@@ -19,13 +19,13 @@
 #ifndef HADOOP_CORE_RPC_PROXY_H
 #define HADOOP_CORE_RPC_PROXY_H
 
+#include "rpc/call.h"
+
 #include <stdint.h> /* for uint8_t */
 #include <uv.h> /* for uv_buf_t */
 
 struct hadoop_err;
 struct hrpc_messenger;
-struct hrpc_proxy;
-struct hrpc_proxy_builder;
 
 struct hrpc_response {
     uint8_t *pb_base;
@@ -39,65 +39,58 @@ struct hrpc_sync_ctx {
     struct hrpc_response resp;
 };
 
-typedef void (*hrpc_raw_cb_t)(struct hrpc_response *,
-    struct hadoop_err *, void *);
-
 typedef size_t (*hrpc_pack_cb_t)(const void *, uint8_t *);
 
-/**
- * Allocate a Hadoop proxy builder.
- *
- * @param msgr      The Hadoop messenger that this proxy will be associated
- *                    with.
- * @return          A Hadoop proxy builder, or NULL on OOM.
- */
-struct hrpc_proxy_builder *hrpc_proxy_builder_alloc(
-                struct hrpc_messenger *msgr);
+#define RPC_PROXY_USERDATA_MAX 64
+
+struct hrpc_proxy {
+    /**
+     * The messenger that this proxy is associated with.
+     */
+    struct hrpc_messenger *msgr;
+
+    /**
+     * String describing the protocol this proxy speaks. 
+     */
+    const char *protocol;
+
+    /**
+     * String describing the username this proxy uses. 
+     */
+    const char *username;
+
+    /**
+     * The current call.
+     */
+    struct hrpc_call call;
+
+    /**
+     * A memory area which can be used by the current call.
+     *
+     * This will be null if userdata_len is 0.
+     */
+    uint8_t userdata[RPC_PROXY_USERDATA_MAX];
+};
 
 /**
- * Free a Hadoop proxy builder.
+ * Initialize a Hadoop proxy.
  *
- * @param bld       The Hadoop proxy builder to free.
+ * @param proxy     The Hadoop proxy to initialize.
+ * @param msgr      The messenger to associate the proxy with.
+ *                      This messenger must not be de-allocated while the proxy
+ *                      still exists.
+ * @param protocol  The protocol to use for this proxy.
+ *                      This string must remain valid for the lifetime of the
+ *                      proxy.
+ * @param remote    The remote to contact.  Will be copied.
+ * @param username  The username to use.
+ *                      This string must remain valid for the lifetime of the
+ *                      proxy.
  */
-void hrpc_proxy_builder_free(struct hrpc_proxy_builder *bld);
-
-/**
- * Set the protocol used by a proxy.
- *
- * @param bld       The Hadoop proxy builder.
- * @param proto     The protocol string to use.  Will be deep-copied.
- */
-void hrpc_proxy_builder_set_protocol(struct hrpc_proxy_builder *bld,
-                                     const char *proto);
-
-/**
- * Set the remote that the proxy should connect to.
- *
- * @param bld       The Hadoop proxy builder.
- * @param remote    The remote.  Will be deep-copied.
- */
-void hrpc_proxy_builder_set_remote(struct hrpc_proxy_builder *bld,
-                                   const struct sockaddr_in *remote);
-
-/**
- * Create a Hadoop proxy
- *
- * @param bld       The Hadoop proxy builder to use.
- *                      The builder will be freed, even on failure.
- * @param out       (out param) On success, the Hadoop proxy.
- *
- * @return          On success, NULL.  On error, the error message.
- */
-struct hadoop_err *hrpc_proxy_create(struct hrpc_proxy_builder *bld,
-                            struct hrpc_proxy **out);
-
-/**
- * Free a Hadoop proxy.
- *
- * @param proxy     The Hadoop proxy to free.  You must not attempt to free a
- *                      proxy with a call in progress.
- */
-void hrpc_proxy_free(struct hrpc_proxy *proxy);
+void hrpc_proxy_init(struct hrpc_proxy *proxy,
+            struct hrpc_messenger *msgr,
+            const struct sockaddr_in *remote,
+            const char *protocol, const char *username);
 
 /**
  * Mark the proxy as active.
@@ -159,6 +152,9 @@ void hrpc_proxy_sync_cb(struct hrpc_response *resp, struct hadoop_err *err,
  * Start an outgoing RPC from the proxy.
  *
  * This method will return after queuing up the RPC to be sent.
+ *
+ * Note: after the proxy has been started, you may __not__ de-allocate the
+ * proxy until the callback has happened.
  *
  * @param proxy                 The Hadoop proxy to use.  A single proxy can
  *                                  only make one call at once.

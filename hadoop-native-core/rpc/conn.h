@@ -134,6 +134,11 @@ struct hrpc_conn {
     char *protocol;
 
     /**
+     * The Hadoop username we're connected as.  Malloc'ed.
+     */
+    char *username;
+
+    /**
      * The client ID we used when establishing the connection.
      */
     struct hrpc_client_id client_id;  
@@ -142,6 +147,11 @@ struct hrpc_conn {
      * The pending connection request, if one is pending.
      */
     uv_connect_t conn_req;
+
+    /**
+     * The current call ID.
+     */
+    uint32_t call_id;
 
     struct hrpc_conn_writer writer;
     struct hrpc_conn_reader reader;
@@ -198,11 +208,13 @@ int hrpc_conn_compare(const struct hrpc_conn *a,
  * @param conn          The connection.
  * @param addr          The address.
  * @param protocol      The protocol.
+ * @param username      The username.
  *
  * @return              1 if the connection is usable; 0 if not.
  */
 int hrpc_conn_usable(const struct hrpc_conn *conn,
-                      const struct sockaddr_in *addr, const char *protocol);
+                      const struct sockaddr_in *addr,
+                      const char *protocol, const char *username);
 
 /**
  * Destroy a connection.

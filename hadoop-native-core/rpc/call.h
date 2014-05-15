@@ -20,11 +20,13 @@
 #define HADOOP_CORE_RPC_CALL_H
 
 #include "common/queue.h"
-#include "rpc/proxy.h" // for hrpc_raw_cb_t 
 
 #include <netinet/in.h> // for struct sockaddr_in
 #include <stdint.h> // for int32_t
 #include <uv.h> // for uv_buf_t
+
+struct hadoop_err;
+struct hrpc_response;
 
 /**
  * The Hadoop call.
@@ -33,7 +35,8 @@
  * include.
  */
 
-struct hrpc_call;
+typedef void (*hrpc_raw_cb_t)(struct hrpc_response *,
+    struct hadoop_err *, void *);
 
 /**
  * A Hadoop RPC call.
@@ -61,14 +64,19 @@ struct hrpc_call {
     void *cb_data;
 
     /**
-     * Malloc'ed payload to send.  Malloced.
+     * Malloc'ed payload to send.
      */
     uv_buf_t payload;
 
     /**
-     * The Java protocol we're using.  Malloced.
+     * String describing the protocol this call is using.
      */
-    char *protocol;
+    const char *protocol;
+
+    /**
+     * String describing the username this call is using. 
+     */
+    const char *username;
 
     /**
      * Nonzero if the call is currently active.  Must be set using atomic

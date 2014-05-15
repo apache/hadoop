@@ -55,6 +55,7 @@ set(COMMON_SRCS
     common/net.c
     common/string.c
     common/test.c
+    common/user.c
 )
 set(COMMON_DEPS
     pthread

@@ -18,6 +18,7 @@
 
 #include "common/hadoop_err.h"
 #include "common/test.h"
+#include "common/user.h"
 #include "protobuf/ClientNamenodeProtocol.call.h"
 #include "rpc/messenger.h"
 #include "rpc/proxy.h"
@@ -31,12 +32,14 @@
 
 struct options {
     struct sockaddr_in remote;
+    char *username;
 };
 
 static void options_from_env(struct options *opts)
 {
     const char *ip_str;
     const char *port_str;
+    const char *username;
     int res, port;
 
     ip_str = getenv("HDFS_IP");
@@ -57,6 +60,19 @@ static void options_from_env(struct options *opts)
         fprintf(stderr, "Invalid IP and port %s and %d: error %s\n",
                 ip_str, port, uv_strerror(res));
         exit(EXIT_FAILURE);
+    }
+    username = getenv("HDFS_USERNAME");
+    if (username) {
+        opts->username = strdup(username);
+        if (!opts->username)
+            abort();
+        fprintf(stderr, "using HDFS username %s\n", username);
+    } else {
+        res = geteuid_string(&opts->username);
+        if (res) {
+            fprintf(stderr, "geteuid_string failed with error %d\n", res);
+            abort();
+        }
     }
 }
 
@@ -87,9 +103,8 @@ void set_replication_cb(SetReplicationResponseProto *resp,
 int main(void)
 {
     struct hrpc_messenger_builder *msgr_bld;
-    struct hrpc_proxy_builder *proxy_bld;
-    struct hrpc_proxy *proxy;
     struct hrpc_messenger *msgr;
+    struct hrpc_proxy proxy;
     struct options opts;
     uv_sem_t sem;
 
@@ -98,26 +113,24 @@ int main(void)
     msgr_bld = hrpc_messenger_builder_alloc();
     EXPECT_NONNULL(msgr_bld);
     EXPECT_NO_HADOOP_ERR(hrpc_messenger_create(msgr_bld, &msgr));
-    proxy_bld = hrpc_proxy_builder_alloc(msgr);
-    EXPECT_NONNULL(proxy_bld);
-    hrpc_proxy_builder_set_remote(proxy_bld, &opts.remote);
-    hrpc_proxy_builder_set_protocol(proxy_bld,
-                "org.apache.hadoop.hdfs.protocol.ClientProtocol");
-    EXPECT_NO_HADOOP_ERR(hrpc_proxy_create(proxy_bld, &proxy));
+
+    hrpc_proxy_init(&proxy, msgr, &opts.remote,
+            "org.apache.hadoop.hdfs.protocol.ClientProtocol",
+            opts.username);
     EXPECT_INT_ZERO(uv_sem_init(&sem, 0));
     {
         SetReplicationRequestProto req = SET_REPLICATION_REQUEST_PROTO__INIT;
         req.src = "/foo2";
         req.replication = 2;
-        cnn_async_set_replication(proxy, &req, set_replication_cb, &sem);
+        cnn_async_set_replication(&proxy, &req, set_replication_cb, &sem);
     }
     uv_sem_wait(&sem);
 
-    hrpc_proxy_free(proxy);
     hrpc_messenger_shutdown(msgr);
     hrpc_messenger_free(msgr);
     uv_sem_destroy(&sem);
 
+    free(opts.username);
     return EXIT_SUCCESS;
 }
 

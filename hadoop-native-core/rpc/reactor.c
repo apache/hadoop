@@ -67,11 +67,11 @@ static struct hrpc_conn *reuse_idle_conn(struct hrpc_reactor *reactor,
 
     memset(&exemplar, 0, sizeof(exemplar));
     exemplar.remote = *remote;
-    exemplar.protocol = call->protocol;
+    exemplar.protocol = (char*)call->protocol;
     conn = RB_NFIND(hrpc_conns, &reactor->conns, &exemplar);
     if (!conn)
         return NULL;
-    if (hrpc_conn_usable(conn, remote, call->protocol)) {
+    if (hrpc_conn_usable(conn, remote, call->protocol, call->username)) {
         if (conn->writer.state == HRPC_CONN_WRITE_IDLE) {
             RB_REMOVE(hrpc_conns, &reactor->conns, conn);
             return conn;
