@@ -68,6 +68,9 @@ Release 2.4.1 - UNRELEASED
 
     HDFS-6326. WebHdfs ACL compatibility is broken. (cnauroth)
 
+    HDFS-4052. BlockManager#invalidateWork should print log outside the lock.
+    (Jing Zhao via suresh)
+
     HDFS-6361. TestIdUserGroup.testUserUpdateSetting failed due to out of range
     nfsnobody Id. (Yongjun Zhang via brandonli)
 
