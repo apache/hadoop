@@ -113,7 +113,23 @@ public class IdUserGroup {
           "The new entry is to be ignored for the following reason.",
           DUPLICATE_NAME_ID_DEBUG_INFO));
   }
-      
+
+  /**
+   * uid and gid are defined as uint32 in linux. Some systems create
+   * (intended or unintended) <nfsnobody, 4294967294> kind of <name,Id>
+   * mapping, where 4294967294 is 2**32-2 as unsigned int32. As an example,
+   *   https://bugzilla.redhat.com/show_bug.cgi?id=511876.
+   * Because user or group id are treated as Integer (signed integer or int32)
+   * here, the number 4294967294 is out of range. The solution is to convert
+   * uint32 to int32, so to map the out-of-range ID to the negative side of
+   * Integer, e.g. 4294967294 maps to -2 and 4294967295 maps to -1.
+   */
+  private static Integer parseId(final String idStr) {
+    Long longVal = Long.parseLong(idStr);
+    int intVal = longVal.intValue();
+    return Integer.valueOf(intVal);
+  }
+  
   /**
    * Get the whole list of users and groups and save them in the maps.
    * @throws IOException 
@@ -134,8 +150,8 @@ public class IdUserGroup {
         }
         LOG.debug("add to " + mapName + "map:" + nameId[0] + " id:" + nameId[1]);
         // HDFS can't differentiate duplicate names with simple authentication
-        final Integer key = Integer.valueOf(nameId[1]);
-        final String value = nameId[0];        
+        final Integer key = parseId(nameId[1]);        
+        final String value = nameId[0];
         if (map.containsKey(key)) {
           final String prevValue = map.get(key);
           if (value.equals(prevValue)) {
