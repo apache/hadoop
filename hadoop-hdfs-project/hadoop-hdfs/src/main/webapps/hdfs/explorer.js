@@ -26,7 +26,8 @@
       var p = ctx.current().permission;
       var dir = ctx.current().type == 'DIRECTORY' ? 'd' : '-';
       var symbols = [ '---', '--x', '-w-', '-wx', 'r--', 'r-x', 'rw-', 'rwx' ];
-      var sticky = p > 1000;
+      var vInt = parseInt(p, 8);
+      var sticky = (vInt & (1 << 9)) != 0;
 
       var res = "";
       for (var i = 0; i < 3; ++i) {
@@ -35,11 +36,18 @@
       }
 
       if (sticky) {
-        var otherExec = ((ctx.current().permission % 10) & 1) == 1;
+        var otherExec = (vInt & 1) == 1;
         res = res.substr(0, res.length - 1) + (otherExec ? 't' : 'T');
       }
 
       chunk.write(dir + res);
+      return chunk;
+    },
+
+    'helper_to_acl_bit': function(chunk, ctx, bodies, params) {
+      if (ctx.current().aclBit) {
+        chunk.write('+');
+      }
       return chunk;
     }
   };
