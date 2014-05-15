@@ -363,6 +363,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6287. Add vecsum test of libhdfs read access times (cmccabe)
 
+    HDFS-5683. Better audit log messages for caching operations.
+    (Abhiraj Butala via wang)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
