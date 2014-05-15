@@ -18,6 +18,8 @@ Release 0.23.11 - UNRELEASED
     HADOOP-7688. When a servlet filter throws an exception in init(..), 
     the Jetty server failed silently. (Uma Maheswara Rao G via kihwal)
 
+    HADOOP-10588. Workaround for jetty6 acceptor startup issue. (kihwal)
+
   OPTIMIZATIONS
     
   BUG FIXES
