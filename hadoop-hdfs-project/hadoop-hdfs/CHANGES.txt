@@ -560,6 +560,9 @@ Release 2.4.1 - UNRELEASED
     HDFS-6362. InvalidateBlocks is inconsistent in usage of DatanodeUuid and
     StorageID. (Arpit Agarwal)
 
+    HDFS-6402. Suppress findbugs warning for failure to override equals and
+    hashCode in FsAclPermission. (cnauroth)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES

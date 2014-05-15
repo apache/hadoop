@@ -60,4 +60,18 @@ public class FsAclPermission extends FsPermission {
   public boolean getAclBit() {
     return aclBit;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    // This intentionally delegates to the base class.  This is only overridden
+    // to suppress a FindBugs warning.
+    return super.equals(o);
+  }
+
+  @Override
+  public int hashCode() {
+    // This intentionally delegates to the base class.  This is only overridden
+    // to suppress a FindBugs warning.
+    return super.hashCode();
+  }
 }
