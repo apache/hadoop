@@ -194,6 +194,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5652. NM Recovery. ShuffleHandler should handle NM restarts.
     (Jason Lowe via kasha)
 
+    MAPREDUCE-5861. finishedSubMaps field in LocalContainerLauncher does not 
+    need to be volatile. (Tsuyoshi OZAWA via junping_du)
+
   OPTIMIZATIONS
 
   BUG FIXES 
