@@ -29,21 +29,75 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.INodeAttributes;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryAttributes;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileAttributes;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiffList;
 import org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff;
 import org.apache.hadoop.hdfs.util.Diff.ListType;
-import org.apache.hadoop.hdfs.server.namenode.FSImageFormat.Loader;
+import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 /**
  * A helper class defining static methods for reading/writing snapshot related
  * information from/to FSImage.
  */
 public class SnapshotFSImageFormat {
+  /**
+   * Save snapshots and snapshot quota for a snapshottable directory.
+   * @param current The directory that the snapshots belongs to.
+   * @param out The {@link DataOutput} to write.
+   * @throws IOException
+   */
+  public static void saveSnapshots(INodeDirectorySnapshottable current,
+      DataOutput out) throws IOException {
+    // list of snapshots in snapshotsByNames
+    ReadOnlyList<Snapshot> snapshots = current.getSnapshotsByNames();
+    out.writeInt(snapshots.size());
+    for (Snapshot s : snapshots) {
+      // write the snapshot id
+      out.writeInt(s.getId());
+    }
+    // snapshot quota
+    out.writeInt(current.getSnapshotQuota());
+  }
+
+  /**
+   * Save SnapshotDiff list for an INodeDirectoryWithSnapshot.
+   * @param sNode The directory that the SnapshotDiff list belongs to.
+   * @param out The {@link DataOutput} to write.
+   */
+  private static <N extends INode, A extends INodeAttributes, D extends AbstractINodeDiff<N, A, D>>
+      void saveINodeDiffs(final AbstractINodeDiffList<N, A, D> diffs,
+      final DataOutput out, ReferenceMap referenceMap) throws IOException {
+    // Record the diffs in reversed order, so that we can find the correct
+    // reference for INodes in the created list when loading the FSImage
+    if (diffs == null) {
+      out.writeInt(-1); // no diffs
+    } else {
+      final List<D> list = diffs.asList();
+      final int size = list.size();
+      out.writeInt(size);
+      for (int i = size - 1; i >= 0; i--) {
+        list.get(i).write(out, referenceMap);
+      }
+    }
+  }
+
+  public static void saveDirectoryDiffList(final INodeDirectory dir,
+      final DataOutput out, final ReferenceMap referenceMap
+      ) throws IOException {
+    saveINodeDiffs(dir.getDiffs(), out, referenceMap);
+  }
+
+  public static void saveFileDiffList(final INodeFile file,
+      final DataOutput out) throws IOException {
+    saveINodeDiffs(file.getDiffs(), out, null);
+  }
+
   public static FileDiffList loadFileDiffList(DataInput in,
       FSImageFormat.Loader loader) throws IOException {
     final int size = in.readInt();
@@ -264,6 +318,23 @@ public class SnapshotFSImageFormat {
      * Used to record whether the subtree of the reference node has been saved 
      */
     private final Map<Long, Long> dirMap = new HashMap<Long, Long>();
+
+    public void writeINodeReferenceWithCount(
+        INodeReference.WithCount withCount, DataOutput out,
+        boolean writeUnderConstruction) throws IOException {
+      final INode referred = withCount.getReferredINode();
+      final long id = withCount.getId();
+      final boolean firstReferred = !referenceMap.containsKey(id);
+      out.writeBoolean(firstReferred);
+
+      if (firstReferred) {
+        FSImageSerialization.saveINode2Image(referred, out,
+            writeUnderConstruction, this);
+        referenceMap.put(id, withCount);
+      } else {
+        out.writeLong(id);
+      }
+    }
     
     public boolean toProcessSubtree(long id) {
       if (dirMap.containsKey(id)) {

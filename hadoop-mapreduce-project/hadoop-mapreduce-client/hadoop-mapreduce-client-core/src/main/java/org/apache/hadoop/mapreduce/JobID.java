@@ -48,7 +48,7 @@ import org.apache.hadoop.io.Text;
 @InterfaceStability.Stable
 public class JobID extends org.apache.hadoop.mapred.ID 
                    implements Comparable<ID> {
-  protected static final String JOB = "job";
+  public static final String JOB = "job";
   
   // Jobid regex for various tools and framework components
   public static final String JOBID_REGEX = 

@@ -177,8 +177,10 @@ public class LocalContainerLauncher extends AbstractService implements
    */
   private class EventHandler implements Runnable {
 
-    private volatile boolean doneWithMaps = false;
-    private volatile int finishedSubMaps = 0;
+    // doneWithMaps and finishedSubMaps are accessed from only
+    // one thread. Therefore, no need to make them volatile.
+    private boolean doneWithMaps = false;
+    private int finishedSubMaps = 0;
 
     private final Map<TaskAttemptId,Future<?>> futures =
         new ConcurrentHashMap<TaskAttemptId,Future<?>>();

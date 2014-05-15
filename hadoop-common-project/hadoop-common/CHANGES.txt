@@ -326,6 +326,8 @@ Trunk (Unreleased)
 
     HADOOP-10431. Change visibility of KeyStore.Options getter methods to public. (tucu)
 
+    HADOOP-10583. bin/hadoop key throws NPE with no args and assorted other fixups. (clamb via tucu)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -379,6 +381,12 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10158. SPNEGO should work with multiple interfaces/SPNs.
     (daryn via kihwal)
+
+    HADOOP-10566. Refactor proxyservers out of ProxyUsers.
+    (Benoy Antony via suresh)
+
+    HADOOP-10572. Example NFS mount command must pass noacl as it isn't
+    supported by the server yet. (Harsh J via brandonli)
 
   OPTIMIZATIONS
 
@@ -464,6 +472,12 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10581. TestUserGroupInformation#testGetServerSideGroups fails
     because groups stored in Set and ArrayList are compared. 
     (Mit Desai via kihwal)
+
+    HADOOP-10585. Retry polices ignore interrupted exceptions (Daryn Sharp via
+    jeagles)
+
+    HADOOP-10401. ShellBasedUnixGroupsMapping#getGroups does not always return
+    primary group first (Akira AJISAKA via Colin Patrick McCabe)
 
 Release 2.4.1 - UNRELEASED
 

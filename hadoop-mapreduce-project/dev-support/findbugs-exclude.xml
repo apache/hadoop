@@ -465,6 +465,9 @@
   <Match>
     <Class name="~org\.apache\.hadoop\.mapreduce\.v2\.proto.*" />
   </Match>
+  <Match>
+    <Package name="org.apache.hadoop.mapred.proto" />
+  </Match>
   
    <!--
      The below fields are accessed locally and only via methods that are synchronized. 

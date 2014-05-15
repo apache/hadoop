@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
@@ -31,20 +36,21 @@ import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
 import org.apache.hadoop.hdfs.util.XMLUtils;
 import org.apache.hadoop.hdfs.util.XMLUtils.InvalidXmlException;
 import org.apache.hadoop.hdfs.util.XMLUtils.Stanza;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.ShortWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import com.google.common.base.Preconditions;
 
 /**
  * Static utility functions for serializing various pieces of data in the correct
@@ -82,6 +88,26 @@ public class FSImageSerialization {
     final ShortWritable U_SHORT = new ShortWritable();
     final IntWritable U_INT = new IntWritable();
     final LongWritable U_LONG = new LongWritable();
+    final FsPermission FILE_PERM = new FsPermission((short) 0);
+  }
+
+  private static void writePermissionStatus(INodeAttributes inode,
+      DataOutput out) throws IOException {
+    final FsPermission p = TL_DATA.get().FILE_PERM;
+    p.fromShort(inode.getFsPermissionShort());
+    PermissionStatus.write(out, inode.getUserName(), inode.getGroupName(), p);
+  }
+
+  private static void writeBlocks(final Block[] blocks,
+      final DataOutput out) throws IOException {
+    if (blocks == null) {
+      out.writeInt(0);
+    } else {
+      out.writeInt(blocks.length);
+      for (Block blk : blocks) {
+        blk.write(out);
+      }
+    }
   }
 
   // Helper function that reads in an INodeUnderConstruction
@@ -125,6 +151,183 @@ public class FSImageSerialization {
         modificationTime, blocks, blockReplication, preferredBlockSize);
     file.toUnderConstruction(clientName, clientMachine, null);
     return file;
+  }
+
+  // Helper function that writes an INodeUnderConstruction
+  // into the input stream
+  //
+  static void writeINodeUnderConstruction(DataOutputStream out, INodeFile cons,
+      String path) throws IOException {
+    writeString(path, out);
+    out.writeLong(cons.getId());
+    out.writeShort(cons.getFileReplication());
+    out.writeLong(cons.getModificationTime());
+    out.writeLong(cons.getPreferredBlockSize());
+
+    writeBlocks(cons.getBlocks(), out);
+    cons.getPermissionStatus().write(out);
+
+    FileUnderConstructionFeature uc = cons.getFileUnderConstructionFeature();
+    writeString(uc.getClientName(), out);
+    writeString(uc.getClientMachine(), out);
+
+    out.writeInt(0); //  do not store locations of last block
+  }
+
+  /**
+   * Serialize a {@link INodeFile} node
+   * @param node The node to write
+   * @param out The {@link DataOutputStream} where the fields are written
+   * @param writeBlock Whether to write block information
+   */
+  public static void writeINodeFile(INodeFile file, DataOutput out,
+      boolean writeUnderConstruction) throws IOException {
+    writeLocalName(file, out);
+    out.writeLong(file.getId());
+    out.writeShort(file.getFileReplication());
+    out.writeLong(file.getModificationTime());
+    out.writeLong(file.getAccessTime());
+    out.writeLong(file.getPreferredBlockSize());
+
+    writeBlocks(file.getBlocks(), out);
+    SnapshotFSImageFormat.saveFileDiffList(file, out);
+
+    if (writeUnderConstruction) {
+      if (file.isUnderConstruction()) {
+        out.writeBoolean(true);
+        final FileUnderConstructionFeature uc = file.getFileUnderConstructionFeature();
+        writeString(uc.getClientName(), out);
+        writeString(uc.getClientMachine(), out);
+      } else {
+        out.writeBoolean(false);
+      }
+    }
+
+    writePermissionStatus(file, out);
+  }
+
+  /** Serialize an {@link INodeFileAttributes}. */
+  public static void writeINodeFileAttributes(INodeFileAttributes file,
+      DataOutput out) throws IOException {
+    writeLocalName(file, out);
+    writePermissionStatus(file, out);
+    out.writeLong(file.getModificationTime());
+    out.writeLong(file.getAccessTime());
+
+    out.writeShort(file.getFileReplication());
+    out.writeLong(file.getPreferredBlockSize());
+  }
+
+  private static void writeQuota(Quota.Counts quota, DataOutput out)
+      throws IOException {
+    out.writeLong(quota.get(Quota.NAMESPACE));
+    out.writeLong(quota.get(Quota.DISKSPACE));
+  }
+
+  /**
+   * Serialize a {@link INodeDirectory}
+   * @param node The node to write
+   * @param out The {@link DataOutput} where the fields are written
+   */
+  public static void writeINodeDirectory(INodeDirectory node, DataOutput out)
+      throws IOException {
+    writeLocalName(node, out);
+    out.writeLong(node.getId());
+    out.writeShort(0);  // replication
+    out.writeLong(node.getModificationTime());
+    out.writeLong(0);   // access time
+    out.writeLong(0);   // preferred block size
+    out.writeInt(-1);   // # of blocks
+
+    writeQuota(node.getQuotaCounts(), out);
+
+    if (node instanceof INodeDirectorySnapshottable) {
+      out.writeBoolean(true);
+    } else {
+      out.writeBoolean(false);
+      out.writeBoolean(node.isWithSnapshot());
+    }
+
+    writePermissionStatus(node, out);
+  }
+
+  /**
+   * Serialize a {@link INodeDirectory}
+   * @param a The node to write
+   * @param out The {@link DataOutput} where the fields are written
+   */
+  public static void writeINodeDirectoryAttributes(
+      INodeDirectoryAttributes a, DataOutput out) throws IOException {
+    writeLocalName(a, out);
+    writePermissionStatus(a, out);
+    out.writeLong(a.getModificationTime());
+    writeQuota(a.getQuotaCounts(), out);
+  }
+
+  /**
+   * Serialize a {@link INodeSymlink} node
+   * @param node The node to write
+   * @param out The {@link DataOutput} where the fields are written
+   */
+  private static void writeINodeSymlink(INodeSymlink node, DataOutput out)
+      throws IOException {
+    writeLocalName(node, out);
+    out.writeLong(node.getId());
+    out.writeShort(0);  // replication
+    out.writeLong(0);   // modification time
+    out.writeLong(0);   // access time
+    out.writeLong(0);   // preferred block size
+    out.writeInt(-2);   // # of blocks
+
+    Text.writeString(out, node.getSymlinkString());
+    writePermissionStatus(node, out);
+  }
+
+  /** Serialize a {@link INodeReference} node */
+  private static void writeINodeReference(INodeReference ref, DataOutput out,
+      boolean writeUnderConstruction, ReferenceMap referenceMap
+      ) throws IOException {
+    writeLocalName(ref, out);
+    out.writeLong(ref.getId());
+    out.writeShort(0);  // replication
+    out.writeLong(0);   // modification time
+    out.writeLong(0);   // access time
+    out.writeLong(0);   // preferred block size
+    out.writeInt(-3);   // # of blocks
+
+    final boolean isWithName = ref instanceof INodeReference.WithName;
+    out.writeBoolean(isWithName);
+
+    if (!isWithName) {
+      Preconditions.checkState(ref instanceof INodeReference.DstReference);
+      // dst snapshot id
+      out.writeInt(((INodeReference.DstReference) ref).getDstSnapshotId());
+    } else {
+      out.writeInt(((INodeReference.WithName) ref).getLastSnapshotId());
+    }
+
+    final INodeReference.WithCount withCount
+        = (INodeReference.WithCount)ref.getReferredINode();
+    referenceMap.writeINodeReferenceWithCount(withCount, out,
+        writeUnderConstruction);
+  }
+
+  /**
+   * Save one inode's attributes to the image.
+   */
+  public static void saveINode2Image(INode node, DataOutput out,
+      boolean writeUnderConstruction, ReferenceMap referenceMap)
+      throws IOException {
+    if (node.isReference()) {
+      writeINodeReference(node.asReference(), out, writeUnderConstruction,
+          referenceMap);
+    } else if (node.isDirectory()) {
+      writeINodeDirectory(node.asDirectory(), out);
+    } else if (node.isSymlink()) {
+      writeINodeSymlink(node.asSymlink(), out);
+    } else if (node.isFile()) {
+      writeINodeFile(node.asFile(), out, writeUnderConstruction);
+    }
   }
 
   // This should be reverted to package private once the ImageLoader
@@ -225,6 +428,12 @@ public class FSImageSerialization {
     byte[] createdNodeName = new byte[in.readShort()];
     in.readFully(createdNodeName);
     return createdNodeName;
+  }
+
+  private static void writeLocalName(INodeAttributes inode, DataOutput out)
+      throws IOException {
+    final byte[] name = inode.getLocalNameBytes();
+    writeBytes(name, out);
   }
   
   public static void writeBytes(byte[] data, DataOutput out)

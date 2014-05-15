@@ -132,11 +132,17 @@ abstract public class Shell {
                     : new String[]{"bash", "-c", "groups"};
   }
 
-  /** a Unix command to get a given user's groups list */
+  /**
+   * a Unix command to get a given user's groups list.
+   * If the OS is not WINDOWS, the command will get the user's primary group
+   * first and finally get the groups list which includes the primary group.
+   * i.e. the user's primary group will be included twice.
+   */
   public static String[] getGroupsForUserCommand(final String user) {
     //'groups username' command return is non-consistent across different unixes
     return (WINDOWS)? new String[] { WINUTILS, "groups", "-F", "\"" + user + "\""}
-                    : new String [] {"bash", "-c", "id -Gn " + user};
+                    : new String [] {"bash", "-c", "id -gn " + user
+                                     + "&& id -Gn " + user};
   }
 
   /** a Unix command to get a given netgroup's user list */

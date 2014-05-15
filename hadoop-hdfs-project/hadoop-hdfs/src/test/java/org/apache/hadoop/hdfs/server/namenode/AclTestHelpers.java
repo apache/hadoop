@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -150,6 +151,9 @@ public final class AclTestHelpers {
    */
   public static void assertPermission(FileSystem fs, Path pathToCheck,
       short perm) throws IOException {
-    assertEquals(perm, fs.getFileStatus(pathToCheck).getPermission().toShort());
+    short filteredPerm = (short)(perm & 01777);
+    FsPermission fsPermission = fs.getFileStatus(pathToCheck).getPermission();
+    assertEquals(filteredPerm, fsPermission.toShort());
+    assertEquals(((perm & (1 << 12)) != 0), fsPermission.getAclBit());
   }
 }

@@ -504,12 +504,6 @@ public class MiniYARNCluster extends CompositeService {
       String logDirsString = prepareDirs("log", numLogDirs);
       config.set(YarnConfiguration.NM_LOG_DIRS, logDirsString);
 
-      File remoteLogDir =
-          new File(testWorkDir, MiniYARNCluster.this.getName()
-              + "-remoteLogDir-nm-" + index);
-      remoteLogDir.mkdir();
-      config.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-          remoteLogDir.getAbsolutePath());
       // By default AM + 2 containers
       config.setInt(YarnConfiguration.NM_PMEM_MB, 4*1024);
       config.set(YarnConfiguration.NM_ADDRESS,
@@ -658,12 +652,14 @@ public class MiniYARNCluster extends CompositeService {
    */
   public boolean waitForNodeManagersToConnect(long timeout)
       throws YarnException, InterruptedException {
-    ResourceManager rm = getResourceManager();
     GetClusterMetricsRequest req = GetClusterMetricsRequest.newInstance();
-
     for (int i = 0; i < timeout / 100; i++) {
-      if (nodeManagers.length == rm.getClientRMService().getClusterMetrics(req)
-          .getClusterMetrics().getNumNodeManagers()) {
+      ResourceManager rm = getResourceManager();
+      if (rm == null) {
+        throw new YarnException("Can not find the active RM.");
+      }
+      else if (nodeManagers.length == rm.getClientRMService()
+            .getClusterMetrics(req).getClusterMetrics().getNumNodeManagers()) {
         return true;
       }
       Thread.sleep(100);

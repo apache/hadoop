@@ -18,16 +18,13 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
-import java.nio.channels.ClosedChannelException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -201,15 +198,23 @@ public class TestDiskError {
     }
   }
   
+  /**
+   * Checks whether {@link DataNode#checkDiskError()} is being called or not.
+   * Before refactoring the code the above function was not getting called 
+   * @throws IOException, InterruptedException
+   */
   @Test
-  public void testNetworkErrorsIgnored() {
-    DataNode dn = cluster.getDataNodes().iterator().next();
-    
-    assertTrue(dn.isNetworkRelatedException(new SocketException()));
-    assertTrue(dn.isNetworkRelatedException(new SocketTimeoutException()));
-    assertTrue(dn.isNetworkRelatedException(new ClosedChannelException()));
-    assertTrue(dn.isNetworkRelatedException(new Exception("Broken pipe foo bar")));
-    assertFalse(dn.isNetworkRelatedException(new Exception()));
-    assertFalse(dn.isNetworkRelatedException(new Exception("random problem")));
+  public void testcheckDiskError() throws IOException, InterruptedException {
+    if(cluster.getDataNodes().size() <= 0) {
+      cluster.startDataNodes(conf, 1, true, null, null);
+      cluster.waitActive();
+    }
+    DataNode dataNode = cluster.getDataNodes().get(0);
+    long slackTime = dataNode.checkDiskErrorInterval/2;
+    //checking for disk error
+    dataNode.checkDiskError();
+    Thread.sleep(dataNode.checkDiskErrorInterval);
+    long lastDiskErrorCheck = dataNode.getLastDiskErrorCheck();
+    assertTrue("Disk Error check is not performed within  " + dataNode.checkDiskErrorInterval +  "  ms", ((System.currentTimeMillis()-lastDiskErrorCheck) < (dataNode.checkDiskErrorInterval + slackTime)));
   }
 }

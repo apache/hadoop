@@ -122,7 +122,7 @@ struct tlhPaths {
 
 static int setupPaths(const struct tlhThreadInfo *ti, struct tlhPaths *paths)
 {
-    memset(paths, sizeof(*paths), 0);
+    memset(paths, 0, sizeof(*paths));
     if (snprintf(paths->prefix, sizeof(paths->prefix), "/tlhData%04d",
                  ti->threadIdx) >= sizeof(paths->prefix)) {
         return ENAMETOOLONG;

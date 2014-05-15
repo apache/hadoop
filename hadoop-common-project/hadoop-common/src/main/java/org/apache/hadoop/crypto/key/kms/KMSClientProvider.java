@@ -126,7 +126,6 @@ public class KMSClientProvider extends KeyProvider {
     return o;
   }
 
-
   public static String checkNotEmpty(String s, String name)
       throws IllegalArgumentException {
     checkNotNull(s, name);
@@ -139,6 +138,13 @@ public class KMSClientProvider extends KeyProvider {
 
   private String kmsUrl;
   private SSLFactory sslFactory;
+
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder("KMSClientProvider[");
+    sb.append(kmsUrl).append("]");
+    return sb.toString();
+  }
 
   public KMSClientProvider(URI uri, Configuration conf) throws IOException {
     Path path = unnestUri(uri);
@@ -515,5 +521,4 @@ public class KMSClientProvider extends KeyProvider {
   public static String buildVersionName(String name, int version) {
     return KeyProvider.buildVersionName(name, version);
   }
-
 }

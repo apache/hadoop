@@ -270,6 +270,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-5168. Add cross node dependency support to BlockPlacementPolicy.
     (Nikola Vujic via szetszwo)
 
+    HDFS-6334. Client failover proxy provider for IP failover based NN HA.
+    (kihwal)
+
   IMPROVEMENTS
 
     HDFS-6007. Update documentation about short-circuit local reads (iwasakims
@@ -347,6 +350,18 @@ Release 2.5.0 - UNRELEASED
     renamed. (cmccabe)
 
     HDFS-6328. Clean up dead code in FSDirectory. (wheat9)
+
+    HDFS-6230. Expose upgrade status through NameNode web UI.
+    (Mit Desai via wheat9)
+
+    HDFS-6186. Pause deletion of blocks when the namenode starts up. (jing9)
+
+    HDFS-6293. Issues with OIV processing PB-based fsimages. (kihwal)
+
+    HDFS-2949. Add check to active state transition to prevent operator-induced
+    split brain. (Rushabh S Shah via kihwal)
+
+    HDFS-6287. Add vecsum test of libhdfs read access times (cmccabe)
 
   OPTIMIZATIONS
 
@@ -440,14 +455,31 @@ Release 2.5.0 - UNRELEASED
     HDFS-6337. Setfacl testcase is failing due to dash character in username
     in TestAclCLI (umamahesh)
 
-    HDFS-5381. ExtendedBlock#hashCode should use both blockId and block pool ID    
+    HDFS-5381. ExtendedBlock#hashCode should use both blockId and block pool ID
     (Benoy Antony via Colin Patrick McCabe)
 
     HDFS-6240. WebImageViewer returns 404 if LISTSTATUS to an empty directory.
     (Akira Ajisaka via wheat9)
 
+    HDFS-6351. Command hdfs dfs -rm -r can't remove empty directory.
+    (Yongjun Zhang via wang)
+
+    HDFS-5522. Datanode disk error check may be incorrectly skipped.
+    (Rushabh S Shah via kihwal)
+
     HDFS-6367. EnumSetParam$Domain#parse fails for parameter containing more than one enum.
     (Yi Liu via umamahesh)
+
+    HDFS-6305. WebHdfs response decoding may throw RuntimeExceptions (Daryn
+    Sharp via jeagles)
+
+    HDFS-6355. Fix divide-by-zero, improper use of wall-clock time in
+    BlockPoolSliceScanner (cmccabe)
+
+    HDFS-6370. Web UI fails to display in intranet under IE.
+    (Haohui Mai via cnauroth)
+
+    HDFS-6381. Fix a typo in INodeReference.java. (Binglin Chang via jing9)
 
 Release 2.4.1 - UNRELEASED
 
@@ -514,6 +546,8 @@ Release 2.4.1 - UNRELEASED
 
     HDFS-6313. WebHdfs may use the wrong NN when configured for multiple HA NNs
     (kihwal)
+
+    HDFS-6326. WebHdfs ACL compatibility is broken. (cnauroth)
 
 Release 2.4.0 - 2014-04-07 
 

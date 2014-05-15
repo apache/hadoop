@@ -194,4 +194,9 @@ public class EmbeddedElectorService extends AbstractService
     }
     return true;
   }
+
+  public void resetLeaderElection() {
+    elector.quitElection(false);
+    elector.joinElection(localActiveNodeInfo);
+  }
 }

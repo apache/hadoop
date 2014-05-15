@@ -40,7 +40,7 @@ import com.google.common.base.Preconditions;
  * snapshots and it is renamed/moved to other locations.
  * 
  * For example,
- * (1) Support we have /abc/foo, say the inode of foo is inode(id=1000,name=foo)
+ * (1) Suppose we have /abc/foo, say the inode of foo is inode(id=1000,name=foo)
  * (2) create snapshot s0 for /abc
  * (3) mv /abc/foo /xyz/bar, i.e. inode(id=1000,name=...) is renamed from "foo"
  *     to "bar" and its parent becomes /xyz.

@@ -62,6 +62,9 @@ endfunction()
 INCLUDE(CheckCSourceCompiles)
 CHECK_C_SOURCE_COMPILES("int main(void) { static __thread int i = 0; return 0; }" HAVE_BETTER_TLS)
 
+# Check to see if we have Intel SSE intrinsics.
+CHECK_C_SOURCE_COMPILES("#include <emmintrin.h>\nint main(void) { __m128d sum0 = _mm_set_pd(0.0,0.0); return 0; }" HAVE_INTEL_SSE_INTRINSICS)
+
 # Check if we need to link dl library to get dlopen.
 # dlopen on Linux is in separate library but on FreeBSD its in libc
 INCLUDE(CheckLibraryExists)
@@ -168,6 +171,15 @@ target_link_libraries(test_libhdfs_zerocopy
     hdfs
     native_mini_dfs
     pthread
+)
+
+add_executable(test_libhdfs_vecsum
+    main/native/libhdfs/test/vecsum.c
+)
+target_link_libraries(test_libhdfs_vecsum
+    hdfs
+    pthread
+    rt
 )
 
 IF(REQUIRE_LIBWEBHDFS)

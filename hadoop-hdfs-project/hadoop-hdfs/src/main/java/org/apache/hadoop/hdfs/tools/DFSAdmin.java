@@ -913,9 +913,10 @@ public class DFSAdmin extends FsShell {
     
     Configuration dfsConf = dfs.getConf();
     URI dfsUri = dfs.getUri();
-    boolean isHaEnabled = HAUtil.isLogicalUri(dfsConf, dfsUri);
-    if (isHaEnabled) {
-      // In the case of HA, run finalizeUpgrade for all NNs in this nameservice
+    boolean isHaAndLogicalUri = HAUtil.isLogicalUri(dfsConf, dfsUri);
+    if (isHaAndLogicalUri) {
+      // In the case of HA and logical URI, run finalizeUpgrade for all
+      // NNs in this nameservice.
       String nsId = dfsUri.getHost();
       List<ClientProtocol> namenodes =
           HAUtil.getProxiesForAllNameNodesInNameservice(dfsConf, nsId);

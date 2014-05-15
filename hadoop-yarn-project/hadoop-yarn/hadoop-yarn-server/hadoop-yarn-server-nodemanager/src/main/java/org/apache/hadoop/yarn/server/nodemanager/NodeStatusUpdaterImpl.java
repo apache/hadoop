@@ -493,6 +493,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                     + " hence shutting down.");
               LOG.warn("Message from ResourceManager: "
                   + response.getDiagnosticsMessage());
+              context.setDecommissioned(true);
               dispatcher.getEventHandler().handle(
                   new NodeManagerEvent(NodeManagerEventType.SHUTDOWN));
               break;

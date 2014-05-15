@@ -272,7 +272,8 @@ public class NodeManager extends CompositeService
     private WebServer webServer;
     private final NodeHealthStatus nodeHealthStatus = RecordFactoryProvider
         .getRecordFactory(null).newRecordInstance(NodeHealthStatus.class);
-        
+    private boolean isDecommissioned = false;
+
     public NMContext(NMContainerTokenSecretManager containerTokenSecretManager,
         NMTokenSecretManagerInNM nmTokenSecretManager,
         LocalDirsHandlerService dirsHandler, ApplicationACLsManager aclsManager) {
@@ -348,6 +349,16 @@ public class NodeManager extends CompositeService
     @Override
     public ApplicationACLsManager getApplicationACLsManager() {
       return aclsManager;
+    }
+
+    @Override
+    public boolean getDecommissioned() {
+      return isDecommissioned;
+    }
+
+    @Override
+    public void setDecommissioned(boolean isDecommissioned) {
+      this.isDecommissioned = isDecommissioned;
     }
   }
 
