@@ -299,6 +299,9 @@ Release 2.4.1 - UNRELEASED
 
     HDFS-6326. WebHdfs ACL compatibility is broken. (cnauroth)
 
+    HDFS-6361. TestIdUserGroup.testUserUpdateSetting failed due to out of range
+    nfsnobody Id. (Yongjun Zhang via brandonli)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES

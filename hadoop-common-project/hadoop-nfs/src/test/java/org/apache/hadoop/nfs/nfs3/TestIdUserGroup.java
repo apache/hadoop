@@ -67,6 +67,51 @@ public class TestIdUserGroup {
   }
 
   @Test
+  public void testIdOutOfIntegerRange() throws IOException {
+    String GET_ALL_USERS_CMD = "echo \""
+        + "nfsnobody:x:4294967294:4294967294:Anonymous NFS User:/var/lib/nfs:/sbin/nologin\n"
+        + "nfsnobody1:x:4294967295:4294967295:Anonymous NFS User:/var/lib/nfs1:/sbin/nologin\n"
+        + "maxint:x:2147483647:2147483647:Grid Distributed File System:/home/maxint:/bin/bash\n"
+        + "minint:x:2147483648:2147483648:Grid Distributed File System:/home/minint:/bin/bash\n"
+        + "archivebackup:*:1031:4294967294:Archive Backup:/home/users/archivebackup:/bin/sh\n"
+        + "hdfs:x:11501:10787:Grid Distributed File System:/home/hdfs:/bin/bash\n"
+        + "daemon:x:2:2:daemon:/sbin:/sbin/nologin\""
+        + " | cut -d: -f1,3";
+    String GET_ALL_GROUPS_CMD = "echo \""
+        + "hdfs:*:11501:hrt_hdfs\n"
+        + "rpcuser:*:29:\n"
+        + "nfsnobody:*:4294967294:\n"
+        + "nfsnobody1:*:4294967295:\n"
+        + "maxint:*:2147483647:\n"
+        + "minint:*:2147483648:\n"
+        + "mapred3:x:498\"" 
+        + " | cut -d: -f1,3";
+    // Maps for id to name map
+    BiMap<Integer, String> uMap = HashBiMap.create();
+    BiMap<Integer, String> gMap = HashBiMap.create();
+
+    IdUserGroup.updateMapInternal(uMap, "user", GET_ALL_USERS_CMD, ":");
+    assertTrue(uMap.size() == 7);
+    assertEquals("nfsnobody", uMap.get(-2));
+    assertEquals("nfsnobody1", uMap.get(-1));
+    assertEquals("maxint", uMap.get(2147483647));
+    assertEquals("minint", uMap.get(-2147483648));
+    assertEquals("archivebackup", uMap.get(1031));
+    assertEquals("hdfs",uMap.get(11501));
+    assertEquals("daemon", uMap.get(2));
+
+    IdUserGroup.updateMapInternal(gMap, "group", GET_ALL_GROUPS_CMD, ":");
+    assertTrue(gMap.size() == 7);
+    assertEquals("hdfs",gMap.get(11501));
+    assertEquals("rpcuser", gMap.get(29));
+    assertEquals("nfsnobody", gMap.get(-2));
+    assertEquals("nfsnobody1", gMap.get(-1));
+    assertEquals("maxint", gMap.get(2147483647));
+    assertEquals("minint", gMap.get(-2147483648));
+    assertEquals("mapred3", gMap.get(498));
+  }
+
+  @Test
   public void testUserUpdateSetting() throws IOException {
     IdUserGroup iug = new IdUserGroup();
     assertEquals(iug.getTimeout(), IdUserGroup.TIMEOUT_DEFAULT);
