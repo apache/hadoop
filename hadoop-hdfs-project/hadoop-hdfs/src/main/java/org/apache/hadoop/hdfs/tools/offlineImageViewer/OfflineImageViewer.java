@@ -47,7 +47,7 @@ public class OfflineImageViewer {
   public static final Log LOG = LogFactory.getLog(OfflineImageViewer.class);
   
   private final static String usage = 
-    "Usage: bin/hdfs oiv [OPTIONS] -i INPUTFILE -o OUTPUTFILE\n" +
+    "Usage: bin/hdfs oiv_legacy [OPTIONS] -i INPUTFILE -o OUTPUTFILE\n" +
     "Offline Image Viewer\n" + 
     "View a Hadoop fsimage INPUTFILE using the specified PROCESSOR,\n" +
     "saving the results in OUTPUTFILE.\n" +
