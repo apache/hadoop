@@ -481,6 +481,8 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6381. Fix a typo in INodeReference.java. (Binglin Chang via jing9)
 
+    HDFS-6400. Cannot execute hdfs oiv_legacy. (Akira AJISAKA via kihwal)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
