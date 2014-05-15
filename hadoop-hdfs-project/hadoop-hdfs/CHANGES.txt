@@ -305,6 +305,9 @@ Release 2.4.1 - UNRELEASED
     HDFS-6361. TestIdUserGroup.testUserUpdateSetting failed due to out of range
     nfsnobody Id. (Yongjun Zhang via brandonli)
 
+    HDFS-4052. BlockManager#invalidateWork should print log outside the lock.
+    (Jing Zhao via suresh)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES

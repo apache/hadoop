@@ -170,36 +170,17 @@ class InvalidateBlocks {
     return pendingPeriodInMs - (Time.monotonicNow() - startupTime);
   }
 
-  /** Invalidate work for the storage. */
-  int invalidateWork(final String storageId) {
+  synchronized List<Block> invalidateWork(
+      final String storageId, final DatanodeDescriptor dn) {
     final long delay = getInvalidationDelay();
     if (delay > 0) {
       if (BlockManager.LOG.isDebugEnabled()) {
         BlockManager.LOG
             .debug("Block deletion is delayed during NameNode startup. "
-                + "The deletion will start after " + delay + " ms.");
+                       + "The deletion will start after " + delay + " ms.");
       }
-      return 0;
+      return null;
     }
-    final DatanodeDescriptor dn = datanodeManager.getDatanode(storageId);
-    if (dn == null) {
-      remove(storageId);
-      return 0;
-    }
-    final List<Block> toInvalidate = invalidateWork(storageId, dn);
-    if (toInvalidate == null) {
-      return 0;
-    }
-
-    if (NameNode.stateChangeLog.isInfoEnabled()) {
-      NameNode.stateChangeLog.info("BLOCK* " + getClass().getSimpleName()
-          + ": ask " + dn + " to delete " + toInvalidate);
-    }
-    return toInvalidate.size();
-  }
-
-  private synchronized List<Block> invalidateWork(
-      final String storageId, final DatanodeDescriptor dn) {
     final LightWeightHashSet<Block> set = node2blocks.get(storageId);
     if (set == null) {
       return null;
