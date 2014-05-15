@@ -557,6 +557,9 @@ Release 2.4.1 - UNRELEASED
     HDFS-6361. TestIdUserGroup.testUserUpdateSetting failed due to out of range
     nfsnobody Id. (Yongjun Zhang via brandonli)
 
+    HDFS-6362. InvalidateBlocks is inconsistent in usage of DatanodeUuid and
+    StorageID. (Arpit Agarwal)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
