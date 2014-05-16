@@ -1,0 +1,13 @@
+Hadoop HDFS Change Log for HDFS-6134 and HADOOP-10150
+
+fs-encryption (Unreleased)
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
