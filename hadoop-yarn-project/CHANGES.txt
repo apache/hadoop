@@ -70,9 +70,6 @@ Release 2.5.0 - UNRELEASED
     YARN-1981. Nodemanager version is not updated when a node reconnects (Jason
     Lowe via jeagles)
 
-    YARN-2053. Fixed a bug in AMS to not add null NMToken into NMTokens list from
-    previous attempts for work-preserving AM restart. (Wangda Tan via jianhe)
-
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -98,12 +95,6 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10562 (Ming Ma via Arpit Agarwal)
 
     YARN-2011. Fix typo and warning in TestLeafQueue (Chen He via junping_du)
-
-    YARN-1976. Fix yarn application CLI to print the scheme of the tracking url
-    of failed/killed applications. (Junping Du via jianhe)
-
-    YARN-2016. Fix a bug in GetApplicationsRequestPBImpl to add the missed fields
-    to proto. (Junping Du via jianhe)
 
     YARN-2042. String shouldn't be compared using == in
     QueuePlacementRule#NestedUserQueue#getQueueForApp (Chen He via Sandy Ryza)
@@ -215,6 +206,15 @@ Release 2.4.1 - UNRELEASED
 
     YARN-1986. In Fifo Scheduler, node heartbeat in between creating app and
     attempt causes NPE (Hong Zhiguo via Sandy Ryza)
+
+    YARN-1976. Fix yarn application CLI to print the scheme of the tracking url
+    of failed/killed applications. (Junping Du via jianhe)
+
+    YARN-2016. Fix a bug in GetApplicationsRequestPBImpl to add the missed fields
+    to proto. (Junping Du via jianhe)
+
+    YARN-2053. Fixed a bug in AMS to not add null NMToken into NMTokens list from
+    previous attempts for work-preserving AM restart. (Wangda Tan via jianhe)
 
 Release 2.4.0 - 2014-04-07 
 
