@@ -67,3 +67,6 @@ HDFS-2006 (Unreleased)
 
     HDFS-6414. xattr modification operations are based on state of latest
     snapshot instead of current version of inode. (Andrew Wang via cnauroth)
+
+    HDFS-6374. setXAttr should require the user to be the owner of the file
+    or directory (Charles Lamb via wang)

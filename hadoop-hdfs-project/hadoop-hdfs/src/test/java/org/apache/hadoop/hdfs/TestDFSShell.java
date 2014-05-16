@@ -155,7 +155,7 @@ public class TestDFSShell {
   }
   
   @Test (timeout = 30000)
-  public void testRecrusiveRm() throws IOException {
+  public void testRecursiveRm() throws IOException {
 	  Configuration conf = new HdfsConfiguration();
 	  MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
 	  FileSystem fs = cluster.getFileSystem();
@@ -1583,6 +1583,7 @@ public class TestDFSShell {
       cluster.shutdown();
     }
   }
+
   private static String runLsr(final FsShell shell, String root, int returnvalue
       ) throws Exception {
     System.out.println("root=" + root + ", returnvalue=" + returnvalue);
@@ -2050,6 +2051,156 @@ public class TestDFSShell {
         str.indexOf(dontExpect) == -1);
     }
     out.reset();
+  }
+
+  /**
+   * HDFS-6374 setXAttr should require the user to be the owner of the file
+   * or directory.
+   *
+   * Test to make sure that only the owner of a file or directory can set
+   * or remove the xattrs.
+   *
+   * As user1:
+   * Create a directory (/foo) as user1, chown it to user1 (and user1's group),
+   * grant rwx to "other".
+   *
+   * As user2:
+   * Set an xattr (should fail).
+   *
+   * As user1:
+   * Set an xattr (should pass).
+   *
+   * As user2:
+   * Read the xattr (should pass).
+   * Remove the xattr (should fail).
+   *
+   * As user1:
+   * Read the xattr (should pass).
+   * Remove the xattr (should pass).
+   */
+  @Test (timeout = 30000)
+  public void testSetXAttrPermissionAsDifferentOwner() throws Exception {
+    final String USER1 = "user1";
+    final String GROUP1 = "mygroup1";
+    final UserGroupInformation user1 = UserGroupInformation.
+        createUserForTesting(USER1, new String[] {GROUP1});
+    final UserGroupInformation user2 = UserGroupInformation.
+        createUserForTesting("user2", new String[] {"mygroup2"});
+    MiniDFSCluster cluster = null;
+    PrintStream bak = null;
+    try {
+      final Configuration conf = new HdfsConfiguration();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+
+      final FileSystem fs = cluster.getFileSystem();
+      fs.setOwner(new Path("/"), USER1, GROUP1);
+      bak = System.err;
+
+      final FsShell fshell = new FsShell(conf);
+      final ByteArrayOutputStream out = new ByteArrayOutputStream();
+      System.setErr(new PrintStream(out));
+
+      // mkdir foo as user1
+      user1.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          final int ret = ToolRunner.run(fshell, new String[]{
+              "-mkdir", "/foo"});
+          assertEquals("Return should be 0", 0, ret);
+          out.reset();
+          return null;
+        }
+      });
+
+      user1.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          // Give access to "other"
+          final int ret = ToolRunner.run(fshell, new String[]{
+              "-chmod", "707", "/foo"});
+          assertEquals("Return should be 0", 0, ret);
+          out.reset();
+          return null;
+        }
+      });
+
+      // No permission to write xattr for non-owning user (user2).
+      user2.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          final int ret = ToolRunner.run(fshell, new String[]{
+              "-setfattr", "-n", "user.a1", "-v", "1234", "/foo"});
+          assertEquals("Returned should be 1", 1, ret);
+          final String str = out.toString();
+          assertTrue("Permission denied printed",
+              str.indexOf("Permission denied") != -1);
+          out.reset();
+          return null;
+        }
+      });
+
+      // But there should be permission to write xattr for
+      // the owning user.
+      user1.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          final int ret = ToolRunner.run(fshell, new String[]{
+              "-setfattr", "-n", "user.a1", "-v", "1234", "/foo"});
+          assertEquals("Returned should be 0", 0, ret);
+          out.reset();
+          return null;
+        }
+      });
+
+      // There should be permission to read,but not to remove for
+      // non-owning user (user2).
+      user2.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          // Read
+          int ret = ToolRunner.run(fshell, new String[]{
+              "-getfattr", "-n", "user.a1", "/foo"});
+          assertEquals("Returned should be 0", 0, ret);
+          out.reset();
+          // Remove
+          ret = ToolRunner.run(fshell, new String[]{
+              "-setfattr", "-x", "user.a1", "/foo"});
+          assertEquals("Returned should be 1", 1, ret);
+          final String str = out.toString();
+          assertTrue("Permission denied printed",
+              str.indexOf("Permission denied") != -1);
+          out.reset();
+          return null;
+        }
+      });
+
+      // But there should be permission to read/remove for
+      // the owning user.
+      user1.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          // Read
+          int ret = ToolRunner.run(fshell, new String[]{
+              "-getfattr", "-n", "user.a1", "/foo"});
+          assertEquals("Returned should be 0", 0, ret);
+          out.reset();
+          // Remove
+          ret = ToolRunner.run(fshell, new String[]{
+              "-setfattr", "-x", "user.a1", "/foo"});
+          assertEquals("Returned should be 0", 0, ret);
+          out.reset();
+          return null;
+        }
+      });
+    } finally {
+      if (bak != null) {
+        System.setErr(bak);
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 
   /**
