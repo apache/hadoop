@@ -19,6 +19,8 @@ package org.apache.hadoop.fs;
 
 import java.util.Arrays;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * XAttr is the POSIX Extended Attribute model similar to that found in
  * traditional Operating Systems.  Extended Attributes consist of one
@@ -44,6 +46,7 @@ import java.util.Arrays;
  * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
  *
  */
+@InterfaceAudience.Private
 public class XAttr {
 
   public static enum NameSpace {

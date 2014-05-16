@@ -35,6 +35,9 @@ HDFS-2006 (Unreleased)
 
     HDFS-6283. Write end user documentation for xattrs. (wang)
 
+    HDFS-6412. Interface audience and stability annotations missing from
+    several new classes related to xattrs. (wang)
+
   OPTIMIZATIONS
 
     HDFS-6346. Optimize OP_SET_XATTRS by persisting single Xattr entry per setXattr/removeXattr api call

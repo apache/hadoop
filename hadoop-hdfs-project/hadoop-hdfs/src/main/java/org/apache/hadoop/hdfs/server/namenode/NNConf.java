@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.AclException;
@@ -29,6 +30,7 @@ import com.google.common.base.Preconditions;
 /**
  * This class is a common place for NN configuration.
  */
+@InterfaceAudience.Private
 final class NNConf {
   /**
    * Support for ACLs is controlled by a configuration flag. If the 
