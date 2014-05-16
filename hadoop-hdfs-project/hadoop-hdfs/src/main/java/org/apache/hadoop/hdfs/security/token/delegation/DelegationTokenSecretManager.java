@@ -18,9 +18,16 @@
 
 package org.apache.hadoop.hdfs.security.token.delegation;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.protobuf.ByteString;
+import java.io.DataInput;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map.Entry;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -43,13 +50,9 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 
-import java.io.DataInput;
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map.Entry;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import com.google.protobuf.ByteString;
 
 /**
  * A HDFS specific delegation token secret manager.
@@ -209,6 +212,18 @@ public class DelegationTokenSecretManager
       id.setMasterKeyId(t.getMasterKeyId());
       addPersistedDelegationToken(id, t.getExpiryDate());
     }
+  }
+
+  /**
+   * Store the current state of the SecretManager for persistence
+   *
+   * @param out Output stream for writing into fsimage.
+   * @param sdPath String storage directory path
+   * @throws IOException
+   */
+  public synchronized void saveSecretManagerStateCompat(DataOutputStream out,
+      String sdPath) throws IOException {
+    serializerCompat.save(out, sdPath);
   }
 
   public synchronized SecretManagerState saveSecretManagerState() {
@@ -404,6 +419,56 @@ public class DelegationTokenSecretManager
       loadAllKeys(in);
       delegationTokenSequenceNumber = in.readInt();
       loadCurrentTokens(in);
+    }
+
+    private void save(DataOutputStream out, String sdPath) throws IOException {
+      out.writeInt(currentId);
+      saveAllKeys(out, sdPath);
+      out.writeInt(delegationTokenSequenceNumber);
+      saveCurrentTokens(out, sdPath);
+    }
+
+    /**
+     * Private helper methods to save delegation keys and tokens in fsimage
+     */
+    private synchronized void saveCurrentTokens(DataOutputStream out,
+        String sdPath) throws IOException {
+      StartupProgress prog = NameNode.getStartupProgress();
+      Step step = new Step(StepType.DELEGATION_TOKENS, sdPath);
+      prog.beginStep(Phase.SAVING_CHECKPOINT, step);
+      prog.setTotal(Phase.SAVING_CHECKPOINT, step, currentTokens.size());
+      Counter counter = prog.getCounter(Phase.SAVING_CHECKPOINT, step);
+      out.writeInt(currentTokens.size());
+      Iterator<DelegationTokenIdentifier> iter = currentTokens.keySet()
+          .iterator();
+      while (iter.hasNext()) {
+        DelegationTokenIdentifier id = iter.next();
+        id.write(out);
+        DelegationTokenInformation info = currentTokens.get(id);
+        out.writeLong(info.getRenewDate());
+        counter.increment();
+      }
+      prog.endStep(Phase.SAVING_CHECKPOINT, step);
+    }
+
+    /*
+     * Save the current state of allKeys
+     */
+    private synchronized void saveAllKeys(DataOutputStream out, String sdPath)
+        throws IOException {
+      StartupProgress prog = NameNode.getStartupProgress();
+      Step step = new Step(StepType.DELEGATION_KEYS, sdPath);
+      prog.beginStep(Phase.SAVING_CHECKPOINT, step);
+      prog.setTotal(Phase.SAVING_CHECKPOINT, step, currentTokens.size());
+      Counter counter = prog.getCounter(Phase.SAVING_CHECKPOINT, step);
+      out.writeInt(allKeys.size());
+      Iterator<Integer> iter = allKeys.keySet().iterator();
+      while (iter.hasNext()) {
+        Integer key = iter.next();
+        allKeys.get(key).write(out);
+        counter.increment();
+      }
+      prog.endStep(Phase.SAVING_CHECKPOINT, step);
     }
 
     /**

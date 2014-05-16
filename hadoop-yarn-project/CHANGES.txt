@@ -26,6 +26,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1864. Fair Scheduler Dynamic Hierarchical User Queues (Ashwin Shankar
     via Sandy Ryza)
 
+    YARN-1362. Distinguish between nodemanager shutdown for decommission vs shutdown 
+    for restart. (Jason Lowe via junping_du)
+
   IMPROVEMENTS
 
     YARN-1479. Invalid NaN values in Hadoop REST API JSON response (Chen He via
@@ -108,11 +111,8 @@ Release 2.5.0 - UNRELEASED
 
     YARN-2011. Fix typo and warning in TestLeafQueue (Chen He via junping_du)
 
-    YARN-1976. Fix yarn application CLI to print the scheme of the tracking url
-    of failed/killed applications. (Junping Du via jianhe)
-
-    YARN-2016. Fix a bug in GetApplicationsRequestPBImpl to add the missed fields
-    to proto. (Junping Du via jianhe)
+    YARN-2042. String shouldn't be compared using == in
+    QueuePlacementRule#NestedUserQueue#getQueueForApp (Chen He via Sandy Ryza)
 
 Release 2.4.1 - UNRELEASED
 
@@ -215,6 +215,21 @@ Release 2.4.1 - UNRELEASED
     YARN-1861. Fixed a bug in RM to reset leader-election on fencing that was
     causing both RMs to be stuck in standby mode when automatic failover is
     enabled. (Karthik Kambatla and Xuan Gong via vinodkv)
+
+    YARN-1957. Consider the max capacity of the queue when computing the ideal
+    capacity for preemption. (Carlo Curino via cdouglas)
+
+    YARN-1986. In Fifo Scheduler, node heartbeat in between creating app and
+    attempt causes NPE (Hong Zhiguo via Sandy Ryza)
+
+    YARN-1976. Fix yarn application CLI to print the scheme of the tracking url
+    of failed/killed applications. (Junping Du via jianhe)
+
+    YARN-2016. Fix a bug in GetApplicationsRequestPBImpl to add the missed fields
+    to proto. (Junping Du via jianhe)
+
+    YARN-2053. Fixed a bug in AMS to not add null NMToken into NMTokens list from
+    previous attempts for work-preserving AM restart. (Wangda Tan via jianhe)
 
 Release 2.4.0 - 2014-04-07 
 

@@ -18,11 +18,13 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
 
@@ -231,6 +233,60 @@ public class NNStorageRetentionManager {
         // next time we swing through this directory.
         LOG.warn("Could not delete " + file);
       }      
+    }
+  }
+
+  /**
+   * Delete old OIV fsimages. Since the target dir is not a full blown
+   * storage directory, we simply list and keep the latest ones. For the
+   * same reason, no storage inspector is used.
+   */
+  void purgeOldLegacyOIVImages(String dir, long txid) {
+    File oivImageDir = new File(dir);
+    final String oivImagePrefix = NameNodeFile.IMAGE_LEGACY_OIV.getName();
+    String filesInStorage[];
+
+    // Get the listing
+    filesInStorage = oivImageDir.list(new FilenameFilter() {
+      @Override
+      public boolean accept(File dir, String name) {
+        return name.matches(oivImagePrefix + "_(\\d+)");
+      }
+    });
+
+    // Check whether there is any work to do.
+    if (filesInStorage.length <= numCheckpointsToRetain) {
+      return;
+    }
+
+    // Create a sorted list of txids from the file names.
+    TreeSet<Long> sortedTxIds = new TreeSet<Long>();
+    for (String fName : filesInStorage) {
+      // Extract the transaction id from the file name.
+      long fTxId;
+      try {
+        fTxId = Long.parseLong(fName.substring(oivImagePrefix.length() + 1));
+      } catch (NumberFormatException nfe) {
+        // This should not happen since we have already filtered it.
+        // Log and continue.
+        LOG.warn("Invalid file name. Skipping " + fName);
+        continue;
+      }
+      sortedTxIds.add(Long.valueOf(fTxId));
+    }
+
+    int numFilesToDelete = sortedTxIds.size() - numCheckpointsToRetain;
+    Iterator<Long> iter = sortedTxIds.iterator();
+    while (numFilesToDelete > 0 && iter.hasNext()) {
+      long txIdVal = iter.next().longValue();
+      String fileName = NNStorage.getLegacyOIVImageFileName(txIdVal);
+      LOG.info("Deleting " + fileName);
+      File fileToDelete = new File(oivImageDir, fileName);
+      if (!fileToDelete.delete()) {
+        // deletion failed.
+        LOG.warn("Failed to delete image file: " + fileToDelete);
+      }
+      numFilesToDelete--;
     }
   }
 }

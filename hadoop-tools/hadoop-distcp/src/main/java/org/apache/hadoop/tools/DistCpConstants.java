@@ -115,6 +115,7 @@ public class DistCpConstants {
   public static final int SUCCESS = 0;
   public static final int INVALID_ARGUMENT = -1;
   public static final int DUPLICATE_INPUT = -2;
+  public static final int ACLS_NOT_SUPPORTED = -3;
   public static final int UNKNOWN_ERROR = -999;
   
   /**

@@ -100,6 +100,21 @@ public class FileStatus implements Writable, Comparable {
   }
 
   /**
+   * Copy constructor.
+   *
+   * @param other FileStatus to copy
+   */
+  public FileStatus(FileStatus other) throws IOException {
+    // It's important to call the getters here instead of directly accessing the
+    // members.  Subclasses like ViewFsFileStatus can override the getters.
+    this(other.getLen(), other.isDirectory(), other.getReplication(),
+      other.getBlockSize(), other.getModificationTime(), other.getAccessTime(),
+      other.getPermission(), other.getOwner(), other.getGroup(),
+      (other.isSymlink() ? other.getSymlink() : null),
+      other.getPath());
+  }
+
+  /**
    * Get the length of this file, in bytes.
    * @return the length of this file, in bytes.
    */

@@ -85,17 +85,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.util.Time.now;
 
-import java.io.BufferedWriter;
-import java.io.ByteArrayInputStream;
-import java.io.DataInput;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.URI;
@@ -6092,6 +6082,42 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /**
+   * Serializes leases.
+   */
+  void saveFilesUnderConstruction(DataOutputStream out,
+      Map<Long, INodeFile> snapshotUCMap) throws IOException {
+    // This is run by an inferior thread of saveNamespace, which holds a read
+    // lock on our behalf. If we took the read lock here, we could block
+    // for fairness if a writer is waiting on the lock.
+    synchronized (leaseManager) {
+      Map<String, INodeFile> nodes = leaseManager.getINodesUnderConstruction();
+      for (Map.Entry<String, INodeFile> entry : nodes.entrySet()) {
+        // TODO: for HDFS-5428, because of rename operations, some
+        // under-construction files that are
+        // in the current fs directory can also be captured in the
+        // snapshotUCMap. We should remove them from the snapshotUCMap.
+        snapshotUCMap.remove(entry.getValue().getId());
+      }
+
+      out.writeInt(nodes.size() + snapshotUCMap.size()); // write the size
+      for (Map.Entry<String, INodeFile> entry : nodes.entrySet()) {
+        FSImageSerialization.writeINodeUnderConstruction(
+            out, entry.getValue(), entry.getKey());
+      }
+      for (Map.Entry<Long, INodeFile> entry : snapshotUCMap.entrySet()) {
+        // for those snapshot INodeFileUC, we use "/.reserved/.inodes/<inodeid>"
+        // as their paths
+        StringBuilder b = new StringBuilder();
+        b.append(FSDirectory.DOT_RESERVED_PATH_PREFIX)
+            .append(Path.SEPARATOR).append(FSDirectory.DOT_INODES_STRING)
+            .append(Path.SEPARATOR).append(entry.getValue().getId());
+        FSImageSerialization.writeINodeUnderConstruction(
+            out, entry.getValue(), b.toString());
+      }
+    }
+  }
+
+  /**
    * @return all the under-construction files in the lease map
    */
   Map<String, INodeFile> getFilesUnderConstruction() {
@@ -6375,6 +6401,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       writeUnlock();
     }
     getEditLog().logSync();
+  }
+
+  /**
+   * @param out save state of the secret manager
+   * @param sdPath String storage directory path
+   */
+  void saveSecretManagerStateCompat(DataOutputStream out, String sdPath)
+      throws IOException {
+    dtSecretManager.saveSecretManagerStateCompat(out, sdPath);
   }
 
   SecretManagerState saveSecretManagerState() {
@@ -7403,6 +7438,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       cacheManager.waitForRescanIfNeeded();
     }
     writeLock();
+    String effectiveDirectiveStr = null;
     Long result = null;
     try {
       checkOperation(OperationCategory.WRITE);
@@ -7414,11 +7450,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new IOException("addDirective: you cannot specify an ID " +
             "for this operation.");
       }
-      CacheDirectiveInfo effectiveDirective = 
+      CacheDirectiveInfo effectiveDirective =
           cacheManager.addDirective(directive, pc, flags);
       getEditLog().logAddCacheDirectiveInfo(effectiveDirective,
           cacheEntry != null);
       result = effectiveDirective.getId();
+      effectiveDirectiveStr = effectiveDirective.toString();
       success = true;
     } finally {
       writeUnlock();
@@ -7426,7 +7463,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         getEditLog().logSync();
       }
       if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "addCacheDirective", null, null, null);
+        logAuditEvent(success, "addCacheDirective", effectiveDirectiveStr, null, null);
       }
       RetryCache.setState(cacheEntry, success, result);
     }
@@ -7463,7 +7500,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         getEditLog().logSync();
       }
       if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "modifyCacheDirective", null, null, null);
+        String idStr = "{id: " + directive.getId().toString() + "}";
+        logAuditEvent(success, "modifyCacheDirective", idStr, directive.toString(), null);
       }
       RetryCache.setState(cacheEntry, success);
     }
@@ -7491,7 +7529,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } finally {
       writeUnlock();
       if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "removeCacheDirective", null, null,
+        String idStr = "{id: " + id.toString() + "}";
+        logAuditEvent(success, "removeCacheDirective", idStr, null,
             null);
       }
       RetryCache.setState(cacheEntry, success);
@@ -7516,7 +7555,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } finally {
       readUnlock();
       if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "listCacheDirectives", null, null,
+        logAuditEvent(success, "listCacheDirectives", filter.toString(), null,
             null);
       }
     }
@@ -7533,6 +7572,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     writeLock();
     boolean success = false;
+    String poolInfoStr = null;
     try {
       checkOperation(OperationCategory.WRITE);
       if (isInSafeMode()) {
@@ -7543,12 +7583,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         pc.checkSuperuserPrivilege();
       }
       CachePoolInfo info = cacheManager.addCachePool(req);
+      poolInfoStr = info.toString();
       getEditLog().logAddCachePool(info, cacheEntry != null);
       success = true;
     } finally {
       writeUnlock();
       if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "addCachePool", req.getPoolName(), null, null);
+        logAuditEvent(success, "addCachePool", poolInfoStr, null, null);
       }
       RetryCache.setState(cacheEntry, success);
     }
@@ -7581,7 +7622,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } finally {
       writeUnlock();
       if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "modifyCachePool", req.getPoolName(), null, null);
+        String poolNameStr = "{poolName: " + req.getPoolName() + "}";
+        logAuditEvent(success, "modifyCachePool", poolNameStr, req.toString(), null);
       }
       RetryCache.setState(cacheEntry, success);
     }
@@ -7614,7 +7656,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } finally {
       writeUnlock();
       if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "removeCachePool", cachePoolName, null, null);
+        String poolNameStr = "{poolName: " + cachePoolName + "}";
+        logAuditEvent(success, "removeCachePool", poolNameStr, null, null);
       }
       RetryCache.setState(cacheEntry, success);
     }

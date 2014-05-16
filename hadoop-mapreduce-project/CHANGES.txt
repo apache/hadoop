@@ -194,6 +194,11 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5652. NM Recovery. ShuffleHandler should handle NM restarts.
     (Jason Lowe via kasha)
 
+    MAPREDUCE-5861. finishedSubMaps field in LocalContainerLauncher does not 
+    need to be volatile. (Tsuyoshi OZAWA via junping_du)
+
+    MAPREDUCE-5809. Enhance distcp to support preserving HDFS ACLs. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -272,6 +277,9 @@ Release 2.4.1 - UNRELEASED
 
     MAPREDUCE-5835. Killing Task might cause the job to go to ERROR state
     (Ming Ma via jlowe)
+
+    MAPREDUCE-5821. Avoid unintentional reallocation of byte arrays in segments
+    during merge. (Todd Lipcon via cdouglas)
 
 Release 2.4.0 - 2014-04-07 
 

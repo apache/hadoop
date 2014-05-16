@@ -29,7 +29,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.tools.CopyListingFileStatus;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -133,7 +133,7 @@ public class DynamicInputFormat<K, V> extends InputFormat<K, V> {
     
     List<DynamicInputChunk> chunksFinal = new ArrayList<DynamicInputChunk>();
 
-    FileStatus fileStatus = new FileStatus();
+    CopyListingFileStatus fileStatus = new CopyListingFileStatus();
     Text relPath = new Text();
     int recordCounter = 0;
     int chunkCount = 0;

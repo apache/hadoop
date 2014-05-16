@@ -45,8 +45,10 @@ public enum DistCpOptionSwitch {
    *
    */
   PRESERVE_STATUS(DistCpConstants.CONF_LABEL_PRESERVE_STATUS,
-      new Option("p", true, "preserve status (rbugpc)" +
-          "(replication, block-size, user, group, permission, checksum-type)")),
+      new Option("p", true, "preserve status (rbugpca)(replication, " +
+          "block-size, user, group, permission, checksum-type, ACL).  If " +
+          "-p is specified with no <arg>, then preserves replication, block " +
+          "size, user, group, permission and checksum type.")),
 
   /**
    * Update target location by copying only files that are missing

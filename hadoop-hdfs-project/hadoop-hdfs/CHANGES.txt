@@ -356,6 +356,19 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6186. Pause deletion of blocks when the namenode starts up. (jing9)
 
+    HDFS-6293. Issues with OIV processing PB-based fsimages. (kihwal)
+
+    HDFS-2949. Add check to active state transition to prevent operator-induced
+    split brain. (Rushabh S Shah via kihwal)
+
+    HDFS-6287. Add vecsum test of libhdfs read access times (cmccabe)
+
+    HDFS-5683. Better audit log messages for caching operations.
+    (Abhiraj Butala via wang)
+
+    HDFS-6345. DFS.listCacheDirectives() should allow filtering based on
+    cache directive ID. (wang)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
@@ -472,6 +485,13 @@ Release 2.5.0 - UNRELEASED
     HDFS-6370. Web UI fails to display in intranet under IE.
     (Haohui Mai via cnauroth)
 
+    HDFS-6381. Fix a typo in INodeReference.java. (Binglin Chang via jing9)
+
+    HDFS-6400. Cannot execute hdfs oiv_legacy. (Akira AJISAKA via kihwal)
+
+    HDFS-6250. Fix test failed in TestBalancerWithNodeGroup.testBalancerWithRackLocality
+    (Binglin Chang and Chen He via junping_du)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -537,6 +557,17 @@ Release 2.4.1 - UNRELEASED
 
     HDFS-6313. WebHdfs may use the wrong NN when configured for multiple HA NNs
     (kihwal)
+
+    HDFS-6326. WebHdfs ACL compatibility is broken. (cnauroth)
+
+    HDFS-6361. TestIdUserGroup.testUserUpdateSetting failed due to out of range
+    nfsnobody Id. (Yongjun Zhang via brandonli)
+
+    HDFS-6362. InvalidateBlocks is inconsistent in usage of DatanodeUuid and
+    StorageID. (Arpit Agarwal)
+
+    HDFS-6402. Suppress findbugs warning for failure to override equals and
+    hashCode in FsAclPermission. (cnauroth)
 
 Release 2.4.0 - 2014-04-07 
 
