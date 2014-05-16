@@ -61,3 +61,6 @@ HDFS-2006 (Unreleased)
 
     HDFS-6410. DFSClient unwraps AclException in xattr methods, but those
     methods cannot throw AclException. (wang)
+
+    HDFS-6413. xattr names erroneously handled as case-insensitive.
+    (Charles Lamb via cnauroth)

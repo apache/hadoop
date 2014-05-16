@@ -57,7 +57,7 @@ public class XAttrHelper {
     }
     
     NameSpace ns;
-    final String prefix = name.substring(0, prefixIndex);
+    final String prefix = name.substring(0, prefixIndex).toLowerCase();
     if (prefix.equals(NameSpace.USER.toString().toLowerCase())) {
       ns = NameSpace.USER;
     } else if (prefix.equals(NameSpace.TRUSTED.toString().toLowerCase())) {

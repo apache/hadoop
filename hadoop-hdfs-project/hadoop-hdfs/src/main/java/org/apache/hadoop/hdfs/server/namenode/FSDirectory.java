@@ -2909,7 +2909,7 @@ public class FSDirectory implements Closeable {
     List<XAttr> xAttrs = Lists.newArrayListWithCapacity(existingXAttrs.size());
     for (XAttr a : existingXAttrs) {
       if (!(a.getNameSpace() == xAttr.getNameSpace()
-          && a.getName().equalsIgnoreCase(xAttr.getName()))) {
+          && a.getName().equals(xAttr.getName()))) {
         xAttrs.add(a);
       }
     }
@@ -2947,7 +2947,7 @@ public class FSDirectory implements Closeable {
     if (existingXAttrs != null) {
       for (XAttr a: existingXAttrs) {
         if ((a.getNameSpace() == xAttr.getNameSpace()
-            && a.getName().equalsIgnoreCase(xAttr.getName()))) {
+            && a.getName().equals(xAttr.getName()))) {
           exist = true;
         } else {
           xAttrs.add(a);

@@ -1950,6 +1950,108 @@ public class TestDFSShell {
     }
   }
 
+  /* HDFS-6413 xattr names erroneously handled as case-insensitive */
+  @Test (timeout = 30000)
+  public void testSetXAttrCaseSensitivity() throws Exception {
+    UserGroupInformation user = UserGroupInformation.
+        createUserForTesting("user", new String[] {"mygroup"});
+    MiniDFSCluster cluster = null;
+    PrintStream bak = null;
+    try {
+      final Configuration conf = new HdfsConfiguration();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+
+      FileSystem fs = cluster.getFileSystem();
+      Path p = new Path("/mydir");
+      fs.mkdirs(p);
+      bak = System.err;
+
+      final FsShell fshell = new FsShell(conf);
+      final ByteArrayOutputStream out = new ByteArrayOutputStream();
+      System.setOut(new PrintStream(out));
+
+      doSetXattr(out, fshell,
+        new String[] {"-setfattr", "-n", "User.Foo", "/mydir"},
+        new String[] {"-getfattr", "-d", "/mydir"},
+        new String[] {"user.Foo"},
+        new String[] {});
+
+      doSetXattr(out, fshell,
+        new String[] {"-setfattr", "-n", "user.FOO", "/mydir"},
+        new String[] {"-getfattr", "-d", "/mydir"},
+        new String[] {"user.Foo", "user.FOO"},
+        new String[] {});
+
+      doSetXattr(out, fshell,
+        new String[] {"-setfattr", "-n", "USER.foo", "/mydir"},
+        new String[] {"-getfattr", "-d", "/mydir"},
+        new String[] {"user.Foo", "user.FOO", "user.foo"},
+        new String[] {});
+
+      doSetXattr(out, fshell,
+        new String[] {"-setfattr", "-n", "USER.fOo", "-v", "myval", "/mydir"},
+        new String[] {"-getfattr", "-d", "/mydir"},
+        new String[] {"user.Foo", "user.FOO", "user.foo", "user.fOo=\"myval\""},
+        new String[] {"user.Foo=", "user.FOO=", "user.foo="});
+
+      doSetXattr(out, fshell,
+        new String[] {"-setfattr", "-x", "useR.foo", "/mydir"},
+        new String[] {"-getfattr", "-d", "/mydir"},
+        new String[] {"user.Foo", "user.FOO"},
+        new String[] {"foo"});
+
+      doSetXattr(out, fshell,
+        new String[] {"-setfattr", "-x", "USER.FOO", "/mydir"},
+        new String[] {"-getfattr", "-d", "/mydir"},
+        new String[] {"user.Foo"},
+        new String[] {"FOO"});
+
+      doSetXattr(out, fshell,
+        new String[] {"-setfattr", "-x", "useR.Foo", "/mydir"},
+        new String[] {"-getfattr", "-n", "User.Foo", "/mydir"},
+        new String[] {},
+        new String[] {"Foo"});
+
+    } finally {
+      if (bak != null) {
+        System.setOut(bak);
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  private void doSetXattr(ByteArrayOutputStream out, FsShell fshell,
+    String[] setOp, String[] getOp, String[] expectArr,
+    String[] dontExpectArr) throws Exception {
+    int ret = ToolRunner.run(fshell, setOp);
+    out.reset();
+    ret = ToolRunner.run(fshell, getOp);
+    final String str = out.toString();
+    for (int i = 0; i < expectArr.length; i++) {
+      final String expect = expectArr[i];
+      final StringBuilder sb = new StringBuilder
+        ("Incorrect results from getfattr. Expected: ");
+      sb.append(expect).append(" Full Result: ");
+      sb.append(str);
+      assertTrue(sb.toString(),
+        str.indexOf(expect) != -1);
+    }
+
+    for (int i = 0; i < dontExpectArr.length; i++) {
+      String dontExpect = dontExpectArr[i];
+      final StringBuilder sb = new StringBuilder
+        ("Incorrect results from getfattr. Didn't Expect: ");
+      sb.append(dontExpect).append(" Full Result: ");
+      sb.append(str);
+      assertTrue(sb.toString(),
+        str.indexOf(dontExpect) == -1);
+    }
+    out.reset();
+  }
+
   /**
    * Test that the server trash configuration is respected when
    * the client configuration is not set.
