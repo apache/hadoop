@@ -70,6 +70,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1981. Nodemanager version is not updated when a node reconnects (Jason
     Lowe via jeagles)
 
+    YARN-2053. Fixed a bug in AMS to not add null NMToken into NMTokens list from
+    previous attempts for work-preserving AM restart. (Wangda Tan via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES 
