@@ -23,7 +23,6 @@ import org.apache.hadoop.mapreduce.task.MapContextImpl;
 import org.apache.hadoop.mapreduce.lib.map.WrappedMapper;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.conf.Configuration;
 
 import java.util.List;
@@ -33,18 +32,19 @@ import java.io.IOException;
 public class StubContext {
 
   private StubStatusReporter reporter = new StubStatusReporter();
-  private RecordReader<Text, FileStatus> reader;
+  private RecordReader<Text, CopyListingFileStatus> reader;
   private StubInMemoryWriter writer = new StubInMemoryWriter();
-  private Mapper<Text, FileStatus, Text, Text>.Context mapperContext;
+  private Mapper<Text, CopyListingFileStatus, Text, Text>.Context mapperContext;
 
-  public StubContext(Configuration conf, RecordReader<Text, FileStatus> reader,
-                     int taskId) throws IOException, InterruptedException {
+  public StubContext(Configuration conf,
+      RecordReader<Text, CopyListingFileStatus> reader, int taskId)
+      throws IOException, InterruptedException {
 
-    WrappedMapper<Text, FileStatus, Text, Text> wrappedMapper
-            = new WrappedMapper<Text, FileStatus, Text, Text>();
+    WrappedMapper<Text, CopyListingFileStatus, Text, Text> wrappedMapper
+            = new WrappedMapper<Text, CopyListingFileStatus, Text, Text>();
 
-    MapContextImpl<Text, FileStatus, Text, Text> contextImpl
-            = new MapContextImpl<Text, FileStatus, Text, Text>(conf,
+    MapContextImpl<Text, CopyListingFileStatus, Text, Text> contextImpl
+            = new MapContextImpl<Text, CopyListingFileStatus, Text, Text>(conf,
             getTaskAttemptID(taskId), reader, writer,
             null, reporter, null);
 
@@ -52,7 +52,7 @@ public class StubContext {
     this.mapperContext = wrappedMapper.getMapContext(contextImpl);
   }
 
-  public Mapper<Text, FileStatus, Text, Text>.Context getContext() {
+  public Mapper<Text, CopyListingFileStatus, Text, Text>.Context getContext() {
     return mapperContext;
   }
 
@@ -60,7 +60,7 @@ public class StubContext {
     return reporter;
   }
 
-  public RecordReader<Text, FileStatus> getReader() {
+  public RecordReader<Text, CopyListingFileStatus> getReader() {
     return reader;
   }
 

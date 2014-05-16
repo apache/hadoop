@@ -27,8 +27,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
+import org.apache.hadoop.fs.permission.AclUtil;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.ScopedAclEntries;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 
@@ -90,7 +92,7 @@ final class AclStorage {
     FsPermission childPerm = child.getFsPermission();
 
     // Copy each default ACL entry from parent to new child's access ACL.
-    boolean parentDefaultIsMinimal = isMinimalAcl(parentDefaultEntries);
+    boolean parentDefaultIsMinimal = AclUtil.isMinimalAcl(parentDefaultEntries);
     for (AclEntry entry: parentDefaultEntries) {
       AclEntryType type = entry.getType();
       String name = entry.getName();
@@ -127,7 +129,7 @@ final class AclStorage {
       Collections.<AclEntry>emptyList();
 
     final FsPermission newPerm;
-    if (!isMinimalAcl(accessEntries) || !defaultEntries.isEmpty()) {
+    if (!AclUtil.isMinimalAcl(accessEntries) || !defaultEntries.isEmpty()) {
       // Save the new ACL to the child.
       child.addAclFeature(createAclFeature(accessEntries, defaultEntries));
       newPerm = createFsPermissionForExtendedAcl(accessEntries, childPerm);
@@ -172,7 +174,7 @@ final class AclStorage {
     FsPermission perm = inode.getFsPermission();
     AclFeature f = inode.getAclFeature();
     if (f == null) {
-      return getMinimalAcl(perm);
+      return AclUtil.getMinimalAcl(perm);
     }
 
     final List<AclEntry> existingAcl;
@@ -208,7 +210,7 @@ final class AclStorage {
     } else {
       // It's possible that there is a default ACL but no access ACL. In this
       // case, add the minimal access ACL implied by the permission bits.
-      existingAcl.addAll(getMinimalAcl(perm));
+      existingAcl.addAll(AclUtil.getMinimalAcl(perm));
     }
 
     // Add all default entries after the access entries.
@@ -267,7 +269,7 @@ final class AclStorage {
     assert newAcl.size() >= 3;
     FsPermission perm = inode.getFsPermission();
     final FsPermission newPerm;
-    if (!isMinimalAcl(newAcl)) {
+    if (!AclUtil.isMinimalAcl(newAcl)) {
       // This is an extended ACL.  Split entries into access vs. default.
       ScopedAclEntries scoped = new ScopedAclEntries(newAcl);
       List<AclEntry> accessEntries = scoped.getAccessEntries();
@@ -321,7 +323,7 @@ final class AclStorage {
     // For the access ACL, the feature only needs to hold the named user and
     // group entries.  For a correctly sorted ACL, these will be in a
     // predictable range.
-    if (!isMinimalAcl(accessEntries)) {
+    if (!AclUtil.isMinimalAcl(accessEntries)) {
       featureEntries.addAll(
         accessEntries.subList(1, accessEntries.size() - 2));
     }
@@ -365,42 +367,5 @@ final class AclStorage {
       accessEntries.get(1).getPermission(),
       accessEntries.get(2).getPermission(),
       existingPerm.getStickyBit());
-  }
-
-  /**
-   * Translates the given permission bits to the equivalent minimal ACL.
-   *
-   * @param perm FsPermission to translate
-   * @return List<AclEntry> containing exactly 3 entries representing the owner,
-   *   group and other permissions
-   */
-  private static List<AclEntry> getMinimalAcl(FsPermission perm) {
-    return Lists.newArrayList(
-      new AclEntry.Builder()
-        .setScope(AclEntryScope.ACCESS)
-        .setType(AclEntryType.USER)
-        .setPermission(perm.getUserAction())
-        .build(),
-      new AclEntry.Builder()
-        .setScope(AclEntryScope.ACCESS)
-        .setType(AclEntryType.GROUP)
-        .setPermission(perm.getGroupAction())
-        .build(),
-      new AclEntry.Builder()
-        .setScope(AclEntryScope.ACCESS)
-        .setType(AclEntryType.OTHER)
-        .setPermission(perm.getOtherAction())
-        .build());
-  }
-
-  /**
-   * Checks if the given entries represent a minimal ACL (contains exactly 3
-   * entries).
-   *
-   * @param entries List<AclEntry> entries to check
-   * @return boolean true if the entries represent a minimal ACL
-   */
-  private static boolean isMinimalAcl(List<AclEntry> entries) {
-    return entries.size() == 3;
   }
 }

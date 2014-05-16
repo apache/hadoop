@@ -30,6 +30,7 @@ import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.tools.CopyListing;
+import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.hadoop.tools.StubContext;
 import org.apache.hadoop.security.Credentials;
@@ -122,8 +123,8 @@ public class TestUniformSizeInputFormat {
     for (int i=0; i<splits.size(); ++i) {
       InputSplit split = splits.get(i);
       int currentSplitSize = 0;
-      RecordReader<Text, FileStatus> recordReader = uniformSizeInputFormat.createRecordReader(
-              split, null);
+      RecordReader<Text, CopyListingFileStatus> recordReader =
+        uniformSizeInputFormat.createRecordReader(split, null);
       StubContext stubContext = new StubContext(jobContext.getConfiguration(),
                                                 recordReader, 0);
       final TaskAttemptContext taskAttemptContext
@@ -168,7 +169,7 @@ public class TestUniformSizeInputFormat {
 
     try {
       reader.seek(lastEnd);
-      FileStatus srcFileStatus = new FileStatus();
+      CopyListingFileStatus srcFileStatus = new CopyListingFileStatus();
       Text srcRelPath = new Text();
       Assert.assertFalse(reader.next(srcRelPath, srcFileStatus));
     } finally {
