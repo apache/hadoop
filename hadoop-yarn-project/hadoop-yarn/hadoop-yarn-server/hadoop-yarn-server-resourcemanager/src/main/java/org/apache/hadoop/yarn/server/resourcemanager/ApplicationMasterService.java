@@ -298,9 +298,12 @@ public class ApplicationMasterService extends AbstractService implements
         List<NMToken> nmTokens = new ArrayList<NMToken>();
         for (Container container : transferredContainers) {
           try {
-            nmTokens.add(rmContext.getNMTokenSecretManager()
-              .createAndGetNMToken(app.getUser(), applicationAttemptId,
-                container));
+            NMToken token = rmContext.getNMTokenSecretManager()
+                .createAndGetNMToken(app.getUser(), applicationAttemptId,
+                    container);
+            if (null != token) {
+              nmTokens.add(token);
+            }
           } catch (IllegalArgumentException e) {
             // if it's a DNS issue, throw UnknowHostException directly and that
             // will be automatically retried by RMProxy in RPC layer.

@@ -264,31 +264,36 @@ public class TestAMRestart {
     nm2.registerNode();
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
-    int NUM_CONTAINERS = 1;
     List<Container> containers = new ArrayList<Container>();
     // nmTokens keeps track of all the nmTokens issued in the allocate call.
     List<NMToken> expectedNMTokens = new ArrayList<NMToken>();
 
-    // am1 allocate 1 container on nm1.
+    // am1 allocate 2 container on nm1.
+    // first container
     while (true) {
       AllocateResponse response =
-          am1.allocate("127.0.0.1", 2000, NUM_CONTAINERS,
+          am1.allocate("127.0.0.1", 2000, 2,
             new ArrayList<ContainerId>());
       nm1.nodeHeartbeat(true);
       containers.addAll(response.getAllocatedContainers());
       expectedNMTokens.addAll(response.getNMTokens());
-      if (containers.size() == NUM_CONTAINERS) {
+      if (containers.size() == 2) {
         break;
       }
       Thread.sleep(200);
       System.out.println("Waiting for container to be allocated.");
     }
-    // launch the container
+    // launch the container-2
     nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 2, ContainerState.RUNNING);
     ContainerId containerId2 =
         ContainerId.newInstance(am1.getApplicationAttemptId(), 2);
     rm1.waitForState(nm1, containerId2, RMContainerState.RUNNING);
-
+    // launch the container-3
+    nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 3, ContainerState.RUNNING);
+    ContainerId containerId3 =
+        ContainerId.newInstance(am1.getApplicationAttemptId(), 3);
+    rm1.waitForState(nm1, containerId3, RMContainerState.RUNNING);
+    
     // fail am1
     nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
     am1.waitForState(RMAppAttemptState.FAILED);
@@ -308,12 +313,12 @@ public class TestAMRestart {
     containers = new ArrayList<Container>();
     while (true) {
       AllocateResponse allocateResponse =
-          am2.allocate("127.1.1.1", 4000, NUM_CONTAINERS,
+          am2.allocate("127.1.1.1", 4000, 1,
             new ArrayList<ContainerId>());
       nm2.nodeHeartbeat(true);
       containers.addAll(allocateResponse.getAllocatedContainers());
       expectedNMTokens.addAll(allocateResponse.getNMTokens());
-      if (containers.size() == NUM_CONTAINERS) {
+      if (containers.size() == 1) {
         break;
       }
       Thread.sleep(200);
