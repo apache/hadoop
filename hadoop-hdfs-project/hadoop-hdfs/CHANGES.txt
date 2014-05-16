@@ -237,6 +237,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6400. Cannot execute hdfs oiv_legacy. (Akira AJISAKA via kihwal)
 
+    HDFS-6250. Fix test failed in TestBalancerWithNodeGroup.testBalancerWithRackLocality
+    (Binglin Chang and Chen He via junping_du)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
