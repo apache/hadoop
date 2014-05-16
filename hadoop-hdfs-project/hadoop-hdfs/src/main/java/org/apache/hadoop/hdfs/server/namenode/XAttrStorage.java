@@ -60,21 +60,21 @@ public class XAttrStorage {
    * Update xattrs of inode.
    * @param inode INode to update
    * @param xAttrs to update xAttrs.
-   * @param snapshotId
+   * @param snapshotId id of the latest snapshot of the inode
    */
   public static void updateINodeXAttrs(INode inode, 
       List<XAttr> xAttrs, int snapshotId) throws QuotaExceededException {
     if (xAttrs == null || xAttrs.isEmpty()) {
-      if (inode.getXAttrFeature(snapshotId) != null) {
+      if (inode.getXAttrFeature() != null) {
         inode.removeXAttrFeature(snapshotId);
       }
       return;
     }
     
     ImmutableList<XAttr> newXAttrs = ImmutableList.copyOf(xAttrs);
-    if (inode.getXAttrFeature(snapshotId) != null) {
+    if (inode.getXAttrFeature() != null) {
       inode.removeXAttrFeature(snapshotId);
     }
-    inode.addXAttrFeature(new XAttrFeature(newXAttrs));
+    inode.addXAttrFeature(new XAttrFeature(newXAttrs), snapshotId);
   }
 }

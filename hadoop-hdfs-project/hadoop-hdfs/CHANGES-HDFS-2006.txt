@@ -64,3 +64,6 @@ HDFS-2006 (Unreleased)
 
     HDFS-6413. xattr names erroneously handled as case-insensitive.
     (Charles Lamb via cnauroth)
+
+    HDFS-6414. xattr modification operations are based on state of latest
+    snapshot instead of current version of inode. (Andrew Wang via cnauroth)

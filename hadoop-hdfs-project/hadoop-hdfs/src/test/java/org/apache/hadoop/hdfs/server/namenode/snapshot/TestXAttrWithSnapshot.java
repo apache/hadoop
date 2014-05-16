@@ -18,11 +18,16 @@
 
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+
+import java.util.EnumSet;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -83,6 +88,80 @@ public class TestXAttrWithSnapshot {
     path = new Path("/p" + pathCount);
     snapshotName = "snapshot" + pathCount;
     snapshotPath = new Path(path, new Path(".snapshot", snapshotName));
+  }
+
+  /**
+   * Tests modifying xattrs on a directory that has been snapshotted
+   */
+  @Test (timeout = 120000)
+  public void testModifyReadsCurrentState() throws Exception {
+    // Init
+    FileSystem.mkdirs(hdfs, path, FsPermission.createImmutable((short) 0700));
+    SnapshotTestHelper.createSnapshot(hdfs, path, snapshotName);
+    hdfs.setXAttr(path, name1, value1);
+    hdfs.setXAttr(path, name2, value2);
+
+    // Verify that current path reflects xattrs, snapshot doesn't
+    Map<String, byte[]> xattrs = hdfs.getXAttrs(path);
+    assertEquals(xattrs.size(), 2);
+    assertArrayEquals(value1, xattrs.get(name1));
+    assertArrayEquals(value2, xattrs.get(name2));
+
+    xattrs = hdfs.getXAttrs(snapshotPath);
+    assertEquals(xattrs.size(), 0);
+
+    // Modify each xattr and make sure it's reflected
+    hdfs.setXAttr(path, name1, value2, EnumSet.of(XAttrSetFlag.REPLACE));
+    xattrs = hdfs.getXAttrs(path);
+    assertEquals(xattrs.size(), 2);
+    assertArrayEquals(value2, xattrs.get(name1));
+    assertArrayEquals(value2, xattrs.get(name2));
+
+    hdfs.setXAttr(path, name2, value1, EnumSet.of(XAttrSetFlag.REPLACE));
+    xattrs = hdfs.getXAttrs(path);
+    assertEquals(xattrs.size(), 2);
+    assertArrayEquals(value2, xattrs.get(name1));
+    assertArrayEquals(value1, xattrs.get(name2));
+
+    // Paranoia checks
+    xattrs = hdfs.getXAttrs(snapshotPath);
+    assertEquals(xattrs.size(), 0);
+
+    hdfs.removeXAttr(path, name1);
+    hdfs.removeXAttr(path, name2);
+    xattrs = hdfs.getXAttrs(path);
+    assertEquals(xattrs.size(), 0);
+  }
+
+  /**
+   * Tests removing xattrs on a directory that has been snapshotted
+   */
+  @Test (timeout = 120000)
+  public void testRemoveReadsCurrentState() throws Exception {
+    // Init
+    FileSystem.mkdirs(hdfs, path, FsPermission.createImmutable((short) 0700));
+    SnapshotTestHelper.createSnapshot(hdfs, path, snapshotName);
+    hdfs.setXAttr(path, name1, value1);
+    hdfs.setXAttr(path, name2, value2);
+
+    // Verify that current path reflects xattrs, snapshot doesn't
+    Map<String, byte[]> xattrs = hdfs.getXAttrs(path);
+    assertEquals(xattrs.size(), 2);
+    assertArrayEquals(value1, xattrs.get(name1));
+    assertArrayEquals(value2, xattrs.get(name2));
+
+    xattrs = hdfs.getXAttrs(snapshotPath);
+    assertEquals(xattrs.size(), 0);
+
+    // Remove xattrs and verify one-by-one
+    hdfs.removeXAttr(path, name2);
+    xattrs = hdfs.getXAttrs(path);
+    assertEquals(xattrs.size(), 1);
+    assertArrayEquals(value1, xattrs.get(name1));
+
+    hdfs.removeXAttr(path, name1);
+    xattrs = hdfs.getXAttrs(path);
+    assertEquals(xattrs.size(), 0);
   }
 
   /**
@@ -213,6 +292,25 @@ public class TestXAttrWithSnapshot {
 
     exception.expect(NSQuotaExceededException.class);
     hdfs.setXAttr(filePath, name2, value2);
+  }
+
+
+  /**
+   * Test that an exception is thrown when adding an XAttr Feature to
+   * a snapshotted path
+   */
+  @Test
+  public void testSetXAttrAfterSnapshotExceedsQuota() throws Exception {
+    Path filePath = new Path(path, "file1");
+    FileSystem.mkdirs(hdfs, path, FsPermission.createImmutable((short) 0755));
+    hdfs.allowSnapshot(path);
+    hdfs.setQuota(path, 3, HdfsConstants.QUOTA_DONT_SET);
+    FileSystem.create(hdfs, filePath,
+        FsPermission.createImmutable((short) 0600)).close();
+    hdfs.createSnapshot(path, snapshotName);
+    // This adds an XAttr feature, which can throw an exception
+    exception.expect(NSQuotaExceededException.class);
+    hdfs.setXAttr(filePath, name1, value1);
   }
 
   /**
