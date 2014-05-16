@@ -22,8 +22,9 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
@@ -39,6 +40,9 @@ import org.apache.hadoop.hdfs.MiniDFSClusterWithNodeGroup;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyWithNodeGroup;
 import org.apache.hadoop.net.NetworkTopology;
@@ -53,7 +57,7 @@ public class TestBalancerWithNodeGroup {
   private static final Log LOG = LogFactory.getLog(
   "org.apache.hadoop.hdfs.TestBalancerWithNodeGroup");
   
-  final private static long CAPACITY = 6000L;
+  final private static long CAPACITY = 5000L;
   final private static String RACK0 = "/rack0";
   final private static String RACK1 = "/rack1";
   final private static String NODEGROUP0 = "/nodegroup0";
@@ -77,6 +81,7 @@ public class TestBalancerWithNodeGroup {
   static Configuration createConf() {
     Configuration conf = new HdfsConfiguration();
     TestBalancer.initConf(conf);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
     conf.set(CommonConfigurationKeysPublic.NET_TOPOLOGY_IMPL_KEY, 
         NetworkTopologyWithNodeGroup.class.getName());
     conf.set(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY, 
@@ -191,6 +196,19 @@ public class TestBalancerWithNodeGroup {
     LOG.info("Rebalancing with default factor.");
   }
 
+  private Set<ExtendedBlock> getBlocksOnRack(List<LocatedBlock> blks, String rack) {
+    Set<ExtendedBlock> ret = new HashSet<ExtendedBlock>();
+    for (LocatedBlock blk : blks) {
+      for (DatanodeInfo di : blk.getLocations()) {
+        if (rack.equals(NetworkTopology.getFirstHalf(di.getNetworkLocation()))) {
+          ret.add(blk.getBlock());
+          break;
+        }
+      }
+    }
+    return ret;
+  }
+
   /**
    * Create a cluster with even distribution, and a new empty node is added to
    * the cluster, then test rack locality for balancer policy. 
@@ -220,9 +238,14 @@ public class TestBalancerWithNodeGroup {
 
       // fill up the cluster to be 30% full
       long totalUsedSpace = totalCapacity * 3 / 10;
-      TestBalancer.createFile(cluster, filePath, totalUsedSpace / numOfDatanodes,
+      long length = totalUsedSpace / numOfDatanodes;
+      TestBalancer.createFile(cluster, filePath, length,
           (short) numOfDatanodes, 0);
       
+      LocatedBlocks lbs = client.getBlockLocations(filePath.toUri().getPath(), 0,
+          length);
+      Set<ExtendedBlock> before = getBlocksOnRack(lbs.getLocatedBlocks(), RACK0);
+
       long newCapacity = CAPACITY;
       String newRack = RACK1;
       String newNodeGroup = NODEGROUP2;
@@ -235,22 +258,9 @@ public class TestBalancerWithNodeGroup {
       // run balancer and validate results
       runBalancerCanFinish(conf, totalUsedSpace, totalCapacity);
       
-      DatanodeInfo[] datanodeReport = 
-              client.getDatanodeReport(DatanodeReportType.ALL);
-      
-      Map<String, Integer> rackToUsedCapacity = new HashMap<String, Integer>();
-      for (DatanodeInfo datanode: datanodeReport) {
-        String rack = NetworkTopology.getFirstHalf(datanode.getNetworkLocation());
-        int usedCapacity = (int) datanode.getDfsUsed();
-         
-        if (rackToUsedCapacity.get(rack) != null) {
-          rackToUsedCapacity.put(rack, usedCapacity + rackToUsedCapacity.get(rack));
-        } else {
-          rackToUsedCapacity.put(rack, usedCapacity);
-        }
-      }
-      assertEquals(rackToUsedCapacity.size(), 2);
-      assertEquals(rackToUsedCapacity.get(RACK0), rackToUsedCapacity.get(RACK1));
+      lbs = client.getBlockLocations(filePath.toUri().getPath(), 0, length);
+      Set<ExtendedBlock> after = getBlocksOnRack(lbs.getLocatedBlocks(), RACK0);
+      assertEquals(before, after);
       
     } finally {
       cluster.shutdown();

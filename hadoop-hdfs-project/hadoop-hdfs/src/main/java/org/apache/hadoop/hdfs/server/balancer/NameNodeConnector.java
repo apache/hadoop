@@ -170,7 +170,7 @@ class NameNodeConnector {
   }
 
   /* The idea for making sure that there is no more than one balancer
-   * running in an HDFS is to create a file in the HDFS, writes the IP address
+   * running in an HDFS is to create a file in the HDFS, writes the hostname
    * of the machine on which the balancer is running to the file, but did not
    * close the file until the balancer exits. 
    * This prevents the second balancer from running because it can not
