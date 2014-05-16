@@ -58,3 +58,6 @@ HDFS-2006 (Unreleased)
     (umamahesh)
 
     HDFS-6372. Handle setXattr rpcIDs for OfflineEditsViewer. (umamahesh)
+
+    HDFS-6410. DFSClient unwraps AclException in xattr methods, but those
+    methods cannot throw AclException. (wang)

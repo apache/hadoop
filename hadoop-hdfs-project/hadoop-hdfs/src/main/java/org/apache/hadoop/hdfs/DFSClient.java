@@ -2767,7 +2767,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
       namenode.setXAttr(src, XAttrHelper.buildXAttr(name, value), flag);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     AclException.class,
                                      FileNotFoundException.class,
                                      NSQuotaExceededException.class,
                                      SafeModeException.class,
@@ -2784,7 +2783,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
       return XAttrHelper.getFirstXAttrValue(result);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     AclException.class,
                                      FileNotFoundException.class,
                                      UnresolvedPathException.class);
     }
@@ -2796,7 +2794,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
       return XAttrHelper.buildXAttrMap(namenode.getXAttrs(src, null));
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     AclException.class,
                                      FileNotFoundException.class,
                                      UnresolvedPathException.class);
     }
@@ -2810,7 +2807,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
           src, XAttrHelper.buildXAttrs(names)));
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     AclException.class,
                                      FileNotFoundException.class,
                                      UnresolvedPathException.class);
     }
@@ -2822,7 +2818,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
       namenode.removeXAttr(src, XAttrHelper.buildXAttr(name));
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     AclException.class,
                                      FileNotFoundException.class,
                                      NSQuotaExceededException.class,
                                      SafeModeException.class,
