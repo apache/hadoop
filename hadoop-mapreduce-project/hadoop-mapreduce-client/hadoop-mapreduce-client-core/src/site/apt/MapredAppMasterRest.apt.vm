@@ -11,32 +11,30 @@
 ~~ limitations under the License. See accompanying LICENSE file.
 
   ---
-  History Server REST API's.
+  MapReduce Application Master REST API's.
   ---
   ---
   ${maven.build.timestamp}
 
-History Server REST API's.
+MapReduce Application Master REST API's.
 
-  \[ {{{./index.html}Go Back}} \]
-
-%{toc|section=1|fromDepth=0|toDepth=3}
+%{toc|section=1|fromDepth=0|toDepth=2}
 
 * Overview
 
-  The history server REST API's allow the user to get status on finished applications. Currently it only supports MapReduce and provides information on finished jobs.
+  The MapReduce Application Master REST API's allow the user to get status on the running MapReduce application master. Currently this is the equivalent to a running MapReduce job. The information includes the jobs the app master is running and all the job particulars like tasks, counters, configuration, attempts, etc. The application master should be accessed via the proxy.  This proxy is configurable to run either on the resource manager or on a separate host. The proxy URL usually looks like: http://<proxy http address:port>/proxy/{appid}.
+  
+* Mapreduce Application Master Info API
 
-* History Server Information API
-
-  The history server information resource provides overall information about the history server. 
+  The MapReduce application master information resource provides overall information about that mapreduce application master. This includes application id, time it was started, user, name, etc. 
 
 ** URI
 
-  Both of the following URI's give you the history server information, from an application id identified by the appid value. 
+  Both of the following URI's give you the MapReduce application master information, from an application id identified by the appid value. 
 
 ------
-  * http://<history server http address:port>/ws/v1/history
-  * http://<history server http address:port>/ws/v1/history/info
+  * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce
+  * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/info
 ------
 
 ** HTTP Operations Supported
@@ -51,18 +49,22 @@ History Server REST API's.
   None
 ------
 
-** Elements of the <historyInfo> object
+** Elements of the <info> object
+
+  When you make a request for the mapreduce application master information, the information will be returned as an info object.
 
 *---------------+--------------+-------------------------------+
 || Item         || Data Type   || Description                   |
 *---------------+--------------+-------------------------------+
-| startedOn | long  | The time the history server was started (in ms since epoch)|
+| appId            | long         | The application id |
 *---------------+--------------+-------------------------------+
-| hadoopVersion | string  | Version of hadoop common |
+| startedOn     | long         | The time the application started (in ms since epoch)|
 *---------------+--------------+-------------------------------+
-| hadoopBuildVersion | string  | Hadoop common build string with build version, user, and checksum |
+| name | string | The name of the application |
 *---------------+--------------+-------------------------------+
-| hadoopVersionBuiltOn | string  | Timestamp when hadoop common was built |
+| user | string | The user name of the user who started the application |
+*---------------+--------------+-------------------------------+
+| elapsedTime | long | The time since the application was started (in ms)|
 *---------------+--------------+-------------------------------+
 
 ** Response Examples
@@ -72,7 +74,7 @@ History Server REST API's.
   HTTP Request:
 
 ------
-  GET http://<history server http address:port>/ws/v1/history/info
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0003/ws/v1/mapreduce/info
 ------
 
   Response Header:
@@ -88,11 +90,12 @@ History Server REST API's.
 
 +---+
 {   
-   "historyInfo" : {
-      "startedOn":1353512830963,
-      "hadoopVersionBuiltOn" : "Wed Jan 11 21:18:36 UTC 2012",
-      "hadoopBuildVersion" : "0.23.1-SNAPSHOT from 1230253 by user1 source checksum bb6e554c6d50b0397d826081017437a7",
-      "hadoopVersion" : "0.23.1-SNAPSHOT"
+  "info" : {
+      "appId" : "application_1326232085508_0003",
+      "startedOn" : 1326238244047,
+      "user" : "user1",
+      "name" : "Sleep job",
+      "elapsedTime" : 32374
    }
 }
 +---+
@@ -102,8 +105,8 @@ History Server REST API's.
   HTTP Request:
 
 -----
-  GET http://<history server http address:port>/ws/v1/history/info
   Accept: application/xml
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0003/ws/v1/mapreduce/info
 -----
 
   Response Header:
@@ -111,7 +114,7 @@ History Server REST API's.
 +---+
   HTTP/1.1 200 OK
   Content-Type: application/xml
-  Content-Length: 330
+  Content-Length: 223
   Server: Jetty(6.1.26)
 +---+
 
@@ -119,70 +122,55 @@ History Server REST API's.
 
 +---+
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<historyInfo>
-  <startedOn>1353512830963</startedOn>
-  <hadoopVersion>0.23.1-SNAPSHOT</hadoopVersion>
-  <hadoopBuildVersion>0.23.1-SNAPSHOT from 1230253 by user1 source checksum bb6e554c6d50b0397d826081017437a7</hadoopBuildVersion>
-  <hadoopVersionBuiltOn>Wed Jan 11 21:18:36 UTC 2012</hadoopVersionBuiltOn>
-</historyInfo>
+<info>
+  <appId>application_1326232085508_0003</appId>
+  <name>Sleep job</name>
+  <user>user1</user>
+  <startedOn>1326238244047</startedOn>
+  <elapsedTime>32407</elapsedTime>
+</info>
 +---+
 
-* MapReduce API's
+* Jobs API
 
-  The following list of resources apply to MapReduce.
+  The jobs resource provides a list of the jobs running on this application master.  See also {{Job API}} for syntax of the job object.
 
-** Jobs API
-
-  The jobs resource provides a list of the MapReduce jobs that have finished.  It does not currently return a full list of parameters
-
-*** URI
+** URI
 
 ------
-  *  http://<history server http address:port>/ws/v1/history/mapreduce/jobs
+  *  http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs
 ------
 
-*** HTTP Operations Supported 
+** HTTP Operations Supported 
 
 ------
   * GET
 ------
 
-*** Query Parameters Supported
-
-  Multiple paramters can be specified.  The started and finished times have a begin and end parameter to allow you to specify ranges.  For example, one could request all jobs that started between 1:00am and 2:00pm on 12/19/2011 with startedTimeBegin=1324256400&startedTimeEnd=1324303200. If the Begin parameter is not specfied, it defaults to 0, and if the End parameter is not specified, it defaults to infinity.
+** Query Parameters Supported
 
 ------
-  * user - user name
-  * state - the job state
-  * queue - queue name
-  * limit - total number of app objects to be returned
-  * startedTimeBegin - jobs with start time beginning with this time, specified in ms since epoch
-  * startedTimeEnd - jobs with start time ending with this time, specified in ms since epoch
-  * finishedTimeBegin - jobs with finish time beginning with this time, specified in ms since epoch
-  * finishedTimeEnd - jobs with finish time ending with this time, specified in ms since epoch
+  None
 ------
 
-*** Elements of the <jobs> object
+** Elements of the <jobs> object
 
-  When you make a request for the list of jobs, the information will be returned as an array of job objects.
-  See also {{Job API}} for syntax of the job object.  Except this is a subset of a full job.  Only startTime,
-  finishTime, id, name, queue, user, state, mapsTotal, mapsCompleted, reducesTotal, and reducesCompleted are
-  returned.
+  When you make a request for the list of jobs, the information will be returned as a collection of job objects. See also {{Job API}} for syntax of the job object.
 
 *---------------+--------------+-------------------------------+
 || Item         || Data Type  || Description                   |
 *---------------+--------------+-------------------------------+
-| job | array of job objects(json)/zero or more job objects(XML) | The collection of job objects |
+| job | array of job objects(JSON)/Zero or more job objects(XML) | The collection of job objects |
 *---------------+--------------+-------------------------------+
 
-*** Response Examples
+** Response Examples
 
   <<JSON response>>
 
   HTTP Request:
 
 ------
-  GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs
 ------
 
   Response Header:
@@ -198,39 +186,52 @@ History Server REST API's.
 
 +---+
 {
-   "jobs" : {
+  "jobs" : {
       "job" : [
          {
-            "submitTime" : 1326381344449,
-            "state" : "SUCCEEDED",
+            "runningReduceAttempts" : 1,
+            "reduceProgress" : 100,
+            "failedReduceAttempts" : 0,
+            "newMapAttempts" : 0,
+            "mapsRunning" : 0,
+            "state" : "RUNNING",
+            "successfulReduceAttempts" : 0,
+            "reducesRunning" : 1,
+            "acls" : [
+               {
+                  "value" : " ",
+                  "name" : "mapreduce.job.acl-modify-job"
+               },
+               {
+                  "value" : " ",
+                  "name" : "mapreduce.job.acl-view-job"
+               }
+            ],
+            "reducesPending" : 0,
             "user" : "user1",
             "reducesTotal" : 1,
             "mapsCompleted" : 1,
-            "startTime" : 1326381344489,
-            "id" : "job_1326381300833_1_1",
-            "name" : "word count",
-            "reducesCompleted" : 1,
-            "mapsTotal" : 1,
-            "queue" : "default",
-            "finishTime" : 1326381356010
-         },
-         {
-            "submitTime" : 1326381446500
-            "state" : "SUCCEEDED",
-            "user" : "user1",
-            "reducesTotal" : 1,
-            "mapsCompleted" : 1,
-            "startTime" : 1326381446529,
-            "id" : "job_1326381300833_2_2",
+            "startTime" : 1326238769379,
+            "id" : "job_1326232085508_4_4",
+            "successfulMapAttempts" : 1,
+            "runningMapAttempts" : 0,
+            "newReduceAttempts" : 0,
             "name" : "Sleep job",
-            "reducesCompleted" : 1,
+            "mapsPending" : 0,
+            "elapsedTime" : 59377,
+            "reducesCompleted" : 0,
+            "mapProgress" : 100,
+            "diagnostics" : "",
+            "failedMapAttempts" : 0,
+            "killedReduceAttempts" : 0,
             "mapsTotal" : 1,
-            "queue" : "default",
-            "finishTime" : 1326381582106
+            "uberized" : false,
+            "killedMapAttempts" : 0,
+            "finishTime" : 0
          }
-      ]
+     ]
    }
-}
+ }
 +---+
 
   <<XML response>>
@@ -238,7 +239,7 @@ History Server REST API's.
   HTTP Request:
 
 ------
-  GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs
   Accept: application/xml
 ------
 
@@ -247,7 +248,7 @@ History Server REST API's.
 +---+
   HTTP/1.1 200 OK
   Content-Type: application/xml
-  Content-Length: 1922
+  Content-Length: 1214 
   Server: Jetty(6.1.26)
 +---+
 
@@ -257,59 +258,72 @@ History Server REST API's.
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <jobs>
   <job>
-    <submitTime>1326381344449</submitTime>
-    <startTime>1326381344489</startTime>
-    <finishTime>1326381356010</finishTime>
-    <id>job_1326381300833_1_1</id>
-    <name>word count</name>
-    <queue>default</queue>
-    <user>user1</user>
-    <state>SUCCEEDED</state>
-    <mapsTotal>1</mapsTotal>
-    <mapsCompleted>1</mapsCompleted>
-    <reducesTotal>1</reducesTotal>
-    <reducesCompleted>1</reducesCompleted>
-  </job>
-  <job>
-    <submitTime>1326381446500</submitTime>
-    <startTime>1326381446529</startTime>
-    <finishTime>1326381582106</finishTime>
-    <id>job_1326381300833_2_2</id>
+    <startTime>1326238769379</startTime>
+    <finishTime>0</finishTime>
+    <elapsedTime>59416</elapsedTime>
+    <id>job_1326232085508_4_4</id>
     <name>Sleep job</name>
-    <queue>default</queue>
     <user>user1</user>
-    <state>SUCCEEDED</state>
+    <state>RUNNING</state>
     <mapsTotal>1</mapsTotal>
     <mapsCompleted>1</mapsCompleted>
     <reducesTotal>1</reducesTotal>
-    <reducesCompleted>1</reducesCompleted>
+    <reducesCompleted>0</reducesCompleted>
+    <mapProgress>100.0</mapProgress>
+    <reduceProgress>100.0</reduceProgress>
+    <mapsPending>0</mapsPending>
+    <mapsRunning>0</mapsRunning>
+    <reducesPending>0</reducesPending>
+    <reducesRunning>1</reducesRunning>
+    <uberized>false</uberized>
+    <diagnostics/>
+    <newReduceAttempts>0</newReduceAttempts>
+    <runningReduceAttempts>1</runningReduceAttempts>
+    <failedReduceAttempts>0</failedReduceAttempts>
+    <killedReduceAttempts>0</killedReduceAttempts>
+    <successfulReduceAttempts>0</successfulReduceAttempts>
+    <newMapAttempts>0</newMapAttempts>
+    <runningMapAttempts>0</runningMapAttempts>
+    <failedMapAttempts>0</failedMapAttempts>
+    <killedMapAttempts>0</killedMapAttempts>
+    <successfulMapAttempts>1</successfulMapAttempts>
+    <acls>
+      <name>mapreduce.job.acl-modify-job</name>
+      <value> </value>
+    </acls>
+    <acls>
+      <name>mapreduce.job.acl-view-job</name>
+      <value> </value>
+    </acls>
   </job>
 </jobs>
 +---+
 
-** {Job API}
+* {Job API}
 
-  A Job resource contains information about a particular job identified by {jobid}. 
+  A job resource contains information about a particular job that was started by this application master. Certain fields are only accessible if user has permissions - depends on acl settings.
 
-*** URI
+** URI
+
+  Use the following URI to obtain a job object, for a job identified by the jobid value.
 
 ------
-  * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}
+  * http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/{jobid}
 ------
 
-*** HTTP Operations Supported 
+** HTTP Operations Supported 
 
 ------
   * GET
 ------
 
-*** Query Parameters Supported
+** Query Parameters Supported
 
 ------
   None
 ------
 
-*** Elements of the <job> object
+** Elements of the <job> object
 
 *---------------+--------------+-------------------------------+
 || Item         || Data Type   || Description                   |
@@ -318,19 +332,15 @@ History Server REST API's.
 *---------------+--------------+-------------------------------+
 | name | string | The job name |
 *---------------+--------------+-------------------------------+
-| queue | string | The queue the job was submitted to|
-*---------------+--------------+-------------------------------+
 | user | string | The user name |
 *---------------+--------------+-------------------------------+
 | state | string | the job state - valid values are:  NEW, INITED, RUNNING, SUCCEEDED, FAILED, KILL_WAIT, KILLED, ERROR|
 *---------------+--------------+-------------------------------+
-| diagnostics | string | A diagnostic message |
-*---------------+--------------+-------------------------------+
-| submitTime | long | The time the job submitted (in ms since epoch)|
-*---------------+--------------+-------------------------------+
 | startTime | long | The time the job started (in ms since epoch)|
 *---------------+--------------+-------------------------------+
 | finishTime | long | The time the job finished (in ms since epoch)|
+*---------------+--------------+-------------------------------+
+| elapsedTime | long | The elapsed time since job started (in ms)|
 *---------------+--------------+-------------------------------+
 | mapsTotal | int | The total number of maps |
 *---------------+--------------+-------------------------------+
@@ -340,21 +350,31 @@ History Server REST API's.
 *---------------+--------------+-------------------------------+
 | reducesCompleted | int | The number of completed reduces|
 *---------------+--------------+-------------------------------+
+| diagnostics | string | A diagnostic message |
+*---------------+--------------+-------------------------------+
 | uberized | boolean | Indicates if the job was an uber job - ran completely in the application master|
 *---------------+--------------+-------------------------------+
-| avgMapTime | long | The average time of a map task (in ms)|
+| mapsPending | int | The number of maps still to be run|
 *---------------+--------------+-------------------------------+
-| avgReduceTime | long | The average time of the reduce (in ms)|
+| mapsRunning | int | The number of running maps |
 *---------------+--------------+-------------------------------+
-| avgShuffleTime | long | The average time of the shuffle (in ms)|
+| reducesPending | int | The number of reduces still to be run |
 *---------------+--------------+-------------------------------+
-| avgMergeTime | long | The average time of the merge (in ms)|
+| reducesRunning | int | The number of running reduces|
+*---------------+--------------+-------------------------------+
+| newReduceAttempts | int | The number of new reduce attempts |
+*---------------+--------------+-------------------------------+
+| runningReduceAttempts | int | The number of running reduce attempts |
 *---------------+--------------+-------------------------------+
 | failedReduceAttempts | int | The number of failed reduce attempts |
 *---------------+--------------+-------------------------------+
 | killedReduceAttempts | int | The number of killed reduce attempts |
 *---------------+--------------+-------------------------------+
 | successfulReduceAttempts | int | The number of successful reduce attempts |
+*---------------+--------------+-------------------------------+
+| newMapAttempts | int | The number of new map attempts |
+*---------------+--------------+-------------------------------+
+| runningMapAttempts | int | The number of running map attempts |
 *---------------+--------------+-------------------------------+
 | failedMapAttempts | int | The number of failed map attempts |
 *---------------+--------------+-------------------------------+
@@ -375,14 +395,14 @@ History Server REST API's.
 | name | string | The acl name |
 *---------------+--------------+-------------------------------+
 
-*** Response Examples
+** Response Examples
 
   <<JSON response>>
 
   HTTP Request:
 
 ------
-  GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4
 ------
 
   Response Header:
@@ -399,40 +419,45 @@ History Server REST API's.
 +---+
 {
    "job" : {
-      "submitTime":  1326381446500,
-      "avgReduceTime" : 124961,
+      "runningReduceAttempts" : 1,
+      "reduceProgress" : 100,
       "failedReduceAttempts" : 0,
-      "state" : "SUCCEEDED",
-      "successfulReduceAttempts" : 1,
+      "newMapAttempts" : 0,
+      "mapsRunning" : 0,
+      "state" : "RUNNING",
+      "successfulReduceAttempts" : 0,
+      "reducesRunning" : 1,
       "acls" : [
-         {
+         {  
             "value" : " ",
             "name" : "mapreduce.job.acl-modify-job"
          },
-         {
+         {  
             "value" : " ",
             "name" : "mapreduce.job.acl-view-job"
          }
       ],
+      "reducesPending" : 0,
       "user" : "user1",
       "reducesTotal" : 1,
       "mapsCompleted" : 1,
-      "startTime" : 1326381446529,
-      "id" : "job_1326381300833_2_2",
-      "avgMapTime" : 2638,
+      "startTime" : 1326238769379,
+      "id" : "job_1326232085508_4_4",
       "successfulMapAttempts" : 1,
+      "runningMapAttempts" : 0,
+      "newReduceAttempts" : 0,
       "name" : "Sleep job",
-      "avgShuffleTime" : 2540,
-      "reducesCompleted" : 1,
+      "mapsPending" : 0,
+      "elapsedTime" : 59437,
+      "reducesCompleted" : 0,
+      "mapProgress" : 100,
       "diagnostics" : "",
       "failedMapAttempts" : 0,
-      "avgMergeTime" : 2589,
       "killedReduceAttempts" : 0,
       "mapsTotal" : 1,
-      "queue" : "default",
       "uberized" : false,
       "killedMapAttempts" : 0,
-      "finishTime" : 1326381582106
+      "finishTime" : 0
    }
 }
 +---+
@@ -442,7 +467,7 @@ History Server REST API's.
   HTTP Request:
 
 ------
-  GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4
   Accept: application/xml
 ------
 
@@ -451,7 +476,7 @@ History Server REST API's.
 +---+
   HTTP/1.1 200 OK
   Content-Type: application/xml
-  Content-Length: 983
+  Content-Length: 1201
   Server: Jetty(6.1.26)
 +---+
 
@@ -460,27 +485,32 @@ History Server REST API's.
 +---+
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <job>
-  <submitTime>1326381446500</submitTime>
-  <startTime>1326381446529</startTime>
-  <finishTime>1326381582106</finishTime>
-  <id>job_1326381300833_2_2</id>
+  <startTime>1326238769379</startTime>
+  <finishTime>0</finishTime>
+  <elapsedTime>59474</elapsedTime>
+  <id>job_1326232085508_4_4</id>
   <name>Sleep job</name>
-  <queue>default</queue>
   <user>user1</user>
-  <state>SUCCEEDED</state>
+  <state>RUNNING</state>
   <mapsTotal>1</mapsTotal>
   <mapsCompleted>1</mapsCompleted>
   <reducesTotal>1</reducesTotal>
-  <reducesCompleted>1</reducesCompleted>
+  <reducesCompleted>0</reducesCompleted>
+  <mapProgress>100.0</mapProgress>
+  <reduceProgress>100.0</reduceProgress>
+  <mapsPending>0</mapsPending>
+  <mapsRunning>0</mapsRunning>
+  <reducesPending>0</reducesPending>
+  <reducesRunning>1</reducesRunning>
   <uberized>false</uberized>
-  <diagnostics/>
-  <avgMapTime>2638</avgMapTime>
-  <avgReduceTime>124961</avgReduceTime>
-  <avgShuffleTime>2540</avgShuffleTime>
-  <avgMergeTime>2589</avgMergeTime>
+  <diagnostics/>  
+  <newReduceAttempts>0</newReduceAttempts>
+  <runningReduceAttempts>1</runningReduceAttempts>
   <failedReduceAttempts>0</failedReduceAttempts>
   <killedReduceAttempts>0</killedReduceAttempts>
-  <successfulReduceAttempts>1</successfulReduceAttempts>
+  <successfulReduceAttempts>0</successfulReduceAttempts>
+  <newMapAttempts>0</newMapAttempts>
+  <runningMapAttempts>0</runningMapAttempts>
   <failedMapAttempts>0</failedMapAttempts>
   <killedMapAttempts>0</killedMapAttempts>
   <successfulMapAttempts>1</successfulMapAttempts>
@@ -489,39 +519,36 @@ History Server REST API's.
     <value> </value>
   </acls>
   <acls>
-    <name>mapreduce.job.acl-view-job</name>
-    <value> </value>
+    <name>mapreduce.job.acl-view-job</name>    <value> </value>
   </acls>
 </job>
 +---+
 
-** Job Attempts API
+* Job Attempts API
 
-  With the job attempts API, you can obtain a collection of resources that represent a job attempt.  When you run a GET operation on this resource, you obtain a collection of Job Attempt Objects. 
+  With the job attempts API, you can obtain a collection of resources that represent the job attempts.  When you run a GET operation on this resource, you obtain a collection of Job Attempt Objects.
 
-*** URI
+** URI
 
 ------
-  * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}/jobattempts
+  * http://<history server http address:port>/ws/v1/history/jobs/{jobid}/jobattempts
 ------
 
-*** HTTP Operations Supported 
+** HTTP Operations Supported
 
 ------
   * GET
 ------
 
-*** Query Parameters Supported
+** Query Parameters Supported
 
 ------
   None
 ------
 
-*** Elements of the <jobAttempts> object
+** Elements of the <jobAttempts> object
 
-  When you make a request for the list of job attempts, the information will be returned as an array of job attempt objects. 
-
-  jobAttempts:
+  When you make a request for the list of job attempts, the information will be returned as an array of job attempt objects.
 
 *---------------+--------------+-------------------------------+
 || Item         || Data Type   || Description                  |
@@ -529,7 +556,7 @@ History Server REST API's.
 | jobAttempt | array of job attempt objects(JSON)/zero or more job attempt objects(XML) | The collection of job attempt objects |
 *---------------+--------------+--------------------------------+
 
-*** Elements of the <jobAttempt> object
+** Elements of the <jobAttempt> object
 
 *---------------+--------------+-------------------------------+
 || Item         || Data Type   || Description                  |
@@ -547,14 +574,14 @@ History Server REST API's.
 | startTime | long | The start time of the attempt (in ms since epoch)|
 *---------------+--------------+--------------------------------+
 
-*** Response Examples
+** Response Examples
 
   <<JSON response>>
 
   HTTP Request:
 
 ------
-  GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/jobattempts
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/jobattempts
 ------
 
   Response Header:
@@ -572,14 +599,14 @@ History Server REST API's.
 {
    "jobAttempts" : {
       "jobAttempt" : [
-         {
+         {    
             "nodeId" : "host.domain.com:8041",
             "nodeHttpAddress" : "host.domain.com:8042",
-            "startTime" : 1326381444693,
-            "id" : 1,
-            "logsLink" : "http://host.domain.com:19888/jobhistory/logs/host.domain.com:8041/container_1326381300833_0002_01_000001/job_1326381300833_2_2/user1",
-            "containerId" : "container_1326381300833_0002_01_000001"
-         }
+            "startTime" : 1326238773493,
+            "id" : 1, 
+            "logsLink" : "http://host.domain.com:8042/node/containerlogs/container_1326232085508_0004_01_000001",
+            "containerId" : "container_1326232085508_0004_01_000001"
+         }  
       ]
    }
 }
@@ -590,7 +617,7 @@ History Server REST API's.
   HTTP Request:
 
 ------
-  GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/jobattmpts
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/jobattempts
   Accept: application/xml
 ------
 
@@ -599,7 +626,7 @@ History Server REST API's.
 +---+
   HTTP/1.1 200 OK
   Content-Type: application/xml
-  Content-Length: 575
+  Content-Length: 498
   Server: Jetty(6.1.26)
 +---+
 
@@ -612,37 +639,37 @@ History Server REST API's.
     <nodeHttpAddress>host.domain.com:8042</nodeHttpAddress>
     <nodeId>host.domain.com:8041</nodeId>
     <id>1</id>
-    <startTime>1326381444693</startTime>
-    <containerId>container_1326381300833_0002_01_000001</containerId>
-    <logsLink>http://host.domain.com:19888/jobhistory/logs/host.domain.com:8041/container_1326381300833_0002_01_000001/job_1326381300833_2_2/user1</logsLink>
+    <startTime>1326238773493</startTime>
+    <containerId>container_1326232085508_0004_01_000001</containerId>
+    <logsLink>http://host.domain.com:8042/node/containerlogs/container_1326232085508_0004_01_000001</logsLink>
   </jobAttempt>
 </jobAttempts>
 +---+
 
-** Job Counters API
+* Job Counters API
 
-  With the job counters API, you can object a collection of resources that represent al the counters for that job. 
+  With the job counters API, you can object a collection of resources that represent all the counters for that job. 
 
-*** URI
+** URI
 
 ------
-  * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}/counters
+  * http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/{jobid}/counters
 ------
 
-*** HTTP Operations Supported 
+** HTTP Operations Supported 
 
 ------
   * GET
 ------
 
-*** Query Parameters Supported
+** Query Parameters Supported
 
 ------
   None
 ------
 
-*** Elements of the <jobCounters> object
-  
+** Elements of the <jobCounters> object
+
 *---------------+--------------+-------------------------------+
 || Item         || Data Type   || Description                   |
 *---------------+--------------+-------------------------------+
@@ -651,7 +678,7 @@ History Server REST API's.
 | counterGroup | array of counterGroup objects(JSON)/zero or more counterGroup objects(XML) | A collection of counter group objects |
 *---------------+--------------+-------------------------------+
 
-*** Elements of the <counterGroup> objecs
+** Elements of the <counterGroup> object
 
 *---------------+--------------+-------------------------------+
 || Item         || Data Type   || Description                   |
@@ -661,7 +688,7 @@ History Server REST API's.
 | counter | array of counter objects(JSON)/zero or more counter objects(XML) | A collection of counter objects |
 *---------------+--------------+-------------------------------+
 
-*** Elements of the <counter> object
+** Elements of the <counter> object
 
 *---------------+--------------+-------------------------------+
 || Item         || Data Type   || Description                   |
@@ -675,14 +702,14 @@ History Server REST API's.
 | totalCounterValue | long | The counter value of all tasks |
 *---------------+--------------+-------------------------------+
 
-*** Response Examples
+** Response Examples
 
   <<JSON response>>
 
   HTTP Request:
 
 ------
-  GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/counters
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/counters
 ------
 
   Response Header:
@@ -699,83 +726,82 @@ History Server REST API's.
 +---+
 {
    "jobCounters" : {
-      "id" : "job_1326381300833_2_2",
+      "id" : "job_1326232085508_4_4",
       "counterGroup" : [
          {
             "counterGroupName" : "Shuffle Errors",
             "counter" : [
-               {
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 0,
                   "name" : "BAD_ID"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 0,
                   "name" : "CONNECTION"
-               },
-               {
+               }, 
+              {
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 0,
                   "name" : "IO_ERROR"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 0,
                   "name" : "WRONG_LENGTH"
-               },
-               {
+               },                {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 0,
                   "name" : "WRONG_MAP"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 0,
                   "name" : "WRONG_REDUCE"
                }
             ]
-          },
-         {
+         }, 
+         {  
             "counterGroupName" : "org.apache.hadoop.mapreduce.FileSystemCounter",
             "counter" : [
-               {
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 2483,
                   "name" : "FILE_BYTES_READ"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
-                  "totalCounterValue" : 108525,
+                  "totalCounterValue" : 108763,
                   "name" : "FILE_BYTES_WRITTEN"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 0,
                   "name" : "FILE_READ_OPS"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 0,
                   "name" : "FILE_LARGE_READ_OPS"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 0,
                   "name" : "FILE_WRITE_OPS"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 48,
@@ -786,156 +812,155 @@ History Server REST API's.
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 0,
                   "name" : "HDFS_BYTES_WRITTEN"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 1,
                   "name" : "HDFS_READ_OPS"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 0,
                   "name" : "HDFS_LARGE_READ_OPS"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 0,
                   "name" : "HDFS_WRITE_OPS"
                }
             ]
-         },
-         {
+         }, 
+         {  
             "counterGroupName" : "org.apache.hadoop.mapreduce.TaskCounter",
             "counter" : [
-               {
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 1,
                   "name" : "MAP_INPUT_RECORDS"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 1200,
                   "name" : "MAP_OUTPUT_RECORDS"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 4800,
                   "name" : "MAP_OUTPUT_BYTES"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 2235,
                   "name" : "MAP_OUTPUT_MATERIALIZED_BYTES"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 48,
                   "name" : "SPLIT_RAW_BYTES"
-               },
-               {
+               }, 
+              {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 0,
                   "name" : "COMBINE_INPUT_RECORDS"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 0,
                   "name" : "COMBINE_OUTPUT_RECORDS"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
-                  "totalCounterValue" : 1200,
+                  "totalCounterValue" : 460,
                   "name" : "REDUCE_INPUT_GROUPS"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 2235,
                   "name" : "REDUCE_SHUFFLE_BYTES"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
-                  "totalCounterValue" : 1200,
+                  "totalCounterValue" : 460,
                   "name" : "REDUCE_INPUT_RECORDS"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 0,
                   "name" : "REDUCE_OUTPUT_RECORDS"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
-                  "totalCounterValue" : 2400,
+                  "totalCounterValue" : 1200,
                   "name" : "SPILLED_RECORDS"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 1,
                   "name" : "SHUFFLED_MAPS"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 0,
                   "name" : "FAILED_SHUFFLE"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 1,
                   "name" : "MERGED_MAP_OUTPUTS"
-               },
-               {
+               },                {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
-                  "totalCounterValue" : 113,
+                  "totalCounterValue" : 58,
                   "name" : "GC_TIME_MILLIS"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
-                  "totalCounterValue" : 1830,
+                  "totalCounterValue" : 1580,
                   "name" : "CPU_MILLISECONDS"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
-                  "totalCounterValue" : 478068736,
+                  "totalCounterValue" : 462643200,
                   "name" : "PHYSICAL_MEMORY_BYTES"
-               },
-               {
+               }, 
+               {   
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
-                  "totalCounterValue" : 2159284224,
+                  "totalCounterValue" : 2149728256,
                   "name" : "VIRTUAL_MEMORY_BYTES"
-               },
-               {
+               }, 
+              {  
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
-                  "totalCounterValue" : 378863616,
+                  "totalCounterValue" : 357957632,
                   "name" : "COMMITTED_HEAP_BYTES"
                }
             ]
          },
-         {
+         {  
             "counterGroupName" : "org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter",
             "counter" : [
-               {
+               {  
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 0,
@@ -946,7 +971,7 @@ History Server REST API's.
          {
             "counterGroupName" : "org.apache.hadoop.mapreduce.lib.output.FileOutputFormatCounter",
             "counter" : [
-               {
+               {  
                   "reduceCounterValue" : 0,
                   "mapCounterValue" : 0,
                   "totalCounterValue" : 0,
@@ -964,7 +989,7 @@ History Server REST API's.
   HTTP Request:
 
 ------
-  GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/counters
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/counters
   Accept: application/xml
 ------
 
@@ -973,7 +998,7 @@ History Server REST API's.
 +---+
   HTTP/1.1 200 OK
   Content-Type: application/xml
-  Content-Length: 7030
+  Content-Length: 7027
   Server: Jetty(6.1.26)
 +---+
 
@@ -982,7 +1007,7 @@ History Server REST API's.
 +---+
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <jobCounters>
-  <id>job_1326381300833_2_2</id>
+  <id>job_1326232085508_4_4</id>
   <counterGroup>
     <counterGroupName>Shuffle Errors</counterGroupName>
     <counter>
@@ -1032,7 +1057,7 @@ History Server REST API's.
     </counter>
     <counter>
       <name>FILE_BYTES_WRITTEN</name>
-      <totalCounterValue>108525</totalCounterValue>
+      <totalCounterValue>108763</totalCounterValue>
       <mapCounterValue>0</mapCounterValue>
       <reduceCounterValue>0</reduceCounterValue>
     </counter>
@@ -1086,7 +1111,7 @@ History Server REST API's.
     </counter>
   </counterGroup>
   <counterGroup>
-    <counterGroupName>org.apache.hadoop.mapreduce.TaskCounter</counterGroupName>
+    <counterGroupName>org.apache.hadoop.mapreduce.TaskCounter</counterGroupName> 
     <counter>
       <name>MAP_INPUT_RECORDS</name>
       <totalCounterValue>1</totalCounterValue>
@@ -1131,7 +1156,7 @@ History Server REST API's.
     </counter>
     <counter>
       <name>REDUCE_INPUT_GROUPS</name>
-      <totalCounterValue>1200</totalCounterValue>
+      <totalCounterValue>460</totalCounterValue>
       <mapCounterValue>0</mapCounterValue>
       <reduceCounterValue>0</reduceCounterValue>
     </counter>
@@ -1143,7 +1168,7 @@ History Server REST API's.
     </counter>
     <counter>
       <name>REDUCE_INPUT_RECORDS</name>
-      <totalCounterValue>1200</totalCounterValue>
+      <totalCounterValue>460</totalCounterValue>
       <mapCounterValue>0</mapCounterValue>
       <reduceCounterValue>0</reduceCounterValue>
     </counter>
@@ -1155,7 +1180,7 @@ History Server REST API's.
     </counter>
     <counter>
       <name>SPILLED_RECORDS</name>
-      <totalCounterValue>2400</totalCounterValue>
+      <totalCounterValue>1200</totalCounterValue>
       <mapCounterValue>0</mapCounterValue>
       <reduceCounterValue>0</reduceCounterValue>
     </counter>
@@ -1179,31 +1204,31 @@ History Server REST API's.
     </counter>
     <counter>
       <name>GC_TIME_MILLIS</name>
-      <totalCounterValue>113</totalCounterValue>
+      <totalCounterValue>58</totalCounterValue>
       <mapCounterValue>0</mapCounterValue>
       <reduceCounterValue>0</reduceCounterValue>
     </counter>
     <counter>
       <name>CPU_MILLISECONDS</name>
-      <totalCounterValue>1830</totalCounterValue>
+      <totalCounterValue>1580</totalCounterValue>
       <mapCounterValue>0</mapCounterValue>
       <reduceCounterValue>0</reduceCounterValue>
     </counter>
     <counter>
       <name>PHYSICAL_MEMORY_BYTES</name>
-      <totalCounterValue>478068736</totalCounterValue>
+      <totalCounterValue>462643200</totalCounterValue>
       <mapCounterValue>0</mapCounterValue>
       <reduceCounterValue>0</reduceCounterValue>
     </counter>
     <counter>
       <name>VIRTUAL_MEMORY_BYTES</name>
-      <totalCounterValue>2159284224</totalCounterValue>
+      <totalCounterValue>2149728256</totalCounterValue>
       <mapCounterValue>0</mapCounterValue>
       <reduceCounterValue>0</reduceCounterValue>
     </counter>
     <counter>
       <name>COMMITTED_HEAP_BYTES</name>
-      <totalCounterValue>378863616</totalCounterValue>
+      <totalCounterValue>357957632</totalCounterValue>
       <mapCounterValue>0</mapCounterValue>
       <reduceCounterValue>0</reduceCounterValue>
     </counter>
@@ -1215,12 +1240,9 @@ History Server REST API's.
       <totalCounterValue>0</totalCounterValue>
       <mapCounterValue>0</mapCounterValue>
       <reduceCounterValue>0</reduceCounterValue>
-    </counter>
-  </counterGroup>
-  <counterGroup>
+    </counter>  </counterGroup>  <counterGroup>
     <counterGroupName>org.apache.hadoop.mapreduce.lib.output.FileOutputFormatCounter</counterGroupName>
-    <counter>
-      <name>BYTES_WRITTEN</name>
+    <counter>      <name>BYTES_WRITTEN</name>
       <totalCounterValue>0</totalCounterValue>
       <mapCounterValue>0</mapCounterValue>
       <reduceCounterValue>0</reduceCounterValue>
@@ -1229,42 +1251,41 @@ History Server REST API's.
 </jobCounters>
 +---+
 
-
-** Job Conf API
+* Job Conf API
 
   A job configuration resource contains information about the job configuration for this job.
 
-*** URI
+** URI
 
   Use the following URI to obtain th job configuration information, from a job identified by the {jobid} value. 
 
 ------
-  * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}/conf
+  * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/conf
 ------
 
-*** HTTP Operations Supported 
+** HTTP Operations Supported 
 
 ------
   * GET
 ------
 
-*** Query Parameters Supported
+** Query Parameters Supported
 
 ------
   None
 ------
 
-*** Elements of the <conf> object
+** Elements of the <conf> object
 
 *---------------+--------------+-------------------------------+
 || Item         || Data Type   || Description                   |
 *---------------+--------------+-------------------------------+
 | path | string | The path to the job configuration file|
 *---------------+--------------+-------------------------------+
-| property | array of the configuration properties(JSON)/zero or more configuration properties(XML) | Collection of configuration property objects|
+| property | array of the configuration properties(JSON)/zero or more property objects(XML) | Collection of property objects |
 *---------------+--------------+-------------------------------+
 
-*** Elements of the <property> object
+** Elements of the <property> object
 
 *---------------+--------------+-------------------------------+
 || Item         || Data Type   || Description                   |
@@ -1276,15 +1297,14 @@ History Server REST API's.
 | source | string | The location this configuration object came from. If there is more then one of these it shows the history with the latest source at the end of the list. |
 *---------------+--------------+-------------------------------+
 
-
-*** Response Examples
+** Response Examples
 
   <<JSON response>>
 
   HTTP Request:
 
 ------
-  GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/conf
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/conf
 ------
 
   Response Header:
@@ -1303,11 +1323,11 @@ History Server REST API's.
 +---+
 {
    "conf" : {
-      "path" : "hdfs://host.domain.com:9000/user/user1/.staging/job_1326381300833_0002/job.xml",
+      "path" : "hdfs://host.domain.com:9000/user/user1/.staging/job_1326232085508_0004/job.xml",
       "property" : [
          {  
             "value" : "/home/hadoop/hdfs/data",
-            "name" : "dfs.datanode.data.dir"
+            "name" : "dfs.datanode.data.dir",
             "source" : ["hdfs-site.xml", "job.xml"]
          },
          {
@@ -1331,7 +1351,7 @@ History Server REST API's.
   HTTP Request:
 
 ------
-  GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/conf
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/conf
   Accept: application/xml
 ------
 
@@ -1349,7 +1369,7 @@ History Server REST API's.
 +---+
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <conf>
-  <path>hdfs://host.domain.com:9000/user/user1/.staging/job_1326381300833_0002/job.xml</path>
+  <path>hdfs://host.domain.com:9000/user/user1/.staging/job_1326232085508_0004/job.xml</path>
   <property>
     <name>dfs.datanode.data.dir</name>
     <value>/home/hadoop/hdfs/data</value>
@@ -1371,29 +1391,29 @@ History Server REST API's.
 </conf>
 +---+
 
-** Tasks API
+* Tasks API
 
-  With the tasks API, you can obtain a collection of resources that represent a task within a job.  When you run a GET operation on this resource, you obtain a collection of Task Objects. 
+  With the tasks API, you can obtain a collection of resources that represent all the tasks for a job.  When you run a GET operation on this resource, you obtain a collection of Task Objects. 
 
-*** URI
+** URI
 
 ------
-  * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}/tasks
+  * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks
 ------
 
-*** HTTP Operations Supported 
+** HTTP Operations Supported 
 
 ------
   * GET
 ------
 
-*** Query Parameters Supported
+** Query Parameters Supported
 
 ------
   * type - type of task, valid values are m or r.  m for map task or r for reduce task.
 ------
 
-*** Elements of the <tasks> object
+** Elements of the <tasks> object
 
   When you make a request for the list of tasks , the information will be returned as an array of task objects. 
   See also {{Task API}} for syntax of the task object.
@@ -1401,17 +1421,17 @@ History Server REST API's.
 *---------------+--------------+-------------------------------+
 || Item         || Data Type   || Description                  |
 *---------------+--------------+-------------------------------+
-| task | array of task objects(JSON)/zero or more task objects(XML) | The collection of task objects. |
+| task | array of task objects(JSON)/zero or more task objects(XML) | The collection of task objects |
 *---------------+--------------+--------------------------------+
 
-*** Response Examples
+** Response Examples
 
   <<JSON response>>
 
   HTTP Request:
 
 ------
-  GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks
 ------
 
   Response Header:
@@ -1431,23 +1451,23 @@ History Server REST API's.
       "task" : [
          {
             "progress" : 100,
-            "elapsedTime" : 6777,
+            "elapsedTime" : 2768,
             "state" : "SUCCEEDED",
-            "startTime" : 1326381446541,
-            "id" : "task_1326381300833_2_2_m_0",
+            "startTime" : 1326238773493,
+            "id" : "task_1326232085508_4_4_m_0",
             "type" : "MAP",
-            "successfulAttempt" : "attempt_1326381300833_2_2_m_0_0",
-            "finishTime" : 1326381453318
+            "successfulAttempt" : "attempt_1326232085508_4_4_m_0_0",
+            "finishTime" : 1326238776261
          },
          {
             "progress" : 100,
-            "elapsedTime" : 135559,
-            "state" : "SUCCEEDED",
-            "startTime" : 1326381446544,
-            "id" : "task_1326381300833_2_2_r_0",
+            "elapsedTime" : 0,
+            "state" : "RUNNING",
+            "startTime" : 1326238777460,
+            "id" : "task_1326232085508_4_4_r_0",
             "type" : "REDUCE",
-            "successfulAttempt" : "attempt_1326381300833_2_2_r_0_0",
-            "finishTime" : 1326381582103
+            "successfulAttempt" : "",
+            "finishTime" : 0
          }
       ]
    }
@@ -1459,7 +1479,7 @@ History Server REST API's.
   HTTP Request:
 
 ------
-  GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks
   Accept: application/xml
 ------
 
@@ -1468,7 +1488,7 @@ History Server REST API's.
 +---+
   HTTP/1.1 200 OK
   Content-Type: application/xml
-  Content-Length: 653
+  Content-Length: 603
   Server: Jetty(6.1.26)
 +---+
 
@@ -1478,83 +1498,82 @@ History Server REST API's.
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <tasks>
   <task>
-    <startTime>1326381446541</startTime>
-    <finishTime>1326381453318</finishTime>
-    <elapsedTime>6777</elapsedTime>
+    <startTime>1326238773493</startTime>
+    <finishTime>1326238776261</finishTime>
+    <elapsedTime>2768</elapsedTime>
     <progress>100.0</progress>
-    <id>task_1326381300833_2_2_m_0</id>
+    <id>task_1326232085508_4_4_m_0</id>
     <state>SUCCEEDED</state>
     <type>MAP</type>
-    <successfulAttempt>attempt_1326381300833_2_2_m_0_0</successfulAttempt>
+    <successfulAttempt>attempt_1326232085508_4_4_m_0_0</successfulAttempt>
   </task>
   <task>
-    <startTime>1326381446544</startTime>
-    <finishTime>1326381582103</finishTime>
-    <elapsedTime>135559</elapsedTime>
+    <startTime>1326238777460</startTime>
+    <finishTime>0</finishTime>
+    <elapsedTime>0</elapsedTime>
     <progress>100.0</progress>
-    <id>task_1326381300833_2_2_r_0</id>
-    <state>SUCCEEDED</state>
+    <id>task_1326232085508_4_4_r_0</id>
+    <state>RUNNING</state>
     <type>REDUCE</type>
-    <successfulAttempt>attempt_1326381300833_2_2_r_0_0</successfulAttempt>
+    <successfulAttempt/>
   </task>
 </tasks>
 +---+
 
-** {Task API}
+* {Task API}
 
   A Task resource contains information about a particular task within a job. 
 
-*** URI
+** URI
 
   Use the following URI to obtain an Task Object, from a task identified by the {taskid} value. 
 
 ------
-  * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}/tasks/{taskid}
+  * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}
 ------
 
-*** HTTP Operations Supported 
+** HTTP Operations Supported 
 
 ------
   * GET
 ------
 
-*** Query Parameters Supported
+** Query Parameters Supported
 
 ------
   None
 ------
 
-*** Elements of the <task> object
+** Elements of the <task> object
 
 *---------------+--------------+-------------------------------+
 || Item         || Data Type   || Description                  |
 *---------------+--------------+-------------------------------+
 | id | string  | The task id | 
 *---------------+--------------+--------------------------------+
-| state | string | The state of the task - valid values are:  NEW, SCHEDULED, RUNNING, SUCCEEDED, FAILED, KILL_WAIT, KILLED
+| state | string | The state of the task - valid values are: NEW, SCHEDULED, RUNNING, SUCCEEDED, FAILED, KILL_WAIT, KILLED |
 *---------------+--------------+--------------------------------+
 | type | string | The task type - MAP or REDUCE|
 *---------------+--------------+--------------------------------+
-| successfulAttempt | string | The id of the last successful attempt |
+| successfulAttempt | string | The the id of the last successful attempt |
 *---------------+--------------+--------------------------------+
 | progress | float | The progress of the task as a percent|
 *---------------+--------------+--------------------------------+
-| startTime | long | The time in which the task started (in ms since epoch) or -1 if it was never started |
+| startTime | long | The time in which the task started (in ms since epoch)|
 *---------------+--------------+--------------------------------+
 | finishTime | long | The time in which the task finished (in ms since epoch)|
 *---------------+--------------+--------------------------------+
 | elapsedTime | long | The elapsed time since the application started (in ms)|
 *---------------+--------------+--------------------------------+
 
-
-*** Response Examples
+** Response Examples
 
   <<JSON response>>
 
   HTTP Request:
 
 ------
-  GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0
 ------
 
   Response Header:
@@ -1572,13 +1591,13 @@ History Server REST API's.
 {
    "task" : {
       "progress" : 100,
-      "elapsedTime" : 6777,
-      "state" : "SUCCEEDED",
-      "startTime" : 1326381446541,
-      "id" : "task_1326381300833_2_2_m_0",
-      "type" : "MAP",
-      "successfulAttempt" : "attempt_1326381300833_2_2_m_0_0",
-      "finishTime" : 1326381453318
+      "elapsedTime" : 0,
+      "state" : "RUNNING",
+      "startTime" : 1326238777460,
+      "id" : "task_1326232085508_4_4_r_0",
+      "type" : "REDUCE",
+      "successfulAttempt" : "",
+      "finishTime" : 0
    }
 }
 +---+
@@ -1588,7 +1607,7 @@ History Server REST API's.
   HTTP Request:
 
 ------
-  GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0
   Accept: application/xml
 ------
 
@@ -1606,40 +1625,40 @@ History Server REST API's.
 +---+
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <task>
-  <startTime>1326381446541</startTime>
-  <finishTime>1326381453318</finishTime>
-  <elapsedTime>6777</elapsedTime>
+  <startTime>1326238777460</startTime>
+  <finishTime>0</finishTime>
+  <elapsedTime>0</elapsedTime>
   <progress>100.0</progress>
-  <id>task_1326381300833_2_2_m_0</id>
-  <state>SUCCEEDED</state>
-  <type>MAP</type>
-  <successfulAttempt>attempt_1326381300833_2_2_m_0_0</successfulAttempt>
+  <id>task_1326232085508_4_4_r_0</id>
+  <state>RUNNING</state>
+  <type>REDUCE</type>
+  <successfulAttempt/>
 </task>
 +---+
 
-** Task Counters API
+* Task Counters API
 
   With the task counters API, you can object a collection of resources that represent all the counters for that task. 
 
-*** URI
+** URI
 
 ------
-  * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}/tasks/{taskid}/counters
+  * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/counters
 ------
 
-*** HTTP Operations Supported 
+** HTTP Operations Supported 
 
 ------
   * GET
 ------
 
-*** Query Parameters Supported
+** Query Parameters Supported
 
 ------
   None
 ------
 
-*** Elements of the <jobTaskCounters> object
+** Elements of the <jobTaskCounters> object
 
 *---------------+--------------+-------------------------------+
 || Item         || Data Type   || Description                   |
@@ -1649,7 +1668,7 @@ History Server REST API's.
 | taskcounterGroup | array of counterGroup objects(JSON)/zero or more counterGroup objects(XML) | A collection of counter group objects |
 *---------------+--------------+-------------------------------+
 
-*** Elements of the <counterGroup> object
+** Elements of the <counterGroup> object
 
 *---------------+--------------+-------------------------------+
 || Item         || Data Type   || Description                   |
@@ -1659,7 +1678,7 @@ History Server REST API's.
 | counter | array of counter objects(JSON)/zero or more counter objects(XML) | A collection of counter objects |
 *---------------+--------------+-------------------------------+
 
-*** Elements of the <counter> object
+** Elements of the <counter> object
 
 *---------------+--------------+-------------------------------+
 || Item         || Data Type   || Description                   |
@@ -1669,14 +1688,14 @@ History Server REST API's.
 | value | long | The value of the counter |
 *---------------+--------------+-------------------------------+
 
-*** Response Examples
+** Response Examples
 
   <<JSON response>>
 
   HTTP Request:
 
 ------
-  GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/counters
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/counters
 ------
 
   Response Header:
@@ -1693,7 +1712,7 @@ History Server REST API's.
 +---+
 {
    "jobTaskCounters" : {
-      "id" : "task_1326381300833_2_2_m_0",
+      "id" : "task_1326232085508_4_4_r_0",
       "taskCounterGroup" : [
          {
             "counterGroupName" : "org.apache.hadoop.mapreduce.FileSystemCounter",
@@ -1853,7 +1872,7 @@ History Server REST API's.
   HTTP Request:
 
 ------
-  GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/counters
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/counters
   Accept: application/xml
 ------
 
@@ -1871,7 +1890,7 @@ History Server REST API's.
 +---+
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <jobTaskCounters>
-  <id>task_1326381300833_2_2_m_0</id>
+  <id>task_1326232085508_4_4_r_0</id>
   <taskCounterGroup>
     <counterGroupName>org.apache.hadoop.mapreduce.FileSystemCounter</counterGroupName>
     <counter>
@@ -2015,29 +2034,29 @@ History Server REST API's.
 </jobTaskCounters>
 +---+
 
-** Task Attempts API
+* Task Attempts API
 
-  With the task attempts API, you can obtain a collection of resources that represent a task attempt within a job.  When you run a GET operation on this resource, you obtain a collection of Task Attempt Objects. 
+  With the task attempts  API, you can obtain a collection of resources that represent a task attempt within a job.  When you run a GET operation on this resource, you obtain a collection of Task Attempt Objects. 
 
-*** URI
+** URI
 
 ------
-  * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts
+  * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts
 ------
 
-*** HTTP Operations Supported 
+** HTTP Operations Supported 
 
 ------
   * GET
 ------
 
-*** Query Parameters Supported
+** Query Parameters Supported
 
 ------
   None
 ------
 
-*** Elements of the <taskAttempts> object
+** Elements of the <taskAttempts> object
 
   When you make a request for the list of task attempts, the information will be returned as an array of task attempt objects. 
   See also {{Task Attempt API}} for syntax of the task object.
@@ -2048,14 +2067,14 @@ History Server REST API's.
 | taskAttempt | array of task attempt objects(JSON)/zero or more task attempt objects(XML) | The collection of task attempt objects |
 *---------------+--------------+--------------------------------+
 
-*** Response Examples
+** Response Examples
 
   <<JSON response>>
 
   HTTP Request:
 
 ------
-  GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/attempts
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/attempts
 ------
 
   Response Header:
@@ -2074,17 +2093,21 @@ History Server REST API's.
    "taskAttempts" : {
       "taskAttempt" : [
          {
-            "assignedContainerId" : "container_1326381300833_0002_01_000002",
+            "elapsedMergeTime" : 47,
+            "shuffleFinishTime" : 1326238780052,
+            "assignedContainerId" : "container_1326232085508_0004_01_000003",
             "progress" : 100,
-            "elapsedTime" : 2638,
-            "state" : "SUCCEEDED",
-            "diagnostics" : "",
+            "elapsedTime" : 0,
+            "state" : "RUNNING",
+            "elapsedShuffleTime" : 2592,
+            "mergeFinishTime" : 1326238780099,
             "rack" : "/98.139.92.0",
+            "elapsedReduceTime" : 0,
             "nodeHttpAddress" : "host.domain.com:8042",
-            "startTime" : 1326381450680,
-            "id" : "attempt_1326381300833_2_2_m_0_0",
-            "type" : "MAP",
-            "finishTime" : 1326381453318
+            "type" : "REDUCE",
+            "startTime" : 1326238777460,
+            "id" : "attempt_1326232085508_4_4_r_0_0",
+            "finishTime" : 0
          }
       ]
    }
@@ -2096,7 +2119,7 @@ History Server REST API's.
   HTTP Request:
 
 ------
-  GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/attempts
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/attempts
   Accept: application/xml
 ------
 
@@ -2105,7 +2128,7 @@ History Server REST API's.
 +---+
   HTTP/1.1 200 OK
   Content-Type: application/xml
-  Content-Length: 537
+  Content-Length: 807
   Server: Jetty(6.1.26)
 +---+
 
@@ -2114,47 +2137,51 @@ History Server REST API's.
 +---+
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <taskAttempts>
-  <taskAttempt>
-    <startTime>1326381450680</startTime>
-    <finishTime>1326381453318</finishTime>
-    <elapsedTime>2638</elapsedTime>
+  <taskAttempt xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="reduceTaskAttemptInfo">
+    <startTime>1326238777460</startTime>
+    <finishTime>0</finishTime>
+    <elapsedTime>0</elapsedTime>
     <progress>100.0</progress>
-    <id>attempt_1326381300833_2_2_m_0_0</id>
+    <id>attempt_1326232085508_4_4_r_0_0</id>
     <rack>/98.139.92.0</rack>
-    <state>SUCCEEDED</state>
+    <state>RUNNING</state>
     <nodeHttpAddress>host.domain.com:8042</nodeHttpAddress>
-    <diagnostics/>
-    <type>MAP</type>
-    <assignedContainerId>container_1326381300833_0002_01_000002</assignedContainerId>
+    <type>REDUCE</type>
+    <assignedContainerId>container_1326232085508_0004_01_000003</assignedContainerId>
+    <shuffleFinishTime>1326238780052</shuffleFinishTime>
+    <mergeFinishTime>1326238780099</mergeFinishTime>
+    <elapsedShuffleTime>2592</elapsedShuffleTime>
+    <elapsedMergeTime>47</elapsedMergeTime>
+    <elapsedReduceTime>0</elapsedReduceTime>
   </taskAttempt>
 </taskAttempts>
 +---+
 
-** {Task Attempt API}
+* {Task Attempt API}
 
   A Task Attempt resource contains information about a particular task attempt within a job. 
 
-*** URI
+** URI
 
   Use the following URI to obtain an Task Attempt Object, from a task identified by the {attemptid} value. 
 
 ------
-  * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}/tasks/{taskid}/attempt/{attemptid}
+  * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/attempt/{attemptid}
 ------
 
-*** HTTP Operations Supported 
+** HTTP Operations Supported 
 
 ------
   * GET
 ------
 
-*** Query Parameters Supported
+** Query Parameters Supported
 
 ------
   None
 ------
 
-*** Elements of the <taskAttempt> object
+** Elements of the <taskAttempt> object
 
 *---------------+--------------+-------------------------------+
 || Item         || Data Type   || Description                  |
@@ -2163,7 +2190,7 @@ History Server REST API's.
 *---------------+--------------+--------------------------------+
 | rack | string  | The rack | 
 *---------------+--------------+--------------------------------+
-| state | string | The state of the task attempt - valid values are: NEW, UNASSIGNED, ASSIGNED, RUNNING, COMMIT_PENDING, SUCCESS_CONTAINER_CLEANUP, SUCCEEDED, FAIL_CONTAINER_CLEANUP, FAIL_TASK_CLEANUP, FAILED, KILL_CONTAINER_CLEANUP, KILL_TASK_CLEANUP, KILLED |
+| state | string | The state of the task attempt - valid values are: NEW, UNASSIGNED, ASSIGNED, RUNNING, COMMIT_PENDING, SUCCESS_CONTAINER_CLEANUP, SUCCEEDED, FAIL_CONTAINER_CLEANUP, FAIL_TASK_CLEANUP, FAILED, KILL_CONTAINER_CLEANUP, KILL_TASK_CLEANUP, KILLED|
 *---------------+--------------+--------------------------------+
 | type | string | The type of task |
 *---------------+--------------+--------------------------------+
@@ -2171,7 +2198,7 @@ History Server REST API's.
 *---------------+--------------+--------------------------------+
 | nodeHttpAddress | string | The http address of the node this task attempt ran on |
 *---------------+--------------+--------------------------------+
-| diagnostics| string | A diagnostics message |
+| diagnostics| string | The diagnostics message |
 *---------------+--------------+--------------------------------+
 | progress | float | The progress of the task attempt as a percent|
 *---------------+--------------+--------------------------------+
@@ -2187,26 +2214,25 @@ History Server REST API's.
 *---------------+--------------+-------------------------------+
 || Item         || Data Type   || Description                  |
 *---------------+--------------+-------------------------------+
-| shuffleFinishTime | long | The time at which shuffle finished (in ms since epoch)| 
+| shuffleFinishTime | long | The time at which shuffle finished (in ms since epoch)|
 *---------------+--------------+--------------------------------+
-| mergeFinishTime | long | The time at which merge finished (in ms since epoch)| 
+| mergeFinishTime | long | The time at which merge finished (in ms since epoch)|
 *---------------+--------------+--------------------------------+
-| elapsedShuffleTime | long | The time it took for the shuffle phase to complete (time in ms between reduce task start and shuffle finish)| 
+| elapsedShuffleTime | long | The time it took for the shuffle phase to complete (time in ms between reduce task start and shuffle finish)|
 *---------------+--------------+--------------------------------+
-| elapsedMergeTime | long | The time it took for the merge phase to complete (time in ms between the shuffle finish and merge finish)| 
+| elapsedMergeTime | long | The time it took for the merge phase to complete (time in ms between the shuffle finish and merge finish)|
 *---------------+--------------+--------------------------------+
-| elapsedReduceTime | long | The time it took for the reduce phase to complete (time in ms between merge finish to end of reduce task)| 
+| elapsedReduceTime | long | The time it took for the reduce phase to complete (time in ms between merge finish to end of reduce task)|
 *---------------+--------------+--------------------------------+
 
-
-*** Response Examples
+** Response Examples
 
   <<JSON response>>
 
   HTTP Request:
 
 ------
-  GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/attempts/attempt_1326381300833_2_2_m_0_0 
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/attempts/attempt_1326232085508_4_4_r_0_0 
 ------
 
   Response Header:
@@ -2223,17 +2249,21 @@ History Server REST API's.
 +---+
 {
    "taskAttempt" : {
-      "assignedContainerId" : "container_1326381300833_0002_01_000002",
+      "elapsedMergeTime" : 47,
+      "shuffleFinishTime" : 1326238780052,
+      "assignedContainerId" : "container_1326232085508_0004_01_000003",
       "progress" : 100,
-      "elapsedTime" : 2638,
-      "state" : "SUCCEEDED",
-      "diagnostics" : "",
+      "elapsedTime" : 0,
+      "state" : "RUNNING",
+      "elapsedShuffleTime" : 2592,
+      "mergeFinishTime" : 1326238780099,
       "rack" : "/98.139.92.0",
+      "elapsedReduceTime" : 0,
       "nodeHttpAddress" : "host.domain.com:8042",
-      "startTime" : 1326381450680,
-      "id" : "attempt_1326381300833_2_2_m_0_0",
-      "type" : "MAP",
-      "finishTime" : 1326381453318
+      "startTime" : 1326238777460,
+      "id" : "attempt_1326232085508_4_4_r_0_0",
+      "type" : "REDUCE",
+      "finishTime" : 0
    }
 }
 +---+
@@ -2243,7 +2273,7 @@ History Server REST API's.
   HTTP Request:
 
 ------
-  GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/attempts/attempt_1326381300833_2_2_m_0_0 
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/attempts/attempt_1326232085508_4_4_r_0_0 
   Accept: application/xml
 ------
 
@@ -2261,43 +2291,47 @@ History Server REST API's.
 +---+
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <taskAttempt>
-  <startTime>1326381450680</startTime>
-  <finishTime>1326381453318</finishTime>
-  <elapsedTime>2638</elapsedTime>
+  <startTime>1326238777460</startTime>
+  <finishTime>0</finishTime>
+  <elapsedTime>0</elapsedTime>
   <progress>100.0</progress>
-  <id>attempt_1326381300833_2_2_m_0_0</id>
+  <id>attempt_1326232085508_4_4_r_0_0</id>
   <rack>/98.139.92.0</rack>
-  <state>SUCCEEDED</state>
+  <state>RUNNING</state>
   <nodeHttpAddress>host.domain.com:8042</nodeHttpAddress>
-  <diagnostics/>
-  <type>MAP</type>
-  <assignedContainerId>container_1326381300833_0002_01_000002</assignedContainerId>
+  <type>REDUCE</type>
+  <assignedContainerId>container_1326232085508_0004_01_000003</assignedContainerId>
+  <shuffleFinishTime>1326238780052</shuffleFinishTime>
+  <mergeFinishTime>1326238780099</mergeFinishTime>
+  <elapsedShuffleTime>2592</elapsedShuffleTime>
+  <elapsedMergeTime>47</elapsedMergeTime>
+  <elapsedReduceTime>0</elapsedReduceTime>
 </taskAttempt>
 +---+
 
-** Task Attempt Counters API
+* Task Attempt Counters API
 
   With the task attempt counters API, you can object a collection of resources that represent al the counters for that task attempt. 
 
-*** URI 
+** URI
 
 ------
-  * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}/tasks/{taskid}/attempt/{attemptid}/counters
+  * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/attempt/{attemptid}/counters
 ------
 
-*** HTTP Operations Supported 
+** HTTP Operations Supported 
 
 ------
   * GET
 ------
 
-*** Query Parameters Supported
+** Query Parameters Supported
 
 ------
   None
 ------
 
-*** Elements of the <jobTaskAttemptCounters> object
+** Elements of the <jobTaskAttemptCounters> object
 
 *---------------+--------------+-------------------------------+
 || Item         || Data Type   || Description                   |
@@ -2307,7 +2341,7 @@ History Server REST API's.
 | taskAttemptcounterGroup | array of task attempt counterGroup objects(JSON)/zero or more task attempt counterGroup objects(XML) | A collection of task attempt counter group objects |
 *---------------+--------------+-------------------------------+
 
-*** Elements of the <taskAttemptCounterGroup> object
+** Elements of the <taskAttemptCounterGroup> object
 
 *---------------+--------------+-------------------------------+
 || Item         || Data Type   || Description                   |
@@ -2317,7 +2351,7 @@ History Server REST API's.
 | counter | array of counter objects(JSON)/zero or more counter objects(XML) | A collection of counter objects |
 *---------------+--------------+-------------------------------+
 
-*** Elements of the <counter> object
+** Elements of the <counter> object
 
 *---------------+--------------+-------------------------------+
 || Item         || Data Type   || Description                   |
@@ -2327,14 +2361,14 @@ History Server REST API's.
 | value | long | The value of the counter |
 *---------------+--------------+-------------------------------+
 
-*** Response Examples
+** Response Examples
 
   <<JSON response>>
 
   HTTP Request:
 
 ------
-  GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/attempts/attempt_1326381300833_2_2_m_0_0/counters
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/attempts/attempt_1326232085508_4_4_r_0_0/counters
 ------
 
   Response Header:
@@ -2501,7 +2535,7 @@ History Server REST API's.
             ]
          }
       ],
-      "id" : "attempt_1326381300833_2_2_m_0_0"
+      "id" : "attempt_1326232085508_4_4_r_0_0"
    }
 }
 +---+
@@ -2511,7 +2545,7 @@ History Server REST API's.
   HTTP Request:
 
 ------
-  GET http://<history server http address:port>/ws/v1/history/mapreduce/jobs/job_1326381300833_2_2/tasks/task_1326381300833_2_2_m_0/attempts/attempt_1326381300833_2_2_m_0_0/counters
+  GET http://<proxy http address:port>/proxy/application_1326232085508_0004/ws/v1/mapreduce/jobs/job_1326232085508_4_4/tasks/task_1326232085508_4_4_r_0/attempts/attempt_1326232085508_4_4_r_0_0/counters
   Accept: application/xml
 ------
 
@@ -2529,7 +2563,7 @@ History Server REST API's.
 +---+
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <jobTaskAttemptCounters>
-  <id>attempt_1326381300833_2_2_m_0_0</id>
+  <id>attempt_1326232085508_4_4_r_0_0</id>
   <taskAttemptCounterGroup>
     <counterGroupName>org.apache.hadoop.mapreduce.FileSystemCounter</counterGroupName>
     <counter>
@@ -2672,3 +2706,4 @@ History Server REST API's.
   </taskAttemptCounterGroup>
 </jobTaskAttemptCounters>
 +---+
+
