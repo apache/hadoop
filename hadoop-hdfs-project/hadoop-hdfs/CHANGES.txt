@@ -19,6 +19,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6334. Client failover proxy provider for IP failover based NN HA.
     (kihwal)
 
+    HDFS-6406. Add capability for NFS gateway to reject connections from
+    unprivileged ports. (atm)
+
   IMPROVEMENTS
 
     HDFS-6007. Update documentation about short-circuit local reads (iwasakims

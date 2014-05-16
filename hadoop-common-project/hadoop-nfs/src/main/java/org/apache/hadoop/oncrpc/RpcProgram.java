@@ -19,11 +19,14 @@ package org.apache.hadoop.oncrpc;
 
 import java.io.IOException;
 import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.oncrpc.RpcAcceptedReply.AcceptState;
 import org.apache.hadoop.oncrpc.security.Verifier;
+import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.apache.hadoop.portmap.PortmapMapping;
 import org.apache.hadoop.portmap.PortmapRequest;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -37,7 +40,7 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  * and implement {@link #handleInternal} to handle the requests received.
  */
 public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
-  private static final Log LOG = LogFactory.getLog(RpcProgram.class);
+  static final Log LOG = LogFactory.getLog(RpcProgram.class);
   public static final int RPCB_PORT = 111;
   private final String program;
   private final String host;
@@ -45,6 +48,7 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
   private final int progNumber;
   private final int lowProgVersion;
   private final int highProgVersion;
+  private final boolean allowInsecurePorts;
   
   /**
    * If not null, this will be used as the socket to use to connect to the
@@ -61,10 +65,14 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
    * @param progNumber program number as defined in RFC 1050
    * @param lowProgVersion lowest version of the specification supported
    * @param highProgVersion highest version of the specification supported
+   * @param DatagramSocket registrationSocket if not null, use this socket to
+   *        register with portmap daemon
+   * @param allowInsecurePorts true to allow client connections from
+   *        unprivileged ports, false otherwise
    */
   protected RpcProgram(String program, String host, int port, int progNumber,
       int lowProgVersion, int highProgVersion,
-      DatagramSocket registrationSocket) {
+      DatagramSocket registrationSocket, boolean allowInsecurePorts) {
     this.program = program;
     this.host = host;
     this.port = port;
@@ -72,6 +80,9 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
     this.lowProgVersion = lowProgVersion;
     this.highProgVersion = highProgVersion;
     this.registrationSocket = registrationSocket;
+    this.allowInsecurePorts = allowInsecurePorts;
+    LOG.info("Will " + (allowInsecurePorts ? "" : "not ") + "accept client "
+        + "connections from unprivileged ports");
   }
 
   /**
@@ -133,42 +144,81 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
       throws Exception {
     RpcInfo info = (RpcInfo) e.getMessage();
     RpcCall call = (RpcCall) info.header();
+    
+    SocketAddress remoteAddress = info.remoteAddress();
+    if (!allowInsecurePorts) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Will not allow connections from unprivileged ports. " +
+            "Checking for valid client port...");
+      }
+      if (remoteAddress instanceof InetSocketAddress) {
+        InetSocketAddress inetRemoteAddress = (InetSocketAddress) remoteAddress;
+        if (inetRemoteAddress.getPort() > 1023) {
+          LOG.warn("Connection attempted from '" + inetRemoteAddress + "' "
+              + "which is an unprivileged port. Rejecting connection.");
+          sendRejectedReply(call, remoteAddress, ctx);
+          return;
+        } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Accepting connection from '" + remoteAddress + "'");
+          }
+        }
+      } else {
+        LOG.warn("Could not determine remote port of socket address '" +
+            remoteAddress + "'. Rejecting connection.");
+        sendRejectedReply(call, remoteAddress, ctx);
+        return;
+      }
+    }
+    
     if (LOG.isTraceEnabled()) {
       LOG.trace(program + " procedure #" + call.getProcedure());
     }
     
     if (this.progNumber != call.getProgram()) {
       LOG.warn("Invalid RPC call program " + call.getProgram());
-      RpcAcceptedReply reply = RpcAcceptedReply.getInstance(call.getXid(),
-          AcceptState.PROG_UNAVAIL, Verifier.VERIFIER_NONE);
-
-      XDR out = new XDR();
-      reply.write(out);
-      ChannelBuffer b = ChannelBuffers.wrappedBuffer(out.asReadOnlyWrap()
-          .buffer());
-      RpcResponse rsp = new RpcResponse(b, info.remoteAddress());
-      RpcUtil.sendRpcResponse(ctx, rsp);
+      sendAcceptedReply(call, remoteAddress, AcceptState.PROG_UNAVAIL, ctx);
       return;
     }
 
     int ver = call.getVersion();
     if (ver < lowProgVersion || ver > highProgVersion) {
       LOG.warn("Invalid RPC call version " + ver);
-      RpcAcceptedReply reply = RpcAcceptedReply.getInstance(call.getXid(),
-          AcceptState.PROG_MISMATCH, Verifier.VERIFIER_NONE);
-
-      XDR out = new XDR();
-      reply.write(out);
-      out.writeInt(lowProgVersion);
-      out.writeInt(highProgVersion);
-      ChannelBuffer b = ChannelBuffers.wrappedBuffer(out.asReadOnlyWrap()
-          .buffer());
-      RpcResponse rsp = new RpcResponse(b, info.remoteAddress());
-      RpcUtil.sendRpcResponse(ctx, rsp);
+      sendAcceptedReply(call, remoteAddress, AcceptState.PROG_MISMATCH, ctx);
       return;
     }
     
     handleInternal(ctx, info);
+  }
+  
+  private void sendAcceptedReply(RpcCall call, SocketAddress remoteAddress,
+      AcceptState acceptState, ChannelHandlerContext ctx) {
+    RpcAcceptedReply reply = RpcAcceptedReply.getInstance(call.getXid(),
+        acceptState, Verifier.VERIFIER_NONE);
+
+    XDR out = new XDR();
+    reply.write(out);
+    if (acceptState == AcceptState.PROG_MISMATCH) {
+      out.writeInt(lowProgVersion);
+      out.writeInt(highProgVersion);
+    }
+    ChannelBuffer b = ChannelBuffers.wrappedBuffer(out.asReadOnlyWrap()
+        .buffer());
+    RpcResponse rsp = new RpcResponse(b, remoteAddress);
+    RpcUtil.sendRpcResponse(ctx, rsp);
+  }
+  
+  private static void sendRejectedReply(RpcCall call,
+      SocketAddress remoteAddress, ChannelHandlerContext ctx) {
+    XDR out = new XDR();
+    RpcDeniedReply reply = new RpcDeniedReply(call.getXid(),
+        RpcReply.ReplyState.MSG_DENIED,
+        RpcDeniedReply.RejectState.AUTH_ERROR, new VerifierNone());
+    reply.write(out);
+    ChannelBuffer buf = ChannelBuffers.wrappedBuffer(out.asReadOnlyWrap()
+        .buffer());
+    RpcResponse rsp = new RpcResponse(buf, remoteAddress);
+    RpcUtil.sendRpcResponse(ctx, rsp);
   }
 
   protected abstract void handleInternal(ChannelHandlerContext ctx, RpcInfo info);
