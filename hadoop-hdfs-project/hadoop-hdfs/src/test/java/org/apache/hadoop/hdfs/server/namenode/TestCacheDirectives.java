@@ -477,6 +477,12 @@ public class TestCacheDirectives {
     iter = dfs.listCacheDirectives(
         new CacheDirectiveInfo.Builder().setPool("pool2").build());
     validateListAll(iter, betaId);
+    iter = dfs.listCacheDirectives(
+        new CacheDirectiveInfo.Builder().setId(alphaId2).build());
+    validateListAll(iter, alphaId2);
+    iter = dfs.listCacheDirectives(
+        new CacheDirectiveInfo.Builder().setId(relativeId).build());
+    validateListAll(iter, relativeId);
 
     dfs.removeCacheDirective(betaId);
     iter = dfs.listCacheDirectives(

@@ -112,6 +112,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-5683. Better audit log messages for caching operations.
     (Abhiraj Butala via wang)
 
+    HDFS-6345. DFS.listCacheDirectives() should allow filtering based on
+    cache directive ID. (wang)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
