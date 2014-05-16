@@ -197,6 +197,8 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5861. finishedSubMaps field in LocalContainerLauncher does not 
     need to be volatile. (Tsuyoshi OZAWA via junping_du)
 
+    MAPREDUCE-5809. Enhance distcp to support preserving HDFS ACLs. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES 
