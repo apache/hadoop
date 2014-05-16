@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.DatagramSocket;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.nfs.mount.Mountd;
 import org.apache.hadoop.nfs.nfs3.Nfs3Base;
 import org.apache.hadoop.util.StringUtils;
@@ -41,12 +42,13 @@ public class Nfs3 extends Nfs3Base {
   }
   
   public Nfs3(Configuration conf) throws IOException {
-    this(conf, null);
+    this(conf, null, true);
   }
   
-  public Nfs3(Configuration conf, DatagramSocket registrationSocket) throws IOException {
-    super(new RpcProgramNfs3(conf, registrationSocket), conf);
-    mountd = new Mountd(conf, registrationSocket);
+  public Nfs3(Configuration conf, DatagramSocket registrationSocket,
+      boolean allowInsecurePorts) throws IOException {
+    super(new RpcProgramNfs3(conf, registrationSocket, allowInsecurePorts), conf);
+    mountd = new Mountd(conf, registrationSocket, allowInsecurePorts);
   }
 
   public Mountd getMountd() {
@@ -61,8 +63,13 @@ public class Nfs3 extends Nfs3Base {
   
   static void startService(String[] args,
       DatagramSocket registrationSocket) throws IOException {
-    StringUtils.startupShutdownMessage(Nfs3.class, args, LOG);    
-    final Nfs3 nfsServer = new Nfs3(new Configuration(), registrationSocket);
+    StringUtils.startupShutdownMessage(Nfs3.class, args, LOG);
+    Configuration conf = new Configuration();
+    boolean allowInsecurePorts = conf.getBoolean(
+        DFSConfigKeys.DFS_NFS_ALLOW_INSECURE_PORTS_KEY,
+        DFSConfigKeys.DFS_NFS_ALLOW_INSECURE_PORTS_DEFAULT);
+    final Nfs3 nfsServer = new Nfs3(new Configuration(), registrationSocket,
+        allowInsecurePorts);
     nfsServer.startServiceInternal(true);
   }
   
