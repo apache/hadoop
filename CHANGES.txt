@@ -58,6 +58,9 @@ Release 1.3.0 - unreleased
     MAPREDUCE-5712. Backport Fair Scheduler pool placement by secondary group
     (Ted Malaska via Sandy Ryza)
 
+    HADOOP-10614. CBZip2InputStream is not threadsafe (Xiangrui Meng via Sandy
+    Ryza)
+
   BUG FIXES
 
     HADOOP-9863. Backport HADOOP-8686 to support BigEndian on ppc64. 
