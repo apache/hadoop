@@ -392,6 +392,9 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10609. .gitignore should ignore .orig and .rej files. (kasha)
 
+    HADOOP-10614. CBZip2InputStream is not threadsafe (Xiangrui Meng via
+    Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES 
