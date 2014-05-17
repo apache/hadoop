@@ -231,6 +231,9 @@ Release 2.4.1 - UNRELEASED
     YARN-2053. Fixed a bug in AMS to not add null NMToken into NMTokens list from
     previous attempts for work-preserving AM restart. (Wangda Tan via jianhe)
 
+    YARN-2066. Wrong field is referenced in GetApplicationsRequestPBImpl#mergeLocalToBuilder()
+    (Hong Zhiguo via junping_du)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
