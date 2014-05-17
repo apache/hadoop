@@ -1,6 +1,8 @@
 *.iml
 *.ipr
 *.iws
+*.orig
+*.rej
 .idea
 .svn
 .classpath

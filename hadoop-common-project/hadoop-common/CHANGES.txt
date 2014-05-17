@@ -53,6 +53,8 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10588. Workaround for jetty6 acceptor startup issue. (kihwal)
 
+    HADOOP-10609. .gitignore should ignore .orig and .rej files. (kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 
