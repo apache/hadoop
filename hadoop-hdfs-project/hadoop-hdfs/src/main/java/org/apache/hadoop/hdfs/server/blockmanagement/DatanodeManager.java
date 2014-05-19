@@ -1005,15 +1005,7 @@ public class DatanodeManager {
 
   /** @return the number of dead datanodes. */
   public int getNumDeadDataNodes() {
-    int numDead = 0;
-    synchronized (datanodeMap) {   
-      for(DatanodeDescriptor dn : datanodeMap.values()) {
-        if (isDatanodeDead(dn) ) {
-          numDead++;
-        }
-      }
-    }
-    return numDead;
+    return getDatanodeListForReport(DatanodeReportType.DEAD).size();
   }
 
   /** @return list of datanodes where decommissioning is in progress. */

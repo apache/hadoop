@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.assertTrue;
 
+import java.lang.management.ManagementFactory;
 import java.net.InetSocketAddress;
 import java.net.URL;
 
@@ -35,6 +36,9 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.junit.Test;
+
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 
 /**
  * DFS_HOSTS and DFS_HOSTS_EXCLUDE tests
@@ -130,6 +134,46 @@ public class TestHostsFiles {
 
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testHostsIncludeForDeadCount() throws Exception {
+    Configuration conf = getConf();
+
+    // Configure an excludes file
+    FileSystem localFileSys = FileSystem.getLocal(conf);
+    Path workingDir = localFileSys.getWorkingDirectory();
+    Path dir = new Path(workingDir, "build/test/data/temp/decommission");
+    Path excludeFile = new Path(dir, "exclude");
+    Path includeFile = new Path(dir, "include");
+    assertTrue(localFileSys.mkdirs(dir));
+    StringBuilder includeHosts = new StringBuilder();
+    includeHosts.append("localhost:52").append("\n").append("127.0.0.1:7777")
+        .append("\n");
+    DFSTestUtil.writeFile(localFileSys, excludeFile, "");
+    DFSTestUtil.writeFile(localFileSys, includeFile, includeHosts.toString());
+    conf.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
+    conf.set(DFSConfigKeys.DFS_HOSTS, includeFile.toUri().getPath());
+
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      final FSNamesystem ns = cluster.getNameNode().getNamesystem();
+      assertTrue(ns.getNumDeadDataNodes() == 2);
+      assertTrue(ns.getNumLiveDataNodes() == 0);
+
+      // Testing using MBeans
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxbeanName = new ObjectName(
+          "Hadoop:service=NameNode,name=FSNamesystemState");
+      String nodes = mbs.getAttribute(mxbeanName, "NumDeadDataNodes") + "";
+      assertTrue((Integer) mbs.getAttribute(mxbeanName, "NumDeadDataNodes") == 2);
+      assertTrue((Integer) mbs.getAttribute(mxbeanName, "NumLiveDataNodes") == 0);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 }
