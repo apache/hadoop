@@ -7,6 +7,8 @@ Trunk (Unreleased)
     HADOOP-8124. Remove the deprecated FSDataOutputStream constructor,
     FSDataOutputStream.sync() and Syncable.sync().  (szetszwo)
 
+    HADOOP-10474 Move o.a.h.record to hadoop-streaming. (wheat9)
+
   NEW FEATURES
 
     HADOOP-10433. Key Management Server based on KeyProvider API. (tucu)
@@ -147,6 +149,8 @@ Trunk (Unreleased)
     rather than returning all keys. (omalley)
 
     HADOOP-10563. Remove the dependency of jsp in trunk. (wheat9)
+
+    HADOOP-10485. Remove dead classes in hadoop-streaming. (wheat9)
 
   BUG FIXES
 
@@ -340,8 +344,6 @@ Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
-    HADOOP-10474 Move o.a.h.record to hadoop-streaming. (wheat9)
-
   NEW FEATURES
 
     HADOOP-10498. Add support for proxy server. (daryn)
@@ -358,8 +360,6 @@ Release 2.5.0 - UNRELEASED
     via jeagles)
 
     HADOOP-10104. Update jackson to 1.9.13 (Akira Ajisaka via stevel)
-
-    HADOOP-10485. Remove dead classes in hadoop-streaming. (wheat9)
 
     HADOOP-10503. Move junit up to v 4.11. (cnauroth)
 
