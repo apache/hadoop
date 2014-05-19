@@ -486,6 +486,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10401. ShellBasedUnixGroupsMapping#getGroups does not always return
     primary group first (Akira AJISAKA via Colin Patrick McCabe)
 
+    HADOOP-10489. UserGroupInformation#getTokens and UserGroupInformation
+    #addToken can lead to ConcurrentModificationException (Robert Kanter via atm)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
