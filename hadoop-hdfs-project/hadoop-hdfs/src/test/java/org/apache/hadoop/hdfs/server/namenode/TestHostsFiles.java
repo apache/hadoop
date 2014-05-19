@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.assertTrue;
 
+import java.lang.management.ManagementFactory;
 import java.net.InetSocketAddress;
 import java.net.URL;
 
@@ -35,6 +36,9 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.junit.Test;
+
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 
 /**
  * DFS_HOSTS and DFS_HOSTS_EXCLUDE tests
