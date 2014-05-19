@@ -946,6 +946,16 @@ public class BlockManager {
   }
 
   /**
+   * Check if a block is replicated to at least the minimum replication.
+   */
+  public boolean isSufficientlyReplicated(BlockInfo b) {
+    // Compare against the lesser of the minReplication and number of live DNs.
+    final int replication =
+        Math.min(minReplication, getDatanodeManager().getNumLiveDataNodes());
+    return countNodes(b).liveReplicas() >= replication;
+  }
+
+  /**
    * return a list of blocks & their locations on <code>datanode</code> whose
    * total size is <code>size</code>
    * 
