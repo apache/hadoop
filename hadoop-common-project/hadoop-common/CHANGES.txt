@@ -4,8 +4,6 @@ Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
-    HADOOP-10474 Move o.a.h.record to hadoop-streaming. (wheat9)
-
   NEW FEATURES
 
     HADOOP-10498. Add support for proxy server. (daryn)

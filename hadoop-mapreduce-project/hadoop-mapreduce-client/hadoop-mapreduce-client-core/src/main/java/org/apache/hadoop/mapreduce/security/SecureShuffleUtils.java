@@ -31,8 +31,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
+import org.apache.hadoop.record.Utils;
 
 import com.google.common.base.Charsets;
 
@@ -74,7 +74,7 @@ public class SecureShuffleUtils {
    */
   private static boolean verifyHash(byte[] hash, byte[] msg, SecretKey key) {
     byte[] msg_hash = generateByteHash(msg, key);
-    return WritableComparator.compareBytes(msg_hash, 0, msg_hash.length, hash, 0, hash.length) == 0;
+    return Utils.compareBytes(msg_hash, 0, msg_hash.length, hash, 0, hash.length) == 0;
   }
   
   /**
