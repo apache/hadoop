@@ -575,6 +575,9 @@ Release 2.4.1 - UNRELEASED
     HDFS-6402. Suppress findbugs warning for failure to override equals and
     hashCode in FsAclPermission. (cnauroth)
 
+    HDFS-6325. Append should fail if the last block has insufficient number of
+    replicas (Keith Pak via cos)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
