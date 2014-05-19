@@ -139,6 +139,9 @@ Trunk (Unreleased)
 
     MAPREDUCE-5717. Task pings are interpreted as task progress (jlowe)
 
+    MAPREDUCE-5867. Fix NPE in KillAMPreemptionPolicy related to 
+    ProportionalCapacityPreemptionPolicy (Sunil G via devaraj)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
