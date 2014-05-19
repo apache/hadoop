@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
+import java.util.ConcurrentModificationException;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -797,5 +798,70 @@ public class TestUserGroupInformation {
     // Ensure only non-private tokens are returned
     Collection<Token<? extends TokenIdentifier>> tokens = ugi.getCredentials().getAllTokens();
     assertEquals(1, tokens.size());
+  }
+
+  /**
+   * This test checks a race condition between getting and adding tokens for
+   * the current user.  Calling UserGroupInformation.getCurrentUser() returns
+   * a new object each time, so simply making these methods synchronized was not
+   * enough to prevent race conditions and causing a
+   * ConcurrentModificationException.  These methods are synchronized on the
+   * Subject, which is the same object between UserGroupInformation instances.
+   * This test tries to cause a CME, by exposing the race condition.  Previously
+   * this test would fail every time; now it does not.
+   */
+  @Test
+  public void testTokenRaceCondition() throws Exception {
+    UserGroupInformation userGroupInfo =
+      UserGroupInformation.createUserForTesting(USER_NAME, GROUP_NAMES);
+    userGroupInfo.doAs(new PrivilegedExceptionAction<Void>(){
+      @Override
+      public Void run() throws Exception {
+        // make sure it is not the same as the login user because we use the
+        // same UGI object for every instantiation of the login user and you
+        // won't run into the race condition otherwise
+        assertNotEquals(UserGroupInformation.getLoginUser(),
+                        UserGroupInformation.getCurrentUser());
+
+        GetTokenThread thread = new GetTokenThread();
+        try {
+          thread.start();
+          for (int i = 0; i < 100; i++) {
+            @SuppressWarnings("unchecked")
+            Token<? extends TokenIdentifier> t = mock(Token.class);
+            when(t.getService()).thenReturn(new Text("t" + i));
+            UserGroupInformation.getCurrentUser().addToken(t);
+            assertNull("ConcurrentModificationException encountered",
+                thread.cme);
+          }
+        } catch (ConcurrentModificationException cme) {
+          cme.printStackTrace();
+          fail("ConcurrentModificationException encountered");
+        } finally {
+          thread.runThread = false;
+          thread.join(5 * 1000);
+        }
+        return null;
+      }});
+  }
+
+  static class GetTokenThread extends Thread {
+    boolean runThread = true;
+    volatile ConcurrentModificationException cme = null;
+
+    @Override
+    public void run() {
+      while(runThread) {
+        try {
+          UserGroupInformation.getCurrentUser().getCredentials();
+        } catch (ConcurrentModificationException cme) {
+          this.cme = cme;
+          cme.printStackTrace();
+          runThread = false;
+        } catch (IOException ex) {
+          ex.printStackTrace();
+        }
+      }
+    }
   }
 }
