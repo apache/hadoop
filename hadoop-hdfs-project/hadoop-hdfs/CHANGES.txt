@@ -578,6 +578,9 @@ Release 2.4.1 - UNRELEASED
     HDFS-6325. Append should fail if the last block has insufficient number of
     replicas (Keith Pak via cos)
 
+    HDFS-6397. NN shows inconsistent value in deadnode count.
+    (Mohammad Kamrul Islam via kihwal)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
