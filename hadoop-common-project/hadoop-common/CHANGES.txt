@@ -521,6 +521,8 @@ Release 2.4.1 - UNRELEASED
     HADOOP-10527. Fix incorrect return code and allow more retries on EINTR.
     (kihwal)
 
+    HADOOP-10612. NFS failed to refresh the user group id mapping table (brandonli)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
