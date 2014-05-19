@@ -24,6 +24,7 @@ import java.io.InputStreamReader;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BiMap;
@@ -79,7 +80,7 @@ public class IdUserGroup {
   }
   
   synchronized private boolean isExpired() {
-    return lastUpdateTime - System.currentTimeMillis() > timeout;
+    return Time.monotonicNow() - lastUpdateTime > timeout;
   }
 
   // If can't update the maps, will keep using the old ones
@@ -210,7 +211,7 @@ public class IdUserGroup {
 
     uidNameMap = uMap;
     gidNameMap = gMap;
-    lastUpdateTime = System.currentTimeMillis();
+    lastUpdateTime = Time.monotonicNow();
   }
 
   synchronized public int getUid(String user) throws IOException {
