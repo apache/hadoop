@@ -273,6 +273,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6334. Client failover proxy provider for IP failover based NN HA.
     (kihwal)
 
+    HDFS-6406. Add capability for NFS gateway to reject connections from
+    unprivileged ports. (atm)
+
   IMPROVEMENTS
 
     HDFS-6007. Update documentation about short-circuit local reads (iwasakims
@@ -362,6 +365,12 @@ Release 2.5.0 - UNRELEASED
     split brain. (Rushabh S Shah via kihwal)
 
     HDFS-6287. Add vecsum test of libhdfs read access times (cmccabe)
+
+    HDFS-5683. Better audit log messages for caching operations.
+    (Abhiraj Butala via wang)
+
+    HDFS-6345. DFS.listCacheDirectives() should allow filtering based on
+    cache directive ID. (wang)
 
   OPTIMIZATIONS
 
@@ -481,6 +490,14 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6381. Fix a typo in INodeReference.java. (Binglin Chang via jing9)
 
+    HDFS-6400. Cannot execute hdfs oiv_legacy. (Akira AJISAKA via kihwal)
+
+    HDFS-6250. Fix test failed in TestBalancerWithNodeGroup.testBalancerWithRackLocality
+    (Binglin Chang and Chen He via junping_du)
+
+    HDFS-4913. Deleting file through fuse-dfs when using trash fails requiring
+    root permissions (cmccabe)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -548,6 +565,21 @@ Release 2.4.1 - UNRELEASED
     (kihwal)
 
     HDFS-6326. WebHdfs ACL compatibility is broken. (cnauroth)
+
+    HDFS-6361. TestIdUserGroup.testUserUpdateSetting failed due to out of range
+    nfsnobody Id. (Yongjun Zhang via brandonli)
+
+    HDFS-6362. InvalidateBlocks is inconsistent in usage of DatanodeUuid and
+    StorageID. (Arpit Agarwal)
+
+    HDFS-6402. Suppress findbugs warning for failure to override equals and
+    hashCode in FsAclPermission. (cnauroth)
+
+    HDFS-6325. Append should fail if the last block has insufficient number of
+    replicas (Keith Pak via cos)
+
+    HDFS-6397. NN shows inconsistent value in deadnode count.
+    (Mohammad Kamrul Islam via kihwal)
 
 Release 2.4.0 - 2014-04-07 
 

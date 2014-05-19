@@ -1318,6 +1318,17 @@
 </property>
 
 <property>
+  <name>dfs.nfs.allow.insecure.ports</name>
+  <value>true</value>
+  <description>
+    When set to false, client connections originating from unprivileged ports
+    (those above 1023) will be rejected. This is to ensure that clients
+    connecting to this NFS Gateway must have had root privilege on the machine
+    where they're connecting from.
+  </description>
+</property>
+
+<property>
   <name>dfs.webhdfs.enabled</name>
   <value>true</value>
   <description>

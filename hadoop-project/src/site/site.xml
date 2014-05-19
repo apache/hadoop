@@ -100,6 +100,11 @@
       <item name="DistCp" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/DistCp.html"/>
     </menu>
 
+    <menu name="MapReduce REST APIs" inherit="top">
+      <item name="MR Application Master" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapredAppMasterRest.html"/>
+      <item name="MR History Server" href="hadoop-mapreduce-client/hadoop-mapreduce-client-hs/HistoryServerRest.html"/>
+    </menu>
+
     <menu name="YARN" inherit="top">
       <item name="YARN Architecture" href="hadoop-yarn/hadoop-yarn-site/YARN.html"/>
       <item name="Capacity Scheduler" href="hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html"/>
@@ -117,8 +122,6 @@
       <item name="Introduction" href="hadoop-yarn/hadoop-yarn-site/WebServicesIntro.html"/>
       <item name="Resource Manager" href="hadoop-yarn/hadoop-yarn-site/ResourceManagerRest.html"/>
       <item name="Node Manager" href="hadoop-yarn/hadoop-yarn-site/NodeManagerRest.html"/>
-      <item name="MR Application Master" href="hadoop-yarn/hadoop-yarn-site/MapredAppMasterRest.html"/>
-      <item name="History Server" href="hadoop-yarn/hadoop-yarn-site/HistoryServerRest.html"/>
     </menu>
     
     <menu name="Auth" inherit="top">

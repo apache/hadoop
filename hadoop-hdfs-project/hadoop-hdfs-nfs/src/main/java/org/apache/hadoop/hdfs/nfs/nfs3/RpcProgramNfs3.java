@@ -166,11 +166,12 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   
   private final RpcCallCache rpcCallCache;
 
-  public RpcProgramNfs3(Configuration config, DatagramSocket registrationSocket)
-      throws IOException {
+  public RpcProgramNfs3(Configuration config, DatagramSocket registrationSocket,
+      boolean allowInsecurePorts) throws IOException {
     super("NFS3", "localhost", config.getInt(Nfs3Constant.NFS3_SERVER_PORT,
         Nfs3Constant.NFS3_SERVER_PORT_DEFAULT), Nfs3Constant.PROGRAM,
-        Nfs3Constant.VERSION, Nfs3Constant.VERSION, registrationSocket);
+        Nfs3Constant.VERSION, Nfs3Constant.VERSION, registrationSocket,
+        allowInsecurePorts);
    
     config.set(FsPermission.UMASK_LABEL, "000");
     iug = new IdUserGroup();

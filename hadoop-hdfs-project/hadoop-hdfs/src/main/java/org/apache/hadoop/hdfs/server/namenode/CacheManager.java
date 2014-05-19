@@ -691,15 +691,25 @@ public final class CacheManager {
     assert namesystem.hasReadLock();
     final int NUM_PRE_ALLOCATED_ENTRIES = 16;
     String filterPath = null;
-    if (filter.getId() != null) {
-      throw new IOException("Filtering by ID is unsupported.");
-    }
     if (filter.getPath() != null) {
       filterPath = validatePath(filter);
     }
     if (filter.getReplication() != null) {
-      throw new IOException("Filtering by replication is unsupported.");
+      throw new InvalidRequestException(
+          "Filtering by replication is unsupported.");
     }
+
+    // Querying for a single ID
+    final Long id = filter.getId();
+    if (id != null) {
+      if (!directivesById.containsKey(id)) {
+        throw new InvalidRequestException("Did not find requested id " + id);
+      }
+      // Since we use a tailMap on directivesById, setting prev to id-1 gets
+      // us the directive with the id (if present)
+      prevId = id - 1;
+    }
+
     ArrayList<CacheDirectiveEntry> replies =
         new ArrayList<CacheDirectiveEntry>(NUM_PRE_ALLOCATED_ENTRIES);
     int numReplies = 0;
@@ -711,6 +721,14 @@ public final class CacheManager {
       }
       CacheDirective curDirective = cur.getValue();
       CacheDirectiveInfo info = cur.getValue().toInfo();
+
+      // If the requested ID is present, it should be the first item.
+      // Hitting this case means the ID is not present, or we're on the second
+      // item and should break out.
+      if (id != null &&
+          !(info.getId().equals(id))) {
+        break;
+      }
       if (filter.getPool() != null && 
           !info.getPool().equals(filter.getPool())) {
         continue;

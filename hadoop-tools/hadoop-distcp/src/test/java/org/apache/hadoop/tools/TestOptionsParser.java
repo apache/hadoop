@@ -410,6 +410,7 @@ public class TestOptionsParser {
     Assert.assertTrue(options.shouldPreserve(FileAttribute.USER));
     Assert.assertTrue(options.shouldPreserve(FileAttribute.GROUP));
     Assert.assertTrue(options.shouldPreserve(FileAttribute.CHECKSUMTYPE));
+    Assert.assertFalse(options.shouldPreserve(FileAttribute.ACL));
 
     options = OptionsParser.parse(new String[] {
         "-p",
@@ -421,6 +422,7 @@ public class TestOptionsParser {
     Assert.assertTrue(options.shouldPreserve(FileAttribute.USER));
     Assert.assertTrue(options.shouldPreserve(FileAttribute.GROUP));
     Assert.assertTrue(options.shouldPreserve(FileAttribute.CHECKSUMTYPE));
+    Assert.assertFalse(options.shouldPreserve(FileAttribute.ACL));
 
     options = OptionsParser.parse(new String[] {
         "-pbr",
@@ -433,6 +435,7 @@ public class TestOptionsParser {
     Assert.assertFalse(options.shouldPreserve(FileAttribute.USER));
     Assert.assertFalse(options.shouldPreserve(FileAttribute.GROUP));
     Assert.assertFalse(options.shouldPreserve(FileAttribute.CHECKSUMTYPE));
+    Assert.assertFalse(options.shouldPreserve(FileAttribute.ACL));
 
     options = OptionsParser.parse(new String[] {
         "-pbrgup",
@@ -445,9 +448,10 @@ public class TestOptionsParser {
     Assert.assertTrue(options.shouldPreserve(FileAttribute.USER));
     Assert.assertTrue(options.shouldPreserve(FileAttribute.GROUP));
     Assert.assertFalse(options.shouldPreserve(FileAttribute.CHECKSUMTYPE));
+    Assert.assertFalse(options.shouldPreserve(FileAttribute.ACL));
 
     options = OptionsParser.parse(new String[] {
-        "-pbrgupc",
+        "-pbrgupca",
         "-f",
         "hdfs://localhost:8020/source/first",
         "hdfs://localhost:8020/target/"});
@@ -457,6 +461,7 @@ public class TestOptionsParser {
     Assert.assertTrue(options.shouldPreserve(FileAttribute.USER));
     Assert.assertTrue(options.shouldPreserve(FileAttribute.GROUP));
     Assert.assertTrue(options.shouldPreserve(FileAttribute.CHECKSUMTYPE));
+    Assert.assertTrue(options.shouldPreserve(FileAttribute.ACL));
 
     options = OptionsParser.parse(new String[] {
         "-pc",
@@ -469,6 +474,7 @@ public class TestOptionsParser {
     Assert.assertFalse(options.shouldPreserve(FileAttribute.USER));
     Assert.assertFalse(options.shouldPreserve(FileAttribute.GROUP));
     Assert.assertTrue(options.shouldPreserve(FileAttribute.CHECKSUMTYPE));
+    Assert.assertFalse(options.shouldPreserve(FileAttribute.ACL));
 
     options = OptionsParser.parse(new String[] {
         "-p",
@@ -485,7 +491,7 @@ public class TestOptionsParser {
 
     try {
       OptionsParser.parse(new String[] {
-          "-pabc",
+          "-pabcd",
           "-f",
           "hdfs://localhost:8020/source/first",
           "hdfs://localhost:8020/target"});

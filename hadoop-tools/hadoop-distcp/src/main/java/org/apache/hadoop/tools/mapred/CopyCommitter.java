@@ -178,7 +178,7 @@ public class CopyCommitter extends FileOutputCommitter {
 
     long preservedEntries = 0;
     try {
-      FileStatus srcFileStatus = new FileStatus();
+      CopyListingFileStatus srcFileStatus = new CopyListingFileStatus();
       Text srcRelPath = new Text();
 
       // Iterate over every source path that was copied.
@@ -246,9 +246,9 @@ public class CopyCommitter extends FileOutputCommitter {
     // Delete all from target that doesn't also exist on source.
     long deletedEntries = 0;
     try {
-      FileStatus srcFileStatus = new FileStatus();
+      CopyListingFileStatus srcFileStatus = new CopyListingFileStatus();
       Text srcRelPath = new Text();
-      FileStatus trgtFileStatus = new FileStatus();
+      CopyListingFileStatus trgtFileStatus = new CopyListingFileStatus();
       Text trgtRelPath = new Text();
 
       FileSystem targetFS = targetFinalPath.getFileSystem(conf);

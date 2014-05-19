@@ -15,12 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.fs.permission;
 
 import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 
@@ -28,8 +29,9 @@ import org.apache.hadoop.fs.permission.AclEntryScope;
  * Groups a list of ACL entries into separate lists for access entries vs.
  * default entries.
  */
-@InterfaceAudience.Private
-final class ScopedAclEntries {
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Unstable
+public final class ScopedAclEntries {
   private static final int PIVOT_NOT_FOUND = -1;
 
   private final List<AclEntry> accessEntries;

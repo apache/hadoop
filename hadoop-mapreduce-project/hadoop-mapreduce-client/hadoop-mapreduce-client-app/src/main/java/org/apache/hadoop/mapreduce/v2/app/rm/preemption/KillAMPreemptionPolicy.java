@@ -29,7 +29,9 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.PreemptionContainer;
+import org.apache.hadoop.yarn.api.records.PreemptionContract;
 import org.apache.hadoop.yarn.api.records.PreemptionMessage;
+import org.apache.hadoop.yarn.api.records.StrictPreemptionContract;
 import org.apache.hadoop.yarn.event.EventHandler;
 
 /**
@@ -52,13 +54,18 @@ public class KillAMPreemptionPolicy implements AMPreemptionPolicy {
   public void preempt(Context ctxt, PreemptionMessage preemptionRequests) {
     // for both strict and negotiable preemption requests kill the
     // container
-    for (PreemptionContainer c :
-        preemptionRequests.getStrictContract().getContainers()) {
-      killContainer(ctxt, c);
+    StrictPreemptionContract strictContract = preemptionRequests
+        .getStrictContract();
+    if (strictContract != null) {
+      for (PreemptionContainer c : strictContract.getContainers()) {
+        killContainer(ctxt, c);
+      }
     }
-    for (PreemptionContainer c :
-         preemptionRequests.getContract().getContainers()) {
-       killContainer(ctxt, c);
+    PreemptionContract contract = preemptionRequests.getContract();
+    if (contract != null) {
+      for (PreemptionContainer c : contract.getContainers()) {
+        killContainer(ctxt, c);
+      }
     }
   }
 

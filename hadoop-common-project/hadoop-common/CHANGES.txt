@@ -328,6 +328,8 @@ Trunk (Unreleased)
 
     HADOOP-10583. bin/hadoop key throws NPE with no args and assorted other fixups. (clamb via tucu)
 
+    HADOOP-10586. KeyShell doesn't allow setting Options via CLI. (clamb via tucu)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -387,6 +389,11 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10572. Example NFS mount command must pass noacl as it isn't
     supported by the server yet. (Harsh J via brandonli)
+
+    HADOOP-10609. .gitignore should ignore .orig and .rej files. (kasha)
+
+    HADOOP-10614. CBZip2InputStream is not threadsafe (Xiangrui Meng via
+    Sandy Ryza)
 
   OPTIMIZATIONS
 

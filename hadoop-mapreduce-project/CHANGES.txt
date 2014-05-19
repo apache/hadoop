@@ -139,6 +139,9 @@ Trunk (Unreleased)
 
     MAPREDUCE-5717. Task pings are interpreted as task progress (jlowe)
 
+    MAPREDUCE-5867. Fix NPE in KillAMPreemptionPolicy related to 
+    ProportionalCapacityPreemptionPolicy (Sunil G via devaraj)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -196,6 +199,8 @@ Release 2.5.0 - UNRELEASED
 
     MAPREDUCE-5861. finishedSubMaps field in LocalContainerLauncher does not 
     need to be volatile. (Tsuyoshi OZAWA via junping_du)
+
+    MAPREDUCE-5809. Enhance distcp to support preserving HDFS ACLs. (cnauroth)
 
   OPTIMIZATIONS
 
