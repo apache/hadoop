@@ -503,6 +503,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6421. Fix vecsum.c compile on BSD and some other systems. (Mit Desai
     via Colin Patrick McCabe)
 
+    HDFS-6419. TestBookKeeperHACheckpoints#TestSBNCheckpoints fails on trunk.
+    (Akira AJISAKA via kihwal)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
