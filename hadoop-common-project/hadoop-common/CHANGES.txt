@@ -182,7 +182,8 @@ Release 2.4.1 - UNRELEASED
     HADOOP-10612. NFS failed to refresh the user group id mapping table (brandonli)
 
     HADOOP-10562. Namenode exits on exception without printing stack trace
-    in AbstractDelegationTokenSecretManager. (Arpit Agarwal)
+    in AbstractDelegationTokenSecretManager. (Suresh Srinivas via Arpit
+    Agarwal)
 
 Release 2.4.0 - 2014-04-07 
 
