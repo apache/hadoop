@@ -99,6 +99,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2042. String shouldn't be compared using == in
     QueuePlacementRule#NestedUserQueue#getQueueForApp (Chen He via Sandy Ryza)
 
+    YARN-2050. Fix LogCLIHelpers to create the correct FileContext (Ming Ma
+    via jlowe)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
