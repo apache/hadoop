@@ -118,6 +118,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-6345. DFS.listCacheDirectives() should allow filtering based on
     cache directive ID. (wang)
 
+    HDFS-6432. Add snapshot related APIs to webhdfs. (jing9)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)

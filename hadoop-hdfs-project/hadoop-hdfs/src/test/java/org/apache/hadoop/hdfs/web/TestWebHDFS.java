@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs.web;
 
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
@@ -34,8 +36,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.TestDFSClientRetries;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -325,5 +329,120 @@ public class TestWebHDFS {
     Configuration conf = new HdfsConfiguration();
     Assert.assertTrue(conf.getBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY,
         false));
+  }
+
+  /**
+   * Test snapshot creation through WebHdfs
+   */
+  @Test
+  public void testWebHdfsCreateSnapshot() throws Exception {
+    MiniDFSCluster cluster = null;
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      final FileSystem webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+          WebHdfsFileSystem.SCHEME);
+
+      final Path foo = new Path("/foo");
+      dfs.mkdirs(foo);
+
+      try {
+        webHdfs.createSnapshot(foo);
+        fail("Cannot create snapshot on a non-snapshottable directory");
+      } catch (Exception e) {
+        GenericTestUtils.assertExceptionContains(
+            "Directory is not a snapshottable directory", e);
+      }
+
+      // allow snapshots on /foo
+      dfs.allowSnapshot(foo);
+      // create snapshots on foo using WebHdfs
+      webHdfs.createSnapshot(foo, "s1");
+      // create snapshot without specifying name
+      final Path spath = webHdfs.createSnapshot(foo, null);
+
+      Assert.assertTrue(webHdfs.exists(spath));
+      final Path s1path = SnapshotTestHelper.getSnapshotRoot(foo, "s1");
+      Assert.assertTrue(webHdfs.exists(s1path));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Test snapshot deletion through WebHdfs
+   */
+  @Test
+  public void testWebHdfsDeleteSnapshot() throws Exception {
+    MiniDFSCluster cluster = null;
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      final FileSystem webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+          WebHdfsFileSystem.SCHEME);
+
+      final Path foo = new Path("/foo");
+      dfs.mkdirs(foo);
+      dfs.allowSnapshot(foo);
+
+      webHdfs.createSnapshot(foo, "s1");
+      final Path spath = webHdfs.createSnapshot(foo, null);
+      Assert.assertTrue(webHdfs.exists(spath));
+      final Path s1path = SnapshotTestHelper.getSnapshotRoot(foo, "s1");
+      Assert.assertTrue(webHdfs.exists(s1path));
+
+      // delete the two snapshots
+      webHdfs.deleteSnapshot(foo, "s1");
+      Assert.assertFalse(webHdfs.exists(s1path));
+      webHdfs.deleteSnapshot(foo, spath.getName());
+      Assert.assertFalse(webHdfs.exists(spath));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Test snapshot rename through WebHdfs
+   */
+  @Test
+  public void testWebHdfsRenameSnapshot() throws Exception {
+    MiniDFSCluster cluster = null;
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      final FileSystem webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+          WebHdfsFileSystem.SCHEME);
+
+      final Path foo = new Path("/foo");
+      dfs.mkdirs(foo);
+      dfs.allowSnapshot(foo);
+
+      webHdfs.createSnapshot(foo, "s1");
+      final Path s1path = SnapshotTestHelper.getSnapshotRoot(foo, "s1");
+      Assert.assertTrue(webHdfs.exists(s1path));
+
+      // rename s1 to s2
+      webHdfs.renameSnapshot(foo, "s1", "s2");
+      Assert.assertFalse(webHdfs.exists(s1path));
+      final Path s2path = SnapshotTestHelper.getSnapshotRoot(foo, "s2");
+      Assert.assertTrue(webHdfs.exists(s2path));
+
+      webHdfs.deleteSnapshot(foo, "s2");
+      Assert.assertFalse(webHdfs.exists(s2path));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 }
