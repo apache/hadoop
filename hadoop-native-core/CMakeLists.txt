@@ -80,6 +80,11 @@ add_executable(varint-unit rpc/varint-unit.c
     rpc/varint.c common/test.c)
 add_utest(varint-unit)
 
+add_executable(net-unit common/net-unit.c
+    common/net.c common/test.c)
+add_utest(net-unit)
+target_link_libraries(net-unit uv)
+
 add_executable(hadoop_err-unit common/hadoop_err-unit.c
     common/hadoop_err.c common/test.c)
 add_utest(hadoop_err-unit)
