@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -231,6 +232,8 @@ public class FSXAttrBaseTest {
       Assert.fail("Setting xattr with null name should fail.");
     } catch (NullPointerException e) {
       GenericTestUtils.assertExceptionContains("XAttr name cannot be null", e);
+    } catch (RemoteException e) {
+      GenericTestUtils.assertExceptionContains("XAttr name cannot be null", e);
     }
     
     // Set xattr with empty name: "user."
@@ -240,6 +243,9 @@ public class FSXAttrBaseTest {
       Assert.fail("Setting xattr with empty name should fail.");
     } catch (HadoopIllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains("XAttr name cannot be empty", e);
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains("Invalid value: \"user.\" does " + 
+          "not belong to the domain ^(user\\.|trusted\\.|system\\.|security\\.).+", e);
     }
     
     // Set xattr with invalid name: "a1"
@@ -250,6 +256,9 @@ public class FSXAttrBaseTest {
           "name prefix should fail.");
     } catch (HadoopIllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains("XAttr name must be prefixed", e);
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains("Invalid value: \"a1\" does " + 
+          "not belong to the domain ^(user\\.|trusted\\.|system\\.|security\\.).+", e);
     }
     
     // Set xattr without XAttrSetFlag
