@@ -875,6 +875,38 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   @Override
+  public Path createSnapshot(final Path path, final String snapshotName) 
+      throws IOException {
+    statistics.incrementWriteOps(1);
+    final HttpOpParam.Op op = PutOpParam.Op.CREATESNAPSHOT;
+    Path spath = new FsPathResponseRunner<Path>(op, path,
+        new SnapshotNameParam(snapshotName)) {
+      @Override
+      Path decodeResponse(Map<?,?> json) {
+        return new Path((String) json.get(Path.class.getSimpleName()));
+      }
+    }.run();
+    return spath;
+  }
+
+  @Override
+  public void deleteSnapshot(final Path path, final String snapshotName)
+      throws IOException {
+    statistics.incrementWriteOps(1);
+    final HttpOpParam.Op op = PutOpParam.Op.DELETESNAPSHOT;
+    new FsPathRunner(op, path, new SnapshotNameParam(snapshotName)).run();
+  }
+
+  @Override
+  public void renameSnapshot(final Path path, final String snapshotOldName,
+      final String snapshotNewName) throws IOException {
+    statistics.incrementWriteOps(1);
+    final HttpOpParam.Op op = PutOpParam.Op.RENAMESNAPSHOT;
+    new FsPathRunner(op, path, new OldSnapshotNameParam(snapshotOldName),
+        new SnapshotNameParam(snapshotNewName)).run();
+  }
+
+  @Override
   public boolean setReplication(final Path p, final short replication
      ) throws IOException {
     statistics.incrementWriteOps(1);

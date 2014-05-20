@@ -88,6 +88,7 @@ import org.apache.hadoop.hdfs.web.resources.LengthParam;
 import org.apache.hadoop.hdfs.web.resources.ModificationTimeParam;
 import org.apache.hadoop.hdfs.web.resources.NamenodeAddressParam;
 import org.apache.hadoop.hdfs.web.resources.OffsetParam;
+import org.apache.hadoop.hdfs.web.resources.OldSnapshotNameParam;
 import org.apache.hadoop.hdfs.web.resources.OverwriteParam;
 import org.apache.hadoop.hdfs.web.resources.OwnerParam;
 import org.apache.hadoop.hdfs.web.resources.Param;
@@ -98,6 +99,7 @@ import org.apache.hadoop.hdfs.web.resources.RecursiveParam;
 import org.apache.hadoop.hdfs.web.resources.RenameOptionSetParam;
 import org.apache.hadoop.hdfs.web.resources.RenewerParam;
 import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
+import org.apache.hadoop.hdfs.web.resources.SnapshotNameParam;
 import org.apache.hadoop.hdfs.web.resources.TokenArgumentParam;
 import org.apache.hadoop.hdfs.web.resources.UriFsPathParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
@@ -341,12 +343,16 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(TokenArgumentParam.NAME) @DefaultValue(TokenArgumentParam.DEFAULT)
           final TokenArgumentParam delegationTokenArgument,
       @QueryParam(AclPermissionParam.NAME) @DefaultValue(AclPermissionParam.DEFAULT) 
-          final AclPermissionParam aclPermission
+          final AclPermissionParam aclPermission,
+      @QueryParam(SnapshotNameParam.NAME) @DefaultValue(SnapshotNameParam.DEFAULT)
+          final SnapshotNameParam snapshotName,
+      @QueryParam(OldSnapshotNameParam.NAME) @DefaultValue(OldSnapshotNameParam.DEFAULT)
+          final OldSnapshotNameParam oldSnapshotName
           )throws IOException, InterruptedException {
     return put(ugi, delegation, username, doAsUser, ROOT, op, destination,
         owner, group, permission, overwrite, bufferSize, replication,
         blockSize, modificationTime, accessTime, renameOptions, createParent,
-        delegationTokenArgument,aclPermission);
+        delegationTokenArgument, aclPermission, snapshotName, oldSnapshotName);
   }
 
   /** Handle HTTP PUT request. */
@@ -392,12 +398,17 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(TokenArgumentParam.NAME) @DefaultValue(TokenArgumentParam.DEFAULT)
           final TokenArgumentParam delegationTokenArgument,
       @QueryParam(AclPermissionParam.NAME) @DefaultValue(AclPermissionParam.DEFAULT) 
-          final AclPermissionParam aclPermission
+          final AclPermissionParam aclPermission,
+      @QueryParam(SnapshotNameParam.NAME) @DefaultValue(SnapshotNameParam.DEFAULT)
+          final SnapshotNameParam snapshotName,
+      @QueryParam(OldSnapshotNameParam.NAME) @DefaultValue(OldSnapshotNameParam.DEFAULT)
+          final OldSnapshotNameParam oldSnapshotName
       ) throws IOException, InterruptedException {
 
     init(ugi, delegation, username, doAsUser, path, op, destination, owner,
         group, permission, overwrite, bufferSize, replication, blockSize,
-        modificationTime, accessTime, renameOptions, delegationTokenArgument,aclPermission);
+        modificationTime, accessTime, renameOptions, delegationTokenArgument,
+        aclPermission, snapshotName, oldSnapshotName);
 
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
@@ -407,7 +418,8 @@ public class NamenodeWebHdfsMethods {
               path.getAbsolutePath(), op, destination, owner, group,
               permission, overwrite, bufferSize, replication, blockSize,
               modificationTime, accessTime, renameOptions, createParent,
-              delegationTokenArgument,aclPermission);
+              delegationTokenArgument, aclPermission, snapshotName,
+              oldSnapshotName);
         } finally {
           reset();
         }
@@ -435,7 +447,9 @@ public class NamenodeWebHdfsMethods {
       final RenameOptionSetParam renameOptions,
       final CreateParentParam createParent,
       final TokenArgumentParam delegationTokenArgument,
-      final AclPermissionParam aclPermission
+      final AclPermissionParam aclPermission,
+      final SnapshotNameParam snapshotName,
+      final OldSnapshotNameParam oldSnapshotName
       ) throws IOException, URISyntaxException {
 
     final Configuration conf = (Configuration)context.getAttribute(JspHelper.CURRENT_CONF);
@@ -533,6 +547,21 @@ public class NamenodeWebHdfsMethods {
     }
     case SETACL: {
       np.setAcl(fullpath, aclPermission.getAclPermission(true));
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
+    }
+    case CREATESNAPSHOT: {
+      String snapshotPath = np.createSnapshot(fullpath, snapshotName.getValue());
+      final String js = JsonUtil.toJsonString(
+          org.apache.hadoop.fs.Path.class.getSimpleName(), snapshotPath);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case DELETESNAPSHOT: {
+      np.deleteSnapshot(fullpath, snapshotName.getValue());
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
+    }
+    case RENAMESNAPSHOT: {
+      np.renameSnapshot(fullpath, oldSnapshotName.getValue(),
+          snapshotName.getValue());
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     default:

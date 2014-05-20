@@ -357,4 +357,12 @@ public class TestParam {
     Assert.assertEquals(p1.getValue(), EnumSet.of(
         Options.Rename.OVERWRITE, Options.Rename.NONE));
   }
+
+  @Test
+  public void testSnapshotNameParam() {
+    final OldSnapshotNameParam s1 = new OldSnapshotNameParam("s1");
+    final SnapshotNameParam s2 = new SnapshotNameParam("s2");
+    Assert.assertEquals("s1", s1.getValue());
+    Assert.assertEquals("s2", s2.getValue());
+  }
 }
