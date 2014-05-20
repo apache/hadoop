@@ -246,6 +246,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-4913. Deleting file through fuse-dfs when using trash fails requiring
     root permissions (cmccabe)
 
+    HDFS-6421. Fix vecsum.c compile on BSD and some other systems. (Mit Desai
+    via Colin Patrick McCabe)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
