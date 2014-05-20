@@ -20,6 +20,8 @@ HDFS-2006 (Unreleased)
 
     HADOOP-10567. Shift XAttr value encoding code out for reuse. (Yi Liu via umamahesh)
 
+    HADOOP-10621. Remove CRLF for xattr value base64 encoding for better display.(Yi Liu via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES

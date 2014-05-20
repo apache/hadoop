@@ -57,6 +57,7 @@ public enum XAttrCodec {
   
   private static final String HEX_PREFIX = "0x";
   private static final String BASE64_PREFIX = "0s";
+  private static final Base64 base64 = new Base64(0);
   
   /**
    * Decode string representation of a value and check whether it's 
@@ -86,7 +87,7 @@ public enum XAttrCodec {
           }
         } else if (en.equalsIgnoreCase(BASE64_PREFIX)) {
           value = value.substring(2, value.length());
-          result = Base64.decodeBase64(value);
+          result = base64.decode(value);
         }
       }
       if (result == null) {
@@ -112,7 +113,7 @@ public enum XAttrCodec {
     if (encoding == HEX) {
       return HEX_PREFIX + Hex.encodeHexString(value);
     } else if (encoding == BASE64) {
-      return BASE64_PREFIX + Base64.encodeBase64String(value);
+      return BASE64_PREFIX + base64.encodeToString(value);
     } else {
       return "\"" + new String(value, "utf-8") + "\"";
     }
