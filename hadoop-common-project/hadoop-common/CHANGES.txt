@@ -126,9 +126,6 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10543. RemoteException's unwrapRemoteException method failed for
     PathIOException. (Yongjun Zhang via atm)
 
-    HADOOP-10562. Namenode exits on exception without printing stack trace
-    in AbstractDelegationTokenSecretManager. (Arpit Agarwal)
-
     HADOOP-10568. Add s3 server-side encryption. (David S. Wang via atm)
 
     HADOOP-10541. InputStream in MiniKdc#initKDCServer for minikdc.ldiff is not
@@ -183,6 +180,9 @@ Release 2.4.1 - UNRELEASED
     (kihwal)
 
     HADOOP-10612. NFS failed to refresh the user group id mapping table (brandonli)
+
+    HADOOP-10562. Namenode exits on exception without printing stack trace
+    in AbstractDelegationTokenSecretManager. (Arpit Agarwal)
 
 Release 2.4.0 - 2014-04-07 
 
