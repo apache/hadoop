@@ -35,6 +35,7 @@ import org.apache.avro.Schema;
 import org.apache.avro.io.Decoder;
 import org.apache.avro.io.DecoderFactory;
 import org.apache.avro.io.DatumReader;
+import org.apache.avro.specific.SpecificData;
 import org.apache.avro.specific.SpecificDatumReader;
 
 @InterfaceAudience.Private
@@ -69,9 +70,10 @@ public class EventReader implements Closeable {
     if (!EventWriter.VERSION.equals(version)) {
       throw new IOException("Incompatible event log version: "+version);
     }
-    
+
+    Schema myschema = new SpecificData(Event.class.getClassLoader()).getSchema(Event.class);
     this.schema = Schema.parse(in.readLine());
-    this.reader = new SpecificDatumReader(schema);
+    this.reader = new SpecificDatumReader(schema, myschema);
     this.decoder = DecoderFactory.get().jsonDecoder(schema, in);
   }
   
@@ -173,13 +175,15 @@ public class EventReader implements Closeable {
 
   static Counters fromAvro(JhCounters counters) {
     Counters result = new Counters();
-    for (JhCounterGroup g : counters.groups) {
-      CounterGroup group =
-          result.addGroup(StringInterner.weakIntern(g.name.toString()), 
-              StringInterner.weakIntern(g.displayName.toString()));
-      for (JhCounter c : g.counts) {
-        group.addCounter(StringInterner.weakIntern(c.name.toString()), 
-            StringInterner.weakIntern(c.displayName.toString()), c.value);
+    if(counters != null) {
+      for (JhCounterGroup g : counters.groups) {
+        CounterGroup group =
+            result.addGroup(StringInterner.weakIntern(g.name.toString()), 
+                StringInterner.weakIntern(g.displayName.toString()));
+        for (JhCounter c : g.counts) {
+          group.addCounter(StringInterner.weakIntern(c.name.toString()), 
+              StringInterner.weakIntern(c.displayName.toString()), c.value);
+        }
       }
     }
     return result;
