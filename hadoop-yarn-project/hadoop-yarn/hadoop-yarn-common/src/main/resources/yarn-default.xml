@@ -1195,6 +1195,18 @@
   </property>
 
   <property>
+    <description>The Kerberos principal for the timeline server.</description>
+    <name>yarn.timeline-service.principal</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>The Kerberos keytab for the timeline server.</description>
+    <name>yarn.timeline-service.keytab</name>
+    <value>/etc/krb5.keytab</value>
+  </property>
+
+  <property>
     <description>Indicate to ResourceManager as well as clients whether
     history-service is enabled or not. If enabled, ResourceManager starts
     recording historical data that ApplicationHistory service can consume.
