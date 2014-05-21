@@ -54,6 +54,8 @@ import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_OWN
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_PERMISSIONS;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_QUOTA;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_REPLICATION;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_XATTR;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_REMOVE_XATTR;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_START_LOG_SEGMENT;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SYMLINK;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_TIMES;
@@ -79,12 +81,14 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.Options.Rename;
+import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -95,6 +99,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEditLogProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.XAttrEditLogProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.util.XMLUtils;
@@ -186,6 +191,8 @@ public abstract class FSEditLogOp {
           OP_ROLLING_UPGRADE_START, "start"));
       inst.put(OP_ROLLING_UPGRADE_FINALIZE, new RollingUpgradeOp(
           OP_ROLLING_UPGRADE_FINALIZE, "finalize"));
+      inst.put(OP_SET_XATTR, new SetXAttrOp());
+      inst.put(OP_REMOVE_XATTR, new RemoveXAttrOp());
     }
     
     public FSEditLogOp get(FSEditLogOpCodes opcode) {
@@ -3490,6 +3497,95 @@ public abstract class FSEditLogOp {
       return builder.toString();
     }
   }
+  
+  static class RemoveXAttrOp extends FSEditLogOp {
+    XAttr xAttr;
+    String src;
+    
+    private RemoveXAttrOp() {
+      super(OP_REMOVE_XATTR);
+    }
+    
+    static RemoveXAttrOp getInstance() {
+      return new RemoveXAttrOp();
+    }
+
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+      XAttrEditLogProto p = XAttrEditLogProto.parseDelimitedFrom(in);
+      src = p.getSrc();
+      xAttr = PBHelper.convertXAttr(p.getXAttr());
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+      XAttrEditLogProto.Builder b = XAttrEditLogProto.newBuilder();
+      if (src != null) {
+        b.setSrc(src);
+      }
+      b.setXAttr(PBHelper.convertXAttrProto(xAttr));
+      b.build().writeDelimitedTo(out);
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "SRC", src);
+      appendXAttrToXml(contentHandler, xAttr);
+    }
+
+    @Override
+    void fromXml(Stanza st) throws InvalidXmlException {
+      src = st.getValue("SRC");
+      xAttr = readXAttrFromXml(st);
+    }
+  }
+  
+  static class SetXAttrOp extends FSEditLogOp {
+    XAttr xAttr;
+    String src;
+    
+    private SetXAttrOp() {
+      super(OP_SET_XATTR);
+    }
+    
+    static SetXAttrOp getInstance() {
+      return new SetXAttrOp();
+    }
+
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+      XAttrEditLogProto p = XAttrEditLogProto.parseDelimitedFrom(in);
+      src = p.getSrc();
+      xAttr = PBHelper.convertXAttr(p.getXAttr());
+      readRpcIds(in, logVersion);
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+      XAttrEditLogProto.Builder b = XAttrEditLogProto.newBuilder();
+      if (src != null) {
+        b.setSrc(src);
+      }
+      b.setXAttr(PBHelper.convertXAttrProto(xAttr));
+      b.build().writeDelimitedTo(out);
+      // clientId and callId
+      writeRpcIds(rpcClientId, rpcCallId, out);
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "SRC", src);
+      appendXAttrToXml(contentHandler, xAttr);
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
+    }
+
+    @Override
+    void fromXml(Stanza st) throws InvalidXmlException {
+      src = st.getValue("SRC");
+      xAttr = readXAttrFromXml(st);
+      readRpcIdsFromXml(st);
+    }
+  }
 
   static class SetAclOp extends FSEditLogOp {
     List<AclEntry> aclEntries = Lists.newArrayList();
@@ -4105,5 +4201,43 @@ public abstract class FSEditLogOp {
       aclEntries.add(e);
     }
     return aclEntries;
+  }
+  
+  private static void appendXAttrToXml(ContentHandler contentHandler,
+      XAttr xAttr) throws SAXException {
+    contentHandler.startElement("", "", "XATTR", new AttributesImpl());
+    XMLUtils.addSaxString(contentHandler, "NAMESPACE", 
+        xAttr.getNameSpace().toString());
+    XMLUtils.addSaxString(contentHandler, "NAME", xAttr.getName());
+    if (xAttr.getValue() != null) {
+      try {
+        XMLUtils.addSaxString(contentHandler, "VALUE", 
+            XAttrCodec.encodeValue(xAttr.getValue(), XAttrCodec.HEX));
+      } catch (IOException e) {
+        throw new SAXException(e);
+      }
+    }
+    contentHandler.endElement("", "", "XATTR");
+  }
+  
+  private static XAttr readXAttrFromXml(Stanza st) 
+      throws InvalidXmlException {
+    if (!st.hasChildren("XATTR")) {
+      return null;
+    }
+    
+    Stanza a = st.getChildren("XATTR").get(0);
+    XAttr.Builder builder = new XAttr.Builder();
+    builder.setNameSpace(XAttr.NameSpace.valueOf(a.getValue("NAMESPACE"))).
+        setName(a.getValue("NAME"));
+    String v = a.getValueOrNull("VALUE");
+    if (v != null) {
+      try {
+        builder.setValue(XAttrCodec.decodeValue(v));
+      } catch (IOException e) {
+        throw new InvalidXmlException(e.toString());
+      }
+    }
+    return builder.build();
   }
 }

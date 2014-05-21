@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
 
 import com.google.common.base.Preconditions;
 
@@ -35,8 +36,9 @@ public interface INodeDirectoryAttributes extends INodeAttributes {
   public static class SnapshotCopy extends INodeAttributes.SnapshotCopy
       implements INodeDirectoryAttributes {
     public SnapshotCopy(byte[] name, PermissionStatus permissions,
-        AclFeature aclFeature, long modificationTime) {
-      super(name, permissions, aclFeature, modificationTime, 0L);
+        AclFeature aclFeature, long modificationTime, 
+        XAttrFeature xAttrsFeature) {
+      super(name, permissions, aclFeature, modificationTime, 0L, xAttrsFeature);
     }
 
     public SnapshotCopy(INodeDirectory dir) {
@@ -63,8 +65,8 @@ public interface INodeDirectoryAttributes extends INodeAttributes {
 
     public CopyWithQuota(byte[] name, PermissionStatus permissions,
         AclFeature aclFeature, long modificationTime, long nsQuota,
-        long dsQuota) {
-      super(name, permissions, aclFeature, modificationTime);
+        long dsQuota, XAttrFeature xAttrsFeature) {
+      super(name, permissions, aclFeature, modificationTime, xAttrsFeature);
       this.nsQuota = nsQuota;
       this.dsQuota = dsQuota;
     }

@@ -109,6 +109,8 @@ import org.apache.hadoop.fs.MD5MD5CRC32CastagnoliFileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32GzipFileChecksum;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
@@ -2754,6 +2756,72 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      AclException.class,
                                      FileNotFoundException.class,
+                                     UnresolvedPathException.class);
+    }
+  }
+  
+  public void setXAttr(String src, String name, byte[] value, 
+      EnumSet<XAttrSetFlag> flag) throws IOException {
+    checkOpen();
+    try {
+      namenode.setXAttr(src, XAttrHelper.buildXAttr(name, value), flag);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     FileNotFoundException.class,
+                                     NSQuotaExceededException.class,
+                                     SafeModeException.class,
+                                     SnapshotAccessControlException.class,
+                                     UnresolvedPathException.class);
+    }
+  }
+  
+  public byte[] getXAttr(String src, String name) throws IOException {
+    checkOpen();
+    try {
+      final List<XAttr> xAttrs = XAttrHelper.buildXAttrAsList(name);
+      final List<XAttr> result = namenode.getXAttrs(src, xAttrs);
+      return XAttrHelper.getFirstXAttrValue(result);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     FileNotFoundException.class,
+                                     UnresolvedPathException.class);
+    }
+  }
+  
+  public Map<String, byte[]> getXAttrs(String src) throws IOException {
+    checkOpen();
+    try {
+      return XAttrHelper.buildXAttrMap(namenode.getXAttrs(src, null));
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     FileNotFoundException.class,
+                                     UnresolvedPathException.class);
+    }
+  }
+  
+  public Map<String, byte[]> getXAttrs(String src, List<String> names) 
+      throws IOException {
+    checkOpen();
+    try {
+      return XAttrHelper.buildXAttrMap(namenode.getXAttrs(
+          src, XAttrHelper.buildXAttrs(names)));
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     FileNotFoundException.class,
+                                     UnresolvedPathException.class);
+    }
+  }
+  
+  public void removeXAttr(String src, String name) throws IOException {
+    checkOpen();
+    try {
+      namenode.removeXAttr(src, XAttrHelper.buildXAttr(name));
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     FileNotFoundException.class,
+                                     NSQuotaExceededException.class,
+                                     SafeModeException.class,
+                                     SnapshotAccessControlException.class,
                                      UnresolvedPathException.class);
     }
   }

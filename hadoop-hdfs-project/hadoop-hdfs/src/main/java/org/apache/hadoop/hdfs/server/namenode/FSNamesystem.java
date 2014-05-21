@@ -131,6 +131,8 @@ import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -508,7 +510,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   private final RetryCache retryCache;
 
-  private final AclConfigFlag aclConfigFlag;
+  private final NNConf nnConf;
 
   /**
    * Set the last allocated inode id when fsimage or editlog is loaded. 
@@ -775,7 +777,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       this.isDefaultAuditLogger = auditLoggers.size() == 1 &&
         auditLoggers.get(0) instanceof DefaultAuditLogger;
       this.retryCache = ignoreRetryCache ? null : initRetryCache(conf);
-      this.aclConfigFlag = new AclConfigFlag(conf);
+      this.nnConf = new NNConf(conf);
     } catch(IOException e) {
       LOG.error(getClass().getSimpleName() + " initialization failed.", e);
       close();
@@ -1112,8 +1114,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         // so that the tailer starts from the right spot.
         dir.fsImage.updateLastAppliedTxIdFromWritten();
       }
-      cacheManager.stopMonitorThread();
-      cacheManager.clearDirectiveStats();
+      if (cacheManager != null) {
+        cacheManager.stopMonitorThread();
+        cacheManager.clearDirectiveStats();
+      }
       blockManager.getDatanodeManager().clearPendingCachingCommands();
       blockManager.getDatanodeManager().setShouldSendCachingCommands(false);
       // Don't want to keep replication queues when not in Active.
@@ -7694,7 +7698,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   void modifyAclEntries(String src, List<AclEntry> aclSpec) throws IOException {
-    aclConfigFlag.checkForApiCall();
+    nnConf.checkAclsConfigFlag();
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
@@ -7715,7 +7719,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   void removeAclEntries(String src, List<AclEntry> aclSpec) throws IOException {
-    aclConfigFlag.checkForApiCall();
+    nnConf.checkAclsConfigFlag();
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
@@ -7736,7 +7740,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   void removeDefaultAcl(String src) throws IOException {
-    aclConfigFlag.checkForApiCall();
+    nnConf.checkAclsConfigFlag();
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
@@ -7757,7 +7761,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   void removeAcl(String src) throws IOException {
-    aclConfigFlag.checkForApiCall();
+    nnConf.checkAclsConfigFlag();
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
@@ -7778,7 +7782,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   void setAcl(String src, List<AclEntry> aclSpec) throws IOException {
-    aclConfigFlag.checkForApiCall();
+    nnConf.checkAclsConfigFlag();
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
@@ -7799,7 +7803,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   AclStatus getAclStatus(String src) throws IOException {
-    aclConfigFlag.checkForApiCall();
+    nnConf.checkAclsConfigFlag();
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.READ);
     readLock();
@@ -7812,6 +7816,167 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } finally {
       readUnlock();
     }
+  }
+  
+  /**
+   * Set xattr for a file or directory.
+   * 
+   * @param src
+   *          - path on which it sets the xattr
+   * @param xAttr
+   *          - xAttr details to set
+   * @param flag
+   *          - xAttrs flags
+   * @throws AccessControlException
+   * @throws SafeModeException
+   * @throws UnresolvedLinkException
+   * @throws IOException
+   */
+  void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag)
+      throws AccessControlException, SafeModeException,
+      UnresolvedLinkException, IOException {
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return; // Return previous response
+    }
+    boolean success = false;
+    try {
+      setXAttrInt(src, xAttr, flag, cacheEntry != null);
+      success = true;
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "setXAttr", src);
+      throw e;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+    }
+  }
+  
+  private void setXAttrInt(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag,
+      boolean logRetryCache) throws IOException {
+    nnConf.checkXAttrsConfigFlag();
+    checkXAttrSize(xAttr);
+    HdfsFileStatus resultingStat = null;
+    FSPermissionChecker pc = getPermissionChecker();
+    XAttrPermissionFilter.checkPermissionForApi(pc, xAttr);
+    checkOperation(OperationCategory.WRITE);
+    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+    writeLock();
+    try {
+      checkOperation(OperationCategory.WRITE);
+      checkNameNodeSafeMode("Cannot set XAttr on " + src);
+      src = FSDirectory.resolvePath(src, pathComponents, dir);
+      if (isPermissionEnabled) {
+        checkOwner(pc, src);
+        checkPathAccess(pc, src, FsAction.WRITE);
+      }
+      dir.setXAttr(src, xAttr, flag, logRetryCache);
+      resultingStat = getAuditFileInfo(src, false);
+    } finally {
+      writeUnlock();
+    }
+    getEditLog().logSync();
+    logAuditEvent(true, "setXAttr", src, null, resultingStat);
+  }
+
+  /**
+   * Verifies that the combined size of the name and value of an xattr is within
+   * the configured limit. Setting a limit of zero disables this check.
+   */
+  private void checkXAttrSize(XAttr xAttr) {
+    if (nnConf.xattrMaxSize == 0) {
+      return;
+    }
+    int size = xAttr.getName().getBytes(Charsets.UTF_8).length;
+    if (xAttr.getValue() != null) {
+      size += xAttr.getValue().length;
+    }
+    if (size > nnConf.xattrMaxSize) {
+      throw new HadoopIllegalArgumentException(
+          "The XAttr is too big. The maximum combined size of the"
+          + " name and value is " + nnConf.xattrMaxSize
+          + ", but the total size is " + size);
+    }
+  }
+  
+  List<XAttr> getXAttrs(String src, List<XAttr> xAttrs) throws IOException {
+    nnConf.checkXAttrsConfigFlag();
+    FSPermissionChecker pc = getPermissionChecker();
+    boolean getAll = xAttrs == null || xAttrs.isEmpty();
+    List<XAttr> filteredXAttrs = null;
+    if (!getAll) {
+      filteredXAttrs = XAttrPermissionFilter.filterXAttrsForApi(pc, xAttrs);
+      if (filteredXAttrs.isEmpty()) {
+        return filteredXAttrs;
+      }
+    }
+    checkOperation(OperationCategory.READ);
+    readLock();
+    try {
+      checkOperation(OperationCategory.READ);
+      if (isPermissionEnabled) {
+        checkPathAccess(pc, src, FsAction.READ);
+      }
+      List<XAttr> all = dir.getXAttrs(src);
+      List<XAttr> filteredAll = XAttrPermissionFilter.
+          filterXAttrsForApi(pc, all);
+      if (getAll) {
+        return filteredAll;
+      } else {
+        if (filteredAll == null || filteredAll.isEmpty()) {
+          return null;
+        }
+        List<XAttr> toGet = Lists.newArrayListWithCapacity(filteredXAttrs.size());
+        for (XAttr xAttr : filteredXAttrs) {
+          for (XAttr a : filteredAll) {
+            if (xAttr.getNameSpace() == a.getNameSpace()
+                && xAttr.getName().equals(a.getName())) {
+              toGet.add(a);
+              break;
+            }
+          }
+        }
+        return toGet;
+      }
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "getXAttrs", src);
+      throw e;
+    } finally {
+      readUnlock();
+    }
+  }
+  
+  void removeXAttr(String src, XAttr xAttr) throws IOException {
+    nnConf.checkXAttrsConfigFlag();
+    HdfsFileStatus resultingStat = null;
+    FSPermissionChecker pc = getPermissionChecker();
+    try {
+      XAttrPermissionFilter.checkPermissionForApi(pc, xAttr);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "removeXAttr", src);
+      throw e;
+    }
+    checkOperation(OperationCategory.WRITE);
+    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+    writeLock();
+    try {
+      checkOperation(OperationCategory.WRITE);
+      checkNameNodeSafeMode("Cannot remove XAttr entry on " + src);
+      src = FSDirectory.resolvePath(src, pathComponents, dir);
+      if (isPermissionEnabled) {
+        checkOwner(pc, src);
+        checkPathAccess(pc, src, FsAction.WRITE);
+      }
+      
+      dir.removeXAttr(src, xAttr);
+      resultingStat = getAuditFileInfo(src, false);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "removeXAttr", src);
+      throw e;
+    } finally {
+      writeUnlock();
+    }
+    getEditLog().logSync();
+    logAuditEvent(true, "removeXAttr", src, null, resultingStat);
   }
 
   /**
@@ -7898,6 +8063,5 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       logger.addAppender(asyncAppender);        
     }
   }
-
 }
 

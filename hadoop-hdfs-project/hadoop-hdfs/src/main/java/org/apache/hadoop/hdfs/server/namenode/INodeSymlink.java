@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
 
 /**
  * An {@link INode} representing a symbolic link.
@@ -109,5 +110,20 @@ public class INodeSymlink extends INodeWithAdditionalFields {
       final int snapshot) {
     super.dumpTreeRecursively(out, prefix, snapshot);
     out.println();
+  }
+
+  @Override
+  final XAttrFeature getXAttrFeature(int snapshotId) {
+    throw new UnsupportedOperationException("XAttrs are not supported on symlinks");
+  }
+  
+  @Override
+  public void removeXAttrFeature() {
+    throw new UnsupportedOperationException("XAttrs are not supported on symlinks");
+  }
+  
+  @Override
+  public void addXAttrFeature(XAttrFeature f) {
+    throw new UnsupportedOperationException("XAttrs are not supported on symlinks");
   }
 }

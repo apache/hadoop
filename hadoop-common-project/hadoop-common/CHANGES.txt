@@ -340,6 +340,24 @@ Trunk (Unreleased)
 
     HADOOP-8589. ViewFs tests fail when tests and home dirs are nested (sanjay Radia)
 
+  BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
+
+    HADOOP-10520. Extended attributes definition and FileSystem APIs for
+    extended attributes. (Yi Liu via wang)
+
+    HADOOP-10546. Javadoc and other small fixes for extended attributes in
+    hadoop-common. (Charles Lamb via wang)
+
+    HADOOP-10521. FsShell commands for extended attributes. (Yi Liu via wang)
+
+    HADOOP-10548. Improve FsShell xattr error handling and other fixes. (Charles Lamb via umamahesh)
+
+    HADOOP-10567. Shift XAttr value encoding code out for reuse. (Yi Liu via umamahesh)
+
+    HADOOP-10621. Remove CRLF for xattr value base64 encoding for better display.(Yi Liu via umamahesh)
+
+    HADOOP-10575. Small fixes for XAttrCommands and test. (Yi Liu via umamahesh)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

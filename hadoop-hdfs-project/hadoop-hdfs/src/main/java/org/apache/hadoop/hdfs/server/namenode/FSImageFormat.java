@@ -877,7 +877,7 @@ public class FSImageFormat {
       final long preferredBlockSize = in.readLong();
 
       return new INodeFileAttributes.SnapshotCopy(name, permissions, null, modificationTime,
-          accessTime, replication, preferredBlockSize);
+          accessTime, replication, preferredBlockSize, null);
     }
 
     public INodeDirectoryAttributes loadINodeDirectoryAttributes(DataInput in)
@@ -897,10 +897,10 @@ public class FSImageFormat {
       final long nsQuota = in.readLong();
       final long dsQuota = in.readLong();
   
-      return nsQuota == -1L && dsQuota == -1L?
-          new INodeDirectoryAttributes.SnapshotCopy(name, permissions, null, modificationTime)
+      return nsQuota == -1L && dsQuota == -1L ? new INodeDirectoryAttributes.SnapshotCopy(
+          name, permissions, null, modificationTime, null)
         : new INodeDirectoryAttributes.CopyWithQuota(name, permissions,
-            null, modificationTime, nsQuota, dsQuota);
+            null, modificationTime, nsQuota, dsQuota, null);
     }
   
     private void loadFilesUnderConstruction(DataInput in,

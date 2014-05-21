@@ -25,12 +25,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -76,6 +78,8 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetOwnerOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetPermissionsOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetQuotaOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetReplicationOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetXAttrOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemoveXAttrOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
@@ -796,6 +800,20 @@ public class FSEditLogLoader {
     case OP_SET_ACL: {
       SetAclOp setAclOp = (SetAclOp) op;
       fsDir.unprotectedSetAcl(setAclOp.src, setAclOp.aclEntries);
+      break;
+    }
+    case OP_SET_XATTR: {
+      SetXAttrOp setXAttrOp = (SetXAttrOp) op;
+      fsDir.unprotectedSetXAttr(setXAttrOp.src, setXAttrOp.xAttr, 
+          EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(setXAttrOp.rpcClientId, setXAttrOp.rpcCallId);
+      }
+      break;
+    }
+    case OP_REMOVE_XATTR: {
+      RemoveXAttrOp removeXAttrOp = (RemoveXAttrOp) op;
+      fsDir.unprotectedRemoveXAttr(removeXAttrOp.src, removeXAttrOp.xAttr);
       break;
     }
     default:

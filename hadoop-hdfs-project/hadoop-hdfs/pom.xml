@@ -290,6 +290,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <include>NamenodeProtocol.proto</include>
                   <include>QJournalProtocol.proto</include>
                   <include>acl.proto</include>
+                  <include>xattr.proto</include>
                   <include>datatransfer.proto</include>
                   <include>fsimage.proto</include>
                   <include>hdfs.proto</include>
