@@ -85,6 +85,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1981. Nodemanager version is not updated when a node reconnects (Jason
     Lowe via jeagles)
 
+    YARN-1938. Added kerberos login for the Timeline Server. (Zhijie Shen via
+    vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES 

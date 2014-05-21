@@ -18,12 +18,16 @@
 
 package org.apache.hadoop.yarn.server.applicationhistoryservice;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ExitUtil;
@@ -33,8 +37,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.LeveldbTimelineStore;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.AHSWebApp;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
@@ -69,13 +73,19 @@ public class ApplicationHistoryServer extends CompositeService {
     addService((Service) historyManager);
     timelineStore = createTimelineStore(conf);
     addIfService(timelineStore);
+
+    DefaultMetricsSystem.initialize("ApplicationHistoryServer");
+    JvmMetrics.initSingleton("ApplicationHistoryServer", null);
     super.serviceInit(conf);
   }
 
   @Override
   protected void serviceStart() throws Exception {
-    DefaultMetricsSystem.initialize("ApplicationHistoryServer");
-    JvmMetrics.initSingleton("ApplicationHistoryServer", null);
+    try {
+      doSecureLogin(getConfig());
+    } catch(IOException ie) {
+      throw new YarnRuntimeException("Failed to login", ie);
+    }
 
     startWebApp();
     super.serviceStart();
@@ -176,5 +186,23 @@ public class ApplicationHistoryServer extends CompositeService {
   @VisibleForTesting
   public TimelineStore getTimelineStore() {
     return timelineStore;
+  }
+
+  private void doSecureLogin(Configuration conf) throws IOException {
+    InetSocketAddress socAddr = getBindAddress(conf);
+    SecurityUtil.login(conf, YarnConfiguration.TIMELINE_SERVICE_KEYTAB,
+        YarnConfiguration.TIMELINE_SERVICE_PRINCIPAL, socAddr.getHostName());
+  }
+
+  /**
+   * Retrieve the timeline server bind address from configuration
+   *
+   * @param conf
+   * @return InetSocketAddress
+   */
+  private static InetSocketAddress getBindAddress(Configuration conf) {
+    return conf.getSocketAddr(YarnConfiguration.TIMELINE_SERVICE_ADDRESS,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ADDRESS,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_PORT);
   }
 }

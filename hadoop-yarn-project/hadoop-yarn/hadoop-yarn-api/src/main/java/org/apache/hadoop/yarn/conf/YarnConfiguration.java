@@ -1196,6 +1196,14 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_TIMELINE_SERVICE_LEVELDB_TTL_INTERVAL_MS =
       1000 * 60 * 5;
 
+  /** The Kerberos principal for the timeline server.*/
+  public static final String TIMELINE_SERVICE_PRINCIPAL =
+      TIMELINE_SERVICE_PREFIX + "principal";
+
+  /** The Kerberos keytab for the timeline server.*/
+  public static final String TIMELINE_SERVICE_KEYTAB =
+      TIMELINE_SERVICE_PREFIX + "keytab";
+
   ////////////////////////////////
   // Other Configs
   ////////////////////////////////
