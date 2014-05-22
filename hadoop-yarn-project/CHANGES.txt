@@ -240,6 +240,9 @@ Release 2.4.1 - UNRELEASED
     YARN-2066. Wrong field is referenced in GetApplicationsRequestPBImpl#mergeLocalToBuilder()
     (Hong Zhiguo via junping_du)
 
+    YARN-2081. Fixed TestDistributedShell failure after YARN-1962. (Zhiguo Hong
+    via zjshen)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
