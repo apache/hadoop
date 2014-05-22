@@ -50,6 +50,7 @@ public class DistCpConstants {
   public static final String CONF_LABEL_COPY_STRATEGY = "distcp.copy.strategy";
   public static final String CONF_LABEL_SKIP_CRC = "distcp.skip.crc";
   public static final String CONF_LABEL_OVERWRITE = "distcp.copy.overwrite";
+  public static final String CONF_LABEL_APPEND = "distcp.copy.append";
   public static final String CONF_LABEL_BANDWIDTH_MB = "distcp.map.bandwidth.mb";
   
   public static final String CONF_LABEL_MAX_CHUNKS_TOLERABLE =

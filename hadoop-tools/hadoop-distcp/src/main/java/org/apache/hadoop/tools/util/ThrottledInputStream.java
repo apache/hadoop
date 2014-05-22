@@ -21,6 +21,11 @@ package org.apache.hadoop.tools.util;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.PositionedReadable;
+
+import com.google.common.base.Preconditions;
+
 /**
  * The ThrottleInputStream provides bandwidth throttling on a specified
  * InputStream. It is implemented as a wrapper on top of another InputStream
@@ -84,6 +89,25 @@ public class ThrottledInputStream extends InputStream {
   public int read(byte[] b, int off, int len) throws IOException {
     throttle();
     int readLen = rawStream.read(b, off, len);
+    if (readLen != -1) {
+      bytesRead += readLen;
+    }
+    return readLen;
+  }
+
+  /**
+   * Read bytes starting from the specified position. This requires rawStream is
+   * an instance of {@link PositionedReadable}.
+   */
+  public int read(long position, byte[] buffer, int offset, int length)
+      throws IOException {
+    if (!(rawStream instanceof PositionedReadable)) {
+      throw new UnsupportedOperationException(
+          "positioned read is not supported by the internal stream");
+    }
+    throttle();
+    int readLen = ((PositionedReadable) rawStream).read(position, buffer,
+        offset, length);
     if (readLen != -1) {
       bytesRead += readLen;
     }

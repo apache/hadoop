@@ -121,7 +121,7 @@ public class FileChecksumServlets {
       try {
         final DFSClient dfs = DatanodeJspHelper.getDFSClient(request, 
             datanode, conf, getUGI(request, conf));
-        final MD5MD5CRC32FileChecksum checksum = dfs.getFileChecksum(path);
+        final MD5MD5CRC32FileChecksum checksum = dfs.getFileChecksum(path, Long.MAX_VALUE);
         MD5MD5CRC32FileChecksum.write(xml, checksum);
       } catch(IOException ioe) {
         writeXml(ioe, path, xml);

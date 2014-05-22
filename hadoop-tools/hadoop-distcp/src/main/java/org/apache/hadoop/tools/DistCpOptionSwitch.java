@@ -138,6 +138,10 @@ public enum DistCpOptionSwitch {
       new Option("overwrite", false, "Choose to overwrite target files " +
           "unconditionally, even if they exist.")),
 
+  APPEND(DistCpConstants.CONF_LABEL_APPEND,
+      new Option("append", false,
+          "Reuse existing data in target files and append new data to them if possible")),
+
   /**
    * Should DisctpExecution be blocking
    */

@@ -140,6 +140,10 @@ public class OptionsParser {
       option.setOverwrite(true);
     }
 
+    if (command.hasOption(DistCpOptionSwitch.APPEND.getSwitch())) {
+      option.setAppend(true);
+    }
+
     if (command.hasOption(DistCpOptionSwitch.DELETE_MISSING.getSwitch())) {
       option.setDeleteMissing(true);
     }

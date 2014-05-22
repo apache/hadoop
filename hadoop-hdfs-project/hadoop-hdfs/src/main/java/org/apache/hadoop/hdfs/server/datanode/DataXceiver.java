@@ -42,6 +42,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.channels.ClosedChannelException;
+import java.security.MessageDigest;
 import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
@@ -83,6 +84,7 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
 
+import com.google.common.base.Preconditions;
 import com.google.common.net.InetAddresses;
 import com.google.protobuf.ByteString;
 
@@ -802,7 +804,44 @@ class DataXceiver extends Receiver implements Runnable {
       IOUtils.closeStream(out);
     }
   }
-  
+
+  private MD5Hash calcPartialBlockChecksum(ExtendedBlock block,
+      long requestLength, DataChecksum checksum, DataInputStream checksumIn)
+      throws IOException {
+    final int bytesPerCRC = checksum.getBytesPerChecksum();
+    final int csize = checksum.getChecksumSize();
+    final byte[] buffer = new byte[4*1024];
+    MessageDigest digester = MD5Hash.getDigester();
+
+    long remaining = requestLength / bytesPerCRC * csize;
+    for (int toDigest = 0; remaining > 0; remaining -= toDigest) {
+      toDigest = checksumIn.read(buffer, 0,
+          (int) Math.min(remaining, buffer.length));
+      if (toDigest < 0) {
+        break;
+      }
+      digester.update(buffer, 0, toDigest);
+    }
+    
+    int partialLength = (int) (requestLength % bytesPerCRC);
+    if (partialLength > 0) {
+      byte[] buf = new byte[partialLength];
+      final InputStream blockIn = datanode.data.getBlockInputStream(block,
+          requestLength - partialLength);
+      try {
+        // Get the CRC of the partialLength.
+        IOUtils.readFully(blockIn, buf, 0, partialLength);
+      } finally {
+        IOUtils.closeStream(blockIn);
+      }
+      checksum.update(buf, 0, partialLength);
+      byte[] partialCrc = new byte[csize];
+      checksum.writeValue(partialCrc, 0, true);
+      digester.update(partialCrc);
+    }
+    return new MD5Hash(digester.digest());
+  }
+
   @Override
   public void blockChecksum(final ExtendedBlock block,
       final Token<BlockTokenIdentifier> blockToken) throws IOException {
@@ -810,25 +849,32 @@ class DataXceiver extends Receiver implements Runnable {
         getOutputStream());
     checkAccess(out, true, block, blockToken,
         Op.BLOCK_CHECKSUM, BlockTokenSecretManager.AccessMode.READ);
-    updateCurrentThreadName("Reading metadata for block " + block);
-    final LengthInputStream metadataIn = 
-      datanode.data.getMetaDataInputStream(block);
-    final DataInputStream checksumIn = new DataInputStream(new BufferedInputStream(
-        metadataIn, HdfsConstants.IO_FILE_BUFFER_SIZE));
+    // client side now can specify a range of the block for checksum
+    long requestLength = block.getNumBytes();
+    Preconditions.checkArgument(requestLength >= 0);
+    long visibleLength = datanode.data.getReplicaVisibleLength(block);
+    boolean partialBlk = requestLength < visibleLength;
 
+    updateCurrentThreadName("Reading metadata for block " + block);
+    final LengthInputStream metadataIn = datanode.data
+        .getMetaDataInputStream(block);
+    
+    final DataInputStream checksumIn = new DataInputStream(
+        new BufferedInputStream(metadataIn, HdfsConstants.IO_FILE_BUFFER_SIZE));
     updateCurrentThreadName("Getting checksum for block " + block);
     try {
       //read metadata file
-      final BlockMetadataHeader header = BlockMetadataHeader.readHeader(checksumIn);
-      final DataChecksum checksum = header.getChecksum(); 
+      final BlockMetadataHeader header = BlockMetadataHeader
+          .readHeader(checksumIn);
+      final DataChecksum checksum = header.getChecksum();
+      final int csize = checksum.getChecksumSize();
       final int bytesPerCRC = checksum.getBytesPerChecksum();
-      final long crcPerBlock = checksum.getChecksumSize() > 0 
-              ? (metadataIn.getLength() - BlockMetadataHeader.getHeaderSize())/checksum.getChecksumSize()
-              : 0;
-      
-      //compute block checksum
-      final MD5Hash md5 = MD5Hash.digest(checksumIn);
+      final long crcPerBlock = csize <= 0 ? 0 : 
+        (metadataIn.getLength() - BlockMetadataHeader.getHeaderSize()) / csize;
 
+      final MD5Hash md5 = partialBlk && crcPerBlock > 0 ? 
+          calcPartialBlockChecksum(block, requestLength, checksum, checksumIn)
+            : MD5Hash.digest(checksumIn);
       if (LOG.isDebugEnabled()) {
         LOG.debug("block=" + block + ", bytesPerCRC=" + bytesPerCRC
             + ", crcPerBlock=" + crcPerBlock + ", md5=" + md5);
@@ -841,8 +887,7 @@ class DataXceiver extends Receiver implements Runnable {
           .setBytesPerCrc(bytesPerCRC)
           .setCrcPerBlock(crcPerBlock)
           .setMd5(ByteString.copyFrom(md5.getDigest()))
-          .setCrcType(PBHelper.convert(checksum.getChecksumType()))
-          )
+          .setCrcType(PBHelper.convert(checksum.getChecksumType())))
         .build()
         .writeDelimitedTo(out);
       out.flush();

@@ -2141,9 +2141,21 @@ public abstract class FileSystem extends Configured implements Closeable {
    *  in the corresponding FileSystem.
    */
   public FileChecksum getFileChecksum(Path f) throws IOException {
+    return getFileChecksum(f, Long.MAX_VALUE);
+  }
+
+  /**
+   * Get the checksum of a file, from the beginning of the file till the
+   * specific length.
+   * @param f The file path
+   * @param length The length of the file range for checksum calculation
+   * @return The file checksum.
+   */
+  public FileChecksum getFileChecksum(Path f, final long length)
+      throws IOException {
     return null;
   }
-  
+
   /**
    * Set the verify checksum flag. This is only applicable if the 
    * corresponding FileSystem supports checksum. By default doesn't do anything.
