@@ -170,7 +170,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
   public void editSchedule(){
     CSQueue root = scheduler.getRootQueue();
     Resource clusterResources =
-      Resources.clone(scheduler.getClusterResources());
+      Resources.clone(scheduler.getClusterResource());
     containerBasedPreemptOrKill(root, clusterResources);
   }
 

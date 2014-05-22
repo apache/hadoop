@@ -73,6 +73,8 @@ Release 2.5.0 - UNRELEASED
     YARN-1938. Added kerberos login for the Timeline Server. (Zhijie Shen via
     vinodkv)
 
+    YARN-2017. Merged some of the common scheduler code. (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES 

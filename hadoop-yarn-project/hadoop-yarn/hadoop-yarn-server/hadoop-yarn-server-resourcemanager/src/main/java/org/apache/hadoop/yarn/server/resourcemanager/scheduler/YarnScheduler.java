@@ -69,7 +69,15 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   @Public
   @Stable
   public List<QueueUserACLInfo> getQueueUserAclInfo();
-  
+
+  /**
+   * Get the whole resource capacity of the cluster.
+   * @return the whole resource capacity of the cluster.
+   */
+  @LimitedPrivate("yarn")
+  @Unstable
+  public Resource getClusterResource();
+
   /**
    * Get minimum allocatable {@link Resource}.
    * @return minimum allocatable resource
@@ -182,7 +190,7 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   @LimitedPrivate("yarn")
   @Unstable
   public RMContainer getRMContainer(ContainerId containerId);
-  
+
   /**
    * Moves the given application to the given queue
    * @param appId

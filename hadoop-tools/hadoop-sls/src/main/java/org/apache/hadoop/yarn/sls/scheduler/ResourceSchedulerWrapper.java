@@ -36,6 +36,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -872,6 +874,13 @@ public class ResourceSchedulerWrapper implements ResourceScheduler,
   public String moveApplication(ApplicationId appId, String newQueue)
       throws YarnException {
     return scheduler.moveApplication(appId, newQueue);
+  }
+
+  @Override
+  @LimitedPrivate("yarn")
+  @Unstable
+  public Resource getClusterResource() {
+    return null;
   }
 }
 

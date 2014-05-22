@@ -174,12 +174,12 @@ public class LeafQueue implements CSQueue {
     int maxActiveApplications = 
         CSQueueUtils.computeMaxActiveApplications(
             resourceCalculator,
-            cs.getClusterResources(), this.minimumAllocation,
+            cs.getClusterResource(), this.minimumAllocation,
             maxAMResourcePerQueuePercent, absoluteMaxCapacity);
     this.maxActiveAppsUsingAbsCap = 
             CSQueueUtils.computeMaxActiveApplications(
                 resourceCalculator,
-                cs.getClusterResources(), this.minimumAllocation,
+                cs.getClusterResource(), this.minimumAllocation,
                 maxAMResourcePerQueuePercent, absoluteCapacity);
     int maxActiveApplicationsPerUser = 
         CSQueueUtils.computeMaxActiveApplicationsPerUser(maxActiveAppsUsingAbsCap, userLimit, 
@@ -195,7 +195,7 @@ public class LeafQueue implements CSQueue {
       cs.getConfiguration().getAcls(getQueuePath());
 
     setupQueueConfigs(
-        cs.getClusterResources(),
+        cs.getClusterResource(),
         capacity, absoluteCapacity, 
         maximumCapacity, absoluteMaxCapacity, 
         userLimit, userLimitFactor, 
