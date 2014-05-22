@@ -73,6 +73,7 @@ public class TestDistributedShell {
     conf.setClass(YarnConfiguration.RM_SCHEDULER, 
         FifoScheduler.class, ResourceScheduler.class);
     conf.set("yarn.log.dir", "target");
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     if (yarnCluster == null) {
       yarnCluster = new MiniYARNCluster(
         TestDistributedShell.class.getSimpleName(), 1, 1, 1, 1, true);
