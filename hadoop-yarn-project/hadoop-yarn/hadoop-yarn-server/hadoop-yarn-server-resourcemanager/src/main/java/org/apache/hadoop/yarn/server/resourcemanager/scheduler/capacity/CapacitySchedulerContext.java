@@ -43,7 +43,7 @@ public interface CapacitySchedulerContext {
 
   RMContext getRMContext();
   
-  Resource getClusterResources();
+  Resource getClusterResource();
 
   /**
    * Get the yarn configuration.

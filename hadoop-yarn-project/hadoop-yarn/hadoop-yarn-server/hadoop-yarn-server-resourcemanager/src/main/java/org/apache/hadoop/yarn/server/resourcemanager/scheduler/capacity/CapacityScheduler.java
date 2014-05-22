@@ -41,7 +41,6 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -49,11 +48,9 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -75,9 +72,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnSched
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
@@ -100,9 +95,9 @@ import com.google.common.annotations.VisibleForTesting;
 @LimitedPrivate("yarn")
 @Evolving
 @SuppressWarnings("unchecked")
-public class CapacityScheduler extends AbstractYarnScheduler
-  implements PreemptableResourceScheduler, CapacitySchedulerContext,
-             Configurable {
+public class CapacityScheduler extends
+    AbstractYarnScheduler<FiCaSchedulerApp, FiCaSchedulerNode> implements
+    PreemptableResourceScheduler, CapacitySchedulerContext, Configurable {
 
   private static final Log LOG = LogFactory.getLog(CapacityScheduler.class);
 
@@ -182,15 +177,7 @@ public class CapacityScheduler extends AbstractYarnScheduler
 
   private Map<String, CSQueue> queues = new ConcurrentHashMap<String, CSQueue>();
 
-  private Map<NodeId, FiCaSchedulerNode> nodes = 
-      new ConcurrentHashMap<NodeId, FiCaSchedulerNode>();
-
-  private Resource clusterResource = 
-    RecordFactoryProvider.getRecordFactory(null).newRecordInstance(Resource.class);
   private int numNodeManagers = 0;
-
-  private Resource minimumAllocation;
-  private Resource maximumAllocation;
 
   private boolean initialized = false;
 
@@ -231,16 +218,6 @@ public class CapacityScheduler extends AbstractYarnScheduler
   }
 
   @Override
-  public Resource getMinimumResourceCapability() {
-    return minimumAllocation;
-  }
-
-  @Override
-  public Resource getMaximumResourceCapability() {
-    return maximumAllocation;
-  }
-
-  @Override
   public Comparator<FiCaSchedulerApp> getApplicationComparator() {
     return applicationComparator;
   }
@@ -264,11 +241,6 @@ public class CapacityScheduler extends AbstractYarnScheduler
   public RMContext getRMContext() {
     return this.rmContext;
   }
-
-  @Override
-  public Resource getClusterResources() {
-    return clusterResource;
-  }
   
   @Override
   public synchronized void
@@ -283,7 +255,7 @@ public class CapacityScheduler extends AbstractYarnScheduler
       this.calculator = this.conf.getResourceCalculator();
       this.usePortForNodeName = this.conf.getUsePortForNodeName();
       this.applications =
-          new ConcurrentHashMap<ApplicationId, SchedulerApplication>();
+          new ConcurrentHashMap<ApplicationId, SchedulerApplication<FiCaSchedulerApp>>();
 
       initializeQueues(this.conf);
       
@@ -536,8 +508,8 @@ public class CapacityScheduler extends AbstractYarnScheduler
           .handle(new RMAppRejectedEvent(applicationId, ace.toString()));
       return;
     }
-    SchedulerApplication application =
-        new SchedulerApplication(queue, user);
+    SchedulerApplication<FiCaSchedulerApp> application =
+        new SchedulerApplication<FiCaSchedulerApp>(queue, user);
     applications.put(applicationId, application);
     LOG.info("Accepted application " + applicationId + " from user: " + user
         + ", in queue: " + queueName);
@@ -548,7 +520,7 @@ public class CapacityScheduler extends AbstractYarnScheduler
   private synchronized void addApplicationAttempt(
       ApplicationAttemptId applicationAttemptId,
       boolean transferStateFromPreviousAttempt) {
-    SchedulerApplication application =
+    SchedulerApplication<FiCaSchedulerApp> application =
         applications.get(applicationAttemptId.getApplicationId());
     CSQueue queue = (CSQueue) application.getQueue();
 
@@ -572,7 +544,8 @@ public class CapacityScheduler extends AbstractYarnScheduler
 
   private synchronized void doneApplication(ApplicationId applicationId,
       RMAppState finalState) {
-    SchedulerApplication application = applications.get(applicationId);
+    SchedulerApplication<FiCaSchedulerApp> application =
+        applications.get(applicationId);
     if (application == null){
       // The AppRemovedSchedulerEvent maybe sent on recovery for completed apps,
       // ignore it.
@@ -597,7 +570,7 @@ public class CapacityScheduler extends AbstractYarnScheduler
     		" finalState=" + rmAppAttemptFinalState);
     
     FiCaSchedulerApp attempt = getApplicationAttempt(applicationAttemptId);
-    SchedulerApplication application =
+    SchedulerApplication<FiCaSchedulerApp> application =
         applications.get(applicationAttemptId.getApplicationId());
 
     if (application == null || attempt == null) {
@@ -659,7 +632,7 @@ public class CapacityScheduler extends AbstractYarnScheduler
     
     // Sanity check
     SchedulerUtils.normalizeRequests(
-        ask, getResourceCalculator(), getClusterResources(),
+        ask, getResourceCalculator(), getClusterResource(),
         getMinimumResourceCapability(), maximumAllocation);
 
     // Release containers
@@ -822,7 +795,7 @@ public class CapacityScheduler extends AbstractYarnScheduler
 
     // Try to schedule more if there are no reservations to fulfill
     if (node.getReservedContainer() == null) {
-      if (Resources.greaterThanOrEqual(calculator, getClusterResources(),
+      if (Resources.greaterThanOrEqual(calculator, getClusterResource(),
           node.getAvailableResource(), minimumAllocation)) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Trying to schedule on node: " + node.getNodeName() +
@@ -942,7 +915,7 @@ public class CapacityScheduler extends AbstractYarnScheduler
   }
 
   private synchronized void removeNode(RMNode nodeInfo) {
-    FiCaSchedulerNode node = this.nodes.get(nodeInfo.getNodeID());
+    FiCaSchedulerNode node = nodes.get(nodeInfo.getNodeID());
     if (node == null) {
       return;
     }
@@ -1015,28 +988,10 @@ public class CapacityScheduler extends AbstractYarnScheduler
 
   @Lock(Lock.NoLock.class)
   @VisibleForTesting
+  @Override
   public FiCaSchedulerApp getApplicationAttempt(
       ApplicationAttemptId applicationAttemptId) {
-    SchedulerApplication app =
-        applications.get(applicationAttemptId.getApplicationId());
-    if (app != null) {
-      return (FiCaSchedulerApp) app.getCurrentAppAttempt();
-    }
-    return null;
-  }
-
-  @Override
-  public SchedulerAppReport getSchedulerAppInfo(
-      ApplicationAttemptId applicationAttemptId) {
-    FiCaSchedulerApp app = getApplicationAttempt(applicationAttemptId);
-    return app == null ? null : new SchedulerAppReport(app);
-  }
-  
-  @Override
-  public ApplicationResourceUsageReport getAppResourceUsageReport(
-      ApplicationAttemptId applicationAttemptId) {
-    FiCaSchedulerApp app = getApplicationAttempt(applicationAttemptId);
-    return app == null ? null : app.getResourceUsageReport();
+    return super.getApplicationAttempt(applicationAttemptId);
   }
   
   @Lock(Lock.NoLock.class)
@@ -1048,35 +1003,11 @@ public class CapacityScheduler extends AbstractYarnScheduler
   Map<NodeId, FiCaSchedulerNode> getAllNodes() {
     return nodes;
   }
-  
-  @Override
-  public RMContainer getRMContainer(ContainerId containerId) {
-    FiCaSchedulerApp attempt = getCurrentAttemptForContainer(containerId);
-    return (attempt == null) ? null : attempt.getRMContainer(containerId);
-  }
-
-  @VisibleForTesting
-  public FiCaSchedulerApp getCurrentAttemptForContainer(
-      ContainerId containerId) {
-    SchedulerApplication app =
-        applications.get(containerId.getApplicationAttemptId()
-          .getApplicationId());
-    if (app != null) {
-      return (FiCaSchedulerApp) app.getCurrentAppAttempt();
-    }
-    return null;
-  }
 
   @Override
   @Lock(Lock.NoLock.class)
   public void recover(RMState state) throws Exception {
     // NOT IMPLEMENTED
-  }
-
-  @Override
-  public SchedulerNodeReport getNodeReport(NodeId nodeId) {
-    FiCaSchedulerNode node = getNode(nodeId);
-    return node == null ? null : new SchedulerNodeReport(node);
   }
 
   @Override

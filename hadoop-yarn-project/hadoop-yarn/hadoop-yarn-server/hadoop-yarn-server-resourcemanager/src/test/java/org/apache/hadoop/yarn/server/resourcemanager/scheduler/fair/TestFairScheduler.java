@@ -43,7 +43,6 @@ import java.util.Set;
 
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -80,8 +79,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestSchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
@@ -95,12 +97,14 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.xml.sax.SAXException;
 
 import com.google.common.collect.Sets;
 
+@SuppressWarnings("unchecked")
 public class TestFairScheduler {
 
   static class MockClock implements Clock {
@@ -377,19 +381,19 @@ public class TestFairScheduler {
             .newNodeInfo(1, Resources.createResource(1024), 1, "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
-    assertEquals(1024, scheduler.getClusterCapacity().getMemory());
+    assertEquals(1024, scheduler.getClusterResource().getMemory());
 
     // Add another node
     RMNode node2 =
         MockNodes.newNodeInfo(1, Resources.createResource(512), 2, "127.0.0.2");
     NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
     scheduler.handle(nodeEvent2);
-    assertEquals(1536, scheduler.getClusterCapacity().getMemory());
+    assertEquals(1536, scheduler.getClusterResource().getMemory());
 
     // Remove the first node
     NodeRemovedSchedulerEvent nodeEvent3 = new NodeRemovedSchedulerEvent(node1);
     scheduler.handle(nodeEvent3);
-    assertEquals(512, scheduler.getClusterCapacity().getMemory());
+    assertEquals(512, scheduler.getClusterResource().getMemory());
   }
 
   @Test
@@ -2123,7 +2127,7 @@ public class TestFairScheduler {
     FSSchedulerApp app2 = scheduler.getSchedulerApp(appAttId2);
 
     DominantResourceFairnessPolicy drfPolicy = new DominantResourceFairnessPolicy();
-    drfPolicy.initialize(scheduler.getClusterCapacity());
+    drfPolicy.initialize(scheduler.getClusterResource());
     scheduler.getQueueManager().getQueue("queue1").setPolicy(drfPolicy);
     scheduler.update();
 
@@ -2167,7 +2171,7 @@ public class TestFairScheduler {
     FSSchedulerApp app3 = scheduler.getSchedulerApp(appAttId3);
     
     DominantResourceFairnessPolicy drfPolicy = new DominantResourceFairnessPolicy();
-    drfPolicy.initialize(scheduler.getClusterCapacity());
+    drfPolicy.initialize(scheduler.getClusterResource());
     scheduler.getQueueManager().getQueue("root").setPolicy(drfPolicy);
     scheduler.getQueueManager().getQueue("queue1").setPolicy(drfPolicy);
     scheduler.update();
@@ -2210,7 +2214,7 @@ public class TestFairScheduler {
     FSSchedulerApp app4 = scheduler.getSchedulerApp(appAttId4);
     
     DominantResourceFairnessPolicy drfPolicy = new DominantResourceFairnessPolicy();
-    drfPolicy.initialize(scheduler.getClusterCapacity());
+    drfPolicy.initialize(scheduler.getClusterResource());
     scheduler.getQueueManager().getQueue("root").setPolicy(drfPolicy);
     scheduler.getQueueManager().getQueue("queue1").setPolicy(drfPolicy);
     scheduler.getQueueManager().getQueue("queue1.subqueue1").setPolicy(drfPolicy);
@@ -2466,8 +2470,8 @@ public class TestFairScheduler {
     fs.handle(nodeEvent2);
 
     // available resource
-    Assert.assertEquals(fs.getClusterCapacity().getMemory(), 16 * 1024);
-    Assert.assertEquals(fs.getClusterCapacity().getVirtualCores(), 16);
+    Assert.assertEquals(fs.getClusterResource().getMemory(), 16 * 1024);
+    Assert.assertEquals(fs.getClusterResource().getVirtualCores(), 16);
 
     // send application request
     ApplicationAttemptId appAttemptId =
@@ -2647,8 +2651,9 @@ public class TestFairScheduler {
 
   @Test
   public void testAddAndRemoveAppFromFairScheduler() throws Exception {
-    FairScheduler scheduler =
-        (FairScheduler) resourceManager.getResourceScheduler();
+    AbstractYarnScheduler<SchedulerApplicationAttempt, SchedulerNode> scheduler =
+        (AbstractYarnScheduler<SchedulerApplicationAttempt, SchedulerNode>) resourceManager
+          .getResourceScheduler();
     TestSchedulerUtils.verifyAppAddedAndRemovedFromScheduler(
       scheduler.getSchedulerApplications(), scheduler, "default");
   }
