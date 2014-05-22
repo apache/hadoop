@@ -107,6 +107,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2050. Fix LogCLIHelpers to create the correct FileContext (Ming Ma
     via jlowe)
 
+    YARN-2089. FairScheduler: QueuePlacementPolicy and QueuePlacementRule 
+    are missing audience annotations. (Zhihai Xu via kasha)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
