@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.server.namenode.AclFeature;
 
 /**
  * An {@link INode} representing a symbolic link.
@@ -109,5 +110,24 @@ public class INodeSymlink extends INodeWithAdditionalFields {
       final int snapshot) {
     super.dumpTreeRecursively(out, prefix, snapshot);
     out.println();
+  }
+
+  /**
+   * getAclFeature is not overridden because it is needed for resolving
+   * symlinks.
+  @Override
+  final AclFeature getAclFeature(int snapshotId) {
+    throw new UnsupportedOperationException("ACLs are not supported on symlinks");
+  }
+  */
+
+  @Override
+  public void removeAclFeature() {
+    throw new UnsupportedOperationException("ACLs are not supported on symlinks");
+  }
+
+  @Override
+  public void addAclFeature(AclFeature f) {
+    throw new UnsupportedOperationException("ACLs are not supported on symlinks");
   }
 }
