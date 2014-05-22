@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.INode.Feature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
 import org.apache.hadoop.util.LightWeightGSet.LinkedElement;
 
 import com.google.common.base.Preconditions;
@@ -338,6 +339,30 @@ public abstract class INodeWithAdditionalFields extends INode
     if (f1 != null)
       throw new IllegalStateException("Duplicated ACLFeature");
 
+    addFeature(f);
+  }
+  
+  @Override
+  XAttrFeature getXAttrFeature(int snapshotId) {
+    if (snapshotId != Snapshot.CURRENT_STATE_ID) {
+      return getSnapshotINode(snapshotId).getXAttrFeature();
+    }
+
+    return getFeature(XAttrFeature.class);
+  }
+  
+  @Override
+  public void removeXAttrFeature() {
+    XAttrFeature f = getXAttrFeature();
+    Preconditions.checkNotNull(f);
+    removeFeature(f);
+  }
+  
+  @Override
+  public void addXAttrFeature(XAttrFeature f) {
+    XAttrFeature f1 = getXAttrFeature();
+    Preconditions.checkState(f1 == null, "Duplicated XAttrFeature");
+    
     addFeature(f);
   }
 

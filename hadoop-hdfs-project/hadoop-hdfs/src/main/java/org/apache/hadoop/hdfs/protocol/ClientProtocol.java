@@ -31,10 +31,12 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -1254,4 +1256,66 @@ public interface ClientProtocol {
    */
   @Idempotent
   public AclStatus getAclStatus(String src) throws IOException;
+  
+  /**
+   * Set xattr of a file or directory.
+   * A regular user only can set xattr of "user" namespace.
+   * A super user can set xattr of "user" and "trusted" namespace.
+   * XAttr of "security" and "system" namespace is only used/exposed 
+   * internally to the FS impl.
+   * <p/>
+   * For xattr of "user" namespace, its access permissions are 
+   * defined by the file or directory permission bits.
+   * XAttr will be set only when login user has correct permissions.
+   * <p/>
+   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
+   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * @param src file or directory
+   * @param xAttr <code>XAttr</code> to set
+   * @param flag set flag
+   * @throws IOException
+   */
+  @AtMostOnce
+  public void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag) 
+      throws IOException;
+  
+  /**
+   * Get xattrs of file or directory. Values in xAttrs parameter are ignored.
+   * If xattrs is null or empty, equals getting all xattrs of the file or 
+   * directory.
+   * Only xattrs which login user has correct permissions will be returned. 
+   * <p/>
+   * A regular user only can get xattr of "user" namespace.
+   * A super user can get xattr of "user" and "trusted" namespace.
+   * XAttr of "security" and "system" namespace is only used/exposed 
+   * internally to the FS impl.
+   * <p/>
+   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
+   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * @param src file or directory
+   * @param xAttrs xAttrs to get
+   * @return List<XAttr> <code>XAttr</code> list 
+   * @throws IOException
+   */
+  @Idempotent
+  public List<XAttr> getXAttrs(String src, List<XAttr> xAttrs) 
+      throws IOException;
+  
+  /**
+   * Remove xattr of a file or directory.Value in xAttr parameter is ignored.
+   * Name must be prefixed with user/trusted/security/system.
+   * <p/>
+   * A regular user only can remove xattr of "user" namespace.
+   * A super user can remove xattr of "user" and "trusted" namespace.
+   * XAttr of "security" and "system" namespace is only used/exposed 
+   * internally to the FS impl.
+   * <p/>
+   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
+   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * @param src file or directory
+   * @param xAttr <code>XAttr</code> to remove
+   * @throws IOException
+   */
+  @Idempotent
+  public void removeXAttr(String src, XAttr xAttr) throws IOException;
 }

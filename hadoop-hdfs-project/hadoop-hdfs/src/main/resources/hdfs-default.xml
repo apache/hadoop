@@ -1318,6 +1318,17 @@
 </property>
 
 <property>
+  <name>dfs.nfs.allow.insecure.ports</name>
+  <value>true</value>
+  <description>
+    When set to false, client connections originating from unprivileged ports
+    (those above 1023) will be rejected. This is to ensure that clients
+    connecting to this NFS Gateway must have had root privilege on the machine
+    where they're connecting from.
+  </description>
+</property>
+
+<property>
   <name>dfs.webhdfs.enabled</name>
   <value>true</value>
   <description>
@@ -1892,6 +1903,30 @@
     data resiliency, since they define fault domains. Thus it may be unwanted 
     behavior to allow datanode registration with the default rack if the 
     resolving topology failed.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.xattrs.enabled</name>
+  <value>true</value>
+  <description>
+    Whether support for extended attributes is enabled on the NameNode.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.fs-limits.max-xattrs-per-inode</name>
+  <value>32</value>
+  <description>
+    Maximum number of extended attributes per inode.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.fs-limits.max-xattr-size</name>
+  <value>16384</value>
+  <description>
+    The maximum combined size of the name and value of an extended attribute in bytes.
   </description>
 </property>
 

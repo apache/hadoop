@@ -7,6 +7,8 @@ Trunk (Unreleased)
     HADOOP-8124. Remove the deprecated FSDataOutputStream constructor,
     FSDataOutputStream.sync() and Syncable.sync().  (szetszwo)
 
+    HADOOP-10474 Move o.a.h.record to hadoop-streaming. (wheat9)
+
   NEW FEATURES
 
     HADOOP-10433. Key Management Server based on KeyProvider API. (tucu)
@@ -147,6 +149,8 @@ Trunk (Unreleased)
     rather than returning all keys. (omalley)
 
     HADOOP-10563. Remove the dependency of jsp in trunk. (wheat9)
+
+    HADOOP-10485. Remove dead classes in hadoop-streaming. (wheat9)
 
   BUG FIXES
 
@@ -336,11 +340,27 @@ Trunk (Unreleased)
 
     HADOOP-8589. ViewFs tests fail when tests and home dirs are nested (sanjay Radia)
 
+  BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
+
+    HADOOP-10520. Extended attributes definition and FileSystem APIs for
+    extended attributes. (Yi Liu via wang)
+
+    HADOOP-10546. Javadoc and other small fixes for extended attributes in
+    hadoop-common. (Charles Lamb via wang)
+
+    HADOOP-10521. FsShell commands for extended attributes. (Yi Liu via wang)
+
+    HADOOP-10548. Improve FsShell xattr error handling and other fixes. (Charles Lamb via umamahesh)
+
+    HADOOP-10567. Shift XAttr value encoding code out for reuse. (Yi Liu via umamahesh)
+
+    HADOOP-10621. Remove CRLF for xattr value base64 encoding for better display.(Yi Liu via umamahesh)
+
+    HADOOP-10575. Small fixes for XAttrCommands and test. (Yi Liu via umamahesh)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
-
-    HADOOP-10474 Move o.a.h.record to hadoop-streaming. (wheat9)
 
   NEW FEATURES
 
@@ -358,8 +378,6 @@ Release 2.5.0 - UNRELEASED
     via jeagles)
 
     HADOOP-10104. Update jackson to 1.9.13 (Akira Ajisaka via stevel)
-
-    HADOOP-10485. Remove dead classes in hadoop-streaming. (wheat9)
 
     HADOOP-10503. Move junit up to v 4.11. (cnauroth)
 
@@ -389,6 +407,11 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10572. Example NFS mount command must pass noacl as it isn't
     supported by the server yet. (Harsh J via brandonli)
+
+    HADOOP-10609. .gitignore should ignore .orig and .rej files. (kasha)
+
+    HADOOP-10614. CBZip2InputStream is not threadsafe (Xiangrui Meng via
+    Sandy Ryza)
 
   OPTIMIZATIONS
 
@@ -460,9 +483,6 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10543. RemoteException's unwrapRemoteException method failed for
     PathIOException. (Yongjun Zhang via atm)
 
-    HADOOP-10562. Namenode exits on exception without printing stack trace
-    in AbstractDelegationTokenSecretManager. (Arpit Agarwal)
-
     HADOOP-10568. Add s3 server-side encryption. (David S. Wang via atm)
 
     HADOOP-10541. InputStream in MiniKdc#initKDCServer for minikdc.ldiff is not
@@ -480,6 +500,9 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10401. ShellBasedUnixGroupsMapping#getGroups does not always return
     primary group first (Akira AJISAKA via Colin Patrick McCabe)
+
+    HADOOP-10489. UserGroupInformation#getTokens and UserGroupInformation
+    #addToken can lead to ConcurrentModificationException (Robert Kanter via atm)
 
 Release 2.4.1 - UNRELEASED
 
@@ -512,6 +535,12 @@ Release 2.4.1 - UNRELEASED
 
     HADOOP-10527. Fix incorrect return code and allow more retries on EINTR.
     (kihwal)
+
+    HADOOP-10612. NFS failed to refresh the user group id mapping table (brandonli)
+
+    HADOOP-10562. Namenode exits on exception without printing stack trace
+    in AbstractDelegationTokenSecretManager. (Suresh Srinivas via Arpit
+    Agarwal)
 
 Release 2.4.0 - 2014-04-07 
 

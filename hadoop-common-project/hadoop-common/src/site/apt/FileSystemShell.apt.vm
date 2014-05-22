@@ -254,6 +254,35 @@ getfacl
 
    Returns 0 on success and non-zero on error.
 
+getfattr
+
+   Usage: <<<hdfs dfs -getfattr [-R] {-n name | -d} [-e en] <path> >>>
+
+   Displays the extended attribute names and values (if any) for a file or
+   directory.
+
+   Options:
+
+     * -R: Recursively list the attributes for all files and directories.
+
+     * -n name: Dump the named extended attribute value.
+
+     * -d: Dump all extended attribute values associated with pathname.
+
+     * -e <encoding>: Encode values after retrieving them. Valid encodings are "text", "hex", and "base64". Values encoded as text strings are enclosed in double quotes ("), and values encoded as hexadecimal and base64 are prefixed with 0x and 0s, respectively.
+
+     * <path>: The file or directory.
+
+   Examples:
+
+     * <<<hdfs dfs -getfattr -d /file>>>
+
+     * <<<hdfs dfs -getfattr -R -n user.myAttr /dir>>>
+
+   Exit Code:
+
+   Returns 0 on success and non-zero on error.
+
 getmerge
 
    Usage: <<<hdfs dfs -getmerge <src> <localdst> [addnl]>>>
@@ -445,6 +474,36 @@ setfacl
       * <<<hdfs dfs -setfacl -R -m user:hadoop:r-x /dir>>>
 
       * <<<hdfs dfs -setfacl -m default:user:hadoop:r-x /dir>>>
+
+   Exit Code:
+
+   Returns 0 on success and non-zero on error.
+
+setfattr
+
+   Usage: <<<hdfs dfs -setfattr {-n name [-v value] | -x name} <path> >>>
+
+   Sets an extended attribute name and value for a file or directory.
+
+   Options:
+
+     * -b: Remove all but the base ACL entries. The entries for user, group and others are retained for compatibility with permission bits.
+
+     * -n name: The extended attribute name.
+
+     * -v value: The extended attribute value. There are three different encoding methods for the value. If the argument is enclosed in double quotes, then the value is the string inside the quotes. If the argument is prefixed with 0x or 0X, then it is taken as a hexadecimal number. If the argument begins with 0s or 0S, then it is taken as a base64 encoding.
+
+     * -x name: Remove the extended attribute.
+
+     * <path>: The file or directory.
+
+   Examples:
+
+      * <<<hdfs dfs -setfattr -n user.myAttr -v myValue /file>>>
+
+      * <<<hdfs dfs -setfattr -n user.noValue /file>>>
+
+      * <<<hdfs dfs -setfattr -x user.myAttr /file>>>
 
    Exit Code:
 

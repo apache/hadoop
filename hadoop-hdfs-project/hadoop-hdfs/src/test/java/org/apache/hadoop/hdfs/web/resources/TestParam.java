@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.web.resources;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
@@ -30,6 +31,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.XAttrCodec;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -349,6 +352,43 @@ public class TestParam {
   }
  
   @Test
+  public void testXAttrNameParam() {
+    final XAttrNameParam p = new XAttrNameParam("user.a1");
+    Assert.assertEquals(p.getXAttrName(), "user.a1");
+    try {
+      new XAttrNameParam("a1");
+      Assert.fail();
+    } catch (IllegalArgumentException e) {
+      LOG.info("EXPECTED: " + e);
+    }
+  }
+  
+  @Test
+  public void testXAttrValueParam() throws IOException {
+    final XAttrValueParam p = new XAttrValueParam("0x313233");
+    Assert.assertArrayEquals(p.getXAttrValue(), 
+        XAttrCodec.decodeValue("0x313233"));
+  }
+  
+  @Test
+  public void testXAttrEncodingParam() {
+    final XAttrEncodingParam p = new XAttrEncodingParam(XAttrCodec.BASE64);
+    Assert.assertEquals(p.getEncoding(), XAttrCodec.BASE64);
+    final XAttrEncodingParam p1 = new XAttrEncodingParam(p.getValueString());
+    Assert.assertEquals(p1.getEncoding(), XAttrCodec.BASE64);
+  }
+  
+  @Test
+  public void testXAttrSetFlagParam() {
+    EnumSet<XAttrSetFlag> flag = EnumSet.of(
+        XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE);
+    final XAttrSetFlagParam p = new XAttrSetFlagParam(flag);
+    Assert.assertEquals(p.getFlag(), flag);
+    final XAttrSetFlagParam p1 = new XAttrSetFlagParam(p.getValueString());
+    Assert.assertEquals(p1.getFlag(), flag);
+  }
+  
+  @Test
   public void testRenameOptionSetParam() {
     final RenameOptionSetParam p = new RenameOptionSetParam(
         Options.Rename.OVERWRITE, Options.Rename.NONE);
@@ -356,5 +396,13 @@ public class TestParam {
         p.getValueString());
     Assert.assertEquals(p1.getValue(), EnumSet.of(
         Options.Rename.OVERWRITE, Options.Rename.NONE));
+  }
+
+  @Test
+  public void testSnapshotNameParam() {
+    final OldSnapshotNameParam s1 = new OldSnapshotNameParam("s1");
+    final SnapshotNameParam s2 = new SnapshotNameParam("s2");
+    Assert.assertEquals("s1", s1.getValue());
+    Assert.assertEquals("s2", s2.getValue());
   }
 }

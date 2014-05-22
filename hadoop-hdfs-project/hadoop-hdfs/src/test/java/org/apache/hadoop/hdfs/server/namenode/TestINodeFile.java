@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -66,6 +67,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.Test;
 import org.mockito.Mockito;
+
+import com.google.common.collect.ImmutableList;
 
 public class TestINodeFile {
   public static final Log LOG = LogFactory.getLog(TestINodeFile.class);
@@ -1076,5 +1079,23 @@ public class TestINodeFile {
 
     file.toCompleteFile(Time.now());
     assertFalse(file.isUnderConstruction());
+  }
+
+  @Test
+  public void testXAttrFeature() {
+    replication = 3;
+    preferredBlockSize = 128*1024*1024;
+    INodeFile inf = createINodeFile(replication, preferredBlockSize);
+    ImmutableList.Builder<XAttr> builder = new ImmutableList.Builder<XAttr>();
+    XAttr xAttr = new XAttr.Builder().setNameSpace(XAttr.NameSpace.USER).
+        setName("a1").setValue(new byte[]{0x31, 0x32, 0x33}).build();
+    builder.add(xAttr);
+    XAttrFeature f = new XAttrFeature(builder.build());
+    inf.addXAttrFeature(f);
+    XAttrFeature f1 = inf.getXAttrFeature();
+    assertEquals(xAttr, f1.getXAttrs().get(0));
+    inf.removeXAttrFeature();
+    f1 = inf.getXAttrFeature();
+    assertEquals(f1, null);
   }
 }

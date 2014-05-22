@@ -129,4 +129,44 @@ public class TestHostsFiles {
       cluster.shutdown();
     }
   }
+
+  @Test
+  public void testHostsIncludeForDeadCount() throws Exception {
+    Configuration conf = getConf();
+
+    // Configure an excludes file
+    FileSystem localFileSys = FileSystem.getLocal(conf);
+    Path workingDir = localFileSys.getWorkingDirectory();
+    Path dir = new Path(workingDir, "build/test/data/temp/decommission");
+    Path excludeFile = new Path(dir, "exclude");
+    Path includeFile = new Path(dir, "include");
+    assertTrue(localFileSys.mkdirs(dir));
+    StringBuilder includeHosts = new StringBuilder();
+    includeHosts.append("localhost:52").append("\n").append("127.0.0.1:7777")
+        .append("\n");
+    DFSTestUtil.writeFile(localFileSys, excludeFile, "");
+    DFSTestUtil.writeFile(localFileSys, includeFile, includeHosts.toString());
+    conf.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
+    conf.set(DFSConfigKeys.DFS_HOSTS, includeFile.toUri().getPath());
+
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      final FSNamesystem ns = cluster.getNameNode().getNamesystem();
+      assertTrue(ns.getNumDeadDataNodes() == 2);
+      assertTrue(ns.getNumLiveDataNodes() == 0);
+
+      // Testing using MBeans
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxbeanName = new ObjectName(
+          "Hadoop:service=NameNode,name=FSNamesystemState");
+      String nodes = mbs.getAttribute(mxbeanName, "NumDeadDataNodes") + "";
+      assertTrue((Integer) mbs.getAttribute(mxbeanName, "NumDeadDataNodes") == 2);
+      assertTrue((Integer) mbs.getAttribute(mxbeanName, "NumLiveDataNodes") == 0);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
 }

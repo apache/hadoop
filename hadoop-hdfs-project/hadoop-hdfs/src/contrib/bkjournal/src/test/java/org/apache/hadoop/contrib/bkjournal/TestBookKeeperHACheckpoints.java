@@ -23,12 +23,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.namenode.ha.TestStandbyCheckpoints;
-import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-
-import com.google.common.collect.ImmutableList;
 
 /**
  * Runs the same tests as TestStandbyCheckpoints, but
@@ -43,19 +40,11 @@ public class TestBookKeeperHACheckpoints extends TestStandbyCheckpoints {
   @Override
   @Before
   public void setupCluster() throws Exception {
-    Configuration conf = new Configuration();
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY, 1);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 5);
-    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    Configuration conf = setupCommonConfig();
     conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
              BKJMUtil.createJournalURI("/checkpointing" + journalCount++)
              .toString());
     BKJMUtil.addJournalManagerDefinition(conf);
-    conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, true);
-    conf.set(DFSConfigKeys.DFS_IMAGE_COMPRESSION_CODEC_KEY, SlowCodec.class
-        .getCanonicalName());
-    CompressionCodecFactory.setCodecClasses(conf, ImmutableList
-        .<Class> of(SlowCodec.class));
     MiniDFSNNTopology topology = new MiniDFSNNTopology()
       .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
         .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(10001))

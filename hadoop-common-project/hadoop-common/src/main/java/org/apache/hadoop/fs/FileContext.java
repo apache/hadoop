@@ -2294,4 +2294,194 @@ public final class FileContext {
       }
     }.resolve(this, absF);
   }
+
+  /**
+   * Set an xattr of a file or directory.
+   * The name must be prefixed with user/trusted/security/system and
+   * followed by ".". For example, "user.attr".
+   * <p/>
+   * A regular user can only set an xattr for the "user" namespace.
+   * The super user can set an xattr of either the "user" or "trusted" namespaces.
+   * The xattrs of the "security" and "system" namespaces are only used/exposed 
+   * internally by/to the FS impl.
+   * <p/>
+   * The access permissions of an xattr in the "user" namespace are
+   * defined by the file and directory permission bits.
+   * An xattr can only be set when the logged-in user has the correct permissions.
+   * If the xattr exists, it will be replaced.
+   * <p/>
+   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
+   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   *
+   * @param path Path to modify
+   * @param name xattr name.
+   * @param value xattr value.
+   * @throws IOException
+   */
+  public void setXAttr(Path path, String name, byte[] value)
+      throws IOException {
+    setXAttr(path, name, value, EnumSet.of(XAttrSetFlag.CREATE,
+        XAttrSetFlag.REPLACE));
+  }
+
+  /**
+   * Set an xattr of a file or directory.
+   * The name must be prefixed with user/trusted/security/system and
+   * followed by ".". For example, "user.attr".
+   * <p/>
+   * A regular user can only set an xattr for the "user" namespace.
+   * The super user can set an xattr of either the "user" or "trusted" namespaces.
+   * The xattrs of the "security" and "system" namespaces are only used/exposed 
+   * internally by/to the FS impl.
+   * <p/>
+   * The access permissions of an xattr in the "user" namespace are
+   * defined by the file and directory permission bits.
+   * An xattr can only be set when the logged-in user has the correct permissions.
+   * If the xattr exists, it will be replaced.
+   * <p/>
+   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
+   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   *
+   * @param path Path to modify
+   * @param name xattr name.
+   * @param value xattr value.
+   * @param flag xattr set flag
+   * @throws IOException
+   */
+  public void setXAttr(Path path, final String name, final byte[] value,
+      final EnumSet<XAttrSetFlag> flag) throws IOException {
+    final Path absF = fixRelativePart(path);
+    new FSLinkResolver<Void>() {
+      @Override
+      public Void next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        fs.setXAttr(p, name, value, flag);
+        return null;
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
+   * Get an xattr for a file or directory.
+   * The name must be prefixed with user/trusted/security/system and
+   * followed by ".". For example, "user.attr".
+   * <p/>
+   * 
+   * A regular user can only get an xattr for the "user" namespace.
+   * The super user can get an xattr of either the "user" or "trusted" namespaces.
+   * The xattrs of the "security" and "system" namespaces are only used/exposed 
+   * internally by/to the FS impl.
+   * <p/>
+   * An xattr will only be returned when the logged-in user has the correct permissions.
+   * <p/>
+   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
+   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   *
+   * @param path Path to get extended attribute
+   * @param name xattr name.
+   * @return byte[] xattr value.
+   * @throws IOException
+   */
+  public byte[] getXAttr(Path path, final String name) throws IOException {
+    final Path absF = fixRelativePart(path);
+    return new FSLinkResolver<byte[]>() {
+      @Override
+      public byte[] next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        return fs.getXAttr(p, name);
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
+   * Get all of the xattrs for a file or directory.
+   * Only those xattrs for which the logged-in user has permissions to view
+   * are returned.
+   * <p/>
+   * A regular user can only get xattrs for the "user" namespace.
+   * The super user can only get xattrs for "user" and "trusted" namespaces.
+   * The xattr of "security" and "system" namespaces are only used/exposed 
+   * internally by/to the FS impl.
+   * <p/>
+   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
+   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   *
+   * @param path Path to get extended attributes
+   * @return Map<String, byte[]> describing the XAttrs of the file or directory
+   * @throws IOException
+   */
+  public Map<String, byte[]> getXAttrs(Path path) throws IOException {
+    final Path absF = fixRelativePart(path);
+    return new FSLinkResolver<Map<String, byte[]>>() {
+      @Override
+      public Map<String, byte[]> next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        return fs.getXAttrs(p);
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
+   * Get all of the xattrs for a file or directory.
+   * Only those xattrs for which the logged-in user has permissions to view
+   * are returned.
+   * <p/>
+   * A regular user can only get xattrs for the "user" namespace.
+   * The super user can only get xattrs for "user" and "trusted" namespaces.
+   * The xattr of "security" and "system" namespaces are only used/exposed 
+   * internally by/to the FS impl.
+   * <p/>
+   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
+   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   *
+   * @param path Path to get extended attributes
+   * @param names XAttr names.
+   * @return Map<String, byte[]> describing the XAttrs of the file or directory
+   * @throws IOException
+   */
+  public Map<String, byte[]> getXAttrs(Path path, final List<String> names)
+      throws IOException {
+    final Path absF = fixRelativePart(path);
+    return new FSLinkResolver<Map<String, byte[]>>() {
+      @Override
+      public Map<String, byte[]> next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        return fs.getXAttrs(p, names);
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
+   * Remove an xattr of a file or directory.
+   * The name must be prefixed with user/trusted/security/system and
+   * followed by ".". For example, "user.attr".
+   * <p/>
+   * A regular user can only remove an xattr for the "user" namespace.
+   * The super user can remove an xattr of either the "user" or "trusted" namespaces.
+   * The xattrs of the "security" and "system" namespaces are only used/exposed 
+   * internally by/to the FS impl.
+   * <p/>
+   * The access permissions of an xattr in the "user" namespace are
+   * defined by the file and directory permission bits.
+   * An xattr can only be set when the logged-in user has the correct permissions.
+   * If the xattr exists, it will be replaced.
+   * <p/>
+   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
+   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   *
+   * @param path Path to remove extended attribute
+   * @param name xattr name
+   * @throws IOException
+   */
+  public void removeXAttr(Path path, final String name) throws IOException {
+    final Path absF = fixRelativePart(path);
+    new FSLinkResolver<Void>() {
+      @Override
+      public Void next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        fs.removeXAttr(p, name);
+        return null;
+      }
+    }.resolve(this, absF);
+  }
 }

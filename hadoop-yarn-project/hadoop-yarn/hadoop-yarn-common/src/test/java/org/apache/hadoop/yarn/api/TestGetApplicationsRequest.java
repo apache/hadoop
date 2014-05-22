@@ -47,10 +47,12 @@ public class TestGetApplicationsRequest {
     types.add("type1");
     request.setApplicationTypes(types);
     
-    long begin = System.currentTimeMillis();
-    long end = System.currentTimeMillis() + 1;
-    request.setStartRange(begin, end);
-    request.setFinishRange(begin, end);
+    long startBegin = System.currentTimeMillis();
+    long startEnd = System.currentTimeMillis() + 1;
+    request.setStartRange(startBegin, startEnd);
+    long finishBegin = System.currentTimeMillis() + 2;
+    long finishEnd = System.currentTimeMillis() + 3;
+    request.setFinishRange(finishBegin, finishEnd);
     
     long limit = 100L;
     request.setLimit(limit);
@@ -85,11 +87,11 @@ public class TestGetApplicationsRequest {
     
     Assert.assertEquals(
         "StartRange from proto is not the same with original request",
-        requestFromProto.getStartRange(), new LongRange(begin, end));
+        requestFromProto.getStartRange(), new LongRange(startBegin, startEnd));
     
     Assert.assertEquals(
         "FinishRange from proto is not the same with original request",
-        requestFromProto.getFinishRange(), new LongRange(begin, end));
+        requestFromProto.getFinishRange(), new LongRange(finishBegin, finishEnd));
     
     Assert.assertEquals(
         "Limit from proto is not the same with original request",

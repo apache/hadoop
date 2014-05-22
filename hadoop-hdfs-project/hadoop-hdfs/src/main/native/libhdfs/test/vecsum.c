@@ -18,7 +18,6 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -48,7 +47,6 @@ static double timespec_to_double(const struct timespec *ts)
 struct stopwatch {
     struct timespec start;
     struct timespec stop;
-    struct rusage rusage;
 };
 
 static struct stopwatch *stopwatch_create(void)
@@ -64,12 +62,6 @@ static struct stopwatch *stopwatch_create(void)
         int err = errno;
         fprintf(stderr, "clock_gettime(CLOCK_MONOTONIC) failed with "
             "error %d (%s)\n", err, strerror(err));
-        goto error;
-    }
-    if (getrusage(RUSAGE_THREAD, &watch->rusage) < 0) {
-        int err = errno;
-        fprintf(stderr, "getrusage failed: error %d (%s)\n",
-            err, strerror(err));
         goto error;
     }
     return watch;

@@ -384,15 +384,18 @@ public class TestSchedulerUtils {
     Assert.assertEquals(ContainerExitStatus.PREEMPTED, cd.getExitStatus());
   }
 
-  public static <T> SchedulerApplication verifyAppAddedAndRemovedFromScheduler(
-      final Map<ApplicationId, SchedulerApplication> applications,
-      EventHandler<SchedulerEvent> handler, String queueName) throws Exception {
+  public static SchedulerApplication<SchedulerApplicationAttempt>
+      verifyAppAddedAndRemovedFromScheduler(
+          Map<ApplicationId, SchedulerApplication<SchedulerApplicationAttempt>> applications,
+          EventHandler<SchedulerEvent> handler, String queueName)
+          throws Exception {
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
     AppAddedSchedulerEvent appAddedEvent =
         new AppAddedSchedulerEvent(appId, queueName, "user");
     handler.handle(appAddedEvent);
-    SchedulerApplication app = applications.get(appId);
+    SchedulerApplication<SchedulerApplicationAttempt> app =
+        applications.get(appId);
     // verify application is added.
     Assert.assertNotNull(app);
     Assert.assertEquals("user", app.getUser());

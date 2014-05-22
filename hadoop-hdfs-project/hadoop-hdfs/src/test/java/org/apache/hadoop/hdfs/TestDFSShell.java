@@ -155,7 +155,7 @@ public class TestDFSShell {
   }
   
   @Test (timeout = 30000)
-  public void testRecrusiveRm() throws IOException {
+  public void testRecursiveRm() throws IOException {
 	  Configuration conf = new HdfsConfiguration();
 	  MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
 	  FileSystem fs = cluster.getFileSystem();
@@ -1583,6 +1583,7 @@ public class TestDFSShell {
       cluster.shutdown();
     }
   }
+
   private static String runLsr(final FsShell shell, String root, int returnvalue
       ) throws Exception {
     System.out.println("root=" + root + ", returnvalue=" + returnvalue);
@@ -1872,6 +1873,333 @@ public class TestDFSShell {
       assertThat(res, not(0));
     } finally {
       cluster.shutdown();
+    }
+  }
+  
+  @Test (timeout = 30000)
+  public void testSetXAttrPermission() throws Exception {
+    UserGroupInformation user = UserGroupInformation.
+        createUserForTesting("user", new String[] {"mygroup"});
+    MiniDFSCluster cluster = null;
+    PrintStream bak = null;
+    try {
+      final Configuration conf = new HdfsConfiguration();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+      
+      FileSystem fs = cluster.getFileSystem();
+      Path p = new Path("/foo");
+      fs.mkdirs(p);
+      bak = System.err;
+      
+      final FsShell fshell = new FsShell(conf);
+      final ByteArrayOutputStream out = new ByteArrayOutputStream();
+      System.setErr(new PrintStream(out));
+      
+      // No permission to write xattr
+      fs.setPermission(p, new FsPermission((short) 0700));
+      user.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          int ret = ToolRunner.run(fshell, new String[]{
+              "-setfattr", "-n", "user.a1", "-v", "1234", "/foo"});
+          assertEquals("Returned should be 1", 1, ret);
+          String str = out.toString();
+          assertTrue("Permission denied printed", 
+              str.indexOf("Permission denied") != -1);
+          out.reset();
+          return null;
+        }
+      });
+      
+      int ret = ToolRunner.run(fshell, new String[]{
+          "-setfattr", "-n", "user.a1", "-v", "1234", "/foo"});
+      assertEquals("Returned should be 0", 0, ret);
+      out.reset();
+      
+      // No permission to read and remove
+      fs.setPermission(p, new FsPermission((short) 0750));
+      user.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          // Read
+          int ret = ToolRunner.run(fshell, new String[]{
+              "-getfattr", "-n", "user.a1", "/foo"});
+          assertEquals("Returned should be 1", 1, ret);
+          String str = out.toString();
+          assertTrue("Permission denied printed",
+              str.indexOf("Permission denied") != -1);
+          out.reset();           
+          // Remove
+          ret = ToolRunner.run(fshell, new String[]{
+              "-setfattr", "-x", "user.a1", "/foo"});
+          assertEquals("Returned should be 1", 1, ret);
+          str = out.toString();
+          assertTrue("Permission denied printed",
+              str.indexOf("Permission denied") != -1);
+          out.reset();  
+          return null;
+        }
+      });
+    } finally {
+      if (bak != null) {
+        System.setErr(bak);
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /* HDFS-6413 xattr names erroneously handled as case-insensitive */
+  @Test (timeout = 30000)
+  public void testSetXAttrCaseSensitivity() throws Exception {
+    UserGroupInformation user = UserGroupInformation.
+        createUserForTesting("user", new String[] {"mygroup"});
+    MiniDFSCluster cluster = null;
+    PrintStream bak = null;
+    try {
+      final Configuration conf = new HdfsConfiguration();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+
+      FileSystem fs = cluster.getFileSystem();
+      Path p = new Path("/mydir");
+      fs.mkdirs(p);
+      bak = System.err;
+
+      final FsShell fshell = new FsShell(conf);
+      final ByteArrayOutputStream out = new ByteArrayOutputStream();
+      System.setOut(new PrintStream(out));
+
+      doSetXattr(out, fshell,
+        new String[] {"-setfattr", "-n", "User.Foo", "/mydir"},
+        new String[] {"-getfattr", "-d", "/mydir"},
+        new String[] {"user.Foo"},
+        new String[] {});
+
+      doSetXattr(out, fshell,
+        new String[] {"-setfattr", "-n", "user.FOO", "/mydir"},
+        new String[] {"-getfattr", "-d", "/mydir"},
+        new String[] {"user.Foo", "user.FOO"},
+        new String[] {});
+
+      doSetXattr(out, fshell,
+        new String[] {"-setfattr", "-n", "USER.foo", "/mydir"},
+        new String[] {"-getfattr", "-d", "/mydir"},
+        new String[] {"user.Foo", "user.FOO", "user.foo"},
+        new String[] {});
+
+      doSetXattr(out, fshell,
+        new String[] {"-setfattr", "-n", "USER.fOo", "-v", "myval", "/mydir"},
+        new String[] {"-getfattr", "-d", "/mydir"},
+        new String[] {"user.Foo", "user.FOO", "user.foo", "user.fOo=\"myval\""},
+        new String[] {"user.Foo=", "user.FOO=", "user.foo="});
+
+      doSetXattr(out, fshell,
+        new String[] {"-setfattr", "-x", "useR.foo", "/mydir"},
+        new String[] {"-getfattr", "-d", "/mydir"},
+        new String[] {"user.Foo", "user.FOO"},
+        new String[] {"foo"});
+
+      doSetXattr(out, fshell,
+        new String[] {"-setfattr", "-x", "USER.FOO", "/mydir"},
+        new String[] {"-getfattr", "-d", "/mydir"},
+        new String[] {"user.Foo"},
+        new String[] {"FOO"});
+
+      doSetXattr(out, fshell,
+        new String[] {"-setfattr", "-x", "useR.Foo", "/mydir"},
+        new String[] {"-getfattr", "-n", "User.Foo", "/mydir"},
+        new String[] {},
+        new String[] {"Foo"});
+
+    } finally {
+      if (bak != null) {
+        System.setOut(bak);
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  private void doSetXattr(ByteArrayOutputStream out, FsShell fshell,
+    String[] setOp, String[] getOp, String[] expectArr,
+    String[] dontExpectArr) throws Exception {
+    int ret = ToolRunner.run(fshell, setOp);
+    out.reset();
+    ret = ToolRunner.run(fshell, getOp);
+    final String str = out.toString();
+    for (int i = 0; i < expectArr.length; i++) {
+      final String expect = expectArr[i];
+      final StringBuilder sb = new StringBuilder
+        ("Incorrect results from getfattr. Expected: ");
+      sb.append(expect).append(" Full Result: ");
+      sb.append(str);
+      assertTrue(sb.toString(),
+        str.indexOf(expect) != -1);
+    }
+
+    for (int i = 0; i < dontExpectArr.length; i++) {
+      String dontExpect = dontExpectArr[i];
+      final StringBuilder sb = new StringBuilder
+        ("Incorrect results from getfattr. Didn't Expect: ");
+      sb.append(dontExpect).append(" Full Result: ");
+      sb.append(str);
+      assertTrue(sb.toString(),
+        str.indexOf(dontExpect) == -1);
+    }
+    out.reset();
+  }
+
+  /**
+   * HDFS-6374 setXAttr should require the user to be the owner of the file
+   * or directory.
+   *
+   * Test to make sure that only the owner of a file or directory can set
+   * or remove the xattrs.
+   *
+   * As user1:
+   * Create a directory (/foo) as user1, chown it to user1 (and user1's group),
+   * grant rwx to "other".
+   *
+   * As user2:
+   * Set an xattr (should fail).
+   *
+   * As user1:
+   * Set an xattr (should pass).
+   *
+   * As user2:
+   * Read the xattr (should pass).
+   * Remove the xattr (should fail).
+   *
+   * As user1:
+   * Read the xattr (should pass).
+   * Remove the xattr (should pass).
+   */
+  @Test (timeout = 30000)
+  public void testSetXAttrPermissionAsDifferentOwner() throws Exception {
+    final String USER1 = "user1";
+    final String GROUP1 = "mygroup1";
+    final UserGroupInformation user1 = UserGroupInformation.
+        createUserForTesting(USER1, new String[] {GROUP1});
+    final UserGroupInformation user2 = UserGroupInformation.
+        createUserForTesting("user2", new String[] {"mygroup2"});
+    MiniDFSCluster cluster = null;
+    PrintStream bak = null;
+    try {
+      final Configuration conf = new HdfsConfiguration();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+
+      final FileSystem fs = cluster.getFileSystem();
+      fs.setOwner(new Path("/"), USER1, GROUP1);
+      bak = System.err;
+
+      final FsShell fshell = new FsShell(conf);
+      final ByteArrayOutputStream out = new ByteArrayOutputStream();
+      System.setErr(new PrintStream(out));
+
+      // mkdir foo as user1
+      user1.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          final int ret = ToolRunner.run(fshell, new String[]{
+              "-mkdir", "/foo"});
+          assertEquals("Return should be 0", 0, ret);
+          out.reset();
+          return null;
+        }
+      });
+
+      user1.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          // Give access to "other"
+          final int ret = ToolRunner.run(fshell, new String[]{
+              "-chmod", "707", "/foo"});
+          assertEquals("Return should be 0", 0, ret);
+          out.reset();
+          return null;
+        }
+      });
+
+      // No permission to write xattr for non-owning user (user2).
+      user2.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          final int ret = ToolRunner.run(fshell, new String[]{
+              "-setfattr", "-n", "user.a1", "-v", "1234", "/foo"});
+          assertEquals("Returned should be 1", 1, ret);
+          final String str = out.toString();
+          assertTrue("Permission denied printed",
+              str.indexOf("Permission denied") != -1);
+          out.reset();
+          return null;
+        }
+      });
+
+      // But there should be permission to write xattr for
+      // the owning user.
+      user1.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          final int ret = ToolRunner.run(fshell, new String[]{
+              "-setfattr", "-n", "user.a1", "-v", "1234", "/foo"});
+          assertEquals("Returned should be 0", 0, ret);
+          out.reset();
+          return null;
+        }
+      });
+
+      // There should be permission to read,but not to remove for
+      // non-owning user (user2).
+      user2.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          // Read
+          int ret = ToolRunner.run(fshell, new String[]{
+              "-getfattr", "-n", "user.a1", "/foo"});
+          assertEquals("Returned should be 0", 0, ret);
+          out.reset();
+          // Remove
+          ret = ToolRunner.run(fshell, new String[]{
+              "-setfattr", "-x", "user.a1", "/foo"});
+          assertEquals("Returned should be 1", 1, ret);
+          final String str = out.toString();
+          assertTrue("Permission denied printed",
+              str.indexOf("Permission denied") != -1);
+          out.reset();
+          return null;
+        }
+      });
+
+      // But there should be permission to read/remove for
+      // the owning user.
+      user1.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          // Read
+          int ret = ToolRunner.run(fshell, new String[]{
+              "-getfattr", "-n", "user.a1", "/foo"});
+          assertEquals("Returned should be 0", 0, ret);
+          out.reset();
+          // Remove
+          ret = ToolRunner.run(fshell, new String[]{
+              "-setfattr", "-x", "user.a1", "/foo"});
+          assertEquals("Returned should be 0", 0, ret);
+          out.reset();
+          return null;
+        }
+      });
+    } finally {
+      if (bak != null) {
+        System.setErr(bak);
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 

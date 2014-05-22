@@ -23,6 +23,7 @@ package hadoop.hdfs.fsimage;
 
 import "hdfs.proto";
 import "acl.proto";
+import "xattr.proto";
 
 /**
  * This file defines the on-disk layout of the file system image. The
@@ -106,7 +107,23 @@ message INodeSection {
      */
     repeated fixed32 entries = 2 [packed = true];
   }
-
+  
+  message XAttrCompactProto {
+    /**
+     * 
+     * [0:2) -- the namespace of XAttr (XAttrNamespaceProto)
+     * [2:26) -- the name of the entry, which is an ID that points to a
+     * string in the StringTableSection. 
+     * [26:32) -- reserved for future uses.
+     */
+    required fixed32 name = 1;
+    optional bytes value = 2;
+  }
+  
+  message XAttrFeatureProto {
+    repeated XAttrCompactProto xAttrs = 1;
+  }
+  
   message INodeFile {
     optional uint32 replication = 1;
     optional uint64 modificationTime = 2;
@@ -116,6 +133,7 @@ message INodeSection {
     repeated BlockProto blocks = 6;
     optional FileUnderConstructionFeature fileUC = 7;
     optional AclFeatureProto acl = 8;
+    optional XAttrFeatureProto xAttrs = 9;
   }
 
   message INodeDirectory {
@@ -126,6 +144,7 @@ message INodeSection {
     optional uint64 dsQuota = 3;
     optional fixed64 permission = 4;
     optional AclFeatureProto acl = 5;
+    optional XAttrFeatureProto xAttrs = 6;
   }
 
   message INodeSymlink {

@@ -28,6 +28,7 @@ import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
@@ -53,8 +54,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.hdfs.StorageType;
+import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -88,6 +91,7 @@ import org.apache.hadoop.hdfs.web.resources.LengthParam;
 import org.apache.hadoop.hdfs.web.resources.ModificationTimeParam;
 import org.apache.hadoop.hdfs.web.resources.NamenodeAddressParam;
 import org.apache.hadoop.hdfs.web.resources.OffsetParam;
+import org.apache.hadoop.hdfs.web.resources.OldSnapshotNameParam;
 import org.apache.hadoop.hdfs.web.resources.OverwriteParam;
 import org.apache.hadoop.hdfs.web.resources.OwnerParam;
 import org.apache.hadoop.hdfs.web.resources.Param;
@@ -98,9 +102,14 @@ import org.apache.hadoop.hdfs.web.resources.RecursiveParam;
 import org.apache.hadoop.hdfs.web.resources.RenameOptionSetParam;
 import org.apache.hadoop.hdfs.web.resources.RenewerParam;
 import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
+import org.apache.hadoop.hdfs.web.resources.SnapshotNameParam;
 import org.apache.hadoop.hdfs.web.resources.TokenArgumentParam;
 import org.apache.hadoop.hdfs.web.resources.UriFsPathParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
+import org.apache.hadoop.hdfs.web.resources.XAttrEncodingParam;
+import org.apache.hadoop.hdfs.web.resources.XAttrNameParam;
+import org.apache.hadoop.hdfs.web.resources.XAttrSetFlagParam;
+import org.apache.hadoop.hdfs.web.resources.XAttrValueParam;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetworkTopology.InvalidTopologyException;
@@ -341,12 +350,23 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(TokenArgumentParam.NAME) @DefaultValue(TokenArgumentParam.DEFAULT)
           final TokenArgumentParam delegationTokenArgument,
       @QueryParam(AclPermissionParam.NAME) @DefaultValue(AclPermissionParam.DEFAULT) 
-          final AclPermissionParam aclPermission
+          final AclPermissionParam aclPermission,
+      @QueryParam(XAttrNameParam.NAME) @DefaultValue(XAttrNameParam.DEFAULT) 
+          final XAttrNameParam xattrName,
+      @QueryParam(XAttrValueParam.NAME) @DefaultValue(XAttrValueParam.DEFAULT) 
+          final XAttrValueParam xattrValue,
+      @QueryParam(XAttrSetFlagParam.NAME) @DefaultValue(XAttrSetFlagParam.DEFAULT) 
+          final XAttrSetFlagParam xattrSetFlag,
+      @QueryParam(SnapshotNameParam.NAME) @DefaultValue(SnapshotNameParam.DEFAULT)
+          final SnapshotNameParam snapshotName,
+      @QueryParam(OldSnapshotNameParam.NAME) @DefaultValue(OldSnapshotNameParam.DEFAULT)
+          final OldSnapshotNameParam oldSnapshotName
           )throws IOException, InterruptedException {
     return put(ugi, delegation, username, doAsUser, ROOT, op, destination,
         owner, group, permission, overwrite, bufferSize, replication,
         blockSize, modificationTime, accessTime, renameOptions, createParent,
-        delegationTokenArgument,aclPermission);
+        delegationTokenArgument, aclPermission, xattrName, xattrValue,
+        xattrSetFlag, snapshotName, oldSnapshotName);
   }
 
   /** Handle HTTP PUT request. */
@@ -392,12 +412,24 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(TokenArgumentParam.NAME) @DefaultValue(TokenArgumentParam.DEFAULT)
           final TokenArgumentParam delegationTokenArgument,
       @QueryParam(AclPermissionParam.NAME) @DefaultValue(AclPermissionParam.DEFAULT) 
-          final AclPermissionParam aclPermission
+          final AclPermissionParam aclPermission,
+      @QueryParam(XAttrNameParam.NAME) @DefaultValue(XAttrNameParam.DEFAULT) 
+          final XAttrNameParam xattrName,
+      @QueryParam(XAttrValueParam.NAME) @DefaultValue(XAttrValueParam.DEFAULT) 
+          final XAttrValueParam xattrValue,
+      @QueryParam(XAttrSetFlagParam.NAME) @DefaultValue(XAttrSetFlagParam.DEFAULT) 
+          final XAttrSetFlagParam xattrSetFlag,
+      @QueryParam(SnapshotNameParam.NAME) @DefaultValue(SnapshotNameParam.DEFAULT)
+          final SnapshotNameParam snapshotName,
+      @QueryParam(OldSnapshotNameParam.NAME) @DefaultValue(OldSnapshotNameParam.DEFAULT)
+          final OldSnapshotNameParam oldSnapshotName
       ) throws IOException, InterruptedException {
 
     init(ugi, delegation, username, doAsUser, path, op, destination, owner,
         group, permission, overwrite, bufferSize, replication, blockSize,
-        modificationTime, accessTime, renameOptions, delegationTokenArgument,aclPermission);
+        modificationTime, accessTime, renameOptions, delegationTokenArgument,
+        aclPermission, xattrName, xattrValue, xattrSetFlag, snapshotName,
+        oldSnapshotName);
 
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
@@ -407,7 +439,8 @@ public class NamenodeWebHdfsMethods {
               path.getAbsolutePath(), op, destination, owner, group,
               permission, overwrite, bufferSize, replication, blockSize,
               modificationTime, accessTime, renameOptions, createParent,
-              delegationTokenArgument,aclPermission);
+              delegationTokenArgument, aclPermission, xattrName, xattrValue,
+              xattrSetFlag, snapshotName, oldSnapshotName);
         } finally {
           reset();
         }
@@ -435,7 +468,12 @@ public class NamenodeWebHdfsMethods {
       final RenameOptionSetParam renameOptions,
       final CreateParentParam createParent,
       final TokenArgumentParam delegationTokenArgument,
-      final AclPermissionParam aclPermission
+      final AclPermissionParam aclPermission,
+      final XAttrNameParam xattrName,
+      final XAttrValueParam xattrValue, 
+      final XAttrSetFlagParam xattrSetFlag,
+      final SnapshotNameParam snapshotName,
+      final OldSnapshotNameParam oldSnapshotName
       ) throws IOException, URISyntaxException {
 
     final Configuration conf = (Configuration)context.getAttribute(JspHelper.CURRENT_CONF);
@@ -533,6 +571,28 @@ public class NamenodeWebHdfsMethods {
     }
     case SETACL: {
       np.setAcl(fullpath, aclPermission.getAclPermission(true));
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
+    }
+    case SETXATTR: {
+      np.setXAttr(
+          fullpath,
+          XAttrHelper.buildXAttr(xattrName.getXAttrName(),
+              xattrValue.getXAttrValue()), xattrSetFlag.getFlag());
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
+    }
+    case REMOVEXATTR: {
+      np.removeXAttr(fullpath, XAttrHelper.buildXAttr(xattrName.getXAttrName()));
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
+    }
+    case CREATESNAPSHOT: {
+      String snapshotPath = np.createSnapshot(fullpath, snapshotName.getValue());
+      final String js = JsonUtil.toJsonString(
+          org.apache.hadoop.fs.Path.class.getSimpleName(), snapshotPath);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case RENAMESNAPSHOT: {
+      np.renameSnapshot(fullpath, oldSnapshotName.getValue(),
+          snapshotName.getValue());
       return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     default:
@@ -650,10 +710,14 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(RenewerParam.NAME) @DefaultValue(RenewerParam.DEFAULT)
           final RenewerParam renewer,
       @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
-          final BufferSizeParam bufferSize
+          final BufferSizeParam bufferSize,
+      @QueryParam(XAttrNameParam.NAME) @DefaultValue(XAttrNameParam.DEFAULT) 
+          final XAttrNameParam xattrName,
+      @QueryParam(XAttrEncodingParam.NAME) @DefaultValue(XAttrEncodingParam.DEFAULT) 
+          final XAttrEncodingParam xattrEncoding
       ) throws IOException, InterruptedException {
-    return get(ugi, delegation, username, doAsUser, ROOT, op,
-        offset, length, renewer, bufferSize);
+    return get(ugi, delegation, username, doAsUser, ROOT, op, offset, length,
+        renewer, bufferSize, xattrName, xattrEncoding);
   }
 
   /** Handle HTTP GET request. */
@@ -678,18 +742,23 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(RenewerParam.NAME) @DefaultValue(RenewerParam.DEFAULT)
           final RenewerParam renewer,
       @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
-          final BufferSizeParam bufferSize
+          final BufferSizeParam bufferSize,
+      @QueryParam(XAttrNameParam.NAME) @DefaultValue(XAttrNameParam.DEFAULT) 
+          final XAttrNameParam xattrName,
+      @QueryParam(XAttrEncodingParam.NAME) @DefaultValue(XAttrEncodingParam.DEFAULT) 
+          final XAttrEncodingParam xattrEncoding
       ) throws IOException, InterruptedException {
 
-    init(ugi, delegation, username, doAsUser, path, op,
-        offset, length, renewer, bufferSize);
+    init(ugi, delegation, username, doAsUser, path, op, offset, length,
+        renewer, bufferSize, xattrName, xattrEncoding);
 
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
       public Response run() throws IOException, URISyntaxException {
         try {
           return get(ugi, delegation, username, doAsUser,
-              path.getAbsolutePath(), op, offset, length, renewer, bufferSize);
+              path.getAbsolutePath(), op, offset, length, renewer, bufferSize,
+              xattrName, xattrEncoding);
         } finally {
           reset();
         }
@@ -707,7 +776,9 @@ public class NamenodeWebHdfsMethods {
       final OffsetParam offset,
       final LengthParam length,
       final RenewerParam renewer,
-      final BufferSizeParam bufferSize
+      final BufferSizeParam bufferSize,
+      final XAttrNameParam xattrName,
+      final XAttrEncodingParam xattrEncoding
       ) throws IOException, URISyntaxException {
     final NameNode namenode = (NameNode)context.getAttribute("name.node");
     final NamenodeProtocols np = getRPCServer(namenode);
@@ -780,6 +851,19 @@ public class NamenodeWebHdfsMethods {
       }
 
       final String js = JsonUtil.toJsonString(status);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETXATTR: {
+      XAttr xAttr = XAttrHelper.getFirstXAttr(np.getXAttrs(fullpath,
+          XAttrHelper.buildXAttrAsList(xattrName.getXAttrName())));
+      final String js = JsonUtil.toJsonString(xAttr,
+          xattrEncoding.getEncoding());
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETXATTRS: {
+      List<XAttr> xAttrs = np.getXAttrs(fullpath, null);
+      final String js = JsonUtil.toJsonString(xAttrs,
+          xattrEncoding.getEncoding());
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     default:
@@ -865,9 +949,12 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(DeleteOpParam.NAME) @DefaultValue(DeleteOpParam.DEFAULT)
           final DeleteOpParam op,
       @QueryParam(RecursiveParam.NAME) @DefaultValue(RecursiveParam.DEFAULT)
-          final RecursiveParam recursive
+          final RecursiveParam recursive,
+      @QueryParam(SnapshotNameParam.NAME) @DefaultValue(SnapshotNameParam.DEFAULT)
+          final SnapshotNameParam snapshotName
       ) throws IOException, InterruptedException {
-    return delete(ugi, delegation, username, doAsUser, ROOT, op, recursive);
+    return delete(ugi, delegation, username, doAsUser, ROOT, op, recursive,
+        snapshotName);
   }
 
   /** Handle HTTP DELETE request. */
@@ -886,17 +973,19 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(DeleteOpParam.NAME) @DefaultValue(DeleteOpParam.DEFAULT)
           final DeleteOpParam op,
       @QueryParam(RecursiveParam.NAME) @DefaultValue(RecursiveParam.DEFAULT)
-          final RecursiveParam recursive
+          final RecursiveParam recursive,
+      @QueryParam(SnapshotNameParam.NAME) @DefaultValue(SnapshotNameParam.DEFAULT)
+          final SnapshotNameParam snapshotName
       ) throws IOException, InterruptedException {
 
-    init(ugi, delegation, username, doAsUser, path, op, recursive);
+    init(ugi, delegation, username, doAsUser, path, op, recursive, snapshotName);
 
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
       public Response run() throws IOException {
         try {
           return delete(ugi, delegation, username, doAsUser,
-              path.getAbsolutePath(), op, recursive);
+              path.getAbsolutePath(), op, recursive, snapshotName);
         } finally {
           reset();
         }
@@ -911,16 +1000,21 @@ public class NamenodeWebHdfsMethods {
       final DoAsParam doAsUser,
       final String fullpath,
       final DeleteOpParam op,
-      final RecursiveParam recursive
+      final RecursiveParam recursive,
+      final SnapshotNameParam snapshotName
       ) throws IOException {
     final NameNode namenode = (NameNode)context.getAttribute("name.node");
+    final NamenodeProtocols np = getRPCServer(namenode);
 
     switch(op.getValue()) {
-    case DELETE:
-    {
-      final boolean b = getRPCServer(namenode).delete(fullpath, recursive.getValue());
+    case DELETE: {
+      final boolean b = np.delete(fullpath, recursive.getValue());
       final String js = JsonUtil.toJsonString("boolean", b);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case DELETESNAPSHOT: {
+      np.deleteSnapshot(fullpath, snapshotName.getValue());
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     default:
       throw new UnsupportedOperationException(op + " is not supported");

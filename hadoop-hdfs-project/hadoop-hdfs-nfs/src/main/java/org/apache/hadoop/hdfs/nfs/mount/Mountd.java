@@ -32,14 +32,14 @@ import org.apache.hadoop.mount.MountdBase;
  */
 public class Mountd extends MountdBase {
 
-  public Mountd(Configuration config, DatagramSocket registrationSocket)
-      throws IOException {
-    super(new RpcProgramMountd(config, registrationSocket));
+  public Mountd(Configuration config, DatagramSocket registrationSocket,
+      boolean allowInsecurePorts) throws IOException {
+    super(new RpcProgramMountd(config, registrationSocket, allowInsecurePorts));
   }
   
   public static void main(String[] args) throws IOException {
     Configuration config = new Configuration();
-    Mountd mountd = new Mountd(config, null);
+    Mountd mountd = new Mountd(config, null, true);
     mountd.start(true);
   }
 }

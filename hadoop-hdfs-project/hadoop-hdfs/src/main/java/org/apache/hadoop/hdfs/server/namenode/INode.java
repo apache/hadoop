@@ -177,6 +177,44 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     nodeToUpdate.removeAclFeature();
     return nodeToUpdate;
   }
+
+  /**
+   * @param snapshotId
+   *          if it is not {@link Snapshot#CURRENT_STATE_ID}, get the result
+   *          from the given snapshot; otherwise, get the result from the
+   *          current inode.
+   * @return XAttrFeature
+   */  
+  abstract XAttrFeature getXAttrFeature(int snapshotId);
+  
+  @Override
+  public final XAttrFeature getXAttrFeature() {
+    return getXAttrFeature(Snapshot.CURRENT_STATE_ID);
+  }
+  
+  /**
+   * Set <code>XAttrFeature</code> 
+   */
+  abstract void addXAttrFeature(XAttrFeature xAttrFeature);
+  
+  final INode addXAttrFeature(XAttrFeature xAttrFeature, int latestSnapshotId) 
+      throws QuotaExceededException {
+    final INode nodeToUpdate = recordModification(latestSnapshotId);
+    nodeToUpdate.addXAttrFeature(xAttrFeature);
+    return nodeToUpdate;
+  }
+  
+  /**
+   * Remove <code>XAttrFeature</code> 
+   */
+  abstract void removeXAttrFeature();
+  
+  final INode removeXAttrFeature(int lastestSnapshotId)
+      throws QuotaExceededException {
+    final INode nodeToUpdate = recordModification(lastestSnapshotId);
+    nodeToUpdate.removeXAttrFeature();
+    return nodeToUpdate;
+  }
   
   /**
    * @return if the given snapshot id is {@link Snapshot#CURRENT_STATE_ID},

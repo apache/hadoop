@@ -142,6 +142,17 @@
     <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.LogAggregationService" />
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
+  <!-- Inconsistent sync warning - minimumAllocation is only initialized once and never changed -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler" />
+    <Field name="minimumAllocation" />
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSSchedulerNode" />
+    <Method name="reserveResource" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" /> 
+  </Match>
   <!-- Inconsistent sync warning - reinitialize read from other queue does not need sync-->
   <Match>
     <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue" />
@@ -176,12 +187,6 @@
   <Match>
     <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler" />
     <Field name="scheduleAsynchronously" />
-    <Bug pattern="IS2_INCONSISTENT_SYNC" />
-  </Match>
-  <!-- Inconsistent sync warning - minimumAllocation is only initialized once and never changed -->
-  <Match>
-    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler" />
-    <Field name="minimumAllocation" />
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
   <!-- Inconsistent sync warning - numRetries is only initialized once and never changed -->

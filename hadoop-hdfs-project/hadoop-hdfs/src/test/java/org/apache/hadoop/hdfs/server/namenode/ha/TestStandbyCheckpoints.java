@@ -80,24 +80,12 @@ public class TestStandbyCheckpoints {
   @SuppressWarnings("rawtypes")
   @Before
   public void setupCluster() throws Exception {
-    tmpOivImgDir = Files.createTempDir();
-    Configuration conf = new Configuration();
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY, 1);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 5);
-    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
-    conf.set(DFSConfigKeys.DFS_NAMENODE_LEGACY_OIV_IMAGE_DIR_KEY,
-        tmpOivImgDir.getAbsolutePath());
+    Configuration conf = setupCommonConfig();
 
     // Dial down the retention of extra edits and checkpoints. This is to
     // help catch regressions of HDFS-4238 (SBN should not purge shared edits)
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_NUM_CHECKPOINTS_RETAINED_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_NUM_EXTRA_EDITS_RETAINED_KEY, 0);
-    
-    conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, true);
-    conf.set(DFSConfigKeys.DFS_IMAGE_COMPRESSION_CODEC_KEY,
-        SlowCodec.class.getCanonicalName());
-    CompressionCodecFactory.setCodecClasses(conf,
-        ImmutableList.<Class>of(SlowCodec.class));
 
     MiniDFSNNTopology topology = new MiniDFSNNTopology()
       .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
@@ -116,7 +104,24 @@ public class TestStandbyCheckpoints {
 
     cluster.transitionToActive(0);
   }
-  
+
+  protected Configuration setupCommonConfig() {
+    tmpOivImgDir = Files.createTempDir();
+
+    Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 5);
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_LEGACY_OIV_IMAGE_DIR_KEY,
+        tmpOivImgDir.getAbsolutePath());
+    conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, true);
+    conf.set(DFSConfigKeys.DFS_IMAGE_COMPRESSION_CODEC_KEY,
+        SlowCodec.class.getCanonicalName());
+    CompressionCodecFactory.setCodecClasses(conf,
+        ImmutableList.<Class>of(SlowCodec.class));
+    return conf;
+  }
+
   @After
   public void shutdownCluster() throws IOException {
     if (cluster != null) {
