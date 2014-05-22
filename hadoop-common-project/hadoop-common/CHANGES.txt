@@ -54,6 +54,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10614. CBZip2InputStream is not threadsafe (Xiangrui Meng via
     Sandy Ryza)
 
+    HADOOP-10618. Remove SingleNodeSetup.apt.vm. (Akira Ajisaka via
+    Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES 
