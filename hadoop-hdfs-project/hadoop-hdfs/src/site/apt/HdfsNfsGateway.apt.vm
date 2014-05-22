@@ -338,8 +338,21 @@ HDFS NFS Gateway
   The system administrator must ensure that the user on NFS client host has the same
   name and UID as that on the NFS gateway host. This is usually not a problem if
   the same user management system (e.g., LDAP/NIS) is used to create and deploy users on
-  HDFS nodes and NFS client node. In case the user account is created manually in different hosts, one might need to 
+  HDFS nodes and NFS client node. In case the user account is created manually on different hosts, one might need to 
   modify UID (e.g., do "usermod -u 123 myusername") on either NFS client or NFS gateway host
   in order to make it the same on both sides. More technical details of RPC AUTH_UNIX can be found
   in {{{http://tools.ietf.org/html/rfc1057}RPC specification}}.
 
+  Optionally, the system administrator can configure a custom static mapping
+  file in the event one wishes to access the HDFS NFS Gateway from a system with
+  a completely disparate set of UIDs/GIDs. By default this file is located at
+  "/etc/nfs.map", but a custom location can be configured by setting the
+  "dfs.nfs.static.mapping.file" property to the path of the static mapping file.
+  The format of the static mapping file is similar to what is described in the
+  exports(5) manual page, but roughly it is:
+
+-------------------------
+# Mapping for clients accessing the NFS gateway
+uid 10 100 # Map the remote UID 10 the local UID 100
+gid 11 101 # Map the remote GID 11 to the local GID 101
+-------------------------
