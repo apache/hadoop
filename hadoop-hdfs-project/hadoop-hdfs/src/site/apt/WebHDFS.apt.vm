@@ -102,6 +102,12 @@ WebHDFS REST API
     * {{{Cancel Delegation Token}<<<CANCELDELEGATIONTOKEN>>>}}
         (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.cancelDelegationToken)
 
+    * {{{Create Snapshot}<<<CREATESNAPSHOT>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.createSnapshot)
+
+    * {{{Rename Snapshot}<<<RENAMESNAPSHOT>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.renameSnapshot)
+
   * HTTP POST
 
     * {{{Append to a File}<<<APPEND>>>}}
@@ -114,6 +120,9 @@ WebHDFS REST API
 
     * {{{Delete a File/Directory}<<<DELETE>>>}}
         (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.delete)
+ 
+    * {{{Delete Snapshot}<<<DELETESNAPSHOT>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.deleteSnapshot)
 
 ** {FileSystem URIs vs HTTP URLs}
 
@@ -898,6 +907,75 @@ Transfer-Encoding: chunked
 
   See also:
   {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getAclStatus
+
+
+* {Snapshot Operations}
+
+** {Create Snapshot}
+
+  * Submit a HTTP PUT request.
+
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=CREATESNAPSHOT[&snapshotname=<SNAPSHOTNAME>]"
++---------------------------------
+
+  The client receives a response with a {{{Path JSON Schema}<<<Path>>> JSON object}}:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{"Path": "/user/szetszwo/.snapshot/s1"}
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.createSnapshot
+
+
+** {Delete Snapshot}
+
+  * Submit a HTTP DELETE request.
+
++---------------------------------
+curl -i -X DELETE "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=DELETESNAPSHOT&snapshotname=<SNAPSHOTNAME>"
++---------------------------------
+
+  The client receives a response with zero content length:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Length: 0
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.deleteSnapshot
+
+
+** {Rename Snapshot}
+
+  * Submit a HTTP PUT request.
+
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=RENAMESNAPSHOT
+                   &oldsnapshotname=<SNAPSHOTNAME>&snapshotname=<SNAPSHOTNAME>"
++---------------------------------
+
+  The client receives a response with zero content length:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Length: 0
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.renameSnapshot
 
 
 * {Delegation Token Operations}
@@ -1839,6 +1917,26 @@ var tokenProperties =
   {{{Open and Read a File}<<<OPEN>>>}}
 
 
+** {Old Snapshot Name}
+
+*----------------+-------------------------------------------------------------------+
+|| Name          | <<<oldsnapshotname>>> |
+*----------------+-------------------------------------------------------------------+
+|| Description   | The old name of the snapshot to be renamed. |
+*----------------+-------------------------------------------------------------------+
+|| Type          | String |
+*----------------+-------------------------------------------------------------------+
+|| Default Value | null |
+*----------------+-------------------------------------------------------------------+
+|| Valid Values  | An existing snapshot name. |
+*----------------+-------------------------------------------------------------------+
+|| Syntax        | Any string. |
+*----------------+-------------------------------------------------------------------+
+
+  See also:
+  {{{Rename Snapshot}<<<RENAMESNAPSHOT>>>}}
+
+
 ** {Op}
 
 *----------------+-------------------------------------------------------------------+
@@ -1983,6 +2081,29 @@ var tokenProperties =
   {{{Set Replication Factor}<<<SETREPLICATION>>>}}
 
 
+** {Snapshot Name}
+
+*----------------+-------------------------------------------------------------------+
+|| Name          | <<<snapshotname>>> |
+*----------------+-------------------------------------------------------------------+
+|| Description   | The name of the snapshot to be created/deleted. |
+||               | Or the new name for snapshot rename.            |
+*----------------+-------------------------------------------------------------------+
+|| Type          | String |
+*----------------+-------------------------------------------------------------------+
+|| Default Value | null |
+*----------------+-------------------------------------------------------------------+
+|| Valid Values  | Any valid snapshot name. |
+*----------------+-------------------------------------------------------------------+
+|| Syntax        | Any string. |
+*----------------+-------------------------------------------------------------------+
+
+  See also:
+  {{{Create Snapshot}<<<CREATESNAPSHOT>>>}},
+  {{{Delete Snapshot}<<<DELETESNAPSHOT>>>}},
+  {{{Rename Snapshot}<<<RENAMESNAPSHOT>>>}}
+
+
 ** {Sources}
 
 *----------------+-------------------------------------------------------------------+
@@ -2042,4 +2163,3 @@ var tokenProperties =
 
   See also:
   {{Authentication}}
-

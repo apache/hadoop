@@ -957,7 +957,7 @@ public class WebHdfsFileSystem extends FileSystem
   public void deleteSnapshot(final Path path, final String snapshotName)
       throws IOException {
     statistics.incrementWriteOps(1);
-    final HttpOpParam.Op op = PutOpParam.Op.DELETESNAPSHOT;
+    final HttpOpParam.Op op = DeleteOpParam.Op.DELETESNAPSHOT;
     new FsPathRunner(op, path, new SnapshotNameParam(snapshotName)).run();
   }
 
