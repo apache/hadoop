@@ -572,6 +572,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6419. TestBookKeeperHACheckpoints#TestSBNCheckpoints fails on trunk.
     (Akira AJISAKA via kihwal)
 
+    HDFS-6409. Fix typo in log message about NameNode layout version upgrade.
+    (Chen He via cnauroth)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
