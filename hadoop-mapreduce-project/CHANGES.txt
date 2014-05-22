@@ -202,6 +202,8 @@ Release 2.5.0 - UNRELEASED
 
     MAPREDUCE-5809. Enhance distcp to support preserving HDFS ACLs. (cnauroth)
 
+    MAPREDUCE-5899. Support incremental data copy in DistCp. (jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES 

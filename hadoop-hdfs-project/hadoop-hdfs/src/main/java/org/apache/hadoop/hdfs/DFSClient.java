@@ -1801,15 +1801,19 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
    }
 
   /**
-   * Get the checksum of a file.
+   * Get the checksum of the whole file of a range of the file. Note that the
+   * range always starts from the beginning of the file.
    * @param src The file path
+   * @param length The length of the range
    * @return The checksum 
    * @see DistributedFileSystem#getFileChecksum(Path)
    */
-  public MD5MD5CRC32FileChecksum getFileChecksum(String src) throws IOException {
+  public MD5MD5CRC32FileChecksum getFileChecksum(String src, long length)
+      throws IOException {
     checkOpen();
-    return getFileChecksum(src, clientName, namenode, socketFactory,
-        dfsClientConf.socketTimeout, getDataEncryptionKey(),
+    Preconditions.checkArgument(length >= 0);
+    return getFileChecksum(src, length, clientName, namenode,
+        socketFactory, dfsClientConf.socketTimeout, getDataEncryptionKey(),
         dfsClientConf.connectToDnViaHostname);
   }
   
@@ -1850,8 +1854,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
   }
 
   /**
-   * Get the checksum of a file.
+   * Get the checksum of the whole file or a range of the file.
    * @param src The file path
+   * @param length the length of the range, i.e., the range is [0, length]
    * @param clientName the name of the client requesting the checksum.
    * @param namenode the RPC proxy for the namenode
    * @param socketFactory to create sockets to connect to DNs
@@ -1861,12 +1866,13 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
    * @return The checksum 
    */
   private static MD5MD5CRC32FileChecksum getFileChecksum(String src,
-      String clientName,
-      ClientProtocol namenode, SocketFactory socketFactory, int socketTimeout,
+      long length, String clientName, ClientProtocol namenode,
+      SocketFactory socketFactory, int socketTimeout,
       DataEncryptionKey encryptionKey, boolean connectToDnViaHostname)
       throws IOException {
-    //get all block locations
-    LocatedBlocks blockLocations = callGetBlockLocations(namenode, src, 0, Long.MAX_VALUE);
+    //get block locations for the file range
+    LocatedBlocks blockLocations = callGetBlockLocations(namenode, src, 0,
+        length);
     if (null == blockLocations) {
       throw new FileNotFoundException("File does not exist: " + src);
     }
@@ -1878,10 +1884,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
     boolean refetchBlocks = false;
     int lastRetriedIndex = -1;
 
-    //get block checksum for each block
-    for(int i = 0; i < locatedblocks.size(); i++) {
+    // get block checksum for each block
+    long remaining = length;
+    for(int i = 0; i < locatedblocks.size() && remaining > 0; i++) {
       if (refetchBlocks) {  // refetch to get fresh tokens
-        blockLocations = callGetBlockLocations(namenode, src, 0, Long.MAX_VALUE);
+        blockLocations = callGetBlockLocations(namenode, src, 0, length);
         if (null == blockLocations) {
           throw new FileNotFoundException("File does not exist: " + src);
         }
@@ -1890,6 +1897,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
       }
       LocatedBlock lb = locatedblocks.get(i);
       final ExtendedBlock block = lb.getBlock();
+      if (remaining < block.getNumBytes()) {
+        block.setNumBytes(remaining);
+      }
+      remaining -= block.getNumBytes();
       final DatanodeInfo[] datanodes = lb.getLocations();
       
       //try each datanode location of the block

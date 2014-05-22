@@ -39,6 +39,7 @@ public class DistCpOptions {
   private boolean deleteMissing = false;
   private boolean ignoreFailures = false;
   private boolean overwrite = false;
+  private boolean append = false;
   private boolean skipCRC = false;
   private boolean blocking = true;
 
@@ -242,6 +243,22 @@ public class DistCpOptions {
   public void setOverwrite(boolean overwrite) {
     validate(DistCpOptionSwitch.OVERWRITE, overwrite);
     this.overwrite = overwrite;
+  }
+
+  /**
+   * @return whether we can append new data to target files
+   */
+  public boolean shouldAppend() {
+    return append;
+  }
+
+  /**
+   * Set if we want to append new data to target files. This is valid only with
+   * update option and CRC is not skipped.
+   */
+  public void setAppend(boolean append) {
+    validate(DistCpOptionSwitch.APPEND, append);
+    this.append = append;
   }
 
   /**
@@ -472,6 +489,7 @@ public class DistCpOptions {
         value : this.atomicCommit);
     boolean skipCRC = (option == DistCpOptionSwitch.SKIP_CRC ?
         value : this.skipCRC);
+    boolean append = (option == DistCpOptionSwitch.APPEND ? value : this.append);
 
     if (syncFolder && atomicCommit) {
       throw new IllegalArgumentException("Atomic commit can't be used with " +
@@ -492,6 +510,14 @@ public class DistCpOptions {
       throw new IllegalArgumentException("Skip CRC is valid only with update options");
     }
 
+    if (!syncFolder && append) {
+      throw new IllegalArgumentException(
+          "Append is valid only with update options");
+    }
+    if (skipCRC && append) {
+      throw new IllegalArgumentException(
+          "Append is disallowed when skipping CRC");
+    }
   }
 
   /**
@@ -510,6 +536,8 @@ public class DistCpOptions {
         String.valueOf(deleteMissing));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.OVERWRITE,
         String.valueOf(overwrite));
+    DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.APPEND,
+        String.valueOf(append));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.SKIP_CRC,
         String.valueOf(skipCRC));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.BANDWIDTH,
