@@ -555,10 +555,6 @@ public class NamenodeWebHdfsMethods {
           org.apache.hadoop.fs.Path.class.getSimpleName(), snapshotPath);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
-    case DELETESNAPSHOT: {
-      np.deleteSnapshot(fullpath, snapshotName.getValue());
-      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
-    }
     case RENAMESNAPSHOT: {
       np.renameSnapshot(fullpath, oldSnapshotName.getValue(),
           snapshotName.getValue());
@@ -894,9 +890,12 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(DeleteOpParam.NAME) @DefaultValue(DeleteOpParam.DEFAULT)
           final DeleteOpParam op,
       @QueryParam(RecursiveParam.NAME) @DefaultValue(RecursiveParam.DEFAULT)
-          final RecursiveParam recursive
+          final RecursiveParam recursive,
+      @QueryParam(SnapshotNameParam.NAME) @DefaultValue(SnapshotNameParam.DEFAULT)
+          final SnapshotNameParam snapshotName
       ) throws IOException, InterruptedException {
-    return delete(ugi, delegation, username, doAsUser, ROOT, op, recursive);
+    return delete(ugi, delegation, username, doAsUser, ROOT, op, recursive,
+        snapshotName);
   }
 
   /** Handle HTTP DELETE request. */
@@ -915,17 +914,19 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(DeleteOpParam.NAME) @DefaultValue(DeleteOpParam.DEFAULT)
           final DeleteOpParam op,
       @QueryParam(RecursiveParam.NAME) @DefaultValue(RecursiveParam.DEFAULT)
-          final RecursiveParam recursive
+          final RecursiveParam recursive,
+      @QueryParam(SnapshotNameParam.NAME) @DefaultValue(SnapshotNameParam.DEFAULT)
+          final SnapshotNameParam snapshotName
       ) throws IOException, InterruptedException {
 
-    init(ugi, delegation, username, doAsUser, path, op, recursive);
+    init(ugi, delegation, username, doAsUser, path, op, recursive, snapshotName);
 
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
       public Response run() throws IOException {
         try {
           return delete(ugi, delegation, username, doAsUser,
-              path.getAbsolutePath(), op, recursive);
+              path.getAbsolutePath(), op, recursive, snapshotName);
         } finally {
           reset();
         }
@@ -940,16 +941,21 @@ public class NamenodeWebHdfsMethods {
       final DoAsParam doAsUser,
       final String fullpath,
       final DeleteOpParam op,
-      final RecursiveParam recursive
+      final RecursiveParam recursive,
+      final SnapshotNameParam snapshotName
       ) throws IOException {
     final NameNode namenode = (NameNode)context.getAttribute("name.node");
+    final NamenodeProtocols np = getRPCServer(namenode);
 
     switch(op.getValue()) {
-    case DELETE:
-    {
-      final boolean b = getRPCServer(namenode).delete(fullpath, recursive.getValue());
+    case DELETE: {
+      final boolean b = np.delete(fullpath, recursive.getValue());
       final String js = JsonUtil.toJsonString("boolean", b);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case DELETESNAPSHOT: {
+      np.deleteSnapshot(fullpath, snapshotName.getValue());
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     default:
       throw new UnsupportedOperationException(op + " is not supported");
