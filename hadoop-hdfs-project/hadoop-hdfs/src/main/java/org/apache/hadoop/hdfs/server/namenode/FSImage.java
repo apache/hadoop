@@ -227,7 +227,7 @@ public class FSImage implements Closeable {
           + HdfsConstants.NAMENODE_LAYOUT_VERSION + " is required.\n"
           + "Please restart NameNode with the \""
           + RollingUpgradeStartupOption.STARTED.getOptionString()
-          + "\" option if a rolling upgraded is already started;"
+          + "\" option if a rolling upgrade is already started;"
           + " or restart NameNode with the \""
           + StartupOption.UPGRADE.getName() + "\" option to start"
           + " a new upgrade.");
