@@ -580,6 +580,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6438. DeleteSnapshot should be a DELETE request in WebHdfs. (jing9)
 
+    HDFS-6423. Diskspace quota usage should be updated when appending data to
+    partial block. (jing9)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

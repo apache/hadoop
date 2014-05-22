@@ -2424,6 +2424,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         .getClientName(), src);
     
     LocatedBlock ret = blockManager.convertLastBlockToUnderConstruction(cons);
+    if (ret != null) {
+      // update the quota: use the preferred block size for UC block
+      final long diff = file.getPreferredBlockSize() - ret.getBlockSize();
+      dir.updateSpaceConsumed(src, 0, diff);
+    }
+
     if (writeToEditLog) {
       getEditLog().logOpenFile(src, cons, logRetryCache);
     }
