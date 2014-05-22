@@ -123,6 +123,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6396. Remove support for ACL feature from INodeSymlink.
     (Charles Lamb via wang)
 
+    HDFS-6435. Add support for specifying a static uid/gid mapping for the NFS
+    gateway. (atm via wang)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
