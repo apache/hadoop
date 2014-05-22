@@ -260,6 +260,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6409. Fix typo in log message about NameNode layout version upgrade.
     (Chen He via cnauroth)
 
+    HDFS-6433. Replace BytesMoved class with AtomicLong.
+    (Benoy Antony via cnauroth)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
