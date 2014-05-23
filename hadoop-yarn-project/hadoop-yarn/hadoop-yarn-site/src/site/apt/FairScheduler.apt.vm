@@ -156,6 +156,12 @@ Properties that can be placed in yarn-site.xml
     * Whether to use preemption. Note that preemption is experimental in the current
       version. Defaults to false.
 
+ * <<<yarn.scheduler.fair.preemption.cluster-utilization-threshold>>>
+
+    * The utilization threshold after which preemption kicks in. The
+      utilization is computed as the maximum ratio of usage to capacity among
+      all resources. Defaults to 0.8f.
+
  * <<<yarn.scheduler.fair.sizebasedweight>>>
   
     * Whether to assign shares to individual apps based on their size, rather than

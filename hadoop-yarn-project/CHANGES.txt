@@ -104,6 +104,9 @@ Release 2.5.0 - UNRELEASED
 
     YARN-2059. Added admin ACLs support to Timeline Server. (Zhijie Shen via
     vinodkv)
+    
+    YARN-2073. Fair Scheduler: Add a utilization threshold to prevent preempting
+    resources when cluster is free (Karthik Kambatla via Sandy Ryza)
 
   OPTIMIZATIONS
 

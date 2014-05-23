@@ -101,6 +101,10 @@ public class FairSchedulerConfiguration extends Configuration {
   /** Whether preemption is enabled. */
   protected static final String  PREEMPTION = CONF_PREFIX + "preemption";
   protected static final boolean DEFAULT_PREEMPTION = false;
+
+  protected static final String PREEMPTION_THRESHOLD =
+      CONF_PREFIX + "preemption.cluster-utilization-threshold";
+  protected static final float DEFAULT_PREEMPTION_THRESHOLD = 0.8f;
   
   protected static final String PREEMPTION_INTERVAL = CONF_PREFIX + "preemptionInterval";
   protected static final int DEFAULT_PREEMPTION_INTERVAL = 5000;
@@ -183,6 +187,10 @@ public class FairSchedulerConfiguration extends Configuration {
 
   public boolean getPreemptionEnabled() {
     return getBoolean(PREEMPTION, DEFAULT_PREEMPTION);
+  }
+
+  public float getPreemptionUtilizationThreshold() {
+    return getFloat(PREEMPTION_THRESHOLD, DEFAULT_PREEMPTION_THRESHOLD);
   }
 
   public boolean getAssignMultiple() {
