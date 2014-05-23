@@ -1638,10 +1638,16 @@ public class TestRMRestart {
 
     // create app that gets launched and does allocate before RM restart
     RMApp app1 = rm1.submitApp(200);
-    assertQueueMetrics(qm1, 1, 1, 0, 0);
-    nm1.nodeHeartbeat(true);
+    // Need to wait first for AppAttempt to be started (RMAppState.ACCEPTED)
+    // and then for it to reach RMAppAttemptState.SCHEDULED
+    // inorder to ensure appsPending metric is incremented
+    rm1.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
     ApplicationAttemptId attemptId1 = attempt1.getAppAttemptId();
+    rm1.waitForState(attemptId1, RMAppAttemptState.SCHEDULED);
+    assertQueueMetrics(qm1, 1, 1, 0, 0);
+
+    nm1.nodeHeartbeat(true);
     rm1.waitForState(attemptId1, RMAppAttemptState.ALLOCATED);
     MockAM am1 = rm1.sendAMLaunched(attempt1.getAppAttemptId());
     am1.registerAppAttempt();
@@ -1660,11 +1666,12 @@ public class TestRMRestart {
     // PHASE 2: create new RM and start from old state
     // create new RM to represent restart and recover state
     MockRM rm2 = new MockRM(conf, memStore);
-    rm2.start();
-    nm1.setResourceTrackerService(rm2.getResourceTrackerService());
     QueueMetrics qm2 = rm2.getResourceScheduler().getRootQueueMetrics();
     resetQueueMetrics(qm2);
     assertQueueMetrics(qm2, 0, 0, 0, 0);
+
+    rm2.start();
+    nm1.setResourceTrackerService(rm2.getResourceTrackerService());
     // recover app
     RMApp loadedApp1 = rm2.getRMContext().getRMApps().get(app1.getApplicationId());
     am1.setAMRMProtocol(rm2.getApplicationMasterService());
