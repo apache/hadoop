@@ -32,8 +32,6 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 /**
  * A client library that can be used to post some information in terms of a
  * number of conceptual entities.
- * 
- * @See Entity
  */
 @Public
 @Unstable

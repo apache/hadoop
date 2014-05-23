@@ -90,6 +90,9 @@ Release 2.5.0 - UNRELEASED
 
     YARN-2017. Merged some of the common scheduler code. (Jian He via vinodkv)
 
+    YARN-2049. Added delegation-token support for the Timeline Server. (Zhijie
+    Shen via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES 

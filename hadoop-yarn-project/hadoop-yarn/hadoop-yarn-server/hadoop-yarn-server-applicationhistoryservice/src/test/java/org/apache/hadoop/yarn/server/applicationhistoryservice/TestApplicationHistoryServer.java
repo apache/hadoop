@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.AHSWebApp;
 import org.junit.After;
 import org.junit.Test;
 
@@ -40,7 +41,7 @@ public class TestApplicationHistoryServer {
     Configuration config = new YarnConfiguration();
     historyServer.init(config);
     assertEquals(STATE.INITED, historyServer.getServiceState());
-    assertEquals(3, historyServer.getServices().size());
+    assertEquals(4, historyServer.getServices().size());
     ApplicationHistoryClientService historyService =
         historyServer.getClientService();
     assertNotNull(historyServer.getClientService());
@@ -73,5 +74,6 @@ public class TestApplicationHistoryServer {
     if (historyServer != null) {
       historyServer.stop();
     }
+    AHSWebApp.resetInstance();
   }
 }
