@@ -148,7 +148,11 @@ public class FairScheduler extends
   // Time we last ran preemptTasksIfNecessary
   private long lastPreemptCheckTime;
 
-  // How often tasks are preempted 
+  // Preemption related variables
+  protected boolean preemptionEnabled;
+  protected float preemptionUtilizationThreshold;
+
+  // How often tasks are preempted
   protected long preemptionInterval; 
   
   // ms to wait before force killing stuff (must be longer than a couple
@@ -158,7 +162,6 @@ public class FairScheduler extends
   // Containers whose AMs have been warned that they will be preempted soon.
   private List<RMContainer> warnedContainers = new ArrayList<RMContainer>();
   
-  protected boolean preemptionEnabled;
   protected boolean sizeBasedWeight; // Give larger weights to larger jobs
   protected WeightAdjuster weightAdjuster; // Can be null for no weight adjuster
   protected boolean continuousSchedulingEnabled; // Continuous Scheduling enabled or not
@@ -318,7 +321,7 @@ public class FairScheduler extends
    * and then select the right ones using preemptTasks.
    */
   protected synchronized void preemptTasksIfNecessary() {
-    if (!preemptionEnabled) {
+    if (!shouldAttemptPreemption()) {
       return;
     }
 
@@ -328,10 +331,9 @@ public class FairScheduler extends
     }
     lastPreemptCheckTime = curTime;
 
-    Resource resToPreempt = Resources.none();
-
+    Resource resToPreempt = Resources.clone(Resources.none());
     for (FSLeafQueue sched : queueMgr.getLeafQueues()) {
-      resToPreempt = Resources.add(resToPreempt, resToPreempt(sched, curTime));
+      Resources.addTo(resToPreempt, resToPreempt(sched, curTime));
     }
     if (Resources.greaterThan(RESOURCE_CALCULATOR, clusterResource, resToPreempt,
         Resources.none())) {
@@ -1067,6 +1069,22 @@ public class FairScheduler extends
             clusterResource, rootMetrics.getAllocatedResources()));
   }
 
+  /**
+   * Check if preemption is enabled and the utilization threshold for
+   * preemption is met.
+   *
+   * @return true if preemption should be attempted, false otherwise.
+   */
+  private boolean shouldAttemptPreemption() {
+    if (preemptionEnabled) {
+      return (preemptionUtilizationThreshold < Math.max(
+          (float) rootMetrics.getAvailableMB() / clusterResource.getMemory(),
+          (float) rootMetrics.getAvailableVirtualCores() /
+              clusterResource.getVirtualCores()));
+    }
+    return false;
+  }
+
   @Override
   public QueueMetrics getRootQueueMetrics() {
     return rootMetrics;
@@ -1172,6 +1190,8 @@ public class FairScheduler extends
       nodeLocalityDelayMs = this.conf.getLocalityDelayNodeMs();
       rackLocalityDelayMs = this.conf.getLocalityDelayRackMs();
       preemptionEnabled = this.conf.getPreemptionEnabled();
+      preemptionUtilizationThreshold =
+          this.conf.getPreemptionUtilizationThreshold();
       assignMultiple = this.conf.getAssignMultiple();
       maxAssign = this.conf.getMaxAssign();
       sizeBasedWeight = this.conf.getSizeBasedWeight();
