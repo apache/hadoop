@@ -84,6 +84,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1937. Added owner-only ACLs support for Timeline Client and server.
     (Zhijie Shen via vinodkv)
 
+    YARN-2012. Fair Scheduler: allow default queue placement rule to take an
+    arbitrary queue (Ashwin Shankar via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES 
