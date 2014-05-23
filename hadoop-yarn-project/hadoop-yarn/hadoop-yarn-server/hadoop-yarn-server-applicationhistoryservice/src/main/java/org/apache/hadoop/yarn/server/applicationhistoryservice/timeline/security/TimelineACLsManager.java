@@ -27,8 +27,8 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.AdminACLsManager;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.EntityIdentifier;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineStore.SystemFilter;
 
@@ -42,11 +42,10 @@ public class TimelineACLsManager {
 
   private static final Log LOG = LogFactory.getLog(TimelineACLsManager.class);
 
-  private boolean aclsEnabled;
+  private AdminACLsManager adminAclsManager;
 
   public TimelineACLsManager(Configuration conf) {
-    aclsEnabled = conf.getBoolean(YarnConfiguration.YARN_ACL_ENABLE,
-        YarnConfiguration.DEFAULT_YARN_ACL_ENABLE);
+    this.adminAclsManager = new AdminACLsManager(conf);
   }
 
   public boolean checkAccess(UserGroupInformation callerUGI,
@@ -57,7 +56,7 @@ public class TimelineACLsManager {
           + new EntityIdentifier(entity.getEntityId(), entity.getEntityType()));
     }
 
-    if (!aclsEnabled) {
+    if (!adminAclsManager.areACLsEnabled()) {
       return true;
     }
 
@@ -70,10 +69,12 @@ public class TimelineACLsManager {
           + " is corrupted.");
     }
     String owner = values.iterator().next().toString();
-    // TODO: Currently we just check the user is the timeline entity owner. In
-    // the future, we need to check whether the user is admin or is in the
+    // TODO: Currently we just check the user is the admin or the timeline
+    // entity owner. In the future, we need to check whether the user is in the
     // allowed user/group list
-    if (callerUGI != null && callerUGI.getShortUserName().equals(owner)) {
+    if (callerUGI != null
+        && (adminAclsManager.isAdmin(callerUGI) ||
+            callerUGI.getShortUserName().equals(owner))) {
       return true;
     }
     return false;
@@ -81,8 +82,11 @@ public class TimelineACLsManager {
 
   @Private
   @VisibleForTesting
-  public void setACLsEnabled(boolean aclsEnabled) {
-    this.aclsEnabled = aclsEnabled;
+  public AdminACLsManager
+      setAdminACLsManager(AdminACLsManager adminAclsManager) {
+    AdminACLsManager oldAdminACLsManager = this.adminAclsManager;
+    this.adminAclsManager = adminAclsManager;
+    return oldAdminACLsManager;
   }
 
 }

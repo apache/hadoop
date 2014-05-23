@@ -346,8 +346,9 @@ public class TimelineWebServices {
             new EntityIdentifier(entity.getEntityId(), entity.getEntityType());
 
         // check if there is existing entity
+        TimelineEntity existingEntity = null;
         try {
-          TimelineEntity existingEntity =
+          existingEntity =
               store.getEntity(entityID.getId(), entityID.getType(),
                   EnumSet.of(Field.PRIMARY_FILTERS));
           if (existingEntity != null
@@ -369,10 +370,14 @@ public class TimelineWebServices {
           continue;
         }
 
-        // inject owner information for the access check
+        // inject owner information for the access check if this is the first
+        // time to post the entity, in case it's the admin who is updating
+        // the timeline data.
         try {
-          injectOwnerInfo(entity,
-              callerUGI == null ? "" : callerUGI.getShortUserName());
+          if (existingEntity == null) {
+            injectOwnerInfo(entity,
+                callerUGI == null ? "" : callerUGI.getShortUserName());
+          }
         } catch (YarnException e) {
           // Skip the entity which messes up the primary filter and record the
           // error

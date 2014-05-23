@@ -102,6 +102,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2012. Fair Scheduler: allow default queue placement rule to take an
     arbitrary queue (Ashwin Shankar via Sandy Ryza)
 
+    YARN-2059. Added admin ACLs support to Timeline Server. (Zhijie Shen via
+    vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES 
