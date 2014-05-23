@@ -19,9 +19,14 @@
 package org.apache.hadoop.yarn.util.timeline;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.map.JsonMappingException;
@@ -78,4 +83,26 @@ public class TimelineUtils {
     }
   }
 
+  public static InetSocketAddress getTimelineTokenServiceAddress(
+      Configuration conf) {
+    InetSocketAddress timelineServiceAddr = null;
+    if (YarnConfiguration.useHttps(conf)) {
+      timelineServiceAddr = conf.getSocketAddr(
+          YarnConfiguration.TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS,
+          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS,
+          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_PORT);
+    } else {
+      timelineServiceAddr = conf.getSocketAddr(
+          YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS,
+          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_PORT);
+    }
+    return timelineServiceAddr;
+  }
+
+  public static Text buildTimelineTokenService(Configuration conf) {
+    InetSocketAddress timelineServiceAddr =
+        getTimelineTokenServiceAddress(conf);
+    return SecurityUtil.buildTokenService(timelineServiceAddr);
+  }
 }

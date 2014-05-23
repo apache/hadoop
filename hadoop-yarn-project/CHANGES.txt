@@ -78,6 +78,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2049. Added delegation-token support for the Timeline Server. (Zhijie
     Shen via vinodkv)
 
+    YARN-1936. Added security support for the Timeline Client. (Zhijie Shen via
+    vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES 
