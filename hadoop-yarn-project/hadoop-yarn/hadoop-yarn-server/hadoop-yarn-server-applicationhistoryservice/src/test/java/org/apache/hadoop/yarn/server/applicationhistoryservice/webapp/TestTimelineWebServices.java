@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.AdminACLsManager;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TestMemoryTimelineStore;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.security.TimelineACLsManager;
@@ -64,6 +65,7 @@ public class TestTimelineWebServices extends JerseyTest {
 
   private static TimelineStore store;
   private static TimelineACLsManager timelineACLsManager;
+  private static AdminACLsManager adminACLsManager;
   private static String remoteUser;
   private long beforeTime;
 
@@ -83,6 +85,9 @@ public class TestTimelineWebServices extends JerseyTest {
       Configuration conf = new YarnConfiguration();
       conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, false);
       timelineACLsManager = new TimelineACLsManager(conf);
+      conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+      conf.set(YarnConfiguration.YARN_ADMIN_ACL, "admin");
+      adminACLsManager = new AdminACLsManager(conf);
       bind(TimelineACLsManager.class).toInstance(timelineACLsManager);
       serve("/*").with(GuiceContainer.class);
       filter("/*").through(TestFilter.class);
@@ -387,7 +392,8 @@ public class TestTimelineWebServices extends JerseyTest {
 
   @Test
   public void testPostEntitiesWithYarnACLsEnabled() throws Exception {
-    timelineACLsManager.setACLsEnabled(true);
+    AdminACLsManager oldAdminACLsManager =
+        timelineACLsManager.setAdminACLsManager(adminACLsManager);
     remoteUser = "tester";
     try {
       TimelineEntities entities = new TimelineEntities();
@@ -419,14 +425,15 @@ public class TestTimelineWebServices extends JerseyTest {
       Assert.assertEquals(TimelinePutResponse.TimelinePutError.ACCESS_DENIED,
           putResponse.getErrors().get(0).getErrorCode());
     } finally {
-      timelineACLsManager.setACLsEnabled(false);
+      timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
       remoteUser = null;
     }
   }
 
   @Test
   public void testGetEntityWithYarnACLsEnabled() throws Exception {
-    timelineACLsManager.setACLsEnabled(true);
+    AdminACLsManager oldAdminACLsManager =
+        timelineACLsManager.setAdminACLsManager(adminACLsManager);
     remoteUser = "tester";
     try {
       TimelineEntities entities = new TimelineEntities();
@@ -481,14 +488,15 @@ public class TestTimelineWebServices extends JerseyTest {
       assertEquals(ClientResponse.Status.NOT_FOUND,
           response.getClientResponseStatus());
     } finally {
-      timelineACLsManager.setACLsEnabled(false);
+      timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
       remoteUser = null;
     }
   }
 
   @Test
   public void testGetEntitiesWithYarnACLsEnabled() {
-    timelineACLsManager.setACLsEnabled(true);
+    AdminACLsManager oldAdminACLsManager =
+        timelineACLsManager.setAdminACLsManager(adminACLsManager);
     remoteUser = "tester";
     try {
       TimelineEntities entities = new TimelineEntities();
@@ -526,14 +534,15 @@ public class TestTimelineWebServices extends JerseyTest {
       assertEquals("test type 4", entities.getEntities().get(0).getEntityType());
       assertEquals("test id 5", entities.getEntities().get(0).getEntityId());
     } finally {
-      timelineACLsManager.setACLsEnabled(false);
+      timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
       remoteUser = null;
     }
   }
 
   @Test
   public void testGetEventsWithYarnACLsEnabled() {
-    timelineACLsManager.setACLsEnabled(true);
+    AdminACLsManager oldAdminACLsManager =
+        timelineACLsManager.setAdminACLsManager(adminACLsManager);
     remoteUser = "tester";
     try {
       TimelineEntities entities = new TimelineEntities();
@@ -579,7 +588,7 @@ public class TestTimelineWebServices extends JerseyTest {
       assertEquals(1, events.getAllEvents().size());
       assertEquals("test id 6", events.getAllEvents().get(0).getEntityId());
     } finally {
-      timelineACLsManager.setACLsEnabled(false);
+      timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
       remoteUser = null;
     }
   }

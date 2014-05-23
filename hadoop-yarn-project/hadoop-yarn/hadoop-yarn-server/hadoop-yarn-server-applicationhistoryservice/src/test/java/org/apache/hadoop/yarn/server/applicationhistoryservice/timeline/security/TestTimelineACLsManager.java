@@ -49,6 +49,7 @@ public class TestTimelineACLsManager {
   public void testYarnACLsEnabled() throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+    conf.set(YarnConfiguration.YARN_ADMIN_ACL, "admin");
     TimelineACLsManager timelineACLsManager =
         new TimelineACLsManager(conf);
     TimelineEntity entity = new TimelineEntity();
@@ -63,12 +64,17 @@ public class TestTimelineACLsManager {
         "Other shouldn't be allowed to access",
         timelineACLsManager.checkAccess(
             UserGroupInformation.createRemoteUser("other"), entity));
+    Assert.assertTrue(
+        "Admin should be allowed to access",
+        timelineACLsManager.checkAccess(
+            UserGroupInformation.createRemoteUser("admin"), entity));
   }
 
   @Test
   public void testCorruptedOwnerInfo() throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+    conf.set(YarnConfiguration.YARN_ADMIN_ACL, "owner");
     TimelineACLsManager timelineACLsManager =
         new TimelineACLsManager(conf);
     TimelineEntity entity = new TimelineEntity();
