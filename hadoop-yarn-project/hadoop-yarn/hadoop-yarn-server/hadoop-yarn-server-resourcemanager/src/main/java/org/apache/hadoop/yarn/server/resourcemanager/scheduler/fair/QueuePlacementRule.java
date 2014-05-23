@@ -276,21 +276,38 @@ public abstract class QueuePlacementRule {
   }
   
   /**
-   * Places all apps in the default queue
+   * Places apps in the specified default queue. If no default queue is
+   * specified the app is placed in root.default queue.
    */
   public static class Default extends QueuePlacementRule {
+    private String defaultQueueName;
+
+    @Override
+    public void initializeFromXml(Element el)
+        throws AllocationConfigurationException {
+      defaultQueueName = el.getAttribute("queue");
+      if (defaultQueueName != null && !defaultQueueName.isEmpty()) {
+        if (!defaultQueueName.startsWith("root.")) {
+          defaultQueueName = "root." + defaultQueueName;
+        }
+      } else {
+        defaultQueueName = "root." + YarnConfiguration.DEFAULT_QUEUE_NAME;
+      }
+      super.initializeFromXml(el);
+    }
+
     @Override
     protected String getQueueForApp(String requestedQueue, String user,
         Groups groups, Map<FSQueueType, Set<String>> configuredQueues) {
-      return "root." + YarnConfiguration.DEFAULT_QUEUE_NAME;
+      return defaultQueueName;
     }
-    
+
     @Override
     public boolean isTerminal() {
       return true;
     }
   }
-  
+
   /**
    * Rejects all apps
    */
