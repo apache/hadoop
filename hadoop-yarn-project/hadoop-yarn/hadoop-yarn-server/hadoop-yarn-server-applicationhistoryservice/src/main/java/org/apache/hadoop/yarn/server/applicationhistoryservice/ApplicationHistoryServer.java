@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.LeveldbTimelineStore;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineStore;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.security.TimelineACLsManager;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.security.TimelineAuthenticationFilterInitializer;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.security.TimelineDelegationTokenSecretManagerService;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.AHSWebApp;
@@ -63,6 +64,7 @@ public class ApplicationHistoryServer extends CompositeService {
   protected ApplicationHistoryManager historyManager;
   protected TimelineStore timelineStore;
   protected TimelineDelegationTokenSecretManagerService secretManagerService;
+  protected TimelineACLsManager timelineACLsManager;
   protected WebApp webApp;
 
   public ApplicationHistoryServer() {
@@ -79,6 +81,7 @@ public class ApplicationHistoryServer extends CompositeService {
     addIfService(timelineStore);
     secretManagerService = createTimelineDelegationTokenSecretManagerService(conf);
     addService(secretManagerService);
+    timelineACLsManager = createTimelineACLsManager(conf);
 
     DefaultMetricsSystem.initialize("ApplicationHistoryServer");
     JvmMetrics.initSingleton("ApplicationHistoryServer", null);
@@ -169,6 +172,10 @@ public class ApplicationHistoryServer extends CompositeService {
     return new TimelineDelegationTokenSecretManagerService();
   }
 
+  protected TimelineACLsManager createTimelineACLsManager(Configuration conf) {
+    return new TimelineACLsManager(conf);
+  }
+
   protected void startWebApp() {
     Configuration conf = getConfig();
     // Play trick to make the customized filter will only be loaded by the
@@ -196,6 +203,7 @@ public class ApplicationHistoryServer extends CompositeService {
       ahsWebApp.setApplicationHistoryManager(historyManager);
       ahsWebApp.setTimelineStore(timelineStore);
       ahsWebApp.setTimelineDelegationTokenSecretManagerService(secretManagerService);
+      ahsWebApp.setTimelineACLsManager(timelineACLsManager);
       webApp =
           WebApps
             .$for("applicationhistory", ApplicationHistoryClientService.class,
