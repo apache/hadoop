@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.yarn.server.api.ApplicationContext;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryManager;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineStore;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.security.TimelineACLsManager;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.security.TimelineDelegationTokenSecretManagerService;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
@@ -36,6 +37,7 @@ public class AHSWebApp extends WebApp implements YarnWebParams {
   private ApplicationHistoryManager applicationHistoryManager;
   private TimelineStore timelineStore;
   private TimelineDelegationTokenSecretManagerService secretManagerService;
+  private TimelineACLsManager timelineACLsManager;
 
   private static AHSWebApp instance = null;
 
@@ -83,6 +85,14 @@ public class AHSWebApp extends WebApp implements YarnWebParams {
     this.secretManagerService = secretManagerService;
   }
 
+  public TimelineACLsManager getTimelineACLsManager() {
+    return timelineACLsManager;
+  }
+
+  public void setTimelineACLsManager(TimelineACLsManager timelineACLsManager) {
+    this.timelineACLsManager = timelineACLsManager;
+  }
+
   @Override
   public void setup() {
     bind(YarnJacksonJaxbJsonProvider.class);
@@ -93,6 +103,7 @@ public class AHSWebApp extends WebApp implements YarnWebParams {
     bind(TimelineStore.class).toInstance(timelineStore);
     bind(TimelineDelegationTokenSecretManagerService.class).toInstance(
         secretManagerService);
+    bind(TimelineACLsManager.class).toInstance(timelineACLsManager);
     route("/", AHSController.class);
     route(pajoin("/apps", APP_STATE), AHSController.class);
     route(pajoin("/app", APPLICATION_ID), AHSController.class, "app");

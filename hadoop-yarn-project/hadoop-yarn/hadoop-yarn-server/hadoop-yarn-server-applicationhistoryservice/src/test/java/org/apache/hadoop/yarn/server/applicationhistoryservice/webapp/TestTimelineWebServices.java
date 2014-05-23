@@ -20,19 +20,32 @@ package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
 import static org.junit.Assert.assertEquals;
 
+import java.io.IOException;
+
+import javax.inject.Singleton;
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
 import javax.ws.rs.core.MediaType;
 
-import org.junit.Assert;
-
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineStore;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TestMemoryTimelineStore;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineStore;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.security.TimelineACLsManager;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
+import org.junit.Assert;
 import org.junit.Test;
 
 import com.google.inject.Guice;
@@ -50,6 +63,8 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
 public class TestTimelineWebServices extends JerseyTest {
 
   private static TimelineStore store;
+  private static TimelineACLsManager timelineACLsManager;
+  private static String remoteUser;
   private long beforeTime;
 
   private Injector injector = Guice.createInjector(new ServletModule() {
@@ -65,7 +80,12 @@ public class TestTimelineWebServices extends JerseyTest {
         Assert.fail();
       }
       bind(TimelineStore.class).toInstance(store);
+      Configuration conf = new YarnConfiguration();
+      conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, false);
+      timelineACLsManager = new TimelineACLsManager(conf);
+      bind(TimelineACLsManager.class).toInstance(timelineACLsManager);
       serve("/*").with(GuiceContainer.class);
+      filter("/*").through(TestFilter.class);
     }
 
   });
@@ -340,8 +360,8 @@ public class TestTimelineWebServices extends JerseyTest {
   public void testPostEntities() throws Exception {
     TimelineEntities entities = new TimelineEntities();
     TimelineEntity entity = new TimelineEntity();
-    entity.setEntityId("test id");
-    entity.setEntityType("test type");
+    entity.setEntityId("test id 1");
+    entity.setEntityType("test type 1");
     entity.setStartTime(System.currentTimeMillis());
     entities.addEntity(entity);
     WebResource r = resource();
@@ -355,14 +375,248 @@ public class TestTimelineWebServices extends JerseyTest {
     Assert.assertEquals(0, putResposne.getErrors().size());
     // verify the entity exists in the store
     response = r.path("ws").path("v1").path("timeline")
-        .path("test type").path("test id")
+        .path("test type 1").path("test id 1")
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     entity = response.getEntity(TimelineEntity.class);
     Assert.assertNotNull(entity);
-    Assert.assertEquals("test id", entity.getEntityId());
-    Assert.assertEquals("test type", entity.getEntityType());
+    Assert.assertEquals("test id 1", entity.getEntityId());
+    Assert.assertEquals("test type 1", entity.getEntityType());
   }
 
+  @Test
+  public void testPostEntitiesWithYarnACLsEnabled() throws Exception {
+    timelineACLsManager.setACLsEnabled(true);
+    remoteUser = "tester";
+    try {
+      TimelineEntities entities = new TimelineEntities();
+      TimelineEntity entity = new TimelineEntity();
+      entity.setEntityId("test id 2");
+      entity.setEntityType("test type 2");
+      entity.setStartTime(System.currentTimeMillis());
+      entities.addEntity(entity);
+      WebResource r = resource();
+      ClientResponse response = r.path("ws").path("v1").path("timeline")
+          .accept(MediaType.APPLICATION_JSON)
+          .type(MediaType.APPLICATION_JSON)
+          .post(ClientResponse.class, entities);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      TimelinePutResponse putResponse = response.getEntity(TimelinePutResponse.class);
+      Assert.assertNotNull(putResponse);
+      Assert.assertEquals(0, putResponse.getErrors().size());
+
+      // override/append timeline data in the same entity with different user
+      remoteUser = "other";
+      response = r.path("ws").path("v1").path("timeline")
+          .accept(MediaType.APPLICATION_JSON)
+          .type(MediaType.APPLICATION_JSON)
+          .post(ClientResponse.class, entities);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      putResponse = response.getEntity(TimelinePutResponse.class);
+      Assert.assertNotNull(putResponse);
+      Assert.assertEquals(1, putResponse.getErrors().size());
+      Assert.assertEquals(TimelinePutResponse.TimelinePutError.ACCESS_DENIED,
+          putResponse.getErrors().get(0).getErrorCode());
+    } finally {
+      timelineACLsManager.setACLsEnabled(false);
+      remoteUser = null;
+    }
+  }
+
+  @Test
+  public void testGetEntityWithYarnACLsEnabled() throws Exception {
+    timelineACLsManager.setACLsEnabled(true);
+    remoteUser = "tester";
+    try {
+      TimelineEntities entities = new TimelineEntities();
+      TimelineEntity entity = new TimelineEntity();
+      entity.setEntityId("test id 3");
+      entity.setEntityType("test type 3");
+      entity.setStartTime(System.currentTimeMillis());
+      entities.addEntity(entity);
+      WebResource r = resource();
+      ClientResponse response = r.path("ws").path("v1").path("timeline")
+          .accept(MediaType.APPLICATION_JSON)
+          .type(MediaType.APPLICATION_JSON)
+          .post(ClientResponse.class, entities);
+      // verify the system data will not be exposed
+      // 1. No field specification
+      response = r.path("ws").path("v1").path("timeline")
+          .path("test type 3").path("test id 3")
+          .accept(MediaType.APPLICATION_JSON)
+          .get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      entity = response.getEntity(TimelineEntity.class);
+      Assert.assertNull(entity.getPrimaryFilters().get(
+          TimelineStore.SystemFilter.ENTITY_OWNER.toString()));
+      // 2. other field
+      response = r.path("ws").path("v1").path("timeline")
+          .path("test type 3").path("test id 3")
+          .queryParam("fields", "relatedentities")
+          .accept(MediaType.APPLICATION_JSON)
+          .get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      entity = response.getEntity(TimelineEntity.class);
+      Assert.assertNull(entity.getPrimaryFilters().get(
+          TimelineStore.SystemFilter.ENTITY_OWNER.toString()));
+      // 3. primaryfilters field
+      response = r.path("ws").path("v1").path("timeline")
+          .path("test type 3").path("test id 3")
+          .queryParam("fields", "primaryfilters")
+          .accept(MediaType.APPLICATION_JSON)
+          .get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      entity = response.getEntity(TimelineEntity.class);
+      Assert.assertNull(entity.getPrimaryFilters().get(
+          TimelineStore.SystemFilter.ENTITY_OWNER.toString()));
+
+      // get entity with other user
+      remoteUser = "other";
+      response = r.path("ws").path("v1").path("timeline")
+          .path("test type 3").path("test id 3")
+          .accept(MediaType.APPLICATION_JSON)
+          .get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(ClientResponse.Status.NOT_FOUND,
+          response.getClientResponseStatus());
+    } finally {
+      timelineACLsManager.setACLsEnabled(false);
+      remoteUser = null;
+    }
+  }
+
+  @Test
+  public void testGetEntitiesWithYarnACLsEnabled() {
+    timelineACLsManager.setACLsEnabled(true);
+    remoteUser = "tester";
+    try {
+      TimelineEntities entities = new TimelineEntities();
+      TimelineEntity entity = new TimelineEntity();
+      entity.setEntityId("test id 4");
+      entity.setEntityType("test type 4");
+      entity.setStartTime(System.currentTimeMillis());
+      entities.addEntity(entity);
+      WebResource r = resource();
+      ClientResponse response = r.path("ws").path("v1").path("timeline")
+          .accept(MediaType.APPLICATION_JSON)
+          .type(MediaType.APPLICATION_JSON)
+          .post(ClientResponse.class, entities);
+
+      remoteUser = "other";
+      entities = new TimelineEntities();
+      entity = new TimelineEntity();
+      entity.setEntityId("test id 5");
+      entity.setEntityType("test type 4");
+      entity.setStartTime(System.currentTimeMillis());
+      entities.addEntity(entity);
+      r = resource();
+      response = r.path("ws").path("v1").path("timeline")
+          .accept(MediaType.APPLICATION_JSON)
+          .type(MediaType.APPLICATION_JSON)
+          .post(ClientResponse.class, entities);
+
+      response = r.path("ws").path("v1").path("timeline")
+          .path("test type 4")
+          .accept(MediaType.APPLICATION_JSON)
+          .get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      entities = response.getEntity(TimelineEntities.class);
+      assertEquals(1, entities.getEntities().size());
+      assertEquals("test type 4", entities.getEntities().get(0).getEntityType());
+      assertEquals("test id 5", entities.getEntities().get(0).getEntityId());
+    } finally {
+      timelineACLsManager.setACLsEnabled(false);
+      remoteUser = null;
+    }
+  }
+
+  @Test
+  public void testGetEventsWithYarnACLsEnabled() {
+    timelineACLsManager.setACLsEnabled(true);
+    remoteUser = "tester";
+    try {
+      TimelineEntities entities = new TimelineEntities();
+      TimelineEntity entity = new TimelineEntity();
+      entity.setEntityId("test id 5");
+      entity.setEntityType("test type 5");
+      entity.setStartTime(System.currentTimeMillis());
+      TimelineEvent event = new TimelineEvent();
+      event.setEventType("event type 1");
+      event.setTimestamp(System.currentTimeMillis());
+      entity.addEvent(event);
+      entities.addEntity(entity);
+      WebResource r = resource();
+      ClientResponse response = r.path("ws").path("v1").path("timeline")
+          .accept(MediaType.APPLICATION_JSON)
+          .type(MediaType.APPLICATION_JSON)
+          .post(ClientResponse.class, entities);
+
+      remoteUser = "other";
+      entities = new TimelineEntities();
+      entity = new TimelineEntity();
+      entity.setEntityId("test id 6");
+      entity.setEntityType("test type 5");
+      entity.setStartTime(System.currentTimeMillis());
+      event = new TimelineEvent();
+      event.setEventType("event type 2");
+      event.setTimestamp(System.currentTimeMillis());
+      entity.addEvent(event);
+      entities.addEntity(entity);
+      r = resource();
+      response = r.path("ws").path("v1").path("timeline")
+          .accept(MediaType.APPLICATION_JSON)
+          .type(MediaType.APPLICATION_JSON)
+          .post(ClientResponse.class, entities);
+
+      response = r.path("ws").path("v1").path("timeline")
+          .path("test type 5").path("events")
+          .queryParam("entityId", "test id 5,test id 6")
+          .accept(MediaType.APPLICATION_JSON)
+          .get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      TimelineEvents events = response.getEntity(TimelineEvents.class);
+      assertEquals(1, events.getAllEvents().size());
+      assertEquals("test id 6", events.getAllEvents().get(0).getEntityId());
+    } finally {
+      timelineACLsManager.setACLsEnabled(false);
+      remoteUser = null;
+    }
+  }
+
+  @Singleton
+  private static class TestFilter implements Filter {
+
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
+    }
+
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response,
+        FilterChain chain) throws IOException, ServletException {
+      if (request instanceof HttpServletRequest) {
+        request =
+            new TestHttpServletRequestWrapper((HttpServletRequest) request);
+      }
+      chain.doFilter(request, response);
+    }
+
+    @Override
+    public void destroy() {
+    }
+
+  }
+
+  private static class TestHttpServletRequestWrapper extends HttpServletRequestWrapper {
+
+    public TestHttpServletRequestWrapper(HttpServletRequest request) {
+      super(request);
+    }
+
+    @Override
+    public String getRemoteUser() {
+      return TestTimelineWebServices.remoteUser;
+    }
+
+  }
 }

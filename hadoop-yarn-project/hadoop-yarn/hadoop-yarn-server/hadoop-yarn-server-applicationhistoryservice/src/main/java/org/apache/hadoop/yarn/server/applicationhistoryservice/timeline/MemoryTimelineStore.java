@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.applicationhistoryservice.timeline;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -40,8 +39,8 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
-import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents.EventsOfOneEntity;
+import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
 
 /**
@@ -314,15 +313,29 @@ public class MemoryTimelineStore
     entityToReturn.setEntityId(entity.getEntityId());
     entityToReturn.setEntityType(entity.getEntityType());
     entityToReturn.setStartTime(entity.getStartTime());
-    entityToReturn.setEvents(fields.contains(Field.EVENTS) ?
-        entity.getEvents() : fields.contains(Field.LAST_EVENT_ONLY) ?
-            Arrays.asList(entity.getEvents().get(0)) : null);
-    entityToReturn.setRelatedEntities(fields.contains(Field.RELATED_ENTITIES) ?
-        entity.getRelatedEntities() : null);
-    entityToReturn.setPrimaryFilters(fields.contains(Field.PRIMARY_FILTERS) ?
-        entity.getPrimaryFilters() : null);
-    entityToReturn.setOtherInfo(fields.contains(Field.OTHER_INFO) ?
-        entity.getOtherInfo() : null);
+    // Deep copy
+    if (fields.contains(Field.EVENTS)) {
+      entityToReturn.addEvents(entity.getEvents());
+    } else if (fields.contains(Field.LAST_EVENT_ONLY)) {
+      entityToReturn.addEvent(entity.getEvents().get(0));
+    } else {
+      entityToReturn.setEvents(null);
+    }
+    if (fields.contains(Field.RELATED_ENTITIES)) {
+      entityToReturn.addRelatedEntities(entity.getRelatedEntities());
+    } else {
+      entityToReturn.setRelatedEntities(null);
+    }
+    if (fields.contains(Field.PRIMARY_FILTERS)) {
+      entityToReturn.addPrimaryFilters(entity.getPrimaryFilters());
+    } else {
+      entityToReturn.setPrimaryFilters(null);
+    }
+    if (fields.contains(Field.OTHER_INFO)) {
+      entityToReturn.addOtherInfo(entity.getOtherInfo());
+    } else {
+      entityToReturn.setOtherInfo(null);
+    }
     return entityToReturn;
   }
 
