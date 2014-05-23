@@ -34,6 +34,7 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecret
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 /**
  * The service wrapper of {@link TimelineDelegationTokenSecretManager}
@@ -65,17 +66,7 @@ public class TimelineDelegationTokenSecretManagerService extends AbstractService
         3600000);
     secretManager.startThreads();
 
-    if (YarnConfiguration.useHttps(getConfig())) {
-      serviceAddr = getConfig().getSocketAddr(
-          YarnConfiguration.TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS,
-          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS,
-          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_PORT);
-    } else {
-      serviceAddr = getConfig().getSocketAddr(
-          YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
-          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS,
-          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_PORT);
-    }
+    serviceAddr = TimelineUtils.getTimelineTokenServiceAddress(getConfig());
     super.init(conf);
   }
 
