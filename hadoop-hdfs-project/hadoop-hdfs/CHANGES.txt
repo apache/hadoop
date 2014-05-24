@@ -271,6 +271,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6423. Diskspace quota usage should be updated when appending data to
     partial block. (jing9)
 
+    HDFS-6443. Fix MiniQJMHACluster related test failures. (Zesheng Wu via
+    Arpit Agarwal)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
