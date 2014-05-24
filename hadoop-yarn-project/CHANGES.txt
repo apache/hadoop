@@ -93,6 +93,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2073. Fair Scheduler: Add a utilization threshold to prevent preempting
     resources when cluster is free (Karthik Kambatla via Sandy Ryza)
 
+    YARN-2071. Modified levelDB store permissions to be readable only by the
+    server user. (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES 
