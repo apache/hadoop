@@ -1348,4 +1348,30 @@
     true.
   </description>
 </property>
+
+<property>
+  <name>hadoop.security.crypto.codec.class</name>
+  <value></value>
+  <description>
+    The default implementation of CryptoCodec which is used for encryption 
+    and decryption. 
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.crypto.jce.provider</name>
+  <value></value>
+  <description>
+    The JCE provider name used in CryptoCodec. 
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.crypto.buffer.size</name>
+  <value>8192</value>
+  <description>
+    The buffer size used in Crypto InputStream and OutputStream, and default
+    value is 8192. 
+  </description>
+</property>
 </configuration>

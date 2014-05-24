@@ -282,5 +282,16 @@ public class CommonConfigurationKeysPublic {
   /** Class to override Sasl Properties for a connection */
   public static final String  HADOOP_SECURITY_SASL_PROPS_RESOLVER_CLASS =
     "hadoop.security.saslproperties.resolver.class";
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_SECURITY_CRYPTO_CODEC_CLASS_KEY =
+    "hadoop.security.crypto.codec.class";
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY =
+      "hadoop.security.crypto.jce.provider";
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_SECURITY_CRYPTO_BUFFER_SIZE_KEY = 
+      "hadoop.security.crypto.buffer.size";
+  /** Defalt value for HADOOP_SECURITY_CRYPTO_BUFFER_SIZE_KEY */
+  public static final int HADOOP_SECURITY_CRYPTO_BUFFER_SIZE_DEFAULT = 8192;
 }
 

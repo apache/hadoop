@@ -8,6 +8,9 @@ fs-encryption (Unreleased)
 
   IMPROVEMENTS
 
+    HADOOP-10603. Crypto input and output streams implementing Hadoop stream
+    interfaces. (Yi Liu and Charles Lamb)
+
   OPTIMIZATIONS
 
   BUG FIXES
