@@ -126,6 +126,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6435. Add support for specifying a static uid/gid mapping for the NFS
     gateway. (atm via wang)
 
+    HDFS-6110 adding more slow action log in critical write path
+    (Liang Xie via stack)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
