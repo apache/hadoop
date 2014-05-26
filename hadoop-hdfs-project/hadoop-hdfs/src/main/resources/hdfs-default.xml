@@ -1930,4 +1930,22 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.client.slow.io.warning.threshold.ms</name>
+  <value>30000</value>
+  <description>The threshold in milliseconds at which we will log a slow
+    io warning in a dfsclient. By default, this parameter is set to 30000
+    milliseconds (30 seconds).
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.slow.io.warning.threshold.ms</name>
+  <value>300</value>
+  <description>The threshold in milliseconds at which we will log a slow
+    io warning in a datanode. By default, this parameter is set to 300
+    milliseconds.
+  </description>
+</property>
+
 </configuration>

@@ -317,6 +317,9 @@ Trunk (Unreleased)
     HDFS-6374. setXAttr should require the user to be the owner of the file
     or directory (Charles Lamb via wang)
 
+    HDFS-6110 adding more slow action log in critical write path
+    (Liang Xie via stack)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
