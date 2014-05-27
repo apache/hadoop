@@ -369,6 +369,9 @@ Release 2.4.1 - UNRELEASED
     HDFS-6397. NN shows inconsistent value in deadnode count.
     (Mohammad Kamrul Islam via kihwal)
 
+    HDFS-6411. nfs-hdfs-gateway mount raises I/O error and hangs when a 
+    unauthorized user attempts to access it (brandonli)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
