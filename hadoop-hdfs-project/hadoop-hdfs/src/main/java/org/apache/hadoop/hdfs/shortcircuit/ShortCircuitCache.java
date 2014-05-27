@@ -437,11 +437,22 @@ public class ShortCircuitCache implements Closeable {
   void unref(ShortCircuitReplica replica) {
     lock.lock();
     try {
-      // If the replica is stale, but we haven't purged it yet, let's do that.
-      // It would be a shame to evict a non-stale replica so that we could put
-      // a stale one into the cache.
-      if ((!replica.purged) && replica.isStale()) {
-        purge(replica);
+      // If the replica is stale or unusable, but we haven't purged it yet,
+      // let's do that.  It would be a shame to evict a non-stale replica so
+      // that we could put a stale or unusable one into the cache.
+      if (!replica.purged) {
+        String purgeReason = null;
+        if (!replica.getDataStream().getChannel().isOpen()) {
+          purgeReason = "purging replica because its data channel is closed.";
+        } else if (!replica.getMetaStream().getChannel().isOpen()) {
+          purgeReason = "purging replica because its meta channel is closed.";
+        } else if (replica.isStale()) {
+          purgeReason = "purging replica because it is stale.";
+        }
+        if (purgeReason != null) {
+          LOG.debug(this + ": " + purgeReason);
+          purge(replica);
+        }
       }
       String addedString = "";
       boolean shouldTrimEvictionMaps = false;
