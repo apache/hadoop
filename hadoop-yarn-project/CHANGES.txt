@@ -134,6 +134,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2096. Race in TestRMRestart#testQueueMetricsOnRMRestart.
     (Anubhav Dhoot via kasha)
 
+    YARN-2105. Fix TestFairScheduler after YARN-2012. (Ashwin Shankar via
+    Sandy Ryza)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

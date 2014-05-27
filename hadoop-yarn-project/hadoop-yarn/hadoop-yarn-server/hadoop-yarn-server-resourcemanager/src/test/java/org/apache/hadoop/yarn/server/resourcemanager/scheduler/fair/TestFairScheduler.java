@@ -88,6 +88,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptR
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueuePlacementRule.Default;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -2423,6 +2424,35 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertEquals(2, defaultQueue.getRunnableAppSchedulables().size());
   }
 
+  @Test
+  public void testDefaultRuleInitializesProperlyWhenPolicyNotConfigured()
+      throws IOException {
+    // This test verifies if default rule in queue placement policy
+    // initializes properly when policy is not configured and
+    // undeclared pools is not allowed.
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    conf.setBoolean(FairSchedulerConfiguration.ALLOW_UNDECLARED_POOLS, false);
+
+    // Create an alloc file with no queue placement policy
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    List<QueuePlacementRule> rules = scheduler.allocConf.placementPolicy
+        .getRules();
+
+    for (QueuePlacementRule rule : rules) {
+      if (rule instanceof Default) {
+        Default defaultRule = (Default) rule;
+        assertNotNull(defaultRule.defaultQueueName);
+      }
+    }
+  }
+  
   @SuppressWarnings("resource")
   @Test
   public void testBlacklistNodes() throws Exception {
