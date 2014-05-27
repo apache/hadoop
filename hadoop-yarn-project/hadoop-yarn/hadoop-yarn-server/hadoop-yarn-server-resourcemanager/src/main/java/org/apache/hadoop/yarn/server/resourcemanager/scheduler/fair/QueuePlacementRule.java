@@ -280,8 +280,18 @@ public abstract class QueuePlacementRule {
    * specified the app is placed in root.default queue.
    */
   public static class Default extends QueuePlacementRule {
-    private String defaultQueueName;
+    @VisibleForTesting
+    String defaultQueueName;
 
+    @Override
+    public QueuePlacementRule initialize(boolean create,
+        Map<String, String> args) {
+      if (defaultQueueName == null) {
+        defaultQueueName = "root." + YarnConfiguration.DEFAULT_QUEUE_NAME;
+      }
+      return super.initialize(create, args);
+    }
+    
     @Override
     public void initializeFromXml(Element el)
         throws AllocationConfigurationException {
