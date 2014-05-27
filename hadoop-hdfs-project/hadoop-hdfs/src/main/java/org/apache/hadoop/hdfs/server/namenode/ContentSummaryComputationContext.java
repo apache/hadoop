@@ -72,8 +72,7 @@ public class ContentSummaryComputationContext {
     }
 
     // Have we reached the limit?
-    long currentCount = counts[0] + counts[1] + counts[2] +
-        counts[3];
+    long currentCount = counts[1] + counts[2];
     if (currentCount <= nextCountLimit) {
       return false;
     }

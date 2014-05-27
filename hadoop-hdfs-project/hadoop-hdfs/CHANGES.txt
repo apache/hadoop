@@ -27,6 +27,9 @@ Release 0.23.11 - UNRELEASED
     HDFS-5728. Block recovery will fail if the metafile does not have crc 
     for all chunks of the block. (Vinayakumar B via kihwal)
 
+    HDFS-6449. Incorrect counting in ContentSummaryComputationContext in 0.23.
+    (kihwal)
+
 Release 0.23.10 - 2013-12-09
 
   INCOMPATIBLE CHANGES
