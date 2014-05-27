@@ -592,6 +592,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6443. Fix MiniQJMHACluster related test failures. (Zesheng Wu via
     Arpit Agarwal)
 
+    HDFS-6227. ShortCircuitCache#unref should purge ShortCircuitReplicas whose
+    streams have been closed by java interrupts. (Colin Patrick McCabe via jing9)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
