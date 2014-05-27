@@ -129,6 +129,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6110 adding more slow action log in critical write path
     (Liang Xie via stack)
 
+    HDFS-6416. Use Time#monotonicNow in OpenFileCtx and OpenFileCtxCatch to
+    avoid system clock bugs (Abhiraj Butala via brandonli)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
