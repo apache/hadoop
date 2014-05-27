@@ -54,6 +54,7 @@ import org.apache.hadoop.nfs.nfs3.response.WccData;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.Time;
 import org.jboss.netty.channel.Channel;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -136,7 +137,7 @@ class OpenFileCtx {
       this.channel = channel;
       this.xid = xid;
       this.preOpAttr = preOpAttr;
-      this.startTime = System.currentTimeMillis();
+      this.startTime = Time.monotonicNow();
     }
 
     @Override
@@ -158,11 +159,11 @@ class OpenFileCtx {
   private Daemon dumpThread;
   
   private void updateLastAccessTime() {
-    lastAccessTime = System.currentTimeMillis();
+    lastAccessTime = Time.monotonicNow();
   }
 
   private boolean checkStreamTimeout(long streamTimeout) {
-    return System.currentTimeMillis() - lastAccessTime > streamTimeout;
+    return Time.monotonicNow() - lastAccessTime > streamTimeout;
   }
   
   long getLastAccessTime() {
@@ -696,7 +697,7 @@ class OpenFileCtx {
           + " updating the mtime, then return success");
       Nfs3FileAttributes postOpAttr = null;
       try {
-        dfsClient.setTimes(path, System.currentTimeMillis(), -1);
+        dfsClient.setTimes(path, Time.monotonicNow(), -1);
         postOpAttr = Nfs3Utils.getFileAttr(dfsClient, path, iug);
       } catch (IOException e) {
         LOG.info("Got error when processing perfect overwrite, path=" + path
@@ -997,7 +998,7 @@ class OpenFileCtx {
       
       if (LOG.isDebugEnabled()) {
         LOG.debug("FileId: " + latestAttr.getFileId() + " Service time:"
-            + (System.currentTimeMillis() - commit.getStartTime())
+            + (Time.monotonicNow() - commit.getStartTime())
             + "ms. Sent response for commit:" + commit);
       }
       entry = pendingCommits.firstEntry();
