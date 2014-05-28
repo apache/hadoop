@@ -604,6 +604,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6448. BlockReaderLocalLegacy should set socket timeout based on
     conf.socketTimeout (liangxie via cmccabe)
 
+    HDFS-6453. Use Time#monotonicNow to avoid system clock reset.
+    (Liang Xie via wang)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

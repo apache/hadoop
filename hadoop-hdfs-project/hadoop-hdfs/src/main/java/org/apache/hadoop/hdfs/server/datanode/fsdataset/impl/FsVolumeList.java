@@ -23,6 +23,7 @@ import java.util.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.VolumeChoosingPolicy;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
 class FsVolumeList {
@@ -97,7 +98,7 @@ class FsVolumeList {
   }
   
   void getAllVolumesMap(final String bpid, final ReplicaMap volumeMap) throws IOException {
-    long totalStartTime = System.currentTimeMillis();
+    long totalStartTime = Time.monotonicNow();
     final List<IOException> exceptions = Collections.synchronizedList(
         new ArrayList<IOException>());
     List<Thread> replicaAddingThreads = new ArrayList<Thread>();
@@ -107,9 +108,9 @@ class FsVolumeList {
           try {
             FsDatasetImpl.LOG.info("Adding replicas to map for block pool " +
                 bpid + " on volume " + v + "...");
-            long startTime = System.currentTimeMillis();
+            long startTime = Time.monotonicNow();
             v.getVolumeMap(bpid, volumeMap);
-            long timeTaken = System.currentTimeMillis() - startTime;
+            long timeTaken = Time.monotonicNow() - startTime;
             FsDatasetImpl.LOG.info("Time to add replicas to map for block pool"
                 + " " + bpid + " on volume " + v + ": " + timeTaken + "ms");
           } catch (IOException ioe) {
@@ -132,7 +133,7 @@ class FsVolumeList {
     if (!exceptions.isEmpty()) {
       throw exceptions.get(0);
     }
-    long totalTimeTaken = System.currentTimeMillis() - totalStartTime;
+    long totalTimeTaken = Time.monotonicNow() - totalStartTime;
     FsDatasetImpl.LOG.info("Total time to add all replicas to map: "
         + totalTimeTaken + "ms");
   }
@@ -141,9 +142,9 @@ class FsVolumeList {
       throws IOException {
     FsDatasetImpl.LOG.info("Adding replicas to map for block pool " + bpid +
                                " on volume " + volume + "...");
-    long startTime = System.currentTimeMillis();
+    long startTime = Time.monotonicNow();
     volume.getVolumeMap(bpid, volumeMap);
-    long timeTaken = System.currentTimeMillis() - startTime;
+    long timeTaken = Time.monotonicNow() - startTime;
     FsDatasetImpl.LOG.info("Time to add replicas to map for block pool " + bpid +
                                " on volume " + volume + ": " + timeTaken + "ms");
   }
@@ -195,7 +196,7 @@ class FsVolumeList {
 
 
   void addBlockPool(final String bpid, final Configuration conf) throws IOException {
-    long totalStartTime = System.currentTimeMillis();
+    long totalStartTime = Time.monotonicNow();
     
     final List<IOException> exceptions = Collections.synchronizedList(
         new ArrayList<IOException>());
@@ -206,9 +207,9 @@ class FsVolumeList {
           try {
             FsDatasetImpl.LOG.info("Scanning block pool " + bpid +
                 " on volume " + v + "...");
-            long startTime = System.currentTimeMillis();
+            long startTime = Time.monotonicNow();
             v.addBlockPool(bpid, conf);
-            long timeTaken = System.currentTimeMillis() - startTime;
+            long timeTaken = Time.monotonicNow() - startTime;
             FsDatasetImpl.LOG.info("Time taken to scan block pool " + bpid +
                 " on " + v + ": " + timeTaken + "ms");
           } catch (IOException ioe) {
@@ -232,7 +233,7 @@ class FsVolumeList {
       throw exceptions.get(0);
     }
     
-    long totalTimeTaken = System.currentTimeMillis() - totalStartTime;
+    long totalTimeTaken = Time.monotonicNow() - totalStartTime;
     FsDatasetImpl.LOG.info("Total time to scan all replicas for block pool " +
         bpid + ": " + totalTimeTaken + "ms");
   }
