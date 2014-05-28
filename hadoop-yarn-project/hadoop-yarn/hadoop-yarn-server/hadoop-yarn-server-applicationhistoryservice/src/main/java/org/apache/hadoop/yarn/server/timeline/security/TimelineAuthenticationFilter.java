@@ -16,27 +16,33 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.applicationhistoryservice.timeline;
+package org.apache.hadoop.yarn.server.timeline.security;
+
+import java.util.Properties;
+
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.service.Service;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 
 @Private
 @Unstable
-public interface TimelineStore extends
-    Service, TimelineReader, TimelineWriter {
+public class TimelineAuthenticationFilter extends AuthenticationFilter {
 
-  /**
-   * The system filter which will be automatically added to a
-   * {@link TimelineEntity}'s primary filter section when storing the entity.
-   * The filter key is case sensitive. Users are supposed not to use the key
-   * reserved by the timeline system.
-   */
-  @Private
-  enum SystemFilter {
-    ENTITY_OWNER
+  @Override
+  protected Properties getConfiguration(String configPrefix,
+      FilterConfig filterConfig) throws ServletException {
+    // In yarn-site.xml, we can simply set type to "kerberos". However, we need
+    // to replace the name here to use the customized Kerberos + DT service
+    // instead of the standard Kerberos handler.
+    Properties properties = super.getConfiguration(configPrefix, filterConfig);
+    if (properties.getProperty(AUTH_TYPE).equals("kerberos")) {
+      properties.setProperty(
+          AUTH_TYPE, TimelineClientAuthenticationService.class.getName());
+    }
+    return properties;
   }
 
 }

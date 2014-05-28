@@ -152,7 +152,7 @@ YARN Timeline Server
 <property>
   <description>Store class name for timeline store.</description>
   <name>yarn.timeline-service.store-class</name>
-  <value>org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.LeveldbTimelineStore</value>
+  <value>org.apache.hadoop.yarn.server.timeline.LeveldbTimelineStore</value>
 </property>
 
 <property>
