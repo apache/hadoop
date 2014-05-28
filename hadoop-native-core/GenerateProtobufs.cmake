@@ -23,11 +23,12 @@ function(DECLARE_PROTOS OUTPUT_SRC_LIST GENERATOR_DIR INCLUDE_DIRS)
         get_filename_component(BASENAME_F ${PB_FILE} NAME_WE)
         set(PB_C_FILE "${GENERATOR_DIR}/${BASENAME_F}.pb-c.c")
         set(PB_H_FILE "${GENERATOR_DIR}/${BASENAME_F}.pb-c.h")
+        set(PB_H_S_FILE "${GENERATOR_DIR}/${BASENAME_F}.pb-c.h.s")
         set(CALL_C_FILE "${GENERATOR_DIR}/${BASENAME_F}.call.c")
         set(CALL_H_FILE "${GENERATOR_DIR}/${BASENAME_F}.call.h")
         execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${GENERATOR_DIR})
         add_custom_command(
-            OUTPUT ${PB_C_FILE} ${PB_H_FILE} ${CALL_C_FILE} ${CALL_H_FILE}
+            OUTPUT ${PB_C_FILE} ${PB_H_FILE} ${CALL_C_FILE} ${CALL_H_FILE} ${PB_H_S_FILE}
             COMMAND  ${PROTOBUFC_EXE}
                 ARGS --c_out  ${GENERATOR_DIR} ${INCLUDE_FLAGS} --proto_path ${DIRNAME_F} ${ABSNAME_F}
                 COMMENT "Running protoc-c on ${PB_FILE}"
@@ -45,8 +46,8 @@ function(DECLARE_PROTOS OUTPUT_SRC_LIST GENERATOR_DIR INCLUDE_DIRS)
                 VERBATIM
             )
         list(APPEND CFILES ${PB_C_FILE} ${CALL_C_FILE})
-        list(APPEND HFILES ${PB_H_FILE} ${PB_H_FILE}.s ${CALL_H_FILE})
-        set_source_files_properties(${PB_C_FILE} ${PB_H_FILE} "${PB_H_FILE}.s" PROPERTIES GENERATED TRUE)
+        list(APPEND HFILES ${PB_H_FILE} ${PB_H_S_FILE} ${CALL_H_FILE})
+        set_source_files_properties(${PB_C_FILE} ${PB_H_FILE} "${PB_H_S_FILE}" PROPERTIES GENERATED TRUE)
     endforeach()
     #MESSAGE(STATUS "OUTPUT_SRC_LIST = ${OUTPUT_SRC_LIST}, CFILES = ${CFILES}, HFILES = ${HFILES}")
     set(${OUTPUT_SRC_LIST} ${CFILES} ${HFILES} PARENT_SCOPE)
