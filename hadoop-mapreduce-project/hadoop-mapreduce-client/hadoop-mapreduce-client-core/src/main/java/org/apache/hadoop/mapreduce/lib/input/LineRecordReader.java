@@ -121,7 +121,7 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
   private int maxBytesToConsume(long pos) {
     return isCompressedInput
       ? Integer.MAX_VALUE
-      : (int) Math.min(Integer.MAX_VALUE, end - pos);
+      : (int) Math.max(Math.min(Integer.MAX_VALUE, end - pos), maxLineLength);
   }
 
   private long getFilePosition() throws IOException {
@@ -146,8 +146,7 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
     // We always read one extra line, which lies outside the upper
     // split limit i.e. (end - 1)
     while (getFilePosition() <= end || in.needAdditionalRecordAfterSplit()) {
-      newSize = in.readLine(value, maxLineLength,
-          Math.max(maxBytesToConsume(pos), maxLineLength));
+      newSize = in.readLine(value, maxLineLength, maxBytesToConsume(pos));
       pos += newSize;
       if (newSize < maxLineLength) {
         break;
