@@ -283,6 +283,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6227. ShortCircuitCache#unref should purge ShortCircuitReplicas whose
     streams have been closed by java interrupts. (Colin Patrick McCabe via jing9)
 
+    HDFS-6442. Fix TestEditLogAutoroll and TestStandbyCheckpoints failure
+    caused by port conficts. (Zesheng Wu via Arpit Agarwal)
+
     HDFS-6448. BlockReaderLocalLegacy should set socket timeout based on
     conf.socketTimeout (liangxie via cmccabe)
 
