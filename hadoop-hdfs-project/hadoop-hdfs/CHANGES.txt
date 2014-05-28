@@ -601,6 +601,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6442. Fix TestEditLogAutoroll and TestStandbyCheckpoints failure
     caused by port conficts. (Zesheng Wu via Arpit Agarwal)
 
+    HDFS-6448. BlockReaderLocalLegacy should set socket timeout based on
+    conf.socketTimeout (liangxie via cmccabe)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
