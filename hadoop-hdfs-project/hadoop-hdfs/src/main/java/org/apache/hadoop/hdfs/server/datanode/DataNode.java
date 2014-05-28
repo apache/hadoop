@@ -2588,7 +2588,7 @@ public class DataNode extends Configured
                   return;
                 }
                 synchronized(checkDiskErrorMutex) {
-                  lastDiskErrorCheck = System.currentTimeMillis();
+                  lastDiskErrorCheck = Time.monotonicNow();
                 }
               }
               try {
