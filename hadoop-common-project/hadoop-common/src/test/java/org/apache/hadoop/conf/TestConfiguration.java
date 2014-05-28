@@ -49,7 +49,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
-import org.codehaus.jackson.map.ObjectMapper; 
+import org.codehaus.jackson.map.ObjectMapper;
 
 public class TestConfiguration extends TestCase {
 
@@ -1003,6 +1003,14 @@ public class TestConfiguration extends TestCase {
     String resource;
   }
   
+  public void testGetSetTrimmedNames() throws IOException {
+    Configuration conf = new Configuration(false);
+    conf.set(" name", "value");
+    assertEquals("value", conf.get("name"));
+    assertEquals("value", conf.get(" name"));
+    assertEquals("value", conf.getRaw("  name  "));
+  }
+
   public void testDumpConfiguration () throws IOException {
     StringWriter outWriter = new StringWriter();
     Configuration.dumpConfiguration(conf, outWriter);
