@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.security;
+package org.apache.hadoop.yarn.server.timeline.security;
 
 import java.io.IOException;
 import java.util.Set;
@@ -29,8 +29,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AdminACLsManager;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.EntityIdentifier;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineStore.SystemFilter;
+import org.apache.hadoop.yarn.server.timeline.EntityIdentifier;
+import org.apache.hadoop.yarn.server.timeline.TimelineStore.SystemFilter;
 
 import com.google.common.annotations.VisibleForTesting;
 

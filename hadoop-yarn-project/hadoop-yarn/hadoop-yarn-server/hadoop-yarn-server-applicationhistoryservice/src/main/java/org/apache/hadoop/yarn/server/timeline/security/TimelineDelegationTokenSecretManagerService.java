@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.security;
+package org.apache.hadoop.yarn.server.timeline.security;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;

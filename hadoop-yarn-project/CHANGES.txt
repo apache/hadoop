@@ -96,6 +96,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2071. Modified levelDB store permissions to be readable only by the
     server user. (Zhijie Shen via vinodkv)
 
+    YARN-2107. Refactored timeline classes into o.a.h.y.s.timeline package. (Vinod
+    Kumar Vavilapalli via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES 

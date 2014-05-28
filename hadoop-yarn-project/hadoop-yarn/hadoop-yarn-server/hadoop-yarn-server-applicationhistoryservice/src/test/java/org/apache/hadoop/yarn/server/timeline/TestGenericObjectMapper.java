@@ -15,12 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.applicationhistoryservice.timeline;
+package org.apache.hadoop.yarn.server.timeline;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.WritableComparator;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.GenericObjectMapper;
+import org.apache.hadoop.yarn.server.timeline.GenericObjectMapper;
 import org.junit.Test;
 
 import java.io.IOException;

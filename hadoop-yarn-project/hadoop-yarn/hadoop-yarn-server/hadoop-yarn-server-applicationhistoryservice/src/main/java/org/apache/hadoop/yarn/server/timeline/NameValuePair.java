@@ -15,32 +15,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.yarn.server.applicationhistoryservice.timeline;
+package org.apache.hadoop.yarn.server.timeline;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
-import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
-
-import java.io.IOException;
 
 /**
- * This interface is for storing timeline information.
+ * A class holding a name and value pair, used for specifying filters in
+ * {@link TimelineReader}.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public interface TimelineWriter {
+public class NameValuePair {
+  String name;
+  Object value;
+
+  public NameValuePair(String name, Object value) {
+    this.name = name;
+    this.value = value;
+  }
 
   /**
-   * Stores entity information to the timeline store. Any errors occurring for
-   * individual put request objects will be reported in the response.
-   * 
-   * @param data
-   *          An {@link TimelineEntities} object.
-   * @return An {@link TimelinePutResponse} object.
-   * @throws IOException
+   * Get the name.
+   * @return The name.
    */
-  TimelinePutResponse put(TimelineEntities data) throws IOException;
+  public String getName() {
 
+    return name;
+  }
+
+  /**
+   * Get the value.
+   * @return The value.
+   */
+  public Object getValue() {
+    return value;
+  }
+
+  @Override
+  public String toString() {
+    return "{ name: " + name + ", value: " + value + " }";
+  }
 }
