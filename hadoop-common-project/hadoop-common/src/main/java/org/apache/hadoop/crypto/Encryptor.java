@@ -28,8 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 public interface Encryptor {
   
   /**
-   * Initialize the encryptor, the internal encryption context will be 
-   * reset.
+   * Initialize the encryptor and the internal encryption context.
    * @param key encryption key.
    * @param iv encryption initialization vector
    * @throws IOException if initialization fails
@@ -37,37 +36,34 @@ public interface Encryptor {
   public void init(byte[] key, byte[] iv) throws IOException;
   
   /**
-   * Indicate whether encryption context is reset.
+   * Indicate whether the encryption context is reset.
    * <p/>
-   * It's useful for some mode like CTR which requires different IV for 
-   * different parts of data. Usually encryptor can maintain the context 
-   * internally such as calculating IV/counter, then continue a multiple-part 
-   * encryption operation without reinit the encryptor using key and the new 
-   * IV. For mode like CTR, if context is reset after each encryption, the 
-   * encryptor should be reinit before each operation, that's not efficient. 
+   * Certain modes, like CTR, require a different IV depending on the
+   * position in the stream. Generally, the encryptor maintains any necessary
+   * context for calculating the IV and counter so that no reinit is necessary
+   * during the encryption. Reinit before each operation is inefficient. 
    * @return boolean whether context is reset.
    */
   public boolean isContextReset();
   
   /**
-   * This exposes a direct interface for record encryption with direct byte
-   * buffers.
+   * This presents a direct interface encrypting with direct ByteBuffers.
    * <p/>
-   * The encrypt() function need not always consume the buffers provided,
-   * it will need to be called multiple times to encrypt an entire buffer 
-   * and the object will hold the encryption context internally.
+   * This function does not always encrypt the entire buffer and may potentially
+   * need to be called multiple times to process an entire buffer. The object 
+   * may hold the encryption context internally.
    * <p/>
-   * Some implementation may need enough space in the destination buffer to 
-   * encrypt an entire input.
+   * Some implementations may require sufficient space in the destination 
+   * buffer to encrypt the entire input buffer.
    * <p/>
-   * The end result will move inBuffer.position() by the bytes-read and
-   * outBuffer.position() by the bytes-written. It should not modify the 
-   * inBuffer.limit() or outBuffer.limit() to maintain consistency of operation.
+   * Upon return, inBuffer.position() will be advanced by the number of bytes
+   * read and outBuffer.position() by bytes written. Implementations should
+   * not modify inBuffer.limit() and outBuffer.limit().
    * <p/>
-   * @param inBuffer in direct {@link ByteBuffer} for reading from. Requires 
-   * inBuffer != null and inBuffer.remaining() > 0
-   * @param outBuffer out direct {@link ByteBuffer} for storing the results
-   * into. Requires outBuffer != null and outBuffer.remaining() > 0
+   * @param inBuffer a direct {@link ByteBuffer} to read from. inBuffer may 
+   * not be null and inBuffer.remaining() must be > 0
+   * @param outBuffer a direct {@link ByteBuffer} to write to. outBuffer may 
+   * not be null and outBuffer.remaining() must be > 0
    * @throws IOException if encryption fails
    */
   public void encrypt(ByteBuffer inBuffer, ByteBuffer outBuffer) 

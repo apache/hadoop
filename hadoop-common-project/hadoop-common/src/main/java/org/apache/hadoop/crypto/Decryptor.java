@@ -28,7 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 public interface Decryptor {
   
   /**
-   * Initialize the decryptor, the internal decryption context will be 
+   * Initialize the decryptor and the internal decryption context. 
    * reset.
    * @param key decryption key.
    * @param iv decryption initialization vector
@@ -37,37 +37,34 @@ public interface Decryptor {
   public void init(byte[] key, byte[] iv) throws IOException;
   
   /**
-   * Indicate whether decryption context is reset.
+   * Indicate whether the decryption context is reset.
    * <p/>
-   * It's useful for some mode like CTR which requires different IV for 
-   * different parts of data. Usually decryptor can maintain the context 
-   * internally such as calculating IV/counter, then continue a multiple-part 
-   * decryption operation without reinit the decryptor using key and the new 
-   * IV. For mode like CTR, if context is reset after each decryption, the 
-   * decryptor should be reinit before each operation, that's not efficient. 
+   * Certain modes, like CTR, require a different IV depending on the 
+   * position in the stream. Generally, the decryptor maintains any necessary
+   * context for calculating the IV and counter so that no reinit is necessary 
+   * during the decryption. Reinit before each operation is inefficient.
    * @return boolean whether context is reset.
    */
   public boolean isContextReset();
   
   /**
-   * This exposes a direct interface for record decryption with direct byte
-   * buffers.
+   * This presents a direct interface decrypting with direct ByteBuffers.
    * <p/>
-   * The decrypt() function need not always consume the buffers provided,
-   * it will need to be called multiple times to decrypt an entire buffer 
-   * and the object will hold the decryption context internally.
+   * This function does not always decrypt the entire buffer and may potentially
+   * need to be called multiple times to process an entire buffer. The object 
+   * may hold the decryption context internally.
    * <p/>
-   * Some implementation may need enough space in the destination buffer to 
-   * decrypt an entire input.
+   * Some implementations may require sufficient space in the destination 
+   * buffer to decrypt the entire input buffer.
    * <p/>
-   * The end result will move inBuffer.position() by the bytes-read and
-   * outBuffer.position() by the bytes-written. It should not modify the 
-   * inBuffer.limit() or outBuffer.limit() to maintain consistency of operation.
+   * Upon return, inBuffer.position() will be advanced by the number of bytes
+   * read and outBuffer.position() by bytes written. Implementations should 
+   * not modify inBuffer.limit() and outBuffer.limit().
    * <p/>
-   * @param inBuffer in direct {@link ByteBuffer} for reading from. Requires 
-   * inBuffer != null and inBuffer.remaining() > 0
-   * @param outBuffer out direct {@link ByteBuffer} for storing the results
-   * into. Requires outBuffer != null and outBuffer.remaining() > 0
+   * @param inBuffer a direct {@link ByteBuffer} to read from. inBuffer may 
+   * not be null and inBuffer.remaining() must be > 0
+   * @param outBuffer a direct {@link ByteBuffer} to write to. outBuffer may 
+   * not be null and outBuffer.remaining() must be > 0
    * @throws IOException if decryption fails
    */
   public void decrypt(ByteBuffer inBuffer, ByteBuffer outBuffer) 

@@ -40,15 +40,15 @@ public abstract class AESCTRCryptoCodec extends CryptoCodec {
   }
   
   /**
-   * IV is produced by combining initial IV and the counter using addition.
-   * IV length should be the same as {@link #AES_BLOCK_SIZE}
+   * The IV is produced by adding the initial IV to the counter. IV length 
+   * should be the same as {@link #AES_BLOCK_SIZE}
    */
   @Override
   public void calculateIV(byte[] initIV, long counter, byte[] IV) {
     Preconditions.checkArgument(initIV.length == AES_BLOCK_SIZE);
     Preconditions.checkArgument(IV.length == AES_BLOCK_SIZE);
     
-    ByteBuffer buf = ByteBuffer.wrap(IV);
+    final ByteBuffer buf = ByteBuffer.wrap(IV);
     buf.put(initIV);
     buf.order(ByteOrder.BIG_ENDIAN);
     counter += buf.getLong(AES_BLOCK_SIZE - 8);

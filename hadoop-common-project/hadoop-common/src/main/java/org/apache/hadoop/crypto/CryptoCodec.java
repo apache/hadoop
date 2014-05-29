@@ -41,37 +41,37 @@ public abstract class CryptoCodec implements Configurable {
   }
   
   /**
-   * Get block size of a block cipher.
+   * Get the block size of a block cipher.
    * For different algorithms, the block size may be different.
-   * @return int block size
+   * @return int the block size
    */
   public abstract int getAlgorithmBlockSize();
 
   /**
-   * Get a {@link #org.apache.hadoop.crypto.Encryptor}. 
-   * @return Encryptor
+   * Get an {@link #org.apache.hadoop.crypto.Encryptor}. 
+   * @return Encryptor the encryptor
    */
   public abstract Encryptor getEncryptor() throws GeneralSecurityException;
   
   /**
    * Get a {@link #org.apache.hadoop.crypto.Decryptor}.
-   * @return Decryptor
+   * @return Decryptor the decryptor
    */
   public abstract Decryptor getDecryptor() throws GeneralSecurityException;
   
   /**
-   * This interface is only for Counter (CTR) mode. Typically calculating 
-   * IV(Initialization Vector) is up to Encryptor or Decryptor, for 
-   * example {@link #javax.crypto.Cipher} will maintain encryption context 
-   * internally when do encryption/decryption continuously using its 
+   * This interface is only for Counter (CTR) mode. Generally the Encryptor
+   * or Decryptor calculates the IV and maintain encryption context internally. 
+   * For example a {@link #javax.crypto.Cipher} will maintain its encryption 
+   * context internally when we do encryption/decryption using the 
    * Cipher#update interface. 
    * <p/>
-   * In Hadoop, multiple nodes may read splits of a file, so decrypting of 
-   * file is not continuous, even for encrypting may be not continuous. For 
-   * each part, we need to calculate the counter through file position.
+   * Encryption/Decryption is not always on the entire file. For example,
+   * in Hadoop, a node may only decrypt a portion of a file (i.e. a split).
+   * In these situations, the counter is derived from the file position.
    * <p/>
-   * Typically IV for a file position is produced by combining initial IV and 
-   * the counter using any lossless operation (concatenation, addition, or XOR).
+   * The IV can be calculated by combining the initial IV and the counter with 
+   * a lossless operation (concatenation, addition, or XOR).
    * @see http://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Counter_.28CTR.29
    * 
    * @param initIV initial IV

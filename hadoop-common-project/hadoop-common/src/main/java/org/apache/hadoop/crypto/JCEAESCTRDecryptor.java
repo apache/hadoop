@@ -53,8 +53,8 @@ public class JCEAESCTRDecryptor implements Decryptor {
   }
 
   /**
-   * For AES-CTR, will consume all input data and needs enough space in the 
-   * destination buffer to decrypt entire input data.
+   * AES-CTR will consume all of the input data. It requires enough space in
+   * the destination buffer to decrypt entire input buffer.
    */
   @Override
   public void decrypt(ByteBuffer inBuffer, ByteBuffer outBuffer)

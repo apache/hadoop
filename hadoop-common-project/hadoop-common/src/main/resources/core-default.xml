@@ -1370,8 +1370,7 @@
   <name>hadoop.security.crypto.buffer.size</name>
   <value>8192</value>
   <description>
-    The buffer size used in Crypto InputStream and OutputStream, and default
-    value is 8192. 
+    The buffer size used by CryptoInputStream and CryptoOutputStream. 
   </description>
 </property>
 </configuration>

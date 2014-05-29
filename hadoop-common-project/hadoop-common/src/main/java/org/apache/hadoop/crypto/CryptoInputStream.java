@@ -63,26 +63,30 @@ public class CryptoInputStream extends FilterInputStream implements
   private static final byte[] oneByteBuf = new byte[1];
   private final CryptoCodec codec;
   private final Decryptor decryptor;
+  
   /**
    * Input data buffer. The data starts at inBuffer.position() and ends at 
    * to inBuffer.limit().
    */
   private ByteBuffer inBuffer;
+  
   /**
    * The decrypted data buffer. The data starts at outBuffer.position() and 
    * ends at outBuffer.limit();
    */
   private ByteBuffer outBuffer;
   private long streamOffset = 0; // Underlying stream offset.
+  
   /**
-   * Whether underlying stream supports 
+   * Whether the underlying stream supports 
    * {@link #org.apache.hadoop.fs.ByteBufferReadable}
    */
   private Boolean usingByteBufferRead = null;
+  
   /**
    * Padding = pos%(algorithm blocksize); Padding is put into {@link #inBuffer} 
-   * before any other data goes in. The purpose of padding is to put input data
-   * at proper position.
+   * before any other data goes in. The purpose of padding is to put the input 
+   * data at proper position.
    */
   private byte padding;
   private boolean closed;
@@ -144,14 +148,15 @@ public class CryptoInputStream extends FilterInputStream implements
       return 0;
     }
     
-    int remaining = outBuffer.remaining();
+    final int remaining = outBuffer.remaining();
     if (remaining > 0) {
       int n = Math.min(len, remaining);
       outBuffer.get(b, off, n);
       return n;
     } else {
       int n = 0;
-      /**
+      
+      /*
        * Check whether the underlying stream is {@link ByteBufferReadable},
        * it can avoid bytes copy.
        */
@@ -186,11 +191,11 @@ public class CryptoInputStream extends FilterInputStream implements
     }
   }
   
-  // Read data from underlying stream.
+  /** Read data from underlying stream. */
   private int readFromUnderlyingStream() throws IOException {
-    int toRead = inBuffer.remaining();
-    byte[] tmp = getTmpBuf();
-    int n = in.read(tmp, 0, toRead);
+    final int toRead = inBuffer.remaining();
+    final byte[] tmp = getTmpBuf();
+    final int n = in.read(tmp, 0, toRead);
     if (n > 0) {
       inBuffer.put(tmp, 0, n);
     }
@@ -221,19 +226,19 @@ public class CryptoInputStream extends FilterInputStream implements
     inBuffer.clear();
     outBuffer.flip();
     if (padding > 0) {
-      /**
-       * The plain text and cipher text have 1:1 mapping, they start at same 
-       * position.
+      /*
+       * The plain text and cipher text have a 1:1 mapping, they start at the 
+       * same position.
        */
       outBuffer.position(padding);
       padding = 0;
     }
     if (decryptor.isContextReset()) {
-      /**
-       * Typically we will not get here. To improve performance in CTR mode,
-       * we rely on the decryptor maintaining context, for example calculating 
-       * the counter. Unfortunately, some bad implementations can't maintain 
-       * context so we need to re-init after doing decryption.
+      /*
+       * This code is generally not executed since the decryptor usually 
+       * maintains decryption context (e.g. the counter) internally. However, 
+       * some implementations can't maintain context so a re-init is necessary 
+       * after each decryption call.
        */
       updateDecryptor();
     }
@@ -243,7 +248,7 @@ public class CryptoInputStream extends FilterInputStream implements
    * Update the {@link #decryptor}. Calculate the counter and {@link #padding}.
    */
   private void updateDecryptor() throws IOException {
-    long counter = streamOffset / codec.getAlgorithmBlockSize();
+    final long counter = streamOffset / codec.getAlgorithmBlockSize();
     padding = (byte)(streamOffset % codec.getAlgorithmBlockSize());
     inBuffer.position(padding); // Set proper position for input data.
     codec.calculateIV(initIV, counter, iv);
@@ -251,8 +256,8 @@ public class CryptoInputStream extends FilterInputStream implements
   }
   
   /**
-   * Reset the underlying stream offset; and clear {@link #inBuffer} and 
-   * {@link #outBuffer}. Typically this happens when doing {@link #seek(long)} 
+   * Reset the underlying stream offset, and clear {@link #inBuffer} and 
+   * {@link #outBuffer}. This Typically happens during {@link #seek(long)} 
    * or {@link #skip(long)}.
    */
   private void resetStreamOffset(long offset) throws IOException {
@@ -274,30 +279,29 @@ public class CryptoInputStream extends FilterInputStream implements
     closed = true;
   }
   
-  /**
-   * Free the direct buffer manually.
-   */
+  /** Forcibly free the direct buffer. */
   private void freeBuffers() {
-    sun.misc.Cleaner inBufferCleaner =
+    final sun.misc.Cleaner inBufferCleaner =
         ((sun.nio.ch.DirectBuffer) inBuffer).cleaner();
     inBufferCleaner.clean();
-    sun.misc.Cleaner outBufferCleaner =
+    final sun.misc.Cleaner outBufferCleaner =
         ((sun.nio.ch.DirectBuffer) outBuffer).cleaner();
     outBufferCleaner.clean();
   }
   
-  // Positioned read.
+  /** Positioned read. */
   @Override
   public int read(long position, byte[] buffer, int offset, int length)
       throws IOException {
     checkStream();
     try {
-      int n = ((PositionedReadable) in).read(position, buffer, offset, length);
+      final int n = ((PositionedReadable) in).read(position, buffer, offset, 
+          length);
       if (n > 0) {
-        /** 
+        /*
          * Since this operation does not change the current offset of a file, 
-         * streamOffset should be not changed and we need to restore the 
-         * decryptor and outBuffer after decryption.
+         * streamOffset should not be changed. We need to restore the decryptor 
+         * and outBuffer after decryption.
          */
         decrypt(position, buffer, offset, length);
       }
@@ -310,24 +314,23 @@ public class CryptoInputStream extends FilterInputStream implements
   }
   
   /**
-   * Decrypt given length of data in buffer: start from offset.
-   * Output is also buffer and start from same offset. Restore the 
-   * {@link #decryptor} and {@link #outBuffer} after decryption.
+   * Decrypt length bytes in buffer starting at offset. Output is also put 
+   * into buffer starting at offset. Restore the {@link #decryptor} and 
+   * {@link #outBuffer} after the decryption.
    */
   private void decrypt(long position, byte[] buffer, int offset, int length) 
       throws IOException {
-    
-    byte[] tmp = getTmpBuf();
+    final byte[] tmp = getTmpBuf();
     int unread = outBuffer.remaining();
     if (unread > 0) { // Cache outBuffer
       outBuffer.get(tmp, 0, unread);
     }
-    long curOffset = streamOffset;
+    final long curOffset = streamOffset;
     resetStreamOffset(position);
     
     int n = 0;
     while (n < length) {
-      int toDecrypt = Math.min(length - n, inBuffer.remaining());
+      final int toDecrypt = Math.min(length - n, inBuffer.remaining());
       inBuffer.put(buffer, offset + n, toDecrypt);
       // Do decryption
       decrypt();
@@ -344,7 +347,7 @@ public class CryptoInputStream extends FilterInputStream implements
     }
   }
   
-  // Positioned read fully.
+  /** Positioned read fully. */
   @Override
   public void readFully(long position, byte[] buffer, int offset, int length)
       throws IOException {
@@ -352,9 +355,9 @@ public class CryptoInputStream extends FilterInputStream implements
     try {
       ((PositionedReadable) in).readFully(position, buffer, offset, length);
       if (length > 0) {
-        /** 
-         * Since this operation does not change the current offset of a file, 
-         * streamOffset should be not changed and we need to restore the decryptor 
+        /*
+         * Since this operation does not change the current offset of the file, 
+         * streamOffset should not be changed. We need to restore the decryptor 
          * and outBuffer after decryption.
          */
         decrypt(position, buffer, offset, length);
@@ -370,13 +373,16 @@ public class CryptoInputStream extends FilterInputStream implements
     readFully(position, buffer, 0, buffer.length);
   }
 
-  // Seek to a position.
+  /** Seek to a position. */
   @Override
   public void seek(long pos) throws IOException {
     Preconditions.checkArgument(pos >= 0, "Cannot seek to negative offset.");
     checkStream();
     try {
-      // If target pos we have already read and decrypt.
+      /*
+       * If data of target pos in the underlying stream has already been read 
+       * and decrypted in outBuffer, we just need to re-position outBuffer.
+       */
       if (pos <= streamOffset && pos >= (streamOffset - outBuffer.remaining())) {
         int forward = (int) (pos - (streamOffset - outBuffer.remaining()));
         if (forward > 0) {
@@ -392,7 +398,7 @@ public class CryptoInputStream extends FilterInputStream implements
     }
   }
   
-  // Skip n bytes
+  /** Skip n bytes */
   @Override
   public long skip(long n) throws IOException {
     Preconditions.checkArgument(n >= 0, "Negative skip length.");
@@ -405,11 +411,11 @@ public class CryptoInputStream extends FilterInputStream implements
       outBuffer.position(pos);
       return n;
     } else {
-      /**
+      /*
        * Subtract outBuffer.remaining() to see how many bytes we need to 
-       * skip in underlying stream. We get real skipped bytes number of 
-       * underlying stream then add outBuffer.remaining() to get skipped
-       * bytes number from user's view.
+       * skip in the underlying stream. Add outBuffer.remaining() to the 
+       * actual number of skipped bytes in the underlying stream to get the 
+       * number of skipped bytes from the user's point of view.
        */
       n -= outBuffer.remaining();
       long skipped = in.skip(n);
@@ -423,7 +429,7 @@ public class CryptoInputStream extends FilterInputStream implements
     }
   }
 
-  // Get underlying stream position.
+  /** Get underlying stream position. */
   @Override
   public long getPos() throws IOException {
     checkStream();
@@ -431,16 +437,16 @@ public class CryptoInputStream extends FilterInputStream implements
     return streamOffset - outBuffer.remaining();
   }
   
-  // ByteBuffer read.
+  /** ByteBuffer read. */
   @Override
   public int read(ByteBuffer buf) throws IOException {
     checkStream();
     if (in instanceof ByteBufferReadable) {
-      int unread = outBuffer.remaining();
+      final int unread = outBuffer.remaining();
       if (unread > 0) { // Have unread decrypted data in buffer.
         int toRead = buf.remaining();
         if (toRead <= unread) {
-          int limit = outBuffer.limit();
+          final int limit = outBuffer.limit();
           outBuffer.limit(outBuffer.position() + toRead);
           buf.put(outBuffer);
           outBuffer.limit(limit);
@@ -450,8 +456,8 @@ public class CryptoInputStream extends FilterInputStream implements
         }
       }
       
-      int pos = buf.position();
-      int n = ((ByteBufferReadable) in).read(buf);
+      final int pos = buf.position();
+      final int n = ((ByteBufferReadable) in).read(buf);
       if (n > 0) {
         streamOffset += n; // Read n bytes
         decrypt(buf, n, pos);
@@ -470,8 +476,8 @@ public class CryptoInputStream extends FilterInputStream implements
    */
   private void decrypt(ByteBuffer buf, int n, int start) 
       throws IOException {
-    int pos = buf.position();
-    int limit = buf.limit();
+    final int pos = buf.position();
+    final int limit = buf.limit();
     int len = 0;
     while (len < n) {
       buf.position(start + len);
@@ -535,13 +541,13 @@ public class CryptoInputStream extends FilterInputStream implements
         ((Seekable) in).seek(getPos());
         resetStreamOffset(getPos());
       }
-      ByteBuffer buffer = ((HasEnhancedByteBufferAccess) in).
+      final ByteBuffer buffer = ((HasEnhancedByteBufferAccess) in).
           read(bufferPool, maxLength, opts);
       if (buffer != null) {
-        int n = buffer.remaining();
+        final int n = buffer.remaining();
         if (n > 0) {
           streamOffset += buffer.remaining(); // Read n bytes
-          int pos = buffer.position();
+          final int pos = buffer.position();
           decrypt(buffer, n, pos);
         }
       }

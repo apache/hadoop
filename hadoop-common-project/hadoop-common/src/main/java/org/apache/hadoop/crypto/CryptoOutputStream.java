@@ -52,17 +52,20 @@ public class CryptoOutputStream extends FilterOutputStream implements
   private static final byte[] oneByteBuf = new byte[1];
   private final CryptoCodec codec;
   private final Encryptor encryptor;
+  
   /**
    * Input data buffer. The data starts at inBuffer.position() and ends at 
    * inBuffer.limit().
    */
   private ByteBuffer inBuffer;
+  
   /**
    * Encrypted data buffer. The data starts at outBuffer.position() and ends at 
    * outBuffer.limit();
    */
   private ByteBuffer outBuffer;
   private long streamOffset = 0; // Underlying stream offset.
+  
   /**
    * Padding = pos%(algorithm blocksize); Padding is put into {@link #inBuffer} 
    * before any other data goes in. The purpose of padding is to put input data
@@ -134,7 +137,7 @@ public class CryptoOutputStream extends FilterOutputStream implements
       throw new IndexOutOfBoundsException();
     }
     while (len > 0) {
-      int remaining = inBuffer.remaining();
+      final int remaining = inBuffer.remaining();
       if (len < remaining) {
         inBuffer.put(b, off, len);
         len = 0;
@@ -163,15 +166,16 @@ public class CryptoOutputStream extends FilterOutputStream implements
     inBuffer.clear();
     outBuffer.flip();
     if (padding > 0) {
-      /**
-       * The plain text and cipher text have 1:1 mapping, they start at same 
-       * position.
+      /*
+       * The plain text and cipher text have a 1:1 mapping, they start at the 
+       * same position.
        */
       outBuffer.position(padding);
       padding = 0;
     }
-    int len = outBuffer.remaining();
-    /**
+    final int len = outBuffer.remaining();
+    
+    /*
      * If underlying stream supports {@link ByteBuffer} write in future, needs
      * refine here. 
      */
@@ -181,12 +185,11 @@ public class CryptoOutputStream extends FilterOutputStream implements
     
     streamOffset += len;
     if (encryptor.isContextReset()) {
-      /**
-       * We will generally not get here.  For CTR mode, to improve
-       * performance, we rely on the encryptor maintaining context, for
-       * example to calculate the counter.  But some bad implementations
-       * can't maintain context, and need us to re-init after doing
-       * encryption.
+      /*
+       * This code is generally not executed since the encryptor usually
+       * maintains encryption context (e.g. the counter) internally. However,
+       * some implementations can't maintain context so a re-init is necessary
+       * after each encryption call.
        */
       updateEncryptor();
     }
@@ -196,7 +199,7 @@ public class CryptoOutputStream extends FilterOutputStream implements
    * Update the {@link #encryptor}: calculate counter and {@link #padding}.
    */
   private void updateEncryptor() throws IOException {
-    long counter = streamOffset / codec.getAlgorithmBlockSize();
+    final long counter = streamOffset / codec.getAlgorithmBlockSize();
     padding = (byte)(streamOffset % codec.getAlgorithmBlockSize());
     inBuffer.position(padding); // Set proper position for input data.
     codec.calculateIV(initIV, counter, iv);
@@ -222,21 +225,19 @@ public class CryptoOutputStream extends FilterOutputStream implements
     closed = true;
   }
   
-  /**
-   * Free the direct buffer manually.
-   */
+  /** Forcibly free the direct buffer. */
   private void freeBuffers() {
-    sun.misc.Cleaner inBufferCleaner =
+    final sun.misc.Cleaner inBufferCleaner =
         ((sun.nio.ch.DirectBuffer) inBuffer).cleaner();
     inBufferCleaner.clean();
-    sun.misc.Cleaner outBufferCleaner =
+    final sun.misc.Cleaner outBufferCleaner =
         ((sun.nio.ch.DirectBuffer) outBuffer).cleaner();
     outBufferCleaner.clean();
   }
   
   /**
-   * To flush, we need to encrypt the data in buffer and write to underlying
-   * stream, then do the flush.
+   * To flush, we need to encrypt the data in the buffer and write to the 
+   * underlying stream, then do the flush.
    */
   @Override
   public void flush() throws IOException {
