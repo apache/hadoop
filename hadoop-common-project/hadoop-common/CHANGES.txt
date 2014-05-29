@@ -156,7 +156,7 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10625. Trim configuration names when putting/getting them
     to properties. (Wangda Tan via xgong)
 
-    HADOOP-10489. Documentation has broken "Go Back" hyperlinks.
+    HADOOP-10602. Documentation has broken "Go Back" hyperlinks.
     (Akira AJISAKA via cnauroth)
 
 Release 2.4.1 - UNRELEASED
