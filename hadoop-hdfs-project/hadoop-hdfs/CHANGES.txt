@@ -454,6 +454,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6447. balancer should timestamp the completion message.
     (Juan Yu via wang).
 
+    HDFS-6463. Clarify behavior of AclStorage#createFsPermissionForExtendedAcl
+    in comments. (cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
