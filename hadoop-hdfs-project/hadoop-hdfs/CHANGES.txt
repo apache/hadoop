@@ -449,6 +449,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-6416. Use Time#monotonicNow in OpenFileCtx and OpenFileCtxCatch to
     avoid system clock bugs (Abhiraj Butala via brandonli)
 
+    HDFS-6356. Fix typo in DatanodeLayoutVersion. (Tulasi G via wang)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
