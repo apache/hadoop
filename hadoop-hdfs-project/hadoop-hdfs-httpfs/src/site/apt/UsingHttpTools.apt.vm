@@ -18,8 +18,6 @@
 
 Hadoop HDFS over HTTP ${project.version} - Using HTTP Tools
 
-  \[ {{{./index.html}Go Back}} \]
-
 * Security
 
   Out of the box HttpFS supports both pseudo authentication and Kerberos HTTP
@@ -87,5 +85,3 @@ $ curl --negotiate -u foo -c ~/.httpfsauth "http://<HTTPFS_HOST>:14000/webhdfs/v
 +---+
 $ curl -b ~/.httpfsauth "http://<HTTPFS_HOST>:14000/webhdfs/v1?op=liststatus"
 +---+
-
-  \[ {{{./index.html}Go Back}} \]

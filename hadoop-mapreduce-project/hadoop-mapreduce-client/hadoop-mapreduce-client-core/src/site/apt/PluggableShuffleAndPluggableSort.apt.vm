@@ -18,8 +18,6 @@
 
 Hadoop MapReduce Next Generation - Pluggable Shuffle and Pluggable Sort
 
-  \[ {{{./index.html}Go Back}} \]
-
 * Introduction
 
   The pluggable shuffle and pluggable sort capabilities allow replacing the 
