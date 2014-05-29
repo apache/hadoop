@@ -35,10 +35,8 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Collection;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
@@ -51,8 +49,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     public int lastPreemptMemory = -1;
 
     @Override
-    protected void preemptResources(
-        Collection<FSLeafQueue> scheds, Resource toPreempt) {
+    protected void preemptResources(Resource toPreempt) {
       lastPreemptMemory = toPreempt.getMemory();
     }
 

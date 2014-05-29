@@ -114,6 +114,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2107. Refactored timeline classes into o.a.h.y.s.timeline package. (Vinod
     Kumar Vavilapalli via zjshen)
 
+    YARN-596. Use scheduling policies throughout the queue hierarchy to decide
+    which containers to preempt (Wei Yan via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES 

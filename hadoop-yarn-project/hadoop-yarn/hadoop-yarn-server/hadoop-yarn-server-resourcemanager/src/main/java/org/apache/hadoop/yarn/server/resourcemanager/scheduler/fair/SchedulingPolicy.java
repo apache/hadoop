@@ -139,4 +139,14 @@ public abstract class SchedulingPolicy {
    */
   public abstract void computeShares(
       Collection<? extends Schedulable> schedulables, Resource totalResources);
+
+  /**
+   * Check if the resource usage is over the fair share under this policy
+   *
+   * @param usage {@link Resource} the resource usage
+   * @param fairShare {@link Resource} the fair share
+   * @return true if check passes (is over) or false otherwise
+   */
+  public abstract boolean checkIfUsageOverFairShare(
+      Resource usage, Resource fairShare);
 }

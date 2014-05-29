@@ -59,6 +59,8 @@ public class FSSchedulerApp extends SchedulerApplicationAttempt {
   private AppSchedulable appSchedulable;
 
   final Map<RMContainer, Long> preemptionMap = new HashMap<RMContainer, Long>();
+
+  private Resource preemptedResources = Resources.createResource(0);
   
   public FSSchedulerApp(ApplicationAttemptId applicationAttemptId, 
       String user, FSLeafQueue queue, ActiveUsersManager activeUsersManager,
@@ -316,6 +318,7 @@ public class FSSchedulerApp extends SchedulerApplicationAttempt {
   public void addPreemption(RMContainer container, long time) {
     assert preemptionMap.get(container) == null;
     preemptionMap.put(container, time);
+    Resources.addTo(preemptedResources, container.getAllocatedResource());
   }
 
   public Long getContainerPreemptionTime(RMContainer container) {
@@ -329,5 +332,21 @@ public class FSSchedulerApp extends SchedulerApplicationAttempt {
   @Override
   public FSLeafQueue getQueue() {
     return (FSLeafQueue)super.getQueue();
+  }
+
+  public Resource getPreemptedResources() {
+    return preemptedResources;
+  }
+
+  public void resetPreemptedResources() {
+    preemptedResources = Resources.createResource(0);
+    for (RMContainer container : getPreemptionContainers()) {
+      Resources.addTo(preemptedResources, container.getAllocatedResource());
+    }
+  }
+
+  public void clearPreemptedResources() {
+    preemptedResources.setMemory(0);
+    preemptedResources.setVirtualCores(0);
   }
 }

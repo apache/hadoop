@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -32,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 
@@ -154,6 +156,32 @@ public class FSParentQueue extends FSQueue {
       }
     }
     return assigned;
+  }
+
+  @Override
+  public RMContainer preemptContainer() {
+    RMContainer toBePreempted = null;
+
+    // If this queue is not over its fair share, reject
+    if (!preemptContainerPreCheck()) {
+      return toBePreempted;
+    }
+
+    // Find the childQueue which is most over fair share
+    FSQueue candidateQueue = null;
+    Comparator<Schedulable> comparator = policy.getComparator();
+    for (FSQueue queue : childQueues) {
+      if (candidateQueue == null ||
+          comparator.compare(queue, candidateQueue) > 0) {
+        candidateQueue = queue;
+      }
+    }
+
+    // Let the selected queue choose which of its container to preempt
+    if (candidateQueue != null) {
+      toBePreempted = candidateQueue.preemptContainer();
+    }
+    return toBePreempted;
   }
 
   @Override
