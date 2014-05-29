@@ -18,8 +18,6 @@
 
 Hadoop MapReduce Next Generation - Distributed Cache Deploy
 
-  \[ {{{./index.html}Go Back}} \]
-
 * Introduction
 
   The MapReduce application framework has rudimentary support for deploying a
