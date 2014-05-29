@@ -516,6 +516,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10602. Documentation has broken "Go Back" hyperlinks.
     (Akira AJISAKA via cnauroth)
 
+    HADOOP-10639. FileBasedKeyStoresFactory initialization is not using default
+    for SSL_REQUIRE_CLIENT_CERT_KEY. (tucu)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

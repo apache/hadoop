@@ -272,4 +272,17 @@ public class TestSSLFactory {
       sslFactory.destroy();
     }
   }
+
+  @Test
+  public void testNoClientCertsInitialization() throws Exception {
+    Configuration conf = createConfiguration(false);
+    conf.unset(SSLFactory.SSL_REQUIRE_CLIENT_CERT_KEY);
+    SSLFactory sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
+    try {
+      sslFactory.init();
+    } finally {
+      sslFactory.destroy();
+    }
+  }
+
 }
