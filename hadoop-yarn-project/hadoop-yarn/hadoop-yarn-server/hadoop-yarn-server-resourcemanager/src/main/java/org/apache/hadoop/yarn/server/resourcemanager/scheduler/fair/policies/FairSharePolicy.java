@@ -120,6 +120,11 @@ public class FairSharePolicy extends SchedulingPolicy {
   }
 
   @Override
+  public boolean checkIfUsageOverFairShare(Resource usage, Resource fairShare) {
+    return Resources.greaterThan(RESOURCE_CALCULATOR, null, usage, fairShare);
+  }
+
+  @Override
   public byte getApplicableDepth() {
     return SchedulingPolicy.DEPTH_ANY;
   }
