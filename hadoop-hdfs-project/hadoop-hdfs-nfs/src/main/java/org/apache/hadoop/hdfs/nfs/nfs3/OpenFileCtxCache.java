@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -99,7 +100,7 @@ class OpenFileCtxCache {
       LOG.warn("No eviction candidate. All streams have pending work.");
       return null;
     } else {
-      long idleTime = System.currentTimeMillis()
+      long idleTime = Time.monotonicNow()
           - idlest.getValue().getLastAccessTime();
       if (idleTime < Nfs3Constant.OUTPUT_STREAM_TIMEOUT_MIN_DEFAULT) {
         if (LOG.isDebugEnabled()) {
@@ -250,7 +251,7 @@ class OpenFileCtxCache {
 
         // Check if it can sleep
         try {
-          long workedTime = System.currentTimeMillis() - lastWakeupTime;
+          long workedTime = Time.monotonicNow() - lastWakeupTime;
           if (workedTime < rotation) {
             if (LOG.isTraceEnabled()) {
               LOG.trace("StreamMonitor can still have a sleep:"
@@ -258,7 +259,7 @@ class OpenFileCtxCache {
             }
             Thread.sleep(rotation - workedTime);
           }
-          lastWakeupTime = System.currentTimeMillis();
+          lastWakeupTime = Time.monotonicNow();
 
         } catch (InterruptedException e) {
           LOG.info("StreamMonitor got interrupted");

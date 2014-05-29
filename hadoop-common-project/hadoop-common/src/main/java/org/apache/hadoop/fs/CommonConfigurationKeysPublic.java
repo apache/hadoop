@@ -293,5 +293,8 @@ public class CommonConfigurationKeysPublic {
       "hadoop.security.crypto.buffer.size";
   /** Defalt value for HADOOP_SECURITY_CRYPTO_BUFFER_SIZE_KEY */
   public static final int HADOOP_SECURITY_CRYPTO_BUFFER_SIZE_DEFAULT = 8192;
+  /** Class to override Impersonation provider */
+  public static final String  HADOOP_SECURITY_IMPERSONATION_PROVIDER_CLASS =
+    "hadoop.security.impersonation.provider.class";
 }
 

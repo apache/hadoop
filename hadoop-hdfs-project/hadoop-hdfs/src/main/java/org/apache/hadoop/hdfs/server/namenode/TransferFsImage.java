@@ -159,7 +159,7 @@ public class TransferFsImage {
       }
     }
 
-    final long milliTime = System.currentTimeMillis();
+    final long milliTime = Time.monotonicNow();
     String tmpFileName = NNStorage.getTemporaryEditsFileName(
         log.getStartTxId(), log.getEndTxId(), milliTime);
     List<File> tmpFiles = dstStorage.getFiles(NameNodeDirType.EDITS,

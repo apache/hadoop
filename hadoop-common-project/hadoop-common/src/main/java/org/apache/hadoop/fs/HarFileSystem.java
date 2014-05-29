@@ -687,7 +687,7 @@ public class HarFileSystem extends FileSystem {
    * @return null since no checksum algorithm is implemented.
    */
   @Override
-  public FileChecksum getFileChecksum(Path f) {
+  public FileChecksum getFileChecksum(Path f, long length) {
     return null;
   }
 

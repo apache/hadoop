@@ -15,6 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@InterfaceAudience.Private
-package org.apache.hadoop.yarn.server.applicationhistoryservice.timeline;
-import org.apache.hadoop.classification.InterfaceAudience;
+
+package org.apache.hadoop.yarn.server.timeline;
+
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.service.Service;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
+
+@Private
+@Unstable
+public interface TimelineStore extends
+    Service, TimelineReader, TimelineWriter {
+
+  /**
+   * The system filter which will be automatically added to a
+   * {@link TimelineEntity}'s primary filter section when storing the entity.
+   * The filter key is case sensitive. Users are supposed not to use the key
+   * reserved by the timeline system.
+   */
+  @Private
+  enum SystemFilter {
+    ENTITY_OWNER
+  }
+
+}

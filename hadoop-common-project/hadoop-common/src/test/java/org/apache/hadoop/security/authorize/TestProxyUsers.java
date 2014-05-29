@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.security.authorize;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -25,13 +28,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.util.NativeCodeLoader;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
-
+import org.apache.hadoop.util.NativeCodeLoader;
+import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 
 public class TestProxyUsers {
@@ -46,6 +47,8 @@ public class TestProxyUsers {
     new String[] { "@foo_group" };
   private static final String[] OTHER_GROUP_NAMES =
     new String[] { "bar_group" };
+  private static final String[] SUDO_GROUP_NAMES =
+    new String[] { "sudo_proxied_user" };
   private static final String PROXY_IP = "1.2.3.4";
 
   /**
@@ -106,10 +109,10 @@ public class TestProxyUsers {
       groupMappingClassName);
 
     conf.set(
-        ProxyUsers.getProxySuperuserGroupConfKey(REAL_USER_NAME),
+        DefaultImpersonationProvider.getProxySuperuserGroupConfKey(REAL_USER_NAME),
         StringUtils.join(",", Arrays.asList(NETGROUP_NAMES)));
     conf.set(
-        ProxyUsers.getProxySuperuserIpConfKey(REAL_USER_NAME),
+        DefaultImpersonationProvider.getProxySuperuserIpConfKey(REAL_USER_NAME),
         PROXY_IP);
     
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
@@ -130,10 +133,10 @@ public class TestProxyUsers {
   public void testProxyUsers() throws Exception {
     Configuration conf = new Configuration();
     conf.set(
-      ProxyUsers.getProxySuperuserGroupConfKey(REAL_USER_NAME),
+      DefaultImpersonationProvider.getProxySuperuserGroupConfKey(REAL_USER_NAME),
       StringUtils.join(",", Arrays.asList(GROUP_NAMES)));
     conf.set(
-      ProxyUsers.getProxySuperuserIpConfKey(REAL_USER_NAME),
+      DefaultImpersonationProvider.getProxySuperuserIpConfKey(REAL_USER_NAME),
       PROXY_IP);
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
 
@@ -164,11 +167,11 @@ public class TestProxyUsers {
   public void testProxyUsersWithUserConf() throws Exception {
     Configuration conf = new Configuration();
     conf.set(
-      ProxyUsers.getProxySuperuserUserConfKey(REAL_USER_NAME),
-      StringUtils.join(",", Arrays.asList(AUTHORIZED_PROXY_USER_NAME)));
+        DefaultImpersonationProvider.getProxySuperuserUserConfKey(REAL_USER_NAME),
+        StringUtils.join(",", Arrays.asList(AUTHORIZED_PROXY_USER_NAME)));
     conf.set(
-      ProxyUsers.getProxySuperuserIpConfKey(REAL_USER_NAME),
-      PROXY_IP);
+        DefaultImpersonationProvider.getProxySuperuserIpConfKey(REAL_USER_NAME),
+        PROXY_IP);
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
 
 
@@ -198,10 +201,10 @@ public class TestProxyUsers {
   public void testWildcardGroup() {
     Configuration conf = new Configuration();
     conf.set(
-      ProxyUsers.getProxySuperuserGroupConfKey(REAL_USER_NAME),
+      DefaultImpersonationProvider.getProxySuperuserGroupConfKey(REAL_USER_NAME),
       "*");
     conf.set(
-      ProxyUsers.getProxySuperuserIpConfKey(REAL_USER_NAME),
+      DefaultImpersonationProvider.getProxySuperuserIpConfKey(REAL_USER_NAME),
       PROXY_IP);
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
 
@@ -232,10 +235,10 @@ public class TestProxyUsers {
   public void testWildcardUser() {
     Configuration conf = new Configuration();
     conf.set(
-      ProxyUsers.getProxySuperuserUserConfKey(REAL_USER_NAME),
+      DefaultImpersonationProvider.getProxySuperuserUserConfKey(REAL_USER_NAME),
       "*");
     conf.set(
-      ProxyUsers.getProxySuperuserIpConfKey(REAL_USER_NAME),
+      DefaultImpersonationProvider.getProxySuperuserIpConfKey(REAL_USER_NAME),
       PROXY_IP);
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
 
@@ -266,10 +269,10 @@ public class TestProxyUsers {
   public void testWildcardIP() {
     Configuration conf = new Configuration();
     conf.set(
-      ProxyUsers.getProxySuperuserGroupConfKey(REAL_USER_NAME),
+      DefaultImpersonationProvider.getProxySuperuserGroupConfKey(REAL_USER_NAME),
       StringUtils.join(",", Arrays.asList(GROUP_NAMES)));
     conf.set(
-      ProxyUsers.getProxySuperuserIpConfKey(REAL_USER_NAME),
+      DefaultImpersonationProvider.getProxySuperuserIpConfKey(REAL_USER_NAME),
       "*");
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
 
@@ -297,15 +300,16 @@ public class TestProxyUsers {
   public void testWithDuplicateProxyGroups() throws Exception {
     Configuration conf = new Configuration();
     conf.set(
-      ProxyUsers.getProxySuperuserGroupConfKey(REAL_USER_NAME),
+      DefaultImpersonationProvider.getProxySuperuserGroupConfKey(REAL_USER_NAME),
       StringUtils.join(",", Arrays.asList(GROUP_NAMES,GROUP_NAMES)));
     conf.set(
-      ProxyUsers.getProxySuperuserIpConfKey(REAL_USER_NAME),
+      DefaultImpersonationProvider.getProxySuperuserIpConfKey(REAL_USER_NAME),
       PROXY_IP);
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
     
-    Collection<String> groupsToBeProxied = ProxyUsers.getProxyGroups().get(
-        ProxyUsers.getProxySuperuserGroupConfKey(REAL_USER_NAME));
+    Collection<String> groupsToBeProxied = 
+        ProxyUsers.getDefaultImpersonationProvider().getProxyGroups().get(
+        DefaultImpersonationProvider.getProxySuperuserGroupConfKey(REAL_USER_NAME));
     
     assertEquals (1,groupsToBeProxied.size());
   }
@@ -314,18 +318,51 @@ public class TestProxyUsers {
   public void testWithDuplicateProxyHosts() throws Exception {
     Configuration conf = new Configuration();
     conf.set(
-      ProxyUsers.getProxySuperuserGroupConfKey(REAL_USER_NAME),
+      DefaultImpersonationProvider.getProxySuperuserGroupConfKey(REAL_USER_NAME),
       StringUtils.join(",", Arrays.asList(GROUP_NAMES)));
     conf.set(
-      ProxyUsers.getProxySuperuserIpConfKey(REAL_USER_NAME),
+      DefaultImpersonationProvider.getProxySuperuserIpConfKey(REAL_USER_NAME),
       StringUtils.join(",", Arrays.asList(PROXY_IP,PROXY_IP)));
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
     
-    Collection<String> hosts = ProxyUsers.getProxyHosts().get(
-        ProxyUsers.getProxySuperuserIpConfKey(REAL_USER_NAME));
+    Collection<String> hosts = 
+        ProxyUsers.getDefaultImpersonationProvider().getProxyHosts().get(
+        DefaultImpersonationProvider.getProxySuperuserIpConfKey(REAL_USER_NAME));
     
     assertEquals (1,hosts.size());
   }
+  
+  @Test
+   public void testProxyUsersWithProviderOverride() throws Exception {
+     Configuration conf = new Configuration();
+     conf.set(
+         CommonConfigurationKeysPublic.HADOOP_SECURITY_IMPERSONATION_PROVIDER_CLASS,
+         "org.apache.hadoop.security.authorize.TestProxyUsers$TestDummyImpersonationProvider");
+     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+ 
+     // First try proxying a group that's allowed
+     UserGroupInformation realUserUgi = UserGroupInformation
+     .createUserForTesting(REAL_USER_NAME, SUDO_GROUP_NAMES);
+     UserGroupInformation proxyUserUgi = UserGroupInformation.createProxyUserForTesting(
+         PROXY_USER_NAME, realUserUgi, GROUP_NAMES);
+ 
+     // From good IP
+     assertAuthorized(proxyUserUgi, "1.2.3.4");
+     // From bad IP
+     assertAuthorized(proxyUserUgi, "1.2.3.5");
+ 
+     // Now try proxying a group that's not allowed
+     realUserUgi = UserGroupInformation
+     .createUserForTesting(REAL_USER_NAME, GROUP_NAMES);
+     proxyUserUgi = UserGroupInformation.createProxyUserForTesting(
+         PROXY_USER_NAME, realUserUgi, GROUP_NAMES);
+ 
+     // From good IP
+     assertNotAuthorized(proxyUserUgi, "1.2.3.4");
+     // From bad IP
+     assertNotAuthorized(proxyUserUgi, "1.2.3.5");
+   }
+
 
   private void assertNotAuthorized(UserGroupInformation proxyUgi, String host) {
     try {
@@ -341,6 +378,34 @@ public class TestProxyUsers {
       ProxyUsers.authorize(proxyUgi, host);
     } catch (AuthorizationException e) {
       fail("Did not allow authorization of " + proxyUgi + " from " + host);
+    }
+  }
+
+  static class TestDummyImpersonationProvider implements ImpersonationProvider {
+    /**
+     * Authorize a user (superuser) to impersonate another user (user1) if the 
+     * superuser belongs to the group "sudo_user1" .
+     */
+
+    public void authorize(UserGroupInformation user, 
+        String remoteAddress) throws AuthorizationException{
+      UserGroupInformation superUser = user.getRealUser();
+
+      String sudoGroupName = "sudo_" + user.getShortUserName();
+      if (!Arrays.asList(superUser.getGroupNames()).contains(sudoGroupName)){
+        throw new AuthorizationException("User: " + superUser.getUserName()
+            + " is not allowed to impersonate " + user.getUserName());
+      }
+    }
+
+    @Override
+    public void setConf(Configuration conf) {
+
+    }
+
+    @Override
+    public Configuration getConf() {
+      return null;
     }
   }
 }

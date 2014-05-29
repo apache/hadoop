@@ -15,7 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.applicationhistoryservice.timeline;
+package org.apache.hadoop.yarn.server.timeline;
+
+import static org.apache.hadoop.yarn.server.timeline.GenericObjectMapper.writeReverseOrderedLong;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,19 +32,20 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.timeline.LeveldbTimelineStore;
+import org.apache.hadoop.yarn.server.timeline.NameValuePair;
 import org.iq80.leveldb.DBIterator;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import static org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.GenericObjectMapper.writeReverseOrderedLong;
-import static org.junit.Assert.assertEquals;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -51,7 +56,7 @@ public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
   @Before
   public void setup() throws Exception {
     fsContext = FileContext.getLocalFSFileContext();
-    Configuration conf = new Configuration();
+    Configuration conf = new YarnConfiguration();
     fsPath = new File("target", this.getClass().getSimpleName() +
         "-tmpDir").getAbsoluteFile();
     fsContext.delete(new Path(fsPath.getAbsolutePath()), true);
@@ -69,6 +74,15 @@ public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
   public void tearDown() throws Exception {
     store.stop();
     fsContext.delete(new Path(fsPath.getAbsolutePath()), true);
+  }
+
+  @Test
+  public void testRootDirPermission() throws IOException {
+    FileSystem fs = FileSystem.getLocal(new YarnConfiguration());
+    FileStatus file = fs.getFileStatus(
+        new Path(fsPath.getAbsolutePath(), LeveldbTimelineStore.FILENAME));
+    assertNotNull(file);
+    assertEquals(LeveldbTimelineStore.LEVELDB_DIR_UMASK, file.getPermission());
   }
 
   @Test

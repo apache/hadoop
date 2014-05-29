@@ -187,7 +187,7 @@ class BlockReaderLocalLegacy implements BlockReader {
         userGroupInformation = UserGroupInformation.getCurrentUser();
       }
       pathinfo = getBlockPathInfo(userGroupInformation, blk, node,
-          configuration, conf.hdfsTimeout, token,
+          configuration, conf.socketTimeout, token,
           conf.connectToDnViaHostname);
     }
 

@@ -566,6 +566,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   private String[] handleDeprecation(DeprecationContext deprecations,
       String name) {
+    if (null != name) {
+      name = name.trim();
+    }
     ArrayList<String > names = new ArrayList<String>();
 	if (isDeprecated(name)) {
       DeprecatedKeyInfo keyInfo = deprecations.getDeprecatedKeyMap().get(name);
@@ -843,12 +846,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   /**
    * Get the value of the <code>name</code> property, <code>null</code> if
    * no such property exists. If the key is deprecated, it returns the value of
-   * the first key which replaces the deprecated key and is not null
+   * the first key which replaces the deprecated key and is not null.
    * 
    * Values are processed for <a href="#VariableExpansion">variable expansion</a> 
    * before being returned. 
    * 
-   * @param name the property name.
+   * @param name the property name, will be trimmed before get value.
    * @return the value of the <code>name</code> or its replacing property, 
    *         or null if no such property exists.
    */
@@ -952,7 +955,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   /** 
    * Set the <code>value</code> of the <code>name</code> property. If 
    * <code>name</code> is deprecated or there is a deprecated name associated to it,
-   * it sets the value to both names.
+   * it sets the value to both names. Name will be trimmed before put into
+   * configuration.
    * 
    * @param name property name.
    * @param value property value.
@@ -964,7 +968,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   /** 
    * Set the <code>value</code> of the <code>name</code> property. If 
    * <code>name</code> is deprecated, it also sets the <code>value</code> to
-   * the keys that replace the deprecated key.
+   * the keys that replace the deprecated key. Name will be trimmed before put
+   * into configuration.
    *
    * @param name property name.
    * @param value property value.
@@ -979,6 +984,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     Preconditions.checkArgument(
         value != null,
         "The value of property " + name + " must not be null");
+    name = name.trim();
     DeprecationContext deprecations = deprecationContext.get();
     if (deprecations.getDeprecatedKeyMap().isEmpty()) {
       getProps();
@@ -1064,7 +1070,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * If no such property exists,
    * then <code>defaultValue</code> is returned.
    * 
-   * @param name property name.
+   * @param name property name, will be trimmed before get value.
    * @param defaultValue default value.
    * @return property value, or <code>defaultValue</code> if the property 
    *         doesn't exist.                    

@@ -74,7 +74,6 @@ import org.apache.hadoop.hdfs.web.resources.PutOpParam;
 import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
 import org.apache.hadoop.hdfs.web.resources.UriFsPathParam;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -452,7 +451,7 @@ public class DatanodeWebHdfsMethods {
       MD5MD5CRC32FileChecksum checksum = null;
       DFSClient dfsclient = newDfsClient(nnId, conf);
       try {
-        checksum = dfsclient.getFileChecksum(fullpath);
+        checksum = dfsclient.getFileChecksum(fullpath, Long.MAX_VALUE);
         dfsclient.close();
         dfsclient = null;
       } finally {

@@ -187,4 +187,17 @@ public abstract class FSQueue extends Schedulable implements Queue {
     }
     return true;
   }
+
+  /**
+   * Helper method to check if the queue should preempt containers
+   *
+   * @return true if check passes (can preempt) or false otherwise
+   */
+  protected boolean preemptContainerPreCheck() {
+    if (this == scheduler.getQueueManager().getRootQueue()) {
+      return true;
+    }
+    return parent.getPolicy()
+        .checkIfUsageOverFairShare(getResourceUsage(), getFairShare());
+  }
 }

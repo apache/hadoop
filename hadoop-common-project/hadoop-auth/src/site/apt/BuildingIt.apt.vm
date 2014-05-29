@@ -18,8 +18,6 @@
 
 Hadoop Auth, Java HTTP SPNEGO ${project.version} - Building It
 
-  \[ {{{./index.html}Go Back}} \]
-
 * Requirements
 
   * Java 6+
@@ -70,6 +68,3 @@ $ mvn package -Pdocs
 
   The generated documentation is available at
   <<<hadoop-auth/target/site/>>>.
-
-  \[ {{{./index.html}Go Back}} \]
-

@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.tools.mapred.CopyMapper.FileAction;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -48,8 +49,8 @@ public class TestRetriableFileCopyCommand {
     
     Exception actualEx = null;
     try {
-      new RetriableFileCopyCommand("testFailOnCloseError")
-        .copyBytes(stat, out, 512, context);
+      new RetriableFileCopyCommand("testFailOnCloseError", FileAction.OVERWRITE)
+        .copyBytes(stat, 0, out, 512, context);
     } catch (Exception e) {
       actualEx = e;
     }

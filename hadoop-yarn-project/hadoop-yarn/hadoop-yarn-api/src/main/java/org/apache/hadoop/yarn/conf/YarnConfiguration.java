@@ -1136,14 +1136,6 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS =
       "0.0.0.0:" + DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_PORT;
 
-  /**The kerberos principal to be used for spnego filter for timeline service.*/
-  public static final String TIMELINE_SERVICE_WEBAPP_SPNEGO_USER_NAME_KEY =
-      TIMELINE_SERVICE_PREFIX + "webapp.spnego-principal";
-
-  /**The kerberos keytab to be used for spnego filter for timeline service.*/
-  public static final String TIMELINE_SERVICE_WEBAPP_SPNEGO_KEYTAB_FILE_KEY =
-      TIMELINE_SERVICE_PREFIX + "webapp.spnego-keytab-file";
-
   /** Timeline service store class */
   public static final String TIMELINE_SERVICE_STORE =
       TIMELINE_SERVICE_PREFIX + "store-class";

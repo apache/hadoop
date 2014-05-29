@@ -25,11 +25,13 @@ import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
@@ -118,6 +120,16 @@ public class TestCopyMapper {
     touchFile(SOURCE_PATH + "/7/8/9");
   }
 
+  private static void appendSourceData() throws Exception {
+    FileSystem fs = cluster.getFileSystem();
+    for (Path source : pathList) {
+      if (fs.getFileStatus(source).isFile()) {
+        // append 2048 bytes per file
+        appendFile(source, DEFAULT_FILE_SIZE * 2);
+      }
+    }
+  }
+
   private static void createSourceDataWithDifferentBlockSize() throws Exception {
     mkdirs(SOURCE_PATH + "/1");
     mkdirs(SOURCE_PATH + "/2");
@@ -201,85 +213,132 @@ public class TestCopyMapper {
     }
   }
 
+  /**
+   * Append specified length of bytes to a given file
+   */
+  private static void appendFile(Path p, int length) throws IOException {
+    byte[] toAppend = new byte[length];
+    Random random = new Random();
+    random.nextBytes(toAppend);
+    FSDataOutputStream out = cluster.getFileSystem().append(p);
+    try {
+      out.write(toAppend);
+    } finally {
+      IOUtils.closeStream(out);
+    }
+  }
+
   @Test
   public void testCopyWithDifferentChecksumType() throws Exception {
     testCopy(true);
   }
 
   @Test(timeout=40000)
-  public void testRun() {
+  public void testRun() throws Exception {
     testCopy(false);
   }
 
-  private void testCopy(boolean preserveChecksum) {
-    try {
-      deleteState();
-      if (preserveChecksum) {
-        createSourceDataWithDifferentChecksumType();
-      } else {
-        createSourceData();
-      }
+  @Test
+  public void testCopyWithAppend() throws Exception {
+    final FileSystem fs = cluster.getFileSystem();
+    // do the first distcp
+    testCopy(false);
+    // start appending data to source
+    appendSourceData();
 
-      FileSystem fs = cluster.getFileSystem();
-      CopyMapper copyMapper = new CopyMapper();
-      StubContext stubContext = new StubContext(getConfiguration(), null, 0);
-      Mapper<Text, CopyListingFileStatus, Text, Text>.Context context
-              = stubContext.getContext();
-
-      Configuration configuration = context.getConfiguration();
-      EnumSet<DistCpOptions.FileAttribute> fileAttributes
-              = EnumSet.of(DistCpOptions.FileAttribute.REPLICATION);
-      if (preserveChecksum) {
-        fileAttributes.add(DistCpOptions.FileAttribute.CHECKSUMTYPE);
-      }
-      configuration.set(DistCpOptionSwitch.PRESERVE_STATUS.getConfigLabel(),
-              DistCpUtils.packAttributes(fileAttributes));
-
-      copyMapper.setup(context);
-
-      for (Path path: pathList) {
-        copyMapper.map(new Text(DistCpUtils.getRelativePath(new Path(SOURCE_PATH), path)),
-                new CopyListingFileStatus(fs.getFileStatus(path)), context);
-      }
-
-      // Check that the maps worked.
-      for (Path path : pathList) {
-        final Path targetPath = new Path(path.toString()
-                .replaceAll(SOURCE_PATH, TARGET_PATH));
-        Assert.assertTrue(fs.exists(targetPath));
-        Assert.assertTrue(fs.isFile(targetPath) == fs.isFile(path));
-        FileStatus sourceStatus = fs.getFileStatus(path);
-        FileStatus targetStatus = fs.getFileStatus(targetPath);
-        Assert.assertEquals(sourceStatus.getReplication(),
-            targetStatus.getReplication());
-        if (preserveChecksum) {
-          Assert.assertEquals(sourceStatus.getBlockSize(),
-              targetStatus.getBlockSize());
-        }
-        Assert.assertTrue(!fs.isFile(targetPath)
-            || fs.getFileChecksum(targetPath).equals(fs.getFileChecksum(path)));
-      }
-
-      Assert.assertEquals(pathList.size(),
-              stubContext.getReporter().getCounter(CopyMapper.Counter.COPY).getValue());
-      if (!preserveChecksum) {
-        Assert.assertEquals(nFiles * DEFAULT_FILE_SIZE, stubContext
-            .getReporter().getCounter(CopyMapper.Counter.BYTESCOPIED)
-            .getValue());
-      } else {
-        Assert.assertEquals(nFiles * NON_DEFAULT_BLOCK_SIZE * 2, stubContext
-            .getReporter().getCounter(CopyMapper.Counter.BYTESCOPIED)
-            .getValue());
-      }
-
-      testCopyingExistingFiles(fs, copyMapper, context);
-      for (Text value : stubContext.getWriter().values()) {
-        Assert.assertTrue(value.toString() + " is not skipped", value.toString().startsWith("SKIP:"));
-      }
+    // do the distcp again with -update and -append option
+    CopyMapper copyMapper = new CopyMapper();
+    StubContext stubContext = new StubContext(getConfiguration(), null, 0);
+    Mapper<Text, CopyListingFileStatus, Text, Text>.Context context =
+        stubContext.getContext();
+    // Enable append 
+    context.getConfiguration().setBoolean(
+        DistCpOptionSwitch.APPEND.getConfigLabel(), true);
+    copyMapper.setup(context);
+    for (Path path: pathList) {
+      copyMapper.map(new Text(DistCpUtils.getRelativePath(new Path(SOURCE_PATH), path)),
+              new CopyListingFileStatus(cluster.getFileSystem().getFileStatus(
+                  path)), context);
     }
-    catch (Exception e) {
-      LOG.error("Unexpected exception: ", e);
-      Assert.assertTrue(false);
+
+    verifyCopy(fs, false);
+    // verify that we only copied new appended data
+    Assert.assertEquals(nFiles * DEFAULT_FILE_SIZE * 2, stubContext
+        .getReporter().getCounter(CopyMapper.Counter.BYTESCOPIED)
+        .getValue());
+    Assert.assertEquals(pathList.size(), stubContext.getReporter().
+        getCounter(CopyMapper.Counter.COPY).getValue());
+  }
+
+  private void testCopy(boolean preserveChecksum) throws Exception {
+    deleteState();
+    if (preserveChecksum) {
+      createSourceDataWithDifferentChecksumType();
+    } else {
+      createSourceData();
+    }
+
+    FileSystem fs = cluster.getFileSystem();
+    CopyMapper copyMapper = new CopyMapper();
+    StubContext stubContext = new StubContext(getConfiguration(), null, 0);
+    Mapper<Text, CopyListingFileStatus, Text, Text>.Context context
+            = stubContext.getContext();
+
+    Configuration configuration = context.getConfiguration();
+    EnumSet<DistCpOptions.FileAttribute> fileAttributes
+            = EnumSet.of(DistCpOptions.FileAttribute.REPLICATION);
+    if (preserveChecksum) {
+      fileAttributes.add(DistCpOptions.FileAttribute.CHECKSUMTYPE);
+    }
+    configuration.set(DistCpOptionSwitch.PRESERVE_STATUS.getConfigLabel(),
+            DistCpUtils.packAttributes(fileAttributes));
+
+    copyMapper.setup(context);
+
+    for (Path path: pathList) {
+      copyMapper.map(
+          new Text(DistCpUtils.getRelativePath(new Path(SOURCE_PATH), path)),
+          new CopyListingFileStatus(fs.getFileStatus(path)), context);
+    }
+
+    // Check that the maps worked.
+    verifyCopy(fs, preserveChecksum);
+    Assert.assertEquals(pathList.size(), stubContext.getReporter()
+        .getCounter(CopyMapper.Counter.COPY).getValue());
+    if (!preserveChecksum) {
+      Assert.assertEquals(nFiles * DEFAULT_FILE_SIZE, stubContext
+          .getReporter().getCounter(CopyMapper.Counter.BYTESCOPIED)
+          .getValue());
+    } else {
+      Assert.assertEquals(nFiles * NON_DEFAULT_BLOCK_SIZE * 2, stubContext
+          .getReporter().getCounter(CopyMapper.Counter.BYTESCOPIED)
+          .getValue());
+    }
+
+    testCopyingExistingFiles(fs, copyMapper, context);
+    for (Text value : stubContext.getWriter().values()) {
+      Assert.assertTrue(value.toString() + " is not skipped", value
+          .toString().startsWith("SKIP:"));
+    }
+  }
+
+  private void verifyCopy(FileSystem fs, boolean preserveChecksum)
+      throws Exception {
+    for (Path path : pathList) {
+      final Path targetPath = new Path(path.toString().replaceAll(SOURCE_PATH,
+          TARGET_PATH));
+      Assert.assertTrue(fs.exists(targetPath));
+      Assert.assertTrue(fs.isFile(targetPath) == fs.isFile(path));
+      FileStatus sourceStatus = fs.getFileStatus(path);
+      FileStatus targetStatus = fs.getFileStatus(targetPath);
+      Assert.assertEquals(sourceStatus.getReplication(),
+          targetStatus.getReplication());
+      if (preserveChecksum) {
+        Assert.assertEquals(sourceStatus.getBlockSize(),
+            targetStatus.getBlockSize());
+      }
+      Assert.assertTrue(!fs.isFile(targetPath)
+          || fs.getFileChecksum(targetPath).equals(fs.getFileChecksum(path)));
     }
   }
 

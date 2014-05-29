@@ -334,6 +334,9 @@ Trunk (Unreleased)
 
     HADOOP-10586. KeyShell doesn't allow setting Options via CLI. (clamb via tucu)
 
+    HADOOP-10625. Trim configuration names when putting/getting them
+    to properties. (Wangda Tan via xgong)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -412,6 +415,12 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10614. CBZip2InputStream is not threadsafe (Xiangrui Meng via
     Sandy Ryza)
+
+    HADOOP-10618. Remove SingleNodeSetup.apt.vm. (Akira Ajisaka via
+    Arpit Agarwal)
+
+    HADOOP-10448. Support pluggable mechanism to specify proxy user settings.
+    (Benoy Antony via Arpit Agarwal)
 
   OPTIMIZATIONS
 
@@ -503,6 +512,12 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10489. UserGroupInformation#getTokens and UserGroupInformation
     #addToken can lead to ConcurrentModificationException (Robert Kanter via atm)
+
+    HADOOP-10602. Documentation has broken "Go Back" hyperlinks.
+    (Akira AJISAKA via cnauroth)
+
+    HADOOP-10639. FileBasedKeyStoresFactory initialization is not using default
+    for SSL_REQUIRE_CLIENT_CERT_KEY. (tucu)
 
 Release 2.4.1 - UNRELEASED
 

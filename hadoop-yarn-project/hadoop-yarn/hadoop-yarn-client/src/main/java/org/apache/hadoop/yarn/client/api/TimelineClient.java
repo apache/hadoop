@@ -23,17 +23,17 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.client.api.impl.TimelineClientImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 
 /**
  * A client library that can be used to post some information in terms of a
  * number of conceptual entities.
- * 
- * @See Entity
  */
 @Public
 @Unstable
@@ -66,5 +66,23 @@ public abstract class TimelineClient extends AbstractService {
   @Public
   public abstract TimelinePutResponse putEntities(
       TimelineEntity... entities) throws IOException, YarnException;
+
+  /**
+   * <p>
+   * Get a delegation token so as to be able to talk to the timeline server in a
+   * secure way.
+   * </p>
+   * 
+   * @param renewer
+   *          Address of the renewer who can renew these tokens when needed by
+   *          securely talking to the timeline server
+   * @return a delegation token ({@link Token}) that can be used to talk to the
+   *         timeline server
+   * @throws IOException
+   * @throws YarnException
+   */
+  @Public
+  public abstract Token<TimelineDelegationTokenIdentifier> getDelegationToken(
+      String renewer) throws IOException, YarnException;
 
 }

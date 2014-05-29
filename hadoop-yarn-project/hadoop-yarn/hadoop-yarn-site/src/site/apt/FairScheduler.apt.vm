@@ -18,8 +18,6 @@
 
 Hadoop MapReduce Next Generation - Fair Scheduler
 
-  \[ {{{./index.html}Go Back}} \]
-
 %{toc|section=1|fromDepth=0}
 
 * {Purpose} 
@@ -155,6 +153,12 @@ Properties that can be placed in yarn-site.xml
 
     * Whether to use preemption. Note that preemption is experimental in the current
       version. Defaults to false.
+
+ * <<<yarn.scheduler.fair.preemption.cluster-utilization-threshold>>>
+
+    * The utilization threshold after which preemption kicks in. The
+      utilization is computed as the maximum ratio of usage to capacity among
+      all resources. Defaults to 0.8f.
 
  * <<<yarn.scheduler.fair.sizebasedweight>>>
   
@@ -310,7 +314,8 @@ Allocation file format
        to ‘parent’ or by configuring at least one leaf under that queue which makes it a parent.
        See example allocation for a sample use case. 
 
-     * default: the app is placed into the queue named "default".
+     * default: the app is placed into the queue specified in the ‘queue’ attribute of the 
+       default rule. If ‘queue’ attribute is not specified, the app is placed into ‘root.default’ queue.
 
      * reject: the app is rejected.
 
@@ -348,7 +353,7 @@ Allocation file format
     <rule name=“nestedUserQueue”>
         <rule name=“secondaryGroupExistingQueue” create=“false” />
     </rule>
-    <rule name="default" />
+    <rule name="default" queue=“sample_queue” />
   </queuePlacementPolicy>
 </allocations>
 ---

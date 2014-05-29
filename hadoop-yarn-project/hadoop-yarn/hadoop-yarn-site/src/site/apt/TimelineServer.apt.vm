@@ -18,8 +18,6 @@
 
 YARN Timeline Server
 
-  \[ {{{./index.html}Go Back}} \]
-
 %{toc|section=1|fromDepth=0|toDepth=3}
 
 * Overview
@@ -152,7 +150,7 @@ YARN Timeline Server
 <property>
   <description>Store class name for timeline store.</description>
   <name>yarn.timeline-service.store-class</name>
-  <value>org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.LeveldbTimelineStore</value>
+  <value>org.apache.hadoop.yarn.server.timeline.LeveldbTimelineStore</value>
 </property>
 
 <property>

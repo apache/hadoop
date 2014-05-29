@@ -139,6 +139,7 @@ public class TestHarFileSystem {
     public int getDefaultPort();
     public String getCanonicalServiceName();
     public Token<?> getDelegationToken(String renewer) throws IOException;
+    public FileChecksum getFileChecksum(Path f) throws IOException;
     public boolean deleteOnExit(Path f) throws IOException;
     public boolean cancelDeleteOnExit(Path f) throws IOException;
     public Token<?>[] addDelegationTokens(String renewer, Credentials creds)
@@ -223,10 +224,16 @@ public class TestHarFileSystem {
   }
 
   @Test
-  public void testFileChecksum() {
+  public void testFileChecksum() throws Exception {
     final Path p = new Path("har://file-localhost/foo.har/file1");
     final HarFileSystem harfs = new HarFileSystem();
-    Assert.assertEquals(null, harfs.getFileChecksum(p));
+    try {
+      Assert.assertEquals(null, harfs.getFileChecksum(p));
+    } finally {
+      if (harfs != null) {
+        harfs.close();
+      }
+    }
   }
 
   /**

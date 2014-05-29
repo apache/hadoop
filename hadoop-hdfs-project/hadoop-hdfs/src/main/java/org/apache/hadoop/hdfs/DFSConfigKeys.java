@@ -645,5 +645,12 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_NFS_REGISTRATION_PORT_DEFAULT = 40; // Currently unassigned.
   public static final String  DFS_NFS_ALLOW_INSECURE_PORTS_KEY = "dfs.nfs.allow.insecure.ports";
   public static final boolean DFS_NFS_ALLOW_INSECURE_PORTS_DEFAULT = true;
-  
+
+   // Slow io warning log threshold settings for dfsclient and datanode.
+   public static final String DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_KEY =
+     "dfs.client.slow.io.warning.threshold.ms";
+   public static final long DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_DEFAULT = 30000;
+   public static final String DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY =
+     "dfs.datanode.slow.io.warning.threshold.ms";
+   public static final long DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_DEFAULT = 300;
 }

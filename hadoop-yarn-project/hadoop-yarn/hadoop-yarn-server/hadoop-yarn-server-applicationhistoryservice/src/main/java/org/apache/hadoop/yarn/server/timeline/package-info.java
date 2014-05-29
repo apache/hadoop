@@ -15,45 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.applicationhistoryservice.timeline;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-
-/**
- * A class holding a name and value pair, used for specifying filters in
- * {@link TimelineReader}.
- */
 @InterfaceAudience.Private
-@InterfaceStability.Unstable
-public class NameValuePair {
-  String name;
-  Object value;
-
-  public NameValuePair(String name, Object value) {
-    this.name = name;
-    this.value = value;
-  }
-
-  /**
-   * Get the name.
-   * @return The name.
-   */
-  public String getName() {
-
-    return name;
-  }
-
-  /**
-   * Get the value.
-   * @return The value.
-   */
-  public Object getValue() {
-    return value;
-  }
-
-  @Override
-  public String toString() {
-    return "{ name: " + name + ", value: " + value + " }";
-  }
-}
+package org.apache.hadoop.yarn.server.timeline;
+import org.apache.hadoop.classification.InterfaceAudience;

@@ -30,6 +30,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.security.authorize.ProxyServers;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.Token;
@@ -284,8 +285,8 @@ public class TestJspHelper {
     String user = "TheNurse";
     conf.set(DFSConfigKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     
-    conf.set(ProxyUsers.getProxySuperuserGroupConfKey(realUser), "*");
-    conf.set(ProxyUsers.getProxySuperuserIpConfKey(realUser), "*");
+    conf.set(DefaultImpersonationProvider.getProxySuperuserGroupConfKey(realUser), "*");
+    conf.set(DefaultImpersonationProvider.getProxySuperuserIpConfKey(realUser), "*");
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
     UserGroupInformation.setConfiguration(conf);
     UserGroupInformation ugi;

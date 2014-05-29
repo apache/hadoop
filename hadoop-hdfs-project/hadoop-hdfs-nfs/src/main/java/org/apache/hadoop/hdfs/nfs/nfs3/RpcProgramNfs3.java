@@ -44,7 +44,6 @@ import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.nfs.AccessPrivilege;
 import org.apache.hadoop.nfs.NfsExports;
@@ -124,6 +123,7 @@ import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -151,13 +151,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
   private final NfsExports exports;
   
-  /**
-   * superUserClient should always impersonate HDFS file system owner to send
-   * requests which requires supergroup privilege. This requires the same user
-   * to start HDFS and NFS.
-   */
-  private final DFSClient superUserClient;
-  
   private final short replication;
   private final long blockSize;
   private final int bufferSize;
@@ -179,7 +172,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     exports = NfsExports.getInstance(config);
     writeManager = new WriteManager(iug, config);
     clientCache = new DFSClientCache(config);
-    superUserClient = new DFSClient(NameNode.getAddress(config), config);
     replication = (short) config.getInt(DFSConfigKeys.DFS_REPLICATION_KEY,
         DFSConfigKeys.DFS_REPLICATION_DEFAULT);
     blockSize = config.getLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
@@ -270,6 +262,17 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     Nfs3FileAttributes attrs = null;
     try {
       attrs = writeManager.getFileAttr(dfsClient, handle, iug);
+    } catch (RemoteException r) {
+      LOG.warn("Exception ", r);
+      IOException io = r.unwrapRemoteException();
+      /**
+       * AuthorizationException can be thrown if the user can't be proxy'ed.
+       */
+      if (io instanceof AuthorizationException) {
+        return new GETATTR3Response(Nfs3Status.NFS3ERR_ACCES);
+      } else {
+        return new GETATTR3Response(Nfs3Status.NFS3ERR_IO);
+      }
     } catch (IOException e) {
       LOG.info("Can't get file attribute, fileId=" + handle.getFileId(), e);
       response.setStatus(Nfs3Status.NFS3ERR_IO);
@@ -499,6 +502,17 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
           securityHandler.getUid(), securityHandler.getGid(), attrs);
       
       return new ACCESS3Response(Nfs3Status.NFS3_OK, attrs, access);
+    } catch (RemoteException r) {
+      LOG.warn("Exception ", r);
+      IOException io = r.unwrapRemoteException();
+      /**
+       * AuthorizationException can be thrown if the user can't be proxy'ed.
+       */
+      if (io instanceof AuthorizationException) {
+        return new ACCESS3Response(Nfs3Status.NFS3ERR_ACCES);
+      } else {
+        return new ACCESS3Response(Nfs3Status.NFS3ERR_IO);
+      }
     } catch (IOException e) {
       LOG.warn("Exception ", e);
       return new ACCESS3Response(Nfs3Status.NFS3ERR_IO);
@@ -1658,8 +1672,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
 
     try {
-      // Use superUserClient to get file system status
-      FsStatus fsStatus = superUserClient.getDiskStatus();
+      FsStatus fsStatus = dfsClient.getDiskStatus();
       long totalBytes = fsStatus.getCapacity();
       long freeBytes = fsStatus.getRemaining();
       
@@ -1680,6 +1693,17 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       
       return new FSSTAT3Response(Nfs3Status.NFS3_OK, attrs, totalBytes,
           freeBytes, freeBytes, maxFsObjects, maxFsObjects, maxFsObjects, 0);
+    } catch (RemoteException r) {
+      LOG.warn("Exception ", r);
+      IOException io = r.unwrapRemoteException();
+      /**
+       * AuthorizationException can be thrown if the user can't be proxy'ed.
+       */
+      if (io instanceof AuthorizationException) {
+        return new FSSTAT3Response(Nfs3Status.NFS3ERR_ACCES);
+      } else {
+        return new FSSTAT3Response(Nfs3Status.NFS3ERR_IO);
+      }
     } catch (IOException e) {
       LOG.warn("Exception ", e);
       return new FSSTAT3Response(Nfs3Status.NFS3ERR_IO);

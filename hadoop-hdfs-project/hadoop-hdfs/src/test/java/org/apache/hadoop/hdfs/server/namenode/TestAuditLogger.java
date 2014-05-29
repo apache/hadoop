@@ -39,8 +39,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.ProxyServers;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.junit.Before;
 import org.junit.Test;
 

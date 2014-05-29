@@ -122,6 +122,7 @@ public class DFSOutputStream extends FSOutputSummer
     implements Syncable, CanSetDropBehind {
   private static final int MAX_PACKETS = 80; // each packet 64K, total 5MB
   private final DFSClient dfsClient;
+  private final long dfsclientSlowLogThresholdMs;
   private Socket s;
   // closed is accessed by different threads under different locks.
   private volatile boolean closed = false;
@@ -788,11 +789,19 @@ public class DFSOutputStream extends FSOutputSummer
           // process responses from datanodes.
           try {
             // read an ack from the pipeline
+            long begin = Time.monotonicNow();
             ack.readFields(blockReplyStream);
-            if (DFSClient.LOG.isDebugEnabled()) {
+            long duration = Time.monotonicNow() - begin;
+            if (duration > dfsclientSlowLogThresholdMs
+                && ack.getSeqno() != Packet.HEART_BEAT_SEQNO) {
+              DFSClient.LOG
+                  .warn("Slow ReadProcessor read fields took " + duration
+                      + "ms (threshold=" + dfsclientSlowLogThresholdMs + "ms); ack: "
+                      + ack + ", targets: " + Arrays.asList(targets));
+            } else if (DFSClient.LOG.isDebugEnabled()) {
               DFSClient.LOG.debug("DFSClient " + ack);
             }
-            
+
             long seqno = ack.getSeqno();
             // processes response status from datanodes.
             for (int i = ack.getNumOfReplies()-1; i >=0  && dfsClient.clientRunning; i--) {
@@ -1570,6 +1579,8 @@ public class DFSOutputStream extends FSOutputSummer
                             
     }
     this.checksum = checksum;
+    this.dfsclientSlowLogThresholdMs =
+      dfsClient.getConf().dfsclientSlowIoWarningThresholdMs;
   }
 
   /** Construct a new output stream for creating a file. */
@@ -2001,6 +2012,7 @@ public class DFSOutputStream extends FSOutputSummer
     if (DFSClient.LOG.isDebugEnabled()) {
       DFSClient.LOG.debug("Waiting for ack for: " + seqno);
     }
+    long begin = Time.monotonicNow();
     try {
       synchronized (dataQueue) {
         while (!closed) {
@@ -2019,6 +2031,11 @@ public class DFSOutputStream extends FSOutputSummer
       }
       checkClosed();
     } catch (ClosedChannelException e) {
+    }
+    long duration = Time.monotonicNow() - begin;
+    if (duration > dfsclientSlowLogThresholdMs) {
+      DFSClient.LOG.warn("Slow waitForAckedSeqno took " + duration
+          + "ms (threshold=" + dfsclientSlowLogThresholdMs + "ms)");
     }
   }
 
