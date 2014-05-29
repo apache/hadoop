@@ -134,6 +134,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6356. Fix typo in DatanodeLayoutVersion. (Tulasi G via wang)
 
+    HDFS-6447. balancer should timestamp the completion message.
+    (Juan Yu via wang).
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)

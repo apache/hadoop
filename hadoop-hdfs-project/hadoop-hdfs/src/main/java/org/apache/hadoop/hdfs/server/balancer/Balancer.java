@@ -1552,6 +1552,7 @@ public class Balancer {
         System.out.println(e + ".  Exiting ...");
         return ReturnStatus.INTERRUPTED.code;
       } finally {
+        System.out.format("%-24s ", DateFormat.getDateTimeInstance().format(new Date()));
         System.out.println("Balancing took " + time2Str(Time.now()-startTime));
       }
     }
