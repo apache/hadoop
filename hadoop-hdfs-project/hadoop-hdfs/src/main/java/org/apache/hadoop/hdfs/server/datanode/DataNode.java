@@ -1228,7 +1228,7 @@ public class DataNode extends Configured
     }
     
     // Record the time of initial notification
-    long timeNotified = Time.now();
+    long timeNotified = Time.monotonicNow();
 
     if (localDataXceiverServer != null) {
       ((DataXceiverServer) this.localDataXceiverServer.getRunnable()).kill();
@@ -1260,8 +1260,9 @@ public class DataNode extends Configured
       while (true) {
         // When shutting down for restart, wait 2.5 seconds before forcing
         // termination of receiver threads.
-        if (!this.shutdownForUpgrade || 
-            (this.shutdownForUpgrade && (Time.now() - timeNotified > 2500))) {
+        if (!this.shutdownForUpgrade ||
+            (this.shutdownForUpgrade && (Time.monotonicNow() - timeNotified
+                > 2500))) {
           this.threadGroup.interrupt();
         }
         LOG.info("Waiting for threadgroup to exit, active threads is " +

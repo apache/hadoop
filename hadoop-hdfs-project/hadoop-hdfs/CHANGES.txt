@@ -292,6 +292,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6453. Use Time#monotonicNow to avoid system clock reset.
     (Liang Xie via wang)
 
+    HDFS-6461. Use Time#monotonicNow to compute duration in DataNode#shutDown.
+    (James Thomas via wang)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
