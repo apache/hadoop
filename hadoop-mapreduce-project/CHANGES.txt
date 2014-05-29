@@ -102,6 +102,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5862. Line records longer than 2x split size aren't handled
     correctly (bc Wong via jlowe)
 
+    MAPREDUCE-5895. Close streams properly to avoid leakage in TaskLog. 
+    (Kousuke Saruta via devaraj)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
