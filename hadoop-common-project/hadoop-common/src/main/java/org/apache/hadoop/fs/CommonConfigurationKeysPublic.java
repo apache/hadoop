@@ -290,5 +290,8 @@ public class CommonConfigurationKeysPublic {
   /** Class to override Sasl Properties for a connection */
   public static final String  HADOOP_SECURITY_SASL_PROPS_RESOLVER_CLASS =
     "hadoop.security.saslproperties.resolver.class";
+  /** Class to override Impersonation provider */
+  public static final String  HADOOP_SECURITY_IMPERSONATION_PROVIDER_CLASS =
+    "hadoop.security.impersonation.provider.class";
 }
 

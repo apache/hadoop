@@ -715,6 +715,17 @@
 <!-- Proxy Configuration -->
 
 <property>
+  <name>hadoop.security.impersonation.provider.class</name>
+  <value></value>
+  <description>A class which implements ImpersonationProvider interface, used to 
+       authorize whether one user can impersonate a specific user. 
+       If not specified, the DefaultImpersonationProvider will be used. 
+       If a class is specified, then that class will be used to determine 
+       the impersonation capability.
+  </description>
+</property>
+
+<property>
   <name>hadoop.rpc.socket.factory.class.default</name>
   <value>org.apache.hadoop.net.StandardSocketFactory</value>
   <description> Default SocketFactory to use. This parameter is expected to be

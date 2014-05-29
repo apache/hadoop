@@ -60,6 +60,12 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10566. Refactor proxyservers out of ProxyUsers. (Benoy Antony via
     Arpit Agarwal)
 
+    HDFS-9968. ProxyUsers does not work with NetGroups. (Benoy Antony via
+    Devaraj Das)
+
+    HADOOP-10448. Support pluggable mechanism to specify proxy user settings.
+    (Benoy Antony via Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES 
