@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -41,9 +40,8 @@ import org.apache.hadoop.nfs.nfs3.response.READDIRPLUS3Response;
 import org.apache.hadoop.nfs.nfs3.response.READDIRPLUS3Response.EntryPlus3;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.SecurityHandler;
-import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
-import org.apache.hadoop.util.StringUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -67,10 +65,10 @@ public class TestReaddir {
   public static void setup() throws Exception {
     String currentUser = System.getProperty("user.name");
     config.set(
-            ProxyUsers.getProxySuperuserGroupConfKey(currentUser),
+            DefaultImpersonationProvider.getProxySuperuserGroupConfKey(currentUser),
             "*");
     config.set(
-            ProxyUsers.getProxySuperuserIpConfKey(currentUser),
+            DefaultImpersonationProvider.getProxySuperuserIpConfKey(currentUser),
             "*");
     ProxyUsers.refreshSuperUserGroupsConfiguration(config);
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(1).build();

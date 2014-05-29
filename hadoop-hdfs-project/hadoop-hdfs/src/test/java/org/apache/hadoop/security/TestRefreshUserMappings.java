@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.junit.After;
 import org.junit.Before;
@@ -150,8 +151,8 @@ public class TestRefreshUserMappings {
     final String [] GROUP_NAMES2 = new String [] {"gr3" , "gr4"};
     
     //keys in conf
-    String userKeyGroups = ProxyUsers.getProxySuperuserGroupConfKey(SUPER_USER);
-    String userKeyHosts = ProxyUsers.getProxySuperuserIpConfKey (SUPER_USER);
+    String userKeyGroups = DefaultImpersonationProvider.getProxySuperuserGroupConfKey(SUPER_USER);
+    String userKeyHosts = DefaultImpersonationProvider.getProxySuperuserIpConfKey (SUPER_USER);
     
     config.set(userKeyGroups, "gr3,gr4,gr5"); // superuser can proxy for this group
     config.set(userKeyHosts,"127.0.0.1");

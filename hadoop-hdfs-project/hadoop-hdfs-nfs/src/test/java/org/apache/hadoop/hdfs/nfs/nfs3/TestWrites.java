@@ -50,6 +50,7 @@ import org.apache.hadoop.nfs.nfs3.response.CREATE3Response;
 import org.apache.hadoop.nfs.nfs3.response.READ3Response;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.SecurityHandler;
+import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.jboss.netty.channel.Channel;
 import org.junit.Assert;
@@ -288,10 +289,10 @@ public class TestWrites {
         System.getProperty("user.name"));
     String currentUser = System.getProperty("user.name");
     config.set(
-            ProxyUsers.getProxySuperuserGroupConfKey(currentUser),
+            DefaultImpersonationProvider.getProxySuperuserGroupConfKey(currentUser),
             "*");
     config.set(
-            ProxyUsers.getProxySuperuserIpConfKey(currentUser),
+            DefaultImpersonationProvider.getProxySuperuserIpConfKey(currentUser),
             "*");
     ProxyUsers.refreshSuperUserGroupsConfiguration(config);
 
