@@ -143,6 +143,10 @@ Release 2.5.0 - UNRELEASED
     YARN-2105. Fix TestFairScheduler after YARN-2012. (Ashwin Shankar via
     Sandy Ryza)
 
+    YARN-2112. Fixed yarn-common's pom.xml to include jackson dependencies so
+    that both Timeline Server and client can access them. (Zhijie Shen via
+    vinodkv)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
