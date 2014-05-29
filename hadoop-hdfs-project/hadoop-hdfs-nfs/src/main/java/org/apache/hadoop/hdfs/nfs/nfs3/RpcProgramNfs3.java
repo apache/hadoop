@@ -44,7 +44,6 @@ import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.nfs.AccessPrivilege;
 import org.apache.hadoop.nfs.NfsExports;
@@ -152,13 +151,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
   private final NfsExports exports;
   
-  /**
-   * superUserClient should always impersonate HDFS file system owner to send
-   * requests which requires supergroup privilege. This requires the same user
-   * to start HDFS and NFS.
-   */
-  private final DFSClient superUserClient;
-  
   private final short replication;
   private final long blockSize;
   private final int bufferSize;
@@ -180,7 +172,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     exports = NfsExports.getInstance(config);
     writeManager = new WriteManager(iug, config);
     clientCache = new DFSClientCache(config);
-    superUserClient = new DFSClient(NameNode.getAddress(config), config);
     replication = (short) config.getInt(DFSConfigKeys.DFS_REPLICATION_KEY,
         DFSConfigKeys.DFS_REPLICATION_DEFAULT);
     blockSize = config.getLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
@@ -1681,8 +1672,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
 
     try {
-      // Use superUserClient to get file system status
-      FsStatus fsStatus = superUserClient.getDiskStatus();
+      FsStatus fsStatus = dfsClient.getDiskStatus();
       long totalBytes = fsStatus.getCapacity();
       long freeBytes = fsStatus.getRemaining();
       

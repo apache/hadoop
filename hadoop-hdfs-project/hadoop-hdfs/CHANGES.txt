@@ -295,6 +295,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-6461. Use Time#monotonicNow to compute duration in DataNode#shutDown.
     (James Thomas via wang)
 
+    HDFS-6462. NFS: fsstat request fails with the secure hdfs (brandonli)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
