@@ -62,7 +62,7 @@ public class DataNodeLayoutVersion {
    * </ul>
    */
   public static enum Feature implements LayoutFeature {
-    FIRST_LAYOUT(-55, -53, "First datenode layout", false);
+    FIRST_LAYOUT(-55, -53, "First datanode layout", false);
    
     private final FeatureInfo info;
 
