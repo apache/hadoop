@@ -135,10 +135,12 @@ Release 2.5.0 - UNRELEASED
     HDFS-6356. Fix typo in DatanodeLayoutVersion. (Tulasi G via wang)
 
     HDFS-6447. balancer should timestamp the completion message.
-    (Juan Yu via wang).
+    (Juan Yu via wang)
 
     HDFS-6463. Clarify behavior of AclStorage#createFsPermissionForExtendedAcl
     in comments. (cnauroth)
+
+    HDFS-6472. fix typo in webapps/hdfs/explorer.js. (Juan Yu via wang)
 
   OPTIMIZATIONS
 
