@@ -25,11 +25,8 @@ import java.security.GeneralSecurityException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.Syncable;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_BUFFER_SIZE_KEY;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_BUFFER_SIZE_DEFAULT;
 
 import com.google.common.base.Preconditions;
 
@@ -44,14 +41,14 @@ import com.google.common.base.Preconditions;
  * <p/>
  * The underlying stream offset is maintained as state.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class CryptoOutputStream extends FilterOutputStream implements 
     Syncable, CanSetDropBehind {
-  private static final int MIN_BUFFER_SIZE = 512;
   private static final byte[] oneByteBuf = new byte[1];
   private final CryptoCodec codec;
   private final Encryptor encryptor;
+  private final int bufferSize;
   
   /**
    * Input data buffer. The data starts at inBuffer.position() and ends at 
@@ -86,17 +83,16 @@ public class CryptoOutputStream extends FilterOutputStream implements
       int bufferSize, byte[] key, byte[] iv, long streamOffset) 
       throws IOException {
     super(out);
-    Preconditions.checkArgument(bufferSize >= MIN_BUFFER_SIZE, 
-        "Minimum value of buffer size is 512.");
-    this.key = key;
-    this.initIV = iv;
-    this.iv = iv.clone();
-    inBuffer = ByteBuffer.allocateDirect(bufferSize);
-    outBuffer = ByteBuffer.allocateDirect(bufferSize);
-    this.streamOffset = streamOffset;
+    this.bufferSize = CryptoStreamUtils.checkBufferSize(codec, bufferSize);
     this.codec = codec;
+    this.key = key.clone();
+    this.initIV = iv.clone();
+    this.iv = iv.clone();
+    inBuffer = ByteBuffer.allocateDirect(this.bufferSize);
+    outBuffer = ByteBuffer.allocateDirect(this.bufferSize);
+    this.streamOffset = streamOffset;
     try {
-      encryptor = codec.getEncryptor();
+      encryptor = codec.createEncryptor();
     } catch (GeneralSecurityException e) {
       throw new IOException(e);
     }
@@ -110,7 +106,8 @@ public class CryptoOutputStream extends FilterOutputStream implements
   
   public CryptoOutputStream(OutputStream out, CryptoCodec codec, 
       byte[] key, byte[] iv, long streamOffset) throws IOException {
-    this(out, codec, getBufferSize(codec.getConf()), key, iv, streamOffset);
+    this(out, codec, CryptoStreamUtils.getBufferSize(codec.getConf()), 
+        key, iv, streamOffset);
   }
   
   public OutputStream getWrappedStream() {
@@ -195,9 +192,7 @@ public class CryptoOutputStream extends FilterOutputStream implements
     }
   }
   
-  /**
-   * Update the {@link #encryptor}: calculate counter and {@link #padding}.
-   */
+  /** Update the {@link #encryptor}: calculate counter and {@link #padding}. */
   private void updateEncryptor() throws IOException {
     final long counter = streamOffset / codec.getAlgorithmBlockSize();
     padding = (byte)(streamOffset % codec.getAlgorithmBlockSize());
@@ -209,7 +204,7 @@ public class CryptoOutputStream extends FilterOutputStream implements
   private byte[] tmpBuf;
   private byte[] getTmpBuf() {
     if (tmpBuf == null) {
-      tmpBuf = new byte[outBuffer.capacity()];
+      tmpBuf = new byte[bufferSize];
     }
     return tmpBuf;
   }
@@ -223,16 +218,6 @@ public class CryptoOutputStream extends FilterOutputStream implements
     super.close();
     freeBuffers();
     closed = true;
-  }
-  
-  /** Forcibly free the direct buffer. */
-  private void freeBuffers() {
-    final sun.misc.Cleaner inBufferCleaner =
-        ((sun.nio.ch.DirectBuffer) inBuffer).cleaner();
-    inBufferCleaner.clean();
-    final sun.misc.Cleaner outBufferCleaner =
-        ((sun.nio.ch.DirectBuffer) outBuffer).cleaner();
-    outBufferCleaner.clean();
   }
   
   /**
@@ -285,8 +270,9 @@ public class CryptoOutputStream extends FilterOutputStream implements
     }
   }
   
-  private static int getBufferSize(Configuration conf) {
-    return conf.getInt(HADOOP_SECURITY_CRYPTO_BUFFER_SIZE_KEY, 
-        HADOOP_SECURITY_CRYPTO_BUFFER_SIZE_DEFAULT);
+  /** Forcibly free the direct buffers. */
+  private void freeBuffers() {
+    CryptoStreamUtils.freeDB(inBuffer);
+    CryptoStreamUtils.freeDB(outBuffer);
   }
 }

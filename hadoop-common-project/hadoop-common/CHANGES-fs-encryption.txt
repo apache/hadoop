@@ -12,7 +12,10 @@ fs-encryption (Unreleased)
     interfaces. (Yi Liu and Charles Lamb)
 
     HADOOP-10628. Javadoc and few code style improvement for Crypto
-    input and output streams. (yliu via clamb)
+    input and output streams. (Yi Liu via clamb)
+
+    HADOOP-10632. Minor improvements to Crypto input and output streams. 
+    (Yi Liu)
 
   OPTIMIZATIONS
 

@@ -17,15 +17,12 @@
  */
 package org.apache.hadoop.crypto;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import com.google.common.base.Preconditions;
 
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class AESCTRCryptoCodec extends CryptoCodec {
   /**
@@ -33,6 +30,7 @@ public abstract class AESCTRCryptoCodec extends CryptoCodec {
    * @see http://en.wikipedia.org/wiki/Advanced_Encryption_Standard
    */
   private static final int AES_BLOCK_SIZE = 16;
+  private static final int CTR_OFFSET = 8;
 
   @Override
   public int getAlgorithmBlockSize() {
@@ -48,10 +46,23 @@ public abstract class AESCTRCryptoCodec extends CryptoCodec {
     Preconditions.checkArgument(initIV.length == AES_BLOCK_SIZE);
     Preconditions.checkArgument(IV.length == AES_BLOCK_SIZE);
     
-    final ByteBuffer buf = ByteBuffer.wrap(IV);
-    buf.put(initIV);
-    buf.order(ByteOrder.BIG_ENDIAN);
-    counter += buf.getLong(AES_BLOCK_SIZE - 8);
-    buf.putLong(AES_BLOCK_SIZE - 8, counter);
+    System.arraycopy(initIV, 0, IV, 0, CTR_OFFSET);
+    long l = (initIV[CTR_OFFSET + 0] << 56)
+        + ((initIV[CTR_OFFSET + 1] & 0xFF) << 48)
+        + ((initIV[CTR_OFFSET + 2] & 0xFF) << 40)
+        + ((initIV[CTR_OFFSET + 3] & 0xFF) << 32)
+        + ((initIV[CTR_OFFSET + 4] & 0xFF) << 24)
+        + ((initIV[CTR_OFFSET + 5] & 0xFF) << 16)
+        + ((initIV[CTR_OFFSET + 6] & 0xFF) << 8)
+        + (initIV[CTR_OFFSET + 7] & 0xFF);
+    l += counter;
+    IV[CTR_OFFSET + 0] = (byte) (l >>> 56);
+    IV[CTR_OFFSET + 1] = (byte) (l >>> 48);
+    IV[CTR_OFFSET + 2] = (byte) (l >>> 40);
+    IV[CTR_OFFSET + 3] = (byte) (l >>> 32);
+    IV[CTR_OFFSET + 4] = (byte) (l >>> 24);
+    IV[CTR_OFFSET + 5] = (byte) (l >>> 16);
+    IV[CTR_OFFSET + 6] = (byte) (l >>> 8);
+    IV[CTR_OFFSET + 7] = (byte) (l);
   }
 }

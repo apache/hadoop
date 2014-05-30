@@ -29,7 +29,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY
 /**
  * Crypto codec class, encapsulates encryptor/decryptor pair.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class CryptoCodec implements Configurable {
   
@@ -48,21 +48,21 @@ public abstract class CryptoCodec implements Configurable {
   public abstract int getAlgorithmBlockSize();
 
   /**
-   * Get an {@link #org.apache.hadoop.crypto.Encryptor}. 
+   * Create a {@link org.apache.hadoop.crypto.Encryptor}. 
    * @return Encryptor the encryptor
    */
-  public abstract Encryptor getEncryptor() throws GeneralSecurityException;
+  public abstract Encryptor createEncryptor() throws GeneralSecurityException;
   
   /**
-   * Get a {@link #org.apache.hadoop.crypto.Decryptor}.
+   * Create a {@link org.apache.hadoop.crypto.Decryptor}.
    * @return Decryptor the decryptor
    */
-  public abstract Decryptor getDecryptor() throws GeneralSecurityException;
+  public abstract Decryptor createDecryptor() throws GeneralSecurityException;
   
   /**
    * This interface is only for Counter (CTR) mode. Generally the Encryptor
    * or Decryptor calculates the IV and maintain encryption context internally. 
-   * For example a {@link #javax.crypto.Cipher} will maintain its encryption 
+   * For example a {@link javax.crypto.Cipher} will maintain its encryption 
    * context internally when we do encryption/decryption using the 
    * Cipher#update interface. 
    * <p/>
