@@ -70,6 +70,6 @@ public class TestSubViews {
     out.flush();
     verify(out).print("sub1 text");
     verify(out).print("sub2 text");
-    verify(out, times(15)).println(); // test inline transition across views
+    verify(out, times(16)).println(); // test inline transition across views
   }
 }

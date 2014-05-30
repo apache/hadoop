@@ -171,6 +171,9 @@ Release 2.5.0 - UNRELEASED
     that both Timeline Server and client can access them. (Zhijie Shen via
     vinodkv)
 
+    YARN-1868. YARN status web ui does not show correctly in IE 11.
+    (Chuan Liu via cnauroth)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
