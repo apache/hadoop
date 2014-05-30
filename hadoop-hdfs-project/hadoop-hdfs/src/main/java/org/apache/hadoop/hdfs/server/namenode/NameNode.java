@@ -27,6 +27,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
@@ -269,6 +271,9 @@ public class NameNode implements NameNodeStatusMXBean {
   private List<ServicePlugin> plugins;
   
   private NameNodeRpcServer rpcServer;
+
+  /* The KeyProvider, if any. */
+  private KeyProvider provider = null;
 
   private JvmPauseMonitor pauseMonitor;
   private ObjectName nameNodeStatusBeanName;
@@ -581,6 +586,7 @@ public class NameNode implements NameNodeStatusMXBean {
       startHttpServer(conf);
     }
     loadNamesystem(conf);
+    initializeKeyProvider(conf);
 
     rpcServer = createRpcServer(conf);
     if (clientNamenodeAddress == null) {
@@ -696,6 +702,36 @@ public class NameNode implements NameNodeStatusMXBean {
       if (httpServer != null) httpServer.stop();
     } catch (Exception e) {
       LOG.error("Exception while stopping httpserver", e);
+    }
+  }
+
+  private void initializeKeyProvider(final Configuration conf) {
+    try {
+      final List<KeyProvider> providers = KeyProviderFactory.getProviders(conf);
+      if (providers == null) {
+        return;
+      }
+
+      if (providers.size() == 0) {
+        LOG.info("No KeyProviders found.");
+        return;
+      }
+
+      if (providers.size() > 1) {
+        final String err =
+            "Multiple KeyProviders found. Only one is permitted.";
+        LOG.error(err);
+        throw new RuntimeException(err);
+      }
+      provider = providers.get(0);
+      if (provider.isTransient()) {
+        final String err =
+            "A KeyProvider was found but it is a transient provider.";
+        LOG.error(err);
+        throw new RuntimeException(err);
+      }
+    } catch (IOException e) {
+      LOG.error("Exception while initializing KeyProvider", e);
     }
   }
 

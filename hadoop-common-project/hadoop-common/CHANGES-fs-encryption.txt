@@ -6,6 +6,8 @@ fs-encryption (Unreleased)
 
   NEW FEATURES
 
+    HDFS-6388. HDFS integration with KeyProvider. (clamb)
+
   IMPROVEMENTS
 
     HADOOP-10603. Crypto input and output streams implementing Hadoop stream
