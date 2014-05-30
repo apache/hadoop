@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.lib.server.BaseService;
 import org.apache.hadoop.lib.server.ServiceException;
 import org.apache.hadoop.lib.service.FileSystemAccess;
@@ -395,6 +396,10 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
     Configuration conf = new Configuration(true);
     ConfigurationUtils.copy(serviceHadoopConf, conf);
     conf.setBoolean(FILE_SYSTEM_SERVICE_CREATED, true);
+
+    // Force-clear server-side umask to make HttpFS match WebHDFS behavior
+    conf.set(FsPermission.UMASK_LABEL, "000");
+
     return conf;
   }
 
