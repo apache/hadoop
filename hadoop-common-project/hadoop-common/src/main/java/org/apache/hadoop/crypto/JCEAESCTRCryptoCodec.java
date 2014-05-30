@@ -20,6 +20,7 @@ package org.apache.hadoop.crypto;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
+import java.security.SecureRandom;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
@@ -31,6 +32,8 @@ import org.apache.hadoop.conf.Configuration;
 import com.google.common.base.Preconditions;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_SECURE_RANDOM_ALGORITHM_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_SECURE_RANDOM_ALGORITHM_DEFAULT;
 
 /**
  * Implement the AES-CTR crypto codec using JCE provider.
@@ -39,6 +42,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY
 public class JCEAESCTRCryptoCodec extends AESCTRCryptoCodec {
   private Configuration conf;
   private String provider;
+  private SecureRandom random;
 
   public JCEAESCTRCryptoCodec() {
   }
@@ -52,6 +56,16 @@ public class JCEAESCTRCryptoCodec extends AESCTRCryptoCodec {
   public void setConf(Configuration conf) {
     this.conf = conf;
     provider = conf.get(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY);
+    final String secureRandomAlg = conf.get(
+        HADOOP_SECURITY_SECURE_RANDOM_ALGORITHM_KEY, 
+        HADOOP_SECURITY_SECURE_RANDOM_ALGORITHM_DEFAULT);
+    try {
+      random = (provider != null) ? 
+          SecureRandom.getInstance(secureRandomAlg, provider) : 
+            SecureRandom.getInstance(secureRandomAlg);
+    } catch (GeneralSecurityException e) {
+      throw new IllegalArgumentException(e);
+    }
   }
 
   @Override
@@ -63,6 +77,13 @@ public class JCEAESCTRCryptoCodec extends AESCTRCryptoCodec {
   public Decryptor createDecryptor() throws GeneralSecurityException {
     return new JCEAESCTRCipher(Cipher.DECRYPT_MODE, provider);
   }
+  
+  @Override
+  public byte[] generateSecureRandom(int bytes) {
+    final byte[] data = new byte[bytes];
+    random.nextBytes(data);
+    return data;
+  }  
   
   private static class JCEAESCTRCipher implements Encryptor, Decryptor {
     private final Cipher cipher;

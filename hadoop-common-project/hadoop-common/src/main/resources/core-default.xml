@@ -1384,4 +1384,12 @@
     The buffer size used by CryptoInputStream and CryptoOutputStream. 
   </description>
 </property>
+
+<property>
+  <name>hadoop.security.secure.random.algorithm</name>
+  <value></value>
+  <description>
+    The secure random algorithm. 
+  </description>
+</property>
 </configuration>

@@ -79,4 +79,11 @@ public abstract class CryptoCodec implements Configurable {
    * @param IV the IV for input stream position
    */
   public abstract void calculateIV(byte[] initIV, long counter, byte[] IV);
+  
+  /**
+   * Generate secure random.
+   * @param bytes length of the secure random
+   * @return byte[] the secure random
+   */
+  public abstract byte[] generateSecureRandom(int bytes);
 }

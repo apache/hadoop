@@ -17,6 +17,8 @@ fs-encryption (Unreleased)
     HADOOP-10632. Minor improvements to Crypto input and output streams. 
     (Yi Liu)
 
+    HADOOP-10635. Add a method to CryptoCodec to generate SRNs for IV. (Yi Liu)
+
   OPTIMIZATIONS
 
   BUG FIXES

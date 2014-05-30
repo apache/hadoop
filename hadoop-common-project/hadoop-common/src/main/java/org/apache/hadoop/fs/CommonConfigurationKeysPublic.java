@@ -296,5 +296,11 @@ public class CommonConfigurationKeysPublic {
   /** Class to override Impersonation provider */
   public static final String  HADOOP_SECURITY_IMPERSONATION_PROVIDER_CLASS =
     "hadoop.security.impersonation.provider.class";
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_SECURITY_SECURE_RANDOM_ALGORITHM_KEY = 
+      "hadoop.security.secure.random.algorithm";
+  /** Defalt value for HADOOP_SECURITY_SECURE_RANDOM_ALGORITHM_KEY */
+  public static final String HADOOP_SECURITY_SECURE_RANDOM_ALGORITHM_DEFAULT = 
+      "SHA1PRNG";
 }
 
