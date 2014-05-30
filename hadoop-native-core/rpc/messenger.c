@@ -31,7 +31,7 @@
 #define msgr_log_info(msgr, fmt, ...) \
     fprintf(stderr, "INFO: msgr %p: " fmt, msgr, __VA_ARGS__)
 #define msgr_log_debug(msgr, fmt, ...) \
-    fprintf(stderr, "DBUG: msgr %p: " fmt, msgr, __VA_ARGS__)
+    fprintf(stderr, "DEBUG: msgr %p: " fmt, msgr, __VA_ARGS__)
 
 struct hrpc_messenger_builder {
 };

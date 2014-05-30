@@ -35,7 +35,7 @@
 #define reactor_log_info(msgr, fmt, ...) \
     fprintf(stderr, "INFO: reactor %p: " fmt, reactor, __VA_ARGS__)
 #define reactor_log_debug(msgr, fmt, ...) \
-    fprintf(stderr, "DBUG: reactor %p: " fmt, reactor, __VA_ARGS__)
+    fprintf(stderr, "DEBUG: reactor %p: " fmt, reactor, __VA_ARGS__)
 
 RB_GENERATE(hrpc_conns, hrpc_conn, entry, hrpc_conn_compare);
 

@@ -47,7 +47,7 @@ struct hadoop_err *hadoop_lerr_alloc(int code, const char *fmt, ...)
  *
  * @return              A new error message.  This will never be NULL.
  */
-struct hadoop_err *hadoop_uverr_alloc(int cod, const char *fmt, ...)
+struct hadoop_err *hadoop_uverr_alloc(int code, const char *fmt, ...)
     __attribute__((format(printf, 2, 3)));
 
 /**
