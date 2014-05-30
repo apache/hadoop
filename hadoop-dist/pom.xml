@@ -52,6 +52,11 @@
       <artifactId>hadoop-yarn-api</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-native-core</artifactId>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -122,6 +127,7 @@
                       run cp -r $ROOT/hadoop-yarn-project/target/hadoop-yarn-project-${project.version}/* .
                       run cp -r $ROOT/hadoop-mapreduce-project/target/hadoop-mapreduce-${project.version}/* .
                       run cp -r $ROOT/hadoop-tools/hadoop-tools-dist/target/hadoop-tools-dist-${project.version}/* .
+                      run cp -r $ROOT/hadoop-native-core/target/hadoop-native-core-${project.version}/* .
                       echo
                       echo "Hadoop dist layout available at: ${project.build.directory}/hadoop-${project.version}"
                       echo

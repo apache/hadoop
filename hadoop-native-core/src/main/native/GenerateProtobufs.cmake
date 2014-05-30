@@ -53,7 +53,7 @@ function(DECLARE_PROTOS OUTPUT_SRC_LIST GENERATOR_DIR INCLUDE_DIRS)
     set(${OUTPUT_SRC_LIST} ${CFILES} ${HFILES} PARENT_SCOPE)
 endfunction()
 
-get_filename_component(R "${PROJECT_SOURCE_DIR}/.." REALPATH)
+get_filename_component(R "${PROJECT_SOURCE_DIR}/../../../../" REALPATH)
 
 # Common protobuf files.  In general, the other subprojects such as HDFS and
 # YARN may rely on definitions in these protobuf files.
