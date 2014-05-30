@@ -336,6 +336,9 @@ Trunk (Unreleased)
 
     HADOOP-10645. TestKMS fails because race condition writing acl files. (tucu)
 
+    HADOOP-10611. KMS, keyVersion name should not be assumed to be 
+    keyName@versionNumber. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
