@@ -692,6 +692,35 @@ public class UserGroupInformation {
     }
   }
 
+   /**
+   * Create a UserGroupInformation from a Subject with Kerberos principal.
+   *
+   * @param user                The KerberosPrincipal to use in UGI
+   *
+   * @throws IOException        if the kerberos login fails
+   */
+  public static UserGroupInformation getUGIFromSubject(Subject subject)
+      throws IOException {
+    if (subject == null) {
+      throw new IOException("Subject must not be null");
+    }
+
+    if (subject.getPrincipals(KerberosPrincipal.class).isEmpty()) {
+      throw new IOException("Provided Subject must contain a KerberosPrincipal");
+    }
+
+    KerberosPrincipal principal =
+        subject.getPrincipals(KerberosPrincipal.class).iterator().next();
+
+    User ugiUser = new User(principal.getName(),
+        AuthenticationMethod.KERBEROS, null);
+    subject.getPrincipals().add(ugiUser);
+    UserGroupInformation ugi = new UserGroupInformation(subject);
+    ugi.setLogin(null);
+    ugi.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
+    return ugi;
+  }
+
   /**
    * Get the currently logged in user.
    * @return the logged in user
@@ -1097,6 +1126,14 @@ public class UserGroupInformation {
   @InterfaceStability.Evolving
   public synchronized static boolean isLoginKeytabBased() throws IOException {
     return getLoginUser().isKeytab;
+  }
+
+  /**
+   * Did the login happen via ticket cache
+   * @return true or false
+   */
+  public static boolean isLoginTicketBased()  throws IOException {
+    return getLoginUser().isKrbTkt;
   }
 
   /**

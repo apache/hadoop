@@ -652,7 +652,7 @@ public class Client {
               // try re-login
               if (UserGroupInformation.isLoginKeytabBased()) {
                 UserGroupInformation.getLoginUser().reloginFromKeytab();
-              } else {
+              } else if (UserGroupInformation.isLoginTicketBased()) {
                 UserGroupInformation.getLoginUser().reloginFromTicketCache();
               }
               // have granularity of milliseconds
