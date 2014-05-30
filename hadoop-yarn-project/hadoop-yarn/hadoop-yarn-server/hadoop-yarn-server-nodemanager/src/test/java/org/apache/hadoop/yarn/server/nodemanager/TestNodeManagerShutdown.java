@@ -109,6 +109,36 @@ public class TestNodeManagerShutdown {
   }
   
   @Test
+  public void testStateStoreRemovalOnDecommission() throws IOException {
+    final File recoveryDir = new File(basedir, "nm-recovery");
+    nm = new TestNodeManager();
+    YarnConfiguration conf = createNMConfig();
+    conf.setBoolean(YarnConfiguration.NM_RECOVERY_ENABLED, true);
+    conf.set(YarnConfiguration.NM_RECOVERY_DIR, recoveryDir.getAbsolutePath());
+
+    // verify state store is not removed on normal shutdown
+    nm.init(conf);
+    nm.start();
+    Assert.assertTrue(recoveryDir.exists());
+    Assert.assertTrue(recoveryDir.isDirectory());
+    nm.stop();
+    nm = null;
+    Assert.assertTrue(recoveryDir.exists());
+    Assert.assertTrue(recoveryDir.isDirectory());
+
+    // verify state store is removed on decommissioned shutdown
+    nm = new TestNodeManager();
+    nm.init(conf);
+    nm.start();
+    Assert.assertTrue(recoveryDir.exists());
+    Assert.assertTrue(recoveryDir.isDirectory());
+    nm.getNMContext().setDecommissioned(true);
+    nm.stop();
+    nm = null;
+    Assert.assertFalse(recoveryDir.exists());
+  }
+
+  @Test
   public void testKillContainersOnShutdown() throws IOException,
       YarnException {
     nm = new TestNodeManager();
