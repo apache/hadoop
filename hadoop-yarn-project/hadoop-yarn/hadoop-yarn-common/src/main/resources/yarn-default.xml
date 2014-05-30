@@ -309,14 +309,17 @@
   <property>
     <description>Number of times RM tries to connect to ZooKeeper.</description>
     <name>yarn.resourcemanager.zk-num-retries</name>
-    <value>500</value>
+    <value>1000</value>
   </property>
 
   <property>
     <description>Retry interval in milliseconds when connecting to ZooKeeper.
+      When HA is enabled, the value here is NOT used. It is generated
+      automatically from yarn.resourcemanager.zk-timeout-ms and
+      yarn.resourcemanager.zk-num-retries.
     </description>
     <name>yarn.resourcemanager.zk-retry-interval-ms</name>
-    <value>2000</value>
+    <value>1000</value>
   </property>
 
   <property>
