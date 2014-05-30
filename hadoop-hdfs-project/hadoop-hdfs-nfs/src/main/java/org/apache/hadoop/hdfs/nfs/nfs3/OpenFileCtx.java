@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
 import org.apache.hadoop.hdfs.nfs.nfs3.WriteCtx.DataState;
 import org.apache.hadoop.io.BytesWritable.Comparator;
 import org.apache.hadoop.io.IOUtils;
@@ -823,7 +824,7 @@ class OpenFileCtx {
    */
   public synchronized boolean streamCleanup(long fileId, long streamTimeout) {
     Preconditions
-        .checkState(streamTimeout >= Nfs3Constant.OUTPUT_STREAM_TIMEOUT_MIN_DEFAULT);
+        .checkState(streamTimeout >= NfsConfigKeys.DFS_NFS_STREAM_TIMEOUT_MIN_DEFAULT);
     if (!activeState) {
       return true;
     }

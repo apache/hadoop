@@ -17,11 +17,8 @@
  */
 package org.apache.hadoop.nfs;
 
-import org.junit.Assert;
-
-import org.apache.hadoop.nfs.AccessPrivilege;
-import org.apache.hadoop.nfs.NfsExports;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestNfsExports {
@@ -32,9 +29,9 @@ public class TestNfsExports {
   private final String hostname2 = "a.b.org";
   
   private static final long ExpirationPeriod = 
-      Nfs3Constant.EXPORTS_CACHE_EXPIRYTIME_MILLIS_DEFAULT * 1000 * 1000;
+      Nfs3Constant.NFS_EXPORTS_CACHE_EXPIRYTIME_MILLIS_DEFAULT * 1000 * 1000;
   
-  private static final int CacheSize = Nfs3Constant.EXPORTS_CACHE_SIZE_DEFAULT;
+  private static final int CacheSize = Nfs3Constant.NFS_EXPORTS_CACHE_SIZE_DEFAULT;
   private static final long NanosPerMillis = 1000000;
 
   @Test

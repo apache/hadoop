@@ -21,10 +21,11 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
 import org.apache.hadoop.hdfs.nfs.nfs3.OpenFileCtx.COMMIT_STATUS;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.ipc.RemoteException;
@@ -50,7 +51,7 @@ import com.google.common.annotations.VisibleForTesting;
 public class WriteManager {
   public static final Log LOG = LogFactory.getLog(WriteManager.class);
 
-  private final Configuration config;
+  private final NfsConfiguration config;
   private final IdUserGroup iug;
  
   private AsyncDataService asyncDataService;
@@ -78,19 +79,19 @@ public class WriteManager {
     return fileContextCache.put(h, ctx);
   }
   
-  WriteManager(IdUserGroup iug, final Configuration config) {
+  WriteManager(IdUserGroup iug, final NfsConfiguration config) {
     this.iug = iug;
     this.config = config;
-    streamTimeout = config.getLong(Nfs3Constant.OUTPUT_STREAM_TIMEOUT,
-        Nfs3Constant.OUTPUT_STREAM_TIMEOUT_DEFAULT);
+    streamTimeout = config.getLong(NfsConfigKeys.DFS_NFS_STREAM_TIMEOUT_KEY,
+        NfsConfigKeys.DFS_NFS_STREAM_TIMEOUT_DEFAULT);
     LOG.info("Stream timeout is " + streamTimeout + "ms.");
-    if (streamTimeout < Nfs3Constant.OUTPUT_STREAM_TIMEOUT_MIN_DEFAULT) {
+    if (streamTimeout < NfsConfigKeys.DFS_NFS_STREAM_TIMEOUT_MIN_DEFAULT) {
       LOG.info("Reset stream timeout to minimum value "
-          + Nfs3Constant.OUTPUT_STREAM_TIMEOUT_MIN_DEFAULT + "ms.");
-      streamTimeout = Nfs3Constant.OUTPUT_STREAM_TIMEOUT_MIN_DEFAULT;
+          + NfsConfigKeys.DFS_NFS_STREAM_TIMEOUT_MIN_DEFAULT + "ms.");
+      streamTimeout = NfsConfigKeys.DFS_NFS_STREAM_TIMEOUT_MIN_DEFAULT;
     }
-    maxStreams = config.getInt(Nfs3Constant.MAX_OPEN_FILES,
-        Nfs3Constant.MAX_OPEN_FILES_DEFAULT);
+    maxStreams = config.getInt(NfsConfigKeys.DFS_NFS_MAX_OPEN_FILES_KEY,
+        NfsConfigKeys.DFS_NFS_MAX_OPEN_FILES_DEFAULT);
     LOG.info("Maximum open streams is "+ maxStreams);
     this.fileContextCache = new OpenFileCtxCache(config, streamTimeout);
   }
@@ -171,8 +172,8 @@ public class WriteManager {
       }
 
       // Add open stream
-      String writeDumpDir = config.get(Nfs3Constant.FILE_DUMP_DIR_KEY,
-          Nfs3Constant.FILE_DUMP_DIR_DEFAULT);
+      String writeDumpDir = config.get(NfsConfigKeys.DFS_NFS_FILE_DUMP_DIR_KEY,
+          NfsConfigKeys.DFS_NFS_FILE_DUMP_DIR_DEFAULT);
       openFileCtx = new OpenFileCtx(fos, latestAttr, writeDumpDir + "/"
           + fileHandle.getFileId(), dfsClient, iug);
 

@@ -23,7 +23,8 @@ import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
 import org.apache.hadoop.hdfs.nfs.nfs3.Nfs3Utils;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
@@ -155,10 +156,10 @@ public class TestOutOfOrderWrite {
     Arrays.fill(data3, (byte) 9);
 
     // NFS3 Create request
-    Configuration conf = new Configuration();
+    NfsConfiguration conf = new NfsConfiguration();
     WriteClient client = new WriteClient("localhost", conf.getInt(
-        Nfs3Constant.NFS3_SERVER_PORT, Nfs3Constant.NFS3_SERVER_PORT_DEFAULT),
-        create(), false);
+        NfsConfigKeys.DFS_NFS_SERVER_PORT_KEY,
+        NfsConfigKeys.DFS_NFS_SERVER_PORT_DEFAULT), create(), false);
     client.run();
 
     while (handle == null) {

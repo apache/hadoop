@@ -199,17 +199,19 @@ public class TestIdUserGroup {
 
   @Test
   public void testUserUpdateSetting() throws IOException {
-    IdUserGroup iug = new IdUserGroup();
-    assertEquals(iug.getTimeout(), IdUserGroup.TIMEOUT_DEFAULT);
+    IdUserGroup iug = new IdUserGroup(new Configuration());
+    assertEquals(iug.getTimeout(),
+        Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_DEFAULT);
 
     Configuration conf = new Configuration();
-    conf.setLong(IdUserGroup.NFS_USERUPDATE_MILLY, 0);
+    conf.setLong(Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_KEY, 0);
     iug = new IdUserGroup(conf);
-    assertEquals(iug.getTimeout(), IdUserGroup.TIMEOUT_MIN);
+    assertEquals(iug.getTimeout(), Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_MIN);
 
-    conf.setLong(IdUserGroup.NFS_USERUPDATE_MILLY,
-        IdUserGroup.TIMEOUT_DEFAULT * 2);
+    conf.setLong(Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_KEY,
+        Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_DEFAULT * 2);
     iug = new IdUserGroup(conf);
-    assertEquals(iug.getTimeout(), IdUserGroup.TIMEOUT_DEFAULT * 2);
+    assertEquals(iug.getTimeout(),
+        Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_DEFAULT * 2);
   }
 }
