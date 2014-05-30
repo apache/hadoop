@@ -519,6 +519,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10639. FileBasedKeyStoresFactory initialization is not using default
     for SSL_REQUIRE_CLIENT_CERT_KEY. (tucu)
 
+    HADOOP-10638. Updating hadoop-daemon.sh to work as expected when nfs is
+    started as a privileged user. (Manikandan Narayanaswamy via atm)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
