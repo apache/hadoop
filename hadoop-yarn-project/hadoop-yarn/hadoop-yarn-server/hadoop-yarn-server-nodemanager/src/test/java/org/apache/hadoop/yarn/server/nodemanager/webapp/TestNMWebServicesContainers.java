@@ -122,7 +122,8 @@ public class TestNMWebServicesContainers extends JerseyTest {
       healthChecker.init(conf);
       dirsHandler = healthChecker.getDiskHandler();
       aclsManager = new ApplicationACLsManager(conf);
-      nmContext = new NodeManager.NMContext(null, null, dirsHandler, aclsManager) {
+      nmContext = new NodeManager.NMContext(null, null, dirsHandler,
+          aclsManager, null) {
         public NodeId getNodeId() {
           return NodeId.newInstance("testhost.foo.com", 8042);
         };

@@ -16,26 +16,28 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
+package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
-import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalResourceRequest;
 
-/**
- * Component tracking resources all of the same {@link LocalResourceVisibility}
- * 
- */
-interface LocalResourcesTracker
-    extends EventHandler<ResourceEvent>, Iterable<LocalizedResource> {
+public class ResourceRecoveredEvent extends ResourceEvent {
 
-  boolean remove(LocalizedResource req, DeletionService delService);
+  private final Path localPath;
+  private final long size;
 
-  Path getPathForLocalization(LocalResourceRequest req, Path localDirPath);
+  public ResourceRecoveredEvent(LocalResourceRequest rsrc, Path localPath,
+      long size) {
+    super(rsrc, ResourceEventType.RECOVERED);
+    this.localPath = localPath;
+    this.size = size;
+  }
 
-  String getUser();
+  public Path getLocalPath() {
+    return localPath;
+  }
 
-  LocalizedResource getLocalizedResource(LocalResourceRequest request);
+  public long getSize() {
+    return size;
+  }
 }
