@@ -373,6 +373,18 @@
   </property>
 
   <property>
+    <description>
+        Specify the auths to be used for the ACL's specified in both the
+        yarn.resourcemanager.zk-acl and
+        yarn.resourcemanager.zk-state-store.root-node.acl properties.  This
+        takes a comma-separated list of authentication mechanisms, each of the
+        form 'scheme:auth' (the same syntax used for the 'addAuth' command in
+        the ZK CLI).
+    </description>
+    <name>yarn.resourcemanager.zk-auth</name>
+  </property>
+
+  <property>
     <description>URI pointing to the location of the FileSystem path where
     RM state will be stored. This must be supplied when using
     org.apache.hadoop.yarn.server.resourcemanager.recovery.FileSystemRMStateStore
