@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.nfs.nfs3;
 import java.io.IOException;
 import java.net.DatagramSocket;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
 import org.apache.hadoop.hdfs.nfs.mount.Mountd;
 import org.apache.hadoop.nfs.nfs3.Nfs3Base;
 import org.apache.hadoop.util.StringUtils;
@@ -36,16 +36,11 @@ import com.google.common.annotations.VisibleForTesting;
 public class Nfs3 extends Nfs3Base {
   private Mountd mountd;
   
-  static {
-    Configuration.addDefaultResource("hdfs-default.xml");
-    Configuration.addDefaultResource("hdfs-site.xml");
-  }
-  
-  public Nfs3(Configuration conf) throws IOException {
+  public Nfs3(NfsConfiguration conf) throws IOException {
     this(conf, null, true);
   }
   
-  public Nfs3(Configuration conf, DatagramSocket registrationSocket,
+  public Nfs3(NfsConfiguration conf, DatagramSocket registrationSocket,
       boolean allowInsecurePorts) throws IOException {
     super(new RpcProgramNfs3(conf, registrationSocket, allowInsecurePorts), conf);
     mountd = new Mountd(conf, registrationSocket, allowInsecurePorts);
@@ -64,11 +59,11 @@ public class Nfs3 extends Nfs3Base {
   static void startService(String[] args,
       DatagramSocket registrationSocket) throws IOException {
     StringUtils.startupShutdownMessage(Nfs3.class, args, LOG);
-    Configuration conf = new Configuration();
+    NfsConfiguration conf = new NfsConfiguration();
     boolean allowInsecurePorts = conf.getBoolean(
-        DFSConfigKeys.DFS_NFS_ALLOW_INSECURE_PORTS_KEY,
-        DFSConfigKeys.DFS_NFS_ALLOW_INSECURE_PORTS_DEFAULT);
-    final Nfs3 nfsServer = new Nfs3(new Configuration(), registrationSocket,
+        NfsConfigKeys.DFS_NFS_ALLOW_INSECURE_PORTS_KEY,
+        NfsConfigKeys.DFS_NFS_ALLOW_INSECURE_PORTS_DEFAULT);
+    final Nfs3 nfsServer = new Nfs3(conf, registrationSocket,
         allowInsecurePorts);
     nfsServer.startServiceInternal(true);
   }

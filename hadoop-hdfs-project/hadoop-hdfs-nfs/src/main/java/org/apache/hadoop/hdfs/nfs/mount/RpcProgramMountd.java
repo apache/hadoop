@@ -16,9 +16,6 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdfs.nfs.mount;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NFS_KEYTAB_FILE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NFS_KERBEROS_PRINCIPAL_KEY;
-
 import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -29,8 +26,9 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.mount.MountEntry;
@@ -39,7 +37,6 @@ import org.apache.hadoop.mount.MountResponse;
 import org.apache.hadoop.nfs.AccessPrivilege;
 import org.apache.hadoop.nfs.NfsExports;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
-import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
 import org.apache.hadoop.nfs.nfs3.Nfs3Status;
 import org.apache.hadoop.oncrpc.RpcAcceptedReply;
 import org.apache.hadoop.oncrpc.RpcCall;
@@ -66,9 +63,7 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
   public static final int VERSION_1 = 1;
   public static final int VERSION_2 = 2;
   public static final int VERSION_3 = 3;
-  public static final int PORT = 4242;
 
-  // Need DFSClient for branch-1 to get ExtendedHdfsFileStatus
   private final DFSClient dfsClient;
   
   /** Synchronized list */
@@ -79,19 +74,22 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
   
   private final NfsExports hostsMatcher;
 
-  public RpcProgramMountd(Configuration config, DatagramSocket registrationSocket,
-      boolean allowInsecurePorts) throws IOException {
+  public RpcProgramMountd(NfsConfiguration config,
+      DatagramSocket registrationSocket, boolean allowInsecurePorts)
+      throws IOException {
     // Note that RPC cache is not enabled
-    super("mountd", "localhost", config.getInt("nfs3.mountd.port", PORT),
-        PROGRAM, VERSION_1, VERSION_3, registrationSocket, allowInsecurePorts);
+    super("mountd", "localhost", config.getInt(
+        NfsConfigKeys.DFS_NFS_MOUNTD_PORT_KEY,
+        NfsConfigKeys.DFS_NFS_MOUNTD_PORT_DEFAULT), PROGRAM, VERSION_1,
+        VERSION_3, registrationSocket, allowInsecurePorts);
     exports = new ArrayList<String>();
-    exports.add(config.get(Nfs3Constant.EXPORT_POINT,
-        Nfs3Constant.EXPORT_POINT_DEFAULT));
+    exports.add(config.get(NfsConfigKeys.DFS_NFS_EXPORT_POINT_KEY,
+        NfsConfigKeys.DFS_NFS_EXPORT_POINT_DEFAULT));
     this.hostsMatcher = NfsExports.getInstance(config);
     this.mounts = Collections.synchronizedList(new ArrayList<MountEntry>());
     UserGroupInformation.setConfiguration(config);
-    SecurityUtil.login(config, DFS_NFS_KEYTAB_FILE_KEY,
-            DFS_NFS_KERBEROS_PRINCIPAL_KEY);
+    SecurityUtil.login(config, NfsConfigKeys.DFS_NFS_KEYTAB_FILE_KEY,
+        NfsConfigKeys.DFS_NFS_KERBEROS_PRINCIPAL_KEY);
     this.dfsClient = new DFSClient(NameNode.getAddress(config), config);
   }
   

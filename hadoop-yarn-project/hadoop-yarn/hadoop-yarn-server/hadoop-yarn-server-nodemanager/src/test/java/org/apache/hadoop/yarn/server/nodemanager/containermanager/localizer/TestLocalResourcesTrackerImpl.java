@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 
 import static org.mockito.Mockito.any;
 import static org.mockito.Matchers.isA;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -34,13 +35,17 @@ import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.impl.pb.LocalResourcePBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
+import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
@@ -52,10 +57,14 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceFailedLocalizationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceLocalizedEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceRecoveredEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceReleaseEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceRequestEvent;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 public class TestLocalResourcesTrackerImpl {
 
@@ -92,8 +101,8 @@ public class TestLocalResourcesTrackerImpl {
       localrsrc.put(req1, lr1);
       localrsrc.put(req2, lr2);
       LocalResourcesTracker tracker =
-          new LocalResourcesTrackerImpl(user, dispatcher, localrsrc, false,
-            conf);
+          new LocalResourcesTrackerImpl(user, null, dispatcher, localrsrc,
+              false, conf, new NMNullStateStoreService());
 
       ResourceEvent req11Event =
           new ResourceRequestEvent(req1, LocalResourceVisibility.PUBLIC, lc1);
@@ -176,7 +185,8 @@ public class TestLocalResourcesTrackerImpl {
       ConcurrentMap<LocalResourceRequest, LocalizedResource> localrsrc = new ConcurrentHashMap<LocalResourceRequest, LocalizedResource>();
       localrsrc.put(req1, lr1);
       LocalResourcesTracker tracker = new LocalResourcesTrackerImpl(user,
-          dispatcher, localrsrc, false, conf);
+          null, dispatcher, localrsrc, false, conf,
+          new NMNullStateStoreService());
 
       ResourceEvent req11Event = new ResourceRequestEvent(req1,
           LocalResourceVisibility.PUBLIC, lc1);
@@ -246,7 +256,8 @@ public class TestLocalResourcesTrackerImpl {
       ConcurrentMap<LocalResourceRequest, LocalizedResource> localrsrc =
           new ConcurrentHashMap<LocalResourceRequest, LocalizedResource>();
       LocalResourcesTracker tracker =
-          new LocalResourcesTrackerImpl(user, dispatcher, localrsrc, true, conf);
+          new LocalResourcesTrackerImpl(user, null, dispatcher, localrsrc,
+              true, conf, new NMNullStateStoreService());
 
       LocalResourceRequest lr =
           createLocalResourceRequest(user, 1, 1, LocalResourceVisibility.PUBLIC);
@@ -264,6 +275,7 @@ public class TestLocalResourcesTrackerImpl {
 
       // Container-1 requesting local resource.
       tracker.handle(reqEvent1);
+      dispatcher.await();
 
       // New localized Resource should have been added to local resource map
       // and the requesting container will be added to its waiting queue.
@@ -280,6 +292,7 @@ public class TestLocalResourcesTrackerImpl {
       ResourceEvent reqEvent2 =
           new ResourceRequestEvent(lr, LocalResourceVisibility.PRIVATE, lc2);
       tracker.handle(reqEvent2);
+      dispatcher.await();
 
       // Container 2 should have been added to the waiting queue of the local
       // resource
@@ -295,6 +308,7 @@ public class TestLocalResourcesTrackerImpl {
       LocalizedResource localizedResource = localrsrc.get(lr);
       
       tracker.handle(resourceFailedEvent);
+      dispatcher.await();
 
       // After receiving failed resource event; all waiting containers will be
       // notified with Container Resource Failed Event.
@@ -308,6 +322,7 @@ public class TestLocalResourcesTrackerImpl {
       // exception.
       ResourceReleaseEvent relEvent1 = new ResourceReleaseEvent(lr, cId1);
       tracker.handle(relEvent1);
+      dispatcher.await();
 
       // Container-3 now requests for the same resource. This request call
       // is coming prior to Container-2's release call.
@@ -316,6 +331,7 @@ public class TestLocalResourcesTrackerImpl {
       ResourceEvent reqEvent3 =
           new ResourceRequestEvent(lr, LocalResourceVisibility.PRIVATE, lc3);
       tracker.handle(reqEvent3);
+      dispatcher.await();
 
       // Local resource cache now should have the requested resource and the
       // number of waiting containers should be 1.
@@ -327,6 +343,7 @@ public class TestLocalResourcesTrackerImpl {
       // Container-2 Releases the resource
       ResourceReleaseEvent relEvent2 = new ResourceReleaseEvent(lr, cId2);
       tracker.handle(relEvent2);
+      dispatcher.await();
 
       // Making sure that there is no change in the cache after the release.
       Assert.assertEquals(1, localrsrc.size());
@@ -340,6 +357,7 @@ public class TestLocalResourcesTrackerImpl {
       ResourceLocalizedEvent localizedEvent =
           new ResourceLocalizedEvent(lr, localizedPath, 123L);
       tracker.handle(localizedEvent);
+      dispatcher.await();
       
       // Verifying ContainerResourceLocalizedEvent .
       verify(containerEventHandler, times(1)).handle(
@@ -351,6 +369,7 @@ public class TestLocalResourcesTrackerImpl {
       // Container-3 releasing the resource.
       ResourceReleaseEvent relEvent3 = new ResourceReleaseEvent(lr, cId3);
       tracker.handle(relEvent3);
+      dispatcher.await();
       
       Assert.assertEquals(0, localrsrc.get(lr).getRefCount());
       
@@ -384,7 +403,8 @@ public class TestLocalResourcesTrackerImpl {
       ConcurrentMap<LocalResourceRequest, LocalizedResource> localrsrc =
           new ConcurrentHashMap<LocalResourceRequest, LocalizedResource>();
       LocalResourcesTracker tracker = new LocalResourcesTrackerImpl(user,
-          dispatcher, localrsrc, true, conf);
+          null, dispatcher, localrsrc, true, conf,
+          new NMNullStateStoreService());
 
       // This is a random path. NO File creation will take place at this place.
       Path localDir = new Path("/tmp");
@@ -401,7 +421,9 @@ public class TestLocalResourcesTrackerImpl {
       tracker.handle(reqEvent1);
 
       // Simulate the process of localization of lr1
-      Path hierarchicalPath1 = tracker.getPathForLocalization(lr1, localDir);
+      // NOTE: Localization path from tracker has resource ID at end
+      Path hierarchicalPath1 =
+          tracker.getPathForLocalization(lr1, localDir).getParent();
       // Simulate lr1 getting localized
       ResourceLocalizedEvent rle1 =
           new ResourceLocalizedEvent(lr1,
@@ -417,7 +439,8 @@ public class TestLocalResourcesTrackerImpl {
           new ResourceRequestEvent(lr2, LocalResourceVisibility.PUBLIC, lc1);
       tracker.handle(reqEvent2);
 
-      Path hierarchicalPath2 = tracker.getPathForLocalization(lr2, localDir);
+      Path hierarchicalPath2 =
+          tracker.getPathForLocalization(lr2, localDir).getParent();
       // localization failed.
       ResourceFailedLocalizationEvent rfe2 =
           new ResourceFailedLocalizationEvent(
@@ -435,7 +458,8 @@ public class TestLocalResourcesTrackerImpl {
       ResourceEvent reqEvent3 = new ResourceRequestEvent(lr3,
           LocalResourceVisibility.PUBLIC, lc1);
       tracker.handle(reqEvent3);
-      Path hierarchicalPath3 = tracker.getPathForLocalization(lr3, localDir);
+      Path hierarchicalPath3 =
+          tracker.getPathForLocalization(lr3, localDir).getParent();
       // localization successful
       ResourceLocalizedEvent rle3 =
           new ResourceLocalizedEvent(lr3, new Path(hierarchicalPath3.toUri()
@@ -472,6 +496,284 @@ public class TestLocalResourcesTrackerImpl {
       // lr1 is not used by anyone and will be removed, only lr3 will hang
       // around
       Assert.assertEquals(1, resources);
+    } finally {
+      if (dispatcher != null) {
+        dispatcher.stop();
+      }
+    }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testStateStoreSuccessfulLocalization() throws Exception {
+    final String user = "someuser";
+    final ApplicationId appId = ApplicationId.newInstance(1, 1);
+    // This is a random path. NO File creation will take place at this place.
+    final Path localDir = new Path("/tmp");
+    Configuration conf = new YarnConfiguration();
+    DrainDispatcher dispatcher = null;
+    dispatcher = createDispatcher(conf);
+    EventHandler<LocalizerEvent> localizerEventHandler =
+        mock(EventHandler.class);
+    EventHandler<LocalizerEvent> containerEventHandler =
+        mock(EventHandler.class);
+    dispatcher.register(LocalizerEventType.class, localizerEventHandler);
+    dispatcher.register(ContainerEventType.class, containerEventHandler);
+    DeletionService mockDelService = mock(DeletionService.class);
+    NMStateStoreService stateStore = mock(NMStateStoreService.class);
+
+    try {
+      LocalResourcesTracker tracker = new LocalResourcesTrackerImpl(user,
+          appId, dispatcher, false, conf, stateStore);
+      // Container 1 needs lr1 resource
+      ContainerId cId1 = BuilderUtils.newContainerId(1, 1, 1, 1);
+      LocalResourceRequest lr1 = createLocalResourceRequest(user, 1, 1,
+          LocalResourceVisibility.APPLICATION);
+      LocalizerContext lc1 = new LocalizerContext(user, cId1, null);
+
+      // Container 1 requests lr1 to be localized
+      ResourceEvent reqEvent1 = new ResourceRequestEvent(lr1,
+          LocalResourceVisibility.APPLICATION, lc1);
+      tracker.handle(reqEvent1);
+      dispatcher.await();
+
+      // Simulate the process of localization of lr1
+      Path hierarchicalPath1 = tracker.getPathForLocalization(lr1, localDir);
+
+      ArgumentCaptor<LocalResourceProto> localResourceCaptor =
+          ArgumentCaptor.forClass(LocalResourceProto.class);
+      ArgumentCaptor<Path> pathCaptor = ArgumentCaptor.forClass(Path.class);
+      verify(stateStore).startResourceLocalization(eq(user), eq(appId),
+          localResourceCaptor.capture(), pathCaptor.capture());
+      LocalResourceProto lrProto = localResourceCaptor.getValue();
+      Path localizedPath1 = pathCaptor.getValue();
+      Assert.assertEquals(lr1,
+          new LocalResourceRequest(new LocalResourcePBImpl(lrProto)));
+      Assert.assertEquals(hierarchicalPath1, localizedPath1.getParent());
+
+      // Simulate lr1 getting localized
+      ResourceLocalizedEvent rle1 =
+          new ResourceLocalizedEvent(lr1, pathCaptor.getValue(), 120);
+      tracker.handle(rle1);
+      dispatcher.await();
+
+      ArgumentCaptor<LocalizedResourceProto> localizedProtoCaptor =
+          ArgumentCaptor.forClass(LocalizedResourceProto.class);
+      verify(stateStore).finishResourceLocalization(eq(user), eq(appId),
+          localizedProtoCaptor.capture());
+      LocalizedResourceProto localizedProto = localizedProtoCaptor.getValue();
+      Assert.assertEquals(lr1, new LocalResourceRequest(
+          new LocalResourcePBImpl(localizedProto.getResource())));
+      Assert.assertEquals(localizedPath1.toString(),
+          localizedProto.getLocalPath());
+      LocalizedResource localizedRsrc1 = tracker.getLocalizedResource(lr1);
+      Assert.assertNotNull(localizedRsrc1);
+
+      // simulate release and retention processing
+      tracker.handle(new ResourceReleaseEvent(lr1, cId1));
+      dispatcher.await();
+      boolean removeResult = tracker.remove(localizedRsrc1, mockDelService);
+
+      Assert.assertTrue(removeResult);
+      verify(stateStore).removeLocalizedResource(eq(user), eq(appId),
+          eq(localizedPath1));
+    } finally {
+      if (dispatcher != null) {
+        dispatcher.stop();
+      }
+    }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testStateStoreFailedLocalization() throws Exception {
+    final String user = "someuser";
+    final ApplicationId appId = ApplicationId.newInstance(1, 1);
+    // This is a random path. NO File creation will take place at this place.
+    final Path localDir = new Path("/tmp");
+    Configuration conf = new YarnConfiguration();
+    DrainDispatcher dispatcher = null;
+    dispatcher = createDispatcher(conf);
+    EventHandler<LocalizerEvent> localizerEventHandler =
+        mock(EventHandler.class);
+    EventHandler<LocalizerEvent> containerEventHandler =
+        mock(EventHandler.class);
+    dispatcher.register(LocalizerEventType.class, localizerEventHandler);
+    dispatcher.register(ContainerEventType.class, containerEventHandler);
+    NMStateStoreService stateStore = mock(NMStateStoreService.class);
+
+    try {
+      LocalResourcesTracker tracker = new LocalResourcesTrackerImpl(user,
+          appId, dispatcher, false, conf, stateStore);
+      // Container 1 needs lr1 resource
+      ContainerId cId1 = BuilderUtils.newContainerId(1, 1, 1, 1);
+      LocalResourceRequest lr1 = createLocalResourceRequest(user, 1, 1,
+          LocalResourceVisibility.APPLICATION);
+      LocalizerContext lc1 = new LocalizerContext(user, cId1, null);
+
+      // Container 1 requests lr1 to be localized
+      ResourceEvent reqEvent1 = new ResourceRequestEvent(lr1,
+          LocalResourceVisibility.APPLICATION, lc1);
+      tracker.handle(reqEvent1);
+      dispatcher.await();
+
+      // Simulate the process of localization of lr1
+      Path hierarchicalPath1 = tracker.getPathForLocalization(lr1, localDir);
+
+      ArgumentCaptor<LocalResourceProto> localResourceCaptor =
+          ArgumentCaptor.forClass(LocalResourceProto.class);
+      ArgumentCaptor<Path> pathCaptor = ArgumentCaptor.forClass(Path.class);
+      verify(stateStore).startResourceLocalization(eq(user), eq(appId),
+          localResourceCaptor.capture(), pathCaptor.capture());
+      LocalResourceProto lrProto = localResourceCaptor.getValue();
+      Path localizedPath1 = pathCaptor.getValue();
+      Assert.assertEquals(lr1,
+          new LocalResourceRequest(new LocalResourcePBImpl(lrProto)));
+      Assert.assertEquals(hierarchicalPath1, localizedPath1.getParent());
+
+      ResourceFailedLocalizationEvent rfe1 =
+          new ResourceFailedLocalizationEvent(
+              lr1, new Exception("Test").toString());
+      tracker.handle(rfe1);
+      dispatcher.await();
+      verify(stateStore).removeLocalizedResource(eq(user), eq(appId),
+          eq(localizedPath1));
+    } finally {
+      if (dispatcher != null) {
+        dispatcher.stop();
+      }
+    }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testRecoveredResource() throws Exception {
+    final String user = "someuser";
+    final ApplicationId appId = ApplicationId.newInstance(1, 1);
+    // This is a random path. NO File creation will take place at this place.
+    final Path localDir = new Path("/tmp/localdir");
+    Configuration conf = new YarnConfiguration();
+    DrainDispatcher dispatcher = null;
+    dispatcher = createDispatcher(conf);
+    EventHandler<LocalizerEvent> localizerEventHandler =
+        mock(EventHandler.class);
+    EventHandler<LocalizerEvent> containerEventHandler =
+        mock(EventHandler.class);
+    dispatcher.register(LocalizerEventType.class, localizerEventHandler);
+    dispatcher.register(ContainerEventType.class, containerEventHandler);
+    NMStateStoreService stateStore = mock(NMStateStoreService.class);
+
+    try {
+      LocalResourcesTracker tracker = new LocalResourcesTrackerImpl(user,
+          appId, dispatcher, false, conf, stateStore);
+      // Container 1 needs lr1 resource
+      ContainerId cId1 = BuilderUtils.newContainerId(1, 1, 1, 1);
+      LocalResourceRequest lr1 = createLocalResourceRequest(user, 1, 1,
+          LocalResourceVisibility.APPLICATION);
+      Assert.assertNull(tracker.getLocalizedResource(lr1));
+      final long localizedId1 = 52;
+      Path hierarchicalPath1 = new Path(localDir,
+          Long.toString(localizedId1));
+      Path localizedPath1 = new Path(hierarchicalPath1, "resource.jar");
+      tracker.handle(new ResourceRecoveredEvent(lr1, localizedPath1, 120));
+      dispatcher.await();
+      Assert.assertNotNull(tracker.getLocalizedResource(lr1));
+
+      // verify new paths reflect recovery of previous resources
+      LocalResourceRequest lr2 = createLocalResourceRequest(user, 2, 2,
+          LocalResourceVisibility.APPLICATION);
+      LocalizerContext lc2 = new LocalizerContext(user, cId1, null);
+      ResourceEvent reqEvent2 = new ResourceRequestEvent(lr2,
+          LocalResourceVisibility.APPLICATION, lc2);
+      tracker.handle(reqEvent2);
+      dispatcher.await();
+      Path hierarchicalPath2 = tracker.getPathForLocalization(lr2, localDir);
+      long localizedId2 = Long.parseLong(hierarchicalPath2.getName());
+      Assert.assertEquals(localizedId1 + 1, localizedId2);
+    } finally {
+      if (dispatcher != null) {
+        dispatcher.stop();
+      }
+    }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testRecoveredResourceWithDirCacheMgr() throws Exception {
+    final String user = "someuser";
+    final ApplicationId appId = ApplicationId.newInstance(1, 1);
+    // This is a random path. NO File creation will take place at this place.
+    final Path localDirRoot = new Path("/tmp/localdir");
+    Configuration conf = new YarnConfiguration();
+    DrainDispatcher dispatcher = null;
+    dispatcher = createDispatcher(conf);
+    EventHandler<LocalizerEvent> localizerEventHandler =
+        mock(EventHandler.class);
+    EventHandler<LocalizerEvent> containerEventHandler =
+        mock(EventHandler.class);
+    dispatcher.register(LocalizerEventType.class, localizerEventHandler);
+    dispatcher.register(ContainerEventType.class, containerEventHandler);
+    NMStateStoreService stateStore = mock(NMStateStoreService.class);
+
+    try {
+      LocalResourcesTrackerImpl tracker = new LocalResourcesTrackerImpl(user,
+          appId, dispatcher, true, conf, stateStore);
+      LocalResourceRequest lr1 = createLocalResourceRequest(user, 1, 1,
+          LocalResourceVisibility.PUBLIC);
+      Assert.assertNull(tracker.getLocalizedResource(lr1));
+      final long localizedId1 = 52;
+      Path hierarchicalPath1 = new Path(localDirRoot + "/4/2",
+          Long.toString(localizedId1));
+      Path localizedPath1 = new Path(hierarchicalPath1, "resource.jar");
+      tracker.handle(new ResourceRecoveredEvent(lr1, localizedPath1, 120));
+      dispatcher.await();
+      Assert.assertNotNull(tracker.getLocalizedResource(lr1));
+      LocalCacheDirectoryManager dirMgrRoot =
+          tracker.getDirectoryManager(localDirRoot);
+      Assert.assertEquals(0, dirMgrRoot.getDirectory("").getCount());
+      Assert.assertEquals(1, dirMgrRoot.getDirectory("4/2").getCount());
+
+      LocalResourceRequest lr2 = createLocalResourceRequest(user, 2, 2,
+          LocalResourceVisibility.PUBLIC);
+      Assert.assertNull(tracker.getLocalizedResource(lr2));
+      final long localizedId2 = localizedId1 + 1;
+      Path hierarchicalPath2 = new Path(localDirRoot + "/4/2",
+          Long.toString(localizedId2));
+      Path localizedPath2 = new Path(hierarchicalPath2, "resource.jar");
+      tracker.handle(new ResourceRecoveredEvent(lr2, localizedPath2, 120));
+      dispatcher.await();
+      Assert.assertNotNull(tracker.getLocalizedResource(lr2));
+      Assert.assertEquals(0, dirMgrRoot.getDirectory("").getCount());
+      Assert.assertEquals(2, dirMgrRoot.getDirectory("4/2").getCount());
+
+      LocalResourceRequest lr3 = createLocalResourceRequest(user, 3, 3,
+          LocalResourceVisibility.PUBLIC);
+      Assert.assertNull(tracker.getLocalizedResource(lr3));
+      final long localizedId3 = 128;
+      Path hierarchicalPath3 = new Path(localDirRoot + "/4/3",
+          Long.toString(localizedId3));
+      Path localizedPath3 = new Path(hierarchicalPath3, "resource.jar");
+      tracker.handle(new ResourceRecoveredEvent(lr3, localizedPath3, 120));
+      dispatcher.await();
+      Assert.assertNotNull(tracker.getLocalizedResource(lr3));
+      Assert.assertEquals(0, dirMgrRoot.getDirectory("").getCount());
+      Assert.assertEquals(2, dirMgrRoot.getDirectory("4/2").getCount());
+      Assert.assertEquals(1, dirMgrRoot.getDirectory("4/3").getCount());
+
+      LocalResourceRequest lr4 = createLocalResourceRequest(user, 4, 4,
+          LocalResourceVisibility.PUBLIC);
+      Assert.assertNull(tracker.getLocalizedResource(lr4));
+      final long localizedId4 = 256;
+      Path hierarchicalPath4 = new Path(localDirRoot + "/4",
+          Long.toString(localizedId4));
+      Path localizedPath4 = new Path(hierarchicalPath4, "resource.jar");
+      tracker.handle(new ResourceRecoveredEvent(lr4, localizedPath4, 120));
+      dispatcher.await();
+      Assert.assertNotNull(tracker.getLocalizedResource(lr4));
+      Assert.assertEquals(0, dirMgrRoot.getDirectory("").getCount());
+      Assert.assertEquals(1, dirMgrRoot.getDirectory("4").getCount());
+      Assert.assertEquals(2, dirMgrRoot.getDirectory("4/2").getCount());
+      Assert.assertEquals(1, dirMgrRoot.getDirectory("4/3").getCount());
     } finally {
       if (dispatcher != null) {
         dispatcher.stop();

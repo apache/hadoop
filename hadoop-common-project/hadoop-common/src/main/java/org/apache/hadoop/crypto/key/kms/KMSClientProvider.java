@@ -517,8 +517,4 @@ public class KMSClientProvider extends KeyProvider {
     // the server should not keep in memory state on behalf of clients either.
   }
 
-  @VisibleForTesting
-  public static String buildVersionName(String name, int version) {
-    return KeyProvider.buildVersionName(name, version);
-  }
 }

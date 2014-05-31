@@ -91,6 +91,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 
 @SuppressWarnings("rawtypes")
 public class TestNodeStatusUpdater {
@@ -1159,7 +1161,8 @@ public class TestNodeStatusUpdater {
       @Override
       protected NMContext createNMContext(
           NMContainerTokenSecretManager containerTokenSecretManager,
-          NMTokenSecretManagerInNM nmTokenSecretManager) {
+          NMTokenSecretManagerInNM nmTokenSecretManager,
+          NMStateStoreService store) {
         return new MyNMContext(containerTokenSecretManager,
           nmTokenSecretManager);
       }
@@ -1268,7 +1271,8 @@ public class TestNodeStatusUpdater {
     public MyNMContext(
         NMContainerTokenSecretManager containerTokenSecretManager,
         NMTokenSecretManagerInNM nmTokenSecretManager) {
-      super(containerTokenSecretManager, nmTokenSecretManager, null, null);
+      super(containerTokenSecretManager, nmTokenSecretManager, null, null,
+          new NMNullStateStoreService());
     }
 
     @Override

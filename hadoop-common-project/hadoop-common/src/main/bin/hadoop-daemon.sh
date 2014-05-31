@@ -87,6 +87,14 @@ if [ "$command" == "datanode" ] && [ "$EUID" -eq 0 ] && [ -n "$HADOOP_SECURE_DN_
   starting_secure_dn="true"
 fi
 
+#Determine if we're starting a privileged NFS, if so, redefine the appropriate variables
+if [ "$command" == "nfs3" ] && [ "$EUID" -eq 0 ] && [ -n "$HADOOP_PRIVILEGED_NFS_USER" ]; then
+    export HADOOP_PID_DIR=$HADOOP_PRIVILEGED_NFS_PID_DIR
+    export HADOOP_LOG_DIR=$HADOOP_PRIVILEGED_NFS_LOG_DIR
+    export HADOOP_IDENT_STRING=$HADOOP_PRIVILEGED_NFS_USER
+    starting_privileged_nfs="true"
+fi
+
 if [ "$HADOOP_IDENT_STRING" = "" ]; then
   export HADOOP_IDENT_STRING="$USER"
 fi
@@ -162,6 +170,9 @@ case $startStop in
       echo "ulimit -a for secure datanode user $HADOOP_SECURE_DN_USER" >> $log
       # capture the ulimit info for the appropriate user
       su --shell=/bin/bash $HADOOP_SECURE_DN_USER -c 'ulimit -a' >> $log 2>&1
+    elif [ "true" = "$starting_privileged_nfs" ]; then
+        echo "ulimit -a for privileged nfs user $HADOOP_PRIVILEGED_NFS_USER" >> $log
+        su --shell=/bin/bash $HADOOP_PRIVILEGED_NFS_USER -c 'ulimit -a' >> $log 2>&1
     else
       echo "ulimit -a for user $USER" >> $log
       ulimit -a >> $log 2>&1

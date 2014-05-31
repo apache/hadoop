@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.net.util.SubnetUtils;
 import org.apache.commons.net.util.SubnetUtils.SubnetInfo;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
 import org.apache.hadoop.util.LightWeightCache;
 import org.apache.hadoop.util.LightWeightGSet;
@@ -44,13 +45,14 @@ public class NfsExports {
   
   public static synchronized NfsExports getInstance(Configuration conf) {
     if (exports == null) {
-      String matchHosts = conf.get(Nfs3Constant.EXPORTS_ALLOWED_HOSTS_KEY,
-          Nfs3Constant.EXPORTS_ALLOWED_HOSTS_KEY_DEFAULT);
-      int cacheSize = conf.getInt(Nfs3Constant.EXPORTS_CACHE_SIZE_KEY,
-          Nfs3Constant.EXPORTS_CACHE_SIZE_DEFAULT);
+      String matchHosts = conf.get(
+          CommonConfigurationKeys.NFS_EXPORTS_ALLOWED_HOSTS_KEY,
+          CommonConfigurationKeys.NFS_EXPORTS_ALLOWED_HOSTS_KEY_DEFAULT);
+      int cacheSize = conf.getInt(Nfs3Constant.NFS_EXPORTS_CACHE_SIZE_KEY,
+          Nfs3Constant.NFS_EXPORTS_CACHE_SIZE_DEFAULT);
       long expirationPeriodNano = conf.getLong(
-          Nfs3Constant.EXPORTS_CACHE_EXPIRYTIME_MILLIS_KEY,
-          Nfs3Constant.EXPORTS_CACHE_EXPIRYTIME_MILLIS_DEFAULT) * 1000 * 1000;
+          Nfs3Constant.NFS_EXPORTS_CACHE_EXPIRYTIME_MILLIS_KEY,
+          Nfs3Constant.NFS_EXPORTS_CACHE_EXPIRYTIME_MILLIS_DEFAULT) * 1000 * 1000;
       exports = new NfsExports(cacheSize, expirationPeriodNano, matchHosts);
     }
     return exports;
@@ -140,7 +142,7 @@ public class NfsExports {
     accessCache = new LightWeightCache<AccessCacheEntry, AccessCacheEntry>(
         cacheSize, cacheSize, expirationPeriodNano, 0);        
     String[] matchStrings = matchHosts.split(
-        Nfs3Constant.EXPORTS_ALLOWED_HOSTS_SEPARATOR);
+        CommonConfigurationKeys.NFS_EXPORTS_ALLOWED_HOSTS_SEPARATOR);
     mMatches = new ArrayList<Match>(matchStrings.length);
     for(String mStr : matchStrings) {
       if (LOG.isDebugEnabled()) {

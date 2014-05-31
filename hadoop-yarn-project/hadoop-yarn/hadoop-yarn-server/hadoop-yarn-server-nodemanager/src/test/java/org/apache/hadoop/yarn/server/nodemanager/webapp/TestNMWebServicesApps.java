@@ -99,7 +99,8 @@ public class TestNMWebServicesApps extends JerseyTest {
       healthChecker.init(conf);
       dirsHandler = healthChecker.getDiskHandler();
       aclsManager = new ApplicationACLsManager(conf);
-      nmContext = new NodeManager.NMContext(null, null, dirsHandler, aclsManager);
+      nmContext = new NodeManager.NMContext(null, null, dirsHandler,
+          aclsManager, null);
       NodeId nodeId = NodeId.newInstance("testhost.foo.com", 9999);
       ((NodeManager.NMContext)nmContext).setNodeId(nodeId);
       resourceView = new ResourceView() {

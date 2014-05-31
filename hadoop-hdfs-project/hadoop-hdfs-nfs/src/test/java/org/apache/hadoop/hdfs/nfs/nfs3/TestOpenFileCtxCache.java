@@ -22,13 +22,13 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
 import org.apache.hadoop.hdfs.nfs.nfs3.OpenFileCtx.CommitCtx;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.nfs.nfs3.IdUserGroup;
-import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
 import org.apache.hadoop.nfs.nfs3.Nfs3FileAttributes;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -38,10 +38,10 @@ public class TestOpenFileCtxCache {
 
   @Test
   public void testEviction() throws IOException, InterruptedException {
-    Configuration conf = new Configuration();
+    NfsConfiguration conf = new NfsConfiguration();
 
     // Only two entries will be in the cache
-    conf.setInt(Nfs3Constant.MAX_OPEN_FILES, 2);
+    conf.setInt(NfsConfigKeys.DFS_NFS_MAX_OPEN_FILES_KEY, 2);
 
     DFSClient dfsClient = Mockito.mock(DFSClient.class);
     Nfs3FileAttributes attr = new Nfs3FileAttributes();
@@ -49,15 +49,15 @@ public class TestOpenFileCtxCache {
     Mockito.when(fos.getPos()).thenReturn((long) 0);
 
     OpenFileCtx context1 = new OpenFileCtx(fos, attr, "/dumpFilePath",
-        dfsClient, new IdUserGroup());
+        dfsClient, new IdUserGroup(new NfsConfiguration()));
     OpenFileCtx context2 = new OpenFileCtx(fos, attr, "/dumpFilePath",
-        dfsClient, new IdUserGroup());
+        dfsClient, new IdUserGroup(new NfsConfiguration()));
     OpenFileCtx context3 = new OpenFileCtx(fos, attr, "/dumpFilePath",
-        dfsClient, new IdUserGroup());
+        dfsClient, new IdUserGroup(new NfsConfiguration()));
     OpenFileCtx context4 = new OpenFileCtx(fos, attr, "/dumpFilePath",
-        dfsClient, new IdUserGroup());
+        dfsClient, new IdUserGroup(new NfsConfiguration()));
     OpenFileCtx context5 = new OpenFileCtx(fos, attr, "/dumpFilePath",
-        dfsClient, new IdUserGroup());
+        dfsClient, new IdUserGroup(new NfsConfiguration()));
 
     OpenFileCtxCache cache = new OpenFileCtxCache(conf, 10 * 60 * 100);
 
@@ -71,7 +71,7 @@ public class TestOpenFileCtxCache {
     assertTrue(cache.size() == 2);
 
     // Wait for the oldest stream to be evict-able, insert again
-    Thread.sleep(Nfs3Constant.OUTPUT_STREAM_TIMEOUT_MIN_DEFAULT);
+    Thread.sleep(NfsConfigKeys.DFS_NFS_STREAM_TIMEOUT_MIN_DEFAULT);
     assertTrue(cache.size() == 2);
 
     ret = cache.put(new FileHandle(3), context3);
@@ -90,17 +90,17 @@ public class TestOpenFileCtxCache {
         new WriteCtx(null, 0, 0, 0, null, null, null, 0, false, null));
     context4.getPendingCommitsForTest().put(new Long(100),
         new CommitCtx(0, null, 0, attr));
-    Thread.sleep(Nfs3Constant.OUTPUT_STREAM_TIMEOUT_MIN_DEFAULT);
+    Thread.sleep(NfsConfigKeys.DFS_NFS_STREAM_TIMEOUT_MIN_DEFAULT);
     ret = cache.put(new FileHandle(5), context5);
     assertFalse(ret);
   }
 
   @Test
   public void testScan() throws IOException, InterruptedException {
-    Configuration conf = new Configuration();
+    NfsConfiguration conf = new NfsConfiguration();
 
     // Only two entries will be in the cache
-    conf.setInt(Nfs3Constant.MAX_OPEN_FILES, 2);
+    conf.setInt(NfsConfigKeys.DFS_NFS_MAX_OPEN_FILES_KEY, 2);
 
     DFSClient dfsClient = Mockito.mock(DFSClient.class);
     Nfs3FileAttributes attr = new Nfs3FileAttributes();
@@ -108,13 +108,13 @@ public class TestOpenFileCtxCache {
     Mockito.when(fos.getPos()).thenReturn((long) 0);
 
     OpenFileCtx context1 = new OpenFileCtx(fos, attr, "/dumpFilePath",
-        dfsClient, new IdUserGroup());
+        dfsClient, new IdUserGroup(new NfsConfiguration()));
     OpenFileCtx context2 = new OpenFileCtx(fos, attr, "/dumpFilePath",
-        dfsClient, new IdUserGroup());
+        dfsClient, new IdUserGroup(new NfsConfiguration()));
     OpenFileCtx context3 = new OpenFileCtx(fos, attr, "/dumpFilePath",
-        dfsClient, new IdUserGroup());
+        dfsClient, new IdUserGroup(new NfsConfiguration()));
     OpenFileCtx context4 = new OpenFileCtx(fos, attr, "/dumpFilePath",
-        dfsClient, new IdUserGroup());
+        dfsClient, new IdUserGroup(new NfsConfiguration()));
 
     OpenFileCtxCache cache = new OpenFileCtxCache(conf, 10 * 60 * 100);
 
@@ -123,8 +123,8 @@ public class TestOpenFileCtxCache {
     assertTrue(ret);
     ret = cache.put(new FileHandle(2), context2);
     assertTrue(ret);
-    Thread.sleep(Nfs3Constant.OUTPUT_STREAM_TIMEOUT_MIN_DEFAULT + 1);
-    cache.scan(Nfs3Constant.OUTPUT_STREAM_TIMEOUT_MIN_DEFAULT);
+    Thread.sleep(NfsConfigKeys.DFS_NFS_STREAM_TIMEOUT_MIN_DEFAULT + 1);
+    cache.scan(NfsConfigKeys.DFS_NFS_STREAM_TIMEOUT_MIN_DEFAULT);
     assertTrue(cache.size() == 0);
 
     // Test cleaning inactive entry
@@ -133,7 +133,7 @@ public class TestOpenFileCtxCache {
     ret = cache.put(new FileHandle(4), context4);
     assertTrue(ret);
     context3.setActiveStatusForTest(false);
-    cache.scan(Nfs3Constant.OUTPUT_STREAM_TIMEOUT_DEFAULT);
+    cache.scan(NfsConfigKeys.DFS_NFS_STREAM_TIMEOUT_DEFAULT);
     assertTrue(cache.size() == 1);
     assertTrue(cache.get(new FileHandle(3)) == null);
     assertTrue(cache.get(new FileHandle(4)) != null);

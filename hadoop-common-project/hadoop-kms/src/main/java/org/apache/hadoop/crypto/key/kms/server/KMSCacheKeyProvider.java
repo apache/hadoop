@@ -135,14 +135,11 @@ public class KMSCacheKeyProvider extends KeyProvider {
 
   @Override
   public void deleteKey(String name) throws IOException {
-    Metadata metadata = provider.getMetadata(name);
-    List<String> versions = new ArrayList<String>(metadata.getVersions());
-    for (int i = 0; i < metadata.getVersions(); i++) {
-      versions.add(KeyProvider.buildVersionName(name, i));
-    }
     provider.deleteKey(name);
     currentKeyCache.invalidate(name);
-    keyVersionCache.invalidateAll(versions);
+    // invalidating all key versions as we don't know which ones belonged to the
+    // deleted key
+    keyVersionCache.invalidateAll();
   }
 
   @Override

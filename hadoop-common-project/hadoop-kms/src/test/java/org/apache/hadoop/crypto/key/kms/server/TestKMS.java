@@ -577,7 +577,9 @@ public class TestKMS {
               Assert.fail(ex.toString());
             }
             try {
-              kp.getKeyVersion(KMSClientProvider.buildVersionName("k", 0));
+              // we are using JavaKeyStoreProvider for testing, so we know how
+              // the keyversion is created.
+              kp.getKeyVersion("k@0");
               Assert.fail();
             } catch (AuthorizationException ex) {
               //NOP
@@ -716,6 +718,9 @@ public class TestKMS {
             return null;
           }
         });
+
+        //stop the reloader, to avoid running while we are writing the new file
+        KMSWebApp.getACLs().stopReloader();
 
         // test ACL reloading
         Thread.sleep(10); // to ensure the ACLs file modifiedTime is newer

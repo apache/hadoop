@@ -53,6 +53,9 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManag
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMLeveldbStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer;
@@ -78,6 +81,7 @@ public class NodeManager extends CompositeService
   private ContainerManagerImpl containerManager;
   private NodeStatusUpdater nodeStatusUpdater;
   private static CompositeServiceShutdownHook nodeManagerShutdownHook; 
+  private NMStateStoreService nmStore = null;
   
   private AtomicBoolean isStopping = new AtomicBoolean(false);
   
@@ -115,9 +119,10 @@ public class NodeManager extends CompositeService
 
   protected NMContext createNMContext(
       NMContainerTokenSecretManager containerTokenSecretManager,
-      NMTokenSecretManagerInNM nmTokenSecretManager) {
+      NMTokenSecretManagerInNM nmTokenSecretManager,
+      NMStateStoreService stateStore) {
     return new NMContext(containerTokenSecretManager, nmTokenSecretManager,
-        dirsHandler, aclsManager);
+        dirsHandler, aclsManager, stateStore);
   }
 
   protected void doSecureLogin() throws IOException {
@@ -125,11 +130,8 @@ public class NodeManager extends CompositeService
         YarnConfiguration.NM_PRINCIPAL);
   }
 
-  @Override
-  protected void serviceInit(Configuration conf) throws Exception {
-
-    conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
-
+  private void initAndStartRecoveryStore(Configuration conf)
+      throws IOException {
     boolean recoveryEnabled = conf.getBoolean(
         YarnConfiguration.NM_RECOVERY_ENABLED,
         YarnConfiguration.DEFAULT_NM_RECOVERY_ENABLED);
@@ -142,7 +144,36 @@ public class NodeManager extends CompositeService
       }
       Path recoveryRoot = new Path(recoveryDirName);
       recoveryFs.mkdirs(recoveryRoot, new FsPermission((short)0700));
+      nmStore = new NMLeveldbStateStoreService();
+    } else {
+      nmStore = new NMNullStateStoreService();
     }
+    nmStore.init(conf);
+    nmStore.start();
+  }
+
+  private void stopRecoveryStore() throws IOException {
+    nmStore.stop();
+    if (context.getDecommissioned() && nmStore.canRecover()) {
+      LOG.info("Removing state store due to decommission");
+      Configuration conf = getConfig();
+      Path recoveryRoot = new Path(
+          conf.get(YarnConfiguration.NM_RECOVERY_DIR));
+      LOG.info("Removing state store at " + recoveryRoot
+          + " due to decommission");
+      FileSystem recoveryFs = FileSystem.getLocal(conf);
+      if (!recoveryFs.delete(recoveryRoot, true)) {
+        LOG.warn("Unable to delete " + recoveryRoot);
+      }
+    }
+  }
+
+  @Override
+  protected void serviceInit(Configuration conf) throws Exception {
+
+    conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
+
+    initAndStartRecoveryStore(conf);
 
     NMContainerTokenSecretManager containerTokenSecretManager =
         new NMContainerTokenSecretManager(conf);
@@ -171,7 +202,7 @@ public class NodeManager extends CompositeService
     dirsHandler = nodeHealthChecker.getDiskHandler();
 
     this.context = createNMContext(containerTokenSecretManager,
-        nmTokenSecretManager);
+        nmTokenSecretManager, nmStore);
     
     nodeStatusUpdater =
         createNodeStatusUpdater(context, dispatcher, nodeHealthChecker);
@@ -220,6 +251,7 @@ public class NodeManager extends CompositeService
       return;
     }
     super.serviceStop();
+    stopRecoveryStore();
     DefaultMetricsSystem.shutdown();
   }
 
@@ -272,11 +304,13 @@ public class NodeManager extends CompositeService
     private WebServer webServer;
     private final NodeHealthStatus nodeHealthStatus = RecordFactoryProvider
         .getRecordFactory(null).newRecordInstance(NodeHealthStatus.class);
+    private final NMStateStoreService stateStore;
     private boolean isDecommissioned = false;
 
     public NMContext(NMContainerTokenSecretManager containerTokenSecretManager,
         NMTokenSecretManagerInNM nmTokenSecretManager,
-        LocalDirsHandlerService dirsHandler, ApplicationACLsManager aclsManager) {
+        LocalDirsHandlerService dirsHandler, ApplicationACLsManager aclsManager,
+        NMStateStoreService stateStore) {
       this.containerTokenSecretManager = containerTokenSecretManager;
       this.nmTokenSecretManager = nmTokenSecretManager;
       this.dirsHandler = dirsHandler;
@@ -284,6 +318,7 @@ public class NodeManager extends CompositeService
       this.nodeHealthStatus.setIsNodeHealthy(true);
       this.nodeHealthStatus.setHealthReport("Healthy");
       this.nodeHealthStatus.setLastHealthReportTime(System.currentTimeMillis());
+      this.stateStore = stateStore;
     }
 
     /**
@@ -349,6 +384,11 @@ public class NodeManager extends CompositeService
     @Override
     public ApplicationACLsManager getApplicationACLsManager() {
       return aclsManager;
+    }
+
+    @Override
+    public NMStateStoreService getNMStateStore() {
+      return stateStore;
     }
 
     @Override

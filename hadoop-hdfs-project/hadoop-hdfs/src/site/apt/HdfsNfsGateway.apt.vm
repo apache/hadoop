@@ -76,14 +76,14 @@ HDFS NFS Gateway
 
 ----
   <property>
-    <name>dfs.nfs.keytab.file</name>
+    <name>nfs.keytab.file</name>
     <value>/etc/hadoop/conf/nfsserver.keytab</value> <!-- path to the nfs gateway keytab -->
   </property>
 ----
 
 ----
   <property>
-    <name>dfs.nfs.kerberos.principal</name>
+    <name>nfs.kerberos.principal</name>
     <value>nfsserver/_HOST@YOUR-REALM.COM</value>
   </property>
 ----
@@ -121,7 +121,7 @@ HDFS NFS Gateway
 
 ----
   <property>    
-    <name>dfs.nfs3.dump.dir</name>
+    <name>nfs.dump.dir</name>
     <value>/tmp/.hdfs-nfs</value>
   </property>
 ---- 
@@ -134,7 +134,7 @@ HDFS NFS Gateway
 
 ----
 <property>
-  <name>dfs.nfs.rtmax</name>
+  <name>nfs.rtmax</name>
   <value>1048576</value>
   <description>This is the maximum size in bytes of a READ request
     supported by the NFS gateway. If you change this, make sure you
@@ -146,7 +146,7 @@ HDFS NFS Gateway
 
 ----
 <property>
-  <name>dfs.nfs.wtmax</name>
+  <name>nfs.wtmax</name>
   <value>65536</value>
   <description>This is the maximum size in bytes of a WRITE request
     supported by the NFS gateway. If you change this, make sure you
@@ -167,7 +167,7 @@ HDFS NFS Gateway
 
 ----
 <property>
-  <name>dfs.nfs.exports.allowed.hosts</name>
+  <name>nfs.exports.allowed.hosts</name>
   <value>* rw</value>
 </property>
 ----
@@ -345,7 +345,7 @@ HDFS NFS Gateway
   file in the event one wishes to access the HDFS NFS Gateway from a system with
   a completely disparate set of UIDs/GIDs. By default this file is located at
   "/etc/nfs.map", but a custom location can be configured by setting the
-  "dfs.nfs.static.mapping.file" property to the path of the static mapping file.
+  "nfs.static.mapping.file" property to the path of the static mapping file.
   The format of the static mapping file is similar to what is described in the
   exports(5) manual page, but roughly it is:
 

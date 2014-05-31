@@ -90,7 +90,9 @@ public class ZKRMStateStore extends RMStateStore {
 
   private String zkHostPort = null;
   private int zkSessionTimeout;
-  private long zkRetryInterval;
+
+  @VisibleForTesting
+  long zkRetryInterval;
   private List<ACL> zkAcl;
   private List<ZKUtil.ZKAuthInfo> zkAuths;
 
@@ -199,9 +201,14 @@ public class ZKRMStateStore extends RMStateStore {
     zkSessionTimeout =
         conf.getInt(YarnConfiguration.RM_ZK_TIMEOUT_MS,
             YarnConfiguration.DEFAULT_RM_ZK_TIMEOUT_MS);
-    zkRetryInterval =
-        conf.getLong(YarnConfiguration.RM_ZK_RETRY_INTERVAL_MS,
-          YarnConfiguration.DEFAULT_RM_ZK_RETRY_INTERVAL_MS);
+
+    if (HAUtil.isHAEnabled(conf)) {
+      zkRetryInterval = zkSessionTimeout / numRetries;
+    } else {
+      zkRetryInterval =
+          conf.getLong(YarnConfiguration.RM_ZK_RETRY_INTERVAL_MS,
+              YarnConfiguration.DEFAULT_RM_ZK_RETRY_INTERVAL_MS);
+    }
 
     zkAcl = RMZKUtils.getZKAcls(conf);
     zkAuths = RMZKUtils.getZKAuths(conf);

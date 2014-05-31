@@ -265,4 +265,10 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final boolean RPC_METRICS_QUANTILE_ENABLE_DEFAULT = false;
   public static final String  RPC_METRICS_PERCENTILES_INTERVALS_KEY =
       "rpc.metrics.percentiles.intervals";
+  
+  /** Allowed hosts for nfs exports */
+  public static final String NFS_EXPORTS_ALLOWED_HOSTS_SEPARATOR = ";";
+  public static final String NFS_EXPORTS_ALLOWED_HOSTS_KEY = "nfs.exports.allowed.hosts";
+  public static final String NFS_EXPORTS_ALLOWED_HOSTS_KEY_DEFAULT = "* rw";
+
 }

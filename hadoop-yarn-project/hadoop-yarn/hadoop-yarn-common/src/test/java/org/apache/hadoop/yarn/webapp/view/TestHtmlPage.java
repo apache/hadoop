@@ -22,11 +22,12 @@ import com.google.inject.Injector;
 
 import java.io.PrintWriter;
 
+import org.apache.hadoop.yarn.webapp.MimeType;
 import org.apache.hadoop.yarn.webapp.WebAppException;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.apache.hadoop.yarn.webapp.view.HtmlPage;
-
 import org.junit.Test;
+
 import static org.mockito.Mockito.*;
 
 public class TestHtmlPage {
@@ -52,6 +53,12 @@ public class TestHtmlPage {
   @Test public void testUsual() {
     Injector injector = WebAppTests.testPage(TestView.class);
     PrintWriter out = injector.getInstance(PrintWriter.class);
+
+    // Verify the HTML page has correct meta tags in the header
+    verify(out).print(" http-equiv=\"X-UA-Compatible\"");
+    verify(out).print(" content=\"IE=8\"");
+    verify(out).print(" http-equiv=\"Content-type\"");
+    verify(out).print(String.format(" content=\"%s\"", MimeType.HTML));
 
     verify(out).print("test");
     verify(out).print(" id=\"testid\"");

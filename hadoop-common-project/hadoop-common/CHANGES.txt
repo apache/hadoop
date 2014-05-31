@@ -125,9 +125,6 @@ Trunk (Unreleased)
     HADOOP-10342. Add a new method to UGI to use a Kerberos login subject to
     build a new UGI. (Larry McCay via omalley)
 
-    HADOOP-9968. Makes ProxyUsers to work with NetGroups (Benoy Antony via 
-    ddas)
-
     HADOOP-10237. JavaKeyStoreProvider needs to set keystore permissions 
     correctly. (Larry McCay via omalley)
 
@@ -337,6 +334,11 @@ Trunk (Unreleased)
     HADOOP-10625. Trim configuration names when putting/getting them
     to properties. (Wangda Tan via xgong)
 
+    HADOOP-10645. TestKMS fails because race condition writing acl files. (tucu)
+
+    HADOOP-10611. KMS, keyVersion name should not be assumed to be 
+    keyName@versionNumber. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -418,6 +420,9 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10618. Remove SingleNodeSetup.apt.vm. (Akira Ajisaka via
     Arpit Agarwal)
+
+    HADOOP-9968. Makes ProxyUsers to work with NetGroups (Benoy Antony via 
+    ddas)
 
     HADOOP-10448. Support pluggable mechanism to specify proxy user settings.
     (Benoy Antony via Arpit Agarwal)
@@ -518,6 +523,9 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10639. FileBasedKeyStoresFactory initialization is not using default
     for SSL_REQUIRE_CLIENT_CERT_KEY. (tucu)
+
+    HADOOP-10638. Updating hadoop-daemon.sh to work as expected when nfs is
+    started as a privileged user. (Manikandan Narayanaswamy via atm)
 
 Release 2.4.1 - UNRELEASED
 
