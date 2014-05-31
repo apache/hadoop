@@ -145,9 +145,13 @@ public class TestFifoScheduler {
     RMContext rmContext = new RMContextImpl(dispatcher, null,
         null, null, null, null, null, null, null, writer);
 
-    FifoScheduler schedular = new FifoScheduler();
-    schedular.reinitialize(new Configuration(), rmContext);
-    QueueMetrics metrics = schedular.getRootQueueMetrics();
+    FifoScheduler scheduler = new FifoScheduler();
+    Configuration conf = new Configuration();
+    scheduler.setRMContext(rmContext);
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, rmContext);
+    QueueMetrics metrics = scheduler.getRootQueueMetrics();
     int beforeAppsSubmitted = metrics.getAppsSubmitted();
 
     ApplicationId appId = BuilderUtils.newApplicationId(200, 1);
@@ -155,18 +159,19 @@ public class TestFifoScheduler {
         appId, 1);
 
     SchedulerEvent appEvent = new AppAddedSchedulerEvent(appId, "queue", "user");
-    schedular.handle(appEvent);
+    scheduler.handle(appEvent);
     SchedulerEvent attemptEvent =
         new AppAttemptAddedSchedulerEvent(appAttemptId, false);
-    schedular.handle(attemptEvent);
+    scheduler.handle(attemptEvent);
 
     appAttemptId = BuilderUtils.newApplicationAttemptId(appId, 2);
     SchedulerEvent attemptEvent2 =
         new AppAttemptAddedSchedulerEvent(appAttemptId, false);
-    schedular.handle(attemptEvent2);
+    scheduler.handle(attemptEvent2);
 
     int afterAppsSubmitted = metrics.getAppsSubmitted();
     Assert.assertEquals(1, afterAppsSubmitted - beforeAppsSubmitted);
+    scheduler.stop();
   }
 
   @Test(timeout=2000)
@@ -184,6 +189,9 @@ public class TestFifoScheduler {
         null, containerTokenSecretManager, nmTokenSecretManager, null, writer);
 
     FifoScheduler scheduler = new FifoScheduler();
+    scheduler.setRMContext(rmContext);
+    scheduler.init(conf);
+    scheduler.start();
     scheduler.reinitialize(new Configuration(), rmContext);
 
     RMNode node0 = MockNodes.newNodeInfo(1,
@@ -232,6 +240,7 @@ public class TestFifoScheduler {
     //Also check that the containers were scheduled
     SchedulerAppReport info = scheduler.getSchedulerAppInfo(appAttemptId);
     Assert.assertEquals(3, info.getLiveContainers().size());
+    scheduler.stop();
   }
   
   @Test(timeout=2000)
@@ -254,6 +263,9 @@ public class TestFifoScheduler {
         return nodes;
       }
     };
+    scheduler.setRMContext(rmContext);
+    scheduler.init(conf);
+    scheduler.start();
     scheduler.reinitialize(new Configuration(), rmContext);
     RMNode node0 = MockNodes.newNodeInfo(1,
         Resources.createResource(2048, 4), 1, "127.0.0.1");
