@@ -111,6 +111,10 @@ Release 2.5.0 - UNRELEASED
     YARN-2010. Document yarn.resourcemanager.zk-auth and its scope. 
     (Robert Kanter via kasha)
 
+    YARN-2115. Replaced RegisterNodeManagerRequest's ContainerStatus with a new
+    NMContainerStatus which has more information that is needed for
+    work-preserving RM-restart. (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES 
