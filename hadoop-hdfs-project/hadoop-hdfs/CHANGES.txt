@@ -142,6 +142,8 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6472. fix typo in webapps/hdfs/explorer.js. (Juan Yu via wang)
 
+    HDFS-6056. Clean up NFS config settings (brandonli)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)

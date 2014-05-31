@@ -33,7 +33,6 @@ import org.apache.hadoop.util.ShutdownHookManager;
 public abstract class Nfs3Base {
   public static final Log LOG = LogFactory.getLog(Nfs3Base.class);
   private final RpcProgram rpcProgram;
-  private final int nfsPort;
   private int nfsBoundPort; // Will set after server starts
     
   public RpcProgram getRpcProgram() {
@@ -42,9 +41,7 @@ public abstract class Nfs3Base {
 
   protected Nfs3Base(RpcProgram rpcProgram, Configuration conf) {
     this.rpcProgram = rpcProgram;
-    this.nfsPort = conf.getInt(Nfs3Constant.NFS3_SERVER_PORT,
-        Nfs3Constant.NFS3_SERVER_PORT_DEFAULT);
-    LOG.info("NFS server port set to: " + nfsPort);
+    LOG.info("NFS server port set to: " + rpcProgram.getPort());
   }
 
   public void start(boolean register) {
@@ -58,7 +55,7 @@ public abstract class Nfs3Base {
   }
 
   private void startTCPServer() {
-    SimpleTcpServer tcpServer = new SimpleTcpServer(nfsPort,
+    SimpleTcpServer tcpServer = new SimpleTcpServer(rpcProgram.getPort(),
         rpcProgram, 0);
     rpcProgram.startDaemons();
     tcpServer.run();

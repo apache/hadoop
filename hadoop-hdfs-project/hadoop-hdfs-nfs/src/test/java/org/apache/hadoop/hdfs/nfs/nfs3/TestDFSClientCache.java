@@ -18,24 +18,24 @@
 package org.apache.hadoop.hdfs.nfs.nfs3;
 
 import static org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod.KERBEROS;
+import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertThat;
-import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Test;
 
 public class TestDFSClientCache {
   @Test
   public void testEviction() throws IOException {
-    Configuration conf = new Configuration();
+    NfsConfiguration conf = new NfsConfiguration();
     conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "hdfs://localhost");
 
     // Only one entry will be in the cache
@@ -59,7 +59,7 @@ public class TestDFSClientCache {
     String currentUser = "test-user";
 
 
-    Configuration conf = new Configuration();
+    NfsConfiguration conf = new NfsConfiguration();
     UserGroupInformation currentUserUgi
             = UserGroupInformation.createRemoteUser(currentUser);
     currentUserUgi.setAuthenticationMethod(KERBEROS);
@@ -83,7 +83,7 @@ public class TestDFSClientCache {
 
     UserGroupInformation currentUserUgi = UserGroupInformation
             .createUserForTesting(currentUser, new String[0]);
-    Configuration conf = new Configuration();
+    NfsConfiguration conf = new NfsConfiguration();
     conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "hdfs://localhost");
     DFSClientCache cache = new DFSClientCache(conf);
     UserGroupInformation ugiResult
