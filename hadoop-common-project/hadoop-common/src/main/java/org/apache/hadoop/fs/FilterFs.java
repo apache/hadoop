@@ -347,6 +347,11 @@ public abstract class FilterFs extends AbstractFileSystem {
   }
 
   @Override
+  public List<String> listXAttrs(Path path) throws IOException {
+    return myFs.listXAttrs(path);
+  }
+
+  @Override
   public void removeXAttr(Path path, String name) throws IOException {
     myFs.removeXAttr(path, name);
   }

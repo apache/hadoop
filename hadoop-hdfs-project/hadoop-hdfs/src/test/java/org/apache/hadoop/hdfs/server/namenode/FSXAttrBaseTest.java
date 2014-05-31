@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.FileNotFoundException;
+import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -32,8 +35,11 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -380,6 +386,111 @@ public class FSXAttrBaseTest {
     Assert.assertArrayEquals(new byte[0], xattrs.get(name3));
     
     fs.removeXAttr(path, name3);
+  }
+
+  /**
+   * Test the listXAttrs api.
+   * listXAttrs on a path that doesn't exist.
+   * listXAttrs on a path with no XAttrs
+   * Check basic functionality.
+   * Check that read access to parent dir is not enough to get xattr names
+   * Check that write access to the parent dir is not enough to get names
+   * Check that execute/scan access to the parent dir is sufficient to get
+   *  xattr names.
+   */
+  @Test(timeout = 120000)
+  public void testListXAttrs() throws Exception {
+    final UserGroupInformation user = UserGroupInformation.
+      createUserForTesting("user", new String[] {"mygroup"});
+
+    /* listXAttrs in a path that doesn't exist. */
+    try {
+      fs.listXAttrs(path);
+      fail("expected FileNotFoundException");
+    } catch (FileNotFoundException e) {
+      GenericTestUtils.assertExceptionContains("cannot find", e);
+    }
+
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) 0750));
+
+    /* listXAttrs on a path with no XAttrs.*/
+    final List<String> noXAttrs = fs.listXAttrs(path);
+    assertTrue("XAttrs were found?", noXAttrs.size() == 0);
+
+    fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
+    fs.setXAttr(path, name2, value2, EnumSet.of(XAttrSetFlag.CREATE));
+
+    /** Check basic functionality. */
+    final List<String> xattrNames = fs.listXAttrs(path);
+    assertTrue(xattrNames.contains(name1));
+    assertTrue(xattrNames.contains(name2));
+    assertTrue(xattrNames.size() == 2);
+
+    /* Check that read access to parent dir is not enough to get xattr names. */
+    fs.setPermission(path, new FsPermission((short) 0704));
+    final Path childDir = new Path(path, "child" + pathCount);
+    FileSystem.mkdirs(fs, childDir, FsPermission.createImmutable((short) 0700));
+    fs.setXAttr(childDir, name1, "1234".getBytes());
+    try {
+      user.doAs(new PrivilegedExceptionAction<Object>() {
+          @Override
+          public Object run() throws Exception {
+            final FileSystem userFs = dfsCluster.getFileSystem();
+            userFs.listXAttrs(childDir);
+            return null;
+          }
+        });
+      fail("expected IOException");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("Permission denied", e);
+    }
+
+    /*
+     * Check that write access to the parent dir is not enough to get names.
+     */
+    fs.setPermission(path, new FsPermission((short) 0702));
+    try {
+      user.doAs(new PrivilegedExceptionAction<Object>() {
+          @Override
+          public Object run() throws Exception {
+            final FileSystem userFs = dfsCluster.getFileSystem();
+            userFs.listXAttrs(childDir);
+            return null;
+          }
+        });
+      fail("expected IOException");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("Permission denied", e);
+    }
+
+    /*
+     * Check that execute/scan access to the parent dir is sufficient to get
+     * xattr names.
+     */
+    fs.setPermission(path, new FsPermission((short) 0701));
+    user.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          final FileSystem userFs = dfsCluster.getFileSystem();
+          userFs.listXAttrs(childDir);
+          return null;
+        }
+      });
+
+    /*
+     * Test that xattrs in the "trusted" namespace are filtered correctly.
+     */
+    fs.setXAttr(childDir, "trusted.myxattr", "1234".getBytes());
+    user.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          final FileSystem userFs = dfsCluster.getFileSystem();
+          assertTrue(userFs.listXAttrs(childDir).size() == 1);
+          return null;
+        }
+      });
+
+    assertTrue(fs.listXAttrs(childDir).size() == 2);
   }
   
   /**

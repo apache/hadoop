@@ -35,6 +35,7 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 import org.mortbay.util.ajax.JSON;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import java.io.ByteArrayInputStream;
@@ -715,6 +716,18 @@ public class JsonUtil {
     return JSON.toString(finalMap);
   }
   
+  public static String toJsonString(final List<XAttr> xAttrs)
+    throws IOException {
+    final List<String> names = Lists.newArrayListWithCapacity(xAttrs.size());
+    for (XAttr xAttr : xAttrs) {
+      names.add(XAttrHelper.getPrefixName(xAttr));
+    }
+    String ret = JSON.toString(names);
+    final Map<String, Object> finalMap = new TreeMap<String, Object>();
+    finalMap.put("XAttrNames", ret);
+    return JSON.toString(finalMap);
+  }
+
   public static XAttr toXAttr(final Map<?, ?> json) throws IOException {
     if (json == null) {
       return null;
@@ -760,6 +773,23 @@ public class JsonUtil {
     return result;
   }
   
+  public static List<String> toXAttrNames(final Map<?, ?> json)
+      throws IOException {
+    if (json == null) {
+      return null;
+    }
+
+    final String namesInJson = (String) json.get("XAttrNames");
+    final Object[] xattrs = (Object[]) JSON.parse(namesInJson);
+    final List<String> names =
+      Lists.newArrayListWithCapacity(json.keySet().size());
+
+    for (int i = 0; i < xattrs.length; i++) {
+        names.add((String) (xattrs[i]));
+    }
+    return names;
+  }
+
   private static Map<String, byte[]> toXAttrMap(final Object[] objects) 
       throws IOException {
     if (objects == null) {

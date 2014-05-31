@@ -338,6 +338,11 @@ class ChRootedFileSystem extends FilterFileSystem {
   }
 
   @Override
+  public List<String> listXAttrs(Path path) throws IOException {
+    return super.listXAttrs(fullPath(path));
+  }
+
+  @Override
   public void removeXAttr(Path path, String name) throws IOException {
     super.removeXAttr(fullPath(path), name);
   }

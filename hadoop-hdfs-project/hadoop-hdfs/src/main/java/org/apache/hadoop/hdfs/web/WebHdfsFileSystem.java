@@ -872,6 +872,17 @@ public class WebHdfsFileSystem extends FileSystem
   }
   
   @Override
+  public List<String> listXAttrs(Path p) throws IOException {
+    final HttpOpParam.Op op = GetOpParam.Op.LISTXATTRS;
+    return new FsPathResponseRunner<List<String>>(op, p) {
+      @Override
+      List<String> decodeResponse(Map<?, ?> json) throws IOException {
+        return JsonUtil.toXAttrNames(json);
+      }
+    }.run();
+  }
+
+  @Override
   public void removeXAttr(Path p, String name) throws IOException {
     statistics.incrementWriteOps(1);
     final HttpOpParam.Op op = PutOpParam.Op.REMOVEXATTR;

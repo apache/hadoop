@@ -196,6 +196,8 @@ public class TestHarFileSystem {
     public Map<String, byte[]> getXAttrs(Path path, List<String> names)
         throws IOException;
 
+    public List<String> listXAttrs(Path path) throws IOException;
+
     public void removeXAttr(Path path, String name) throws IOException;
 
     public AclStatus getAclStatus(Path path) throws IOException;

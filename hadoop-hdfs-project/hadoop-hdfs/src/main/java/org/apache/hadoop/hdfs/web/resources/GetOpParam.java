@@ -38,6 +38,7 @@ public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
     GETACLSTATUS(false, HttpURLConnection.HTTP_OK),
     GETXATTR(false, HttpURLConnection.HTTP_OK),
     GETXATTRS(false, HttpURLConnection.HTTP_OK),
+    LISTXATTRS(false, HttpURLConnection.HTTP_OK),
 
     NULL(false, HttpURLConnection.HTTP_NOT_IMPLEMENTED);
 

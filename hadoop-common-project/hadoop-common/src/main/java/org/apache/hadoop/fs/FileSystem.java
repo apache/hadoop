@@ -2403,8 +2403,8 @@ public abstract class FileSystem extends Configured implements Closeable {
    * <p/>
    * The access permissions of an xattr in the "user" namespace are
    * defined by the file and directory permission bits.
-   * An xattr can only be set when the logged-in user has the correct permissions.
-   * If the xattr exists, it will be replaced.
+   * An xattr can only be set if the logged-in user has the correct permissions.
+   * If the xattr exists, it is replaced.
    * <p/>
    * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
    * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
@@ -2422,7 +2422,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
-   * Get an xattr for a file or directory.
+   * Get an xattr name and value for a file or directory.
    * The name must be prefixed with user/trusted/security/system and
    * followed by ".". For example, "user.attr".
    * <p/>
@@ -2432,7 +2432,8 @@ public abstract class FileSystem extends Configured implements Closeable {
    * The xattrs of the "security" and "system" namespaces are only used/exposed 
    * internally by/to the FS impl.
    * <p/>
-   * An xattr will only be returned when the logged-in user has the correct permissions.
+   * An xattr will only be returned if the logged-in user has the
+   * correct permissions.
    * <p/>
    * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
    * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
@@ -2448,13 +2449,13 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
-   * Get all of the xattrs for a file or directory.
-   * Only those xattrs for which the logged-in user has permissions to view
+   * Get all of the xattr name/value pairs for a file or directory.
+   * Only those xattrs which the logged-in user has permissions to view
    * are returned.
    * <p/>
    * A regular user can only get xattrs for the "user" namespace.
    * The super user can only get xattrs for "user" and "trusted" namespaces.
-   * The xattr of "security" and "system" namespaces are only used/exposed 
+   * The xattrs of the "security" and "system" namespaces are only used/exposed
    * internally by/to the FS impl.
    * <p/>
    * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
@@ -2470,13 +2471,13 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
-   * Get all of the xattrs for a file or directory.
-   * Only those xattrs for which the logged-in user has permissions to view
+   * Get all of the xattrs name/value pairs for a file or directory.
+   * Only those xattrs which the logged-in user has permissions to view
    * are returned.
    * <p/>
    * A regular user can only get xattrs for the "user" namespace.
    * The super user can only get xattrs for "user" and "trusted" namespaces.
-   * The xattr of "security" and "system" namespaces are only used/exposed 
+   * The xattrs of the "security" and "system" namespaces are only used/exposed
    * internally by/to the FS impl.
    * <p/>
    * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
@@ -2491,6 +2492,29 @@ public abstract class FileSystem extends Configured implements Closeable {
       throws IOException {
     throw new UnsupportedOperationException(getClass().getSimpleName()
         + " doesn't support getXAttrs");
+  }
+
+  /**
+   * Get all of the xattr names for a file or directory.
+   * Only those xattr names which the logged-in user has permissions to view
+   * are returned.
+   * <p/>
+   * A regular user can only get xattr names for the "user" namespace.
+   * The super user can only get xattr names for "user" and "trusted"
+   * namespaces.
+   * The xattrs of the "security" and "system" namespaces are only
+   * used/exposed internally by/to the FS impl.
+   * <p/>
+   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
+   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   *
+   * @param path Path to get extended attributes
+   * @return Map<String, byte[]> describing the XAttrs of the file or directory
+   * @throws IOException
+   */
+  public List<String> listXAttrs(Path path) throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+            + " doesn't support listXAttrs");
   }
 
   /**

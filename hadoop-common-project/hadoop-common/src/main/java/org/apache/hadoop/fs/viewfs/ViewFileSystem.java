@@ -552,6 +552,13 @@ public class ViewFileSystem extends FileSystem {
   }
 
   @Override
+  public List<String> listXAttrs(Path path) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res =
+      fsState.resolve(getUriPath(path), true);
+    return res.targetFileSystem.listXAttrs(res.remainingPath);
+  }
+
+  @Override
   public void removeXAttr(Path path, String name) throws IOException {
     InodeTree.ResolveResult<FileSystem> res = fsState.resolve(getUriPath(path),
         true);
