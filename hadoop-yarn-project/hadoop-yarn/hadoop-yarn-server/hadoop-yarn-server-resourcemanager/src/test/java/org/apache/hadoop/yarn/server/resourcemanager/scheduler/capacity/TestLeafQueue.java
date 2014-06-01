@@ -114,7 +114,7 @@ public class TestLeafQueue {
     setupQueueConfiguration(csConf, newRoot);
     YarnConfiguration conf = new YarnConfiguration();
     cs.setConf(conf);
-    
+
     csContext = mock(CapacitySchedulerContext.class);
     when(csContext.getConfiguration()).thenReturn(csConf);
     when(csContext.getConf()).thenReturn(conf);
@@ -142,7 +142,9 @@ public class TestLeafQueue {
             queues, queues, 
             TestUtils.spyHook);
 
-    cs.reinitialize(csConf, rmContext);
+    cs.setRMContext(rmContext);
+    cs.init(csConf);
+    cs.start();
   }
   
   private static final String A = "a";
@@ -2080,5 +2082,8 @@ public class TestLeafQueue {
 
   @After
   public void tearDown() throws Exception {
+    if (cs != null) {
+      cs.stop();
+    }
   }
 }

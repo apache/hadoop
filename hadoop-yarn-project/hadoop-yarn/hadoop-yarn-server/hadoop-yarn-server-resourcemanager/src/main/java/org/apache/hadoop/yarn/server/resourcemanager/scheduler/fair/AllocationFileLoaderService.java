@@ -68,7 +68,9 @@ public class AllocationFileLoaderService extends AbstractService {
    * (this is done to prevent loading a file that hasn't been fully written).
    */
   public static final long ALLOC_RELOAD_WAIT_MS = 5 * 1000;
-  
+
+  public static final long THREAD_JOIN_TIMEOUT_MS = 1000;
+
   private final Clock clock;
 
   private long lastSuccessfulReload; // Last time we successfully reloaded queues
@@ -146,7 +148,14 @@ public class AllocationFileLoaderService extends AbstractService {
   @Override
   public void stop() {
     running = false;
-    reloadThread.interrupt();
+    if (reloadThread != null) {
+      reloadThread.interrupt();
+      try {
+        reloadThread.join(THREAD_JOIN_TIMEOUT_MS);
+      } catch (InterruptedException e) {
+        LOG.warn("reloadThread fails to join.");
+      }
+    }
     super.stop();
   }
   

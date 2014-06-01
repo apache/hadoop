@@ -61,10 +61,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
@@ -89,11 +92,13 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SlidingWindowReservoir;
 import com.codahale.metrics.Timer;
 
-public class ResourceSchedulerWrapper implements ResourceScheduler,
-        Configurable {
+public class ResourceSchedulerWrapper
+    extends AbstractYarnScheduler<SchedulerApplicationAttempt, SchedulerNode>
+    implements ResourceScheduler, Configurable {
   private static final String EOL = System.getProperty("line.separator");
   private static final int SAMPLING_SIZE = 60;
   private ScheduledExecutorService pool;
+  private RMContext rmContext;
   // counters for scheduler allocate/handle operations
   private Counter schedulerAllocateCounter;
   private Counter schedulerHandleCounter;
@@ -146,6 +151,7 @@ public class ResourceSchedulerWrapper implements ResourceScheduler,
   public final Logger LOG = Logger.getLogger(ResourceSchedulerWrapper.class);
 
   public ResourceSchedulerWrapper() {
+    super(ResourceSchedulerWrapper.class.getName());
     samplerLock = new ReentrantLock();
     queueLock = new ReentrantLock();
   }
@@ -795,10 +801,39 @@ public class ResourceSchedulerWrapper implements ResourceScheduler,
     return conf;
   }
 
+  @SuppressWarnings("unchecked")
   @Override
-  public void reinitialize(Configuration entries, RMContext rmContext)
-          throws IOException {
-    scheduler.reinitialize(entries, rmContext);
+  public void serviceInit(Configuration conf) throws Exception {
+    ((AbstractYarnScheduler<SchedulerApplicationAttempt, SchedulerNode>)
+        scheduler).init(conf);
+    super.serviceInit(conf);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public void serviceStart() throws Exception {
+    ((AbstractYarnScheduler<SchedulerApplicationAttempt, SchedulerNode>)
+        scheduler).start();
+    super.serviceStart();
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public void serviceStop() throws Exception {
+    ((AbstractYarnScheduler<SchedulerApplicationAttempt, SchedulerNode>)
+        scheduler).stop();
+    super.serviceStop();
+  }
+
+  @Override
+  public void setRMContext(RMContext rmContext) {
+    scheduler.setRMContext(rmContext);
+  }
+
+  @Override
+  public void reinitialize(Configuration conf, RMContext rmContext)
+      throws IOException {
+    scheduler.reinitialize(conf, rmContext);
   }
 
   @Override

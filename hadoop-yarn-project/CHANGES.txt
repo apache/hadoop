@@ -115,6 +115,8 @@ Release 2.5.0 - UNRELEASED
     NMContainerStatus which has more information that is needed for
     work-preserving RM-restart. (Jian He via vinodkv)
 
+    YARN-1474. Make sechedulers services. (Tsuyoshi Ozawa via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 

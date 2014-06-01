@@ -203,10 +203,11 @@ public class TestRMWebApp {
 
     CapacityScheduler cs = new CapacityScheduler();
     cs.setConf(new YarnConfiguration());
-    cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
+    cs.setRMContext(new RMContextImpl(null, null, null, null, null,
         null, new RMContainerTokenSecretManager(conf),
         new NMTokenSecretManagerInRM(conf),
         new ClientToAMTokenSecretManagerInRM(), null));
+    cs.init(conf);
     return cs;
   }
 
@@ -269,19 +270,21 @@ public class TestRMWebApp {
     ResourceManager rm = mock(ResourceManager.class);
     RMContext rmContext = mockRMContext(apps, racks, nodes,
         mbsPerNode);
-    ResourceScheduler rs = mockFifoScheduler();
+    ResourceScheduler rs = mockFifoScheduler(rmContext);
     when(rm.getResourceScheduler()).thenReturn(rs);
     when(rm.getRMContext()).thenReturn(rmContext);
     return rm;
   }
 
-  public static FifoScheduler mockFifoScheduler() throws Exception {
+  public static FifoScheduler mockFifoScheduler(RMContext rmContext)
+      throws Exception {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     setupFifoQueueConfiguration(conf);
 
     FifoScheduler fs = new FifoScheduler();
     fs.setConf(new YarnConfiguration());
-    fs.reinitialize(conf, null);
+    fs.setRMContext(rmContext);
+    fs.init(conf);
     return fs;
   }
 
