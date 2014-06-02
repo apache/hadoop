@@ -183,6 +183,8 @@ Release 2.5.0 - UNRELEASED
     YARN-2103. Inconsistency between viaProto flag and initial value of 
     SerializedExceptionProto.Builder (Binglin Chang via junping_du)
 
+    YARN-1550. NPE in FairSchedulerAppsBlock#render. (Anubhav Dhoot via kasha)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
