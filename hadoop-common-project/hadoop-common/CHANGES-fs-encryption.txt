@@ -21,6 +21,9 @@ fs-encryption (Unreleased)
 
     HADOOP-10635. Add a method to CryptoCodec to generate SRNs for IV. (Yi Liu)
 
+    HADOOP-10653. Add a new constructor for CryptoInputStream that 
+    receives current position of wrapped stream. (Yi Liu)
+
   OPTIMIZATIONS
 
   BUG FIXES

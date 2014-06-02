@@ -102,18 +102,22 @@ public class CryptoInputStream extends FilterInputStream implements
   
   public CryptoInputStream(InputStream in, CryptoCodec codec, 
       int bufferSize, byte[] key, byte[] iv) throws IOException {
+    this(in, codec, bufferSize, key, iv, 
+        CryptoStreamUtils.getInputStreamOffset(in));
+  }
+  
+  public CryptoInputStream(InputStream in, CryptoCodec codec,
+      int bufferSize, byte[] key, byte[] iv, long streamOffset) throws IOException {
     super(in);
     this.bufferSize = CryptoStreamUtils.checkBufferSize(codec, bufferSize);
     this.codec = codec;
     this.key = key.clone();
     this.initIV = iv.clone();
     this.iv = iv.clone();
+    this.streamOffset = streamOffset;
     inBuffer = ByteBuffer.allocateDirect(this.bufferSize);
     outBuffer = ByteBuffer.allocateDirect(this.bufferSize);
     decryptor = getDecryptor();
-    if (in instanceof Seekable) {
-      streamOffset = ((Seekable) in).getPos();
-    }
     resetStreamOffset(streamOffset);
   }
   

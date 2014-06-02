@@ -20,10 +20,13 @@ package org.apache.hadoop.crypto;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_BUFFER_SIZE_KEY;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Seekable;
 
 import com.google.common.base.Preconditions;
 
@@ -51,5 +54,16 @@ public class CryptoStreamUtils {
     Preconditions.checkArgument(bufferSize >= MIN_BUFFER_SIZE, 
         "Minimum value of buffer size is " + MIN_BUFFER_SIZE + ".");
     return bufferSize - bufferSize % codec.getAlgorithmBlockSize();
+  }
+  
+  /**
+   * If input stream is {@link org.apache.hadoop.fs.Seekable}, return it's
+   * current position, otherwise return 0;
+   */
+  public static long getInputStreamOffset(InputStream in) throws IOException {
+    if (in instanceof Seekable) {
+      return ((Seekable) in).getPos();
+    }
+    return 0;
   }
 }
