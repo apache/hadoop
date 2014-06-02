@@ -180,6 +180,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1868. YARN status web ui does not show correctly in IE 11.
     (Chuan Liu via cnauroth)
 
+    YARN-2103. Inconsistency between viaProto flag and initial value of 
+    SerializedExceptionProto.Builder (Binglin Chang via junping_du)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

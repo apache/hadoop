@@ -32,9 +32,9 @@ import org.apache.hadoop.yarn.proto.YarnProtos.SerializedExceptionProtoOrBuilder
 
 public class SerializedExceptionPBImpl extends SerializedException {
 
-  SerializedExceptionProto proto = SerializedExceptionProto
-      .getDefaultInstance();
-  SerializedExceptionProto.Builder builder = null;
+  SerializedExceptionProto proto = null;
+  SerializedExceptionProto.Builder builder =
+      SerializedExceptionProto.newBuilder();
   boolean viaProto = false;
 
   public SerializedExceptionPBImpl() {
@@ -133,6 +133,22 @@ public class SerializedExceptionPBImpl extends SerializedException {
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null) {
+      return false;
+    }
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
   }
 
   private void maybeInitBuilder() {
