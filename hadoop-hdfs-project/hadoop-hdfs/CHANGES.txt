@@ -144,6 +144,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6056. Clean up NFS config settings (brandonli)
 
+    HDFS-6109 let sync_file_range() system call run in background
+    (Liang Xie via stack)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)

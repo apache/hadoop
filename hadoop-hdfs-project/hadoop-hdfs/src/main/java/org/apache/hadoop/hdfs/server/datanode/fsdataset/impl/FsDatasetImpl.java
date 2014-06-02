@@ -1907,5 +1907,13 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
     return new RollingLogsImpl(dir, prefix);
   }
+
+  @Override
+  public void submitBackgroundSyncFileRangeRequest(ExtendedBlock block,
+      FileDescriptor fd, long offset, long nbytes, int flags) {
+    FsVolumeImpl fsVolumeImpl = this.getVolume(block);
+    asyncDiskService.submitSyncFileRangeRequest(fsVolumeImpl, fd, offset,
+        nbytes, flags);
+  }
 }
 
