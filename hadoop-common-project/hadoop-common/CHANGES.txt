@@ -527,6 +527,8 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10638. Updating hadoop-daemon.sh to work as expected when nfs is
     started as a privileged user. (Manikandan Narayanaswamy via atm)
 
+    HADOOP-10630. Possible race condition in RetryInvocationHandler. (jing9)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

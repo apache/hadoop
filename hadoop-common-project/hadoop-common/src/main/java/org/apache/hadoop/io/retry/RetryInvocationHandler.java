@@ -36,7 +36,6 @@ import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcConstants;
 import org.apache.hadoop.ipc.RpcInvocationHandler;
-import org.apache.hadoop.util.ThreadUtil;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -160,11 +159,11 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
               if (invocationAttemptFailoverCount == proxyProviderFailoverCount) {
                 proxyProvider.performFailover(currentProxy.proxy);
                 proxyProviderFailoverCount++;
-                currentProxy = proxyProvider.getProxy();
               } else {
                 LOG.warn("A failover has occurred since the start of this method"
                     + " invocation attempt.");
               }
+              currentProxy = proxyProvider.getProxy();
             }
             invocationFailoverCount++;
           }
