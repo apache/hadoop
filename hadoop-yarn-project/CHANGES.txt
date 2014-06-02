@@ -108,7 +108,7 @@ Release 2.5.0 - UNRELEASED
     YARN-2054. Better defaults for YARN ZK configs for retries and retry-inteval 
     when HA is enabled. (kasha)
 
-    YARN-2010. Document yarn.resourcemanager.zk-auth and its scope. 
+    YARN-1877. Document yarn.resourcemanager.zk-auth and its scope. 
     (Robert Kanter via kasha)
 
     YARN-2115. Replaced RegisterNodeManagerRequest's ContainerStatus with a new
