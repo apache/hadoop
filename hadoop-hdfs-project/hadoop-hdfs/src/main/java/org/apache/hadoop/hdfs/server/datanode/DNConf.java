@@ -67,6 +67,7 @@ public class DNConf {
   final boolean transferToAllowed;
   final boolean dropCacheBehindWrites;
   final boolean syncBehindWrites;
+  final boolean syncBehindWritesInBackground;
   final boolean dropCacheBehindReads;
   final boolean syncOnClose;
   final boolean encryptDataTransfer;
@@ -119,6 +120,9 @@ public class DNConf {
     syncBehindWrites = conf.getBoolean(
         DFSConfigKeys.DFS_DATANODE_SYNC_BEHIND_WRITES_KEY,
         DFSConfigKeys.DFS_DATANODE_SYNC_BEHIND_WRITES_DEFAULT);
+    syncBehindWritesInBackground = conf.getBoolean(
+        DFSConfigKeys.DFS_DATANODE_SYNC_BEHIND_WRITES_IN_BACKGROUND_KEY,
+        DFSConfigKeys.DFS_DATANODE_SYNC_BEHIND_WRITES_IN_BACKGROUND_DEFAULT);
     dropCacheBehindReads = conf.getBoolean(
         DFSConfigKeys.DFS_DATANODE_DROP_CACHE_BEHIND_READS_KEY,
         DFSConfigKeys.DFS_DATANODE_DROP_CACHE_BEHIND_READS_DEFAULT);
