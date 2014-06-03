@@ -16,11 +16,14 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.service.launcher;
+package org.apache.hadoop.util;
 
 /**
- * Get the exit code of an exception. 
+ * Get the exit code of an exception. Making it an interface makes
+ * it possible to retrofit exit codes onto existing classes,
+ * and add exit code providers under all parts of the Exception tree.
  */
+
 public interface ExitCodeProvider {
 
   /**

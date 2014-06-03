@@ -19,6 +19,8 @@
 package org.apache.hadoop.service.launcher;
 
 
+import org.apache.hadoop.util.ExitCodeProvider;
+
 /**
  * A service launch exception that includes an exit code;
  * when caught by the ServiceLauncher, it will convert that

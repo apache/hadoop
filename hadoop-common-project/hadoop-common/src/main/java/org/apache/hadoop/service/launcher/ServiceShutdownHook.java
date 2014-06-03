@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.service.launcher;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.slf4j.Logger;
@@ -39,7 +40,12 @@ public class ServiceShutdownHook implements Runnable {
   private final WeakReference<Service> serviceRef;
   private Runnable hook;
 
+  /**
+   * Create an instance
+   * @param service the service
+   */
   public ServiceShutdownHook(Service service) {
+    Preconditions.checkArgument(service != null);
     serviceRef = new WeakReference<Service>(service);
   }
 

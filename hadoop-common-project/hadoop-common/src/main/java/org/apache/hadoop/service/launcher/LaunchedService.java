@@ -21,42 +21,47 @@ package org.apache.hadoop.service.launcher;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service;
 
+import java.util.List;
+
 /**
  * An interface which services can implement to have their
  * execution managed by the ServiceLauncher.
  * The command line options will be passed down before the 
  * {@link Service#init(Configuration)} operation is invoked via an
- * invocation of {@link RunService#bindArgs(Configuration, String...)}
+ * invocation of {@link LaunchedService#bindArgs(Configuration, List)}
  * After the service has been successfully started via {@link Service#start()}
- * the {@link RunService#runService()} method is called to execute the 
+ * the {@link LaunchedService#execute()} method is called to execute the 
  * service. When this method returns, the service launcher will exit, using
  * the return code from the method as its exit option.
  */
-public interface RunService extends Service {
+public interface LaunchedService extends Service {
 
   /**
    * Propagate the command line arguments.
-   * This method is called before {@link Service#init(Configuration)};
+   * This method is called before {@link #init(Configuration)};
    * the configuration that is returned from this operation
-   * is the one that is passed on to the init operation.
-   * This permits implemenations to change the configuration before
-   * the init operation.n
+   * is the one that is passed on to that {@link #init(Configuration) operation.
    * 
-   *
+   * This permits implementations to change the configuration before
+   * the init operation. As the ServiceLauncher only creates
+   * an instance of the base {@link Configuration} class, it is
+   * recommended to instantiate any subclass (such as YarnConfiguration)
+   * that injects new resources.
+   * 
    * @param config the initial configuration build up by the
    * service launcher.
-   * @param args argument list list of arguments passed to the command line
+   * @param args list of arguments passed to the command line
    * after any launcher-specific commands have been stripped.
    * @return the configuration to init the service with. This MUST NOT be null.
    * Recommended: pass down the config parameter with any changes
    * @throws Exception any problem
    */
-  Configuration bindArgs(Configuration config, String... args) throws Exception;
+  Configuration bindArgs(Configuration config, List<String> args) throws Exception;
   
   /**
    * Run a service. This called after {@link Service#start()}
    * @return the exit code
    * @throws Throwable any exception to report
    */
-  int runService() throws Throwable ;
+  int execute() throws Throwable ;
 }

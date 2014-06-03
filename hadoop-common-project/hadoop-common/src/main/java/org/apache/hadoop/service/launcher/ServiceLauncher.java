@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.util.ExitCodeProvider;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.VersionInfo;
@@ -46,9 +47,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Workflow
  * <ol>
  *   <li>An instance of the class is created</li>
- *   <li>If it implements RunService, it is given the binding args off the CLI</li>
+ *   <li>If it implements LaunchedService, it is given the binding args off the CLI</li>
  *   <li>Its service.init() and service.start() methods are called.</li>
- *   <li>If it implements RunService, runService() is called and its return
+ *   <li>If it implements LaunchedService, runService() is called and its return
  *   code used as the exit code.</li>
  *   <li>Otherwise: it waits for the service to stop, assuming in its start() method
  *   it begins work</li>
@@ -77,12 +78,14 @@ public class ServiceLauncher<S extends Service>
   public static final String ARG_CONF = "--conf";
 
   public static final String USAGE_MESSAGE =
-    "Usage: " + NAME + " classname ["+ARG_CONF + "<conf file>] <service arguments> | ";
+      "Usage: " + NAME + " classname " +
+      "[" + ARG_CONF + "<conf file>] " +
+      "<service arguments> ";
   static final int SHUTDOWN_TIME_ON_INTERRUPT = 30 * 1000;
 
   private volatile S service;
   private int serviceExitCode;
-  private final List<IrqHandler> interruptHandlers = new ArrayList<IrqHandler>(1);
+  private final List<IrqHandler> interruptHandlers = new ArrayList<IrqHandler>(2);
   private Configuration configuration;
   private String serviceClassName;
   private static AtomicBoolean signalAlreadyReceived = new AtomicBoolean(false);
@@ -98,7 +101,7 @@ public class ServiceLauncher<S extends Service>
 
   /**
    * Get the service. Null until and unless
-   * {@link #launchService(Configuration, String[], boolean)} has completed
+   * {@link #launchService(Configuration, List, boolean)} has completed
    * @return the service
    */
   public S getService() {
@@ -128,14 +131,14 @@ public class ServiceLauncher<S extends Service>
 
   /**
    * Launch the service, by creating it, initing it, starting it and then
-   * maybe running it. {@link RunService#bindArgs(Configuration, String...)} is invoked
+   * maybe running it. {@link LaunchedService#bindArgs(Configuration, List)} is invoked
    * on the service between creation and init.
    *
    * All exceptions that occur are propagated upwards.
    *
    * If the method returns a status code, it means that it got as far starting
-   * the service, and if it implements {@link RunService}, that the 
-   * method {@link RunService#runService()} has completed. 
+   * the service, and if it implements {@link LaunchedService}, that the 
+   * method {@link LaunchedService#execute()} has completed. 
    *
    * At this point, the service is returned by {@link #getService()}.
    *
@@ -151,7 +154,7 @@ public class ServiceLauncher<S extends Service>
    * @throws Throwable any other failure
    */
   public int launchService(Configuration conf,
-      String[] processedArgs,
+      List<String> processedArgs,
       boolean addShutdownHook)
     throws Throwable {
 
@@ -162,12 +165,12 @@ public class ServiceLauncher<S extends Service>
       ServiceShutdownHook shutdownHook = new ServiceShutdownHook(service);
       ShutdownHookManager.get().addShutdownHook(shutdownHook, PRIORITY);
     }
-    RunService runService = null;
+    LaunchedService launchedService = null;
 
-    if (service instanceof RunService) {
-      //if its a runService, pass in the conf and arguments before init)
-      runService = (RunService) service;
-      configuration = runService.bindArgs(configuration, processedArgs);
+    if (service instanceof LaunchedService) {
+      //if its a launchedService, pass in the conf and arguments before init)
+      launchedService = (LaunchedService) service;
+      configuration = launchedService.bindArgs(configuration, processedArgs);
       Preconditions.checkNotNull(configuration,
           "null configuration returned by bindArgs()");
     }
@@ -178,9 +181,9 @@ public class ServiceLauncher<S extends Service>
     }
     service.start();
     int exitCode = EXIT_SUCCESS;
-    if (runService != null) {
+    if (launchedService != null) {
       //assume that runnable services are meant to run from here
-      exitCode = runService.runService();
+      exitCode = launchedService.execute();
       LOG.debug("Service exited with exit code {}", exitCode);
 
     } else {
@@ -316,11 +319,14 @@ public class ServiceLauncher<S extends Service>
   }
 
   /**
-   * Exit off an exception. This can be subclassed for testing
+   * Exit off an exception. By default, calls
+   * {@link ExitUtil#terminate(ExitUtil.ExitException)}
+   * 
+   * This can be subclassed for testing
    * @param ee exit exception
    */
   protected void exit(ExitUtil.ExitException ee) {
-    ExitUtil.terminate(ee.status, ee);
+    ExitUtil.terminate(ee);
   }
 
   /**
@@ -357,62 +363,9 @@ public class ServiceLauncher<S extends Service>
     registerFailureHandling();
     //Currently the config just the default
     Configuration conf = new Configuration();
-    String[] processedArgs = extractConfigurationArgs(conf, args);
+    List<String> processedArgs = extractConfigurationArgs(conf, args);
     ExitUtil.ExitException ee = launchServiceRobustly(conf, processedArgs);
     exit(ee);
-  }
-
-  /**
-   * Extract the configuration arguments and apply them to the configuration,
-   * building an array of processed arguments to hand down to the service.
-   *
-   * @param conf configuration to update
-   * @param args main arguments. args[0] is assumed to be the service
-   * classname and is skipped
-   * @return the processed list.
-   */
-  public static String[] extractConfigurationArgs(Configuration conf,
-                                                  List<String> args) {
-
-    //convert args to a list
-    int argCount = args.size();
-    if (argCount <= 1 ) {
-      return new String[0];
-    }
-    List<String> argsList = new ArrayList<String>(argCount);
-    ListIterator<String> arguments = args.listIterator();
-    //skip that first entry
-    arguments.next();
-    while (arguments.hasNext()) {
-      String arg = arguments.next();
-      if (arg.equals(ARG_CONF)) {
-        //the argument is a --conf file tuple: extract the path and load
-        //it in as a configuration resource.
-
-        //increment the loop iterator
-        if (!arguments.hasNext()) {
-          //overshot the end of the file
-          exitWithMessage(EXIT_COMMAND_ARGUMENT_ERROR,
-              ARG_CONF + ": missing configuration file after ");
-        }
-        File file = new File(arguments.next());
-        if (!file.exists()) {
-          exitWithMessage(EXIT_COMMAND_ARGUMENT_ERROR,
-              ARG_CONF + ": configuration file not found: " + file);
-        }
-        try {
-          conf.addResource(file.toURI().toURL());
-        } catch (MalformedURLException e) {
-          exitWithMessage(EXIT_COMMAND_ARGUMENT_ERROR,
-              ARG_CONF + ": configuration file path invalid: " + file);
-        }
-      } else {
-        argsList.add(arg);
-      }
-    }
-    String[] processedArgs = new String[argsList.size()];
-    argsList.toArray(processedArgs);
-    return processedArgs;
   }
 
   /**
@@ -424,7 +377,7 @@ public class ServiceLauncher<S extends Service>
    * @return an exit exception, which will have a status code of 0 if it worked
    */
   public ExitUtil.ExitException launchServiceRobustly(Configuration conf,
-                                   String[] processedArgs) {
+                                   List<String> processedArgs) {
     ExitUtil.ExitException exitException;
     try {
       int exitCode = launchService(conf, processedArgs, true);
@@ -458,19 +411,103 @@ public class ServiceLauncher<S extends Service>
       }
       if (thrown instanceof ExitCodeProvider) {
         exitCode = ((ExitCodeProvider) thrown).getExitCode();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("While running {}: {}", getServiceName(), message, thrown);
-        }
-        LOG.error(message);
       } else {
-        // not any of the service launcher exceptions -assume something worse
-        error(message, thrown);
         exitCode = EXIT_EXCEPTION_THROWN;
       }
       exitException = new ExitUtil.ExitException(exitCode, message);
       exitException.initCause(thrown);
     }
     return exitException;
+  }
+
+  
+  /* ====================================================================== */
+
+  /**
+   * The real main function, which takes the arguments as a list
+   * arg 0 must be the service classname
+   * @param argsList the list of arguments
+   */
+  public static void serviceMain(List<String> argsList) {
+    if (argsList.isEmpty()) {
+      exitWithMessage(EXIT_USAGE, USAGE_MESSAGE);
+    } else {
+      String serviceClassName = argsList.get(0);
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(startupShutdownMessage(serviceClassName, argsList));
+        StringBuilder builder = new StringBuilder();
+        for (String arg : argsList) {
+          builder.append('"').append(arg).append("\" ");
+        }
+        LOG.debug(builder.toString());
+      }
+
+      ServiceLauncher<Service> serviceLauncher =
+          new ServiceLauncher<Service>(serviceClassName);
+      serviceLauncher.launchServiceAndExit(argsList);
+    }
+  }
+
+  /* ====================================================================== */
+
+
+  /**
+   * Extract the configuration arguments and apply them to the configuration,
+   * building an array of processed arguments to hand down to the service.
+   *
+   * @param conf configuration to update
+   * @param args main arguments. args[0] is assumed to be the service
+   * classname and is skipped
+   * @return the processed list.
+   * @throws ExitUtil.ExitException if exceptions are disabled
+   */
+  public List<String> extractConfigurationArgs(Configuration conf,
+      List<String> args) {
+
+    //convert args to a list
+    int argCount = args.size();
+    if (argCount <= 1 ) {
+      return new ArrayList<String>(0);
+    }
+    List<String> argsList = new ArrayList<String>(argCount);
+    ListIterator<String> arguments = args.listIterator();
+    //skip that first entry
+    arguments.next();
+    while (arguments.hasNext()) {
+      String arg = arguments.next();
+      if (arg.equals(ARG_CONF)) {
+        //the argument is a --conf file tuple: extract the path and load
+        //it in as a configuration resource.
+
+        //increment the loop iterator
+        if (!arguments.hasNext()) {
+          //overshot the end of the file
+          exitWithMessage(EXIT_COMMAND_ARGUMENT_ERROR,
+              ARG_CONF + ": missing configuration file after ");
+          // never called, but retained for completeness
+          break;
+        }
+        File file = new File(arguments.next());
+        if (!file.exists()) {
+          exitWithMessage(EXIT_COMMAND_ARGUMENT_ERROR,
+              ARG_CONF + ": configuration file not found: " + file);
+          // never called, but retained for completeness
+          break;
+        }
+        try {
+          conf.addResource(file.toURI().toURL());
+        } catch (MalformedURLException e) {
+          exitWithMessage(EXIT_COMMAND_ARGUMENT_ERROR,
+              ARG_CONF + ": configuration file path invalid: " + file);
+          // never called, but retained for completeness
+          break;
+        }
+      } else {
+        argsList.add(arg);
+      }
+    }
+    return argsList;
   }
 
 
@@ -499,13 +536,13 @@ public class ServiceLauncher<S extends Service>
   }
 
   /**
-   * Exit with a printed message
+   * Exit with a printed message. 
    * @param status status code
    * @param message message
+   * @throws ExitUtil.ExitException if exceptions are disabled
    */
   private static void exitWithMessage(int status, String message) {
-    System.err.println(message);
-    ExitUtil.terminate(status);
+    ExitUtil.terminate(status, message);
   }
 
   private static String toStartupShutdownString(String prefix, String[] msg) {
@@ -517,7 +554,6 @@ public class ServiceLauncher<S extends Service>
     b.append("\n************************************************************/");
     return b.toString();
   }
-
   /**
    * forced shutdown runnable.
    */
@@ -542,31 +578,6 @@ public class ServiceLauncher<S extends Service>
 
     private boolean isServiceStopped() {
       return serviceStopped;
-    }
-  }
-
-  /**
-   * The real main function, which takes the arguments as a list
-   * arg 0 must be the service classname
-   * @param argsList the list of arguments
-   */
-  public static void serviceMain(List<String> argsList) {
-    if (argsList.isEmpty()) {
-      exitWithMessage(EXIT_USAGE, USAGE_MESSAGE);
-    } else {
-      String serviceClassName = argsList.get(0);
-
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(startupShutdownMessage(serviceClassName, argsList));
-        StringBuilder builder = new StringBuilder();
-        for (String arg : argsList) {
-          builder.append('"').append(arg).append("\" ");
-        }
-        LOG.debug(builder.toString());
-      }
-
-      ServiceLauncher serviceLauncher = new ServiceLauncher<Service>(serviceClassName);
-      serviceLauncher.launchServiceAndExit(argsList);
     }
   }
 
