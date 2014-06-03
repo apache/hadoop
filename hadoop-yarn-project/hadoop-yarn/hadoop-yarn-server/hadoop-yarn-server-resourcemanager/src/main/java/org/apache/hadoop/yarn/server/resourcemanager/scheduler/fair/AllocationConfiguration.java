@@ -53,6 +53,10 @@ public class AllocationConfiguration {
   private final int userMaxAppsDefault;
   private final int queueMaxAppsDefault;
 
+  // Maximum resource share for each leaf queue that can be used to run AMs
+  final Map<String, Float> queueMaxAMShares;
+  private final float queueMaxAMShareDefault;
+
   // ACL's for each queue. Only specifies non-default ACL's from configuration.
   private final Map<String, Map<QueueACL, AccessControlList>> queueAcls;
 
@@ -84,8 +88,9 @@ public class AllocationConfiguration {
   public AllocationConfiguration(Map<String, Resource> minQueueResources,
       Map<String, Resource> maxQueueResources,
       Map<String, Integer> queueMaxApps, Map<String, Integer> userMaxApps,
-      Map<String, ResourceWeights> queueWeights, int userMaxAppsDefault,
-      int queueMaxAppsDefault,
+      Map<String, ResourceWeights> queueWeights,
+      Map<String, Float> queueMaxAMShares, int userMaxAppsDefault,
+      int queueMaxAppsDefault, float queueMaxAMShareDefault,
       Map<String, SchedulingPolicy> schedulingPolicies,
       SchedulingPolicy defaultSchedulingPolicy,
       Map<String, Long> minSharePreemptionTimeouts,
@@ -97,9 +102,11 @@ public class AllocationConfiguration {
     this.maxQueueResources = maxQueueResources;
     this.queueMaxApps = queueMaxApps;
     this.userMaxApps = userMaxApps;
+    this.queueMaxAMShares = queueMaxAMShares;
     this.queueWeights = queueWeights;
     this.userMaxAppsDefault = userMaxAppsDefault;
     this.queueMaxAppsDefault = queueMaxAppsDefault;
+    this.queueMaxAMShareDefault = queueMaxAMShareDefault;
     this.defaultSchedulingPolicy = defaultSchedulingPolicy;
     this.schedulingPolicies = schedulingPolicies;
     this.minSharePreemptionTimeouts = minSharePreemptionTimeouts;
@@ -116,8 +123,10 @@ public class AllocationConfiguration {
     queueWeights = new HashMap<String, ResourceWeights>();
     queueMaxApps = new HashMap<String, Integer>();
     userMaxApps = new HashMap<String, Integer>();
+    queueMaxAMShares = new HashMap<String, Float>();
     userMaxAppsDefault = Integer.MAX_VALUE;
     queueMaxAppsDefault = Integer.MAX_VALUE;
+    queueMaxAMShareDefault = 1.0f;
     queueAcls = new HashMap<String, Map<QueueACL, AccessControlList>>();
     minSharePreemptionTimeouts = new HashMap<String, Long>();
     defaultMinSharePreemptionTimeout = Long.MAX_VALUE;
@@ -184,6 +193,11 @@ public class AllocationConfiguration {
     return (maxApps == null) ? queueMaxAppsDefault : maxApps;
   }
   
+  public float getQueueMaxAMShare(String queue) {
+    Float maxAMShare = queueMaxAMShares.get(queue);
+    return (maxAMShare == null) ? queueMaxAMShareDefault : maxAMShare;
+  }
+
   /**
    * Get the minimum resource allocation for the given queue.
    * @return the cap set on this queue, or 0 if not set.
