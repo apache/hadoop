@@ -167,6 +167,9 @@ public class TestGetBlocks {
       if (stm != null) {
         stm.close();
       }
+      if (client != null) {
+        client.close();
+      }
       cluster.shutdown();
     }
   }
