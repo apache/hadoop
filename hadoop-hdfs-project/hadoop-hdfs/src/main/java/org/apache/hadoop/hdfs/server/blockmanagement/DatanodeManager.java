@@ -351,8 +351,7 @@ public class DatanodeManager {
         DFSUtil.DECOM_COMPARATOR;
         
     for (LocatedBlock b : locatedblocks) {
-      networktopology.sortByDistance(client, b.getLocations(), b
-          .getBlock().getBlockId());
+      networktopology.pseudoSortByDistance(client, b.getLocations());
       // Move decommissioned/stale datanodes to the bottom
       Arrays.sort(b.getLocations(), comparator);
     }
