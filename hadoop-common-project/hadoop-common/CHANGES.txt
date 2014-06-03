@@ -8,6 +8,8 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10498. Add support for proxy server. (daryn)
 
+    HADOOP-9704. Write metrics sink plugin for Hadoop/Graphite (Chu Tong, Alex Newman and Babak Behzad via raviprak)
+
   IMPROVEMENTS
 
     HADOOP-10451. Remove unused field and imports from SaslRpcServer.
