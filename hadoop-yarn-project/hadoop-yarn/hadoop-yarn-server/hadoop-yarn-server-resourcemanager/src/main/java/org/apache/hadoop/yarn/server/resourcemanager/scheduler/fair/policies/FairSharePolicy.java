@@ -125,6 +125,11 @@ public class FairSharePolicy extends SchedulingPolicy {
   }
 
   @Override
+  public boolean checkIfAMResourceUsageOverLimit(Resource usage, Resource maxAMResource) {
+    return usage.getMemory() > maxAMResource.getMemory();
+  }
+
+  @Override
   public byte getApplicableDepth() {
     return SchedulingPolicy.DEPTH_ANY;
   }

@@ -132,6 +132,9 @@ Release 2.5.0 - UNRELEASED
 
     YARN-1474. Make schedulers services. (Tsuyoshi Ozawa via kasha)
 
+    YARN-1913. With Fair Scheduler, cluster can logjam when all resources are
+    consumed by AMs (Wei Yan via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES 

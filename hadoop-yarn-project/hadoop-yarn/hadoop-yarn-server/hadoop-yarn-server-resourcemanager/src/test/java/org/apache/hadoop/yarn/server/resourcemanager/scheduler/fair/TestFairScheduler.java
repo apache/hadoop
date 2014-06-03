@@ -64,7 +64,6 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
@@ -73,12 +72,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestSchedulerUtils;
@@ -510,26 +509,14 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.init(conf);
     scheduler.start();
     scheduler.reinitialize(conf, resourceManager.getRMContext());
-    RMContext rmContext = resourceManager.getRMContext();
-    Map<ApplicationId, RMApp> appsMap = rmContext.getRMApps();
     ApplicationAttemptId appAttemptId = createAppAttemptId(1, 1);
-    RMApp rmApp = new RMAppImpl(appAttemptId.getApplicationId(), rmContext, conf,
-        null, null, null, ApplicationSubmissionContext.newInstance(null, null,
-        null, null, null, false, false, 0, null, null), null, null, 0, null, null);
-    appsMap.put(appAttemptId.getApplicationId(), rmApp);
-    
-    AppAddedSchedulerEvent appAddedEvent =
-        new AppAddedSchedulerEvent(appAttemptId.getApplicationId(), "default",
-          "user1");
-    scheduler.handle(appAddedEvent);
-    AppAttemptAddedSchedulerEvent attempAddedEvent =
-        new AppAttemptAddedSchedulerEvent(appAttemptId, false);
-    scheduler.handle(attempAddedEvent);
+    createApplicationWithAMResource(appAttemptId, "default", "user1", null);
     assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1", true)
         .getRunnableAppSchedulables().size());
     assertEquals(0, scheduler.getQueueManager().getLeafQueue("default", true)
         .getRunnableAppSchedulables().size());
-    assertEquals("root.user1", rmApp.getQueue());
+    assertEquals("root.user1", resourceManager.getRMContext().getRMApps()
+        .get(appAttemptId.getApplicationId()).getQueue());
   }
   
   @Test
@@ -538,21 +525,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.init(conf);
     scheduler.start();
     scheduler.reinitialize(conf, resourceManager.getRMContext());
-    RMContext rmContext = resourceManager.getRMContext();
-    Map<ApplicationId, RMApp> appsMap = rmContext.getRMApps();
     ApplicationAttemptId appAttemptId = createAppAttemptId(1, 1);
-    RMApp rmApp = new RMAppImpl(appAttemptId.getApplicationId(), rmContext, conf,
-        null, null, null, ApplicationSubmissionContext.newInstance(null, null,
-        null, null, null, false, false, 0, null, null), null, null, 0, null, null);
-    appsMap.put(appAttemptId.getApplicationId(), rmApp);
-
-    AppAddedSchedulerEvent appAddedEvent =
-        new AppAddedSchedulerEvent(appAttemptId.getApplicationId(), "default",
-          "user2");
-    scheduler.handle(appAddedEvent);
-    AppAttemptAddedSchedulerEvent attempAddedEvent =
-        new AppAttemptAddedSchedulerEvent(appAttemptId, false);
-    scheduler.handle(attempAddedEvent);
+    createApplicationWithAMResource(appAttemptId, "default", "user2", null);
     assertEquals(0, scheduler.getQueueManager().getLeafQueue("user1", true)
         .getRunnableAppSchedulables().size());
     assertEquals(1, scheduler.getQueueManager().getLeafQueue("default", true)
@@ -2329,6 +2303,121 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     verifyQueueNumRunnable("queue1", 2, 1);
   }
   
+  @Test
+  public void testQueueMaxAMShare() throws Exception {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"queue1\">");
+    out.println("<maxAMShare>0.2</maxAMShare>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    RMNode node =
+        MockNodes.newNodeInfo(1, Resources.createResource(20480, 20),
+            0, "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent = new NodeAddedSchedulerEvent(node);
+    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node);
+    scheduler.handle(nodeEvent);
+    scheduler.update();
+
+    assertEquals("Queue queue1's fair share should be 10240",
+        10240, scheduler.getQueueManager().getLeafQueue("queue1", true)
+            .getFairShare().getMemory());
+
+    Resource amResource1 = Resource.newInstance(1024, 1);
+    Resource amResource2 = Resource.newInstance(2048, 2);
+    int amPriority = RMAppAttemptImpl.AM_CONTAINER_PRIORITY.getPriority();
+    // Exceeds no limits
+    ApplicationAttemptId attId1 = createAppAttemptId(1, 1);
+    createApplicationWithAMResource(attId1, "queue1", "user1", amResource1);
+    createSchedulingRequestExistingApplication(1024, 1, amPriority, attId1);
+    FSSchedulerApp app1 = scheduler.getSchedulerApp(attId1);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    assertEquals("Application1's AM requests 1024 MB memory",
+        1024, app1.getAMResource().getMemory());
+    assertEquals("Application1's AM should be running",
+        1, app1.getLiveContainers().size());
+
+    // Exceeds no limits
+    ApplicationAttemptId attId2 = createAppAttemptId(2, 1);
+    createApplicationWithAMResource(attId2, "queue1", "user1", amResource1);
+    createSchedulingRequestExistingApplication(1024, 1, amPriority, attId2);
+    FSSchedulerApp app2 = scheduler.getSchedulerApp(attId2);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    assertEquals("Application2's AM requests 1024 MB memory",
+        1024, app2.getAMResource().getMemory());
+    assertEquals("Application2's AM should be running",
+        1, app2.getLiveContainers().size());
+
+    // Exceeds queue limit
+    ApplicationAttemptId attId3 = createAppAttemptId(3, 1);
+    createApplicationWithAMResource(attId3, "queue1", "user1", amResource1);
+    createSchedulingRequestExistingApplication(1024, 1, amPriority, attId3);
+    FSSchedulerApp app3 = scheduler.getSchedulerApp(attId3);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    assertEquals("Application3's AM requests 1024 MB memory",
+        1024, app3.getAMResource().getMemory());
+    assertEquals("Application3's AM should not be running",
+        0, app3.getLiveContainers().size());
+
+    // Still can run non-AM container
+    createSchedulingRequestExistingApplication(1024, 1, attId1);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    assertEquals("Application1 should have two running containers",
+        2, app1.getLiveContainers().size());
+
+    // Remove app1, app3's AM should become running
+    AppAttemptRemovedSchedulerEvent appRemovedEvent1 =
+        new AppAttemptRemovedSchedulerEvent(attId1, RMAppAttemptState.FINISHED, false);
+    scheduler.update();
+    scheduler.handle(appRemovedEvent1);
+    scheduler.handle(updateEvent);
+    assertEquals("Application1's AM should be finished",
+        0, app1.getLiveContainers().size());
+    assertEquals("Application3's AM should be running",
+        1, app3.getLiveContainers().size());
+
+    // Exceeds queue limit
+    ApplicationAttemptId attId4 = createAppAttemptId(4, 1);
+    createApplicationWithAMResource(attId4, "queue1", "user1", amResource2);
+    createSchedulingRequestExistingApplication(2048, 2, amPriority, attId4);
+    FSSchedulerApp app4 = scheduler.getSchedulerApp(attId4);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    assertEquals("Application4's AM requests 2048 MB memory",
+        2048, app4.getAMResource().getMemory());
+    assertEquals("Application4's AM should not be running",
+        0, app4.getLiveContainers().size());
+
+    // Remove app2 and app3, app4's AM should become running
+    AppAttemptRemovedSchedulerEvent appRemovedEvent2 =
+        new AppAttemptRemovedSchedulerEvent(attId2, RMAppAttemptState.FINISHED, false);
+    AppAttemptRemovedSchedulerEvent appRemovedEvent3 =
+        new AppAttemptRemovedSchedulerEvent(attId3, RMAppAttemptState.FINISHED, false);
+    scheduler.handle(appRemovedEvent2);
+    scheduler.handle(appRemovedEvent3);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    assertEquals("Application2's AM should be finished",
+        0, app2.getLiveContainers().size());
+    assertEquals("Application3's AM should be finished",
+        0, app3.getLiveContainers().size());
+    assertEquals("Application4's AM should be running",
+        1, app4.getLiveContainers().size());
+  }
+
   @Test
   public void testMaxRunningAppsHierarchicalQueues() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);

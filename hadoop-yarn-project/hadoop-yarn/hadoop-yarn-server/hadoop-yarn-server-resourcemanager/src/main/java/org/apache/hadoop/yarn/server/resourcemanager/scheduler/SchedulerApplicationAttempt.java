@@ -32,6 +32,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NMToken;
@@ -76,6 +77,8 @@ public class SchedulerApplicationAttempt {
   protected final Resource currentReservation = Resource.newInstance(0, 0);
   private Resource resourceLimit = Resource.newInstance(0, 0);
   protected Resource currentConsumption = Resource.newInstance(0, 0);
+  private Resource amResource;
+  private boolean unmanagedAM = true;
 
   protected List<RMContainer> newlyAllocatedContainers = 
       new ArrayList<RMContainer>();
@@ -106,6 +109,19 @@ public class SchedulerApplicationAttempt {
         new AppSchedulingInfo(applicationAttemptId, user, queue,  
             activeUsersManager);
     this.queue = queue;
+
+
+    if (rmContext != null && rmContext.getRMApps() != null &&
+        rmContext.getRMApps()
+            .containsKey(applicationAttemptId.getApplicationId())) {
+      ApplicationSubmissionContext appSubmissionContext =
+          rmContext.getRMApps().get(applicationAttemptId.getApplicationId())
+              .getApplicationSubmissionContext();
+      if (appSubmissionContext != null) {
+        amResource = appSubmissionContext.getResource();
+        unmanagedAM = appSubmissionContext.getUnmanagedAM();
+      }
+    }
   }
   
   /**
@@ -168,6 +184,14 @@ public class SchedulerApplicationAttempt {
     return appSchedulingInfo.getQueueName();
   }
   
+  public Resource getAMResource() {
+    return amResource;
+  }
+
+  public boolean getUnmanagedAM() {
+    return unmanagedAM;
+  }
+
   public synchronized RMContainer getRMContainer(ContainerId id) {
     return liveContainers.get(id);
   }
