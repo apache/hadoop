@@ -1050,6 +1050,9 @@ public class BlockManager {
    * datanode and log the operation
    */
   void addToInvalidates(final Block block, final DatanodeInfo datanode) {
+    if (!namesystem.isPopulatingReplQueues()) {
+      return;
+    }
     invalidateBlocks.add(block, datanode, true);
   }
 
@@ -1058,6 +1061,9 @@ public class BlockManager {
    * datanodes.
    */
   private void addToInvalidates(Block b) {
+    if (!namesystem.isPopulatingReplQueues()) {
+      return;
+    }
     StringBuilder datanodes = new StringBuilder();
     for(DatanodeStorageInfo storage : blocksMap.getStorages(b, State.NORMAL)) {
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
