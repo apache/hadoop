@@ -147,6 +147,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6109 let sync_file_range() system call run in background
     (Liang Xie via stack)
 
+    HDFS-6268. Better sorting in NetworkTopology#pseudoSortByDistance when
+    no local node is found. (wang)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
