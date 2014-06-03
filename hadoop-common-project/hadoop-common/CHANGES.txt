@@ -531,6 +531,8 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10630. Possible race condition in RetryInvocationHandler. (jing9)
 
+    HADOOP-10658. SSLFactory expects truststores being configured. (tucu via atm)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
