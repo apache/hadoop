@@ -173,6 +173,9 @@ Release 2.5.0 - UNRELEASED
 
     YARN-1550. NPE in FairSchedulerAppsBlock#render. (Anubhav Dhoot via kasha)
 
+    YARN-2119. DEFAULT_PROXY_ADDRESS should use DEFAULT_PROXY_PORT.
+    (Anubhav Dhoot via kasha)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
