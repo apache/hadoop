@@ -135,6 +135,8 @@ Release 2.5.0 - UNRELEASED
     YARN-1913. With Fair Scheduler, cluster can logjam when all resources are
     consumed by AMs (Wei Yan via Sandy Ryza)
 
+    YARN-2061. Revisit logging levels in ZKRMStateStore. (Ray Chiang via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 

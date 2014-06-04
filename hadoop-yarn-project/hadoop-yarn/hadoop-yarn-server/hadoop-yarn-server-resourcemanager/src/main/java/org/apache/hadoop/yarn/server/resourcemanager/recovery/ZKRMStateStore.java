@@ -546,7 +546,7 @@ public class ZKRMStateStore extends RMStateStore {
         appState.attempts.put(attemptState.getAttemptId(), attemptState);
       }
     }
-    LOG.info("Done Loading applications from ZK state store");
+    LOG.debug("Done Loading applications from ZK state store");
   }
 
   @Override
@@ -579,7 +579,7 @@ public class ZKRMStateStore extends RMStateStore {
     } else {
       createWithRetries(nodeUpdatePath, appStateData, zkAcl,
         CreateMode.PERSISTENT);
-      LOG.info(appId + " znode didn't exist. Created a new znode to"
+      LOG.debug(appId + " znode didn't exist. Created a new znode to"
           + " update the application state.");
     }
   }
@@ -622,7 +622,7 @@ public class ZKRMStateStore extends RMStateStore {
     } else {
       createWithRetries(nodeUpdatePath, attemptStateData, zkAcl,
         CreateMode.PERSISTENT);
-      LOG.info(appAttemptId + " znode didn't exist. Created a new znode to"
+      LOG.debug(appAttemptId + " znode didn't exist. Created a new znode to"
           + " update the application attempt state.");
     }
   }
@@ -671,7 +671,7 @@ public class ZKRMStateStore extends RMStateStore {
     if (existsWithRetries(nodeRemovePath, true) != null) {
       opList.add(Op.delete(nodeRemovePath, -1));
     } else {
-      LOG.info("Attempted to delete a non-existing znode " + nodeRemovePath);
+      LOG.debug("Attempted to delete a non-existing znode " + nodeRemovePath);
     }
     doMultiWithRetries(opList);
   }
@@ -688,7 +688,7 @@ public class ZKRMStateStore extends RMStateStore {
       // in case znode doesn't exist
       addStoreOrUpdateOps(
           opList, rmDTIdentifier, renewDate, latestSequenceNumber, false);
-      LOG.info("Attempted to update a non-existing znode " + nodeRemovePath);
+      LOG.debug("Attempted to update a non-existing znode " + nodeRemovePath);
     } else {
       // in case znode exists
       addStoreOrUpdateOps(
@@ -770,7 +770,7 @@ public class ZKRMStateStore extends RMStateStore {
     if (existsWithRetries(nodeRemovePath, true) != null) {
       doMultiWithRetries(Op.delete(nodeRemovePath, -1));
     } else {
-      LOG.info("Attempted to delete a non-existing znode " + nodeRemovePath);
+      LOG.debug("Attempted to delete a non-existing znode " + nodeRemovePath);
     }
   }
 
@@ -823,7 +823,7 @@ public class ZKRMStateStore extends RMStateStore {
         case Expired:
           // the connection got terminated because of session timeout
           // call listener to reconnect
-          LOG.info("Session expired");
+          LOG.info("ZKRMStateStore Session expired");
           createConnection();
           break;
         default:
