@@ -20,41 +20,31 @@ package org.apache.hadoop.service.launcher;
 
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ExitUtil;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.rules.TestName;
-import org.junit.rules.Timeout;
 
-public class AbstractServiceLauncherTestBase extends Assert {
-  @Rule
-  public Timeout testTimeout = new Timeout(10000);
+/**
+ * Service launcher for testing
+ * @param <S> type of service to launch
+ */
+public class NonExitingServiceLauncher<S extends Service> extends ServiceLauncher<S>{
 
-  @Rule
-  public TestName methodName = new TestName();
-
-  @Before
-  public void nameThread() {
-    Thread.currentThread().setName("JUnit");
+  public ExitUtil.ExitException exitException;
+  
+  public NonExitingServiceLauncher(String serviceClassName) {
+    super(serviceClassName);
   }
 
-  @BeforeClass
-  public static void disableJVMExits() {
-    ExitUtil.disableSystemExit();
-    ExitUtil.disableSystemHalt();
+  public void setService(S s) {
+    super.setService(s);
+  }
+  
+  @Override
+  protected void exit(ExitUtil.ExitException ee) {
+    exitException = ee;
+    super.exit(ee);
   }
 
-  protected void assertInState(Service service, Service.STATE expected) {
-    Service.STATE actual = service.getServiceState();
-    if (actual != expected) {
-      fail("Service " + service.getName() + " in state " + actual
-           + " -expected " + expected);
-    }
+  @Override
+  protected void exit(int exitCode, String message) {
+    exit(new ServiceLaunchException(exitCode, message));
   }
-
-  protected void assertStopped(Service service) {
-    assertInState(service, Service.STATE.STOPPED);
-  }
-
 }

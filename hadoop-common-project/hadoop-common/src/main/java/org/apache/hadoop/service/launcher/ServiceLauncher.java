@@ -126,6 +126,14 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
   }
 
   /**
+   * Setter is to give subclasses the ability to manipulate the service
+   * @param service the new service
+   */
+  protected void setService(S service) {
+    this.service = service;
+  }
+
+  /**
    * Get the configuration constructed from the command line arguments
    * @return the configuration used to create the service
    */

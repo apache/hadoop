@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.service.launcher;
 
+import org.apache.hadoop.service.BreakableService;
+import org.apache.hadoop.util.ExitUtil;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +32,7 @@ public class TestInterruptHandling extends AbstractServiceLauncherTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
       TestInterruptHandling.class);
   
+
   @Test
   public void testRegisterAndRaise() throws Throwable {
     InterruptCatcher catcher = new InterruptCatcher();
@@ -44,6 +48,30 @@ public class TestInterruptHandling extends AbstractServiceLauncherTestBase {
     assertEquals(1, irqHandler.getSignalCount());
   }
 
+
+  @Test
+  public void testInterruptEscalationShutdown() throws Throwable {
+    NonExitingServiceLauncher<BreakableService> launcher =
+        new NonExitingServiceLauncher<BreakableService>(
+            BreakableService.class.getName());
+    BreakableService breakableService = new BreakableService();
+    launcher.setService(breakableService);
+
+    InterruptEscalator<BreakableService> escalator =
+        new InterruptEscalator<BreakableService>(launcher, 100);
+    
+    // call the interrupt operation directly
+    try {
+      escalator.interrupted(new IrqHandler.InterruptData("INT", 3));
+      fail("Expected an exception to be raised");
+    } catch (ExitUtil.ExitException e) {
+      assertEquals(LauncherExitCodes.EXIT_INTERRUPTED, e.getExitCode());
+    }
+    assertStopped(breakableService);
+    
+  }
+  
+  
   private static class InterruptCatcher implements IrqHandler.Interrupted {
 
     IrqHandler.InterruptData interruptData;
