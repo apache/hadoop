@@ -72,6 +72,19 @@ public final class ExitUtil {
     public int getExitCode() {
       return status;
     }
+
+    /**
+     * String value does not include exception type, just exit code and message
+     * @return the exit code and any message
+     */
+    @Override
+    public String toString() {
+      String message = getMessage();
+      if (message == null) {
+        message = super.toString();
+      }
+      return Integer.toString(status) + ": " + message;
+    }
   }
 
   /**
@@ -104,6 +117,20 @@ public final class ExitUtil {
     public int getExitCode() {
       return status;
     }
+
+    /**
+     * String value does not include exception type, just exit code and message
+     * @return the exit code and any message
+     */
+    @Override
+    public String toString() {
+      String message = getMessage();
+      if (message == null) {
+        message = super.toString();
+      }
+      return Integer.toString(status) + ": " + message;
+    }
+
   }
 
   /**

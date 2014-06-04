@@ -19,6 +19,7 @@
 package org.apache.hadoop.service.launcher;
 
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.util.ExitCodeProvider;
 import org.apache.hadoop.util.ExitUtil;
 import org.junit.Assert;
 import org.junit.Before;
@@ -26,8 +27,13 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class AbstractServiceLauncherTestBase extends Assert {
+public class AbstractServiceLauncherTestBase extends Assert implements
+    LauncherExitCodes {
+  private static final Logger LOG = LoggerFactory.getLogger(
+      AbstractServiceLauncherTestBase.class);
   @Rule
   public Timeout testTimeout = new Timeout(10000);
 
@@ -57,4 +63,18 @@ public class AbstractServiceLauncherTestBase extends Assert {
     assertInState(service, Service.STATE.STOPPED);
   }
 
+  /**
+   * Assert that an exception code matches the value expected
+   * @param expected expected value
+   * @param e exception providing the actual value
+   */
+  protected void assertExceptionCodeEquals(int expected, ExitCodeProvider e) {
+    if (expected != e.getExitCode()) {
+      String error = "Expected exception with exit code " + expected
+                     + " but got the exit code " + e.getExitCode()
+                     + " - \"" + e.toString() + "\"";
+      LOG.error(error, e);
+      fail(error);
+    }
+  }
 }

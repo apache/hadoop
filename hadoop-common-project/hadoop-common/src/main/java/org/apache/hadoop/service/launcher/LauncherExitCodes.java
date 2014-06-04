@@ -87,5 +87,10 @@ public interface LauncherExitCodes {
    */
   int EXIT_CONNECTIVITY_PROBLEM       = 38;
  
+   /**
+   * the service instance could not be created: {@value}
+   */
+  int EXIT_SERVICE_CREATION_FAILURE       = 39;
+ 
   
 }

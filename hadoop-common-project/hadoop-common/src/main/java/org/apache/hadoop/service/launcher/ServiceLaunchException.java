@@ -22,13 +22,18 @@ package org.apache.hadoop.service.launcher;
 import org.apache.hadoop.util.ExitCodeProvider;
 import org.apache.hadoop.util.ExitUtil;
 
+import java.util.Locale;
+
 /**
  * A service launch exception that includes an exit code;
  * when caught by the ServiceLauncher, it will convert that
  * into a process exit code.
+ * 
+ * The {@link #ServiceLaunchException(int, String, Object...)} constructor
+ * generates formatted exceptions.
  */
 public class ServiceLaunchException extends ExitUtil.ExitException
-  implements ExitCodeProvider, LauncherExitCodes {
+    implements ExitCodeProvider, LauncherExitCodes {
 
   /**
    * Create an exception with the specific exit code
@@ -45,17 +50,24 @@ public class ServiceLaunchException extends ExitUtil.ExitException
    * @param message message to use in exception
    */
   public ServiceLaunchException(int exitCode, String message) {
-    super(exitCode,message);
+    super(exitCode, message);
   }
 
   /**
-   * Create an exception with the specific exit code, text and cause
+   * {@link String#format(String, Object...)} formatted exception -in the 
+   * ENGLISH locale. 
+   * If the last argument is a throwable, it becomes the cause of the exception.
+   * It is still be avaialable as a parameter for the format.
    * @param exitCode exit code
-   * @param message message to use in exception
-   * @param cause cause of the exception
+   * @param format format for message to use in exception
+   * @param args list of arguments
    */
-  public ServiceLaunchException(int exitCode, String message, Throwable cause) {
-    super(exitCode, message, cause);
+  public ServiceLaunchException(int exitCode, String format, Object... args) {
+    super(exitCode, String.format(Locale.ENGLISH, format, args));
+    if (args.length > 0 && (args[args.length - 1] instanceof Throwable)) {
+      initCause((Throwable) args[args.length - 1]);
+    }
   }
+
 
 }

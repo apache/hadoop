@@ -19,8 +19,8 @@
 package org.apache.hadoop.service.launcher;
 
 import org.apache.hadoop.service.BreakableService;
+import org.apache.hadoop.util.ExitCodeProvider;
 import org.apache.hadoop.util.ExitUtil;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,7 +65,7 @@ public class TestInterruptHandling extends AbstractServiceLauncherTestBase {
       escalator.interrupted(new IrqHandler.InterruptData("INT", 3));
       fail("Expected an exception to be raised");
     } catch (ExitUtil.ExitException e) {
-      assertEquals(LauncherExitCodes.EXIT_INTERRUPTED, e.getExitCode());
+      assertExceptionCodeEquals(EXIT_INTERRUPTED, e);
     }
     //the service is now stopped
     assertStopped(service);
@@ -77,29 +77,28 @@ public class TestInterruptHandling extends AbstractServiceLauncherTestBase {
       escalator.interrupted(new IrqHandler.InterruptData("INT", 3));
       fail("Expected an exception to be raised");
     } catch (ExitUtil.HaltException e) {
-      assertEquals(LauncherExitCodes.EXIT_INTERRUPTED, e.getExitCode());
+      assertExceptionCodeEquals(EXIT_INTERRUPTED, e);
     }
   }
 
 
   @Test
   public void testBlockingShutdownTimeouts() throws Throwable{
-    NonExitingServiceLauncher<BlockingOnShutdownService> launcher =
-        new NonExitingServiceLauncher<BlockingOnShutdownService>(
-            BlockingOnShutdownService.class.getName());
-    BlockingOnShutdownService service =
-        new BlockingOnShutdownService(false, false, false, 2000);
-    launcher.setService(service);
+    NonExitingServiceLauncher<FailureTestService> launcher =
+        new NonExitingServiceLauncher<FailureTestService>(
+            FailureTestService.class.getName());
+    FailureTestService service =
+        new FailureTestService(false, false, false, 2000, null);
     launcher.setService(service);
 
-    InterruptEscalator<BlockingOnShutdownService> escalator =
-        new InterruptEscalator<BlockingOnShutdownService>(launcher, 500);
+    InterruptEscalator<FailureTestService> escalator =
+        new InterruptEscalator<FailureTestService>(launcher, 500);
     // call the interrupt operation directly
     try {
       escalator.interrupted(new IrqHandler.InterruptData("INT", 3));
       fail("Expected an exception to be raised");
     } catch (ExitUtil.ExitException e) {
-      assertEquals(LauncherExitCodes.EXIT_INTERRUPTED, e.getExitCode());
+      assertExceptionCodeEquals(EXIT_INTERRUPTED, e);
     }
 
     assertTrue(escalator.isForcedShutdownTimedOut());
@@ -107,31 +106,13 @@ public class TestInterruptHandling extends AbstractServiceLauncherTestBase {
   
   private static class InterruptCatcher implements IrqHandler.Interrupted {
 
-    IrqHandler.InterruptData interruptData;
+    public IrqHandler.InterruptData interruptData;
 
     @Override
-    public void interrupted(IrqHandler.InterruptData interruptData) {
+    public void interrupted(IrqHandler.InterruptData data) {
       LOG.info("Interrupt caught");
-      this.interruptData = interruptData;
+      this.interruptData = data;
     }
   }
-  
-  private static class BlockingOnShutdownService extends BreakableService {
-    final int delay;
 
-    private BlockingOnShutdownService(boolean failOnInit,
-        boolean failOnStart,
-        boolean failOnStop, int delay) {
-      super(failOnInit, failOnStart, failOnStop);
-      this.delay = delay;
-    }
-
-    @Override
-    protected void serviceStop() throws Exception {
-      if (delay>0) {
-        Thread.sleep(delay);
-      }
-      super.serviceStop();
-    }
-  }
 }

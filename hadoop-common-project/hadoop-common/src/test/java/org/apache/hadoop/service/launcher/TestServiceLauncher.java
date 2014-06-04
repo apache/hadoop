@@ -23,4 +23,31 @@ import org.junit.Test;
 public class TestServiceLauncher extends AbstractServiceLauncherTestBase {
 
 
+  @Test
+  public void testNoArgs() throws Throwable {
+    try {
+      ServiceLauncher.serviceMain();
+    } catch (ServiceLaunchException e) {
+      assertExceptionCodeEquals(EXIT_USAGE, e);
+    }
+  }
+  
+  @Test
+  public void testUnknownClass() throws Throwable {
+    try {
+      ServiceLauncher.serviceMain("no.such.classname");
+    } catch (ServiceLaunchException e) {
+      assertExceptionCodeEquals(EXIT_SERVICE_CREATION_FAILURE, e);
+    }
+  }
+   
+  @Test
+  public void testNotAService() throws Throwable {
+    try {
+      ServiceLauncher.serviceMain("org.apache.hadoop.service.launcher.TestServiceLauncher");
+    } catch (ServiceLaunchException e) {
+      assertExceptionCodeEquals(EXIT_SERVICE_CREATION_FAILURE, e);
+    }
+  }
+  
 }

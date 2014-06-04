@@ -25,6 +25,9 @@ import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ExitCodeProvider;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.VersionInfo;
+
+import static org.apache.hadoop.service.launcher.LauncherExitCodes.*;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,7 +82,7 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
    */
   public static final String USAGE_MESSAGE =
       "Usage: " + NAME + " classname " +
-      "[" + ARG_CONF + "<conf file>] " +
+      "[" + ARG_CONF + " <conf file>] " +
       "<service arguments> ";
   private static final int SHUTDOWN_TIME_ON_INTERRUPT = 30 * 1000;
 
@@ -194,7 +197,7 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
       List<String> processedArgs, boolean addShutdownHook) {
     ExitUtil.ExitException exitException;
     try {
-      int exitCode = innerServiceLaunch(conf, processedArgs, true);
+      int exitCode = innerServiceLaunch(conf, processedArgs, addShutdownHook);
       if (service != null) {
         //check to see if the service failed
         Throwable failure = service.getFailureCause();
@@ -220,26 +223,35 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
       // exit exceptions are passed through unchanged
       exitException = ee;
     } catch (Throwable thrown) {
-      // other exceptions are converted to ExitExceptions
-      // get the exception message
-      String message = thrown.getMessage();
-      if (message == null) {
-        // if there is no message, get the full toString() text
-        message = thrown.toString();
-      }
-      int exitCode;
-      if (thrown instanceof ExitCodeProvider) {
-        // the exception provides a status code -extract it
-        exitCode = ((ExitCodeProvider) thrown).getExitCode();
-      } else {
-        // no exception code: use the default
-        exitCode = EXIT_EXCEPTION_THROWN;
-      }
-      // construct the new exception with the original message and
-      // an exit code
-      exitException = new ServiceLaunchException(exitCode, message);
-      exitException.initCause(thrown);
+      exitException = convertToExitException(thrown);
+
     }
+    return exitException;
+  }
+
+  /**
+   * Convert an exception to an ExitException
+   * @param thrown the exception thrown
+   * @return an ExitException with a status code
+   */
+  protected ExitUtil.ExitException convertToExitException(Throwable thrown) {
+    ExitUtil.ExitException
+        exitException;// other exceptions are converted to ExitExceptions
+    // get the exception message
+    String message = thrown.toString();
+    int exitCode;
+    if (thrown instanceof ExitCodeProvider) {
+      // the exception provides a status code -extract it
+      exitCode = ((ExitCodeProvider) thrown).getExitCode();
+      message = thrown.getMessage();
+    } else {
+      // no exception code: use the default
+      exitCode = EXIT_EXCEPTION_THROWN;
+    }
+    // construct the new exception with the original message and
+    // an exit code
+    exitException = new ServiceLaunchException(exitCode, message);
+    exitException.initCause(thrown);
     return exitException;
   }
 
@@ -328,26 +340,39 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
    * and the <code>service</code> field to the service created.
    *
    * @param conf configuration to use
-   * @throws ClassNotFoundException classname not on the classpath
-   * @throws IllegalAccessException not allowed at the class
-   * @throws InstantiationException unable to instantiate it,
-   * possibly due to no empty constructor or problems with dependencies
    */
-  public Service instantiateService(Configuration conf)
-      throws ClassNotFoundException, InstantiationException, IllegalAccessException,
-      ExitUtil.ExitException, NoSuchMethodException, InvocationTargetException {
+  public Service instantiateService(Configuration conf) {
     Preconditions.checkArgument(conf != null, "null conf");
     configuration = conf;
 
     //Instantiate the class -this requires the service to have a public
     // zero-argument constructor
-    Class<?> serviceClass = getClassLoader().loadClass(serviceClassName);
-    Object instance = serviceClass.getConstructor().newInstance();
+    Object instance = null;
+    
+    // in Java7+ the exception catch logic should be consolidated
+    try {
+      Class<?> serviceClass = getClassLoader().loadClass(serviceClassName);
+      instance = serviceClass.getConstructor().newInstance();
+    } catch (ClassNotFoundException e) {
+      throw serviceCreationFailure(serviceClassName, e);
+    } catch (InstantiationException e) {
+      throw serviceCreationFailure(serviceClassName, e);
+    } catch (IllegalAccessException e) {
+      throw serviceCreationFailure(serviceClassName, e);
+    } catch (IllegalArgumentException e) {
+      throw serviceCreationFailure(serviceClassName, e);
+    } catch (InvocationTargetException e) {
+      throw serviceCreationFailure(serviceClassName, e);
+    } catch (NoSuchMethodException e) {
+      throw serviceCreationFailure(serviceClassName, e);
+    } catch (SecurityException e) {
+      throw serviceCreationFailure(serviceClassName, e);
+    }
     if (!(instance instanceof Service)) {
       //not a service
       throw new ServiceLaunchException(
-          LauncherExitCodes.EXIT_COMMAND_ARGUMENT_ERROR,
-          "Not a Service class: " + serviceClassName);
+          LauncherExitCodes.EXIT_SERVICE_CREATION_FAILURE,
+          "Not a service class: \"%s\"", serviceClassName);
     }
 
     // cast to the specific instance type of this ServiceLauncher
@@ -355,6 +380,11 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
     return service;
   }
 
+  protected ExitUtil.ExitException serviceCreationFailure(String serviceClassName,
+      Exception e) {
+    return new ServiceLaunchException(EXIT_SERVICE_CREATION_FAILURE, e);
+  }
+  
   /**
    * Register this class as the handler for the control-C interrupt.
    * Subclasses can extend this with extra operations, such as
@@ -468,37 +498,6 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
     return this.getClass().getClassLoader();
   }
 
-  
-  /* ====================================================================== */
-
-  /**
-   * The real main function, which takes the arguments as a list
-   * arg 0 must be the service classname
-   * @param argsList the list of arguments
-   */
-  public static void serviceMain(List<String> argsList) {
-    if (argsList.isEmpty()) {
-      exitWithMessage(EXIT_USAGE, USAGE_MESSAGE);
-    } else {
-      String serviceClassName = argsList.get(0);
-
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(startupShutdownMessage(serviceClassName, argsList));
-        StringBuilder builder = new StringBuilder();
-        for (String arg : argsList) {
-          builder.append('"').append(arg).append("\" ");
-        }
-        LOG.debug(builder.toString());
-      }
-
-      ServiceLauncher<Service> serviceLauncher =
-          new ServiceLauncher<Service>(serviceClassName);
-      serviceLauncher.launchServiceAndExit(argsList);
-    }
-  }
-
-  /* ====================================================================== */
-
 
   /**
    * Extract the configuration arguments and apply them to the configuration,
@@ -590,7 +589,7 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
    * @throws ExitUtil.ExitException if exceptions are disabled
    */
   private static void exitWithMessage(int status, String message) {
-    ExitUtil.terminate(status, message);
+    ExitUtil.terminate(new ServiceLaunchException(status, message));
   }
 
   private static String toStartupShutdownString(String prefix, String[] msg) {
@@ -612,4 +611,46 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
     List<String> argsList = Arrays.asList(args);
     serviceMain(argsList);
   }
+
+
+  /**
+   * Varargs version of the entry point for testing and other in-JVM use
+   * @param argsList the list of arguments
+   */
+  public static void serviceMain(String ... args) {
+    List<String> argsList = Arrays.asList(args);
+    serviceMain(argsList);
+  }
+ 
+    
+  /* ====================================================================== */
+
+  /**
+   * The real main function, which takes the arguments as a list
+   * arg 0 must be the service classname
+   * @param argsList the list of arguments
+   */
+  public static void serviceMain(List<String> argsList) {
+    if (argsList.isEmpty()) {
+      exitWithMessage(EXIT_USAGE, USAGE_MESSAGE);
+    } else {
+      String serviceClassName = argsList.get(0);
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(startupShutdownMessage(serviceClassName, argsList));
+        StringBuilder builder = new StringBuilder();
+        for (String arg : argsList) {
+          builder.append('"').append(arg).append("\" ");
+        }
+        LOG.debug(builder.toString());
+      }
+
+      ServiceLauncher<Service> serviceLauncher =
+          new ServiceLauncher<Service>(serviceClassName);
+      serviceLauncher.launchServiceAndExit(argsList);
+    }
+  }
+
+  /* ====================================================================== */
+
 }
