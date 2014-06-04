@@ -18,38 +18,17 @@
 
 package org.apache.hadoop.service.launcher;
 
-import org.apache.hadoop.service.Service;
-import org.apache.hadoop.util.ExitUtil;
+public class FailInStartService extends FailureTestService {
+  public static final String NAME =
+      "org.apache.hadoop.service.launcher.FailInStartService";
+  public static final int EXIT_CODE = -2;
 
-/**
- * Service launcher for testing
- * @param <S> type of service to launch
- */
-public class NonExitingServiceLauncher<S extends Service> extends ServiceLauncher<S>{
-
-  public ExitUtil.ExitException exitException;
-  
-  public NonExitingServiceLauncher(String serviceClassName) {
-    super(serviceClassName);
-  }
-
-  public void setService(S s) {
-    super.setService(s);
-  }
-  
-  @Override
-  protected void exit(ExitUtil.ExitException ee) {
-    exitException = ee;
-    super.exit(ee);
+  public FailInStartService() {
+    super(false, true, false, 0);
   }
 
   @Override
-  protected void exit(int exitCode, String message) {
-    exit(new ServiceLaunchException(exitCode, message));
-  }
-
-  @Override
-  public ExitUtil.ExitException convertToExitException(Throwable thrown) {
-    return super.convertToExitException(thrown);
+  int getExitCode() {
+    return EXIT_CODE;
   }
 }

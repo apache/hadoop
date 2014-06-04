@@ -20,26 +20,49 @@ package org.apache.hadoop.service;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.service.launcher.LauncherExitCodes;
+import org.apache.hadoop.util.ExitCodeProvider;
 
 /**
  * Exception that is raised on state change operations.
  */
 @Public
 @Evolving
-public class ServiceStateException extends RuntimeException {
+public class ServiceStateException extends RuntimeException implements
+    ExitCodeProvider {
 
   private static final long serialVersionUID = 1110000352259232646L;
+  /**
+   * Exit code. Non final as the constructor logic is too complex for
+   * the compiler to like.
+   */
+  private int exitCode;
 
   public ServiceStateException(String message) {
-    super(message);
+    this(message, null);
   }
 
   public ServiceStateException(String message, Throwable cause) {
+    this(LauncherExitCodes.EXIT_SERVICE_LIFECYCLE_EXCEPTION, message, cause);
+  }
+
+  private ServiceStateException(int exitCode,
+      String message,
+      Throwable cause) {
     super(message, cause);
+
+    this.exitCode = (cause instanceof ExitCodeProvider)?
+                    (((ExitCodeProvider) cause).getExitCode())
+                   : exitCode;
   }
 
   public ServiceStateException(Throwable cause) {
     super(cause);
+  }
+
+  @Override
+  public int getExitCode() {
+    return exitCode;
   }
 
   /**

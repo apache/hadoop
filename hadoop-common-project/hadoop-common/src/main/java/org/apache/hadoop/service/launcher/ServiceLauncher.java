@@ -196,6 +196,7 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
   public ExitUtil.ExitException launchService(Configuration conf,
       List<String> processedArgs, boolean addShutdownHook) {
     ExitUtil.ExitException exitException;
+    
     try {
       int exitCode = innerServiceLaunch(conf, processedArgs, addShutdownHook);
       if (service != null) {
@@ -215,8 +216,16 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
           }
         }
       }
-      exitException = new ExitUtil.ExitException(exitCode,
-          "In " + serviceClassName);
+      String serviceName = getServiceName();
+
+      if (exitCode == 0) {
+        exitException = new ServiceLaunchException(exitCode,
+            "%s succeeded",
+            serviceName);
+      } else {
+        exitException = new ServiceLaunchException(exitCode,
+            "%s failed ", serviceName);
+      }
       // either the service succeeded, or an error raised during shutdown, 
       // which we don't worry that much about
     } catch (ExitUtil.ExitException ee) {
@@ -224,7 +233,6 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
       exitException = ee;
     } catch (Throwable thrown) {
       exitException = convertToExitException(thrown);
-
     }
     return exitException;
   }

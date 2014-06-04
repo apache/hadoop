@@ -26,18 +26,12 @@ import org.apache.hadoop.service.BreakableService;
 public class FailureTestService extends BreakableService {
   public final int delay;
 
-  /**
-   * The exception to be raised on a failure -may be null
-   */
-  public final Exception exceptionToRaise;
-
   public FailureTestService(boolean failOnInit,
       boolean failOnStart,
       boolean failOnStop,
-      int delay, Exception exceptionToRaise) {
+      int delay) {
     super(failOnInit, failOnStart, failOnStop);
     this.delay = delay;
-    this.exceptionToRaise = exceptionToRaise;
   }
 
   @Override
@@ -50,10 +44,10 @@ public class FailureTestService extends BreakableService {
 
   @Override
   protected Exception createFailureException(String action) {
-    if (exceptionToRaise!=null) {
-      return exceptionToRaise;
-    } else {
-      return super.createFailureException(action);
-    }
+    return new ServiceLaunchException(getExitCode(), toString());
+  }
+  
+  int getExitCode() {
+    return -1;
   }
 }

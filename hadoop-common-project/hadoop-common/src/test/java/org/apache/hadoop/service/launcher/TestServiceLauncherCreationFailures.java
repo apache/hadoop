@@ -31,7 +31,7 @@ public class TestServiceLauncherCreationFailures extends AbstractServiceLauncher
     try {
       ServiceLauncher.serviceMain();
     } catch (ServiceLaunchException e) {
-      assertExceptionCodeEquals(EXIT_USAGE, e);
+      assertExceptionDetails(EXIT_USAGE, "", e);
     }
   }
   
@@ -50,38 +50,32 @@ public class TestServiceLauncherCreationFailures extends AbstractServiceLauncher
     assertServiceCreationFails("org.apache.hadoop.service.launcher.FailureTestService");
   }
 
-
   @Test
   public void testFailInConstructor() throws Throwable {
-    assertServiceCreationFails(SELF + ".FailInConstructorService");
+    assertServiceCreationFails(FailInConstructorService.NAME);
+  }
+
+  @Test
+  public void testFailInInit() throws Throwable {
+    assertLaunchFails(FailInInitService.EXIT_CODE, "",
+        FailInInitService.NAME);
+  }
+
+  @Test
+  public void testFailInStart() throws Throwable {
+    assertLaunchFails(FailInStartService.EXIT_CODE, "" ,
+        FailInStartService.NAME);
   }
 
 
-  private static class FailInConstructorService extends FailureTestService {
-    private FailInConstructorService() {
-      super(false, false, false, 0, null);
-      throw new NullPointerException("oops");
+  @Test
+  public void testFailInStop() throws Throwable {
+    try {
+      ServiceLauncher.serviceMain(FailingStopInStartService.NAME);
+    } catch (ServiceLaunchException e) {
+      assertExceptionDetails(0, "succeeded", e);
     }
-  } 
-  
-  private static class FailInInitService extends FailureTestService {
-    private FailInInitService() {
-      super(true, false, false, 0, null);
-    }
-  } 
-  
-  private static class FailInStartService extends FailureTestService {
-    private FailInStartService() {
-      super(false, true, false, 0, null);
-    }
-  } 
-  
-    
-  private static class FailInStopService extends FailureTestService {
-    private FailInStopService() {
-      super(false, false, true, 0, null);
-    }
-  } 
-  
-  
+  }
+
+
 }

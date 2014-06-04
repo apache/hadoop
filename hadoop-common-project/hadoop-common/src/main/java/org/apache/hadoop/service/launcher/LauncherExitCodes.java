@@ -92,5 +92,9 @@ public interface LauncherExitCodes {
    */
   int EXIT_SERVICE_CREATION_FAILURE       = 39;
  
+    /**
+   * the service instance could not be created: {@value}
+   */
+  int EXIT_SERVICE_LIFECYCLE_EXCEPTION    = 40;
   
 }

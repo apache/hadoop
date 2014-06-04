@@ -18,38 +18,26 @@
 
 package org.apache.hadoop.service.launcher;
 
-import org.apache.hadoop.service.Service;
-import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.conf.Configuration;
+import org.junit.Test;
 
 /**
- * Service launcher for testing
- * @param <S> type of service to launch
+ * Test the behaviour of service stop logic
  */
-public class NonExitingServiceLauncher<S extends Service> extends ServiceLauncher<S>{
+public class TestStoppingService extends AbstractServiceLauncherTestBase{
 
-  public ExitUtil.ExitException exitException;
+  @Test
+  public void testStopInStartup() throws Throwable {
+    FailingStopInStartService svc = new FailingStopInStartService();
+    svc.init(new Configuration());
+    svc.start();
+    assertStopped(svc);
+    Throwable cause = svc.getFailureCause();
+    assertNotNull(cause);
+    assertTrue(cause instanceof ServiceLaunchException);
+    assertTrue(svc.waitForServiceToStop(0));
+    ServiceLaunchException e = (ServiceLaunchException) cause;
+    assertEquals(FailingStopInStartService.EXIT_CODE,e.getExitCode());
+  }
   
-  public NonExitingServiceLauncher(String serviceClassName) {
-    super(serviceClassName);
-  }
-
-  public void setService(S s) {
-    super.setService(s);
-  }
-  
-  @Override
-  protected void exit(ExitUtil.ExitException ee) {
-    exitException = ee;
-    super.exit(ee);
-  }
-
-  @Override
-  protected void exit(int exitCode, String message) {
-    exit(new ServiceLaunchException(exitCode, message));
-  }
-
-  @Override
-  public ExitUtil.ExitException convertToExitException(Throwable thrown) {
-    return super.convertToExitException(thrown);
-  }
 }

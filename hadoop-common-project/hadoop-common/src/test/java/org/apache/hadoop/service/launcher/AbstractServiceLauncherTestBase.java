@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.service.launcher;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ExitCodeProvider;
 import org.apache.hadoop.util.ExitUtil;
@@ -40,15 +42,15 @@ public class AbstractServiceLauncherTestBase extends Assert implements
   @Rule
   public TestName methodName = new TestName();
 
-  @Before
-  public void nameThread() {
-    Thread.currentThread().setName("JUnit");
-  }
-
   @BeforeClass
   public static void disableJVMExits() {
     ExitUtil.disableSystemExit();
     ExitUtil.disableSystemHalt();
+  }
+
+  @Before
+  public void nameThread() {
+    Thread.currentThread().setName("JUnit");
   }
 
   protected void assertInState(Service service, Service.STATE expected) {
@@ -66,23 +68,51 @@ public class AbstractServiceLauncherTestBase extends Assert implements
   /**
    * Assert that an exception code matches the value expected
    * @param expected expected value
+   * @param text
    * @param e exception providing the actual value
    */
-  protected void assertExceptionCodeEquals(int expected, ExitCodeProvider e) {
-    if (expected != e.getExitCode()) {
-      String error = "Expected exception with exit code " + expected
-                     + " but got the exit code " + e.getExitCode()
-                     + " - \"" + e.toString() + "\"";
+  protected void assertExceptionDetails(int expected,
+      String text,
+      ExitCodeProvider e) {
+    String toString = e.toString();
+    int exitCode = e.getExitCode();
+    boolean failed = expected != exitCode;
+    failed |= StringUtils.isNotEmpty(text)
+              && !StringUtils.contains(toString, text);
+    if (failed) {
+      String error = String.format( 
+          "Expected exception with exit code %d and text \"%s\"" 
+                     + " but got the exit code %d"
+                     + " and text \"%s\"",
+          expected, text,
+          exitCode, toString);
       LOG.error(error, e);
-      fail(error);
+      AssertionError assertionError = new AssertionError(error);
+      assertionError.initCause((Throwable) e);
+      throw assertionError;
     }
   }
 
-  protected void assertServiceCreationFails(String classname) {
+  protected void assertServiceCreationFails(String args) {
+    assertLaunchFails(EXIT_SERVICE_CREATION_FAILURE, "", args);
+  }
+
+  protected void assertLaunchFails(int expected, String text, String...args) {
     try {
-      ServiceLauncher.serviceMain(classname);
+      ServiceLauncher.serviceMain(args);
     } catch (ServiceLaunchException e) {
-      assertExceptionCodeEquals(EXIT_SERVICE_CREATION_FAILURE, e);
+      assertExceptionDetails(expected, text, e);
     }
+  }
+
+  /**
+   * Init and start a service
+   * @param svc the service
+   * @return the service
+   */
+  protected <S extends Service> S run(S svc) {
+    svc.init(new Configuration());
+    svc.start();
+    return svc;
   }
 }

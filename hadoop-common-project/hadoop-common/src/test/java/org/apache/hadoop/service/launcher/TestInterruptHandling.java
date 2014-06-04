@@ -19,7 +19,6 @@
 package org.apache.hadoop.service.launcher;
 
 import org.apache.hadoop.service.BreakableService;
-import org.apache.hadoop.util.ExitCodeProvider;
 import org.apache.hadoop.util.ExitUtil;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -65,7 +64,7 @@ public class TestInterruptHandling extends AbstractServiceLauncherTestBase {
       escalator.interrupted(new IrqHandler.InterruptData("INT", 3));
       fail("Expected an exception to be raised");
     } catch (ExitUtil.ExitException e) {
-      assertExceptionCodeEquals(EXIT_INTERRUPTED, e);
+      assertExceptionDetails(EXIT_INTERRUPTED, "", e);
     }
     //the service is now stopped
     assertStopped(service);
@@ -77,7 +76,7 @@ public class TestInterruptHandling extends AbstractServiceLauncherTestBase {
       escalator.interrupted(new IrqHandler.InterruptData("INT", 3));
       fail("Expected an exception to be raised");
     } catch (ExitUtil.HaltException e) {
-      assertExceptionCodeEquals(EXIT_INTERRUPTED, e);
+      assertExceptionDetails(EXIT_INTERRUPTED, "", e);
     }
   }
 
@@ -88,7 +87,7 @@ public class TestInterruptHandling extends AbstractServiceLauncherTestBase {
         new NonExitingServiceLauncher<FailureTestService>(
             FailureTestService.class.getName());
     FailureTestService service =
-        new FailureTestService(false, false, false, 2000, null);
+        new FailureTestService(false, false, false, 2000);
     launcher.setService(service);
 
     InterruptEscalator<FailureTestService> escalator =
@@ -98,7 +97,7 @@ public class TestInterruptHandling extends AbstractServiceLauncherTestBase {
       escalator.interrupted(new IrqHandler.InterruptData("INT", 3));
       fail("Expected an exception to be raised");
     } catch (ExitUtil.ExitException e) {
-      assertExceptionCodeEquals(EXIT_INTERRUPTED, e);
+      assertExceptionDetails(EXIT_INTERRUPTED, "", e);
     }
 
     assertTrue(escalator.isForcedShutdownTimedOut());
