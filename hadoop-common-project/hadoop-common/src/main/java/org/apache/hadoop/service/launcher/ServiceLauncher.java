@@ -83,11 +83,34 @@ public class ServiceLauncher<S extends Service>
       "<service arguments> ";
   static final int SHUTDOWN_TIME_ON_INTERRUPT = 30 * 1000;
 
+  /**
+   * The launched service
+   */
   private volatile S service;
+  /**
+   * Exit code
+   */
   private int serviceExitCode;
+
+  /**
+   * Previous interrupt handlers. These are not queried.
+   */
   private final List<IrqHandler> interruptHandlers = new ArrayList<IrqHandler>(2);
+
+  /**
+   * Configuration used for the service
+   */
   private Configuration configuration;
+
+  /**
+   * Classname for the service to create
+   */
   private String serviceClassName;
+
+  /**
+   * Flag to indicate when a shutdown signal has already been received.
+   * This allows the operation to be escalated
+   */
   private static AtomicBoolean signalAlreadyReceived = new AtomicBoolean(false);
   
 
@@ -101,7 +124,7 @@ public class ServiceLauncher<S extends Service>
 
   /**
    * Get the service. Null until and unless
-   * {@link #launchService(Configuration, List, boolean)} has completed
+   * {@link #innerServiceLaunch(Configuration, List, boolean)} has completed
    * @return the service
    */
   public S getService() {
@@ -129,6 +152,96 @@ public class ServiceLauncher<S extends Service>
     return "ServiceLauncher for " + serviceClassName;
   }
 
+
+  /**
+   * Parse the command line, building a configuration from it, then
+   * launch the service and wait for it to finish. finally, exit
+   * passing the status code to the #exit(int) method.
+   * @param args arguments to the service. arg[0] is 
+   * assumed to be the service classname and is automatically
+   */
+  public void launchServiceAndExit(List<String> args) {
+
+    registerFailureHandling();
+    //Currently the config just the default
+    Configuration conf = createConfiguration();
+    List<String> processedArgs = extractConfigurationArgs(conf, args);
+    ExitUtil.ExitException ee = launchService(conf, processedArgs, true);
+    exit(ee);
+  }
+
+  /**
+   * Override point: create the base configuration for the service.
+   * Subclasses can override to create HDFS/YARN configurations &c.
+   * @return the configuration to use as the service initalizer.
+   */
+  protected Configuration createConfiguration() {
+    return new Configuration();
+  }
+
+  /**
+   * Launch a service catching all exceptions and downgrading them to exit codes
+   * after logging.
+   * @param conf configuration to use
+   * @param processedArgs command line after the launcher-specific arguments have
+   * been stripped out
+   * @param addShutdownHook should a shutdown hook be added to terminate
+   * this service on shutdown. Tests should set this to false.
+   * @return an exit exception, which will have a status code of 0 if it worked
+   */
+  public ExitUtil.ExitException launchService(Configuration conf,
+      List<String> processedArgs, boolean addShutdownHook) {
+    ExitUtil.ExitException exitException;
+    try {
+      int exitCode = innerServiceLaunch(conf, processedArgs, true);
+      if (service != null) {
+        //check to see if the service failed
+        Throwable failure = service.getFailureCause();
+        if (failure != null) {
+          //the service exited with a failure.
+          //check what state it is in
+          Service.STATE failureState = service.getFailureState();
+          if (failureState == Service.STATE.STOPPED) {
+            //the failure occurred during shutdown, not important enough to bother
+            //the user as it may just scare them
+            LOG.debug("Failure during shutdown:{} ", failure, failure);
+          } else {
+            //throw it for the catch handlers to deal with
+            throw failure;
+          }
+        }
+      }
+      exitException = new ExitUtil.ExitException(exitCode,
+          "In " + serviceClassName);
+      // either the service succeeded, or an error raised during shutdown, 
+      // which we don't worry that much about
+    } catch (ExitUtil.ExitException ee) {
+      // exit exceptions are passed through unchanged
+      exitException = ee;
+    } catch (Throwable thrown) {
+      // other exceptions are converted to ExitExceptions
+      // get the exception message
+      String message = thrown.getMessage();
+      if (message == null) {
+        // if there is no message, get the full toString() text
+        message = thrown.toString();
+      }
+      int exitCode;
+      if (thrown instanceof ExitCodeProvider) {
+        // the exception provides a status code -extract it
+        exitCode = ((ExitCodeProvider) thrown).getExitCode();
+      } else {
+        // no exception code: use the default
+        exitCode = EXIT_EXCEPTION_THROWN;
+      }
+      // construct the new exception with the original message and
+      // an exit code
+      exitException = new ExitUtil.ExitException(exitCode, message);
+      exitException.initCause(thrown);
+    }
+    return exitException;
+  }
+
   /**
    * Launch the service, by creating it, initing it, starting it and then
    * maybe running it. {@link LaunchedService#bindArgs(Configuration, List)} is invoked
@@ -153,7 +266,7 @@ public class ServiceLauncher<S extends Service>
    * @throws InterruptedException thread interrupted
    * @throws Throwable any other failure
    */
-  public int launchService(Configuration conf,
+  public int innerServiceLaunch(Configuration conf,
       List<String> processedArgs,
       boolean addShutdownHook)
     throws Throwable {
@@ -165,26 +278,36 @@ public class ServiceLauncher<S extends Service>
       ServiceShutdownHook shutdownHook = new ServiceShutdownHook(service);
       ShutdownHookManager.get().addShutdownHook(shutdownHook, PRIORITY);
     }
+    String serviceName = getServiceName();
+    LOG.debug("Launched service {}", serviceName);
     LaunchedService launchedService = null;
 
     if (service instanceof LaunchedService) {
-      //if its a launchedService, pass in the conf and arguments before init)
+      // it's a launchedService, pass in the conf and arguments before init)
+      LOG.debug("Service implements LaunchedService");
       launchedService = (LaunchedService) service;
       configuration = launchedService.bindArgs(configuration, processedArgs);
       Preconditions.checkNotNull(configuration,
           "null configuration returned by bindArgs()");
+      if (service.isInState(Service.STATE.INITED)) {
+        LOG.warn("LaunchedService {}" 
+                 + " initialized in constructor before CLI arguments passed in",
+            serviceName);
+      }
     }
 
     //some class constructors init; here this is picked up on.
     if (!service.isInState(Service.STATE.INITED)) {
       service.init(configuration);
     }
+    
+    // start the service
     service.start();
     int exitCode = EXIT_SUCCESS;
     if (launchedService != null) {
-      //assume that runnable services are meant to run from here
+      // assume that runnable services are meant to run from here
       exitCode = launchedService.execute();
-      LOG.debug("Service exited with exit code {}", exitCode);
+      LOG.debug("Service {} exited with exit code {}", serviceName, exitCode);
 
     } else {
       //run the service until it stops or an interrupt happens on a different thread.
@@ -228,6 +351,7 @@ public class ServiceLauncher<S extends Service>
           "Not a Service class: " + serviceClassName);
     }
 
+    // cast to the specific instance type of this ServiceLauncher
     service = (S) instance;
     return service;
   }
@@ -246,6 +370,7 @@ public class ServiceLauncher<S extends Service>
       interruptHandlers.add(new IrqHandler(IrqHandler.CONTROL_C, this));
       interruptHandlers.add(new IrqHandler(IrqHandler.SIGTERM, this));
     } catch (IllegalArgumentException e) {
+      // downgrade interrupt registration to warnings
       LOG.warn("{}", e, e);
     }
   }
@@ -284,6 +409,29 @@ public class ServiceLauncher<S extends Service>
     exit(EXIT_INTERRUPTED, message);
   }
 
+
+  /**
+   * Get the service name via {@link Service#getName()}.
+   * If the service is not instantiated, the classname is returned instead.
+   * @return the service name
+   */
+  public String getServiceName() {
+    Service s = service;
+    String name = null;
+    if (s != null) {
+      try {
+        name = s.getName();
+      } catch (Exception ignored) {
+        // ignored
+      }
+    }
+    if (name != null) {
+      return "service " + name;
+    } else {
+      return "service classname " + serviceClassName;
+    }
+  }
+  
   /**
    * Print a warning: currently this goes to stderr
    * @param text
@@ -291,7 +439,6 @@ public class ServiceLauncher<S extends Service>
   protected void warn(String text) {
     System.err.println(text);
   }
-
 
   /**
    * Report an error. The message is printed to stderr; the exception
@@ -319,105 +466,17 @@ public class ServiceLauncher<S extends Service>
   }
 
   /**
-   * Exit off an exception. By default, calls
-   * {@link ExitUtil#terminate(ExitUtil.ExitException)}
+   * Exit off an exception -the standard way a launched service
+   * exits. Error code 0 means: success
+   * 
+   * By default, calls
+   * {@link ExitUtil#terminate(ExitUtil.ExitException)}.
    * 
    * This can be subclassed for testing
    * @param ee exit exception
    */
   protected void exit(ExitUtil.ExitException ee) {
     ExitUtil.terminate(ee);
-  }
-
-  /**
-   * Get the service name via {@link Service#getName()}.
-   * If the service is not instantiated, the classname is returned instead.
-   * @return the service name
-   */
-  public String getServiceName() {
-    Service s = service;
-    String name = null;
-    if (s != null) {
-      try {
-        name = s.getName();
-      } catch (Exception ignored) {
-        // ignored
-      }
-    }
-    if (name != null) {
-      return "service " + name;
-    } else {
-      return "service classname " + serviceClassName;
-    }
-  }
-
-  /**
-   * Parse the command line, building a configuration from it, then
-   * launch the service and wait for it to finish. finally, exit
-   * passing the status code to the #exit(int) method.
-   * @param args arguments to the service. arg[0] is 
-   * assumed to be the service classname and is automatically
-   */
-  public void launchServiceAndExit(List<String> args) {
-
-    registerFailureHandling();
-    //Currently the config just the default
-    Configuration conf = new Configuration();
-    List<String> processedArgs = extractConfigurationArgs(conf, args);
-    ExitUtil.ExitException ee = launchServiceRobustly(conf, processedArgs);
-    exit(ee);
-  }
-
-  /**
-   * Launch a service catching all exceptions and downgrading them to exit codes
-   * after logging.
-   * @param conf configuration to use
-   * @param processedArgs command line after the launcher-specific arguments have
-   * been stripped out
-   * @return an exit exception, which will have a status code of 0 if it worked
-   */
-  public ExitUtil.ExitException launchServiceRobustly(Configuration conf,
-                                   List<String> processedArgs) {
-    ExitUtil.ExitException exitException;
-    try {
-      int exitCode = launchService(conf, processedArgs, true);
-      if (service != null) {
-        Throwable failure = service.getFailureCause();
-        if (failure != null) {
-          //the service exited with a failure.
-          //check what state it is in
-          Service.STATE failureState = service.getFailureState();
-          if (failureState == Service.STATE.STOPPED) {
-            //the failure occurred during shutdown, not important enough to bother
-            //the user as it may just scare them
-            LOG.debug("Failure during shutdown:{} ", failure, failure);
-          } else {
-            //throw it for the catch handlers to deal with
-            throw failure;
-          }
-        }
-      }
-      exitException = new ExitUtil.ExitException(exitCode,
-                                     "In " + serviceClassName);
-      // either the service succeeded, or an error raised during shutdown, 
-      // which we don't worry that much about
-    } catch (ExitUtil.ExitException ee) {
-      exitException = ee;
-    } catch (Throwable thrown) {
-      int exitCode;
-      String message = thrown.getMessage();
-      if (message == null) {
-        message = thrown.toString();
-      }
-      if (thrown instanceof ExitCodeProvider) {
-        exitCode = ((ExitCodeProvider) thrown).getExitCode();
-      } else {
-        exitCode = EXIT_EXCEPTION_THROWN;
-      }
-      exitException = new ExitUtil.ExitException(exitCode, message);
-      exitException.initCause(thrown);
-    }
-    return exitException;
   }
 
   
