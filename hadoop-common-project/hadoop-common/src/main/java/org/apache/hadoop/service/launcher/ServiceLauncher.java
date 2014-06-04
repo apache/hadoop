@@ -24,7 +24,6 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ExitCodeProvider;
 import org.apache.hadoop.util.ExitUtil;
-import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.VersionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +35,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * A class to launch any service by name.
@@ -64,11 +62,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 @SuppressWarnings("UseOfSystemOutOrSystemErr")
 public class ServiceLauncher<S extends Service>
-  implements LauncherExitCodes, IrqHandler.Interrupted {
+  implements LauncherExitCodes {
   private static final Logger LOG = LoggerFactory.getLogger(
       ServiceLauncher.class);
 
-  protected static final int PRIORITY = 30;
+  protected static final int SHUTDOWN_PRIORITY = 30;
 
   public static final String NAME = "ServiceLauncher";
 
@@ -77,25 +75,29 @@ public class ServiceLauncher<S extends Service>
    */
   public static final String ARG_CONF = "--conf";
 
+  /**
+   * Usage message
+   */
   public static final String USAGE_MESSAGE =
       "Usage: " + NAME + " classname " +
       "[" + ARG_CONF + "<conf file>] " +
       "<service arguments> ";
-  static final int SHUTDOWN_TIME_ON_INTERRUPT = 30 * 1000;
+  private static final int SHUTDOWN_TIME_ON_INTERRUPT = 30 * 1000;
 
   /**
    * The launched service
    */
   private volatile S service;
+  
   /**
    * Exit code
    */
   private int serviceExitCode;
 
   /**
-   * Previous interrupt handlers. These are not queried.
+   * The interrupt escalator for the servie
    */
-  private final List<IrqHandler> interruptHandlers = new ArrayList<IrqHandler>(2);
+  private InterruptEscalator<S> interruptEscalator;
 
   /**
    * Configuration used for the service
@@ -106,13 +108,6 @@ public class ServiceLauncher<S extends Service>
    * Classname for the service to create
    */
   private String serviceClassName;
-
-  /**
-   * Flag to indicate when a shutdown signal has already been received.
-   * This allows the operation to be escalated
-   */
-  private static AtomicBoolean signalAlreadyReceived = new AtomicBoolean(false);
-  
 
   /**
    * Create an instance of the launcher
@@ -151,7 +146,6 @@ public class ServiceLauncher<S extends Service>
   public String toString() {
     return "ServiceLauncher for " + serviceClassName;
   }
-
 
   /**
    * Parse the command line, building a configuration from it, then
@@ -236,7 +230,7 @@ public class ServiceLauncher<S extends Service>
       }
       // construct the new exception with the original message and
       // an exit code
-      exitException = new ExitUtil.ExitException(exitCode, message);
+      exitException = new ServiceLaunchException(exitCode, message);
       exitException.initCause(thrown);
     }
     return exitException;
@@ -271,12 +265,13 @@ public class ServiceLauncher<S extends Service>
       boolean addShutdownHook)
     throws Throwable {
 
+    // create the service instance
     instantiateService(conf);
 
     // and the shutdown hook if requested
     if (addShutdownHook) {
       ServiceShutdownHook shutdownHook = new ServiceShutdownHook(service);
-      ShutdownHookManager.get().addShutdownHook(shutdownHook, PRIORITY);
+      shutdownHook.register(SHUTDOWN_PRIORITY);
     }
     String serviceName = getServiceName();
     LOG.debug("Launched service {}", serviceName);
@@ -320,19 +315,16 @@ public class ServiceLauncher<S extends Service>
   }
 
   /**
-   * Instantiate the service defined in <code>serviceClassName</code>
-   * . Sets the <code>configuration</code> field
-   * to the configuration, and <code>service</code> to the service.
+   * Instantiate the service defined in <code>serviceClassName</code>.
+   * Sets the <code>configuration</code> field
+   * to the the value of <code>conf</code>,
+   * and the <code>service</code> field to the service created.
    *
    * @param conf configuration to use
-   * @throws ClassNotFoundException no such class
-   * @throws InstantiationException no empty constructor,
-   * problems with dependencies
    * @throws ClassNotFoundException classname not on the classpath
    * @throws IllegalAccessException not allowed at the class
-   * @throws InstantiationException not allowed to instantiate it
-   * @throws InterruptedException thread interrupted
-   * @throws Throwable any other failure
+   * @throws InstantiationException unable to instantiate it,
+   * possibly due to no empty constructor or problems with dependencies
    */
   public Service instantiateService(Configuration conf)
       throws ClassNotFoundException, InstantiationException, IllegalAccessException,
@@ -342,12 +334,12 @@ public class ServiceLauncher<S extends Service>
 
     //Instantiate the class -this requires the service to have a public
     // zero-argument constructor
-    Class<?> serviceClass =
-        this.getClass().getClassLoader().loadClass(serviceClassName);
+    Class<?> serviceClass = getClassLoader().loadClass(serviceClassName);
     Object instance = serviceClass.getConstructor().newInstance();
     if (!(instance instanceof Service)) {
       //not a service
-      throw new ExitUtil.ExitException(EXIT_BAD_CONFIGURATION,
+      throw new ServiceLaunchException(
+          LauncherExitCodes.EXIT_COMMAND_ARGUMENT_ERROR,
           "Not a Service class: " + serviceClassName);
     }
 
@@ -366,49 +358,15 @@ public class ServiceLauncher<S extends Service>
    * </pre>
    */
   protected void registerFailureHandling() {
+    interruptEscalator = new InterruptEscalator<S>(this, SHUTDOWN_TIME_ON_INTERRUPT);
     try {
-      interruptHandlers.add(new IrqHandler(IrqHandler.CONTROL_C, this));
-      interruptHandlers.add(new IrqHandler(IrqHandler.SIGTERM, this));
+      interruptEscalator.register(IrqHandler.CONTROL_C);
+      interruptEscalator.register(IrqHandler.SIGTERM);
     } catch (IllegalArgumentException e) {
       // downgrade interrupt registration to warnings
       LOG.warn("{}", e, e);
     }
   }
-
-  /**
-   * The service has been interrupted -try to shut down the service.
-   * Give the service time to do this before the exit operation is called 
-   * @param interruptData the interrupted data.
-   */
-  @Override
-  public void interrupted(IrqHandler.InterruptData interruptData) {
-    String message = "Service interrupted by " + interruptData.toString();
-    warn(message);
-    if (!signalAlreadyReceived.compareAndSet(false, true)) {
-      warn("Repeated interrupt: escalating to a JVM halt");
-      // signal already received. On a second request to a hard JVM
-      // halt and so bypass any blocking shutdown hooks.
-      ExitUtil.halt(EXIT_INTERRUPTED, message);
-    }
-    int shutdownTimeMillis = SHUTDOWN_TIME_ON_INTERRUPT;
-    //start an async shutdown thread with a timeout
-    ServiceForcedShutdown forcedShutdown =
-      new ServiceForcedShutdown(shutdownTimeMillis);
-    Thread thread = new Thread(forcedShutdown);
-    thread.setDaemon(true);
-    thread.start();
-    //wait for that thread to finish
-    try {
-      thread.join(shutdownTimeMillis);
-    } catch (InterruptedException ignored) {
-      //ignored
-    }
-    if (!forcedShutdown.isServiceStopped()) {
-      warn("Service did not shut down in time");
-    }
-    exit(EXIT_INTERRUPTED, message);
-  }
-
 
   /**
    * Get the service name via {@link Service#getName()}.
@@ -433,27 +391,41 @@ public class ServiceLauncher<S extends Service>
   }
   
   /**
-   * Print a warning: currently this goes to stderr
-   * @param text
+   * Print a warning: this tries to log to the log's warn() operation
+   * -if disabled it logs to system error
+   * @param text warning text
    */
   protected void warn(String text) {
-    System.err.println(text);
+    if (LOG.isWarnEnabled()) {
+      LOG.warn(text);
+    } else {
+      System.err.println(text);
+    }
   }
 
   /**
-   * Report an error. The message is printed to stderr; the exception
-   * is logged via the current logger.
+   * Report an error. 
+   * This tries to log to the log's error() operation
+   * -if disabled the message is logged to system error along
+   * with <code>thrown.toString()</code>
    * @param message message for the user
    * @param thrown the exception thrown
    */
   protected void error(String message, Throwable thrown) {
     String text = "Exception: " + message;
-    warn(text);
-    LOG.error(text, thrown);
+    if (LOG.isErrorEnabled()) {
+      LOG.error(text, thrown);
+    } else {
+      System.err.println(text);
+      if (thrown != null) {
+        System.err.println(thrown.toString());
+      }
+    }
   }
   
   /**
    * Exit the code.
+   * 
    * This is method can be overridden for testing, throwing an 
    * exception instead. Any subclassed method MUST raise an 
    * {@link ExitUtil.ExitException} instance.
@@ -466,8 +438,10 @@ public class ServiceLauncher<S extends Service>
   }
 
   /**
-   * Exit off an exception -the standard way a launched service
-   * exits. Error code 0 means: success
+   * Exit off an exception.
+   * 
+   * This is the standard way a launched service exits.
+   * Error code 0 means success
    * 
    * By default, calls
    * {@link ExitUtil#terminate(ExitUtil.ExitException)}.
@@ -477,6 +451,14 @@ public class ServiceLauncher<S extends Service>
    */
   protected void exit(ExitUtil.ExitException ee) {
     ExitUtil.terminate(ee);
+  }
+
+  /**
+   * Override point: get the classloader to use
+   * @return the classloader
+   */
+  protected ClassLoader getClassLoader() {
+    return this.getClass().getClassLoader();
   }
 
   
@@ -613,32 +595,7 @@ public class ServiceLauncher<S extends Service>
     b.append("\n************************************************************/");
     return b.toString();
   }
-  /**
-   * forced shutdown runnable.
-   */
-  protected class ServiceForcedShutdown implements Runnable {
 
-    private final int shutdownTimeMillis;
-    private boolean serviceStopped;
-
-    public ServiceForcedShutdown(int shutdownTimeoutMillis) {
-      this.shutdownTimeMillis = shutdownTimeoutMillis;
-    }
-
-    @Override
-    public void run() {
-      if (service != null) {
-        service.stop();
-        serviceStopped = service.waitForServiceToStop(shutdownTimeMillis);
-      } else {
-        serviceStopped = true;
-      }
-    }
-
-    private boolean isServiceStopped() {
-      return serviceStopped;
-    }
-  }
 
   /**
    * This is the main entry point for the service launcher.

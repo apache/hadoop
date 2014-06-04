@@ -19,11 +19,14 @@
 package org.apache.hadoop.service.launcher;
 
 
-/*
- * Common Exit codes
- * Exit codes from 32 up  are relative to a base value that
- * we put a fair way up from the the base numbers, so that 
- * applications can have their own set of failures
+/**
+ * Common Exit codes.
+ * 
+ * Codes with a YARN prefix are YARN-related.
+ * Exit codes from 32 up are defined for the {@link ServiceLauncher}. 
+ * These are away up from the the base numbers, to distinguish them. 
+ * Applications can have their own set of failures -it is recommended to
+ * start them at 64 to differentiate them.
  */
 public interface LauncherExitCodes {
   /**
@@ -38,12 +41,12 @@ public interface LauncherExitCodes {
   int EXIT_FALSE                      = -1;
   
   /**
-   * Exit code when a client requested service termination: {@value}
+   * YARN Exit code on a client initiated AM termination: {@value}
    */
   int EXIT_CLIENT_INITIATED_SHUTDOWN  =  1;
   
   /**
-   * Exit code when targets could not be launched: {@value}
+   * YARN Exit code when tasks could not be launched: {@value}
    */
   int EXIT_TASK_LAUNCH_FAILURE        =  2;
   
@@ -80,7 +83,7 @@ public interface LauncherExitCodes {
   int EXIT_BAD_CONFIGURATION          = 37;
  
   /**
-   * Exit code when the configurations in valid/incomplete: {@value}
+   * Exit code on network connectivity problems: {@value}
    */
   int EXIT_CONNECTIVITY_PROBLEM       = 38;
  

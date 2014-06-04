@@ -20,16 +20,15 @@ package org.apache.hadoop.service.launcher;
 
 
 import org.apache.hadoop.util.ExitCodeProvider;
+import org.apache.hadoop.util.ExitUtil;
 
 /**
  * A service launch exception that includes an exit code;
  * when caught by the ServiceLauncher, it will convert that
  * into a process exit code.
  */
-public class ServiceLaunchException extends RuntimeException
+public class ServiceLaunchException extends ExitUtil.ExitException
   implements ExitCodeProvider, LauncherExitCodes {
-
-  private final int exitCode;
 
   /**
    * Create an exception with the specific exit code
@@ -37,8 +36,7 @@ public class ServiceLaunchException extends RuntimeException
    * @param cause cause of the exception
    */
   public ServiceLaunchException(int exitCode, Throwable cause) {
-    super(cause);
-    this.exitCode = exitCode;
+    super(exitCode, cause);
   }
 
   /**
@@ -47,8 +45,7 @@ public class ServiceLaunchException extends RuntimeException
    * @param message message to use in exception
    */
   public ServiceLaunchException(int exitCode, String message) {
-    super(message);
-    this.exitCode = exitCode;
+    super(exitCode,message);
   }
 
   /**
@@ -58,16 +55,7 @@ public class ServiceLaunchException extends RuntimeException
    * @param cause cause of the exception
    */
   public ServiceLaunchException(int exitCode, String message, Throwable cause) {
-    super(message, cause);
-    this.exitCode = exitCode;
+    super(exitCode, message, cause);
   }
 
-  /**
-   * Get the exit code
-   * @return the exit code
-   */
-  @Override
-  public int getExitCode() {
-    return exitCode;
-  }
 }

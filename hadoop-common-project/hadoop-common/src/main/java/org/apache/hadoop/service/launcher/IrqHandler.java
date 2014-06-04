@@ -18,21 +18,35 @@
 
 package org.apache.hadoop.service.launcher;
 
+import com.google.common.base.Preconditions;
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
 
 /**
+ * Handler of interrupts -relays them to a registered
+ * implementation of {@link IrqHandler.Interrupted}
+ *
  * This class bundles up all the compiler warnings about abuse of sun.misc
- * interrupt handling code
- * into one place.
+ * interrupt handling code into one place.
  */
 @SuppressWarnings("UseOfSunClasses")
 public final class IrqHandler implements SignalHandler {
 
+  /**
+   * Definition of the Control-C handler name: {@value}
+   */
   public static final String CONTROL_C = "INT";
+
+  /**
+   * Definition of default <code>kill</code> signal: {@value}
+   */
   public static final String SIGTERM = "TERM";
 
   private final String name;
+
+  /**
+   * Handler to relay to
+   */
   private final Interrupted handler;
 
   /**
@@ -41,32 +55,51 @@ public final class IrqHandler implements SignalHandler {
    * @param handler handler
    * @throws IllegalArgumentException if the exception could not be set
    */
-  public IrqHandler(String name, Interrupted handler)  {
+  public IrqHandler(String name, Interrupted handler) {
+    Preconditions.checkArgument(name != null, "Null \"name\"");
+    Preconditions.checkArgument(handler != null, "Null \"handler\"");
     this.handler = handler;
     this.name = name;
     try {
       Signal.handle(new Signal(name), this);
     } catch (IllegalArgumentException e) {
       throw new IllegalArgumentException(
-        "Could not set handler for signal \"" + name + "\"."
-        + "This can happen if the JVM has the -Xrs set.",
-        e);
+          "Could not set handler for signal \"" + name + "\"."
+          + "This can happen if the JVM has the -Xrs set.",
+          e);
     }
+  }
+
+  public String getName() {
+    return name;
   }
 
   @Override
   public String toString() {
-    return "IrqHandler for signal " + name ;
+    return "IrqHandler for signal " + name;
   }
 
   /**
    * Handler for the JVM API for signal handling
    * @param signal signal raised
    */
-//  @Override
+  @Override
   public void handle(Signal signal) {
-    InterruptData data = new InterruptData(signal.getName(), signal.getNumber());
+    InterruptData data =
+        new InterruptData(signal.getName(), signal.getNumber());
     handler.interrupted(data);
+  }
+
+  /**
+   * Callback issues on an interrupt
+   */
+  public interface Interrupted {
+
+    /**
+     * Handle an interrupt
+     * @param interruptData data
+     */
+    void interrupted(InterruptData interruptData);
   }
 
   /**
@@ -85,17 +118,5 @@ public final class IrqHandler implements SignalHandler {
     public String toString() {
       return "signal " + name + '(' + number + ')';
     }
-  }
-
-  /**
-   * Callback on interruption
-   */
-  public interface Interrupted {
-
-    /**
-     * Handle an interrupt
-     * @param interruptData data
-     */
-    void interrupted(InterruptData interruptData);
   }
 }

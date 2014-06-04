@@ -37,7 +37,14 @@ public class ServiceShutdownHook implements Runnable {
   private static final Logger LOG = LoggerFactory.getLogger(
       ServiceShutdownHook.class);
 
+  /**
+   * A weak reference to the service.
+   */
   private final WeakReference<Service> serviceRef;
+
+  /**
+   * The service hook
+   */
   private Runnable hook;
 
   /**
@@ -49,7 +56,7 @@ public class ServiceShutdownHook implements Runnable {
     serviceRef = new WeakReference<Service>(service);
   }
 
-  public void register(int priority) {
+  public synchronized void register(int priority) {
     unregister();
     hook = this;
     ShutdownHookManager.get().addShutdownHook(hook, priority);
@@ -66,21 +73,35 @@ public class ServiceShutdownHook implements Runnable {
     }
   }
 
+  /**
+   * Shutdown handler.
+   * Query the service hook reference -if it is still valid the 
+   * {@link Service#stop()} operation is invoked.
+   */
   @Override
   public void run() {
+    shutdown();
+  }
+
+  /**
+   * Shutdown operation. Subclasses may extend, but it is primarily
+   * made available for testing
+   * @return true if the service was stopped and no exception was raised.
+   */
+  protected boolean shutdown() {
     Service service;
+    boolean result = false;
     synchronized (this) {
       service = serviceRef.get();
       serviceRef.clear();
     }
-    if (service == null) {
-      return;
-    }
-    try {
+    if (service != null)  try {
       // Stop the  Service
       service.stop();
+      result = true;
     } catch (Throwable t) {
       LOG.info("Error stopping {}: {}", service.getName(), t);
     }
+    return result;
   }
 }
