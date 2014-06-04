@@ -63,6 +63,7 @@ public class InterruptEscalator<S extends Service> implements IrqHandler.Interru
    */
   private final List<IrqHandler> interruptHandlers =
       new ArrayList<IrqHandler>(2);
+  private boolean forcedShutdownTimedOut;
 
   public InterruptEscalator(ServiceLauncher<S> owner, int shutdownTimeMillis) {
     Preconditions.checkArgument(owner != null, "null owner");
@@ -75,7 +76,8 @@ public class InterruptEscalator<S extends Service> implements IrqHandler.Interru
     String message = "Service interrupted by " + interruptData.toString();
     LOG.warn(message);
     if (!signalAlreadyReceived.compareAndSet(false, true)) {
-      LOG.warn("Repeated interrupt: escalating to a JVM halt");
+      message = "Repeated interrupt: escalating to a JVM halt";
+      LOG.warn(message);
       // signal already received. On a second request to a hard JVM
       // halt and so bypass any blocking shutdown hooks.
       ExitUtil.halt(LauncherExitCodes.EXIT_INTERRUPTED, message);
@@ -93,7 +95,8 @@ public class InterruptEscalator<S extends Service> implements IrqHandler.Interru
     } catch (InterruptedException ignored) {
       //ignored
     }
-    if (!forcedShutdown.isServiceStopped()) {
+    forcedShutdownTimedOut = !forcedShutdown.isServiceStopped();
+    if (forcedShutdownTimedOut) {
       LOG.warn("Service did not shut down in time");
     }
     owner.exit(EXIT_INTERRUPTED, message);
@@ -121,7 +124,23 @@ public class InterruptEscalator<S extends Service> implements IrqHandler.Interru
     }
     return null;
   }
-  
+
+  /**
+   * Flag set if forced shut down timed out
+   * @return true if a shutdown was attempted and it timed out
+   */
+  public boolean isForcedShutdownTimedOut() {
+    return forcedShutdownTimedOut;
+  }
+
+  /**
+   * Flag set if a signal has been received
+   * @return true if there has been one interrupt already.
+   */
+  public boolean isSignalAlreadyReceived() {
+    return signalAlreadyReceived.get();
+  }
+
   /**
    * forced shutdown runnable.
    */

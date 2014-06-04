@@ -54,11 +54,11 @@ public class TestInterruptHandling extends AbstractServiceLauncherTestBase {
     NonExitingServiceLauncher<BreakableService> launcher =
         new NonExitingServiceLauncher<BreakableService>(
             BreakableService.class.getName());
-    BreakableService breakableService = new BreakableService();
-    launcher.setService(breakableService);
+    BreakableService service = new BreakableService();
+    launcher.setService(service);
 
     InterruptEscalator<BreakableService> escalator =
-        new InterruptEscalator<BreakableService>(launcher, 100);
+        new InterruptEscalator<BreakableService>(launcher, 500);
     
     // call the interrupt operation directly
     try {
@@ -67,10 +67,43 @@ public class TestInterruptHandling extends AbstractServiceLauncherTestBase {
     } catch (ExitUtil.ExitException e) {
       assertEquals(LauncherExitCodes.EXIT_INTERRUPTED, e.getExitCode());
     }
-    assertStopped(breakableService);
+    //the service is now stopped
+    assertStopped(service);
+    assertTrue(escalator.isSignalAlreadyReceived());
+    assertFalse(escalator.isForcedShutdownTimedOut());
     
+    // now interrupt it a second time and expect it to escalate to a halt
+    try {
+      escalator.interrupted(new IrqHandler.InterruptData("INT", 3));
+      fail("Expected an exception to be raised");
+    } catch (ExitUtil.HaltException e) {
+      assertEquals(LauncherExitCodes.EXIT_INTERRUPTED, e.getExitCode());
+    }
   }
-  
+
+
+  @Test
+  public void testBlockingShutdownTimeouts() throws Throwable{
+    NonExitingServiceLauncher<BlockingOnShutdownService> launcher =
+        new NonExitingServiceLauncher<BlockingOnShutdownService>(
+            BlockingOnShutdownService.class.getName());
+    BlockingOnShutdownService service =
+        new BlockingOnShutdownService(false, false, false, 2000);
+    launcher.setService(service);
+    launcher.setService(service);
+
+    InterruptEscalator<BlockingOnShutdownService> escalator =
+        new InterruptEscalator<BlockingOnShutdownService>(launcher, 500);
+    // call the interrupt operation directly
+    try {
+      escalator.interrupted(new IrqHandler.InterruptData("INT", 3));
+      fail("Expected an exception to be raised");
+    } catch (ExitUtil.ExitException e) {
+      assertEquals(LauncherExitCodes.EXIT_INTERRUPTED, e.getExitCode());
+    }
+
+    assertTrue(escalator.isForcedShutdownTimedOut());
+  }
   
   private static class InterruptCatcher implements IrqHandler.Interrupted {
 
@@ -80,6 +113,25 @@ public class TestInterruptHandling extends AbstractServiceLauncherTestBase {
     public void interrupted(IrqHandler.InterruptData interruptData) {
       LOG.info("Interrupt caught");
       this.interruptData = interruptData;
+    }
+  }
+  
+  private static class BlockingOnShutdownService extends BreakableService {
+    final int delay;
+
+    private BlockingOnShutdownService(boolean failOnInit,
+        boolean failOnStart,
+        boolean failOnStop, int delay) {
+      super(failOnInit, failOnStart, failOnStop);
+      this.delay = delay;
+    }
+
+    @Override
+    protected void serviceStop() throws Exception {
+      if (delay>0) {
+        Thread.sleep(delay);
+      }
+      super.serviceStop();
     }
   }
 }

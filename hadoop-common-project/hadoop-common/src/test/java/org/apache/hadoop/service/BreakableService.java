@@ -83,13 +83,13 @@ public class BreakableService extends AbstractService {
   }
 
   @Override
-  protected void serviceStart() {
+  protected void serviceStart() throws Exception {
     inc(STATE.STARTED);
     maybeFail(failOnStart, "start");
   }
 
   @Override
-  protected void serviceStop() {
+  protected void serviceStop() throws Exception {
     inc(STATE.STOPPED);
     maybeFail(failOnStop, "stop");
   }
