@@ -18,17 +18,13 @@
 
 package org.apache.hadoop.service.launcher;
 
-public class FailInStartService extends FailureTestService {
-  public static final String NAME =
-      "org.apache.hadoop.service.launcher.FailInStartService";
-  public static final int EXIT_CODE = -2;
+import org.apache.hadoop.service.launcher.testservices.RunningService;
+import org.junit.Test;
 
-  public FailInStartService() {
-    super(false, true, false, 0);
-  }
+public class TestLaunchRunningService extends AbstractServiceLauncherTestBase {
 
-  @Override
-  int getExitCode() {
-    return EXIT_CODE;
+  @Test
+  public void testRunService() throws Throwable {
+    assertLaunchOutcome(0, "", RunningService.NAME);
   }
 }

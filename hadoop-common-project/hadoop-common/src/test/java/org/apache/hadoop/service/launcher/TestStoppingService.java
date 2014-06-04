@@ -19,6 +19,7 @@
 package org.apache.hadoop.service.launcher;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.service.launcher.testservices.FailingStopInStartService;
 import org.junit.Test;
 
 /**

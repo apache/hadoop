@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.service.launcher;
 
+import org.apache.hadoop.service.launcher.testservices.FailInConstructorService;
+import org.apache.hadoop.service.launcher.testservices.FailInInitService;
+import org.apache.hadoop.service.launcher.testservices.FailInStartService;
+import org.apache.hadoop.service.launcher.testservices.FailingStopInStartService;
 import org.junit.Test;
 
 public class TestServiceLauncherCreationFailures extends AbstractServiceLauncherTestBase {
@@ -57,19 +61,19 @@ public class TestServiceLauncherCreationFailures extends AbstractServiceLauncher
 
   @Test
   public void testFailInInit() throws Throwable {
-    assertLaunchFails(FailInInitService.EXIT_CODE, "",
+    assertLaunchOutcome(FailInInitService.EXIT_CODE, "",
         FailInInitService.NAME);
   }
 
   @Test
   public void testFailInStart() throws Throwable {
-    assertLaunchFails(FailInStartService.EXIT_CODE, "" ,
+    assertLaunchOutcome(FailInStartService.EXIT_CODE, "",
         FailInStartService.NAME);
   }
 
 
   @Test
-  public void testFailInStop() throws Throwable {
+  public void testFailInStopIsIgnored() throws Throwable {
     try {
       ServiceLauncher.serviceMain(FailingStopInStartService.NAME);
     } catch (ServiceLaunchException e) {

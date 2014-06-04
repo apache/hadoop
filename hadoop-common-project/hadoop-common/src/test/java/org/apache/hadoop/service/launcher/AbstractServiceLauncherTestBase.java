@@ -68,7 +68,7 @@ public class AbstractServiceLauncherTestBase extends Assert implements
   /**
    * Assert that an exception code matches the value expected
    * @param expected expected value
-   * @param text
+   * @param text text in exception -can be null
    * @param e exception providing the actual value
    */
   protected void assertExceptionDetails(int expected,
@@ -94,10 +94,16 @@ public class AbstractServiceLauncherTestBase extends Assert implements
   }
 
   protected void assertServiceCreationFails(String args) {
-    assertLaunchFails(EXIT_SERVICE_CREATION_FAILURE, "", args);
+    assertLaunchOutcome(EXIT_SERVICE_CREATION_FAILURE, "", args);
   }
 
-  protected void assertLaunchFails(int expected, String text, String...args) {
+  /**
+   * Assert a launch outcome
+   * @param expected expected value
+   * @param text text in exception -can be null
+   * @param args CLI args
+   */
+  protected void assertLaunchOutcome(int expected, String text, String... args) {
     try {
       ServiceLauncher.serviceMain(args);
     } catch (ServiceLaunchException e) {

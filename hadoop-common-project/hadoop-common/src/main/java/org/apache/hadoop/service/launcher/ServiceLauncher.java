@@ -306,7 +306,7 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
 
     if (service instanceof LaunchedService) {
       // it's a launchedService, pass in the conf and arguments before init)
-      LOG.debug("Service implements LaunchedService");
+      LOG.debug("Service {} implements LaunchedService", serviceName);
       launchedService = (LaunchedService) service;
       configuration = launchedService.bindArgs(configuration, processedArgs);
       Preconditions.checkNotNull(configuration,
@@ -610,9 +610,9 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
     return b.toString();
   }
 
-
   /**
-   * This is the main entry point for the service launcher.
+   * This is the JVM main entry point for the service launcher
+   * -hands off to {@link #serviceMain(List)}
    * @param args command line arguments.
    */
   public static void main(String[] args) {
@@ -620,9 +620,9 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
     serviceMain(argsList);
   }
 
-
   /**
    * Varargs version of the entry point for testing and other in-JVM use
+   * -hands off to {@link #serviceMain(List)}
    * @param argsList the list of arguments
    */
   public static void serviceMain(String ... args) {
@@ -632,12 +632,13 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
  
     
   /* ====================================================================== */
-
   /**
    * The real main function, which takes the arguments as a list
    * arg 0 must be the service classname
    * @param argsList the list of arguments
    */
+  /* ====================================================================== */
+
   public static void serviceMain(List<String> argsList) {
     if (argsList.isEmpty()) {
       exitWithMessage(EXIT_USAGE, USAGE_MESSAGE);
@@ -658,7 +659,5 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
       serviceLauncher.launchServiceAndExit(argsList);
     }
   }
-
-  /* ====================================================================== */
 
 }

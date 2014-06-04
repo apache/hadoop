@@ -16,38 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.service.launcher;
+package org.apache.hadoop.service.launcher.testservices;
 
-import org.apache.hadoop.service.BreakableService;
+public class FailInStartService extends FailureTestService {
+  public static final String NAME =
+      "org.apache.hadoop.service.launcher.testservices.FailInStartService";
+  public static final int EXIT_CODE = -2;
 
-/**
- * Laucher test service that does not take CLI arguments
- */
-public class FailureTestService extends BreakableService {
-  public final int delay;
-
-  public FailureTestService(boolean failOnInit,
-      boolean failOnStart,
-      boolean failOnStop,
-      int delay) {
-    super(failOnInit, failOnStart, failOnStop);
-    this.delay = delay;
+  public FailInStartService() {
+    super(false, true, false, 0);
   }
 
   @Override
-  protected void serviceStop() throws Exception {
-    if (delay>0) {
-      Thread.sleep(delay);
-    }
-    super.serviceStop();
-  }
-
-  @Override
-  protected Exception createFailureException(String action) {
-    return new ServiceLaunchException(getExitCode(), toString());
-  }
-  
   int getExitCode() {
-    return -1;
+    return EXIT_CODE;
   }
 }

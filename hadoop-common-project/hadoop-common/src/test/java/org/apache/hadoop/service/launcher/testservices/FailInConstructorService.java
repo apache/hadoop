@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.service.launcher;
+package org.apache.hadoop.service.launcher.testservices;
 
 public class FailInConstructorService extends FailureTestService {
 
   public static final String NAME =
-      "org.apache.hadoop.service.launcher.FailInConstructorService";
+      "org.apache.hadoop.service.launcher.testservices.FailInConstructorService";
   public FailInConstructorService() {
     super(false, false, false, 0);
     throw new NullPointerException("oops");

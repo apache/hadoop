@@ -19,6 +19,7 @@
 package org.apache.hadoop.service.launcher;
 
 import org.apache.hadoop.service.BreakableService;
+import org.apache.hadoop.service.launcher.testservices.FailureTestService;
 import org.apache.hadoop.util.ExitUtil;
 import org.junit.Test;
 import org.slf4j.Logger;
