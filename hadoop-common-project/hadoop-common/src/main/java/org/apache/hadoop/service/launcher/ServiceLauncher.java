@@ -61,8 +61,7 @@ import java.util.ListIterator;
  * 
  */
 @SuppressWarnings("UseOfSystemOutOrSystemErr")
-public class ServiceLauncher<S extends Service>
-  implements LauncherExitCodes {
+public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
   private static final Logger LOG = LoggerFactory.getLogger(
       ServiceLauncher.class);
 
