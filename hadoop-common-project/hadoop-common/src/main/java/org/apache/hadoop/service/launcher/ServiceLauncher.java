@@ -521,29 +521,34 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
       List<String> args) {
 
     //convert args to a list
-    int argCount = args.size();
-    if (argCount <= 1 ) {
+    int size = args.size();
+    if (size <= 1 ) {
       return new ArrayList<String>(0);
     }
-    List<String> argsList = new ArrayList<String>(argCount);
-    ListIterator<String> arguments = args.listIterator();
+    List<String> argsList = new ArrayList<String>(size);
     //skip that first entry
-    arguments.next();
-    while (arguments.hasNext()) {
-      String arg = arguments.next();
+    int index = 1;
+    while (index< size) {
+      String arg = args.get(index);
+      LOG.info("arg[{}]={}", index, arg);
       if (arg.equals(ARG_CONF)) {
         //the argument is a --conf file tuple: extract the path and load
         //it in as a configuration resource.
 
         //increment the loop iterator
-        if (!arguments.hasNext()) {
+        index++;
+        if (index == size) {
           //overshot the end of the file
           exitWithMessage(EXIT_COMMAND_ARGUMENT_ERROR,
-              ARG_CONF + ": missing configuration file after ");
+              ARG_CONF + ": missing configuration file");
           // never called, but retained for completeness
           break;
         }
-        File file = new File(arguments.next());
+
+        String filename = args.get(index);
+        index++;
+        File file = new File(filename);
+        LOG.info("arg[{}] = Conf file {}",index, filename);
         if (!file.exists()) {
           exitWithMessage(EXIT_COMMAND_ARGUMENT_ERROR,
               ARG_CONF + ": configuration file not found: " + file);
@@ -559,6 +564,7 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
           break;
         }
       } else {
+        index++;
         argsList.add(arg);
       }
     }

@@ -20,7 +20,9 @@ package org.apache.hadoop.service.launcher;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.service.launcher.testservices.RunningService;
 import org.apache.hadoop.util.ExitCodeProvider;
 import org.apache.hadoop.util.ExitUtil;
 import org.junit.Assert;
@@ -31,6 +33,13 @@ import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Arrays;
+import java.util.List;
 
 public class AbstractServiceLauncherTestBase extends Assert implements
     LauncherExitCodes {
@@ -112,6 +121,15 @@ public class AbstractServiceLauncherTestBase extends Assert implements
   }
 
   /**
+   * Assert a launch runs
+   * @param text text in exception -can be null
+   * @param args CLI args
+   */
+  protected void assertRuns(String... args) {
+    assertLaunchOutcome(0, "", args);
+  }
+
+  /**
    * Init and start a service
    * @param svc the service
    * @return the service
@@ -120,5 +138,31 @@ public class AbstractServiceLauncherTestBase extends Assert implements
     svc.init(new Configuration());
     svc.start();
     return svc;
+  }
+  
+  protected String configFile(Configuration conf) throws IOException {
+    File file = File.createTempFile("conf", ".xml", new File("target"));
+    OutputStream fos = new FileOutputStream(file);
+    try {
+      conf.writeXml(fos);
+    } finally {
+      IOUtils.closeStream(fos);
+    }
+    return file.toString();
+  }
+  
+  protected Configuration newConf(String... kvp) {
+    int len = kvp.length;
+    assertEquals("unbalanced keypair len of " + len, 0, len % 2);
+    Configuration conf = new Configuration(false);
+    for (int i = 0; i < len ; i+=2) {
+      conf.set(kvp[i], kvp[i+1]);
+    }
+    return conf;
+  }
+  
+  /** varargs to list conversion */
+  protected List<String> asList(String ... args) {
+    return Arrays.asList(args);
   }
 }
