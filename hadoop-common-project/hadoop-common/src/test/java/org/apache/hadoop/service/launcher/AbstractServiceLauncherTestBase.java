@@ -77,4 +77,12 @@ public class AbstractServiceLauncherTestBase extends Assert implements
       fail(error);
     }
   }
+
+  protected void assertServiceCreationFails(String classname) {
+    try {
+      ServiceLauncher.serviceMain(classname);
+    } catch (ServiceLaunchException e) {
+      assertExceptionCodeEquals(EXIT_SERVICE_CREATION_FAILURE, e);
+    }
+  }
 }

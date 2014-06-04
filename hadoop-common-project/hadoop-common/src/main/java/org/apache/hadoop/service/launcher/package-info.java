@@ -55,16 +55,30 @@ package org.apache.hadoop.service.launcher;
 
  <p>
  <b>Standard Exit codes</b>: {@link org.apache.hadoop.service.launcher.LauncherExitCodes}
- Defines a set of exit codes that can be used by services to standardise exit causes.
+ Defines a set of exit codes that can be used by services to standardize exit causes.
  </p> 
 
+ <p><b>Tests:</b> test cases include interrupt handling and
+ lifecycle failures.</p>
 
  <h2>Utility Classes</h2>
+ 
  <ul>
+
+ <li>
  {@link org.apache.hadoop.service.launcher.IrqHandler}: registers interrupt
  handlers using <code>sun.misc</code> APIs.
+ </li>
+ 
  <li>
- </li></ul>
+ {@link org.apache.hadoop.service.launcher.ServiceLaunchException}: a
+ subclass of {@link org.apache.hadoop.util.ExitUtil.ExitException} which
+ takes a String-formatted format string and a list of arguments to create
+ the exception text.
+ </li>
+ 
+ 
+ </ul>
  */
  
  
