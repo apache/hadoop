@@ -31,11 +31,11 @@ public class InitInConstructorLaunchableService extends
     AbstractLaunchableService {
 
   public static final String NAME =
-      "org.apache.hadoop.service.launcher.testservices.InitInConstructorLaunchedService";
+      "org.apache.hadoop.service.launcher.testservices.InitInConstructorLaunchableService";
   private final Configuration originalConf = new Configuration();
 
   public InitInConstructorLaunchableService() {
-    super("InitInConstructorLaunchedService");
+    super("InitInConstructorLaunchableService");
     init(originalConf);
   }
 

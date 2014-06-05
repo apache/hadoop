@@ -35,7 +35,7 @@ public class ExceptionInExecuteLaunchableService extends
     AbstractLaunchableService {
 
   public static final String NAME =
-      "org.apache.hadoop.service.launcher.testservices.ExceptionInExecuteLaunchedService";
+      "org.apache.hadoop.service.launcher.testservices.ExceptionInExecuteLaunchableService";
   public static final String ARG_THROW_SLE = "--SLE";
   public static final String ARG_THROW_IOE = "--IOE";
   public static final String ARG_THROWABLE = "--throwable";

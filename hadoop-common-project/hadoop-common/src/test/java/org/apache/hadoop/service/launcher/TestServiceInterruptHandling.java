@@ -57,8 +57,8 @@ public class TestServiceInterruptHandling extends AbstractServiceLauncherTestBas
     BreakableService service = new BreakableService();
     launcher.setService(service);
 
-    InterruptEscalator<BreakableService> escalator =
-        new InterruptEscalator<BreakableService>(launcher, 500);
+    InterruptEscalator escalator =
+        new InterruptEscalator(launcher, 500);
 
     // call the interrupt operation directly
     try {
@@ -91,8 +91,8 @@ public class TestServiceInterruptHandling extends AbstractServiceLauncherTestBas
         new FailureTestService(false, false, false, 2000);
     launcher.setService(service);
 
-    InterruptEscalator<FailureTestService> escalator =
-        new InterruptEscalator<FailureTestService>(launcher, 500);
+    InterruptEscalator escalator =
+        new InterruptEscalator(launcher, 500);
     // call the interrupt operation directly
     try {
       escalator.interrupted(new IrqHandler.InterruptData("INT", 3));

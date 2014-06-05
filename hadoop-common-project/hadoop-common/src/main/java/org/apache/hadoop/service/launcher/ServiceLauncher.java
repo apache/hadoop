@@ -102,7 +102,7 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
   /**
    * The interrupt escalator for the servie
    */
-  private InterruptEscalator<S> interruptEscalator;
+  private InterruptEscalator interruptEscalator;
 
   /**
    * Configuration used for the service
@@ -254,8 +254,6 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
     return exitException;
   }
 
-
-
   /**
    * Launch the service, by creating it, initing it, starting it and then
    * maybe running it. {@link LaunchableService#bindArgs(Configuration, List)} is invoked
@@ -291,10 +289,11 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
 
     // create the service instance
     instantiateService(conf);
+    ServiceShutdownHook shutdownHook = null;
 
     // and the shutdown hook if requested
     if (addShutdownHook) {
-      ServiceShutdownHook shutdownHook = new ServiceShutdownHook(service);
+      shutdownHook = new ServiceShutdownHook(service);
       shutdownHook.register(SHUTDOWN_PRIORITY);
     }
     String serviceName = getServiceName();
@@ -320,24 +319,31 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
     if (!service.isInState(Service.STATE.INITED)) {
       service.init(configuration);
     }
-    
-    // start the service
-    service.start();
-    int exitCode = EXIT_SUCCESS;
-    if (execute && service.isInState(Service.STATE.STARTED)) {
-      if (launchableService != null) {
-        // assume that runnable services are meant to run from here
-        try {
-          exitCode = launchableService.execute();
-          LOG.debug("Service {} execution returned exit code {}", serviceName, exitCode);
-        } finally {
-          // then stop the service
-          service.stop();
+    int exitCode;
+
+    try {
+      // start the service
+      service.start();
+      exitCode = EXIT_SUCCESS;
+      if (execute && service.isInState(Service.STATE.STARTED) ) {
+        if (launchableService != null) {
+          // assume that runnable services are meant to run from here
+          try {
+            exitCode = launchableService.execute();
+            LOG.debug("Service {} execution returned exit code {}", serviceName, exitCode);
+          } finally {
+            // then stop the service
+            service.stop();
+          }
+        } else {
+          //run the service until it stops or an interrupt happens on a different thread.
+          LOG.debug("waiting for service threads to terminate");
+          service.waitForServiceToStop(0);
         }
-      } else {
-        //run the service until it stops or an interrupt happens on a different thread.
-        LOG.debug("waiting for service threads to terminate");
-        service.waitForServiceToStop(0);
+      }
+    } finally {
+      if (shutdownHook != null) {
+        shutdownHook.unregister();
       }
     }
     return exitCode;
@@ -423,7 +429,7 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
     exitException.initCause(thrown);
     return exitException;
   }
-  
+
   protected ExitUtil.ExitException serviceCreationFailure(String serviceClassName,
       Exception e) {
     return new ServiceLaunchException(EXIT_SERVICE_CREATION_FAILURE, e);
@@ -439,8 +445,8 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
    * </pre>
    */
   protected void registerFailureHandling() {
-    interruptEscalator = new InterruptEscalator<S>(this, SHUTDOWN_TIME_ON_INTERRUPT);
     try {
+      interruptEscalator = new InterruptEscalator(this, SHUTDOWN_TIME_ON_INTERRUPT);
       interruptEscalator.register(IrqHandler.CONTROL_C);
       interruptEscalator.register(IrqHandler.SIGTERM);
     } catch (IllegalArgumentException e) {

@@ -24,11 +24,12 @@ import org.apache.hadoop.util.ExitUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_INTERRUPTED;
-
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_INTERRUPTED;
 
 /**
  * Handles interrupts by shutting down a service, escalating if the service
@@ -42,10 +43,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *   process, {@link ExitUtil#halt(int)} is invoked. This handles the 
  *   problem of blocking shutdown hooks.</li>
  * </ol>
- * 
- * @param <S> type of service to shut down
+ *
  */
-public class InterruptEscalator<S extends Service> implements IrqHandler.Interrupted {
+public class InterruptEscalator implements IrqHandler.Interrupted {
   private static final Logger LOG = LoggerFactory.getLogger(
       InterruptEscalator.class);
 
@@ -55,7 +55,8 @@ public class InterruptEscalator<S extends Service> implements IrqHandler.Interru
    */
   private final AtomicBoolean signalAlreadyReceived = new AtomicBoolean(false);
 
-  private final ServiceLauncher<S> owner;
+  private final WeakReference<ServiceLauncher> ownerRef;
+
   private final int shutdownTimeMillis;
 
   /**
@@ -65,11 +66,21 @@ public class InterruptEscalator<S extends Service> implements IrqHandler.Interru
       new ArrayList<IrqHandler>(2);
   private boolean forcedShutdownTimedOut;
 
-  public InterruptEscalator(ServiceLauncher<S> owner, int shutdownTimeMillis) {
+  public InterruptEscalator(ServiceLauncher owner, int shutdownTimeMillis) {
     Preconditions.checkArgument(owner != null, "null owner");
-    this.owner = owner;
+    this.ownerRef = new WeakReference<ServiceLauncher>(owner);
     this.shutdownTimeMillis = shutdownTimeMillis;
   }
+
+  private ServiceLauncher getOwner() {
+    return ownerRef.get();
+  }
+
+  private Service getService() {
+    ServiceLauncher owner = getOwner();
+    return owner != null ? owner.getService() : null;
+  }
+
 
   @Override
   public void interrupted(IrqHandler.InterruptData interruptData) {
@@ -82,24 +93,28 @@ public class InterruptEscalator<S extends Service> implements IrqHandler.Interru
       // halt and so bypass any blocking shutdown hooks.
       ExitUtil.halt(LauncherExitCodes.EXIT_INTERRUPTED, message);
     }
-    //start an async shutdown thread with a timeout
-    ServiceForcedShutdown forcedShutdown =
-        new ServiceForcedShutdown();
-    Thread thread = new Thread(forcedShutdown);
-    thread.setDaemon(true);
-    thread.setName("Service Forced Shutdown");
-    thread.start();
-    //wait for that thread to finish
-    try {
-      thread.join(shutdownTimeMillis);
-    } catch (InterruptedException ignored) {
-      //ignored
+    Service service = getService();
+    if (service != null) {
+      //start an async shutdown thread with a timeout
+      ServiceForcedShutdown shutdown = new ServiceForcedShutdown(service,
+          shutdownTimeMillis);
+      Thread thread = new Thread(shutdown);
+      thread.setDaemon(true);
+      thread.setName("Service Forced Shutdown");
+      thread.start();
+      //wait for that thread to finish
+      try {
+        thread.join(shutdownTimeMillis);
+      } catch (InterruptedException ignored) {
+        //ignored
+      }
+      forcedShutdownTimedOut = !shutdown.getServiceWasShutdown();
+      if (forcedShutdownTimedOut) {
+        LOG.warn("Service did not shut down in time");
+      }
     }
-    forcedShutdownTimedOut = !forcedShutdown.getServiceShutdown();
-    if (forcedShutdownTimedOut) {
-      LOG.warn("Service did not shut down in time");
-    }
-    owner.exit(EXIT_INTERRUPTED, message);
+
+    ExitUtil.terminate(EXIT_INTERRUPTED, message);
   }
 
   /**
@@ -144,10 +159,17 @@ public class InterruptEscalator<S extends Service> implements IrqHandler.Interru
   /**
    * forced shutdown runnable.
    */
-  protected class ServiceForcedShutdown implements Runnable {
+  protected static class ServiceForcedShutdown implements Runnable {
 
-    private final AtomicBoolean serviceShutdown =
+    private final int shutdownTimeMillis;
+    private final AtomicBoolean serviceWasShutdown =
         new AtomicBoolean(false);
+    private Service service;
+
+    public ServiceForcedShutdown(Service service, int shutdownTimeMillis) {
+      this.shutdownTimeMillis = shutdownTimeMillis;
+      this.service = service;
+    }
 
     /**
      * shutdown callback: stop the service and set an atomic boolean
@@ -155,12 +177,12 @@ public class InterruptEscalator<S extends Service> implements IrqHandler.Interru
      */
     @Override
     public void run() {
-      S service = owner.getService();
       if (service != null) {
         service.stop();
-        serviceShutdown.set(service.waitForServiceToStop(shutdownTimeMillis));
+        serviceWasShutdown.set(
+            service.waitForServiceToStop(shutdownTimeMillis));
       } else {
-        serviceShutdown.set(true);
+        serviceWasShutdown.set(true);
       }
     }
 
@@ -168,8 +190,8 @@ public class InterruptEscalator<S extends Service> implements IrqHandler.Interru
      * Probe for the service being shutdown
      * @return true if the service has been shutdown in the runnable
      */
-    private boolean getServiceShutdown() {
-      return serviceShutdown.get();
+    private boolean getServiceWasShutdown() {
+      return serviceWasShutdown.get();
     }
   }
 }

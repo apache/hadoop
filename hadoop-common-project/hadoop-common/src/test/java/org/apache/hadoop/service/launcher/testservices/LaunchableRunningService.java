@@ -45,13 +45,13 @@ public class LaunchableRunningService extends RunningService implements
   private static final Logger LOG =
       LoggerFactory.getLogger(RunningService.class);
   public static final String NAME =
-      "org.apache.hadoop.service.launcher.testservices.LaunchedRunningService";
+      "org.apache.hadoop.service.launcher.testservices.LaunchableRunningService";
   public static final String ARG_FAILING = "--failing";
   public static final String EXIT_CODE_PROP = "exit.code";
   public int exitCode = 0;
 
   public LaunchableRunningService() {
-    this("LaunchedRunningService");
+    this("LaunchableRunningService");
   }
 
   public LaunchableRunningService(String name) {

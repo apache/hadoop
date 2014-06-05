@@ -28,10 +28,10 @@ import java.util.List;
  */
 public class NullBindLaunchableService extends LaunchableRunningService {
   public static final String NAME =
-      "org.apache.hadoop.service.launcher.testservices.NullBindLaunchedService";
+      "org.apache.hadoop.service.launcher.testservices.NullBindLaunchableService";
 
   public NullBindLaunchableService() {
-    this("NullBindLaunchedService");
+    this("NullBindLaunchableService");
   }
 
   public NullBindLaunchableService(String name) {

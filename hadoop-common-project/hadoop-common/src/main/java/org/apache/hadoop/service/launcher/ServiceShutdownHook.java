@@ -52,7 +52,6 @@ public class ServiceShutdownHook implements Runnable {
    * @param service the service
    */
   public ServiceShutdownHook(Service service) {
-    Preconditions.checkArgument(service != null);
     serviceRef = new WeakReference<Service>(service);
   }
 
