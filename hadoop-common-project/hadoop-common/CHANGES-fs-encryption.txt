@@ -10,6 +10,9 @@ fs-encryption (Unreleased)
 
   IMPROVEMENTS
 
+    HADOOP-6392. Wire crypto streams for encrypted files in
+    DFSClient. (clamb and yliu)
+
     HADOOP-10603. Crypto input and output streams implementing Hadoop stream
     interfaces. (Yi Liu and Charles Lamb)
 

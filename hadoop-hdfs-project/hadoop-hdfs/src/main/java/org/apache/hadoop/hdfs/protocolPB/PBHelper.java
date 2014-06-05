@@ -1127,7 +1127,9 @@ public class PBHelper {
         lb.getFileLength(), lb.getUnderConstruction(),
         PBHelper.convertLocatedBlock(lb.getBlocksList()),
         lb.hasLastBlock() ? PBHelper.convert(lb.getLastBlock()) : null,
-        lb.getIsLastBlockComplete());
+        lb.getIsLastBlockComplete(),
+        lb.hasKey() ? lb.getKey().toByteArray() : null,
+        lb.hasIv() ? lb.getIv().toByteArray() : null);
   }
   
   public static LocatedBlocksProto convert(LocatedBlocks lb) {
@@ -1138,6 +1140,12 @@ public class PBHelper {
         LocatedBlocksProto.newBuilder();
     if (lb.getLastLocatedBlock() != null) {
       builder.setLastBlock(PBHelper.convert(lb.getLastLocatedBlock()));
+    }
+    if (lb.getKey() != null) {
+      builder.setKey(ByteString.copyFrom(lb.getKey()));
+    }
+    if (lb.getIv() != null) {
+      builder.setIv(ByteString.copyFrom(lb.getIv()));
     }
     return builder.setFileLength(lb.getFileLength())
         .setUnderConstruction(lb.isUnderConstruction())
@@ -1264,7 +1272,9 @@ public class PBHelper {
         fs.getPath().toByteArray(),
         fs.hasFileId()? fs.getFileId(): INodeId.GRANDFATHER_INODE_ID,
         fs.hasLocations() ? PBHelper.convert(fs.getLocations()) : null,
-        fs.hasChildrenNum() ? fs.getChildrenNum() : -1);
+        fs.hasChildrenNum() ? fs.getChildrenNum() : -1,
+        fs.hasKey() ? fs.getKey().toByteArray() : null,
+        fs.hasIv() ? fs.getIv().toByteArray() : null);
   }
 
   public static SnapshottableDirectoryStatus convert(
@@ -1313,6 +1323,12 @@ public class PBHelper {
       setPath(ByteString.copyFrom(fs.getLocalNameInBytes()));
     if (fs.isSymlink())  {
       builder.setSymlink(ByteString.copyFrom(fs.getSymlinkInBytes()));
+    }
+    if (fs.getKey() != null) {
+      builder.setKey(ByteString.copyFrom(fs.getKey()));
+    }
+    if (fs.getIv() != null) {
+      builder.setIv(ByteString.copyFrom(fs.getIv()));
     }
     if (fs instanceof HdfsLocatedFileStatus) {
       LocatedBlocks locations = ((HdfsLocatedFileStatus)fs).getBlockLocations();

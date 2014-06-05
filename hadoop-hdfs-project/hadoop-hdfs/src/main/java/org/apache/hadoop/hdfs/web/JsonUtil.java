@@ -251,7 +251,8 @@ public class JsonUtil {
             : childrenNumLong.intValue();
     return new HdfsFileStatus(len, type == PathType.DIRECTORY, replication,
         blockSize, mTime, aTime, permission, owner, group,
-        symlink, DFSUtil.string2Bytes(localName), fileId, childrenNum);
+        symlink, DFSUtil.string2Bytes(localName), fileId, childrenNum,
+        null /* key */, null /* IV */);
   }
 
   /** Convert an ExtendedBlock to a Json map. */
@@ -531,7 +532,7 @@ public class JsonUtil {
         (Map<?, ?>)m.get("lastLocatedBlock"));
     final boolean isLastBlockComplete = (Boolean)m.get("isLastBlockComplete");
     return new LocatedBlocks(fileLength, isUnderConstruction, locatedBlocks,
-        lastLocatedBlock, isLastBlockComplete);
+        lastLocatedBlock, isLastBlockComplete, null /* key */, null /* IV */);
   }
 
   /** Convert a ContentSummary to a Json string. */

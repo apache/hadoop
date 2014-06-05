@@ -35,22 +35,27 @@ public class LocatedBlocks {
   private final boolean underConstruction;
   private LocatedBlock lastLocatedBlock = null;
   private boolean isLastBlockComplete = false;
+  private final byte[] key;
+  private final byte[] iv;
 
   public LocatedBlocks() {
     fileLength = 0;
     blocks = null;
     underConstruction = false;
+    key = null;
+    iv = null;
   }
-  
-  /** public Constructor */
+
   public LocatedBlocks(long flength, boolean isUnderConstuction,
-      List<LocatedBlock> blks, 
-      LocatedBlock lastBlock, boolean isLastBlockCompleted) {
+    List<LocatedBlock> blks, LocatedBlock lastBlock,
+    boolean isLastBlockCompleted, byte[] key, byte[] iv) {
     fileLength = flength;
     blocks = blks;
     underConstruction = isUnderConstuction;
     this.lastLocatedBlock = lastBlock;
     this.isLastBlockComplete = isLastBlockCompleted;
+    this.key = key;
+    this.iv = iv;
   }
   
   /**
@@ -92,13 +97,21 @@ public class LocatedBlocks {
   }
 
   /**
-   * Return ture if file was under construction when 
-   * this LocatedBlocks was constructed, false otherwise.
+   * Return true if file was under construction when this LocatedBlocks was
+   * constructed, false otherwise.
    */
   public boolean isUnderConstruction() {
     return underConstruction;
   }
   
+  public byte[] getKey() {
+    return key;
+  }
+
+  public byte[] getIv() {
+    return iv;
+  }
+
   /**
    * Find block containing specified offset.
    * 

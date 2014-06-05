@@ -154,6 +154,8 @@ public class DFSOutputStream extends FSOutputSummer
   private boolean shouldSyncBlock = false; // force blocks to disk upon close
   private final AtomicReference<CachingStrategy> cachingStrategy;
   private boolean failPacket = false;
+  private byte[] key = null;
+  private byte[] iv = null;
   
   private static class Packet {
     private static final long HEART_BEAT_SEQNO = -1L;
@@ -1562,6 +1564,8 @@ public class DFSOutputStream extends FSOutputSummer
     this.fileId = stat.getFileId();
     this.blockSize = stat.getBlockSize();
     this.blockReplication = stat.getReplication();
+    this.key = stat.getKey();
+    this.iv = stat.getIv();
     this.progress = progress;
     this.cachingStrategy = new AtomicReference<CachingStrategy>(
         dfsClient.getDefaultWriteCachingStrategy());
@@ -2176,6 +2180,24 @@ public class DFSOutputStream extends FSOutputSummer
    */
   long getInitialLen() {
     return initialFileSize;
+  }
+
+  /**
+   * Get the encryption key for this stream.
+   *
+   * @return byte[] the key.
+   */
+  public byte[] getKey() {
+    return key;
+  }
+
+  /**
+   * Get the encryption initialization vector (IV) for this stream.
+   *
+   * @return byte[] the initialization vector (IV).
+   */
+  public byte[] getIv() {
+    return iv;
   }
 
   /**

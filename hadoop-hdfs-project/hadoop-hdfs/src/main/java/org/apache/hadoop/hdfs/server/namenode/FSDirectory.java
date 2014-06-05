@@ -1640,7 +1640,7 @@ public class FSDirectory implements Closeable {
       throws UnresolvedLinkException {
     if (getINode4DotSnapshot(src) != null) {
       return new HdfsFileStatus(0, true, 0, 0, 0, 0, null, null, null, null,
-          HdfsFileStatus.EMPTY_NAME, -1L, 0);
+          HdfsFileStatus.EMPTY_NAME, -1L, 0, null /* key */, null /* IV */);
     }
     return null;
   }
@@ -2611,7 +2611,9 @@ public class FSDirectory implements Closeable {
         node.isSymlink() ? node.asSymlink().getSymlink() : null,
         path,
         node.getId(),
-        childrenNum);
+        childrenNum,
+        HdfsConstants.KEY,  // key
+        HdfsConstants.IV); // IV
   }
 
   /**
@@ -2651,7 +2653,7 @@ public class FSDirectory implements Closeable {
           getPermissionForFileStatus(node, snapshot),
           node.getUserName(snapshot), node.getGroupName(snapshot),
           node.isSymlink() ? node.asSymlink().getSymlink() : null, path,
-          node.getId(), loc, childrenNum);
+          node.getId(), loc, childrenNum, null /* key */, null /* IV */);
     // Set caching information for the located blocks.
     if (loc != null) {
       CacheManager cacheManager = namesystem.getCacheManager();

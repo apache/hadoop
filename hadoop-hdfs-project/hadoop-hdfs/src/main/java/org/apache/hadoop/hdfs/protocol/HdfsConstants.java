@@ -161,4 +161,8 @@ public class HdfsConstants {
   
   public static final String SEPARATOR_DOT_SNAPSHOT_DIR
       = Path.SEPARATOR + DOT_SNAPSHOT_DIR; 
+
+  /* Temporary until we stop hard-coding these values. */
+  public static final byte[] KEY = "0123456789012345".getBytes();
+  public static final byte[] IV = "ABCDEFGJIJKLMNOP".getBytes();
 }

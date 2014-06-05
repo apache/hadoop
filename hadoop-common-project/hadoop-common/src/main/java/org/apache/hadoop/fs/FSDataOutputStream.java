@@ -99,7 +99,7 @@ public class FSDataOutputStream extends DataOutputStream
   }
 
   /**
-   * Get a reference to the wrapped output stream. Used by unit tests.
+   * Get a reference to the wrapped output stream.
    *
    * @return the underlying output stream
    */

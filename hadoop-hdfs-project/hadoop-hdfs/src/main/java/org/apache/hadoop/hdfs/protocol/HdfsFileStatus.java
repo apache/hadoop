@@ -44,6 +44,9 @@ public class HdfsFileStatus {
   private final String owner;
   private final String group;
   private final long fileId;
+
+  private final byte[] key;
+  private final byte[] iv;
   
   // Used by dir, not including dot and dotdot. Always zero for a regular file.
   private final int childrenNum;
@@ -65,9 +68,18 @@ public class HdfsFileStatus {
    * @param fileId the file id
    */
   public HdfsFileStatus(long length, boolean isdir, int block_replication,
-                    long blocksize, long modification_time, long access_time,
-                    FsPermission permission, String owner, String group, 
-                    byte[] symlink, byte[] path, long fileId, int childrenNum) {
+      long blocksize, long modification_time, long access_time,
+      FsPermission permission, String owner, String group, byte[] symlink,
+      byte[] path, long fileId, int childrenNum) {
+    this(length, isdir, block_replication, blocksize, modification_time,
+      access_time, permission, owner, group, symlink, path, fileId,
+      childrenNum, HdfsConstants.KEY, HdfsConstants.IV);
+  }
+
+  public HdfsFileStatus(long length, boolean isdir, int block_replication,
+      long blocksize, long modification_time, long access_time,
+      FsPermission permission, String owner, String group, byte[] symlink,
+    byte[] path, long fileId, int childrenNum, byte[] key, byte[] iv) {
     this.length = length;
     this.isdir = isdir;
     this.block_replication = (short)block_replication;
@@ -85,6 +97,8 @@ public class HdfsFileStatus {
     this.path = path;
     this.fileId = fileId;
     this.childrenNum = childrenNum;
+    this.key = key;
+    this.iv = iv;
   }
 
   /**
@@ -238,6 +252,14 @@ public class HdfsFileStatus {
     return fileId;
   }
   
+  final public byte[] getKey() {
+    return key;
+  }
+
+  final public byte[] getIv() {
+    return iv;
+  }
+
   final public int getChildrenNum() {
     return childrenNum;
   }

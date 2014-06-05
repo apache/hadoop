@@ -88,6 +88,8 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
   private final boolean verifyChecksum;
   private LocatedBlocks locatedBlocks = null;
   private long lastBlockBeingWrittenLength = 0;
+  private byte[] key = null;
+  private byte[] iv = null;
   private DatanodeInfo currentNode = null;
   private LocatedBlock currentLocatedBlock = null;
   private long pos = 0;
@@ -297,6 +299,8 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       }
     }
 
+    key = locatedBlocks.getKey();
+    iv = locatedBlocks.getIv();
     currentNode = null;
     return lastBlockBeingWrittenLength;
   }
@@ -1515,6 +1519,24 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
    */
   public synchronized ReadStatistics getReadStatistics() {
     return new ReadStatistics(readStatistics);
+  }
+
+  /**
+   * Get the encryption key for this stream.
+   *
+   * @return byte[] the key
+   */
+  public synchronized byte[] getKey() {
+    return key;
+  }
+
+  /**
+   * Get the encryption initialization vector (IV) for this stream.
+   *
+   * @return byte[] the initialization vector (IV).
+   */
+  public synchronized byte[] getIv() {
+    return iv;
   }
 
   private synchronized void closeCurrentBlockReader() {

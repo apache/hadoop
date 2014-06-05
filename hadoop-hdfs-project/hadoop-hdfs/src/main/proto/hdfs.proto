@@ -179,6 +179,8 @@ message LocatedBlocksProto {
   required bool underConstruction = 3;
   optional LocatedBlockProto lastBlock = 4;
   required bool isLastBlockComplete = 5;
+  optional bytes key = 6;
+  optional bytes iv = 7;
 }
 
 
@@ -212,6 +214,10 @@ message HdfsFileStatusProto {
   // Optional field for fileId
   optional uint64 fileId = 13 [default = 0]; // default as an invalid id
   optional int32 childrenNum = 14 [default = -1];
+
+  // Optional fields for key/iv for encryption
+  optional bytes key = 15;
+  optional bytes iv = 16;
 } 
 
 /**
