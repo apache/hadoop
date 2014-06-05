@@ -124,7 +124,7 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
 
   /**
    * Get the service. Null until and unless
-   * {@link #coreServiceLaunch(Configuration, List, boolean)} has completed
+   * {@link #coreServiceLaunch(Configuration, List, boolean, boolean)} has completed
    * @return the service
    */
   public S getService() {
@@ -179,7 +179,7 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
     //Currently the config just the default
     Configuration conf = createConfiguration();
     List<String> processedArgs = extractConfigurationArgs(conf, args);
-    ExitUtil.ExitException ee = launchService(conf, processedArgs, true);
+    ExitUtil.ExitException ee = launchService(conf, processedArgs, true, true);
     exit(ee);
   }
 
@@ -200,15 +200,20 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
    * been stripped out
    * @param addShutdownHook should a shutdown hook be added to terminate
    * this service on shutdown. Tests should set this to false.
+   * @param execute execute/wait for the service to stop
    * @return an exit exception, which will have a status code of 0 if it worked
    */
   @VisibleForTesting
   public ExitUtil.ExitException launchService(Configuration conf,
-      List<String> processedArgs, boolean addShutdownHook) {
+      List<String> processedArgs,
+      boolean addShutdownHook,
+      boolean execute) {
+    
     ExitUtil.ExitException exitException;
     
     try {
-      int exitCode = coreServiceLaunch(conf, processedArgs, addShutdownHook);
+      int exitCode = coreServiceLaunch(conf, processedArgs, addShutdownHook,
+          execute);
       if (service != null) {
         //check to see if the service failed
         Throwable failure = service.getFailureCause();
@@ -249,31 +254,7 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
     return exitException;
   }
 
-  /**
-   * Convert an exception to an ExitException
-   * @param thrown the exception thrown
-   * @return an ExitException with a status code
-   */
-  protected ExitUtil.ExitException convertToExitException(Throwable thrown) {
-    ExitUtil.ExitException
-        exitException;// other exceptions are converted to ExitExceptions
-    // get the exception message
-    String message = thrown.toString();
-    int exitCode;
-    if (thrown instanceof ExitCodeProvider) {
-      // the exception provides a status code -extract it
-      exitCode = ((ExitCodeProvider) thrown).getExitCode();
-      message = thrown.getMessage();
-    } else {
-      // no exception code: use the default
-      exitCode = EXIT_EXCEPTION_THROWN;
-    }
-    // construct the new exception with the original message and
-    // an exit code
-    exitException = new ServiceLaunchException(exitCode, message);
-    exitException.initCause(thrown);
-    return exitException;
-  }
+
 
   /**
    * Launch the service, by creating it, initing it, starting it and then
@@ -293,6 +274,7 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
    * have been stripped out.
    * @param addShutdownHook should a shutdown hook be added to terminate
    * this service on shutdown. Tests should set this to false.
+   * @param execute execute/wait for the service to stop
    * @throws ClassNotFoundException classname not on the classpath
    * @throws IllegalAccessException not allowed at the class
    * @throws InstantiationException not allowed to instantiate it
@@ -302,9 +284,10 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
    * then it defines the exit code for any containing exception
    */
 
-  public int coreServiceLaunch(Configuration conf,
+  protected int coreServiceLaunch(Configuration conf,
       List<String> processedArgs,
-      boolean addShutdownHook) throws Exception {
+      boolean addShutdownHook,
+      boolean execute) throws Exception {
 
     // create the service instance
     instantiateService(conf);
@@ -341,15 +324,21 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
     // start the service
     service.start();
     int exitCode = EXIT_SUCCESS;
-    if (launchedService != null) {
-      // assume that runnable services are meant to run from here
-      exitCode = launchedService.execute();
-      LOG.debug("Service {} exited with exit code {}", serviceName, exitCode);
-
-    } else {
-      //run the service until it stops or an interrupt happens on a different thread.
-      LOG.debug("waiting for service threads to terminate");
-      service.waitForServiceToStop(0);
+    if (execute) {
+      if (launchedService != null) {
+        // assume that runnable services are meant to run from here
+        try {
+          exitCode = launchedService.execute();
+          LOG.debug("Service {} execution returned exit code {}", serviceName, exitCode);
+        } finally {
+          // then stop the service
+          service.stop();
+        }
+      } else {
+        //run the service until it stops or an interrupt happens on a different thread.
+        LOG.debug("waiting for service threads to terminate");
+        service.waitForServiceToStop(0);
+      }
     }
     return exitCode;
   }
@@ -409,6 +398,32 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
     return service;
   }
 
+  /**
+   * Convert an exception to an ExitException
+   * @param thrown the exception thrown
+   * @return an ExitException with a status code
+   */
+  protected ExitUtil.ExitException convertToExitException(Throwable thrown) {
+    ExitUtil.ExitException
+        exitException;// other exceptions are converted to ExitExceptions
+    // get the exception message
+    String message = thrown.toString();
+    int exitCode;
+    if (thrown instanceof ExitCodeProvider) {
+      // the exception provides a status code -extract it
+      exitCode = ((ExitCodeProvider) thrown).getExitCode();
+      message = thrown.getMessage();
+    } else {
+      // no exception code: use the default
+      exitCode = EXIT_EXCEPTION_THROWN;
+    }
+    // construct the new exception with the original message and
+    // an exit code
+    exitException = new ServiceLaunchException(exitCode, message);
+    exitException.initCause(thrown);
+    return exitException;
+  }
+  
   protected ExitUtil.ExitException serviceCreationFailure(String serviceClassName,
       Exception e) {
     return new ServiceLaunchException(EXIT_SERVICE_CREATION_FAILURE, e);

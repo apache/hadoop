@@ -19,6 +19,8 @@
 package org.apache.hadoop.service.launcher;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.service.BreakableService;
+import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.launcher.testservices.ExceptionInExecuteLaunchedService;
 import org.apache.hadoop.service.launcher.testservices.LaunchedRunningService;
 import org.apache.hadoop.service.launcher.testservices.NoArgsAllowedService;
@@ -49,6 +51,7 @@ public class TestServiceLauncherInnerMethods extends
     ServiceLauncher<LaunchedRunningService> launcher =
         launchService(LaunchedRunningService.class, new Configuration());
     LaunchedRunningService service = launcher.getService();
+    assertInState(service, Service.STATE.STARTED);
     service.failInRun = true;
     service.exitCode = EXIT_CONNECTIVITY_PROBLEM;
     assertEquals(EXIT_CONNECTIVITY_PROBLEM, service.execute());
@@ -60,6 +63,13 @@ public class TestServiceLauncherInnerMethods extends
         new Configuration(),
         "java.lang.OutOfMemoryError", EXIT_EXCEPTION_THROWN,
         ExceptionInExecuteLaunchedService.ARG_THROWABLE);
+  }
+
+  @Test
+  public void testBreakableServiceLifecycle() throws Throwable {
+    ServiceLauncher<BreakableService> launcher =
+        launchService(BreakableService.class, new Configuration());
+    
   }
 
 }

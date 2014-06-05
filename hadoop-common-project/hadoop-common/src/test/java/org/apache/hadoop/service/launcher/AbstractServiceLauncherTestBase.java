@@ -214,9 +214,11 @@ public class AbstractServiceLauncherTestBase extends Assert implements
    * Launch a service with the given list of arguments. Returns
    * the service launcher, from which the created service can be extracted
    * via {@link ServiceLauncher#getService()}.
+   * The service is has its execute() method called, but 
    * @param serviceClass service class to create
    * @param conf configuration
    * @param args list of arguments
+   * @param execute execute/wait for the service to stop
    * @param <S> service type
    * @return the service launcher
    * @throws ExitUtil.ExitException if the launch's exit code != 0
@@ -224,11 +226,12 @@ public class AbstractServiceLauncherTestBase extends Assert implements
   protected <S extends Service> ServiceLauncher<S> launchService(
       Class serviceClass,
       Configuration conf,
-      List<String> args) throws ExitUtil.ExitException {
+      List<String> args,
+      boolean execute) throws ExitUtil.ExitException {
     ServiceLauncher<S> serviceLauncher =
         new ServiceLauncher<S>(serviceClass.getName());
     ExitUtil.ExitException exitException =
-        serviceLauncher.launchService(conf, args, false);
+        serviceLauncher.launchService(conf, args, false, execute);
     if (exitException.getExitCode() == 0) {
       return serviceLauncher;
     } else {
@@ -238,8 +241,12 @@ public class AbstractServiceLauncherTestBase extends Assert implements
 
   /**
    * Launch a service with the given list of arguments. Returns
-   * the service launcher, from which the created service can be extracted
+   * the service launcher, from which the created service can be extracted.
    * via {@link ServiceLauncher#getService()}.
+   * 
+   * This call DOES NOT call {@link LaunchedService#execute()} or wait for
+   * a simple service to finish. It returns the service that has been created,
+   * initialized and started.
    * @param serviceClass service class to create
    * @param conf configuration
    * @param args varargs launch arguments
@@ -251,7 +258,7 @@ public class AbstractServiceLauncherTestBase extends Assert implements
       Class serviceClass,
       Configuration conf,
       String... args) throws ExitUtil.ExitException {
-    return launchService(serviceClass,conf, Arrays.asList(args));
+    return launchService(serviceClass,conf, Arrays.asList(args), false);
   }
 
   /**
@@ -270,7 +277,10 @@ public class AbstractServiceLauncherTestBase extends Assert implements
       int errorCode,
       String... args) {
     try {
-      ServiceLauncher<Service> launch = launchService(serviceClass, conf, args);
+      ServiceLauncher<Service> launch = launchService(serviceClass,
+          conf,
+          Arrays.asList(args),
+          true);
 
       failf("Expected an exception with error code %d and text \"%s\" "
             + " -but the service completed with :%s",

@@ -76,10 +76,23 @@ package org.apache.hadoop.service.launcher;
  takes a String-formatted format string and a list of arguments to create
  the exception text.
  </li>
- 
- 
+  
  </ul>
+ 
+ <h2>Implementing a Launchable Service</h2>
+ 
+ 
+ The Service Launcher can launch <i>any YARN service</i>. It will instantiate
+ the service classname provided, by zero-args constructor -preferably- falling
+ back to a constructor that takes a <code>String</code> as its parameter.
+ 
+ It will initialize the service via {@link org.apache.hadoop.service.Service#init(Configuration)},
+ then start it via the {@link org.apache.hadoop.service.Service#start()} method.
+ 
+ 
+ A Launchable service is one that 
+ 
  */
- 
- 
- 
+
+
+import org.apache.hadoop.conf.Configuration;
