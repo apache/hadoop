@@ -20,12 +20,8 @@ package org.apache.hadoop.service.launcher.testservices;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.launcher.AbstractLaunchedService;
-import org.apache.hadoop.service.launcher.LauncherExitCodes;
-import org.apache.hadoop.service.launcher.ServiceLaunchException;
-import org.apache.hadoop.util.ExitCodeProvider;
 import org.junit.Assert;
 
-import java.io.IOException;
 import java.util.List;
 
 /**

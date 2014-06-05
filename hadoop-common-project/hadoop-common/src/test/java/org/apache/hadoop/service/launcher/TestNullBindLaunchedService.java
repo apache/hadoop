@@ -28,5 +28,4 @@ public class TestNullBindLaunchedService extends AbstractServiceLauncherTestBase
     assertRuns(NullBindLaunchedService.NAME);
   }
 
-
 }

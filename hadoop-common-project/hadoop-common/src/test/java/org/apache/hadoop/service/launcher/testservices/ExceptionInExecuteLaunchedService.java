@@ -27,6 +27,10 @@ import org.apache.hadoop.util.ExitCodeProvider;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * Raise an exception in the execute() method; the exception type can
+ * be configured from the CLI
+ */
 public class ExceptionInExecuteLaunchedService extends AbstractLaunchedService {
 
   public static final String NAME =
