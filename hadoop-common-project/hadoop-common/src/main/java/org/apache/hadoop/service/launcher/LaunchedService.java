@@ -59,9 +59,29 @@ public interface LaunchedService extends Service {
   Configuration bindArgs(Configuration config, List<String> args) throws Exception;
   
   /**
-   * Run a service. This called after {@link Service#start()}
+   * Run a service -called after {@link Service#start()}.
+   * <p>
+   * The return value becomes the exit code of the launched process.
+   * <p>
+   * If an exception is raised, the policy is
+   * <ol>
+   *   <li>Any subset of {@link org.apache.hadoop.util.ExitUtil.ExitException}:
+   *   the exception is passed up unmodified
+   *   </li>
+   *   <li>Any exception which implements
+   *   {@link org.apache.hadoop.util.ExitCodeProvider}:
+   *   A new {@link ServiceLaunchException} is created with the exit code
+   *   and message of the thrown exception; the thrown exception becomes the
+   *   cause.</li>
+   *   <li>Any other exception. A new {@link ServiceLaunchException} is created 
+   *   with the exit code {@link LauncherExitCodes#EXIT_EXCEPTION_THROWN} and
+   *   the message of the original exception (which becomes the cause)</li>
+   * </ol>
    * @return the exit code
-   * @throws Throwable any exception to report
+   * @throws org.apache.hadoop.util.ExitUtil.ExitException an exception passed up as the exit code
+   * and error text.
+   * @throws Throwable any exception to report. If it provides an exit code
+   * this is used in a wrapping exception.
    */
   int execute() throws Throwable ;
 }

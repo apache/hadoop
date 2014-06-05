@@ -18,37 +18,15 @@
 
 package org.apache.hadoop.service.launcher;
 
-import static org.apache.hadoop.service.launcher.testservices.ExceptionInExecuteLaunchedService.*;
+import org.apache.hadoop.service.launcher.testservices.InitInConstructorLaunchedService;
+import org.apache.hadoop.service.launcher.testservices.NoArgsAllowedService;
 import org.junit.Test;
 
-/**
- * This test verifies that exceptions in the 
- * {@link LaunchedService#execute()} method are relayed if exit exceptions,
- * forwarded if not
- */
-public class TestExceptionInExecuteLaunchedService extends AbstractServiceLauncherTestBase {
+public class TestInitInConstructorLaunchedService extends AbstractServiceLauncherTestBase {
 
   @Test
-  public void testEx() throws Throwable {
-    assertLaunchOutcome(EXIT_EXCEPTION_THROWN,
-        OTHER_EXCEPTION_TEXT,
-        NAME);
-  }
-
-  @Test
-  public void testSLE() throws Throwable {
-    assertLaunchOutcome(EXIT_OTHER_FAILURE, 
-        SLE_TEXT,
-        NAME, 
-        ARG_THROW_SLE);
-  }
-
-  @Test
-  public void testIOE() throws Throwable {
-    assertLaunchOutcome(IOE_EXIT_CODE, 
-        EXIT_IN_IOE_TEXT,
-        NAME, 
-        ARG_THROW_IOE);
+  public void testRunService() throws Throwable {
+    assertRuns(InitInConstructorLaunchedService.NAME);
   }
 
 }

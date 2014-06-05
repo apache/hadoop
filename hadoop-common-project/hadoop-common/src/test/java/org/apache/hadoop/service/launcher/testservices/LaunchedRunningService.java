@@ -21,6 +21,7 @@ package org.apache.hadoop.service.launcher.testservices;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.launcher.LaunchedService;
 import org.apache.hadoop.service.launcher.LauncherExitCodes;
+import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,6 +61,7 @@ public class LaunchedRunningService extends RunningService implements
   @Override
   public Configuration bindArgs(Configuration config, List<String> args) throws
       Exception {
+    Assert.assertTrue(isInState(STATE.INITED));
     Configuration newConf = new Configuration(config);
     if (args.contains(ARG_FAILING)) {
       LOG.info("CLI contains " + ARG_FAILING);
@@ -87,6 +89,7 @@ public class LaunchedRunningService extends RunningService implements
 
   @Override
   public int execute() throws Throwable {
+    Assert.assertTrue(isInState(STATE.STARTED));
     Thread.sleep(delayTime);
     if (failInRun) {
       return exitCode;
