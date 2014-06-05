@@ -24,6 +24,9 @@ fs-encryption (Unreleased)
     HADOOP-10653. Add a new constructor for CryptoInputStream that 
     receives current position of wrapped stream. (Yi Liu)
 
+    HADOOP-10662. NullPointerException in CryptoInputStream while wrapped
+    stream is not ByteBufferReadable. Add tests using normal stream. (Yi Liu)
+
   OPTIMIZATIONS
 
   BUG FIXES

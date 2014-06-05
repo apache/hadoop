@@ -172,6 +172,8 @@ public class CryptoInputStream extends FilterInputStream implements
           } catch (UnsupportedOperationException e) {
             usingByteBufferRead = Boolean.FALSE;
           }
+        } else {
+          usingByteBufferRead = Boolean.FALSE;
         }
         if (!usingByteBufferRead) {
           n = readFromUnderlyingStream(inBuffer);
