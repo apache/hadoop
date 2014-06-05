@@ -38,8 +38,8 @@ public class RunningService extends AbstractService implements Runnable {
   public static final String FAILURE_MESSAGE = "FAIL_IN_RUN";
   public boolean interrupted;
 
-  protected int delayTime = DELAY;
-  protected boolean failInRun;
+  public int delayTime = DELAY;
+  public boolean failInRun;
 
   public RunningService() {
     super("RunningService");

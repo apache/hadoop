@@ -35,16 +35,16 @@ public class ExceptionInExecuteLaunchedService extends AbstractLaunchedService {
 
   public static final String NAME =
       "org.apache.hadoop.service.launcher.testservices.ExceptionInExecuteLaunchedService";
-  public static final String ARG_THROW_SLE = "--throwSLE";
-  public static final String ARG_THROW_IOE = "--throwIOE";
+  public static final String ARG_THROW_SLE = "--SLE";
+  public static final String ARG_THROW_IOE = "--IOE";
+  public static final String ARG_THROWABLE = "--throwable";
   public static final String SLE_TEXT = "SLE raised in execute()";
   public static final String OTHER_EXCEPTION_TEXT = "Other exception";
 
   public static final String EXIT_IN_IOE_TEXT = "Exit in IOE";
   public static final int IOE_EXIT_CODE = 64;
-
-  private boolean throwSLE;
-  private boolean throwIOE;
+  ExType exceptionType = ExType.EX;
+  ;
 
   public ExceptionInExecuteLaunchedService() {
     super("ExceptionInExecuteLaunchedService");
@@ -53,24 +53,34 @@ public class ExceptionInExecuteLaunchedService extends AbstractLaunchedService {
   @Override
   public Configuration bindArgs(Configuration config, List<String> args) throws
       Exception {
-    throwSLE = args.contains(ARG_THROW_SLE);
-    throwIOE = args.contains(ARG_THROW_IOE);
+    if (args.contains(ARG_THROW_SLE)) {
+      exceptionType = ExType.SLE;
+    } else if (args.contains(ARG_THROW_IOE)) {
+      exceptionType = ExType.IOE;
+    } else if (args.contains(ARG_THROWABLE)) {
+      exceptionType = ExType.THROWABLE;
+    }
     return super.bindArgs(config, args);
   }
 
   @Override
-  public int execute() throws Throwable {
-    if (throwSLE) {
-      throw new ServiceLaunchException(LauncherExitCodes.EXIT_OTHER_FAILURE,
-          SLE_TEXT);
-    } else if (throwIOE) {
-      throw new IOECodedException();
-    } else {
-      throw new Exception(OTHER_EXCEPTION_TEXT);
+  public int execute() throws Exception {
+    switch (exceptionType) {
+      case SLE:
+        throw new ServiceLaunchException(LauncherExitCodes.EXIT_OTHER_FAILURE,
+            SLE_TEXT);
+      case IOE:
+        throw new IOECodedException();
+      case THROWABLE:
+        throw new OutOfMemoryError("OOM");
+      case EX:
+      default:
+        throw new Exception(OTHER_EXCEPTION_TEXT);
     }
-
   }
-  
+
+  enum ExType {EX, SLE, IOE, THROWABLE}
+
   public static class IOECodedException extends IOException implements
       ExitCodeProvider {
 

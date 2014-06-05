@@ -22,6 +22,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.launcher.AbstractLaunchedService;
 import org.apache.hadoop.service.launcher.LauncherExitCodes;
 import org.apache.hadoop.service.launcher.ServiceLaunchException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -29,6 +31,10 @@ import java.util.List;
  * service that does not allow any arguments
  */
 public class NoArgsAllowedService extends AbstractLaunchedService {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NoArgsAllowedService.class);
+
   public NoArgsAllowedService() {
     super("NoArgsAllowedService");
   }
@@ -41,6 +47,7 @@ public class NoArgsAllowedService extends AbstractLaunchedService {
       Exception {
     Configuration configuration = super.bindArgs(config, args);
     if (!args.isEmpty()) {
+      LOG.error("Got {} arguments, first one: {}", args.size(), args.get(0));
       throw new ServiceLaunchException(LauncherExitCodes.EXIT_COMMAND_ARGUMENT_ERROR,
           "Expected 0 arguments but got %d",
           args.size());

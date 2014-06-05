@@ -95,7 +95,7 @@ public class InterruptEscalator<S extends Service> implements IrqHandler.Interru
     } catch (InterruptedException ignored) {
       //ignored
     }
-    forcedShutdownTimedOut = !forcedShutdown.isServiceStopped();
+    forcedShutdownTimedOut = !forcedShutdown.getServiceShutdown();
     if (forcedShutdownTimedOut) {
       LOG.warn("Service did not shut down in time");
     }
@@ -146,22 +146,30 @@ public class InterruptEscalator<S extends Service> implements IrqHandler.Interru
    */
   protected class ServiceForcedShutdown implements Runnable {
 
-    private final AtomicBoolean serviceStopped =
+    private final AtomicBoolean serviceShutdown =
         new AtomicBoolean(false);
 
+    /**
+     * shutdown callback: stop the service and set an atomic boolean
+     * if it stopped within the shutdown time
+     */
     @Override
     public void run() {
       S service = owner.getService();
       if (service != null) {
         service.stop();
-        serviceStopped.set(service.waitForServiceToStop(shutdownTimeMillis));
+        serviceShutdown.set(service.waitForServiceToStop(shutdownTimeMillis));
       } else {
-        serviceStopped.set(true);
+        serviceShutdown.set(true);
       }
     }
 
-    private boolean isServiceStopped() {
-      return serviceStopped.get();
+    /**
+     * Probe for the service being shutdown
+     * @return true if the service has been shutdown in the runnable
+     */
+    private boolean getServiceShutdown() {
+      return serviceShutdown.get();
     }
   }
 }

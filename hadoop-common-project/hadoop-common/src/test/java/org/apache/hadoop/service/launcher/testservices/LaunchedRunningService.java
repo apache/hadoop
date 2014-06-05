@@ -48,7 +48,7 @@ public class LaunchedRunningService extends RunningService implements
       "org.apache.hadoop.service.launcher.testservices.LaunchedRunningService";
   public static final String ARG_FAILING = "--failing";
   public static final String EXIT_CODE_PROP = "exit.code";
-  protected int exitCode = 0;
+  public int exitCode = 0;
 
   public LaunchedRunningService() {
     this("LaunchedRunningService");
@@ -61,7 +61,7 @@ public class LaunchedRunningService extends RunningService implements
   @Override
   public Configuration bindArgs(Configuration config, List<String> args) throws
       Exception {
-    Assert.assertTrue(isInState(STATE.INITED));
+    Assert.assertEquals(STATE.NOTINITED, getServiceState());
     Configuration newConf = new Configuration(config);
     if (args.contains(ARG_FAILING)) {
       LOG.info("CLI contains " + ARG_FAILING);
@@ -88,8 +88,7 @@ public class LaunchedRunningService extends RunningService implements
   }
 
   @Override
-  public int execute() throws Throwable {
-    Assert.assertTrue(isInState(STATE.STARTED));
+  public int execute() throws Exception {
     Thread.sleep(delayTime);
     if (failInRun) {
       return exitCode;

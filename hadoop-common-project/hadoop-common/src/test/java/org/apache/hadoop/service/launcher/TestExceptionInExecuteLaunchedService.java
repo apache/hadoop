@@ -51,4 +51,12 @@ public class TestExceptionInExecuteLaunchedService extends AbstractServiceLaunch
         ARG_THROW_IOE);
   }
 
+  @Test
+  public void testThrowable() throws Throwable {
+    assertLaunchOutcome(EXIT_EXCEPTION_THROWN, 
+        "java.lang.OutOfMemoryError",
+        NAME, 
+        ARG_THROWABLE);
+  }
+
 }

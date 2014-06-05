@@ -80,8 +80,8 @@ public interface LaunchedService extends Service {
    * @return the exit code
    * @throws org.apache.hadoop.util.ExitUtil.ExitException an exception passed up as the exit code
    * and error text.
-   * @throws Throwable any exception to report. If it provides an exit code
+   * @throws Exception any exception to report. If it provides an exit code
    * this is used in a wrapping exception.
    */
-  int execute() throws Throwable ;
+  int execute() throws Exception ;
 }

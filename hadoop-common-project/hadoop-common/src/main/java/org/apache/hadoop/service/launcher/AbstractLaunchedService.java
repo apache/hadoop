@@ -65,7 +65,7 @@ public abstract class AbstractLaunchedService extends AbstractService
    * {@inheritDoc}
    */
   @Override
-  public int execute() throws Throwable {
+  public int execute() throws Exception {
     return LauncherExitCodes.EXIT_SUCCESS;
   }
 }

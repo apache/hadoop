@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.service.launcher;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
@@ -25,8 +26,6 @@ import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ExitCodeProvider;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.VersionInfo;
-
-import static org.apache.hadoop.service.launcher.LauncherExitCodes.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +36,6 @@ import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.ListIterator;
 
 /**
  * A class to launch any service by name.
@@ -95,6 +93,11 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
    * Exit code
    */
   private int serviceExitCode;
+  
+  /**
+   * Exception raised during execution
+   */
+  private ExitUtil.ExitException serviceException;
 
   /**
    * The interrupt escalator for the servie
@@ -121,7 +124,7 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
 
   /**
    * Get the service. Null until and unless
-   * {@link #innerServiceLaunch(Configuration, List, boolean)} has completed
+   * {@link #coreServiceLaunch(Configuration, List, boolean)} has completed
    * @return the service
    */
   public S getService() {
@@ -148,8 +151,14 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
    * The exit code from a successful service execution
    * @return the exit code. 
    */
+  @VisibleForTesting
   public int getServiceExitCode() {
     return serviceExitCode;
+  }
+
+  @VisibleForTesting
+  public ExitUtil.ExitException getServiceException() {
+    return serviceException;
   }
 
   @Override
@@ -185,7 +194,7 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
 
   /**
    * Launch a service catching all exceptions and downgrading them to exit codes
-   * after logging.
+   * after logging. Sets {@link #serviceException} to this value
    * @param conf configuration to use
    * @param processedArgs command line after the launcher-specific arguments have
    * been stripped out
@@ -193,12 +202,13 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
    * this service on shutdown. Tests should set this to false.
    * @return an exit exception, which will have a status code of 0 if it worked
    */
+  @VisibleForTesting
   public ExitUtil.ExitException launchService(Configuration conf,
       List<String> processedArgs, boolean addShutdownHook) {
     ExitUtil.ExitException exitException;
     
     try {
-      int exitCode = innerServiceLaunch(conf, processedArgs, addShutdownHook);
+      int exitCode = coreServiceLaunch(conf, processedArgs, addShutdownHook);
       if (service != null) {
         //check to see if the service failed
         Throwable failure = service.getFailureCause();
@@ -209,7 +219,7 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
           if (failureState == Service.STATE.STOPPED) {
             //the failure occurred during shutdown, not important enough to bother
             //the user as it may just scare them
-            LOG.debug("Failure during shutdown:{} ", failure, failure);
+            LOG.debug("Failure during shutdown: {} ", failure, failure);
           } else {
             //throw it for the catch handlers to deal with
             throw failure;
@@ -234,6 +244,8 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
     } catch (Throwable thrown) {
       exitException = convertToExitException(thrown);
     }
+    serviceExitCode = exitException.getExitCode();
+    serviceException = exitException;
     return exitException;
   }
 
@@ -285,12 +297,14 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
    * @throws IllegalAccessException not allowed at the class
    * @throws InstantiationException not allowed to instantiate it
    * @throws InterruptedException thread interrupted
-   * @throws Throwable any other failure
+   * @throws ExitUtil.ExitException any exception defining the status code.
+   * @throws Exception any other failure -if it implements {@link ExitCodeProvider}
+   * then it defines the exit code for any containing exception
    */
-  public int innerServiceLaunch(Configuration conf,
+
+  public int coreServiceLaunch(Configuration conf,
       List<String> processedArgs,
-      boolean addShutdownHook)
-    throws Throwable {
+      boolean addShutdownHook) throws Exception {
 
     // create the service instance
     instantiateService(conf);
@@ -337,9 +351,7 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
       LOG.debug("waiting for service threads to terminate");
       service.waitForServiceToStop(0);
     }
-    //exit
-    serviceExitCode = exitCode;
-    return serviceExitCode;
+    return exitCode;
   }
 
   /**
@@ -356,7 +368,7 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
 
     //Instantiate the class -this requires the service to have a public
     // zero-argument constructor
-    Object instance = null;
+    Object instance;
     
     // in Java7+ the exception catch logic should be consolidated
     try {
@@ -638,7 +650,7 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
   /**
    * Varargs version of the entry point for testing and other in-JVM use
    * -hands off to {@link #serviceMain(List)}
-   * @param argsList the list of arguments
+   * @param args command line arguments.
    */
   public static void serviceMain(String ... args) {
     List<String> argsList = Arrays.asList(args);

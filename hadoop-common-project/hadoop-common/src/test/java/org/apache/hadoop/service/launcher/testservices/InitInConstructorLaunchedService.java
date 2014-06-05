@@ -40,22 +40,22 @@ public class InitInConstructorLaunchedService extends AbstractLaunchedService {
 
   @Override
   public void init(Configuration conf) {
-    Assert.assertTrue(isInState(STATE.NOTINITED));
+    Assert.assertEquals(STATE.NOTINITED, getServiceState());
     super.init(conf);
   }
 
   @Override
   public Configuration bindArgs(Configuration config, List<String> args) throws
       Exception {
-
+    Assert.assertEquals(STATE.INITED, getServiceState());
     Assert.assertTrue(isInState(STATE.INITED));
     Assert.assertNotSame(getConfig(), config);
     return null;
   }
 
   @Override
-  public int execute() throws Throwable {
-    Assert.assertTrue(isInState(STATE.STARTED));
+  public int execute() throws Exception {
+    Assert.assertEquals(STATE.STARTED, getServiceState());
     Assert.assertSame(originalConf, getConfig());
     return super.execute();
   }
