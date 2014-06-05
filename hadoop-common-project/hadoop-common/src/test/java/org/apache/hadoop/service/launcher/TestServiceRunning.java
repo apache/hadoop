@@ -24,7 +24,7 @@ import org.junit.Test;
 
 import java.util.List;
 
-public class TestRunningService extends AbstractServiceLauncherTestBase {
+public class TestServiceRunning extends AbstractServiceLauncherTestBase {
 
 
   @Test

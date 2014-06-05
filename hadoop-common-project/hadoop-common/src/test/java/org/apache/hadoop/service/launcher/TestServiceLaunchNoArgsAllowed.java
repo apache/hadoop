@@ -18,14 +18,27 @@
 
 package org.apache.hadoop.service.launcher;
 
-import org.apache.hadoop.service.launcher.testservices.StringConstructorOnlyService;
+import org.apache.hadoop.service.launcher.testservices.NoArgsAllowedService;
 import org.junit.Test;
 
-public class TestStringConstructorOnlyService extends AbstractServiceLauncherTestBase {
+public class TestServiceLaunchNoArgsAllowed extends AbstractServiceLauncherTestBase {
 
   @Test
   public void testRunService() throws Throwable {
-    assertRuns(StringConstructorOnlyService.NAME);
+    assertRuns(NoArgsAllowedService.NAME);
+  }
+
+  @Test
+  public void testOneArg() throws Throwable {
+    assertLaunchOutcome(EXIT_COMMAND_ARGUMENT_ERROR, "1",
+        NoArgsAllowedService.NAME, "one");
+  }
+
+  @Test
+  public void testConfsStripped() throws Throwable {
+    assertRuns(NoArgsAllowedService.NAME,
+        ServiceLauncher.ARG_CONF,
+        configFile(newConf())); 
   }
 
 }

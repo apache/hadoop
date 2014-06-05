@@ -28,9 +28,9 @@ import org.slf4j.LoggerFactory;
 /**
  * Test service launcher interrupt handling
  */
-public class TestInterruptHandling extends AbstractServiceLauncherTestBase {
+public class TestServiceInterruptHandling extends AbstractServiceLauncherTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
-      TestInterruptHandling.class);
+      TestServiceInterruptHandling.class);
 
 
   @Test

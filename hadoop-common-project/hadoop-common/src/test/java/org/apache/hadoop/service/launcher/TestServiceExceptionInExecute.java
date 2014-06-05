@@ -26,7 +26,7 @@ import org.junit.Test;
  * {@link LaunchedService#execute()} method are relayed if exit exceptions,
  * forwarded if not
  */
-public class TestExceptionInExecuteLaunchedService extends AbstractServiceLauncherTestBase {
+public class TestServiceExceptionInExecute extends AbstractServiceLauncherTestBase {
 
   @Test
   public void testEx() throws Throwable {

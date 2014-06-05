@@ -19,26 +19,33 @@
 package org.apache.hadoop.service.launcher;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.service.launcher.testservices.FailingStopInStartService;
+import org.apache.hadoop.service.launcher.testservices.LaunchedRunningService;
 import org.junit.Test;
 
-/**
- * Test the behaviour of service stop logic
- */
-public class TestStoppingService extends AbstractServiceLauncherTestBase {
+public class TestServiceLaunchedRunning extends AbstractServiceLauncherTestBase {
 
   @Test
-  public void testStopInStartup() throws Throwable {
-    FailingStopInStartService svc = new FailingStopInStartService();
-    svc.init(new Configuration());
-    svc.start();
-    assertStopped(svc);
-    Throwable cause = svc.getFailureCause();
-    assertNotNull(cause);
-    assertTrue(cause instanceof ServiceLaunchException);
-    assertTrue(svc.waitForServiceToStop(0));
-    ServiceLaunchException e = (ServiceLaunchException) cause;
-    assertEquals(FailingStopInStartService.EXIT_CODE, e.getExitCode());
+  public void testRunService() throws Throwable {
+    assertRuns(LaunchedRunningService.NAME);
+  }
+
+  @Test
+  public void testConfPropagationOverInitBindings() throws Throwable {
+    Configuration conf = newConf(LaunchedRunningService.FAIL_IN_RUN, "true");
+    assertLaunchOutcome(EXIT_FAIL,
+        "failed",
+        LaunchedRunningService.NAME,
+        ServiceLauncher.ARG_CONF,
+        configFile(conf));
+  }
+
+  @Test
+  public void testArgBinding() throws Throwable {
+    Configuration conf = newConf(LaunchedRunningService.FAIL_IN_RUN, "true");
+    assertLaunchOutcome(EXIT_OTHER_FAILURE,
+        "",
+        LaunchedRunningService.NAME,
+        LaunchedRunningService.ARG_FAILING);
   }
 
 }

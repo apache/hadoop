@@ -18,34 +18,14 @@
 
 package org.apache.hadoop.service.launcher;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.service.launcher.testservices.LaunchedRunningService;
+import org.apache.hadoop.service.launcher.testservices.StringConstructorOnlyService;
 import org.junit.Test;
 
-public class TestLaunchedRunningService extends AbstractServiceLauncherTestBase {
+public class TestServiceLaunchStringConstructor extends AbstractServiceLauncherTestBase {
 
   @Test
   public void testRunService() throws Throwable {
-    assertRuns(LaunchedRunningService.NAME);
-  }
-
-  @Test
-  public void testConfPropagationOverInitBindings() throws Throwable {
-    Configuration conf = newConf(LaunchedRunningService.FAIL_IN_RUN, "true");
-    assertLaunchOutcome(EXIT_FAIL,
-        "failed",
-        LaunchedRunningService.NAME,
-        ServiceLauncher.ARG_CONF,
-        configFile(conf));
-  }
-
-  @Test
-  public void testArgBinding() throws Throwable {
-    Configuration conf = newConf(LaunchedRunningService.FAIL_IN_RUN, "true");
-    assertLaunchOutcome(EXIT_OTHER_FAILURE,
-        "",
-        LaunchedRunningService.NAME,
-        LaunchedRunningService.ARG_FAILING);
+    assertRuns(StringConstructorOnlyService.NAME);
   }
 
 }

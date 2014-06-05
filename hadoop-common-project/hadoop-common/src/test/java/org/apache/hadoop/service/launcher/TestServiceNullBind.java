@@ -18,27 +18,14 @@
 
 package org.apache.hadoop.service.launcher;
 
-import org.apache.hadoop.service.launcher.testservices.NoArgsAllowedService;
+import org.apache.hadoop.service.launcher.testservices.NullBindLaunchedService;
 import org.junit.Test;
 
-public class TestNoArgsAllowedService extends AbstractServiceLauncherTestBase {
+public class TestServiceNullBind extends AbstractServiceLauncherTestBase {
 
   @Test
   public void testRunService() throws Throwable {
-    assertRuns(NoArgsAllowedService.NAME);
-  }
-
-  @Test
-  public void testOneArg() throws Throwable {
-    assertLaunchOutcome(EXIT_COMMAND_ARGUMENT_ERROR, "1",
-        NoArgsAllowedService.NAME, "one");
-  }
-
-  @Test
-  public void testConfsStripped() throws Throwable {
-    assertRuns(NoArgsAllowedService.NAME,
-        ServiceLauncher.ARG_CONF,
-        configFile(newConf())); 
+    assertRuns(NullBindLaunchedService.NAME);
   }
 
 }

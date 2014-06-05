@@ -21,7 +21,7 @@ package org.apache.hadoop.service.launcher;
 import org.apache.hadoop.service.launcher.testservices.InitInConstructorLaunchedService;
 import org.junit.Test;
 
-public class TestInitInConstructorLaunchedService extends AbstractServiceLauncherTestBase {
+public class TestServiceLaunchInitInConstructor extends AbstractServiceLauncherTestBase {
 
   @Test
   public void testRunService() throws Throwable {

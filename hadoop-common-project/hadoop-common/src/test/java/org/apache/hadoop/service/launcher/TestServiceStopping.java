@@ -18,14 +18,27 @@
 
 package org.apache.hadoop.service.launcher;
 
-import org.apache.hadoop.service.launcher.testservices.NullBindLaunchedService;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.service.launcher.testservices.FailingStopInStartService;
 import org.junit.Test;
 
-public class TestNullBindLaunchedService extends AbstractServiceLauncherTestBase {
+/**
+ * Test the behaviour of service stop logic
+ */
+public class TestServiceStopping extends AbstractServiceLauncherTestBase {
 
   @Test
-  public void testRunService() throws Throwable {
-    assertRuns(NullBindLaunchedService.NAME);
+  public void testStopInStartup() throws Throwable {
+    FailingStopInStartService svc = new FailingStopInStartService();
+    svc.init(new Configuration());
+    svc.start();
+    assertStopped(svc);
+    Throwable cause = svc.getFailureCause();
+    assertNotNull(cause);
+    assertTrue(cause instanceof ServiceLaunchException);
+    assertTrue(svc.waitForServiceToStop(0));
+    ServiceLaunchException e = (ServiceLaunchException) cause;
+    assertEquals(FailingStopInStartService.EXIT_CODE, e.getExitCode());
   }
 
 }
