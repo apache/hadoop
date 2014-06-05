@@ -49,8 +49,4 @@ public class NonExitingServiceLauncher<S extends Service> extends
     exit(new ServiceLaunchException(exitCode, message));
   }
 
-  @Override
-  public ExitUtil.ExitException convertToExitException(Throwable thrown) {
-    return super.convertToExitException(thrown);
-  }
 }
