@@ -19,58 +19,52 @@
 package org.apache.hadoop.service.launcher.testservices;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.service.launcher.LaunchedService;
+import org.apache.hadoop.service.launcher.LauncherExitCodes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class RunningService extends AbstractService implements Runnable {
+import java.util.List;
+
+/**
+ * A service which implements {@link LaunchedService} and
+ * <ol>
+ *   <li>does nothing in its {@link #serviceStart()}</li>
+ *   <li>does its sleep+ maybe fail operation in its {@link #execute()} method</li>
+ *   <li>gets the failing flag from the argument {@link #ARG_FAILING}</li>
+ *   <li>returns 0 for a succesful execute</li>
+ *   <li>returns {@link LauncherExitCodes#EXIT_FAIL} for a failing execute</li>
+ * </ol>
+ */
+public class LaunchedRunningService extends RunningService implements
+    LaunchedService {
   private static final Logger LOG =
       LoggerFactory.getLogger(RunningService.class);
   public static final String NAME =
-      "org.apache.hadoop.service.launcher.testservices.RunningService"; 
-  public static final int DELAY = 100;
-
-  /**
-   * Property on delay times
-   */
-  public static final String DELAY_TIME = "delay.time";
-  public static final String FAIL_IN_RUN = "fail.runnable";
-  public static final String FAILURE_MESSAGE = "FAIL_IN_RUN";
-  public boolean interrupted;
-
-  protected int delayTime = DELAY;
-  protected boolean failInRun;
-
-  public RunningService() {
-    super("RunningService");
-  }
-
+      "org.apache.hadoop.service.launcher.testservices.LaunchedRunningService";
+  public static final String ARG_FAILING = "--failing";
 
   @Override
-  protected void serviceInit(Configuration conf) throws Exception {
-    super.serviceInit(conf);
-    delayTime = getConfig().getInt(DELAY_TIME, delayTime);
-    failInRun = getConfig().getBoolean(FAIL_IN_RUN, failInRun);
+  public Configuration bindArgs(Configuration config, List<String> args) throws
+      Exception {
+    if (args.contains(ARG_FAILING)) {
+      LOG.info("CLI contains " + ARG_FAILING);
+      failInRun = true;
+    }
+    return config;
   }
 
   @Override
   protected void serviceStart() throws Exception {
-    Thread thread = new Thread(this);
-    thread.setName(getName());
-    thread.start();
+    // no-op
   }
 
   @Override
-  public void run() {
-    try {
+  public int execute() throws Throwable {
       Thread.sleep(delayTime);
       if (failInRun) {
-        noteFailure(new Exception(FAILURE_MESSAGE));
+        return LauncherExitCodes.EXIT_FAIL;
       }
-    } catch (InterruptedException e) {
-      interrupted = true;
-      LOG.info("Interrupted");
-    }
-    stop();
+    return 0;
   }
 }

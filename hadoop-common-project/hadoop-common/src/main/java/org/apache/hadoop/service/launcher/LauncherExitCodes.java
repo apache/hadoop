@@ -38,7 +38,7 @@ public interface LauncherExitCodes {
    * -1: generic "false" response. The operation worked but
    * the result was not true
    */
-  int EXIT_FALSE                      = -1;
+  int EXIT_FAIL                       = -1;
   
   /**
    * YARN Exit code on a client initiated AM termination: {@value}
