@@ -317,7 +317,6 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
       if (newconf != null) {
         configuration = newconf;
       }
-
     }
 
     //some class constructors init; here this is picked up on.

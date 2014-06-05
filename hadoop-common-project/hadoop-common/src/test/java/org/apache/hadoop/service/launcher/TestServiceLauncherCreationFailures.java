@@ -73,15 +73,9 @@ public class TestServiceLauncherCreationFailures extends
         FailInStartService.NAME);
   }
 
-
   @Test
   public void testFailInStopIsIgnored() throws Throwable {
-    try {
-      ServiceLauncher.serviceMain(FailingStopInStartService.NAME);
-    } catch (ServiceLaunchException e) {
-      assertExceptionDetails(0, "succeeded", e);
-    }
+    assertRuns(FailingStopInStartService.NAME);
   }
-
 
 }
