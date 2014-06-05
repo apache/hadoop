@@ -18,39 +18,15 @@
 
 package org.apache.hadoop.service.launcher;
 
-import org.apache.hadoop.service.Service;
-import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.service.launcher.testservices.NullBindLaunchedService;
+import org.junit.Test;
 
-/**
- * Service launcher for testing
- * @param <S> type of service to launch
- */
-public class NonExitingServiceLauncher<S extends Service> extends
-    ServiceLauncher<S> {
+public class TestNullBindLaunchedService extends AbstractServiceLauncherTestBase {
 
-  public ExitUtil.ExitException exitException;
-
-  public NonExitingServiceLauncher(String serviceClassName) {
-    super(serviceClassName);
+  @Test
+  public void testRunService() throws Throwable {
+    assertRuns(NullBindLaunchedService.NAME);
   }
 
-  public void setService(S s) {
-    super.setService(s);
-  }
 
-  @Override
-  protected void exit(ExitUtil.ExitException ee) {
-    exitException = ee;
-    super.exit(ee);
-  }
-
-  @Override
-  protected void exit(int exitCode, String message) {
-    exit(new ServiceLaunchException(exitCode, message));
-  }
-
-  @Override
-  public ExitUtil.ExitException convertToExitException(Throwable thrown) {
-    return super.convertToExitException(thrown);
-  }
 }

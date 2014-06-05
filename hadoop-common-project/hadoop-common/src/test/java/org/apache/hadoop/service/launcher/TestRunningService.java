@@ -19,7 +19,6 @@
 package org.apache.hadoop.service.launcher;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.service.launcher.testservices.LaunchedRunningService;
 import org.apache.hadoop.service.launcher.testservices.RunningService;
 import org.junit.Test;
 

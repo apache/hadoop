@@ -20,10 +20,7 @@ package org.apache.hadoop.service.launcher;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.launcher.testservices.LaunchedRunningService;
-import org.apache.hadoop.service.launcher.testservices.RunningService;
 import org.junit.Test;
-
-import java.util.List;
 
 public class TestLaunchedRunningService extends AbstractServiceLauncherTestBase {
 
@@ -33,9 +30,9 @@ public class TestLaunchedRunningService extends AbstractServiceLauncherTestBase 
   }
 
   @Test
-  public void testConfPropagation() throws Throwable {
+  public void testConfPropagationOverInitBindings() throws Throwable {
     Configuration conf = newConf(LaunchedRunningService.FAIL_IN_RUN, "true");
-    assertLaunchOutcome(LauncherExitCodes.EXIT_FAIL,
+    assertLaunchOutcome(EXIT_FAIL,
         "failed",
         LaunchedRunningService.NAME,
         ServiceLauncher.ARG_CONF,
@@ -45,7 +42,7 @@ public class TestLaunchedRunningService extends AbstractServiceLauncherTestBase 
   @Test
   public void testArgBinding() throws Throwable {
     Configuration conf = newConf(LaunchedRunningService.FAIL_IN_RUN, "true");
-    assertLaunchOutcome(LauncherExitCodes.EXIT_FAIL,
+    assertLaunchOutcome(EXIT_OTHER_FAILURE,
         "",
         LaunchedRunningService.NAME,
         LaunchedRunningService.ARG_FAILING);

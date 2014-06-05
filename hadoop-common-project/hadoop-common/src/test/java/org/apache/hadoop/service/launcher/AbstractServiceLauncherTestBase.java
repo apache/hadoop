@@ -22,7 +22,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.service.Service;
-import org.apache.hadoop.service.launcher.testservices.RunningService;
 import org.apache.hadoop.util.ExitCodeProvider;
 import org.apache.hadoop.util.ExitUtil;
 import org.junit.Assert;
@@ -89,10 +88,10 @@ public class AbstractServiceLauncherTestBase extends Assert implements
     failed |= StringUtils.isNotEmpty(text)
               && !StringUtils.contains(toString, text);
     if (failed) {
-      String error = String.format( 
-          "Expected exception with exit code %d and text \"%s\"" 
-                     + " but got the exit code %d"
-                     + " and text \"%s\"",
+      String error = String.format(
+          "Expected exception with exit code %d and text \"%s\""
+          + " but got the exit code %d"
+          + " and text \"%s\"",
           expected, text,
           exitCode, toString);
       LOG.error(error, e);
@@ -112,7 +111,9 @@ public class AbstractServiceLauncherTestBase extends Assert implements
    * @param text text in exception -can be null
    * @param args CLI args
    */
-  protected void assertLaunchOutcome(int expected, String text, String... args) {
+  protected void assertLaunchOutcome(int expected,
+      String text,
+      String... args) {
     try {
       ServiceLauncher.serviceMain(args);
     } catch (ServiceLaunchException e) {
@@ -139,7 +140,7 @@ public class AbstractServiceLauncherTestBase extends Assert implements
     svc.start();
     return svc;
   }
-  
+
   protected String configFile(Configuration conf) throws IOException {
     File file = File.createTempFile("conf", ".xml", new File("target"));
     OutputStream fos = new FileOutputStream(file);
@@ -150,19 +151,19 @@ public class AbstractServiceLauncherTestBase extends Assert implements
     }
     return file.toString();
   }
-  
+
   protected Configuration newConf(String... kvp) {
     int len = kvp.length;
     assertEquals("unbalanced keypair len of " + len, 0, len % 2);
     Configuration conf = new Configuration(false);
-    for (int i = 0; i < len ; i+=2) {
-      conf.set(kvp[i], kvp[i+1]);
+    for (int i = 0; i < len; i += 2) {
+      conf.set(kvp[i], kvp[i + 1]);
     }
     return conf;
   }
-  
+
   /** varargs to list conversion */
-  protected List<String> asList(String ... args) {
+  protected List<String> asList(String... args) {
     return Arrays.asList(args);
   }
 }

@@ -308,14 +308,16 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
       // it's a launchedService, pass in the conf and arguments before init)
       LOG.debug("Service {} implements LaunchedService", serviceName);
       launchedService = (LaunchedService) service;
-      configuration = launchedService.bindArgs(configuration, processedArgs);
-      Preconditions.checkNotNull(configuration,
-          "null configuration returned by bindArgs()");
-      if (service.isInState(Service.STATE.INITED)) {
-        LOG.warn("LaunchedService {}" 
+      if (launchedService.isInState(Service.STATE.INITED)) {
+        LOG.warn("LaunchedService {}"
                  + " initialized in constructor before CLI arguments passed in",
             serviceName);
       }
+      Configuration newconf = launchedService.bindArgs(configuration, processedArgs);
+      if (newconf != null) {
+        configuration = newconf;
+      }
+
     }
 
     //some class constructors init; here this is picked up on.

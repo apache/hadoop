@@ -27,6 +27,16 @@ import java.util.List;
  * the {@link #bindArgs(Configuration, List)} method.
  */
 public class NullBindLaunchedService extends LaunchedRunningService {
+  public static final String NAME =
+      "org.apache.hadoop.service.launcher.testservices.NullBindLaunchedService";
+
+  public NullBindLaunchedService() {
+    this("NullBindLaunchedService");
+  }
+
+  public NullBindLaunchedService(String name) {
+    super(name);
+  }
 
   @Override
   public Configuration bindArgs(Configuration config, List<String> args) throws

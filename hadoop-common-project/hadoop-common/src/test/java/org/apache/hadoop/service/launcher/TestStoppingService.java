@@ -25,7 +25,7 @@ import org.junit.Test;
 /**
  * Test the behaviour of service stop logic
  */
-public class TestStoppingService extends AbstractServiceLauncherTestBase{
+public class TestStoppingService extends AbstractServiceLauncherTestBase {
 
   @Test
   public void testStopInStartup() throws Throwable {
@@ -38,7 +38,7 @@ public class TestStoppingService extends AbstractServiceLauncherTestBase{
     assertTrue(cause instanceof ServiceLaunchException);
     assertTrue(svc.waitForServiceToStop(0));
     ServiceLaunchException e = (ServiceLaunchException) cause;
-    assertEquals(FailingStopInStartService.EXIT_CODE,e.getExitCode());
+    assertEquals(FailingStopInStartService.EXIT_CODE, e.getExitCode());
   }
-  
+
 }

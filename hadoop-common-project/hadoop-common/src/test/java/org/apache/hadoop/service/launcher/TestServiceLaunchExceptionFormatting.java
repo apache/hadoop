@@ -25,7 +25,8 @@ import org.junit.Test;
  * tests verify that exception arguments are being correctly
  * used as initializers
  */
-public class TestServiceLaunchExceptionFormatting extends AbstractServiceLauncherTestBase {
+public class TestServiceLaunchExceptionFormatting extends
+    AbstractServiceLauncherTestBase {
 
   @Test
   public void testBasicExceptionFormatting() throws Throwable {
@@ -34,6 +35,7 @@ public class TestServiceLaunchExceptionFormatting extends AbstractServiceLaunche
         new ServiceLaunchException(0, "%03x", 32);
     assertTrue(ex.getMessage().contains("020"));
   }
+
   @Test
   public void testNotEnoughArgsExceptionFormatting() throws Throwable {
 

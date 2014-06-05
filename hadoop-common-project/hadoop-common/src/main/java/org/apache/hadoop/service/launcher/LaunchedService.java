@@ -39,8 +39,8 @@ public interface LaunchedService extends Service {
   /**
    * Propagate the command line arguments.
    * This method is called before {@link #init(Configuration)};
-   * the configuration that is returned from this operation
-   * is the one that is passed on to that {@link #init(Configuration) operation.
+   * Any non-null configuration that is returned from this operation
+   * becomes the one that is passed on to that {@link #init(Configuration) operation.
    * 
    * This permits implementations to change the configuration before
    * the init operation. As the ServiceLauncher only creates
@@ -52,7 +52,7 @@ public interface LaunchedService extends Service {
    * service launcher.
    * @param args list of arguments passed to the command line
    * after any launcher-specific commands have been stripped.
-   * @return the configuration to init the service with. This MUST NOT be null.
+   * @return the configuration to init the service with.
    * Recommended: pass down the config parameter with any changes
    * @throws Exception any problem
    */

@@ -31,9 +31,12 @@ import java.util.List;
  * <ol>
  *   <li>does nothing in its {@link #serviceStart()}</li>
  *   <li>does its sleep+ maybe fail operation in its {@link #execute()} method</li>
- *   <li>gets the failing flag from the argument {@link #ARG_FAILING}</li>
+ *   <li>gets the failing flag from the argument {@link #ARG_FAILING} first,
+ *   the config file second.</li>
  *   <li>returns 0 for a succesful execute</li>
- *   <li>returns {@link LauncherExitCodes#EXIT_FAIL} for a failing execute</li>
+ *   <li>returns a configurable exit code for a failing execute</li>
+ *   <li>generates a new configuration in its {@link #bindArgs(Configuration, List)}
+ *   to verify that these propagate.</li>
  * </ol>
  */
 public class LaunchedRunningService extends RunningService implements
@@ -43,15 +46,38 @@ public class LaunchedRunningService extends RunningService implements
   public static final String NAME =
       "org.apache.hadoop.service.launcher.testservices.LaunchedRunningService";
   public static final String ARG_FAILING = "--failing";
+  public static final String EXIT_CODE_PROP = "exit.code";
+  protected int exitCode = 0;
+
+  public LaunchedRunningService() {
+    this("LaunchedRunningService");
+  }
+
+  public LaunchedRunningService(String name) {
+    super(name);
+  }
 
   @Override
   public Configuration bindArgs(Configuration config, List<String> args) throws
       Exception {
+    Configuration newConf = new Configuration(config);
     if (args.contains(ARG_FAILING)) {
       LOG.info("CLI contains " + ARG_FAILING);
       failInRun = true;
+      newConf.setInt(EXIT_CODE_PROP, LauncherExitCodes.EXIT_OTHER_FAILURE);
     }
-    return config;
+    return newConf;
+  }
+
+  @Override
+  protected void serviceInit(Configuration conf) throws Exception {
+    super.serviceInit(conf);
+    if (conf.getBoolean(FAIL_IN_RUN, false)) {
+      //if the conf value says fail, the exit code goes to it too
+      exitCode = LauncherExitCodes.EXIT_FAIL;
+    }
+    // the exit code can be read off the property
+    exitCode = conf.getInt(EXIT_CODE_PROP, exitCode);
   }
 
   @Override
@@ -61,10 +87,10 @@ public class LaunchedRunningService extends RunningService implements
 
   @Override
   public int execute() throws Throwable {
-      Thread.sleep(delayTime);
-      if (failInRun) {
-        return LauncherExitCodes.EXIT_FAIL;
-      }
+    Thread.sleep(delayTime);
+    if (failInRun) {
+      return exitCode;
+    }
     return 0;
   }
 }

@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
 public class TestInterruptHandling extends AbstractServiceLauncherTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
       TestInterruptHandling.class);
-  
+
 
   @Test
   public void testRegisterAndRaise() throws Throwable {
@@ -59,7 +59,7 @@ public class TestInterruptHandling extends AbstractServiceLauncherTestBase {
 
     InterruptEscalator<BreakableService> escalator =
         new InterruptEscalator<BreakableService>(launcher, 500);
-    
+
     // call the interrupt operation directly
     try {
       escalator.interrupted(new IrqHandler.InterruptData("INT", 3));
@@ -71,7 +71,7 @@ public class TestInterruptHandling extends AbstractServiceLauncherTestBase {
     assertStopped(service);
     assertTrue(escalator.isSignalAlreadyReceived());
     assertFalse(escalator.isForcedShutdownTimedOut());
-    
+
     // now interrupt it a second time and expect it to escalate to a halt
     try {
       escalator.interrupted(new IrqHandler.InterruptData("INT", 3));
@@ -83,7 +83,7 @@ public class TestInterruptHandling extends AbstractServiceLauncherTestBase {
 
 
   @Test
-  public void testBlockingShutdownTimeouts() throws Throwable{
+  public void testBlockingShutdownTimeouts() throws Throwable {
     NonExitingServiceLauncher<FailureTestService> launcher =
         new NonExitingServiceLauncher<FailureTestService>(
             FailureTestService.class.getName());
@@ -103,7 +103,7 @@ public class TestInterruptHandling extends AbstractServiceLauncherTestBase {
 
     assertTrue(escalator.isForcedShutdownTimedOut());
   }
-  
+
   private static class InterruptCatcher implements IrqHandler.Interrupted {
 
     public IrqHandler.InterruptData interruptData;

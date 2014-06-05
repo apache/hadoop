@@ -27,7 +27,7 @@ public class RunningService extends AbstractService implements Runnable {
   private static final Logger LOG =
       LoggerFactory.getLogger(RunningService.class);
   public static final String NAME =
-      "org.apache.hadoop.service.launcher.testservices.RunningService"; 
+      "org.apache.hadoop.service.launcher.testservices.RunningService";
   public static final int DELAY = 100;
 
   /**
@@ -45,6 +45,9 @@ public class RunningService extends AbstractService implements Runnable {
     super("RunningService");
   }
 
+  public RunningService(String name) {
+    super(name);
+  }
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {

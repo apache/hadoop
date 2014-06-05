@@ -24,7 +24,8 @@ import org.apache.hadoop.service.launcher.testservices.FailInStartService;
 import org.apache.hadoop.service.launcher.testservices.FailingStopInStartService;
 import org.junit.Test;
 
-public class TestServiceLauncherCreationFailures extends AbstractServiceLauncherTestBase {
+public class TestServiceLauncherCreationFailures extends
+    AbstractServiceLauncherTestBase {
 
 
   public static final String SELF =
@@ -38,12 +39,12 @@ public class TestServiceLauncherCreationFailures extends AbstractServiceLauncher
       assertExceptionDetails(EXIT_USAGE, "", e);
     }
   }
-  
+
   @Test
   public void testUnknownClass() throws Throwable {
     assertServiceCreationFails("no.such.classname");
   }
-  
+
   @Test
   public void testNotAService() throws Throwable {
     assertServiceCreationFails(SELF);
@@ -51,7 +52,8 @@ public class TestServiceLauncherCreationFailures extends AbstractServiceLauncher
 
   @Test
   public void testNoSimpleConstructor() throws Throwable {
-    assertServiceCreationFails("org.apache.hadoop.service.launcher.FailureTestService");
+    assertServiceCreationFails(
+        "org.apache.hadoop.service.launcher.FailureTestService");
   }
 
   @Test

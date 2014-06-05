@@ -38,7 +38,7 @@ public class FailureTestService extends BreakableService {
 
   @Override
   protected void serviceStop() throws Exception {
-    if (delay>0) {
+    if (delay > 0) {
       Thread.sleep(delay);
     }
     super.serviceStop();
@@ -48,7 +48,7 @@ public class FailureTestService extends BreakableService {
   protected Exception createFailureException(String action) {
     return new ServiceLaunchException(getExitCode(), toString());
   }
-  
+
   int getExitCode() {
     return -1;
   }
