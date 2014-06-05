@@ -18,14 +18,14 @@
 
 package org.apache.hadoop.service.launcher;
 
-import org.apache.hadoop.service.launcher.testservices.InitInConstructorLaunchedService;
+import org.apache.hadoop.service.launcher.testservices.InitInConstructorLaunchableService;
 import org.junit.Test;
 
 public class TestServiceLaunchInitInConstructor extends AbstractServiceLauncherTestBase {
 
   @Test
   public void testRunService() throws Throwable {
-    assertRuns(InitInConstructorLaunchedService.NAME);
+    assertRuns(InitInConstructorLaunchableService.NAME);
   }
 
 }

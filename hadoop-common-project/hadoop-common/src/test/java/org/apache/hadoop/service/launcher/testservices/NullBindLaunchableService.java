@@ -19,44 +19,28 @@
 package org.apache.hadoop.service.launcher.testservices;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.service.launcher.AbstractLaunchedService;
-import org.junit.Assert;
 
 import java.util.List;
 
 /**
- * Init in the constructor and make sure that it isn't inited again
+ * An extension of {@link LaunchableRunningService} which returns null from
+ * the {@link #bindArgs(Configuration, List)} method.
  */
-public class InitInConstructorLaunchedService extends AbstractLaunchedService {
-
+public class NullBindLaunchableService extends LaunchableRunningService {
   public static final String NAME =
-      "org.apache.hadoop.service.launcher.testservices.InitInConstructorLaunchedService";
-  private final Configuration originalConf = new Configuration();
+      "org.apache.hadoop.service.launcher.testservices.NullBindLaunchedService";
 
-  public InitInConstructorLaunchedService() {
-    super("InitInConstructorLaunchedService");
-    init(originalConf);
+  public NullBindLaunchableService() {
+    this("NullBindLaunchedService");
   }
 
-  @Override
-  public void init(Configuration conf) {
-    Assert.assertEquals(STATE.NOTINITED, getServiceState());
-    super.init(conf);
+  public NullBindLaunchableService(String name) {
+    super(name);
   }
 
   @Override
   public Configuration bindArgs(Configuration config, List<String> args) throws
       Exception {
-    Assert.assertEquals(STATE.INITED, getServiceState());
-    Assert.assertTrue(isInState(STATE.INITED));
-    Assert.assertNotSame(getConfig(), config);
     return null;
-  }
-
-  @Override
-  public int execute() throws Exception {
-    Assert.assertEquals(STATE.STARTED, getServiceState());
-    Assert.assertSame(originalConf, getConfig());
-    return super.execute();
   }
 }

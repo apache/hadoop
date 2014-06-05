@@ -19,33 +19,33 @@
 package org.apache.hadoop.service.launcher;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.service.launcher.testservices.LaunchedRunningService;
+import org.apache.hadoop.service.launcher.testservices.LaunchableRunningService;
 import org.junit.Test;
 
 public class TestServiceLaunchedRunning extends AbstractServiceLauncherTestBase {
 
   @Test
   public void testRunService() throws Throwable {
-    assertRuns(LaunchedRunningService.NAME);
+    assertRuns(LaunchableRunningService.NAME);
   }
 
   @Test
   public void testConfPropagationOverInitBindings() throws Throwable {
-    Configuration conf = newConf(LaunchedRunningService.FAIL_IN_RUN, "true");
+    Configuration conf = newConf(LaunchableRunningService.FAIL_IN_RUN, "true");
     assertLaunchOutcome(EXIT_FAIL,
         "failed",
-        LaunchedRunningService.NAME,
+        LaunchableRunningService.NAME,
         ServiceLauncher.ARG_CONF,
         configFile(conf));
   }
 
   @Test
   public void testArgBinding() throws Throwable {
-    Configuration conf = newConf(LaunchedRunningService.FAIL_IN_RUN, "true");
+    Configuration conf = newConf(LaunchableRunningService.FAIL_IN_RUN, "true");
     assertLaunchOutcome(EXIT_OTHER_FAILURE,
         "",
-        LaunchedRunningService.NAME,
-        LaunchedRunningService.ARG_FAILING);
+        LaunchableRunningService.NAME,
+        LaunchableRunningService.ARG_FAILING);
   }
 
 }

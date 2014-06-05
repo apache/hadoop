@@ -21,8 +21,8 @@ package org.apache.hadoop.service.launcher;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.BreakableService;
 import org.apache.hadoop.service.Service;
-import org.apache.hadoop.service.launcher.testservices.ExceptionInExecuteLaunchedService;
-import org.apache.hadoop.service.launcher.testservices.LaunchedRunningService;
+import org.apache.hadoop.service.launcher.testservices.ExceptionInExecuteLaunchableService;
+import org.apache.hadoop.service.launcher.testservices.LaunchableRunningService;
 import org.apache.hadoop.service.launcher.testservices.NoArgsAllowedService;
 import org.junit.Test;
 
@@ -48,9 +48,9 @@ public class TestServiceLauncherInnerMethods extends
 
   @Test
   public void testAccessLaunchedService() throws Throwable {
-    ServiceLauncher<LaunchedRunningService> launcher =
-        launchService(LaunchedRunningService.class, new Configuration());
-    LaunchedRunningService service = launcher.getService();
+    ServiceLauncher<LaunchableRunningService> launcher =
+        launchService(LaunchableRunningService.class, new Configuration());
+    LaunchableRunningService service = launcher.getService();
     assertInState(service, Service.STATE.STARTED);
     service.failInRun = true;
     service.exitCode = EXIT_CONNECTIVITY_PROBLEM;
@@ -59,10 +59,10 @@ public class TestServiceLauncherInnerMethods extends
 
   @Test
   public void testLaunchThrowableRaised() throws Throwable {
-    launchExpectingException(ExceptionInExecuteLaunchedService.class,
+    launchExpectingException(ExceptionInExecuteLaunchableService.class,
         new Configuration(),
         "java.lang.OutOfMemoryError", EXIT_EXCEPTION_THROWN,
-        ExceptionInExecuteLaunchedService.ARG_THROWABLE);
+        ExceptionInExecuteLaunchableService.ARG_THROWABLE);
   }
 
   @Test

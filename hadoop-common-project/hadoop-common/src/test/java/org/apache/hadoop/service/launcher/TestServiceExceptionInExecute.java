@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.service.launcher;
 
-import static org.apache.hadoop.service.launcher.testservices.ExceptionInExecuteLaunchedService.*;
+import static org.apache.hadoop.service.launcher.testservices.ExceptionInExecuteLaunchableService.*;
 import org.junit.Test;
 
 /**
  * This test verifies that exceptions in the 
- * {@link LaunchedService#execute()} method are relayed if exit exceptions,
+ * {@link LaunchableService#execute()} method are relayed if exit exceptions,
  * forwarded if not
  */
 public class TestServiceExceptionInExecute extends AbstractServiceLauncherTestBase {

@@ -18,14 +18,14 @@
 
 package org.apache.hadoop.service.launcher.testservices;
 
-import org.apache.hadoop.service.launcher.AbstractLaunchedService;
+import org.apache.hadoop.service.launcher.AbstractLaunchableService;
 
 /**
  * service that only has one constructor that takes a string.
  * This is the standard base class of a YARN service, so handle it
  * in the launch
  */
-public class StringConstructorOnlyService extends AbstractLaunchedService {
+public class StringConstructorOnlyService extends AbstractLaunchableService {
   
 
   public StringConstructorOnlyService(String name) {

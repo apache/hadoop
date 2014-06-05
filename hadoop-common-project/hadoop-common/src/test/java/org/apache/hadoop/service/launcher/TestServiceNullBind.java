@@ -18,14 +18,14 @@
 
 package org.apache.hadoop.service.launcher;
 
-import org.apache.hadoop.service.launcher.testservices.NullBindLaunchedService;
+import org.apache.hadoop.service.launcher.testservices.NullBindLaunchableService;
 import org.junit.Test;
 
 public class TestServiceNullBind extends AbstractServiceLauncherTestBase {
 
   @Test
   public void testRunService() throws Throwable {
-    assertRuns(NullBindLaunchedService.NAME);
+    assertRuns(NullBindLaunchableService.NAME);
   }
 
 }

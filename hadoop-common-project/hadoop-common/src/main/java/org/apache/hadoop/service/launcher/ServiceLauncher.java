@@ -258,14 +258,14 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
 
   /**
    * Launch the service, by creating it, initing it, starting it and then
-   * maybe running it. {@link LaunchedService#bindArgs(Configuration, List)} is invoked
+   * maybe running it. {@link LaunchableService#bindArgs(Configuration, List)} is invoked
    * on the service between creation and init.
    *
    * All exceptions that occur are propagated upwards.
    *
    * If the method returns a status code, it means that it got as far starting
-   * the service, and if it implements {@link LaunchedService}, that the 
-   * method {@link LaunchedService#execute()} has completed. 
+   * the service, and if it implements {@link LaunchableService}, that the 
+   * method {@link LaunchableService#execute()} has completed. 
    *
    * At this point, the service is returned by {@link #getService()}.
    *
@@ -299,18 +299,18 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
     }
     String serviceName = getServiceName();
     LOG.debug("Launched service {}", serviceName);
-    LaunchedService launchedService = null;
+    LaunchableService launchableService = null;
 
-    if (service instanceof LaunchedService) {
+    if (service instanceof LaunchableService) {
       // it's a launchedService, pass in the conf and arguments before init)
       LOG.debug("Service {} implements LaunchedService", serviceName);
-      launchedService = (LaunchedService) service;
-      if (launchedService.isInState(Service.STATE.INITED)) {
+      launchableService = (LaunchableService) service;
+      if (launchableService.isInState(Service.STATE.INITED)) {
         LOG.warn("LaunchedService {}"
                  + " initialized in constructor before CLI arguments passed in",
             serviceName);
       }
-      Configuration newconf = launchedService.bindArgs(configuration, processedArgs);
+      Configuration newconf = launchableService.bindArgs(configuration, processedArgs);
       if (newconf != null) {
         configuration = newconf;
       }
@@ -325,10 +325,10 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
     service.start();
     int exitCode = EXIT_SUCCESS;
     if (execute) {
-      if (launchedService != null) {
+      if (launchableService != null) {
         // assume that runnable services are meant to run from here
         try {
-          exitCode = launchedService.execute();
+          exitCode = launchableService.execute();
           LOG.debug("Service {} execution returned exit code {}", serviceName, exitCode);
         } finally {
           // then stop the service

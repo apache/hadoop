@@ -19,7 +19,7 @@
 package org.apache.hadoop.service.launcher.testservices;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.service.launcher.AbstractLaunchedService;
+import org.apache.hadoop.service.launcher.AbstractLaunchableService;
 import org.apache.hadoop.service.launcher.LauncherExitCodes;
 import org.apache.hadoop.service.launcher.ServiceLaunchException;
 import org.apache.hadoop.util.ExitCodeProvider;
@@ -31,7 +31,8 @@ import java.util.List;
  * Raise an exception in the execute() method; the exception type can
  * be configured from the CLI
  */
-public class ExceptionInExecuteLaunchedService extends AbstractLaunchedService {
+public class ExceptionInExecuteLaunchableService extends
+    AbstractLaunchableService {
 
   public static final String NAME =
       "org.apache.hadoop.service.launcher.testservices.ExceptionInExecuteLaunchedService";
@@ -46,7 +47,7 @@ public class ExceptionInExecuteLaunchedService extends AbstractLaunchedService {
   ExType exceptionType = ExType.EX;
   ;
 
-  public ExceptionInExecuteLaunchedService() {
+  public ExceptionInExecuteLaunchableService() {
     super("ExceptionInExecuteLaunchedService");
   }
 

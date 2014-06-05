@@ -244,7 +244,7 @@ public class AbstractServiceLauncherTestBase extends Assert implements
    * the service launcher, from which the created service can be extracted.
    * via {@link ServiceLauncher#getService()}.
    * 
-   * This call DOES NOT call {@link LaunchedService#execute()} or wait for
+   * This call DOES NOT call {@link LaunchableService#execute()} or wait for
    * a simple service to finish. It returns the service that has been created,
    * initialized and started.
    * @param serviceClass service class to create

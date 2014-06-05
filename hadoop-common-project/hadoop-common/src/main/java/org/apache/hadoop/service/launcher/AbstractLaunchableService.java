@@ -29,16 +29,16 @@ import java.util.List;
  * Subclass of {@link AbstractService} that provides basic implementations
  * of the new methods
  */
-public abstract class AbstractLaunchedService extends AbstractService
-    implements LaunchedService {
+public abstract class AbstractLaunchableService extends AbstractService
+    implements LaunchableService {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(AbstractLaunchedService.class);
+      LoggerFactory.getLogger(AbstractLaunchableService.class);
 
   /**
    * {@inheritDoc}
    */
-  public AbstractLaunchedService(String name) {
+  public AbstractLaunchableService(String name) {
     super(name);
   }
 

@@ -19,7 +19,7 @@
 package org.apache.hadoop.service.launcher.testservices;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.service.launcher.AbstractLaunchedService;
+import org.apache.hadoop.service.launcher.AbstractLaunchableService;
 import org.apache.hadoop.service.launcher.LauncherExitCodes;
 import org.apache.hadoop.service.launcher.ServiceLaunchException;
 import org.slf4j.Logger;
@@ -30,7 +30,7 @@ import java.util.List;
 /**
  * service that does not allow any arguments
  */
-public class NoArgsAllowedService extends AbstractLaunchedService {
+public class NoArgsAllowedService extends AbstractLaunchableService {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(NoArgsAllowedService.class);

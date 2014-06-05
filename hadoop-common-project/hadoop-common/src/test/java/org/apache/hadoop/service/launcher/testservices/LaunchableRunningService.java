@@ -19,7 +19,7 @@
 package org.apache.hadoop.service.launcher.testservices;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.service.launcher.LaunchedService;
+import org.apache.hadoop.service.launcher.LaunchableService;
 import org.apache.hadoop.service.launcher.LauncherExitCodes;
 import org.junit.Assert;
 import org.slf4j.Logger;
@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 /**
- * A service which implements {@link LaunchedService} and
+ * A service which implements {@link LaunchableService} and
  * <ol>
  *   <li>does nothing in its {@link #serviceStart()}</li>
  *   <li>does its sleep+ maybe fail operation in its {@link #execute()} method</li>
@@ -40,8 +40,8 @@ import java.util.List;
  *   to verify that these propagate.</li>
  * </ol>
  */
-public class LaunchedRunningService extends RunningService implements
-    LaunchedService {
+public class LaunchableRunningService extends RunningService implements
+    LaunchableService {
   private static final Logger LOG =
       LoggerFactory.getLogger(RunningService.class);
   public static final String NAME =
@@ -50,11 +50,11 @@ public class LaunchedRunningService extends RunningService implements
   public static final String EXIT_CODE_PROP = "exit.code";
   public int exitCode = 0;
 
-  public LaunchedRunningService() {
+  public LaunchableRunningService() {
     this("LaunchedRunningService");
   }
 
-  public LaunchedRunningService(String name) {
+  public LaunchableRunningService(String name) {
     super(name);
   }
 

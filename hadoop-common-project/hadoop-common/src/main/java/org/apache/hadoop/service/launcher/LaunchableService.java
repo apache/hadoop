@@ -28,13 +28,13 @@ import java.util.List;
  * execution managed by the ServiceLauncher.
  * The command line options will be passed down before the 
  * {@link Service#init(Configuration)} operation is invoked via an
- * invocation of {@link LaunchedService#bindArgs(Configuration, List)}
+ * invocation of {@link LaunchableService#bindArgs(Configuration, List)}
  * After the service has been successfully started via {@link Service#start()}
- * the {@link LaunchedService#execute()} method is called to execute the 
+ * the {@link LaunchableService#execute()} method is called to execute the 
  * service. When this method returns, the service launcher will exit, using
  * the return code from the method as its exit option.
  */
-public interface LaunchedService extends Service {
+public interface LaunchableService extends Service {
 
   /**
    * Propagate the command line arguments.

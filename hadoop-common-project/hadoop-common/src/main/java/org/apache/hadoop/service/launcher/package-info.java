@@ -39,7 +39,7 @@ package org.apache.hadoop.service.launcher;
  
  <p>
  <b>Extended {@link org.apache.hadoop.service.Service} Interface</b>:
- The {@link org.apache.hadoop.service.launcher.LaunchedService} interface
+ The {@link org.apache.hadoop.service.launcher.LaunchableService} interface
  adds methods to pass down the CLI arguments, to execute a command line
  action without having to spawn a thread in the
  {@link org.apache.hadoop.service.Service#start()} phase.
@@ -79,16 +79,33 @@ package org.apache.hadoop.service.launcher;
   
  </ul>
  
- <h2>Implementing a Launchable Service</h2>
+ <h2>Launching a YARN Service</h2>
  
  
  The Service Launcher can launch <i>any YARN service</i>. It will instantiate
- the service classname provided, by zero-args constructor -preferably- falling
- back to a constructor that takes a <code>String</code> as its parameter.
+ the service classname provided, by zero-args constructor. Or, if none
+ is available, falling back to a constructor that takes a <code>String</code>
+ as its parameter, on the assumption that the parameter is the service name.
  
- It will initialize the service via {@link org.apache.hadoop.service.Service#init(Configuration)},
- then start it via the {@link org.apache.hadoop.service.Service#start()} method.
  
+ The launcher will initialize the service via {@link org.apache.hadoop.service.Service#init(Configuration)},
+ then start it via its {@link org.apache.hadoop.service.Service#start()} method.
+
+ It then proceeds to wait for the service to stop.
+ 
+ The return code of the service is 0 if it worked, or a non-zero return code
+ if a failure happened during service instantiation, init or launch. 
+ After the service has stopped, a non-null value  of
+ {@link org.apache.hadoop.service.Service#getFailureCause()} is interpreted
+ as a failure, and, if it didn't happen during the stop phase (i.e. when
+ {@link org.apache.hadoop.service.Service#getFailureState()} is not
+ <code>STATE.STOPPED</code>, escalated into a non-zero return code.
+
+ <h2>Launching a Launchable YARN Service</h2>
+
+ A Launchable YARN Service is a YARN service which implements the interface
+ {@link org.apache.hadoop.service.launcher.LaunchableService}. 
+ Implementing a Launchable Service
  
  A Launchable service is one that 
  
