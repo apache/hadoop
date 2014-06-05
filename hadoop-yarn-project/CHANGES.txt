@@ -122,6 +122,8 @@ Release 2.5.0 - UNRELEASED
 
     YARN-2061. Revisit logging levels in ZKRMStateStore. (Ray Chiang via kasha)
 
+    YARN-1977. Add tests on getApplicationRequest with filtering start time range. (junping_du)
+
   OPTIMIZATIONS
 
   BUG FIXES 
