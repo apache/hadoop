@@ -324,7 +324,7 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
     // start the service
     service.start();
     int exitCode = EXIT_SUCCESS;
-    if (execute) {
+    if (execute && service.isInState(Service.STATE.STARTED)) {
       if (launchableService != null) {
         // assume that runnable services are meant to run from here
         try {
