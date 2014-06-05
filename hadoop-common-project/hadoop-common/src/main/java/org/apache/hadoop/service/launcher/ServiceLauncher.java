@@ -361,7 +361,15 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
     // in Java7+ the exception catch logic should be consolidated
     try {
       Class<?> serviceClass = getClassLoader().loadClass(serviceClassName);
-      instance = serviceClass.getConstructor().newInstance();
+      try {
+        instance = serviceClass.getConstructor().newInstance();
+      } catch (NoSuchMethodException noEmptyConstructor) {
+        // no simple constructor, fall back to a string
+        LOG.debug("No empty constructor {}", noEmptyConstructor,
+            noEmptyConstructor);
+        instance = serviceClass.getConstructor(String.class).newInstance(
+            serviceClassName);
+      }
     } catch (ClassNotFoundException e) {
       throw serviceCreationFailure(serviceClassName, e);
     } catch (InstantiationException e) {
