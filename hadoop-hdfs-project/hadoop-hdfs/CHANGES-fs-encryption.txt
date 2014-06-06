@@ -6,9 +6,14 @@ fs-encryption (Unreleased)
 
   NEW FEATURES
 
+    HDFS-6388. HDFS integration with KeyProvider. (clamb)
+
   IMPROVEMENTS
 
     HDFS-6473. Protocol and API for Encryption Zones (clamb)
+
+    HDFS-6392. Wire crypto streams for encrypted files in
+    DFSClient. (clamb and yliu)
 
     HDFS-6476. Print out the KeyProvider after finding KP successfully on
     startup. (Juan Yu via wang)
