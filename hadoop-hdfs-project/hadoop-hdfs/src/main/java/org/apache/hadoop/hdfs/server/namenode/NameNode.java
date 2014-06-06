@@ -730,6 +730,7 @@ public class NameNode implements NameNodeStatusMXBean {
         LOG.error(err);
         throw new RuntimeException(err);
       }
+      LOG.info("Found KeyProvider: " + provider.toString());
     } catch (IOException e) {
       LOG.error("Exception while initializing KeyProvider", e);
     }
