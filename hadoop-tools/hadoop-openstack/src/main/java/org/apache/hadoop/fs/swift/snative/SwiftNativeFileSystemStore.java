@@ -927,7 +927,7 @@ public class SwiftNativeFileSystemStore {
     }
 
     if (LOG.isDebugEnabled()) {
-      SwiftUtils.debug(LOG, SwiftUtils.fileStatsToString(statuses, "\n"));
+      SwiftUtils.debug(LOG, "%s", SwiftUtils.fileStatsToString(statuses, "\n"));
     }
 
     if (filecount == 1 && swiftPath.equals(statuses[0].getPath())) {

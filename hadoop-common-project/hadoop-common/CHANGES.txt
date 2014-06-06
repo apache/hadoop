@@ -180,6 +180,9 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10658. SSLFactory expects truststores being configured. (tucu via atm)
 
+    HADOOP-10647. String Format Exception in SwiftNativeFileSystemStore.java.
+    (Gene Kim via stevel)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
