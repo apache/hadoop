@@ -186,6 +186,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2117. Fixed the issue that secret file reader is potentially not
     closed in TimelineAuthenticationFilterInitializer. (Chen He via zjshen)
 
+    YARN-2121. Fixed NPE handling in Timeline Server's TimelineAuthenticator.
+    (Zhijie Shen via vinodkv)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
