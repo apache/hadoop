@@ -95,7 +95,7 @@ public class AbstractServiceLauncherTestBase extends Assert implements
   protected static void failif(boolean condition,
       String format,
       Object... args) {
-    if (!condition) {
+    if (condition) {
       failf(format, args);
     }
   }
@@ -343,8 +343,7 @@ public class AbstractServiceLauncherTestBase extends Assert implements
    * @param search search key
    */
   protected void assertContains(String text, String search) {
-    boolean contains = StringUtils.contains(text, search);
-    failif(!contains, "String \"%s\" not found in \"%s\"",
-        contains, search);
+    failif(!StringUtils.contains(text, search), "String \"%s\" not found in \"%s\"",
+        text, search);
   }
 }
