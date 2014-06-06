@@ -121,6 +121,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
+import com.google.common.collect.Lists;
 import com.sun.jersey.spi.container.ResourceFilters;
 
 /** Web-hdfs NameNode implementation. */
@@ -712,12 +713,12 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
           final BufferSizeParam bufferSize,
       @QueryParam(XAttrNameParam.NAME) @DefaultValue(XAttrNameParam.DEFAULT) 
-          final XAttrNameParam xattrName,
+          final List<XAttrNameParam> xattrNames,
       @QueryParam(XAttrEncodingParam.NAME) @DefaultValue(XAttrEncodingParam.DEFAULT) 
           final XAttrEncodingParam xattrEncoding
       ) throws IOException, InterruptedException {
     return get(ugi, delegation, username, doAsUser, ROOT, op, offset, length,
-        renewer, bufferSize, xattrName, xattrEncoding);
+        renewer, bufferSize, xattrNames, xattrEncoding);
   }
 
   /** Handle HTTP GET request. */
@@ -744,13 +745,13 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
           final BufferSizeParam bufferSize,
       @QueryParam(XAttrNameParam.NAME) @DefaultValue(XAttrNameParam.DEFAULT) 
-          final XAttrNameParam xattrName,
+          final List<XAttrNameParam> xattrNames,
       @QueryParam(XAttrEncodingParam.NAME) @DefaultValue(XAttrEncodingParam.DEFAULT) 
           final XAttrEncodingParam xattrEncoding
       ) throws IOException, InterruptedException {
 
     init(ugi, delegation, username, doAsUser, path, op, offset, length,
-        renewer, bufferSize, xattrName, xattrEncoding);
+        renewer, bufferSize, xattrEncoding);
 
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
@@ -758,7 +759,7 @@ public class NamenodeWebHdfsMethods {
         try {
           return get(ugi, delegation, username, doAsUser,
               path.getAbsolutePath(), op, offset, length, renewer, bufferSize,
-              xattrName, xattrEncoding);
+              xattrNames, xattrEncoding);
         } finally {
           reset();
         }
@@ -777,7 +778,7 @@ public class NamenodeWebHdfsMethods {
       final LengthParam length,
       final RenewerParam renewer,
       final BufferSizeParam bufferSize,
-      final XAttrNameParam xattrName,
+      final List<XAttrNameParam> xattrNames,
       final XAttrEncodingParam xattrEncoding
       ) throws IOException, URISyntaxException {
     final NameNode namenode = (NameNode)context.getAttribute("name.node");
@@ -853,15 +854,18 @@ public class NamenodeWebHdfsMethods {
       final String js = JsonUtil.toJsonString(status);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
-    case GETXATTR: {
-      XAttr xAttr = XAttrHelper.getFirstXAttr(np.getXAttrs(fullpath,
-          XAttrHelper.buildXAttrAsList(xattrName.getXAttrName())));
-      final String js = JsonUtil.toJsonString(xAttr,
-          xattrEncoding.getEncoding());
-      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
-    }
     case GETXATTRS: {
-      List<XAttr> xAttrs = np.getXAttrs(fullpath, null);
+      List<String> names = null;
+      if (xattrNames != null) {
+        names = Lists.newArrayListWithCapacity(xattrNames.size());
+        for (XAttrNameParam xattrName : xattrNames) {
+          if (xattrName.getXAttrName() != null) {
+            names.add(xattrName.getXAttrName());
+          }
+        }
+      }
+      List<XAttr> xAttrs = np.getXAttrs(fullpath, (names != null && 
+          !names.isEmpty()) ? XAttrHelper.buildXAttrs(names) : null);
       final String js = JsonUtil.toJsonString(xAttrs,
           xattrEncoding.getEncoding());
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();

@@ -50,7 +50,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -80,6 +79,7 @@ import org.mortbay.util.ajax.JSON;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
 /** A FileSystem for HDFS over the web. */
@@ -601,6 +601,13 @@ public class WebHdfsFileSystem extends FileSystem
       this.parameters = parameters;
     }
     
+    AbstractFsPathRunner(final HttpOpParam.Op op, Param<?,?>[] parameters,
+        final Path fspath) {
+      super(op, false);
+      this.fspath = fspath;
+      this.parameters = parameters;
+    }
+    
     @Override
     protected URL getUrl() throws IOException {
       return toUrl(op, fspath, parameters);
@@ -628,6 +635,11 @@ public class WebHdfsFileSystem extends FileSystem
     FsPathResponseRunner(final HttpOpParam.Op op, final Path fspath,
         Param<?,?>... parameters) {
       super(op, fspath, parameters);
+    }
+    
+    FsPathResponseRunner(final HttpOpParam.Op op, Param<?,?>[] parameters,
+        final Path fspath) {
+      super(op, parameters, fspath);
     }
     
     @Override
@@ -834,14 +846,13 @@ public class WebHdfsFileSystem extends FileSystem
   }
   
   @Override
-  public byte[] getXAttr(Path p, String name) throws IOException {
-    final HttpOpParam.Op op = GetOpParam.Op.GETXATTR;
+  public byte[] getXAttr(Path p, final String name) throws IOException {
+    final HttpOpParam.Op op = GetOpParam.Op.GETXATTRS;
     return new FsPathResponseRunner<byte[]>(op, p, new XAttrNameParam(name), 
         new XAttrEncodingParam(XAttrCodec.HEX)) {
       @Override
       byte[] decodeResponse(Map<?, ?> json) throws IOException {
-        XAttr xAttr = JsonUtil.toXAttr(json);
-        return xAttr != null ? xAttr.getValue() : null;
+        return JsonUtil.getXAttr(json, name);
       }
     }.run();
   }
@@ -861,12 +872,19 @@ public class WebHdfsFileSystem extends FileSystem
   @Override
   public Map<String, byte[]> getXAttrs(Path p, final List<String> names) 
       throws IOException {
+    Preconditions.checkArgument(names != null && !names.isEmpty(), 
+        "XAttr names cannot be null or empty.");
+    Param<?,?>[] parameters = new Param<?,?>[names.size() + 1];
+    for (int i = 0; i < parameters.length - 1; i++) {
+      parameters[i] = new XAttrNameParam(names.get(i));
+    }
+    parameters[parameters.length - 1] = new XAttrEncodingParam(XAttrCodec.HEX);
+    
     final HttpOpParam.Op op = GetOpParam.Op.GETXATTRS;
-    return new FsPathResponseRunner<Map<String, byte[]>>(op, p, 
-        new XAttrEncodingParam(XAttrCodec.HEX)) {
+    return new FsPathResponseRunner<Map<String, byte[]>>(op, parameters, p) {
       @Override
       Map<String, byte[]> decodeResponse(Map<?, ?> json) throws IOException {
-        return JsonUtil.toXAttrs(json, names);
+        return JsonUtil.toXAttrs(json);
       }
     }.run();
   }
