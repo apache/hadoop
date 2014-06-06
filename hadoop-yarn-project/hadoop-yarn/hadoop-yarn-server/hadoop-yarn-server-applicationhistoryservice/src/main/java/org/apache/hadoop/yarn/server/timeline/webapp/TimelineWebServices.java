@@ -519,7 +519,7 @@ public class TimelineWebServices {
       String owner) throws YarnException {
     if (timelineEntity.getPrimaryFilters() != null &&
         timelineEntity.getPrimaryFilters().containsKey(
-            TimelineStore.SystemFilter.ENTITY_OWNER)) {
+            TimelineStore.SystemFilter.ENTITY_OWNER.toString())) {
       throw new YarnException(
           "User should not use the timeline system filter key: "
               + TimelineStore.SystemFilter.ENTITY_OWNER);

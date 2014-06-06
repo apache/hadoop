@@ -180,6 +180,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2119. DEFAULT_PROXY_ADDRESS should use DEFAULT_PROXY_PORT.
     (Anubhav Dhoot via kasha)
 
+    YARN-2118. Fixed the type mismatch in Map#containsKey check of
+    TimelineWebServices#injectOwnerInfo. (Ted Yu via zjshen)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
