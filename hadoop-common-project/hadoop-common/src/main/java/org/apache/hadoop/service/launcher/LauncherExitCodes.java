@@ -19,15 +19,22 @@
 package org.apache.hadoop.service.launcher;
 
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Common Exit codes.
- * 
+ * <p>
  * Codes with a YARN prefix are YARN-related.
+ * <p>
  * Exit codes from 32 up are defined for the {@link ServiceLauncher}. 
  * These are away up from the the base numbers, to distinguish them. 
  * Applications can have their own set of failures -it is recommended to
  * start them at 64 to differentiate them.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+
 public interface LauncherExitCodes {
   /**
    * 0: success

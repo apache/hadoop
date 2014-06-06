@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.service.launcher;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.slf4j.Logger;
@@ -29,6 +31,8 @@ import java.util.List;
  * Subclass of {@link AbstractService} that provides basic implementations
  * of the new methods
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public abstract class AbstractLaunchableService extends AbstractService
     implements LaunchableService {
 
@@ -36,16 +40,18 @@ public abstract class AbstractLaunchableService extends AbstractService
       LoggerFactory.getLogger(AbstractLaunchableService.class);
 
   /**
-   * {@inheritDoc}
+   * Construct an instance with the given name.
    */
   public AbstractLaunchableService(String name) {
     super(name);
   }
 
   /**
-   * Implementation logs all arguments @ debug, then returns the passed
-   * in config unchanged.
-   * {@inheritDoc}
+   * {@inheritDoc}.
+   * <p>
+   * The base implementation logs all arguments at the debug level,
+   * then returns the passed in config unchanged.
+   * 
    */
   
   @Override
@@ -61,8 +67,9 @@ public abstract class AbstractLaunchableService extends AbstractService
   }
 
   /**
-   * Default execution action is to succeed.
    * {@inheritDoc}
+   * <p>
+   * The action is to signal succes by returnind the exit code 0.
    */
   @Override
   public int execute() throws Exception {

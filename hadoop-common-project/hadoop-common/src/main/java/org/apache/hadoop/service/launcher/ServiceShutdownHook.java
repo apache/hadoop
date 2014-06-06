@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.service.launcher;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.slf4j.Logger;
@@ -33,6 +34,15 @@ import java.lang.ref.WeakReference;
  * does not cause services to be retained after they have
  * been stopped and deferenced elsewhere.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+
+/**
+ * A service shutdown hook.
+ * <p>
+ *   It stores a weak reference to a service, and, when shut down,
+ *   calls {@link Service#stop()} if the reference is valid.
+ */
 public class ServiceShutdownHook implements Runnable {
   private static final Logger LOG = LoggerFactory.getLogger(
       ServiceShutdownHook.class);
@@ -43,33 +53,32 @@ public class ServiceShutdownHook implements Runnable {
   private final WeakReference<Service> serviceRef;
 
   /**
-   * The service hook
-   */
-  private Runnable hook;
-
-  /**
-   * Create an instance
+   * Create an instance.
    * @param service the service
    */
   public ServiceShutdownHook(Service service) {
     serviceRef = new WeakReference<Service>(service);
   }
 
+  /**
+   * Register the service for shutdown with Hadoop's
+   * {@link ShutdownHookManager}.
+   * @param priority shutdown hook priority
+   */
   public synchronized void register(int priority) {
     unregister();
-    hook = this;
-    ShutdownHookManager.get().addShutdownHook(hook, priority);
+    ShutdownHookManager.get().addShutdownHook(this, priority);
   }
 
+  /**
+   * Unregister the hook.
+   */
   public synchronized void unregister() {
-    if (hook != null) {
       try {
-        ShutdownHookManager.get().removeShutdownHook(hook);
+        ShutdownHookManager.get().removeShutdownHook(this);
       } catch (IllegalStateException e) {
         LOG.info("Failed to unregister shutdown hook: {}", e, e);
       }
-      hook = null;
-    }
   }
 
   /**
@@ -83,8 +92,10 @@ public class ServiceShutdownHook implements Runnable {
   }
 
   /**
-   * Shutdown operation. Subclasses may extend, but it is primarily
-   * made available for testing
+   * Shutdown operation.
+   * <p>
+   * Subclasses may extend it, but it is primarily
+   * made available for testing.
    * @return true if the service was stopped and no exception was raised.
    */
   protected boolean shutdown() {

@@ -19,6 +19,8 @@
 package org.apache.hadoop.service.launcher;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Signal;
@@ -33,6 +35,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * This class bundles up all the compiler warnings about abuse of sun.misc
  * interrupt handling code into one place.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 @SuppressWarnings("UseOfSunClasses")
 public final class IrqHandler implements SignalHandler {
   private static final Logger LOG = LoggerFactory.getLogger(IrqHandler.class);

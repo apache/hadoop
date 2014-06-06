@@ -19,6 +19,8 @@
 package org.apache.hadoop.service.launcher;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ExitUtil;
 import org.slf4j.Logger;
@@ -45,6 +47,10 @@ import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_INTERRUP
  * </ol>
  *
  */
+
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+
 public class InterruptEscalator implements IrqHandler.Interrupted {
   private static final Logger LOG = LoggerFactory.getLogger(
       InterruptEscalator.class);

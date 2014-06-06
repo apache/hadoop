@@ -19,24 +19,30 @@
 package org.apache.hadoop.service.launcher;
 
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.ExitCodeProvider;
 import org.apache.hadoop.util.ExitUtil;
 
 import java.util.Locale;
 
 /**
- * A service launch exception that includes an exit code;
- * when caught by the ServiceLauncher, it will convert that
+ * A service launch exception that includes an exit code.
+ * <p>
+ * When caught by the ServiceLauncher, it will convert that
  * into a process exit code.
  * 
  * The {@link #ServiceLaunchException(int, String, Object...)} constructor
  * generates formatted exceptions.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+
 public class ServiceLaunchException extends ExitUtil.ExitException
     implements ExitCodeProvider, LauncherExitCodes {
 
   /**
-   * Create an exception with the specific exit code
+   * Create an exception with the specific exit code.
    * @param exitCode exit code
    * @param cause cause of the exception
    */
@@ -45,7 +51,7 @@ public class ServiceLaunchException extends ExitUtil.ExitException
   }
 
   /**
-   * Create an exception with the specific exit code and text
+   * Create an exception with the specific exit code and text.
    * @param exitCode exit code
    * @param message message to use in exception
    */
@@ -54,8 +60,11 @@ public class ServiceLaunchException extends ExitUtil.ExitException
   }
 
   /**
-   * {@link String#format(String, Object...)} formatted exception -in the 
-   * ENGLISH locale. 
+   * Create a formatted exception.
+   * <p>
+   * This uses    * {@link String#format(String, Object...)}
+   * to build the formatted exception -in the ENGLISH locale.
+   * <p>
    * If the last argument is a throwable, it becomes the cause of the exception.
    * It is still be avaialable as a parameter for the format.
    * @param exitCode exit code

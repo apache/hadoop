@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.service.launcher;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service;
 
@@ -34,13 +36,16 @@ import java.util.List;
  * service. When this method returns, the service launcher will exit, using
  * the return code from the method as its exit option.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public interface LaunchableService extends Service {
 
   /**
    * Propagate the command line arguments.
    * This method is called before {@link #init(Configuration)};
    * Any non-null configuration that is returned from this operation
-   * becomes the one that is passed on to that {@link #init(Configuration) operation.
+   * becomes the one that is passed on to that {@link #init(Configuration)}
+   * operation.
    * 
    * This permits implementations to change the configuration before
    * the init operation. As the ServiceLauncher only creates

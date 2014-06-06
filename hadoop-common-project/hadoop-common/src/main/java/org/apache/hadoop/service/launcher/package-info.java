@@ -16,12 +16,6 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.service.launcher;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.ExitUtil;
-
-import java.util.List;
 
 /**
 
@@ -290,7 +284,7 @@ import java.util.List;
  block, yet the caller (such as an init.d daemon) wishes to kill the process.
  The shutdown script should repeat the kill signal after a chosen time period,
  to trigger the more aggressive process halt. The exit code will always be
- {@link LauncherExitCodes#EXIT_INTERRUPTED}.
+ {@link org.apache.hadoop.service.launcher.LauncherExitCodes#EXIT_INTERRUPTED}.
  </p>
  <p>
  The {@link org.apache.hadoop.service.launcher.ServiceLauncher} also registers
@@ -364,3 +358,10 @@ import java.util.List;
 
  */
 
+
+package org.apache.hadoop.service.launcher;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.ExitUtil;
+
+import java.util.List;
