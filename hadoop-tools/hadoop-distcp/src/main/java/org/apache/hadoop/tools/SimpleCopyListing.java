@@ -23,7 +23,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.IOUtils;
@@ -36,7 +35,6 @@ import org.apache.hadoop.security.Credentials;
 import com.google.common.annotations.VisibleForTesting;
 
 import java.io.*;
-import java.util.List;
 import java.util.Stack;
 
 /**
@@ -123,7 +121,7 @@ public class SimpleCopyListing extends CopyListing {
    *     the the source root is a directory, then the source root entry is not 
    *     written to the sequence file, because only the contents of the source
    *     directory need to be copied in this case.
-   * See {@link org.apache.hadoop.tools.util.DistCpUtils.getRelativePath} for
+   * See {@link org.apache.hadoop.tools.util.DistCpUtils#getRelativePath} for
    *     how relative path is computed.
    * See computeSourceRootPath method for how the root path of the source is
    *     computed.
@@ -147,7 +145,8 @@ public class SimpleCopyListing extends CopyListing {
         if (!explore || rootStatus.isDirectory()) {
           CopyListingFileStatus rootCopyListingStatus =
             DistCpUtils.toCopyListingFileStatus(sourceFS, rootStatus,
-              options.shouldPreserve(FileAttribute.ACL));
+              options.shouldPreserve(FileAttribute.ACL), 
+              options.shouldPreserve(FileAttribute.XATTR));
           writeToFileListingRoot(fileListWriter, rootCopyListingStatus,
               sourcePathRoot, options);
         }
@@ -159,7 +158,8 @@ public class SimpleCopyListing extends CopyListing {
             CopyListingFileStatus sourceCopyListingStatus =
               DistCpUtils.toCopyListingFileStatus(sourceFS, sourceStatus,
                 options.shouldPreserve(FileAttribute.ACL) &&
-                sourceStatus.isDirectory());
+                sourceStatus.isDirectory(), options.shouldPreserve(
+                    FileAttribute.XATTR) && sourceStatus.isDirectory());
             writeToFileListing(fileListWriter, sourceCopyListingStatus,
                 sourcePathRoot, options);
 
@@ -271,7 +271,8 @@ public class SimpleCopyListing extends CopyListing {
                     + sourceStatus.getPath() + " for copy.");
         CopyListingFileStatus childCopyListingStatus =
           DistCpUtils.toCopyListingFileStatus(sourceFS, child,
-            options.shouldPreserve(FileAttribute.ACL) && child.isDirectory());
+            options.shouldPreserve(FileAttribute.ACL) && child.isDirectory(), 
+            options.shouldPreserve(FileAttribute.XATTR) && child.isDirectory());
         writeToFileListing(fileListWriter, childCopyListingStatus,
              sourcePathRoot, options);
         if (isDirectoryAndNotEmpty(sourceFS, child)) {
