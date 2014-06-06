@@ -153,6 +153,18 @@ public class TestStandbyCheckpoints {
     // do a checkpoint and save one to its local directories.
     HATestUtil.waitForCheckpoint(cluster, 1, ImmutableList.of(12));
 
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        if(tmpOivImgDir.list().length > 0) {
+          return true;
+        }
+        else {
+          return false;
+        }
+      }
+    }, 1000, 60000);
+    
     // It should have saved the oiv image too.
     assertEquals("One file is expected", 1, tmpOivImgDir.list().length);
     

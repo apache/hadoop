@@ -153,6 +153,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6369. Document that BlockReader#available() can return more bytes than
     are remaining in the block (Ted Yu via Colin Patrick McCabe)
 
+    HDFS-6487. TestStandbyCheckpoint#testSBNCheckpoints is racy.
+    (Mit Desai via wang)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
