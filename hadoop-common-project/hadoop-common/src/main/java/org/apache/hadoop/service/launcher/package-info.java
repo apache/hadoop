@@ -216,15 +216,15 @@
 
  </p>
  Exceptions are converted into exit codes -but rather than simply
- have a "something went wrong" exit code , exceptions may
+ have a "something went wrong" exit code , exceptions <i>>may</i>
  provide exit codes which will be extracted and used as the return code.
  This enables LaunchableServices to use exceptions as a way
  of returning error codes to signal failures -and for 
  normal Services to return any error code at all.
  
  <p>
- Any exception that implements the {@link org.apache.hadoop.util.ExitCodeProvider}
- interface will be a provider of the exit code: the method
+ Any exception which implements the {@link org.apache.hadoop.util.ExitCodeProvider}
+ interface is considered be a provider of the exit code: the method
  {@link org.apache.hadoop.util.ExitCodeProvider#getExitCode()}
  will be called on the caught exception to generate the return code.
  This return code and the message in the exception will be used to
@@ -237,26 +237,54 @@
  <p>
  If the exception is already an instance or subclass of 
  {@link org.apache.hadoop.util.ExitUtil.ExitException}, it is passed
- directly to {@link org.apache.hadoop.util.ExitUtil.ExitException} without
- any conversion. One such subclass, {@link org.apache.hadoop.service.launcher.ServiceLaunchException}</p>
+ directly to {@link org.apache.hadoop.util.ExitUtil#terminate(ExitUtil.ExitException)}
+ without any conversion. One such subclass, {@link org.apache.hadoop.service.launcher.ServiceLaunchException}</p>
  may be useful: it includes formatted exception message generation. 
  It also declares that it extends {@link org.apache.hadoop.service.launcher.LauncherExitCodes}
  interface listing common exception codes. These are exception codes
  that can be raised by the {@link org.apache.hadoop.service.launcher.ServiceLauncher}
  itself to indicate problems during parsing the command line, creating
- the service instance &c. There are also some common exit codes
+ the service instance and such like. There are also some common exit codes
  for Hadoop/YARN service failures, such as {@link org.apache.hadoop.service.launcher.LauncherExitCodes#EXIT_CONNECTIVITY_PROBLEM}.
  Note that {@link org.apache.hadoop.util.ExitUtil.ExitException} itself
  implements {@link org.apache.hadoop.util.ExitCodeProvider#getExitCode()}
 
  <p>
  If an exception does not implement  {@link org.apache.hadoop.util.ExitCodeProvider#getExitCode()},
- it is is wrapped in an {@link org.apache.hadoop.util.ExitUtil.ExitException} with
+ it will be wrapped in an {@link org.apache.hadoop.util.ExitUtil.ExitException} with
  the exit code {@link org.apache.hadoop.service.launcher.LauncherExitCodes#EXIT_EXCEPTION_THROWN}.
  
  
  </p>
 
+ <p>
+ To view the exit code extraction in sequence, it is:
+ <ol>
+ <li>If no exception was triggered by a basic service, a
+ {@link org.apache.hadoop.service.launcher.ServiceLaunchException} with an
+ exit code of 0 s created.</li>
+ <li>For a LaunchableService, the exit code is the result of <code>execute().
+ Again, a {@link org.apache.hadoop.service.launcher.ServiceLaunchException}
+ with a return code of 0 is created.
+ </code></li>
+ <li>Otherwise, if the exception is an instance of <code>ExitException</code>,
+ it is returned as the service terminating exception.</li>
+ <li>If the exception implements {@link org.apache.hadoop.util.ExitCodeProvider},
+ its exit code and <code>getMessage()</code> value become the exit exception.</li>
+ <li>Otherwise, it is wrapped as a {@link org.apache.hadoop.service.launcher.ServiceLaunchException}
+ with the exit code {@link org.apache.hadoop.service.launcher.LauncherExitCodes#EXIT_EXCEPTION_THROWN}
+ to indicate that an exception was thrown.</li>
+ <li>This is finally passed to {@link org.apache.hadoop.util.ExitUtil#terminate(ExitUtil.ExitException)},
+ by way of {@link org.apache.hadoop.service.launcher.ServiceLauncher#exit(ExitUtil.ExitException)};
+ a method designed to allow subclasses to override for testing.</li>
+ <li>The {@link org.apache.hadoop.util.ExitUtil} class then terminates the JVM
+ with the specified exit code, printing the <code>toString()</code> value
+ of the exception if the return code is non-zero.</li>
+ 
+ This process may seem convoluted, but it is designed to allow any exception in the
+ Hadoop exception hierarchy to generate exit codes, and to minimise the amount of
+ exception wrapping which takes place.
+ 
  <h2>Interrupt Handling</h2>
 
  The Service Launcher has a helper class, the {@link org.apache.hadoop.service.launcher.InterruptEscalator}
