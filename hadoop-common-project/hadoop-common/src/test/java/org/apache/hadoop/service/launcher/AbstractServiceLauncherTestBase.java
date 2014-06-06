@@ -45,6 +45,7 @@ public class AbstractServiceLauncherTestBase extends Assert implements
     LauncherExitCodes {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbstractServiceLauncherTestBase.class);
+  public static final String CONF_FILE_DIR = "target/conf";
 
   /**
    * All tests have a short life.
@@ -68,14 +69,6 @@ public class AbstractServiceLauncherTestBase extends Assert implements
   }
 
   /**
-   * rule to name the thread JUnit.
-   */
-  @Before
-  public void nameThread() {
-    Thread.currentThread().setName("JUnit");
-  }
-
-  /**
    * Formatted fail
    * @param format format string
    * @param args argument list. If the last argument is a throwable, it
@@ -93,18 +86,39 @@ public class AbstractServiceLauncherTestBase extends Assert implements
   }
 
   /**
+   * Conditional formatted fail
+   * @param format format string
+   * @param args argument list. If the last argument is a throwable, it
+   * is used as the inner cause of the exception
+   * @throws AssertionError with the formatted message
+   */
+  protected static void failif(boolean condition,
+      String format,
+      Object... args) {
+    if (!condition) {
+      failf(format, args);
+    }
+  }
+
+  /**
+   * rule to name the thread JUnit.
+   */
+  @Before
+  public void nameThread() {
+    Thread.currentThread().setName("JUnit");
+  }
+
+  /**
    * Assert that a service is in a state
-   * @param service
-   * @param expected
+   * @param service service
+   * @param expected expected state
    */
   protected void assertInState(Service service, Service.STATE expected) {
     assertNotNull(service);
     Service.STATE actual = service.getServiceState();
-    if (actual != expected) {
-      
-      failf("Service %s in state %s expected state: %s",
-          service.getName(), actual, expected);
-    }
+    failif(actual != expected,
+        "Service %s in state %s expected state: %s",
+        service.getName(), actual, expected);
   }
 
   /**
@@ -144,8 +158,12 @@ public class AbstractServiceLauncherTestBase extends Assert implements
     }
   }
 
-  protected void assertServiceCreationFails(String args) {
-    assertLaunchOutcome(EXIT_SERVICE_CREATION_FAILURE, "", args);
+  /**
+   * Assert the launch come was a service creation failure
+   * @param classname argument
+   */
+  protected void assertServiceCreationFails(String classname) {
+    assertLaunchOutcome(EXIT_SERVICE_CREATION_FAILURE, "", classname);
   }
 
   /**
@@ -184,17 +202,30 @@ public class AbstractServiceLauncherTestBase extends Assert implements
     return service;
   }
 
+  /**
+   * Save a configuration to a config file in the target dir
+   * @param conf config
+   * @return absolute path
+   * @throws IOException problems
+   */
   protected String configFile(Configuration conf) throws IOException {
-    File file = File.createTempFile("conf", ".xml", new File("target"));
+    File directory = new File(CONF_FILE_DIR);
+    directory.mkdirs();
+    File file = File.createTempFile("conf", ".xml", directory);
     OutputStream fos = new FileOutputStream(file);
     try {
       conf.writeXml(fos);
     } finally {
       IOUtils.closeStream(fos);
     }
-    return file.toString();
+    return file.getAbsolutePath();
   }
 
+  /**
+   * Create a new config from key-val pairs
+   * @param kvp a list of key, value, ...
+   * @return a new configuration
+   */
   protected Configuration newConf(String... kvp) {
     int len = kvp.length;
     assertEquals("unbalanced keypair len of " + len, 0, len % 2);
@@ -243,7 +274,7 @@ public class AbstractServiceLauncherTestBase extends Assert implements
    * Launch a service with the given list of arguments. Returns
    * the service launcher, from which the created service can be extracted.
    * via {@link ServiceLauncher#getService()}.
-   * 
+   *
    * This call DOES NOT call {@link LaunchableService#execute()} or wait for
    * a simple service to finish. It returns the service that has been created,
    * initialized and started.
@@ -258,7 +289,7 @@ public class AbstractServiceLauncherTestBase extends Assert implements
       Class serviceClass,
       Configuration conf,
       String... args) throws ExitUtil.ExitException {
-    return launchService(serviceClass,conf, Arrays.asList(args), false);
+    return launchService(serviceClass, conf, Arrays.asList(args), false);
   }
 
   /**
@@ -288,13 +319,32 @@ public class AbstractServiceLauncherTestBase extends Assert implements
       return null;
     } catch (ExitUtil.ExitException e) {
       int actualCode = e.getExitCode();
-      if (errorCode != actualCode ||
-          !StringUtils.contains(e.toString(), expectedText) ) {
-        failf("Expected an exception with error code %d and text \"%s\" "
-              + " -but the service threw an exception with exit code %d: %s",
-            errorCode, expectedText, actualCode, e);
-      }    
+      failif(errorCode != actualCode ||
+             !StringUtils.contains(e.toString(), expectedText),
+          "Expected an exception with error code %d and text \"%s\" "
+          + " -but the service threw an exception with exit code %d: %s",
+          errorCode, expectedText, actualCode, e);
       return e;
     }
+  }
+
+  /**
+   * Assert that an exception message contains a search string
+   * @param exception exception to get a message from
+   * @param search search key
+   */
+  protected void assertMessageContains(Exception exception, String search) {
+    assertContains(exception.getMessage(), search);
+  }
+
+  /**
+   * assert that a text string contains the search text
+   * @param text text to look through
+   * @param search search key
+   */
+  protected void assertContains(String text, String search) {
+    boolean contains = StringUtils.contains(text, search);
+    failif(!contains, "String \"%s\" not found in \"%s\"",
+        contains, search);
   }
 }

@@ -31,8 +31,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -589,22 +591,9 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
 
         String filename = args.get(index);
         index++;
-        File file = new File(filename);
         LOG.info("arg[{}] = Conf file {}",index, filename);
-        if (!file.exists()) {
-          exitWithMessage(EXIT_COMMAND_ARGUMENT_ERROR,
-              ARG_CONF + ": configuration file not found: " + file);
-          // never called, but retained for completeness
-          break;
-        }
-        try {
-          conf.addResource(file.toURI().toURL());
-        } catch (MalformedURLException e) {
-          exitWithMessage(EXIT_COMMAND_ARGUMENT_ERROR,
-              ARG_CONF + ": configuration file path invalid: " + file);
-          // never called, but retained for completeness
-          break;
-        }
+        URL fileURL = extractConfFile(filename);
+        conf.addResource(fileURL);
       } else {
         index++;
         argsList.add(arg);
@@ -613,6 +602,28 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
     return argsList;
   }
 
+  private URL extractConfFile(String filename)  {
+    File file = new File(filename);
+    URL fileURL = null;
+    if (!file.exists()) {
+      exitWithMessage(EXIT_COMMAND_ARGUMENT_ERROR,
+          ARG_CONF + ": configuration file not found: " + file);
+      // never called, but retained for completeness
+    } else {
+      try {
+        Configuration c = new Configuration(false);
+        fileURL = file.toURI().toURL();
+        c.addResource(fileURL);
+        c.get("key");
+      } catch (Exception e) {
+        // this means that the file could not be parsed
+        exitWithMessage(EXIT_COMMAND_ARGUMENT_ERROR,
+            ARG_CONF + ": configuration file not loadable: " + file);
+      }
+    }
+    return fileURL;
+
+  }
 
   /**
    * Build a log message for starting up and shutting down. 

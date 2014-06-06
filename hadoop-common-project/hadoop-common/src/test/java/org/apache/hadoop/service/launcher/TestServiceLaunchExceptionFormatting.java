@@ -33,7 +33,7 @@ public class TestServiceLaunchExceptionFormatting extends
 
     ServiceLaunchException ex =
         new ServiceLaunchException(0, "%03x", 32);
-    assertTrue(ex.getMessage().contains("020"));
+    assertMessageContains(ex, "020");
   }
 
   @Test
@@ -41,7 +41,7 @@ public class TestServiceLaunchExceptionFormatting extends
 
     ServiceLaunchException ex =
         new ServiceLaunchException(0, "%03x");
-    assertTrue(ex.getMessage().contains("%03x"));
+    assertMessageContains(ex, "%03x");
   }
 
   @Test
@@ -50,8 +50,8 @@ public class TestServiceLaunchExceptionFormatting extends
     Exception cause = new Exception("cause");
     ServiceLaunchException ex =
         new ServiceLaunchException(0, "%03x: %s", 32, cause);
-    assertTrue(ex.getMessage().contains("020"));
-    assertTrue(ex.getMessage().contains("cause"));
+    assertMessageContains(ex, "020");
+    assertMessageContains(ex, "cause");
     assertSame(cause, ex.getCause());
   }
 
@@ -61,7 +61,7 @@ public class TestServiceLaunchExceptionFormatting extends
     Exception cause = new Exception("cause");
     ServiceLaunchException ex =
         new ServiceLaunchException(0, "%03x:", 32, cause);
-    assertTrue(ex.getMessage().contains("020"));
+    assertMessageContains(ex, "020");
     assertFalse(ex.getMessage().contains("cause"));
     assertSame(cause, ex.getCause());
   }

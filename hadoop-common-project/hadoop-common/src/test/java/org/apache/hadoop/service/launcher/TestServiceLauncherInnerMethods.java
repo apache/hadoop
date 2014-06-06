@@ -29,6 +29,7 @@ import org.junit.Test;
 /**
  * Test the inner launcher methods. 
  */
+@SuppressWarnings("ThrowableResultOfMethodCallIgnored")
 public class TestServiceLauncherInnerMethods extends
     AbstractServiceLauncherTestBase {
 
