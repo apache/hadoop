@@ -310,6 +310,4 @@ public final class ExitUtil {
   public static void halt(int status, String message) throws HaltException {
     halt(new HaltException(status, message));
   }
-  
-  
 }

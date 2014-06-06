@@ -36,7 +36,7 @@
  or from <code>main(String[])</code> methods implemented by other classes
  that which to provide their own endpoints.
  </p> 
- 
+
  <p>
  <b>Extended YARN Service Interface</b>:<p>
  The {@link org.apache.hadoop.service.launcher.LaunchableService} interface
@@ -50,7 +50,7 @@
  {@link org.apache.hadoop.service.launcher.LauncherExitCodes}
  defines a set of exit codes that can be used by services to standardize exit causes.
  </p>
- 
+
  <p>
  <b>Escalated shutdown</b>:<p>
  The {@link org.apache.hadoop.service.launcher.ServiceShutdownHook}
@@ -60,20 +60,17 @@
  exit if it times our or a second interrupt is received.
  </p> 
 
-
  <p><b>Tests:</b><p> test cases include interrupt handling and
  lifecycle failures.</p>
 
- 
  <h2>Launching a YARN Service</h2>
- 
- 
+
  The Service Launcher can launch <i>any YARN service</i>. It will instantiate
  the service classname provided, by zero-args constructor. Or, if none
  is available, falling back to a constructor that takes a <code>String</code>
  as its parameter, on the assumption that the parameter is the service name.
  <p>
- 
+
  The launcher will initialize the service via {@link org.apache.hadoop.service.Service#init(Configuration)},
  then start it via its {@link org.apache.hadoop.service.Service#start()} method.
  It then waits indefinitely for the service to stop.
@@ -103,42 +100,42 @@
  <li>Terminate itself via a call to {@link org.apache.hadoop.service.Service#stop()}
  in one of these asynchronous methods.</li>
  </ul>
- 
+
  If a service does not stop itself, <i>ever</i>, then it can be launched as a long-lived
  daemon. The service launcher will never terminate, but neither will the service.
  The service launcher does register signal handlers to catch <code>kill</code>
  and control-C signals -calling <code>stop()</code> on the service when signalled.
  This means that a daemon service <i>may</i> get some warning and time to shut
  down.
- 
+
  <p>
  To summarize: provided a service launches its long-lived threads in its Service
  <code>start()</code> method, the service launcher can create it, configure it
  and start it -triggering shutdown when signalled.</b>
- 
+
  What these services can not do is get at the command line parameters or easily
  propagate exit codes (there is way covered later). These features require
  some extensions to the base <code>Service</code> interface: <i>the Launchable
  Service</i>.
- 
+
  <h2>Launching a Launchable YARN Service</h2>
 
  A Launchable YARN Service is a YARN service which implements the interface
  {@link org.apache.hadoop.service.launcher.LaunchableService}. 
  <p>
  It adds two methods to the service interface -and hence two new features: 
- 
+
  <ol>
  <li>Access to the command line passed to the service launcher </li>
  <li>A blocking <code>int execute()</code> method which can return the exit
  code for the application.</li>
  </ol>
- 
+
  This design is ideal for implementing services which parse the command line,
  and which execute short-lived applications. For example, end user 
  commands can be implemented as such services, so integrating with YARN's
  workflow and <code>YarnClient</code> client-side code.  
- 
+
  <p>
  It can just as easily be used for implementing long-lived services that
  parse the command line -it just becomes the responsibility of the
@@ -148,7 +145,7 @@
  <p>
  The {@link org.apache.hadoop.service.launcher.LaunchableService} interface
  extends {@link org.apache.hadoop.service.Service} with two new methods.
- 
+
  <p>
  {@link org.apache.hadoop.service.launcher.LaunchableService#bindArgs(Configuration, List)}
  provides the <code>main(String args[])</code> arguments as a list, after any
@@ -221,7 +218,7 @@
  This enables LaunchableServices to use exceptions as a way
  of returning error codes to signal failures -and for 
  normal Services to return any error code at all.
- 
+
  <p>
  Any exception which implements the {@link org.apache.hadoop.util.ExitCodeProvider}
  interface is considered be a provider of the exit code: the method
@@ -253,8 +250,8 @@
  If an exception does not implement  {@link org.apache.hadoop.util.ExitCodeProvider#getExitCode()},
  it will be wrapped in an {@link org.apache.hadoop.util.ExitUtil.ExitException} with
  the exit code {@link org.apache.hadoop.service.launcher.LauncherExitCodes#EXIT_EXCEPTION_THROWN}.
- 
- 
+
+
  </p>
 
  <p>
@@ -280,11 +277,11 @@
  <li>The {@link org.apache.hadoop.util.ExitUtil} class then terminates the JVM
  with the specified exit code, printing the <code>toString()</code> value
  of the exception if the return code is non-zero.</li>
- 
+
  This process may seem convoluted, but it is designed to allow any exception in the
  Hadoop exception hierarchy to generate exit codes, and to minimise the amount of
  exception wrapping which takes place.
- 
+
  <h2>Interrupt Handling</h2>
 
  The Service Launcher has a helper class, the {@link org.apache.hadoop.service.launcher.InterruptEscalator}
@@ -312,7 +309,7 @@
  </p>
 
  <h2>Configuration class creation</h2>
- 
+
  The Configuration class used to initialize a service is a basic
  {@link org.apache.hadoop.conf.Configuration} instance. As the launcher is
  the entry point for an application, this implies that the HDFS, YARN or other
@@ -328,7 +325,7 @@
  <p>
  In the {@link org.apache.hadoop.service.launcher.LaunchableService#bindArgs(Configuration, List)},
  a new configuration is created:
- 
+
  <pre>
  public Configuration bindArgs(Configuration config, List<String> args) throws
  Exception {
@@ -336,11 +333,11 @@
    return newConf;
  }
  </pre>
- 
+
  This guarantees a configuration of the right type is generated for all
  instances created via the service launcher. It does imply that this is
  expected to be only way that services will be launched.
- 
+
  <pre>
  protected void serviceInit(Configuration conf) throws Exception {
    super.serviceInit(new YARNConfiguration(conf));
@@ -353,11 +350,11 @@
  YARN services use a single shared configuration instance as a way of propagating
  information between peer services in a {@link org.apache.hadoop.service.CompositeService}.
  While a dangerous practice, it does happen.
- 
+
  </p>
 
  <h2>Configuration file loading</h2>
- 
+
  Before the service is bound to the CLI, the ServiceLauncher scans through
  all the arguments after the first one, looking for instances of the argument
  {@link org.apache.hadoop.service.launcher.ServiceLauncher#ARG_CONF}
@@ -367,7 +364,7 @@
  method. If this argument is repeated multiple times, all configuration
  files are merged -with the latest file on the command line being the 
  last one to be applied.
- 
+
  All the <code>--conf &lt;file&gt;</code> argument pairs are stripped off
  the argument list provided to the instantiated service; they get the
  merged configuration, but not the commands used to create it.
