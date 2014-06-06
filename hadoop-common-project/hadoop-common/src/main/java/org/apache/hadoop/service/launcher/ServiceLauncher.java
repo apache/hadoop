@@ -83,7 +83,7 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
   /**
    * Name of the configuration argument on the CLI: {@value} 
    */
-  public static final String ARG_CONF = "--conf";
+  public static final String ARG_CONF = "-conf";
 
   /**
    * Usage message.
