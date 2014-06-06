@@ -183,6 +183,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2118. Fixed the type mismatch in Map#containsKey check of
     TimelineWebServices#injectOwnerInfo. (Ted Yu via zjshen)
 
+    YARN-2117. Fixed the issue that secret file reader is potentially not
+    closed in TimelineAuthenticationFilterInitializer. (Chen He via zjshen)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
