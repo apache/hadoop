@@ -32,6 +32,7 @@ import "Security.proto";
 import "hdfs.proto";
 import "acl.proto";
 import "xattr.proto";
+import "encryption.proto";
 
 /**
  * The ClientNamenodeProtocol Service defines the interface between a client 
@@ -766,4 +767,10 @@ service ClientNamenodeProtocol {
       returns(GetXAttrsResponseProto);
   rpc removeXAttr(RemoveXAttrRequestProto)
       returns(RemoveXAttrResponseProto);
+  rpc createEncryptionZone(CreateEncryptionZoneRequestProto)
+      returns(CreateEncryptionZoneResponseProto);
+  rpc deleteEncryptionZone(DeleteEncryptionZoneRequestProto)
+      returns(DeleteEncryptionZoneResponseProto);
+  rpc listEncryptionZones(ListEncryptionZonesRequestProto)
+      returns(ListEncryptionZonesResponseProto);
 }

@@ -1258,6 +1258,32 @@ public interface ClientProtocol {
   public AclStatus getAclStatus(String src) throws IOException;
   
   /**
+   * Create an encryption zone
+   */
+  @AtMostOnce
+  public void createEncryptionZone(String src, String keyId)
+    throws IOException;
+
+  /**
+   * Delete an encryption zone
+   */
+  @AtMostOnce
+  public void deleteEncryptionZone(String src)
+    throws IOException;
+
+  /**
+   * Return a list of all {@EncryptionZone}s in the HDFS hierarchy which are
+   * visible to the caller. If the caller is the HDFS admin, then the returned
+   * EncryptionZone instances will have the key id field filled in. If the
+   * caller is not the HDFS admin, then the EncryptionZone instances will only
+   * have the path field filled in and only those zones that are visible to the
+   * user are returned.
+   */
+  @Idempotent
+  public List<EncryptionZone> listEncryptionZones()
+    throws IOException;
+
+  /**
    * Set xattr of a file or directory.
    * A regular user only can set xattr of "user" namespace.
    * A super user can set xattr of "user" and "trusted" namespace.

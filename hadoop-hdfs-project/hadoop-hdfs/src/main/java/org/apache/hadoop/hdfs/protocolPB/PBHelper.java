@@ -58,6 +58,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FsAclPermission;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -110,6 +111,8 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.NNHAStatusHe
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReceivedDeletedBlockInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageReportProto;
+import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ListEncryptionZonesResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.EncryptionZoneProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
@@ -2180,6 +2183,45 @@ public class PBHelper {
     return xAttrs;
   }
   
+  public static List<EncryptionZone> convert(ListEncryptionZonesResponseProto a) {
+    final List<EncryptionZoneProto> ezs = a.getPathsAndKeysList();
+    return convertEZ(ezs);
+  }
+
+  public static ListEncryptionZonesResponseProto convertListEZResponse(
+    List<EncryptionZone> ezs) {
+    final ListEncryptionZonesResponseProto.Builder builder =
+      ListEncryptionZonesResponseProto.newBuilder();
+    builder.addAllPathsAndKeys(convertEZProto(ezs));
+    return builder.build();
+  }
+
+  public static List<EncryptionZoneProto> convertEZProto(
+      List<EncryptionZone> ezs) {
+    final ArrayList<EncryptionZoneProto> ret =
+      Lists.newArrayListWithCapacity(ezs.size());
+    for (EncryptionZone a : ezs) {
+      final EncryptionZoneProto.Builder builder =
+        EncryptionZoneProto.newBuilder();
+      builder.setPath(a.getPath());
+      builder.setKeyId(a.getKeyId());
+      ret.add(builder.build());
+    }
+    return ret;
+  }
+
+  public static List<EncryptionZone> convertEZ(
+    List<EncryptionZoneProto> ezs) {
+    final ArrayList<EncryptionZone> ret =
+      Lists.newArrayListWithCapacity(ezs.size());
+    for (EncryptionZoneProto a : ezs) {
+      final EncryptionZone ez =
+        new EncryptionZone(a.getPath(), a.getKeyId());
+      ret.add(ez);
+    }
+    return ret;
+  }
+
   public static List<XAttr> convert(GetXAttrsResponseProto a) {
     List<XAttrProto> xAttrs = a.getXAttrsList();
     return convertXAttrs(xAttrs);

@@ -68,6 +68,7 @@ import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
@@ -1795,6 +1796,22 @@ public class DistributedFileSystem extends FileSystem {
     }.resolve(this, absF);
   }
   
+  /* HDFS only */
+  public void createEncryptionZone(Path path, String keyId)
+    throws IOException {
+    dfs.createEncryptionZone(getPathName(path), keyId);
+  }
+
+  /* HDFS only */
+  public void deleteEncryptionZone(Path path) throws IOException {
+    dfs.deleteEncryptionZone(getPathName(path));
+  }
+
+  /* HDFS only */
+  public List<EncryptionZone> listEncryptionZones() throws IOException {
+    return dfs.listEncryptionZones();
+  }
+
   @Override
   public void setXAttr(Path path, final String name, final byte[] value, 
       final EnumSet<XAttrSetFlag> flag) throws IOException {

@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hdfs.client;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.EnumSet;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -33,7 +35,9 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 
 /**
@@ -224,5 +228,71 @@ public class HdfsAdmin {
    */
   public RemoteIterator<CachePoolEntry> listCachePools() throws IOException {
     return dfs.listCachePools();
+  }
+
+  /**
+   * Create an encryption zone rooted at path using the optional encryption key
+   * id. An encryption zone is a portion of the HDFS file system hierarchy in
+   * which all files are encrypted with the same key, but possibly different
+   * key versions per file.
+   * <p/>
+   * Path must refer to an empty, existing directory. Otherwise an IOException
+   * will be thrown. keyId specifies the id of an encryption key in the
+   * KeyProvider that the Namenode has been configured to use. If keyId is
+   * null, then a key is generated in the KeyProvider using {@link
+   * java.util.UUID} to generate a key id.
+   *
+   * @param path The path of the root of the encryption zone.
+   *
+   * @param keyId An optional keyId in the KeyProvider. If null, then
+   * a key is generated.
+   *
+   * @throws IOException if there was a general IO exception
+   *
+   * @throws AccessControlException if the caller does not have access to path
+   *
+   * @throws FileNotFoundException if the path does not exist
+   */
+  public void createEncryptionZone(Path path, String keyId)
+    throws IOException, AccessControlException, FileNotFoundException {
+    dfs.createEncryptionZone(path, keyId);
+  }
+
+  /**
+   * Delete the encryption zone rooted at path. Path must refer to an existing,
+   * empty directory. Otherwise, an IOException is thrown. This method removes
+   * those extended attributes on the directory which indicate that it is part
+   * of an encryption zone. Following successful completion of this call, any
+   * new files created in the directory (or it's children) will not be
+   * encrypted. The directory is not removed by this method.
+   *
+   * @param path The path of the root of the encryption zone.
+   *
+   * @throws IOException if there was a general IO exception
+   *
+   * @throws AccessControlException if the caller does not have access to path
+   *
+   * @throws FileNotFoundException if the path does not exist
+   */
+  public void deleteEncryptionZone(Path path)
+    throws IOException, AccessControlException, FileNotFoundException {
+    dfs.deleteEncryptionZone(path);
+  }
+
+  /**
+   * Return a list of all {@EncryptionZone}s in the HDFS hierarchy which are
+   * visible to the caller. If the caller is the HDFS admin, then the returned
+   * EncryptionZone instances will have the key id field filled in. If the
+   * caller is not the HDFS admin, then the EncryptionZone instances will only
+   * have the path field filled in and only those zones that are visible to the
+   * user are returned.
+   *
+   * @throws IOException if there was a general IO exception
+   *
+   * @return List<EncryptionZone> the list of Encryption Zones that the caller has
+   * access to.
+   */
+  public List<EncryptionZone> listEncryptionZones() throws IOException {
+    return dfs.listEncryptionZones();
   }
 }

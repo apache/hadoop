@@ -8,6 +8,8 @@ fs-encryption (Unreleased)
 
   IMPROVEMENTS
 
+    HDFS-6473. Protocol and API for Encryption Zones (clamb)
+
     HDFS-6476. Print out the KeyProvider after finding KP successfully on
     startup. (Juan Yu via wang)
 

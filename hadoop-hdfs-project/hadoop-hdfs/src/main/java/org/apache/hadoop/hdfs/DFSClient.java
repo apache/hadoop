@@ -136,6 +136,7 @@ import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -2775,6 +2776,34 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
     }
   }
   
+  public void createEncryptionZone(String src, String keyId)
+    throws IOException {
+    checkOpen();
+    try {
+      namenode.createEncryptionZone(src, keyId);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     SafeModeException.class,
+                                     UnresolvedPathException.class);
+    }
+  }
+
+  public void deleteEncryptionZone(String src) throws IOException {
+    checkOpen();
+    try {
+      namenode.deleteEncryptionZone(src);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     SafeModeException.class,
+                                     UnresolvedPathException.class);
+    }
+  }
+
+  public List<EncryptionZone> listEncryptionZones() throws IOException {
+    checkOpen();
+    return namenode.listEncryptionZones();
+  }
+
   public void setXAttr(String src, String name, byte[] value, 
       EnumSet<XAttrSetFlag> flag) throws IOException {
     checkOpen();

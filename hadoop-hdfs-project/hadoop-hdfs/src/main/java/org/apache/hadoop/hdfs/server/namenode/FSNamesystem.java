@@ -155,6 +155,7 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -7824,6 +7825,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
   
+  void createEncryptionZone(final String src, final String keyId)
+          throws IOException {
+  }
+
+  void deleteEncryptionZone(final String src) throws IOException {
+  }
+
+  List<EncryptionZone> listEncryptionZones() throws IOException {
+    return null;
+  }
+
   /**
    * Set xattr for a file or directory.
    * 
