@@ -648,6 +648,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6424. blockReport doesn't need to invalidate blocks on SBN. (Ming Ma
     via jing9)
 
+    HDFS-6497. Make TestAvailableSpaceVolumeChoosingPolicy deterministic
+    (cmccabe)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
