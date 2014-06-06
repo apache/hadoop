@@ -45,10 +45,18 @@ public class AvailableSpaceVolumeChoosingPolicy<V extends FsVolumeSpi>
   
   private static final Log LOG = LogFactory.getLog(AvailableSpaceVolumeChoosingPolicy.class);
   
-  private static final Random RAND = new Random();
+  private final Random random;
   
   private long balancedSpaceThreshold = DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_THRESHOLD_DEFAULT;
   private float balancedPreferencePercent = DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT;
+
+  AvailableSpaceVolumeChoosingPolicy(Random random) {
+    this.random = random;
+  }
+
+  public AvailableSpaceVolumeChoosingPolicy() {
+    this(new Random());
+  }
 
   @Override
   public synchronized void setConf(Configuration conf) {
@@ -128,7 +136,7 @@ public class AvailableSpaceVolumeChoosingPolicy<V extends FsVolumeSpi>
           (highAvailableVolumes.size() * balancedPreferencePercent) /
           preferencePercentScaler;
       if (mostAvailableAmongLowVolumes < replicaSize ||
-          RAND.nextFloat() < scaledPreferencePercent) {
+          random.nextFloat() < scaledPreferencePercent) {
         volume = roundRobinPolicyHighAvailable.chooseVolume(
             highAvailableVolumes,
             replicaSize);
