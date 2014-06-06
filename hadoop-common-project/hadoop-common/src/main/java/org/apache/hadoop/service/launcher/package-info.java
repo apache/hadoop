@@ -25,11 +25,12 @@
  <h2>Key Features</h2>
 
  <p>
- <b>Generic service launcher</b>:
+ <b>General purpose YARN service launcher</b>:<p>
  The {@link org.apache.hadoop.service.launcher.ServiceLauncher} class parses
- a command line, then instantiates and launches the specified service. It
+ a command line, then instantiates and launches the specified YARN service. It
  then waits for the service to finish, converting any exceptions raised or
  exit codes returned into an exit code for the (then exited) process. 
+ <p></p>
  This class is designed be invokable from the static 
  {@link org.apache.hadoop.service.launcher.ServiceLauncher#main(String[])} method,
  or from <code>main(String[])</code> methods implemented by other classes
@@ -37,46 +38,32 @@
  </p> 
  
  <p>
- <b>Extended {@link org.apache.hadoop.service.Service} Interface</b>:
+ <b>Extended YARN Service Interface</b>:<p>
  The {@link org.apache.hadoop.service.launcher.LaunchableService} interface
- adds methods to pass down the CLI arguments, to execute a command line
- action without having to spawn a thread in the
- {@link org.apache.hadoop.service.Service#start()} phase.
+ extendss {@link org.apache.hadoop.service.Service} with methods to pass
+ down the CLI arguments, to execute an operapation without having to
+ spawn a thread in the  {@link org.apache.hadoop.service.Service#start()} phase.
  </p> 
+
+ <p>
+ <b>Standard Exit codes</b>:<p>
+ {@link org.apache.hadoop.service.launcher.LauncherExitCodes}
+ defines a set of exit codes that can be used by services to standardize exit causes.
+ </p>
  
  <p>
- <b>Escalated shutdown</b>: the {@link org.apache.hadoop.service.launcher.ServiceShutdownHook}
+ <b>Escalated shutdown</b>:<p>
+ The {@link org.apache.hadoop.service.launcher.ServiceShutdownHook}
  shuts down any service via the hadoop shutdown mechanism.
  The {@link org.apache.hadoop.service.launcher.InterruptEscalator} can be
  registered to catch interrupts, triggering the shutdown -and forcing a JVM
  exit if it times our or a second interrupt is received.
  </p> 
 
- <p>
- <b>Standard Exit codes</b>: {@link org.apache.hadoop.service.launcher.LauncherExitCodes}
- Defines a set of exit codes that can be used by services to standardize exit causes.
- </p> 
 
- <p><b>Tests:</b> test cases include interrupt handling and
+ <p><b>Tests:</b><p> test cases include interrupt handling and
  lifecycle failures.</p>
 
- <h2>Utility Classes</h2>
- 
- <ul>
-
- <li>
- {@link org.apache.hadoop.service.launcher.IrqHandler}: registers interrupt
- handlers using <code>sun.misc</code> APIs.
- </li>
- 
- <li>
- {@link org.apache.hadoop.service.launcher.ServiceLaunchException}: a
- subclass of {@link org.apache.hadoop.util.ExitUtil.ExitException} which
- takes a String-formatted format string and a list of arguments to create
- the exception text.
- </li>
-  
- </ul>
  
  <h2>Launching a YARN Service</h2>
  
@@ -89,11 +76,8 @@
  
  The launcher will initialize the service via {@link org.apache.hadoop.service.Service#init(Configuration)},
  then start it via its {@link org.apache.hadoop.service.Service#start()} method.
- <p>
- It then proceeds to wait for the service to stop.
+ It then waits indefinitely for the service to stop.
  <p> 
- The return code of the service is 0 if it worked, or a non-zero return code
- if a failure happened during service instantiation, init or launch. 
  After the service has stopped, a non-null value  of
  {@link org.apache.hadoop.service.Service#getFailureCause()} is interpreted
  as a failure, and, if it didn't happen during the stop phase (i.e. when
@@ -107,17 +91,17 @@
  <li>call {@link org.apache.hadoop.service.Service#init(Configuration)}</li>
  <li>call {@link org.apache.hadoop.service.Service#start()}</li>
  <li>call {@link org.apache.hadoop.service.Service#waitForServiceToStop(long)}</li>
- <li>If an exception was raised in this workflow: propagate it</li>
+ <li>If an exception was raised: propagate it</li>
  <li>If an exception was recorded in {@link org.apache.hadoop.service.Service#getFailureCause()}
  while the service was running: propagate it.</li>
  </ol>
 
  For a service to be fully compatible with this launch model, it must
  <ul>
- <li>start worker threads, processes and executors in its <code>start()</code>
- method</li>
- <li>Terminate itself via a call to <code>stop()</code> in one of these
- asynchronous methods.</li>
+ <li>Start worker threads, processes and executors in its
+ {@link org.apache.hadoop.service.Service#start()} method</li>
+ <li>Terminate itself via a call to {@link org.apache.hadoop.service.Service#stop()}
+ in one of these asynchronous methods.</li>
  </ul>
  
  If a service does not stop itself, <i>ever</i>, then it can be launched as a long-lived
@@ -128,7 +112,7 @@
  down.
  
  <p>
- To summarize: provided a service launches its long-lived processes in it's
+ To summarize: provided a service launches its long-lived threads in its Service
  <code>start()</code> method, the service launcher can create it, configure it
  and start it -triggering shutdown when signalled.</b>
  
@@ -147,7 +131,7 @@
  <ol>
  <li>Access to the command line passed to the service launcher </li>
  <li>A blocking <code>int execute()</code> method which can return the exit
- code for the application.<li>
+ code for the application.</li>
  </ol>
  
  This design is ideal for implementing services which parse the command line,
@@ -185,24 +169,26 @@
  passed in to the <code>init()</code> method.
  <p>
  After the <code>bindArgs()</code> processing, the service's <code>init()</code>
- and <code>start()</code> methods are called, as usual. It is after this point
- that the lifecycle of a launched service diverges from a classic service.
- In a Launchable Service, the method {@link org.apache.hadoop.service.launcher.LaunchableService#execute()}
- is called, a method expected to block until completed, returning the exit code
- of the process when it does so. This method will be invoked after the
- service is started -and provided the service hasn't already stopped.
+ and <code>start()</code> methods are called, as usual.
+ <p>
+ At this point, rather than block waiting for the service to terminate (as
+ is done for a basic service), the method
+ {@link org.apache.hadoop.service.launcher.LaunchableService#execute()}
+ is called.
+ This is a method expected to block until completed, returning the intended 
+ application exit code of the process when it does so. 
  <p> 
- Finally, after this <code>execute()</code> operation completes, the
+ After this <code>execute()</code> operation completes, the
  service is stopped and exit codes generated. Any exception raised
- during the execute method takes priority over any exit codes returned
- by the method, so services may signal failures simply by returning
+ during the <code>execute()</code> method takes priority over any exit codes returned
+ by the method --so services may signal failures simply by returning
  exceptions with exit codes.
  <p>
 
  <p>
  To view the worklow in sequence, it is:
  <ol>
- <li>(prepare configuration files -covered later)</li>
+ <li>(prepare configuration files --covered later)</li>
  <li>instantiate service via its empty or string constructor</li>
  <li>call {@link org.apache.hadoop.service.launcher.LaunchableService#bindArgs(Configuration, List)}</li>
  <li>call {@link org.apache.hadoop.service.Service#init(Configuration)} with the existing config,
@@ -220,15 +206,17 @@
 
  <h2>Exit codes and Exceptions</h2>
 
- As stated, the exit code from run is, for a LaunchableService, the return
- value from the {@link org.apache.hadoop.service.launcher.LaunchableService#execute()}
- operation -unless overridden by an exception.
  <p>
- For a normal service, the return code is 0 unless an exception
+ For a basic service, the return code is 0 unless an exception
  was raised. 
+ <p>
+ For a {@link org.apache.hadoop.service.launcher.LaunchableService}, the return
+ code is the number returned from the {@link org.apache.hadoop.service.launcher.LaunchableService#execute()}
+ operation, again, unless overridden an exception was raised.
+
  </p>
  Exceptions are converted into exit codes -but rather than simply
- have an exit code "something went wrong", exceptions may
+ have a "something went wrong" exit code , exceptions may
  provide exit codes which will be extracted and used as the return code.
  This enables LaunchableServices to use exceptions as a way
  of returning error codes to signal failures -and for 
@@ -356,6 +344,24 @@
  the argument list provided to the instantiated service; they get the
  merged configuration, but not the commands used to create it.
 
+
+ <h2>Utility Classes</h2>
+
+ <ul>
+
+ <li>
+ {@link org.apache.hadoop.service.launcher.IrqHandler}: registers interrupt
+ handlers using <code>sun.misc</code> APIs.
+ </li>
+
+ <li>
+ {@link org.apache.hadoop.service.launcher.ServiceLaunchException}: a
+ subclass of {@link org.apache.hadoop.util.ExitUtil.ExitException} which
+ takes a String-formatted format string and a list of arguments to create
+ the exception text.
+ </li>
+
+ </ul>
  */
 
 
