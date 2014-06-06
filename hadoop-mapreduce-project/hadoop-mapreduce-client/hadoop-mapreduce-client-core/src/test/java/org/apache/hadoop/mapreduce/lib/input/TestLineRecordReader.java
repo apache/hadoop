@@ -193,4 +193,42 @@ public class TestLineRecordReader {
                                       200 * 1000,
                                       true);
   }
+
+  @Test
+  public void testStripBOM() throws IOException {
+    // the test data contains a BOM at the start of the file
+    // confirm the BOM is skipped by LineRecordReader
+    String UTF8_BOM = "\uFEFF";
+    URL testFileUrl = getClass().getClassLoader().getResource("testBOM.txt");
+    assertNotNull("Cannot find testBOM.txt", testFileUrl);
+    File testFile = new File(testFileUrl.getFile());
+    Path testFilePath = new Path(testFile.getAbsolutePath());
+    long testFileSize = testFile.length();
+    Configuration conf = new Configuration();
+    conf.setInt(org.apache.hadoop.mapreduce.lib.input.
+        LineRecordReader.MAX_LINE_LENGTH, Integer.MAX_VALUE);
+
+    TaskAttemptContext context = new TaskAttemptContextImpl(conf, new TaskAttemptID());
+
+    // read the data and check whether BOM is skipped
+    FileSplit split = new FileSplit(testFilePath, 0, testFileSize,
+        (String[])null);
+    LineRecordReader reader = new LineRecordReader();
+    reader.initialize(split, context);
+    int numRecords = 0;
+    boolean firstLine = true;
+    boolean skipBOM = true;
+    while (reader.nextKeyValue()) {
+      if (firstLine) {
+        firstLine = false;
+        if (reader.getCurrentValue().toString().startsWith(UTF8_BOM)) {
+          skipBOM = false;
+        }
+      }
+      ++numRecords;
+    }
+    reader.close();
+
+    assertTrue("BOM is not skipped", skipBOM);
+  }
 }
