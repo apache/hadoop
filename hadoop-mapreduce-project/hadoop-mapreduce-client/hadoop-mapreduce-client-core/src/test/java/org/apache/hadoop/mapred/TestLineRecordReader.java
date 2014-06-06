@@ -188,4 +188,41 @@ public class TestLineRecordReader {
     checkRecordSpanningMultipleSplits("recordSpanningMultipleSplits.txt.bz2",
         200 * 1000, true);
   }
+
+  @Test
+  public void testStripBOM() throws IOException {
+    // the test data contains a BOM at the start of the file
+    // confirm the BOM is skipped by LineRecordReader
+    String UTF8_BOM = "\uFEFF";
+    URL testFileUrl = getClass().getClassLoader().getResource("testBOM.txt");
+    assertNotNull("Cannot find testBOM.txt", testFileUrl);
+    File testFile = new File(testFileUrl.getFile());
+    Path testFilePath = new Path(testFile.getAbsolutePath());
+    long testFileSize = testFile.length();
+    Configuration conf = new Configuration();
+    conf.setInt(org.apache.hadoop.mapreduce.lib.input.
+        LineRecordReader.MAX_LINE_LENGTH, Integer.MAX_VALUE);
+
+    // read the data and check whether BOM is skipped
+    FileSplit split = new FileSplit(testFilePath, 0, testFileSize,
+        (String[])null);
+    LineRecordReader reader = new LineRecordReader(conf, split);
+    LongWritable key = new LongWritable();
+    Text value = new Text();
+    int numRecords = 0;
+    boolean firstLine = true;
+    boolean skipBOM = true;
+    while (reader.next(key, value)) {
+      if (firstLine) {
+        firstLine = false;
+        if (value.toString().startsWith(UTF8_BOM)) {
+          skipBOM = false;
+        }
+      }
+      ++numRecords;
+    }
+    reader.close();
+
+    assertTrue("BOM is not skipped", skipBOM);
+  }
 }

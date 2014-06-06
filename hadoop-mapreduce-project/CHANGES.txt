@@ -105,6 +105,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5895. Close streams properly to avoid leakage in TaskLog. 
     (Kousuke Saruta via devaraj)
 
+    MAPREDUCE-5777. Support utf-8 text with Byte Order Marker.
+    (Zhihai Xu via kasha)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
