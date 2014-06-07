@@ -124,6 +124,9 @@ Release 2.5.0 - UNRELEASED
 
     YARN-1977. Add tests on getApplicationRequest with filtering start time range. (junping_du)
 
+    YARN-2122. In AllocationFileLoaderService, the reloadThread should be created
+    in init() and started in start(). (Robert Kanter via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -149,6 +152,7 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10562 (Ming Ma via Arpit Agarwal)
 
     YARN-2011. Fix typo and warning in TestLeafQueue (Chen He via junping_du)
+
 
     YARN-2042. String shouldn't be compared using == in
     QueuePlacementRule#NestedUserQueue#getQueueForApp (Chen He via Sandy Ryza)
