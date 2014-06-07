@@ -79,6 +79,7 @@ public class SchedulerApplicationAttempt {
   protected Resource currentConsumption = Resource.newInstance(0, 0);
   private Resource amResource;
   private boolean unmanagedAM = true;
+  private boolean amRunning = false;
 
   protected List<RMContainer> newlyAllocatedContainers = 
       new ArrayList<RMContainer>();
@@ -110,7 +111,6 @@ public class SchedulerApplicationAttempt {
             activeUsersManager);
     this.queue = queue;
 
-
     if (rmContext != null && rmContext.getRMApps() != null &&
         rmContext.getRMApps()
             .containsKey(applicationAttemptId.getApplicationId())) {
@@ -118,7 +118,6 @@ public class SchedulerApplicationAttempt {
           rmContext.getRMApps().get(applicationAttemptId.getApplicationId())
               .getApplicationSubmissionContext();
       if (appSubmissionContext != null) {
-        amResource = appSubmissionContext.getResource();
         unmanagedAM = appSubmissionContext.getUnmanagedAM();
       }
     }
@@ -186,6 +185,18 @@ public class SchedulerApplicationAttempt {
   
   public Resource getAMResource() {
     return amResource;
+  }
+
+  public void setAMResource(Resource amResource) {
+    this.amResource = amResource;
+  }
+
+  public boolean isAmRunning() {
+    return amRunning;
+  }
+
+  public void setAmRunning(boolean bool) {
+    amRunning = bool;
   }
 
   public boolean getUnmanagedAM() {

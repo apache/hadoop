@@ -836,6 +836,12 @@ public class FairScheduler extends
     SchedulerUtils.normalizeRequests(ask, new DominantResourceCalculator(),
         clusterResource, minimumAllocation, maximumAllocation, incrAllocation);
 
+    // Set amResource for this app
+    if (!application.getUnmanagedAM() && ask.size() == 1
+        && application.getLiveContainers().isEmpty()) {
+      application.setAMResource(ask.get(0).getCapability());
+    }
+
     // Release containers
     for (ContainerId releasedContainerId : release) {
       RMContainer rmContainer = getRMContainer(releasedContainerId);
