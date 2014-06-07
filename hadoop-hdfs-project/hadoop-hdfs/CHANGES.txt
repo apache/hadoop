@@ -479,6 +479,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6487. TestStandbyCheckpoint#testSBNCheckpoints is racy.
     (Mit Desai via wang)
 
+    HDFS-6297. Add CLI testcases to reflect new features of dfs and dfsadmin
+    (Dasha Boudnik via cos)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
