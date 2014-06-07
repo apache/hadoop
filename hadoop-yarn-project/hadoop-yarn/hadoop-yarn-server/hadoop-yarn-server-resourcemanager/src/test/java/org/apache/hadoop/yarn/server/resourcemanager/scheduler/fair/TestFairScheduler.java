@@ -2328,12 +2328,13 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.handle(nodeEvent);
     scheduler.update();
 
+    FSLeafQueue queue1 = scheduler.getQueueManager().getLeafQueue("queue1", true);
     assertEquals("Queue queue1's fair share should be 10240",
-        10240, scheduler.getQueueManager().getLeafQueue("queue1", true)
-            .getFairShare().getMemory());
+        10240, queue1.getFairShare().getMemory());
 
     Resource amResource1 = Resource.newInstance(1024, 1);
     Resource amResource2 = Resource.newInstance(2048, 2);
+    Resource amResource3 = Resource.newInstance(1860, 2);
     int amPriority = RMAppAttemptImpl.AM_CONTAINER_PRIORITY.getPriority();
     // Exceeds no limits
     ApplicationAttemptId attId1 = createAppAttemptId(1, 1);
@@ -2346,6 +2347,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         1024, app1.getAMResource().getMemory());
     assertEquals("Application1's AM should be running",
         1, app1.getLiveContainers().size());
+    assertEquals("Queue1's AM resource usage should be 1024 MB memory",
+        1024, queue1.getAmResourceUsage().getMemory());
 
     // Exceeds no limits
     ApplicationAttemptId attId2 = createAppAttemptId(2, 1);
@@ -2358,6 +2361,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         1024, app2.getAMResource().getMemory());
     assertEquals("Application2's AM should be running",
         1, app2.getLiveContainers().size());
+    assertEquals("Queue1's AM resource usage should be 2048 MB memory",
+        2048, queue1.getAmResourceUsage().getMemory());
 
     // Exceeds queue limit
     ApplicationAttemptId attId3 = createAppAttemptId(3, 1);
@@ -2370,6 +2375,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         1024, app3.getAMResource().getMemory());
     assertEquals("Application3's AM should not be running",
         0, app3.getLiveContainers().size());
+    assertEquals("Queue1's AM resource usage should be 2048 MB memory",
+        2048, queue1.getAmResourceUsage().getMemory());
 
     // Still can run non-AM container
     createSchedulingRequestExistingApplication(1024, 1, attId1);
@@ -2377,6 +2384,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.handle(updateEvent);
     assertEquals("Application1 should have two running containers",
         2, app1.getLiveContainers().size());
+    assertEquals("Queue1's AM resource usage should be 2048 MB memory",
+        2048, queue1.getAmResourceUsage().getMemory());
 
     // Remove app1, app3's AM should become running
     AppAttemptRemovedSchedulerEvent appRemovedEvent1 =
@@ -2388,6 +2397,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         0, app1.getLiveContainers().size());
     assertEquals("Application3's AM should be running",
         1, app3.getLiveContainers().size());
+    assertEquals("Queue1's AM resource usage should be 2048 MB memory",
+        2048, queue1.getAmResourceUsage().getMemory());
 
     // Exceeds queue limit
     ApplicationAttemptId attId4 = createAppAttemptId(4, 1);
@@ -2400,8 +2411,35 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         2048, app4.getAMResource().getMemory());
     assertEquals("Application4's AM should not be running",
         0, app4.getLiveContainers().size());
+    assertEquals("Queue1's AM resource usage should be 2048 MB memory",
+        2048, queue1.getAmResourceUsage().getMemory());
 
-    // Remove app2 and app3, app4's AM should become running
+    // Exceeds queue limit
+    ApplicationAttemptId attId5 = createAppAttemptId(5, 1);
+    createApplicationWithAMResource(attId5, "queue1", "user1", amResource2);
+    createSchedulingRequestExistingApplication(2048, 2, amPriority, attId5);
+    FSSchedulerApp app5 = scheduler.getSchedulerApp(attId5);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    assertEquals("Application5's AM requests 2048 MB memory",
+        2048, app5.getAMResource().getMemory());
+    assertEquals("Application5's AM should not be running",
+        0, app5.getLiveContainers().size());
+    assertEquals("Queue1's AM resource usage should be 2048 MB memory",
+        2048, queue1.getAmResourceUsage().getMemory());
+
+    // Remove un-running app doesn't affect others
+    AppAttemptRemovedSchedulerEvent appRemovedEvent4 =
+        new AppAttemptRemovedSchedulerEvent(attId4, RMAppAttemptState.KILLED, false);
+    scheduler.handle(appRemovedEvent4);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    assertEquals("Application5's AM should not be running",
+        0, app5.getLiveContainers().size());
+    assertEquals("Queue1's AM resource usage should be 2048 MB memory",
+        2048, queue1.getAmResourceUsage().getMemory());
+
+    // Remove app2 and app3, app5's AM should become running
     AppAttemptRemovedSchedulerEvent appRemovedEvent2 =
         new AppAttemptRemovedSchedulerEvent(attId2, RMAppAttemptState.FINISHED, false);
     AppAttemptRemovedSchedulerEvent appRemovedEvent3 =
@@ -2414,8 +2452,35 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         0, app2.getLiveContainers().size());
     assertEquals("Application3's AM should be finished",
         0, app3.getLiveContainers().size());
-    assertEquals("Application4's AM should be running",
-        1, app4.getLiveContainers().size());
+    assertEquals("Application5's AM should be running",
+        1, app5.getLiveContainers().size());
+    assertEquals("Queue1's AM resource usage should be 2048 MB memory",
+        2048, queue1.getAmResourceUsage().getMemory());
+
+    // Check amResource normalization
+    ApplicationAttemptId attId6 = createAppAttemptId(6, 1);
+    createApplicationWithAMResource(attId6, "queue1", "user1", amResource3);
+    createSchedulingRequestExistingApplication(1860, 2, amPriority, attId6);
+    FSSchedulerApp app6 = scheduler.getSchedulerApp(attId6);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    assertEquals("Application6's AM should not be running",
+        0, app6.getLiveContainers().size());
+    assertEquals("Application6's AM requests 2048 MB memory",
+        2048, app6.getAMResource().getMemory());
+    assertEquals("Queue1's AM resource usage should be 2048 MB memory",
+        2048, queue1.getAmResourceUsage().getMemory());
+
+    // Remove all apps
+    AppAttemptRemovedSchedulerEvent appRemovedEvent5 =
+        new AppAttemptRemovedSchedulerEvent(attId5, RMAppAttemptState.FINISHED, false);
+    AppAttemptRemovedSchedulerEvent appRemovedEvent6 =
+        new AppAttemptRemovedSchedulerEvent(attId6, RMAppAttemptState.FINISHED, false);
+    scheduler.handle(appRemovedEvent5);
+    scheduler.handle(appRemovedEvent6);
+    scheduler.update();
+    assertEquals("Queue1's AM resource usage should be 0",
+        0, queue1.getAmResourceUsage().getMemory());
   }
 
   @Test

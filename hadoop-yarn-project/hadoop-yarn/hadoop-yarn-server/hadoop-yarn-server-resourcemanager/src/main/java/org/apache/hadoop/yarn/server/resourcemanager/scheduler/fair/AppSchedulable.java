@@ -271,6 +271,7 @@ public class AppSchedulable extends Schedulable {
       if (app.getLiveContainers().size() == 1 &&
           !app.getUnmanagedAM()) {
         queue.addAMResourceUsage(container.getResource());
+        app.setAmRunning(true);
       }
 
       return container.getResource();

@@ -193,6 +193,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2121. Fixed NPE handling in Timeline Server's TimelineAuthenticator.
     (Zhijie Shen via vinodkv)
 
+    YARN-2128. FairScheduler: Incorrect calculation of amResource usage.
+    (Wei Yan via kasha)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
