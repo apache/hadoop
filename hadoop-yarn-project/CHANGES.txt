@@ -127,6 +127,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2122. In AllocationFileLoaderService, the reloadThread should be created
     in init() and started in start(). (Robert Kanter via kasha)
 
+    YARN-2132. ZKRMStateStore.ZKAction#runWithRetries doesn't log the exception
+    it encounters. (Vamsee Yarlagadda via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 
