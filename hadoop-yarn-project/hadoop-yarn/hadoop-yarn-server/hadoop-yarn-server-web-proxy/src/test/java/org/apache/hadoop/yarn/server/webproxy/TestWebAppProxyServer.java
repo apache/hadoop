@@ -25,8 +25,11 @@ import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServer;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.net.InetSocketAddress;
 
 public class TestWebAppProxyServer {
   private WebAppProxyServer webAppProxy = null;
@@ -55,5 +58,15 @@ public class TestWebAppProxyServer {
       }
     }
     assertEquals(STATE.STARTED, webAppProxy.getServiceState());
+  }
+
+  @Test
+  public void testBindAddress() {
+    YarnConfiguration conf = new YarnConfiguration();
+
+    InetSocketAddress defaultBindAddress = WebAppProxyServer.getBindAddress(conf);
+    Assert.assertEquals("Web Proxy default bind address port is incorrect",
+        YarnConfiguration.DEFAULT_PROXY_PORT,
+        defaultBindAddress.getPort());
   }
 }

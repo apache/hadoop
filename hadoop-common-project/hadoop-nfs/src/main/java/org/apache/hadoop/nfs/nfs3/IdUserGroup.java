@@ -50,9 +50,6 @@ public class IdUserGroup {
   static final String MAC_GET_ALL_USERS_CMD = "dscl . -list /Users UniqueID";
   static final String MAC_GET_ALL_GROUPS_CMD = "dscl . -list /Groups PrimaryGroupID";
 
-  // Used for finding the configured static mapping file.
-  static final String NFS_STATIC_MAPPING_FILE_KEY = "dfs.nfs.static.mapping.file";
-  private static final String NFS_STATIC_MAPPING_FILE_DEFAULT = "/etc/nfs.map";
   private final File staticMappingFile;
 
   // Used for parsing the static mapping file.
@@ -61,11 +58,7 @@ public class IdUserGroup {
   private static final Pattern MAPPING_LINE =
       Pattern.compile("^(uid|gid)\\s+(\\d+)\\s+(\\d+)\\s*(#.*)?$");
 
-  // Do update every 15 minutes by default
-  final static long TIMEOUT_DEFAULT = 15 * 60 * 1000; // ms
-  final static long TIMEOUT_MIN = 1 * 60 * 1000; // ms
   final private long timeout;
-  final static String NFS_USERUPDATE_MILLY = "hadoop.nfs.userupdate.milly";
   
   // Maps for id to name map. Guarded by this object monitor lock
   private BiMap<Integer, String> uidNameMap = HashBiMap.create();
@@ -73,25 +66,21 @@ public class IdUserGroup {
 
   private long lastUpdateTime = 0; // Last time maps were updated
   
-  public IdUserGroup() throws IOException {
-    timeout = TIMEOUT_DEFAULT;
-    staticMappingFile = new File(NFS_STATIC_MAPPING_FILE_DEFAULT);
-    updateMaps();
-  }
-  
   public IdUserGroup(Configuration conf) throws IOException {
-    long updateTime = conf.getLong(NFS_USERUPDATE_MILLY, TIMEOUT_DEFAULT);
+    long updateTime = conf.getLong(
+        Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_KEY,
+        Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_DEFAULT);
     // Minimal interval is 1 minute
-    if (updateTime < TIMEOUT_MIN) {
+    if (updateTime < Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_MIN) {
       LOG.info("User configured user account update time is less"
           + " than 1 minute. Use 1 minute instead.");
-      timeout = TIMEOUT_MIN;
+      timeout = Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_MIN;
     } else {
       timeout = updateTime;
     }
     
-    String staticFilePath = conf.get(NFS_STATIC_MAPPING_FILE_KEY,
-        NFS_STATIC_MAPPING_FILE_DEFAULT);
+    String staticFilePath = conf.get(Nfs3Constant.NFS_STATIC_MAPPING_FILE_KEY,
+        Nfs3Constant.NFS_STATIC_MAPPING_FILE_DEFAULT);
     staticMappingFile = new File(staticFilePath);
     
     updateMaps();

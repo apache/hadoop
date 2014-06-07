@@ -89,6 +89,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSc
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
+
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.Lock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
@@ -111,7 +112,6 @@ public class FifoScheduler extends
 
   Configuration conf;
 
-  private boolean initialized;
   private boolean usePortForNodeName;
 
   private ActiveUsersManager activeUsersManager;
@@ -180,6 +180,47 @@ public class FifoScheduler extends
     }
   };
 
+  public FifoScheduler() {
+    super(FifoScheduler.class.getName());
+  }
+
+  private synchronized void initScheduler(Configuration conf) {
+    validateConf(conf);
+    //Use ConcurrentSkipListMap because applications need to be ordered
+    this.applications =
+        new ConcurrentSkipListMap<ApplicationId, SchedulerApplication<FiCaSchedulerApp>>();
+    this.minimumAllocation =
+        Resources.createResource(conf.getInt(
+            YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB));
+    this.maximumAllocation =
+        Resources.createResource(conf.getInt(
+            YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB));
+    this.usePortForNodeName = conf.getBoolean(
+        YarnConfiguration.RM_SCHEDULER_INCLUDE_PORT_IN_NODE_NAME,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_USE_PORT_FOR_NODE_NAME);
+    this.metrics = QueueMetrics.forQueue(DEFAULT_QUEUE_NAME, null, false,
+        conf);
+    this.activeUsersManager = new ActiveUsersManager(metrics);
+  }
+
+  @Override
+  public void serviceInit(Configuration conf) throws Exception {
+    initScheduler(conf);
+    super.serviceInit(conf);
+  }
+
+  @Override
+  public void serviceStart() throws Exception {
+    super.serviceStart();
+  }
+
+  @Override
+  public void serviceStop() throws Exception {
+    super.serviceStop();
+  }
+
   @Override
   public synchronized void setConf(Configuration conf) {
     this.conf = conf;
@@ -216,34 +257,16 @@ public class FifoScheduler extends
   }
 
   @Override
+  public synchronized void setRMContext(RMContext rmContext) {
+    this.rmContext = rmContext;
+  }
+
+  @Override
   public synchronized void
       reinitialize(Configuration conf, RMContext rmContext) throws IOException
   {
     setConf(conf);
-    if (!this.initialized) {
-      validateConf(conf);
-      this.rmContext = rmContext;
-      //Use ConcurrentSkipListMap because applications need to be ordered
-      this.applications =
-          new ConcurrentSkipListMap<ApplicationId, SchedulerApplication<FiCaSchedulerApp>>();
-      this.minimumAllocation = 
-        Resources.createResource(conf.getInt(
-            YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
-            YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB));
-      this.maximumAllocation = 
-        Resources.createResource(conf.getInt(
-            YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
-            YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB));
-      this.usePortForNodeName = conf.getBoolean(
-          YarnConfiguration.RM_SCHEDULER_INCLUDE_PORT_IN_NODE_NAME, 
-          YarnConfiguration.DEFAULT_RM_SCHEDULER_USE_PORT_FOR_NODE_NAME);
-      this.metrics = QueueMetrics.forQueue(DEFAULT_QUEUE_NAME, null, false,
-          conf);
-      this.activeUsersManager = new ActiveUsersManager(metrics);
-      this.initialized = true;
-    }
   }
-
 
   @Override
   public Allocation allocate(

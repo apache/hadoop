@@ -188,33 +188,33 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
     String locationProperty =
       resolvePropertyName(mode, SSL_TRUSTSTORE_LOCATION_TPL_KEY);
     String truststoreLocation = conf.get(locationProperty, "");
-    if (truststoreLocation.isEmpty()) {
-      throw new GeneralSecurityException("The property '" + locationProperty +
-        "' has not been set in the ssl configuration file.");
+    if (!truststoreLocation.isEmpty()) {
+      String passwordProperty = resolvePropertyName(mode,
+          SSL_TRUSTSTORE_PASSWORD_TPL_KEY);
+      String truststorePassword = conf.get(passwordProperty, "");
+      if (truststorePassword.isEmpty()) {
+        throw new GeneralSecurityException("The property '" + passwordProperty +
+            "' has not been set in the ssl configuration file.");
+      }
+      long truststoreReloadInterval =
+          conf.getLong(
+              resolvePropertyName(mode, SSL_TRUSTSTORE_RELOAD_INTERVAL_TPL_KEY),
+              DEFAULT_SSL_TRUSTSTORE_RELOAD_INTERVAL);
+
+      LOG.debug(mode.toString() + " TrustStore: " + truststoreLocation);
+
+      trustManager = new ReloadingX509TrustManager(truststoreType,
+          truststoreLocation,
+          truststorePassword,
+          truststoreReloadInterval);
+      trustManager.init();
+      LOG.debug(mode.toString() + " Loaded TrustStore: " + truststoreLocation);
+      trustManagers = new TrustManager[]{trustManager};
+    } else {
+      LOG.warn("The property '" + locationProperty + "' has not been set, " +
+          "no TrustStore will be loaded");
+      trustManagers = null;
     }
-
-    String passwordProperty = resolvePropertyName(mode,
-                                                  SSL_TRUSTSTORE_PASSWORD_TPL_KEY);
-    String truststorePassword = conf.get(passwordProperty, "");
-    if (truststorePassword.isEmpty()) {
-      throw new GeneralSecurityException("The property '" + passwordProperty +
-        "' has not been set in the ssl configuration file.");
-    }
-    long truststoreReloadInterval =
-      conf.getLong(
-        resolvePropertyName(mode, SSL_TRUSTSTORE_RELOAD_INTERVAL_TPL_KEY),
-        DEFAULT_SSL_TRUSTSTORE_RELOAD_INTERVAL);
-
-    LOG.debug(mode.toString() + " TrustStore: " + truststoreLocation);
-
-    trustManager = new ReloadingX509TrustManager(truststoreType,
-                                                 truststoreLocation,
-                                                 truststorePassword,
-                                                 truststoreReloadInterval);
-    trustManager.init();
-    LOG.debug(mode.toString() + " Loaded TrustStore: " + truststoreLocation);
-
-    trustManagers = new TrustManager[]{trustManager};
   }
 
   /**

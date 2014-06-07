@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
@@ -41,7 +42,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 public abstract class AbstractYarnScheduler
     <T extends SchedulerApplicationAttempt, N extends SchedulerNode>
-    implements ResourceScheduler {
+    extends AbstractService implements ResourceScheduler {
 
   private static final Log LOG = LogFactory.getLog(AbstractYarnScheduler.class);
 
@@ -61,6 +62,15 @@ public abstract class AbstractYarnScheduler
       new ArrayList<Container>();
   protected static final Allocation EMPTY_ALLOCATION = new Allocation(
     EMPTY_CONTAINER_LIST, Resources.createResource(0), null, null, null);
+
+  /**
+   * Construct the service.
+   *
+   * @param name service name
+   */
+  public AbstractYarnScheduler(String name) {
+    super(name);
+  }
 
   public synchronized List<Container> getTransferredContainers(
       ApplicationAttemptId currentAttempt) {

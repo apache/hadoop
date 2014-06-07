@@ -111,6 +111,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_DATANODE_DROP_CACHE_BEHIND_WRITES_DEFAULT = false;
   public static final String  DFS_DATANODE_SYNC_BEHIND_WRITES_KEY = "dfs.datanode.sync.behind.writes";
   public static final boolean DFS_DATANODE_SYNC_BEHIND_WRITES_DEFAULT = false;
+  public static final String  DFS_DATANODE_SYNC_BEHIND_WRITES_IN_BACKGROUND_KEY = "dfs.datanode.sync.behind.writes.in.background";
+  public static final boolean DFS_DATANODE_SYNC_BEHIND_WRITES_IN_BACKGROUND_DEFAULT = false;
   public static final String  DFS_DATANODE_DROP_CACHE_BEHIND_READS_KEY = "dfs.datanode.drop.cache.behind.reads";
   public static final boolean DFS_DATANODE_DROP_CACHE_BEHIND_READS_DEFAULT = false;
   public static final String  DFS_DATANODE_USE_DN_HOSTNAME = "dfs.datanode.use.datanode.hostname";
@@ -639,12 +641,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE =
       "dfs.client.hedged.read.threadpool.size";
   public static final int     DEFAULT_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE = 0;
-  public static final String  DFS_NFS_KEYTAB_FILE_KEY = "dfs.nfs.keytab.file";
-  public static final String  DFS_NFS_KERBEROS_PRINCIPAL_KEY = "dfs.nfs.kerberos.principal";
-  public static final String  DFS_NFS_REGISTRATION_PORT_KEY = "dfs.nfs.registration.port";
-  public static final int     DFS_NFS_REGISTRATION_PORT_DEFAULT = 40; // Currently unassigned.
-  public static final String  DFS_NFS_ALLOW_INSECURE_PORTS_KEY = "dfs.nfs.allow.insecure.ports";
-  public static final boolean DFS_NFS_ALLOW_INSECURE_PORTS_DEFAULT = true;
 
    // Slow io warning log threshold settings for dfsclient and datanode.
    public static final String DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_KEY =

@@ -1296,8 +1296,56 @@
     non-zero integer.
   </description>
 </property>
+
 <property>
-  <name>dfs.nfs.keytab.file</name>
+  <name>nfs.server.port</name>
+  <value>2049</value>
+  <description>
+      Specify the port number used by Hadoop NFS.
+  </description>
+</property>
+
+<property>
+  <name>nfs.mountd.port</name>
+  <value>4242</value>
+  <description>
+      Specify the port number used by Hadoop mount daemon.
+  </description>
+</property>
+
+<property>    
+  <name>nfs.dump.dir</name>
+  <value>/tmp/.hdfs-nfs</value>
+  <description>
+    This directory is used to temporarily save out-of-order writes before
+    writing to HDFS. For each file, the out-of-order writes are dumped after
+    they are accumulated to exceed certain threshold (e.g., 1MB) in memory. 
+    One needs to make sure the directory has enough space.
+  </description>
+</property>
+
+<property>
+  <name>nfs.rtmax</name>
+  <value>1048576</value>
+  <description>This is the maximum size in bytes of a READ request
+    supported by the NFS gateway. If you change this, make sure you
+    also update the nfs mount's rsize(add rsize= # of bytes to the 
+    mount directive).
+  </description>
+</property>
+
+<property>
+  <name>nfs.wtmax</name>
+  <value>1048576</value>
+  <description>This is the maximum size in bytes of a WRITE request
+    supported by the NFS gateway. If you change this, make sure you
+    also update the nfs mount's wsize(add wsize= # of bytes to the 
+    mount directive).
+  </description>
+</property>
+
+<property>
+  <name>nfs.keytab.file</name>
   <value></value>
   <description>
     *Note*: Advanced property. Change with caution.
@@ -1307,7 +1355,7 @@
 </property>
 
 <property>
-  <name>dfs.nfs.kerberos.principal</name>
+  <name>nfs.kerberos.principal</name>
   <value></value>
   <description>
     *Note*: Advanced property. Change with caution.
@@ -1318,7 +1366,7 @@
 </property>
 
 <property>
-  <name>dfs.nfs.allow.insecure.ports</name>
+  <name>nfs.allow.insecure.ports</name>
   <value>true</value>
   <description>
     When set to false, client connections originating from unprivileged ports

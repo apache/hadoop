@@ -23,8 +23,8 @@ import java.net.InetAddress;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
 import org.apache.hadoop.hdfs.nfs.mount.RpcProgramMountd;
 import org.apache.hadoop.hdfs.nfs.nfs3.Nfs3;
 import org.apache.hadoop.hdfs.nfs.nfs3.RpcProgramNfs3;
@@ -38,7 +38,7 @@ public class TestMountd {
   @Test
   public void testStart() throws IOException {
     // Start minicluster
-    Configuration config = new Configuration();
+    NfsConfiguration config = new NfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(config).numDataNodes(1)
         .build();
     cluster.waitActive();

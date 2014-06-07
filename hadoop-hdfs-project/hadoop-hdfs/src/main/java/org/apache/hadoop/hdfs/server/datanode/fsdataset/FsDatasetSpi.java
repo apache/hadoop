@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset;
 
 
 import java.io.File;
+import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -431,5 +432,12 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * @return true when trash is enabled
    */
   public boolean trashEnabled(String bpid);
+
+  /**
+   * submit a sync_file_range request to AsyncDiskService
+   */
+  public void submitBackgroundSyncFileRangeRequest(final ExtendedBlock block,
+      final FileDescriptor fd, final long offset, final long nbytes,
+      final int flags);
 }
 

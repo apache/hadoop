@@ -324,11 +324,11 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_ZK_ADDRESS = RM_ZK_PREFIX + "address";
 
   public static final String RM_ZK_NUM_RETRIES = RM_ZK_PREFIX + "num-retries";
-  public static final int DEFAULT_ZK_RM_NUM_RETRIES = 500;
+  public static final int DEFAULT_ZK_RM_NUM_RETRIES = 1000;
 
   public static final String RM_ZK_RETRY_INTERVAL_MS =
       RM_ZK_PREFIX + "retry-interval-ms";
-  public static final long DEFAULT_RM_ZK_RETRY_INTERVAL_MS = 2000;
+  public static final long DEFAULT_RM_ZK_RETRY_INTERVAL_MS = 1000;
 
   public static final String RM_ZK_TIMEOUT_MS = RM_ZK_PREFIX + "timeout-ms";
   public static final int DEFAULT_RM_ZK_TIMEOUT_MS = 10000;
@@ -908,7 +908,7 @@ public class YarnConfiguration extends Configuration {
     PROXY_PREFIX + "address";
   public static final int DEFAULT_PROXY_PORT = 9099;
   public static final String DEFAULT_PROXY_ADDRESS =
-    "0.0.0.0:" + DEFAULT_RM_PORT;
+    "0.0.0.0:" + DEFAULT_PROXY_PORT;
   
   /**
    * YARN Service Level Authorization

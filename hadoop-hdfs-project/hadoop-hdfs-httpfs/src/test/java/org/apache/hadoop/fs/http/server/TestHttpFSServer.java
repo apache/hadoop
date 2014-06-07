@@ -231,6 +231,105 @@ public class TestHttpFSServer extends HFSTestCase {
     reader.close();
   }
 
+  /**
+   * Talks to the http interface to create a file.
+   *
+   * @param filename The file to create
+   * @param perms The permission field, if any (may be null)
+   * @throws Exception
+   */
+  private void createWithHttp ( String filename, String perms )
+          throws Exception {
+    String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
+    String pathOps;
+    if ( perms == null ) {
+      pathOps = MessageFormat.format(
+              "/webhdfs/v1/{0}?user.name={1}&op=CREATE",
+              filename, user);
+    } else {
+      pathOps = MessageFormat.format(
+              "/webhdfs/v1/{0}?user.name={1}&permission={2}&op=CREATE",
+              filename, user, perms);
+    }
+    URL url = new URL(TestJettyHelper.getJettyURL(), pathOps);
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.addRequestProperty("Content-Type", "application/octet-stream");
+    conn.setRequestMethod("PUT");
+    conn.connect();
+    Assert.assertEquals(HttpURLConnection.HTTP_CREATED, conn.getResponseCode());
+  }
+
+  /**
+   * Talks to the http interface to get the json output of the GETFILESTATUS
+   * command on the given file.
+   *
+   * @param filename The file to query.
+   * @return A string containing the JSON output describing the file.
+   * @throws Exception
+   */
+  private String getFileStatus ( String filename ) throws Exception {
+    String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
+    String pathOps = MessageFormat.format(
+            "/webhdfs/v1/{0}?user.name={1}&op=GETFILESTATUS",
+            filename, user);
+    URL url = new URL(TestJettyHelper.getJettyURL(), pathOps);
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.connect();
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+
+    BufferedReader reader =
+            new BufferedReader(new InputStreamReader(conn.getInputStream()));
+
+    return reader.readLine();
+  }
+
+  /**
+   * Given the JSON output from the GETFILESTATUS call, return the
+   * 'permission' value.
+   *
+   * @param statusJson JSON from GETFILESTATUS
+   * @return The value of 'permission' in statusJson
+   * @throws Exception
+   */
+  private String getPerms ( String statusJson ) throws Exception {
+    JSONParser parser = new JSONParser();
+    JSONObject jsonObject = (JSONObject) parser.parse(statusJson);
+    JSONObject details = (JSONObject) jsonObject.get("FileStatus");
+    return (String) details.get("permission");
+  }
+
+  /**
+   * Validate that files are created with 755 permissions when no
+   * 'permissions' attribute is specified, and when 'permissions'
+   * is specified, that value is honored.
+   */
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testPerms() throws Exception {
+    createHttpFSServer(false);
+
+    FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
+    fs.mkdirs(new Path("/perm"));
+
+    createWithHttp("/perm/none", null);
+    String statusJson = getFileStatus("/perm/none");
+    Assert.assertTrue("755".equals(getPerms(statusJson)));
+
+    createWithHttp("/perm/p-777", "777");
+    statusJson = getFileStatus("/perm/p-777");
+    Assert.assertTrue("777".equals(getPerms(statusJson)));
+
+    createWithHttp("/perm/p-654", "654");
+    statusJson = getFileStatus("/perm/p-654");
+    Assert.assertTrue("654".equals(getPerms(statusJson)));
+
+    createWithHttp("/perm/p-321", "321");
+    statusJson = getFileStatus("/perm/p-321");
+    Assert.assertTrue("321".equals(getPerms(statusJson)));
+  }
+
   @Test
   @TestDir
   @TestJetty

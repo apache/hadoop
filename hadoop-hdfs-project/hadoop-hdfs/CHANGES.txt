@@ -254,6 +254,9 @@ Trunk (Unreleased)
     HDFS-5794. Fix the inconsistency of layout version number of 
     ADD_DATANODE_AND_STORAGE_UUIDS between trunk and branch-2. (jing9)
 
+    HDFS-6464. Support multiple xattr.name parameters for WebHDFS getXAttrs.
+    (Yi Liu via umamahesh)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
@@ -317,8 +320,8 @@ Trunk (Unreleased)
     HDFS-6374. setXAttr should require the user to be the owner of the file
     or directory (Charles Lamb via wang)
 
-    HDFS-6110 adding more slow action log in critical write path
-    (Liang Xie via stack)
+    HDFS-6375. Listing extended attributes with the search permission.
+    (Charles Lamb via wang)
 
 Release 2.5.0 - UNRELEASED
 
@@ -452,10 +455,32 @@ Release 2.5.0 - UNRELEASED
     HDFS-6356. Fix typo in DatanodeLayoutVersion. (Tulasi G via wang)
 
     HDFS-6447. balancer should timestamp the completion message.
-    (Juan Yu via wang).
+    (Juan Yu via wang)
 
     HDFS-6463. Clarify behavior of AclStorage#createFsPermissionForExtendedAcl
     in comments. (cnauroth)
+
+    HDFS-6472. fix typo in webapps/hdfs/explorer.js. (Juan Yu via wang)
+
+    HDFS-6056. Clean up NFS config settings (brandonli)
+
+    HDFS-6110 adding more slow action log in critical write path
+    (Liang Xie via stack)
+
+    HDFS-6109 let sync_file_range() system call run in background
+    (Liang Xie via stack)
+
+    HDFS-6268. Better sorting in NetworkTopology#pseudoSortByDistance when
+    no local node is found. (wang)
+
+    HDFS-6369. Document that BlockReader#available() can return more bytes than
+    are remaining in the block (Ted Yu via Colin Patrick McCabe)
+
+    HDFS-6487. TestStandbyCheckpoint#testSBNCheckpoints is racy.
+    (Mit Desai via wang)
+
+    HDFS-6297. Add CLI testcases to reflect new features of dfs and dfsadmin
+    (Dasha Boudnik via cos)
 
   OPTIMIZATIONS
 
@@ -619,6 +644,15 @@ Release 2.5.0 - UNRELEASED
     (James Thomas via wang)
 
     HDFS-6462. NFS: fsstat request fails with the secure hdfs (brandonli)
+
+    HDFS-6404. HttpFS should use a 000 umask for mkdir and create 
+    operations. (yoderme via tucu)
+
+    HDFS-6424. blockReport doesn't need to invalidate blocks on SBN. (Ming Ma
+    via jing9)
+
+    HDFS-6497. Make TestAvailableSpaceVolumeChoosingPolicy deterministic
+    (cmccabe)
 
 Release 2.4.1 - UNRELEASED
 

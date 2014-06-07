@@ -21,9 +21,8 @@ import java.net.InetSocketAddress;
 
 import org.apache.commons.daemon.Daemon;
 import org.apache.commons.daemon.DaemonContext;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
 
 /**
  * This class is used to allow the initial registration of the NFS gateway with
@@ -42,12 +41,12 @@ public class PrivilegedNfsGatewayStarter implements Daemon {
   @Override
   public void init(DaemonContext context) throws Exception {
     System.err.println("Initializing privileged NFS client socket...");
-    Configuration conf = new HdfsConfiguration();
-    int clientPort = conf.getInt(DFSConfigKeys.DFS_NFS_REGISTRATION_PORT_KEY,
-        DFSConfigKeys.DFS_NFS_REGISTRATION_PORT_DEFAULT);
+    NfsConfiguration conf = new NfsConfiguration();
+    int clientPort = conf.getInt(NfsConfigKeys.DFS_NFS_REGISTRATION_PORT_KEY,
+        NfsConfigKeys.DFS_NFS_REGISTRATION_PORT_DEFAULT);
     if (clientPort < 1 || clientPort > 1023) {
       throw new RuntimeException("Must start privileged NFS server with '" +
-          DFSConfigKeys.DFS_NFS_REGISTRATION_PORT_KEY + "' configured to a " +
+          NfsConfigKeys.DFS_NFS_REGISTRATION_PORT_KEY + "' configured to a " +
           "privileged port.");
     }
     registrationSocket = new DatagramSocket(

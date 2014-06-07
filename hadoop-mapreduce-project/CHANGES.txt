@@ -142,6 +142,9 @@ Trunk (Unreleased)
     MAPREDUCE-5867. Fix NPE in KillAMPreemptionPolicy related to 
     ProportionalCapacityPreemptionPolicy (Sunil G via devaraj)
 
+    MAPREDUCE-5898. distcp to support preserving HDFS extended attributes(XAttrs)
+    (Yi Liu via umamahesh)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -246,6 +249,9 @@ Release 2.5.0 - UNRELEASED
 
     MAPREDUCE-5895. Close streams properly to avoid leakage in TaskLog. 
     (Kousuke Saruta via devaraj)
+
+    MAPREDUCE-5777. Support utf-8 text with Byte Order Marker.
+    (Zhihai Xu via kasha)
 
 Release 2.4.1 - UNRELEASED
 

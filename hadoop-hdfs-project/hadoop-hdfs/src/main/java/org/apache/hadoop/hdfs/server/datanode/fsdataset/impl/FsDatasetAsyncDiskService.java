@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.File;
+import java.io.FileDescriptor;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -31,6 +32,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
+import org.apache.hadoop.io.nativeio.NativeIO;
+import org.apache.hadoop.io.nativeio.NativeIOException;
 
 /**
  * This class is a container of multiple thread pools, each for a volume,
@@ -42,6 +45,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
  * can be slow, and we don't want to use a single thread pool because that
  * is inefficient when we have more than 1 volume.  AsyncDiskService is the
  * solution for these.
+ * Another example of async disk operation is requesting sync_file_range().
  * 
  * This class and {@link org.apache.hadoop.util.AsyncDiskService} are similar.
  * They should be combined.
@@ -146,6 +150,21 @@ class FsDatasetAsyncDiskService {
       
       LOG.info("All async disk service threads have been shut down");
     }
+  }
+
+  public void submitSyncFileRangeRequest(FsVolumeImpl volume,
+      final FileDescriptor fd, final long offset, final long nbytes,
+      final int flags) {
+    execute(volume.getCurrentDir(), new Runnable() {
+      @Override
+      public void run() {
+        try {
+          NativeIO.POSIX.syncFileRangeIfPossible(fd, offset, nbytes, flags);
+        } catch (NativeIOException e) {
+          LOG.warn("sync_file_range error", e);
+        }
+      }
+    });
   }
 
   /**

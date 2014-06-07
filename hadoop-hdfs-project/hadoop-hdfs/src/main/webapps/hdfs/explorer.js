@@ -45,7 +45,7 @@
     return function (jqxhr, text, err) {
       switch(jqxhr.status) {
         case 401:
-          var msg = '<p>Authentication failed when trying to open ' + url + ': Unauthrozied.</p>';
+          var msg = '<p>Authentication failed when trying to open ' + url + ': Unauthorized.</p>';
           break;
         case 403:
           if(jqxhr.responseJSON !== undefined && jqxhr.responseJSON.RemoteException !== undefined) {

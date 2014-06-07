@@ -152,7 +152,7 @@ public class XAttrHelper {
   public static List<XAttr> buildXAttrs(List<String> names) {
     if (names == null || names.isEmpty()) {
       throw new HadoopIllegalArgumentException("XAttr names can not be " +
-      		"null or empty.");
+          "null or empty.");
     }
     
     List<XAttr> xAttrs = Lists.newArrayListWithCapacity(names.size());

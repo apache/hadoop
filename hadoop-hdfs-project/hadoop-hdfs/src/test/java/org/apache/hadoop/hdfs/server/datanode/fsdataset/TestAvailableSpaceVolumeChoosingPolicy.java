@@ -22,6 +22,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_AVAILABLE_SPACE_
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -251,10 +252,10 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
    */
   public void doRandomizedTest(float preferencePercent, int lowSpaceVolumes,
       int highSpaceVolumes) throws Exception {
-    @SuppressWarnings("unchecked")
-    final AvailableSpaceVolumeChoosingPolicy<FsVolumeSpi> policy = 
-        ReflectionUtils.newInstance(AvailableSpaceVolumeChoosingPolicy.class, null);
-    
+    Random random = new Random(123L);
+    final AvailableSpaceVolumeChoosingPolicy<FsVolumeSpi> policy =
+        new AvailableSpaceVolumeChoosingPolicy<FsVolumeSpi>(random);
+
     List<FsVolumeSpi> volumes = new ArrayList<FsVolumeSpi>();
     
     // Volumes with 1MB free space

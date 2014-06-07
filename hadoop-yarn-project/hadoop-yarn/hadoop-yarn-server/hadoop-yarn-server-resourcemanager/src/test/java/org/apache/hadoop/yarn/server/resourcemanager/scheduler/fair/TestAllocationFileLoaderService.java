@@ -174,9 +174,10 @@ public class TestAllocationFileLoaderService {
     out.println("<queue name=\"queueC\">");
     out.println("<aclSubmitApps>alice,bob admins</aclSubmitApps>");
     out.println("</queue>");
-    // Give queue D a limit of 3 running apps
+    // Give queue D a limit of 3 running apps and 0.4f maxAMShare
     out.println("<queue name=\"queueD\">");
     out.println("<maxRunningApps>3</maxRunningApps>");
+    out.println("<maxAMShare>0.4</maxAMShare>");
     out.println("</queue>");
     // Give queue E a preemption timeout of one minute
     out.println("<queue name=\"queueE\">");
@@ -194,6 +195,8 @@ public class TestAllocationFileLoaderService {
     out.println("<queueMaxAppsDefault>15</queueMaxAppsDefault>");
     // Set default limit of apps per user to 5
     out.println("<userMaxAppsDefault>5</userMaxAppsDefault>");
+    // Set default limit of AMResourceShare to 0.5f
+    out.println("<queueMaxAMShareDefault>0.5f</queueMaxAMShareDefault>");
     // Give user1 a limit of 10 jobs
     out.println("<user name=\"user1\">");
     out.println("<maxRunningApps>10</maxRunningApps>");
@@ -239,6 +242,13 @@ public class TestAllocationFileLoaderService {
     assertEquals(15, queueConf.getQueueMaxApps("root.queueE"));
     assertEquals(10, queueConf.getUserMaxApps("user1"));
     assertEquals(5, queueConf.getUserMaxApps("user2"));
+
+    assertEquals(.5f, queueConf.getQueueMaxAMShare("root." + YarnConfiguration.DEFAULT_QUEUE_NAME), 0.01);
+    assertEquals(.5f, queueConf.getQueueMaxAMShare("root.queueA"), 0.01);
+    assertEquals(.5f, queueConf.getQueueMaxAMShare("root.queueB"), 0.01);
+    assertEquals(.5f, queueConf.getQueueMaxAMShare("root.queueC"), 0.01);
+    assertEquals(.4f, queueConf.getQueueMaxAMShare("root.queueD"), 0.01);
+    assertEquals(.5f, queueConf.getQueueMaxAMShare("root.queueE"), 0.01);
 
     // Root should get * ACL
     assertEquals("*", queueConf.getQueueAcl("root",

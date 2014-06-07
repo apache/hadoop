@@ -423,7 +423,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       new DeprecationDelta("fs.default.name", 
         CommonConfigurationKeys.FS_DEFAULT_NAME_KEY),
       new DeprecationDelta("dfs.umaskmode",
-        CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY)
+        CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY),
+      new DeprecationDelta("dfs.nfs.exports.allowed.hosts",
+          CommonConfigurationKeys.NFS_EXPORTS_ALLOWED_HOSTS_KEY)
     };
 
   /**

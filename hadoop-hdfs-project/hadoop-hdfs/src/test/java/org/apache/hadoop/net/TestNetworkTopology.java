@@ -54,7 +54,8 @@ public class TestNetworkTopology {
         DFSTestUtil.getDatanodeDescriptor("4.4.4.4", "/d1/r2"),
         DFSTestUtil.getDatanodeDescriptor("5.5.5.5", "/d1/r2"),
         DFSTestUtil.getDatanodeDescriptor("6.6.6.6", "/d2/r3"),
-        DFSTestUtil.getDatanodeDescriptor("7.7.7.7", "/d2/r3")
+        DFSTestUtil.getDatanodeDescriptor("7.7.7.7", "/d2/r3"),
+        DFSTestUtil.getDatanodeDescriptor("8.8.8.8", "/d2/r3")
     };
     for (int i = 0; i < dataNodes.length; i++) {
       cluster.add(dataNodes[i]);
@@ -117,14 +118,14 @@ public class TestNetworkTopology {
   }
 
   @Test
-  public void testPseudoSortByDistance() throws Exception {
+  public void testSortByDistance() throws Exception {
     DatanodeDescriptor[] testNodes = new DatanodeDescriptor[3];
     
     // array contains both local node & local rack node
     testNodes[0] = dataNodes[1];
     testNodes[1] = dataNodes[2];
     testNodes[2] = dataNodes[0];
-    cluster.pseudoSortByDistance(dataNodes[0], testNodes );
+    cluster.sortByDistance(dataNodes[0], testNodes, 0xDEADBEEF);
     assertTrue(testNodes[0] == dataNodes[0]);
     assertTrue(testNodes[1] == dataNodes[1]);
     assertTrue(testNodes[2] == dataNodes[2]);
@@ -133,7 +134,7 @@ public class TestNetworkTopology {
     testNodes[0] = dataNodes[1];
     testNodes[1] = dataNodes[3];
     testNodes[2] = dataNodes[0];
-    cluster.pseudoSortByDistance(dataNodes[0], testNodes );
+    cluster.sortByDistance(dataNodes[0], testNodes, 0xDEADBEEF);
     assertTrue(testNodes[0] == dataNodes[0]);
     assertTrue(testNodes[1] == dataNodes[1]);
     assertTrue(testNodes[2] == dataNodes[3]);
@@ -142,21 +143,50 @@ public class TestNetworkTopology {
     testNodes[0] = dataNodes[5];
     testNodes[1] = dataNodes[3];
     testNodes[2] = dataNodes[1];
-    cluster.pseudoSortByDistance(dataNodes[0], testNodes );
+    cluster.sortByDistance(dataNodes[0], testNodes, 0xDEADBEEF);
     assertTrue(testNodes[0] == dataNodes[1]);
     assertTrue(testNodes[1] == dataNodes[3]);
     assertTrue(testNodes[2] == dataNodes[5]);
-    
+
     // array contains local rack node which happens to be in position 0
     testNodes[0] = dataNodes[1];
     testNodes[1] = dataNodes[5];
     testNodes[2] = dataNodes[3];
-    cluster.pseudoSortByDistance(dataNodes[0], testNodes );
-    // peudoSortByDistance does not take the "data center" layer into consideration 
+    cluster.sortByDistance(dataNodes[0], testNodes, 0xDEADBEEF);
+    assertTrue(testNodes[0] == dataNodes[1]);
+    assertTrue(testNodes[1] == dataNodes[3]);
+    assertTrue(testNodes[2] == dataNodes[5]);
+
+    // Same as previous, but with a different random seed to test randomization
+    testNodes[0] = dataNodes[1];
+    testNodes[1] = dataNodes[5];
+    testNodes[2] = dataNodes[3];
+    cluster.sortByDistance(dataNodes[0], testNodes, 0xDEAD);
+    // sortByDistance does not take the "data center" layer into consideration
     // and it doesn't sort by getDistance, so 1, 5, 3 is also valid here
     assertTrue(testNodes[0] == dataNodes[1]);
     assertTrue(testNodes[1] == dataNodes[5]);
     assertTrue(testNodes[2] == dataNodes[3]);
+
+    // Array is just local rack nodes
+    // Expect a random first node depending on the seed (normally the block ID).
+    DatanodeDescriptor first = null;
+    boolean foundRandom = false;
+    for (int i=5; i<=7; i++) {
+      testNodes[0] = dataNodes[5];
+      testNodes[1] = dataNodes[6];
+      testNodes[2] = dataNodes[7];
+      cluster.sortByDistance(dataNodes[i], testNodes, 0xBEADED+i);
+      if (first == null) {
+        first = testNodes[0];
+      } else {
+        if (first != testNodes[0]) {
+          foundRandom = true;
+          break;
+        }
+      }
+    }
+    assertTrue("Expected to find a different first location", foundRandom);
   }
   
   @Test

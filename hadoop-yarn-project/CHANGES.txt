@@ -29,6 +29,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1362. Distinguish between nodemanager shutdown for decommission vs shutdown 
     for restart. (Jason Lowe via junping_du)
 
+    YARN-1338. Recover localized resource cache state upon nodemanager restart 
+    (Jason Lowe via junping_du)
+
   IMPROVEMENTS
 
     YARN-1479. Invalid NaN values in Hadoop REST API JSON response (Chen He via
@@ -117,6 +120,31 @@ Release 2.5.0 - UNRELEASED
     YARN-596. Use scheduling policies throughout the queue hierarchy to decide
     which containers to preempt (Wei Yan via Sandy Ryza)
 
+    YARN-2054. Better defaults for YARN ZK configs for retries and retry-inteval 
+    when HA is enabled. (kasha)
+
+    YARN-1877. Document yarn.resourcemanager.zk-auth and its scope. 
+    (Robert Kanter via kasha)
+
+    YARN-2115. Replaced RegisterNodeManagerRequest's ContainerStatus with a new
+    NMContainerStatus which has more information that is needed for
+    work-preserving RM-restart. (Jian He via vinodkv)
+
+    YARN-1474. Make schedulers services. (Tsuyoshi Ozawa via kasha)
+
+    YARN-1913. With Fair Scheduler, cluster can logjam when all resources are
+    consumed by AMs (Wei Yan via Sandy Ryza)
+
+    YARN-2061. Revisit logging levels in ZKRMStateStore. (Ray Chiang via kasha)
+
+    YARN-1977. Add tests on getApplicationRequest with filtering start time range. (junping_du)
+
+    YARN-2122. In AllocationFileLoaderService, the reloadThread should be created
+    in init() and started in start(). (Robert Kanter via kasha)
+
+    YARN-2132. ZKRMStateStore.ZKAction#runWithRetries doesn't log the exception
+    it encounters. (Vamsee Yarlagadda via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -143,6 +171,7 @@ Release 2.5.0 - UNRELEASED
 
     YARN-2011. Fix typo and warning in TestLeafQueue (Chen He via junping_du)
 
+
     YARN-2042. String shouldn't be compared using == in
     QueuePlacementRule#NestedUserQueue#getQueueForApp (Chen He via Sandy Ryza)
 
@@ -161,6 +190,29 @@ Release 2.5.0 - UNRELEASED
     YARN-2112. Fixed yarn-common's pom.xml to include jackson dependencies so
     that both Timeline Server and client can access them. (Zhijie Shen via
     vinodkv)
+
+    YARN-1868. YARN status web ui does not show correctly in IE 11.
+    (Chuan Liu via cnauroth)
+
+    YARN-2103. Inconsistency between viaProto flag and initial value of 
+    SerializedExceptionProto.Builder (Binglin Chang via junping_du)
+
+    YARN-1550. NPE in FairSchedulerAppsBlock#render. (Anubhav Dhoot via kasha)
+
+    YARN-2119. DEFAULT_PROXY_ADDRESS should use DEFAULT_PROXY_PORT.
+    (Anubhav Dhoot via kasha)
+
+    YARN-2118. Fixed the type mismatch in Map#containsKey check of
+    TimelineWebServices#injectOwnerInfo. (Ted Yu via zjshen)
+
+    YARN-2117. Fixed the issue that secret file reader is potentially not
+    closed in TimelineAuthenticationFilterInitializer. (Chen He via zjshen)
+
+    YARN-2121. Fixed NPE handling in Timeline Server's TimelineAuthenticator.
+    (Zhijie Shen via vinodkv)
+
+    YARN-2128. FairScheduler: Incorrect calculation of amResource usage.
+    (Wei Yan via kasha)
 
 Release 2.4.1 - UNRELEASED
 

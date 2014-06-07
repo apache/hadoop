@@ -334,6 +334,11 @@ Trunk (Unreleased)
     HADOOP-10625. Trim configuration names when putting/getting them
     to properties. (Wangda Tan via xgong)
 
+    HADOOP-10645. TestKMS fails because race condition writing acl files. (tucu)
+
+    HADOOP-10611. KMS, keyVersion name should not be assumed to be 
+    keyName@versionNumber. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -365,6 +370,8 @@ Release 2.5.0 - UNRELEASED
   NEW FEATURES
 
     HADOOP-10498. Add support for proxy server. (daryn)
+
+    HADOOP-9704. Write metrics sink plugin for Hadoop/Graphite (Chu Tong, Alex Newman and Babak Behzad via raviprak)
 
   IMPROVEMENTS
 
@@ -521,6 +528,13 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10638. Updating hadoop-daemon.sh to work as expected when nfs is
     started as a privileged user. (Manikandan Narayanaswamy via atm)
+
+    HADOOP-10630. Possible race condition in RetryInvocationHandler. (jing9)
+
+    HADOOP-10658. SSLFactory expects truststores being configured. (tucu via atm)
+
+    HADOOP-10647. String Format Exception in SwiftNativeFileSystemStore.java.
+    (Gene Kim via stevel)
 
 Release 2.4.1 - UNRELEASED
 

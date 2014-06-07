@@ -145,6 +145,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.StorageType;
+import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
@@ -1632,9 +1633,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       blockManager.getDatanodeManager().sortLocatedBlocks(
           clientMachine, blocks.getLocatedBlocks());
       
+      // lastBlock is not part of getLocatedBlocks(), might need to sort it too
       LocatedBlock lastBlock = blocks.getLastLocatedBlock();
       if (lastBlock != null) {
-        ArrayList<LocatedBlock> lastBlockList = new ArrayList<LocatedBlock>();
+        ArrayList<LocatedBlock> lastBlockList =
+            Lists.newArrayListWithCapacity(1);
         lastBlockList.add(lastBlock);
         blockManager.getDatanodeManager().sortLocatedBlocks(
                               clientMachine, lastBlockList);
@@ -7945,6 +7948,29 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
     } catch (AccessControlException e) {
       logAuditEvent(false, "getXAttrs", src);
+      throw e;
+    } finally {
+      readUnlock();
+    }
+  }
+
+  List<XAttr> listXAttrs(String src) throws IOException {
+    nnConf.checkXAttrsConfigFlag();
+    final FSPermissionChecker pc = getPermissionChecker();
+    checkOperation(OperationCategory.READ);
+    readLock();
+    try {
+      checkOperation(OperationCategory.READ);
+      if (isPermissionEnabled) {
+        /* To access xattr names, you need EXECUTE in the owning directory. */
+        checkParentAccess(pc, src, FsAction.EXECUTE);
+      }
+      final List<XAttr> all = dir.getXAttrs(src);
+      final List<XAttr> filteredAll = XAttrPermissionFilter.
+        filterXAttrsForApi(pc, all);
+      return filteredAll;
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "listXAttrs", src);
       throw e;
     } finally {
       readUnlock();

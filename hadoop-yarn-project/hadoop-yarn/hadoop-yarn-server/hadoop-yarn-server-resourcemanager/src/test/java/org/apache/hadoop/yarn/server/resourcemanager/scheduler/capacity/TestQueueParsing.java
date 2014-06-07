@@ -43,11 +43,15 @@ public class TestQueueParsing {
     YarnConfiguration conf = new YarnConfiguration(csConf);
 
     CapacityScheduler capacityScheduler = new CapacityScheduler();
+    RMContextImpl rmContext = new RMContextImpl(null, null,
+        null, null, null, null, new RMContainerTokenSecretManager(conf),
+        new NMTokenSecretManagerInRM(conf),
+        new ClientToAMTokenSecretManagerInRM(), null);
     capacityScheduler.setConf(conf);
-    capacityScheduler.reinitialize(conf, new RMContextImpl(null, null,
-      null, null, null, null, new RMContainerTokenSecretManager(conf),
-      new NMTokenSecretManagerInRM(conf),
-      new ClientToAMTokenSecretManagerInRM(), null));
+    capacityScheduler.setRMContext(rmContext);
+    capacityScheduler.init(conf);
+    capacityScheduler.start();
+    capacityScheduler.reinitialize(conf, rmContext);
     
     CSQueue a = capacityScheduler.getQueue("a");
     Assert.assertEquals(0.10, a.getAbsoluteCapacity(), DELTA);
@@ -62,6 +66,7 @@ public class TestQueueParsing {
     Assert.assertEquals(0.7 * 0.5 * 0.45, c12.getAbsoluteCapacity(), DELTA);
     Assert.assertEquals(0.7 * 0.55 * 0.7, 
         c12.getAbsoluteMaximumCapacity(), DELTA);
+    capacityScheduler.stop();
   }
   
   private void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
@@ -142,7 +147,10 @@ public class TestQueueParsing {
 
     CapacityScheduler capacityScheduler = new CapacityScheduler();
     capacityScheduler.setConf(new YarnConfiguration());
+    capacityScheduler.init(conf);
+    capacityScheduler.start();
     capacityScheduler.reinitialize(conf, null);
+    capacityScheduler.stop();
   }
   
   public void testMaxCapacity() throws Exception {
@@ -164,6 +172,8 @@ public class TestQueueParsing {
     try {
       capacityScheduler = new CapacityScheduler();
       capacityScheduler.setConf(new YarnConfiguration());
+      capacityScheduler.init(conf);
+      capacityScheduler.start();
       capacityScheduler.reinitialize(conf, null);
     } catch (IllegalArgumentException iae) {
       fail = true;
@@ -176,6 +186,8 @@ public class TestQueueParsing {
     // Now this should work
     capacityScheduler = new CapacityScheduler();
     capacityScheduler.setConf(new YarnConfiguration());
+    capacityScheduler.init(conf);
+    capacityScheduler.start();
     capacityScheduler.reinitialize(conf, null);
     
     fail = false;
@@ -187,6 +199,7 @@ public class TestQueueParsing {
     }
     Assert.assertTrue("Didn't throw IllegalArgumentException for wrong " +
     		"setMaxCap", fail);
+    capacityScheduler.stop();
   }
   
 }

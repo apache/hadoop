@@ -401,6 +401,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
       // Initialize the scheduler
       scheduler = createScheduler();
+      scheduler.setRMContext(rmContext);
+      addIfService(scheduler);
       rmContext.setScheduler(scheduler);
 
       schedulerDispatcher = createSchedulerEventDispatcher();
@@ -428,12 +430,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
       DefaultMetricsSystem.initialize("ResourceManager");
       JvmMetrics.initSingleton("ResourceManager", null);
-
-      try {
-        scheduler.reinitialize(conf, rmContext);
-      } catch (IOException ioe) {
-        throw new RuntimeException("Failed to initialize scheduler", ioe);
-      }
 
       // creating monitors that handle preemption
       createPolicyMonitors();
