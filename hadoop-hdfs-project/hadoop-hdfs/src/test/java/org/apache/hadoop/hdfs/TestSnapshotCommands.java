@@ -186,6 +186,17 @@ public class TestSnapshotCommands {
     FsShellRun("-ls /sub1/.snapshot", 0, "/sub1/.snapshot/sn.rename");
     FsShellRun("-ls /sub1/.snapshot/sn.rename", 0, "/sub1/.snapshot/sn.rename/sub1sub1");
     FsShellRun("-ls /sub1/.snapshot/sn.rename", 0, "/sub1/.snapshot/sn.rename/sub1sub2");
+
+    //try renaming from a non-existing snapshot
+    FsShellRun("-renameSnapshot /sub1 sn.nonexist sn.rename", 1,
+        "renameSnapshot: The snapshot sn.nonexist does not exist for directory /sub1");
+
+    //try renaming to existing snapshots
+    FsShellRun("-createSnapshot /sub1 sn.new");
+    FsShellRun("-renameSnapshot /sub1 sn.new sn.rename", 1,
+        "renameSnapshot: The snapshot sn.rename already exists for directory /sub1");
+    FsShellRun("-renameSnapshot /sub1 sn.rename sn.new", 1,
+        "renameSnapshot: The snapshot sn.new already exists for directory /sub1");
   }
 
   @Test
