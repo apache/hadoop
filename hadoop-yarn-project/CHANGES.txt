@@ -134,6 +134,8 @@ Release 2.5.0 - UNRELEASED
     YARN-2132. ZKRMStateStore.ZKAction#runWithRetries doesn't log the exception
     it encounters. (Vamsee Yarlagadda via kasha)
 
+    YARN-2030. Augmented RMStateStore with state machine. (Binglin Chang via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES 
