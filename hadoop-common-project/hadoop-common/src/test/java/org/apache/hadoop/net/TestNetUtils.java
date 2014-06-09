@@ -605,7 +605,7 @@ public class TestNetUtils {
   @Test
   public void testNormalizeHostName() {	
     List<String> hosts = Arrays.asList(new String[] {"127.0.0.1",
-        "localhost", "3w.org", "UnknownHost"});
+        "localhost", "3w.org", "UnknownHost123"});
     List<String> normalizedHosts = NetUtils.normalizeHostNames(hosts);
     // when ipaddress is normalized, same address is expected in return
     assertEquals(normalizedHosts.get(0), hosts.get(0));

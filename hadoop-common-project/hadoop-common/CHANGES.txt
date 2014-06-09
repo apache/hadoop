@@ -183,6 +183,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10647. String Format Exception in SwiftNativeFileSystemStore.java.
     (Gene Kim via stevel)
 
+    HADOOP-9099. NetUtils.normalizeHostName fails on domains where
+    UnknownHost resolves to an IP address. (Ivan Mitic via suresh)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
