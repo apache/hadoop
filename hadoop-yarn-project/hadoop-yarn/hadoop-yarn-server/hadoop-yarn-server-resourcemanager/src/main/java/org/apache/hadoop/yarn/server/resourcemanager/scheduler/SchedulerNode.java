@@ -27,7 +27,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -35,10 +34,10 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import com.google.common.base.Preconditions;
 
 /**
  * Represents a YARN Cluster Node from the viewpoint of the scheduler.
@@ -119,13 +118,10 @@ public abstract class SchedulerNode {
    * The Scheduler has allocated containers on this node to the given
    * application.
    * 
-   * @param applicationId
-   *          application
    * @param rmContainer
    *          allocated container
    */
-  public synchronized void allocateContainer(ApplicationId applicationId,
-      RMContainer rmContainer) {
+  public synchronized void allocateContainer(RMContainer rmContainer) {
     Container container = rmContainer.getContainer();
     deductAvailableResource(container.getResource());
     ++numContainers;
@@ -166,8 +162,8 @@ public abstract class SchedulerNode {
     return this.totalResourceCapability;
   }
 
-  private synchronized boolean isValidContainer(Container c) {
-    if (launchedContainers.containsKey(c.getId())) {
+  public synchronized boolean isValidContainer(ContainerId containerId) {
+    if (launchedContainers.containsKey(containerId)) {
       return true;
     }
     return false;
@@ -185,7 +181,7 @@ public abstract class SchedulerNode {
    *          container to be released
    */
   public synchronized void releaseContainer(Container container) {
-    if (!isValidContainer(container)) {
+    if (!isValidContainer(container.getId())) {
       LOG.error("Invalid container released " + container);
       return;
     }
@@ -273,5 +269,13 @@ public abstract class SchedulerNode {
       applyDeltaOnAvailableResource(Resource deltaResource) {
     // we can only adjust available resource if total resource is changed.
     Resources.addTo(this.availableResource, deltaResource);
+  }
+
+
+  public synchronized void recoverContainer(RMContainer rmContainer) {
+    if (rmContainer.getState().equals(RMContainerState.COMPLETED)) {
+      return;
+    }
+    allocateContainer(rmContainer);
   }
 }

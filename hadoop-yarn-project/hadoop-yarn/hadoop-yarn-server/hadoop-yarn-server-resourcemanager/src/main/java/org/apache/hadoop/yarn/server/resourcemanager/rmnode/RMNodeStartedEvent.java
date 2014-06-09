@@ -16,24 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
+package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
 
-public enum RMContainerEventType {
+import java.util.List;
 
-  // Source: SchedulerApp
-  START,
-  ACQUIRED,
-  KILL, // Also from Node on NodeRemoval
-  RESERVED,
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 
-  LAUNCHED,
-  FINISHED,
+public class RMNodeStartedEvent extends RMNodeEvent {
 
-  // Source: ApplicationMasterService->Scheduler
-  RELEASED,
+  private List<NMContainerStatus> containerReports;
 
-  // Source: ContainerAllocationExpirer  
-  EXPIRE,
+  public RMNodeStartedEvent(NodeId nodeId, List<NMContainerStatus> containerReports) {
+    super(nodeId, RMNodeEventType.STARTED);
+    this.containerReports = containerReports;
+  }
 
-  RECOVER
+  public List<NMContainerStatus> getContainerRecoveryReports() {
+    return this.containerReports;
+  }
 }

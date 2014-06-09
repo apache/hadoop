@@ -18,19 +18,34 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
 
+import java.util.List;
+
+import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
 public class NodeAddedSchedulerEvent extends SchedulerEvent {
 
   private final RMNode rmNode;
+  private final List<NMContainerStatus> containerReports;
 
   public NodeAddedSchedulerEvent(RMNode rmNode) {
     super(SchedulerEventType.NODE_ADDED);
     this.rmNode = rmNode;
+    this.containerReports = null;
+  }
+
+  public NodeAddedSchedulerEvent(RMNode rmNode,
+      List<NMContainerStatus> containerReports) {
+    super(SchedulerEventType.NODE_ADDED);
+    this.rmNode = rmNode;
+    this.containerReports = containerReports;
   }
 
   public RMNode getAddedRMNode() {
     return rmNode;
   }
 
+  public List<NMContainerStatus> getContainerReports() {
+    return containerReports;
+  }
 }

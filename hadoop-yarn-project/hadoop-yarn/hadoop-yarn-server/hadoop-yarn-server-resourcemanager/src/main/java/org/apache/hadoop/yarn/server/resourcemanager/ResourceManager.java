@@ -364,9 +364,15 @@ public class ResourceManager extends CompositeService implements Recoverable {
           YarnConfiguration.DEFAULT_RM_RECOVERY_ENABLED);
 
       RMStateStore rmStore = null;
-      if(isRecoveryEnabled) {
+      if (isRecoveryEnabled) {
         recoveryEnabled = true;
-        rmStore =  RMStateStoreFactory.getStore(conf);
+        rmStore = RMStateStoreFactory.getStore(conf);
+        boolean isWorkPreservingRecoveryEnabled =
+            conf.getBoolean(
+              YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED,
+              YarnConfiguration.DEFAULT_RM_WORK_PRESERVING_RECOVERY_ENABLED);
+        rmContext
+          .setWorkPreservingRecoveryEnabled(isWorkPreservingRecoveryEnabled);
       } else {
         recoveryEnabled = false;
         rmStore = new NullRMStateStore();

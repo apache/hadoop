@@ -264,8 +264,7 @@ public class AppSchedulable extends Schedulable {
       }
 
       // Inform the node
-      node.allocateContainer(app.getApplicationId(),
-          allocatedContainer);
+      node.allocateContainer(allocatedContainer);
 
       // If this container is used to run AM, update the leaf queue's AM usage
       if (app.getLiveContainers().size() == 1 &&
