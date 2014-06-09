@@ -297,9 +297,6 @@ Trunk (Unreleased)
     HADOOP-9394. Port findHangingTest.sh from HBase to Hadoop. (Andrew Wang
     via atm)
 
-    HADOOP-9099. NetUtils.normalizeHostName fails on domains where 
-    UnknownHost resolves to an IP address. (Ivan Mitic via suresh)
-
     HADOOP-9431 TestSecurityUtil#testLocalHostNameForNullOrWild on systems where hostname
     contains capital letters  (Chris Nauroth via sanjay)
 
@@ -535,6 +532,9 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10647. String Format Exception in SwiftNativeFileSystemStore.java.
     (Gene Kim via stevel)
+
+    HADOOP-9099. NetUtils.normalizeHostName fails on domains where
+    UnknownHost resolves to an IP address. (Ivan Mitic via suresh)
 
     HADOOP-10664. TestNetUtils.testNormalizeHostName fails. (atm)
 
