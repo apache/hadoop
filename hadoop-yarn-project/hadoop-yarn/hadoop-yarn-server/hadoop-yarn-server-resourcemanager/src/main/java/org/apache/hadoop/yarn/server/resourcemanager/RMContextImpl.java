@@ -60,6 +60,7 @@ public class RMContextImpl implements RMContext {
     = new ConcurrentHashMap<String, RMNode>();
 
   private boolean isHAEnabled;
+  private boolean isWorkPreservingRecoveryEnabled;
   private HAServiceState haServiceState =
       HAServiceProtocol.HAServiceState.INITIALIZING;
   
@@ -327,6 +328,15 @@ public class RMContextImpl implements RMContext {
     synchronized (haServiceState) {
       return haServiceState;
     }
+  }
+
+  public void setWorkPreservingRecoveryEnabled(boolean enabled) {
+    this.isWorkPreservingRecoveryEnabled = enabled;
+  }
+
+  @Override
+  public boolean isWorkPreservingRecoveryEnabled() {
+    return this.isWorkPreservingRecoveryEnabled;
   }
 
   @Override

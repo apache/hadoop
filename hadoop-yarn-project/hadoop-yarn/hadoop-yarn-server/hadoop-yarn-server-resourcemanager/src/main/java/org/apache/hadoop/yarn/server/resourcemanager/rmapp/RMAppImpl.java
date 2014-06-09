@@ -723,29 +723,36 @@ public class RMAppImpl implements RMApp, Recoverable {
     }
   }
 
+  // synchronously recover attempt to ensure any incoming external events
+  // to be processed after the attempt processes the recover event.
+  private void recoverAppAttempts() {
+    for (RMAppAttempt attempt : getAppAttempts().values()) {
+      attempt.handle(new RMAppAttemptEvent(attempt.getAppAttemptId(),
+        RMAppAttemptEventType.RECOVER));
+    }
+  }
+
   private static final class RMAppRecoveredTransition implements
       MultipleArcTransition<RMAppImpl, RMAppEvent, RMAppState> {
 
     @Override
     public RMAppState transition(RMAppImpl app, RMAppEvent event) {
 
-      for (RMAppAttempt attempt : app.getAppAttempts().values()) {
-        // synchronously recover attempt to ensure any incoming external events
-        // to be processed after the attempt processes the recover event.
-        attempt.handle(
-          new RMAppAttemptEvent(attempt.getAppAttemptId(),
-            RMAppAttemptEventType.RECOVER));
-      }
-
       // The app has completed.
       if (app.recoveredFinalState != null) {
+        app.recoverAppAttempts();
         new FinalTransition(app.recoveredFinalState).transition(app, event);
         return app.recoveredFinalState;
       }
 
-      // Last attempt is in final state, do not add to scheduler and just return
-      // ACCEPTED waiting for last RMAppAttempt to send finished or failed event
-      // back.
+      // Notify scheduler about the app on recovery
+      new AddApplicationToSchedulerTransition().transition(app, event);
+
+      // recover attempts
+      app.recoverAppAttempts();
+
+      // Last attempt is in final state, return ACCEPTED waiting for last
+      // RMAppAttempt to send finished or failed event back.
       if (app.currentAttempt != null
           && (app.currentAttempt.getState() == RMAppAttemptState.KILLED
               || app.currentAttempt.getState() == RMAppAttemptState.FINISHED
@@ -753,9 +760,6 @@ public class RMAppImpl implements RMApp, Recoverable {
                   && app.attempts.size() == app.maxAppAttempts))) {
         return RMAppState.ACCEPTED;
       }
-
-      // Notify scheduler about the app on recovery
-      new AddApplicationToSchedulerTransition().transition(app, event);
 
       // No existent attempts means the attempt associated with this app was not
       // started or started but not yet saved.
@@ -1055,8 +1059,12 @@ public class RMAppImpl implements RMApp, Recoverable {
       if (app.finishTime == 0 ) {
         app.finishTime = System.currentTimeMillis();
       }
-      app.handler.handle(new AppRemovedSchedulerEvent(app.applicationId,
-        finalState));
+      // Recovered apps that are completed were not added to scheduler, so no
+      // need to remove them from scheduler.
+      if (app.recoveredFinalState == null) {
+        app.handler.handle(new AppRemovedSchedulerEvent(app.applicationId,
+          finalState));
+      }
       app.handler.handle(
           new RMAppManagerEvent(app.applicationId,
           RMAppManagerEventType.APP_COMPLETED));

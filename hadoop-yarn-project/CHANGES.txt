@@ -17,6 +17,10 @@ Release 2.5.0 - UNRELEASED
     YARN-1338. Recover localized resource cache state upon nodemanager restart 
     (Jason Lowe via junping_du)
 
+    YARN-1368. Added core functionality of recovering container state into
+    schedulers after ResourceManager Restart so as to preserve running work in
+    the cluster. (Jian He via vinodkv)
+
   IMPROVEMENTS
 
     YARN-1479. Invalid NaN values in Hadoop REST API JSON response (Chen He via

@@ -18,22 +18,20 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
 
-public enum RMContainerEventType {
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 
-  // Source: SchedulerApp
-  START,
-  ACQUIRED,
-  KILL, // Also from Node on NodeRemoval
-  RESERVED,
+public class RMContainerRecoverEvent extends RMContainerEvent {
 
-  LAUNCHED,
-  FINISHED,
+  private final NMContainerStatus containerReport;
 
-  // Source: ApplicationMasterService->Scheduler
-  RELEASED,
+  public RMContainerRecoverEvent(ContainerId containerId,
+      NMContainerStatus containerReport) {
+    super(containerId, RMContainerEventType.RECOVER);
+    this.containerReport = containerReport;
+  }
 
-  // Source: ContainerAllocationExpirer  
-  EXPIRE,
-
-  RECOVER
+  public NMContainerStatus getContainerReport() {
+    return containerReport;
+  }
 }
