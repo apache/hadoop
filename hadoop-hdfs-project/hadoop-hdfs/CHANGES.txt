@@ -159,6 +159,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6297. Add CLI testcases to reflect new features of dfs and dfsadmin
     (Dasha Boudnik via cos)
 
+    HDFS-6399. Add note about setfacl in HDFS permissions guide.
+    (cnauroth via wang)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
