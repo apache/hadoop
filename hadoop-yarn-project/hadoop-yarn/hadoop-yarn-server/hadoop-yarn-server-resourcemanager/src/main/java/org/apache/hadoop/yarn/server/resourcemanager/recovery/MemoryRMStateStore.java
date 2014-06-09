@@ -32,9 +32,9 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -80,7 +80,7 @@ public class MemoryRMStateStore extends RMStateStore {
 
   @Override
   public void storeApplicationStateInternal(ApplicationId appId,
-                                     ApplicationStateDataPBImpl appStateData)
+                                     ApplicationStateData appStateData)
       throws Exception {
     ApplicationState appState =
         new ApplicationState(appStateData.getSubmitTime(),
@@ -92,7 +92,7 @@ public class MemoryRMStateStore extends RMStateStore {
 
   @Override
   public void updateApplicationStateInternal(ApplicationId appId,
-      ApplicationStateDataPBImpl appStateData) throws Exception {
+      ApplicationStateData appStateData) throws Exception {
     ApplicationState updatedAppState =
         new ApplicationState(appStateData.getSubmitTime(),
           appStateData.getStartTime(),
@@ -112,7 +112,7 @@ public class MemoryRMStateStore extends RMStateStore {
   @Override
   public synchronized void storeApplicationAttemptStateInternal(
       ApplicationAttemptId appAttemptId,
-      ApplicationAttemptStateDataPBImpl attemptStateData)
+      ApplicationAttemptStateData attemptStateData)
       throws Exception {
     Credentials credentials = null;
     if(attemptStateData.getAppAttemptTokens() != null){
@@ -137,7 +137,7 @@ public class MemoryRMStateStore extends RMStateStore {
   @Override
   public synchronized void updateApplicationAttemptStateInternal(
       ApplicationAttemptId appAttemptId,
-      ApplicationAttemptStateDataPBImpl attemptStateData)
+      ApplicationAttemptStateData attemptStateData)
       throws Exception {
     Credentials credentials = null;
     if (attemptStateData.getAppAttemptTokens() != null) {
