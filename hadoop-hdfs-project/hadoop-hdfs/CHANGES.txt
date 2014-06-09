@@ -336,6 +336,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6500. Snapshot shouldn't be removed silently after renaming to an 
     existing snapshot. (Nicholas SZE via junping_du)
 
+    HDFS-6257. TestCacheDirectives#testExceedsCapacity fails occasionally
+    (cmccabe)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
