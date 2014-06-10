@@ -47,7 +47,7 @@ public abstract class ApplicationResourceUsageReport {
   }
 
   /**
-   * Get the number of used containers
+   * Get the number of used containers.  -1 for invalid/inaccessible reports.
    * @return the number of used containers
    */
   @Public
@@ -63,7 +63,7 @@ public abstract class ApplicationResourceUsageReport {
   public abstract void setNumUsedContainers(int num_containers);
 
   /**
-   * Get the number of reserved containers
+   * Get the number of reserved containers.  -1 for invalid/inaccessible reports.
    * @return the number of reserved containers
    */
   @Private
@@ -79,7 +79,7 @@ public abstract class ApplicationResourceUsageReport {
   public abstract void setNumReservedContainers(int num_reserved_containers);
 
   /**
-   * Get the used <code>Resource</code>
+   * Get the used <code>Resource</code>.  -1 for invalid/inaccessible reports.
    * @return the used <code>Resource</code>
    */
   @Public
@@ -91,7 +91,7 @@ public abstract class ApplicationResourceUsageReport {
   public abstract void setUsedResources(Resource resources);
 
   /**
-   * Get the reserved <code>Resource</code>
+   * Get the reserved <code>Resource</code>.  -1 for invalid/inaccessible reports.
    * @return the reserved <code>Resource</code>
    */
   @Public
@@ -103,7 +103,7 @@ public abstract class ApplicationResourceUsageReport {
   public abstract void setReservedResources(Resource reserved_resources);
 
   /**
-   * Get the needed <code>Resource</code>
+   * Get the needed <code>Resource</code>.  -1 for invalid/inaccessible reports.
    * @return the needed <code>Resource</code>
    */
   @Public

@@ -71,6 +71,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
@@ -293,11 +294,6 @@ public class RMAppImpl implements RMApp, Recoverable {
   private final StateMachine<RMAppState, RMAppEventType, RMAppEvent>
                                                                  stateMachine;
 
-  private static final ApplicationResourceUsageReport
-    DUMMY_APPLICATION_RESOURCE_USAGE_REPORT =
-      BuilderUtils.newApplicationResourceUsageReport(-1, -1,
-          Resources.createResource(-1, -1), Resources.createResource(-1, -1),
-          Resources.createResource(-1, -1));
   private static final int DUMMY_APPLICATION_ATTEMPT_NUMBER = -1;
   
   public RMAppImpl(ApplicationId applicationId, RMContext rmContext,
@@ -498,7 +494,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       String origTrackingUrl = UNAVAILABLE;
       int rpcPort = -1;
       ApplicationResourceUsageReport appUsageReport =
-          DUMMY_APPLICATION_RESOURCE_USAGE_REPORT;
+          RMServerUtils.DUMMY_APPLICATION_RESOURCE_USAGE_REPORT;
       FinalApplicationStatus finishState = getFinalApplicationStatus();
       String diags = UNAVAILABLE;
       float progress = 0.0f;
