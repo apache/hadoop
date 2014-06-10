@@ -342,6 +342,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6257. TestCacheDirectives#testExceedsCapacity fails occasionally
     (cmccabe)
 
+    HDFS-6364. Incorrect check for unknown datanode in Balancer. (Benoy
+    Antony via Arpit Agarwal)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
