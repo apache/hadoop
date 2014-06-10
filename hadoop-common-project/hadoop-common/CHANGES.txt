@@ -13,6 +13,11 @@ Release 2.7.0 - UNRELEASED
     HADOOP-7984. Add hadoop --loglevel option to change log level.
     (Akira AJISAKA via cnauroth)
 
+    HADOOP-9629. Support Windows Azure Storage - Blob as a file system in Hadoop.
+    (Dexter Bradshaw, Mostafa Elhemali, Xi Fang, Johannes Klein, David Lao,
+    Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
+    Alexander Stojanovic, Brian Swan, and Min Wei via cnauroth)
+
   IMPROVEMENTS
 
     HADOOP-11156. DelegateToFileSystem should implement

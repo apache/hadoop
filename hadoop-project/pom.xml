@@ -348,6 +348,12 @@
         <artifactId>hadoop-openstack</artifactId>
         <version>${project.version}</version>
       </dependency>
+      
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-azure</artifactId>
+        <version>${project.version}</version>
+      </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
@@ -922,6 +928,11 @@
        <version>1.46</version>
        <scope>test</scope>
      </dependency>
+      <dependency>
+        <groupId>com.microsoft.windowsazure.storage</groupId>
+        <artifactId>microsoft-windowsazure-storage-sdk</artifactId>
+        <version>0.6.0</version>
+    </dependency>
       
     </dependencies>
   </dependencyManagement>
