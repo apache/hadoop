@@ -62,6 +62,9 @@ Release 2.5.0 - UNRELEASED
 
     MAPREDUCE-5899. Support incremental data copy in DistCp. (jing9)
 
+    MAPREDUCE-5886. Allow wordcount example job to accept multiple input paths.
+    (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES 
