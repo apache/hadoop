@@ -155,6 +155,9 @@ Release 2.5.0 - UNRELEASED
     DummyApplicationResourceUsageReport for all invalid accesses. 
     (Ray Chiang via kasha)
 
+    YARN-2091. Add more values to ContainerExitStatus and pass it from NM to
+    RM and then to app masters (Tsuyoshi OZAWA via bikas)
+
   OPTIMIZATIONS
 
   BUG FIXES 

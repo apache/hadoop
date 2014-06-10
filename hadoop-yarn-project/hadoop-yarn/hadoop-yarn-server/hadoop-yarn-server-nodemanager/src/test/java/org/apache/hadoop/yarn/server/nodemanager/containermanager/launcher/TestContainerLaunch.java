@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
+import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
@@ -73,7 +74,6 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
-import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -604,8 +604,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         GetContainerStatusesRequest.newInstance(containerIds);
     ContainerStatus containerStatus = 
         containerManager.getContainerStatuses(gcsRequest).getContainerStatuses().get(0);
-    int expectedExitCode = Shell.WINDOWS ? ExitCode.FORCE_KILLED.getExitCode() :
-      ExitCode.TERMINATED.getExitCode();
+    int expectedExitCode = ContainerExitStatus.KILLED_BY_APPMASTER;
     Assert.assertEquals(expectedExitCode, containerStatus.getExitStatus());
 
     // Assert that the process is not alive anymore
@@ -717,7 +716,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     ContainerStatus containerStatus = 
         containerManager.getContainerStatuses(gcsRequest)
           .getContainerStatuses().get(0);
-    Assert.assertEquals(ExitCode.FORCE_KILLED.getExitCode(),
+    Assert.assertEquals(ContainerExitStatus.KILLED_BY_APPMASTER,
         containerStatus.getExitStatus());
 
     // Now verify the contents of the file.  Script generates a message when it
