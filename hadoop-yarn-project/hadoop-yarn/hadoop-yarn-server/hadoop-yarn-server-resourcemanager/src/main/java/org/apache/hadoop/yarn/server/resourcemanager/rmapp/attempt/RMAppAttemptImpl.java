@@ -675,9 +675,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       ApplicationResourceUsageReport report =
           scheduler.getAppResourceUsageReport(this.getAppAttemptId());
       if (report == null) {
-        Resource none = Resource.newInstance(0, 0);
-        report = ApplicationResourceUsageReport.newInstance(0, 0, none, none,
-            none);
+        report = RMServerUtils.DUMMY_APPLICATION_RESOURCE_USAGE_REPORT;
       }
       return report;
     } finally {

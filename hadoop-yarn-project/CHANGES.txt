@@ -151,6 +151,10 @@ Release 2.5.0 - UNRELEASED
 
     YARN-2030. Augmented RMStateStore with state machine.(Binglin Chang via jianhe)
 
+    YARN-1424. RMAppAttemptImpl should return the 
+    DummyApplicationResourceUsageReport for all invalid accesses. 
+    (Ray Chiang via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 
