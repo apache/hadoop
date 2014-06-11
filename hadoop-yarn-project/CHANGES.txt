@@ -143,6 +143,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2091. Add more values to ContainerExitStatus and pass it from NM to
     RM and then to app masters (Tsuyoshi OZAWA via bikas)
 
+    YARN-2125. Changed ProportionalCapacityPreemptionPolicy to log CSV in debug
+    level. (Wangda Tan via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES 
