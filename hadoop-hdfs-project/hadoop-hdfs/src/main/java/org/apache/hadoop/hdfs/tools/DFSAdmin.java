@@ -575,7 +575,7 @@ public class DFSAdmin extends FsShell {
    * @exception IOException 
    * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#restoreFailedStorage(String arg)
    */
-  public int restoreFaileStorage(String arg) throws IOException {
+  public int restoreFailedStorage(String arg) throws IOException {
     int exitCode = -1;
 
     if(!arg.equals("check") && !arg.equals("true") && !arg.equals("false")) {
@@ -1362,7 +1362,7 @@ public class DFSAdmin extends FsShell {
       } else if ("-rollEdits".equals(cmd)) {
         exitCode = rollEdits();
       } else if ("-restoreFailedStorage".equals(cmd)) {
-        exitCode = restoreFaileStorage(argv[i]);
+        exitCode = restoreFailedStorage(argv[i]);
       } else if ("-refreshNodes".equals(cmd)) {
         exitCode = refreshNodes();
       } else if ("-finalizeUpgrade".equals(cmd)) {
