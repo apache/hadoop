@@ -669,6 +669,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6364. Incorrect check for unknown datanode in Balancer. (Benoy
     Antony via Arpit Agarwal)
 
+    HDFS-6503. Fix typo of DFSAdmin restoreFailedStorage.
+    (Zesheng Wu via wheat9)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
