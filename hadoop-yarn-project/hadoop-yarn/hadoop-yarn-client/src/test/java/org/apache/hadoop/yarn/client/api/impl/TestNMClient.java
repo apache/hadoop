@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -346,7 +347,7 @@ public class TestNMClient {
           // 137 is possible if the container is not terminated but killed
           testGetContainerStatus(container, i, ContainerState.COMPLETE,
               "Container killed by the ApplicationMaster.", Arrays.asList(
-                  new Integer[] {137, 143, 0}));
+                  new Integer[] {ContainerExitStatus.KILLED_BY_APPMASTER}));
         } catch (YarnException e) {
           // The exception is possible because, after the container is stopped,
           // it may be removed from NM's context.
