@@ -70,6 +70,8 @@ public enum FSEditLogOpCodes {
   OP_SET_ACL                    ((byte) 40),
   OP_ROLLING_UPGRADE_START      ((byte) 41),
   OP_ROLLING_UPGRADE_FINALIZE   ((byte) 42),
+  OP_SET_XATTR                  ((byte) 43),
+  OP_REMOVE_XATTR               ((byte) 44),
 
   // Note that the current range of the valid OP code is 0~127
   OP_INVALID                    ((byte) -1);

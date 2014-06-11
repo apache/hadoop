@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 
@@ -46,6 +47,7 @@ import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -517,6 +519,43 @@ public class ViewFileSystem extends FileSystem {
     InodeTree.ResolveResult<FileSystem> res =
       fsState.resolve(getUriPath(path), true);
     return res.targetFileSystem.getAclStatus(res.remainingPath);
+  }
+
+  @Override
+  public void setXAttr(Path path, String name, byte[] value,
+      EnumSet<XAttrSetFlag> flag) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res =
+        fsState.resolve(getUriPath(path), true);
+    res.targetFileSystem.setXAttr(res.remainingPath, name, value, flag);
+  }
+
+  @Override
+  public byte[] getXAttr(Path path, String name) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res =
+        fsState.resolve(getUriPath(path), true);
+    return res.targetFileSystem.getXAttr(res.remainingPath, name);
+  }
+
+  @Override
+  public Map<String, byte[]> getXAttrs(Path path) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res =
+        fsState.resolve(getUriPath(path), true);
+    return res.targetFileSystem.getXAttrs(res.remainingPath);
+  }
+
+  @Override
+  public Map<String, byte[]> getXAttrs(Path path, List<String> names)
+      throws IOException {
+    InodeTree.ResolveResult<FileSystem> res =
+        fsState.resolve(getUriPath(path), true);
+    return res.targetFileSystem.getXAttrs(res.remainingPath, names);
+  }
+
+  @Override
+  public void removeXAttr(Path path, String name) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res = fsState.resolve(getUriPath(path),
+        true);
+    res.targetFileSystem.removeXAttr(res.remainingPath, name);
   }
 
   @Override

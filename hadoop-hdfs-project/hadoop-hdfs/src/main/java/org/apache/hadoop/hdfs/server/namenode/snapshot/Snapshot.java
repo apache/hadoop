@@ -34,8 +34,10 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
+import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
+import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -144,9 +146,20 @@ public class Snapshot implements Comparable<byte[]> {
   /** The root directory of the snapshot. */
   static public class Root extends INodeDirectory {
     Root(INodeDirectory other) {
-      // Always preserve ACL.
+      // Always preserve ACL, XAttr.
       super(other, false, Lists.newArrayList(
-        Iterables.filter(Arrays.asList(other.getFeatures()), AclFeature.class))
+        Iterables.filter(Arrays.asList(other.getFeatures()), new Predicate<Feature>() {
+
+          @Override
+          public boolean apply(Feature input) {
+            if (AclFeature.class.isInstance(input) 
+                || XAttrFeature.class.isInstance(input)) {
+              return true;
+            }
+            return false;
+          }
+          
+        }))
         .toArray(new Feature[0]));
     }
 

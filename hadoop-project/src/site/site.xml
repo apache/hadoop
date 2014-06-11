@@ -85,6 +85,7 @@
       <item name="Centralized Cache Management" href="hadoop-project-dist/hadoop-hdfs/CentralizedCacheManagement.html"/>
       <item name="HDFS NFS Gateway" href="hadoop-project-dist/hadoop-hdfs/HdfsNfsGateway.html"/>
       <item name="HDFS Rolling Upgrade" href="hadoop-project-dist/hadoop-hdfs/HdfsRollingUpgrade.html"/>
+      <item name="Extended Attributes" href="hadoop-project-dist/hadoop-hdfs/ExtendedAttributes.html"/>
     </menu>
 
     <menu name="MapReduce" inherit="top">

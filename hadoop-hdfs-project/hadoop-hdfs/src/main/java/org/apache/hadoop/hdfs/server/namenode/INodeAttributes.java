@@ -21,6 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.server.namenode.INodeWithAdditionalFields.PermissionStatusFormat;
+import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
 
 /**
  * The attributes of an inode.
@@ -50,6 +51,9 @@ public interface INodeAttributes {
 
   /** @return the ACL feature. */
   public AclFeature getAclFeature();
+  
+  /** @return the XAttrs feature. */
+  public XAttrFeature getXAttrFeature();
 
   /** @return the modification time. */
   public long getModificationTime();
@@ -64,14 +68,17 @@ public interface INodeAttributes {
     private final AclFeature aclFeature;
     private final long modificationTime;
     private final long accessTime;
+    private XAttrFeature xAttrFeature;
 
     SnapshotCopy(byte[] name, PermissionStatus permissions,
-        AclFeature aclFeature, long modificationTime, long accessTime) {
+        AclFeature aclFeature, long modificationTime, long accessTime, 
+        XAttrFeature xAttrFeature) {
       this.name = name;
       this.permission = PermissionStatusFormat.toLong(permissions);
       this.aclFeature = aclFeature;
       this.modificationTime = modificationTime;
       this.accessTime = accessTime;
+      this.xAttrFeature = xAttrFeature;
     }
 
     SnapshotCopy(INode inode) {
@@ -80,6 +87,7 @@ public interface INodeAttributes {
       this.aclFeature = inode.getAclFeature();
       this.modificationTime = inode.getModificationTime();
       this.accessTime = inode.getAccessTime();
+      this.xAttrFeature = inode.getXAttrFeature();
     }
 
     @Override
@@ -127,6 +135,11 @@ public interface INodeAttributes {
     @Override
     public final long getAccessTime() {
       return accessTime;
+    }
+    
+    @Override
+    public final XAttrFeature getXAttrFeature() {
+      return xAttrFeature;
     }
   }
 }

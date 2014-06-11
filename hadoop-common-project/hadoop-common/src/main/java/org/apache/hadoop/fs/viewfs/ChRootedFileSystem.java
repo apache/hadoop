@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -37,6 +38,7 @@ import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -311,6 +313,33 @@ class ChRootedFileSystem extends FilterFileSystem {
   @Override
   public AclStatus getAclStatus(Path path) throws IOException {
     return super.getAclStatus(fullPath(path));
+  }
+
+  @Override
+  public void setXAttr(Path path, String name, byte[] value,
+      EnumSet<XAttrSetFlag> flag) throws IOException {
+    super.setXAttr(fullPath(path), name, value, flag);
+  }
+
+  @Override
+  public byte[] getXAttr(Path path, String name) throws IOException {
+    return super.getXAttr(fullPath(path), name);
+  }
+
+  @Override
+  public Map<String, byte[]> getXAttrs(Path path) throws IOException {
+    return super.getXAttrs(fullPath(path));
+  }
+
+  @Override
+  public Map<String, byte[]> getXAttrs(Path path, List<String> names)
+      throws IOException {
+    return super.getXAttrs(fullPath(path), names);
+  }
+
+  @Override
+  public void removeXAttr(Path path, String name) throws IOException {
+    super.removeXAttr(fullPath(path), name);
   }
 
   @Override

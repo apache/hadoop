@@ -22,16 +22,22 @@ import static org.apache.hadoop.fs.permission.AclEntryType.*;
 import static org.apache.hadoop.fs.permission.FsAction.*;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.*;
 
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
@@ -185,6 +191,48 @@ public class TestJsonUtil {
     Assert.assertEquals(jsonString,
         JsonUtil.toJsonString(aclStatusBuilder.build()));
 
+  }
+  
+  @Test
+  public void testToJsonFromXAttrs() throws IOException {
+    String jsonString = 
+        "{\"XAttrs\":[{\"name\":\"user.a1\",\"value\":\"0x313233\"}," +
+        "{\"name\":\"user.a2\",\"value\":\"0x313131\"}]}";
+    XAttr xAttr1 = (new XAttr.Builder()).setNameSpace(XAttr.NameSpace.USER).
+        setName("a1").setValue(XAttrCodec.decodeValue("0x313233")).build();
+    XAttr xAttr2 = (new XAttr.Builder()).setNameSpace(XAttr.NameSpace.USER).
+        setName("a2").setValue(XAttrCodec.decodeValue("0x313131")).build();
+    List<XAttr> xAttrs = Lists.newArrayList();
+    xAttrs.add(xAttr1);
+    xAttrs.add(xAttr2);
+    
+    Assert.assertEquals(jsonString, JsonUtil.toJsonString(xAttrs, 
+        XAttrCodec.HEX));
+  }
+  
+  @Test
+  public void testToXAttrMap() throws IOException {
+    String jsonString = 
+        "{\"XAttrs\":[{\"name\":\"user.a1\",\"value\":\"0x313233\"}," +
+        "{\"name\":\"user.a2\",\"value\":\"0x313131\"}]}";
+    Map<?, ?> json = (Map<?, ?>)JSON.parse(jsonString);
+    XAttr xAttr1 = (new XAttr.Builder()).setNameSpace(XAttr.NameSpace.USER).
+        setName("a1").setValue(XAttrCodec.decodeValue("0x313233")).build();
+    XAttr xAttr2 = (new XAttr.Builder()).setNameSpace(XAttr.NameSpace.USER).
+        setName("a2").setValue(XAttrCodec.decodeValue("0x313131")).build();
+    List<XAttr> xAttrs = Lists.newArrayList();
+    xAttrs.add(xAttr1);
+    xAttrs.add(xAttr2);
+    Map<String, byte[]> xAttrMap = XAttrHelper.buildXAttrMap(xAttrs);
+    Map<String, byte[]> parsedXAttrMap = JsonUtil.toXAttrs(json);
+    
+    Assert.assertEquals(xAttrMap.size(), parsedXAttrMap.size());
+    Iterator<Entry<String, byte[]>> iter = xAttrMap.entrySet().iterator();
+    while(iter.hasNext()) {
+      Entry<String, byte[]> entry = iter.next();
+      Assert.assertArrayEquals(entry.getValue(), 
+          parsedXAttrMap.get(entry.getKey()));
+    }
   }
 
   private void checkDecodeFailure(Map<String, Object> map) {

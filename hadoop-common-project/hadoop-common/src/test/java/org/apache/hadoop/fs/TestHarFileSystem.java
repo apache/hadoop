@@ -36,6 +36,7 @@ import java.lang.reflect.Modifier;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.hadoop.fs.Options.ChecksumOpt;
 import static org.apache.hadoop.fs.Options.CreateOpts;
@@ -181,6 +182,21 @@ public class TestHarFileSystem {
     public void removeAcl(Path path) throws IOException;
 
     public void setAcl(Path path, List<AclEntry> aclSpec) throws IOException;
+
+    public void setXAttr(Path path, String name, byte[] value)
+        throws IOException;
+
+    public void setXAttr(Path path, String name, byte[] value,
+        EnumSet<XAttrSetFlag> flag) throws IOException;
+
+    public byte[] getXAttr(Path path, String name) throws IOException;
+
+    public Map<String, byte[]> getXAttrs(Path path) throws IOException;
+
+    public Map<String, byte[]> getXAttrs(Path path, List<String> names)
+        throws IOException;
+
+    public void removeXAttr(Path path, String name) throws IOException;
 
     public AclStatus getAclStatus(Path path) throws IOException;
   }

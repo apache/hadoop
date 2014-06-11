@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
@@ -33,6 +34,8 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 import org.mortbay.util.ajax.JSON;
+
+import com.google.common.collect.Maps;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -663,5 +666,126 @@ public class JsonUtil {
     }
     aclStatusBuilder.addEntries(aclEntryList);
     return aclStatusBuilder.build();
+  }
+  
+  public static String toJsonString(final XAttr xAttr, 
+      final XAttrCodec encoding) throws IOException {
+    if (xAttr == null) {
+      return "{}";
+    }
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("name", XAttrHelper.getPrefixName(xAttr));
+    m.put("value", xAttr.getValue() != null ? 
+        XAttrCodec.encodeValue(xAttr.getValue(), encoding) : null);
+    final Map<String, Map<String, Object>> finalMap =
+        new TreeMap<String, Map<String, Object>>();
+    finalMap.put(XAttr.class.getSimpleName(), m);
+    return JSON.toString(finalMap);
+  }
+  
+  private static Map<String, Object> toJsonMap(final XAttr xAttr,
+      final XAttrCodec encoding) throws IOException {
+    if (xAttr == null) {
+      return null;
+    }
+ 
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("name", XAttrHelper.getPrefixName(xAttr));
+    m.put("value", xAttr.getValue() != null ? 
+        XAttrCodec.encodeValue(xAttr.getValue(), encoding) : null);
+    return m;
+  }
+  
+  private static Object[] toJsonArray(final List<XAttr> array,
+      final XAttrCodec encoding) throws IOException {
+    if (array == null) {
+      return null;
+    } else if (array.size() == 0) {
+      return EMPTY_OBJECT_ARRAY;
+    } else {
+      final Object[] a = new Object[array.size()];
+      for(int i = 0; i < array.size(); i++) {
+        a[i] = toJsonMap(array.get(i), encoding);
+      }
+      return a;
+    }
+  }
+  
+  public static String toJsonString(final List<XAttr> xAttrs, 
+      final XAttrCodec encoding) throws IOException {
+    final Map<String, Object> finalMap = new TreeMap<String, Object>();
+    finalMap.put("XAttrs", toJsonArray(xAttrs, encoding));
+    return JSON.toString(finalMap);
+  }
+  
+  public static XAttr toXAttr(final Map<?, ?> json) throws IOException {
+    if (json == null) {
+      return null;
+    }
+    
+    Map<?, ?> m = (Map<?, ?>) json.get(XAttr.class.getSimpleName());
+    if (m == null) {
+      return null;
+    }
+    String name = (String) m.get("name");
+    String value = (String) m.get("value");
+    return XAttrHelper.buildXAttr(name, decodeXAttrValue(value));
+  }
+  
+  public static Map<String, byte[]> toXAttrs(final Map<?, ?> json) 
+      throws IOException {
+    if (json == null) {
+      return null;
+    }
+    
+    return toXAttrMap((Object[])json.get("XAttrs"));
+  }
+  
+  public static Map<String, byte[]> toXAttrs(final Map<?, ?> json, 
+      List<String> names) throws IOException {
+    if (json == null || names == null) {
+      return null;
+    }
+    if (names.isEmpty()) {
+      return Maps.newHashMap();
+    }
+    Map<String, byte[]> xAttrs = toXAttrs(json);
+    if (xAttrs == null || xAttrs.isEmpty()) {
+      return xAttrs;
+    }
+    
+    Map<String, byte[]> result = Maps.newHashMap();
+    for (String name : names) {
+      if (xAttrs.containsKey(name)) {
+        result.put(name, xAttrs.get(name));
+      }
+    }
+    return result;
+  }
+  
+  private static Map<String, byte[]> toXAttrMap(final Object[] objects) 
+      throws IOException {
+    if (objects == null) {
+      return null;
+    } else if (objects.length == 0) {
+      return Maps.newHashMap();
+    } else {
+      final Map<String, byte[]> xAttrs = Maps.newHashMap();
+      for(int i = 0; i < objects.length; i++) {
+        Map<?, ?> m = (Map<?, ?>) objects[i];
+        String name = (String) m.get("name");
+        String value = (String) m.get("value");
+        xAttrs.put(name, decodeXAttrValue(value));
+      }
+      return xAttrs;
+    }
+  }
+  
+  private static byte[] decodeXAttrValue(String value) throws IOException {
+    if (value != null) {
+      return XAttrCodec.decodeValue(value);
+    } else {
+      return new byte[0];
+    }
   }
 }

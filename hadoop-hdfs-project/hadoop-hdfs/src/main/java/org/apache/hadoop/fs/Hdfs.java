@@ -25,6 +25,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -413,6 +414,33 @@ public class Hdfs extends AbstractFileSystem {
   @Override
   public AclStatus getAclStatus(Path path) throws IOException {
     return dfs.getAclStatus(getUriPath(path));
+  }
+  
+  @Override
+  public void setXAttr(Path path, String name, byte[] value, 
+      EnumSet<XAttrSetFlag> flag) throws IOException {
+    dfs.setXAttr(getUriPath(path), name, value, flag);
+  }
+  
+  @Override
+  public byte[] getXAttr(Path path, String name) throws IOException {
+    return dfs.getXAttr(getUriPath(path), name);
+  }
+  
+  @Override
+  public Map<String, byte[]> getXAttrs(Path path) throws IOException {
+    return dfs.getXAttrs(getUriPath(path));
+  }
+  
+  @Override
+  public Map<String, byte[]> getXAttrs(Path path, List<String> names) 
+      throws IOException {
+    return dfs.getXAttrs(getUriPath(path), names);
+  }
+  
+  @Override
+  public void removeXAttr(Path path, String name) throws IOException {
+    dfs.removeXAttr(getUriPath(path), name);
   }
 
   /**

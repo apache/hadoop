@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <EDITS>
-  <EDITS_VERSION>-56</EDITS_VERSION>
+  <EDITS_VERSION>-57</EDITS_VERSION>
   <RECORD>
     <OPCODE>OP_START_LOG_SEGMENT</OPCODE>
     <DATA>
@@ -938,9 +938,34 @@
     </DATA>
   </RECORD>
   <RECORD>
-    <OPCODE>OP_END_LOG_SEGMENT</OPCODE>
+    <OPCODE>OP_SET_XATTR</OPCODE>
     <DATA>
       <TXID>75</TXID>
+      <SRC>/file_concat_target</SRC>
+      <XATTR>
+        <NAMESPACE>USER</NAMESPACE>
+        <NAME>a1</NAME>
+        <VALUE>0x313233</VALUE>
+      </XATTR>
+      <RPC_CLIENTID>9b85a845-bbfa-42f6-8a16-c433614b8eb9</RPC_CLIENTID>
+      <RPC_CALLID>80</RPC_CALLID>
+    </DATA>
+  </RECORD>
+  <RECORD>
+    <OPCODE>OP_REMOVE_XATTR</OPCODE>
+    <DATA>
+      <TXID>76</TXID>
+      <SRC>/file_concat_target</SRC>
+      <XATTR>
+        <NAMESPACE>USER</NAMESPACE>
+        <NAME>a1</NAME>
+      </XATTR>
+    </DATA>
+  </RECORD>
+  <RECORD>
+    <OPCODE>OP_END_LOG_SEGMENT</OPCODE>
+    <DATA>
+      <TXID>77</TXID>
     </DATA>
   </RECORD>
 </EDITS>

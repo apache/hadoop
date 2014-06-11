@@ -24,6 +24,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
@@ -39,6 +40,8 @@ import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -47,6 +50,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -79,6 +83,7 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 
 /*************************************************
  * FSDirectory stores the filesystem directory state.
@@ -125,6 +130,7 @@ public class FSDirectory implements Closeable {
   private final int contentCountLimit; // max content summary counts per run
   private final INodeMap inodeMap; // Synchronized by dirLock
   private long yieldCount = 0; // keep track of lock yield count.
+  private final int inodeXAttrsLimit; //inode xattrs max limit
 
   // lock to protect the directory and BlockMap
   private final ReentrantReadWriteLock dirLock;
@@ -190,6 +196,12 @@ public class FSDirectory implements Closeable {
     this.maxDirItems = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY,
         DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_DEFAULT);
+    this.inodeXAttrsLimit = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY,
+        DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_DEFAULT);
+    Preconditions.checkArgument(this.inodeXAttrsLimit >= 0,
+        "Cannot set a negative limit on the number of xattrs per inode (%s).",
+        DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY);
     // We need a maximum maximum because by default, PB limits message sizes
     // to 64MB. This means we can only store approximately 6.7 million entries
     // per directory, but let's use 6.4 million for some safety.
@@ -2752,6 +2764,116 @@ public class FSDirectory implements Closeable {
           .owner(inode.getUserName()).group(inode.getGroupName())
           .stickyBit(inode.getFsPermission(snapshotId).getStickyBit())
           .addEntries(acl).build();
+    } finally {
+      readUnlock();
+    }
+  }
+  
+  void removeXAttr(String src, XAttr xAttr) throws IOException {
+    writeLock();
+    try {
+      XAttr removedXAttr = unprotectedRemoveXAttr(src, xAttr);
+      if (removedXAttr != null) {
+        fsImage.getEditLog().logRemoveXAttr(src, removedXAttr);
+      } else {
+        NameNode.stateChangeLog.info("DIR* FSDirectory.removeXAttr: XAttr " +
+        		XAttrHelper.getPrefixName(xAttr) + 
+        		" does not exist on the path " + src);
+      }
+    } finally {
+      writeUnlock();
+    }
+  }
+  
+  XAttr unprotectedRemoveXAttr(String src,
+      XAttr xAttr) throws IOException {
+    assert hasWriteLock();
+    INodesInPath iip = getINodesInPath4Write(normalizePath(src), true);
+    INode inode = resolveLastINode(src, iip);
+    int snapshotId = iip.getLatestSnapshotId();
+    List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
+    List<XAttr> newXAttrs = filterINodeXAttr(existingXAttrs, xAttr);
+    if (existingXAttrs.size() != newXAttrs.size()) {
+      XAttrStorage.updateINodeXAttrs(inode, newXAttrs, snapshotId);
+      return xAttr;
+    }
+    return null;
+  }
+  
+  List<XAttr> filterINodeXAttr(List<XAttr> existingXAttrs, 
+      XAttr xAttr) throws QuotaExceededException {
+    if (existingXAttrs == null || existingXAttrs.isEmpty()) {
+      return existingXAttrs;
+    }
+    
+    List<XAttr> xAttrs = Lists.newArrayListWithCapacity(existingXAttrs.size());
+    for (XAttr a : existingXAttrs) {
+      if (!(a.getNameSpace() == xAttr.getNameSpace()
+          && a.getName().equals(xAttr.getName()))) {
+        xAttrs.add(a);
+      }
+    }
+    
+    return xAttrs;
+  }
+  
+  void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag,
+      boolean logRetryCache) throws IOException {
+    writeLock();
+    try {
+      unprotectedSetXAttr(src, xAttr, flag);
+      fsImage.getEditLog().logSetXAttr(src, xAttr, logRetryCache);
+    } finally {
+      writeUnlock();
+    }
+  }
+  
+  void unprotectedSetXAttr(String src, XAttr xAttr, 
+      EnumSet<XAttrSetFlag> flag) throws IOException {
+    assert hasWriteLock();
+    INodesInPath iip = getINodesInPath4Write(normalizePath(src), true);
+    INode inode = resolveLastINode(src, iip);
+    int snapshotId = iip.getLatestSnapshotId();
+    List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
+    List<XAttr> newXAttrs = setINodeXAttr(existingXAttrs, xAttr, flag);
+    XAttrStorage.updateINodeXAttrs(inode, newXAttrs, snapshotId);
+  }
+  
+  List<XAttr> setINodeXAttr(List<XAttr> existingXAttrs, XAttr xAttr, 
+      EnumSet<XAttrSetFlag> flag) throws QuotaExceededException, IOException {
+    List<XAttr> xAttrs = Lists.newArrayListWithCapacity(
+        existingXAttrs != null ? existingXAttrs.size() + 1 : 1);
+    boolean exist = false;
+    if (existingXAttrs != null) {
+      for (XAttr a: existingXAttrs) {
+        if ((a.getNameSpace() == xAttr.getNameSpace()
+            && a.getName().equals(xAttr.getName()))) {
+          exist = true;
+        } else {
+          xAttrs.add(a);
+        }
+      }
+    }
+    
+    XAttrSetFlag.validate(xAttr.getName(), exist, flag);
+    xAttrs.add(xAttr);
+    
+    if (xAttrs.size() > inodeXAttrsLimit) {
+      throw new IOException("Cannot add additional XAttr to inode, "
+          + "would exceed limit of " + inodeXAttrsLimit);
+    }
+    
+    return xAttrs;
+  }
+  
+  List<XAttr> getXAttrs(String src) throws IOException {
+    String srcs = normalizePath(src);
+    readLock();
+    try {
+      INodesInPath iip = getLastINodeInPath(srcs, true);
+      INode inode = resolveLastINode(src, iip);
+      int snapshotId = iip.getPathSnapshotId();
+      return XAttrStorage.readINodeXAttrs(inode, snapshotId);
     } finally {
       readUnlock();
     }

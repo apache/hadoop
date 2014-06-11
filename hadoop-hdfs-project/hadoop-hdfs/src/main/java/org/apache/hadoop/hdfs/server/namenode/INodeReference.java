@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
 
 import com.google.common.base.Preconditions;
 
@@ -227,6 +228,21 @@ public abstract class INodeReference extends INode {
   @Override
   final void removeAclFeature() {
     referred.removeAclFeature();
+  }
+  
+  @Override
+  final XAttrFeature getXAttrFeature(int snapshotId) {
+    return referred.getXAttrFeature(snapshotId);
+  }
+  
+  @Override
+  final void addXAttrFeature(XAttrFeature xAttrFeature) {
+    referred.addXAttrFeature(xAttrFeature);
+  }
+  
+  @Override
+  final void removeXAttrFeature() {
+    referred.removeXAttrFeature();
   }
 
   @Override
