@@ -424,6 +424,8 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6315. Decouple recording edit logs from FSDirectory. (wheat9)
 
+    HDFS-6379. HTTPFS - Implement ACLs support. (yoderme via tucu)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
