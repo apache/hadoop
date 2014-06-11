@@ -40,6 +40,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.IOUtils;
 
 /**
  * An implementation of {@link GroupMappingServiceProvider} which
@@ -312,8 +313,8 @@ public class LdapGroupsMapping
     keystorePass =
         conf.get(LDAP_KEYSTORE_PASSWORD_KEY, LDAP_KEYSTORE_PASSWORD_DEFAULT);
     if (keystorePass.isEmpty()) {
-      keystorePass = extractPassword(
-        conf.get(LDAP_KEYSTORE_PASSWORD_KEY, LDAP_KEYSTORE_PASSWORD_DEFAULT));
+      keystorePass = extractPassword(conf.get(LDAP_KEYSTORE_PASSWORD_FILE_KEY,
+          LDAP_KEYSTORE_PASSWORD_FILE_DEFAULT));
     }
     
     bindUser = conf.get(BIND_USER_KEY, BIND_USER_DEFAULT);
@@ -346,18 +347,20 @@ public class LdapGroupsMapping
       return "";
     }
     
+    Reader reader = null;
     try {
       StringBuilder password = new StringBuilder();
-      Reader reader = new FileReader(pwFile);
+      reader = new FileReader(pwFile);
       int c = reader.read();
       while (c > -1) {
         password.append((char)c);
         c = reader.read();
       }
-      reader.close();
       return password.toString().trim();
     } catch (IOException ioe) {
       throw new RuntimeException("Could not read password file: " + pwFile, ioe);
+    } finally {
+      IOUtils.cleanup(LOG, reader);
     }
   }
 }
