@@ -209,7 +209,7 @@ public class TestFsLimits {
     lazyInitFSDirectory();
     Class<?> generated = null;
     try {
-      fs.renameTo(src, dst, false, new Rename[] { });
+      fs.renameTo(src, dst, now(), new Rename[] { });
     } catch (Throwable e) {
       generated = e.getClass();
     }
@@ -222,7 +222,7 @@ public class TestFsLimits {
     lazyInitFSDirectory();
     Class<?> generated = null;
     try {
-      fs.renameTo(src, dst, false);
+      fs.renameTo(src, dst, now());
     } catch (Throwable e) {
       generated = e.getClass();
     }

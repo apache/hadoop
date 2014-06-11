@@ -162,6 +162,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-6399. Add note about setfacl in HDFS permissions guide.
     (cnauroth via wang)
 
+    HDFS-6315. Decouple recording edit logs from FSDirectory. (wheat9)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
