@@ -482,9 +482,15 @@ Release 2.5.0 - UNRELEASED
     HDFS-6297. Add CLI testcases to reflect new features of dfs and dfsadmin
     (Dasha Boudnik via cos)
 
+    HDFS-6399. Add note about setfacl in HDFS permissions guide.
+    (cnauroth via wang)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
+
+    HDFS-6460. Ignore stale and decommissioned nodes in
+    NetworkTopology#sortByDistance. (Yongjun Zhang via wang)
 
   BUG FIXES 
 
@@ -653,6 +659,15 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6497. Make TestAvailableSpaceVolumeChoosingPolicy deterministic
     (cmccabe)
+
+    HDFS-6500. Snapshot shouldn't be removed silently after renaming to an 
+    existing snapshot. (Nicholas SZE via junping_du)
+
+    HDFS-6257. TestCacheDirectives#testExceedsCapacity fails occasionally
+    (cmccabe)
+
+    HDFS-6364. Incorrect check for unknown datanode in Balancer. (Benoy
+    Antony via Arpit Agarwal)
 
 Release 2.4.1 - UNRELEASED
 

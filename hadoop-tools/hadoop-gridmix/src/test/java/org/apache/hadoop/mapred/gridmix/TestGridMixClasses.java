@@ -376,7 +376,7 @@ public class TestGridMixClasses {
   /*
    * test LoadSortComparator
    */
-  @Test (timeout=1000)
+  @Test (timeout=3000)
   public void testLoadJobLoadSortComparator() throws Exception {
     LoadJob.LoadSortComparator test = new LoadJob.LoadSortComparator();
 
@@ -409,7 +409,7 @@ public class TestGridMixClasses {
   /*
    * test SpecGroupingComparator
    */
-  @Test (timeout=1000)
+  @Test (timeout=3000)
   public void testGridmixJobSpecGroupingComparator() throws Exception {
     GridmixJob.SpecGroupingComparator test = new GridmixJob.SpecGroupingComparator();
 
@@ -452,7 +452,7 @@ public class TestGridMixClasses {
   /*
    * test CompareGridmixJob only equals and compare
    */
-  @Test (timeout=10000)
+  @Test (timeout=30000)
   public void testCompareGridmixJob() throws Exception {
     Configuration conf = new Configuration();
     Path outRoot = new Path("target");
@@ -478,7 +478,7 @@ public class TestGridMixClasses {
   /*
    * test ReadRecordFactory. should read all data from inputstream
    */
-  @Test (timeout=1000)
+  @Test (timeout=3000)
   public void testReadRecordFactory() throws Exception {
 
     // RecordFactory factory, InputStream src, Configuration conf
@@ -589,7 +589,7 @@ public class TestGridMixClasses {
   /*
    * test LoadRecordReader. It class reads data from some files.
    */
-  @Test (timeout=1000)
+  @Test (timeout=3000)
   public void testLoadJobLoadRecordReader() throws Exception {
     LoadJob.LoadRecordReader test = new LoadJob.LoadRecordReader();
     Configuration conf = new Configuration();
@@ -652,7 +652,7 @@ public class TestGridMixClasses {
    * test LoadReducer
    */
 
-  @Test (timeout=1000)
+  @Test (timeout=3000)
   public void testLoadJobLoadReducer() throws Exception {
     LoadJob.LoadReducer test = new LoadJob.LoadReducer();
 
@@ -772,7 +772,7 @@ public class TestGridMixClasses {
   /*
    * test SerialJobFactory
    */
-  @Test (timeout=40000)
+  @Test (timeout=120000)
   public void testSerialReaderThread() throws Exception {
 
     Configuration conf = new Configuration();
@@ -833,7 +833,7 @@ public class TestGridMixClasses {
    * test SleepMapper
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
-  @Test (timeout=10000)
+  @Test (timeout=30000)
   public void testSleepMapper() throws Exception {
     SleepJob.SleepMapper test = new SleepJob.SleepMapper();
 
@@ -878,7 +878,7 @@ public class TestGridMixClasses {
   /*
    * test SleepReducer
    */
-  @Test (timeout=1000)
+  @Test (timeout=3000)
   public void testSleepReducer() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(JobContext.NUM_REDUCES, 2);

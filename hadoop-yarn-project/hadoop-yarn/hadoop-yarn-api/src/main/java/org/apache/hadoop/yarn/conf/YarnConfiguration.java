@@ -318,6 +318,13 @@ public class YarnConfiguration extends Configuration {
   public static final String RECOVERY_ENABLED = RM_PREFIX + "recovery.enabled";
   public static final boolean DEFAULT_RM_RECOVERY_ENABLED = false;
 
+  @Private
+  public static final String RM_WORK_PRESERVING_RECOVERY_ENABLED = RM_PREFIX
+      + "work-preserving-recovery.enabled";
+  @Private
+  public static final boolean DEFAULT_RM_WORK_PRESERVING_RECOVERY_ENABLED =
+      false;
+
   /** Zookeeper interaction configs */
   public static final String RM_ZK_PREFIX = RM_PREFIX + "zk-";
 

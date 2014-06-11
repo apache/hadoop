@@ -297,9 +297,6 @@ Trunk (Unreleased)
     HADOOP-9394. Port findHangingTest.sh from HBase to Hadoop. (Andrew Wang
     via atm)
 
-    HADOOP-9099. NetUtils.normalizeHostName fails on domains where 
-    UnknownHost resolves to an IP address. (Ivan Mitic via suresh)
-
     HADOOP-9431 TestSecurityUtil#testLocalHostNameForNullOrWild on systems where hostname
     contains capital letters  (Chris Nauroth via sanjay)
 
@@ -373,6 +370,11 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-9704. Write metrics sink plugin for Hadoop/Graphite (Chu Tong, Alex Newman and Babak Behzad via raviprak)
 
+    HADOOP-9629. Support Windows Azure Storage - Blob as a file system in Hadoop.
+    (Dexter Bradshaw, Mostafa Elhemali, Xi Fang, Johannes Klein, David Lao,
+    Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
+    Alexander Stojanovic, Brian Swan, and Min Wei via cnauroth)
+
   IMPROVEMENTS
 
     HADOOP-10451. Remove unused field and imports from SaslRpcServer.
@@ -428,6 +430,10 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10448. Support pluggable mechanism to specify proxy user settings.
     (Benoy Antony via Arpit Agarwal)
+
+    HADOOP-9555. HA functionality that uses ZooKeeper may experience inadvertent
+    TCP RST and miss session expiration event due to bug in client connection
+    management. (cnauroth)
 
   OPTIMIZATIONS
 
@@ -535,6 +541,11 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10647. String Format Exception in SwiftNativeFileSystemStore.java.
     (Gene Kim via stevel)
+
+    HADOOP-9099. NetUtils.normalizeHostName fails on domains where
+    UnknownHost resolves to an IP address. (Ivan Mitic via suresh)
+
+    HADOOP-10664. TestNetUtils.testNormalizeHostName fails. (atm)
 
 Release 2.4.1 - UNRELEASED
 

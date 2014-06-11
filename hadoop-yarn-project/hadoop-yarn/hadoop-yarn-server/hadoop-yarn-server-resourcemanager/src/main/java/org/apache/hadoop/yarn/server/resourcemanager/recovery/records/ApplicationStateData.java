@@ -24,7 +24,10 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationStateDataProto;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * Contains all the state data that needs to be stored persistently 
@@ -32,19 +35,43 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
  */
 @Public
 @Unstable
-public interface ApplicationStateData {
-  
+public abstract class ApplicationStateData {
+  public static ApplicationStateData newInstance(long submitTime,
+      long startTime, String user,
+      ApplicationSubmissionContext submissionContext,
+      RMAppState state, String diagnostics, long finishTime) {
+    ApplicationStateData appState = Records.newRecord(ApplicationStateData.class);
+    appState.setSubmitTime(submitTime);
+    appState.setStartTime(startTime);
+    appState.setUser(user);
+    appState.setApplicationSubmissionContext(submissionContext);
+    appState.setState(state);
+    appState.setDiagnostics(diagnostics);
+    appState.setFinishTime(finishTime);
+    return appState;
+  }
+
+  public static ApplicationStateData newInstance(
+      ApplicationState appState) {
+    return newInstance(appState.getSubmitTime(), appState.getStartTime(),
+        appState.getUser(), appState.getApplicationSubmissionContext(),
+        appState.getState(), appState.getDiagnostics(),
+        appState.getFinishTime());
+  }
+
+  public abstract ApplicationStateDataProto getProto();
+
   /**
    * The time at which the application was received by the Resource Manager
    * @return submitTime
    */
   @Public
   @Unstable
-  public long getSubmitTime();
+  public abstract long getSubmitTime();
   
   @Public
   @Unstable
-  public void setSubmitTime(long submitTime);
+  public abstract void setSubmitTime(long submitTime);
 
   /**
    * Get the <em>start time</em> of the application.
@@ -63,11 +90,11 @@ public interface ApplicationStateData {
    */
   @Public
   @Unstable
-  public void setUser(String user);
+  public abstract void setUser(String user);
   
   @Public
   @Unstable
-  public String getUser();
+  public abstract String getUser();
   
   /**
    * The {@link ApplicationSubmissionContext} for the application
@@ -76,34 +103,34 @@ public interface ApplicationStateData {
    */
   @Public
   @Unstable
-  public ApplicationSubmissionContext getApplicationSubmissionContext();
+  public abstract ApplicationSubmissionContext getApplicationSubmissionContext();
   
   @Public
   @Unstable
-  public void setApplicationSubmissionContext(
+  public abstract void setApplicationSubmissionContext(
       ApplicationSubmissionContext context);
 
   /**
    * Get the final state of the application.
    * @return the final state of the application.
    */
-  public RMAppState getState();
+  public abstract RMAppState getState();
 
-  public void setState(RMAppState state);
+  public abstract void setState(RMAppState state);
 
   /**
    * Get the diagnostics information for the application master.
    * @return the diagnostics information for the application master.
    */
-  public String getDiagnostics();
+  public abstract String getDiagnostics();
 
-  public void setDiagnostics(String diagnostics);
+  public abstract void setDiagnostics(String diagnostics);
 
   /**
    * The finish time of the application.
    * @return the finish time of the application.,
    */
-  public long getFinishTime();
+  public abstract long getFinishTime();
 
-  public void setFinishTime(long finishTime);
+  public abstract void setFinishTime(long finishTime);
 }

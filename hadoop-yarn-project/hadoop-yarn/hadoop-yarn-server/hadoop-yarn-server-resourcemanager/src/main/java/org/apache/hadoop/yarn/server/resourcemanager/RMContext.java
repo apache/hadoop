@@ -99,4 +99,6 @@ public interface RMContext {
       RMApplicationHistoryWriter rmApplicationHistoryWriter);
 
   ConfigurationProvider getConfigurationProvider();
+
+  boolean isWorkPreservingRecoveryEnabled();
 }

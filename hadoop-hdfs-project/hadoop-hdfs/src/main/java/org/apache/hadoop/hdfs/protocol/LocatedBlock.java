@@ -26,7 +26,6 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.security.token.Token;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
 /**

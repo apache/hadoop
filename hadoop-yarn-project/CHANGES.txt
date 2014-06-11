@@ -32,6 +32,10 @@ Release 2.5.0 - UNRELEASED
     YARN-1338. Recover localized resource cache state upon nodemanager restart 
     (Jason Lowe via junping_du)
 
+    YARN-1368. Added core functionality of recovering container state into
+    schedulers after ResourceManager Restart so as to preserve running work in
+    the cluster. (Jian He via vinodkv)
+
   IMPROVEMENTS
 
     YARN-1479. Invalid NaN values in Hadoop REST API JSON response (Chen He via
@@ -144,6 +148,15 @@ Release 2.5.0 - UNRELEASED
 
     YARN-2132. ZKRMStateStore.ZKAction#runWithRetries doesn't log the exception
     it encounters. (Vamsee Yarlagadda via kasha)
+
+    YARN-2030. Augmented RMStateStore with state machine.(Binglin Chang via jianhe)
+
+    YARN-1424. RMAppAttemptImpl should return the 
+    DummyApplicationResourceUsageReport for all invalid accesses. 
+    (Ray Chiang via kasha)
+
+    YARN-2091. Add more values to ContainerExitStatus and pass it from NM to
+    RM and then to app masters (Tsuyoshi OZAWA via bikas)
 
   OPTIMIZATIONS
 

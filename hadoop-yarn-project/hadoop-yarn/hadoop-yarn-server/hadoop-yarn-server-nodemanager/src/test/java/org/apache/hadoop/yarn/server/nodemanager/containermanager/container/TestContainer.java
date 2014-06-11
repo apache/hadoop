@@ -17,6 +17,7 @@
 */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.container;
 
+import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -319,7 +320,7 @@ public class TestContainer {
       assertEquals(ContainerState.NEW, wc.c.getContainerState());
       wc.killContainer();
       assertEquals(ContainerState.DONE, wc.c.getContainerState());
-      assertEquals(ExitCode.TERMINATED.getExitCode(),
+      assertEquals(ContainerExitStatus.KILLED_BY_RESOURCEMANAGER,
           wc.c.cloneAndGetContainerStatus().getExitStatus());
       assertTrue(wc.c.cloneAndGetContainerStatus().getDiagnostics()
           .contains("KillRequest"));
@@ -339,7 +340,7 @@ public class TestContainer {
       assertEquals(ContainerState.LOCALIZING, wc.c.getContainerState());
       wc.killContainer();
       assertEquals(ContainerState.KILLING, wc.c.getContainerState());
-      assertEquals(ExitCode.TERMINATED.getExitCode(),
+      assertEquals(ContainerExitStatus.KILLED_BY_RESOURCEMANAGER,
           wc.c.cloneAndGetContainerStatus().getExitStatus());
       assertTrue(wc.c.cloneAndGetContainerStatus().getDiagnostics()
           .contains("KillRequest"));
@@ -898,12 +899,14 @@ public class TestContainer {
     }
 
     public void killContainer() {
-      c.handle(new ContainerKillEvent(cId, "KillRequest"));
+      c.handle(new ContainerKillEvent(cId,
+          ContainerExitStatus.KILLED_BY_RESOURCEMANAGER,
+          "KillRequest"));
       drainDispatcherEvents();
     }
 
     public void containerKilledOnRequest() {
-      int exitCode = ExitCode.FORCE_KILLED.getExitCode();
+      int exitCode = ContainerExitStatus.KILLED_BY_RESOURCEMANAGER;
       String diagnosticMsg = "Container completed with exit code " + exitCode;
       c.handle(new ContainerExitEvent(cId,
           ContainerEventType.CONTAINER_KILLED_ON_REQUEST, exitCode,

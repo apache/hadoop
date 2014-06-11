@@ -55,11 +55,18 @@ public class TestNetworkTopology {
         DFSTestUtil.getDatanodeDescriptor("5.5.5.5", "/d1/r2"),
         DFSTestUtil.getDatanodeDescriptor("6.6.6.6", "/d2/r3"),
         DFSTestUtil.getDatanodeDescriptor("7.7.7.7", "/d2/r3"),
-        DFSTestUtil.getDatanodeDescriptor("8.8.8.8", "/d2/r3")
+        DFSTestUtil.getDatanodeDescriptor("8.8.8.8", "/d2/r3"),
+        DFSTestUtil.getDatanodeDescriptor("9.9.9.9", "/d3/r1"),
+        DFSTestUtil.getDatanodeDescriptor("10.10.10.10", "/d3/r1"),
+        DFSTestUtil.getDatanodeDescriptor("11.11.11.11", "/d3/r1"),
+        DFSTestUtil.getDatanodeDescriptor("12.12.12.12", "/d3/r2"),
+        DFSTestUtil.getDatanodeDescriptor("13.13.13.13", "/d3/r2")        
     };
     for (int i = 0; i < dataNodes.length; i++) {
       cluster.add(dataNodes[i]);
     }
+    dataNodes[9].setDecommissioned();
+    dataNodes[10].setDecommissioned();
   }
   
   @Test
@@ -100,7 +107,7 @@ public class TestNetworkTopology {
 
   @Test
   public void testRacks() throws Exception {
-    assertEquals(cluster.getNumOfRacks(), 3);
+    assertEquals(cluster.getNumOfRacks(), 5);
     assertTrue(cluster.isOnSameRack(dataNodes[0], dataNodes[1]));
     assertFalse(cluster.isOnSameRack(dataNodes[1], dataNodes[2]));
     assertTrue(cluster.isOnSameRack(dataNodes[2], dataNodes[3]));
@@ -125,16 +132,33 @@ public class TestNetworkTopology {
     testNodes[0] = dataNodes[1];
     testNodes[1] = dataNodes[2];
     testNodes[2] = dataNodes[0];
-    cluster.sortByDistance(dataNodes[0], testNodes, 0xDEADBEEF);
+    cluster.sortByDistance(dataNodes[0], testNodes,
+        testNodes.length, 0xDEADBEEF);
     assertTrue(testNodes[0] == dataNodes[0]);
     assertTrue(testNodes[1] == dataNodes[1]);
     assertTrue(testNodes[2] == dataNodes[2]);
+
+    // array contains both local node & local rack node & decommissioned node
+    DatanodeDescriptor[] dtestNodes = new DatanodeDescriptor[5];
+    dtestNodes[0] = dataNodes[8];
+    dtestNodes[1] = dataNodes[12];
+    dtestNodes[2] = dataNodes[11];
+    dtestNodes[3] = dataNodes[9];
+    dtestNodes[4] = dataNodes[10];
+    cluster.sortByDistance(dataNodes[8], dtestNodes,
+        dtestNodes.length - 2, 0xDEADBEEF);
+    assertTrue(dtestNodes[0] == dataNodes[8]);
+    assertTrue(dtestNodes[1] == dataNodes[11]);
+    assertTrue(dtestNodes[2] == dataNodes[12]);
+    assertTrue(dtestNodes[3] == dataNodes[9]);
+    assertTrue(dtestNodes[4] == dataNodes[10]);
 
     // array contains local node
     testNodes[0] = dataNodes[1];
     testNodes[1] = dataNodes[3];
     testNodes[2] = dataNodes[0];
-    cluster.sortByDistance(dataNodes[0], testNodes, 0xDEADBEEF);
+    cluster.sortByDistance(dataNodes[0], testNodes,
+        testNodes.length, 0xDEADBEEF);
     assertTrue(testNodes[0] == dataNodes[0]);
     assertTrue(testNodes[1] == dataNodes[1]);
     assertTrue(testNodes[2] == dataNodes[3]);
@@ -143,7 +167,8 @@ public class TestNetworkTopology {
     testNodes[0] = dataNodes[5];
     testNodes[1] = dataNodes[3];
     testNodes[2] = dataNodes[1];
-    cluster.sortByDistance(dataNodes[0], testNodes, 0xDEADBEEF);
+    cluster.sortByDistance(dataNodes[0], testNodes,
+        testNodes.length, 0xDEADBEEF);
     assertTrue(testNodes[0] == dataNodes[1]);
     assertTrue(testNodes[1] == dataNodes[3]);
     assertTrue(testNodes[2] == dataNodes[5]);
@@ -152,7 +177,8 @@ public class TestNetworkTopology {
     testNodes[0] = dataNodes[1];
     testNodes[1] = dataNodes[5];
     testNodes[2] = dataNodes[3];
-    cluster.sortByDistance(dataNodes[0], testNodes, 0xDEADBEEF);
+    cluster.sortByDistance(dataNodes[0], testNodes,
+        testNodes.length, 0xDEADBEEF);
     assertTrue(testNodes[0] == dataNodes[1]);
     assertTrue(testNodes[1] == dataNodes[3]);
     assertTrue(testNodes[2] == dataNodes[5]);
@@ -161,7 +187,8 @@ public class TestNetworkTopology {
     testNodes[0] = dataNodes[1];
     testNodes[1] = dataNodes[5];
     testNodes[2] = dataNodes[3];
-    cluster.sortByDistance(dataNodes[0], testNodes, 0xDEAD);
+    cluster.sortByDistance(dataNodes[0], testNodes,
+        testNodes.length, 0xDEAD);
     // sortByDistance does not take the "data center" layer into consideration
     // and it doesn't sort by getDistance, so 1, 5, 3 is also valid here
     assertTrue(testNodes[0] == dataNodes[1]);
@@ -176,7 +203,8 @@ public class TestNetworkTopology {
       testNodes[0] = dataNodes[5];
       testNodes[1] = dataNodes[6];
       testNodes[2] = dataNodes[7];
-      cluster.sortByDistance(dataNodes[i], testNodes, 0xBEADED+i);
+      cluster.sortByDistance(dataNodes[i], testNodes,
+          testNodes.length, 0xBEADED+i);
       if (first == null) {
         first = testNodes[0];
       } else {

@@ -395,8 +395,8 @@ HDFS Permissions Guide
        permission checking is turned off, but all other behavior is
        unchanged. Switching from one parameter value to the other does not
        change the mode, owner or group of files or directories.
-       Regardless of whether permissions are on or off, chmod, chgrp and
-       chown always check permissions. These functions are only useful in
+       Regardless of whether permissions are on or off, chmod, chgrp, chown and
+       setfacl always check permissions. These functions are only useful in
        the permissions context, and so there is no backwards compatibility
        issue. Furthermore, this allows administrators to reliably set
        owners and permissions in advance of turning on regular permissions

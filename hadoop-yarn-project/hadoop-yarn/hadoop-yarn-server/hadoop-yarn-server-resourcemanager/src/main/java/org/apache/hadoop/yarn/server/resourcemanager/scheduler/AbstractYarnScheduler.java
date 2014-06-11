@@ -32,14 +32,21 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerRecoverEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+@SuppressWarnings("unchecked")
 public abstract class AbstractYarnScheduler
     <T extends SchedulerApplicationAttempt, N extends SchedulerNode>
     extends AbstractService implements ResourceScheduler {
@@ -47,8 +54,7 @@ public abstract class AbstractYarnScheduler
   private static final Log LOG = LogFactory.getLog(AbstractYarnScheduler.class);
 
   // Nodes in the cluster, indexed by NodeId
-  protected Map<NodeId, N> nodes =
-      new ConcurrentHashMap<NodeId, N>();
+  protected Map<NodeId, N> nodes = new ConcurrentHashMap<NodeId, N>();
 
   // Whole capacity of the cluster
   protected Resource clusterResource = Resource.newInstance(0, 0);
@@ -58,6 +64,7 @@ public abstract class AbstractYarnScheduler
 
   protected RMContext rmContext;
   protected Map<ApplicationId, SchedulerApplication<T>> applications;
+
   protected final static List<Container> EMPTY_CONTAINER_LIST =
       new ArrayList<Container>();
   protected static final Allocation EMPTY_ALLOCATION = new Allocation(
@@ -168,5 +175,91 @@ public abstract class AbstractYarnScheduler
       throws YarnException {
     throw new YarnException(getClass().getSimpleName()
         + " does not support moving apps between queues");
+  }
+
+  private void killOrphanContainerOnNode(RMNode node,
+      NMContainerStatus container) {
+    if (!container.getContainerState().equals(ContainerState.COMPLETE)) {
+      this.rmContext.getDispatcher().getEventHandler().handle(
+        new RMNodeCleanContainerEvent(node.getNodeID(),
+          container.getContainerId()));
+    }
+  }
+
+  public synchronized void recoverContainersOnNode(
+      List<NMContainerStatus> containerReports, RMNode nm) {
+    if (!rmContext.isWorkPreservingRecoveryEnabled()
+        || containerReports == null
+        || (containerReports != null && containerReports.isEmpty())) {
+      return;
+    }
+
+    for (NMContainerStatus container : containerReports) {
+      ApplicationId appId =
+          container.getContainerId().getApplicationAttemptId().getApplicationId();
+      RMApp rmApp = rmContext.getRMApps().get(appId);
+      if (rmApp == null) {
+        LOG.error("Skip recovering container " + container
+            + " for unknown application.");
+        killOrphanContainerOnNode(nm, container);
+        continue;
+      }
+
+      // Unmanaged AM recovery is addressed in YARN-1815
+      if (rmApp.getApplicationSubmissionContext().getUnmanagedAM()) {
+        LOG.info("Skip recovering container " + container + " for unmanaged AM."
+            + rmApp.getApplicationId());
+        killOrphanContainerOnNode(nm, container);
+        continue;
+      }
+
+      SchedulerApplication<T> schedulerApp = applications.get(appId);
+      if (schedulerApp == null) {
+        LOG.info("Skip recovering container  " + container
+            + " for unknown SchedulerApplication. Application current state is "
+            + rmApp.getState());
+        killOrphanContainerOnNode(nm, container);
+        continue;
+      }
+
+      LOG.info("Recovering container " + container);
+      SchedulerApplicationAttempt schedulerAttempt =
+          schedulerApp.getCurrentAppAttempt();
+
+      // create container
+      RMContainer rmContainer = recoverAndCreateContainer(container, nm);
+
+      // recover RMContainer
+      rmContainer.handle(new RMContainerRecoverEvent(container.getContainerId(),
+        container));
+
+      // recover scheduler node
+      nodes.get(nm.getNodeID()).recoverContainer(rmContainer);
+
+      // recover queue: update headroom etc.
+      Queue queue = schedulerAttempt.getQueue();
+      queue.recoverContainer(clusterResource, schedulerAttempt, rmContainer);
+
+      // recover scheduler attempt
+      schedulerAttempt.recoverContainer(rmContainer);
+    }
+  }
+
+  private RMContainer recoverAndCreateContainer(NMContainerStatus report,
+      RMNode node) {
+    Container container =
+        Container.newInstance(report.getContainerId(), node.getNodeID(),
+          node.getHttpAddress(), report.getAllocatedResource(),
+          report.getPriority(), null);
+    ApplicationAttemptId attemptId =
+        container.getId().getApplicationAttemptId();
+    RMContainer rmContainer =
+        new RMContainerImpl(container, attemptId, node.getNodeID(),
+          applications.get(attemptId.getApplicationId()).getUser(), rmContext);
+    return rmContainer;
+  }
+
+  public SchedulerNode getSchedulerNode(NodeId nodeId) {
+    return nodes.get(nodeId);
   }
 }

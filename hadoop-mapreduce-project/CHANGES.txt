@@ -207,6 +207,12 @@ Release 2.5.0 - UNRELEASED
 
     MAPREDUCE-5899. Support incremental data copy in DistCp. (jing9)
 
+    MAPREDUCE-5886. Allow wordcount example job to accept multiple input paths.
+    (cnauroth)
+
+    MAPREDUCE-5834. Increased test-timeouts in TestGridMixClasses to avoid
+    occassional failures. (Mit Desai via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES 

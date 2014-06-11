@@ -39,6 +39,8 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
@@ -408,5 +410,26 @@ public class AppSchedulingInfo {
     //    this.priorities = appInfo.getPriorities();
     //    this.requests = appInfo.getRequests();
     this.blacklist = appInfo.getBlackList();
+  }
+
+  public synchronized void recoverContainer(RMContainer rmContainer) {
+    // ContainerIdCounter on recovery will be addressed in YARN-2052
+    this.containerIdCounter.incrementAndGet();
+
+    QueueMetrics metrics = queue.getMetrics();
+    if (pending) {
+      // If there was any container to recover, the application was
+      // running from scheduler's POV.
+      pending = false;
+      metrics.runAppAttempt(applicationId, user);
+    }
+
+    // Container is completed. Skip recovering resources.
+    if (rmContainer.getState().equals(RMContainerState.COMPLETED)) {
+      return;
+    }
+
+    metrics.allocateResources(user, 1, rmContainer.getAllocatedResource(),
+      false);
   }
 }
