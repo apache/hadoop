@@ -571,4 +571,8 @@ public class MockRM extends ResourceManager {
       .getSchedulerApplications().get(app.getApplicationId()).getQueue()
       .getMetrics().clearQueueMetrics();
   }
+  
+  public RMActiveServices getRMActiveService() {
+    return activeServices;
+  }
 }

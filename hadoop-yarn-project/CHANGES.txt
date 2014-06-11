@@ -227,6 +227,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2128. FairScheduler: Incorrect calculation of amResource usage.
     (Wei Yan via kasha)
 
+    YARN-2124. Fixed NPE in ProportionalCapacityPreemptionPolicy. (Wangda Tan
+    via jianhe)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
