@@ -62,8 +62,6 @@ public class TestCommitBlockSynchronization {
     doReturn(blockInfo).when(namesystemSpy).getStoredBlock(any(Block.class));
     doReturn("").when(namesystemSpy).closeFileCommitBlocks(
         any(INodeFile.class), any(BlockInfo.class));
-    doReturn("").when(namesystemSpy).persistBlocks(
-        any(INodeFile.class), anyBoolean());
     doReturn(mock(FSEditLog.class)).when(namesystemSpy).getEditLog();
 
     return namesystemSpy;
