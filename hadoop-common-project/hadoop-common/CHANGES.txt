@@ -532,6 +532,8 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10656. The password keystore file is not picked by LDAP group mapping
     (brandonli)
 
+    HADOOP-10622. Shell.runCommand can deadlock (Gera Shegalov via jlowe)
+
   BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
 
     HADOOP-10520. Extended attributes definition and FileSystem APIs for
