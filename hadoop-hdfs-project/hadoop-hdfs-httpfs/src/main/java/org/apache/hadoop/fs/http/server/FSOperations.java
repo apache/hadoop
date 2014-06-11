@@ -26,7 +26,10 @@ import org.apache.hadoop.fs.GlobFilter;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.json.simple.JSONArray;
@@ -36,6 +39,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -44,34 +48,170 @@ import java.util.Map;
 @InterfaceAudience.Private
 public class FSOperations {
 
-  @SuppressWarnings({"unchecked", "deprecation"})
-  private static Map fileStatusToJSONRaw(FileStatus status, boolean emptyPathSuffix) {
-    Map json = new LinkedHashMap();
-    json.put(HttpFSFileSystem.PATH_SUFFIX_JSON, (emptyPathSuffix) ? "" : status.getPath().getName());
-    json.put(HttpFSFileSystem.TYPE_JSON, HttpFSFileSystem.FILE_TYPE.getType(status).toString());
-    json.put(HttpFSFileSystem.LENGTH_JSON, status.getLen());
-    json.put(HttpFSFileSystem.OWNER_JSON, status.getOwner());
-    json.put(HttpFSFileSystem.GROUP_JSON, status.getGroup());
-    json.put(HttpFSFileSystem.PERMISSION_JSON, HttpFSFileSystem.permissionToString(status.getPermission()));
-    json.put(HttpFSFileSystem.ACCESS_TIME_JSON, status.getAccessTime());
-    json.put(HttpFSFileSystem.MODIFICATION_TIME_JSON, status.getModificationTime());
-    json.put(HttpFSFileSystem.BLOCK_SIZE_JSON, status.getBlockSize());
-    json.put(HttpFSFileSystem.REPLICATION_JSON, status.getReplication());
-    return json;
+  /**
+   * This class is used to group a FileStatus and an AclStatus together.
+   * It's needed for the GETFILESTATUS and LISTSTATUS calls, which take
+   * most info from the FileStatus and a wee bit from the AclStatus.
+   */
+  private static class StatusPair {
+    private FileStatus fileStatus;
+    private AclStatus aclStatus;
+
+    /**
+     * Simple constructor
+     * @param fileStatus Existing FileStatus object
+     * @param aclStatus Existing AclStatus object
+     */
+    public StatusPair(FileStatus fileStatus, AclStatus aclStatus) {
+      this.fileStatus = fileStatus;
+      this.aclStatus = aclStatus;
+    }
+
+    /**
+     * Create one StatusPair by performing the underlying calls to
+     * fs.getFileStatus and fs.getAclStatus
+     * @param fs The FileSystem where 'path' lives
+     * @param path The file/directory to query
+     * @throws IOException
+     */
+    public StatusPair(FileSystem fs, Path path) throws IOException {
+      fileStatus = fs.getFileStatus(path);
+      aclStatus = null;
+      try {
+        aclStatus = fs.getAclStatus(path);
+      } catch (AclException e) {
+        /*
+         * The cause is almost certainly an "ACLS aren't enabled"
+         * exception, so leave aclStatus at null and carry on.
+         */
+      } catch (UnsupportedOperationException e) {
+        /* Ditto above - this is the case for a local file system */
+      }
+    }
+
+    /**
+     * Return a Map suitable for conversion into JSON format
+     * @return The JSONish Map
+     */
+    public Map<String,Object> toJson() {
+      Map<String,Object> json = new LinkedHashMap<String,Object>();
+      json.put(HttpFSFileSystem.FILE_STATUS_JSON, toJsonInner(true));
+      return json;
+    }
+
+    /**
+     * Return in inner part of the JSON for the status - used by both the
+     * GETFILESTATUS and LISTSTATUS calls.
+     * @param emptyPathSuffix Whether or not to include PATH_SUFFIX_JSON
+     * @return The JSONish Map
+     */
+    public Map<String,Object> toJsonInner(boolean emptyPathSuffix) {
+      Map<String,Object> json = new LinkedHashMap<String,Object>();
+      json.put(HttpFSFileSystem.PATH_SUFFIX_JSON,
+              (emptyPathSuffix) ? "" : fileStatus.getPath().getName());
+      json.put(HttpFSFileSystem.TYPE_JSON,
+              HttpFSFileSystem.FILE_TYPE.getType(fileStatus).toString());
+      json.put(HttpFSFileSystem.LENGTH_JSON, fileStatus.getLen());
+      json.put(HttpFSFileSystem.OWNER_JSON, fileStatus.getOwner());
+      json.put(HttpFSFileSystem.GROUP_JSON, fileStatus.getGroup());
+      json.put(HttpFSFileSystem.PERMISSION_JSON,
+              HttpFSFileSystem.permissionToString(fileStatus.getPermission()));
+      json.put(HttpFSFileSystem.ACCESS_TIME_JSON, fileStatus.getAccessTime());
+      json.put(HttpFSFileSystem.MODIFICATION_TIME_JSON,
+              fileStatus.getModificationTime());
+      json.put(HttpFSFileSystem.BLOCK_SIZE_JSON, fileStatus.getBlockSize());
+      json.put(HttpFSFileSystem.REPLICATION_JSON, fileStatus.getReplication());
+      if ( (aclStatus != null) && !(aclStatus.getEntries().isEmpty()) ) {
+        json.put(HttpFSFileSystem.ACL_BIT_JSON,true);
+      }
+      return json;
+    }
   }
 
   /**
-   * Converts a FileSystemAccess <code>FileStatus</code> object into a JSON
-   * object.
-   *
-   * @param status FileSystemAccess file status.
-   *
-   * @return The JSON representation of the file status.
+   * Simple class used to contain and operate upon a list of StatusPair
+   * objects.  Used by LISTSTATUS.
    */
-  @SuppressWarnings({"unchecked", "deprecation"})
-  private static Map fileStatusToJSON(FileStatus status) {
-    Map json = new LinkedHashMap();
-    json.put(HttpFSFileSystem.FILE_STATUS_JSON, fileStatusToJSONRaw(status, true));
+  private static class StatusPairs {
+    private StatusPair[] statusPairs;
+
+    /**
+     * Construct a list of StatusPair objects
+     * @param fs The FileSystem where 'path' lives
+     * @param path The directory to query
+     * @param filter A possible filter for entries in the directory
+     * @throws IOException
+     */
+    public StatusPairs(FileSystem fs, Path path, PathFilter filter)
+            throws IOException {
+      /* Grab all the file statuses at once in an array */
+      FileStatus[] fileStatuses = fs.listStatus(path, filter);
+
+      /* We'll have an array of StatusPairs of the same length */
+      AclStatus aclStatus = null;
+      statusPairs = new StatusPair[fileStatuses.length];
+
+      /*
+       * For each FileStatus, attempt to acquire an AclStatus.  If the
+       * getAclStatus throws an exception, we assume that ACLs are turned
+       * off entirely and abandon the attempt.
+       */
+      boolean useAcls = true;   // Assume ACLs work until proven otherwise
+      for (int i = 0; i < fileStatuses.length; i++) {
+        if (useAcls) {
+          try {
+            aclStatus = fs.getAclStatus(fileStatuses[i].getPath());
+          } catch (AclException e) {
+            /* Almost certainly due to an "ACLs not enabled" exception */
+            aclStatus = null;
+            useAcls = false;
+          } catch (UnsupportedOperationException e) {
+            /* Ditto above - this is the case for a local file system */
+            aclStatus = null;
+            useAcls = false;
+          }
+        }
+        statusPairs[i] = new StatusPair(fileStatuses[i], aclStatus);
+      }
+    }
+
+    /**
+     * Return a Map suitable for conversion into JSON.
+     * @return A JSONish Map
+     */
+    @SuppressWarnings({"unchecked"})
+    public Map<String,Object> toJson() {
+      Map<String,Object> json = new LinkedHashMap<String,Object>();
+      Map<String,Object> inner = new LinkedHashMap<String,Object>();
+      JSONArray statuses = new JSONArray();
+      for (StatusPair s : statusPairs) {
+        statuses.add(s.toJsonInner(false));
+      }
+      inner.put(HttpFSFileSystem.FILE_STATUS_JSON, statuses);
+      json.put(HttpFSFileSystem.FILE_STATUSES_JSON, inner);
+      return json;
+    }
+  }
+
+  /** Converts an <code>AclStatus</code> object into a JSON object.
+   *
+   * @param aclStatus AclStatus object
+   *
+   * @return The JSON representation of the ACLs for the file
+   */
+  @SuppressWarnings({"unchecked"})
+  private static Map<String,Object> aclStatusToJSON(AclStatus aclStatus) {
+    Map<String,Object> json = new LinkedHashMap<String,Object>();
+    Map<String,Object> inner = new LinkedHashMap<String,Object>();
+    JSONArray entriesArray = new JSONArray();
+    inner.put(HttpFSFileSystem.OWNER_JSON, aclStatus.getOwner());
+    inner.put(HttpFSFileSystem.GROUP_JSON, aclStatus.getGroup());
+    inner.put(HttpFSFileSystem.ACL_STICKY_BIT_JSON, aclStatus.isStickyBit());
+    for ( AclEntry e : aclStatus.getEntries() ) {
+      entriesArray.add(e.toString());
+    }
+    inner.put(HttpFSFileSystem.ACL_ENTRIES_JSON, entriesArray);
+    json.put(HttpFSFileSystem.ACL_STATUS_JSON, inner);
     return json;
   }
 
@@ -114,30 +254,6 @@ public class FSOperations {
     json.put(HttpFSFileSystem.CONTENT_SUMMARY_SPACE_QUOTA_JSON, contentSummary.getSpaceQuota());
     Map response = new LinkedHashMap();
     response.put(HttpFSFileSystem.CONTENT_SUMMARY_JSON, json);
-    return response;
-  }
-
-  /**
-   * Converts a FileSystemAccess <code>FileStatus</code> array into a JSON array
-   * object.
-   *
-   * @param status FileSystemAccess file status array.
-   * <code>SCHEME://HOST:PORT</code> in the file status.
-   *
-   * @return The JSON representation of the file status array.
-   */
-  @SuppressWarnings("unchecked")
-  private static Map fileStatusToJSON(FileStatus[] status) {
-    JSONArray json = new JSONArray();
-    if (status != null) {
-      for (FileStatus s : status) {
-        json.add(fileStatusToJSONRaw(s, false));
-      }
-    }
-    Map response = new LinkedHashMap();
-    Map temp = new LinkedHashMap();
-    temp.put(HttpFSFileSystem.FILE_STATUS_JSON, json);
-    response.put(HttpFSFileSystem.FILE_STATUSES_JSON, temp);
     return response;
   }
 
@@ -418,18 +534,19 @@ public class FSOperations {
     }
 
     /**
-     * Executes the filesystem operation.
+     * Executes the filesystem getFileStatus operation and returns the
+     * result in a JSONish Map.
      *
      * @param fs filesystem instance to use.
      *
      * @return a Map object (JSON friendly) with the file status.
      *
-     * @throws IOException thrown if an IO error occured.
+     * @throws IOException thrown if an IO error occurred.
      */
     @Override
     public Map execute(FileSystem fs) throws IOException {
-      FileStatus status = fs.getFileStatus(path);
-      return fileStatusToJSON(status);
+      StatusPair sp = new StatusPair(fs, path);
+      return sp.toJson();
     }
 
   }
@@ -482,19 +599,20 @@ public class FSOperations {
     }
 
     /**
-     * Executes the filesystem operation.
+     * Returns data for a JSON Map containing the information for
+     * the set of files in 'path' that match 'filter'.
      *
      * @param fs filesystem instance to use.
      *
      * @return a Map with the file status of the directory
-     *         contents.
+     *         contents that match the filter
      *
-     * @throws IOException thrown if an IO error occured.
+     * @throws IOException thrown if an IO error occurred.
      */
     @Override
     public Map execute(FileSystem fs) throws IOException {
-      FileStatus[] status = fs.listStatus(path, filter);
-      return fileStatusToJSON(status);
+      StatusPairs sp = new StatusPairs(fs, path, filter);
+      return sp.toJson();
     }
 
     @Override
@@ -686,6 +804,218 @@ public class FSOperations {
       FsPermission fsPermission = new FsPermission(permission);
       fs.setPermission(path, fsPermission);
       return null;
+    }
+
+  }
+
+  /**
+   * Executor that sets the acl for a file in a FileSystem
+   */
+  @InterfaceAudience.Private
+  public static class FSSetAcl implements FileSystemAccess.FileSystemExecutor<Void> {
+
+    private Path path;
+    private List<AclEntry> aclEntries;
+
+    /**
+     * Creates a set-acl executor.
+     *
+     * @param path path to set the acl.
+     * @param aclSpec acl to set.
+     */
+    public FSSetAcl(String path, String aclSpec) {
+      this.path = new Path(path);
+      this.aclEntries = AclEntry.parseAclSpec(aclSpec, true);
+    }
+
+    /**
+     * Executes the filesystem operation.
+     *
+     * @param fs filesystem instance to use.
+     *
+     * @return void.
+     *
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      fs.setAcl(path, aclEntries);
+      return null;
+    }
+
+  }
+
+  /**
+   * Executor that removes all acls from a file in a FileSystem
+   */
+  @InterfaceAudience.Private
+  public static class FSRemoveAcl implements FileSystemAccess.FileSystemExecutor<Void> {
+
+    private Path path;
+
+    /**
+     * Creates a remove-acl executor.
+     *
+     * @param path path from which to remove the acl.
+     */
+    public FSRemoveAcl(String path) {
+      this.path = new Path(path);
+    }
+
+    /**
+     * Executes the filesystem operation.
+     *
+     * @param fs filesystem instance to use.
+     *
+     * @return void.
+     *
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      fs.removeAcl(path);
+      return null;
+    }
+
+  }
+
+  /**
+   * Executor that modifies acl entries for a file in a FileSystem
+   */
+  @InterfaceAudience.Private
+  public static class FSModifyAclEntries implements FileSystemAccess.FileSystemExecutor<Void> {
+
+    private Path path;
+    private List<AclEntry> aclEntries;
+
+    /**
+     * Creates a modify-acl executor.
+     *
+     * @param path path to set the acl.
+     * @param aclSpec acl to set.
+     */
+    public FSModifyAclEntries(String path, String aclSpec) {
+      this.path = new Path(path);
+      this.aclEntries = AclEntry.parseAclSpec(aclSpec, true);
+    }
+
+    /**
+     * Executes the filesystem operation.
+     *
+     * @param fs filesystem instance to use.
+     *
+     * @return void.
+     *
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      fs.modifyAclEntries(path, aclEntries);
+      return null;
+    }
+
+  }
+
+  /**
+   * Executor that removes acl entries from a file in a FileSystem
+   */
+  @InterfaceAudience.Private
+  public static class FSRemoveAclEntries implements FileSystemAccess.FileSystemExecutor<Void> {
+
+    private Path path;
+    private List<AclEntry> aclEntries;
+
+    /**
+     * Creates a remove acl entry executor.
+     *
+     * @param path path to set the acl.
+     * @param aclSpec acl parts to remove.
+     */
+    public FSRemoveAclEntries(String path, String aclSpec) {
+      this.path = new Path(path);
+      this.aclEntries = AclEntry.parseAclSpec(aclSpec, true);
+    }
+
+    /**
+     * Executes the filesystem operation.
+     *
+     * @param fs filesystem instance to use.
+     *
+     * @return void.
+     *
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      fs.removeAclEntries(path, aclEntries);
+      return null;
+    }
+
+  }
+
+  /**
+   * Executor that removes the default acl from a directory in a FileSystem
+   */
+  @InterfaceAudience.Private
+  public static class FSRemoveDefaultAcl implements FileSystemAccess.FileSystemExecutor<Void> {
+
+    private Path path;
+
+    /**
+     * Creates an executor for removing the default acl.
+     *
+     * @param path path to set the acl.
+     */
+    public FSRemoveDefaultAcl(String path) {
+      this.path = new Path(path);
+    }
+
+    /**
+     * Executes the filesystem operation.
+     *
+     * @param fs filesystem instance to use.
+     *
+     * @return void.
+     *
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      fs.removeDefaultAcl(path);
+      return null;
+    }
+
+  }
+
+  /**
+   * Executor that gets the ACL information for a given file.
+   */
+  @InterfaceAudience.Private
+  public static class FSAclStatus implements FileSystemAccess.FileSystemExecutor<Map> {
+    private Path path;
+
+    /**
+     * Creates an executor for getting the ACLs for a file.
+     *
+     * @param path the path to retrieve the ACLs.
+     */
+    public FSAclStatus(String path) {
+      this.path = new Path(path);
+    }
+
+    /**
+     * Executes the filesystem operation.
+     *
+     * @param fs filesystem instance to use.
+     *
+     * @return a Map object (JSON friendly) with the file status.
+     *
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public Map execute(FileSystem fs) throws IOException {
+      AclStatus status = fs.getAclStatus(path);
+      return aclStatusToJSON(status);
     }
 
   }

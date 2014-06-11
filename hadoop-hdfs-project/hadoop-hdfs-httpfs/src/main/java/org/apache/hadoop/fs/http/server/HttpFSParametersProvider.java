@@ -33,12 +33,16 @@ import org.slf4j.MDC;
 import javax.ws.rs.ext.Provider;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
+
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT;
 
 /**
  * HttpFS ParametersProvider.
  */
 @Provider
 @InterfaceAudience.Private
+@SuppressWarnings("unchecked")
 public class HttpFSParametersProvider extends ParametersProvider {
 
   private static final Map<Enum, Class<Param<?>>[]> PARAMS_DEF =
@@ -55,6 +59,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
     PARAMS_DEF.put(Operation.GETFILECHECKSUM, new Class[]{DoAsParam.class});
     PARAMS_DEF.put(Operation.GETFILEBLOCKLOCATIONS,
       new Class[]{DoAsParam.class});
+    PARAMS_DEF.put(Operation.GETACLSTATUS, new Class[]{DoAsParam.class});
     PARAMS_DEF.put(Operation.INSTRUMENTATION, new Class[]{DoAsParam.class});
     PARAMS_DEF.put(Operation.APPEND,
       new Class[]{DoAsParam.class, DataParam.class});
@@ -77,6 +82,16 @@ public class HttpFSParametersProvider extends ParametersProvider {
                   AccessTimeParam.class});
     PARAMS_DEF.put(Operation.DELETE,
       new Class[]{DoAsParam.class, RecursiveParam.class});
+    PARAMS_DEF.put(Operation.SETACL,
+            new Class[]{DoAsParam.class, AclPermissionParam.class});
+    PARAMS_DEF.put(Operation.REMOVEACL,
+            new Class[]{DoAsParam.class});
+    PARAMS_DEF.put(Operation.MODIFYACLENTRIES,
+            new Class[]{DoAsParam.class, AclPermissionParam.class});
+    PARAMS_DEF.put(Operation.REMOVEACLENTRIES,
+            new Class[]{DoAsParam.class, AclPermissionParam.class});
+    PARAMS_DEF.put(Operation.REMOVEDEFAULTACL,
+            new Class[]{DoAsParam.class});
   }
 
   public HttpFSParametersProvider() {
@@ -368,6 +383,26 @@ public class HttpFSParametersProvider extends ParametersProvider {
       super(NAME, HttpFSFileSystem.DEFAULT_PERMISSION, 8);
     }
 
+  }
+
+  /**
+   * Class for AclPermission parameter.
+   */
+  @InterfaceAudience.Private
+  public static class AclPermissionParam extends StringParam {
+
+    /**
+     * Parameter name.
+     */
+    public static final String NAME = HttpFSFileSystem.ACLSPEC_PARAM;
+
+    /**
+     * Constructor.
+     */
+    public AclPermissionParam() {
+      super(NAME, HttpFSFileSystem.ACLSPEC_DEFAULT,
+              Pattern.compile(DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT));
+    }
   }
 
   /**

@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.AccessTimeParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.AclPermissionParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.BlockSizeParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DataParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DestinationParam;
@@ -313,6 +314,14 @@ public class HttpFSServer {
         response = Response.status(Response.Status.BAD_REQUEST).build();
         break;
       }
+      case GETACLSTATUS: {
+        FSOperations.FSAclStatus command =
+                new FSOperations.FSAclStatus(path);
+        Map json = fsExecute(user, doAs, command);
+        AUDIT_LOG.info("ACL status for [{}]", path);
+        response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
+        break;
+      }
       default: {
         throw new IOException(
           MessageFormat.format("Invalid HTTP GET operation [{0}]",
@@ -576,6 +585,52 @@ public class HttpFSServer {
         fsExecute(user, doAs, command);
         AUDIT_LOG.info("[{}] to (M/A)[{}]", path,
                        modifiedTime + ":" + accessTime);
+        response = Response.ok().build();
+        break;
+      }
+      case SETACL: {
+        String aclSpec = params.get(AclPermissionParam.NAME,
+                AclPermissionParam.class);
+        FSOperations.FSSetAcl command =
+                new FSOperations.FSSetAcl(path, aclSpec);
+        fsExecute(user, doAs, command);
+        AUDIT_LOG.info("[{}] to acl [{}]", path, aclSpec);
+        response = Response.ok().build();
+        break;
+      }
+      case REMOVEACL: {
+        FSOperations.FSRemoveAcl command =
+                new FSOperations.FSRemoveAcl(path);
+        fsExecute(user, doAs, command);
+        AUDIT_LOG.info("[{}] removed acl", path);
+        response = Response.ok().build();
+        break;
+      }
+      case MODIFYACLENTRIES: {
+        String aclSpec = params.get(AclPermissionParam.NAME,
+                AclPermissionParam.class);
+        FSOperations.FSModifyAclEntries command =
+                new FSOperations.FSModifyAclEntries(path, aclSpec);
+        fsExecute(user, doAs, command);
+        AUDIT_LOG.info("[{}] modify acl entry with [{}]", path, aclSpec);
+        response = Response.ok().build();
+        break;
+      }
+      case REMOVEACLENTRIES: {
+        String aclSpec = params.get(AclPermissionParam.NAME,
+                AclPermissionParam.class);
+        FSOperations.FSRemoveAclEntries command =
+                new FSOperations.FSRemoveAclEntries(path, aclSpec);
+        fsExecute(user, doAs, command);
+        AUDIT_LOG.info("[{}] remove acl entry [{}]", path, aclSpec);
+        response = Response.ok().build();
+        break;
+      }
+      case REMOVEDEFAULTACL: {
+        FSOperations.FSRemoveDefaultAcl command =
+                new FSOperations.FSRemoveDefaultAcl(path);
+        fsExecute(user, doAs, command);
+        AUDIT_LOG.info("[{}] remove default acl", path);
         response = Response.ok().build();
         break;
       }
