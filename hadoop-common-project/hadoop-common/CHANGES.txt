@@ -558,6 +558,9 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10575. Small fixes for XAttrCommands and test. (Yi Liu via umamahesh)
 
+    HADOOP-10561. Copy command with preserve option should handle Xattrs.
+    (Yi Liu via cnauroth)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
