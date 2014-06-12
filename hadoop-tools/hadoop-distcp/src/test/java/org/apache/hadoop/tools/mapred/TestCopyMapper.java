@@ -450,6 +450,7 @@ public class TestCopyMapper {
       EnumSet<DistCpOptions.FileAttribute> preserveStatus =
           EnumSet.allOf(DistCpOptions.FileAttribute.class);
       preserveStatus.remove(DistCpOptions.FileAttribute.ACL);
+      preserveStatus.remove(DistCpOptions.FileAttribute.XATTR);
 
       context.getConfiguration().set(DistCpConstants.CONF_LABEL_PRESERVE_STATUS,
         DistCpUtils.packAttributes(preserveStatus));
@@ -588,6 +589,7 @@ public class TestCopyMapper {
       EnumSet<DistCpOptions.FileAttribute> preserveStatus =
           EnumSet.allOf(DistCpOptions.FileAttribute.class);
       preserveStatus.remove(DistCpOptions.FileAttribute.ACL);
+      preserveStatus.remove(DistCpOptions.FileAttribute.XATTR);
 
       context.getConfiguration().set(DistCpConstants.CONF_LABEL_PRESERVE_STATUS,
         DistCpUtils.packAttributes(preserveStatus));
@@ -663,6 +665,7 @@ public class TestCopyMapper {
       EnumSet<DistCpOptions.FileAttribute> preserveStatus =
           EnumSet.allOf(DistCpOptions.FileAttribute.class);
       preserveStatus.remove(DistCpOptions.FileAttribute.ACL);
+      preserveStatus.remove(DistCpOptions.FileAttribute.XATTR);
 
       final Mapper<Text, CopyListingFileStatus, Text, Text>.Context context
               = stubContext.getContext();

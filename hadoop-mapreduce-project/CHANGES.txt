@@ -114,6 +114,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5777. Support utf-8 text with Byte Order Marker.
     (Zhihai Xu via kasha)
 
+    MAPREDUCE-5898. distcp to support preserving HDFS extended attributes(XAttrs)
+    (Yi Liu via umamahesh)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

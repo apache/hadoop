@@ -213,7 +213,8 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
         sourceFS = sourcePath.getFileSystem(conf);
         sourceCurrStatus = DistCpUtils.toCopyListingFileStatus(sourceFS,
           sourceFS.getFileStatus(sourcePath),
-          fileAttributes.contains(FileAttribute.ACL));
+          fileAttributes.contains(FileAttribute.ACL), 
+          fileAttributes.contains(FileAttribute.XATTR));
       } catch (FileNotFoundException e) {
         throw new IOException(new RetriableFileCopyCommand.CopyReadException(e));
       }

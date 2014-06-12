@@ -128,6 +128,9 @@ public class DistCp extends Configured implements Tool {
     } catch (AclsNotSupportedException e) {
       LOG.error("ACLs not supported on at least one file system: ", e);
       return DistCpConstants.ACLS_NOT_SUPPORTED;
+    } catch (XAttrsNotSupportedException e) {
+      LOG.error("XAttrs not supported on at least one file system: ", e);
+      return DistCpConstants.XATTRS_NOT_SUPPORTED;
     } catch (Exception e) {
       LOG.error("Exception encountered ", e);
       return DistCpConstants.UNKNOWN_ERROR;
@@ -303,6 +306,9 @@ public class DistCp extends Configured implements Tool {
                                           targetFS.getWorkingDirectory());
     if (inputOptions.shouldPreserve(DistCpOptions.FileAttribute.ACL)) {
       DistCpUtils.checkFileSystemAclSupport(targetFS);
+    }
+    if (inputOptions.shouldPreserve(DistCpOptions.FileAttribute.XATTR)) {
+      DistCpUtils.checkFileSystemXAttrSupport(targetFS);
     }
     if (inputOptions.shouldAtomicCommit()) {
       Path workDir = inputOptions.getAtomicWorkPath();
