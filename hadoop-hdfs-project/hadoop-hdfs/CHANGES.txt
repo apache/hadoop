@@ -169,6 +169,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6471. Make moveFromLocal CLI testcases to be non-disruptive
     (Dasha Boudnik via cos)
 
+    HDFS-6395. Skip checking xattr limits for non-user-visible namespaces.
+    (Yi Liu via wang).
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
