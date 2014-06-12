@@ -334,6 +334,7 @@
                   <include>RefreshAuthorizationPolicyProtocol.proto</include>
                   <include>RefreshUserMappingsProtocol.proto</include>
                   <include>RefreshCallQueueProtocol.proto</include>
+                  <include>GenericRefreshProtocol.proto</include>
                 </includes>
               </source>
               <output>${project.build.directory}/generated-sources/java</output>
