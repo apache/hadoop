@@ -256,7 +256,7 @@ public class MapFile {
       } else {
         keyClass= 
           (Class<? extends WritableComparable>) keyClassOption.getValue();
-        this.comparator = WritableComparator.get(keyClass);
+        this.comparator = WritableComparator.get(keyClass, conf);
       }
       this.lastKey = comparator.newKey();
       FileSystem fs = dirName.getFileSystem(conf);
@@ -428,12 +428,13 @@ public class MapFile {
       this.data = createDataFileReader(dataFile, conf, options);
       this.firstPosition = data.getPosition();
 
-      if (comparator == null)
-        this.comparator = 
-          WritableComparator.get(data.getKeyClass().
-                                   asSubclass(WritableComparable.class));
-      else
+      if (comparator == null) {
+        Class<? extends WritableComparable> cls;
+        cls = data.getKeyClass().asSubclass(WritableComparable.class);
+        this.comparator = WritableComparator.get(cls, conf);
+      } else {
         this.comparator = comparator;
+      }
 
       // open the index
       SequenceFile.Reader.Option[] indexOptions =
