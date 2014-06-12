@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.StorageType;
+import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -152,6 +153,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageUuidsProto;
 import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.JournalInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.GetXAttrsResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.ListXAttrsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.XAttrProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.XAttrProto.XAttrNamespaceProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.XAttrSetFlagProto;
@@ -2174,6 +2176,21 @@ public class PBHelper {
         .newBuilder();
     if (xAttrs != null) {
       builder.addAllXAttrs(convertXAttrProto(xAttrs));
+    }
+    return builder.build();
+  }
+
+  public static List<XAttr> convert(ListXAttrsResponseProto a) {
+    final List<XAttrProto> xAttrs = a.getXAttrsList();
+    return convertXAttrs(xAttrs);
+  }
+
+  public static ListXAttrsResponseProto convertListXAttrsResponse(
+    List<XAttr> names) {
+    ListXAttrsResponseProto.Builder builder =
+      ListXAttrsResponseProto.newBuilder();
+    if (names != null) {
+      builder.addAllXAttrs(convertXAttrProto(names));
     }
     return builder.build();
   }

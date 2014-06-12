@@ -1411,6 +1411,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
       throws IOException {
     return namesystem.getXAttrs(src, xAttrs);
   }
+
+  @Override
+  public List<XAttr> listXAttrs(String src) throws IOException {
+    return namesystem.listXAttrs(src);
+  }
   
   @Override
   public void removeXAttr(String src, XAttr xAttr) throws IOException {

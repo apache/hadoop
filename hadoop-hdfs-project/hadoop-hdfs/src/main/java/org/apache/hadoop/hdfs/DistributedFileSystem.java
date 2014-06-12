@@ -1913,6 +1913,23 @@ public class DistributedFileSystem extends FileSystem {
   }
   
   @Override
+  public List<String> listXAttrs(Path path)
+          throws IOException {
+    final Path absF = fixRelativePart(path);
+    return new FileSystemLinkResolver<List<String>>() {
+      @Override
+      public List<String> doCall(final Path p) throws IOException {
+        return dfs.listXAttrs(getPathName(p));
+      }
+      @Override
+      public List<String> next(final FileSystem fs, final Path p)
+              throws IOException, UnresolvedLinkException {
+        return fs.listXAttrs(p);
+      }
+    }.resolve(this, absF);
+  }
+
+  @Override
   public void removeXAttr(Path path, final String name) throws IOException {
     Path absF = fixRelativePart(path);
     new FileSystemLinkResolver<Void>() {

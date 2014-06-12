@@ -870,6 +870,11 @@ public class NamenodeWebHdfsMethods {
           xattrEncoding.getEncoding());
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
+    case LISTXATTRS: {
+      final List<XAttr> xAttrs = np.listXAttrs(fullpath);
+      final String js = JsonUtil.toJsonString(xAttrs);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
