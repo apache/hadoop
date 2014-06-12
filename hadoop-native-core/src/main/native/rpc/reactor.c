@@ -104,9 +104,10 @@ static void reactor_async_start_outbound(struct hrpc_reactor *reactor,
 
     conn = reuse_idle_conn(reactor, &call->remote, call);
     if (conn) {
-        reactor_log_debug(reactor, "start_outbound(remote=%s) assigning to "
-                       "connection %p\n",
-            net_ipv4_name(&call->remote, remote_str, sizeof(remote_str)), conn);
+        reactor_log_debug(reactor, "reactor_async_start_outbound(remote=%s) "
+                          "assigning to connection %p\n",
+                net_ipv4_name(&call->remote, remote_str, sizeof(remote_str)),
+                conn);
         hrpc_conn_start_outbound(conn, call);
     } else {
         err = hrpc_conn_create_outbound(reactor, call, &conn);
@@ -118,9 +119,10 @@ static void reactor_async_start_outbound(struct hrpc_reactor *reactor,
             hrpc_call_deliver_err(call, err);
             return;
         }
-        reactor_log_debug(reactor, "start_outbound(remote=%s) created new "
-                       "connection %p\n",
-            net_ipv4_name(&call->remote, remote_str, sizeof(remote_str)), conn);
+        reactor_log_debug(reactor, "reactor_async_start_outbound("
+                "remote=%s) created new connection %p\n",
+                net_ipv4_name(&call->remote, remote_str, sizeof(remote_str)),
+                conn);
     }
     // Add or re-add the connection to the reactor's tree.
     RB_INSERT(hrpc_conns, &reactor->conns, conn);

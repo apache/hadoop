@@ -41,7 +41,7 @@ struct hadoop_err *hadoop_lerr_alloc(int code, const char *fmt, ...)
 /**
  * Allocate a new error object based on a libuv error.
  *
- * @param loop          The libuv loop to check.
+ * @param code          The libuv error code to check.
  * @param fmt           printf-style format.
  * @param ...           printf-style arguments.
  *
@@ -75,6 +75,38 @@ const char *hadoop_err_msg(const struct hadoop_err *err);
  * @param err       The hadoop error.
  */
 void hadoop_err_free(struct hadoop_err *err);
+
+/**
+ * Prepend an error message to an existing hadoop error.
+ *
+ * @param err       The hadoop error to prepend to.
+ * @param code      0 to use the existing code; the new code otherwise.
+ * @param fmt       printf-style format string.
+ * @param ...       printf-style arguments.
+ *
+ * @return          The error message.  Valid until the hadoop_err
+ *                  object is freed.
+ */
+struct hadoop_err *hadoop_err_prepend(struct hadoop_err *err,
+        int code, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
+
+/**
+ * Copy a hadoop error.
+ *
+ * @param err       The hadoop error.
+ *
+ * @return          A copy of the hadoop error.
+ */
+struct hadoop_err *hadoop_err_copy(const struct hadoop_err *err);
+
+/**
+ * A thread-safe version of strerror.
+ *
+ * @param errnum    The POSIX errno.
+ *
+ * @return          The error string.
+ */
+const char* terror(int errnum);
 
 #endif
 

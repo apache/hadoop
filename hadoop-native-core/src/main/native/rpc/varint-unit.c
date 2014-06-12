@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-#include "common/test.h"
 #include "rpc/varint.h"
+#include "test/test.h"
 
 #include <errno.h>
 #include <stdint.h>

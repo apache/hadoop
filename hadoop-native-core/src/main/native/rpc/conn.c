@@ -17,6 +17,7 @@
  */
 
 #include "common/hadoop_err.h"
+#include "common/net.h"
 #include "common/string.h"
 #include "protobuf/IpcConnectionContext.pb-c.h.s"
 #include "protobuf/ProtobufRpcEngine.pb-c.h.s"
@@ -348,8 +349,11 @@ struct hadoop_err *hrpc_conn_create_outbound(struct hrpc_reactor *reactor,
     res = uv_tcp_connect(&conn->conn_req, &conn->stream,
             (struct sockaddr*)&conn->remote, conn_connect_cb);
     if (res) {
+        char remote_str[64] = { 0 };
         err = hadoop_uverr_alloc(res,
-                "hrpc_conn_create_outbound: uv_tcp_connect failed");
+                "hrpc_conn_create_outbound: uv_tcp_connect(%s) failed",
+                net_ipv4_name_and_port(&conn->remote, remote_str,
+                                       sizeof(remote_str)));
         goto done;
     }
 

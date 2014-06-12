@@ -34,6 +34,19 @@
 void hex_buf_print(FILE *fp, const void *buf, int32_t buf_len,
         const char *fmt, ...) __attribute__((format(printf, 4, 5)));
 
+/**
+ * Duplicate a string. 
+ *
+ * @param dst       (out param) the destination address.
+ *                    We will put either NULL (if src == NULL) or a malloc'ed
+ *                    string here.  If a malloc'ed string is here, we will free
+ *                    or realloc it.
+ * @param src       The string to duplicate, or NULL to set *dst to NULL.
+ *
+ * @return          0 on success; ENOMEM on OOM.
+ */
+int strdupto(char **dst, const char *src);
+
 #endif
 
 // vim: ts=4:sw=4:tw=79:et

@@ -17,52 +17,34 @@
  */
 
 #include "common/string.h"
+#include "test/test.h"
 
 #include <errno.h>
-#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-void hex_buf_print(FILE *fp, const void *buf, int32_t buf_len,
-                   const char *fmt, ...)
+static int test_strdupto(void)
 {
-    int32_t i, j = 0;
-    va_list ap;
-    const uint8_t *b = buf;
-
-    va_start(ap, fmt);
-    vfprintf(fp, fmt, ap);
-    va_end(ap);
-    for (i = 0; i < buf_len; i++) {
-        const char *suffix = " ";
-
-        if (++j == 8) {
-            suffix = "\n";
-            j = 0;
-        }
-        fprintf(fp, "%02x%s", b[i], suffix);
-    }
+    char *dst = NULL;
+    EXPECT_INT_ZERO(strdupto(&dst, "FOO"));
+    EXPECT_INT_ZERO(strcmp(dst, "FOO"));
+    EXPECT_INT_ZERO(strdupto(&dst, NULL));
+    EXPECT_NULL(dst);
+    EXPECT_INT_ZERO(strdupto(&dst, "BAR"));
+    EXPECT_INT_ZERO(strcmp(dst, "BAR"));
+    EXPECT_INT_ZERO(strdupto(&dst, "BAZ"));
+    EXPECT_INT_ZERO(strcmp(dst, "BAZ"));
+    EXPECT_INT_ZERO(strdupto(&dst, NULL));
+    EXPECT_NULL(dst);
+    return 0;
 }
 
-int strdupto(char **dst, const char *src)
+int main(void)
 {
-    char *ndst;
-    size_t src_len;
+    EXPECT_INT_ZERO(test_strdupto());
 
-    if (!src) {
-        free(*dst);
-        *dst = NULL;
-        return 0;
-    }
-    src_len = strlen(src);
-    ndst = realloc(*dst, src_len + 1);
-    if (!ndst) {
-        return ENOMEM;
-    }
-    strcpy(ndst, src);
-    *dst = ndst;
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 // vim: ts=4:sw=4:tw=79:et

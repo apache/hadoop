@@ -92,7 +92,7 @@ void *hrpc_proxy_alloc_userdata(struct hrpc_proxy *proxy, size_t size)
 struct hrpc_sync_ctx *hrpc_proxy_alloc_sync_ctx(struct hrpc_proxy *proxy)
 {
     struct hrpc_sync_ctx *ctx = 
-        hrpc_proxy_alloc_userdata(proxy, sizeof(struct hrpc_proxy));
+        hrpc_proxy_alloc_userdata(proxy, sizeof(*ctx));
     if (!ctx) {
         return NULL;
     }
@@ -103,7 +103,7 @@ struct hrpc_sync_ctx *hrpc_proxy_alloc_sync_ctx(struct hrpc_proxy *proxy)
     return ctx;
 }
 
-void hrpc_free_sync_ctx(struct hrpc_sync_ctx *ctx)
+void hrpc_release_sync_ctx(struct hrpc_sync_ctx *ctx)
 {
     free(ctx->resp.base);
     uv_sem_destroy(&ctx->sem);

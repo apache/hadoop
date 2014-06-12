@@ -19,11 +19,17 @@
 #ifndef HADOOP_CORE_COMMON_NET
 #define HADOOP_CORE_COMMON_NET
 
+#include <stdint.h>
 #include <stddef.h>
 
 struct sockaddr_in;
 
 const char *net_ipv4_name(struct sockaddr_in *src, char *dst, size_t size);
+
+const char *net_ipv4_name_and_port(struct sockaddr_in *src,
+                                   char *dst, size_t size);
+
+struct hadoop_err *get_first_ipv4_addr(const char *hostname, uint32_t *out);
 
 #endif
 

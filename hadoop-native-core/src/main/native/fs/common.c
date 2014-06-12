@@ -16,53 +16,49 @@
  * limitations under the License.
  */
 
+#include "common/hadoop_err.h"
 #include "common/string.h"
+#include "common/uri.h"
+#include "common/user.h"
+#include "fs/fs.h"
+#include "fs/hdfs.h"
 
 #include <errno.h>
-#include <stdarg.h>
-#include <stdio.h>
+#include <fcntl.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <uriparser/Uri.h>
 
-void hex_buf_print(FILE *fp, const void *buf, int32_t buf_len,
-                   const char *fmt, ...)
+void release_file_info_entry(hdfsFileInfo *hdfsFileInfo)
 {
-    int32_t i, j = 0;
-    va_list ap;
-    const uint8_t *b = buf;
-
-    va_start(ap, fmt);
-    vfprintf(fp, fmt, ap);
-    va_end(ap);
-    for (i = 0; i < buf_len; i++) {
-        const char *suffix = " ";
-
-        if (++j == 8) {
-            suffix = "\n";
-            j = 0;
-        }
-        fprintf(fp, "%02x%s", b[i], suffix);
-    }
+    free(hdfsFileInfo->mName);
+    free(hdfsFileInfo->mOwner);
+    free(hdfsFileInfo->mGroup);
+    memset(&hdfsFileInfo, 0, sizeof(hdfsFileInfo));
 }
 
-int strdupto(char **dst, const char *src)
+int hadoopfs_errno_and_retcode(struct hadoop_err *err)
 {
-    char *ndst;
-    size_t src_len;
-
-    if (!src) {
-        free(*dst);
-        *dst = NULL;
-        return 0;
+    if (err) {
+        fputs(hadoop_err_msg(err), stderr);
+        errno = hadoop_err_code(err);
+        hadoop_err_free(err);
+        return -1;
     }
-    src_len = strlen(src);
-    ndst = realloc(*dst, src_len + 1);
-    if (!ndst) {
-        return ENOMEM;
-    }
-    strcpy(ndst, src);
-    *dst = ndst;
     return 0;
 }
 
-// vim: ts=4:sw=4:tw=79:et
+void *hadoopfs_errno_and_retptr(struct hadoop_err *err, void *ptr)
+{
+    if (err) {
+        fputs(hadoop_err_msg(err), stderr);
+        errno = hadoop_err_code(err);
+        hadoop_err_free(err);
+        return NULL;
+    }
+    return ptr;
+}
+
+// vim: ts=4:sw=4:et

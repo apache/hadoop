@@ -136,11 +136,12 @@ void *hrpc_proxy_alloc_userdata(struct hrpc_proxy *proxy, size_t size);
 struct hrpc_sync_ctx *hrpc_proxy_alloc_sync_ctx(struct hrpc_proxy *proxy);
 
 /**
- * Free a sync context allocated from a proxy.
+ * Release the memory associated with a sync context.  This doesn't free the
+ * context object itself.
  *
  * @param proxy                 The sync context.
  */
-void hrpc_free_sync_ctx(struct hrpc_sync_ctx *ctx);
+void hrpc_release_sync_ctx(struct hrpc_sync_ctx *ctx);
 
 /**
  * A callback which synchronous RPCs can use.

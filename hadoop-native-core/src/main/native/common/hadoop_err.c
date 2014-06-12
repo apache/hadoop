@@ -196,4 +196,64 @@ const char *hadoop_err_msg(const struct hadoop_err *err)
     return err->msg;
 }
 
+struct hadoop_err *hadoop_err_prepend(struct hadoop_err *err,
+        int code, const char *fmt, ...)
+{
+    struct hadoop_err *nerr = NULL;
+    va_list ap;
+    char *nmsg = NULL, *prepend_str = NULL;
+
+    va_start(ap, fmt);
+    if (vasprintf(&prepend_str, fmt, ap) < 0) {
+        prepend_str = NULL;
+        va_end(ap);
+        return err;
+    }
+    va_end(ap);
+    if (asprintf(&nmsg, "%s: %s", prepend_str, err->msg) < 0) {
+        free(prepend_str);
+        return (struct hadoop_err*)err;
+    }
+    free(prepend_str);
+    nerr = calloc(1, sizeof(*nerr));
+    if (!nerr) {
+        free(nmsg);
+        return err;
+    }
+    nerr->code = code ? code : err->code;
+    hadoop_err_free(err);
+    nerr->malloced = 1;
+    nerr->msg = nmsg;
+    return nerr;
+}
+
+struct hadoop_err *hadoop_err_copy(const struct hadoop_err *err)
+{
+    struct hadoop_err *nerr;
+
+    if (!err->malloced) {
+        return (struct hadoop_err*)err;
+    }
+    nerr = malloc(sizeof(*nerr));
+    if (!nerr) {
+        return (struct hadoop_err*)&HADOOP_OOM_ERR;
+    }
+    nerr->code = err->code;
+    nerr->msg = strdup(err->msg);
+    nerr->malloced = 1;
+    if (!nerr->msg) {
+        free(nerr);
+        return (struct hadoop_err*)&HADOOP_OOM_ERR;
+    }
+    return nerr;
+}
+
+const char* terror(int errnum)
+{
+    if ((errnum < 0) || (errnum >= sys_nerr)) {
+        return "unknown error.";
+    }
+    return sys_errlist[errnum];
+}
+
 // vim: ts=4:sw=4:tw=79:et
