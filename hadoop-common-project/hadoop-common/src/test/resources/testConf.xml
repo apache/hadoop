@@ -276,7 +276,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-cp \[-f\] \[-p\] &lt;src&gt; \.\.\. &lt;dst&gt;:( |\t)*Copy files that match the file pattern &lt;src&gt; to a( )*</expected-output>
+          <expected-output>^-cp \[-f\] \[-p \| -p\[topx\]\] &lt;src&gt; \.\.\. &lt;dst&gt;:( |\t)*Copy files that match the file pattern &lt;src&gt; to a( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -284,11 +284,19 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*must be a directory.( )*Passing -p preserves access and( )*</expected-output>
+          <expected-output>^( |\t)*must be a directory.( )*Passing -p preserves status( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*modification times, ownership and the mode. Passing -f( )*</expected-output>
+          <expected-output>^( |\t)*\[topx\] \(timestamps, ownership, permission, XAttr\).( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*If -p is specified with no &lt;arg&gt;, then preserves( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*timestamps, ownership, permission. Passing -f( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>

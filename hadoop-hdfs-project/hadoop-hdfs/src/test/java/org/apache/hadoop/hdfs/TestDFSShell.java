@@ -1604,6 +1604,94 @@ public class TestDFSShell {
     int res = admin.run(new String[] {"-refreshNodes"});
     assertEquals("expected to fail -1", res , -1);
   }
+  
+  // Preserve Copy Option is -ptopx (timestamps, ownership, permission, XATTR)
+  @Test (timeout = 120000)
+  public void testCopyCommandsWithPreserveOption() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, true);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
+        .format(true).build();
+    FsShell shell = null;
+    FileSystem fs = null;
+    final String testdir = "/tmp/TestDFSShell-testCopyCommandsWithPreserveOption-"
+        + counter.getAndIncrement();
+    final Path hdfsTestDir = new Path(testdir);
+    try {
+      fs = cluster.getFileSystem();
+      fs.mkdirs(hdfsTestDir);
+      Path src = new Path(hdfsTestDir, "srcfile");
+      fs.create(src).close();
+      FileStatus status = fs.getFileStatus(src);
+      final long mtime = status.getModificationTime();
+      final long atime = status.getAccessTime();
+      final String owner = status.getOwner();
+      final String group = status.getGroup();
+      final FsPermission perm = status.getPermission();
+      
+      fs.setXAttr(src, "user.a1", new byte[]{0x31, 0x32, 0x33});
+      fs.setXAttr(src, "trusted.a1", new byte[]{0x31, 0x31, 0x31});
+      
+      shell = new FsShell(conf);
+      
+      // -p
+      Path target1 = new Path(hdfsTestDir, "targetfile1");
+      String[] argv = new String[] { "-cp", "-p", src.toUri().toString(), 
+          target1.toUri().toString() };
+      int ret = ToolRunner.run(shell, argv);
+      assertEquals("cp -p is not working", SUCCESS, ret);
+      FileStatus targetStatus = fs.getFileStatus(target1);
+      assertEquals(mtime, targetStatus.getModificationTime());
+      assertEquals(atime, targetStatus.getAccessTime());
+      assertEquals(owner, targetStatus.getOwner());
+      assertEquals(group, targetStatus.getGroup());
+      assertTrue(perm.equals(targetStatus.getPermission()));
+      Map<String, byte[]> xattrs = fs.getXAttrs(target1);
+      assertTrue(xattrs.isEmpty());
+
+      // -ptop
+      Path target2 = new Path(hdfsTestDir, "targetfile2");
+      argv = new String[] { "-cp", "-ptop", src.toUri().toString(), 
+          target2.toUri().toString() };
+      ret = ToolRunner.run(shell, argv);
+      assertEquals("cp -p is not working", SUCCESS, ret);
+      targetStatus = fs.getFileStatus(target1);
+      assertEquals(mtime, targetStatus.getModificationTime());
+      assertEquals(atime, targetStatus.getAccessTime());
+      assertEquals(owner, targetStatus.getOwner());
+      assertEquals(group, targetStatus.getGroup());
+      assertTrue(perm.equals(targetStatus.getPermission()));
+      xattrs = fs.getXAttrs(target2);
+      assertTrue(xattrs.isEmpty());
+      
+      // -ptopx
+      Path target3 = new Path(hdfsTestDir, "targetfile3");
+      argv = new String[] { "-cp", "-ptopx", src.toUri().toString(), 
+          target3.toUri().toString() };
+      ret = ToolRunner.run(shell, argv);
+      assertEquals("cp -p is not working", SUCCESS, ret);
+      targetStatus = fs.getFileStatus(target1);
+      assertEquals(mtime, targetStatus.getModificationTime());
+      assertEquals(atime, targetStatus.getAccessTime());
+      assertEquals(owner, targetStatus.getOwner());
+      assertEquals(group, targetStatus.getGroup());
+      assertTrue(perm.equals(targetStatus.getPermission()));
+      xattrs = fs.getXAttrs(target3);
+      assertEquals(xattrs.size(), 2);
+      assertArrayEquals(new byte[]{0x31, 0x32, 0x33}, xattrs.get("user.a1"));
+      assertArrayEquals(new byte[]{0x31, 0x31, 0x31}, xattrs.get("trusted.a1"));
+    } finally {
+      if (null != shell) {
+        shell.close();
+      }
+
+      if (null != fs) {
+        fs.delete(hdfsTestDir, true);
+        fs.close();
+      }
+      cluster.shutdown();
+    }
+  }
 
   // force Copy Option is -f
   @Test (timeout = 30000)

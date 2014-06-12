@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -132,23 +133,46 @@ class CopyCommands {
 
   static class Cp extends CommandWithDestination {
     public static final String NAME = "cp";
-    public static final String USAGE = "[-f] [-p] <src> ... <dst>";
+    public static final String USAGE = "[-f] [-p | -p[topx]] <src> ... <dst>";
     public static final String DESCRIPTION =
       "Copy files that match the file pattern <src> to a\n" +
       "destination.  When copying multiple files, the destination\n" +
-      "must be a directory. Passing -p preserves access and\n" +
-      "modification times, ownership and the mode. Passing -f\n" +
+      "must be a directory. Passing -p preserves status\n" +
+      "[topx] (timestamps, ownership, permission, XAttr).\n" +
+      "If -p is specified with no <arg>, then preserves\n" +
+      "timestamps, ownership, permission. Passing -f\n" +
       "overwrites the destination if it already exists.\n";
     
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE, "f", "p");
+      popPreserveOption(args);
+      CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE, "f");
       cf.parse(args);
       setOverwrite(cf.getOpt("f"));
-      setPreserve(cf.getOpt("p"));
       // should have a -r option
       setRecursive(true);
       getRemoteDestination(args);
+    }
+    
+    private void popPreserveOption(List<String> args) {
+      for (Iterator<String> iter = args.iterator(); iter.hasNext(); ) {
+        String cur = iter.next();
+        if (cur.equals("--")) {
+          // stop parsing arguments when you see --
+          break;
+        } else if (cur.startsWith("-p")) {
+          iter.remove();
+          if (cur.length() == 2) {
+            setPreserve(true);
+          } else {
+            String attributes = cur.substring(2);
+            for (int index = 0; index < attributes.length(); index++) {
+              preserve(FileAttribute.getAttribute(attributes.charAt(index)));
+            }
+          }
+          return;
+        }
+      }
     }
   }
   
