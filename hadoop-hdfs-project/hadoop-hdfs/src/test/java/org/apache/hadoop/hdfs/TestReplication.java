@@ -25,8 +25,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
+import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
@@ -462,5 +464,67 @@ public class TestReplication {
     	}
     }
     fs.delete(fileName, true);
+  }
+
+  /**
+   * Test that blocks should get replicated if we have corrupted blocks and
+   * having good replicas at least equal or greater to minreplication
+   *
+   * Simulate rbw blocks by creating dummy copies, then a DN restart to detect
+   * those corrupted blocks asap.
+   */
+  @Test(timeout=30000)
+  public void testReplicationWhenBlockCorruption() throws Exception {
+    MiniDFSCluster cluster = null;
+    try {
+      Configuration conf = new HdfsConfiguration();
+      conf.setLong(
+          DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY, 1);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+      FileSystem fs = cluster.getFileSystem();
+      FSDataOutputStream create = fs.create(new Path("/test"));
+      fs.setReplication(new Path("/test"), (short) 1);
+      create.write(new byte[1024]);
+      create.close();
+
+      List<File> nonParticipatedNodeDirs = new ArrayList<File>();
+      File participatedNodeDirs = null;
+      for (int i = 0; i < cluster.getDataNodes().size(); i++) {
+        File storageDir = cluster.getInstanceStorageDir(i, 0);
+        String bpid = cluster.getNamesystem().getBlockPoolId();
+        File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
+        if (data_dir.listFiles().length == 0) {
+          nonParticipatedNodeDirs.add(data_dir);
+        } else {
+          participatedNodeDirs = data_dir;
+        }
+      }
+
+      String blockFile = null;
+      File[] listFiles = participatedNodeDirs.listFiles();
+      for (File file : listFiles) {
+        if (file.getName().startsWith("blk_")
+            && !file.getName().endsWith("meta")) {
+          blockFile = file.getName();
+          for (File file1 : nonParticipatedNodeDirs) {
+            file1.mkdirs();
+            new File(file1, blockFile).createNewFile();
+            new File(file1, blockFile + "_1000.meta").createNewFile();
+          }
+          break;
+        }
+      }
+
+      fs.setReplication(new Path("/test"), (short) 3);
+      cluster.restartDataNodes(); // Lets detect all DNs about dummy copied
+      // blocks
+      cluster.waitActive();
+      cluster.triggerBlockReports();
+      DFSTestUtil.waitReplication(fs, new Path("/test"), (short) 3);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 }

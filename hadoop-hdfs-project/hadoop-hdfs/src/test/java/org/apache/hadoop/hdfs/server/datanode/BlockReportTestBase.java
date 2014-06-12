@@ -410,6 +410,7 @@ public abstract class BlockReportTestBase {
    * The second datanode is started in the cluster.
    * As soon as the replication process is completed test finds a block from
    * the second DN and sets its GS to be < of original one.
+   * this is the markBlockAsCorrupt case 3 so we expect one pending deletion
    * Block report is forced and the check for # of currupted blocks is performed.
    * Another block is chosen and its length is set to a lesser than original.
    * A check for another corrupted block is performed after yet another
@@ -436,20 +437,20 @@ public abstract class BlockReportTestBase {
     printStats();
 
     assertThat("Wrong number of corrupt blocks",
-               cluster.getNamesystem().getCorruptReplicaBlocks(), is(1L));
+               cluster.getNamesystem().getCorruptReplicaBlocks(), is(0L));
     assertThat("Wrong number of PendingDeletion blocks",
-               cluster.getNamesystem().getPendingDeletionBlocks(), is(0L));
+               cluster.getNamesystem().getPendingDeletionBlocks(), is(1L));
     assertThat("Wrong number of PendingReplication blocks",
                cluster.getNamesystem().getPendingReplicationBlocks(), is(0L));
 
-    reports = getBlockReports(dn, poolId, true, true);
+    reports = getBlockReports(dn, poolId, false, true);
     sendBlockReports(dnR, poolId, reports);
     printStats();
 
     assertThat("Wrong number of corrupt blocks",
-               cluster.getNamesystem().getCorruptReplicaBlocks(), is(2L));
+               cluster.getNamesystem().getCorruptReplicaBlocks(), is(1L));
     assertThat("Wrong number of PendingDeletion blocks",
-               cluster.getNamesystem().getPendingDeletionBlocks(), is(0L));
+               cluster.getNamesystem().getPendingDeletionBlocks(), is(1L));
     assertThat("Wrong number of PendingReplication blocks",
                cluster.getNamesystem().getPendingReplicationBlocks(), is(0L));
 
