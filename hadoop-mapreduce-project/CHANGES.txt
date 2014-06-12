@@ -117,6 +117,8 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5898. distcp to support preserving HDFS extended attributes(XAttrs)
     (Yi Liu via umamahesh)
 
+    MAPREDUCE-5920. Add Xattr option in DistCp docs. (Yi Liu via cnauroth)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
