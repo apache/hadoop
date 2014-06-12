@@ -236,6 +236,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2148. TestNMClient failed due more exit code values added and passed
     to AM (Wangda Tan via bikas)
 
+    YARN-2075. Fixed the test failure of TestRMAdminCLI. (Kenji Kikushima via
+    zjshen)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

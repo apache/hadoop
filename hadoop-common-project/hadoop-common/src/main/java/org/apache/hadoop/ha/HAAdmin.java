@@ -19,6 +19,7 @@ package org.apache.hadoop.ha;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
@@ -68,7 +69,7 @@ public abstract class HAAdmin extends Configured implements Tool {
   protected final static Map<String, UsageInfo> USAGE =
     ImmutableMap.<String, UsageInfo>builder()
     .put("-transitionToActive",
-        new UsageInfo(" <serviceId> [--"+FORCEACTIVE+"]", "Transitions the service into Active state"))
+        new UsageInfo("<serviceId> [--"+FORCEACTIVE+"]", "Transitions the service into Active state"))
     .put("-transitionToStandby",
         new UsageInfo("<serviceId>", "Transitions the service into Standby state"))
     .put("-failover",
@@ -104,7 +105,8 @@ public abstract class HAAdmin extends Configured implements Tool {
   protected abstract HAServiceTarget resolveTarget(String string);
   
   protected Collection<String> getTargetIds(String targetNodeToActivate) {
-    return Arrays.asList(new String[]{targetNodeToActivate});
+    return new ArrayList<String>(
+        Arrays.asList(new String[]{targetNodeToActivate}));
   }
 
   protected String getUsageString() {
