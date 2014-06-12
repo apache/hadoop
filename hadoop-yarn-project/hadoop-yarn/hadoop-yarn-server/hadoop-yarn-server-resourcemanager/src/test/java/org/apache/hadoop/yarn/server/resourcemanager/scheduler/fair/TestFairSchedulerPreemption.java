@@ -146,7 +146,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     // Create node with 4GB memory and 4 vcores
     registerNodeAndSubmitApp(4 * 1024, 4, 2, 1024);
 
-    // Verify submitting another request doesn't trigger preemption
+    // Verify submitting another request triggers preemption
     createSchedulingRequest(1024, "queueB", "user1", 1, 1);
     scheduler.update();
     clock.tick(6);
@@ -170,6 +170,22 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     ((StubbedFairScheduler) scheduler).resetLastPreemptResources();
     scheduler.preemptTasksIfNecessary();
     assertEquals("preemptResources() should not have been called", -1,
+        ((StubbedFairScheduler) scheduler).lastPreemptMemory);
+
+    resourceManager.stop();
+
+    startResourceManager(0.7f);
+    // Create node with 4GB memory and 4 vcores
+    registerNodeAndSubmitApp(4 * 1024, 4, 3, 1024);
+
+    // Verify submitting another request triggers preemption
+    createSchedulingRequest(1024, "queueB", "user1", 1, 1);
+    scheduler.update();
+    clock.tick(6);
+
+    ((StubbedFairScheduler) scheduler).resetLastPreemptResources();
+    scheduler.preemptTasksIfNecessary();
+    assertEquals("preemptResources() should have been called", 1024,
         ((StubbedFairScheduler) scheduler).lastPreemptMemory);
   }
 }
