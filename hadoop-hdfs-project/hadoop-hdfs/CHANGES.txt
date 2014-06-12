@@ -432,6 +432,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6395. Skip checking xattr limits for non-user-visible namespaces.
     (Yi Liu via wang).
 
+    HDFS-3493. Invalidate corrupted blocks as long as minimum replication is
+    satisfied. (Juan Yu and Vinayakumar B via wang)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
