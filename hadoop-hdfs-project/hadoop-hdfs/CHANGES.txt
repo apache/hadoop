@@ -426,6 +426,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6379. HTTPFS - Implement ACLs support. (yoderme via tucu)
 
+    HDFS-6471. Make moveFromLocal CLI testcases to be non-disruptive
+    (Dasha Boudnik via cos)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
