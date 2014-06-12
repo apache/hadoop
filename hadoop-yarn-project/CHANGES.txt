@@ -224,6 +224,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2075. Fixed the test failure of TestRMAdminCLI. (Kenji Kikushima via
     zjshen)
 
+    YARN-2155. FairScheduler: Incorrect threshold check for preemption.
+    (Wei Yan via kasha)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
