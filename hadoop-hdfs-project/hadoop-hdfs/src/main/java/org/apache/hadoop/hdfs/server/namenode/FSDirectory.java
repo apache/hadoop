@@ -2833,6 +2833,7 @@ public class FSDirectory implements Closeable {
       EnumSet<XAttrSetFlag> flag) throws QuotaExceededException, IOException {
     List<XAttr> xAttrs = Lists.newArrayListWithCapacity(
         existingXAttrs != null ? existingXAttrs.size() + 1 : 1);
+    int userVisibleXAttrsNum = 0; // Number of user visible xAttrs
     boolean exist = false;
     if (existingXAttrs != null) {
       for (XAttr a: existingXAttrs) {
@@ -2841,6 +2842,10 @@ public class FSDirectory implements Closeable {
           exist = true;
         } else {
           xAttrs.add(a);
+          
+          if (isUserVisible(a)) {
+            userVisibleXAttrsNum++;
+          }
         }
       }
     }
@@ -2848,12 +2853,24 @@ public class FSDirectory implements Closeable {
     XAttrSetFlag.validate(xAttr.getName(), exist, flag);
     xAttrs.add(xAttr);
     
-    if (xAttrs.size() > inodeXAttrsLimit) {
+    if (isUserVisible(xAttr)) {
+      userVisibleXAttrsNum++;
+    }
+    
+    if (userVisibleXAttrsNum > inodeXAttrsLimit) {
       throw new IOException("Cannot add additional XAttr to inode, "
           + "would exceed limit of " + inodeXAttrsLimit);
     }
     
     return xAttrs;
+  }
+  
+  private boolean isUserVisible(XAttr xAttr) {
+    if (xAttr.getNameSpace() == XAttr.NameSpace.USER || 
+        xAttr.getNameSpace() == XAttr.NameSpace.TRUSTED) {
+      return true;
+    }
+    return false;
   }
   
   List<XAttr> getXAttrs(String src) throws IOException {
