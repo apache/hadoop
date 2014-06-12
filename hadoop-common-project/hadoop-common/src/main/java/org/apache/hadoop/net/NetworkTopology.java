@@ -884,15 +884,16 @@ public class NetworkTopology {
    * @param seed Used to seed the pseudo-random generator that randomizes the
    *          set of nodes at each network distance.
    */
-  public void sortByDistance(Node reader, Node[] nodes, long seed) {
+  public void sortByDistance(Node reader, Node[] nodes,
+      int activeLen, long seed) {
     /** Sort weights for the nodes array */
-    int[] weights = new int[nodes.length];
-    for (int i=0; i<nodes.length; i++) {
+    int[] weights = new int[activeLen];
+    for (int i=0; i<activeLen; i++) {
       weights[i] = getWeight(reader, nodes[i]);
     }
     // Add weight/node pairs to a TreeMap to sort
     TreeMap<Integer, List<Node>> tree = new TreeMap<Integer, List<Node>>();
-    for (int i=0; i<nodes.length; i++) {
+    for (int i=0; i<activeLen; i++) {
       int weight = weights[i];
       Node node = nodes[i];
       List<Node> list = tree.get(weight);
@@ -918,7 +919,7 @@ public class NetworkTopology {
         }
       }
     }
-    Preconditions.checkState(idx == nodes.length,
+    Preconditions.checkState(idx == activeLen,
         "Sorted the wrong number of nodes!");
   }
 }

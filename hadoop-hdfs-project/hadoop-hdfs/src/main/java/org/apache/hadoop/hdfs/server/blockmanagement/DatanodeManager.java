@@ -331,6 +331,18 @@ public class DatanodeManager {
     return heartbeatManager;
   }
 
+  private boolean isInactive(DatanodeInfo datanode) {
+    if (datanode.isDecommissioned()) {
+      return true;
+    }
+
+    if (avoidStaleDataNodesForRead) {
+      return datanode.isStale(staleInterval);
+    }
+      
+    return false;
+  }
+  
   /** Sort the located blocks by the distance to the target host. */
   public void sortLocatedBlocks(final String targethost,
       final List<LocatedBlock> locatedblocks) {
@@ -351,10 +363,17 @@ public class DatanodeManager {
         DFSUtil.DECOM_COMPARATOR;
         
     for (LocatedBlock b : locatedblocks) {
-      networktopology.sortByDistance(client, b.getLocations(), b
-          .getBlock().getBlockId());
+      DatanodeInfo[] di = b.getLocations();
       // Move decommissioned/stale datanodes to the bottom
-      Arrays.sort(b.getLocations(), comparator);
+      Arrays.sort(di, comparator);
+      
+      int lastActiveIndex = di.length - 1;
+      while (lastActiveIndex > 0 && isInactive(di[lastActiveIndex])) {
+          --lastActiveIndex;
+      }
+      int activeLen = lastActiveIndex + 1;      
+      networktopology.sortByDistance(client, b.getLocations(), activeLen,
+          b.getBlock().getBlockId());
     }
   }
   
