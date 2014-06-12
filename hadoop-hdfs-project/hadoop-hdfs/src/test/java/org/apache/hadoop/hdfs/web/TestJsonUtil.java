@@ -234,6 +234,18 @@ public class TestJsonUtil {
           parsedXAttrMap.get(entry.getKey()));
     }
   }
+  
+  @Test
+  public void testGetXAttrFromJson() throws IOException {
+    String jsonString = 
+        "{\"XAttrs\":[{\"name\":\"user.a1\",\"value\":\"0x313233\"}," +
+        "{\"name\":\"user.a2\",\"value\":\"0x313131\"}]}";
+    Map<?, ?> json = (Map<?, ?>) JSON.parse(jsonString);
+    
+    // Get xattr: user.a2
+    byte[] value = JsonUtil.getXAttr(json, "user.a2");
+    Assert.assertArrayEquals(XAttrCodec.decodeValue("0x313131"), value);
+  }
 
   private void checkDecodeFailure(Map<String, Object> map) {
     try {
