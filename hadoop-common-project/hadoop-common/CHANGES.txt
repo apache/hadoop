@@ -417,6 +417,9 @@ Release 2.5.0 - UNRELEASED
     TCP RST and miss session expiration event due to bug in client connection
     management. (cnauroth)
 
+    HADOOP-10376. Refactor refresh*Protocols into a single generic
+    refreshConfigProtocol. (Chris Li via Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES 
