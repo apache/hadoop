@@ -1564,6 +1564,287 @@ _01_000001</amContainerLogs>
 </app>
 +---+
 
+* Cluster Application State API
+
+  With the application state API, you can query the state of a submitted app as well kill a running app by modifying the state of a running app using a PUT request with the state set to "KILLED". To perform the PUT operation, authentication has to be setup for the RM web services. In addition, you must be authorized to kill the app. Currently you can only change the state to "KILLED"; an attempt to change the state to any other results in a 400 error response. Examples of the unauthorized and bad request errors are below. When you carry out a successful PUT, the iniital response may be a 202. You can confirm that the app is killed by repeating the PUT request until you get a 200, querying the state using the GET method or querying for app information and checking the state. In the examples below, we repeat the PUT request and get a 200 response.
+
+  Please note that in order to kill an app, you must have an authentication filter setup for the HTTP interface. The functionality requires that a username is set in the HttpServletRequest. If no filter is setup, the response will be an "UNAUTHORIZED" response.
+
+** URI
+
+-----
+  * http://<rm http address:port>/ws/v1/cluster/apps/{appid}/state
+-----
+
+** HTTP Operations Supported
+
+------
+  * GET
+  * PUT
+------
+
+** Query Parameters Supported
+
+------
+  None
+------
+
+** Elements of <appstate> object
+
+  When you make a request for the state of an app, the information returned has the following fields
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                  |
+*---------------+--------------+-------------------------------+
+| state | string  | The application state - can be one of "NEW", "NEW_SAVING", "SUBMITTED", "ACCEPTED", "RUNNING", "FINISHED", "FAILED", "KILLED" |
+*---------------+--------------+--------------------------------+
+
+
+** Response Examples
+
+  <<JSON responses>>
+
+  HTTP Request
+
+-----
+  GET http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+-----
+
+  Response Header:
+
++---+
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+{
+  "state":"ACCEPTED"
+}
++---+
+
+  HTTP Request
+
+-----
+  PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+----
+
+  Request Body:
+
++---+
+{
+  "state":"KILLED"
+}
++---+
+
+  Response Header:
+
++---+
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+Transfer-Encoding: chunked
+Location: http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003
+Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+{
+  "state":"ACCEPTED"
+}
++---+
+
+-----
+  PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+----
+
+  Request Body:
+
++---+
+{
+  "state":"KILLED"
+}
++---+
+
+  Response Header:
+
++---+
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+{
+  "state":"KILLED"
+}
++---+
+
+  <<XML responses>>
+
+  HTTP Request
+
+-----
+  GET http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+-----
+
+  Response Header:
+
++---+
+HTTP/1.1 200 OK
+Content-Type: application/xml
+Content-Length: 99
+Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<appstate>
+  <state>ACCEPTED</state>
+</appstate>
++---+
+
+  HTTP Request
+
+-----
+  PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+----
+
+  Request Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<appstate>
+  <state>KILLED</state>
+</appstate>
++---+
+
+  Response Header:
+
++---+
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+Content-Length: 794
+Location: http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003
+Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<appstate>
+  <state>ACCEPTED</state>
+</appstate>
++---+
+
+  HTTP Request
+
+-----
+  PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+----
+
+  Request Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<appstate>
+  <state>KILLED</state>
+</appstate>
++---+
+
+  Response Header:
+
++---+
+HTTP/1.1 200 OK
+Content-Type: application/xml
+Content-Length: 917
+Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<appstate>
+  <state>KILLED</state>
+</appstate>
++---+
+
+  <<Unauthorized Error Response>>
+
+  HTTP Request
+
+-----
+  PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+----
+
+  Request Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<appstate>
+  <state>KILLED</state>
+</appstate>
++---+
+
+  Response Header:
+
++---+
+HTTP/1.1 403 Unauthorized
+Content-Type: application/json
+Transfer-Encoding: chunked
+Server: Jetty(6.1.26)
++---+
+
+
+  <<Bad Request Error Response>>
+
+  HTTP Request
+
+-----
+  PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+----
+
+  Request Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<appstate>
+  <state>RUNNING</state>
+</appstate>
++---+
+
+  Response Header:
+
++---+
+HTTP/1.1 400
+Content-Length: 295
+Content-Type: application/xml
+Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<RemoteException>
+  <exception>BadRequestException</exception>
+  <message>java.lang.Exception: Only 'KILLED' is allowed as a target state.</message>
+  <javaClassName>org.apache.hadoop.yarn.webapp.BadRequestException</javaClassName>
+</RemoteException>
++---+
+
 * Cluster Application Attempts API
 
   With the application attempts API, you can obtain a collection of resources that represent an application attempt.  When you run a GET operation on this resource, you obtain a collection of App Attempt Objects. 
