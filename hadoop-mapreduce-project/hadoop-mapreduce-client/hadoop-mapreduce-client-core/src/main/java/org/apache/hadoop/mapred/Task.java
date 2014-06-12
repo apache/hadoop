@@ -1120,8 +1120,8 @@ abstract public class Task implements Writable, Configurable {
     if (isMapTask() && conf.getNumReduceTasks() > 0) {
       try {
         Path mapOutput =  mapOutputFile.getOutputFile();
-        FileSystem fs = mapOutput.getFileSystem(conf);
-        return fs.getFileStatus(mapOutput).getLen();
+        FileSystem localFS = FileSystem.getLocal(conf);
+        return localFS.getFileStatus(mapOutput).getLen();
       } catch (IOException e) {
         LOG.warn ("Could not find output size " , e);
       }

@@ -77,6 +77,9 @@ Trunk (Unreleased)
     MAPREDUCE-5196. Add bookkeeping for managing checkpoints of task state.
     (Carlo Curino via cdouglas)
 
+    MAPREDUCE-5912. Task.calculateOutputSize does not handle Windows files after
+    MAPREDUCE-5196. (Remus Rusanu via cnauroth)
+
   BUG FIXES
 
     MAPREDUCE-5714. Removed forceful JVM exit in shutDownJob.  
