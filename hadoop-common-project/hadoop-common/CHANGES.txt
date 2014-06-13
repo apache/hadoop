@@ -208,6 +208,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10686. Writables are not always configured. 
     (Abraham Elmahrek via kasha)
 
+    HADOOP-10678. SecurityUtil has unnecessary synchronization on collection
+    used for only tests. (Benoy Antony via cnauroth)
+
   BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
 
     HADOOP-10520. Extended attributes definition and FileSystem APIs for

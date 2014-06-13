@@ -289,12 +289,10 @@ public class SecurityUtil {
    */
   public static KerberosInfo 
   getKerberosInfo(Class<?> protocol, Configuration conf) {
-    synchronized (testProviders) {
-      for(SecurityInfo provider: testProviders) {
-        KerberosInfo result = provider.getKerberosInfo(protocol, conf);
-        if (result != null) {
-          return result;
-        }
+    for(SecurityInfo provider: testProviders) {
+      KerberosInfo result = provider.getKerberosInfo(protocol, conf);
+      if (result != null) {
+        return result;
       }
     }
     
@@ -317,13 +315,11 @@ public class SecurityUtil {
    * @return the TokenInfo or null if it has no KerberosInfo defined
    */
   public static TokenInfo getTokenInfo(Class<?> protocol, Configuration conf) {
-    synchronized (testProviders) {
-      for(SecurityInfo provider: testProviders) {
-        TokenInfo result = provider.getTokenInfo(protocol, conf);
-        if (result != null) {
-          return result;
-        }      
-      }
+    for(SecurityInfo provider: testProviders) {
+      TokenInfo result = provider.getTokenInfo(protocol, conf);
+      if (result != null) {
+        return result;
+      }      
     }
     
     synchronized (securityInfoProviders) {
