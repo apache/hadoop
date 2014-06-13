@@ -22,6 +22,7 @@ import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 import static org.apache.hadoop.util.Time.now;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.anyObject;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -45,36 +46,19 @@ import org.junit.Test;
 
 public class TestFsLimits {
   static Configuration conf;
-  static INode[] inodes;
-  static FSDirectory fs;
+  static FSNamesystem fs;
   static boolean fsIsReady;
   
   static final PermissionStatus perms
     = new PermissionStatus("admin", "admin", FsPermission.getDefault());
 
-  static private FSImage getMockFSImage() {
-    FSEditLog editLog = mock(FSEditLog.class);
+  static private FSNamesystem getMockNamesystem() throws IOException {
     FSImage fsImage = mock(FSImage.class);
-    when(fsImage.getEditLog()).thenReturn(editLog);
-    return fsImage;
-  }
-
-  static private FSNamesystem getMockNamesystem() {
-    FSNamesystem fsn = mock(FSNamesystem.class);
-    when(
-        fsn.createFsOwnerPermissions((FsPermission)anyObject())
-    ).thenReturn(
-         new PermissionStatus("root", "wheel", FsPermission.getDefault())
-    );
+    FSEditLog editLog = mock(FSEditLog.class);
+    doReturn(editLog).when(fsImage).getEditLog();
+    FSNamesystem fsn = new FSNamesystem(conf, fsImage);
+    fsn.getFSDirectory().setReady(fsIsReady);
     return fsn;
-  }
-  
-  private static class MockFSDirectory extends FSDirectory {
-    public MockFSDirectory() throws IOException {
-      super(getMockFSImage(), getMockNamesystem(), conf);
-      setReady(fsIsReady);
-      NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
-    }
   }
 
   @Before
@@ -83,7 +67,7 @@ public class TestFsLimits {
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
              fileAsURI(new File(MiniDFSCluster.getBaseDirectory(),
                                 "namenode")).toString());
-
+    NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     fs = null;
     fsIsReady = true;
   }
@@ -197,9 +181,10 @@ public class TestFsLimits {
     lazyInitFSDirectory();
     Class<?> generated = null;
     try {
-      fs.mkdirs(name, perms, false, now());
+      fs.mkdirs(name, perms, false);
     } catch (Throwable e) {
       generated = e.getClass();
+      e.printStackTrace();
     }
     assertEquals(expected, generated);
   }
@@ -209,7 +194,7 @@ public class TestFsLimits {
     lazyInitFSDirectory();
     Class<?> generated = null;
     try {
-      fs.renameTo(src, dst, now(), new Rename[] { });
+      fs.renameTo(src, dst, new Rename[] { });
     } catch (Throwable e) {
       generated = e.getClass();
     }
@@ -222,7 +207,7 @@ public class TestFsLimits {
     lazyInitFSDirectory();
     Class<?> generated = null;
     try {
-      fs.renameTo(src, dst, now());
+      fs.renameTo(src, dst);
     } catch (Throwable e) {
       generated = e.getClass();
     }
@@ -232,7 +217,7 @@ public class TestFsLimits {
   private static void lazyInitFSDirectory() throws IOException {
     // have to create after the caller has had a chance to set conf values
     if (fs == null) {
-      fs = new MockFSDirectory();
+      fs = getMockNamesystem();
     }
   }
 }
