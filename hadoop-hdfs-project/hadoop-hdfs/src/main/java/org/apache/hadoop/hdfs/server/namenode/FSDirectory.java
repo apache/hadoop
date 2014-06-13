@@ -316,19 +316,7 @@ public class FSDirectory implements Closeable {
       UnresolvedLinkException, SnapshotAccessControlException, AclException {
     waitForReady();
 
-    // Always do an implicit mkdirs for parent directory tree.
     long modTime = now();
-    
-    Path parent = new Path(path).getParent();
-    if (parent == null) {
-      // Trying to add "/" as a file - this path has no
-      // parent -- avoids an NPE below.
-      return null;
-    }
-    
-    if (!mkdirs(parent.toString(), permissions, true, modTime)) {
-      return null;
-    }
     INodeFile newNode = new INodeFile(namesystem.allocateNewInodeId(), null,
         permissions, modTime, modTime, BlockInfo.EMPTY_ARRAY, replication,
         preferredBlockSize);
@@ -1807,112 +1795,6 @@ public class FSDirectory implements Closeable {
     // inodes can be null only when its called without holding lock
     return inodes == null ? "" : getFullPathName(inodes, inodes.length - 1);
   }
-  
-  /**
-   * Create a directory 
-   * If ancestor directories do not exist, automatically create them.
-
-   * @param src string representation of the path to the directory
-   * @param permissions the permission of the directory
-   * @param inheritPermission if the permission of the directory should inherit
-   *                          from its parent or not. u+wx is implicitly added to
-   *                          the automatically created directories, and to the
-   *                          given directory if inheritPermission is true
-   * @param now creation time
-   * @return true if the operation succeeds false otherwise
-   * @throws QuotaExceededException if directory creation violates
-   *                                any quota limit
-   * @throws UnresolvedLinkException if a symlink is encountered in src.                      
-   * @throws SnapshotAccessControlException if path is in RO snapshot
-   */
-  boolean mkdirs(String src, PermissionStatus permissions,
-      boolean inheritPermission, long now)
-      throws FileAlreadyExistsException, QuotaExceededException, 
-             UnresolvedLinkException, SnapshotAccessControlException,
-             AclException {
-    src = normalizePath(src);
-    String[] names = INode.getPathNames(src);
-    byte[][] components = INode.getPathComponents(names);
-    final int lastInodeIndex = components.length - 1;
-
-    writeLock();
-    try {
-      INodesInPath iip = getExistingPathINodes(components);
-      if (iip.isSnapshot()) {
-        throw new SnapshotAccessControlException(
-            "Modification on RO snapshot is disallowed");
-      }
-      INode[] inodes = iip.getINodes();
-
-      // find the index of the first null in inodes[]
-      StringBuilder pathbuilder = new StringBuilder();
-      int i = 1;
-      for(; i < inodes.length && inodes[i] != null; i++) {
-        pathbuilder.append(Path.SEPARATOR).append(names[i]);
-        if (!inodes[i].isDirectory()) {
-          throw new FileAlreadyExistsException("Parent path is not a directory: "
-              + pathbuilder+ " "+inodes[i].getLocalName());
-        }
-      }
-
-      // default to creating parent dirs with the given perms
-      PermissionStatus parentPermissions = permissions;
-
-      // if not inheriting and it's the last inode, there's no use in
-      // computing perms that won't be used
-      if (inheritPermission || (i < lastInodeIndex)) {
-        // if inheriting (ie. creating a file or symlink), use the parent dir,
-        // else the supplied permissions
-        // NOTE: the permissions of the auto-created directories violate posix
-        FsPermission parentFsPerm = inheritPermission
-            ? inodes[i-1].getFsPermission() : permissions.getPermission();
-        
-        // ensure that the permissions allow user write+execute
-        if (!parentFsPerm.getUserAction().implies(FsAction.WRITE_EXECUTE)) {
-          parentFsPerm = new FsPermission(
-              parentFsPerm.getUserAction().or(FsAction.WRITE_EXECUTE),
-              parentFsPerm.getGroupAction(),
-              parentFsPerm.getOtherAction()
-          );
-        }
-        
-        if (!parentPermissions.getPermission().equals(parentFsPerm)) {
-          parentPermissions = new PermissionStatus(
-              parentPermissions.getUserName(),
-              parentPermissions.getGroupName(),
-              parentFsPerm
-          );
-          // when inheriting, use same perms for entire path
-          if (inheritPermission) permissions = parentPermissions;
-        }
-      }
-      
-      // create directories beginning from the first null index
-      for(; i < inodes.length; i++) {
-        pathbuilder.append(Path.SEPARATOR).append(names[i]);
-        unprotectedMkdir(namesystem.allocateNewInodeId(), iip, i,
-            components[i], (i < lastInodeIndex) ? parentPermissions
-                : permissions, null, now);
-        if (inodes[i] == null) {
-          return false;
-        }
-        // Directory creation also count towards FilesCreated
-        // to match count of FilesDeleted metric.
-        if (getFSNamesystem() != null)
-          NameNode.getNameNodeMetrics().incrFilesCreated();
-
-        final String cur = pathbuilder.toString();
-        fsImage.getEditLog().logMkDir(cur, inodes[i]);
-        if(NameNode.stateChangeLog.isDebugEnabled()) {
-          NameNode.stateChangeLog.debug(
-              "DIR* FSDirectory.mkdirs: created directory " + cur);
-        }
-      }
-    } finally {
-      writeUnlock();
-    }
-    return true;
-  }
 
   INode unprotectedMkdir(long inodeId, String src, PermissionStatus permissions,
                           List<AclEntry> aclEntries, long timestamp)
@@ -1931,7 +1813,7 @@ public class FSDirectory implements Closeable {
    * The parent path to the directory is at [0, pos-1].
    * All ancestors exist. Newly created one stored at index pos.
    */
-  private void unprotectedMkdir(long inodeId, INodesInPath inodesInPath,
+  void unprotectedMkdir(long inodeId, INodesInPath inodesInPath,
       int pos, byte[] name, PermissionStatus permission,
       List<AclEntry> aclEntries, long timestamp)
       throws QuotaExceededException, AclException {
@@ -2243,10 +2125,8 @@ public class FSDirectory implements Closeable {
     }
     return 1;
   }
-  
-  /**
-   */
-  String normalizePath(String src) {
+
+  static String normalizePath(String src) {
     if (src.length() > 1 && src.endsWith("/")) {
       src = src.substring(0, src.length() - 1);
     }
@@ -2583,49 +2463,21 @@ public class FSDirectory implements Closeable {
     }
     return perm;
   }
-    
-  /**
-   * Add the given symbolic link to the fs. Record it in the edits log.
-   */
-  INodeSymlink addSymlink(String path, String target,
-      PermissionStatus dirPerms, boolean createParent, boolean logRetryCache)
-      throws UnresolvedLinkException, FileAlreadyExistsException,
-      QuotaExceededException, SnapshotAccessControlException, AclException {
-    waitForReady();
 
-    final long modTime = now();
-    if (createParent) {
-      final String parent = new Path(path).getParent().toString();
-      if (!mkdirs(parent, dirPerms, true, modTime)) {
-        return null;
-      }
-    }
-    final String userName = dirPerms.getUserName();
-    INodeSymlink newNode  = null;
-    long id = namesystem.allocateNewInodeId();
+  /**
+   * Add the specified path into the namespace.
+   */
+  INodeSymlink addSymlink(long id, String path, String target,
+                          long mtime, long atime, PermissionStatus perm)
+          throws UnresolvedLinkException, QuotaExceededException {
     writeLock();
     try {
-      newNode = unprotectedAddSymlink(id, path, target, modTime, modTime,
-          new PermissionStatus(userName, null, FsPermission.getDefault()));
+      return unprotectedAddSymlink(id, path, target, mtime, atime, perm);
     } finally {
       writeUnlock();
     }
-    if (newNode == null) {
-      NameNode.stateChangeLog.info("DIR* addSymlink: failed to add " + path);
-      return null;
-    }
-    fsImage.getEditLog().logSymlink(path, target, modTime, modTime, newNode,
-        logRetryCache);
-    
-    if(NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* addSymlink: " + path + " is added");
-    }
-    return newNode;
   }
 
-  /**
-   * Add the specified path into the namespace. Invoked from edit log processing.
-   */
   INodeSymlink unprotectedAddSymlink(long id, String path, String target,
       long mtime, long atime, PermissionStatus perm)
       throws UnresolvedLinkException, QuotaExceededException {

@@ -175,6 +175,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-3493. Invalidate excess corrupted blocks as long as minimum
     replication is satisfied. (Juan Yu and Vinayakumar B via wang)
 
+    HDFS-6330. Move mkdirs() to FSNamesystem. (wheat9)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
