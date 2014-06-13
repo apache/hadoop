@@ -40,7 +40,8 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveStats;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolStats;
-import org.apache.hadoop.hdfs.tools.TableListing.Justification;
+import org.apache.hadoop.tools.TableListing;
+import org.apache.hadoop.tools.TableListing.Justification;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 

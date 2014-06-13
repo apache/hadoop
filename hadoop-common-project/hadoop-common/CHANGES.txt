@@ -422,6 +422,9 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-6350. Documenting Hadoop metrics. (Akira Ajisaka via Arpit Agarwal)
 
+    HADOOP-10691. Improve the readability of 'hadoop fs -help'.
+    (Lei Xu via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES 
