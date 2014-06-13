@@ -507,6 +507,13 @@ int create_attempt_directories(const char* user,
   return result;
 }
 
+int initialize_task(const char* user,
+  const char * good_local_dirs, const char *job_id, const char *task_id) {
+  // Prepare the attempt directories for the task JVM.
+  int result = create_attempt_directories(user, good_local_dirs, job_id, task_id);
+  return result;
+}
+
 /**
  * Load the user information for a given user name.
  */
@@ -883,9 +890,6 @@ int run_task_as_user(const char *user, const char * good_local_dirs,
                      const char *work_dir, const char *script_name) {
   int exit_code = -1;
   char *task_script_path = NULL;
-  if (create_attempt_directories(user, good_local_dirs, job_id, task_id) != 0) {
-    goto cleanup;
-  }
   int task_file_source = open_file_as_task_tracker(script_name);
   if (task_file_source == -1) {
     goto cleanup;

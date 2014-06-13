@@ -26,7 +26,8 @@ enum command {
   SIGNAL_TASK = 2,
   DELETE_AS_USER = 3,
   DELETE_LOG_AS_USER = 4,
-  RUN_COMMAND_AS_USER = 5
+  RUN_COMMAND_AS_USER = 5,
+  INITIALIZE_TASK = 6
 };
 
 enum errorcodes {
@@ -159,3 +160,9 @@ int change_user(uid_t user, gid_t group);
  */
 int create_attempt_directories(const char* user,
 	const char * good_local_dirs, const char *job_id, const char *task_id);
+
+/**
+ * Initialize the task directory
+ */
+int initialize_task(const char* user,
+ 	const char * good_local_dirs, const char *job_id, const char *task_id);

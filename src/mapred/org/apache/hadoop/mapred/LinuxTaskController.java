@@ -23,6 +23,8 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -70,6 +72,9 @@ class LinuxTaskController extends TaskController {
   private static final String TASK_CONTROLLER_EXEC_KEY =
     "mapreduce.tasktracker.task-controller.exe";
   
+  private static Map<String, String> jobUserMap = new HashMap<String, String>(); 
+  private static File currentWorkDirectory; 
+  
   @Override
   public void setConf(Configuration conf) {
     super.setConf(conf);
@@ -93,7 +98,8 @@ class LinuxTaskController extends TaskController {
     SIGNAL_TASK(2),
     DELETE_AS_USER(3),
     DELETE_LOG_AS_USER(4),
-    RUN_COMMAND_AS_USER(5);
+    RUN_COMMAND_AS_USER(5),
+    INITIALIZE_TASK(6);
 
     private int value;
     Commands(int value) {
@@ -154,6 +160,8 @@ class LinuxTaskController extends TaskController {
                             Path jobConf, TaskUmbilicalProtocol taskTracker,
                             InetSocketAddress ttAddr
                             ) throws IOException {
+    jobUserMap.put(jobid, user);
+
     List<String> command = new ArrayList<String>(
       Arrays.asList(taskControllerExe, 
                     user,
@@ -264,6 +272,18 @@ class LinuxTaskController extends TaskController {
   public void createLogDir(TaskAttemptID taskID,
                            boolean isCleanup) throws IOException {
     // Log dirs are created during attempt dir creation when running the task
+    String[] command = 
+      new String[]{taskControllerExe, 
+          jobUserMap.get(taskID.getJobID().toString()),
+                   localStorage.getDirsString(),
+                   Integer.toString(Commands.INITIALIZE_TASK.getValue()),
+                   taskID.getJobID().toString(),
+                   taskID.toString()};
+    ShellCommandExecutor shExec = new ShellCommandExecutor(command);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("createLogDir: " + Arrays.toString(command));
+    }
+    shExec.execute();
   }
 
   @Override
