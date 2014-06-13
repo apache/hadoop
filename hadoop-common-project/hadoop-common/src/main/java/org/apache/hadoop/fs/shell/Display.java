@@ -75,7 +75,7 @@ class Display extends FsCommand {
     public static final String NAME = "cat";
     public static final String USAGE = "[-ignoreCrc] <src> ...";
     public static final String DESCRIPTION =
-      "Fetch all files that match the file pattern <src> \n" +
+      "Fetch all files that match the file pattern <src> " +
       "and display their content on stdout.\n";
 
     private boolean verifyChecksum = true;
@@ -170,11 +170,11 @@ class Display extends FsCommand {
     public static final String NAME = "checksum";
     public static final String USAGE = "<src> ...";
     public static final String DESCRIPTION =
-      "Dump checksum information for files that match the file\n" +
-      "pattern <src> to stdout. Note that this requires a round-trip\n" +
-      "to a datanode storing each block of the file, and thus is not\n" +
-      "efficient to run on a large number of files. The checksum of a\n" +
-      "file depends on its content, block size and the checksum\n" +
+      "Dump checksum information for files that match the file " +
+      "pattern <src> to stdout. Note that this requires a round-trip " +
+      "to a datanode storing each block of the file, and thus is not " +
+      "efficient to run on a large number of files. The checksum of a " +
+      "file depends on its content, block size and the checksum " +
       "algorithm and parameters used for creating the file.";
 
     @Override

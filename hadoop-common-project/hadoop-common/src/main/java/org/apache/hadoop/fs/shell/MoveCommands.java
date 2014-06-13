@@ -45,7 +45,7 @@ class MoveCommands {
     public static final String NAME = "moveFromLocal";
     public static final String USAGE = "<localsrc> ... <dst>";
     public static final String DESCRIPTION = 
-      "Same as -put, except that the source is\n" +
+      "Same as -put, except that the source is " +
       "deleted after it's copied.";
 
     @Override
@@ -87,8 +87,8 @@ class MoveCommands {
     public static final String NAME = "mv";
     public static final String USAGE = "<src> ... <dst>";
     public static final String DESCRIPTION = 
-      "Move files that match the specified file pattern <src>\n" +
-      "to a destination <dst>.  When moving multiple files, the\n" +
+      "Move files that match the specified file pattern <src> " +
+      "to a destination <dst>.  When moving multiple files, the " +
       "destination must be a directory.";
 
     @Override

@@ -57,12 +57,12 @@ class FsUsage extends FsCommand {
     public static final String NAME = "df";
     public static final String USAGE = "[-h] [<path> ...]";
     public static final String DESCRIPTION =
-      "Shows the capacity, free and used space of the filesystem.\n"+
-      "If the filesystem has multiple partitions, and no path to a\n" +
-      "particular partition is specified, then the status of the root\n" +
+      "Shows the capacity, free and used space of the filesystem. "+
+      "If the filesystem has multiple partitions, and no path to a " +
+      "particular partition is specified, then the status of the root " +
       "partitions will be shown.\n" +
-      "  -h   Formats the sizes of files in a human-readable fashion\n" +
-      "       rather than a number of bytes.\n\n";
+      "-h: Formats the sizes of files in a human-readable fashion " +
+      "rather than a number of bytes.";
     
     @Override
     protected void processOptions(LinkedList<String> args)
@@ -108,14 +108,14 @@ class FsUsage extends FsCommand {
     public static final String NAME = "du";
     public static final String USAGE = "[-s] [-h] <path> ...";
     public static final String DESCRIPTION =
-    "Show the amount of space, in bytes, used by the files that\n" +
+    "Show the amount of space, in bytes, used by the files that " +
     "match the specified file pattern. The following flags are optional:\n" +
-    "  -s   Rather than showing the size of each individual file that\n" +
-    "       matches the pattern, shows the total (summary) size.\n" +
-    "  -h   Formats the sizes of files in a human-readable fashion\n" +
-    "       rather than a number of bytes.\n\n" +
-    "Note that, even without the -s option, this only shows size summaries\n" +
-    "one level deep into a directory.\n" +
+    "-s: Rather than showing the size of each individual file that" +
+    " matches the pattern, shows the total (summary) size.\n" +
+    "-h: Formats the sizes of files in a human-readable fashion" +
+    " rather than a number of bytes.\n\n" +
+    "Note that, even without the -s option, this only shows size summaries " +
+    "one level deep into a directory.\n\n" +
     "The output is in the form \n" + 
     "\tsize\tname(full path)\n"; 
 

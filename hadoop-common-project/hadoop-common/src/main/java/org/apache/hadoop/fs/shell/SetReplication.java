@@ -41,12 +41,12 @@ class SetReplication extends FsCommand {
   public static final String NAME = "setrep";
   public static final String USAGE = "[-R] [-w] <rep> <path> ...";
   public static final String DESCRIPTION =
-    "Set the replication level of a file. If <path> is a directory\n" +
-    "then the command recursively changes the replication factor of\n" +
+    "Set the replication level of a file. If <path> is a directory " +
+    "then the command recursively changes the replication factor of " +
     "all files under the directory tree rooted at <path>.\n" +
-    "The -w flag requests that the command wait for the replication\n" +
+    "-w: It requests that the command waits for the replication " +
     "to complete. This can potentially take a very long time.\n" +
-    "The -R flag is accepted for backwards compatibility. It has no effect.";
+    "-R: It is accepted for backwards compatibility. It has no effect.";
   
   protected short newRep = 0;
   protected List<PathData> waitList = new LinkedList<PathData>();

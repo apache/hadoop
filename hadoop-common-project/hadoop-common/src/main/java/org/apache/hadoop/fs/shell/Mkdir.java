@@ -44,7 +44,7 @@ class Mkdir extends FsCommand {
   public static final String USAGE = "[-p] <path> ...";
   public static final String DESCRIPTION =
     "Create a directory in specified location.\n" +
-    "  -p  Do not fail if the directory already exists";
+    "-p: Do not fail if the directory already exists";
 
   private boolean createParents;
   

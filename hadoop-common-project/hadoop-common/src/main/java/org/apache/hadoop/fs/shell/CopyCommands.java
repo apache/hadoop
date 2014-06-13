@@ -55,10 +55,10 @@ class CopyCommands {
     public static final String NAME = "getmerge";    
     public static final String USAGE = "[-nl] <src> <localdst>";
     public static final String DESCRIPTION =
-      "Get all the files in the directories that\n" +
-      "match the source file pattern and merge and sort them to only\n" +
+      "Get all the files in the directories that " +
+      "match the source file pattern and merge and sort them to only " +
       "one file on local fs. <src> is kept.\n" +
-      "  -nl   Add a newline character at the end of each file.";
+      "-nl: Add a newline character at the end of each file.";
 
     protected PathData dst = null;
     protected String delimiter = null;
@@ -135,12 +135,12 @@ class CopyCommands {
     public static final String NAME = "cp";
     public static final String USAGE = "[-f] [-p | -p[topx]] <src> ... <dst>";
     public static final String DESCRIPTION =
-      "Copy files that match the file pattern <src> to a\n" +
-      "destination.  When copying multiple files, the destination\n" +
-      "must be a directory. Passing -p preserves status\n" +
-      "[topx] (timestamps, ownership, permission, XAttr).\n" +
-      "If -p is specified with no <arg>, then preserves\n" +
-      "timestamps, ownership, permission. Passing -f\n" +
+      "Copy files that match the file pattern <src> to a " +
+      "destination.  When copying multiple files, the destination " +
+      "must be a directory. Passing -p preserves status " +
+      "[topx] (timestamps, ownership, permission, XAttr). " +
+      "If -p is specified with no <arg>, then preserves " +
+      "timestamps, ownership, permission. Passing -f " +
       "overwrites the destination if it already exists.\n";
     
     @Override
@@ -184,10 +184,10 @@ class CopyCommands {
     public static final String USAGE =
       "[-p] [-ignoreCrc] [-crc] <src> ... <localdst>";
     public static final String DESCRIPTION =
-      "Copy files that match the file pattern <src>\n" +
-      "to the local name.  <src> is kept.  When copying multiple,\n" +
-      "files, the destination must be a directory. Passing\n" +
-      "-p preserves access and modification times,\n" +
+      "Copy files that match the file pattern <src> " +
+      "to the local name.  <src> is kept.  When copying multiple " +
+      "files, the destination must be a directory. Passing " +
+      "-p preserves access and modification times, " +
       "ownership and the mode.\n";
 
     @Override
@@ -211,11 +211,11 @@ class CopyCommands {
     public static final String NAME = "put";
     public static final String USAGE = "[-f] [-p] <localsrc> ... <dst>";
     public static final String DESCRIPTION =
-      "Copy files from the local file system\n" +
-      "into fs. Copying fails if the file already\n" +
-      "exists, unless the -f flag is given. Passing\n" +
-      "-p preserves access and modification times,\n" +
-      "ownership and the mode. Passing -f overwrites\n" +
+      "Copy files from the local file system " +
+      "into fs. Copying fails if the file already " +
+      "exists, unless the -f flag is given. Passing " +
+      "-p preserves access and modification times, " +
+      "ownership and the mode. Passing -f overwrites " +
       "the destination if it already exists.\n";
 
     @Override
@@ -278,9 +278,9 @@ class CopyCommands {
     public static final String NAME = "appendToFile";
     public static final String USAGE = "<localsrc> ... <dst>";
     public static final String DESCRIPTION =
-        "Appends the contents of all the given local files to the\n" +
-            "given dst file. The dst file will be created if it does\n" +
-            "not exist. If <localSrc> is -, then the input is read\n" +
+        "Appends the contents of all the given local files to the " +
+            "given dst file. The dst file will be created if it does " +
+            "not exist. If <localSrc> is -, then the input is read " +
             "from stdin.";
 
     private static final int DEFAULT_IO_LENGTH = 1024 * 1024;

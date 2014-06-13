@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.tools;
+package org.apache.hadoop.tools;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -26,14 +26,14 @@ import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * This class implements a "table listing" with column headers.
- * 
+ *
  * Example:
- * 
+ *
  * NAME   OWNER   GROUP   MODE       WEIGHT
  * pool1  andrew  andrew  rwxr-xr-x     100
  * pool2  andrew  andrew  rwxr-xr-x     100
  * pool3  andrew  andrew  rwxr-xr-x     100
- * 
+ *
  */
 @InterfaceAudience.Private
 public class TableListing {
@@ -141,14 +141,14 @@ public class TableListing {
 
     /**
      * Add a new field to the Table under construction.
-     * 
+     *
      * @param title Field title.
      * @param justification Right or left justification. Defaults to left.
      * @param wrap Width at which to auto-wrap the content of the cell.
      *        Defaults to Integer.MAX_VALUE.
      * @return This Builder object
      */
-    public Builder addField(String title, Justification justification, 
+    public Builder addField(String title, Justification justification,
         boolean wrap) {
       columns.add(new Column(title, justification, wrap));
       return this;

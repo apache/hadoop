@@ -43,7 +43,7 @@ class Tail extends FsCommand {
   public static final String USAGE = "[-f] <file>";
   public static final String DESCRIPTION =
     "Show the last 1KB of the file.\n" +
-    "\t\tThe -f option shows appended data as the file grows.\n";
+    "-f: Shows appended data as the file grows.\n";
 
   private long startingOffset = -1024;
   private boolean follow = false;
