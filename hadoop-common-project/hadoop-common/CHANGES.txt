@@ -75,6 +75,8 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10376. Refactor refresh*Protocols into a single generic
     refreshConfigProtocol. (Chris Li via Arpit Agarwal)
 
+    HADOOP-6350. Documenting Hadoop metrics. (Akira Ajisaka via Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES 
