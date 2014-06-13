@@ -12,6 +12,9 @@ Release 1.2.2 - unreleased
 
   BUG FIXES 
 
+    MAPREDUCE-4490. Fixed LinuxTaskController to re-initialize user log
+    directory when JVM reuse option is enabled.  (Sam Liu via eyang)
+
     HADOOP-9863. Backport HADOOP-8686 to support BigEndian on ppc64. 
     (Yu Li via eyang)
 

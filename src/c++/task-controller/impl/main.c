@@ -51,6 +51,8 @@ void display_usage(FILE *stream) {
 	  DELETE_LOG_AS_USER);
   fprintf(stream, "   run command as user:  %2d cmd args\n",
 	  RUN_COMMAND_AS_USER);
+  fprintf(stream, "   initialize task:      %2d user relative-path jobid taskid\n",
+	  INITIALIZE_TASK);
 }
 
 int main(int argc, char **argv) {
@@ -196,6 +198,15 @@ int main(int argc, char **argv) {
     break;
   case RUN_COMMAND_AS_USER:
     exit_code = run_command_as_user(user_detail->pw_name, argv + optind);
+    break;
+  case INITIALIZE_TASK:
+    if (argc < 6) {
+      fprintf(LOGFILE, "Too few arguments (%d vs 6) for initializing task\n", argc);
+      return INVALID_ARGUMENT_NUMBER;
+    }
+    job_id = argv[optind++];
+    task_id = argv[optind++];
+    exit_code = initialize_task(user_detail->pw_name, good_local_dirs, job_id, task_id);
     break;
   default:
     exit_code = INVALID_COMMAND_PROVIDED;
