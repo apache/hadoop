@@ -437,6 +437,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6330. Move mkdirs() to FSNamesystem. (wheat9)
 
+    HDFS-6470. TestBPOfferService.testBPInitErrorHandling is flaky.
+    (Ming Ma via wang)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
