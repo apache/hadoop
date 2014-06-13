@@ -425,6 +425,8 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10691. Improve the readability of 'hadoop fs -help'.
     (Lei Xu via wang)
 
+    HADOOP-10688. Expose thread-level FileSystem StatisticsData (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES 
