@@ -180,6 +180,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6470. TestBPOfferService.testBPInitErrorHandling is flaky.
     (Ming Ma via wang)
 
+    HDFS-6529. Trace logging for RemoteBlockReader2 to identify remote datanode
+    and file being read. (Anubhav Dhoot via atm)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
