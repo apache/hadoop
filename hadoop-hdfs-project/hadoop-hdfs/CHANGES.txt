@@ -183,6 +183,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6529. Trace logging for RemoteBlockReader2 to identify remote datanode
     and file being read. (Anubhav Dhoot via atm)
 
+    HDFS-6499. Use NativeIO#renameTo instead of File#renameTo in
+    FileJournalManager. (Yongjun Zhang via atm)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
