@@ -159,7 +159,7 @@ count
 
 cp
 
-   Usage: <<<hdfs dfs -cp [-f] URI [URI ...] <dest> >>>
+   Usage: <<<hdfs dfs -cp [-f] [-p | -p[topx]] URI [URI ...] <dest> >>>
 
    Copy files from source to destination. This command allows multiple sources
    as well in which case the destination must be a directory.
@@ -167,6 +167,10 @@ cp
     Options:
 
       * The -f option will overwrite the destination if it already exists.
+      
+      * The -p option will preserve file attributes [topx] (timestamps, 
+        ownership, permission, XAttr). If -p is specified with no <arg>, 
+        then preserves timestamps, ownership, permission.
 
    Example:
 

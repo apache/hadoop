@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.FilterContainer;
 import org.apache.hadoop.http.FilterInitializer;
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.SecurityUtil;
 
 /**
@@ -86,15 +87,15 @@ public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
 
     String signatureSecretFile = filterConfig.get(SIGNATURE_SECRET_FILE);
     if (signatureSecretFile != null) {
+      Reader reader = null;
       try {
         StringBuilder secret = new StringBuilder();
-        Reader reader = new FileReader(signatureSecretFile);
+        reader = new FileReader(signatureSecretFile);
         int c = reader.read();
         while (c > -1) {
           secret.append((char) c);
           c = reader.read();
         }
-        reader.close();
         filterConfig
             .put(TimelineAuthenticationFilter.SIGNATURE_SECRET,
                 secret.toString());
@@ -102,6 +103,8 @@ public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
         throw new RuntimeException(
             "Could not read HTTP signature secret file: "
                 + signatureSecretFile);
+      } finally {
+        IOUtils.closeStream(reader);
       }
     }
 

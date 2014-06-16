@@ -1,0 +1,2 @@
+﻿BOM(Byte Order Mark) test file
+BOM(Byte Order Mark) test file

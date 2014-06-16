@@ -72,7 +72,9 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.blockmanagement.CacheReplicationMonitor;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList.Type;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.nativeio.NativeIO;
@@ -1401,6 +1403,20 @@ public class TestCacheDirectives {
         .build());
   }
 
+  /**
+   * Check that the NameNode is not attempting to cache anything.
+   */
+  private void checkPendingCachedEmpty(MiniDFSCluster cluster)
+      throws Exception {
+    final DatanodeManager datanodeManager =
+        cluster.getNamesystem().getBlockManager().getDatanodeManager();
+    for (DataNode dn : cluster.getDataNodes()) {
+      DatanodeDescriptor descriptor =
+          datanodeManager.getDatanode(dn.getDatanodeId());
+      Assert.assertTrue(descriptor.getPendingCached().isEmpty());
+    }
+  }
+
   @Test(timeout=60000)
   public void testExceedsCapacity() throws Exception {
     // Create a giant file
@@ -1418,21 +1434,16 @@ public class TestCacheDirectives {
         .setPath(fileName).setReplication((short) 1).build());
     waitForCachedBlocks(namenode, -1, numCachedReplicas,
         "testExceeds:1");
-    // Check that no DNs saw an excess CACHE message
-    int lines = appender.countLinesWithMessage(
-        "more bytes in the cache: " +
-        DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY);
-    assertEquals("Namenode should not send extra CACHE commands", 0, lines);
+    checkPendingCachedEmpty(cluster);
+    Thread.sleep(1000);
+    checkPendingCachedEmpty(cluster);
+
     // Try creating a file with giant-sized blocks that exceed cache capacity
     dfs.delete(fileName, false);
     DFSTestUtil.createFile(dfs, fileName, 4096, fileLen, CACHE_CAPACITY * 2,
         (short) 1, 0xFADED);
-    // Nothing will get cached, so just force sleep for a bit
-    Thread.sleep(4000);
-    // Still should not see any excess commands
-    lines = appender.countLinesWithMessage(
-        "more bytes in the cache: " +
-        DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY);
-    assertEquals("Namenode should not send extra CACHE commands", 0, lines);
+    checkPendingCachedEmpty(cluster);
+    Thread.sleep(1000);
+    checkPendingCachedEmpty(cluster);
   }
 }

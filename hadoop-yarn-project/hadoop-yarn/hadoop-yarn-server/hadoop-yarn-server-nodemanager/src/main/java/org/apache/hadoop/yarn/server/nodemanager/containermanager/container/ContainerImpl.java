@@ -47,7 +47,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
-import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
@@ -382,6 +382,17 @@ public class ContainerImpl implements Container {
     try {
       return BuilderUtils.newContainerStatus(this.containerId,
         getCurrentState(), diagnostics.toString(), exitCode);
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  @Override
+  public NMContainerStatus getNMContainerStatus() {
+    this.readLock.lock();
+    try {
+      return NMContainerStatus.newInstance(this.containerId,
+        getCurrentState(), getResource(), diagnostics.toString(), exitCode);
     } finally {
       this.readLock.unlock();
     }
@@ -761,7 +772,7 @@ public class ContainerImpl implements Container {
       container.cleanup();
       container.metrics.endInitingContainer();
       ContainerKillEvent killEvent = (ContainerKillEvent) event;
-      container.exitCode = ExitCode.TERMINATED.getExitCode();
+      container.exitCode = killEvent.getContainerExitStatus();
       container.diagnostics.append(killEvent.getDiagnostic()).append("\n");
       container.diagnostics.append("Container is killed before being launched.\n");
     }
@@ -805,6 +816,7 @@ public class ContainerImpl implements Container {
               ContainersLauncherEventType.CLEANUP_CONTAINER));
       ContainerKillEvent killEvent = (ContainerKillEvent) event;
       container.diagnostics.append(killEvent.getDiagnostic()).append("\n");
+      container.exitCode = killEvent.getContainerExitStatus();
     }
   }
 
@@ -817,7 +829,10 @@ public class ContainerImpl implements Container {
     @Override
     public void transition(ContainerImpl container, ContainerEvent event) {
       ContainerExitEvent exitEvent = (ContainerExitEvent) event;
-      container.exitCode = exitEvent.getExitCode();
+      if (container.hasDefaultExitCode()) {
+        container.exitCode = exitEvent.getExitCode();
+      }
+
       if (exitEvent.getDiagnosticInfo() != null) {
         container.diagnostics.append(exitEvent.getDiagnosticInfo())
           .append('\n');
@@ -859,7 +874,7 @@ public class ContainerImpl implements Container {
     @Override
     public void transition(ContainerImpl container, ContainerEvent event) {
       ContainerKillEvent killEvent = (ContainerKillEvent) event;
-      container.exitCode = ExitCode.TERMINATED.getExitCode();
+      container.exitCode = killEvent.getContainerExitStatus();
       container.diagnostics.append(killEvent.getDiagnostic()).append("\n");
       container.diagnostics.append("Container is killed before being launched.\n");
       super.transition(container, event);
@@ -916,4 +931,9 @@ public class ContainerImpl implements Container {
       this.readLock.unlock();
     }
   }
+
+  private boolean hasDefaultExitCode() {
+    return (this.exitCode == ContainerExitStatus.INVALID);
+  }
+
 }

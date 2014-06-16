@@ -129,6 +129,7 @@ public abstract class CopyListing extends Configured {
   /**
    * Validate the final resulting path listing.  Checks if there are duplicate
    * entries.  If preserving ACLs, checks that file system can support ACLs.
+   * If preserving XAttrs, checks that file system can support XAttrs.
    *
    * @param pathToListFile - path listing build by doBuildListing
    * @param options - Input options to distcp
@@ -151,6 +152,7 @@ public abstract class CopyListing extends Configured {
 
       Text currentKey = new Text();
       Set<URI> aclSupportCheckFsSet = Sets.newHashSet();
+      Set<URI> xAttrSupportCheckFsSet = Sets.newHashSet();
       while (reader.next(currentKey)) {
         if (currentKey.equals(lastKey)) {
           CopyListingFileStatus currentFileStatus = new CopyListingFileStatus();
@@ -165,6 +167,14 @@ public abstract class CopyListing extends Configured {
           if (!aclSupportCheckFsSet.contains(lastFsUri)) {
             DistCpUtils.checkFileSystemAclSupport(lastFs);
             aclSupportCheckFsSet.add(lastFsUri);
+          }
+        }
+        if (options.shouldPreserve(DistCpOptions.FileAttribute.XATTR)) {
+          FileSystem lastFs = lastFileStatus.getPath().getFileSystem(config);
+          URI lastFsUri = lastFs.getUri();
+          if (!xAttrSupportCheckFsSet.contains(lastFsUri)) {
+            DistCpUtils.checkFileSystemXAttrSupport(lastFs);
+            xAttrSupportCheckFsSet.add(lastFsUri);
           }
         }
         lastKey.set(currentKey);
@@ -253,6 +263,12 @@ public abstract class CopyListing extends Configured {
 
   public static class AclsNotSupportedException extends RuntimeException {
     public AclsNotSupportedException(String message) {
+      super(message);
+    }
+  }
+  
+  public static class XAttrsNotSupportedException extends RuntimeException {
+    public XAttrsNotSupportedException(String message) {
       super(message);
     }
   }

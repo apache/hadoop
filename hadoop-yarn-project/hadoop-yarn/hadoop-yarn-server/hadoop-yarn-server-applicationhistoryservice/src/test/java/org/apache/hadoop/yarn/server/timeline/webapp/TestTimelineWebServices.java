@@ -21,6 +21,11 @@ package org.apache.hadoop.yarn.server.timeline.webapp;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import javax.inject.Singleton;
 import javax.servlet.Filter;
@@ -39,7 +44,9 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
+import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AdminACLsManager;
 import org.apache.hadoop.yarn.server.timeline.TestMemoryTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
@@ -362,6 +369,29 @@ public class TestTimelineWebServices extends JerseyTest {
     Assert.assertEquals(0, event2.getEventInfo().size());
   }
 
+  @Test
+  public void testPostEntitiesWithPrimaryFilter() throws Exception {
+    TimelineEntities entities = new TimelineEntities();
+    TimelineEntity entity = new TimelineEntity();
+    Map<String, Set<Object>> filters = new HashMap<String, Set<Object>>();
+    filters.put(TimelineStore.SystemFilter.ENTITY_OWNER.toString(), new HashSet<Object>());
+    entity.setPrimaryFilters(filters);
+    entity.setEntityId("test id 6");
+    entity.setEntityType("test type 6");
+    entity.setStartTime(System.currentTimeMillis());
+    entities.addEntity(entity);
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("timeline")
+        .accept(MediaType.APPLICATION_JSON)
+        .type(MediaType.APPLICATION_JSON)
+        .post(ClientResponse.class, entities);
+    TimelinePutResponse putResposne = response.getEntity(TimelinePutResponse.class);
+    Assert.assertEquals(1, putResposne.getErrors().size());
+    List<TimelinePutError> errors = putResposne.getErrors();
+    Assert.assertEquals(TimelinePutResponse.TimelinePutError.SYSTEM_FILTER_CONFLICT,
+      errors.get(0).getErrorCode());
+  }
+  
   @Test
   public void testPostEntities() throws Exception {
     TimelineEntities entities = new TimelineEntities();

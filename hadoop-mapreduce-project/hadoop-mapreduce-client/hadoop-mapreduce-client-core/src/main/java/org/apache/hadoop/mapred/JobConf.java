@@ -112,7 +112,7 @@ import org.apache.log4j.Level;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class JobConf extends Configuration {
-  
+
   private static final Log LOG = LogFactory.getLog(JobConf.class);
 
   static{
@@ -882,7 +882,7 @@ public class JobConf extends Configuration {
       JobContext.KEY_COMPARATOR, null, RawComparator.class);
     if (theClass != null)
       return ReflectionUtils.newInstance(theClass, this);
-    return WritableComparator.get(getMapOutputKeyClass().asSubclass(WritableComparable.class));
+    return WritableComparator.get(getMapOutputKeyClass().asSubclass(WritableComparable.class), this);
   }
 
   /**

@@ -77,6 +77,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -256,6 +257,28 @@ public class TestClientRMService {
     } catch (ApplicationNotFoundException ex) {
       Assert.fail(ex.getMessage());
     }
+  }
+
+  @Test
+  public void testGetApplicationResourceUsageReportDummy() throws YarnException,
+      IOException {
+    ApplicationAttemptId attemptId = getApplicationAttemptId(1);
+    YarnScheduler yarnScheduler = mockYarnScheduler();
+    RMContext rmContext = mock(RMContext.class);
+    mockRMContext(yarnScheduler, rmContext);
+    when(rmContext.getDispatcher().getEventHandler()).thenReturn(
+        new EventHandler<Event>() {
+          public void handle(Event event) {
+          }
+        });
+    ApplicationSubmissionContext asContext = 
+        mock(ApplicationSubmissionContext.class);
+    YarnConfiguration config = new YarnConfiguration();
+    RMAppAttemptImpl rmAppAttemptImpl = new RMAppAttemptImpl(attemptId,
+        rmContext, yarnScheduler, null, asContext, config, false);
+    ApplicationResourceUsageReport report = rmAppAttemptImpl
+        .getApplicationResourceUsageReport();
+    assertEquals(report, RMServerUtils.DUMMY_APPLICATION_RESOURCE_USAGE_REPORT);
   }
 
   @Test
@@ -646,7 +669,8 @@ public class TestClientRMService {
     ApplicationId[] appIds =
         {getApplicationId(101), getApplicationId(102), getApplicationId(103)};
     List<String> tags = Arrays.asList("Tag1", "Tag2", "Tag3");
-
+    
+    long[] submitTimeMillis = new long[3];
     // Submit applications
     for (int i = 0; i < appIds.length; i++) {
       ApplicationId appId = appIds[i];
@@ -656,6 +680,7 @@ public class TestClientRMService {
           appId, appNames[i], queues[i % queues.length],
           new HashSet<String>(tags.subList(0, i + 1)));
       rmService.submitApplication(submitRequest);
+      submitTimeMillis[i] = System.currentTimeMillis();
     }
 
     // Test different cases of ClientRMService#getApplications()
@@ -667,6 +692,24 @@ public class TestClientRMService {
     request.setLimit(1L);
     assertEquals("Failed to limit applications", 1,
         rmService.getApplications(request).getApplicationList().size());
+    
+    // Check start range
+    request = GetApplicationsRequest.newInstance();
+    request.setStartRange(submitTimeMillis[0], System.currentTimeMillis());
+    
+    // 2 applications are submitted after first timeMills
+    assertEquals("Incorrect number of matching start range", 
+        2, rmService.getApplications(request).getApplicationList().size());
+    
+    // 1 application is submitted after the second timeMills
+    request.setStartRange(submitTimeMillis[1], System.currentTimeMillis());
+    assertEquals("Incorrect number of matching start range", 
+        1, rmService.getApplications(request).getApplicationList().size());
+    
+    // no application is submitted after the third timeMills
+    request.setStartRange(submitTimeMillis[2], System.currentTimeMillis());
+    assertEquals("Incorrect number of matching start range", 
+        0, rmService.getApplications(request).getApplicationList().size());
 
     // Check queue
     request = GetApplicationsRequest.newInstance();
@@ -944,6 +987,8 @@ public class TestClientRMService {
         Arrays.asList(getApplicationAttemptId(101), getApplicationAttemptId(102)));
     when(yarnScheduler.getAppsInQueue(QUEUE_2)).thenReturn(
         Arrays.asList(getApplicationAttemptId(103)));
+    ApplicationAttemptId attemptId = getApplicationAttemptId(1);
+    when(yarnScheduler.getAppResourceUsageReport(attemptId)).thenReturn(null);
     return yarnScheduler;
   }
 }

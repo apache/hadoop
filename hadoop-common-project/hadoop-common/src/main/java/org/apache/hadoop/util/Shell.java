@@ -526,12 +526,8 @@ abstract public class Shell {
       }
       // wait for the process to finish and check the exit code
       exitCode  = process.waitFor();
-      try {
-        // make sure that the error thread exits
-        errThread.join();
-      } catch (InterruptedException ie) {
-        LOG.warn("Interrupted while reading the error stream", ie);
-      }
+      // make sure that the error thread exits
+      joinThread(errThread);
       completed.set(true);
       //the timeout thread handling
       //taken care in finally block
@@ -560,13 +556,9 @@ abstract public class Shell {
       } catch (IOException ioe) {
         LOG.warn("Error while closing the input stream", ioe);
       }
-      try {
-        if (!completed.get()) {
-          errThread.interrupt();
-          errThread.join();
-        }
-      } catch (InterruptedException ie) {
-        LOG.warn("Interrupted while joining errThread");
+      if (!completed.get()) {
+        errThread.interrupt();
+        joinThread(errThread);
       }
       try {
         InputStream stderr = process.getErrorStream();
@@ -578,6 +570,19 @@ abstract public class Shell {
       }
       process.destroy();
       lastTime = Time.now();
+    }
+  }
+
+  private static void joinThread(Thread t) {
+    while (t.isAlive()) {
+      try {
+        t.join();
+      } catch (InterruptedException ie) {
+        if (LOG.isWarnEnabled()) {
+          LOG.warn("Interrupted while joining on: " + t, ie);
+        }
+        t.interrupt(); // propagate interrupt
+      }
     }
   }
 

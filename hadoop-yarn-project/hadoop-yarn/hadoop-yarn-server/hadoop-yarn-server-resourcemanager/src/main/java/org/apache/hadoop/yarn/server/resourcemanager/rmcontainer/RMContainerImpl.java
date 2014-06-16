@@ -35,12 +35,14 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAcquiredEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAllocatedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
+import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
@@ -65,6 +67,9 @@ public class RMContainerImpl implements RMContainer {
         RMContainerEventType.KILL)
     .addTransition(RMContainerState.NEW, RMContainerState.RESERVED,
         RMContainerEventType.RESERVED, new ContainerReservedTransition())
+    .addTransition(RMContainerState.NEW,
+        EnumSet.of(RMContainerState.RUNNING, RMContainerState.COMPLETED),
+        RMContainerEventType.RECOVER, new ContainerRecoveredTransition())
 
     // Transitions from RESERVED state
     .addTransition(RMContainerState.RESERVED, RMContainerState.RESERVED, 
@@ -341,6 +346,38 @@ public class RMContainerImpl implements RMContainer {
     }
   }
 
+  private static final class ContainerRecoveredTransition
+      implements
+      MultipleArcTransition<RMContainerImpl, RMContainerEvent, RMContainerState> {
+    @Override
+    public RMContainerState transition(RMContainerImpl container,
+        RMContainerEvent event) {
+      NMContainerStatus report =
+          ((RMContainerRecoverEvent) event).getContainerReport();
+      if (report.getContainerState().equals(ContainerState.COMPLETE)) {
+        ContainerStatus status =
+            ContainerStatus.newInstance(report.getContainerId(),
+              report.getContainerState(), report.getDiagnostics(),
+              report.getContainerExitStatus());
+
+        new FinishedTransition().transition(container,
+          new RMContainerFinishedEvent(container.containerId, status,
+            RMContainerEventType.FINISHED));
+        return RMContainerState.COMPLETED;
+      } else if (report.getContainerState().equals(ContainerState.RUNNING)) {
+        // Tell the appAttempt
+        container.eventHandler.handle(new RMAppAttemptContainerAcquiredEvent(
+            container.getApplicationAttemptId(), container.getContainer()));
+        return RMContainerState.RUNNING;
+      } else {
+        // This can never happen.
+        LOG.warn("RMContainer received unexpected recover event with container"
+            + " state " + report.getContainerState() + " while recovering.");
+        return RMContainerState.RUNNING;
+      }
+    }
+  }
+
   private static final class ContainerReservedTransition extends
   BaseTransition {
 
@@ -398,7 +435,6 @@ public class RMContainerImpl implements RMContainer {
       // Inform AppAttempt
       container.eventHandler.handle(new RMAppAttemptContainerFinishedEvent(
           container.appAttemptId, finishedEvent.getRemoteContainerStatus()));
-
       container.rmContext.getRMApplicationHistoryWriter()
           .containerFinished(container);
     }

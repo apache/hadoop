@@ -23,6 +23,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Random;
 
+import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -30,6 +31,11 @@ import junit.framework.TestCase;
 
 /** Unit tests for Writable. */
 public class TestWritable extends TestCase {
+private static final String TEST_CONFIG_PARAM = "frob.test";
+private static final String TEST_CONFIG_VALUE = "test";
+private static final String TEST_WRITABLE_CONFIG_PARAM = "test.writable";
+private static final String TEST_WRITABLE_CONFIG_VALUE = TEST_CONFIG_VALUE;
+
   public TestWritable(String name) { super(name); }
 
   /** Example class used in test cases below. */
@@ -61,6 +67,25 @@ public class TestWritable extends TestCase {
         return false;
       SimpleWritable other = (SimpleWritable)o;
       return this.state == other.state;
+    }
+  }
+
+  public static class SimpleWritableComparable extends SimpleWritable
+      implements WritableComparable<SimpleWritableComparable>, Configurable {
+    private Configuration conf;
+
+    public SimpleWritableComparable() {}
+
+    public void setConf(Configuration conf) {
+      this.conf = conf;
+    }
+
+    public Configuration getConf() {
+      return this.conf;
+    }
+
+    public int compareTo(SimpleWritableComparable o) {
+      return this.state - o.state;
     }
   }
 
@@ -121,9 +146,34 @@ public class TestWritable extends TestCase {
     @Override public int compareTo(Frob o) { return 0; }
   }
 
-  /** Test that comparator is defined. */
+  /** Test that comparator is defined and configured. */
   public static void testGetComparator() throws Exception {
-    assert(WritableComparator.get(Frob.class) instanceof FrobComparator);
+    Configuration conf = new Configuration();
+
+    // Without conf.
+    WritableComparator frobComparator = WritableComparator.get(Frob.class);
+    assert(frobComparator instanceof FrobComparator);
+    assertNotNull(frobComparator.getConf());
+    assertNull(frobComparator.getConf().get(TEST_CONFIG_PARAM));
+
+    // With conf.
+    conf.set(TEST_CONFIG_PARAM, TEST_CONFIG_VALUE);
+    frobComparator = WritableComparator.get(Frob.class, conf);
+    assert(frobComparator instanceof FrobComparator);
+    assertNotNull(frobComparator.getConf());
+    assertEquals(conf.get(TEST_CONFIG_PARAM), TEST_CONFIG_VALUE);
+
+    // Without conf. should reuse configuration.
+    frobComparator = WritableComparator.get(Frob.class);
+    assert(frobComparator instanceof FrobComparator);
+    assertNotNull(frobComparator.getConf());
+    assertEquals(conf.get(TEST_CONFIG_PARAM), TEST_CONFIG_VALUE);
+
+    // New conf. should use new configuration.
+    frobComparator = WritableComparator.get(Frob.class, new Configuration());
+    assert(frobComparator instanceof FrobComparator);
+    assertNotNull(frobComparator.getConf());
+    assertNull(frobComparator.getConf().get(TEST_CONFIG_PARAM));
   }
 
   /**
@@ -153,4 +203,17 @@ public class TestWritable extends TestCase {
         .compare(writable1, writable3) == 0);
   }
 
+  /**
+   * Test that Writable's are configured by Comparator.
+   */
+  public void testConfigurableWritableComparator() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(TEST_WRITABLE_CONFIG_PARAM, TEST_WRITABLE_CONFIG_VALUE);
+
+    WritableComparator wc = WritableComparator.get(SimpleWritableComparable.class, conf);
+    SimpleWritableComparable key = ((SimpleWritableComparable)wc.newKey());
+    assertNotNull(wc.getConf());
+    assertNotNull(key.getConf());
+    assertEquals(key.getConf().get(TEST_WRITABLE_CONFIG_PARAM), TEST_WRITABLE_CONFIG_VALUE);
+  }
 }

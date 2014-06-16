@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 
+import org.apache.commons.lang.WordUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -31,6 +32,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFactory;
 import org.apache.hadoop.fs.shell.FsCommand;
+import org.apache.hadoop.tools.TableListing;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -39,6 +41,8 @@ import org.apache.hadoop.util.ToolRunner;
 public class FsShell extends Configured implements Tool {
   
   static final Log LOG = LogFactory.getLog(FsShell.class);
+
+  private static final int MAX_LINE_WIDTH = 80;
 
   private FileSystem fs;
   private Trash trash;
@@ -117,7 +121,7 @@ public class FsShell extends Configured implements Tool {
     public static final String NAME = "usage";
     public static final String USAGE = "[cmd ...]";
     public static final String DESCRIPTION =
-      "Displays the usage for given command or all commands if none\n" +
+      "Displays the usage for given command or all commands if none " +
       "is specified.";
     
     @Override
@@ -137,7 +141,7 @@ public class FsShell extends Configured implements Tool {
     public static final String NAME = "help";
     public static final String USAGE = "[cmd ...]";
     public static final String DESCRIPTION =
-      "Displays help for given command or all commands if none\n" +
+      "Displays help for given command or all commands if none " +
       "is specified.";
     
     @Override
@@ -197,7 +201,7 @@ public class FsShell extends Configured implements Tool {
       for (String name : commandFactory.getNames()) {
         Command instance = commandFactory.getInstance(name);
         if (!instance.isDeprecated()) {
-          System.out.println("\t[" + instance.getUsage() + "]");
+          out.println("\t[" + instance.getUsage() + "]");
           instances.add(instance);
         }
       }
@@ -217,20 +221,48 @@ public class FsShell extends Configured implements Tool {
     out.println(usagePrefix + " " + instance.getUsage());
   }
 
-  // TODO: will eventually auto-wrap the text, but this matches the expected
-  // output for the hdfs tests...
   private void printInstanceHelp(PrintStream out, Command instance) {
-    boolean firstLine = true;
+    out.println(instance.getUsage() + " :");
+    TableListing listing = null;
+    final String prefix = "  ";
     for (String line : instance.getDescription().split("\n")) {
-      String prefix;
-      if (firstLine) {
-        prefix = instance.getUsage() + ":\t";
-        firstLine = false;
-      } else {
-        prefix = "\t\t";
+      if (line.matches("^[ \t]*[-<].*$")) {
+        String[] segments = line.split(":");
+        if (segments.length == 2) {
+          if (listing == null) {
+            listing = createOptionTableListing();
+          }
+          listing.addRow(segments[0].trim(), segments[1].trim());
+          continue;
+        }
       }
-      System.out.println(prefix + line);
-    }    
+
+      // Normal literal description.
+      if (listing != null) {
+        for (String listingLine : listing.toString().split("\n")) {
+          out.println(prefix + listingLine);
+        }
+        listing = null;
+      }
+
+      for (String descLine : WordUtils.wrap(
+          line, MAX_LINE_WIDTH, "\n", true).split("\n")) {
+        out.println(prefix + descLine);
+      }
+    }
+
+    if (listing != null) {
+      for (String listingLine : listing.toString().split("\n")) {
+        out.println(prefix + listingLine);
+      }
+    }
+  }
+
+  // Creates a two-row table, the first row is for the command line option,
+  // the second row is for the option description.
+  private TableListing createOptionTableListing() {
+    return new TableListing.Builder().addField("").addField("", true)
+        .wrapWidth(MAX_LINE_WIDTH).build();
   }
 
   /**

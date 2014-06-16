@@ -50,11 +50,12 @@ public class TestSSLFactory {
     base.mkdirs();
   }
 
-  private Configuration createConfiguration(boolean clientCert)
+  private Configuration createConfiguration(boolean clientCert,
+      boolean trustStore)
     throws Exception {
     Configuration conf = new Configuration();
     KeyStoreTestUtil.setupSSLConfig(KEYSTORES_DIR, sslConfsDir, conf,
-      clientCert);
+      clientCert, trustStore);
     return conf;
   }
 
@@ -67,7 +68,7 @@ public class TestSSLFactory {
 
   @Test(expected = IllegalStateException.class)
   public void clientMode() throws Exception {
-    Configuration conf = createConfiguration(false);
+    Configuration conf = createConfiguration(false, true);
     SSLFactory sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
     try {
       sslFactory.init();
@@ -80,7 +81,7 @@ public class TestSSLFactory {
   }
 
   private void serverMode(boolean clientCert, boolean socket) throws Exception {
-    Configuration conf = createConfiguration(clientCert);
+    Configuration conf = createConfiguration(clientCert, true);
     SSLFactory sslFactory = new SSLFactory(SSLFactory.Mode.SERVER, conf);
     try {
       sslFactory.init();
@@ -119,7 +120,7 @@ public class TestSSLFactory {
 
   @Test
   public void validHostnameVerifier() throws Exception {
-    Configuration conf = createConfiguration(false);
+    Configuration conf = createConfiguration(false, true);
     conf.unset(SSLFactory.SSL_HOSTNAME_VERIFIER_KEY);
     SSLFactory sslFactory = new
       SSLFactory(SSLFactory.Mode.CLIENT, conf);
@@ -157,7 +158,7 @@ public class TestSSLFactory {
 
   @Test(expected = GeneralSecurityException.class)
   public void invalidHostnameVerifier() throws Exception {
-    Configuration conf = createConfiguration(false);
+    Configuration conf = createConfiguration(false, true);
     conf.set(SSLFactory.SSL_HOSTNAME_VERIFIER_KEY, "foo");
     SSLFactory sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
     try {
@@ -169,7 +170,7 @@ public class TestSSLFactory {
 
   @Test
   public void testConnectionConfigurator() throws Exception {
-    Configuration conf = createConfiguration(false);
+    Configuration conf = createConfiguration(false, true);
     conf.set(SSLFactory.SSL_HOSTNAME_VERIFIER_KEY, "STRICT_IE6");
     SSLFactory sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
     try {
@@ -275,9 +276,21 @@ public class TestSSLFactory {
 
   @Test
   public void testNoClientCertsInitialization() throws Exception {
-    Configuration conf = createConfiguration(false);
+    Configuration conf = createConfiguration(false, true);
     conf.unset(SSLFactory.SSL_REQUIRE_CLIENT_CERT_KEY);
     SSLFactory sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
+    try {
+      sslFactory.init();
+    } finally {
+      sslFactory.destroy();
+    }
+  }
+
+  @Test
+  public void testNoTrustStore() throws Exception {
+    Configuration conf = createConfiguration(false, false);
+    conf.unset(SSLFactory.SSL_REQUIRE_CLIENT_CERT_KEY);
+    SSLFactory sslFactory = new SSLFactory(SSLFactory.Mode.SERVER, conf);
     try {
       sslFactory.init();
     } finally {

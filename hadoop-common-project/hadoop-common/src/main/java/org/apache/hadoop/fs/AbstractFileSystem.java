@@ -1169,6 +1169,30 @@ public abstract class AbstractFileSystem {
   }
 
   /**
+   * Get all of the xattr names for a file or directory.
+   * Only the xattr names for which the logged-in user has permissions to view
+   * are returned.
+   * <p/>
+   * A regular user can only get xattr names for the "user" namespace.
+   * The super user can only get xattr names for the "user" and "trusted"
+   * namespaces.
+   * The xattr names in the "security" and "system" namespaces are only
+   * used/exposed internally by/to the FS impl.
+   * <p/>
+   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
+   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   *
+   * @param path Path to get extended attributes
+   * @return Map<String, byte[]> describing the XAttrs of the file or directory
+   * @throws IOException
+   */
+  public List<String> listXAttrs(Path path)
+          throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+            + " doesn't support listXAttrs");
+  }
+
+  /**
    * Remove an xattr of a file or directory.
    * The name must be prefixed with user/trusted/security/system and
    * followed by ".". For example, "user.attr".

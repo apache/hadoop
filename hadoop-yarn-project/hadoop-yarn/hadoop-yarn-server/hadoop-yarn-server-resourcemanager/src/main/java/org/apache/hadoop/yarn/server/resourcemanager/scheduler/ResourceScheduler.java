@@ -34,6 +34,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 @LimitedPrivate("yarn")
 @Evolving
 public interface ResourceScheduler extends YarnScheduler, Recoverable {
+
+  /**
+   * Set RMContext for <code>ResourceScheduler</code>.
+   * This method should be called immediately after instantiating
+   * a scheduler once.
+   * @param rmContext created by ResourceManager
+   */
+  void setRMContext(RMContext rmContext);
+
   /**
    * Re-initialize the <code>ResourceScheduler</code>.
    * @param conf configuration

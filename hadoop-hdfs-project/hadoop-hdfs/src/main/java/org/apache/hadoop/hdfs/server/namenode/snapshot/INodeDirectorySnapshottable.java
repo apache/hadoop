@@ -234,7 +234,7 @@ public class INodeDirectorySnapshottable extends INodeDirectory {
    *           name does not exist or a snapshot with the new name already
    *           exists
    */
-  public void renameSnapshot(String path, String oldName, String newName)
+  void renameSnapshot(String path, String oldName, String newName)
       throws SnapshotException {
     if (newName.equals(oldName)) {
       return;
@@ -246,7 +246,7 @@ public class INodeDirectorySnapshottable extends INodeDirectory {
     } else {
       final byte[] newNameBytes = DFSUtil.string2Bytes(newName);
       int indexOfNew = searchSnapshot(newNameBytes);
-      if (indexOfNew > 0) {
+      if (indexOfNew >= 0) {
         throw new SnapshotException("The snapshot " + newName
             + " already exists for directory " + path);
       }

@@ -297,9 +297,6 @@ Trunk (Unreleased)
     HADOOP-9394. Port findHangingTest.sh from HBase to Hadoop. (Andrew Wang
     via atm)
 
-    HADOOP-9099. NetUtils.normalizeHostName fails on domains where 
-    UnknownHost resolves to an IP address. (Ivan Mitic via suresh)
-
     HADOOP-9431 TestSecurityUtil#testLocalHostNameForNullOrWild on systems where hostname
     contains capital letters  (Chris Nauroth via sanjay)
 
@@ -345,24 +342,6 @@ Trunk (Unreleased)
 
     HADOOP-8589. ViewFs tests fail when tests and home dirs are nested (sanjay Radia)
 
-  BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
-
-    HADOOP-10520. Extended attributes definition and FileSystem APIs for
-    extended attributes. (Yi Liu via wang)
-
-    HADOOP-10546. Javadoc and other small fixes for extended attributes in
-    hadoop-common. (Charles Lamb via wang)
-
-    HADOOP-10521. FsShell commands for extended attributes. (Yi Liu via wang)
-
-    HADOOP-10548. Improve FsShell xattr error handling and other fixes. (Charles Lamb via umamahesh)
-
-    HADOOP-10567. Shift XAttr value encoding code out for reuse. (Yi Liu via umamahesh)
-
-    HADOOP-10621. Remove CRLF for xattr value base64 encoding for better display.(Yi Liu via umamahesh)
-
-    HADOOP-10575. Small fixes for XAttrCommands and test. (Yi Liu via umamahesh)
-
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -370,6 +349,13 @@ Release 2.5.0 - UNRELEASED
   NEW FEATURES
 
     HADOOP-10498. Add support for proxy server. (daryn)
+
+    HADOOP-9704. Write metrics sink plugin for Hadoop/Graphite (Chu Tong, Alex Newman and Babak Behzad via raviprak)
+
+    HADOOP-9629. Support Windows Azure Storage - Blob as a file system in Hadoop.
+    (Dexter Bradshaw, Mostafa Elhemali, Xi Fang, Johannes Klein, David Lao,
+    Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
+    Alexander Stojanovic, Brian Swan, and Min Wei via cnauroth)
 
   IMPROVEMENTS
 
@@ -426,6 +412,20 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10448. Support pluggable mechanism to specify proxy user settings.
     (Benoy Antony via Arpit Agarwal)
+
+    HADOOP-9555. HA functionality that uses ZooKeeper may experience inadvertent
+    TCP RST and miss session expiration event due to bug in client connection
+    management. (cnauroth)
+
+    HADOOP-10376. Refactor refresh*Protocols into a single generic
+    refreshConfigProtocol. (Chris Li via Arpit Agarwal)
+
+    HADOOP-6350. Documenting Hadoop metrics. (Akira Ajisaka via Arpit Agarwal)
+
+    HADOOP-10691. Improve the readability of 'hadoop fs -help'.
+    (Lei Xu via wang)
+
+    HADOOP-10688. Expose thread-level FileSystem StatisticsData (Sandy Ryza)
 
   OPTIMIZATIONS
 
@@ -527,7 +527,51 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10638. Updating hadoop-daemon.sh to work as expected when nfs is
     started as a privileged user. (Manikandan Narayanaswamy via atm)
 
-Release 2.4.1 - UNRELEASED
+    HADOOP-10630. Possible race condition in RetryInvocationHandler. (jing9)
+
+    HADOOP-10658. SSLFactory expects truststores being configured. (tucu via atm)
+
+    HADOOP-10647. String Format Exception in SwiftNativeFileSystemStore.java.
+    (Gene Kim via stevel)
+
+    HADOOP-9099. NetUtils.normalizeHostName fails on domains where
+    UnknownHost resolves to an IP address. (Ivan Mitic via suresh)
+
+    HADOOP-10664. TestNetUtils.testNormalizeHostName fails. (atm)
+
+    HADOOP-10656. The password keystore file is not picked by LDAP group mapping
+    (brandonli)
+
+    HADOOP-10622. Shell.runCommand can deadlock (Gera Shegalov via jlowe)
+
+    HADOOP-10686. Writables are not always configured. 
+    (Abraham Elmahrek via kasha)
+
+    HADOOP-10678. SecurityUtil has unnecessary synchronization on collection
+    used for only tests. (Benoy Antony via cnauroth)
+
+  BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
+
+    HADOOP-10520. Extended attributes definition and FileSystem APIs for
+    extended attributes. (Yi Liu via wang)
+
+    HADOOP-10546. Javadoc and other small fixes for extended attributes in
+    hadoop-common. (Charles Lamb via wang)
+
+    HADOOP-10521. FsShell commands for extended attributes. (Yi Liu via wang)
+
+    HADOOP-10548. Improve FsShell xattr error handling and other fixes. (Charles Lamb via umamahesh)
+
+    HADOOP-10567. Shift XAttr value encoding code out for reuse. (Yi Liu via umamahesh)
+
+    HADOOP-10621. Remove CRLF for xattr value base64 encoding for better display.(Yi Liu via umamahesh)
+
+    HADOOP-10575. Small fixes for XAttrCommands and test. (Yi Liu via umamahesh)
+
+    HADOOP-10561. Copy command with preserve option should handle Xattrs.
+    (Yi Liu via cnauroth)
+
+Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
 

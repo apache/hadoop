@@ -35,12 +35,14 @@ import org.apache.hadoop.security.authentication.client.Authenticator;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDelegationTokenResponse;
+import org.apache.hadoop.yarn.security.client.TimelineAuthenticationConsts;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenOperation;
-import org.apache.hadoop.yarn.security.client.TimelineAuthenticationConsts;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * A <code>KerberosAuthenticator</code> subclass that fallback to
@@ -77,9 +79,15 @@ public class TimelineAuthenticator extends KerberosAuthenticator {
     }
   }
 
-  private boolean hasDelegationToken(URL url) {
-    return url.getQuery().contains(
-        TimelineAuthenticationConsts.DELEGATION_PARAM + "=");
+  @Private
+  @VisibleForTesting
+  boolean hasDelegationToken(URL url) {
+    if (url.getQuery() == null) {
+      return false;
+    } else {
+      return url.getQuery().contains(
+          TimelineAuthenticationConsts.DELEGATION_PARAM + "=");
+    }
   }
 
   @Override

@@ -143,10 +143,10 @@ public class TestSnapshotFileLength {
 
     // Make sure we can read the entire file via its non-snapshot path.
     fileStatus = hdfs.getFileStatus(file1);
-    assertEquals(fileStatus.getLen(), BLOCKSIZE * 2);
+    assertEquals("Unexpected file length", BLOCKSIZE * 2, fileStatus.getLen());
     fis = hdfs.open(file1);
     bytesRead = fis.read(buffer, 0, buffer.length);
-    assertEquals(bytesRead, BLOCKSIZE * 2);
+    assertEquals("Unexpected # bytes read", BLOCKSIZE * 2, bytesRead);
     fis.close();
 
     Path file1snap1 =
@@ -156,21 +156,23 @@ public class TestSnapshotFileLength {
     assertEquals(fileStatus.getLen(), BLOCKSIZE);
     // Make sure we can only read up to the snapshot length.
     bytesRead = fis.read(buffer, 0, buffer.length);
-    assertEquals(bytesRead, BLOCKSIZE);
+    assertEquals("Unexpected # bytes read", BLOCKSIZE, bytesRead);
     fis.close();
 
-    PrintStream psBackup = System.out;
+    PrintStream outBackup = System.out;
+    PrintStream errBackup = System.err;
     ByteArrayOutputStream bao = new ByteArrayOutputStream();
     System.setOut(new PrintStream(bao));
     System.setErr(new PrintStream(bao));
     // Make sure we can cat the file upto to snapshot length
     FsShell shell = new FsShell();
-    try{
+    try {
       ToolRunner.run(conf, shell, new String[] { "-cat",
       "/TestSnapshotFileLength/sub1/.snapshot/snapshot1/file1" });
-      assertEquals(bao.size(), BLOCKSIZE);
-    }finally{
-      System.setOut(psBackup);
+      assertEquals("Unexpected # bytes from -cat", BLOCKSIZE, bao.size());
+    } finally {
+      System.setOut(outBackup);
+      System.setErr(errBackup);
     }
   }
 }

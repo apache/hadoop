@@ -318,6 +318,13 @@ public class YarnConfiguration extends Configuration {
   public static final String RECOVERY_ENABLED = RM_PREFIX + "recovery.enabled";
   public static final boolean DEFAULT_RM_RECOVERY_ENABLED = false;
 
+  @Private
+  public static final String RM_WORK_PRESERVING_RECOVERY_ENABLED = RM_PREFIX
+      + "work-preserving-recovery.enabled";
+  @Private
+  public static final boolean DEFAULT_RM_WORK_PRESERVING_RECOVERY_ENABLED =
+      false;
+
   /** Zookeeper interaction configs */
   public static final String RM_ZK_PREFIX = RM_PREFIX + "zk-";
 
@@ -908,7 +915,7 @@ public class YarnConfiguration extends Configuration {
     PROXY_PREFIX + "address";
   public static final int DEFAULT_PROXY_PORT = 9099;
   public static final String DEFAULT_PROXY_ADDRESS =
-    "0.0.0.0:" + DEFAULT_RM_PORT;
+    "0.0.0.0:" + DEFAULT_PROXY_PORT;
   
   /**
    * YARN Service Level Authorization

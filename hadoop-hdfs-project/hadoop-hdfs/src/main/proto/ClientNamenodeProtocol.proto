@@ -765,6 +765,8 @@ service ClientNamenodeProtocol {
       returns(SetXAttrResponseProto);
   rpc getXAttrs(GetXAttrsRequestProto)
       returns(GetXAttrsResponseProto);
+  rpc listXAttrs(ListXAttrsRequestProto)
+      returns(ListXAttrsResponseProto);
   rpc removeXAttr(RemoveXAttrRequestProto)
       returns(RemoveXAttrResponseProto);
   rpc createEncryptionZone(CreateEncryptionZoneRequestProto)

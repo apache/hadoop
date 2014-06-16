@@ -480,6 +480,11 @@ public class Hdfs extends AbstractFileSystem {
       throws IOException {
     return dfs.getXAttrs(getUriPath(path), names);
   }
+
+  @Override
+  public List<String> listXAttrs(Path path) throws IOException {
+    return dfs.listXAttrs(getUriPath(path));
+  }
   
   @Override
   public void removeXAttr(Path path, String name) throws IOException {

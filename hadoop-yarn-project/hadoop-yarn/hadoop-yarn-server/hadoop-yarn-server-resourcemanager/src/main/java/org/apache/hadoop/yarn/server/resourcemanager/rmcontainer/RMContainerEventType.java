@@ -33,5 +33,7 @@ public enum RMContainerEventType {
   RELEASED,
 
   // Source: ContainerAllocationExpirer  
-  EXPIRE
+  EXPIRE,
+
+  RECOVER
 }

@@ -77,6 +77,9 @@ Trunk (Unreleased)
     MAPREDUCE-5196. Add bookkeeping for managing checkpoints of task state.
     (Carlo Curino via cdouglas)
 
+    MAPREDUCE-5912. Task.calculateOutputSize does not handle Windows files after
+    MAPREDUCE-5196. (Remus Rusanu via cnauroth)
+
   BUG FIXES
 
     MAPREDUCE-5714. Removed forceful JVM exit in shutDownJob.  
@@ -204,6 +207,12 @@ Release 2.5.0 - UNRELEASED
 
     MAPREDUCE-5899. Support incremental data copy in DistCp. (jing9)
 
+    MAPREDUCE-5886. Allow wordcount example job to accept multiple input paths.
+    (cnauroth)
+
+    MAPREDUCE-5834. Increased test-timeouts in TestGridMixClasses to avoid
+    occassional failures. (Mit Desai via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -247,7 +256,15 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5895. Close streams properly to avoid leakage in TaskLog. 
     (Kousuke Saruta via devaraj)
 
-Release 2.4.1 - UNRELEASED
+    MAPREDUCE-5777. Support utf-8 text with Byte Order Marker.
+    (Zhihai Xu via kasha)
+
+    MAPREDUCE-5898. distcp to support preserving HDFS extended attributes(XAttrs)
+    (Yi Liu via umamahesh)
+
+    MAPREDUCE-5920. Add Xattr option in DistCp docs. (Yi Liu via cnauroth)
+
+Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
 

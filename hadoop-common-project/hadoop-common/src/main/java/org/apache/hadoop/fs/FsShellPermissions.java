@@ -63,18 +63,18 @@ public class FsShellPermissions extends FsCommand {
     public static final String NAME = "chmod";
     public static final String USAGE = "[-R] <MODE[,MODE]... | OCTALMODE> PATH...";
     public static final String DESCRIPTION =
-      "Changes permissions of a file.\n" +
-      "\tThis works similar to shell's chmod with a few exceptions.\n\n" +
-      "-R\tmodifies the files recursively. This is the only option\n" +
-      "\tcurrently supported.\n\n" +
-      "MODE\tMode is same as mode used for chmod shell command.\n" +
-      "\tOnly letters recognized are 'rwxXt'. E.g. +t,a+r,g-w,+rwx,o=r\n\n" +
-      "OCTALMODE Mode specifed in 3 or 4 digits. If 4 digits, the first may\n" +
-      "be 1 or 0 to turn the sticky bit on or off, respectively.  Unlike " +
-      "shell command, it is not possible to specify only part of the mode\n" +
-      "\tE.g. 754 is same as u=rwx,g=rx,o=r\n\n" +
-      "\tIf none of 'augo' is specified, 'a' is assumed and unlike\n" +
-      "\tshell command, no umask is applied.";
+      "Changes permissions of a file. " +
+      "This works similar to the shell's chmod command with a few exceptions.\n" +
+      "-R: modifies the files recursively. This is the only option" +
+      " currently supported.\n" +
+      "<MODE>: Mode is the same as mode used for the shell's command. " +
+      "The only letters recognized are 'rwxXt', e.g. +t,a+r,g-w,+rwx,o=r.\n" +
+      "<OCTALMODE>: Mode specifed in 3 or 4 digits. If 4 digits, the first " +
+      "may be 1 or 0 to turn the sticky bit on or off, respectively.  Unlike " +
+      "the shell command, it is not possible to specify only part of the " +
+      "mode, e.g. 754 is same as u=rwx,g=rx,o=r.\n\n" +
+      "If none of 'augo' is specified, 'a' is assumed and unlike the " +
+      "shell command, no umask is applied.";
 
     protected ChmodParser pp;
 
@@ -121,18 +121,18 @@ public class FsShellPermissions extends FsCommand {
     public static final String NAME = "chown";
     public static final String USAGE = "[-R] [OWNER][:[GROUP]] PATH...";
     public static final String DESCRIPTION =
-      "Changes owner and group of a file.\n" +
-      "\tThis is similar to shell's chown with a few exceptions.\n\n" +
-      "\t-R\tmodifies the files recursively. This is the only option\n" +
-      "\tcurrently supported.\n\n" +
-      "\tIf only owner or group is specified then only owner or\n" +
-      "\tgroup is modified.\n\n" +
-      "\tThe owner and group names may only consist of digits, alphabet,\n"+
-      "\tand any of " + allowedChars + ". The names are case sensitive.\n\n" +
-      "\tWARNING: Avoid using '.' to separate user name and group though\n" +
-      "\tLinux allows it. If user names have dots in them and you are\n" +
-      "\tusing local file system, you might see surprising results since\n" +
-      "\tshell command 'chown' is used for local files.";
+      "Changes owner and group of a file. " +
+      "This is similar to the shell's chown command with a few exceptions.\n" +
+      "-R: modifies the files recursively. This is the only option " +
+      "currently supported.\n\n" +
+      "If only the owner or group is specified, then only the owner or " +
+      "group is modified. " +
+      "The owner and group names may only consist of digits, alphabet, "+
+      "and any of " + allowedChars + ". The names are case sensitive.\n\n" +
+      "WARNING: Avoid using '.' to separate user name and group though " +
+      "Linux allows it. If user names have dots in them and you are " +
+      "using local file system, you might see surprising results since " +
+      "the shell command 'chown' is used for local files.";
 
     ///allows only "allowedChars" above in names for owner and group
     static private final Pattern chownPattern = Pattern.compile(

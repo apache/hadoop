@@ -26,6 +26,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.util.EnumSet;
+import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -133,9 +134,22 @@ public class RemoteBlockReader2  implements BlockReader {
   public synchronized int read(byte[] buf, int off, int len) 
                                throws IOException {
 
+    UUID randomId = null;
+    if (LOG.isTraceEnabled()) {
+      randomId = UUID.randomUUID();
+      LOG.trace(String.format("Starting read #%s file %s from datanode %s",
+        randomId.toString(), this.filename,
+        this.datanodeID.getHostName()));
+    }
+
     if (curDataSlice == null || curDataSlice.remaining() == 0 && bytesNeededToFinish > 0) {
       readNextPacket();
     }
+
+    if (LOG.isTraceEnabled()) {
+      LOG.trace(String.format("Finishing read #" + randomId));
+    }
+
     if (curDataSlice.remaining() == 0) {
       // we're at EOF now
       return -1;

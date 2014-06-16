@@ -21,7 +21,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileStatus;
@@ -34,6 +37,7 @@ import org.apache.hadoop.io.WritableUtils;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 /**
  * CopyListingFileStatus is a specialized subclass of {@link FileStatus} for
@@ -45,6 +49,7 @@ import com.google.common.collect.Lists;
 public final class CopyListingFileStatus extends FileStatus {
 
   private static final byte NO_ACL_ENTRIES = -1;
+  private static final int NO_XATTRS = -1;
 
   // Retain static arrays of enum values to prevent repeated allocation of new
   // arrays during deserialization.
@@ -53,6 +58,7 @@ public final class CopyListingFileStatus extends FileStatus {
   private static final FsAction[] FS_ACTIONS = FsAction.values();
 
   private List<AclEntry> aclEntries;
+  private Map<String, byte[]> xAttrs;
 
   /**
    * Default constructor.
@@ -88,6 +94,24 @@ public final class CopyListingFileStatus extends FileStatus {
   public void setAclEntries(List<AclEntry> aclEntries) {
     this.aclEntries = aclEntries;
   }
+  
+  /**
+   * Returns all xAttrs.
+   * 
+   * @return Map<String, byte[]> containing all xAttrs
+   */
+  public Map<String, byte[]> getXAttrs() {
+    return xAttrs;
+  }
+  
+  /**
+   * Sets optional xAttrs.
+   * 
+   * @param xAttrs Map<String, byte[]> containing all xAttrs
+   */
+  public void setXAttrs(Map<String, byte[]> xAttrs) {
+    this.xAttrs = xAttrs;
+  }
 
   @Override
   public void write(DataOutput out) throws IOException {
@@ -103,6 +127,26 @@ public final class CopyListingFileStatus extends FileStatus {
       }
     } else {
       out.writeByte(NO_ACL_ENTRIES);
+    }
+    
+    if (xAttrs != null) {
+      out.writeInt(xAttrs.size());
+      Iterator<Entry<String, byte[]>> iter = xAttrs.entrySet().iterator();
+      while (iter.hasNext()) {
+        Entry<String, byte[]> entry = iter.next();
+        WritableUtils.writeString(out, entry.getKey());
+        final byte[] value = entry.getValue();
+        if (value != null) {
+          out.writeInt(value.length);
+          if (value.length > 0) {
+            out.write(value);
+          }
+        } else {
+          out.writeInt(-1);
+        }
+      }
+    } else {
+      out.writeInt(NO_XATTRS);
     }
   }
 
@@ -123,6 +167,25 @@ public final class CopyListingFileStatus extends FileStatus {
     } else {
       aclEntries = null;
     }
+    
+    int xAttrsSize = in.readInt();
+    if (xAttrsSize != NO_XATTRS) {
+      xAttrs = Maps.newHashMap();
+      for (int i = 0; i < xAttrsSize; ++i) {
+        final String name = WritableUtils.readString(in);
+        final int valueLen = in.readInt();
+        byte[] value = null;
+        if (valueLen > -1) {
+          value = new byte[valueLen];
+          if (valueLen > 0) {
+            in.readFully(value);
+          }
+        }
+        xAttrs.put(name, value);
+      }
+    } else {
+      xAttrs = null;
+    }
   }
 
   @Override
@@ -134,12 +197,13 @@ public final class CopyListingFileStatus extends FileStatus {
       return false;
     }
     CopyListingFileStatus other = (CopyListingFileStatus)o;
-    return Objects.equal(aclEntries, other.aclEntries);
+    return Objects.equal(aclEntries, other.aclEntries) &&
+        Objects.equal(xAttrs, other.xAttrs);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hashCode(super.hashCode(), aclEntries);
+    return Objects.hashCode(super.hashCode(), aclEntries, xAttrs);
   }
 
   @Override
@@ -147,6 +211,7 @@ public final class CopyListingFileStatus extends FileStatus {
     StringBuilder sb = new StringBuilder(super.toString());
     sb.append('{');
     sb.append("aclEntries = " + aclEntries);
+    sb.append(", xAttrs = " + xAttrs);
     sb.append('}');
     return sb.toString();
   }

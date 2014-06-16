@@ -26,6 +26,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.http.server.HttpFSServerWebApp;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -87,6 +89,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     String fsDefaultName = getProxiedFSURI();
     Configuration conf = new Configuration(false);
     conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, fsDefaultName);
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     File hdfsSite = new File(new File(homeDir, "conf"), "hdfs-site.xml");
     OutputStream os = new FileOutputStream(hdfsSite);
     conf.writeXml(os);
@@ -479,9 +482,112 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     Assert.assertEquals(httpContentSummary.getSpaceQuota(), hdfsContentSummary.getSpaceQuota());
   }
 
+  /**
+   * Runs assertions testing that two AclStatus objects contain the same info
+   * @param a First AclStatus
+   * @param b Second AclStatus
+   * @throws Exception
+   */
+  private void assertSameAcls(AclStatus a, AclStatus b) throws Exception {
+    Assert.assertTrue(a.getOwner().equals(b.getOwner()));
+    Assert.assertTrue(a.getGroup().equals(b.getGroup()));
+    Assert.assertTrue(a.isStickyBit() == b.isStickyBit());
+    Assert.assertTrue(a.getEntries().size() == b.getEntries().size());
+    for (AclEntry e : a.getEntries()) {
+      Assert.assertTrue(b.getEntries().contains(e));
+    }
+    for (AclEntry e : b.getEntries()) {
+      Assert.assertTrue(a.getEntries().contains(e));
+    }
+  }
+
+  /**
+   * Simple ACL tests on a file:  Set an acl, add an acl, remove one acl,
+   * and remove all acls.
+   * @throws Exception
+   */
+  private void testFileAcls() throws Exception {
+    if ( isLocalFS() ) {
+      return;
+    }
+
+    final String aclUser1 = "user:foo:rw-";
+    final String aclUser2 = "user:bar:r--";
+    final String aclGroup1 = "group::r--";
+    final String aclSet = "user::rwx," + aclUser1 + ","
+            + aclGroup1 + ",other::---";
+
+    FileSystem proxyFs = FileSystem.get(getProxiedFSConf());
+    FileSystem httpfs = getHttpFSFileSystem();
+
+    Path path = new Path(getProxiedFSTestDir(), "testAclStatus.txt");
+    OutputStream os = proxyFs.create(path);
+    os.write(1);
+    os.close();
+
+    AclStatus proxyAclStat = proxyFs.getAclStatus(path);
+    AclStatus httpfsAclStat = httpfs.getAclStatus(path);
+    assertSameAcls(httpfsAclStat, proxyAclStat);
+
+    httpfs.setAcl(path, AclEntry.parseAclSpec(aclSet,true));
+    proxyAclStat = proxyFs.getAclStatus(path);
+    httpfsAclStat = httpfs.getAclStatus(path);
+    assertSameAcls(httpfsAclStat, proxyAclStat);
+
+    httpfs.modifyAclEntries(path, AclEntry.parseAclSpec(aclUser2, true));
+    proxyAclStat = proxyFs.getAclStatus(path);
+    httpfsAclStat = httpfs.getAclStatus(path);
+    assertSameAcls(httpfsAclStat, proxyAclStat);
+
+    httpfs.removeAclEntries(path, AclEntry.parseAclSpec(aclUser1, true));
+    proxyAclStat = proxyFs.getAclStatus(path);
+    httpfsAclStat = httpfs.getAclStatus(path);
+    assertSameAcls(httpfsAclStat, proxyAclStat);
+
+    httpfs.removeAcl(path);
+    proxyAclStat = proxyFs.getAclStatus(path);
+    httpfsAclStat = httpfs.getAclStatus(path);
+    assertSameAcls(httpfsAclStat, proxyAclStat);
+  }
+
+  /**
+   * Simple acl tests on a directory: set a default acl, remove default acls.
+   * @throws Exception
+   */
+  private void testDirAcls() throws Exception {
+    if ( isLocalFS() ) {
+      return;
+    }
+
+    final String defUser1 = "default:user:glarch:r-x";
+
+    FileSystem proxyFs = FileSystem.get(getProxiedFSConf());
+    FileSystem httpfs = getHttpFSFileSystem();
+
+    Path dir = getProxiedFSTestDir();
+
+    /* ACL Status on a directory */
+    AclStatus proxyAclStat = proxyFs.getAclStatus(dir);
+    AclStatus httpfsAclStat = httpfs.getAclStatus(dir);
+    assertSameAcls(httpfsAclStat, proxyAclStat);
+
+    /* Set a default ACL on the directory */
+    httpfs.setAcl(dir, (AclEntry.parseAclSpec(defUser1,true)));
+    proxyAclStat = proxyFs.getAclStatus(dir);
+    httpfsAclStat = httpfs.getAclStatus(dir);
+    assertSameAcls(httpfsAclStat, proxyAclStat);
+
+    /* Remove the default ACL */
+    httpfs.removeDefaultAcl(dir);
+    proxyAclStat = proxyFs.getAclStatus(dir);
+    httpfsAclStat = httpfs.getAclStatus(dir);
+    assertSameAcls(httpfsAclStat, proxyAclStat);
+  }
+
   protected enum Operation {
     GET, OPEN, CREATE, APPEND, CONCAT, RENAME, DELETE, LIST_STATUS, WORKING_DIRECTORY, MKDIRS,
-    SET_TIMES, SET_PERMISSION, SET_OWNER, SET_REPLICATION, CHECKSUM, CONTENT_SUMMARY
+    SET_TIMES, SET_PERMISSION, SET_OWNER, SET_REPLICATION, CHECKSUM, CONTENT_SUMMARY,
+    FILEACLS, DIRACLS
   }
 
   private void operation(Operation op) throws Exception {
@@ -532,6 +638,12 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
         break;
       case CONTENT_SUMMARY:
         testContentSummary();
+        break;
+      case FILEACLS:
+        testFileAcls();
+        break;
+      case DIRACLS:
+        testDirAcls();
         break;
     }
   }

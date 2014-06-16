@@ -270,6 +270,14 @@
   </property>
 
   <property>
+    <description>Enable RM work preserving recovery. This configuration is private
+    to YARN for experimenting the feature.
+    </description>
+    <name>yarn.resourcemanager.work-preserving-recovery.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>The class to use as the persistent store.
 
       If org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore

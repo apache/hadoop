@@ -64,6 +64,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -738,7 +739,8 @@ public class ContainerManagerImpl extends CompositeService implements
     } else {
       dispatcher.getEventHandler().handle(
         new ContainerKillEvent(containerID,
-          "Container killed by the ApplicationMaster."));
+            ContainerExitStatus.KILLED_BY_APPMASTER,
+            "Container killed by the ApplicationMaster."));
 
       NMAuditLogger.logSuccess(container.getUser(),    
         AuditConstants.STOP_CONTAINER, "ContainerManageImpl", containerID
@@ -887,6 +889,7 @@ public class ContainerManagerImpl extends CompositeService implements
           .getContainersToCleanup()) {
           this.dispatcher.getEventHandler().handle(
               new ContainerKillEvent(container,
+                  ContainerExitStatus.KILLED_BY_RESOURCEMANAGER,
                   "Container Killed by ResourceManager"));
       }
       break;
