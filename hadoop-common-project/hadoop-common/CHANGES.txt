@@ -85,6 +85,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10657. Have RetryInvocationHandler log failover attempt at INFO
     level. (Ming Ma via jing9)
 
+    HADOOP-10666. Remove Copyright /d/d/d/d Apache Software Foundation from
+    the source files license header. (Henry Saputra via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES 
