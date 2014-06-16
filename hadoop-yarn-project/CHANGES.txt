@@ -164,6 +164,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2125. Changed ProportionalCapacityPreemptionPolicy to log CSV in debug
     level. (Wangda Tan via jianhe)
 
+    YARN-2159. Better logging in SchedulerNode#allocateContainer.
+    (Ray Chiang via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 
