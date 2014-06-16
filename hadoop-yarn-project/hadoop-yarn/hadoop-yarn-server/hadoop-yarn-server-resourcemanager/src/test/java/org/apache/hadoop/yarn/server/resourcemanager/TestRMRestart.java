@@ -102,7 +102,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestRMRestart {
-
   private final static File TEMP_DIR = new File(System.getProperty(
     "test.build.data", "/tmp"), "decommision");
   private File hostFile = new File(TEMP_DIR + File.separator + "hostFile.txt");
@@ -309,7 +308,7 @@ public class TestRMRestart {
         TestRMRestart
           .createNMContainerStatus(loadedApp1.getCurrentAppAttempt()
             .getAppAttemptId(), 1, ContainerState.COMPLETE);
-    nm1.registerNode(Arrays.asList(status));
+    nm1.registerNode(Arrays.asList(status), null);
     nm2.registerNode();
     
     rm2.waitForState(loadedApp1.getApplicationId(), RMAppState.ACCEPTED);
@@ -392,7 +391,7 @@ public class TestRMRestart {
     // completed apps are not removed immediately after app finish
     // And finished app is also loaded back.
     Assert.assertEquals(4, rmAppState.size());
- }
+  }
 
   @Test (timeout = 60000)
   public void testRMRestartAppRunningAMFailed() throws Exception {
@@ -514,7 +513,7 @@ public class TestRMRestart {
     NMContainerStatus status =
         TestRMRestart.createNMContainerStatus(
           am2.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
-    nm1.registerNode(Arrays.asList(status));
+    nm1.registerNode(Arrays.asList(status), null);
     rm2.waitForState(am2.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     launchAM(rmApp, rm2, nm1);
     Assert.assertEquals(3, rmApp.getAppAttempts().size());
@@ -1680,7 +1679,8 @@ public class TestRMRestart {
         TestRMRestart
           .createNMContainerStatus(loadedApp1.getCurrentAppAttempt()
             .getAppAttemptId(), 1, ContainerState.COMPLETE);
-    nm1.registerNode(Arrays.asList(status));
+    nm1.registerNode(Arrays.asList(status), null);
+
     while (loadedApp1.getAppAttempts().size() != 2) {
       Thread.sleep(200);
     }
@@ -1807,7 +1807,7 @@ public class TestRMRestart {
             NMContainerStatus status =
                 TestRMRestart.createNMContainerStatus(
                   am0.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
-            nm1.registerNode(Arrays.asList(status));
+            nm1.registerNode(Arrays.asList(status), null);
           }
         };
       }

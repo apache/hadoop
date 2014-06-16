@@ -20,19 +20,28 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
 
 import java.util.List;
 
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 
 public class RMNodeStartedEvent extends RMNodeEvent {
 
-  private List<NMContainerStatus> containerReports;
+  private List<NMContainerStatus> containerStatuses;
+  private List<ApplicationId> runningApplications;
 
-  public RMNodeStartedEvent(NodeId nodeId, List<NMContainerStatus> containerReports) {
+  public RMNodeStartedEvent(NodeId nodeId,
+      List<NMContainerStatus> containerReports,
+      List<ApplicationId> runningApplications) {
     super(nodeId, RMNodeEventType.STARTED);
-    this.containerReports = containerReports;
+    this.containerStatuses = containerReports;
+    this.runningApplications = runningApplications;
   }
 
-  public List<NMContainerStatus> getContainerRecoveryReports() {
-    return this.containerReports;
+  public List<NMContainerStatus> getNMContainerStatuses() {
+    return this.containerStatuses;
+  }
+  
+  public List<ApplicationId> getRunningApplications() {
+    return runningApplications;
   }
 }

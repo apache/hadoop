@@ -244,15 +244,6 @@ public class ResourceTrackerService extends AbstractService implements
     Resource capability = request.getResource();
     String nodeManagerVersion = request.getNMVersion();
 
-    if (!rmContext.isWorkPreservingRecoveryEnabled()) {
-      if (!request.getNMContainerStatuses().isEmpty()) {
-        LOG.info("received container statuses on node manager register :"
-            + request.getNMContainerStatuses());
-        for (NMContainerStatus status : request.getNMContainerStatuses()) {
-          handleNMContainerStatus(status);
-        }
-      }
-    }
     RegisterNodeManagerResponse response = recordFactory
         .newRecordInstance(RegisterNodeManagerResponse.class);
 
@@ -311,7 +302,8 @@ public class ResourceTrackerService extends AbstractService implements
     RMNode oldNode = this.rmContext.getRMNodes().putIfAbsent(nodeId, rmNode);
     if (oldNode == null) {
       this.rmContext.getDispatcher().getEventHandler().handle(
-          new RMNodeStartedEvent(nodeId, request.getNMContainerStatuses()));
+              new RMNodeStartedEvent(nodeId, request.getNMContainerStatuses(),
+                  request.getRunningApplications()));
     } else {
       LOG.info("Reconnect from the node at: " + host);
       this.nmLivelinessMonitor.unregister(nodeId);
@@ -322,6 +314,18 @@ public class ResourceTrackerService extends AbstractService implements
     // present for any running application.
     this.nmTokenSecretManager.removeNodeKey(nodeId);
     this.nmLivelinessMonitor.register(nodeId);
+    
+    // Handle received container status, this should be processed after new
+    // RMNode inserted
+    if (!rmContext.isWorkPreservingRecoveryEnabled()) {
+      if (!request.getNMContainerStatuses().isEmpty()) {
+        LOG.info("received container statuses on node manager register :"
+            + request.getNMContainerStatuses());
+        for (NMContainerStatus status : request.getNMContainerStatuses()) {
+          handleNMContainerStatus(status);
+        }
+      }
+    }
 
     String message =
         "NodeManager from node " + host + "(cmPort: " + cmPort + " httpPort: "

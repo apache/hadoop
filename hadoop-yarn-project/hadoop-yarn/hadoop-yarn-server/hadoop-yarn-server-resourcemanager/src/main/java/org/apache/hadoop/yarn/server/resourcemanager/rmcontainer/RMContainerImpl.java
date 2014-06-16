@@ -37,7 +37,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAcquiredEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRunningOnNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAllocatedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
@@ -365,9 +365,9 @@ public class RMContainerImpl implements RMContainer {
             RMContainerEventType.FINISHED));
         return RMContainerState.COMPLETED;
       } else if (report.getContainerState().equals(ContainerState.RUNNING)) {
-        // Tell the appAttempt
-        container.eventHandler.handle(new RMAppAttemptContainerAcquiredEvent(
-            container.getApplicationAttemptId(), container.getContainer()));
+        // Tell the app
+        container.eventHandler.handle(new RMAppRunningOnNodeEvent(container
+            .getApplicationAttemptId().getApplicationId(), container.nodeId));
         return RMContainerState.RUNNING;
       } else {
         // This can never happen.
@@ -408,9 +408,9 @@ public class RMContainerImpl implements RMContainer {
       // Register with containerAllocationExpirer.
       container.containerAllocationExpirer.register(container.getContainerId());
 
-      // Tell the appAttempt
-      container.eventHandler.handle(new RMAppAttemptContainerAcquiredEvent(
-          container.getApplicationAttemptId(), container.getContainer()));
+      // Tell the app
+      container.eventHandler.handle(new RMAppRunningOnNodeEvent(container
+          .getApplicationAttemptId().getApplicationId(), container.nodeId));
     }
   }
 

@@ -19,16 +19,16 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import java.util.Collection;
-
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -208,6 +208,14 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    * @return the flag indicating whether the applications's state is stored.
    */
   boolean isAppFinalStateStored();
+  
+  
+  /**
+   * Nodes on which the containers for this {@link RMApp} ran.
+   * @return the set of nodes that ran any containers from this {@link RMApp}
+   * Add more node on which containers for this {@link RMApp} ran
+   */
+  Set<NodeId> getRanNodes();
 
   /**
    * Create the external user-facing state of ApplicationMaster from the

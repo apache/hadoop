@@ -100,11 +100,17 @@ public class MockNM {
   }
 
   public RegisterNodeManagerResponse registerNode() throws Exception {
-    return registerNode(null);
+    return registerNode(null, null);
+  }
+  
+  public RegisterNodeManagerResponse registerNode(
+      List<ApplicationId> runningApplications) throws Exception {
+    return registerNode(null, runningApplications);
   }
 
   public RegisterNodeManagerResponse registerNode(
-      List<NMContainerStatus> containerReports) throws Exception{
+      List<NMContainerStatus> containerReports,
+      List<ApplicationId> runningApplications) throws Exception {
     RegisterNodeManagerRequest req = Records.newRecord(
         RegisterNodeManagerRequest.class);
     req.setNodeId(nodeId);
@@ -113,6 +119,7 @@ public class MockNM {
     req.setResource(resource);
     req.setContainerStatuses(containerReports);
     req.setNMVersion(version);
+    req.setRunningApplications(runningApplications);
     RegisterNodeManagerResponse registrationResponse =
         resourceTracker.registerNodeManager(req);
     this.currentContainerTokenMasterKey =
