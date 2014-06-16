@@ -1215,7 +1215,7 @@ public abstract class Server {
         ugi.addTokenIdentifier(tokenId);
         return ugi;
       } else {
-        return UserGroupInformation.createRemoteUser(authorizedId);
+        return UserGroupInformation.createRemoteUser(authorizedId, authMethod);
       }
     }
 

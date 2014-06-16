@@ -20,6 +20,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.token.Token;
@@ -31,6 +32,7 @@ import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.LoginContext;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -150,6 +152,18 @@ public class TestUserGroupInformation {
     assertEquals(AuthenticationMethod.PROXY, ugi.getAuthenticationMethod());
     assertEquals(AuthenticationMethod.SIMPLE, ugi.getRealAuthenticationMethod());
   }
+  
+  @Test (timeout = 30000)
+  public void testCreateRemoteUser() {
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser("user1");
+    assertEquals(AuthenticationMethod.SIMPLE, ugi.getAuthenticationMethod());
+    assertTrue (ugi.toString().contains("(auth:SIMPLE)"));
+    ugi = UserGroupInformation.createRemoteUser("user1", 
+        AuthMethod.KERBEROS);
+    assertEquals(AuthenticationMethod.KERBEROS, ugi.getAuthenticationMethod());
+    assertTrue (ugi.toString().contains("(auth:KERBEROS)"));
+  }
+  
   /** Test login method */
   @Test (timeout = 30000)
   public void testLogin() throws Exception {
