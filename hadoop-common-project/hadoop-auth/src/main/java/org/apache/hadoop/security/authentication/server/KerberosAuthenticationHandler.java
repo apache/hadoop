@@ -193,7 +193,7 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
       
       for (String spnegoPrincipal : spnegoPrincipals) {
         LOG.info("Login using keytab {}, for principal {}",
-            keytab, principal);
+            keytab, spnegoPrincipal);
         final KerberosConfiguration kerberosConfiguration =
             new KerberosConfiguration(keytab, spnegoPrincipal);
         final LoginContext loginContext =
