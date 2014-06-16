@@ -82,6 +82,9 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10688. Expose thread-level FileSystem StatisticsData (Sandy Ryza)
 
+    HADOOP-10657. Have RetryInvocationHandler log failover attempt at INFO
+    level. (Ming Ma via jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES 
