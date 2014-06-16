@@ -264,7 +264,7 @@ Release 2.5.0 - UNRELEASED
 
     MAPREDUCE-5920. Add Xattr option in DistCp docs. (Yi Liu via cnauroth)
 
-Release 2.4.1 - UNRELEASED
+Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
 
