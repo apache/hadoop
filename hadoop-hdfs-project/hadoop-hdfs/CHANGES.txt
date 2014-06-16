@@ -447,6 +447,8 @@ Release 2.5.0 - UNRELEASED
     take FSN read lock when accessing pendingCached list.
     (wang)
 
+    HDFS-6528. Add XAttrs to TestOfflineImageViewer. (Stephen Chu via wang)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
