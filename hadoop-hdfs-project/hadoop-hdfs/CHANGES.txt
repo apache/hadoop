@@ -443,6 +443,10 @@ Release 2.5.0 - UNRELEASED
     HDFS-6499. Use NativeIO#renameTo instead of File#renameTo in
     FileJournalManager. (Yongjun Zhang via atm)
 
+    HDFS-6518. TestCacheDirectives#testExceedsCapacity should
+    take FSN read lock when accessing pendingCached list.
+    (wang)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
