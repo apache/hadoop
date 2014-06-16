@@ -551,7 +551,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                     </exec>
                     <exec executable="sh" failonerror="true" dir="${project.build.directory}/native/">
                         <arg value="-c"/>
-                        <arg value="[ x$SKIPTESTS = xtrue ] || ${project.build.directory}/native/test_libhdfs_threaded"/>
+                        <arg value="[ x$SKIPTESTS = xtrue ] || ${project.build.directory}/native/test_native_mini_dfs"/>
                       <env key="CLASSPATH" value="${test_classpath}:${compile_classpath}"/>
                       <env key="SKIPTESTS" value="${skipTests}"/>
                     </exec>

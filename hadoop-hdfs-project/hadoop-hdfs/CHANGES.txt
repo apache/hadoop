@@ -381,6 +381,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6375. Listing extended attributes with the search permission.
     (Charles Lamb via wang)
 
+    HDFS-6539. test_native_mini_dfs is skipped in hadoop-hdfs/pom.xml
+    (decstery via cmccabe)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
