@@ -1408,12 +1408,17 @@ public class TestCacheDirectives {
    */
   private void checkPendingCachedEmpty(MiniDFSCluster cluster)
       throws Exception {
-    final DatanodeManager datanodeManager =
-        cluster.getNamesystem().getBlockManager().getDatanodeManager();
-    for (DataNode dn : cluster.getDataNodes()) {
-      DatanodeDescriptor descriptor =
-          datanodeManager.getDatanode(dn.getDatanodeId());
-      Assert.assertTrue(descriptor.getPendingCached().isEmpty());
+    cluster.getNamesystem().readLock();
+    try {
+      final DatanodeManager datanodeManager =
+          cluster.getNamesystem().getBlockManager().getDatanodeManager();
+      for (DataNode dn : cluster.getDataNodes()) {
+        DatanodeDescriptor descriptor =
+            datanodeManager.getDatanode(dn.getDatanodeId());
+        Assert.assertTrue(descriptor.getPendingCached().isEmpty());
+      }
+    } finally {
+      cluster.getNamesystem().readUnlock();
     }
   }
 
