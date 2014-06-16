@@ -36,6 +36,9 @@ Release 0.23.11 - UNRELEASED
     YARN-1932. Javascript injection on the job status page (Mit Desai via
     jlowe)
 
+    YARN-853. maximum-am-resource-percent doesn't work after refreshQueues
+    command (Devaraj K via jlowe)
+
 Release 0.23.10 - 2013-12-09
 
   INCOMPATIBLE CHANGES

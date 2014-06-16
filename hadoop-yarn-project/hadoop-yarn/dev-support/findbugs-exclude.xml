@@ -146,6 +146,7 @@
       <Field name="state" />
       <Field name="userLimit" />
       <Field name="userLimitFactor" />
+      <Field name="maxAMResourcePerQueuePercent" />
     </Or>
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>

@@ -1614,6 +1614,51 @@ public class TestLeafQueue {
     // after reinitialization
     assertEquals(60, e.getNodeLocalityDelay());
   }
+  
+  @Test
+  public void testMaxAMResourcePerQueuePercentAfterQueueRefresh()
+      throws Exception {
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
+    Resource clusterResource = Resources
+        .createResource(100 * 16 * GB);
+    CapacitySchedulerContext csContext = mockCSContext(csConf, clusterResource);
+    csConf.setFloat(CapacitySchedulerConfiguration.
+        MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT, 0.1f);
+    ParentQueue root = new ParentQueue(csContext, 
+        CapacitySchedulerConfiguration.ROOT, CapacityScheduler.queueComparator,
+        null, null);
+    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + "." + A, 80);
+    LeafQueue a = new LeafQueue(csContext, A, root,
+        CapacityScheduler.applicationComparator, null);
+    assertEquals(0.1f, a.getMaxAMResourcePerQueuePercent(), 1e-3f);
+    assertEquals(160, a.getMaximumActiveApplications());
+    
+    csConf.setFloat(CapacitySchedulerConfiguration.
+        MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT, 0.2f);
+    LeafQueue newA = new LeafQueue(csContext, A, root,
+        CapacityScheduler.applicationComparator, null);
+    a.reinitialize(newA, clusterResource);
+    assertEquals(0.2f, a.getMaxAMResourcePerQueuePercent(), 1e-3f);
+    assertEquals(320, a.getMaximumActiveApplications());
+
+    Resource newClusterResource = Resources.createResource(100 * 20 * GB);
+    a.updateClusterResource(newClusterResource);
+    //  100 * 20 * 0.2 = 400
+    assertEquals(400, a.getMaximumActiveApplications());
+  }
+
+  private CapacitySchedulerContext mockCSContext(
+      CapacitySchedulerConfiguration csConf, Resource clusterResource) {
+    CapacitySchedulerContext csContext = mock(CapacitySchedulerContext.class);
+    when(csContext.getConfiguration()).thenReturn(csConf);
+    when(csContext.getConf()).thenReturn(new YarnConfiguration());
+    when(csContext.getClusterResources()).thenReturn(clusterResource);
+    when(csContext.getMinimumResourceCapability()).thenReturn(
+        Resources.createResource(GB));
+    when(csContext.getMaximumResourceCapability()).thenReturn(
+        Resources.createResource(2 * GB));
+    return csContext;
+  }
 
   
   @After

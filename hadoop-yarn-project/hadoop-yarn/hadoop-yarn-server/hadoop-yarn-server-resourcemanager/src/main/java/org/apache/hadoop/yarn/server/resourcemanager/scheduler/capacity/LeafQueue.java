@@ -166,9 +166,8 @@ public class LeafQueue implements CSQueue {
     maxApplicationsPerUser = 
       (int)(maxApplications * (userLimit / 100.0f) * userLimitFactor);
 
-    this.maxAMResourcePerQueuePercent = 
-        cs.getConfiguration().
-            getMaximumApplicationMasterResourcePerQueuePercent(getQueuePath());
+    float maxAMResourcePerQueuePercent = cs.getConfiguration()
+        .getMaximumApplicationMasterResourcePerQueuePercent(getQueuePath());
     int maxActiveApplications = 
         CSQueueUtils.computeMaxActiveApplications(
             cs.getClusterResources(), this.minimumAllocation,
@@ -195,9 +194,9 @@ public class LeafQueue implements CSQueue {
         capacity, absoluteCapacity, 
         maximumCapacity, absoluteMaxCapacity, 
         userLimit, userLimitFactor, 
-        maxApplications, maxApplicationsPerUser,
-        maxActiveApplications, maxActiveApplicationsPerUser,
-        state, acls, cs.getConfiguration().getNodeLocalityDelay());
+        maxApplications, maxAMResourcePerQueuePercent, maxApplicationsPerUser,
+        maxActiveApplications, maxActiveApplicationsPerUser, state, acls, cs
+            .getConfiguration().getNodeLocalityDelay());
 
     if(LOG.isDebugEnabled()) {
       LOG.debug("LeafQueue:" + " name=" + queueName
@@ -214,10 +213,10 @@ public class LeafQueue implements CSQueue {
       float capacity, float absoluteCapacity, 
       float maximumCapacity, float absoluteMaxCapacity,
       int userLimit, float userLimitFactor,
-      int maxApplications, int maxApplicationsPerUser,
-      int maxActiveApplications, int maxActiveApplicationsPerUser,
-      QueueState state, Map<QueueACL, AccessControlList> acls, 
-      int nodeLocalityDelay)
+      int maxApplications, float maxAMResourcePerQueuePercent,
+      int maxApplicationsPerUser, int maxActiveApplications,
+      int maxActiveApplicationsPerUser, QueueState state,
+      Map<QueueACL, AccessControlList> acls, int nodeLocalityDelay)
   {
     // Sanity check
     CSQueueUtils.checkMaxCapacity(getQueueName(), capacity, maximumCapacity);
@@ -234,6 +233,7 @@ public class LeafQueue implements CSQueue {
     this.userLimitFactor = userLimitFactor;
 
     this.maxApplications = maxApplications;
+    this.maxAMResourcePerQueuePercent = maxAMResourcePerQueuePercent;
     this.maxApplicationsPerUser = maxApplicationsPerUser;
 
     this.maxActiveApplications = maxActiveApplications;
@@ -381,6 +381,14 @@ public class LeafQueue implements CSQueue {
   @Private
   public float getMinimumAllocationFactor() {
     return minimumAllocationFactor;
+  }
+  
+  /**
+   * Used only by tests.
+   */
+  @Private
+  public float getMaxAMResourcePerQueuePercent() {
+    return maxAMResourcePerQueuePercent;
   }
 
   public int getMaxApplications() {
@@ -594,6 +602,7 @@ public class LeafQueue implements CSQueue {
         newlyParsedLeafQueue.absoluteMaxCapacity, 
         newlyParsedLeafQueue.userLimit, newlyParsedLeafQueue.userLimitFactor, 
         newlyParsedLeafQueue.maxApplications,
+        newlyParsedLeafQueue.maxAMResourcePerQueuePercent,
         newlyParsedLeafQueue.getMaxApplicationsPerUser(),
         newlyParsedLeafQueue.getMaximumActiveApplications(), 
         newlyParsedLeafQueue.getMaximumActiveApplicationsPerUser(),
