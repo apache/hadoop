@@ -240,6 +240,10 @@ Release 2.5.0 - UNRELEASED
     to NMs where the completed applications previously ran in case of RM restart.
     (Wangda Tan via jianhe)
 
+    YARN-2167. LeveldbIterator should get closed in
+    NMLeveldbStateStoreService#loadLocalizationState() within finally block
+    (Junping Du via jlowe)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
