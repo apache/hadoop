@@ -95,8 +95,9 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       throws IOException {
     RecoveredLocalizationState state = new RecoveredLocalizationState();
 
+    LeveldbIterator iter = null;
     try {
-      LeveldbIterator iter = new LeveldbIterator(db);
+      iter = new LeveldbIterator(db);
       iter.seek(bytes(LOCALIZATION_PUBLIC_KEY_PREFIX));
       state.publicTrackerState = loadResourceTrackerState(iter,
           LOCALIZATION_PUBLIC_KEY_PREFIX);
@@ -122,6 +123,10 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       }
     } catch (DBException e) {
       throw new IOException(e.getMessage(), e);
+    } finally {
+      if (iter != null) {
+        iter.close();
+      }
     }
 
     return state;
