@@ -20,12 +20,23 @@ package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerStatusPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NMContainerStatusProto;
@@ -44,6 +55,7 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
   private Resource resource = null;
   private NodeId nodeId = null;
   private List<NMContainerStatus> containerStatuses = null;
+  private List<ApplicationId> runningApplications = null;
   
   public RegisterNodeManagerRequestPBImpl() {
     builder = RegisterNodeManagerRequestProto.newBuilder();
@@ -64,6 +76,9 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
   private void mergeLocalToBuilder() {
     if (this.containerStatuses != null) {
       addNMContainerStatusesToProto();
+    }
+    if (this.runningApplications != null) {
+      addRunningApplicationsToProto();
     }
     if (this.resource != null) {
       builder.setResource(convertToProtoFormat(this.resource));
@@ -158,6 +173,66 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
     maybeInitBuilder();
     builder.setHttpPort(httpPort);
   }
+  
+  @Override
+  public List<ApplicationId> getRunningApplications() {
+    initRunningApplications();
+    return runningApplications;
+  }
+  
+  private void initRunningApplications() {
+    if (this.runningApplications != null) {
+      return;
+    }
+    RegisterNodeManagerRequestProtoOrBuilder p = viaProto ? proto : builder;
+    List<ApplicationIdProto> list = p.getRunningApplicationsList();
+    this.runningApplications = new ArrayList<ApplicationId>();
+    for (ApplicationIdProto c : list) {
+      this.runningApplications.add(convertFromProtoFormat(c));
+    }
+  }
+
+  @Override
+  public void setRunningApplications(List<ApplicationId> apps) {
+    if (apps == null) {
+      return;
+    }
+    initRunningApplications();
+    this.runningApplications.addAll(apps);
+  }
+  
+  private void addRunningApplicationsToProto() {
+    maybeInitBuilder();
+    builder.clearRunningApplications();
+    if (runningApplications == null) {
+      return;
+    }
+    Iterable<ApplicationIdProto> it = new Iterable<ApplicationIdProto>() {
+      
+      @Override
+      public Iterator<ApplicationIdProto> iterator() {
+        return new Iterator<ApplicationIdProto>() {
+          Iterator<ApplicationId> iter = runningApplications.iterator();
+          
+          @Override
+          public boolean hasNext() {
+            return iter.hasNext();
+          }
+          
+          @Override
+          public ApplicationIdProto next() {
+            return convertToProtoFormat(iter.next());  
+          }
+          
+          @Override
+          public void remove() {
+            throw new UnsupportedOperationException();
+          }
+        };
+      }
+    };
+    builder.addAllRunningApplications(it);
+  }
 
   @Override
   public List<NMContainerStatus> getNMContainerStatuses() {
@@ -215,6 +290,14 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
   public void setNMVersion(String version) {
     maybeInitBuilder();
     builder.setNmVersion(version);
+  }
+  
+  private ApplicationIdPBImpl convertFromProtoFormat(ApplicationIdProto p) {
+    return new ApplicationIdPBImpl(p);
+  }
+
+  private ApplicationIdProto convertToProtoFormat(ApplicationId t) {
+    return ((ApplicationIdPBImpl)t).getProto();
   }
 
   private NodeIdPBImpl convertFromProtoFormat(NodeIdProto p) {

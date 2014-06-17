@@ -161,7 +161,7 @@ public class TestRMNodeTransitions {
   @Test (timeout = 5000)
   public void testExpiredContainer() {
     // Start the node
-    node.handle(new RMNodeStartedEvent(null, null));
+    node.handle(new RMNodeStartedEvent(null, null, null));
     verify(scheduler).handle(any(NodeAddedSchedulerEvent.class));
     
     // Expire a container
@@ -189,11 +189,11 @@ public class TestRMNodeTransitions {
   @Test (timeout = 5000)
   public void testContainerUpdate() throws InterruptedException{
     //Start the node
-    node.handle(new RMNodeStartedEvent(null, null));
+    node.handle(new RMNodeStartedEvent(null, null, null));
     
     NodeId nodeId = BuilderUtils.newNodeId("localhost:1", 1);
     RMNodeImpl node2 = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null, null);
-    node2.handle(new RMNodeStartedEvent(null, null));
+    node2.handle(new RMNodeStartedEvent(null, null, null));
     
     ContainerId completedContainerIdFromNode1 = BuilderUtils.newContainerId(
         BuilderUtils.newApplicationAttemptId(
@@ -249,7 +249,7 @@ public class TestRMNodeTransitions {
   @Test (timeout = 5000)
   public void testStatusChange(){
     //Start the node
-    node.handle(new RMNodeStartedEvent(null, null));
+    node.handle(new RMNodeStartedEvent(null, null, null));
     //Add info to the queue first
     node.setNextHeartBeat(false);
 
@@ -465,7 +465,7 @@ public class TestRMNodeTransitions {
     RMNodeImpl node = new RMNodeImpl(nodeId, rmContext,null, 0, 0,
         null, ResourceOption.newInstance(capability,
             RMNode.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT), nmVersion);
-    node.handle(new RMNodeStartedEvent(node.getNodeID(), null));
+    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null));
     Assert.assertEquals(NodeState.RUNNING, node.getState());
     return node;
   }
@@ -496,7 +496,7 @@ public class TestRMNodeTransitions {
     int initialUnhealthy = cm.getUnhealthyNMs();
     int initialDecommissioned = cm.getNumDecommisionedNMs();
     int initialRebooted = cm.getNumRebootedNMs();
-    node.handle(new RMNodeStartedEvent(node.getNodeID(), null));
+    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null));
     Assert.assertEquals("Active Nodes", initialActive + 1, cm.getNumActiveNMs());
     Assert.assertEquals("Lost Nodes", initialLost, cm.getNumLostNMs());
     Assert.assertEquals("Unhealthy Nodes",

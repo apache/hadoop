@@ -250,7 +250,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     List<NMContainerStatus> containerReports = getNMContainerStatuses();
     RegisterNodeManagerRequest request =
         RegisterNodeManagerRequest.newInstance(nodeId, httpPort, totalResource,
-          nodeManagerVersionId, containerReports);
+          nodeManagerVersionId, containerReports, getRunningApplications());
     if (containerReports != null) {
       LOG.info("Registering with RM using containers :" + containerReports);
     }
@@ -373,6 +373,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
           + " container statuses: " + containerStatuses);
     }
     return containerStatuses;
+  }
+  
+  private List<ApplicationId> getRunningApplications() {
+    List<ApplicationId> runningApplications = new ArrayList<ApplicationId>();
+    runningApplications.addAll(this.context.getApplications().keySet());
+    return runningApplications;
   }
 
   // These NMContainerStatus are sent on NM registration and used by YARN only.

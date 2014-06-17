@@ -26,16 +26,13 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import javax.crypto.SecretKey;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -54,7 +51,6 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
-import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -80,7 +76,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppFailedAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppFinishedAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAcquiredEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAllocatedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptLaunchFailedEvent;
@@ -102,6 +97,8 @@ import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+
+import com.google.common.annotations.VisibleForTesting;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
@@ -133,10 +130,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private final ApplicationSubmissionContext submissionContext;
   private Token<AMRMTokenIdentifier> amrmToken = null;
   private SecretKey clientTokenMasterKey = null;
-
-  //nodes on while this attempt's containers ran
-  private Set<NodeId> ranNodes =
-    new HashSet<NodeId>();
+  
   private List<ContainerStatus> justFinishedContainers =
     new ArrayList<ContainerStatus>();
   private Container masterContainer;
@@ -219,10 +213,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       .addTransition(RMAppAttemptState.ALLOCATED_SAVING, 
           RMAppAttemptState.ALLOCATED,
           RMAppAttemptEventType.ATTEMPT_NEW_SAVED, new AttemptStoredTransition())
-      .addTransition(RMAppAttemptState.ALLOCATED_SAVING, 
-          RMAppAttemptState.ALLOCATED_SAVING,
-          RMAppAttemptEventType.CONTAINER_ACQUIRED, 
-          new ContainerAcquiredTransition())
+          
        // App could be killed by the client. So need to handle this. 
       .addTransition(RMAppAttemptState.ALLOCATED_SAVING, 
           RMAppAttemptState.FINAL_SAVING,
@@ -249,10 +240,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
             RMAppAttemptState.KILLED), RMAppAttemptState.KILLED))
 
        // Transitions from ALLOCATED State
-      .addTransition(RMAppAttemptState.ALLOCATED,
-          RMAppAttemptState.ALLOCATED,
-          RMAppAttemptEventType.CONTAINER_ACQUIRED,
-          new ContainerAcquiredTransition())
       .addTransition(RMAppAttemptState.ALLOCATED, RMAppAttemptState.LAUNCHED,
           RMAppAttemptEventType.LAUNCHED, new AMLaunchedTransition())
       .addTransition(RMAppAttemptState.ALLOCATED, RMAppAttemptState.FINAL_SAVING,
@@ -297,10 +284,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       .addTransition(RMAppAttemptState.RUNNING, RMAppAttemptState.RUNNING,
           RMAppAttemptEventType.CONTAINER_ALLOCATED)
       .addTransition(
-                RMAppAttemptState.RUNNING, RMAppAttemptState.RUNNING,
-                RMAppAttemptEventType.CONTAINER_ACQUIRED,
-                new ContainerAcquiredTransition())
-      .addTransition(
           RMAppAttemptState.RUNNING,
           EnumSet.of(RMAppAttemptState.RUNNING, RMAppAttemptState.FINAL_SAVING),
           RMAppAttemptEventType.CONTAINER_FINISHED,
@@ -337,7 +320,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
             // should be fixed to reject container allocate request at Final
             // Saving in scheduler
               RMAppAttemptEventType.CONTAINER_ALLOCATED,
-              RMAppAttemptEventType.CONTAINER_ACQUIRED,
               RMAppAttemptEventType.ATTEMPT_NEW_SAVED,
               RMAppAttemptEventType.KILL))
 
@@ -620,11 +602,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   }
 
   @Override
-  public Set<NodeId> getRanNodes() {
-    return ranNodes;
-  }
-
-  @Override
   public Container getMasterContainer() {
     this.readLock.lock();
 
@@ -705,7 +682,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
   public void transferStateFromPreviousAttempt(RMAppAttempt attempt) {
     this.justFinishedContainers = attempt.getJustFinishedContainers();
-    this.ranNodes = attempt.getRanNodes();
   }
 
   private void recoverAppAttemptCredentials(Credentials appAttemptTokens)
@@ -1400,17 +1376,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     originalTrackingUrl = sanitizeTrackingUrl(unregisterEvent.getFinalTrackingUrl());
     proxiedTrackingUrl = generateProxyUriWithScheme(originalTrackingUrl);
     finalStatus = unregisterEvent.getFinalApplicationStatus();
-  }
-
-  private static final class ContainerAcquiredTransition extends
-      BaseTransition {
-    @Override
-    public void transition(RMAppAttemptImpl appAttempt,
-        RMAppAttemptEvent event) {
-      RMAppAttemptContainerAcquiredEvent acquiredEvent
-        = (RMAppAttemptContainerAcquiredEvent) event;
-      appAttempt.ranNodes.add(acquiredEvent.getContainer().getNodeId());
-    }
   }
 
   private static final class ContainerFinishedTransition

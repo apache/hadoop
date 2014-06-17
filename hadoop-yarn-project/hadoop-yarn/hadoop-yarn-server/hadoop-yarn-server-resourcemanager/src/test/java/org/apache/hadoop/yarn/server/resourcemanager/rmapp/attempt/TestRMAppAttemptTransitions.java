@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -75,8 +76,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppFailedAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRunningOnNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAcquiredEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAllocatedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptLaunchFailedEvent;
@@ -315,7 +316,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(0,applicationAttempt.getJustFinishedContainers().size());
     assertNull(applicationAttempt.getMasterContainer());
     assertEquals(0.0, (double)applicationAttempt.getProgress(), 0.0001);
-    assertEquals(0, applicationAttempt.getRanNodes().size());
+    assertEquals(0, application.getRanNodes().size());
     assertNull(applicationAttempt.getFinalApplicationStatus());
     assertNotNull(applicationAttempt.getTrackingUrl());
     assertFalse("N/A".equals(applicationAttempt.getTrackingUrl()));
@@ -331,7 +332,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(0,applicationAttempt.getJustFinishedContainers().size());
     assertNull(applicationAttempt.getMasterContainer());
     assertEquals(0.0, (double)applicationAttempt.getProgress(), 0.0001);
-    assertEquals(0, applicationAttempt.getRanNodes().size());
+    assertEquals(0, application.getRanNodes().size());
     assertNull(applicationAttempt.getFinalApplicationStatus());
     if (UserGroupInformation.isSecurityEnabled()) {
       verify(clientToAMTokenManager).createMasterKey(
@@ -359,7 +360,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(0,applicationAttempt.getJustFinishedContainers().size());
     assertNull(applicationAttempt.getMasterContainer());
     assertEquals(0.0, (double)applicationAttempt.getProgress(), 0.0001);
-    assertEquals(0, applicationAttempt.getRanNodes().size());
+    assertEquals(0, application.getRanNodes().size());
     assertNull(applicationAttempt.getFinalApplicationStatus());
     
     // Check events
@@ -385,7 +386,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(0,applicationAttempt.getJustFinishedContainers().size());
     assertEquals(amContainer, applicationAttempt.getMasterContainer());
     assertEquals(0.0, (double)applicationAttempt.getProgress(), 0.0001);
-    assertEquals(0, applicationAttempt.getRanNodes().size());
+    assertEquals(0, application.getRanNodes().size());
     assertNull(applicationAttempt.getFinalApplicationStatus());
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
     verifyAttemptFinalStateSaved();
@@ -425,7 +426,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(0,applicationAttempt.getJustFinishedContainers().size());
     assertNull(applicationAttempt.getMasterContainer());
     assertEquals(0.0, (double)applicationAttempt.getProgress(), 0.0001);
-    assertEquals(0, applicationAttempt.getRanNodes().size());
+    assertEquals(0, application.getRanNodes().size());
     assertNull(applicationAttempt.getFinalApplicationStatus());
   }
 
@@ -461,7 +462,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(0,applicationAttempt.getJustFinishedContainers().size());
     assertEquals(container, applicationAttempt.getMasterContainer());
     assertEquals(0.0, (double)applicationAttempt.getProgress(), 0.0001);
-    assertEquals(0, applicationAttempt.getRanNodes().size());
+    assertEquals(0, application.getRanNodes().size());
     
     // Check events
     verify(application, times(1)).handle(any(RMAppFailedAttemptEvent.class));
@@ -666,8 +667,10 @@ public class TestRMAppAttemptTransitions {
     runApplicationAttempt(null, "host", 8042, url, true);
 
     // complete a container
-    applicationAttempt.handle(new RMAppAttemptContainerAcquiredEvent(
-        applicationAttempt.getAppAttemptId(), mock(Container.class)));
+    Container container = mock(Container.class);
+    when(container.getNodeId()).thenReturn(NodeId.newInstance("host", 1234));
+    application.handle(new RMAppRunningOnNodeEvent(application.getApplicationId(),
+        container.getNodeId()));
     applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
         applicationAttempt.getAppAttemptId(), mock(ContainerStatus.class)));
     // complete AM
@@ -845,7 +848,7 @@ public class TestRMAppAttemptTransitions {
         applicationAttempt.getAppAttemptState());
     assertEquals(0,applicationAttempt.getJustFinishedContainers().size());
     assertEquals(amContainer, applicationAttempt.getMasterContainer());
-    assertEquals(0, applicationAttempt.getRanNodes().size());
+    assertEquals(0, application.getRanNodes().size());
     String rmAppPageUrl = pjoin(RM_WEBAPP_ADDR, "cluster", "app",
         applicationAttempt.getAppAttemptId().getApplicationId());
     assertEquals(rmAppPageUrl, applicationAttempt.getOriginalTrackingUrl());
@@ -882,7 +885,7 @@ public class TestRMAppAttemptTransitions {
         applicationAttempt.getAppAttemptState());
     assertEquals(0,applicationAttempt.getJustFinishedContainers().size());
     assertEquals(amContainer, applicationAttempt.getMasterContainer());
-    assertEquals(0, applicationAttempt.getRanNodes().size());
+    assertEquals(0, application.getRanNodes().size());
     String rmAppPageUrl = pjoin(RM_WEBAPP_ADDR, "cluster", "app",
         applicationAttempt.getAppAttemptId().getApplicationId());
     assertEquals(rmAppPageUrl, applicationAttempt.getOriginalTrackingUrl());

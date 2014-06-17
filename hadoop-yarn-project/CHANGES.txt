@@ -233,6 +233,10 @@ Release 2.5.0 - UNRELEASED
     YARN-2155. FairScheduler: Incorrect threshold check for preemption.
     (Wei Yan via kasha)
 
+    YARN-1885. Fixed a bug that RM may not send application-clean-up signal
+    to NMs where the completed applications previously ran in case of RM restart.
+    (Wangda Tan via jianhe)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
