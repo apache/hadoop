@@ -449,6 +449,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6528. Add XAttrs to TestOfflineImageViewer. (Stephen Chu via wang)
 
+    HDFS-6545. Finalizing rolling upgrade can make NN unavailable for a long
+    duration. (kihwal)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)

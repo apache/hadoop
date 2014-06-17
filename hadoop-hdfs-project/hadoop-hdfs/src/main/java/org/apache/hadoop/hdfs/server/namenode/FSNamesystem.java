@@ -7639,14 +7639,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       returnInfo = finalizeRollingUpgradeInternal(now());
       getEditLog().logFinalizeRollingUpgrade(returnInfo.getFinalizeTime());
-      getFSImage().saveNamespace(this);
+      if (haEnabled) {
+        // roll the edit log to make sure the standby NameNode can tail
+        getFSImage().rollEditLog();
+      }
       getFSImage().renameCheckpoint(NameNodeFile.IMAGE_ROLLBACK,
           NameNodeFile.IMAGE);
     } finally {
       writeUnlock();
     }
 
-    // getEditLog().logSync() is not needed since it does saveNamespace 
+    if (!haEnabled) {
+      // Sync not needed for ha since the edit was rolled after logging.
+      getEditLog().logSync();
+    }
 
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(true, "finalizeRollingUpgrade", null, null, null);
