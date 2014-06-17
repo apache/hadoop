@@ -225,6 +225,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10702. KerberosAuthenticationHandler does not log the principal names
     correctly. (Benoy Antony via cnauroth)
 
+    HADOOP-10699. Fix build native library on mac osx (Binglin Chang via
+    jlowe)
+
   BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
 
     HADOOP-10520. Extended attributes definition and FileSystem APIs for
