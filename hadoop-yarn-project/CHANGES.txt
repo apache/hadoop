@@ -39,6 +39,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1702. Added kill app functionality to RM web services. (Varun Vasudev
     via vinodkv)
 
+    YARN-1339. Recover DeletionService state upon nodemanager restart. (Jason Lowe
+    via junping_du)
+
   IMPROVEMENTS
 
     YARN-1479. Invalid NaN values in Hadoop REST API JSON response (Chen He via

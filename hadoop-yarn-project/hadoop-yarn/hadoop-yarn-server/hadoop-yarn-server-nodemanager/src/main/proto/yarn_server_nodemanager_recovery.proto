@@ -24,6 +24,15 @@ package hadoop.yarn;
 
 import "yarn_protos.proto";
 
+message DeletionServiceDeleteTaskProto {
+  optional int32 id = 1;
+  optional string user = 2;
+  optional string subdir = 3;
+  optional int64 deletionTime = 4;
+  repeated string basedirs = 5;
+  repeated int32 successorIds = 6;
+}
+
 message LocalizedResourceProto {
   optional LocalResourceProto resource = 1;
   optional string localPath = 2;
