@@ -25,6 +25,7 @@ import java.net.URISyntaxException;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
@@ -39,6 +40,9 @@ import org.apache.hadoop.fs.PathIsDirectoryException;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.fs.PathOperationException;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclUtil;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 
 /**
@@ -88,7 +92,7 @@ abstract class CommandWithDestination extends FsCommand {
   }
   
   protected static enum FileAttribute {
-    TIMESTAMPS, OWNERSHIP, PERMISSION, XATTR;
+    TIMESTAMPS, OWNERSHIP, PERMISSION, ACL, XATTR;
 
     public static FileAttribute getAttribute(char symbol) {
       for (FileAttribute attribute : values()) {
@@ -306,10 +310,21 @@ abstract class CommandWithDestination extends FsCommand {
           src.stat.getOwner(),
           src.stat.getGroup());
       }
-      if (shouldPreserve(FileAttribute.PERMISSION)) {
+      if (shouldPreserve(FileAttribute.PERMISSION) ||
+          shouldPreserve(FileAttribute.ACL)) {
         target.fs.setPermission(
           target.path,
           src.stat.getPermission());
+      }
+      if (shouldPreserve(FileAttribute.ACL)) {
+        FsPermission perm = src.stat.getPermission();
+        if (perm.getAclBit()) {
+          List<AclEntry> srcEntries =
+              src.fs.getAclStatus(src.path).getEntries();
+          List<AclEntry> srcFullEntries =
+              AclUtil.getAclFromPermAndEntries(perm, srcEntries);
+          target.fs.setAcl(target.path, srcFullEntries);
+        }
       }
       if (shouldPreserve(FileAttribute.XATTR)) {
         Map<String, byte[]> srcXAttrs = src.fs.getXAttrs(src.path);
