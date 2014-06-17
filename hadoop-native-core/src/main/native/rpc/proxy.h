@@ -141,7 +141,7 @@ struct hrpc_sync_ctx *hrpc_proxy_alloc_sync_ctx(struct hrpc_proxy *proxy);
  *
  * @param proxy                 The sync context.
  */
-void hrpc_release_sync_ctx(struct hrpc_sync_ctx *ctx);
+void hrpc_proxy_release_sync_ctx(struct hrpc_sync_ctx *ctx);
 
 /**
  * A callback which synchronous RPCs can use.

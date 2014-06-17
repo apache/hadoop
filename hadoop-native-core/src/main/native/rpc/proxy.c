@@ -96,14 +96,14 @@ struct hrpc_sync_ctx *hrpc_proxy_alloc_sync_ctx(struct hrpc_proxy *proxy)
     if (!ctx) {
         return NULL;
     }
+    memset(ctx, 0, sizeof(*ctx));
     if (uv_sem_init(&ctx->sem, 0)) {
         return NULL;
     }
-    memset(&ctx, 0, sizeof(ctx));
     return ctx;
 }
 
-void hrpc_release_sync_ctx(struct hrpc_sync_ctx *ctx)
+void hrpc_proxy_release_sync_ctx(struct hrpc_sync_ctx *ctx)
 {
     free(ctx->resp.base);
     uv_sem_destroy(&ctx->sem);
