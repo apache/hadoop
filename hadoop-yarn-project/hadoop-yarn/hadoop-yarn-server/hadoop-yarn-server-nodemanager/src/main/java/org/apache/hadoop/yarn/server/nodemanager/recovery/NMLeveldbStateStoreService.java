@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
+import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
 import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -57,6 +58,9 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private static final String DB_NAME = "yarn-nm-state";
   private static final String DB_SCHEMA_VERSION_KEY = "schema-version";
   private static final String DB_SCHEMA_VERSION = "1.0";
+
+  private static final String DELETION_TASK_KEY_PREFIX =
+      "DeletionService/deltask_";
 
   private static final String LOCALIZATION_KEY_PREFIX = "Localization/";
   private static final String LOCALIZATION_PUBLIC_KEY_PREFIX =
@@ -305,6 +309,56 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     }
     return LOCALIZATION_PRIVATE_KEY_PREFIX + user + "/"
         + LOCALIZATION_APPCACHE_SUFFIX + appId + "/";
+  }
+
+
+  @Override
+  public RecoveredDeletionServiceState loadDeletionServiceState()
+      throws IOException {
+    RecoveredDeletionServiceState state = new RecoveredDeletionServiceState();
+    state.tasks = new ArrayList<DeletionServiceDeleteTaskProto>();
+    LeveldbIterator iter = null;
+    try {
+      iter = new LeveldbIterator(db);
+      iter.seek(bytes(DELETION_TASK_KEY_PREFIX));
+      while (iter.hasNext()) {
+        Entry<byte[], byte[]> entry = iter.next();
+        String key = asString(entry.getKey());
+        if (!key.startsWith(DELETION_TASK_KEY_PREFIX)) {
+          break;
+        }
+        state.tasks.add(
+            DeletionServiceDeleteTaskProto.parseFrom(entry.getValue()));
+      }
+    } catch (DBException e) {
+      throw new IOException(e.getMessage(), e);
+    } finally {
+      if (iter != null) {
+        iter.close();
+      }
+    }
+    return state;
+  }
+
+  @Override
+  public void storeDeletionTask(int taskId,
+      DeletionServiceDeleteTaskProto taskProto) throws IOException {
+    String key = DELETION_TASK_KEY_PREFIX + taskId;
+    try {
+      db.put(bytes(key), taskProto.toByteArray());
+    } catch (DBException e) {
+      throw new IOException(e.getMessage(), e);
+    }
+  }
+
+  @Override
+  public void removeDeletionTask(int taskId) throws IOException {
+    String key = DELETION_TASK_KEY_PREFIX + taskId;
+    try {
+      db.delete(bytes(key));
+    } catch (DBException e) {
+      throw new IOException(e.getMessage(), e);
+    }
   }
 
 
