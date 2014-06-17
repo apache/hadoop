@@ -433,6 +433,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10666. Remove Copyright /d/d/d/d Apache Software Foundation from
     the source files license header. (Henry Saputra via wang)
 
+    HADOOP-10557. FsShell -cp -pa option for preserving extended ACLs.
+    (Akira Ajisaka via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES 
