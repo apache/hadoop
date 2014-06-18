@@ -177,6 +177,16 @@ add_executable(uri-unit common/uri-unit.c
 add_utest(uri-unit)
 target_link_libraries(uri-unit ${URIPARSER_LIB} ${LIBUV_LIB})
 
+add_executable(client_id-unit rpc/client_id-unit.c
+    rpc/client_id.c common/hadoop_err.c test/test.c)
+add_utest(client_id-unit)
+target_link_libraries(client_id-unit fstest)
+
+add_executable(call-unit rpc/call-unit.c
+    rpc/call.c common/hadoop_err.c test/test.c)
+add_utest(call-unit)
+target_link_libraries(call-unit fstest)
+
 add_executable(namenode-rpc-unit
     ndfs/namenode-rpc-unit.c)
 target_link_libraries(namenode-rpc-unit fstest)

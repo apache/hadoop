@@ -149,6 +149,9 @@ void *xcalloc(size_t len);
     EXPECT("0", TEST_ERROR_LOCATION_TEXT, TEST_ERROR_NE, \
            "%"PRIdPTR, x);
 
+#define EXPECT_NULL(x) \
+    EXPECT("0", TEST_ERROR_LOCATION_TEXT, TEST_ERROR_EQ, \
+           "%"PRIdPTR, x);
 #endif
 
 // vim: ts=4:sw=4:tw=79:et
