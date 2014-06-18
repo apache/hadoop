@@ -656,6 +656,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6552. add DN storage to a BlockInfo will not replace the different
     storage from same DN. (Amir Langer via Arpit Agarwal)
 
+    HDFS-6551. Rename with OVERWRITE option may throw NPE when the target
+    file/directory is a reference INode. (jing9)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)

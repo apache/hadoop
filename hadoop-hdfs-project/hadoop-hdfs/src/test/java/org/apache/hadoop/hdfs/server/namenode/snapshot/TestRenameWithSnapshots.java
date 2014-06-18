@@ -171,8 +171,6 @@ public class TestRenameWithSnapshots {
   private static boolean existsInDiffReport(List<DiffReportEntry> entries,
       DiffType type, String relativePath) {
     for (DiffReportEntry entry : entries) {
-      System.out.println("DiffEntry is:" + entry.getType() + "\""
-          + new String(entry.getRelativePath()) + "\"");
       if ((entry.getType() == type)
           && ((new String(entry.getRelativePath())).compareTo(relativePath) == 0)) {
         return true;
@@ -2373,5 +2371,47 @@ public class TestRenameWithSnapshots {
 
     // save namespace and restart
     restartClusterAndCheckImage(true);
+  }
+
+  @Test
+  public void testRenameWithOverWrite() throws Exception {
+    final Path root = new Path("/");
+    final Path foo = new Path(root, "foo");
+    final Path file1InFoo = new Path(foo, "file1");
+    final Path file2InFoo = new Path(foo, "file2");
+    final Path file3InFoo = new Path(foo, "file3");
+    DFSTestUtil.createFile(hdfs, file1InFoo, 1L, REPL, SEED);
+    DFSTestUtil.createFile(hdfs, file2InFoo, 1L, REPL, SEED);
+    DFSTestUtil.createFile(hdfs, file3InFoo, 1L, REPL, SEED);
+    final Path bar = new Path(root, "bar");
+    hdfs.mkdirs(bar);
+
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s0");
+    // move file1 from foo to bar
+    final Path fileInBar = new Path(bar, "file1");
+    hdfs.rename(file1InFoo, fileInBar);
+    // rename bar to newDir
+    final Path newDir = new Path(root, "newDir");
+    hdfs.rename(bar, newDir);
+    // move file2 from foo to newDir
+    final Path file2InNewDir = new Path(newDir, "file2");
+    hdfs.rename(file2InFoo, file2InNewDir);
+    // move file3 from foo to newDir and rename it to file1, this will overwrite
+    // the original file1
+    final Path file1InNewDir = new Path(newDir, "file1");
+    hdfs.rename(file3InFoo, file1InNewDir, Rename.OVERWRITE);
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s1");
+
+    SnapshotDiffReport report = hdfs.getSnapshotDiffReport(root, "s0", "s1");
+    LOG.info("DiffList is \n\"" + report.toString() + "\"");
+    List<DiffReportEntry> entries = report.getDiffList();
+    assertEquals(7, entries.size());
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, ""));
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, foo.getName()));
+    assertTrue(existsInDiffReport(entries, DiffType.DELETE, bar.getName()));
+    assertTrue(existsInDiffReport(entries, DiffType.CREATE, newDir.getName()));
+    assertTrue(existsInDiffReport(entries, DiffType.DELETE, "foo/file1"));
+    assertTrue(existsInDiffReport(entries, DiffType.DELETE, "foo/file2"));
+    assertTrue(existsInDiffReport(entries, DiffType.DELETE, "foo/file3"));
   }
 }
