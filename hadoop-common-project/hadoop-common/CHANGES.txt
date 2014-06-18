@@ -596,6 +596,8 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10590. ServiceAuthorizationManager is not threadsafe. (Benoy Antony via vinayakumarb)
 
+    HADOOP-10711. Cleanup some extra dependencies from hadoop-auth. (rkanter via tucu)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
