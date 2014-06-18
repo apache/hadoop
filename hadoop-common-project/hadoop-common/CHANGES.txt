@@ -252,6 +252,8 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10561. Copy command with preserve option should handle Xattrs.
     (Yi Liu via cnauroth)
 
+    HADOOP-10590. ServiceAuthorizationManager is not threadsafe. (Benoy Antony via vinayakumarb)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
