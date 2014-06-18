@@ -339,6 +339,8 @@ Trunk (Unreleased)
     HADOOP-10611. KMS, keyVersion name should not be assumed to be 
     keyName@versionNumber. (tucu)
 
+    HADOOP-10717. Missing JSP support in Jetty (Dapeng Sun via stevel)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)

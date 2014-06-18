@@ -70,6 +70,11 @@
       <artifactId>jetty-util</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>org.mortbay.jetty</groupId>
+      <artifactId>jsp-2.1-jetty</artifactId>
+      <scope>compile</scope>
+    </dependency>
   </dependencies>
 
   <build>
