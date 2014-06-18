@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -157,6 +158,11 @@ public abstract class MockAsm extends MockApps {
 
     @Override
     public YarnApplicationState createApplicationState() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Set<NodeId> getRanNodes() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
   }

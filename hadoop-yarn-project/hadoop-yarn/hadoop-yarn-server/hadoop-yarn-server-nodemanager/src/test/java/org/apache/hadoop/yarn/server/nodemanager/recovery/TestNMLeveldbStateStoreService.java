@@ -35,8 +35,10 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.impl.pb.LocalResourcePBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
+import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.LocalResourceTrackerState;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredDeletionServiceState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredLocalizationState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredUserResources;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -403,5 +405,59 @@ public class TestNMLeveldbStateStoreService {
     Map<String, RecoveredUserResources> userResources =
         state.getUserResources();
     assertTrue(userResources.isEmpty());
+  }
+
+  @Test
+  public void testDeletionTaskStorage() throws IOException {
+    // test empty when no state
+    RecoveredDeletionServiceState state =
+        stateStore.loadDeletionServiceState();
+    assertTrue(state.getTasks().isEmpty());
+
+    // store a deletion task and verify recovered
+    DeletionServiceDeleteTaskProto proto =
+        DeletionServiceDeleteTaskProto.newBuilder()
+        .setId(7)
+        .setUser("someuser")
+        .setSubdir("some/subdir")
+        .addBasedirs("some/dir/path")
+        .addBasedirs("some/other/dir/path")
+        .setDeletionTime(123456L)
+        .addSuccessorIds(8)
+        .addSuccessorIds(9)
+        .build();
+    stateStore.storeDeletionTask(proto.getId(), proto);
+    restartStateStore();
+    state = stateStore.loadDeletionServiceState();
+    assertEquals(1, state.getTasks().size());
+    assertEquals(proto, state.getTasks().get(0));
+
+    // store another deletion task
+    DeletionServiceDeleteTaskProto proto2 =
+        DeletionServiceDeleteTaskProto.newBuilder()
+        .setId(8)
+        .setUser("user2")
+        .setSubdir("subdir2")
+        .setDeletionTime(789L)
+        .build();
+    stateStore.storeDeletionTask(proto2.getId(), proto2);
+    restartStateStore();
+    state = stateStore.loadDeletionServiceState();
+    assertEquals(2, state.getTasks().size());
+    assertTrue(state.getTasks().contains(proto));
+    assertTrue(state.getTasks().contains(proto2));
+
+    // delete a task and verify gone after recovery
+    stateStore.removeDeletionTask(proto2.getId());
+    restartStateStore();
+    state = stateStore.loadDeletionServiceState();
+    assertEquals(1, state.getTasks().size());
+    assertEquals(proto, state.getTasks().get(0));
+
+    // delete the last task and verify none left
+    stateStore.removeDeletionTask(proto.getId());
+    restartStateStore();
+    state = stateStore.loadDeletionServiceState();
+    assertTrue(state.getTasks().isEmpty());
   }
 }

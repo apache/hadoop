@@ -16118,8 +16118,7 @@
       </comparators>
     </test>
 
-    <!-- DFS tests
-        Must come before moveFromLocal tests until HDFS-6471 is fixed -->
+    <!-- DFS tests -->
     <test>
       <description>appendToFile</description>
       <test-commands>
@@ -16480,10 +16479,11 @@
     <test> <!-- TESTED -->
       <description>moveFromLocal: moving non existent file(absolute path)</description>
       <test-commands>
-        <command>-fs NAMENODE -moveFromLocal /user/wrongdata file</command>
+        <command>-fs NAMENODE -mkdir -p /user/USERNAME/dir</command>
+        <command>-fs NAMENODE -moveFromLocal /user/wrongdata /user/USERNAME/dir</command>
       </test-commands>
       <cleanup-commands>
-        <command>-fs NAMENODE -rm -r /user</command>
+        <command>-fs NAMENODE -rm -r /user/USERNAME</command>
       </cleanup-commands>
       <comparators>
         <comparator>
@@ -16496,12 +16496,11 @@
     <test> <!-- TESTED -->
       <description>moveFromLocal: moving non existent file(relative path)</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
-        <command>-fs NAMENODE -touchz test</command>
-        <command>-fs NAMENODE -moveFromLocal wrongdata file</command>
+        <command>-fs NAMENODE -mkdir -p /user/USERNAME/dir</command> <!-- make sure user home dir exists -->
+        <command>-fs NAMENODE -moveFromLocal wrongdata /user/USERNAME/dir</command>
       </test-commands>
       <cleanup-commands>
-        <command>-fs NAMENODE -rm -r /user</command>
+        <command>-fs NAMENODE -rm -r /user/USERNAME</command>
       </cleanup-commands>
       <comparators>
         <comparator>
@@ -16514,19 +16513,19 @@
     <test> <!-- TESTED -->
       <description>moveFromLocal: moving many files into an existing file</description>
       <test-commands>
-        <command>-fs NAMENODE -moveFromLocal CLITEST_DATA/data15bytes /data15bytes</command>
-        <command>-fs NAMENODE -moveFromLocal CLITEST_DATA/data30bytes /data30bytes</command>
-        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
-        <command>-fs NAMENODE -touchz file0</command>
-        <command>-fs NAMENODE -moveFromLocal /data15bytes /data30bytes file0</command>
+        <command>-fs NAMENODE -cp CLITEST_DATA/data15bytes data15bytes</command>
+        <command>-fs NAMENODE -cp CLITEST_DATA/data30bytes data30bytes</command>
+        <command>-fs NAMENODE -mkdir -p /user/USERNAME/dir</command>
+        <command>-fs NAMENODE -touchz /user/USERNAME/dir/file0</command>
+        <command>-fs NAMENODE -moveFromLocal data15bytes data30bytes /user/USERNAME/dir/file0</command>
       </test-commands>
       <cleanup-commands>
-        <command>-fs NAMENODE -rm -r /user</command>
+        <command>-fs NAMENODE -rm -r /user/USERNAME</command>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^moveFromLocal: `file0': Is not a directory</expected-output>
+          <expected-output>moveFromLocal: `/user/USERNAME/dir/file0': Is not a directory</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16534,17 +16533,17 @@
     <test> <!-- TESTED -->
       <description>moveFromLocal: moving many files into a non existent directory</description>
       <test-commands>
-        <command>-fs NAMENODE -moveFromLocal CLITEST_DATA/data15bytes /data15bytes</command>
-        <command>-fs NAMENODE -moveFromLocal CLITEST_DATA/data30bytes /data30bytes</command>
-        <command>-fs NAMENODE -moveFromLocal /data15bytes /data30bytes wrongdir</command>
+        <command>-fs NAMENODE -cp CLITEST_DATA/data15bytes data15bytes</command>
+        <command>-fs NAMENODE -cp CLITEST_DATA/data30bytes data30bytes</command>
+        <command>-fs NAMENODE -moveFromLocal data15bytes data30bytes /user/USERNAME/dir/wrongdir</command>
       </test-commands>
       <cleanup-commands>
-        <command>-fs NAMENODE -rm -r /user</command>
+        <command>-fs NAMENODE -rm -r /user/USERNAME</command>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^moveFromLocal: `wrongdir': No such file or directory</expected-output>
+          <expected-output>^moveFromLocal: `/user/USERNAME/dir/wrongdir': No such file or directory</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16552,7 +16551,8 @@
     <test> <!-- TESTED -->
       <description>moveFromLocal: Test for hdfs:// path - moving non existent file</description>
       <test-commands>
-        <command>-fs NAMENODE -moveFromLocal /user/wrongdata hdfs:///file</command>
+        <command>-fs NAMENODE -mkdir -p /user/USERNAME/dir</command>
+        <command>-fs NAMENODE -moveFromLocal /user/wrongdata hdfs:///user/USERNAME/dir/file</command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rm -r hdfs:///*</command>
@@ -16568,8 +16568,11 @@
     <test> <!-- TESTED -->
       <description>moveFromLocal: Test for hdfs:// path - moving many files into an existing file</description>
       <test-commands>
-        <command>-fs NAMENODE -touchz hdfs:///file0</command>
-        <command>-fs NAMENODE -moveFromLocal CLITEST_DATA/data15bytes CLITEST_DATA/data30bytes hdfs:///file0</command>
+        <command>-fs NAMENODE -cp CLITEST_DATA/data15bytes data15bytes</command>
+        <command>-fs NAMENODE -cp CLITEST_DATA/data30bytes data30bytes</command>
+        <command>-fs NAMENODE -mkdir -p /user/USERNAME/dir</command>
+        <command>-fs NAMENODE -touchz hdfs:///user/USERNAME/dir/file</command>
+        <command>-fs NAMENODE -moveFromLocal data15bytes data30bytes hdfs:///user/USERNAME/dir/file</command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rm -r hdfs:///*</command>
@@ -16577,7 +16580,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^moveFromLocal: `hdfs:///file0': Is not a directory</expected-output>
+          <expected-output>moveFromLocal: `hdfs:///user/USERNAME/dir/file': Is not a directory</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16585,15 +16588,17 @@
     <test> <!-- TESTED -->
       <description>moveFromLocal: Test for hdfs:// path - moving many files into a non existent directory</description>
       <test-commands>
-        <command>-fs NAMENODE -moveFromLocal CLITEST_DATA/data15bytes CLITEST_DATA/data30bytes hdfs:///wrongdir</command>
+        <command>-fs NAMENODE -cp CLITEST_DATA/data15bytes data15bytes</command>
+        <command>-fs NAMENODE -cp CLITEST_DATA/data30bytes data30bytes</command>
+        <command>-fs NAMENODE -moveFromLocal data15bytes data30bytes hdfs:///user/USERNAME/dir/wrongdir</command>
       </test-commands>
       <cleanup-commands>
-        <command>-fs NAMENODE -rm -r /user</command>
+        <command>-fs NAMENODE -rm -r hdfs:///*</command>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^moveFromLocal: `hdfs:///wrongdir': No such file or directory</expected-output>
+          <expected-output>moveFromLocal: `hdfs:///user/USERNAME/dir/wrongdir': No such file or directory</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16601,7 +16606,8 @@
     <test> <!-- TESTED -->
       <description>moveFromLocal: Test for Namenode's path - moving non existent file</description>
       <test-commands>
-        <command>-fs NAMENODE -moveFromLocal /user/wrongdata NAMENODE/file</command>
+        <command>-fs NAMENODE -mkdir -p NAMENODE/user/USERNAME/dir</command>
+        <command>-fs NAMENODE -moveFromLocal /user/wrongdata NAMENODE/user/USERNAME/dir</command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rm -r NAMENODE/*</command>
@@ -16617,8 +16623,11 @@
     <test> <!-- TESTED -->
       <description>moveFromLocal: Test for Namenode's path - moving many files into an existing file</description>
       <test-commands>
-        <command>-fs NAMENODE -touchz NAMENODE/file0</command>
-        <command>-fs NAMENODE -moveFromLocal CLITEST_DATA/data15bytes CLITEST_DATA/data30bytes NAMENODE/file0</command>
+        <command>-fs NAMENODE -mkdir -p NAMENODE/user/USERNAME/dir</command>
+        <command>-fs NAMENODE -touchz NAMENODE/user/USERNAME/dir/file0</command>
+        <command>-fs NAMENODE -cp CLITEST_DATA/data15bytes data15bytes</command>
+        <command>-fs NAMENODE -cp CLITEST_DATA/data30bytes data30bytes</command>
+        <command>-fs NAMENODE -moveFromLocal data15bytes data30bytes NAMENODE/user/USERNAME/dir/file0</command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rm -r NAMENODE/*</command>
@@ -16626,7 +16635,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^moveFromLocal: `hdfs://\w+[-.a-z0-9]*:[0-9]+/file0': Is not a directory</expected-output>
+          <expected-output>moveFromLocal: `hdfs://\w+[-.a-z0-9]*:[0-9]+/user/USERNAME/dir/file0': Is not a directory</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16634,15 +16643,19 @@
     <test> <!-- TESTED -->
       <description>moveFromLocal: Test for Namenode's path - moving many files into a non existent directory</description>
       <test-commands>
-        <command>-fs NAMENODE -moveFromLocal CLITEST_DATA/data15bytes CLITEST_DATA/data30bytes NAMENODE/wrongdir</command>
+        <command>-fs NAMENODE -mkdir -p NAMENODE/user/USERNAME</command>
+        <command>-fs NAMENODE -touchz NAMENODE/user/USERNAME/dir/file0</command>
+        <command>-fs NAMENODE -cp CLITEST_DATA/data15bytes data15bytes</command>
+        <command>-fs NAMENODE -cp CLITEST_DATA/data30bytes data30bytes</command>
+        <command>-fs NAMENODE -moveFromLocal data15bytes data30bytes NAMENODE/user/USERNAME/wrongdir</command>
       </test-commands>
       <cleanup-commands>
-        <command>-fs NAMENODE -rm -r /user</command>
+        <command>-fs NAMENODE -rm -r NAMENODE/*</command>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^moveFromLocal: `hdfs://\w+[-.a-z0-9]*:[0-9]+/wrongdir': No such file or directory</expected-output>
+          <expected-output>moveFromLocal: `hdfs://\w+[-.a-z0-9]*:[0-9]+/user/USERNAME/wrongdir': No such file or directory</expected-output>
         </comparator>
       </comparators>
     </test>

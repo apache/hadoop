@@ -52,7 +52,7 @@ public class SetFile extends MapFile {
                   Class<? extends WritableComparable> keyClass,
                   SequenceFile.CompressionType compress)
       throws IOException {
-      this(conf, fs, dirName, WritableComparator.get(keyClass), compress);
+      this(conf, fs, dirName, WritableComparator.get(keyClass, conf), compress);
     }
 
     /** Create a set naming the element comparator and compression type. */

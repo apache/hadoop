@@ -51,8 +51,8 @@ class Stat extends FsCommand {
   public static final String NAME = "stat";
   public static final String USAGE = "[format] <path> ...";
   public static final String DESCRIPTION =
-    "Print statistics about the file/directory at <path>\n" +
-    "in the specified format. Format accepts filesize in blocks (%b), group name of owner(%g),\n" +
+    "Print statistics about the file/directory at <path> " +
+    "in the specified format. Format accepts filesize in blocks (%b), group name of owner(%g), " +
     "filename (%n), block size (%o), replication (%r), user name of owner(%u), modification date (%y, %Y)\n";
 
   protected static final SimpleDateFormat timeFmt;

@@ -2676,7 +2676,7 @@ public class SequenceFile {
     /** Sort and merge files containing the named classes. */
     public Sorter(FileSystem fs, Class<? extends WritableComparable> keyClass,
                   Class valClass, Configuration conf)  {
-      this(fs, WritableComparator.get(keyClass), keyClass, valClass, conf);
+      this(fs, WritableComparator.get(keyClass, conf), keyClass, valClass, conf);
     }
 
     /** Sort and merge using an arbitrary {@link RawComparator}. */

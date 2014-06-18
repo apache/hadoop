@@ -130,9 +130,9 @@ public abstract class SchedulerNode {
 
     LOG.info("Assigned container " + container.getId() + " of capacity "
         + container.getResource() + " on host " + rmNode.getNodeAddress()
-        + ", which currently has " + numContainers + " containers, "
+        + ", which has " + numContainers + " containers, "
         + getUsedResource() + " used and " + getAvailableResource()
-        + " available");
+        + " available after allocation");
   }
 
   /**

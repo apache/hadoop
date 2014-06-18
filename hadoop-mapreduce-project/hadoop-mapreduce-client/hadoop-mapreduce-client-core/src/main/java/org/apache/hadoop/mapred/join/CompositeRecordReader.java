@@ -131,7 +131,7 @@ public abstract class CompositeRecordReader<
   public void add(ComposableRecordReader<K,? extends V> rr) throws IOException {
     kids[rr.id()] = rr;
     if (null == q) {
-      cmp = WritableComparator.get(rr.createKey().getClass());
+      cmp = WritableComparator.get(rr.createKey().getClass(), conf);
       q = new PriorityQueue<ComposableRecordReader<K,?>>(3,
           new Comparator<ComposableRecordReader<K,?>>() {
             public int compare(ComposableRecordReader<K,?> o1,

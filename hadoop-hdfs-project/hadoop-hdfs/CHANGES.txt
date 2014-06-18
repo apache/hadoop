@@ -254,72 +254,6 @@ Trunk (Unreleased)
     HDFS-5794. Fix the inconsistency of layout version number of 
     ADD_DATANODE_AND_STORAGE_UUIDS between trunk and branch-2. (jing9)
 
-    HDFS-6464. Support multiple xattr.name parameters for WebHDFS getXAttrs.
-    (Yi Liu via umamahesh)
-
-  BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
-
-    HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
-
-    HDFS-6302. Implement XAttr as a INode feature. (Yi Liu via umamahesh)
-
-    HDFS-6309. Javadocs for Xattrs apis in DFSClient and other minor fixups. (Charles Lamb via umamahesh)
-
-    HDFS-6258. Namenode server-side storage for XAttrs. (Yi Liu via umamahesh)
-
-    HDFS-6303. HDFS implementation of FileContext API for XAttrs. (Yi Liu and Charles Lamb via umamahesh)
-
-    HDFS-6324. Shift XAttr helper code out for reuse. (Yi Liu via umamahesh)
-
-    HDFS-6301. NameNode: persist XAttrs in fsimage and record XAttrs modifications to edit log.
-    (Yi Liu via umamahesh)
-
-    HDFS-6298. XML based End-to-End test for getfattr and setfattr commands. (Yi Liu via umamahesh)
-
-    HDFS-6314. Test cases for XAttrs. (Yi Liu via umamahesh)
-
-    HDFS-6344. Maximum limit on the size of an xattr. (Yi Liu via umamahesh)
-
-    HDFS-6377. Unify xattr name and value limits into a single limit. (wang)
-
-    HDFS-6373. Remove support for extended attributes on symlinks. (Charles Lamb via wang)
-
-    HDFS-6283. Write end user documentation for xattrs. (wang)
-
-    HDFS-6412. Interface audience and stability annotations missing from
-    several new classes related to xattrs. (wang)
-
-    HDFS-6259. Support extended attributes via WebHDFS. (yliu)
-
-    HDFS-6346. Optimize OP_SET_XATTRS by persisting single Xattr entry per setXattr/removeXattr api call
-    (Yi Liu via umamahesh)
-
-    HDFS-6331. ClientProtocol#setXattr should not be annotated idempotent.
-    (umamahesh via wang)
-
-    HDFS-6335. TestOfflineEditsViewer for XAttr. (Yi Liu via umamahesh)
-
-    HDFS-6343. fix TestNamenodeRetryCache and TestRetryCacheWithHA failures. (umamahesh)
-
-    HDFS-6366. FsImage loading failed with RemoveXattr op (umamahesh)
-
-    HDFS-6357. SetXattr should persist rpcIDs for handling retrycache with Namenode restart and HA
-    (umamahesh)
-
-    HDFS-6372. Handle setXattr rpcIDs for OfflineEditsViewer. (umamahesh)
-
-    HDFS-6410. DFSClient unwraps AclException in xattr methods, but those
-    methods cannot throw AclException. (wang)
-
-    HDFS-6413. xattr names erroneously handled as case-insensitive.
-    (Charles Lamb via cnauroth)
-
-    HDFS-6414. xattr modification operations are based on state of latest
-    snapshot instead of current version of inode. (Andrew Wang via cnauroth)
-
-    HDFS-6374. setXAttr should require the user to be the owner of the file
-    or directory (Charles Lamb via wang)
-
     HDFS-6375. Listing extended attributes with the search permission.
     (Charles Lamb via wang)
 
@@ -484,6 +418,39 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6399. Add note about setfacl in HDFS permissions guide.
     (cnauroth via wang)
+
+    HDFS-6315. Decouple recording edit logs from FSDirectory. (wheat9)
+
+    HDFS-6379. HTTPFS - Implement ACLs support. (yoderme via tucu)
+
+    HDFS-6471. Make moveFromLocal CLI testcases to be non-disruptive
+    (Dasha Boudnik via cos)
+
+    HDFS-6395. Skip checking xattr limits for non-user-visible namespaces.
+    (Yi Liu via wang).
+
+    HDFS-3493. Invalidate excess corrupted blocks as long as minimum
+    replication is satisfied. (Juan Yu and Vinayakumar B via wang)
+
+    HDFS-6330. Move mkdirs() to FSNamesystem. (wheat9)
+
+    HDFS-6470. TestBPOfferService.testBPInitErrorHandling is flaky.
+    (Ming Ma via wang)
+
+    HDFS-6529. Trace logging for RemoteBlockReader2 to identify remote datanode
+    and file being read. (Anubhav Dhoot via atm)
+
+    HDFS-6499. Use NativeIO#renameTo instead of File#renameTo in
+    FileJournalManager. (Yongjun Zhang via atm)
+
+    HDFS-6518. TestCacheDirectives#testExceedsCapacity should
+    take FSN read lock when accessing pendingCached list.
+    (wang)
+
+    HDFS-6528. Add XAttrs to TestOfflineImageViewer. (Stephen Chu via wang)
+
+    HDFS-6545. Finalizing rolling upgrade can make NN unavailable for a long
+    duration. (kihwal)
 
   OPTIMIZATIONS
 
@@ -669,7 +636,85 @@ Release 2.5.0 - UNRELEASED
     HDFS-6364. Incorrect check for unknown datanode in Balancer. (Benoy
     Antony via Arpit Agarwal)
 
-Release 2.4.1 - UNRELEASED
+    HDFS-6503. Fix typo of DFSAdmin restoreFailedStorage.
+    (Zesheng Wu via wheat9)
+
+    HDFS-6464. Support multiple xattr.name parameters for WebHDFS getXAttrs.
+    (Yi Liu via umamahesh)
+
+    HDFS-6375. Listing extended attributes with the search permission.
+    (Charles Lamb via wang)
+
+    HDFS-6539. test_native_mini_dfs is skipped in hadoop-hdfs/pom.xml
+    (decstery via cmccabe)
+
+    HDFS-6527. Edit log corruption due to defered INode removal. (kihwal and
+    jing9 via jing9)
+
+  BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
+
+    HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
+
+    HDFS-6302. Implement XAttr as a INode feature. (Yi Liu via umamahesh)
+
+    HDFS-6309. Javadocs for Xattrs apis in DFSClient and other minor fixups. (Charles Lamb via umamahesh)
+
+    HDFS-6258. Namenode server-side storage for XAttrs. (Yi Liu via umamahesh)
+
+    HDFS-6303. HDFS implementation of FileContext API for XAttrs. (Yi Liu and Charles Lamb via umamahesh)
+
+    HDFS-6324. Shift XAttr helper code out for reuse. (Yi Liu via umamahesh)
+
+    HDFS-6301. NameNode: persist XAttrs in fsimage and record XAttrs modifications to edit log.
+    (Yi Liu via umamahesh)
+
+    HDFS-6298. XML based End-to-End test for getfattr and setfattr commands. (Yi Liu via umamahesh)
+
+    HDFS-6314. Test cases for XAttrs. (Yi Liu via umamahesh)
+
+    HDFS-6344. Maximum limit on the size of an xattr. (Yi Liu via umamahesh)
+
+    HDFS-6377. Unify xattr name and value limits into a single limit. (wang)
+
+    HDFS-6373. Remove support for extended attributes on symlinks. (Charles Lamb via wang)
+
+    HDFS-6283. Write end user documentation for xattrs. (wang)
+
+    HDFS-6412. Interface audience and stability annotations missing from
+    several new classes related to xattrs. (wang)
+
+    HDFS-6259. Support extended attributes via WebHDFS. (yliu)
+
+    HDFS-6346. Optimize OP_SET_XATTRS by persisting single Xattr entry per setXattr/removeXattr api call
+    (Yi Liu via umamahesh)
+
+    HDFS-6331. ClientProtocol#setXattr should not be annotated idempotent.
+    (umamahesh via wang)
+
+    HDFS-6335. TestOfflineEditsViewer for XAttr. (Yi Liu via umamahesh)
+
+    HDFS-6343. fix TestNamenodeRetryCache and TestRetryCacheWithHA failures. (umamahesh)
+
+    HDFS-6366. FsImage loading failed with RemoveXattr op (umamahesh)
+
+    HDFS-6357. SetXattr should persist rpcIDs for handling retrycache with Namenode restart and HA
+    (umamahesh)
+
+    HDFS-6372. Handle setXattr rpcIDs for OfflineEditsViewer. (umamahesh)
+
+    HDFS-6410. DFSClient unwraps AclException in xattr methods, but those
+    methods cannot throw AclException. (wang)
+
+    HDFS-6413. xattr names erroneously handled as case-insensitive.
+    (Charles Lamb via cnauroth)
+
+    HDFS-6414. xattr modification operations are based on state of latest
+    snapshot instead of current version of inode. (Andrew Wang via cnauroth)
+
+    HDFS-6374. setXAttr should require the user to be the owner of the file
+    or directory (Charles Lamb via wang)
+
+Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
 

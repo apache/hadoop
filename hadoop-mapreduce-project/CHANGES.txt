@@ -77,6 +77,9 @@ Trunk (Unreleased)
     MAPREDUCE-5196. Add bookkeeping for managing checkpoints of task state.
     (Carlo Curino via cdouglas)
 
+    MAPREDUCE-5912. Task.calculateOutputSize does not handle Windows files after
+    MAPREDUCE-5196. (Remus Rusanu via cnauroth)
+
   BUG FIXES
 
     MAPREDUCE-5714. Removed forceful JVM exit in shutDownJob.  
@@ -141,9 +144,6 @@ Trunk (Unreleased)
 
     MAPREDUCE-5867. Fix NPE in KillAMPreemptionPolicy related to 
     ProportionalCapacityPreemptionPolicy (Sunil G via devaraj)
-
-    MAPREDUCE-5898. distcp to support preserving HDFS extended attributes(XAttrs)
-    (Yi Liu via umamahesh)
 
 Release 2.5.0 - UNRELEASED
 
@@ -259,7 +259,15 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5777. Support utf-8 text with Byte Order Marker.
     (Zhihai Xu via kasha)
 
-Release 2.4.1 - UNRELEASED
+    MAPREDUCE-5898. distcp to support preserving HDFS extended attributes(XAttrs)
+    (Yi Liu via umamahesh)
+
+    MAPREDUCE-5920. Add Xattr option in DistCp docs. (Yi Liu via cnauroth)
+
+    MAPREDUCE-5924. Changed TaskAttemptImpl to ignore TA_COMMIT_PENDING event
+    at COMMIT_PENDING state. (Zhijie Shen via jianhe)
+
+Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
 

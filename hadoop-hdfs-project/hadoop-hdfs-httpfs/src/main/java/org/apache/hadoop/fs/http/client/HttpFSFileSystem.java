@@ -31,6 +31,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.net.NetUtils;
@@ -86,6 +88,7 @@ public class HttpFSFileSystem extends FileSystem
   public static final String REPLICATION_PARAM = "replication";
   public static final String BLOCKSIZE_PARAM = "blocksize";
   public static final String PERMISSION_PARAM = "permission";
+  public static final String ACLSPEC_PARAM = "aclspec";
   public static final String DESTINATION_PARAM = "destination";
   public static final String RECURSIVE_PARAM = "recursive";
   public static final String SOURCES_PARAM = "sources";
@@ -95,6 +98,7 @@ public class HttpFSFileSystem extends FileSystem
   public static final String ACCESS_TIME_PARAM = "accesstime";
 
   public static final Short DEFAULT_PERMISSION = 0755;
+  public static final String ACLSPEC_DEFAULT = "";
 
   public static final String RENAME_JSON = "boolean";
 
@@ -152,6 +156,11 @@ public class HttpFSFileSystem extends FileSystem
   public static final String CONTENT_SUMMARY_SPACE_CONSUMED_JSON = "spaceConsumed";
   public static final String CONTENT_SUMMARY_SPACE_QUOTA_JSON = "spaceQuota";
 
+  public static final String ACL_STATUS_JSON = "AclStatus";
+  public static final String ACL_STICKY_BIT_JSON = "stickyBit";
+  public static final String ACL_ENTRIES_JSON = "entries";
+  public static final String ACL_BIT_JSON = "aclBit";
+
   public static final String ERROR_JSON = "RemoteException";
   public static final String ERROR_EXCEPTION_JSON = "exception";
   public static final String ERROR_CLASSNAME_JSON = "javaClassName";
@@ -169,10 +178,12 @@ public class HttpFSFileSystem extends FileSystem
     OPEN(HTTP_GET), GETFILESTATUS(HTTP_GET), LISTSTATUS(HTTP_GET),
     GETHOMEDIRECTORY(HTTP_GET), GETCONTENTSUMMARY(HTTP_GET),
     GETFILECHECKSUM(HTTP_GET),  GETFILEBLOCKLOCATIONS(HTTP_GET),
-    INSTRUMENTATION(HTTP_GET),
+    INSTRUMENTATION(HTTP_GET), GETACLSTATUS(HTTP_GET),
     APPEND(HTTP_POST), CONCAT(HTTP_POST),
     CREATE(HTTP_PUT), MKDIRS(HTTP_PUT), RENAME(HTTP_PUT), SETOWNER(HTTP_PUT),
     SETPERMISSION(HTTP_PUT), SETREPLICATION(HTTP_PUT), SETTIMES(HTTP_PUT),
+    MODIFYACLENTRIES(HTTP_PUT), REMOVEACLENTRIES(HTTP_PUT),
+    REMOVEDEFAULTACL(HTTP_PUT), REMOVEACL(HTTP_PUT), SETACL(HTTP_PUT),
     DELETE(HTTP_DELETE);
 
     private String httpMethod;
@@ -798,6 +809,105 @@ public class HttpFSFileSystem extends FileSystem
     return (Boolean) json.get(SET_REPLICATION_JSON);
   }
 
+  /**
+   * Modify the ACL entries for a file.
+   *
+   * @param path Path to modify
+   * @param aclSpec List<AclEntry> describing modifications
+   * @throws IOException
+   */
+  @Override
+  public void modifyAclEntries(Path path, List<AclEntry> aclSpec)
+          throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.MODIFYACLENTRIES.toString());
+    params.put(ACLSPEC_PARAM, AclEntry.aclSpecToString(aclSpec));
+    HttpURLConnection conn = getConnection(
+            Operation.MODIFYACLENTRIES.getMethod(), params, path, true);
+    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
+  /**
+   * Remove the specified ACL entries from a file
+   * @param path Path to modify
+   * @param aclSpec List<AclEntry> describing entries to remove
+   * @throws IOException
+   */
+  @Override
+  public void removeAclEntries(Path path, List<AclEntry> aclSpec)
+          throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.REMOVEACLENTRIES.toString());
+    params.put(ACLSPEC_PARAM, AclEntry.aclSpecToString(aclSpec));
+    HttpURLConnection conn = getConnection(
+            Operation.REMOVEACLENTRIES.getMethod(), params, path, true);
+    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
+  /**
+   * Removes the default ACL for the given file
+   * @param path Path from which to remove the default ACL.
+   * @throws IOException
+   */
+  @Override
+  public void removeDefaultAcl(Path path) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.REMOVEDEFAULTACL.toString());
+    HttpURLConnection conn = getConnection(
+            Operation.REMOVEDEFAULTACL.getMethod(), params, path, true);
+    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
+  /**
+   * Remove all ACLs from a file
+   * @param path Path from which to remove all ACLs
+   * @throws IOException
+   */
+  @Override
+  public void removeAcl(Path path) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.REMOVEACL.toString());
+    HttpURLConnection conn = getConnection(Operation.REMOVEACL.getMethod(),
+            params, path, true);
+    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
+  /**
+   * Set the ACLs for the given file
+   * @param path Path to modify
+   * @param aclSpec List<AclEntry> describing modifications, must include
+   *                entries for user, group, and others for compatibility
+   *                with permission bits.
+   * @throws IOException
+   */
+  @Override
+  public void setAcl(Path path, List<AclEntry> aclSpec) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.SETACL.toString());
+    params.put(ACLSPEC_PARAM, AclEntry.aclSpecToString(aclSpec));
+    HttpURLConnection conn = getConnection(Operation.SETACL.getMethod(),
+                                           params, path, true);
+    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
+  /**
+   * Get the ACL information for a given file
+   * @param path Path to acquire ACL info for
+   * @return the ACL information in JSON format
+   * @throws IOException
+   */
+  @Override
+  public AclStatus getAclStatus(Path path) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.GETACLSTATUS.toString());
+    HttpURLConnection conn = getConnection(Operation.GETACLSTATUS.getMethod(),
+            params, path, true);
+    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    json = (JSONObject) json.get(ACL_STATUS_JSON);
+    return createAclStatus(json);
+  }
+
   private FileStatus createFileStatus(Path parent, JSONObject json) {
     String pathSuffix = (String) json.get(PATH_SUFFIX_JSON);
     Path path = (pathSuffix.equals("")) ? parent : new Path(parent, pathSuffix);
@@ -828,6 +938,23 @@ public class HttpFSFileSystem extends FileSystem
                                     path);
     }
     return fileStatus;
+  }
+
+  /**
+   * Convert the given JSON object into an AclStatus
+   * @param json Input JSON representing the ACLs
+   * @return Resulting AclStatus
+   */
+  private AclStatus createAclStatus(JSONObject json) {
+    AclStatus.Builder aclStatusBuilder = new AclStatus.Builder()
+            .owner((String) json.get(OWNER_JSON))
+            .group((String) json.get(GROUP_JSON))
+            .stickyBit((Boolean) json.get(ACL_STICKY_BIT_JSON));
+    JSONArray entries = (JSONArray) json.get(ACL_ENTRIES_JSON);
+    for ( Object e : entries ) {
+      aclStatusBuilder.addEntry(AclEntry.parseAclEntry(e.toString(), true));
+    }
+    return aclStatusBuilder.build();
   }
 
   @Override

@@ -78,6 +78,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSec
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -350,11 +351,20 @@ public class MockRM extends ResourceManager {
     nm.registerNode();
     return nm;
   }
+  
+  public MockNM registerNode(String nodeIdStr, int memory, int vCores,
+      List<ApplicationId> runningApplications) throws Exception {
+    MockNM nm =
+        new MockNM(nodeIdStr, memory, vCores, getResourceTrackerService(),
+            YarnVersionInfo.getVersion());
+    nm.registerNode(runningApplications);
+    return nm;
+  }
 
   public void sendNodeStarted(MockNM nm) throws Exception {
     RMNodeImpl node = (RMNodeImpl) getRMContext().getRMNodes().get(
         nm.getNodeId());
-    node.handle(new RMNodeStartedEvent(nm.getNodeId(), null));
+    node.handle(new RMNodeStartedEvent(nm.getNodeId(), null, null));
   }
   
   public void sendNodeLost(MockNM nm) throws Exception {
@@ -570,5 +580,9 @@ public class MockRM extends ResourceManager {
     ((AbstractYarnScheduler<SchedulerApplicationAttempt, SchedulerNode>) getResourceScheduler())
       .getSchedulerApplications().get(app.getApplicationId()).getQueue()
       .getMetrics().clearQueueMetrics();
+  }
+  
+  public RMActiveServices getRMActiveService() {
+    return activeServices;
   }
 }

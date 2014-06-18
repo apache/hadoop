@@ -50,7 +50,6 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -265,11 +264,6 @@ public class FSDirectory implements Closeable {
     ready = flag;
   }
 
-  private void incrDeletedFileCount(long count) {
-    if (getFSNamesystem() != null)
-      NameNode.getNameNodeMetrics().incrFilesDeleted(count);
-  }
-    
   /**
    * Shutdown the filestore
    */
@@ -321,19 +315,7 @@ public class FSDirectory implements Closeable {
       UnresolvedLinkException, SnapshotAccessControlException, AclException {
     waitForReady();
 
-    // Always do an implicit mkdirs for parent directory tree.
     long modTime = now();
-    
-    Path parent = new Path(path).getParent();
-    if (parent == null) {
-      // Trying to add "/" as a file - this path has no
-      // parent -- avoids an NPE below.
-      return null;
-    }
-    
-    if (!mkdirs(parent.toString(), permissions, true, modTime)) {
-      return null;
-    }
     INodeFile newNode = new INodeFile(namesystem.allocateNewInodeId(), null,
         permissions, modTime, modTime, BlockInfo.EMPTY_ARRAY, replication,
         preferredBlockSize);
@@ -437,65 +419,6 @@ public class FSDirectory implements Closeable {
   }
 
   /**
-   * Persist the block list for the inode.
-   */
-  void persistBlocks(String path, INodeFile file, boolean logRetryCache) {
-    Preconditions.checkArgument(file.isUnderConstruction());
-    waitForReady();
-
-    writeLock();
-    try {
-      fsImage.getEditLog().logUpdateBlocks(path, file, logRetryCache);
-      if(NameNode.stateChangeLog.isDebugEnabled()) {
-        NameNode.stateChangeLog.debug("DIR* FSDirectory.persistBlocks: "
-            +path+" with "+ file.getBlocks().length 
-            +" blocks is persisted to the file system");
-      }
-    } finally {
-      writeUnlock();
-    }
-  }
-  
-  /**
-   * Persist the new block (the last block of the given file).
-   */
-  void persistNewBlock(String path, INodeFile file) {
-    Preconditions.checkArgument(file.isUnderConstruction());
-    waitForReady();
-
-    writeLock();
-    try {
-      fsImage.getEditLog().logAddBlock(path, file);
-    } finally {
-      writeUnlock();
-    }
-    if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* FSDirectory.persistNewBlock: "
-          + path + " with new block " + file.getLastBlock().toString()
-          + ", current total block count is " + file.getBlocks().length);
-    }
-  }
-  
-  /**
-   * Close file.
-   */
-  void closeFile(String path, INodeFile file) {
-    waitForReady();
-    writeLock();
-    try {
-      // file is closed
-      fsImage.getEditLog().logCloseFile(path, file);
-      if (NameNode.stateChangeLog.isDebugEnabled()) {
-        NameNode.stateChangeLog.debug("DIR* FSDirectory.closeFile: "
-            +path+" with "+ file.getBlocks().length 
-            +" blocks is persisted to the file system");
-      }
-    } finally {
-      writeUnlock();
-    }
-  }
-
-  /**
    * Remove a block from the file.
    * @return Whether the block exists in the corresponding file
    */
@@ -540,7 +463,7 @@ public class FSDirectory implements Closeable {
    * @deprecated Use {@link #renameTo(String, String, boolean, Rename...)}
    */
   @Deprecated
-  boolean renameTo(String src, String dst, boolean logRetryCache) 
+  boolean renameTo(String src, String dst, long mtime)
       throws QuotaExceededException, UnresolvedLinkException, 
       FileAlreadyExistsException, SnapshotAccessControlException, IOException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
@@ -548,22 +471,20 @@ public class FSDirectory implements Closeable {
           +src+" to "+dst);
     }
     waitForReady();
-    long now = now();
     writeLock();
     try {
-      if (!unprotectedRenameTo(src, dst, now))
+      if (!unprotectedRenameTo(src, dst, mtime))
         return false;
     } finally {
       writeUnlock();
     }
-    fsImage.getEditLog().logRename(src, dst, now, logRetryCache);
     return true;
   }
 
   /**
    * @see #unprotectedRenameTo(String, String, long, Options.Rename...)
    */
-  void renameTo(String src, String dst, boolean logRetryCache, 
+  void renameTo(String src, String dst, long mtime,
       Options.Rename... options)
       throws FileAlreadyExistsException, FileNotFoundException,
       ParentNotDirectoryException, QuotaExceededException,
@@ -573,16 +494,14 @@ public class FSDirectory implements Closeable {
           + " to " + dst);
     }
     waitForReady();
-    long now = now();
     writeLock();
     try {
-      if (unprotectedRenameTo(src, dst, now, options)) {
-        incrDeletedFileCount(1);
+      if (unprotectedRenameTo(src, dst, mtime, options)) {
+        namesystem.incrDeletedFileCount(1);
       }
     } finally {
       writeUnlock();
     }
-    fsImage.getEditLog().logRename(src, dst, now, logRetryCache, options);
   }
 
   /**
@@ -1106,11 +1025,7 @@ public class FSDirectory implements Closeable {
     waitForReady();
     writeLock();
     try {
-      final Block[] fileBlocks = unprotectedSetReplication(
-          src, replication, blockRepls);
-      if (fileBlocks != null)  // log replication change
-        fsImage.getEditLog().logSetReplication(src, replication);
-      return fileBlocks;
+      return unprotectedSetReplication(src, replication, blockRepls);
     } finally {
       writeUnlock();
     }
@@ -1178,7 +1093,6 @@ public class FSDirectory implements Closeable {
     } finally {
       writeUnlock();
     }
-    fsImage.getEditLog().logSetPermissions(src, permission);
   }
   
   void unprotectedSetPermission(String src, FsPermission permissions)
@@ -1203,7 +1117,6 @@ public class FSDirectory implements Closeable {
     } finally {
       writeUnlock();
     }
-    fsImage.getEditLog().logSetOwner(src, username, groupname);
   }
 
   void unprotectedSetOwner(String src, String username, String groupname)
@@ -1226,18 +1139,14 @@ public class FSDirectory implements Closeable {
   /**
    * Concat all the blocks from srcs to trg and delete the srcs files
    */
-  void concat(String target, String [] srcs, boolean supportRetryCache) 
+  void concat(String target, String[] srcs, long timestamp)
       throws UnresolvedLinkException, QuotaExceededException,
       SnapshotAccessControlException, SnapshotException {
     writeLock();
     try {
       // actual move
       waitForReady();
-      long timestamp = now();
       unprotectedConcat(target, srcs, timestamp);
-      // do the commit
-      fsImage.getEditLog().logConcat(target, srcs, timestamp, 
-          supportRetryCache);
     } finally {
       writeUnlock();
     }
@@ -1312,17 +1221,14 @@ public class FSDirectory implements Closeable {
    * @param src Path of a directory to delete
    * @param collectedBlocks Blocks under the deleted directory
    * @param removedINodes INodes that should be removed from {@link #inodeMap}
-   * @param logRetryCache Whether to record RPC IDs in editlog to support retry
-   *                      cache rebuilding.
-   * @return true on successful deletion; else false
+   * @return the number of files that have been removed
    */
-  boolean delete(String src, BlocksMapUpdateInfo collectedBlocks,
-      List<INode> removedINodes, boolean logRetryCache) throws IOException {
+  long delete(String src, BlocksMapUpdateInfo collectedBlocks,
+              List<INode> removedINodes, long mtime) throws IOException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: " + src);
     }
     waitForReady();
-    long now = now();
     final long filesRemoved;
     writeLock();
     try {
@@ -1335,20 +1241,13 @@ public class FSDirectory implements Closeable {
             new ArrayList<INodeDirectorySnapshottable>();
         checkSnapshot(inodesInPath.getLastINode(), snapshottableDirs);
         filesRemoved = unprotectedDelete(inodesInPath, collectedBlocks,
-            removedINodes, now);
+            removedINodes, mtime);
         namesystem.removeSnapshottableDirs(snapshottableDirs);
       }
     } finally {
       writeUnlock();
     }
-    if (filesRemoved < 0) {
-      return false;
-    }
-    fsImage.getEditLog().logDelete(src, now, logRetryCache);
-    incrDeletedFileCount(filesRemoved);
-    // Blocks/INodes will be handled later by the caller of this method
-    getFSNamesystem().removePathAndBlocks(src, null, null);
-    return true;
+    return filesRemoved;
   }
   
   private static boolean deleteAllowed(final INodesInPath iip,
@@ -1895,112 +1794,6 @@ public class FSDirectory implements Closeable {
     // inodes can be null only when its called without holding lock
     return inodes == null ? "" : getFullPathName(inodes, inodes.length - 1);
   }
-  
-  /**
-   * Create a directory 
-   * If ancestor directories do not exist, automatically create them.
-
-   * @param src string representation of the path to the directory
-   * @param permissions the permission of the directory
-   * @param inheritPermission if the permission of the directory should inherit
-   *                          from its parent or not. u+wx is implicitly added to
-   *                          the automatically created directories, and to the
-   *                          given directory if inheritPermission is true
-   * @param now creation time
-   * @return true if the operation succeeds false otherwise
-   * @throws QuotaExceededException if directory creation violates
-   *                                any quota limit
-   * @throws UnresolvedLinkException if a symlink is encountered in src.                      
-   * @throws SnapshotAccessControlException if path is in RO snapshot
-   */
-  boolean mkdirs(String src, PermissionStatus permissions,
-      boolean inheritPermission, long now)
-      throws FileAlreadyExistsException, QuotaExceededException, 
-             UnresolvedLinkException, SnapshotAccessControlException,
-             AclException {
-    src = normalizePath(src);
-    String[] names = INode.getPathNames(src);
-    byte[][] components = INode.getPathComponents(names);
-    final int lastInodeIndex = components.length - 1;
-
-    writeLock();
-    try {
-      INodesInPath iip = getExistingPathINodes(components);
-      if (iip.isSnapshot()) {
-        throw new SnapshotAccessControlException(
-            "Modification on RO snapshot is disallowed");
-      }
-      INode[] inodes = iip.getINodes();
-
-      // find the index of the first null in inodes[]
-      StringBuilder pathbuilder = new StringBuilder();
-      int i = 1;
-      for(; i < inodes.length && inodes[i] != null; i++) {
-        pathbuilder.append(Path.SEPARATOR).append(names[i]);
-        if (!inodes[i].isDirectory()) {
-          throw new FileAlreadyExistsException("Parent path is not a directory: "
-              + pathbuilder+ " "+inodes[i].getLocalName());
-        }
-      }
-
-      // default to creating parent dirs with the given perms
-      PermissionStatus parentPermissions = permissions;
-
-      // if not inheriting and it's the last inode, there's no use in
-      // computing perms that won't be used
-      if (inheritPermission || (i < lastInodeIndex)) {
-        // if inheriting (ie. creating a file or symlink), use the parent dir,
-        // else the supplied permissions
-        // NOTE: the permissions of the auto-created directories violate posix
-        FsPermission parentFsPerm = inheritPermission
-            ? inodes[i-1].getFsPermission() : permissions.getPermission();
-        
-        // ensure that the permissions allow user write+execute
-        if (!parentFsPerm.getUserAction().implies(FsAction.WRITE_EXECUTE)) {
-          parentFsPerm = new FsPermission(
-              parentFsPerm.getUserAction().or(FsAction.WRITE_EXECUTE),
-              parentFsPerm.getGroupAction(),
-              parentFsPerm.getOtherAction()
-          );
-        }
-        
-        if (!parentPermissions.getPermission().equals(parentFsPerm)) {
-          parentPermissions = new PermissionStatus(
-              parentPermissions.getUserName(),
-              parentPermissions.getGroupName(),
-              parentFsPerm
-          );
-          // when inheriting, use same perms for entire path
-          if (inheritPermission) permissions = parentPermissions;
-        }
-      }
-      
-      // create directories beginning from the first null index
-      for(; i < inodes.length; i++) {
-        pathbuilder.append(Path.SEPARATOR).append(names[i]);
-        unprotectedMkdir(namesystem.allocateNewInodeId(), iip, i,
-            components[i], (i < lastInodeIndex) ? parentPermissions
-                : permissions, null, now);
-        if (inodes[i] == null) {
-          return false;
-        }
-        // Directory creation also count towards FilesCreated
-        // to match count of FilesDeleted metric.
-        if (getFSNamesystem() != null)
-          NameNode.getNameNodeMetrics().incrFilesCreated();
-
-        final String cur = pathbuilder.toString();
-        fsImage.getEditLog().logMkDir(cur, inodes[i]);
-        if(NameNode.stateChangeLog.isDebugEnabled()) {
-          NameNode.stateChangeLog.debug(
-              "DIR* FSDirectory.mkdirs: created directory " + cur);
-        }
-      }
-    } finally {
-      writeUnlock();
-    }
-    return true;
-  }
 
   INode unprotectedMkdir(long inodeId, String src, PermissionStatus permissions,
                           List<AclEntry> aclEntries, long timestamp)
@@ -2019,7 +1812,7 @@ public class FSDirectory implements Closeable {
    * The parent path to the directory is at [0, pos-1].
    * All ancestors exist. Newly created one stored at index pos.
    */
-  private void unprotectedMkdir(long inodeId, INodesInPath inodesInPath,
+  void unprotectedMkdir(long inodeId, INodesInPath inodesInPath,
       int pos, byte[] name, PermissionStatus permission,
       List<AclEntry> aclEntries, long timestamp)
       throws QuotaExceededException, AclException {
@@ -2331,10 +2124,8 @@ public class FSDirectory implements Closeable {
     }
     return 1;
   }
-  
-  /**
-   */
-  String normalizePath(String src) {
+
+  static String normalizePath(String src) {
     if (src.length() > 1 && src.endsWith("/")) {
       src = src.substring(0, src.length() - 1);
     }
@@ -2419,7 +2210,7 @@ public class FSDirectory implements Closeable {
   /**
    * See {@link ClientProtocol#setQuota(String, long, long)} for the contract.
    * Sets quota for for a directory.
-   * @return INodeDirectory if any of the quotas have changed. null other wise.
+   * @return INodeDirectory if any of the quotas have changed. null otherwise.
    * @throws FileNotFoundException if the path does not exist.
    * @throws PathIsNotDirectoryException if the path is not a directory.
    * @throws QuotaExceededException if the directory tree size is 
@@ -2470,21 +2261,17 @@ public class FSDirectory implements Closeable {
   
   /**
    * See {@link ClientProtocol#setQuota(String, long, long)} for the contract.
+   * @return INodeDirectory if any of the quotas have changed. null otherwise.
    * @throws SnapshotAccessControlException if path is in RO snapshot
    * @see #unprotectedSetQuota(String, long, long)
    */
-  void setQuota(String src, long nsQuota, long dsQuota) 
+  INodeDirectory setQuota(String src, long nsQuota, long dsQuota)
       throws FileNotFoundException, PathIsNotDirectoryException,
       QuotaExceededException, UnresolvedLinkException,
       SnapshotAccessControlException {
     writeLock();
     try {
-      INodeDirectory dir = unprotectedSetQuota(src, nsQuota, dsQuota);
-      if (dir != null) {
-        final Quota.Counts q = dir.getQuotaCounts();
-        fsImage.getEditLog().logSetQuota(src,
-            q.get(Quota.NAMESPACE), q.get(Quota.DISKSPACE));
-      }
+      return unprotectedSetQuota(src, nsQuota, dsQuota);
     } finally {
       writeUnlock();
     }
@@ -2503,17 +2290,13 @@ public class FSDirectory implements Closeable {
   /**
    * Sets the access time on the file/directory. Logs it in the transaction log.
    */
-  void setTimes(String src, INode inode, long mtime, long atime, boolean force,
-      int latestSnapshotId) throws QuotaExceededException {
-    boolean status = false;
+  boolean setTimes(INode inode, long mtime, long atime, boolean force,
+                   int latestSnapshotId) throws QuotaExceededException {
     writeLock();
     try {
-      status = unprotectedSetTimes(inode, mtime, atime, force, latestSnapshotId);
+      return unprotectedSetTimes(inode, mtime, atime, force, latestSnapshotId);
     } finally {
       writeUnlock();
-    }
-    if (status) {
-      fsImage.getEditLog().logTimes(src, mtime, atime);
     }
   }
 
@@ -2678,49 +2461,21 @@ public class FSDirectory implements Closeable {
     }
     return perm;
   }
-    
-  /**
-   * Add the given symbolic link to the fs. Record it in the edits log.
-   */
-  INodeSymlink addSymlink(String path, String target,
-      PermissionStatus dirPerms, boolean createParent, boolean logRetryCache)
-      throws UnresolvedLinkException, FileAlreadyExistsException,
-      QuotaExceededException, SnapshotAccessControlException, AclException {
-    waitForReady();
 
-    final long modTime = now();
-    if (createParent) {
-      final String parent = new Path(path).getParent().toString();
-      if (!mkdirs(parent, dirPerms, true, modTime)) {
-        return null;
-      }
-    }
-    final String userName = dirPerms.getUserName();
-    INodeSymlink newNode  = null;
-    long id = namesystem.allocateNewInodeId();
+  /**
+   * Add the specified path into the namespace.
+   */
+  INodeSymlink addSymlink(long id, String path, String target,
+                          long mtime, long atime, PermissionStatus perm)
+          throws UnresolvedLinkException, QuotaExceededException {
     writeLock();
     try {
-      newNode = unprotectedAddSymlink(id, path, target, modTime, modTime,
-          new PermissionStatus(userName, null, FsPermission.getDefault()));
+      return unprotectedAddSymlink(id, path, target, mtime, atime, perm);
     } finally {
       writeUnlock();
     }
-    if (newNode == null) {
-      NameNode.stateChangeLog.info("DIR* addSymlink: failed to add " + path);
-      return null;
-    }
-    fsImage.getEditLog().logSymlink(path, target, modTime, modTime, newNode,
-        logRetryCache);
-    
-    if(NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* addSymlink: " + path + " is added");
-    }
-    return newNode;
   }
 
-  /**
-   * Add the specified path into the namespace. Invoked from edit log processing.
-   */
   INodeSymlink unprotectedAddSymlink(long id, String path, String target,
       long mtime, long atime, PermissionStatus perm)
       throws UnresolvedLinkException, QuotaExceededException {
@@ -2730,11 +2485,10 @@ public class FSDirectory implements Closeable {
     return addINode(path, symlink) ? symlink : null;
   }
 
-  void modifyAclEntries(String src, List<AclEntry> aclSpec) throws IOException {
+  List<AclEntry> modifyAclEntries(String src, List<AclEntry> aclSpec) throws IOException {
     writeLock();
     try {
-      List<AclEntry> newAcl = unprotectedModifyAclEntries(src, aclSpec);
-      fsImage.getEditLog().logSetAcl(src, newAcl);
+      return unprotectedModifyAclEntries(src, aclSpec);
     } finally {
       writeUnlock();
     }
@@ -2753,11 +2507,10 @@ public class FSDirectory implements Closeable {
     return newAcl;
   }
 
-  void removeAclEntries(String src, List<AclEntry> aclSpec) throws IOException {
+  List<AclEntry> removeAclEntries(String src, List<AclEntry> aclSpec) throws IOException {
     writeLock();
     try {
-      List<AclEntry> newAcl = unprotectedRemoveAclEntries(src, aclSpec);
-      fsImage.getEditLog().logSetAcl(src, newAcl);
+      return unprotectedRemoveAclEntries(src, aclSpec);
     } finally {
       writeUnlock();
     }
@@ -2776,11 +2529,10 @@ public class FSDirectory implements Closeable {
     return newAcl;
   }
 
-  void removeDefaultAcl(String src) throws IOException {
+  List<AclEntry> removeDefaultAcl(String src) throws IOException {
     writeLock();
     try {
-      List<AclEntry> newAcl = unprotectedRemoveDefaultAcl(src);
-      fsImage.getEditLog().logSetAcl(src, newAcl);
+      return unprotectedRemoveDefaultAcl(src);
     } finally {
       writeUnlock();
     }
@@ -2803,7 +2555,6 @@ public class FSDirectory implements Closeable {
     writeLock();
     try {
       unprotectedRemoveAcl(src);
-      fsImage.getEditLog().logSetAcl(src, AclFeature.EMPTY_ENTRY_LIST);
     } finally {
       writeUnlock();
     }
@@ -2817,11 +2568,10 @@ public class FSDirectory implements Closeable {
     AclStorage.removeINodeAcl(inode, snapshotId);
   }
 
-  void setAcl(String src, List<AclEntry> aclSpec) throws IOException {
+  List<AclEntry> setAcl(String src, List<AclEntry> aclSpec) throws IOException {
     writeLock();
     try {
-      List<AclEntry> newAcl = unprotectedSetAcl(src, aclSpec);
-      fsImage.getEditLog().logSetAcl(src, newAcl);
+      return unprotectedSetAcl(src, aclSpec);
     } finally {
       writeUnlock();
     }
@@ -2868,18 +2618,11 @@ public class FSDirectory implements Closeable {
       readUnlock();
     }
   }
-  
-  void removeXAttr(String src, XAttr xAttr) throws IOException {
+
+  XAttr removeXAttr(String src, XAttr xAttr) throws IOException {
     writeLock();
     try {
-      XAttr removedXAttr = unprotectedRemoveXAttr(src, xAttr);
-      if (removedXAttr != null) {
-        fsImage.getEditLog().logRemoveXAttr(src, removedXAttr);
-      } else {
-        NameNode.stateChangeLog.info("DIR* FSDirectory.removeXAttr: XAttr " +
-        		XAttrHelper.getPrefixName(xAttr) + 
-        		" does not exist on the path " + src);
-      }
+      return unprotectedRemoveXAttr(src, xAttr);
     } finally {
       writeUnlock();
     }
@@ -2917,12 +2660,11 @@ public class FSDirectory implements Closeable {
     return xAttrs;
   }
   
-  void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag,
-      boolean logRetryCache) throws IOException {
+  void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag)
+          throws IOException {
     writeLock();
     try {
       unprotectedSetXAttr(src, xAttr, flag);
-      fsImage.getEditLog().logSetXAttr(src, xAttr, logRetryCache);
     } finally {
       writeUnlock();
     }
@@ -2943,6 +2685,7 @@ public class FSDirectory implements Closeable {
       EnumSet<XAttrSetFlag> flag) throws QuotaExceededException, IOException {
     List<XAttr> xAttrs = Lists.newArrayListWithCapacity(
         existingXAttrs != null ? existingXAttrs.size() + 1 : 1);
+    int userVisibleXAttrsNum = 0; // Number of user visible xAttrs
     boolean exist = false;
     if (existingXAttrs != null) {
       for (XAttr a: existingXAttrs) {
@@ -2951,6 +2694,10 @@ public class FSDirectory implements Closeable {
           exist = true;
         } else {
           xAttrs.add(a);
+          
+          if (isUserVisible(a)) {
+            userVisibleXAttrsNum++;
+          }
         }
       }
     }
@@ -2958,12 +2705,24 @@ public class FSDirectory implements Closeable {
     XAttrSetFlag.validate(xAttr.getName(), exist, flag);
     xAttrs.add(xAttr);
     
-    if (xAttrs.size() > inodeXAttrsLimit) {
+    if (isUserVisible(xAttr)) {
+      userVisibleXAttrsNum++;
+    }
+    
+    if (userVisibleXAttrsNum > inodeXAttrsLimit) {
       throw new IOException("Cannot add additional XAttr to inode, "
           + "would exceed limit of " + inodeXAttrsLimit);
     }
     
     return xAttrs;
+  }
+  
+  private boolean isUserVisible(XAttr xAttr) {
+    if (xAttr.getNameSpace() == XAttr.NameSpace.USER || 
+        xAttr.getNameSpace() == XAttr.NameSpace.TRUSTED) {
+      return true;
+    }
+    return false;
   }
   
   List<XAttr> getXAttrs(String src) throws IOException {

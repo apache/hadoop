@@ -59,8 +59,8 @@ class AclCommands extends FsCommand {
     public static String DESCRIPTION = "Displays the Access Control Lists"
         + " (ACLs) of files and directories. If a directory has a default ACL,"
         + " then getfacl also displays the default ACL.\n"
-        + "-R: List the ACLs of all files and directories recursively.\n"
-        + "<path>: File or directory to list.\n";
+        + "  -R: List the ACLs of all files and directories recursively.\n"
+        + "  <path>: File or directory to list.\n";
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
@@ -153,19 +153,19 @@ class AclCommands extends FsCommand {
     public static String DESCRIPTION = "Sets Access Control Lists (ACLs)"
         + " of files and directories.\n" 
         + "Options:\n"
-        + "-b :Remove all but the base ACL entries. The entries for user,"
+        + "  -b :Remove all but the base ACL entries. The entries for user,"
         + " group and others are retained for compatibility with permission "
         + "bits.\n" 
-        + "-k :Remove the default ACL.\n"
-        + "-R :Apply operations to all files and directories recursively.\n"
-        + "-m :Modify ACL. New entries are added to the ACL, and existing"
+        + "  -k :Remove the default ACL.\n"
+        + "  -R :Apply operations to all files and directories recursively.\n"
+        + "  -m :Modify ACL. New entries are added to the ACL, and existing"
         + " entries are retained.\n"
-        + "-x :Remove specified ACL entries. Other ACL entries are retained.\n"
-        + "--set :Fully replace the ACL, discarding all existing entries."
+        + "  -x :Remove specified ACL entries. Other ACL entries are retained.\n"
+        + "  --set :Fully replace the ACL, discarding all existing entries."
         + " The <acl_spec> must include entries for user, group, and others"
         + " for compatibility with permission bits.\n"
-        + "<acl_spec>: Comma separated list of ACL entries.\n"
-        + "<path>: File or directory to modify.\n";
+        + "  <acl_spec>: Comma separated list of ACL entries.\n"
+        + "  <path>: File or directory to modify.\n";
 
     CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, "b", "k", "R",
         "m", "x", "-set");

@@ -43,6 +43,8 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.EditLogValidation;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
+import org.apache.hadoop.io.nativeio.NativeIO;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -132,10 +134,14 @@ public class FileJournalManager implements JournalManager {
     Preconditions.checkState(!dstFile.exists(),
         "Can't finalize edits file " + inprogressFile + " since finalized file " +
         "already exists");
-    if (!inprogressFile.renameTo(dstFile)) {
+
+    try {
+      NativeIO.renameTo(inprogressFile, dstFile);
+    } catch (IOException e) {
       errorReporter.reportErrorOnFile(dstFile);
-      throw new IllegalStateException("Unable to finalize edits file " + inprogressFile);
+      throw new IllegalStateException("Unable to finalize edits file " + inprogressFile, e);
     }
+
     if (inprogressFile.equals(currentInProgress)) {
       currentInProgress = null;
     }
@@ -513,11 +519,16 @@ public class FileJournalManager implements JournalManager {
       File src = file;
       File dst = new File(src.getParent(), src.getName() + newSuffix);
       // renameTo fails on Windows if the destination file already exists.
-      if (!src.renameTo(dst)) {
-        if (!dst.delete() || !src.renameTo(dst)) {
-          throw new IOException(
-            "Couldn't rename log " + src + " to " + dst);
+      try {
+        if (dst.exists()) {
+          if (!dst.delete()) {
+            throw new IOException("Couldn't delete " + dst);
+          }
         }
+        NativeIO.renameTo(src, dst);
+      } catch (IOException e) {
+        throw new IOException(
+            "Couldn't rename log " + src + " to " + dst, e);
       }
       file = dst;
     }

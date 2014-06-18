@@ -159,7 +159,7 @@ public class TestWorkPreservingRMRestart {
           ContainerState.COMPLETE);
 
     nm1.registerNode(Arrays.asList(amContainer, runningContainer,
-      completedContainer));
+      completedContainer), null);
 
     // Wait for RM to settle down on recovering containers;
     waitForNumContainersToRecover(2, rm2, am1.getApplicationAttemptId());
@@ -383,11 +383,11 @@ public class TestWorkPreservingRMRestart {
     List<NMContainerStatus> am1_2Containers =
         createNMContainerStatusForApp(am1_2);
     am1_1Containers.addAll(am1_2Containers);
-    nm1.registerNode(am1_1Containers);
+    nm1.registerNode(am1_1Containers, null);
 
     List<NMContainerStatus> am2Containers =
         createNMContainerStatusForApp(am2);
-    nm2.registerNode(am2Containers);
+    nm2.registerNode(am2Containers, null);
 
     // Wait for RM to settle down on recovering containers;
     waitForNumContainersToRecover(2, rm2, am1_1.getApplicationAttemptId());
@@ -482,7 +482,7 @@ public class TestWorkPreservingRMRestart {
         TestRMRestart.createNMContainerStatus(am1.getApplicationAttemptId(), 3,
           ContainerState.COMPLETE);
     nm1.registerNode(Arrays.asList(amContainer, runningContainer,
-      completedContainer));
+      completedContainer), null);
     rm2.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     // Wait for RM to settle down on recovering containers;
     Thread.sleep(3000);
@@ -519,7 +519,7 @@ public class TestWorkPreservingRMRestart {
     NMContainerStatus completedContainer =
         TestRMRestart.createNMContainerStatus(am1.getApplicationAttemptId(), 3,
           ContainerState.COMPLETE);
-    nm1.registerNode(Arrays.asList(runningContainer, completedContainer));
+    nm1.registerNode(Arrays.asList(runningContainer, completedContainer), null);
     RMApp recoveredApp1 =
         rm2.getRMContext().getRMApps().get(app1.getApplicationId());
     assertEquals(RMAppState.FINISHED, recoveredApp1.getState());

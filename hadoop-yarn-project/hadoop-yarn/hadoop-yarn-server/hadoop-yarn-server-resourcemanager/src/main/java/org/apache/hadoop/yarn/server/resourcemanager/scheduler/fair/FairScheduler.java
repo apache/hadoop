@@ -1072,8 +1072,8 @@ public class FairScheduler extends
   private boolean shouldAttemptPreemption() {
     if (preemptionEnabled) {
       return (preemptionUtilizationThreshold < Math.max(
-          (float) rootMetrics.getAvailableMB() / clusterResource.getMemory(),
-          (float) rootMetrics.getAvailableVirtualCores() /
+          (float) rootMetrics.getAllocatedMB() / clusterResource.getMemory(),
+          (float) rootMetrics.getAllocatedVirtualCores() /
               clusterResource.getVirtualCores()));
     }
     return false;

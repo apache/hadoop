@@ -165,6 +165,11 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
     observeOnly = config.getBoolean(OBSERVE_ONLY, false);
     rc = scheduler.getResourceCalculator();
   }
+  
+  @VisibleForTesting
+  public ResourceCalculator getResourceCalculator() {
+    return rc;
+  }
 
   @Override
   public void editSchedule(){
@@ -203,7 +208,9 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
     Map<ApplicationAttemptId,Set<RMContainer>> toPreempt =
         getContainersToPreempt(queues, clusterResources);
 
-    logToCSV(queues);
+    if (LOG.isDebugEnabled()) {
+      logToCSV(queues);
+    }
 
     // if we are in observeOnly mode return before any action is taken
     if (observeOnly) {
@@ -603,7 +610,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       sb.append(", ");
       tq.appendLogString(sb);
     }
-    LOG.info(sb.toString());
+    LOG.debug(sb.toString());
   }
 
   /**

@@ -2804,7 +2804,7 @@ public abstract class FileSystem extends Configured implements Closeable {
      * be perceived as atomic with respect to other threads, which is all we
      * need.
      */
-    private static class StatisticsData {
+    public static class StatisticsData {
       volatile long bytesRead;
       volatile long bytesWritten;
       volatile int readOps;
@@ -2848,6 +2848,26 @@ public abstract class FileSystem extends Configured implements Closeable {
         return bytesRead + " bytes read, " + bytesWritten + " bytes written, "
             + readOps + " read ops, " + largeReadOps + " large read ops, "
             + writeOps + " write ops";
+      }
+      
+      public long getBytesRead() {
+        return bytesRead;
+      }
+      
+      public long getBytesWritten() {
+        return bytesWritten;
+      }
+      
+      public int getReadOps() {
+        return readOps;
+      }
+      
+      public int getLargeReadOps() {
+        return largeReadOps;
+      }
+      
+      public int getWriteOps() {
+        return writeOps;
       }
     }
 
@@ -2907,7 +2927,7 @@ public abstract class FileSystem extends Configured implements Closeable {
     /**
      * Get or create the thread-local data associated with the current thread.
      */
-    private StatisticsData getThreadData() {
+    public StatisticsData getThreadStatistics() {
       StatisticsData data = threadData.get();
       if (data == null) {
         data = new StatisticsData(
@@ -2928,7 +2948,7 @@ public abstract class FileSystem extends Configured implements Closeable {
      * @param newBytes the additional bytes read
      */
     public void incrementBytesRead(long newBytes) {
-      getThreadData().bytesRead += newBytes;
+      getThreadStatistics().bytesRead += newBytes;
     }
     
     /**
@@ -2936,7 +2956,7 @@ public abstract class FileSystem extends Configured implements Closeable {
      * @param newBytes the additional bytes written
      */
     public void incrementBytesWritten(long newBytes) {
-      getThreadData().bytesWritten += newBytes;
+      getThreadStatistics().bytesWritten += newBytes;
     }
     
     /**
@@ -2944,7 +2964,7 @@ public abstract class FileSystem extends Configured implements Closeable {
      * @param count number of read operations
      */
     public void incrementReadOps(int count) {
-      getThreadData().readOps += count;
+      getThreadStatistics().readOps += count;
     }
 
     /**
@@ -2952,7 +2972,7 @@ public abstract class FileSystem extends Configured implements Closeable {
      * @param count number of large read operations
      */
     public void incrementLargeReadOps(int count) {
-      getThreadData().largeReadOps += count;
+      getThreadStatistics().largeReadOps += count;
     }
 
     /**
@@ -2960,7 +2980,7 @@ public abstract class FileSystem extends Configured implements Closeable {
      * @param count number of write operations
      */
     public void incrementWriteOps(int count) {
-      getThreadData().writeOps += count;
+      getThreadStatistics().writeOps += count;
     }
 
     /**
