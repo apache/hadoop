@@ -83,12 +83,16 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROU
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.CRYPTO_KEY_SIZE;
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.CRYPTO_XATTR_IV;
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.CRYPTO_XATTR_KEY_VERSION_ID;
 import static org.apache.hadoop.util.Time.now;
 
 import java.io.*;
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.URI;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -102,6 +106,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -116,6 +121,9 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
+import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
@@ -145,6 +153,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.StorageType;
+import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -261,6 +270,7 @@ import org.mortbay.util.ajax.JSON;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -515,6 +525,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   private final NNConf nnConf;
 
+  private KeyProvider provider = null;
+  private KeyProvider.Options providerOptions = null;
+
+  private final Map<String, EncryptionZone> encryptionZones;
+
   /**
    * Set the last allocated inode id when fsimage or editlog is loaded. 
    */
@@ -675,6 +690,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   FSNamesystem(Configuration conf, FSImage fsImage, boolean ignoreRetryCache)
       throws IOException {
+    initializeKeyProvider(conf);
+    providerOptions = KeyProvider.options(conf);
     if (conf.getBoolean(DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY,
                         DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT)) {
       LOG.info("Enabling async auditlog");
@@ -781,6 +798,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         auditLoggers.get(0) instanceof DefaultAuditLogger;
       this.retryCache = ignoreRetryCache ? null : initRetryCache(conf);
       this.nnConf = new NNConf(conf);
+      this.encryptionZones = new HashMap<String, EncryptionZone>();
     } catch(IOException e) {
       LOG.error(getClass().getSimpleName() + " initialization failed.", e);
       close();
@@ -824,6 +842,42 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (retryCache != null) {
       retryCache.addCacheEntry(clientId, callId);
     }
+  }
+
+  private void initializeKeyProvider(final Configuration conf) {
+    try {
+      final List<KeyProvider> providers = KeyProviderFactory.getProviders(conf);
+      if (providers == null) {
+        return;
+      }
+
+      if (providers.size() == 0) {
+        LOG.info("No KeyProviders found.");
+        return;
+      }
+
+      if (providers.size() > 1) {
+        final String err =
+            "Multiple KeyProviders found. Only one is permitted.";
+        LOG.error(err);
+        throw new RuntimeException(err);
+      }
+      provider = providers.get(0);
+      if (provider.isTransient()) {
+        final String err =
+            "A KeyProvider was found but it is a transient provider.";
+        LOG.error(err);
+        throw new RuntimeException(err);
+      }
+      LOG.info("Found KeyProvider: " + provider.toString());
+    } catch (IOException e) {
+      LOG.error("Exception while initializing KeyProvider", e);
+    }
+  }
+
+  @VisibleForTesting
+  public KeyProvider getProvider() {
+    return provider;
   }
 
   @VisibleForTesting
@@ -2358,7 +2412,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throw ie;
     }
   }
-  
+
   /**
    * Append to an existing file for append.
    * <p>
@@ -8057,14 +8111,206 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
   
-  void createEncryptionZone(final String src, final String keyId)
-          throws IOException {
+  /**
+   * Create an encryption zone on directory src either using keyIdArg if
+   * supplied or generating a keyId if it's null.
+   *
+   * @param src the path of a directory which will be the root of the
+   * encryption zone. The directory must be empty.
+   *
+   * @param keyIdArg an optional keyId of a key in the configured
+   * KeyProvider. If this is null, then a a new key is generated.
+   *
+   * @throws AccessControlException if the caller is not the superuser.
+   *
+   * @throws UnresolvedLinkException if the path can't be resolved.
+   *
+   * @throws SafeModeException if the Namenode is in safe mode.
+   */
+  void createEncryptionZone(final String src, String keyIdArg)
+    throws IOException, UnresolvedLinkException,
+      SafeModeException, AccessControlException {
+    final CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return; // Return previous response
+    }
+
+    boolean createdKey = false;
+    String keyId = keyIdArg;
+    boolean success = false;
+    try {
+      if (keyId == null || keyId.isEmpty()) {
+        keyId = createNewKey(src);
+        createdKey = true;
+      } else {
+        if (provider.getCurrentKey(keyId) == null) {
+
+          /*
+           * It would be nice if we threw something more specific than
+           * IOException when the key is not found, but the KeyProvider API
+           * doesn't provide for that. If that API is ever changed to throw
+           * something more specific (e.g. UnknownKeyException) then we can
+           * update this to match it, or better yet, just rethrow the
+           * KeyProvider's exception.
+           */
+          throw new IOException("Key " + keyId + " doesn't exist.");
+        }
+      }
+      createEncryptionZoneInt(src, keyId, cacheEntry != null);
+      success = true;
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "createEncryptionZone", src);
+      throw e;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+      if (!success && createdKey) {
+        /* Unwind key creation. */
+        provider.deleteKey(keyId);
+      }
+    }
   }
 
-  void deleteEncryptionZone(final String src) throws IOException {
+  private void createEncryptionZoneInt(final String srcArg, String keyId,
+    final boolean logRetryCache) throws IOException {
+    String src = srcArg;
+    HdfsFileStatus resultingStat = null;
+    checkSuperuserPrivilege();
+    checkOperation(OperationCategory.WRITE);
+    final byte[][] pathComponents =
+      FSDirectory.getPathComponentsForReservedPath(src);
+    writeLock();
+    try {
+      checkSuperuserPrivilege();
+      checkOperation(OperationCategory.WRITE);
+      checkNameNodeSafeMode("Cannot create encryption zone on " + src);
+      src = FSDirectory.resolvePath(src, pathComponents, dir);
+
+      EncryptionZone ez = getEncryptionZoneForPath(src);
+      if (ez != null) {
+        throw new IOException("Directory " + src +
+          " is already in an encryption zone. (" + ez.getPath() + ")");
+      }
+
+      final XAttr keyIdXAttr = dir.createEncryptionZone(src, keyId);
+      getEditLog().logSetXAttr(src, keyIdXAttr, logRetryCache);
+      encryptionZones.put(src, new EncryptionZone(src, keyId));
+      resultingStat = getAuditFileInfo(src, false);
+    } finally {
+      writeUnlock();
+    }
+    getEditLog().logSync();
+    logAuditEvent(true, "createEncryptionZone", src, null, resultingStat);
+  }
+
+  private String createNewKey(String src)
+    throws IOException {
+    final String keyId = UUID.randomUUID().toString();
+    // TODO pass in hdfs://HOST:PORT (HDFS-6490)
+    providerOptions.setDescription(src);
+    providerOptions.setBitLength(CRYPTO_KEY_SIZE);
+    try {
+      provider.createKey(keyId, providerOptions);
+    } catch (NoSuchAlgorithmException e) {
+      throw new IOException(e);
+    }
+    return keyId;
+  }
+
+  /**
+   * Delete the encryption zone on directory src.
+   *
+   * @param src the path of a directory which is the root of the encryption
+   * zone. The directory must be empty and must be marked as an encryption
+   * zone.
+   *
+   * @throws AccessControlException if the caller is not the superuser.
+   *
+   * @throws UnresolvedLinkException if the path can't be resolved.
+   *
+   * @throws SafeModeException if the Namenode is in safe mode.
+   */
+  void deleteEncryptionZone(final String src)
+    throws IOException, UnresolvedLinkException,
+      SafeModeException, AccessControlException {
+    final CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return; // Return previous response
+    }
+
+    boolean success = false;
+    try {
+      deleteEncryptionZoneInt(src, cacheEntry != null);
+      encryptionZones.remove(src);
+      success = true;
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "deleteEncryptionZone", src);
+      throw e;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+    }
+  }
+
+  private void deleteEncryptionZoneInt(final String srcArg,
+    final boolean logRetryCache) throws IOException {
+    String src = srcArg;
+    HdfsFileStatus resultingStat = null;
+    checkSuperuserPrivilege();
+    checkOperation(OperationCategory.WRITE);
+    final byte[][] pathComponents =
+      FSDirectory.getPathComponentsForReservedPath(src);
+    writeLock();
+    try {
+      checkSuperuserPrivilege();
+      checkOperation(OperationCategory.WRITE);
+      checkNameNodeSafeMode("Cannot delete encryption zone on " + src);
+      src = FSDirectory.resolvePath(src, pathComponents, dir);
+      final EncryptionZone ez = encryptionZones.get(src);
+      if (ez == null) {
+        throw new IOException("Directory " + src +
+          " is not the root of an encryption zone.");
+      }
+      final XAttr removedXAttr = dir.deleteEncryptionZone(src);
+      if (removedXAttr != null) {
+        getEditLog().logRemoveXAttr(src, removedXAttr);
+      }
+      encryptionZones.remove(src);
+      resultingStat = getAuditFileInfo(src, false);
+    } finally {
+      writeUnlock();
+    }
+    getEditLog().logSync();
+    logAuditEvent(true, "deleteEncryptionZone", src, null, resultingStat);
   }
 
   List<EncryptionZone> listEncryptionZones() throws IOException {
+    boolean success = false;
+    checkSuperuserPrivilege();
+    checkOperation(OperationCategory.READ);
+    readLock();
+    try {
+      checkSuperuserPrivilege();
+      checkOperation(OperationCategory.READ);
+      final List<EncryptionZone> ret =
+          Lists.newArrayList(encryptionZones.values());
+      success = true;
+      return ret;
+    } finally {
+      readUnlock();
+      logAuditEvent(success, "listEncryptionZones", null);
+    }
+  }
+
+  /** Lookup the encryption zone of a path. */
+  private EncryptionZone getEncryptionZoneForPath(String src) {
+    final String[] components = INode.getPathNames(src);
+    for (int i = components.length; i > 0; i--) {
+      final List<String> l = Arrays.asList(Arrays.copyOfRange(components, 0, i));
+      String p = Joiner.on(Path.SEPARATOR).join(l);
+      final EncryptionZone ret = encryptionZones.get(p);
+      if (ret != null) {
+        return ret;
+      }
+    }
     return null;
   }
 

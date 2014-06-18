@@ -2802,7 +2802,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
 
   public List<EncryptionZone> listEncryptionZones() throws IOException {
     checkOpen();
-    return namenode.listEncryptionZones();
+    try {
+      return namenode.listEncryptionZones();
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class);
+    }
   }
 
   public void setXAttr(String src, String name, byte[] value, 

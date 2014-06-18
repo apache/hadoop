@@ -10,6 +10,8 @@ fs-encryption (Unreleased)
 
   IMPROVEMENTS
 
+    HDFS-6386. HDFS Encryption Zones (clamb)
+
     HDFS-6473. Protocol and API for Encryption Zones (clamb)
 
     HDFS-6392. Wire crypto streams for encrypted files in

@@ -162,6 +162,11 @@ public class HdfsConstants {
   public static final String SEPARATOR_DOT_SNAPSHOT_DIR
       = Path.SEPARATOR + DOT_SNAPSHOT_DIR; 
 
+  public static final String CRYPTO_XATTR_KEY_ID = "system.hdfs.crypto.key-id";
+  public static final String CRYPTO_XATTR_KEY_VERSION_ID =
+    "system.hdfs.crypto.key-version-id";
+  public static final String CRYPTO_XATTR_IV = "system.hdfs.crypto.iv";
+  public static final int CRYPTO_KEY_SIZE = 128;
   /* Temporary until we stop hard-coding these values. */
   public static final byte[] KEY = "0123456789012345".getBytes();
   public static final byte[] IV = "ABCDEFGJIJKLMNOP".getBytes();

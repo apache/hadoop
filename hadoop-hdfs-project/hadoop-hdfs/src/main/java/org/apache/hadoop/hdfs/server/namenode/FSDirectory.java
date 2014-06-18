@@ -32,6 +32,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.CryptoCodec;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.Options;
@@ -50,6 +51,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -83,6 +85,10 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.CRYPTO_XATTR_KEY_ID;
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.CRYPTO_XATTR_IV;
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.CRYPTO_XATTR_KEY_VERSION_ID;
 
 /*************************************************
  * FSDirectory stores the filesystem directory state.
@@ -130,6 +136,7 @@ public class FSDirectory implements Closeable {
   private final INodeMap inodeMap; // Synchronized by dirLock
   private long yieldCount = 0; // keep track of lock yield count.
   private final int inodeXAttrsLimit; //inode xattrs max limit
+  private final CryptoCodec codec;
 
   // lock to protect the directory and BlockMap
   private final ReentrantReadWriteLock dirLock;
@@ -198,6 +205,7 @@ public class FSDirectory implements Closeable {
     this.inodeXAttrsLimit = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY,
         DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_DEFAULT);
+    this.codec = CryptoCodec.getInstance(conf);
     Preconditions.checkArgument(this.inodeXAttrsLimit >= 0,
         "Cannot set a negative limit on the number of xattrs per inode (%s).",
         DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY);
@@ -2662,6 +2670,44 @@ public class FSDirectory implements Closeable {
     return xAttrs;
   }
   
+  XAttr createEncryptionZone(String src, String keyId)
+    throws IOException {
+    writeLock();
+    try {
+      if (isNonEmptyDirectory(src)) {
+        throw new IOException(
+          "Attempt to create an encryption zone for a non-empty directory.");
+      }
+      final XAttr keyIdXAttr =
+        XAttrHelper.buildXAttr(CRYPTO_XATTR_KEY_ID, keyId.getBytes());
+      unprotectedSetXAttr(src, keyIdXAttr, EnumSet.of(XAttrSetFlag.CREATE));
+      return keyIdXAttr;
+    } finally {
+      writeUnlock();
+    }
+  }
+
+  XAttr deleteEncryptionZone(String src)
+    throws IOException {
+    writeLock();
+    try {
+      if (isNonEmptyDirectory(src)) {
+        throw new IOException(
+          "Attempt to delete an encryption zone for a non-empty directory.");
+      }
+      final XAttr keyIdXAttr =
+        XAttrHelper.buildXAttr(CRYPTO_XATTR_KEY_ID, null);
+      final XAttr removedXAttr = unprotectedRemoveXAttr(src, keyIdXAttr);
+      if (removedXAttr == null) {
+        throw new IOException(
+          src + " does not appear to be the root of an encryption zone");
+      }
+      return removedXAttr;
+    } finally {
+      writeUnlock();
+    }
+  }
+
   void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag)
           throws IOException {
     writeLock();

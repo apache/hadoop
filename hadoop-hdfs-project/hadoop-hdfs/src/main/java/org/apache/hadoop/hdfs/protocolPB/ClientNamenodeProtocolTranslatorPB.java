@@ -1282,9 +1282,13 @@ public class ClientNamenodeProtocolTranslatorPB implements
   @Override
   public void createEncryptionZone(String src, String keyId)
     throws IOException {
-    final CreateEncryptionZoneRequestProto req =
-      CreateEncryptionZoneRequestProto.newBuilder().
-      setSrc(src).setKeyId(keyId).build();
+    final CreateEncryptionZoneRequestProto.Builder builder =
+      CreateEncryptionZoneRequestProto.newBuilder();
+    builder.setSrc(src);
+    if (keyId != null && !keyId.isEmpty()) {
+      builder.setKeyId(keyId);
+    }
+    CreateEncryptionZoneRequestProto req = builder.build();
     try {
       rpcProxy.createEncryptionZone(null, req);
     } catch (ServiceException e) {
