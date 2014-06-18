@@ -322,6 +322,22 @@ HDFS NFS Gateway
   Then the users can access HDFS as part of the local file system except that, 
   hard link and random write are not supported yet.
 
+* {Allow mounts from unprivileged clients}
+
+  In environments where root access on client machines is not generally
+  available, some measure of security can be obtained by ensuring that only NFS
+  clients originating from privileged ports can connect to the NFS server. This
+  feature is referred to as "port monitoring." This feature is not enabled by default
+  in the HDFS NFS Gateway, but can be optionally enabled by setting the
+  following config in hdfs-site.xml on the NFS Gateway machine:
+
+-------------------------------------------------------------------
+<property>
+  <name>nfs.port.monitoring.disabled</name>
+  <value>false</value>
+</property>
+-------------------------------------------------------------------
+
 * {User authentication and mapping}
 
   NFS gateway in this release uses AUTH_UNIX style authentication. When the user on NFS client

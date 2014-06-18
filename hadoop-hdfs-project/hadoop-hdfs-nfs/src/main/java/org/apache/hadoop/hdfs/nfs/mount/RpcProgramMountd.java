@@ -194,7 +194,13 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
     if (mntproc == MNTPROC.NULL) {
       out = nullOp(out, xid, client);
     } else if (mntproc == MNTPROC.MNT) {
-      out = mnt(xdr, out, xid, client);
+      // Only do port monitoring for MNT
+      if (!doPortMonitoring(info.remoteAddress())) {
+        out = MountResponse.writeMNTResponse(Nfs3Status.NFS3ERR_ACCES, out,
+            xid, null);
+      } else {
+        out = mnt(xdr, out, xid, client);
+      }
     } else if (mntproc == MNTPROC.DUMP) {
       out = dump(out, xid, client);
     } else if (mntproc == MNTPROC.UMNT) {      

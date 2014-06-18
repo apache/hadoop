@@ -48,7 +48,7 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
   private final int progNumber;
   private final int lowProgVersion;
   private final int highProgVersion;
-  private final boolean allowInsecurePorts;
+  protected final boolean allowInsecurePorts;
   
   /**
    * If not null, this will be used as the socket to use to connect to the
@@ -146,31 +146,6 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
     RpcCall call = (RpcCall) info.header();
     
     SocketAddress remoteAddress = info.remoteAddress();
-    if (!allowInsecurePorts) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Will not allow connections from unprivileged ports. " +
-            "Checking for valid client port...");
-      }
-      if (remoteAddress instanceof InetSocketAddress) {
-        InetSocketAddress inetRemoteAddress = (InetSocketAddress) remoteAddress;
-        if (inetRemoteAddress.getPort() > 1023) {
-          LOG.warn("Connection attempted from '" + inetRemoteAddress + "' "
-              + "which is an unprivileged port. Rejecting connection.");
-          sendRejectedReply(call, remoteAddress, ctx);
-          return;
-        } else {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Accepting connection from '" + remoteAddress + "'");
-          }
-        }
-      } else {
-        LOG.warn("Could not determine remote port of socket address '" +
-            remoteAddress + "'. Rejecting connection.");
-        sendRejectedReply(call, remoteAddress, ctx);
-        return;
-      }
-    }
-    
     if (LOG.isTraceEnabled()) {
       LOG.trace(program + " procedure #" + call.getProcedure());
     }
@@ -191,6 +166,29 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
     handleInternal(ctx, info);
   }
   
+  public boolean doPortMonitoring(SocketAddress remoteAddress) {
+    if (!allowInsecurePorts) {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Will not allow connections from unprivileged ports. "
+            + "Checking for valid client port...");
+      }
+
+      if (remoteAddress instanceof InetSocketAddress) {
+        InetSocketAddress inetRemoteAddress = (InetSocketAddress) remoteAddress;
+        if (inetRemoteAddress.getPort() > 1023) {
+          LOG.warn("Connection attempted from '" + inetRemoteAddress + "' "
+              + "which is an unprivileged port. Rejecting connection.");
+          return false;
+        }
+      } else {
+        LOG.warn("Could not determine remote port of socket address '"
+            + remoteAddress + "'. Rejecting connection.");
+        return false;
+      }
+    }
+    return true;
+  }
+  
   private void sendAcceptedReply(RpcCall call, SocketAddress remoteAddress,
       AcceptState acceptState, ChannelHandlerContext ctx) {
     RpcAcceptedReply reply = RpcAcceptedReply.getInstance(call.getXid(),
@@ -208,7 +206,7 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
     RpcUtil.sendRpcResponse(ctx, rsp);
   }
   
-  private static void sendRejectedReply(RpcCall call,
+  protected static void sendRejectedReply(RpcCall call,
       SocketAddress remoteAddress, ChannelHandlerContext ctx) {
     XDR out = new XDR();
     RpcDeniedReply reply = new RpcDeniedReply(call.getXid(),

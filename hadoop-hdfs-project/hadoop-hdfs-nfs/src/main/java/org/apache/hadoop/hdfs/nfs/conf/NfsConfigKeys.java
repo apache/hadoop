@@ -51,7 +51,8 @@ public class NfsConfigKeys {
   public static final String DFS_NFS_KEYTAB_FILE_KEY = "nfs.keytab.file";
   public static final String DFS_NFS_KERBEROS_PRINCIPAL_KEY = "nfs.kerberos.principal";
   public static final String DFS_NFS_REGISTRATION_PORT_KEY = "nfs.registration.port";
-  public static final int    DFS_NFS_REGISTRATION_PORT_DEFAULT = 40; // Currently unassigned.
-  public static final String  DFS_NFS_ALLOW_INSECURE_PORTS_KEY = "nfs.allow.insecure.ports";
-  public static final boolean DFS_NFS_ALLOW_INSECURE_PORTS_DEFAULT = true;
+  public static final int DFS_NFS_REGISTRATION_PORT_DEFAULT = 40; // Currently unassigned.
+  public static final String DFS_NFS_PORT_MONITORING_DISABLED_KEY = "nfs.port.monitoring.disabled";
+  public static final boolean DFS_NFS_PORT_MONITORING_DISABLED_DEFAULT = true;
+
 }
