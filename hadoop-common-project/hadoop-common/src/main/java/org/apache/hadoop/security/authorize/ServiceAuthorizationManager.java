@@ -45,7 +45,7 @@ import com.google.common.annotations.VisibleForTesting;
 public class ServiceAuthorizationManager {
   private static final String HADOOP_POLICY_FILE = "hadoop-policy.xml";
 
-  private Map<Class<?>, AccessControlList> protocolToAcl =
+  private volatile Map<Class<?>, AccessControlList> protocolToAcl =
     new IdentityHashMap<Class<?>, AccessControlList>();
   
   /**
@@ -114,7 +114,7 @@ public class ServiceAuthorizationManager {
     AUDITLOG.info(AUTHZ_SUCCESSFUL_FOR + user + " for protocol="+protocol);
   }
 
-  public synchronized void refresh(Configuration conf,
+  public void refresh(Configuration conf,
                                           PolicyProvider provider) {
     // Get the system property 'hadoop.policy.file'
     String policyFile = 
@@ -127,7 +127,7 @@ public class ServiceAuthorizationManager {
   }
 
   @Private
-  public synchronized void refreshWithLoadedConfiguration(Configuration conf,
+  public void refreshWithLoadedConfiguration(Configuration conf,
       PolicyProvider provider) {
     final Map<Class<?>, AccessControlList> newAcls =
         new IdentityHashMap<Class<?>, AccessControlList>();
