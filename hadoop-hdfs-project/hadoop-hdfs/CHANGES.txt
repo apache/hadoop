@@ -665,6 +665,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6559. Fix wrong option "dfsadmin -rollingUpgrade start" in the
     document. (Akira Ajisaka via Arpit Agarwal)
 
+    HDFS-6553. Add missing DeprecationDeltas for NFS Kerberos configurations
+    (Stephen Chu via brandonli)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
