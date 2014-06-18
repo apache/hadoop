@@ -203,7 +203,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
       } else {
         // The block is on the DN but belongs to a different storage.
         // Update our state.
-        removeStorage(storage);
+        removeStorage(getStorageInfo(idx));
         added = false;      // Just updating storage. Return false.
       }
     }

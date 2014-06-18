@@ -29,6 +29,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
@@ -41,6 +43,34 @@ public class TestBlockInfo {
 
   private static final Log LOG = LogFactory
       .getLog("org.apache.hadoop.hdfs.TestBlockInfo");
+
+
+  @Test
+  public void testAddStorage() throws Exception {
+    BlockInfo blockInfo = new BlockInfo(3);
+
+    final DatanodeStorageInfo storage = DFSTestUtil.createDatanodeStorageInfo("storageID", "127.0.0.1");
+
+    boolean added = blockInfo.addStorage(storage);
+
+    Assert.assertTrue(added);
+    Assert.assertEquals(storage, blockInfo.getStorageInfo(0));
+  }
+
+
+  @Test
+  public void testReplaceStorageIfDifferetnOneAlreadyExistedFromSameDataNode() throws Exception {
+    BlockInfo blockInfo = new BlockInfo(3);
+
+    final DatanodeStorageInfo storage1 = DFSTestUtil.createDatanodeStorageInfo("storageID1", "127.0.0.1");
+    final DatanodeStorageInfo storage2 = new DatanodeStorageInfo(storage1.getDatanodeDescriptor(), new DatanodeStorage("storageID2"));
+
+    blockInfo.addStorage(storage1);
+    boolean added = blockInfo.addStorage(storage2);
+
+    Assert.assertFalse(added);
+    Assert.assertEquals(storage2, blockInfo.getStorageInfo(0));
+  }
 
   @Test
   public void testBlockListMoveToHead() throws Exception {
