@@ -105,8 +105,25 @@
     <dependency>
       <groupId>org.apache.directory.server</groupId>
       <artifactId>apacheds-kerberos-codec</artifactId>
-      <version>2.0.0-M15</version>
       <scope>compile</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.directory.api</groupId>
+            <artifactId>api-asn1-ber</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.directory.api</groupId>
+            <artifactId>api-i18n</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.directory.api</groupId>
+            <artifactId>api-ldap-model</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>net.sf.ehcache</groupId>
+            <artifactId>ehcache-core</artifactId>
+          </exclusion>
+        </exclusions>
     </dependency>
   </dependencies>
 
