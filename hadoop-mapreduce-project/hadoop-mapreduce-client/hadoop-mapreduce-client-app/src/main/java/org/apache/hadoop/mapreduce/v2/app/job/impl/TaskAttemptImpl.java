@@ -332,6 +332,15 @@ public abstract class TaskAttemptImpl implements
      .addTransition(TaskAttemptStateInternal.COMMIT_PENDING,
          TaskAttemptStateInternal.FAIL_CONTAINER_CLEANUP,
          TaskAttemptEventType.TA_TIMED_OUT, CLEANUP_CONTAINER_TRANSITION)
+     // AM is likely to receive duplicate TA_COMMIT_PENDINGs as the task attempt
+     // will re-send the commit message until it doesn't encounter any
+     // IOException and succeeds in delivering the commit message.
+     // Ignoring the duplicate commit message is a short-term fix. In long term,
+     // we need to make use of retry cache to help this and other MR protocol
+     // APIs that can be considered as @AtMostOnce.
+     .addTransition(TaskAttemptStateInternal.COMMIT_PENDING,
+         TaskAttemptStateInternal.COMMIT_PENDING,
+         TaskAttemptEventType.TA_COMMIT_PENDING)
 
      // Transitions from SUCCESS_CONTAINER_CLEANUP state
      // kill and cleanup the container
