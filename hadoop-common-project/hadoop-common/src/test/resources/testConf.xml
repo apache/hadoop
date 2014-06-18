@@ -296,7 +296,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-cp \[-f\] \[-p \| -p\[topx\]\] &lt;src&gt; \.\.\. &lt;dst&gt; :\s*</expected-output>
+          <expected-output>^-cp \[-f\] \[-p \| -p\[topax\]\] &lt;src&gt; \.\.\. &lt;dst&gt; :\s*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -308,15 +308,19 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*\[topx\] \(timestamps, ownership, permission, XAttr\). If -p is specified with no( )*</expected-output>
+          <expected-output>^( |\t)*\[topax\] \(timestamps, ownership, permission, ACLs, XAttr\). If -p is specified( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*&lt;arg&gt;, then preserves timestamps, ownership, permission. Passing -f overwrites( )*</expected-output>
+          <expected-output>^( |\t)*with no &lt;arg&gt;, then preserves timestamps, ownership, permission. If -pa is( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*the destination if it already exists.( )*</expected-output>
+          <expected-output>^( |\t)*specified, then preserves permission also because ACL is a super-set of( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*permission. Passing -f overwrites the destination if it already exists.( )*</expected-output>
         </comparator>
       </comparators>
     </test>

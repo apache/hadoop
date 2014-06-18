@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService.FileDeletionTask;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMMemoryStateStoreService;
 import org.junit.AfterClass;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -283,6 +284,60 @@ public class TestDeletionService {
       assertTrue(lfs.util().exists(dirs.get(1)));
     } finally {
       del.stop();
+    }
+  }
+
+  @Test
+  public void testRecovery() throws Exception {
+    Random r = new Random();
+    long seed = r.nextLong();
+    r.setSeed(seed);
+    System.out.println("SEED: " + seed);
+    List<Path> baseDirs = buildDirs(r, base, 4);
+    createDirs(new Path("."), baseDirs);
+    List<Path> content = buildDirs(r, new Path("."), 10);
+    for (Path b : baseDirs) {
+      createDirs(b, content);
+    }
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.NM_RECOVERY_ENABLED, true);
+    conf.setInt(YarnConfiguration.DEBUG_NM_DELETE_DELAY_SEC, 1);
+    NMMemoryStateStoreService stateStore = new NMMemoryStateStoreService();
+    stateStore.init(conf);
+    stateStore.start();
+    DeletionService del =
+      new DeletionService(new FakeDefaultContainerExecutor(), stateStore);
+    try {
+      del.init(conf);
+      del.start();
+      for (Path p : content) {
+        assertTrue(lfs.util().exists(new Path(baseDirs.get(0), p)));
+        del.delete((Long.parseLong(p.getName()) % 2) == 0 ? null : "dingo",
+            p, baseDirs.toArray(new Path[4]));
+      }
+
+      // restart the deletion service
+      del.stop();
+      del = new DeletionService(new FakeDefaultContainerExecutor(),
+          stateStore);
+      del.init(conf);
+      del.start();
+
+      // verify paths are still eventually deleted
+      int msecToWait = 10 * 1000;
+      for (Path p : baseDirs) {
+        for (Path q : content) {
+          Path fp = new Path(p, q);
+          while (msecToWait > 0 && lfs.util().exists(fp)) {
+            Thread.sleep(100);
+            msecToWait -= 100;
+          }
+          assertFalse(lfs.util().exists(fp));
+        }
+      }
+    } finally {
+      del.close();
+      stateStore.close();
     }
   }
 }

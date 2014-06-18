@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -71,7 +72,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
@@ -116,6 +116,7 @@ public class RMAppImpl implements RMApp, Recoverable {
   private EventHandler handler;
   private static final AppFinishedTransition FINISHED_TRANSITION =
       new AppFinishedTransition();
+  private Set<NodeId> ranNodes = new ConcurrentSkipListSet<NodeId>();
 
   // These states stored are only valid when app is at killing or final_saving.
   private RMAppState stateBeforeKilling;
@@ -180,7 +181,6 @@ public class RMAppImpl implements RMApp, Recoverable {
         new FinalSavingTransition(
           new AppKilledTransition(), RMAppState.KILLED))
 
-
      // Transitions from ACCEPTED state
     .addTransition(RMAppState.ACCEPTED, RMAppState.ACCEPTED,
         RMAppEventType.NODE_UPDATE, new RMAppNodeUpdateTransition())
@@ -200,6 +200,9 @@ public class RMAppImpl implements RMApp, Recoverable {
         new FinalSavingTransition(FINISHED_TRANSITION, RMAppState.FINISHED))
     .addTransition(RMAppState.ACCEPTED, RMAppState.KILLING,
         RMAppEventType.KILL, new KillAttemptTransition())
+    .addTransition(RMAppState.ACCEPTED, RMAppState.ACCEPTED, 
+        RMAppEventType.APP_RUNNING_ON_NODE,
+        new AppRunningOnNodeTransition())
     // ACCECPTED state can once again receive APP_ACCEPTED event, because on
     // recovery the app returns ACCEPTED state and the app once again go
     // through the scheduler and triggers one more APP_ACCEPTED event at
@@ -220,6 +223,9 @@ public class RMAppImpl implements RMApp, Recoverable {
     .addTransition(RMAppState.RUNNING, RMAppState.FINISHED,
       // UnManagedAM directly jumps to finished
         RMAppEventType.ATTEMPT_FINISHED, FINISHED_TRANSITION)
+    .addTransition(RMAppState.RUNNING, RMAppState.RUNNING, 
+        RMAppEventType.APP_RUNNING_ON_NODE,
+        new AppRunningOnNodeTransition())
     .addTransition(RMAppState.RUNNING,
         EnumSet.of(RMAppState.ACCEPTED, RMAppState.FINAL_SAVING),
         RMAppEventType.ATTEMPT_FAILED,
@@ -235,6 +241,9 @@ public class RMAppImpl implements RMApp, Recoverable {
     .addTransition(RMAppState.FINAL_SAVING, RMAppState.FINAL_SAVING,
         RMAppEventType.ATTEMPT_FINISHED,
         new AttemptFinishedAtFinalSavingTransition())
+    .addTransition(RMAppState.FINAL_SAVING, RMAppState.FINAL_SAVING, 
+        RMAppEventType.APP_RUNNING_ON_NODE,
+        new AppRunningOnNodeTransition())
     // ignorable transitions
     .addTransition(RMAppState.FINAL_SAVING, RMAppState.FINAL_SAVING,
         EnumSet.of(RMAppEventType.NODE_UPDATE, RMAppEventType.KILL,
@@ -243,6 +252,9 @@ public class RMAppImpl implements RMApp, Recoverable {
      // Transitions from FINISHING state
     .addTransition(RMAppState.FINISHING, RMAppState.FINISHED,
         RMAppEventType.ATTEMPT_FINISHED, FINISHED_TRANSITION)
+    .addTransition(RMAppState.FINISHING, RMAppState.FINISHING, 
+        RMAppEventType.APP_RUNNING_ON_NODE,
+        new AppRunningOnNodeTransition())
     // ignorable transitions
     .addTransition(RMAppState.FINISHING, RMAppState.FINISHING,
       EnumSet.of(RMAppEventType.NODE_UPDATE,
@@ -251,6 +263,9 @@ public class RMAppImpl implements RMApp, Recoverable {
         RMAppEventType.KILL))
 
      // Transitions from KILLING state
+    .addTransition(RMAppState.KILLING, RMAppState.KILLING, 
+        RMAppEventType.APP_RUNNING_ON_NODE,
+        new AppRunningOnNodeTransition())
     .addTransition(RMAppState.KILLING, RMAppState.FINAL_SAVING,
         RMAppEventType.ATTEMPT_KILLED,
         new FinalSavingTransition(
@@ -267,6 +282,9 @@ public class RMAppImpl implements RMApp, Recoverable {
 
      // Transitions from FINISHED state
      // ignorable transitions
+    .addTransition(RMAppState.FINISHED, RMAppState.FINISHED, 
+        RMAppEventType.APP_RUNNING_ON_NODE,
+        new AppRunningOnNodeTransition())
     .addTransition(RMAppState.FINISHED, RMAppState.FINISHED,
         EnumSet.of(
             RMAppEventType.NODE_UPDATE,
@@ -276,11 +294,17 @@ public class RMAppImpl implements RMApp, Recoverable {
 
      // Transitions from FAILED state
      // ignorable transitions
+    .addTransition(RMAppState.FAILED, RMAppState.FAILED, 
+        RMAppEventType.APP_RUNNING_ON_NODE,
+        new AppRunningOnNodeTransition())
     .addTransition(RMAppState.FAILED, RMAppState.FAILED,
         EnumSet.of(RMAppEventType.KILL, RMAppEventType.NODE_UPDATE))
 
      // Transitions from KILLED state
      // ignorable transitions
+    .addTransition(RMAppState.KILLED, RMAppState.KILLED, 
+        RMAppEventType.APP_RUNNING_ON_NODE,
+        new AppRunningOnNodeTransition())
     .addTransition(
         RMAppState.KILLED,
         RMAppState.KILLED,
@@ -695,6 +719,23 @@ public class RMAppImpl implements RMApp, Recoverable {
           nodeUpdateEvent.getNode());
     };
   }
+  
+  private static final class AppRunningOnNodeTransition extends RMAppTransition {
+    public void transition(RMAppImpl app, RMAppEvent event) {
+      RMAppRunningOnNodeEvent nodeAddedEvent = (RMAppRunningOnNodeEvent) event;
+      
+      // if final state already stored, notify RMNode
+      if (isAppInFinalState(app)) {
+        app.handler.handle(
+            new RMNodeCleanAppEvent(nodeAddedEvent.getNodeId(), nodeAddedEvent
+                .getApplicationId()));
+        return;
+      }
+      
+      // otherwise, add it to ranNodes for further process
+      app.ranNodes.add(nodeAddedEvent.getNodeId());
+    };
+  }
 
   /**
    * Move an app to a new queue.
@@ -1037,17 +1078,8 @@ public class RMAppImpl implements RMApp, Recoverable {
       this.finalState = finalState;
     }
 
-    private Set<NodeId> getNodesOnWhichAttemptRan(RMAppImpl app) {
-      Set<NodeId> nodes = new HashSet<NodeId>();
-      for (RMAppAttempt attempt : app.attempts.values()) {
-        nodes.addAll(attempt.getRanNodes());
-      }
-      return nodes;
-    }
-
     public void transition(RMAppImpl app, RMAppEvent event) {
-      Set<NodeId> nodes = getNodesOnWhichAttemptRan(app);
-      for (NodeId nodeId : nodes) {
+      for (NodeId nodeId : app.getRanNodes()) {
         app.handler.handle(
             new RMNodeCleanAppEvent(nodeId, app.applicationId));
       }
@@ -1147,5 +1179,10 @@ public class RMAppImpl implements RMApp, Recoverable {
   
   private RMAppState getRecoveredFinalState() {
     return this.recoveredFinalState;
+  }
+
+  @Override
+  public Set<NodeId> getRanNodes() {
+    return ranNodes;
   }
 }

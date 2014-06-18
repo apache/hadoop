@@ -39,6 +39,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1702. Added kill app functionality to RM web services. (Varun Vasudev
     via vinodkv)
 
+    YARN-1339. Recover DeletionService state upon nodemanager restart. (Jason Lowe
+    via junping_du)
+
   IMPROVEMENTS
 
     YARN-1479. Invalid NaN values in Hadoop REST API JSON response (Chen He via
@@ -164,6 +167,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2125. Changed ProportionalCapacityPreemptionPolicy to log CSV in debug
     level. (Wangda Tan via jianhe)
 
+    YARN-2159. Better logging in SchedulerNode#allocateContainer.
+    (Ray Chiang via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -244,6 +250,14 @@ Release 2.5.0 - UNRELEASED
 
     YARN-2155. FairScheduler: Incorrect threshold check for preemption.
     (Wei Yan via kasha)
+
+    YARN-1885. Fixed a bug that RM may not send application-clean-up signal
+    to NMs where the completed applications previously ran in case of RM restart.
+    (Wangda Tan via jianhe)
+
+    YARN-2167. LeveldbIterator should get closed in
+    NMLeveldbStateStoreService#loadLocalizationState() within finally block
+    (Junping Du via jlowe)
 
 Release 2.4.1 - 2014-06-23 
 

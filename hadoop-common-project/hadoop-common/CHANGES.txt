@@ -149,6 +149,9 @@ Trunk (Unreleased)
 
     HADOOP-10485. Remove dead classes in hadoop-streaming. (wheat9)
 
+    HADOOP-10607. Create API to separate credential/password storage from
+    applications. (Larry McCay via omalley)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -427,6 +430,15 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10688. Expose thread-level FileSystem StatisticsData (Sandy Ryza)
 
+    HADOOP-10657. Have RetryInvocationHandler log failover attempt at INFO
+    level. (Ming Ma via jing9)
+
+    HADOOP-10666. Remove Copyright /d/d/d/d Apache Software Foundation from
+    the source files license header. (Henry Saputra via wang)
+
+    HADOOP-10557. FsShell -cp -pa option for preserving extended ACLs.
+    (Akira Ajisaka via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -550,6 +562,17 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10678. SecurityUtil has unnecessary synchronization on collection
     used for only tests. (Benoy Antony via cnauroth)
 
+    HADOOP-10683. Users authenticated with KERBEROS are recorded as being
+    authenticated with SIMPLE. (Benoy Antony via cnauroth)
+
+    HADOOP-10702. KerberosAuthenticationHandler does not log the principal names
+    correctly. (Benoy Antony via cnauroth)
+
+    HADOOP-10699. Fix build native library on mac osx (Binglin Chang via
+    jlowe)
+
+    HADOOP-10660. GraphiteSink should implement Closeable (Chen He and Ted Yu via raviprak)
+
   BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
 
     HADOOP-10520. Extended attributes definition and FileSystem APIs for
@@ -570,6 +593,10 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10561. Copy command with preserve option should handle Xattrs.
     (Yi Liu via cnauroth)
+
+    HADOOP-10590. ServiceAuthorizationManager is not threadsafe. (Benoy Antony via vinayakumarb)
+
+    HADOOP-10711. Cleanup some extra dependencies from hadoop-auth. (rkanter via tucu)
 
 Release 2.4.1 - 2014-06-23 
 

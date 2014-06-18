@@ -16,12 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.nfs;
+package org.apache.hadoop.hdfs.nfs.nfs3;
 
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.List;
 
 import org.apache.hadoop.fs.Path;
@@ -38,10 +40,15 @@ import org.apache.hadoop.nfs.nfs3.response.READDIR3Response;
 import org.apache.hadoop.nfs.nfs3.response.READDIR3Response.Entry3;
 import org.apache.hadoop.nfs.nfs3.response.READDIRPLUS3Response;
 import org.apache.hadoop.nfs.nfs3.response.READDIRPLUS3Response.EntryPlus3;
+import org.apache.hadoop.oncrpc.RpcInfo;
+import org.apache.hadoop.oncrpc.RpcMessage;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.SecurityHandler;
 import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandlerContext;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -122,7 +129,7 @@ public class TestReaddir {
     xdr_req.writeInt(100); // count
 
     READDIR3Response response = nfsd.readdir(xdr_req.asReadOnlyWrap(),
-        securityHandler, InetAddress.getLocalHost());
+        securityHandler, new InetSocketAddress("localhost", 1234));
     List<Entry3> dirents = response.getDirList().getEntries();
     assertTrue(dirents.size() == 5); // inculding dot, dotdot
 
@@ -139,7 +146,7 @@ public class TestReaddir {
     xdr_req.writeInt(100); // count
 
     response = nfsd.readdir(xdr_req.asReadOnlyWrap(), securityHandler,
-        InetAddress.getLocalHost());
+        new InetSocketAddress("localhost", 1234));
     dirents = response.getDirList().getEntries();
     assertTrue(dirents.size() == 1);
     Entry3 entry = dirents.get(0);
@@ -149,7 +156,7 @@ public class TestReaddir {
     hdfs.delete(new Path(testdir + "/f2"), false);
 
     response = nfsd.readdir(xdr_req.asReadOnlyWrap(), securityHandler,
-        InetAddress.getLocalHost());
+        new InetSocketAddress("localhost", 1234));
     dirents = response.getDirList().getEntries();
     assertTrue(dirents.size() == 2); // No dot, dotdot
   }
@@ -170,8 +177,9 @@ public class TestReaddir {
     xdr_req.writeInt(100); // dirCount
     xdr_req.writeInt(1000); // maxCount
 
-    READDIRPLUS3Response responsePlus = nfsd.readdirplus(
-        xdr_req.asReadOnlyWrap(), securityHandler, InetAddress.getLocalHost());
+    READDIRPLUS3Response responsePlus = nfsd.readdirplus(xdr_req
+        .asReadOnlyWrap(), securityHandler, new InetSocketAddress("localhost",
+        1234));
     List<EntryPlus3> direntPlus = responsePlus.getDirListPlus().getEntries();
     assertTrue(direntPlus.size() == 5); // including dot, dotdot
 
@@ -189,7 +197,7 @@ public class TestReaddir {
     xdr_req.writeInt(1000); // maxCount
 
     responsePlus = nfsd.readdirplus(xdr_req.asReadOnlyWrap(), securityHandler,
-        InetAddress.getLocalHost());
+        new InetSocketAddress("localhost", 1234));
     direntPlus = responsePlus.getDirListPlus().getEntries();
     assertTrue(direntPlus.size() == 1);
     EntryPlus3 entryPlus = direntPlus.get(0);
@@ -199,7 +207,7 @@ public class TestReaddir {
     hdfs.delete(new Path(testdir + "/f2"), false);
 
     responsePlus = nfsd.readdirplus(xdr_req.asReadOnlyWrap(), securityHandler,
-        InetAddress.getLocalHost());
+        new InetSocketAddress("localhost", 1234));
     direntPlus = responsePlus.getDirListPlus().getEntries();
     assertTrue(direntPlus.size() == 2); // No dot, dotdot
   }

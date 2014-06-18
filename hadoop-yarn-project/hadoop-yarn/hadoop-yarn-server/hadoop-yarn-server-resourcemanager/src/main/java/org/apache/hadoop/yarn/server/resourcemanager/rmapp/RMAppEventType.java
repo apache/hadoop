@@ -38,6 +38,9 @@ public enum RMAppEventType {
   ATTEMPT_FAILED,
   ATTEMPT_KILLED,
   NODE_UPDATE,
+  
+  // Source: Container and ResourceTracker
+  APP_RUNNING_ON_NODE,
 
   // Source: RMStateStore
   APP_NEW_SAVED,

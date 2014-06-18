@@ -264,6 +264,9 @@ Release 2.5.0 - UNRELEASED
 
     MAPREDUCE-5920. Add Xattr option in DistCp docs. (Yi Liu via cnauroth)
 
+    MAPREDUCE-5924. Changed TaskAttemptImpl to ignore TA_COMMIT_PENDING event
+    at COMMIT_PENDING state. (Zhijie Shen via jianhe)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES

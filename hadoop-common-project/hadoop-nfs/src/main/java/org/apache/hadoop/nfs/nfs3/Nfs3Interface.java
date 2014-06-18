@@ -17,12 +17,9 @@
  */
 package org.apache.hadoop.nfs.nfs3;
 
-import java.net.InetAddress;
-
 import org.apache.hadoop.nfs.nfs3.response.NFS3Response;
+import org.apache.hadoop.oncrpc.RpcInfo;
 import org.apache.hadoop.oncrpc.XDR;
-import org.apache.hadoop.oncrpc.security.SecurityHandler;
-import org.jboss.netty.channel.Channel;
 
 /**
  * RPC procedures as defined in RFC 1813.
@@ -33,70 +30,65 @@ public interface Nfs3Interface {
   public NFS3Response nullProcedure();
 
   /** GETATTR: Get file attributes */
-  public NFS3Response getattr(XDR xdr, SecurityHandler securityHandler,
-      InetAddress client);
+  public NFS3Response getattr(XDR xdr, RpcInfo info);
 
   /** SETATTR: Set file attributes */
-  public NFS3Response setattr(XDR xdr, SecurityHandler securityHandler,
-      InetAddress client);
+  public NFS3Response setattr(XDR xdr, RpcInfo info);
 
   /** LOOKUP: Lookup filename */
-  public NFS3Response lookup(XDR xdr, SecurityHandler securityHandler,
-      InetAddress client);
+  public NFS3Response lookup(XDR xdr, RpcInfo info);
 
   /** ACCESS: Check access permission */
-  public NFS3Response access(XDR xdr, SecurityHandler securityHandler,
-      InetAddress client);
+  public NFS3Response access(XDR xdr, RpcInfo info);
+
+    /** READLINK: Read from symbolic link */
+  public NFS3Response readlink(XDR xdr, RpcInfo info);
 
   /** READ: Read from file */
-  public NFS3Response read(XDR xdr, SecurityHandler securityHandler,
-      InetAddress client);
+  public NFS3Response read(XDR xdr, RpcInfo info);
 
   /** WRITE: Write to file */
-  public NFS3Response write(XDR xdr, Channel channel, int xid,
-      SecurityHandler securityHandler, InetAddress client);
+  public NFS3Response write(XDR xdr, RpcInfo info);
 
   /** CREATE: Create a file */
-  public NFS3Response create(XDR xdr, SecurityHandler securityHandler,
-      InetAddress client);
+  public NFS3Response create(XDR xdr, RpcInfo info);
 
   /** MKDIR: Create a directory */
-  public NFS3Response mkdir(XDR xdr, SecurityHandler securityHandler,
-      InetAddress client);
-
-  /** REMOVE: Remove a file */
-  public NFS3Response remove(XDR xdr, SecurityHandler securityHandler,
-      InetAddress client);
-
-  /** RMDIR: Remove a directory */
-  public NFS3Response rmdir(XDR xdr, SecurityHandler securityHandler,
-      InetAddress client);
-
-  /** RENAME: Rename a file or directory */
-  public NFS3Response rename(XDR xdr, SecurityHandler securityHandler,
-      InetAddress client);
+  public NFS3Response mkdir(XDR xdr, RpcInfo info);
 
   /** SYMLINK: Create a symbolic link */
-  public NFS3Response symlink(XDR xdr, SecurityHandler securityHandler,
-      InetAddress client);
+  public NFS3Response symlink(XDR xdr, RpcInfo info);
+
+  /** MKNOD: Create a special device */
+  public NFS3Response mknod(XDR xdr, RpcInfo info);
+
+  /** REMOVE: Remove a file */
+  public NFS3Response remove(XDR xdr, RpcInfo info);
+
+  /** RMDIR: Remove a directory */
+  public NFS3Response rmdir(XDR xdr, RpcInfo info);
+
+  /** RENAME: Rename a file or directory */
+  public NFS3Response rename(XDR xdr, RpcInfo info);
+
+  /** LINK: create link to an object */
+  public NFS3Response link(XDR xdr, RpcInfo info);
 
   /** READDIR: Read From directory */
-  public NFS3Response readdir(XDR xdr, SecurityHandler securityHandler,
-      InetAddress client);
+  public NFS3Response readdir(XDR xdr, RpcInfo info);
 
+  /** READDIRPLUS: Extended read from directory */
+  public NFS3Response readdirplus(XDR xdr, RpcInfo info);
+  
   /** FSSTAT: Get dynamic file system information */
-  public NFS3Response fsstat(XDR xdr, SecurityHandler securityHandler,
-      InetAddress client);
+  public NFS3Response fsstat(XDR xdr, RpcInfo info);
 
   /** FSINFO: Get static file system information */
-  public NFS3Response fsinfo(XDR xdr, SecurityHandler securityHandler,
-      InetAddress client);
+  public NFS3Response fsinfo(XDR xdr, RpcInfo info);
 
   /** PATHCONF: Retrieve POSIX information */
-  public NFS3Response pathconf(XDR xdr, SecurityHandler securityHandler,
-      InetAddress client);
+  public NFS3Response pathconf(XDR xdr, RpcInfo info);
 
   /** COMMIT: Commit cached data on a server to stable storage */
-  public NFS3Response commit(XDR xdr, Channel channel, int xid,
-      SecurityHandler securityHandler, InetAddress client);
+  public NFS3Response commit(XDR xdr, RpcInfo info);
 }

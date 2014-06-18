@@ -138,6 +138,13 @@ public class TestOfflineImageViewer {
       hdfs.mkdirs(new Path("/snapshot/1"));
       hdfs.delete(snapshot, true);
 
+      // Set XAttrs so the fsimage contains XAttr ops
+      final Path xattr = new Path("/xattr");
+      hdfs.mkdirs(xattr);
+      hdfs.setXAttr(xattr, "user.a1", new byte[]{ 0x31, 0x32, 0x33 });
+      hdfs.setXAttr(xattr, "user.a2", new byte[]{ 0x37, 0x38, 0x39 });
+      writtenFiles.put(xattr.toString(), hdfs.getFileStatus(xattr));
+
       // Write results to the fsimage file
       hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
       hdfs.saveNamespace();
@@ -210,8 +217,8 @@ public class TestOfflineImageViewer {
     matcher = p.matcher(output.getBuffer());
     assertTrue(matcher.find() && matcher.groupCount() == 1);
     int totalDirs = Integer.parseInt(matcher.group(1));
-    // totalDirs includes root directory and empty directory
-    assertEquals(NUM_DIRS + 2, totalDirs);
+    // totalDirs includes root directory, empty directory, and xattr directory
+    assertEquals(NUM_DIRS + 3, totalDirs);
 
     FileStatus maxFile = Collections.max(writtenFiles.values(),
         new Comparator<FileStatus>() {
@@ -264,7 +271,7 @@ public class TestOfflineImageViewer {
 
       // verify the number of directories
       FileStatus[] statuses = webhdfs.listStatus(new Path("/"));
-      assertEquals(NUM_DIRS + 1, statuses.length); // contains empty directory
+      assertEquals(NUM_DIRS + 2, statuses.length); // contains empty and xattr directory
 
       // verify the number of files in the directory
       statuses = webhdfs.listStatus(new Path("/dir0"));

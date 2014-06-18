@@ -217,7 +217,7 @@
     
   <subsection name="DFSAdmin Commands" id="dfsadminCommands">
   <h4><code>dfsadmin -rollingUpgrade</code></h4>
-  <source>hdfs dfsadmin -rollingUpgrade &lt;query|start|finalize&gt;</source>
+  <source>hdfs dfsadmin -rollingUpgrade &lt;query|prepare|finalize&gt;</source>
   <p>
     Execute a rolling upgrade action.
     <ul><li>Options:<table>

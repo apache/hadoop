@@ -133,16 +133,18 @@ class CopyCommands {
 
   static class Cp extends CommandWithDestination {
     public static final String NAME = "cp";
-    public static final String USAGE = "[-f] [-p | -p[topx]] <src> ... <dst>";
+    public static final String USAGE = "[-f] [-p | -p[topax]] <src> ... <dst>";
     public static final String DESCRIPTION =
       "Copy files that match the file pattern <src> to a " +
       "destination.  When copying multiple files, the destination " +
       "must be a directory. Passing -p preserves status " +
-      "[topx] (timestamps, ownership, permission, XAttr). " +
+      "[topax] (timestamps, ownership, permission, ACLs, XAttr). " +
       "If -p is specified with no <arg>, then preserves " +
-      "timestamps, ownership, permission. Passing -f " +
-      "overwrites the destination if it already exists.\n";
-    
+      "timestamps, ownership, permission. If -pa is specified, " +
+      "then preserves permission also because ACL is a super-set of " +
+      "permission. Passing -f overwrites the destination if it " +
+      "already exists.\n";
+
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
       popPreserveOption(args);

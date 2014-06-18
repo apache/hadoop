@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.recovery;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,10 +27,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
+import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
 
 public class NMMemoryStateStoreService extends NMStateStoreService {
   private Map<TrackerKey, TrackerState> trackerStates;
+  private Map<Integer, DeletionServiceDeleteTaskProto> deleteTasks;
 
   public NMMemoryStateStoreService() {
     super(NMMemoryStateStoreService.class.getName());
@@ -110,6 +114,7 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   @Override
   protected void initStorage(Configuration conf) {
     trackerStates = new HashMap<TrackerKey, TrackerState>();
+    deleteTasks = new HashMap<Integer, DeletionServiceDeleteTaskProto>();
   }
 
   @Override
@@ -118,6 +123,28 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
 
   @Override
   protected void closeStorage() {
+  }
+
+
+  @Override
+  public RecoveredDeletionServiceState loadDeletionServiceState()
+      throws IOException {
+    RecoveredDeletionServiceState result =
+        new RecoveredDeletionServiceState();
+    result.tasks = new ArrayList<DeletionServiceDeleteTaskProto>(
+        deleteTasks.values());
+    return result;
+  }
+
+  @Override
+  public synchronized void storeDeletionTask(int taskId,
+      DeletionServiceDeleteTaskProto taskProto) throws IOException {
+    deleteTasks.put(taskId, taskProto);
+  }
+
+  @Override
+  public synchronized void removeDeletionTask(int taskId) throws IOException {
+    deleteTasks.remove(taskId);
   }
 
 

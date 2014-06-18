@@ -443,6 +443,17 @@ Release 2.5.0 - UNRELEASED
     HDFS-6499. Use NativeIO#renameTo instead of File#renameTo in
     FileJournalManager. (Yongjun Zhang via atm)
 
+    HDFS-6518. TestCacheDirectives#testExceedsCapacity should
+    take FSN read lock when accessing pendingCached list.
+    (wang)
+
+    HDFS-6528. Add XAttrs to TestOfflineImageViewer. (Stephen Chu via wang)
+
+    HDFS-6545. Finalizing rolling upgrade can make NN unavailable for a long
+    duration. (kihwal)
+
+    HDFS-6530. Fix Balancer documentation.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
@@ -635,6 +646,24 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6375. Listing extended attributes with the search permission.
     (Charles Lamb via wang)
+
+    HDFS-6539. test_native_mini_dfs is skipped in hadoop-hdfs/pom.xml
+    (decstery via cmccabe)
+
+    HDFS-6527. Edit log corruption due to defered INode removal. (kihwal and
+    jing9 via jing9)
+
+    HDFS-6552. add DN storage to a BlockInfo will not replace the different
+    storage from same DN. (Amir Langer via Arpit Agarwal)
+
+    HDFS-6551. Rename with OVERWRITE option may throw NPE when the target
+    file/directory is a reference INode. (jing9)
+
+    HDFS-6439. NFS should not reject NFS requests to the NULL procedure whether
+    port monitoring is enabled or not. (brandonli)
+
+    HDFS-6559. Fix wrong option "dfsadmin -rollingUpgrade start" in the
+    document. (Akira Ajisaka via Arpit Agarwal)
 
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 

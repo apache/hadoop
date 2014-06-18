@@ -61,8 +61,8 @@ public class Nfs3 extends Nfs3Base {
     StringUtils.startupShutdownMessage(Nfs3.class, args, LOG);
     NfsConfiguration conf = new NfsConfiguration();
     boolean allowInsecurePorts = conf.getBoolean(
-        NfsConfigKeys.DFS_NFS_ALLOW_INSECURE_PORTS_KEY,
-        NfsConfigKeys.DFS_NFS_ALLOW_INSECURE_PORTS_DEFAULT);
+        NfsConfigKeys.DFS_NFS_PORT_MONITORING_DISABLED_KEY,
+        NfsConfigKeys.DFS_NFS_PORT_MONITORING_DISABLED_DEFAULT);
     final Nfs3 nfsServer = new Nfs3(conf, registrationSocket,
         allowInsecurePorts);
     nfsServer.startServiceInternal(true);

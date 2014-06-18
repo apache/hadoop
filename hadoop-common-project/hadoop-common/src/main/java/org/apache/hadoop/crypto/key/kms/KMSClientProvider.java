@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.PseudoAuthenticator;
@@ -147,7 +148,7 @@ public class KMSClientProvider extends KeyProvider {
   }
 
   public KMSClientProvider(URI uri, Configuration conf) throws IOException {
-    Path path = unnestUri(uri);
+    Path path = ProviderUtils.unnestUri(uri);
     URL url = path.toUri().toURL();
     kmsUrl = createServiceURL(url);
     if ("https".equalsIgnoreCase(url.getProtocol())) {

@@ -16,25 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event;
+package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.NodeId;
 
-public class RMAppAttemptContainerAcquiredEvent extends RMAppAttemptEvent {
+public class RMAppRunningOnNodeEvent extends RMAppEvent {
+  private final NodeId node;
 
-  private final Container container;
-
-  public RMAppAttemptContainerAcquiredEvent(ApplicationAttemptId appAttemptId, 
-      Container container) {
-    super(appAttemptId, RMAppAttemptEventType.CONTAINER_ACQUIRED);
-    this.container = container;
+  public RMAppRunningOnNodeEvent(ApplicationId appId, NodeId node) {
+    super(appId, RMAppEventType.APP_RUNNING_ON_NODE);
+    this.node = node;
   }
-
-  public Container getContainer() {
-    return this.container;
+  
+  public NodeId getNodeId() {
+    return node;
   }
-
 }

@@ -31,6 +31,7 @@ message RegisterNodeManagerRequestProto {
   optional ResourceProto resource = 4;
   optional string nm_version = 5;
   repeated NMContainerStatusProto container_statuses = 6;
+  repeated ApplicationIdProto runningApplications = 7;
 }
 
 message RegisterNodeManagerResponseProto {

@@ -26,6 +26,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.security.ProviderUtils;
+
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
 import java.io.InputStream;
@@ -101,7 +103,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
 
   private JavaKeyStoreProvider(URI uri, Configuration conf) throws IOException {
     this.uri = uri;
-    path = unnestUri(uri);
+    path = ProviderUtils.unnestUri(uri);
     fs = path.getFileSystem(conf);
     // Get the password file from the conf, if not present from the user's
     // environment var
