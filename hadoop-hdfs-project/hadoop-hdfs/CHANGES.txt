@@ -407,6 +407,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6439. NFS should not reject NFS requests to the NULL procedure whether
     port monitoring is enabled or not. (brandonli)
 
+    HDFS-6559. Fix wrong option "dfsadmin -rollingUpgrade start" in the
+    document. (Akira Ajisaka via Arpit Agarwal)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
