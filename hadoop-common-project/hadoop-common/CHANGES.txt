@@ -568,6 +568,8 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10699. Fix build native library on mac osx (Binglin Chang via
     jlowe)
 
+    HADOOP-10660. GraphiteSink should implement Closeable (Chen He and Ted Yu via raviprak)
+
   BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
 
     HADOOP-10520. Extended attributes definition and FileSystem APIs for
