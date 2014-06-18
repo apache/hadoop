@@ -3017,6 +3017,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           + (lease != null ? lease.toString()
               : "Holder " + holder + " does not have any open files."));
     }
+    // No further modification is allowed on a deleted file.
+    // A file is considered deleted, if it has no parent or is marked
+    // as deleted in the snapshot feature.
+    if (file.getParent() == null || (file.isWithSnapshot() &&
+        file.getFileWithSnapshotFeature().isCurrentFileDeleted())) {
+      throw new FileNotFoundException(src);
+    }
     String clientName = file.getFileUnderConstructionFeature().getClientName();
     if (holder != null && !clientName.equals(holder)) {
       throw new LeaseExpiredException("Lease mismatch on " + ident +
@@ -3451,6 +3458,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     getEditLog().logSync(); 
     removeBlocks(collectedBlocks); // Incremental deletion of blocks
     collectedBlocks.clear();
+
     dir.writeLock();
     try {
       dir.removeFromInodeMap(removedINodes);
