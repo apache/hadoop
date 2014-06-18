@@ -648,6 +648,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6539. test_native_mini_dfs is skipped in hadoop-hdfs/pom.xml
     (decstery via cmccabe)
 
+    HDFS-6527. Edit log corruption due to defered INode removal. (kihwal and
+    jing9 via jing9)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
