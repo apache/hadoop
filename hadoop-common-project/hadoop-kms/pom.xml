@@ -184,11 +184,6 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.mortbay.jetty</groupId>
-      <artifactId>jsp-2.1-jetty</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
       <groupId>com.codahale.metrics</groupId>
       <artifactId>metrics-core</artifactId>
       <scope>compile</scope>
