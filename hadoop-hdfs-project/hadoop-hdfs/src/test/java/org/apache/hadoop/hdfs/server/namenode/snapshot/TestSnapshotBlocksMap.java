@@ -28,12 +28,14 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
@@ -395,5 +397,40 @@ public class TestSnapshotBlocksMap {
     blks = barNode.getBlocks();
     assertEquals(1, blks.length);
     assertEquals(BLOCKSIZE, blks[0].getNumBytes());
+  }
+  
+  /**
+   * Make sure that a delete of a non-zero-length file which results in a
+   * zero-length file in a snapshot works.
+   */
+  @Test
+  public void testDeletionOfLaterBlocksWithZeroSizeFirstBlock() throws Exception {
+    final Path foo = new Path("/foo");
+    final Path bar = new Path(foo, "bar");
+    final byte[] testData = "foo bar baz".getBytes();
+    
+    // Create a zero-length file.
+    DFSTestUtil.createFile(hdfs, bar, 0, REPLICATION, 0L);
+    assertEquals(0, fsdir.getINode4Write(bar.toString()).asFile().getBlocks().length);
+
+    // Create a snapshot that includes that file.
+    SnapshotTestHelper.createSnapshot(hdfs, foo, "s0");
+    
+    // Extend that file.
+    FSDataOutputStream out = hdfs.append(bar);
+    out.write(testData);
+    out.close();
+    INodeFile barNode = fsdir.getINode4Write(bar.toString()).asFile();
+    BlockInfo[] blks = barNode.getBlocks();
+    assertEquals(1, blks.length);
+    assertEquals(testData.length, blks[0].getNumBytes());
+    
+    // Delete the file.
+    hdfs.delete(bar, true);
+    
+    // Now make sure that the NN can still save an fsimage successfully.
+    cluster.getNameNode().getRpcServer().setSafeMode(
+        SafeModeAction.SAFEMODE_ENTER, false);
+    cluster.getNameNode().getRpcServer().saveNamespace();
   }
 }
