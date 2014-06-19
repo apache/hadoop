@@ -454,6 +454,8 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6530. Fix Balancer documentation.  (szetszwo)
 
+    HDFS-6480. Move waitForReady() from FSDirectory to FSNamesystem. (wheat9)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
