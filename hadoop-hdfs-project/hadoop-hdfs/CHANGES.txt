@@ -415,6 +415,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6553. Add missing DeprecationDeltas for NFS Kerberos configurations
     (Stephen Chu via brandonli)
 
+    HDFS-6563. NameNode cannot save fsimage in certain circumstances when
+    snapshots are in use. (atm)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
