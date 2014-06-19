@@ -29,8 +29,10 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
@@ -96,6 +98,8 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     super(clientService, context);
   }
 
+  @Private
+  @VisibleForTesting
   static class ContainerRequest {
     final TaskAttemptId attemptID;
     final Resource capability;
@@ -103,20 +107,39 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     final String[] racks;
     //final boolean earlierAttemptFailed;
     final Priority priority;
-    
+    /**
+     * the time when this request object was formed; can be used to avoid
+     * aggressive preemption for recently placed requests
+     */
+    final long requestTimeMs;
+
     public ContainerRequest(ContainerRequestEvent event, Priority priority) {
       this(event.getAttemptID(), event.getCapability(), event.getHosts(),
           event.getRacks(), priority);
     }
-    
+
+    public ContainerRequest(ContainerRequestEvent event, Priority priority,
+                            long requestTimeMs) {
+      this(event.getAttemptID(), event.getCapability(), event.getHosts(),
+          event.getRacks(), priority, requestTimeMs);
+    }
+
     public ContainerRequest(TaskAttemptId attemptID,
-        Resource capability, String[] hosts, String[] racks, 
-        Priority priority) {
+                            Resource capability, String[] hosts, String[] racks,
+                            Priority priority) {
+      this(attemptID, capability, hosts, racks, priority,
+          System.currentTimeMillis());
+    }
+
+    public ContainerRequest(TaskAttemptId attemptID,
+        Resource capability, String[] hosts, String[] racks,
+        Priority priority, long requestTimeMs) {
       this.attemptID = attemptID;
       this.capability = capability;
       this.hosts = hosts;
       this.racks = racks;
       this.priority = priority;
+      this.requestTimeMs = requestTimeMs;
     }
     
     public String toString() {
