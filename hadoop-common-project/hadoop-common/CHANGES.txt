@@ -152,6 +152,9 @@ Trunk (Unreleased)
     HADOOP-10607. Create API to separate credential/password storage from
     applications. (Larry McCay via omalley)
 
+    HADOOP-10696. Add optional attributes to KeyProvider Options and Metadata. 
+    (tucu)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.

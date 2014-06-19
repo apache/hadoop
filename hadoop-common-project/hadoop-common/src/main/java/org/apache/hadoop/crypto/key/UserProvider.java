@@ -89,7 +89,7 @@ public class UserProvider extends KeyProvider {
           options.getBitLength() + ", but got " + (8 * material.length));
     }
     Metadata meta = new Metadata(options.getCipher(), options.getBitLength(),
-        options.getDescription(), new Date(), 1);
+        options.getDescription(), options.getAttributes(), new Date(), 1);
     cache.put(name, meta);
     String versionName = buildVersionName(name, 0);
     credentials.addSecretKey(nameT, meta.serialize());
