@@ -1,6 +1,6 @@
 Hadoop MapReduce Change Log
 
-Release 0.23.11 - UNRELEASED
+Release 0.23.11 - 2014-06-26
 
   INCOMPATIBLE CHANGES
     
