@@ -2577,10 +2577,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       // We found the lease for this file. And surprisingly the original
       // holder is trying to recreate this file. This should never occur.
       //
+
       if (!force && lease != null) {
         Lease leaseFile = leaseManager.getLeaseByPath(src);
-        if ((leaseFile != null && leaseFile.equals(lease)) ||
-            lease.getHolder().equals(holder)) { 
+        if (leaseFile != null && leaseFile.equals(lease)) {
           throw new AlreadyBeingCreatedException(
             "failed to create file " + src + " for " + holder +
             " for client " + clientMachine +

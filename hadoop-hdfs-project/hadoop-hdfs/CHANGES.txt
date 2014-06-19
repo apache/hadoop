@@ -418,6 +418,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6563. NameNode cannot save fsimage in certain circumstances when
     snapshots are in use. (atm)
 
+    HDFS-3848. A Bug in recoverLeaseInternal method of FSNameSystem class
+    (Hooman Peiro Sajjad  and Chen He via kihwal)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
