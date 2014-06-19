@@ -8193,7 +8193,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         checkOwner(pc, src);
         checkPathAccess(pc, src, FsAction.WRITE);
       }
-      dir.setXAttr(src, xAttr, flag, logRetryCache);
+      List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
+      xAttrs.add(xAttr);
+      dir.setXAttrs(src, xAttrs, flag);
+      getEditLog().logSetXAttrs(src, xAttrs, logRetryCache);
       resultingStat = getAuditFileInfo(src, false);
     } finally {
       writeUnlock();
@@ -8313,8 +8316,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         checkOwner(pc, src);
         checkPathAccess(pc, src, FsAction.WRITE);
       }
-      
-      dir.removeXAttr(src, xAttr);
+
+      List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
+      xAttrs.add(xAttr);
+      List<XAttr> removedXAttrs = dir.removeXAttrs(src, xAttrs);
+      if (removedXAttrs != null && !removedXAttrs.isEmpty()) {
+        getEditLog().logRemoveXAttrs(src, removedXAttrs);
+      }
       resultingStat = getAuditFileInfo(src, false);
     } catch (AccessControlException e) {
       logAuditEvent(false, "removeXAttr", src);
