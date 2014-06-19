@@ -24,7 +24,9 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Random;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -36,7 +38,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -44,6 +45,11 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
+
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Test {@link FSDirectory}, the in-memory namespace tree.
@@ -73,6 +79,10 @@ public class TestFSDirectory {
   private FSDirectory fsdir;
 
   private DistributedFileSystem hdfs;
+
+  private static final int numGeneratedXAttrs = 256;
+  private static final ImmutableList<XAttr> generatedXAttrs =
+      ImmutableList.copyOf(generateXAttrs(numGeneratedXAttrs));
 
   @Before
   public void setUp() throws Exception {
@@ -119,24 +129,15 @@ public class TestFSDirectory {
     for(; (line = in.readLine()) != null; ) {
       line = line.trim();
       if (!line.isEmpty() && !line.contains("snapshot")) {
-        Assert.assertTrue("line=" + line,
+        assertTrue("line=" + line,
             line.startsWith(INodeDirectory.DUMPTREE_LAST_ITEM)
-            || line.startsWith(INodeDirectory.DUMPTREE_EXCEPT_LAST_ITEM));
+                || line.startsWith(INodeDirectory.DUMPTREE_EXCEPT_LAST_ITEM)
+        );
         checkClassName(line);
       }
     }
   }
   
-  @Test
-  public void testReset() throws Exception {
-    fsdir.reset();
-    Assert.assertFalse(fsdir.isReady());
-    final INodeDirectory root = (INodeDirectory) fsdir.getINode("/");
-    Assert.assertTrue(root.getChildrenList(Snapshot.CURRENT_STATE_ID).isEmpty());
-    fsdir.imageLoadComplete();
-    Assert.assertTrue(fsdir.isReady());
-  }
-
   @Test
   public void testSkipQuotaCheck() throws Exception {
     try {
@@ -176,7 +177,7 @@ public class TestFSDirectory {
     int i = line.lastIndexOf('(');
     int j = line.lastIndexOf('@');
     final String classname = line.substring(i+1, j);
-    Assert.assertTrue(classname.startsWith(INodeFile.class.getSimpleName())
+    assertTrue(classname.startsWith(INodeFile.class.getSimpleName())
         || classname.startsWith(INodeDirectory.class.getSimpleName()));
   }
   
@@ -193,22 +194,185 @@ public class TestFSDirectory {
     // Adding a system namespace xAttr, isn't affected by inode xAttrs limit.
     XAttr newXAttr = (new XAttr.Builder()).setNameSpace(XAttr.NameSpace.SYSTEM).
         setName("a3").setValue(new byte[]{0x33, 0x33, 0x33}).build();
-    List<XAttr> xAttrs = fsdir.setINodeXAttr(existingXAttrs, newXAttr, 
+    List<XAttr> newXAttrs = Lists.newArrayListWithCapacity(1);
+    newXAttrs.add(newXAttr);
+    List<XAttr> xAttrs = fsdir.setINodeXAttrs(existingXAttrs, newXAttrs,
         EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
-    Assert.assertEquals(xAttrs.size(), 3);
+    assertEquals(xAttrs.size(), 3);
     
     // Adding a trusted namespace xAttr, is affected by inode xAttrs limit.
     XAttr newXAttr1 = (new XAttr.Builder()).setNameSpace(
         XAttr.NameSpace.TRUSTED).setName("a4").
         setValue(new byte[]{0x34, 0x34, 0x34}).build();
+    newXAttrs.set(0, newXAttr1);
     try {
-      fsdir.setINodeXAttr(existingXAttrs, newXAttr1, 
+      fsdir.setINodeXAttrs(existingXAttrs, newXAttrs,
           EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
-      Assert.fail("Setting user visable xattr on inode should fail if " +
+      fail("Setting user visible xattr on inode should fail if " +
           "reaching limit.");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains("Cannot add additional XAttr " +
           "to inode, would exceed limit", e);
     }
+  }
+
+  /**
+   * Verify that the first <i>num</i> generatedXAttrs are present in
+   * newXAttrs.
+   */
+  private static void verifyXAttrsPresent(List<XAttr> newXAttrs,
+      final int num) {
+    assertEquals("Unexpected number of XAttrs after multiset", num,
+        newXAttrs.size());
+    for (int i=0; i<num; i++) {
+      XAttr search = generatedXAttrs.get(i);
+      assertTrue("Did not find set XAttr " + search + " + after multiset",
+          newXAttrs.contains(search));
+    }
+  }
+
+  private static List<XAttr> generateXAttrs(final int numXAttrs) {
+    List<XAttr> generatedXAttrs = Lists.newArrayListWithCapacity(numXAttrs);
+    for (int i=0; i<numXAttrs; i++) {
+      XAttr xAttr = (new XAttr.Builder())
+          .setNameSpace(XAttr.NameSpace.SYSTEM)
+          .setName("a" + i)
+          .setValue(new byte[] { (byte) i, (byte) (i + 1), (byte) (i + 2) })
+          .build();
+      generatedXAttrs.add(xAttr);
+    }
+    return generatedXAttrs;
+  }
+
+  /**
+   * Test setting and removing multiple xattrs via single operations
+   */
+  @Test(timeout=300000)
+  public void testXAttrMultiSetRemove() throws Exception {
+    List<XAttr> existingXAttrs = Lists.newArrayListWithCapacity(0);
+
+    // Keep adding a random number of xattrs and verifying until exhausted
+    final Random rand = new Random(0xFEEDA);
+    int numExpectedXAttrs = 0;
+    while (numExpectedXAttrs < numGeneratedXAttrs) {
+      LOG.info("Currently have " + numExpectedXAttrs + " xattrs");
+      final int numToAdd = rand.nextInt(5)+1;
+
+      List<XAttr> toAdd = Lists.newArrayListWithCapacity(numToAdd);
+      for (int i = 0; i < numToAdd; i++) {
+        if (numExpectedXAttrs >= numGeneratedXAttrs) {
+          break;
+        }
+        toAdd.add(generatedXAttrs.get(numExpectedXAttrs));
+        numExpectedXAttrs++;
+      }
+      LOG.info("Attempting to add " + toAdd.size() + " XAttrs");
+      for (int i = 0; i < toAdd.size(); i++) {
+        LOG.info("Will add XAttr " + toAdd.get(i));
+      }
+      List<XAttr> newXAttrs = fsdir.setINodeXAttrs(existingXAttrs, toAdd,
+          EnumSet.of(XAttrSetFlag.CREATE));
+      verifyXAttrsPresent(newXAttrs, numExpectedXAttrs);
+      existingXAttrs = newXAttrs;
+    }
+
+    // Keep removing a random number of xattrs and verifying until all gone
+    while (numExpectedXAttrs > 0) {
+      LOG.info("Currently have " + numExpectedXAttrs + " xattrs");
+      final int numToRemove = rand.nextInt(5)+1;
+      List<XAttr> toRemove = Lists.newArrayListWithCapacity(numToRemove);
+      for (int i = 0; i < numToRemove; i++) {
+        if (numExpectedXAttrs == 0) {
+          break;
+        }
+        toRemove.add(generatedXAttrs.get(numExpectedXAttrs-1));
+        numExpectedXAttrs--;
+      }
+      final int expectedNumToRemove = toRemove.size();
+      LOG.info("Attempting to remove " + expectedNumToRemove + " XAttrs");
+      List<XAttr> removedXAttrs = Lists.newArrayList();
+      List<XAttr> newXAttrs = fsdir.filterINodeXAttrs(existingXAttrs,
+          toRemove, removedXAttrs);
+      assertEquals("Unexpected number of removed XAttrs",
+          expectedNumToRemove, removedXAttrs.size());
+      verifyXAttrsPresent(newXAttrs, numExpectedXAttrs);
+      existingXAttrs = newXAttrs;
+    }
+  }
+
+  @Test(timeout=300000)
+  public void testXAttrMultiAddRemoveErrors() throws Exception {
+
+    // Test that the same XAttr can not be multiset twice
+    List<XAttr> existingXAttrs = Lists.newArrayList();
+    List<XAttr> toAdd = Lists.newArrayList();
+    toAdd.add(generatedXAttrs.get(0));
+    toAdd.add(generatedXAttrs.get(1));
+    toAdd.add(generatedXAttrs.get(2));
+    toAdd.add(generatedXAttrs.get(0));
+    try {
+      fsdir.setINodeXAttrs(existingXAttrs, toAdd, EnumSet.of(XAttrSetFlag
+          .CREATE));
+      fail("Specified the same xattr to be set twice");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("Cannot specify the same " +
+          "XAttr to be set", e);
+    }
+
+    // Test that CREATE and REPLACE flags are obeyed
+    toAdd.remove(generatedXAttrs.get(0));
+    existingXAttrs.add(generatedXAttrs.get(0));
+    try {
+      fsdir.setINodeXAttrs(existingXAttrs, toAdd, EnumSet.of(XAttrSetFlag
+          .CREATE));
+      fail("Set XAttr that is already set without REPLACE flag");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("already exists", e);
+    }
+    try {
+      fsdir.setINodeXAttrs(existingXAttrs, toAdd, EnumSet.of(XAttrSetFlag
+          .REPLACE));
+      fail("Set XAttr that does not exist without the CREATE flag");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("does not exist", e);
+    }
+
+    // Sanity test for CREATE
+    toAdd.remove(generatedXAttrs.get(0));
+    List<XAttr> newXAttrs = fsdir.setINodeXAttrs(existingXAttrs, toAdd,
+        EnumSet.of(XAttrSetFlag.CREATE));
+    assertEquals("Unexpected toAdd size", 2, toAdd.size());
+    for (XAttr x : toAdd) {
+      assertTrue("Did not find added XAttr " + x, newXAttrs.contains(x));
+    }
+    existingXAttrs = newXAttrs;
+
+    // Sanity test for REPLACE
+    toAdd = Lists.newArrayList();
+    for (int i=0; i<3; i++) {
+      XAttr xAttr = (new XAttr.Builder())
+          .setNameSpace(XAttr.NameSpace.SYSTEM)
+          .setName("a" + i)
+          .setValue(new byte[] { (byte) (i*2) })
+          .build();
+      toAdd.add(xAttr);
+    }
+    newXAttrs = fsdir.setINodeXAttrs(existingXAttrs, toAdd,
+        EnumSet.of(XAttrSetFlag.REPLACE));
+    assertEquals("Unexpected number of new XAttrs", 3, newXAttrs.size());
+    for (int i=0; i<3; i++) {
+      assertArrayEquals("Unexpected XAttr value",
+          new byte[] {(byte)(i*2)}, newXAttrs.get(i).getValue());
+    }
+    existingXAttrs = newXAttrs;
+
+    // Sanity test for CREATE+REPLACE
+    toAdd = Lists.newArrayList();
+    for (int i=0; i<4; i++) {
+      toAdd.add(generatedXAttrs.get(i));
+    }
+    newXAttrs = fsdir.setINodeXAttrs(existingXAttrs, toAdd,
+        EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
+    verifyXAttrsPresent(newXAttrs, 4);
   }
 }

@@ -700,12 +700,19 @@ public class FSEditLog implements LogsPurgeable {
       .setBlocks(newNode.getBlocks())
       .setPermissionStatus(permissions)
       .setClientName(newNode.getFileUnderConstructionFeature().getClientName())
-      .setClientMachine(newNode.getFileUnderConstructionFeature().getClientMachine());
+      .setClientMachine(
+          newNode.getFileUnderConstructionFeature().getClientMachine());
 
     AclFeature f = newNode.getAclFeature();
     if (f != null) {
       op.setAclEntries(AclStorage.readINodeLogicalAcl(newNode));
     }
+
+    XAttrFeature x = newNode.getXAttrFeature();
+    if (x != null) {
+      op.setXAttrs(x.getXAttrs());
+    }
+
     logRpcIds(op, toLogRpcIds);
     logEdit(op);
   }
@@ -760,6 +767,11 @@ public class FSEditLog implements LogsPurgeable {
     AclFeature f = newNode.getAclFeature();
     if (f != null) {
       op.setAclEntries(AclStorage.readINodeLogicalAcl(newNode));
+    }
+
+    XAttrFeature x = newNode.getXAttrFeature();
+    if (x != null) {
+      op.setXAttrs(x.getXAttrs());
     }
     logEdit(op);
   }
@@ -1054,18 +1066,18 @@ public class FSEditLog implements LogsPurgeable {
     logEdit(op);
   }
   
-  void logSetXAttr(String src, XAttr xAttr, boolean toLogRpcIds) {
+  void logSetXAttrs(String src, List<XAttr> xAttrs, boolean toLogRpcIds) {
     final SetXAttrOp op = SetXAttrOp.getInstance();
     op.src = src;
-    op.xAttr = xAttr;
+    op.xAttrs = xAttrs;
     logRpcIds(op, toLogRpcIds);
     logEdit(op);
   }
   
-  void logRemoveXAttr(String src, XAttr xAttr) {
+  void logRemoveXAttrs(String src, List<XAttr> xAttrs) {
     final RemoveXAttrOp op = RemoveXAttrOp.getInstance();
     op.src = src;
-    op.xAttr = xAttr;
+    op.xAttrs = xAttrs;
     logEdit(op);
   }
 

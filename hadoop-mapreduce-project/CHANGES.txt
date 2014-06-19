@@ -213,6 +213,12 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5834. Increased test-timeouts in TestGridMixClasses to avoid
     occassional failures. (Mit Desai via vinodkv)
 
+    MAPREDUCE-5896. InputSplits should indicate which locations have the block 
+    cached in memory. (Sandy Ryza via kasha)
+
+    MAPREDUCE-5844. Add a configurable delay to reducer-preemption. 
+    (Maysam Yabandeh via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 

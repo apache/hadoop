@@ -1391,4 +1391,11 @@
     The secure random algorithm. 
   </description>
 </property>
+
+<property>
+  <name>fs.har.impl.disable.cache</name>
+  <value>true</value>
+  <description>Don't cache 'har' filesystem instances.</description>
+</property>
+
 </configuration>

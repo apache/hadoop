@@ -35,8 +35,8 @@ message XAttrProto {
 }
   
 message XAttrEditLogProto {
-  required string src = 1;
-  optional XAttrProto xAttr = 2;
+  optional string src = 1;
+  repeated XAttrProto xAttrs = 2;
 }
 
 enum XAttrSetFlagProto {
