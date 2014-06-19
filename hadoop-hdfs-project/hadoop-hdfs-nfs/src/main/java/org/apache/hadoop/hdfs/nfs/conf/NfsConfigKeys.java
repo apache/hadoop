@@ -55,4 +55,6 @@ public class NfsConfigKeys {
   public static final String DFS_NFS_PORT_MONITORING_DISABLED_KEY = "nfs.port.monitoring.disabled";
   public static final boolean DFS_NFS_PORT_MONITORING_DISABLED_DEFAULT = true;
 
+  public static final String  AIX_COMPAT_MODE_KEY = "nfs.aix.compatibility.mode.enabled";
+  public static final boolean AIX_COMPAT_MODE_DEFAULT = false;
 }
