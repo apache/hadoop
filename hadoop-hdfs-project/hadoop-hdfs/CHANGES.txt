@@ -490,6 +490,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6492. Support create-time xattrs and atomically setting multiple
     xattrs. (wang)
 
+    HDFS-6312. WebHdfs HA failover is broken on secure clusters. 
+    (daryn via tucu)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
