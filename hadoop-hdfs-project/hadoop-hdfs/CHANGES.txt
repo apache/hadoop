@@ -254,9 +254,6 @@ Trunk (Unreleased)
     HDFS-5794. Fix the inconsistency of layout version number of 
     ADD_DATANODE_AND_STORAGE_UUIDS between trunk and branch-2. (jing9)
 
-    HDFS-6375. Listing extended attributes with the search permission.
-    (Charles Lamb via wang)
-
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -735,6 +732,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6374. setXAttr should require the user to be the owner of the file
     or directory (Charles Lamb via wang)
+
+    HDFS-6375. Listing extended attributes with the search permission.
+    (Charles Lamb via wang)
 
     HDFS-6492. Support create-time xattrs and atomically setting multiple
     xattrs. (wang)
