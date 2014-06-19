@@ -736,6 +736,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6374. setXAttr should require the user to be the owner of the file
     or directory (Charles Lamb via wang)
 
+    HDFS-6492. Support create-time xattrs and atomically setting multiple
+    xattrs. (wang)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
