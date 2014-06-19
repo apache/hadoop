@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.junit.After;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -193,5 +194,23 @@ public class TestFSNamesystem {
     rwLock.writeLock().unlock();
     assertFalse(rwLock.isWriteLockedByCurrentThread());
     assertEquals(0, rwLock.getWriteHoldCount());
+  }
+
+  @Test
+  public void testReset() throws Exception {
+    Configuration conf = new Configuration();
+    FSEditLog fsEditLog = Mockito.mock(FSEditLog.class);
+    FSImage fsImage = Mockito.mock(FSImage.class);
+    Mockito.when(fsImage.getEditLog()).thenReturn(fsEditLog);
+    FSNamesystem fsn = new FSNamesystem(conf, fsImage);
+    fsn.imageLoadComplete();
+    assertTrue(fsn.isImageLoaded());
+    fsn.clear();
+    assertFalse(fsn.isImageLoaded());
+    final INodeDirectory root = (INodeDirectory) fsn.getFSDirectory()
+            .getINode("/");
+    assertTrue(root.getChildrenList(Snapshot.CURRENT_STATE_ID).isEmpty());
+    fsn.imageLoadComplete();
+    assertTrue(fsn.isImageLoaded());
   }
 }

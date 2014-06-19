@@ -36,7 +36,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -128,16 +127,6 @@ public class TestFSDirectory {
     }
   }
   
-  @Test
-  public void testReset() throws Exception {
-    fsdir.reset();
-    Assert.assertFalse(fsdir.isReady());
-    final INodeDirectory root = (INodeDirectory) fsdir.getINode("/");
-    Assert.assertTrue(root.getChildrenList(Snapshot.CURRENT_STATE_ID).isEmpty());
-    fsdir.imageLoadComplete();
-    Assert.assertTrue(fsdir.isReady());
-  }
-
   @Test
   public void testSkipQuotaCheck() throws Exception {
     try {
