@@ -95,6 +95,7 @@ class OpenFileCtx {
    */
   private AtomicLong nextOffset;
   private final HdfsDataOutputStream fos;
+  private final boolean aixCompatMode;
   
   // It's updated after each sync to HDFS
   private Nfs3FileAttributes latestAttr;
@@ -199,8 +200,15 @@ class OpenFileCtx {
   
   OpenFileCtx(HdfsDataOutputStream fos, Nfs3FileAttributes latestAttr,
       String dumpFilePath, DFSClient client, IdUserGroup iug) {
+    this(fos, latestAttr, dumpFilePath, client, iug, false);
+  }
+  
+  OpenFileCtx(HdfsDataOutputStream fos, Nfs3FileAttributes latestAttr,
+      String dumpFilePath, DFSClient client, IdUserGroup iug,
+      boolean aixCompatMode) {
     this.fos = fos;
     this.latestAttr = latestAttr;
+    this.aixCompatMode = aixCompatMode;
     // We use the ReverseComparatorOnMin as the comparator of the map. In this
     // way, we first dump the data with larger offset. In the meanwhile, we
     // retrieve the last element to write back to HDFS.
@@ -788,15 +796,29 @@ class OpenFileCtx {
     }
 
     if (commitOffset > 0) {
-      if (commitOffset > flushed) {
-        if (!fromRead) {
-          CommitCtx commitCtx = new CommitCtx(commitOffset, channel, xid,
-              preOpAttr);
-          pendingCommits.put(commitOffset, commitCtx);
+      if (aixCompatMode) {
+        // The AIX NFS client misinterprets RFC-1813 and will always send 4096
+        // for the commitOffset even if fewer bytes than that have ever (or will
+        // ever) be sent by the client. So, if in AIX compatibility mode, we
+        // will always DO_SYNC if the number of bytes to commit have already all
+        // been flushed, else we will fall through to the logic below which
+        // checks for pending writes in the case that we're being asked to
+        // commit more bytes than have so far been flushed. See HDFS-6549 for
+        // more info.
+        if (commitOffset <= flushed) {
+          return COMMIT_STATUS.COMMIT_DO_SYNC;
         }
-        return COMMIT_STATUS.COMMIT_WAIT;
       } else {
-        return COMMIT_STATUS.COMMIT_DO_SYNC;
+        if (commitOffset > flushed) {
+          if (!fromRead) {
+            CommitCtx commitCtx = new CommitCtx(commitOffset, channel, xid,
+                preOpAttr);
+            pendingCommits.put(commitOffset, commitCtx);
+          }
+          return COMMIT_STATUS.COMMIT_WAIT;
+        } else {
+          return COMMIT_STATUS.COMMIT_DO_SYNC;
+        } 
       }
     }
 

@@ -58,6 +58,7 @@ public class WriteManager {
   private boolean asyncDataServiceStarted = false;
 
   private final int maxStreams;
+  private final boolean aixCompatMode;
 
   /**
    * The time limit to wait for accumulate reordered sequential writes to the
@@ -79,9 +80,11 @@ public class WriteManager {
     return fileContextCache.put(h, ctx);
   }
   
-  WriteManager(IdUserGroup iug, final NfsConfiguration config) {
+  WriteManager(IdUserGroup iug, final NfsConfiguration config,
+      boolean aixCompatMode) {
     this.iug = iug;
     this.config = config;
+    this.aixCompatMode = aixCompatMode;
     streamTimeout = config.getLong(NfsConfigKeys.DFS_NFS_STREAM_TIMEOUT_KEY,
         NfsConfigKeys.DFS_NFS_STREAM_TIMEOUT_DEFAULT);
     LOG.info("Stream timeout is " + streamTimeout + "ms.");
@@ -175,7 +178,7 @@ public class WriteManager {
       String writeDumpDir = config.get(NfsConfigKeys.DFS_NFS_FILE_DUMP_DIR_KEY,
           NfsConfigKeys.DFS_NFS_FILE_DUMP_DIR_DEFAULT);
       openFileCtx = new OpenFileCtx(fos, latestAttr, writeDumpDir + "/"
-          + fileHandle.getFileId(), dfsClient, iug);
+          + fileHandle.getFileId(), dfsClient, iug, aixCompatMode);
 
       if (!addOpenFileStream(fileHandle, openFileCtx)) {
         LOG.info("Can't add new stream. Close it. Tell client to retry.");
