@@ -8,6 +8,10 @@ Release 2.4.1 - 2014-06-23
 
   IMPROVEMENTS
 
+    MAPREDUCE-5830. Added back the private API HostUtil.getTaskLogUrl(..) for
+    binary compatibility with older clients like Hive 0.13. (Akira Ajisaka via
+    vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
