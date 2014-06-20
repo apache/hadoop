@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.PseudoAuthenticator;
@@ -82,6 +83,7 @@ public class KMSClientProvider extends KeyProvider {
     return keyVersion;
   }
 
+  @SuppressWarnings("unchecked")
   private static Metadata parseJSONMetadata(Map valueMap) {
     Metadata metadata = null;
     if (!valueMap.isEmpty()) {
@@ -89,6 +91,7 @@ public class KMSClientProvider extends KeyProvider {
           (String) valueMap.get(KMSRESTConstants.CIPHER_FIELD),
           (Integer) valueMap.get(KMSRESTConstants.LENGTH_FIELD),
           (String) valueMap.get(KMSRESTConstants.DESCRIPTION_FIELD),
+          (Map<String, String>) valueMap.get(KMSRESTConstants.ATTRIBUTES_FIELD),
           new Date((Long) valueMap.get(KMSRESTConstants.CREATED_FIELD)),
           (Integer) valueMap.get(KMSRESTConstants.VERSIONS_FIELD));
     }
@@ -147,7 +150,7 @@ public class KMSClientProvider extends KeyProvider {
   }
 
   public KMSClientProvider(URI uri, Configuration conf) throws IOException {
-    Path path = unnestUri(uri);
+    Path path = ProviderUtils.unnestUri(uri);
     URL url = path.toUri().toURL();
     kmsUrl = createServiceURL(url);
     if ("https".equalsIgnoreCase(url.getProtocol())) {
@@ -350,8 +353,8 @@ public class KMSClientProvider extends KeyProvider {
 
   public static class KMSMetadata extends Metadata {
     public KMSMetadata(String cipher, int bitLength, String description,
-        Date created, int versions) {
-      super(cipher, bitLength, description, created, versions);
+        Map<String, String> attributes, Date created, int versions) {
+      super(cipher, bitLength, description, attributes, created, versions);
     }
   }
 
@@ -414,6 +417,9 @@ public class KMSClientProvider extends KeyProvider {
     if (options.getDescription() != null) {
       jsonKey.put(KMSRESTConstants.DESCRIPTION_FIELD,
           options.getDescription());
+    }
+    if (options.getAttributes() != null && !options.getAttributes().isEmpty()) {
+      jsonKey.put(KMSRESTConstants.ATTRIBUTES_FIELD, options.getAttributes());
     }
     URL url = createURL(KMSRESTConstants.KEYS_RESOURCE, null, null, null);
     HttpURLConnection conn = createConnection(url, HTTP_POST);

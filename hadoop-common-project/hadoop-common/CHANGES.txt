@@ -149,6 +149,12 @@ Trunk (Unreleased)
 
     HADOOP-10485. Remove dead classes in hadoop-streaming. (wheat9)
 
+    HADOOP-10607. Create API to separate credential/password storage from
+    applications. (Larry McCay via omalley)
+
+    HADOOP-10696. Add optional attributes to KeyProvider Options and Metadata. 
+    (tucu)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -568,6 +574,11 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10699. Fix build native library on mac osx (Binglin Chang via
     jlowe)
 
+    HADOOP-10660. GraphiteSink should implement Closeable (Chen He and Ted Yu via raviprak)
+
+    HADOOP-10716. Cannot use more than 1 har filesystem.
+    (Rushabh Shah via cnauroth)
+
   BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
 
     HADOOP-10520. Extended attributes definition and FileSystem APIs for
@@ -588,6 +599,10 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10561. Copy command with preserve option should handle Xattrs.
     (Yi Liu via cnauroth)
+
+    HADOOP-10590. ServiceAuthorizationManager is not threadsafe. (Benoy Antony via vinayakumarb)
+
+    HADOOP-10711. Cleanup some extra dependencies from hadoop-auth. (rkanter via tucu)
 
 Release 2.4.1 - 2014-06-23 
 

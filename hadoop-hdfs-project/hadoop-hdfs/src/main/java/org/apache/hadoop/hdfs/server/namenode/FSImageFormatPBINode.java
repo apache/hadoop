@@ -533,8 +533,10 @@ public final class FSImageFormatPBINode {
       INodeSection.INodeFile.Builder b = buildINodeFile(n,
           parent.getSaverContext());
 
-      for (Block block : n.getBlocks()) {
-        b.addBlocks(PBHelper.convert(block));
+      if (n.getBlocks() != null) {
+        for (Block block : n.getBlocks()) {
+          b.addBlocks(PBHelper.convert(block));
+        }
       }
 
       FileUnderConstructionFeature uc = n.getFileUnderConstructionFeature();

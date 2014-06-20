@@ -102,7 +102,7 @@ public class TestKMSCacheKeyProvider {
     Mockito.when(mockProv.getCurrentKey(Mockito.eq("k1"))).thenReturn(mockKey);
     Mockito.when(mockProv.getKeyVersion(Mockito.eq("k1@0"))).thenReturn(mockKey);
     Mockito.when(mockProv.getMetadata(Mockito.eq("k1"))).thenReturn(
-        new KMSClientProvider.KMSMetadata("c", 0, "l", new Date(), 1));
+        new KMSClientProvider.KMSMetadata("c", 0, "l", null, new Date(), 1));
     KeyProvider cache = new KMSCacheKeyProvider(mockProv, 100);
     Assert.assertEquals(mockKey, cache.getCurrentKey("k1"));
     Mockito.verify(mockProv, Mockito.times(1)).getCurrentKey(Mockito.eq("k1"));

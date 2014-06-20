@@ -306,9 +306,9 @@ Administration Commands
 
    Runs a cluster balancing utility. An administrator can simply press Ctrl-C
    to stop the rebalancing process. See
-   {{{../hadoop-hdfs/HdfsUserGuide.html#Rebalancer}Rebalancer}} for more details.
+   {{{../hadoop-hdfs/HdfsUserGuide.html#Balancer}Balancer}} for more details.
 
-   Usage: <<<hadoop balancer [-threshold <threshold>]>>>
+   Usage: <<<hadoop balancer [-threshold <threshold>] [-policy <policy>]>>>
 
 *------------------------+-----------------------------------------------------------+
 || COMMAND_OPTION        | Description
@@ -316,6 +316,11 @@ Administration Commands
 | -threshold <threshold> | Percentage of disk capacity. This overwrites the
                          | default threshold.
 *------------------------+-----------------------------------------------------------+
+| -policy <policy>       | <<<datanode>>> (default): Cluster is balanced if each datanode is balanced. \
+                         | <<<blockpool>>>: Cluster is balanced if each block pool in each datanode is balanced.
+*------------------------+-----------------------------------------------------------+
+
+   Note that the <<<blockpool>>> policy is more strict than the <<<datanode>>> policy.
 
 * <<<daemonlog>>>
 

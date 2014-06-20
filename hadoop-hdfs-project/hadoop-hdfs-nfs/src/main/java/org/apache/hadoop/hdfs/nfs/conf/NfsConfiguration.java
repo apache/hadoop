@@ -36,6 +36,8 @@ public class NfsConfiguration extends HdfsConfiguration {
             NfsConfigKeys.DFS_NFS_SERVER_PORT_KEY),
         new DeprecationDelta("nfs3.mountd.port",
             NfsConfigKeys.DFS_NFS_MOUNTD_PORT_KEY),
+        new DeprecationDelta("dfs.nfs.exports.cache.size",
+            Nfs3Constant.NFS_EXPORTS_CACHE_SIZE_KEY),
         new DeprecationDelta("dfs.nfs.exports.cache.expirytime.millis",
             Nfs3Constant.NFS_EXPORTS_CACHE_EXPIRYTIME_MILLIS_KEY),
         new DeprecationDelta("hadoop.nfs.userupdate.milly",
@@ -49,6 +51,18 @@ public class NfsConfiguration extends HdfsConfiguration {
         new DeprecationDelta("dfs.nfs3.stream.timeout",
             NfsConfigKeys.DFS_NFS_STREAM_TIMEOUT_KEY),
         new DeprecationDelta("dfs.nfs3.export.point",
-            NfsConfigKeys.DFS_NFS_EXPORT_POINT_KEY) });
+            NfsConfigKeys.DFS_NFS_EXPORT_POINT_KEY),
+        new DeprecationDelta("nfs.allow.insecure.ports",
+            NfsConfigKeys.DFS_NFS_PORT_MONITORING_DISABLED_KEY),
+        new DeprecationDelta("dfs.nfs.keytab.file",
+            NfsConfigKeys.DFS_NFS_KEYTAB_FILE_KEY),
+        new DeprecationDelta("dfs.nfs.kerberos.principal",
+            NfsConfigKeys.DFS_NFS_KERBEROS_PRINCIPAL_KEY),
+        new DeprecationDelta("dfs.nfs.rtmax",
+            NfsConfigKeys.DFS_NFS_MAX_READ_TRANSFER_SIZE_KEY),
+        new DeprecationDelta("dfs.nfs.wtmax",
+            NfsConfigKeys.DFS_NFS_MAX_WRITE_TRANSFER_SIZE_KEY),
+        new DeprecationDelta("dfs.nfs.dtmax",
+            NfsConfigKeys.DFS_NFS_MAX_READDIR_TRANSFER_SIZE_KEY) });
   }
 }

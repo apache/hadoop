@@ -32,7 +32,6 @@ import java.io.IOException;
 
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Mockito.*;
 
 /**
@@ -50,6 +49,7 @@ public class TestCommitBlockSynchronization {
     final DatanodeStorageInfo[] targets = {};
 
     FSNamesystem namesystem = new FSNamesystem(conf, image);
+    namesystem.setImageLoaded(true);
     FSNamesystem namesystemSpy = spy(namesystem);
     BlockInfoUnderConstruction blockInfo = new BlockInfoUnderConstruction(
         block, 1, HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION, targets);

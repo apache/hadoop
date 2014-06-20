@@ -61,6 +61,7 @@ public class KMSServerJSONUtils {
       json.put(KMSRESTConstants.CIPHER_FIELD, meta.getCipher());
       json.put(KMSRESTConstants.LENGTH_FIELD, meta.getBitLength());
       json.put(KMSRESTConstants.DESCRIPTION_FIELD, meta.getDescription());
+      json.put(KMSRESTConstants.ATTRIBUTES_FIELD, meta.getAttributes());
       json.put(KMSRESTConstants.CREATED_FIELD,
           meta.getCreated().getTime());
       json.put(KMSRESTConstants.VERSIONS_FIELD,

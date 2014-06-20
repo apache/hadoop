@@ -490,6 +490,49 @@ public class TestKMS {
         // getKeysMetadata() empty
         Assert.assertEquals(0, kp.getKeysMetadata().length);
 
+        // createKey() no description, no tags
+        options = new KeyProvider.Options(conf);
+        options.setCipher("AES/CTR/NoPadding");
+        options.setBitLength(128);
+        kp.createKey("k2", options);
+        KeyProvider.Metadata meta = kp.getMetadata("k2");
+        Assert.assertNull(meta.getDescription());
+        Assert.assertTrue(meta.getAttributes().isEmpty());
+
+        // createKey() description, no tags
+        options = new KeyProvider.Options(conf);
+        options.setCipher("AES/CTR/NoPadding");
+        options.setBitLength(128);
+        options.setDescription("d");
+        kp.createKey("k3", options);
+        meta = kp.getMetadata("k3");
+        Assert.assertEquals("d", meta.getDescription());
+        Assert.assertTrue(meta.getAttributes().isEmpty());
+
+        Map<String, String> attributes = new HashMap<String, String>();
+        attributes.put("a", "A");
+
+        // createKey() no description, tags
+        options = new KeyProvider.Options(conf);
+        options.setCipher("AES/CTR/NoPadding");
+        options.setBitLength(128);
+        options.setAttributes(attributes);
+        kp.createKey("k4", options);
+        meta = kp.getMetadata("k4");
+        Assert.assertNull(meta.getDescription());
+        Assert.assertEquals(attributes, meta.getAttributes());
+
+        // createKey() description, tags
+        options = new KeyProvider.Options(conf);
+        options.setCipher("AES/CTR/NoPadding");
+        options.setBitLength(128);
+        options.setDescription("d");
+        options.setAttributes(attributes);
+        kp.createKey("k5", options);
+        meta = kp.getMetadata("k5");
+        Assert.assertEquals("d", meta.getDescription());
+        Assert.assertEquals(attributes, meta.getAttributes());
+
         return null;
       }
     });

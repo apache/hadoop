@@ -254,9 +254,6 @@ Trunk (Unreleased)
     HDFS-5794. Fix the inconsistency of layout version number of 
     ADD_DATANODE_AND_STORAGE_UUIDS between trunk and branch-2. (jing9)
 
-    HDFS-6375. Listing extended attributes with the search permission.
-    (Charles Lamb via wang)
-
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -451,6 +448,13 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6545. Finalizing rolling upgrade can make NN unavailable for a long
     duration. (kihwal)
+
+    HDFS-6530. Fix Balancer documentation.  (szetszwo)
+
+    HDFS-6480. Move waitForReady() from FSDirectory to FSNamesystem. (wheat9)
+
+    HDFS-6403. Add metrics for log warnings reported by JVM pauses. (Yongjun
+    Zhang via atm)
 
   OPTIMIZATIONS
 
@@ -651,6 +655,30 @@ Release 2.5.0 - UNRELEASED
     HDFS-6527. Edit log corruption due to defered INode removal. (kihwal and
     jing9 via jing9)
 
+    HDFS-6552. add DN storage to a BlockInfo will not replace the different
+    storage from same DN. (Amir Langer via Arpit Agarwal)
+
+    HDFS-6551. Rename with OVERWRITE option may throw NPE when the target
+    file/directory is a reference INode. (jing9)
+
+    HDFS-6439. NFS should not reject NFS requests to the NULL procedure whether
+    port monitoring is enabled or not. (brandonli)
+
+    HDFS-6559. Fix wrong option "dfsadmin -rollingUpgrade start" in the
+    document. (Akira Ajisaka via Arpit Agarwal)
+
+    HDFS-6553. Add missing DeprecationDeltas for NFS Kerberos configurations
+    (Stephen Chu via brandonli)
+
+    HDFS-6563. NameNode cannot save fsimage in certain circumstances when
+    snapshots are in use. (atm)
+
+    HDFS-3848. A Bug in recoverLeaseInternal method of FSNameSystem class
+    (Hooman Peiro Sajjad  and Chen He via kihwal)
+
+    HDFS-6549. Add support for accessing the NFS gateway from the AIX NFS
+    client. (atm)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
@@ -713,6 +741,15 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6374. setXAttr should require the user to be the owner of the file
     or directory (Charles Lamb via wang)
+
+    HDFS-6375. Listing extended attributes with the search permission.
+    (Charles Lamb via wang)
+
+    HDFS-6492. Support create-time xattrs and atomically setting multiple
+    xattrs. (wang)
+
+    HDFS-6312. WebHdfs HA failover is broken on secure clusters. 
+    (daryn via tucu)
 
 Release 2.4.1 - 2014-06-23 
 

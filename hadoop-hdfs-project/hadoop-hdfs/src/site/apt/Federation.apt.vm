@@ -287,13 +287,14 @@ HDFS Federation
 
   Policy could be:
 
-  * <<<node>>> - this is the <default> policy. This balances the storage at 
+  * <<<datanode>>> - this is the <default> policy. This balances the storage at 
     the datanode level. This is similar to balancing policy from prior releases.
 
   * <<<blockpool>>> - this balances the storage at the block pool level. 
     Balancing at block pool level balances storage at the datanode level also.
 
-  Note that Balander only balances the data and does not balance the namespace.
+  Note that Balancer only balances the data and does not balance the namespace.
+  For the complete command usage, see {{{../hadoop-common/CommandsManual.html#balancer}balancer}}.
 
 ** Decommissioning
 

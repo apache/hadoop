@@ -103,6 +103,7 @@ public class KMS {
   @Path(KMSRESTConstants.KEYS_RESOURCE)
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
+  @SuppressWarnings("unchecked")
   public Response createKey(@Context SecurityContext securityContext,
       Map jsonKey) throws Exception {
     KMSWebApp.getAdminCallsMeter().mark();
@@ -116,7 +117,8 @@ public class KMS {
                  ? (Integer) jsonKey.get(KMSRESTConstants.LENGTH_FIELD) : 0;
     String description = (String)
         jsonKey.get(KMSRESTConstants.DESCRIPTION_FIELD);
-
+    Map<String, String> attributes = (Map<String, String>)
+        jsonKey.get(KMSRESTConstants.ATTRIBUTES_FIELD);
     if (material != null) {
       assertAccess(KMSACLs.Type.SET_KEY_MATERIAL, user,
           CREATE_KEY + " with user provided material", name);
@@ -130,6 +132,7 @@ public class KMS {
       options.setBitLength(length);
     }
     options.setDescription(description);
+    options.setAttributes(attributes);
 
     KeyProvider.KeyVersion keyVersion = (material != null)
         ? provider.createKey(name, Base64.decodeBase64(material), options)

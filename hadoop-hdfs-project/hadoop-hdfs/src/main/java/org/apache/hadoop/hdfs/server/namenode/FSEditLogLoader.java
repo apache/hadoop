@@ -355,6 +355,7 @@ public class FSEditLogLoader {
             lastInodeId);
         newFile = fsDir.unprotectedAddFile(inodeId,
             path, addCloseOp.permissions, addCloseOp.aclEntries,
+            addCloseOp.xAttrs,
             replication, addCloseOp.mtime, addCloseOp.atime,
             addCloseOp.blockSize, true, addCloseOp.clientName,
             addCloseOp.clientMachine);
@@ -804,7 +805,7 @@ public class FSEditLogLoader {
     }
     case OP_SET_XATTR: {
       SetXAttrOp setXAttrOp = (SetXAttrOp) op;
-      fsDir.unprotectedSetXAttr(setXAttrOp.src, setXAttrOp.xAttr, 
+      fsDir.unprotectedSetXAttrs(setXAttrOp.src, setXAttrOp.xAttrs,
           EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(setXAttrOp.rpcClientId, setXAttrOp.rpcCallId);
@@ -813,7 +814,8 @@ public class FSEditLogLoader {
     }
     case OP_REMOVE_XATTR: {
       RemoveXAttrOp removeXAttrOp = (RemoveXAttrOp) op;
-      fsDir.unprotectedRemoveXAttr(removeXAttrOp.src, removeXAttrOp.xAttr);
+      fsDir.unprotectedRemoveXAttrs(removeXAttrOp.src,
+          removeXAttrOp.xAttrs);
       break;
     }
     default:

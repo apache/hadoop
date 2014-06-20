@@ -38,6 +38,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.Interns;
 import static org.apache.hadoop.metrics2.source.JvmMetricsInfo.*;
 import static org.apache.hadoop.metrics2.impl.MsInfo.*;
+import org.apache.hadoop.util.JvmPauseMonitor;
 
 /**
  * JVM and logging related metrics.
@@ -65,12 +66,17 @@ public class JvmMetrics implements MetricsSource {
       ManagementFactory.getGarbageCollectorMXBeans();
   final ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
   final String processName, sessionId;
+  private JvmPauseMonitor pauseMonitor = null;
   final ConcurrentHashMap<String, MetricsInfo[]> gcInfoCache =
       new ConcurrentHashMap<String, MetricsInfo[]>();
 
   JvmMetrics(String processName, String sessionId) {
     this.processName = processName;
     this.sessionId = sessionId;
+  }
+
+  public void setPauseMonitor(final JvmPauseMonitor pauseMonitor) {
+    this.pauseMonitor = pauseMonitor;
   }
 
   public static JvmMetrics create(String processName, String sessionId,
@@ -120,6 +126,15 @@ public class JvmMetrics implements MetricsSource {
     }
     rb.addCounter(GcCount, count)
       .addCounter(GcTimeMillis, timeMillis);
+    
+    if (pauseMonitor != null) {
+      rb.addCounter(GcNumWarnThresholdExceeded,
+          pauseMonitor.getNumGcWarnThreadholdExceeded());
+      rb.addCounter(GcNumInfoThresholdExceeded,
+          pauseMonitor.getNumGcInfoThresholdExceeded());
+      rb.addCounter(GcTotalExtraSleepTime,
+          pauseMonitor.getTotalGcExtraSleepTime());
+    }
   }
 
   private MetricsInfo[] getGcInfo(String gcName) {

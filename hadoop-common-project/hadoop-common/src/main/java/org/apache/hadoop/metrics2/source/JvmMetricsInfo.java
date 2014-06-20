@@ -48,7 +48,10 @@ public enum JvmMetricsInfo implements MetricsInfo {
   LogFatal("Total number of fatal log events"),
   LogError("Total number of error log events"),
   LogWarn("Total number of warning log events"),
-  LogInfo("Total number of info log events");
+  LogInfo("Total number of info log events"),
+  GcNumWarnThresholdExceeded("Number of times that the GC warn threshold is exceeded"),
+  GcNumInfoThresholdExceeded("Number of times that the GC info threshold is exceeded"),
+  GcTotalExtraSleepTime("Total GC extra sleep time in milliseconds");
 
   private final String desc;
 
