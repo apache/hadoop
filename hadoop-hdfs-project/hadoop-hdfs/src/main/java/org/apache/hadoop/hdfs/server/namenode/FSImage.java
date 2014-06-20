@@ -495,7 +495,6 @@ public class FSImage implements Closeable {
     FSImage realImage = target.getFSImage();
     FSImage ckptImage = new FSImage(conf, 
                                     checkpointDirs, checkpointEditsDirs);
-    target.dir.fsImage = ckptImage;
     // load from the checkpoint dirs
     try {
       ckptImage.recoverTransitionRead(StartupOption.REGULAR, target, null);
@@ -507,7 +506,6 @@ public class FSImage implements Closeable {
     realImage.getEditLog().setNextTxId(ckptImage.getEditLog().getLastWrittenTxId()+1);
     realImage.initEditLog(StartupOption.IMPORT);
 
-    target.dir.fsImage = realImage;
     realImage.getStorage().setBlockPoolID(ckptImage.getBlockPoolID());
 
     // and save it but keep the same checkpointTime

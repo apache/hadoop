@@ -831,7 +831,7 @@ public class NameNode implements NameNodeStatusMXBean {
   /** get FSImage */
   @VisibleForTesting
   public FSImage getFSImage() {
-    return namesystem.dir.fsImage;
+    return namesystem.getFSImage();
   }
 
   /**
@@ -1141,7 +1141,7 @@ public class NameNode implements NameNodeStatusMXBean {
         return true;
       }
     }
-    nsys.dir.fsImage.doRollback(nsys);
+    nsys.getFSImage().doRollback(nsys);
     return false;
   }
 

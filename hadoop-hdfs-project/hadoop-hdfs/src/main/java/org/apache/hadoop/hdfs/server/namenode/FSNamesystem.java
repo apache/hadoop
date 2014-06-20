@@ -517,6 +517,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   private volatile boolean imageLoaded = false;
   private final Condition cond;
+
+  private final FSImage fsImage;
+
   /**
    * Notify that loading of this FSDirectory is complete, and
    * it is imageLoaded for use
@@ -738,6 +741,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     LOG.info("fsLock is fair:" + fair);
     fsLock = new FSNamesystemLock(fair);
     cond = fsLock.writeLock().newCondition();
+    this.fsImage = fsImage;
     try {
       resourceRecheckInterval = conf.getLong(
           DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_KEY,
@@ -827,7 +831,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_DEFAULT);
 
       this.dtSecretManager = createDelegationTokenSecretManager(conf);
-      this.dir = new FSDirectory(fsImage, this, conf);
+      this.dir = new FSDirectory(this, conf);
       this.snapshotManager = new SnapshotManager(dir);
       this.cacheManager = new CacheManager(this, conf, blockManager);
       this.safeMode = new SafeModeInfo(conf);
@@ -1055,7 +1059,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     LOG.info("Starting services required for active state");
     writeLock();
     try {
-      FSEditLog editLog = dir.fsImage.getEditLog();
+      FSEditLog editLog = getFSImage().getEditLog();
       
       if (!editLog.isOpenForWrite()) {
         // During startup, we're already open for write during initialization.
@@ -1084,12 +1088,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               metaSaveAsString());
         }
         
-        long nextTxId = dir.fsImage.getLastAppliedTxId() + 1;
+        long nextTxId = getFSImage().getLastAppliedTxId() + 1;
         LOG.info("Will take over writing edit logs at txnid " + 
             nextTxId);
         editLog.setNextTxId(nextTxId);
 
-        dir.fsImage.editLog.openForWrite();
+        getFSImage().editLog.openForWrite();
       }
 
       // Enable quota checks.
@@ -1164,13 +1168,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         ((NameNodeEditLogRoller)nnEditLogRoller.getRunnable()).stop();
         nnEditLogRoller.interrupt();
       }
-      if (dir != null && dir.fsImage != null) {
-        if (dir.fsImage.editLog != null) {
-          dir.fsImage.editLog.close();
+      if (dir != null && getFSImage() != null) {
+        if (getFSImage().editLog != null) {
+          getFSImage().editLog.close();
         }
         // Update the fsimage with the last txid that we wrote
         // so that the tailer starts from the right spot.
-        dir.fsImage.updateLastAppliedTxIdFromWritten();
+        getFSImage().updateLastAppliedTxIdFromWritten();
       }
       if (cacheManager != null) {
         cacheManager.stopMonitorThread();
@@ -1193,9 +1197,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void startStandbyServices(final Configuration conf) throws IOException {
     LOG.info("Starting services required for standby state");
-    if (!dir.fsImage.editLog.isOpenForRead()) {
+    if (!getFSImage().editLog.isOpenForRead()) {
       // During startup, we're already open for read.
-      dir.fsImage.editLog.initSharedJournalsForRead();
+      getFSImage().editLog.initSharedJournalsForRead();
     }
     
     blockManager.setPostponeBlocksFromFuture(true);
@@ -1242,8 +1246,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (editLogTailer != null) {
       editLogTailer.stop();
     }
-    if (dir != null && dir.fsImage != null && dir.fsImage.editLog != null) {
-      dir.fsImage.editLog.close();
+    if (dir != null && getFSImage() != null && getFSImage().editLog != null) {
+      getFSImage().editLog.close();
     }
   }
   
@@ -1486,9 +1490,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Version of @see #getNamespaceInfo() that is not protected by a lock.
    */
   NamespaceInfo unprotectedGetNamespaceInfo() {
-    return new NamespaceInfo(dir.fsImage.getStorage().getNamespaceID(),
+    return new NamespaceInfo(getFSImage().getStorage().getNamespaceID(),
         getClusterId(), getBlockPoolId(),
-        dir.fsImage.getStorage().getCTime());
+        getFSImage().getStorage().getCTime());
   }
 
   /**
@@ -1506,12 +1510,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       try {
         stopActiveServices();
         stopStandbyServices();
-        if (dir != null) {
-          dir.close();
-        }
       } catch (IOException ie) {
-        LOG.error("Error closing FSDirectory", ie);
+      } finally {
         IOUtils.cleanup(LOG, dir);
+        IOUtils.cleanup(LOG, fsImage);
       }
     }
   }
@@ -4503,7 +4505,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @return registration ID
    */
   String getRegistrationID() {
-    return Storage.getRegistrationID(dir.fsImage.getStorage());
+    return Storage.getRegistrationID(getFSImage().getStorage());
   }
 
   /**
@@ -4719,7 +4721,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   public FSImage getFSImage() {
-    return dir.fsImage;
+    return fsImage;
   }
 
   public FSEditLog getEditLog() {
@@ -7044,7 +7046,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   @Override  // NameNodeMXBean
   public String getClusterId() {
-    return dir.fsImage.getStorage().getClusterID();
+    return getFSImage().getStorage().getClusterID();
   }
   
   @Override  // NameNodeMXBean

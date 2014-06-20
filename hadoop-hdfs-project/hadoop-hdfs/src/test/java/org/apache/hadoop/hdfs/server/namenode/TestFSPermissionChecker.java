@@ -75,8 +75,7 @@ public class TestFSPermissionChecker {
         return new PermissionStatus(SUPERUSER, SUPERGROUP, perm);
       }
     }).when(fsn).createFsOwnerPermissions(any(FsPermission.class));
-    FSImage image = mock(FSImage.class);
-    dir = new FSDirectory(image, fsn, conf);
+    dir = new FSDirectory(fsn, conf);
     inodeRoot = dir.getRoot();
   }
 
