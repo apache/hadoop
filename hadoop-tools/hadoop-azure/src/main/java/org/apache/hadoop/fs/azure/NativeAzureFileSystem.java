@@ -196,7 +196,7 @@ public class NativeAzureFileSystem extends FileSystem {
     }
 
     @Override
-    public void close() throws IOException {
+    public synchronized void close() throws IOException {
       in.close();
     }
 
