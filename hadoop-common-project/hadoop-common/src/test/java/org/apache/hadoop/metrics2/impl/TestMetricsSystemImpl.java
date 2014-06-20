@@ -360,6 +360,24 @@ public class TestMetricsSystemImpl {
     ms.register(ts);
   }
 
+  @Test public void testStartStopStart() {
+    DefaultMetricsSystem.shutdown(); // Clear pre-existing source names.
+    MetricsSystemImpl ms = new MetricsSystemImpl("test");
+    TestSource ts = new TestSource("ts");
+    ms.start();
+    ms.register("ts", "", ts);
+    MetricsSourceAdapter sa = ms.getSourceAdapter("ts");
+    assertNotNull(sa);
+    assertNotNull(sa.getMBeanName());
+    ms.stop();
+    ms.shutdown();
+    ms.start();
+    sa = ms.getSourceAdapter("ts");
+    assertNotNull(sa);
+    assertNotNull(sa.getMBeanName());
+    ms.stop();
+    ms.shutdown();
+  }
 
   private void checkMetricsRecords(List<MetricsRecord> recs) {
     LOG.debug(recs);
