@@ -38,6 +38,21 @@ public class HostUtil {
         httpPort + "/tasklog?attemptid=" + taskAttemptID);
   }
 
+  /**
+   * Always throws {@link RuntimeException} because this method is not
+   * supposed to be called at runtime. This method is only for keeping
+   * binary compatibility with Hive 0.13. MAPREDUCE-5830 for the details.
+   * @deprecated Use {@link #getTaskLogUrl(String, String, String, String)}
+   * to construct the taskLogUrl.
+   */
+  @Deprecated
+  public static String getTaskLogUrl(String taskTrackerHostName,
+                                     String httpPort, String taskAttemptID) {
+    throw new RuntimeException(
+        "This method is not supposed to be called at runtime. " +
+        "Use HostUtil.getTaskLogUrl(String, String, String, String) instead.");
+  }
+
   public static String convertTrackerNameToHostName(String trackerName) {
     // Ugly!
     // Convert the trackerName to its host name
