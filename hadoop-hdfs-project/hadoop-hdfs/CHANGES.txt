@@ -427,6 +427,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6549. Add support for accessing the NFS gateway from the AIX NFS
     client. (atm)
 
+    HDFS-6535. HDFS quota update is wrong when file is appended. (George Wong
+    via jing9)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
