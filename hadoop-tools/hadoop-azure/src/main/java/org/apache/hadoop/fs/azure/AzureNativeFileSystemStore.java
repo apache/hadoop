@@ -1723,7 +1723,7 @@ class AzureNativeFileSystemStore implements NativeFileSystemStore {
           inDataStream.close();
         }
         if(in != null){
-          inDataStream.close();
+          in.close();
         }
         throw e;
       }
