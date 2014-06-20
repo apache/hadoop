@@ -89,6 +89,9 @@ Release 2.4.1 - 2014-06-23
     HDFS-6411. nfs-hdfs-gateway mount raises I/O error and hangs when a 
     unauthorized user attempts to access it (brandonli)
 
+    HDFS-6527. Edit log corruption due to defered INode removal. (kihwal and
+    jing9 via jing9)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
