@@ -23,6 +23,8 @@ import java.io.DataInputStream;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.web.SWebHdfsFileSystem;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
@@ -73,6 +75,28 @@ public class DelegationTokenIdentifier
       return ident + " on " + token.getService();
     } else {
       return ident.toString();
+    }
+  }
+  
+  public static class WebHdfsDelegationTokenIdentifier
+      extends DelegationTokenIdentifier {
+    public WebHdfsDelegationTokenIdentifier() {
+      super();
+    }
+    @Override
+    public Text getKind() {
+      return WebHdfsFileSystem.TOKEN_KIND;
+    }
+  }
+  
+  public static class SWebHdfsDelegationTokenIdentifier
+      extends WebHdfsDelegationTokenIdentifier {
+    public SWebHdfsDelegationTokenIdentifier() {
+      super();
+    }
+    @Override
+    public Text getKind() {
+      return SWebHdfsFileSystem.TOKEN_KIND;
     }
   }
 }

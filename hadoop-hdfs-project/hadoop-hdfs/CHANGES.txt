@@ -432,6 +432,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6535. HDFS quota update is wrong when file is appended. (George Wong
     via jing9)
 
+    HDFS-6222. Remove background token renewer from webhdfs.
+    (Rushabh Shah and Daryn Sharp via cnauroth)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
