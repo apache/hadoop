@@ -617,6 +617,9 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10711. Cleanup some extra dependencies from hadoop-auth. (rkanter via tucu)
 
+    HADOOP-10479. Fix new findbugs warnings in hadoop-minikdc.
+    (Swarnim Kulkarni via wheat9)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
