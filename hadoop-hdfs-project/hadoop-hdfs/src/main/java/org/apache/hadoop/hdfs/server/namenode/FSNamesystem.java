@@ -2512,7 +2512,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (ret != null) {
       // update the quota: use the preferred block size for UC block
       final long diff = file.getPreferredBlockSize() - ret.getBlockSize();
-      dir.updateSpaceConsumed(src, 0, diff);
+      dir.updateSpaceConsumed(src, 0, diff * file.getBlockReplication());
     }
 
     if (writeToEditLog) {
