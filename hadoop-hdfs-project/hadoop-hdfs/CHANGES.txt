@@ -202,6 +202,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-6403. Add metrics for log warnings reported by JVM pauses. (Yongjun
     Zhang via atm)
 
+    HDFS-6557. Move the reference of fsimage to FSNamesystem. (wheat9)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
