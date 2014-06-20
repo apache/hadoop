@@ -62,10 +62,13 @@ public class JvmPauseMonitor {
       "jvm.pause.info-threshold.ms";
   private static final long INFO_THRESHOLD_DEFAULT = 1000;
 
-  
+  private long numGcWarnThresholdExceeded = 0;
+  private long numGcInfoThresholdExceeded = 0;
+  private long totalGcExtraSleepTime = 0;
+   
   private Thread monitorThread;
   private volatile boolean shouldRun = true;
-  
+
   public JvmPauseMonitor(Configuration conf) {
     this.warnThresholdMs = conf.getLong(WARN_THRESHOLD_KEY, WARN_THRESHOLD_DEFAULT);
     this.infoThresholdMs = conf.getLong(INFO_THRESHOLD_KEY, INFO_THRESHOLD_DEFAULT);
@@ -86,6 +89,22 @@ public class JvmPauseMonitor {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
+  }
+
+  public boolean isStarted() {
+    return monitorThread != null;
+  }
+  
+  public long getNumGcWarnThreadholdExceeded() {
+    return numGcWarnThresholdExceeded;
+  }
+  
+  public long getNumGcInfoThresholdExceeded() {
+    return numGcInfoThresholdExceeded;
+  }
+  
+  public long getTotalGcExtraSleepTime() {
+    return totalGcExtraSleepTime;
   }
   
   private String formatMessage(long extraSleepTime,
@@ -166,13 +185,15 @@ public class JvmPauseMonitor {
         Map<String, GcTimes> gcTimesAfterSleep = getGcTimes();
 
         if (extraSleepTime > warnThresholdMs) {
+          ++numGcWarnThresholdExceeded;
           LOG.warn(formatMessage(
               extraSleepTime, gcTimesAfterSleep, gcTimesBeforeSleep));
         } else if (extraSleepTime > infoThresholdMs) {
+          ++numGcInfoThresholdExceeded;
           LOG.info(formatMessage(
               extraSleepTime, gcTimesAfterSleep, gcTimesBeforeSleep));
         }
-        
+        totalGcExtraSleepTime += extraSleepTime;
         gcTimesBeforeSleep = gcTimesAfterSleep;
       }
     }
