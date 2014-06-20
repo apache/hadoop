@@ -239,6 +239,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10716. Cannot use more than 1 har filesystem.
     (Rushabh Shah via cnauroth)
 
+    HADOOP-9559. When metrics system is restarted MBean names get incorrectly
+    flagged as dupes. (Mostafa Elhemali and Mike Liddell via cnauroth)
+
   BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
 
     HADOOP-10520. Extended attributes definition and FileSystem APIs for

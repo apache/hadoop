@@ -32,6 +32,7 @@ import javax.management.ObjectName;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.annotations.VisibleForTesting;
 import java.util.Locale;
 import static com.google.common.base.Preconditions.*;
 
@@ -575,6 +576,11 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
 
   public MetricsSource getSource(String name) {
     return allSources.get(name);
+  }
+
+  @VisibleForTesting
+  MetricsSourceAdapter getSourceAdapter(String name) {
+    return sources.get(name);
   }
 
   private InitMode initMode() {
