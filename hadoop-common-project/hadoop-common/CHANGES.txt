@@ -91,6 +91,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10557. FsShell -cp -pa option for preserving extended ACLs.
     (Akira Ajisaka via cnauroth)
 
+    HADOOP-10279. Create multiplexer, a requirement for the fair queue.
+    (Chris Li via Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES 
