@@ -229,6 +229,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11420. Use latest maven-site-plugin and replace link to svn with
     link to git. (Herve Boutemy via wheat9)
 
+    HADOOP-10689. InputStream is not closed in
+    AzureNativeFileSystemStore#retrieve(). (Chen He via cnauroth)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
