@@ -453,6 +453,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6480. Move waitForReady() from FSDirectory to FSNamesystem. (wheat9)
 
+    HDFS-6403. Add metrics for log warnings reported by JVM pauses. (Yongjun
+    Zhang via atm)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)

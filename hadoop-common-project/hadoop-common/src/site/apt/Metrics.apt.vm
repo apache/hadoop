@@ -86,6 +86,14 @@ jvm context
 *-------------------------------------+--------------------------------------+
 |<<<LogInfo>>> | Total number of INFO logs
 *-------------------------------------+--------------------------------------+
+|<<<GcNumWarnThresholdExceeded>>> | Number of times that the GC warn
+                                  | threshold is exceeded
+*-------------------------------------+--------------------------------------+
+|<<<GcNumInfoThresholdExceeded>>> | Number of times that the GC info
+                                  | threshold is exceeded
+*-------------------------------------+--------------------------------------+
+|<<<GcTotalExtraSleepTime>>> | Total GC extra sleep time in msec
+*-------------------------------------+--------------------------------------+
 
 rpc context
 
