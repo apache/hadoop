@@ -244,6 +244,9 @@ Release 2.5.0 - UNRELEASED
     NMLeveldbStateStoreService#loadLocalizationState() within finally block
     (Junping Du via jlowe)
 
+    YARN-2187. FairScheduler: Disable max-AM-share check by default.
+    (Robert Kanter via kasha)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES

@@ -2484,6 +2484,92 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   }
 
   @Test
+  public void testQueueMaxAMShareDefault() throws Exception {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"queue1\">");
+    out.println("</queue>");
+    out.println("<queue name=\"queue2\">");
+    out.println("<maxAMShare>1.0</maxAMShare>");
+    out.println("</queue>");
+    out.println("<queue name=\"queue3\">");
+    out.println("</queue>");
+    out.println("<queue name=\"queue4\">");
+    out.println("</queue>");
+    out.println("<queue name=\"queue5\">");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    RMNode node =
+        MockNodes.newNodeInfo(1, Resources.createResource(8192, 20),
+            0, "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent = new NodeAddedSchedulerEvent(node);
+    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node);
+    scheduler.handle(nodeEvent);
+    scheduler.update();
+
+    FSLeafQueue queue1 =
+        scheduler.getQueueManager().getLeafQueue("queue1", true);
+    assertEquals("Queue queue1's fair share should be 1366",
+        1366, queue1.getFairShare().getMemory());
+    FSLeafQueue queue2 =
+        scheduler.getQueueManager().getLeafQueue("queue2", true);
+    assertEquals("Queue queue2's fair share should be 1366",
+        1366, queue2.getFairShare().getMemory());
+    FSLeafQueue queue3 =
+        scheduler.getQueueManager().getLeafQueue("queue3", true);
+    assertEquals("Queue queue3's fair share should be 1366",
+        1366, queue3.getFairShare().getMemory());
+    FSLeafQueue queue4 =
+        scheduler.getQueueManager().getLeafQueue("queue4", true);
+    assertEquals("Queue queue4's fair share should be 1366",
+        1366, queue4.getFairShare().getMemory());
+    FSLeafQueue queue5 =
+        scheduler.getQueueManager().getLeafQueue("queue5", true);
+    assertEquals("Queue queue5's fair share should be 1366",
+        1366, queue5.getFairShare().getMemory());
+
+    Resource amResource1 = Resource.newInstance(2048, 1);
+    int amPriority = RMAppAttemptImpl.AM_CONTAINER_PRIORITY.getPriority();
+
+    // Exceeds queue limit, but default maxAMShare is -1.0 so it doesn't matter
+    ApplicationAttemptId attId1 = createAppAttemptId(1, 1);
+    createApplicationWithAMResource(attId1, "queue1", "test1", amResource1);
+    createSchedulingRequestExistingApplication(2048, 1, amPriority, attId1);
+    FSSchedulerApp app1 = scheduler.getSchedulerApp(attId1);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    assertEquals("Application1's AM requests 2048 MB memory",
+        2048, app1.getAMResource().getMemory());
+    assertEquals("Application1's AM should be running",
+        1, app1.getLiveContainers().size());
+    assertEquals("Queue1's AM resource usage should be 2048 MB memory",
+        2048, queue1.getAmResourceUsage().getMemory());
+
+    // Exceeds queue limit, and maxAMShare is 1.0
+    ApplicationAttemptId attId2 = createAppAttemptId(2, 1);
+    createApplicationWithAMResource(attId2, "queue2", "test1", amResource1);
+    createSchedulingRequestExistingApplication(2048, 1, amPriority, attId2);
+    FSSchedulerApp app2 = scheduler.getSchedulerApp(attId2);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    assertEquals("Application2's AM requests 2048 MB memory",
+        2048, app2.getAMResource().getMemory());
+    assertEquals("Application2's AM should not be running",
+        0, app2.getLiveContainers().size());
+    assertEquals("Queue2's AM resource usage should be 0 MB memory",
+        0, queue2.getAmResourceUsage().getMemory());
+  }
+
+  @Test
   public void testMaxRunningAppsHierarchicalQueues() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     MockClock clock = new MockClock();
