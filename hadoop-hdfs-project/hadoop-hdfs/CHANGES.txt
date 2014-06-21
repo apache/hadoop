@@ -204,6 +204,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6557. Move the reference of fsimage to FSNamesystem. (wheat9)
 
+    HDFS-4667. Capture renamed files/directories in snapshot diff report. (jing9
+    and Binglin Chang via jing9)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
