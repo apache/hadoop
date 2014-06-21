@@ -169,10 +169,11 @@ public class TestRenameWithSnapshots {
   }
   
   private static boolean existsInDiffReport(List<DiffReportEntry> entries,
-      DiffType type, String relativePath) {
+      DiffType type, String sourcePath, String targetPath) {
     for (DiffReportEntry entry : entries) {
-      if ((entry.getType() == type)
-          && ((new String(entry.getRelativePath())).compareTo(relativePath) == 0)) {
+      if (entry.equals(new DiffReportEntry(type, DFSUtil
+          .string2Bytes(sourcePath), targetPath == null ? null : DFSUtil
+          .string2Bytes(targetPath)))) {
         return true;
       }
     }
@@ -195,8 +196,9 @@ public class TestRenameWithSnapshots {
     SnapshotDiffReport diffReport = hdfs.getSnapshotDiffReport(sub1, snap1, "");
     List<DiffReportEntry> entries = diffReport.getDiffList();
     assertTrue(entries.size() == 2);
-    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, ""));
-    assertTrue(existsInDiffReport(entries, DiffType.CREATE, file2.getName()));
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, "", null));
+    assertTrue(existsInDiffReport(entries, DiffType.CREATE, file2.getName(),
+        null));
   }
 
   /**
@@ -215,10 +217,10 @@ public class TestRenameWithSnapshots {
     SnapshotDiffReport diffReport = hdfs.getSnapshotDiffReport(sub1, snap1, "");
     System.out.println("DiffList is " + diffReport.toString());
     List<DiffReportEntry> entries = diffReport.getDiffList();
-    assertTrue(entries.size() == 3);
-    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, ""));
-    assertTrue(existsInDiffReport(entries, DiffType.CREATE, file2.getName()));
-    assertTrue(existsInDiffReport(entries, DiffType.DELETE, file1.getName()));
+    assertTrue(entries.size() == 2);
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, "", null));
+    assertTrue(existsInDiffReport(entries, DiffType.RENAME, file1.getName(),
+        file2.getName()));
   }
 
   @Test (timeout=60000)
@@ -238,26 +240,26 @@ public class TestRenameWithSnapshots {
     diffReport = hdfs.getSnapshotDiffReport(sub1, snap1, snap2);
     LOG.info("DiffList is " + diffReport.toString());
     List<DiffReportEntry> entries = diffReport.getDiffList();
-    assertTrue(entries.size() == 3);
-    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, ""));
-    assertTrue(existsInDiffReport(entries, DiffType.CREATE, file2.getName()));
-    assertTrue(existsInDiffReport(entries, DiffType.DELETE, file1.getName()));
+    assertTrue(entries.size() == 2);
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, "", null));
+    assertTrue(existsInDiffReport(entries, DiffType.RENAME, file1.getName(),
+        file2.getName()));
     
     diffReport = hdfs.getSnapshotDiffReport(sub1, snap2, "");
     LOG.info("DiffList is " + diffReport.toString());
     entries = diffReport.getDiffList();
-    assertTrue(entries.size() == 3);
-    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, ""));
-    assertTrue(existsInDiffReport(entries, DiffType.CREATE, file3.getName()));
-    assertTrue(existsInDiffReport(entries, DiffType.DELETE, file2.getName()));
+    assertTrue(entries.size() == 2);
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, "", null));
+    assertTrue(existsInDiffReport(entries, DiffType.RENAME, file2.getName(),
+        file3.getName()));
     
     diffReport = hdfs.getSnapshotDiffReport(sub1, snap1, "");
     LOG.info("DiffList is " + diffReport.toString());
     entries = diffReport.getDiffList();
-    assertTrue(entries.size() == 3);
-    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, ""));
-    assertTrue(existsInDiffReport(entries, DiffType.CREATE, file3.getName()));
-    assertTrue(existsInDiffReport(entries, DiffType.DELETE, file1.getName()));
+    assertTrue(entries.size() == 2);
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, "", null));
+    assertTrue(existsInDiffReport(entries, DiffType.RENAME, file1.getName(),
+        file3.getName()));
   }
   
   @Test (timeout=60000)
@@ -280,11 +282,10 @@ public class TestRenameWithSnapshots {
         "");
     LOG.info("DiffList is \n\"" + diffReport.toString() + "\"");
     List<DiffReportEntry> entries = diffReport.getDiffList();
-    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, sub2.getName()));
-    assertTrue(existsInDiffReport(entries, DiffType.CREATE, sub2.getName()
-        + "/" + sub2file2.getName()));
-    assertTrue(existsInDiffReport(entries, DiffType.DELETE, sub2.getName()
-        + "/" + sub2file1.getName()));
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, sub2.getName(),
+        null));
+    assertTrue(existsInDiffReport(entries, DiffType.RENAME, sub2.getName()
+        + "/" + sub2file1.getName(), sub2.getName() + "/" + sub2file2.getName()));
   }
 
   @Test (timeout=60000)
@@ -307,10 +308,10 @@ public class TestRenameWithSnapshots {
         "");
     LOG.info("DiffList is \n\"" + diffReport.toString() + "\"");
     List<DiffReportEntry> entries = diffReport.getDiffList();
-    assertEquals(3, entries.size());
-    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, ""));
-    assertTrue(existsInDiffReport(entries, DiffType.CREATE, sub3.getName()));
-    assertTrue(existsInDiffReport(entries, DiffType.DELETE, sub2.getName()));
+    assertEquals(2, entries.size());
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, "", null));
+    assertTrue(existsInDiffReport(entries, DiffType.RENAME, sub2.getName(),
+        sub3.getName()));
   }
   
   /**
@@ -2406,12 +2407,12 @@ public class TestRenameWithSnapshots {
     LOG.info("DiffList is \n\"" + report.toString() + "\"");
     List<DiffReportEntry> entries = report.getDiffList();
     assertEquals(7, entries.size());
-    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, ""));
-    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, foo.getName()));
-    assertTrue(existsInDiffReport(entries, DiffType.DELETE, bar.getName()));
-    assertTrue(existsInDiffReport(entries, DiffType.CREATE, newDir.getName()));
-    assertTrue(existsInDiffReport(entries, DiffType.DELETE, "foo/file1"));
-    assertTrue(existsInDiffReport(entries, DiffType.DELETE, "foo/file2"));
-    assertTrue(existsInDiffReport(entries, DiffType.DELETE, "foo/file3"));
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, "", null));
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, foo.getName(), null));
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, bar.getName(), null));
+    assertTrue(existsInDiffReport(entries, DiffType.DELETE, "foo/file1", null));
+    assertTrue(existsInDiffReport(entries, DiffType.RENAME, "bar", "newDir"));
+    assertTrue(existsInDiffReport(entries, DiffType.RENAME, "foo/file2", "newDir/file2"));
+    assertTrue(existsInDiffReport(entries, DiffType.RENAME, "foo/file3", "newDir/file1"));
   }
 }

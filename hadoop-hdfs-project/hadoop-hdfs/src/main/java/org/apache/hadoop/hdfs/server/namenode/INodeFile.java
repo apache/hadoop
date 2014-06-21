@@ -144,6 +144,15 @@ public class INodeFile extends INodeWithAdditionalFields
     return this;
   }
 
+  @Override
+  public boolean metadataEquals(INodeFileAttributes other) {
+    return other != null
+        && getHeaderLong()== other.getHeaderLong()
+        && getPermissionLong() == other.getPermissionLong()
+        && getAclFeature() == other.getAclFeature()
+        && getXAttrFeature() == other.getXAttrFeature();
+  }
+
   /* Start of Under-Construction Feature */
 
   /**

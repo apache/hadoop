@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.INodeFileAttributes;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
 
 /**
@@ -73,7 +74,41 @@ public class FileWithSnapshotFeature implements INode.Feature {
     }
     return max;
   }
-  
+
+  boolean changedBetweenSnapshots(INodeFile file, Snapshot from, Snapshot to) {
+    int[] diffIndexPair = diffs.changedBetweenSnapshots(from, to);
+    if (diffIndexPair == null) {
+      return false;
+    }
+    int earlierDiffIndex = diffIndexPair[0];
+    int laterDiffIndex = diffIndexPair[1];
+
+    final List<FileDiff> diffList = diffs.asList();
+    final long earlierLength = diffList.get(earlierDiffIndex).getFileSize();
+    final long laterLength = laterDiffIndex == diffList.size() ? file
+        .computeFileSize(true, false) : diffList.get(laterDiffIndex)
+        .getFileSize();
+    if (earlierLength != laterLength) { // file length has been changed
+      return true;
+    }
+
+    INodeFileAttributes earlierAttr = null; // check the metadata
+    for (int i = earlierDiffIndex; i < laterDiffIndex; i++) {
+      FileDiff diff = diffList.get(i);
+      if (diff.snapshotINode != null) {
+        earlierAttr = diff.snapshotINode;
+        break;
+      }
+    }
+    if (earlierAttr == null) { // no meta-change at all, return false
+      return false;
+    }
+    INodeFileAttributes laterAttr = diffs.getSnapshotINode(
+        Math.max(Snapshot.getSnapshotId(from), Snapshot.getSnapshotId(to)),
+        file);
+    return !earlierAttr.metadataEquals(laterAttr);
+  }
+
   public String getDetailedString() {
     return (isCurrentFileDeleted()? "(DELETED), ": ", ") + diffs;
   }

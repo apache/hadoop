@@ -26,11 +26,9 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
-import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
-import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiffList;
@@ -365,7 +363,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
    * children list nor in any snapshot; otherwise the snapshot id of the
    * corresponding snapshot diff list.
    */
-  int searchChild(INode inode) {
+  public int searchChild(INode inode) {
     INode child = getChild(inode.getLocalNameBytes(), Snapshot.CURRENT_STATE_ID);
     if (child != inode) {
       // inode is not in parent's children list, thus inode must be in
@@ -764,7 +762,9 @@ public class INodeDirectory extends INodeWithAdditionalFields
   public boolean metadataEquals(INodeDirectoryAttributes other) {
     return other != null
         && getQuotaCounts().equals(other.getQuotaCounts())
-        && getPermissionLong() == other.getPermissionLong();
+        && getPermissionLong() == other.getPermissionLong()
+        && getAclFeature() == other.getAclFeature()
+        && getXAttrFeature() == other.getXAttrFeature();
   }
   
   /*
