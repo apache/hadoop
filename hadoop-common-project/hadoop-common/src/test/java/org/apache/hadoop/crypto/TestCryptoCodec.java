@@ -49,8 +49,10 @@ public class TestCryptoCodec {
   }
   
   private void checkSecureRandom(int len) {
-    byte[] rand = codec.generateSecureRandom(len);
-    byte[] rand1 = codec.generateSecureRandom(len);
+    byte[] rand = new byte[len];
+    byte[] rand1 = new byte[len];
+    codec.generateSecureRandom(rand);
+    codec.generateSecureRandom(rand1);
     
     Assert.assertEquals(len, rand.length);
     Assert.assertEquals(len, rand1.length);

@@ -79,10 +79,8 @@ public class JCEAESCTRCryptoCodec extends AESCTRCryptoCodec {
   }
   
   @Override
-  public byte[] generateSecureRandom(int bytes) {
-    final byte[] data = new byte[bytes];
-    random.nextBytes(data);
-    return data;
+  public void generateSecureRandom(byte[] bytes) {
+    random.nextBytes(bytes);
   }  
   
   private static class JCEAESCTRCipher implements Encryptor, Decryptor {

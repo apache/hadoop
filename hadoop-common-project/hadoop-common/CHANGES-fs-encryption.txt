@@ -25,6 +25,9 @@ fs-encryption (Unreleased)
     HADOOP-10662. NullPointerException in CryptoInputStream while wrapped
     stream is not ByteBufferReadable. Add tests using normal stream. (Yi Liu)
 
+    HADOOP-10713. Refactor CryptoCodec#generateSecureRandom to take a byte[]. 
+    (wang via yliu)
+
   OPTIMIZATIONS
 
   BUG FIXES

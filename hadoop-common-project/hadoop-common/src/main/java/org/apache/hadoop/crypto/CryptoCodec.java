@@ -81,9 +81,10 @@ public abstract class CryptoCodec implements Configurable {
   public abstract void calculateIV(byte[] initIV, long counter, byte[] IV);
   
   /**
-   * Generate secure random.
-   * @param bytes length of the secure random
-   * @return byte[] the secure random
+   * Generate a number of secure, random bytes suitable for cryptographic use.
+   * This method needs to be thread-safe.
+   *
+   * @param bytes byte array to populate with random data
    */
-  public abstract byte[] generateSecureRandom(int bytes);
+  public abstract void generateSecureRandom(byte[] bytes);
 }
