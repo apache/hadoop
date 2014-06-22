@@ -83,7 +83,7 @@ public class CreateEditsLog {
 
       final INodeFile inode = new INodeFile(inodeId.nextValue(), null,
           p, 0L, 0L, blocks, replication, blockSize);
-      inode.toUnderConstruction("", "", null);
+      inode.toUnderConstruction("", "");
 
      // Append path to filename with information about blockIDs 
       String path = "_" + iF + "_B" + blocks[0].getBlockId() + 
@@ -98,7 +98,7 @@ public class CreateEditsLog {
       }
       INodeFile fileUc = new INodeFile(inodeId.nextValue(), null,
           p, 0L, 0L, BlockInfo.EMPTY_ARRAY, replication, blockSize);
-      fileUc.toUnderConstruction("", "", null);
+      fileUc.toUnderConstruction("", "");
       editLog.logOpenFile(filePath, fileUc, false);
       editLog.logCloseFile(filePath, inode);
 

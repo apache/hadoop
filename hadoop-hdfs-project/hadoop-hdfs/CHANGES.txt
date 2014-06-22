@@ -468,6 +468,7 @@ Release 2.5.0 - UNRELEASED
     HDFS-6460. Ignore stale and decommissioned nodes in
     NetworkTopology#sortByDistance. (Yongjun Zhang via wang)
 
+    HDFS-6583. Remove clientNode in FileUnderConstructionFeature. (wheat9)
   BUG FIXES 
 
     HDFS-6112. NFS Gateway docs are incorrect for allowed hosts configuration.

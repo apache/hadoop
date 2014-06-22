@@ -32,15 +32,10 @@ import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 public class FileUnderConstructionFeature implements INode.Feature {
   private String clientName; // lease holder
   private final String clientMachine;
-  // if client is a cluster node too.
-  private final DatanodeDescriptor clientNode;
 
-  public FileUnderConstructionFeature(final String clientName,
-      final String clientMachine,
-      final DatanodeDescriptor clientNode) {
+  public FileUnderConstructionFeature(final String clientName, final String clientMachine) {
     this.clientName = clientName;
     this.clientMachine = clientMachine;
-    this.clientNode = clientNode;
   }
 
   public String getClientName() {
@@ -53,10 +48,6 @@ public class FileUnderConstructionFeature implements INode.Feature {
 
   public String getClientMachine() {
     return clientMachine;
-  }
-
-  public DatanodeDescriptor getClientNode() {
-    return clientNode;
   }
 
   /**

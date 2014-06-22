@@ -149,7 +149,7 @@ public class FSImageSerialization {
 
     INodeFile file = new INodeFile(inodeId, name, perm, modificationTime,
         modificationTime, blocks, blockReplication, preferredBlockSize);
-    file.toUnderConstruction(clientName, clientMachine, null);
+    file.toUnderConstruction(clientName, clientMachine);
     return file;
   }
 
