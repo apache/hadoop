@@ -783,7 +783,7 @@ public class FSImageFormat {
       final INodeFile file = new INodeFile(inodeId, localName, permissions,
           modificationTime, atime, blocks, replication, blockSize);
       if (underConstruction) {
-        file.toUnderConstruction(clientName, clientMachine, null);
+        file.toUnderConstruction(clientName, clientMachine);
       }
         return fileDiffs == null ? file : new INodeFile(file, fileDiffs);
       } else if (numBlocks == -1) {
@@ -938,8 +938,7 @@ public class FSImageFormat {
         }
 
         FileUnderConstructionFeature uc = cons.getFileUnderConstructionFeature();
-        oldnode.toUnderConstruction(uc.getClientName(), uc.getClientMachine(),
-            uc.getClientNode());
+        oldnode.toUnderConstruction(uc.getClientName(), uc.getClientMachine());
         if (oldnode.numBlocks() > 0) {
           BlockInfo ucBlock = cons.getLastBlock();
           // we do not replace the inode, just replace the last block of oldnode

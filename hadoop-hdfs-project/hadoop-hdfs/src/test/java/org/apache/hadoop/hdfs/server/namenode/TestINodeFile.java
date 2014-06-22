@@ -28,8 +28,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -321,7 +319,7 @@ public class TestINodeFile {
     {//cast from INodeFileUnderConstruction
       final INode from = new INodeFile(
           INodeId.GRANDFATHER_INODE_ID, null, perm, 0L, 0L, null, replication, 1024L);
-      from.asFile().toUnderConstruction("client", "machine", null);
+      from.asFile().toUnderConstruction("client", "machine");
     
       //cast to INodeFile, should success
       final INodeFile f = INodeFile.valueOf(from, path);
@@ -1034,12 +1032,11 @@ public class TestINodeFile {
 
     final String clientName = "client";
     final String clientMachine = "machine";
-    file.toUnderConstruction(clientName, clientMachine, null);
+    file.toUnderConstruction(clientName, clientMachine);
     assertTrue(file.isUnderConstruction());
     FileUnderConstructionFeature uc = file.getFileUnderConstructionFeature();
     assertEquals(clientName, uc.getClientName());
     assertEquals(clientMachine, uc.getClientMachine());
-    Assert.assertNull(uc.getClientNode());
 
     file.toCompleteFile(Time.now());
     assertFalse(file.isUnderConstruction());

@@ -2381,9 +2381,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
 
       checkFsObjectLimit();
-      final DatanodeDescriptor clientNode = 
-          blockManager.getDatanodeManager().getDatanodeByHost(clientMachine);
-
       INodeFile newNode = null;
 
       // Always do an implicit mkdirs for parent directory tree.
@@ -2391,7 +2388,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (parent != null && mkdirsRecursively(parent.toString(),
               permissions, true, now())) {
         newNode = dir.addFile(src, permissions, replication, blockSize,
-                holder, clientMachine, clientNode);
+                holder, clientMachine);
       }
 
       if (newNode == null) {
@@ -2466,10 +2463,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new IOException("append: lastBlock=" + lastBlock +
             " of src=" + src + " is not sufficiently replicated yet.");
       }
-      final DatanodeDescriptor clientNode = 
-          blockManager.getDatanodeManager().getDatanodeByHost(clientMachine);
-      return prepareFileForWrite(src, myFile, holder, clientMachine, clientNode,
-          true, iip.getLatestSnapshotId(), logRetryCache);
+      return prepareFileForWrite(src, myFile, holder, clientMachine, true,
+              iip.getLatestSnapshotId(), logRetryCache);
     } catch (IOException ie) {
       NameNode.stateChangeLog.warn("DIR* NameSystem.append: " +ie.getMessage());
       throw ie;
@@ -2484,7 +2479,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @param file existing file object
    * @param leaseHolder identifier of the lease holder on this file
    * @param clientMachine identifier of the client machine
-   * @param clientNode if the client is collocated with a DN, that DN's descriptor
    * @param writeToEditLog whether to persist this change to the edit log
    * @param logRetryCache whether to record RPC ids in editlog for retry cache
    *                      rebuilding
@@ -2493,12 +2487,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws IOException
    */
   LocatedBlock prepareFileForWrite(String src, INodeFile file,
-      String leaseHolder, String clientMachine, DatanodeDescriptor clientNode,
-      boolean writeToEditLog, int latestSnapshot, boolean logRetryCache)
+                                   String leaseHolder, String clientMachine,
+                                   boolean writeToEditLog,
+                                   int latestSnapshot, boolean logRetryCache)
       throws IOException {
     file = file.recordModification(latestSnapshot);
-    final INodeFile cons = file.toUnderConstruction(leaseHolder, clientMachine,
-        clientNode);
+    final INodeFile cons = file.toUnderConstruction(leaseHolder, clientMachine);
 
     leaseManager.addLease(cons.getFileUnderConstructionFeature()
         .getClientName(), src);
@@ -2776,7 +2770,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             + maxBlocksPerFile);
       }
       blockSize = pendingFile.getPreferredBlockSize();
-      clientNode = pendingFile.getFileUnderConstructionFeature().getClientNode();
+      clientNode = blockManager.getDatanodeManager().getDatanodeByHost(
+              pendingFile.getFileUnderConstructionFeature().getClientMachine());
       replication = pendingFile.getFileReplication();
     } finally {
       readUnlock();
@@ -2982,7 +2977,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         if (inode != null) src = inode.getFullPathName();
       }
       final INodeFile file = checkLease(src, clientName, inode, fileId);
-      clientnode = file.getFileUnderConstructionFeature().getClientNode();
+      String clientMachine = file.getFileUnderConstructionFeature()
+              .getClientMachine();
+      clientnode = blockManager.getDatanodeManager().getDatanodeByHost(clientMachine);
       preferredblocksize = file.getPreferredBlockSize();
 
       //find datanode storages
