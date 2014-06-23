@@ -210,6 +210,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6507. Improve DFSAdmin to support HA cluster better.
     (Zesheng Wu via vinayakumarb)
 
+    HDFS-6578. add toString method to DatanodeStorage for easier debugging.
+    (Yongjun Zhang via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
