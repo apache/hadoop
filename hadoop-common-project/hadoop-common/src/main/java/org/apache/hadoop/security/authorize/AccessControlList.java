@@ -20,22 +20,21 @@ package org.apache.hadoop.security.authorize;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.Arrays;
-import java.util.List;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.ListIterator;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.Groups;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Class representing a configured access control list.
@@ -58,9 +57,9 @@ public class AccessControlList implements Writable {
   private static final int INITIAL_CAPACITY = 256;
 
   // Set of users who are granted access.
-  private Set<String> users;
+  private Collection<String> users;
   // Set of groups which are granted access
-  private Set<String> groups;
+  private Collection<String> groups;
   // Whether all users are granted access.
   private boolean allAllowed;
 
@@ -92,27 +91,21 @@ public class AccessControlList implements Writable {
    * @param aclString build ACL from this string
    */
   private void buildACL(String aclString) {
-    users = new TreeSet<String>();
-    groups = new TreeSet<String>();
+    users = new HashSet<String>();
+    groups = new HashSet<String>();
     if (isWildCardACLValue(aclString)) {
       allAllowed = true;
     } else {
       allAllowed = false;
       String[] userGroupStrings = aclString.split(" ", 2);
-
+      
       if (userGroupStrings.length >= 1) {
-        List<String> usersList = new LinkedList<String>(
-          Arrays.asList(userGroupStrings[0].split(",")));
-        cleanupList(usersList);
-        addToSet(users, usersList);
-      }
+        users = StringUtils.getTrimmedStringCollection(userGroupStrings[0]);
+      } 
       
       if (userGroupStrings.length == 2) {
-        List<String> groupsList = new LinkedList<String>(
-          Arrays.asList(userGroupStrings[1].split(",")));
-        cleanupList(groupsList);
-        addToSet(groups, groupsList);
-        groupsMapping.cacheGroupsAdd(groupsList);
+        groups = StringUtils.getTrimmedStringCollection(userGroupStrings[1]);
+        groupsMapping.cacheGroupsAdd(new LinkedList<String>(groups));
       }
     }
   }
@@ -203,7 +196,7 @@ public class AccessControlList implements Writable {
    * Get the names of users allowed for this service.
    * @return the set of user names. the set must not be modified.
    */
-  Set<String> getUsers() {
+  Collection<String> getUsers() {
     return users;
   }
   
@@ -211,7 +204,7 @@ public class AccessControlList implements Writable {
    * Get the names of user groups allowed for this service.
    * @return the set of group names. the set must not be modified.
    */
-  Set<String> getGroups() {
+  Collection<String> getGroups() {
     return groups;
   }
 
@@ -226,36 +219,6 @@ public class AccessControlList implements Writable {
       }
     }
     return false;
-  }
-
-  /**
-   * Cleanup list, remove empty strings, trim leading/trailing spaces
-   *
-   * @param list clean this list
-   */
-  private static final void cleanupList(List<String> list) {
-    ListIterator<String> i = list.listIterator();
-    while(i.hasNext()) {
-      String s = i.next();
-      if(s.length() == 0) {
-        i.remove();
-      } else {
-        s = s.trim();
-        i.set(s);
-      }
-    }
-  }
-
-  /**
-   * Add list to a set
-   *
-   * @param set add list to this set
-   * @param list add items of this list to the set
-   */
-  private static final void addToSet(Set<String> set, List<String> list) {
-    for(String s : list) {
-      set.add(s);
-    }
   }
 
   /**
@@ -358,7 +321,7 @@ public class AccessControlList implements Writable {
    *
    * @param strings set of strings to concatenate
    */
-  private String getString(Set<String> strings) {
+  private String getString(Collection<String> strings) {
     StringBuilder sb = new StringBuilder(INITIAL_CAPACITY);
     boolean first = true;
     for(String str: strings) {
