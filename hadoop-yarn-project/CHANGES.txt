@@ -170,6 +170,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2159. Better logging in SchedulerNode#allocateContainer.
     (Ray Chiang via kasha)
 
+    YARN-2191. Added a new test to ensure NM will clean up completed applications
+    in the case of RM restart. (Wangda Tan via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES 
