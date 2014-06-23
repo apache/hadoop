@@ -445,6 +445,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6580. FSNamesystem.mkdirsInt should call the getAuditFileInfo()
     wrapper. (Zhilei Xu via wheat9)
 
+    HDFS-6587. Bug in TestBPOfferService can cause test failure. (Zhilei Xu
+    via Arpit Agarwal)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
