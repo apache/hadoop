@@ -1749,6 +1749,7 @@ public class BlockManager {
     }
     blockLog.info("BLOCK* processReport: from storage " + storage.getStorageID()
         + " node " + nodeID + ", blocks: " + newReport.getNumberOfBlocks()
+        + ", hasStaleStorages: " + node.hasStaleStorages()
         + ", processing time: " + (endTime - startTime) + " msecs");
     return !node.hasStaleStorages();
   }

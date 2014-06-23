@@ -1046,6 +1046,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
     boolean noStaleStorages = false;
     for(StorageBlockReport r : reports) {
       final BlockListAsLongs blocks = new BlockListAsLongs(r.getBlocks());
+      //
+      // BlockManager.processReport accumulates information of prior calls
+      // for the same node and storage, so the value returned by the last
+      // call of this loop is the final updated value for noStaleStorage.
+      //
       noStaleStorages = bm.processReport(nodeReg, r.getStorage(), poolId, blocks);
       metrics.incrStorageBlockReportOps();
     }
