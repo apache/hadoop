@@ -15714,8 +15714,8 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>ExactComparator</type>
-          <expected-output></expected-output>
+          <type>RegexpComparator</type>
+          <expected-output>Refresh service acl successful(\n)*</expected-output>
         </comparator>
       </comparators>
     </test><!--
@@ -15951,8 +15951,8 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>ExactComparator</type>
-          <expected-output></expected-output>
+          <type>RegexpComparator</type>
+          <expected-output>Save namespace successful(\n)*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16367,8 +16367,8 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>ExactComparator</type>
-          <expected-output></expected-output>
+          <type>RegexpComparator</type>
+          <expected-output>Refresh user to groups mapping successful(\n)*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16383,8 +16383,8 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>ExactComparator</type>
-          <expected-output></expected-output>
+          <type>RegexpComparator</type>
+          <expected-output>Refresh super user groups configuration successful(\n)*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16453,8 +16453,8 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>ExactComparator</type>
-          <expected-output></expected-output>
+          <type>RegexpComparator</type>
+          <expected-output>Balancer bandwidth is set to 104857600(\n)*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16469,8 +16469,8 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>ExactComparator</type>
-          <expected-output></expected-output>
+          <type>SubstringComparator</type>
+          <expected-output>Finalize upgrade successful</expected-output>
         </comparator>
       </comparators>
     </test>

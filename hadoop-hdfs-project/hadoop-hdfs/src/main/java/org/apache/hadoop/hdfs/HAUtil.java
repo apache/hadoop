@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.NameNodeProxies;
+import org.apache.hadoop.hdfs.NameNodeProxies.ProxyAndInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
@@ -351,18 +352,42 @@ public class HAUtil {
    */
   public static List<ClientProtocol> getProxiesForAllNameNodesInNameservice(
       Configuration conf, String nsId) throws IOException {
+    List<ProxyAndInfo<ClientProtocol>> proxies =
+        getProxiesForAllNameNodesInNameservice(conf, nsId, ClientProtocol.class);
+
+    List<ClientProtocol> namenodes = new ArrayList<ClientProtocol>(
+        proxies.size());
+    for (ProxyAndInfo<ClientProtocol> proxy : proxies) {
+      namenodes.add(proxy.getProxy());
+    }
+    return namenodes;
+  }
+
+  /**
+   * Get an RPC proxy for each NN in an HA nameservice. Used when a given RPC
+   * call should be made on every NN in an HA nameservice, not just the active.
+   *
+   * @param conf configuration
+   * @param nsId the nameservice to get all of the proxies for.
+   * @param xface the protocol class.
+   * @return a list of RPC proxies for each NN in the nameservice.
+   * @throws IOException in the event of error.
+   */
+  public static <T> List<ProxyAndInfo<T>> getProxiesForAllNameNodesInNameservice(
+      Configuration conf, String nsId, Class<T> xface) throws IOException {
     Map<String, InetSocketAddress> nnAddresses =
         DFSUtil.getRpcAddressesForNameserviceId(conf, nsId, null);
     
-    List<ClientProtocol> namenodes = new ArrayList<ClientProtocol>();
+    List<ProxyAndInfo<T>> proxies = new ArrayList<ProxyAndInfo<T>>(
+        nnAddresses.size());
     for (InetSocketAddress nnAddress : nnAddresses.values()) {
-      NameNodeProxies.ProxyAndInfo<ClientProtocol> proxyInfo = null;
+      NameNodeProxies.ProxyAndInfo<T> proxyInfo = null;
       proxyInfo = NameNodeProxies.createNonHAProxy(conf,
-          nnAddress, ClientProtocol.class,
+          nnAddress, xface,
           UserGroupInformation.getCurrentUser(), false);
-      namenodes.add(proxyInfo.getProxy());
+      proxies.add(proxyInfo);
     }
-    return namenodes;
+    return proxies;
   }
   
   /**
