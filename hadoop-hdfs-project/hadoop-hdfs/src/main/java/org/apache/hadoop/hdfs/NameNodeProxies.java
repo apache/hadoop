@@ -106,10 +106,13 @@ public class NameNodeProxies {
   public static class ProxyAndInfo<PROXYTYPE> {
     private final PROXYTYPE proxy;
     private final Text dtService;
+    private final InetSocketAddress address;
     
-    public ProxyAndInfo(PROXYTYPE proxy, Text dtService) {
+    public ProxyAndInfo(PROXYTYPE proxy, Text dtService,
+        InetSocketAddress address) {
       this.proxy = proxy;
       this.dtService = dtService;
+      this.address = address;
     }
     
     public PROXYTYPE getProxy() {
@@ -118,6 +121,10 @@ public class NameNodeProxies {
     
     public Text getDelegationTokenService() {
       return dtService;
+    }
+
+    public InetSocketAddress getAddress() {
+      return address;
     }
   }
 
@@ -161,7 +168,8 @@ public class NameNodeProxies {
         dtService = SecurityUtil.buildTokenService(
             NameNode.getAddress(nameNodeUri));
       }
-      return new ProxyAndInfo<T>(proxy, dtService);
+      return new ProxyAndInfo<T>(proxy, dtService,
+          NameNode.getAddress(nameNodeUri));
     }
   }
   
@@ -221,7 +229,8 @@ public class NameNodeProxies {
         dtService = SecurityUtil.buildTokenService(
             NameNode.getAddress(nameNodeUri));
       }
-      return new ProxyAndInfo<T>(proxy, dtService);
+      return new ProxyAndInfo<T>(proxy, dtService,
+          NameNode.getAddress(nameNodeUri));
     } else {
       LOG.warn("Currently creating proxy using " +
       		"LossyRetryInvocationHandler requires NN HA setup");
@@ -274,7 +283,7 @@ public class NameNodeProxies {
       throw new IllegalStateException(message);
     }
 
-    return new ProxyAndInfo<T>(proxy, dtService);
+    return new ProxyAndInfo<T>(proxy, dtService, nnAddr);
   }
   
   private static JournalProtocol createNNProxyWithJournalProtocol(

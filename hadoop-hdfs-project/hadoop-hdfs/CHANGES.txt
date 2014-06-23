@@ -461,6 +461,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-4667. Capture renamed files/directories in snapshot diff report. (jing9
     and Binglin Chang via jing9)
 
+    HDFS-6507. Improve DFSAdmin to support HA cluster better.
+    (Zesheng Wu via vinayakumarb)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
