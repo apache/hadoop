@@ -3739,7 +3739,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       src = FSDirectory.resolvePath(src, pathComponents, dir);
       status = mkdirsInternal(pc, src, permissions, createParent);
       if (status) {
-        resultingStat = dir.getFileInfo(src, false);
+        resultingStat = getAuditFileInfo(src, false);
       }
     } finally {
       writeUnlock();
