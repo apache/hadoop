@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.http.server;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.XAttrCodec;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.AccessTimeParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.AclPermissionParam;
@@ -40,6 +42,10 @@ import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.PermissionParam
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.RecursiveParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.ReplicationParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.SourcesParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrEncodingParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrNameParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrSetFlagParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrValueParam;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.lib.service.FileSystemAccessException;
 import org.apache.hadoop.lib.service.Groups;
@@ -75,6 +81,7 @@ import java.net.URI;
 import java.security.AccessControlException;
 import java.security.Principal;
 import java.text.MessageFormat;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
@@ -322,6 +329,27 @@ public class HttpFSServer {
         response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
       }
+      case GETXATTRS: {
+        List<String> xattrNames = params.getValues(XAttrNameParam.NAME, 
+            XAttrNameParam.class);
+        XAttrCodec encoding = params.get(XAttrEncodingParam.NAME, 
+            XAttrEncodingParam.class);
+        FSOperations.FSGetXAttrs command = new FSOperations.FSGetXAttrs(path, 
+            xattrNames, encoding);
+        @SuppressWarnings("rawtypes")
+        Map json = fsExecute(user, doAs, command);
+        AUDIT_LOG.info("XAttrs for [{}]", path);
+        response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
+        break;
+      }
+      case LISTXATTRS: {
+        FSOperations.FSListXAttrs command = new FSOperations.FSListXAttrs(path);
+        @SuppressWarnings("rawtypes")
+        Map json = fsExecute(user, doAs, command);
+        AUDIT_LOG.info("XAttr names for [{}]", path);
+        response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
+        break;
+      }
       default: {
         throw new IOException(
           MessageFormat.format("Invalid HTTP GET operation [{0}]",
@@ -524,6 +552,30 @@ public class HttpFSServer {
             new Object[]{path, permission, override, replication, blockSize});
           response = Response.status(Response.Status.CREATED).build();
         }
+        break;
+      }
+      case SETXATTR: {
+        String xattrName = params.get(XAttrNameParam.NAME, 
+            XAttrNameParam.class);
+        String xattrValue = params.get(XAttrValueParam.NAME, 
+            XAttrValueParam.class);
+        EnumSet<XAttrSetFlag> flag = params.get(XAttrSetFlagParam.NAME, 
+            XAttrSetFlagParam.class);
+
+        FSOperations.FSSetXAttr command = new FSOperations.FSSetXAttr(
+            path, xattrName, xattrValue, flag);
+        fsExecute(user, doAs, command);
+        AUDIT_LOG.info("[{}] to xAttr [{}]", path, xattrName);
+        response = Response.ok().build();
+        break;
+      }
+      case REMOVEXATTR: {
+        String xattrName = params.get(XAttrNameParam.NAME, XAttrNameParam.class);
+        FSOperations.FSRemoveXAttr command = new FSOperations.FSRemoveXAttr(
+            path, xattrName);
+        fsExecute(user, doAs, command);
+        AUDIT_LOG.info("[{}] removed xAttr [{}]", path, xattrName);
+        response = Response.ok().build();
         break;
       }
       case MKDIRS: {

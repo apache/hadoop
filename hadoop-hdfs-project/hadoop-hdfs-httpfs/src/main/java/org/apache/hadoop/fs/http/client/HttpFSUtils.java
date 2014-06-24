@@ -31,6 +31,7 @@ import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.text.MessageFormat;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -59,6 +60,24 @@ public class HttpFSUtils {
    */
   static URL createURL(Path path, Map<String, String> params)
     throws IOException {
+    return createURL(path, params, null);
+  }
+
+  /**
+   * Convenience method that creates an HTTP <code>URL</code> for the
+   * HttpFSServer file system operations.
+   * <p/>
+   *
+   * @param path the file path.
+   * @param params the query string parameters.
+   * @param multiValuedParams multi valued parameters of the query string
+   *
+   * @return URL a <code>URL</code> for the HttpFSServer server,
+   *
+   * @throws IOException thrown if an IO error occurs.
+   */
+  static URL createURL(Path path, Map<String, String> params, Map<String, 
+      List<String>> multiValuedParams) throws IOException {
     URI uri = path.toUri();
     String realScheme;
     if (uri.getScheme().equalsIgnoreCase(HttpFSFileSystem.SCHEME)) {
@@ -81,6 +100,18 @@ public class HttpFSUtils {
         append(URLEncoder.encode(entry.getValue(), "UTF8"));
       separator = "&";
     }
+    if (multiValuedParams != null) {
+      for (Map.Entry<String, List<String>> multiValuedEntry : 
+        multiValuedParams.entrySet()) {
+        String name = URLEncoder.encode(multiValuedEntry.getKey(), "UTF8");
+        List<String> values = multiValuedEntry.getValue();
+        for (String value : values) {
+          sb.append(separator).append(name).append("=").
+            append(URLEncoder.encode(value, "UTF8"));
+          separator = "&";
+        }
+      }
+    }
     return new URL(sb.toString());
   }
 
@@ -96,7 +127,7 @@ public class HttpFSUtils {
    * @throws IOException thrown if the current status code does not match the
    * expected one.
    */
-  @SuppressWarnings({"unchecked", "deprecation"})
+  @SuppressWarnings({"unchecked"})
   static void validateResponse(HttpURLConnection conn, int expected)
     throws IOException {
     int status = conn.getResponseCode();

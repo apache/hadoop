@@ -217,6 +217,8 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6486. Add user doc for XAttrs via WebHDFS. (Yi Liu via umamahesh)
 
+    HDFS-6430. HTTPFS - Implement XAttr support. (Yi Liu via tucu)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
