@@ -196,4 +196,9 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
    */
   ApplicationAttemptReport createApplicationAttemptReport();
 
+  /**
+   * Return the flag which indicates whether the attempt is preempted by the
+   * scheduler.
+   */
+  boolean isPreempted();
 }

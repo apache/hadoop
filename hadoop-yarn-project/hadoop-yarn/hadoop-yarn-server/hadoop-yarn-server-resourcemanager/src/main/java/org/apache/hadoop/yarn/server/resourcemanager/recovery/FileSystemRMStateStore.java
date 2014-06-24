@@ -216,7 +216,8 @@ public class FileSystemRMStateStore extends RMStateStore {
                   attemptStateData.getState(),
                   attemptStateData.getFinalTrackingUrl(),
                   attemptStateData.getDiagnostics(),
-                  attemptStateData.getFinalApplicationStatus());
+                  attemptStateData.getFinalApplicationStatus(),
+                  attemptStateData.getAMContainerExitStatus());
 
             // assert child node name is same as application attempt id
             assert attemptId.equals(attemptState.getAttemptId());

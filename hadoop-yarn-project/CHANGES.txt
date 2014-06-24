@@ -160,6 +160,9 @@ Release 2.5.0 - UNRELEASED
 
     YARN-2195. Clean a piece of code in ResourceRequest. (Wei Yan via devaraj)
 
+    YARN-2074. Changed ResourceManager to not count AM preemptions towards app
+    failures. (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES 

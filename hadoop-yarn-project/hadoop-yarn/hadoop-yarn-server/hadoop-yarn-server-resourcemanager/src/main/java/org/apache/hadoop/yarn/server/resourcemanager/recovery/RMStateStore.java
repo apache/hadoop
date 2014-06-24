@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -258,19 +259,21 @@ public abstract class RMStateStore extends AbstractService {
     RMAppAttemptState state;
     String finalTrackingUrl = "N/A";
     String diagnostics;
+    int exitStatus = ContainerExitStatus.INVALID;
     FinalApplicationStatus amUnregisteredFinalStatus;
 
     public ApplicationAttemptState(ApplicationAttemptId attemptId,
         Container masterContainer, Credentials appAttemptCredentials,
         long startTime) {
       this(attemptId, masterContainer, appAttemptCredentials, startTime, null,
-        null, "", null);
+        null, "", null, ContainerExitStatus.INVALID);
     }
 
     public ApplicationAttemptState(ApplicationAttemptId attemptId,
         Container masterContainer, Credentials appAttemptCredentials,
         long startTime, RMAppAttemptState state, String finalTrackingUrl,
-        String diagnostics, FinalApplicationStatus amUnregisteredFinalStatus) {
+        String diagnostics, FinalApplicationStatus amUnregisteredFinalStatus,
+        int exitStatus) {
       this.attemptId = attemptId;
       this.masterContainer = masterContainer;
       this.appAttemptCredentials = appAttemptCredentials;
@@ -279,6 +282,7 @@ public abstract class RMStateStore extends AbstractService {
       this.finalTrackingUrl = finalTrackingUrl;
       this.diagnostics = diagnostics == null ? "" : diagnostics;
       this.amUnregisteredFinalStatus = amUnregisteredFinalStatus;
+      this.exitStatus = exitStatus;
     }
 
     public Container getMasterContainer() {
@@ -304,6 +308,9 @@ public abstract class RMStateStore extends AbstractService {
     }
     public FinalApplicationStatus getFinalApplicationStatus() {
       return amUnregisteredFinalStatus;
+    }
+    public int getAMContainerExitStatus(){
+      return this.exitStatus;
     }
   }
   

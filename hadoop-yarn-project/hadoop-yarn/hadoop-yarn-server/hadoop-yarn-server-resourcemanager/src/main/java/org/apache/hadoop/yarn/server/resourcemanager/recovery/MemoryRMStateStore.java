@@ -152,7 +152,8 @@ public class MemoryRMStateStore extends RMStateStore {
           attemptStateData.getStartTime(), attemptStateData.getState(),
           attemptStateData.getFinalTrackingUrl(),
           attemptStateData.getDiagnostics(),
-          attemptStateData.getFinalApplicationStatus());
+          attemptStateData.getFinalApplicationStatus(),
+          attemptStateData.getAMContainerExitStatus());
 
     ApplicationState appState =
         state.getApplicationState().get(

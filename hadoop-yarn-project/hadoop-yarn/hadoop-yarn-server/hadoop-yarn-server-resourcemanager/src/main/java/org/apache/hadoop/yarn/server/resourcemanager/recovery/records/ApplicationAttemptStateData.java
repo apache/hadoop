@@ -43,7 +43,7 @@ public abstract class ApplicationAttemptStateData {
       ApplicationAttemptId attemptId, Container container,
       ByteBuffer attemptTokens, long startTime, RMAppAttemptState finalState,
       String finalTrackingUrl, String diagnostics,
-      FinalApplicationStatus amUnregisteredFinalStatus) {
+      FinalApplicationStatus amUnregisteredFinalStatus, int exitStatus) {
     ApplicationAttemptStateData attemptStateData =
         Records.newRecord(ApplicationAttemptStateData.class);
     attemptStateData.setAttemptId(attemptId);
@@ -54,6 +54,7 @@ public abstract class ApplicationAttemptStateData {
     attemptStateData.setDiagnostics(diagnostics);
     attemptStateData.setStartTime(startTime);
     attemptStateData.setFinalApplicationStatus(amUnregisteredFinalStatus);
+    attemptStateData.setAMContainerExitStatus(exitStatus);
     return attemptStateData;
   }
 
@@ -67,11 +68,11 @@ public abstract class ApplicationAttemptStateData {
       appAttemptTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
     }
     return newInstance(attemptState.getAttemptId(),
-        attemptState.getMasterContainer(), appAttemptTokens,
-        attemptState.getStartTime(), attemptState.getState(),
-        attemptState.getFinalTrackingUrl(),
-        attemptState.getDiagnostics(),
-        attemptState.getFinalApplicationStatus());
+      attemptState.getMasterContainer(), appAttemptTokens,
+      attemptState.getStartTime(), attemptState.getState(),
+      attemptState.getFinalTrackingUrl(), attemptState.getDiagnostics(),
+      attemptState.getFinalApplicationStatus(),
+      attemptState.getAMContainerExitStatus());
   }
 
   public abstract ApplicationAttemptStateDataProto getProto();
@@ -150,5 +151,10 @@ public abstract class ApplicationAttemptStateData {
    */
   public abstract FinalApplicationStatus getFinalApplicationStatus();
 
-  public abstract void setFinalApplicationStatus(FinalApplicationStatus finishState);
+  public abstract void setFinalApplicationStatus(
+      FinalApplicationStatus finishState);
+
+  public abstract int getAMContainerExitStatus();
+
+  public abstract void setAMContainerExitStatus(int exitStatus);
 }
