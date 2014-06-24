@@ -96,10 +96,7 @@ public class TestRMHA {
     configuration.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
     ClusterMetrics.destroy();
     QueueMetrics.clearQueueMetrics();
-    MetricsSystem ms = DefaultMetricsSystem.instance();
-    if (ms.getSource("ClusterMetrics") != null) {
-      DefaultMetricsSystem.shutdown();
-    }
+    DefaultMetricsSystem.shutdown();
   }
 
   private void checkMonitorHealth() throws IOException {
