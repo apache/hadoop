@@ -158,6 +158,8 @@ Release 2.5.0 - UNRELEASED
     YARN-2191. Added a new test to ensure NM will clean up completed applications
     in the case of RM restart. (Wangda Tan via jianhe)
 
+    YARN-2195. Clean a piece of code in ResourceRequest. (Wei Yan via devaraj)
+
   OPTIMIZATIONS
 
   BUG FIXES 
