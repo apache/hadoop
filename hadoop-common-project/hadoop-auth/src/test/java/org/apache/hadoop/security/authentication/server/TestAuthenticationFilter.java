@@ -74,6 +74,8 @@ public class TestAuthenticationFilter {
       Assert.fail();
     } catch (ServletException ex) {
       // Expected
+      Assert.assertEquals("Authentication type must be specified: simple|kerberos|<class>", 
+          ex.getMessage());
     } catch (Exception ex) {
       Assert.fail();
     } finally {
@@ -230,6 +232,27 @@ public class TestAuthenticationFilter {
       // Expected
     } finally {
       Assert.assertEquals(KerberosAuthenticationHandler.class, filter.getAuthenticationHandler().getClass());
+      filter.destroy();
+    }
+  }
+  
+  @Test
+  public void testInitCaseSensitivity() throws Exception {
+    // minimal configuration & simple auth handler (Pseudo)
+    AuthenticationFilter filter = new AuthenticationFilter();
+    try {
+      FilterConfig config = Mockito.mock(FilterConfig.class);
+      Mockito.when(config.getInitParameter(AuthenticationFilter.AUTH_TYPE)).thenReturn("SimPle");
+      Mockito.when(config.getInitParameter(AuthenticationFilter.AUTH_TOKEN_VALIDITY)).thenReturn(
+          (new Long(TOKEN_VALIDITY_SEC)).toString());
+      Mockito.when(config.getInitParameterNames()).thenReturn(
+          new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
+              AuthenticationFilter.AUTH_TOKEN_VALIDITY)).elements());
+
+      filter.init(config);
+      Assert.assertEquals(PseudoAuthenticationHandler.class, 
+          filter.getAuthenticationHandler().getClass());
+    } finally {
       filter.destroy();
     }
   }

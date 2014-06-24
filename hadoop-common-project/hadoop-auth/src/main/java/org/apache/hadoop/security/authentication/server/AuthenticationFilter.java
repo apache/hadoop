@@ -134,11 +134,15 @@ public class AuthenticationFilter implements Filter {
     String authHandlerName = config.getProperty(AUTH_TYPE, null);
     String authHandlerClassName;
     if (authHandlerName == null) {
-      throw new ServletException("Authentication type must be specified: simple|kerberos|<class>");
+      throw new ServletException("Authentication type must be specified: " +
+          PseudoAuthenticationHandler.TYPE + "|" + 
+          KerberosAuthenticationHandler.TYPE + "|<class>");
     }
-    if (authHandlerName.equals("simple")) {
+    if (authHandlerName.toLowerCase(Locale.ENGLISH).equals(
+        PseudoAuthenticationHandler.TYPE)) {
       authHandlerClassName = PseudoAuthenticationHandler.class.getName();
-    } else if (authHandlerName.equals("kerberos")) {
+    } else if (authHandlerName.toLowerCase(Locale.ENGLISH).equals(
+        KerberosAuthenticationHandler.TYPE)) {
       authHandlerClassName = KerberosAuthenticationHandler.class.getName();
     } else {
       authHandlerClassName = authHandlerName;
