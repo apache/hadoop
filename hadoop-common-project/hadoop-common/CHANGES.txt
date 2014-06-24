@@ -18,6 +18,11 @@ Release 2.7.0 - UNRELEASED
     Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
     Alexander Stojanovic, Brian Swan, and Min Wei via cnauroth)
 
+    HADOOP-10728. Metrics system for Windows Azure Storage Filesystem.
+    (Dexter Bradshaw, Mostafa Elhemali, Xi Fang, Johannes Klein, David Lao,
+    Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
+    Alexander Stojanovich, Brian Swan, and Min Wei via cnauroth)
+
   IMPROVEMENTS
 
     HADOOP-11156. DelegateToFileSystem should implement

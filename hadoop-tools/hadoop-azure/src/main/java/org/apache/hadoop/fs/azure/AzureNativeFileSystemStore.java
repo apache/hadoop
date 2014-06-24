@@ -17,7 +17,6 @@
  */
 
 package org.apache.hadoop.fs.azure;
-
 import static org.apache.hadoop.fs.azure.NativeAzureFileSystem.PATH_DELIMITER;
 
 import java.io.BufferedInputStream;
@@ -46,6 +45,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azure.StorageInterface.CloudBlobContainerWrapper;
 import org.apache.hadoop.fs.azure.StorageInterface.CloudBlobDirectoryWrapper;
 import org.apache.hadoop.fs.azure.StorageInterface.CloudBlockBlobWrapper;
+import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
+import org.apache.hadoop.fs.azure.metrics.BandwidthGaugeUpdater;
+import org.apache.hadoop.fs.azure.metrics.ErrorMetricUpdater;
+import org.apache.hadoop.fs.azure.metrics.ResponseReceivedMetricUpdater;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.mortbay.util.ajax.JSON;
@@ -69,8 +72,15 @@ import com.microsoft.windowsazure.storage.blob.DeleteSnapshotsOption;
 import com.microsoft.windowsazure.storage.blob.ListBlobItem;
 import com.microsoft.windowsazure.storage.core.Utility;
 
+
+/**
+ * Core implementation of Windows Azure Filesystem for Hadoop.
+ * Provides the bridging logic between Hadoop's abstract filesystem and Azure Storage 
+ *
+ */
 @InterfaceAudience.Private
-class AzureNativeFileSystemStore implements NativeFileSystemStore {
+@VisibleForTesting
+public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   
   /**
    * Configuration knob on whether we do block-level MD5 validation on
@@ -169,6 +179,8 @@ class AzureNativeFileSystemStore implements NativeFileSystemStore {
   private boolean isAnonymousCredentials = false;
   // Set to true if we are connecting using shared access signatures.
   private boolean connectingUsingSAS = false;
+  private AzureFileSystemInstrumentation instrumentation;
+  private BandwidthGaugeUpdater bandwidthGaugeUpdater;
   private static final JSON PERMISSION_JSON_SERIALIZER = createPermissionJsonSerializer();
 
   private boolean suppressRetryPolicy = false;
@@ -301,6 +313,11 @@ class AzureNativeFileSystemStore implements NativeFileSystemStore {
     this.storageInteractionLayer = storageInteractionLayer;
   }
 
+  @VisibleForTesting
+  public BandwidthGaugeUpdater getBandwidthGaugeUpdater() {
+    return bandwidthGaugeUpdater;
+  }
+  
   /**
    * Check if concurrent reads and writes on the same blob are allowed.
    * 
@@ -325,12 +342,18 @@ class AzureNativeFileSystemStore implements NativeFileSystemStore {
    *           if URI or job object is null, or invalid scheme.
    */
   @Override
-  public void initialize(URI uri, Configuration conf) throws AzureException {
+  public void initialize(URI uri, Configuration conf, AzureFileSystemInstrumentation instrumentation) throws AzureException {
 
     if (null == this.storageInteractionLayer) {
       this.storageInteractionLayer = new StorageInterfaceImpl();
     }
 
+    this.instrumentation = instrumentation;
+    this.bandwidthGaugeUpdater = new BandwidthGaugeUpdater(instrumentation);
+    if (null == this.storageInteractionLayer) {
+      this.storageInteractionLayer = new StorageInterfaceImpl();
+    }
+    
     // Check that URI exists.
     //
     if (null == uri) {
@@ -775,8 +798,10 @@ class AzureNativeFileSystemStore implements NativeFileSystemStore {
         throw new AzureException(errMsg);
       }
 
+      instrumentation.setAccountName(accountName);
       String containerName = getContainerFromAuthority(sessionUri);
-
+      instrumentation.setContainerName(containerName);
+      
       // Check whether this is a storage emulator account.
       if (isStorageEmulatorAccount(accountName)) {
         // It is an emulator account, connect to it with no credentials.
@@ -1522,6 +1547,11 @@ class AzureNativeFileSystemStore implements NativeFileSystemStore {
           selfThrottlingWriteFactor);
     }
 
+    ResponseReceivedMetricUpdater.hook(
+        operationContext,
+        instrumentation,
+        bandwidthGaugeUpdater);
+    
     // Bind operation context to receive send request callbacks on this
     // operation.
     // If reads concurrent to OOB writes are allowed, the interception will
@@ -1535,6 +1565,8 @@ class AzureNativeFileSystemStore implements NativeFileSystemStore {
       operationContext = testHookOperationContext
           .modifyOperationContext(operationContext);
     }
+    
+    ErrorMetricUpdater.hook(operationContext, instrumentation);
 
     // Return the operation context.
     return operationContext;
@@ -2218,5 +2250,14 @@ class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
   @Override
   public void close() {
+    bandwidthGaugeUpdater.close();
+  }
+  
+  // Finalizer to ensure complete shutdown
+  @Override
+  protected void finalize() throws Throwable {
+    LOG.debug("finalize() called");
+    close();
+    super.finalize();
   }
 }

@@ -12,9 +12,13 @@ Unit tests
 =============
 Most of the tests will run without additional configuration.
 For complete testing, configuration in src/test/resources is required:
-  src/test/resources/azure-test.xml
-  src/test/resources/log4j.properties
+  
+  src/test/resources/azure-test.xml -> Defines Azure storage dependencies, including account information 
 
+The other files in src/test/resources do not normally need alteration:
+  log4j.properties -> Test logging setup
+  hadoop-metrics2-azure-file-system.properties -> used to wire up instrumentation for testing
+  
 From command-line
 ------------------
 Basic execution:
@@ -59,6 +63,12 @@ Enable the Azure emulator tests by setting
   fs.azure.test.emulator -> true 
 in src\test\resources\azure-test.xml
 
+Known issues:
+  Symptom: When running tests for emulator, you see the following failure message
+           com.microsoft.windowsazure.storage.StorageException: The value for one of the HTTP headers is not in the correct format.
+  Issue:   The emulator can get into a confused state.  
+  Fix:     Restart the Azure Emulator.  Ensure it is v3.2 or later.
+ 
 Running tests against live Azure storage 
 -------------------------------------------------------------------------
 In order to run WASB unit tests against a live Azure Storage account, add credentials to 
@@ -101,4 +111,8 @@ Eclipse:
 NOTE:
 - After any change to the checkstyle rules xml, use window|preferences|checkstyle|{refresh}|OK
 
- 
+=============
+Javadoc
+============= 
+Command-line
+> mvn javadoc:javadoc
