@@ -213,6 +213,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-6578. add toString method to DatanodeStorage for easier debugging.
     (Yongjun Zhang via Arpit Agarwal)
 
+    HDFS-6562. Refactor rename() in FSDirectory. (wheat9)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
