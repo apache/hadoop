@@ -100,6 +100,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10665. Make Hadoop Authentication Handler loads case in-sensitive
     (Benoy Antony via vinayakumarb)
 
+    HADOOP-10652. Refactor Proxyusers to use AccessControlList. (Benoy
+    Antony via Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES 

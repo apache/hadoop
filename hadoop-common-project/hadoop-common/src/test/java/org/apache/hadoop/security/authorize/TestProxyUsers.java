@@ -140,7 +140,6 @@ public class TestProxyUsers {
       PROXY_IP);
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
 
-
     // First try proxying a group that's allowed
     UserGroupInformation realUserUgi = UserGroupInformation
         .createRemoteUser(REAL_USER_NAME);
@@ -362,6 +361,30 @@ public class TestProxyUsers {
      // From bad IP
      assertNotAuthorized(proxyUserUgi, "1.2.3.5");
    }
+  
+  @Test
+  public void testWithProxyGroupsAndUsersWithSpaces() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(
+        DefaultImpersonationProvider.getProxySuperuserUserConfKey(REAL_USER_NAME),
+        StringUtils.join(",", Arrays.asList(PROXY_USER_NAME + " ",AUTHORIZED_PROXY_USER_NAME, "ONEMORE")));
+
+    conf.set(
+      DefaultImpersonationProvider.getProxySuperuserGroupConfKey(REAL_USER_NAME),
+      StringUtils.join(",", Arrays.asList(GROUP_NAMES)));
+    
+    conf.set(
+      DefaultImpersonationProvider.getProxySuperuserIpConfKey(REAL_USER_NAME),
+      PROXY_IP);
+    
+    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+    
+    Collection<String> groupsToBeProxied = 
+        ProxyUsers.getDefaultImpersonationProvider().getProxyGroups().get(
+        DefaultImpersonationProvider.getProxySuperuserGroupConfKey(REAL_USER_NAME));
+    
+    assertEquals (GROUP_NAMES.length, groupsToBeProxied.size());
+  }
 
 
   private void assertNotAuthorized(UserGroupInformation proxyUgi, String host) {

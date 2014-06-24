@@ -81,29 +81,42 @@ public class AccessControlList implements Writable {
    * @param aclString String representation of the ACL
    */
   public AccessControlList(String aclString) {
-    buildACL(aclString);
+    buildACL(aclString.split(" ", 2));
+  }
+  
+  /**
+   * Construct a new ACL from String representation of users and groups
+   * 
+   * The arguments are comma separated lists
+   * 
+   * @param users comma separated list of users
+   * @param groups comma separated list of groups
+   */
+  public AccessControlList(String users, String groups) {
+    buildACL(new String[] {users, groups});
   }
 
   /**
-   * Build ACL from the given string, format of the string is
-   * user1,...,userN group1,...,groupN
+   * Build ACL from the given two Strings.
+   * The Strings contain comma separated values.
    *
-   * @param aclString build ACL from this string
+   * @param aclString build ACL from array of Strings
    */
-  private void buildACL(String aclString) {
+  private void buildACL(String[] userGroupStrings) {
     users = new HashSet<String>();
     groups = new HashSet<String>();
-    if (isWildCardACLValue(aclString)) {
-      allAllowed = true;
-    } else {
-      allAllowed = false;
-      String[] userGroupStrings = aclString.split(" ", 2);
-      
-      if (userGroupStrings.length >= 1) {
+    for (String aclPart : userGroupStrings) {
+      if (aclPart != null && isWildCardACLValue(aclPart)) {
+        allAllowed = true;
+        break;
+      }
+    }
+    if (!allAllowed) {      
+      if (userGroupStrings.length >= 1 && userGroupStrings[0] != null) {
         users = StringUtils.getTrimmedStringCollection(userGroupStrings[0]);
       } 
       
-      if (userGroupStrings.length == 2) {
+      if (userGroupStrings.length == 2 && userGroupStrings[1] != null) {
         groups = StringUtils.getTrimmedStringCollection(userGroupStrings[1]);
         groupsMapping.cacheGroupsAdd(new LinkedList<String>(groups));
       }
@@ -294,7 +307,7 @@ public class AccessControlList implements Writable {
   @Override
   public void readFields(DataInput in) throws IOException {
     String aclString = Text.readString(in);
-    buildACL(aclString);
+    buildACL(aclString.split(" ", 2));
   }
 
   /**

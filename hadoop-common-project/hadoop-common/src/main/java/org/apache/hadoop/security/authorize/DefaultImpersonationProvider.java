@@ -20,14 +20,13 @@ package org.apache.hadoop.security.authorize;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 
@@ -39,11 +38,14 @@ public class DefaultImpersonationProvider implements ImpersonationProvider {
   private static final String CONF_GROUPS = ".groups";
   private static final String CONF_HADOOP_PROXYUSER = "hadoop.proxyuser.";
   private static final String CONF_HADOOP_PROXYUSER_RE = "hadoop\\.proxyuser\\.";
-  // list of users, groups and hosts per proxyuser
-  private Map<String, Collection<String>> proxyUsers = 
-    new HashMap<String, Collection<String>>(); 
-  private Map<String, Collection<String>> proxyGroups = 
-    new HashMap<String, Collection<String>>();
+  private static final String CONF_HADOOP_PROXYUSER_RE_USERS_GROUPS = 
+      CONF_HADOOP_PROXYUSER_RE+"[^.]*(" + Pattern.quote(CONF_USERS) +
+      "|" + Pattern.quote(CONF_GROUPS) + ")";
+  private static final String CONF_HADOOP_PROXYUSER_RE_HOSTS = 
+      CONF_HADOOP_PROXYUSER_RE+"[^.]*"+ Pattern.quote(CONF_HOSTS);
+  // acl and list of hosts per proxyuser
+  private Map<String, AccessControlList> proxyUserAcl = 
+    new HashMap<String, AccessControlList>();
   private Map<String, Collection<String>> proxyHosts = 
     new HashMap<String, Collection<String>>();
   private Configuration conf;
@@ -52,28 +54,20 @@ public class DefaultImpersonationProvider implements ImpersonationProvider {
   public void setConf(Configuration conf) {
     this.conf = conf;
 
-    // get all the new keys for users
-    String regex = CONF_HADOOP_PROXYUSER_RE+"[^.]*\\"+CONF_USERS;
-    Map<String,String> allMatchKeys = conf.getValByRegex(regex);
+    // get list of users and groups per proxyuser
+    Map<String,String> allMatchKeys = 
+        conf.getValByRegex(CONF_HADOOP_PROXYUSER_RE_USERS_GROUPS); 
     for(Entry<String, String> entry : allMatchKeys.entrySet()) {  
-      Collection<String> users = StringUtils.getTrimmedStringCollection(entry.getValue());
-      proxyUsers.put(entry.getKey(), users);
+      String aclKey = getAclKey(entry.getKey());
+      if (!proxyUserAcl.containsKey(aclKey)) {
+        proxyUserAcl.put(aclKey, new AccessControlList(
+            allMatchKeys.get(aclKey + CONF_USERS) ,
+            allMatchKeys.get(aclKey + CONF_GROUPS)));
+      }
     }
 
-    // get all the new keys for groups
-    regex = CONF_HADOOP_PROXYUSER_RE+"[^.]*\\"+CONF_GROUPS;
-    allMatchKeys = conf.getValByRegex(regex);
-    for(Entry<String, String> entry : allMatchKeys.entrySet()) {
-      Collection<String> groups = StringUtils.getTrimmedStringCollection(entry.getValue());
-      proxyGroups.put(entry.getKey(), groups);
-      //cache the groups. This is needed for NetGroups
-      Groups.getUserToGroupsMappingService(conf).cacheGroupsAdd(
-          new ArrayList<String>(groups));
-    }
-
-    // now hosts
-    regex = CONF_HADOOP_PROXYUSER_RE+"[^.]*\\"+CONF_HOSTS;
-    allMatchKeys = conf.getValByRegex(regex);
+    // get hosts per proxyuser
+    allMatchKeys = conf.getValByRegex(CONF_HADOOP_PROXYUSER_RE_HOSTS);
     for(Entry<String, String> entry : allMatchKeys.entrySet()) {
       proxyHosts.put(entry.getKey(),
           StringUtils.getTrimmedStringCollection(entry.getValue()));
@@ -88,48 +82,22 @@ public class DefaultImpersonationProvider implements ImpersonationProvider {
   @Override
   public void authorize(UserGroupInformation user, 
       String remoteAddress) throws AuthorizationException {
-
-    if (user.getRealUser() == null) {
+    
+    UserGroupInformation realUser = user.getRealUser();
+    if (realUser == null) {
       return;
     }
-    boolean userAuthorized = false;
+    
+    AccessControlList acl = proxyUserAcl.get(
+        CONF_HADOOP_PROXYUSER+realUser.getShortUserName());
+    if (acl == null || !acl.isUserAllowed(user)) {
+      throw new AuthorizationException("User: " + realUser.getUserName()
+          + " is not allowed to impersonate " + user.getUserName());
+    }
+
     boolean ipAuthorized = false;
-    UserGroupInformation superUser = user.getRealUser();
-
-    Collection<String> allowedUsers = proxyUsers.get(
-        getProxySuperuserUserConfKey(superUser.getShortUserName()));
-
-    if (isWildcardList(allowedUsers)) {
-      userAuthorized = true;
-    } else if (allowedUsers != null && !allowedUsers.isEmpty()) {
-      if (allowedUsers.contains(user.getShortUserName())) {
-        userAuthorized = true;
-      }
-    }
-
-    if (!userAuthorized){
-      Collection<String> allowedUserGroups = proxyGroups.get(
-          getProxySuperuserGroupConfKey(superUser.getShortUserName()));
-
-      if (isWildcardList(allowedUserGroups)) {
-        userAuthorized = true;
-      } else if (allowedUserGroups != null && !allowedUserGroups.isEmpty()) {
-        for (String group : user.getGroupNames()) {
-          if (allowedUserGroups.contains(group)) {
-            userAuthorized = true;
-            break;
-          }
-        }
-      }
-
-      if (!userAuthorized) {
-        throw new AuthorizationException("User: " + superUser.getUserName()
-            + " is not allowed to impersonate " + user.getUserName());
-      }
-    }
-
     Collection<String> ipList = proxyHosts.get(
-        getProxySuperuserIpConfKey(superUser.getShortUserName()));
+        getProxySuperuserIpConfKey(realUser.getShortUserName()));
 
     if (isWildcardList(ipList)) {
       ipAuthorized = true;
@@ -149,8 +117,16 @@ public class DefaultImpersonationProvider implements ImpersonationProvider {
     }
     if(!ipAuthorized) {
       throw new AuthorizationException("Unauthorized connection for super-user: "
-          + superUser.getUserName() + " from IP " + remoteAddress);
+          + realUser.getUserName() + " from IP " + remoteAddress);
     }
+  }
+  
+  private String getAclKey(String key) {
+    int endIndex = key.lastIndexOf(".");
+    if (endIndex != -1) {
+      return key.substring(0, endIndex); 
+    }
+    return key;
   }
 
   /**
@@ -194,13 +170,12 @@ public class DefaultImpersonationProvider implements ImpersonationProvider {
   }
 
   @VisibleForTesting
-  public Map<String, Collection<String>> getProxyUsers() {
-    return proxyUsers;
-  }
-
-  @VisibleForTesting
   public Map<String, Collection<String>> getProxyGroups() {
-    return proxyGroups;
+     Map<String,Collection<String>> proxyGroups = new HashMap<String,Collection<String>>();
+     for(Entry<String, AccessControlList> entry : proxyUserAcl.entrySet()) {
+       proxyGroups.put(entry.getKey() + CONF_GROUPS, entry.getValue().getGroups());
+     }
+     return proxyGroups;
   }
 
   @VisibleForTesting
