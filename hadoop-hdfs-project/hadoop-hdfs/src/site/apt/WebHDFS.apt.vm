@@ -70,6 +70,18 @@ WebHDFS REST API
     * {{{Get Delegation Tokens}<<<GETDELEGATIONTOKENS>>>}}
         (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getDelegationTokens)
 
+    * {{{Get an XAttr}<<<GETXATTRS>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getXAttr)
+
+    * {{{Get multiple XAttrs}<<<GETXATTRS>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getXAttrs)
+
+    * {{{Get all XAttrs}<<<GETXATTRS>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getXAttrs)
+
+    * {{{List all XAttrs}<<<LISTXATTRS>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.listXAttrs)
+
   * HTTP PUT
 
     * {{{Create and Write to a File}<<<CREATE>>>}}
@@ -107,6 +119,12 @@ WebHDFS REST API
 
     * {{{Rename Snapshot}<<<RENAMESNAPSHOT>>>}}
         (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.renameSnapshot)
+
+    * {{{Set XAttr}<<<SETXATTR>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.setXAttr)
+
+    * {{{Remove XAttr}<<<REMOVEXATTR>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.removeXAttr)
 
   * HTTP POST
 
@@ -909,6 +927,188 @@ Transfer-Encoding: chunked
   {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getAclStatus
 
 
+* {Extended Attributes(XAttrs) Operations}
+
+** {Set XAttr}
+
+  * Submit a HTTP PUT request.
+
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=op=SETXATTR
+                              &xattr.name=<XATTRNAME>&xattr.value=<XATTRVALUE>
+                              &flag=<FLAG>"
++---------------------------------
+
+  The client receives a response with zero content length:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Length: 0
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.setXAttr
+
+
+** {Remove XAttr}
+
+  * Submit a HTTP PUT request.
+
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=REMOVEXATTR
+                              &xattr.name=<XATTRNAME>"
++---------------------------------
+
+  The client receives a response with zero content length:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Length: 0
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.removeXAttr
+
+
+** {Get an XAttr}
+
+  * Submit a HTTP GET request.
+
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETXATTRS
+                              &xattr.name=<XATTRNAME>&encoding=<ENCODING>"
++---------------------------------
+
+  The client receives a response with a {{{XAttrs JSON Schema}<<<XAttrs>>> JSON object}}:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{
+    "XAttrs": [
+        {
+            "name":"XATTRNAME",
+            "value":"XATTRVALUE"
+        }
+    ]
+}
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getXAttr
+
+
+** {Get multiple XAttrs}
+
+  * Submit a HTTP GET request.
+
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETXATTRS
+                              &xattr.name=<XATTRNAME1>&xattr.name=<XATTRNAME2>
+                              &encoding=<ENCODING>"
++---------------------------------
+
+  The client receives a response with a {{{XAttrs JSON Schema}<<<XAttrs>>> JSON object}}:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{
+    "XAttrs": [
+        {
+            "name":"XATTRNAME1",
+            "value":"XATTRVALUE1"
+        },
+        {
+            "name":"XATTRNAME2",
+            "value":"XATTRVALUE2"
+        }
+    ]
+}
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getXAttrs
+
+
+** {Get all XAttrs}
+
+  * Submit a HTTP GET request.
+
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETXATTRS
+                              &encoding=<ENCODING>"
++---------------------------------
+
+  The client receives a response with a {{{XAttrs JSON Schema}<<<XAttrs>>> JSON object}}:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{
+    "XAttrs": [
+        {
+            "name":"XATTRNAME1",
+            "value":"XATTRVALUE1"
+        },
+        {
+            "name":"XATTRNAME2",
+            "value":"XATTRVALUE2"
+        },
+        {
+            "name":"XATTRNAME3",
+            "value":"XATTRVALUE3"
+        }
+    ]
+}
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getXAttrs
+
+
+** {List all XAttrs}
+
+  * Submit a HTTP GET request.
+
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=LISTXATTRS"
++---------------------------------
+
+  The client receives a response with a {{{XAttrNames JSON Schema}<<<XAttrNames>>> JSON object}}:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{
+    "XAttrNames":"[\"XATTRNAME1\",\"XATTRNAME2\",\"XATTRNAME3\"]"
+}
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.listXAttrs
+
+
 * {Snapshot Operations}
 
 ** {Create Snapshot}
@@ -1246,6 +1446,58 @@ Transfer-Encoding: chunked
           "required"   : true
         },
       }
+    }
+  }
+}
++---------------------------------
+
+
+** {XAttrs JSON Schema}
+
++---------------------------------
+{
+  "name"      : "XAttrs",
+  "properties":
+  {
+    "XAttrs":
+    {
+      "type"      : "array",
+      "items":
+      {
+        "type"    " "object",
+        "properties":
+        {
+          "name":
+          {
+            "description": "XAttr name.",
+            "type"       : "string",
+            "required"   : true
+          },
+          "value":
+          {
+            "description": "XAttr value.",
+            "type"       : "string"
+          }
+        }
+      }
+    }
+  }
+}
++---------------------------------
+
+
+** {XAttrNames JSON Schema}
+
++---------------------------------
+{
+  "name"      : "XAttrNames",
+  "properties":
+  {
+    "XAttrNames":
+    {
+      "description": "XAttr names.",
+      "type"       : "string"
+      "required"   : true
     }
   }
 }
@@ -1686,6 +1938,83 @@ var tokenProperties =
 *----------------+-------------------------------------------------------------------+
 || Syntax        | See {{{./HdfsPermissionsGuide.html}Permissions and HDFS}}. |
 *----------------+-------------------------------------------------------------------+
+
+
+** {XAttr Name}
+
+*----------------+-------------------------------------------------------------------+
+|| Name          | <<<xattr.name>>> |
+*----------------+-------------------------------------------------------------------+
+|| Description   | The XAttr name of a file/directory. |
+*----------------+-------------------------------------------------------------------+
+|| Type          | String |
+*----------------+-------------------------------------------------------------------+
+|| Default Value | \<empty\> |
+*----------------+-------------------------------------------------------------------+
+|| Valid Values  | Any string prefixed with user./trusted./system./security.. |
+*----------------+-------------------------------------------------------------------+
+|| Syntax        | Any string prefixed with user./trusted./system./security.. |
+*----------------+-------------------------------------------------------------------+
+
+
+** {XAttr Value}
+
+*----------------+-------------------------------------------------------------------+
+|| Name          | <<<xattr.value>>> |
+*----------------+-------------------------------------------------------------------+
+|| Description   | The XAttr value of a file/directory. |
+*----------------+-------------------------------------------------------------------+
+|| Type          | String |
+*----------------+-------------------------------------------------------------------+
+|| Default Value | \<empty\> |
+*----------------+-------------------------------------------------------------------+
+|| Valid Values  | An encoded value. |
+*----------------+-------------------------------------------------------------------+
+|| Syntax        | Enclosed in double quotes or prefixed with 0x or 0s. |
+*----------------+-------------------------------------------------------------------+
+
+  See also:
+  {{{./ExtendedAttributes.html}Extended Attributes}}
+
+
+** {XAttr set flag}
+
+*----------------+-------------------------------------------------------------------+
+|| Name          | <<<flag>>> |
+*----------------+-------------------------------------------------------------------+
+|| Description   | The XAttr set flag. |
+*----------------+-------------------------------------------------------------------+
+|| Type          | String |
+*----------------+-------------------------------------------------------------------+
+|| Default Value | \<empty\> |
+*----------------+-------------------------------------------------------------------+
+|| Valid Values  | CREATE,REPLACE. |
+*----------------+-------------------------------------------------------------------+
+|| Syntax        | CREATE,REPLACE. |
+*----------------+-------------------------------------------------------------------+
+
+  See also:
+  {{{./ExtendedAttributes.html}Extended Attributes}}
+
+
+** {XAttr value encoding}
+
+*----------------+-------------------------------------------------------------------+
+|| Name          | <<<encoding>>> |
+*----------------+-------------------------------------------------------------------+
+|| Description   | The XAttr value encoding. |
+*----------------+-------------------------------------------------------------------+
+|| Type          | String |
+*----------------+-------------------------------------------------------------------+
+|| Default Value | \<empty\> |
+*----------------+-------------------------------------------------------------------+
+|| Valid Values  | text \| hex \| base64 |
+*----------------+-------------------------------------------------------------------+
+|| Syntax        | text \| hex \| base64 |
+*----------------+-------------------------------------------------------------------+
+
+  See also:
+  {{{./ExtendedAttributes.html}Extended Attributes}}
 
 
 ** {Access Time}
