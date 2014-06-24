@@ -21,22 +21,14 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
-import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
-import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
-import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.Content;
 import org.apache.hadoop.hdfs.server.namenode.ContentSummaryComputationContext;
@@ -56,7 +48,6 @@ import org.apache.hadoop.util.Time;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.common.primitives.SignedBytes;
 
 /**
  * Directories where taking snapshots is allowed.
@@ -78,164 +69,6 @@ public class INodeDirectorySnapshottable extends INodeDirectory {
           "Directory is not a snapshottable directory: " + src);
     }
     return (INodeDirectorySnapshottable)dir;
-  }
-  
-  /**
-   * A class describing the difference between snapshots of a snapshottable
-   * directory.
-   */
-  public static class SnapshotDiffInfo {
-    /** Compare two inodes based on their full names */
-    public static final Comparator<INode> INODE_COMPARATOR = 
-        new Comparator<INode>() {
-      @Override
-      public int compare(INode left, INode right) {
-        if (left == null) {
-          return right == null ? 0 : -1;
-        } else {
-          if (right == null) {
-            return 1;
-          } else {
-            int cmp = compare(left.getParent(), right.getParent());
-            return cmp == 0 ? SignedBytes.lexicographicalComparator().compare(
-                left.getLocalNameBytes(), right.getLocalNameBytes()) : cmp;
-          }
-        }
-      }
-    };
-
-    static class RenameEntry {
-      private byte[][] sourcePath;
-      private byte[][] targetPath;
-
-      void setSource(INode source, byte[][] sourceParentPath) {
-        Preconditions.checkState(sourcePath == null);
-        sourcePath = new byte[sourceParentPath.length + 1][];
-        System.arraycopy(sourceParentPath, 0, sourcePath, 0,
-            sourceParentPath.length);
-        sourcePath[sourcePath.length - 1] = source.getLocalNameBytes();
-      }
-
-      void setTarget(INode target, byte[][] targetParentPath) {
-        targetPath = new byte[targetParentPath.length + 1][];
-        System.arraycopy(targetParentPath, 0, targetPath, 0,
-            targetParentPath.length);
-        targetPath[targetPath.length - 1] = target.getLocalNameBytes();
-      }
-
-      void setTarget(byte[][] targetPath) {
-        this.targetPath = targetPath;
-      }
-
-      boolean isRename() {
-        return sourcePath != null && targetPath != null;
-      }
-
-      byte[][] getSourcePath() {
-        return sourcePath;
-      }
-
-      byte[][] getTargetPath() {
-        return targetPath;
-      }
-    }
-
-    /** The root directory of the snapshots */
-    private final INodeDirectorySnapshottable snapshotRoot;
-    /** The starting point of the difference */
-    private final Snapshot from;
-    /** The end point of the difference */
-    private final Snapshot to;
-    /**
-     * A map recording modified INodeFile and INodeDirectory and their relative
-     * path corresponding to the snapshot root. Sorted based on their names.
-     */ 
-    private final SortedMap<INode, byte[][]> diffMap =
-        new TreeMap<INode, byte[][]>(INODE_COMPARATOR);
-    /**
-     * A map capturing the detailed difference about file creation/deletion.
-     * Each key indicates a directory whose children have been changed between
-     * the two snapshots, while its associated value is a {@link ChildrenDiff}
-     * storing the changes (creation/deletion) happened to the children (files).
-     */
-    private final Map<INodeDirectory, ChildrenDiff> dirDiffMap = 
-        new HashMap<INodeDirectory, ChildrenDiff>();
-
-    private final Map<Long, RenameEntry> renameMap =
-        new HashMap<Long, RenameEntry>();
-
-    SnapshotDiffInfo(INodeDirectorySnapshottable snapshotRoot, Snapshot start,
-        Snapshot end) {
-      this.snapshotRoot = snapshotRoot;
-      this.from = start;
-      this.to = end;
-    }
-    
-    /** Add a dir-diff pair */
-    private void addDirDiff(INodeDirectory dir, byte[][] relativePath,
-        ChildrenDiff diff) {
-      dirDiffMap.put(dir, diff);
-      diffMap.put(dir, relativePath);
-      // detect rename
-      for (INode created : diff.getList(ListType.CREATED)) {
-        if (created.isReference()) {
-          RenameEntry entry = getEntry(created.getId());
-          if (entry.getTargetPath() == null) {
-            entry.setTarget(created, relativePath);
-          }
-        }
-      }
-      for (INode deleted : diff.getList(ListType.DELETED)) {
-        if (deleted instanceof INodeReference.WithName) {
-          RenameEntry entry = getEntry(deleted.getId());
-          entry.setSource(deleted, relativePath);
-        }
-      }
-    }
-
-    private RenameEntry getEntry(long inodeId) {
-      RenameEntry entry = renameMap.get(inodeId);
-      if (entry == null) {
-        entry = new RenameEntry();
-        renameMap.put(inodeId, entry);
-      }
-      return entry;
-    }
-
-    private void setRenameTarget(long inodeId, byte[][] path) {
-      getEntry(inodeId).setTarget(path);
-    }
-
-    /** Add a modified file */ 
-    private void addFileDiff(INodeFile file, byte[][] relativePath) {
-      diffMap.put(file, relativePath);
-    }
-    
-    /** @return True if {@link #from} is earlier than {@link #to} */
-    private boolean isFromEarlier() {
-      return Snapshot.ID_COMPARATOR.compare(from, to) < 0;
-    }
-    
-    /**
-     * Generate a {@link SnapshotDiffReport} based on detailed diff information.
-     * @return A {@link SnapshotDiffReport} describing the difference
-     */
-    public SnapshotDiffReport generateReport() {
-      List<DiffReportEntry> diffReportList = new ArrayList<DiffReportEntry>();
-      for (INode node : diffMap.keySet()) {
-        diffReportList.add(new DiffReportEntry(DiffType.MODIFY, diffMap
-            .get(node), null));
-        if (node.isDirectory()) {
-          ChildrenDiff dirDiff = dirDiffMap.get(node);
-          List<DiffReportEntry> subList = dirDiff.generateReport(
-              diffMap.get(node), isFromEarlier(), renameMap);
-          diffReportList.addAll(subList);
-        }
-      }
-      return new SnapshotDiffReport(snapshotRoot.getFullPathName(),
-          Snapshot.getSnapshotName(from), Snapshot.getSnapshotName(to),
-          diffReportList);
-    }
   }
 
   /**
@@ -496,9 +329,9 @@ public class INodeDirectorySnapshottable extends INodeDirectory {
   private void computeDiffRecursively(INode node, List<byte[]> parentPath,
       SnapshotDiffInfo diffReport) {
     final Snapshot earlierSnapshot = diffReport.isFromEarlier() ?
-        diffReport.from : diffReport.to;
+        diffReport.getFrom() : diffReport.getTo();
     final Snapshot laterSnapshot = diffReport.isFromEarlier() ?
-        diffReport.to : diffReport.from;
+        diffReport.getTo() : diffReport.getFrom();
     byte[][] relativePath = parentPath.toArray(new byte[parentPath.size()][]);
     if (node.isDirectory()) {
       final ChildrenDiff diff = new ChildrenDiff();

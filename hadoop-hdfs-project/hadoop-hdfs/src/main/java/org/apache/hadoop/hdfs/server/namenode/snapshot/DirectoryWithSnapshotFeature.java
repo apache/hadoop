@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -29,8 +28,6 @@ import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
-import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
-import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.server.namenode.Content;
 import org.apache.hadoop.hdfs.server.namenode.ContentSummaryComputationContext;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
@@ -41,7 +38,6 @@ import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryAttributes;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable.SnapshotDiffInfo.RenameEntry;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
 import org.apache.hadoop.hdfs.util.Diff;
 import org.apache.hadoop.hdfs.util.Diff.Container;
@@ -160,43 +156,6 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
           dirList.add(node.asDirectory());
         }
       }
-    }
-
-    /**
-     * Interpret the diff and generate a list of {@link DiffReportEntry}.
-     * @param parentPath The relative path of the parent.
-     * @param fromEarlier True indicates {@code diff=later-earlier},
-     *                    False indicates {@code diff=earlier-later}
-     * @return A list of {@link DiffReportEntry} as the diff report.
-     */
-    public List<DiffReportEntry> generateReport(byte[][] parentPath,
-        boolean fromEarlier, Map<Long, RenameEntry> renameMap) {
-      List<DiffReportEntry> list = new ArrayList<DiffReportEntry>();
-      List<INode> created = getList(ListType.CREATED);
-      List<INode> deleted = getList(ListType.DELETED);
-      byte[][] fullPath = new byte[parentPath.length + 1][];
-      System.arraycopy(parentPath, 0, fullPath, 0, parentPath.length);
-      for (INode cnode : created) {
-        RenameEntry entry = renameMap.get(cnode.getId());
-        if (entry == null || !entry.isRename()) {
-          fullPath[fullPath.length - 1] = cnode.getLocalNameBytes();
-          list.add(new DiffReportEntry(fromEarlier ? DiffType.CREATE
-              : DiffType.DELETE, fullPath));
-        }
-      }
-      for (INode dnode : deleted) {
-        RenameEntry entry = renameMap.get(dnode.getId());
-        if (entry != null && entry.isRename()) {
-          list.add(new DiffReportEntry(DiffType.RENAME,
-              fromEarlier ? entry.getSourcePath() : entry.getTargetPath(),
-              fromEarlier ? entry.getTargetPath() : entry.getSourcePath()));
-        } else {
-          fullPath[fullPath.length - 1] = dnode.getLocalNameBytes();
-          list.add(new DiffReportEntry(fromEarlier ? DiffType.DELETE
-              : DiffType.CREATE, fullPath));
-        }
-      }
-      return list;
     }
   }
 

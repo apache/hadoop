@@ -23,16 +23,14 @@ import java.util.List;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable.SnapshotDiffInfo;
 
 import com.google.common.base.Objects;
 
 /**
  * This class represents to end users the difference between two snapshots of 
  * the same directory, or the difference between a snapshot of the directory and
- * its current state. Instead of capturing all the details of the diff, which 
- * is stored in {@link SnapshotDiffInfo}, this class only lists where the 
- * changes happened and their types.
+ * its current state. Instead of capturing all the details of the diff, this
+ * class only lists where the changes happened and their types.
  */
 public class SnapshotDiffReport {
   private final static String LINE_SEPARATOR = System.getProperty(
