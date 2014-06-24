@@ -538,6 +538,9 @@ Release 2.5.1 - 2014-09-05
     HADOOP-10956. Fix create-release script to include docs and necessary txt
     files. (kasha)
 
+    HADOOP-10717. HttpServer2 should load jsp DTD from local jars instead of
+    going remote. (Dapeng Sun via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
