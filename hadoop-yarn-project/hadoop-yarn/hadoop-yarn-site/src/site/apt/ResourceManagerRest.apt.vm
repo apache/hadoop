@@ -195,6 +195,14 @@ ResourceManager REST API's.
 *---------------+--------------+-------------------------------+
 | totalMB       | long         | The amount of total memory in MB |
 *---------------+--------------+-------------------------------+
+| reservedVirtualCores    | long         | The number of reserved virtual cores |
+*---------------+--------------+-------------------------------+
+| availableVirtualCores   | long         | The number of available virtual cores |
+*---------------+--------------+-------------------------------+
+| allocatedVirtualCores   | long         | The number of allocated virtual cores |
+*---------------+--------------+-------------------------------+
+| totalVirtualCores       | long         | The total number of virtual cores |
+*---------------+--------------+-------------------------------+
 | containersAllocated | int | The number of containers allocated |
 *---------------+--------------+-------------------------------+
 | containersReserved | int | The number of containers reserved |
@@ -247,10 +255,14 @@ ResourceManager REST API's.
       "reservedMB":0,
       "availableMB":17408,
       "allocatedMB":0,
+      "reservedVirtualCores":0,
+      "availableVirtualCores":7,
+      "allocatedVirtualCores":1,
       "containersAllocated":0,
       "containersReserved":0,
       "containersPending":0,
       "totalMB":17408,
+      "totalVirtualCores":8,
       "totalNodes":1,
       "lostNodes":0,
       "unhealthyNodes":0,
@@ -293,10 +305,14 @@ ResourceManager REST API's.
   <reservedMB>0</reservedMB>
   <availableMB>17408</availableMB>
   <allocatedMB>0</allocatedMB>
+  <reservedVirtualCores>0</reservedVirtualCores>
+  <availableVirtualCores>7</availableVirtualCores>
+  <allocatedVirtualCores>1</allocatedVirtualCores>
   <containersAllocated>0</containersAllocated>
   <containersReserved>0</containersReserved>
   <containersPending>0</containersPending>
   <totalMB>17408</totalMB>
+  <totalVirtualCores>8</totalVirtualCores>
   <totalNodes>1</totalNodes>
   <lostNodes>0</lostNodes>
   <unhealthyNodes>0</unhealthyNodes>
@@ -2040,8 +2056,10 @@ Server: Jetty(6.1.26)
         "lastHealthUpdate":1324056895432,
         "healthReport":"Healthy",
         "numContainers":0,
-        "usedMemoryMB":0
-        "availMemoryMB":8192
+        "usedMemoryMB":0,
+        "availMemoryMB":8192,
+        "usedVirtualCores":0,
+        "availableVirtualCores":8
       },
       {
         "rack":"\/default-rack",
@@ -2054,7 +2072,9 @@ Server: Jetty(6.1.26)
         "healthReport":"Healthy",
         "numContainers":0,
         "usedMemoryMB":0,
-        "availMemoryMB":8192
+        "availMemoryMB":8192,
+        "usedVirtualCores":0,
+        "availableVirtualCores":8
       }
     ]
   }
@@ -2096,6 +2116,8 @@ Server: Jetty(6.1.26)
     <numContainers>0</numContainers>
     <usedMemoryMB>0</usedMemoryMB>
     <availMemoryMB>5120</availMemoryMB>
+    <usedVirtualCores>0</usedVirtualCores>
+    <availableVirtualCores>8</availableVirtualCores>
   </node>
   <node>
     <rack>/default-rack</rack>
@@ -2109,6 +2131,8 @@ Server: Jetty(6.1.26)
     <numContainers>0</numContainers>
     <usedMemoryMB>0</usedMemoryMB>
     <availMemoryMB>5120</availMemoryMB>
+    <usedVirtualCores>0</usedVirtualCores>
+    <availableVirtualCores>8</availableVirtualCores>
   </node>
 </nodes>
 +---+
@@ -2159,9 +2183,13 @@ Server: Jetty(6.1.26)
 *---------------+--------------+-------------------------------+
 | lastHealthUpdate | long | The last time the node reported its health (in ms since epoch)|
 *---------------+--------------+-------------------------------+
-| usedMemoryMB | long | The total about of memory currently used on the node (in MB)|
+| usedMemoryMB | long | The total amount of memory currently used on the node (in MB)|
 *---------------+--------------+-------------------------------+
 | availMemoryMB | long | The total amount of memory currently available on the node (in MB)|
+*---------------+--------------+-------------------------------+
+| usedVirtualCores | long | The total number of vCores currently used on the node |
+*---------------+--------------+-------------------------------+
+| availableVirtualCores | long | The total number of vCores available on the node |
 *---------------+--------------+-------------------------------+
 | numContainers | int | The total number of containers currently running on the node|
 *---------------+--------------+-------------------------------+
@@ -2201,7 +2229,9 @@ Server: Jetty(6.1.26)
     "healthReport":"Healthy",
     "numContainers":0,
     "usedMemoryMB":0,
-    "availMemoryMB":5120
+    "availMemoryMB":5120,
+    "usedVirtualCores":0,
+    "availableVirtualCores":8
   }
 }
 +---+
@@ -2240,6 +2270,8 @@ Server: Jetty(6.1.26)
   <numContainers>0</numContainers>
   <usedMemoryMB>0</usedMemoryMB>
   <availMemoryMB>5120</availMemoryMB>
+  <usedVirtualCores>0</usedVirtualCores>
+  <availableVirtualCores>5120</availableVirtualCores>
 </node>
 +---+
 

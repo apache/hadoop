@@ -42,6 +42,7 @@ public class ContainerInfo {
   protected String diagnostics;
   protected String user;
   protected long totalMemoryNeededMB;
+  protected long totalVCoresNeeded;
   protected String containerLogsLink;
   protected String nodeId;
   @XmlTransient
@@ -76,6 +77,7 @@ public class ContainerInfo {
     Resource res = container.getResource();
     if (res != null) {
       this.totalMemoryNeededMB = res.getMemory();
+      this.totalVCoresNeeded = res.getVirtualCores();
     }
     this.containerLogsShortLink = ujoin("containerlogs", this.id,
         container.getUser());
@@ -128,6 +130,10 @@ public class ContainerInfo {
 
   public long getMemoryNeeded() {
     return this.totalMemoryNeededMB;
+  }
+
+  public long getVCoresNeeded() {
+    return this.totalVCoresNeeded;
   }
 
 }
