@@ -127,6 +127,7 @@ message ApplicationAttemptStateDataProto {
   optional string diagnostics = 6 [default = "N/A"];
   optional int64 start_time = 7;
   optional FinalApplicationStatusProto final_application_status = 8;
+  optional int32 am_container_exit_status = 9 [default = -1000];
 }
 
 message RMStateVersionProto {

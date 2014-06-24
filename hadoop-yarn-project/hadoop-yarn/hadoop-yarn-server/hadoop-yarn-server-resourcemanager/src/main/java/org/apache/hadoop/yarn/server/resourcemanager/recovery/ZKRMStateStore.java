@@ -538,12 +538,12 @@ public class ZKRMStateStore extends RMStateStore {
 
         ApplicationAttemptState attemptState =
             new ApplicationAttemptState(attemptId,
-                attemptStateData.getMasterContainer(), credentials,
-                attemptStateData.getStartTime(),
-                attemptStateData.getState(),
-                attemptStateData.getFinalTrackingUrl(),
-                attemptStateData.getDiagnostics(),
-                attemptStateData.getFinalApplicationStatus());
+              attemptStateData.getMasterContainer(), credentials,
+              attemptStateData.getStartTime(), attemptStateData.getState(),
+              attemptStateData.getFinalTrackingUrl(),
+              attemptStateData.getDiagnostics(),
+              attemptStateData.getFinalApplicationStatus(),
+              attemptStateData.getAMContainerExitStatus());
 
         appState.attempts.put(attemptState.getAttemptId(), attemptState);
       }
