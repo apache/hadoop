@@ -255,6 +255,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2187. FairScheduler: Disable max-AM-share check by default.
     (Robert Kanter via kasha)
 
+    YARN-2111. In FairScheduler.attemptScheduling, we don't count containers
+    as assigned if they have 0 memory but non-zero cores (Sandy Ryza)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES

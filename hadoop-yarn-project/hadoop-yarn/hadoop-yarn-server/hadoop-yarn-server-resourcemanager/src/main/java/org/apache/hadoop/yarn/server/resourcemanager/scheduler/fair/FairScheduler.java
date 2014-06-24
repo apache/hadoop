@@ -1033,9 +1033,8 @@ public class FairScheduler extends
       int assignedContainers = 0;
       while (node.getReservedContainer() == null) {
         boolean assignedContainer = false;
-        if (Resources.greaterThan(RESOURCE_CALCULATOR, clusterResource,
-              queueMgr.getRootQueue().assignContainer(node),
-              Resources.none())) {
+        if (!queueMgr.getRootQueue().assignContainer(node).equals(
+            Resources.none())) {
           assignedContainers++;
           assignedContainer = true;
         }
