@@ -598,6 +598,9 @@ Release 2.5.0 - UNRELEASED
     NativeAzureFileSystem#NativeAzureFsInputStream#close().
     (Chen He via cnauroth)
 
+    HADOOP-10746. TestSocketIOWithTimeout#testSocketIOWithTimeout fails on
+    Power PC. (Jinghui Wang via Arpit Agarwal)
+
   BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
 
     HADOOP-10520. Extended attributes definition and FileSystem APIs for
