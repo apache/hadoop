@@ -152,23 +152,27 @@ public class RMContainerImpl implements RMContainer {
   private Resource reservedResource;
   private NodeId reservedNode;
   private Priority reservedPriority;
-  private long startTime;
+  private long creationTime;
   private long finishTime;
   private ContainerStatus finishedStatus;
 
-
-
+  public RMContainerImpl(Container container,
+      ApplicationAttemptId appAttemptId, NodeId nodeId, String user,
+      RMContext rmContext) {
+    this(container, appAttemptId, nodeId, user, rmContext, System
+      .currentTimeMillis());
+  }
 
   public RMContainerImpl(Container container,
       ApplicationAttemptId appAttemptId, NodeId nodeId,
-      String user, RMContext rmContext) {
+      String user, RMContext rmContext, long creationTime) {
     this.stateMachine = stateMachineFactory.make(this);
     this.containerId = container.getId();
     this.nodeId = nodeId;
     this.container = container;
     this.appAttemptId = appAttemptId;
     this.user = user;
-    this.startTime = System.currentTimeMillis();
+    this.creationTime = creationTime;
     this.rmContext = rmContext;
     this.eventHandler = rmContext.getDispatcher().getEventHandler();
     this.containerAllocationExpirer = rmContext.getContainerAllocationExpirer();
@@ -237,8 +241,8 @@ public class RMContainerImpl implements RMContainer {
   }
 
   @Override
-  public long getStartTime() {
-    return startTime;
+  public long getCreationTime() {
+    return creationTime;
   }
 
   @Override
@@ -478,7 +482,7 @@ public class RMContainerImpl implements RMContainer {
     try {
       containerReport = ContainerReport.newInstance(this.getContainerId(),
           this.getAllocatedResource(), this.getAllocatedNode(),
-          this.getAllocatedPriority(), this.getStartTime(),
+          this.getAllocatedPriority(), this.getCreationTime(),
           this.getFinishTime(), this.getDiagnosticsInfo(), this.getLogURL(),
           this.getContainerExitStatus(), this.getContainerState());
     } finally {

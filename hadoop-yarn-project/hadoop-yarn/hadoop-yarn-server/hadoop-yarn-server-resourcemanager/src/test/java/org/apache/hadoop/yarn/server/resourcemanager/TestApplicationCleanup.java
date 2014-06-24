@@ -50,7 +50,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.http.client.params.AllClientPNames;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -382,9 +381,9 @@ public class TestApplicationCleanup {
     // nm1/nm2 register to rm2, and do a heartbeat
     nm1.setResourceTrackerService(rm2.getResourceTrackerService());
     nm1.registerNode(Arrays.asList(NMContainerStatus.newInstance(
-        ContainerId.newInstance(am0.getApplicationAttemptId(), 1),
-        ContainerState.COMPLETE, Resource.newInstance(1024, 1), "", 0)), Arrays
-        .asList(app0.getApplicationId()));
+      ContainerId.newInstance(am0.getApplicationAttemptId(), 1),
+      ContainerState.COMPLETE, Resource.newInstance(1024, 1), "", 0,
+      Priority.newInstance(0), 1234)), Arrays.asList(app0.getApplicationId()));
     nm2.setResourceTrackerService(rm2.getResourceTrackerService());
     nm2.registerNode(Arrays.asList(app0.getApplicationId()));
 

@@ -34,7 +34,8 @@ public abstract class NMContainerStatus {
 
   public static NMContainerStatus newInstance(ContainerId containerId,
       ContainerState containerState, Resource allocatedResource,
-      String diagnostics, int containerExitStatus) {
+      String diagnostics, int containerExitStatus, Priority priority,
+      long creationTime) {
     NMContainerStatus status =
         Records.newRecord(NMContainerStatus.class);
     status.setContainerId(containerId);
@@ -42,6 +43,8 @@ public abstract class NMContainerStatus {
     status.setAllocatedResource(allocatedResource);
     status.setDiagnostics(diagnostics);
     status.setContainerExitStatus(containerExitStatus);
+    status.setPriority(priority);
+    status.setCreationTime(creationTime);
     return status;
   }
 
@@ -95,4 +98,11 @@ public abstract class NMContainerStatus {
   public abstract Priority getPriority();
 
   public abstract void setPriority(Priority priority);
+
+  /**
+   * Get the time when the container is created
+   */
+  public abstract long getCreationTime();
+
+  public abstract void setCreationTime(long creationTime);
 }

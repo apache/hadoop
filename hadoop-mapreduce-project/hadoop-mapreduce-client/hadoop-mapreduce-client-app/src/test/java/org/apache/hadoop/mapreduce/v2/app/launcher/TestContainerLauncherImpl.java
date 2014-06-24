@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.client.api.impl.ContainerManagementProtocolProxy.ContainerManagementProtocolProxyData;
@@ -402,7 +403,7 @@ public class TestContainerLauncherImpl {
         1234), "password".getBytes(), new ContainerTokenIdentifier(
         contId, containerManagerAddr, "user",
         Resource.newInstance(1024, 1),
-        currentTime + 10000L, 123, currentTime));
+        currentTime + 10000L, 123, currentTime, Priority.newInstance(0), 0));
   }
 
   private static class ContainerManagerForTest implements ContainerManagementProtocol {

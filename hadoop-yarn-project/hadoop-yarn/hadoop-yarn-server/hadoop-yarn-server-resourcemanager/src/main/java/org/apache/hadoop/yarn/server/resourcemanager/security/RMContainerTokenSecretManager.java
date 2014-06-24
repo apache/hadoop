@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -34,8 +35,8 @@ import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.security.BaseContainerTokenSecretManager;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
 /**
  * SecretManager for ContainerTokens. This is RM-specific and rolls the
@@ -169,11 +170,13 @@ public class RMContainerTokenSecretManager extends
    * @param nodeId
    * @param appSubmitter
    * @param capability
+   * @param priority
+   * @param createTime
    * @return the container-token
    */
-  public Token
-      createContainerToken(ContainerId containerId, NodeId nodeId,
-          String appSubmitter, Resource capability) {
+  public Token createContainerToken(ContainerId containerId, NodeId nodeId,
+      String appSubmitter, Resource capability, Priority priority,
+      long createTime) {
     byte[] password;
     ContainerTokenIdentifier tokenIdentifier;
     long expiryTimeStamp =
@@ -185,7 +188,8 @@ public class RMContainerTokenSecretManager extends
       tokenIdentifier =
           new ContainerTokenIdentifier(containerId, nodeId.toString(),
             appSubmitter, capability, expiryTimeStamp, this.currentMasterKey
-              .getMasterKey().getKeyId(), ResourceManager.getClusterTimeStamp());
+              .getMasterKey().getKeyId(),
+            ResourceManager.getClusterTimeStamp(), priority, createTime);
       password = this.createPassword(tokenIdentifier);
 
     } finally {

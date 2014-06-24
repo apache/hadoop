@@ -186,6 +186,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2072. RM/NM UIs and webservices are missing vcore information.
     (Nathan Roberts via tgraves)
 
+    YARN-2152. Added missing information into ContainerTokenIdentifier so that
+    NodeManagers can report the same to RM when RM restarts. (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES 

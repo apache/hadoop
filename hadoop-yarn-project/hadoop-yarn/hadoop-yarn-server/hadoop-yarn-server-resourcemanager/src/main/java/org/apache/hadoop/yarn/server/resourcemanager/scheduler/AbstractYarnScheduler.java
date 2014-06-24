@@ -245,17 +245,18 @@ public abstract class AbstractYarnScheduler
     }
   }
 
-  private RMContainer recoverAndCreateContainer(NMContainerStatus report,
+  private RMContainer recoverAndCreateContainer(NMContainerStatus status,
       RMNode node) {
     Container container =
-        Container.newInstance(report.getContainerId(), node.getNodeID(),
-          node.getHttpAddress(), report.getAllocatedResource(),
-          report.getPriority(), null);
+        Container.newInstance(status.getContainerId(), node.getNodeID(),
+          node.getHttpAddress(), status.getAllocatedResource(),
+          status.getPriority(), null);
     ApplicationAttemptId attemptId =
         container.getId().getApplicationAttemptId();
     RMContainer rmContainer =
         new RMContainerImpl(container, attemptId, node.getNodeID(),
-          applications.get(attemptId.getApplicationId()).getUser(), rmContext);
+          applications.get(attemptId.getApplicationId()).getUser(), rmContext,
+          status.getCreationTime());
     return rmContainer;
   }
 

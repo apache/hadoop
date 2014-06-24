@@ -18,11 +18,10 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
-import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static org.junit.matchers.JUnitMatchers.*;
+import static org.junit.matchers.JUnitMatchers.containsString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -41,7 +40,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.Assert;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -59,6 +57,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -66,6 +65,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.URL;
@@ -74,6 +74,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -87,6 +88,7 @@ import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
+import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
@@ -480,7 +482,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     containerLaunchContext.setCommands(commands);
     StartContainerRequest scRequest =
         StartContainerRequest.newInstance(containerLaunchContext,
-          createContainerToken(cId));
+          createContainerToken(cId, Priority.newInstance(0), 0));
     List<StartContainerRequest> list = new ArrayList<StartContainerRequest>();
     list.add(scRequest);
     StartContainersRequest allRequests =
@@ -679,7 +681,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     // set up the rest of the container
     List<String> commands = Arrays.asList(Shell.getRunScriptCommand(scriptFile));
     containerLaunchContext.setCommands(commands);
-    Token containerToken = createContainerToken(cId);
+    Priority priority = Priority.newInstance(10);
+    long createTime = 1234;
+    Token containerToken = createContainerToken(cId, priority, createTime);
 
     StartContainerRequest scRequest =
         StartContainerRequest.newInstance(containerLaunchContext,
@@ -697,6 +701,11 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     }
     Assert.assertTrue("ProcessStartFile doesn't exist!",
         processStartFile.exists());
+
+    NMContainerStatus nmContainerStatus =
+        containerManager.getContext().getContainers().get(cId)
+          .getNMContainerStatus();
+    Assert.assertEquals(priority, nmContainerStatus.getPriority());
 
     // Now test the stop functionality.
     List<ContainerId> containerIds = new ArrayList<ContainerId>();
@@ -783,11 +792,13 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     launch.call();
   }
 
-  protected Token createContainerToken(ContainerId cId) throws InvalidToken {
+  protected Token createContainerToken(ContainerId cId, Priority priority,
+      long createTime) throws InvalidToken {
     Resource r = BuilderUtils.newResource(1024, 1);
     ContainerTokenIdentifier containerTokenIdentifier =
         new ContainerTokenIdentifier(cId, context.getNodeId().toString(), user,
-          r, System.currentTimeMillis() + 10000L, 123, DUMMY_RM_IDENTIFIER);
+          r, System.currentTimeMillis() + 10000L, 123, DUMMY_RM_IDENTIFIER,
+          priority, createTime);
     Token containerToken =
         BuilderUtils.newContainerToken(
           context.getNodeId(),

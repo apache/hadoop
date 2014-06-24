@@ -414,7 +414,8 @@ public class SchedulerApplicationAttempt {
         // create container token and NMToken altogether.
         container.setContainerToken(rmContext.getContainerTokenSecretManager()
           .createContainerToken(container.getId(), container.getNodeId(),
-            getUser(), container.getResource()));
+            getUser(), container.getResource(), container.getPriority(),
+            rmContainer.getCreationTime()));
         NMToken nmToken =
             rmContext.getNMTokenSecretManager().createAndGetNMToken(getUser(),
               getApplicationAttemptId(), container);
