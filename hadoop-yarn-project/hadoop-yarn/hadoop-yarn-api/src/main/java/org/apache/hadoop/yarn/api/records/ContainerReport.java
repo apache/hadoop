@@ -35,7 +35,7 @@ import org.apache.hadoop.yarn.util.Records;
  * <li>Allocated Resources to the container.</li>
  * <li>Assigned Node id.</li>
  * <li>Assigned Priority.</li>
- * <li>Start Time.</li>
+ * <li>Creation Time.</li>
  * <li>Finish Time.</li>
  * <li>Container Exit Status.</li>
  * <li>{@link ContainerState} of the container.</li>
@@ -53,14 +53,14 @@ public abstract class ContainerReport {
   @Unstable
   public static ContainerReport newInstance(ContainerId containerId,
       Resource allocatedResource, NodeId assignedNode, Priority priority,
-      long startTime, long finishTime, String diagnosticInfo, String logUrl,
+      long creationTime, long finishTime, String diagnosticInfo, String logUrl,
       int containerExitStatus, ContainerState containerState) {
     ContainerReport report = Records.newRecord(ContainerReport.class);
     report.setContainerId(containerId);
     report.setAllocatedResource(allocatedResource);
     report.setAssignedNode(assignedNode);
     report.setPriority(priority);
-    report.setStartTime(startTime);
+    report.setCreationTime(creationTime);
     report.setFinishTime(finishTime);
     report.setDiagnosticsInfo(diagnosticInfo);
     report.setLogUrl(logUrl);
@@ -122,17 +122,17 @@ public abstract class ContainerReport {
   public abstract void setPriority(Priority priority);
 
   /**
-   * Get the Start time of the container.
+   * Get the creation time of the container.
    * 
-   * @return Start time of the container
+   * @return creation time of the container
    */
   @Public
   @Unstable
-  public abstract long getStartTime();
+  public abstract long getCreationTime();
 
   @Public
   @Unstable
-  public abstract void setStartTime(long startTime);
+  public abstract void setCreationTime(long creationTime);
 
   /**
    * Get the Finish time of the container.

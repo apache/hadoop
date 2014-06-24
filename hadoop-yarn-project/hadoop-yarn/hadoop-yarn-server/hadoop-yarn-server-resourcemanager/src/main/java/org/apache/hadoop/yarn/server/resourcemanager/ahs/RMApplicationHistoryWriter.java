@@ -269,7 +269,7 @@ public class RMApplicationHistoryWriter extends CompositeService {
         new WritingContainerStartEvent(container.getContainerId(),
           ContainerStartData.newInstance(container.getContainerId(),
             container.getAllocatedResource(), container.getAllocatedNode(),
-            container.getAllocatedPriority(), container.getStartTime())));
+            container.getAllocatedPriority(), container.getCreationTime())));
     }
   }
 

@@ -92,7 +92,7 @@ message ContainerReportProto {
   optional ResourceProto resource = 2;
   optional NodeIdProto node_id = 3;
   optional PriorityProto priority = 4;
-  optional int64 start_time = 5;
+  optional int64 creation_time = 5;
   optional int64 finish_time = 6;
   optional string diagnostics_info = 7 [default = "N/A"];
   optional string log_url = 8;

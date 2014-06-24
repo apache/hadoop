@@ -32,14 +32,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.Assert;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
@@ -66,6 +65,7 @@ import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecret
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
 
@@ -538,7 +538,8 @@ public class TestApplication {
         long currentTime = System.currentTimeMillis();
         ContainerTokenIdentifier identifier =
             new ContainerTokenIdentifier(container.getContainerId(), "", "",
-              null, currentTime + 2000, masterKey.getKeyId(), currentTime);
+              null, currentTime + 2000, masterKey.getKeyId(), currentTime,
+              Priority.newInstance(0), 0);
         containerTokenIdentifierMap
           .put(identifier.getContainerID(), identifier);
         context.getContainerTokenSecretManager().startContainerSuccessful(

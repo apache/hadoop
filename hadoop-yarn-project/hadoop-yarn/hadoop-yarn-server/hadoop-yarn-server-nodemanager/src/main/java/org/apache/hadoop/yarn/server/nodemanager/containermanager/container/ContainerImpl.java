@@ -391,8 +391,10 @@ public class ContainerImpl implements Container {
   public NMContainerStatus getNMContainerStatus() {
     this.readLock.lock();
     try {
-      return NMContainerStatus.newInstance(this.containerId,
-        getCurrentState(), getResource(), diagnostics.toString(), exitCode);
+      return NMContainerStatus.newInstance(this.containerId, getCurrentState(),
+        getResource(), diagnostics.toString(), exitCode,
+        containerTokenIdentifier.getPriority(),
+        containerTokenIdentifier.getCreationTime());
     } finally {
       this.readLock.unlock();
     }
@@ -935,5 +937,4 @@ public class ContainerImpl implements Container {
   private boolean hasDefaultExitCode() {
     return (this.exitCode == ContainerExitStatus.INVALID);
   }
-
 }

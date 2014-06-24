@@ -24,8 +24,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
-import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RegisterNodeManagerRequestPBImpl;
 import org.junit.Assert;
@@ -36,14 +36,15 @@ public class TestRegisterNodeManagerRequest {
   public void testRegisterNodeManagerRequest() {
     RegisterNodeManagerRequest request =
         RegisterNodeManagerRequest.newInstance(
-            NodeId.newInstance("host", 1234), 1234, Resource.newInstance(0, 0),
-            "version", Arrays.asList(NMContainerStatus.newInstance(
-                ContainerId.newInstance(
-                    ApplicationAttemptId.newInstance(
-                        ApplicationId.newInstance(1234L, 1), 1), 1),
-                ContainerState.RUNNING, Resource.newInstance(1024, 1), "good",
-                -1)), Arrays.asList(ApplicationId.newInstance(1234L, 1),
-                ApplicationId.newInstance(1234L, 2)));
+          NodeId.newInstance("host", 1234), 1234, Resource.newInstance(0, 0),
+          "version", Arrays.asList(NMContainerStatus.newInstance(
+            ContainerId.newInstance(
+              ApplicationAttemptId.newInstance(
+                ApplicationId.newInstance(1234L, 1), 1), 1),
+            ContainerState.RUNNING, Resource.newInstance(1024, 1), "good", -1,
+            Priority.newInstance(0), 1234)), Arrays.asList(
+            ApplicationId.newInstance(1234L, 1),
+            ApplicationId.newInstance(1234L, 2)));
 
     // serialze to proto, and get request from proto
     RegisterNodeManagerRequest request1 =

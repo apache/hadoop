@@ -23,8 +23,6 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Assert;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
@@ -50,6 +48,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -61,6 +60,7 @@ import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.util.Records;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestRPC {
@@ -129,7 +129,8 @@ public class TestRPC {
     Resource resource = Resource.newInstance(1234, 2);
     ContainerTokenIdentifier containerTokenIdentifier =
         new ContainerTokenIdentifier(containerId, "localhost", "user",
-          resource, System.currentTimeMillis() + 10000, 42, 42);
+          resource, System.currentTimeMillis() + 10000, 42, 42,
+          Priority.newInstance(0), 0);
     Token containerToken = newContainerToken(nodeId, "password".getBytes(),
           containerTokenIdentifier);
 
