@@ -166,6 +166,8 @@ Release 2.5.0 - UNRELEASED
     YARN-2192. TestRMHA fails when run with a mix of Schedulers.
     (Anubhav Dhoot via kasha)
 
+    YARN-2109. Fix TestRM to work with both schedulers. (Anubhav Dhoot via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 
