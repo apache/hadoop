@@ -12,6 +12,11 @@ Trunk (Unreleased)
   NEW FEATURES
 
     HADOOP-10433. Key Management Server based on KeyProvider API. (tucu)
+
+    HADOOP-9629. Support Windows Azure Storage - Blob as a file system in Hadoop.
+    (Dexter Bradshaw, Mostafa Elhemali, Xi Fang, Johannes Klein, David Lao,
+    Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
+    Alexander Stojanovic, Brian Swan, and Min Wei via cnauroth)
     
   IMPROVEMENTS
 
@@ -345,6 +350,13 @@ Trunk (Unreleased)
     HADOOP-10717. HttpServer2 should load jsp DTD from local jars instead of
     going remote. (Dapeng Sun via wheat9)
 
+    HADOOP-10689. InputStream is not closed in
+    AzureNativeFileSystemStore#retrieve(). (Chen He via cnauroth)
+
+    HADOOP-10690. Lack of synchronization on access to InputStream in
+    NativeAzureFileSystem#NativeAzureFsInputStream#close().
+    (Chen He via cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -360,11 +372,6 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10498. Add support for proxy server. (daryn)
 
     HADOOP-9704. Write metrics sink plugin for Hadoop/Graphite (Chu Tong, Alex Newman and Babak Behzad via raviprak)
-
-    HADOOP-9629. Support Windows Azure Storage - Blob as a file system in Hadoop.
-    (Dexter Bradshaw, Mostafa Elhemali, Xi Fang, Johannes Klein, David Lao,
-    Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
-    Alexander Stojanovic, Brian Swan, and Min Wei via cnauroth)
 
   IMPROVEMENTS
 
@@ -596,13 +603,6 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-9559. When metrics system is restarted MBean names get incorrectly
     flagged as dupes. (Mostafa Elhemali and Mike Liddell via cnauroth)
-
-    HADOOP-10689. InputStream is not closed in
-    AzureNativeFileSystemStore#retrieve(). (Chen He via cnauroth)
-
-    HADOOP-10690. Lack of synchronization on access to InputStream in
-    NativeAzureFileSystem#NativeAzureFsInputStream#close().
-    (Chen He via cnauroth)
 
     HADOOP-10746. TestSocketIOWithTimeout#testSocketIOWithTimeout fails on
     Power PC. (Jinghui Wang via Arpit Agarwal)
