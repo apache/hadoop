@@ -392,6 +392,11 @@
         <artifactId>jetty-util</artifactId>
         <version>6.1.26</version>
       </dependency>
+      <dependency>
+        <groupId>javax.servlet.jsp</groupId>
+        <artifactId>jsp-api</artifactId>
+        <version>2.1</version>
+      </dependency>
 
       <dependency>
         <groupId>org.glassfish</groupId>

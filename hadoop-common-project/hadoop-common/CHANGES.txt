@@ -342,6 +342,9 @@ Trunk (Unreleased)
     HADOOP-10611. KMS, keyVersion name should not be assumed to be 
     keyName@versionNumber. (tucu)
 
+    HADOOP-10717. HttpServer2 should load jsp DTD from local jars instead of
+    going remote. (Dapeng Sun via wheat9)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
