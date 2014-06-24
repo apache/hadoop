@@ -183,6 +183,9 @@ Release 2.5.0 - UNRELEASED
 
     YARN-2109. Fix TestRM to work with both schedulers. (Anubhav Dhoot via kasha)
 
+    YARN-2072. RM/NM UIs and webservices are missing vcore information.
+    (Nathan Roberts via tgraves)
+
   OPTIMIZATIONS
 
   BUG FIXES 

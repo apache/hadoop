@@ -656,13 +656,15 @@ public class TestRMWebServicesNodes extends JerseyTest {
           WebServicesTestUtils.getXmlInt(element, "numContainers"),
           WebServicesTestUtils.getXmlLong(element, "usedMemoryMB"),
           WebServicesTestUtils.getXmlLong(element, "availMemoryMB"),
+          WebServicesTestUtils.getXmlLong(element, "usedVirtualCores"),
+          WebServicesTestUtils.getXmlLong(element,  "availableVirtualCores"),
           WebServicesTestUtils.getXmlString(element, "version"));
     }
   }
 
   public void verifyNodeInfo(JSONObject nodeInfo, MockNM nm)
       throws JSONException, Exception {
-    assertEquals("incorrect number of elements", 11, nodeInfo.length());
+    assertEquals("incorrect number of elements", 13, nodeInfo.length());
 
     verifyNodeInfoGeneric(nm, nodeInfo.getString("state"),
         nodeInfo.getString("rack"),
@@ -671,6 +673,7 @@ public class TestRMWebServicesNodes extends JerseyTest {
         nodeInfo.getLong("lastHealthUpdate"),
         nodeInfo.getString("healthReport"), nodeInfo.getInt("numContainers"),
         nodeInfo.getLong("usedMemoryMB"), nodeInfo.getLong("availMemoryMB"),
+        nodeInfo.getLong("usedVirtualCores"), nodeInfo.getLong("availableVirtualCores"),
         nodeInfo.getString("version"));
 
   }
@@ -678,7 +681,8 @@ public class TestRMWebServicesNodes extends JerseyTest {
   public void verifyNodeInfoGeneric(MockNM nm, String state, String rack,
       String id, String nodeHostName,
       String nodeHTTPAddress, long lastHealthUpdate, String healthReport,
-      int numContainers, long usedMemoryMB, long availMemoryMB, String version)
+      int numContainers, long usedMemoryMB, long availMemoryMB, long usedVirtualCores, 
+      long availVirtualCores, String version)
       throws JSONException, Exception {
 
     RMNode node = rm.getRMContext().getRMNodes().get(nm.getNodeId());
@@ -712,6 +716,10 @@ public class TestRMWebServicesNodes extends JerseyTest {
           .getUsedResource().getMemory(), usedMemoryMB);
       assertEquals("availMemoryMB doesn't match: " + availMemoryMB, report
           .getAvailableResource().getMemory(), availMemoryMB);
+      assertEquals("usedVirtualCores doesn't match: " + usedVirtualCores, report
+          .getUsedResource().getVirtualCores(), usedVirtualCores);
+      assertEquals("availVirtualCores doesn't match: " + availVirtualCores, report
+          .getAvailableResource().getVirtualCores(), availVirtualCores);
     }
   }
 

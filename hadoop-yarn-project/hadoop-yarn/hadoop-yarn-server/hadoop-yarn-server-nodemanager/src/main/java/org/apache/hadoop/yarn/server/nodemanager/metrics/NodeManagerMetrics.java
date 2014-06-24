@@ -40,6 +40,9 @@ public class NodeManagerMetrics {
   @Metric("Current # of allocated containers")
       MutableGaugeInt allocatedContainers;
   @Metric MutableGaugeInt availableGB;
+  @Metric("Current allocated Virtual Cores")
+      MutableGaugeInt allocatedVCores;
+  @Metric MutableGaugeInt availableVCores;
 
   public static NodeManagerMetrics create() {
     return create(DefaultMetricsSystem.instance());
@@ -88,16 +91,21 @@ public class NodeManagerMetrics {
     allocatedContainers.incr();
     allocatedGB.incr(res.getMemory() / 1024);
     availableGB.decr(res.getMemory() / 1024);
+    allocatedVCores.incr(res.getVirtualCores());
+    availableVCores.decr(res.getVirtualCores());
   }
 
   public void releaseContainer(Resource res) {
     allocatedContainers.decr();
     allocatedGB.decr(res.getMemory() / 1024);
     availableGB.incr(res.getMemory() / 1024);
+    allocatedVCores.decr(res.getVirtualCores());
+    availableVCores.incr(res.getVirtualCores());
   }
 
   public void addResource(Resource res) {
     availableGB.incr(res.getMemory() / 1024);
+    availableVCores.incr(res.getVirtualCores());
   }
   
   public int getRunningContainers() {

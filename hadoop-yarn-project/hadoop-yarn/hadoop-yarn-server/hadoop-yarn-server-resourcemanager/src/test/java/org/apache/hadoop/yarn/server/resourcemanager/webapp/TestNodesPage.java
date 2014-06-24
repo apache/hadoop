@@ -48,8 +48,8 @@ public class TestNodesPage {
 
   // Number of Actual Table Headers for NodesPage.NodesBlock might change in
   // future. In that case this value should be adjusted to the new value.
-  final int numberOfThInMetricsTable = 13;
-  final int numberOfActualTableHeaders = 10;
+  final int numberOfThInMetricsTable = 16;
+  final int numberOfActualTableHeaders = 12;
 
   private Injector injector;
   
