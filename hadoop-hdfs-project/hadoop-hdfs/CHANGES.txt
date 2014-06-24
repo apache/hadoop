@@ -716,6 +716,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6598. Fix a typo in message issued from explorer.js. (Yongjun Zhang
     via wheat9)
 
+    HDFS-6475. WebHdfs clients fail without retry because incorrect handling
+    of StandbyException. (Yongjun Zhang via atm)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
