@@ -126,6 +126,9 @@ abstract public class Shell {
   public static final boolean LINUX   = (osType == OSType.OS_TYPE_LINUX);
   public static final boolean OTHER   = (osType == OSType.OS_TYPE_OTHER);
 
+  public static final boolean PPC_64
+                = System.getProperties().getProperty("os.arch").contains("ppc64");
+
   /** a Unix command to get the current user's groups list */
   public static String[] getGroupsCommand() {
     return (WINDOWS)? new String[]{"cmd", "/c", "groups"}

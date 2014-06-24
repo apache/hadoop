@@ -248,6 +248,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-9559. When metrics system is restarted MBean names get incorrectly
     flagged as dupes. (Mostafa Elhemali and Mike Liddell via cnauroth)
 
+    HADOOP-10746. TestSocketIOWithTimeout#testSocketIOWithTimeout fails on
+    Power PC. (Jinghui Wang via Arpit Agarwal)
+
   BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
 
     HADOOP-10520. Extended attributes definition and FileSystem APIs for
