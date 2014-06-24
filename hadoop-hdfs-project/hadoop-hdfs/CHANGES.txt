@@ -484,6 +484,7 @@ Release 2.5.0 - UNRELEASED
     NetworkTopology#sortByDistance. (Yongjun Zhang via wang)
 
     HDFS-6583. Remove clientNode in FileUnderConstructionFeature. (wheat9)
+
   BUG FIXES 
 
     HDFS-6112. NFS Gateway docs are incorrect for allowed hosts configuration.
@@ -711,6 +712,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6587. Bug in TestBPOfferService can cause test failure. (Zhilei Xu
     via Arpit Agarwal)
+
+    HDFS-6598. Fix a typo in message issued from explorer.js. (Yongjun Zhang
+    via wheat9)
 
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
