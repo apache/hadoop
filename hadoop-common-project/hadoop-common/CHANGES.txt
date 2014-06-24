@@ -469,6 +469,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10652. Refactor Proxyusers to use AccessControlList. (Benoy
     Antony via Arpit Agarwal)
 
+    HADOOP-10747. Support configurable retries on SASL connection failures in
+    RPC client. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES 
