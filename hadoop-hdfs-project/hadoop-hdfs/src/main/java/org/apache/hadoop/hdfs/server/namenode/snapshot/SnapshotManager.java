@@ -30,9 +30,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.management.ObjectName;
 
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshotInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -40,7 +42,6 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable.SnapshotDiffInfo;
 import org.apache.hadoop.metrics2.util.MBeans;
 
 /**
@@ -361,12 +362,13 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    * Compute the difference between two snapshots of a directory, or between a
    * snapshot of the directory and its current tree.
    */
-  public SnapshotDiffInfo diff(final String path, final String from,
+  public SnapshotDiffReport diff(final String path, final String from,
       final String to) throws IOException {
     if ((from == null || from.isEmpty())
         && (to == null || to.isEmpty())) {
       // both fromSnapshot and toSnapshot indicate the current tree
-      return null;
+      return new SnapshotDiffReport(path, from, to,
+          Collections.<DiffReportEntry> emptyList());
     }
 
     // Find the source root directory path where the snapshots were taken.
@@ -374,8 +376,10 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     INodesInPath inodesInPath = fsdir.getINodesInPath4Write(path.toString());
     final INodeDirectorySnapshottable snapshotRoot = INodeDirectorySnapshottable
         .valueOf(inodesInPath.getLastINode(), path);
-    
-    return snapshotRoot.computeDiff(from, to);
+
+    final SnapshotDiffInfo diffs = snapshotRoot.computeDiff(from, to);
+    return diffs != null ? diffs.generateReport() : new SnapshotDiffReport(
+        path, from, to, Collections.<DiffReportEntry> emptyList());
   }
   
   public void clearSnapshottableDirs() {

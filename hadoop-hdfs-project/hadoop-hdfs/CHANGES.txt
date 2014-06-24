@@ -473,6 +473,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6430. HTTPFS - Implement XAttr support. (Yi Liu via tucu)
 
+    HDFS-6593. Move SnapshotDiffInfo out of INodeDirectorySnapshottable.
+    (Jing Zhao via wheat9)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
