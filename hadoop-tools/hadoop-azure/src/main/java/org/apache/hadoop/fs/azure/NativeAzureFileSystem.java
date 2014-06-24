@@ -31,12 +31,13 @@ import java.util.Date;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BufferedFSInputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -45,11 +46,13 @@ import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
+import org.apache.hadoop.fs.azure.metrics.AzureFileSystemMetricsSystem;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
-
 
 import com.google.common.annotations.VisibleForTesting;
 import com.microsoft.windowsazure.storage.core.Utility;
@@ -369,8 +372,12 @@ public class NativeAzureFileSystem extends FileSystem {
   private AzureNativeFileSystemStore actualStore;
   private Path workingDir;
   private long blockSize = MAX_AZURE_BLOCK_SIZE;
+  private AzureFileSystemInstrumentation instrumentation;
   private static boolean suppressRetryPolicy = false;
+  // A counter to create unique (within-process) names for my metrics sources.
+  private static AtomicInteger metricsSourceNameCounter = new AtomicInteger();
 
+  
   public NativeAzureFileSystem() {
     // set store in initialize()
   }
@@ -396,6 +403,20 @@ public class NativeAzureFileSystem extends FileSystem {
     suppressRetryPolicy = false;
   }
 
+  /**
+   * Creates a new metrics source name that's unique within this process.
+   */
+  @VisibleForTesting
+  public static String newMetricsSourceName() {
+    int number = metricsSourceNameCounter.incrementAndGet();
+    final String baseName = "AzureFileSystemMetrics";
+    if (number == 1) { // No need for a suffix for the first one
+      return baseName;
+    } else {
+      return baseName + number;
+    }
+  }
+  
   /**
    * Checks if the given URI scheme is a scheme that's affiliated with the Azure
    * File System.
@@ -459,7 +480,16 @@ public class NativeAzureFileSystem extends FileSystem {
       store = createDefaultStore(conf);
     }
 
-    store.initialize(uri, conf);
+    // Make sure the metrics system is available before interacting with Azure
+    AzureFileSystemMetricsSystem.fileSystemStarted();
+    String sourceName = newMetricsSourceName(),
+        sourceDesc = "Azure Storage Volume File System metrics";
+    instrumentation = DefaultMetricsSystem.instance().register(sourceName,
+        sourceDesc, new AzureFileSystemInstrumentation(conf));
+    AzureFileSystemMetricsSystem.registerSource(sourceName, sourceDesc,
+        instrumentation);
+
+    store.initialize(uri, conf, instrumentation);
     setConf(conf);
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
     this.workingDir = new Path("/user", UserGroupInformation.getCurrentUser()
@@ -535,8 +565,18 @@ public class NativeAzureFileSystem extends FileSystem {
    * @return The store object.
    */
   @VisibleForTesting
-  AzureNativeFileSystemStore getStore() {
+  public AzureNativeFileSystemStore getStore() {
     return actualStore;
+  }
+  
+  /**
+   * Gets the metrics source for this file system.
+   * This is mainly here for unit testing purposes.
+   *
+   * @return the metrics source.
+   */
+  public AzureFileSystemInstrumentation getInstrumentation() {
+    return instrumentation;
   }
 
   /** This optional operation is not yet supported. */
@@ -622,6 +662,10 @@ public class NativeAzureFileSystem extends FileSystem {
     // Construct the data output stream from the buffered output stream.
     FSDataOutputStream fsOut = new FSDataOutputStream(bufOutStream, statistics);
 
+    
+    // Increment the counter
+    instrumentation.fileCreated();
+    
     // Return data output stream to caller.
     return fsOut;
   }
@@ -682,6 +726,7 @@ public class NativeAzureFileSystem extends FileSystem {
           store.updateFolderLastModifiedTime(parentKey);
         }
       }
+      instrumentation.fileDeleted();
       store.delete(key);
     } else {
       // The path specifies a folder. Recursively delete all entries under the
@@ -724,6 +769,7 @@ public class NativeAzureFileSystem extends FileSystem {
             p.getKey().lastIndexOf(PATH_DELIMITER));
         if (!p.isDir()) {
           store.delete(key + suffix);
+          instrumentation.fileDeleted();
         } else {
           // Recursively delete contents of the sub-folders. Notice this also
           // deletes the blob for the directory.
@@ -740,6 +786,7 @@ public class NativeAzureFileSystem extends FileSystem {
         String parentKey = pathToKey(parent);
         store.updateFolderLastModifiedTime(parentKey);
       }
+      instrumentation.directoryDeleted();
     }
 
     // File or directory was successfully deleted.
@@ -972,6 +1019,8 @@ public class NativeAzureFileSystem extends FileSystem {
       store.updateFolderLastModifiedTime(key, lastModified);
     }
 
+    instrumentation.directoryCreated();
+    
     // otherwise throws exception
     return true;
   }
@@ -1293,6 +1342,19 @@ public class NativeAzureFileSystem extends FileSystem {
     super.close();
     // Close the store
     store.close();
+    
+    // Notify the metrics system that this file system is closed, which may
+    // trigger one final metrics push to get the accurate final file system
+    // metrics out.
+
+    long startTime = System.currentTimeMillis();
+
+    AzureFileSystemMetricsSystem.fileSystemClosed();
+
+    if (LOG.isDebugEnabled()) {
+        LOG.debug("Submitting metrics when file system closed took "
+                + (System.currentTimeMillis() - startTime) + " ms.");
+    }
   }
 
   /**
