@@ -106,6 +106,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10747. Support configurable retries on SASL connection failures in
     RPC client. (cnauroth)
 
+    HADOOP-10674. Improve PureJavaCrc32 performance and use java.util.zip.CRC32
+    for Java 7 and above. (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES 
