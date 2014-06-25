@@ -1,0 +1,266 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="testConf.xsl"?>
+
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<configuration>
+  <!-- Normal mode is test. To run just the commands and dump the output
+       to the log, set it to nocompare -->
+  <mode>test</mode>
+
+  <!--  Comparator types:
+           ExactComparator
+           SubstringComparator
+           RegexpComparator
+           TokenComparator
+           -->
+  <tests>
+
+    <test>
+      <description>Test basic usage</description>
+      <test-commands>
+        <crypto-admin-command></crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+	  <expected-output>Usage: bin/hdfs crypto [COMMAND]</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test create ez, dir doesn't exist</description>
+      <test-commands>
+        <command>-fs NAMENODE -ls /test</command>-
+        <crypto-admin-command>-createZone -path /test</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>cannot find /test</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test failure of create ez on an existing ez</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /foo</command>
+        <command>-fs NAMENODE -ls /</command>-
+        <crypto-admin-command>-createZone -path /foo</crypto-admin-command>
+        <crypto-admin-command>-createZone -path /foo</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <crypto-admin-command>-deleteZone -path /foo</crypto-admin-command>
+        <command>-fs NAMENODE -rmdir /foo</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Directory /foo is already in an encryption zone</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test success of create ez in which a key is created</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /foo</command>
+        <command>-fs NAMENODE -ls /</command>-
+        <crypto-admin-command>-createZone -path /foo</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <crypto-admin-command>-deleteZone -path /foo</crypto-admin-command>
+        <command>-fs NAMENODE -rmdir /foo</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Added encryption zone /foo</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test failure of Create EZ operation in an existing EZ.</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /foo</command>
+        <command>-fs NAMENODE -ls /</command>-
+        <crypto-admin-command>-createZone -path /foo</crypto-admin-command>
+        <command>-fs NAMENODE -mkdir /foo/bar</command>
+        <crypto-admin-command>-createZone -path /foo/bar</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /foo/bar</command>
+        <crypto-admin-command>-deleteZone -path /foo</crypto-admin-command>
+        <command>-fs NAMENODE -rmdir /foo</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Directory /foo/bar is already in an encryption zone. (/foo)</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test failure of creating an EZ using a non-empty directory.</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /foo</command>
+        <command>-fs NAMENODE -touchz /foo/bar</command>
+        <command>-fs NAMENODE -ls /</command>-
+        <crypto-admin-command>-createZone -path /foo</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm /foo/bar</command>
+        <command>-fs NAMENODE -rmdir /foo</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Attempt to create an encryption zone for a non-empty directory.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test failure of creating an EZ passing a key that doesn't exist.</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /foo</command>
+        <command>-fs NAMENODE -ls /</command>-
+        <crypto-admin-command>-createZone -path /foo -keyId doesntexist</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /foo</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Key doesntexist doesn't exist.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test success of creating an EZ when the key exists.</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /foo</command>
+        <command>-fs NAMENODE -ls /</command>-
+        <crypto-admin-command>-createZone -path /foo -keyId mykey</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <crypto-admin-command>-deleteZone -path /foo</crypto-admin-command>
+        <command>-fs NAMENODE -rmdir /foo</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Added encryption zone /foo</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test failure of deleting an EZ passing a directory that doesn't exist.</description>
+      <test-commands>
+        <command>-fs NAMENODE -ls /</command>-
+        <crypto-admin-command>-deleteZone -path /foo</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Directory /foo is not the root of an encryption zone.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test failure of deleting an EZ which is not empty.</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /foo</command>
+        <command>-fs NAMENODE -ls /</command>-
+        <crypto-admin-command>-createZone -path /foo</crypto-admin-command>
+        <command>-fs NAMENODE -touchz /foo/bar</command>
+        <crypto-admin-command>-deleteZone -path /foo</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm /foo/bar</command>
+        <crypto-admin-command>-deleteZone -path /foo</crypto-admin-command>
+        <command>-fs NAMENODE -rmdir /foo</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Attempt to delete an encryption zone for a non-empty directory.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test failure of deleting an EZ on a subdir that is not the root of an EZ.</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /foo</command>
+        <command>-fs NAMENODE -ls /</command>-
+        <crypto-admin-command>-createZone -path /foo</crypto-admin-command>
+        <command>-fs NAMENODE -mkdir /foo/bar</command>
+        <crypto-admin-command>-deleteZone -path /foo/bar</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /foo/bar</command>
+        <crypto-admin-command>-deleteZone -path /foo</crypto-admin-command>
+        <command>-fs NAMENODE -rmdir /foo</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Directory /foo/bar is not the root of an encryption zone.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test success of creating and deleting an encryption zone a few levels down.</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /foo</command>
+        <command>-fs NAMENODE -mkdir /foo/bar</command>
+        <command>-fs NAMENODE -mkdir /foo/bar/baz</command>
+        <command>-fs NAMENODE -ls /</command>-
+        <crypto-admin-command>-createZone -path /foo/bar/baz</crypto-admin-command>
+        <crypto-admin-command>-deleteZone -path /foo/bar/baz</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /foo/bar/baz</command>
+        <command>-fs NAMENODE -rmdir /foo/bar</command>
+        <command>-fs NAMENODE -rmdir /foo/</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Deleted encryption zone /foo/bar/baz</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+  </tests>
+</configuration>

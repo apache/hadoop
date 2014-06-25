@@ -61,6 +61,7 @@ function print_usage(){
   echo "  portmap              run a portmap service"
   echo "  nfs3                 run an NFS version 3 gateway"
   echo "  cacheadmin           configure the HDFS cache"
+  echo "  crypto               configure HDFS encryption zones"
   echo ""
   echo "Most commands print help when invoked w/o parameters."
 }
@@ -184,6 +185,8 @@ elif [ "$COMMAND" = "nfs3" ] ; then
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_NFS3_OPTS"
 elif [ "$COMMAND" = "cacheadmin" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.CacheAdmin
+elif [ "$COMMAND" = "crypto" ] ; then
+  CLASS=org.apache.hadoop.hdfs.tools.CryptoAdmin
 else
   CLASS="$COMMAND"
 fi

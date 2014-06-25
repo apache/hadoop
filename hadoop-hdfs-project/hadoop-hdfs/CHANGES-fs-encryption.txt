@@ -10,6 +10,9 @@ fs-encryption (Unreleased)
 
   IMPROVEMENTS
 
+    HDFS-6387. HDFS CLI admin tool for creating & deleting an
+    encryption zone. (clamb)
+
     HDFS-6386. HDFS Encryption Zones (clamb)
 
     HDFS-6473. Protocol and API for Encryption Zones (clamb)
