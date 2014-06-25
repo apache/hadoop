@@ -370,8 +370,13 @@ public class TestBalancer {
     // start rebalancing
     Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
     final int r = Balancer.run(namenodes, Balancer.Parameters.DEFALUT, conf);
-    assertEquals(Balancer.ReturnStatus.SUCCESS.code, r);
-
+    if (conf.getInt(DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY, 
+        DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT) ==0) {
+      assertEquals(Balancer.ReturnStatus.NO_MOVE_PROGRESS.code, r);
+      return;
+    } else {
+      assertEquals(Balancer.ReturnStatus.SUCCESS.code, r);
+    }
     waitForHeartBeat(totalUsedSpace, totalCapacity, client, cluster);
     LOG.info("Rebalancing with default ctor.");
     waitForBalancer(totalUsedSpace, totalCapacity, client, cluster);
@@ -460,6 +465,20 @@ public class TestBalancer {
         new long[] {50*CAPACITY/100, 10*CAPACITY/100},
         new long[]{CAPACITY, CAPACITY},
         new String[] {RACK0, RACK1});
+  }
+  
+  @Test(timeout=100000)
+  public void testBalancerWithZeroThreadsForMove() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY, 0);
+    testBalancer1Internal (conf);
+  }
+
+  @Test(timeout=100000)
+  public void testBalancerWithNonZeroThreadsForMove() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY, 8);
+    testBalancer1Internal (conf);
   }
   
   @Test(timeout=100000)

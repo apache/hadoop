@@ -476,6 +476,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6593. Move SnapshotDiffInfo out of INodeDirectorySnapshottable.
     (Jing Zhao via wheat9)
 
+    HDFS-6595. Allow the maximum threads for balancing on datanodes to be
+    configurable. (Benoy Antony via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
