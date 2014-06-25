@@ -597,7 +597,8 @@ public class FairScheduler extends
    */
   protected synchronized void addApplicationAttempt(
       ApplicationAttemptId applicationAttemptId,
-      boolean transferStateFromPreviousAttempt) {
+      boolean transferStateFromPreviousAttempt,
+      boolean shouldNotifyAttemptAdded) {
     SchedulerApplication<FSSchedulerApp> application =
         applications.get(applicationAttemptId.getApplicationId());
     String user = application.getUser();
@@ -625,9 +626,16 @@ public class FairScheduler extends
 
     LOG.info("Added Application Attempt " + applicationAttemptId
         + " to scheduler from user: " + user);
-    rmContext.getDispatcher().getEventHandler().handle(
-        new RMAppAttemptEvent(applicationAttemptId,
-            RMAppAttemptEventType.ATTEMPT_ADDED));
+
+    if (shouldNotifyAttemptAdded) {
+      rmContext.getDispatcher().getEventHandler().handle(
+          new RMAppAttemptEvent(applicationAttemptId,
+              RMAppAttemptEventType.ATTEMPT_ADDED));
+    } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Skipping notifying ATTEMPT_ADDED");
+      }
+    }
   }
 
   /**
@@ -1130,7 +1138,8 @@ public class FairScheduler extends
       AppAttemptAddedSchedulerEvent appAttemptAddedEvent =
           (AppAttemptAddedSchedulerEvent) event;
       addApplicationAttempt(appAttemptAddedEvent.getApplicationAttemptId(),
-        appAttemptAddedEvent.getTransferStateFromPreviousAttempt());
+        appAttemptAddedEvent.getTransferStateFromPreviousAttempt(),
+        appAttemptAddedEvent.getShouldNotifyAttemptAdded());
       break;
     case APP_ATTEMPT_REMOVED:
       if (!(event instanceof AppAttemptRemovedSchedulerEvent)) {

@@ -899,8 +899,12 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       } else {
         // Add the current attempt to the scheduler.
         if (appAttempt.rmContext.isWorkPreservingRecoveryEnabled()) {
+          // Need to register an app attempt before AM can register
+          appAttempt.masterService
+              .registerAppAttempt(appAttempt.applicationAttemptId);
+
           appAttempt.eventHandler.handle(new AppAttemptAddedSchedulerEvent(
-            appAttempt.getAppAttemptId(), false));
+            appAttempt.getAppAttemptId(), false, false));
         }
 
         /*

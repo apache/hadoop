@@ -42,6 +42,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1339. Recover DeletionService state upon nodemanager restart. (Jason Lowe
     via junping_du)
 
+    YARN-1365. Changed ApplicationMasterService to allow an app to re-register
+    after RM restart. (Anubhav Dhoot via jianhe)
+
   IMPROVEMENTS
 
     YARN-1479. Invalid NaN values in Hadoop REST API JSON response (Chen He via

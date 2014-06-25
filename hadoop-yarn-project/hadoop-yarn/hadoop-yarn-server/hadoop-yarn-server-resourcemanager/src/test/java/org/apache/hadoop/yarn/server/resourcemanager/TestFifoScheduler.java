@@ -238,7 +238,7 @@ public class TestFifoScheduler {
     }
 
     ApplicationAttemptId attId = ApplicationAttemptId.newInstance(appId, 1);
-    scheduler.addApplicationAttempt(attId, false);
+    scheduler.addApplicationAttempt(attId, false, true);
 
     rm.stop();
   }

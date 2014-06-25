@@ -787,13 +787,13 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     ApplicationAttemptId id11 = createAppAttemptId(1, 1);
     scheduler.addApplication(id11.getApplicationId(), "root.queue1", "user1");
-    scheduler.addApplicationAttempt(id11, false);
+    scheduler.addApplicationAttempt(id11, false, true);
     ApplicationAttemptId id21 = createAppAttemptId(2, 1);
     scheduler.addApplication(id21.getApplicationId(), "root.queue2", "user1");
-    scheduler.addApplicationAttempt(id21, false);
+    scheduler.addApplicationAttempt(id21, false, true);
     ApplicationAttemptId id22 = createAppAttemptId(2, 2);
     scheduler.addApplication(id22.getApplicationId(), "root.queue2", "user1");
-    scheduler.addApplicationAttempt(id22, false);
+    scheduler.addApplicationAttempt(id22, false, true);
 
     int minReqSize = 
         FairSchedulerConfiguration.DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_MB;
@@ -1555,7 +1555,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     
     ApplicationAttemptId appId = createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
     scheduler.addApplication(appId.getApplicationId(), "queue1", "user1");
-    scheduler.addApplicationAttempt(appId, false);
+    scheduler.addApplicationAttempt(appId, false, true);
     
     // 1 request with 2 nodes on the same rack. another request with 1 node on
     // a different rack
@@ -2714,7 +2714,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     ApplicationAttemptId appAttemptId =
             createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
     fs.addApplication(appAttemptId.getApplicationId(), "queue11", "user11");
-    fs.addApplicationAttempt(appAttemptId, false);
+    fs.addApplicationAttempt(appAttemptId, false, true);
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
     ResourceRequest request =
             createResourceRequest(1024, 1, ResourceRequest.ANY, 1, 1, true);
