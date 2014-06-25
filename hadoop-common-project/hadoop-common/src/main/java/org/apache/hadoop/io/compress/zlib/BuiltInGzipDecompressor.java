@@ -19,12 +19,13 @@
 package org.apache.hadoop.io.compress.zlib;
 
 import java.io.IOException;
+import java.util.zip.Checksum;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
-import org.apache.hadoop.util.PureJavaCrc32;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.DoNotPool;
+import org.apache.hadoop.util.DataChecksum;
 
 /**
  * A {@link Decompressor} based on the popular gzip compressed file format.
@@ -54,7 +55,7 @@ public class BuiltInGzipDecompressor implements Decompressor {
   private int headerBytesRead = 0;
   private int trailerBytesRead = 0;
   private int numExtraFieldBytesRemaining = -1;
-  private PureJavaCrc32 crc = new PureJavaCrc32();
+  private Checksum crc = DataChecksum.newCrc32();
   private boolean hasExtraField = false;
   private boolean hasFilename = false;
   private boolean hasComment = false;
