@@ -287,6 +287,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2111. In FairScheduler.attemptScheduling, we don't count containers
     as assigned if they have 0 memory but non-zero cores (Sandy Ryza)
 
+    YARN-2204. TestAMRestart#testAMRestartWithExistingContainers assumes
+    CapacityScheduler. (Robert Kanter via kasha)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
