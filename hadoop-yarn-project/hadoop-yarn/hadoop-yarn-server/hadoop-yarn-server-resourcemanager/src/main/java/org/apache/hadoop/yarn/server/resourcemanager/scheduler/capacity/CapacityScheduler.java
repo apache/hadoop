@@ -557,7 +557,8 @@ public class CapacityScheduler extends
 
   private synchronized void addApplicationAttempt(
       ApplicationAttemptId applicationAttemptId,
-      boolean transferStateFromPreviousAttempt) {
+      boolean transferStateFromPreviousAttempt,
+      boolean shouldNotifyAttemptAdded) {
     SchedulerApplication<FiCaSchedulerApp> application =
         applications.get(applicationAttemptId.getApplicationId());
     CSQueue queue = (CSQueue) application.getQueue();
@@ -575,9 +576,15 @@ public class CapacityScheduler extends
     LOG.info("Added Application Attempt " + applicationAttemptId
         + " to scheduler from user " + application.getUser() + " in queue "
         + queue.getQueueName());
-    rmContext.getDispatcher().getEventHandler() .handle(
-        new RMAppAttemptEvent(applicationAttemptId,
-          RMAppAttemptEventType.ATTEMPT_ADDED));
+    if (shouldNotifyAttemptAdded) {
+      rmContext.getDispatcher().getEventHandler().handle(
+          new RMAppAttemptEvent(applicationAttemptId,
+              RMAppAttemptEventType.ATTEMPT_ADDED));
+    } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Skipping notifying ATTEMPT_ADDED");
+      }
+    }
   }
 
   private synchronized void doneApplication(ApplicationId applicationId,
@@ -911,7 +918,8 @@ public class CapacityScheduler extends
       AppAttemptAddedSchedulerEvent appAttemptAddedEvent =
           (AppAttemptAddedSchedulerEvent) event;
       addApplicationAttempt(appAttemptAddedEvent.getApplicationAttemptId(),
-        appAttemptAddedEvent.getTransferStateFromPreviousAttempt());
+        appAttemptAddedEvent.getTransferStateFromPreviousAttempt(),
+        appAttemptAddedEvent.getShouldNotifyAttemptAdded());
     }
     break;
     case APP_ATTEMPT_REMOVED:

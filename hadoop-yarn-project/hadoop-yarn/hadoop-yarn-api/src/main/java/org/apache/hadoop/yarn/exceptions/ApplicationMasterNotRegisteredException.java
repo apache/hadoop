@@ -19,30 +19,29 @@
 package org.apache.hadoop.yarn.exceptions;
 
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 
 /**
- * This exception is thrown when an ApplicationMaster asks for resources by
- * calling {@link ApplicationMasterProtocol#allocate(AllocateRequest)}
- * without first registering by calling
+ * This exception is thrown when an Application Master tries to unregister by calling
+ * {@link ApplicationMasterProtocol#finishApplicationMaster(FinishApplicationMasterRequest)}
+ * API without first registering by calling
  * {@link ApplicationMasterProtocol#registerApplicationMaster(RegisterApplicationMasterRequest)}
- * or if it tries to register more than once.
+ * or after an RM restart. The ApplicationMaster is expected to call
+ * {@link ApplicationMasterProtocol#registerApplicationMaster(RegisterApplicationMasterRequest)}
+ * and retry.
  */
-public class InvalidApplicationMasterRequestException extends YarnException {
 
-  private static final long serialVersionUID = 1357686L;
+public class ApplicationMasterNotRegisteredException extends YarnException {
 
-  public InvalidApplicationMasterRequestException(Throwable cause) {
-    super(cause);
-  }
+  private static final long serialVersionUID = 13498238L;
 
-  public InvalidApplicationMasterRequestException(String message) {
-    super(message);
-  }
+  public ApplicationMasterNotRegisteredException(Throwable cause) { super(cause);}
 
-  public InvalidApplicationMasterRequestException(String message,
-      Throwable cause) {
+  public ApplicationMasterNotRegisteredException(String message) { super(message); }
+
+  public ApplicationMasterNotRegisteredException(String message, Throwable
+      cause) {
     super(message, cause);
   }
 }

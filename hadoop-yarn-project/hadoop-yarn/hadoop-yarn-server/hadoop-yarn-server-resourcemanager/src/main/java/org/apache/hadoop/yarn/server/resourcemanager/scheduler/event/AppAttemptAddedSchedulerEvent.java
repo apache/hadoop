@@ -24,13 +24,22 @@ public class AppAttemptAddedSchedulerEvent extends SchedulerEvent {
 
   private final ApplicationAttemptId applicationAttemptId;
   private final boolean transferStateFromPreviousAttempt;
+  private final boolean shouldNotifyAttemptAdded;
 
   public AppAttemptAddedSchedulerEvent(
       ApplicationAttemptId applicationAttemptId,
       boolean transferStateFromPreviousAttempt) {
+    this(applicationAttemptId, transferStateFromPreviousAttempt, true);
+  }
+
+  public AppAttemptAddedSchedulerEvent(
+      ApplicationAttemptId applicationAttemptId,
+      boolean transferStateFromPreviousAttempt,
+      boolean shouldNotifyAttemptAdded) {
     super(SchedulerEventType.APP_ATTEMPT_ADDED);
     this.applicationAttemptId = applicationAttemptId;
     this.transferStateFromPreviousAttempt = transferStateFromPreviousAttempt;
+    this.shouldNotifyAttemptAdded = shouldNotifyAttemptAdded;
   }
 
   public ApplicationAttemptId getApplicationAttemptId() {
@@ -39,5 +48,9 @@ public class AppAttemptAddedSchedulerEvent extends SchedulerEvent {
 
   public boolean getTransferStateFromPreviousAttempt() {
     return transferStateFromPreviousAttempt;
+  }
+
+  public boolean getShouldNotifyAttemptAdded() {
+    return shouldNotifyAttemptAdded;
   }
 }
