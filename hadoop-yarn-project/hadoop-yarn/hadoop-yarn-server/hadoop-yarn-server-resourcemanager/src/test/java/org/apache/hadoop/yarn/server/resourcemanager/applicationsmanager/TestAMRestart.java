@@ -57,6 +57,8 @@ public class TestAMRestart {
   public void testAMRestartWithExistingContainers() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+      ResourceScheduler.class);
 
     MockRM rm1 = new MockRM(conf);
     rm1.start();
