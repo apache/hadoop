@@ -168,10 +168,14 @@ public class FileNameIndexUtils {
           decodeJobHistoryFileName(jobDetails[QUEUE_NAME_INDEX]));
 
       try{
-        indexInfo.setJobStartTime(
-          Long.parseLong(decodeJobHistoryFileName(jobDetails[JOB_START_TIME_INDEX])));
+        if (jobDetails.length <= JOB_START_TIME_INDEX) {
+          indexInfo.setJobStartTime(indexInfo.getSubmitTime());
+        } else {
+          indexInfo.setJobStartTime(
+              Long.parseLong(decodeJobHistoryFileName(jobDetails[JOB_START_TIME_INDEX])));
+        }
       } catch (NumberFormatException e){
-        LOG.warn("Unable to parse launch time from job history file "
+        LOG.warn("Unable to parse start time from job history file "
             + jhFileName + " : " + e);
       }
     } catch (IndexOutOfBoundsException e) {

@@ -39,6 +39,17 @@ public class TestFileNameIndexUtils {
     + FileNameIndexUtils.DELIMITER + "%s"
     + JobHistoryUtils.JOB_HISTORY_FILE_EXTENSION;
 
+  private static final String OLD_FORMAT_BEFORE_ADD_START_TIME = "%s"
+      + FileNameIndexUtils.DELIMITER + "%s"
+      + FileNameIndexUtils.DELIMITER + "%s"
+      + FileNameIndexUtils.DELIMITER + "%s"
+      + FileNameIndexUtils.DELIMITER + "%s"
+      + FileNameIndexUtils.DELIMITER + "%s"
+      + FileNameIndexUtils.DELIMITER + "%s"
+      + FileNameIndexUtils.DELIMITER + "%s"
+      + FileNameIndexUtils.DELIMITER + "%s"
+      + JobHistoryUtils.JOB_HISTORY_FILE_EXTENSION;
+
   private static final String JOB_HISTORY_FILE_FORMATTER = "%s"
     + FileNameIndexUtils.DELIMITER + "%s"
     + FileNameIndexUtils.DELIMITER + "%s"
@@ -233,6 +244,22 @@ public class TestFileNameIndexUtils {
     JobIndexInfo info = FileNameIndexUtils.getIndexInfo(jobHistoryFile);
     Assert.assertEquals("Queue name doesn't match",
         QUEUE_NAME_WITH_DELIMITER, info.getQueueName());
+  }
+
+  @Test
+  public void testJobStartTimeBackwardsCompatible() throws IOException{
+    String jobHistoryFile = String.format(OLD_FORMAT_BEFORE_ADD_START_TIME,
+        JOB_ID,
+        SUBMIT_TIME,
+        USER_NAME,
+        JOB_NAME_WITH_DELIMITER_ESCAPE,
+        FINISH_TIME,
+        NUM_MAPS,
+        NUM_REDUCES,
+        JOB_STATUS,
+        QUEUE_NAME );
+    JobIndexInfo info = FileNameIndexUtils.getIndexInfo(jobHistoryFile);
+    Assert.assertEquals(info.getJobStartTime(), info.getSubmitTime());
   }
 
   @Test

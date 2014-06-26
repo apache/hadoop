@@ -273,6 +273,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5924. Changed TaskAttemptImpl to ignore TA_COMMIT_PENDING event
     at COMMIT_PENDING state. (Zhijie Shen via jianhe)
 
+    MAPREDUCE-5939. StartTime showing up as the epoch time in JHS UI after
+    upgrade (Chen He via jlowe)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
