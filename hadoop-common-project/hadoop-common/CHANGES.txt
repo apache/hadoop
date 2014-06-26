@@ -10,6 +10,8 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-9704. Write metrics sink plugin for Hadoop/Graphite (Chu Tong, Alex Newman and Babak Behzad via raviprak)
 
+    HADOOP-8943. Support multiple group mapping providers. (Kai Zheng via brandonli)
+
   IMPROVEMENTS
 
     HADOOP-10451. Remove unused field and imports from SaslRpcServer.
