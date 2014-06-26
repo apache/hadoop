@@ -59,7 +59,7 @@ void hrpc_proxy_init(struct hrpc_proxy *proxy,
     proxy->msgr = msgr;
     proxy->protocol = protocol;
     proxy->username = username;
-    proxy->call.remote = *remote;
+    proxy->remote = *remote;
 }
 
 struct hadoop_err *hrpc_proxy_activate(struct hrpc_proxy *proxy)
@@ -113,7 +113,11 @@ void hrpc_proxy_sync_cb(struct hrpc_response *resp, struct hadoop_err *err,
                         void *cb_data)
 {
     struct hrpc_sync_ctx *ctx = cb_data;
-    ctx->resp = *resp;
+    if (resp) {
+        ctx->resp = *resp;
+    } else {
+        memset(&ctx->resp, 0, sizeof(ctx->resp));
+    }
     ctx->err = err;
     uv_sem_post(&ctx->sem);
 }
@@ -129,6 +133,7 @@ void hrpc_proxy_start(struct hrpc_proxy *proxy,
     uint8_t *buf;
     struct hrpc_call *call = &proxy->call;
 
+    call->remote = &proxy->remote;
     call->cb = cb;
     call->cb_data = cb_data;
     call->protocol = proxy->protocol;

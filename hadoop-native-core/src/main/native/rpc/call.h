@@ -50,7 +50,7 @@ struct hrpc_call {
     /**
      * Remote address we're sending to.
      */
-    struct sockaddr_in remote;
+    struct sockaddr_in *remote;
 
     /**
      * The callback to make from the reactor thread when this call completes or

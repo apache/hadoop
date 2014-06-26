@@ -109,7 +109,7 @@ int main(void)
     payload.base = strdup("testbuff");
     payload.len = strlen(payload.base);
 
-    call.remote.sin_addr.s_addr = inet_addr("127.0.0.1");
+    call.remote->sin_addr.s_addr = inet_addr("127.0.0.1");
     call.protocol = "org.apache.hadoop.hdfs.protocol.ClientProtocol";
     call.username = "root";
     call.payload = payload;

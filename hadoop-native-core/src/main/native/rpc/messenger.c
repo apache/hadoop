@@ -22,16 +22,23 @@
 #include "rpc/reactor.h"
 
 #include <errno.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <uv.h>
 
 #define msgr_log_warn(msgr, fmt, ...) \
-    fprintf(stderr, "WARN: msgr %p: " fmt, msgr, __VA_ARGS__)
+    fprintf(stderr, "WARN: msgr %" PRId64 ": " fmt, msgr->id, __VA_ARGS__)
 #define msgr_log_info(msgr, fmt, ...) \
-    fprintf(stderr, "INFO: msgr %p: " fmt, msgr, __VA_ARGS__)
+    fprintf(stderr, "INFO: msgr %" PRId64 ": " fmt, msgr->id, __VA_ARGS__)
 #define msgr_log_debug(msgr, fmt, ...) \
-    fprintf(stderr, "DEBUG: msgr %p: " fmt, msgr, __VA_ARGS__)
+    fprintf(stderr, "DEBUG: msgr %" PRId64 ": " fmt, msgr->id, __VA_ARGS__)
+
+/**
+ * The highest messenger ID that has been assigned, or 0 if no messengers have
+ * been created.
+ */
+static uint64_t g_highest_messenger_id;
 
 struct hrpc_messenger_builder {
 };
@@ -43,6 +50,11 @@ struct hrpc_messenger_builder {
  * the RPC system.
  */
 struct hrpc_messenger {
+    /**
+     * Unique messenger ID.
+     */
+    uint64_t id;
+
     /**
      * The reactor thread which makes the actual network calls.
      *
@@ -73,6 +85,7 @@ struct hadoop_err *hrpc_messenger_create(
 {
     struct hrpc_messenger *msgr = NULL;
     struct hadoop_err *err = NULL;
+    char reactor_name[64];
 
     free(bld);
     msgr = calloc(1, sizeof(struct hrpc_messenger));
@@ -80,11 +93,13 @@ struct hadoop_err *hrpc_messenger_create(
         err = hadoop_lerr_alloc(ENOMEM, "hrpc_messenger_create: OOM");
         goto error;
     }
-    err = hrpc_reactor_create(&msgr->reactor);
+    msgr->id = __sync_add_and_fetch(&g_highest_messenger_id, 1);
+    snprintf(reactor_name, sizeof(reactor_name), "%" PRId64"-1", msgr->id);
+    err = hrpc_reactor_create(&msgr->reactor, reactor_name);
     if (err) {
         goto error_free_msgr;
     }
-    msgr_log_info(msgr, "created messenger %p\n", msgr);
+    msgr_log_info(msgr, "%s", "created messenger\n");
     *out = msgr;
     return NULL;
 

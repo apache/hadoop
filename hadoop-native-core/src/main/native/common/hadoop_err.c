@@ -61,6 +61,8 @@ static const char *errno_to_class(int code)
         return "org.apache.hadoop.native.HadoopCore.InvalidRequestException";
     case ENOMEM:
         return "org.apache.hadoop.native.HadoopCore.OutOfMemoryException";
+    case ESHUTDOWN:
+        return "org.apache.hadoop.native.HadoopCore.ShutdownException";
     default:
         return "org.apache.hadoop.native.HadoopCore.IOException";
     }

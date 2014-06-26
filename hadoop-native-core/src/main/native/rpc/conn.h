@@ -155,6 +155,11 @@ struct hrpc_conn {
 
     struct hrpc_conn_writer writer;
     struct hrpc_conn_reader reader;
+
+    /**
+     * Connection name.
+     */
+    char name[0];
 };
 
 /**
@@ -165,21 +170,23 @@ struct hrpc_conn {
  * @param call          The call to make.  The connection will take ownership
  *                          of this call.  If the connection fails, the call
  *                          will be given a failure callback.
+ * @param name          The name to use for this connection.  Will be copied.
  * @param out           (out param) On success, the new connection.
  *
  * @return              NULL on success; the error otherwise.
  */
 struct hadoop_err *hrpc_conn_create_outbound(struct hrpc_reactor *reactor,
-                                    struct hrpc_call *call,
+                                    struct hrpc_call *call, const char *name,
                                     struct hrpc_conn **out);
 
 /**
- * Start an outbound call on this connection.
+ * Reuse a connection for a new call.
  *
  * @param conn          The connection.
  * @param call          The call.
  */
-void hrpc_conn_start_outbound(struct hrpc_conn *conn, struct hrpc_call *call);
+void hrpc_conn_restart_outbound(struct hrpc_conn *conn,
+                                struct hrpc_call *call);
 
 /**
  * Compare two hadoop connection objects.

@@ -72,6 +72,11 @@ struct hrpc_reactor_inbox {
  */
 struct hrpc_reactor {
     /**
+     * Number of connections we've created.
+     */
+    uint64_t conns_created;
+
+    /**
      * The inbox for incoming work for this reactor thread.
      */
     struct hrpc_reactor_inbox inbox;
@@ -99,6 +104,11 @@ struct hrpc_reactor {
      * The reactor thread.  All reactor callbacks are made from this context.
      */
     uv_thread_t thread;
+
+    /**
+     * Name of the reactor.
+     */
+    char name[0];
 };
 
 /**
@@ -110,9 +120,21 @@ struct hrpc_reactor {
 void reactor_remove_conn(struct hrpc_reactor *reactor, struct hrpc_conn *conn);
 
 /**
- * Create the reactor thread.
+ * Insert a connection to the reactor.
+ *
+ * @param reactor       The reactor.
+ * @param conn          The connection.
  */
-struct hadoop_err *hrpc_reactor_create(struct hrpc_reactor **out);
+void reactor_insert_conn(struct hrpc_reactor *reactor, struct hrpc_conn *conn);
+
+/**
+ * Create the reactor thread.
+ *
+ * @param out           (out param) on success, the new reactor thread.
+ * @param name          The reactor name to use.
+ */
+struct hadoop_err *hrpc_reactor_create(struct hrpc_reactor **out,
+                                       const char *reactor_name);
 
 /**
  * Shut down the reactor thread and wait for it to terminate.
@@ -130,7 +152,7 @@ void hrpc_reactor_free(struct hrpc_reactor *reactor);
  * Start an outbound transfer.
  *
  * @param reactor       The reactor.
- * @param conn          The connection.  This connection must be either new, or 
+ * @param conn          The connection.  This connection must be either new, or
  * All pending calls will get timeout errors.
  */
 void hrpc_reactor_start_outbound(struct hrpc_reactor *reactor,

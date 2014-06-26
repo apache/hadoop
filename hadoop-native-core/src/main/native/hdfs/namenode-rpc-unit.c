@@ -98,8 +98,6 @@ void set_replication_cb(SetReplicationResponseProto *resp,
     }
 }
 
-
-
 int main(void)
 {
     struct hrpc_messenger_builder *msgr_bld;
@@ -120,7 +118,14 @@ int main(void)
     EXPECT_INT_ZERO(uv_sem_init(&sem, 0));
     {
         SetReplicationRequestProto req = SET_REPLICATION_REQUEST_PROTO__INIT;
-        req.src = "/foo2";
+        req.src = "/foo";
+        req.replication = 1;
+        cnn_async_set_replication(&proxy, &req, set_replication_cb, &sem);
+    }
+    uv_sem_wait(&sem);
+    {
+        SetReplicationRequestProto req = SET_REPLICATION_REQUEST_PROTO__INIT;
+        req.src = "/bar";
         req.replication = 2;
         cnn_async_set_replication(&proxy, &req, set_replication_cb, &sem);
     }

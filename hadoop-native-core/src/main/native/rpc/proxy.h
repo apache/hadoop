@@ -60,6 +60,11 @@ struct hrpc_proxy {
     const char *username;
 
     /**
+     * Remote address we're sending to.
+     */
+    struct sockaddr_in remote;
+
+    /**
      * The current call.
      */
     struct hrpc_call call;

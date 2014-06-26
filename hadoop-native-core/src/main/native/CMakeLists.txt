@@ -146,7 +146,6 @@ add_library(fstest STATIC
 target_link_libraries(fstest
     ${COMMON_DEPS}
     ${RPC_DEPS}
-    ${JNI_DEPS}
     ${FS_DEPS}
 )
 
@@ -166,6 +165,11 @@ add_executable(hconf-unit common/hconf-unit.c
     common/hconf.c common/htable.c common/hadoop_err.c test/test.c)
 add_utest(hconf-unit)
 target_link_libraries(hconf-unit ${EXPAT_LIB} ${LIBUV_LIB})
+
+add_executable(net-unit common/hadoop_err.c common/net-unit.c
+    common/net.c common/test.c)
+add_utest(net-unit)
+target_link_libraries(net-unit uv)
 
 add_executable(hadoop_err-unit common/hadoop_err-unit.c
     common/hadoop_err.c test/test.c)
