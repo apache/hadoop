@@ -201,25 +201,28 @@ public class NameNode implements NameNodeStatusMXBean {
   };
   
   private static final String USAGE = "Usage: java NameNode ["
-      + StartupOption.BACKUP.getName() + "] | ["
-      + StartupOption.CHECKPOINT.getName() + "] | ["
+      + StartupOption.BACKUP.getName() + "] | \n\t["
+      + StartupOption.CHECKPOINT.getName() + "] | \n\t["
       + StartupOption.FORMAT.getName() + " ["
       + StartupOption.CLUSTERID.getName() + " cid ] ["
       + StartupOption.FORCE.getName() + "] ["
-      + StartupOption.NONINTERACTIVE.getName() + "] ] | ["
+      + StartupOption.NONINTERACTIVE.getName() + "] ] | \n\t["
       + StartupOption.UPGRADE.getName() + 
         " [" + StartupOption.CLUSTERID.getName() + " cid]" +
-        " [" + StartupOption.RENAMERESERVED.getName() + "<k-v pairs>] ] | ["
-      + StartupOption.ROLLBACK.getName() + "] | ["
+        " [" + StartupOption.RENAMERESERVED.getName() + "<k-v pairs>] ] | \n\t["
+      + StartupOption.ROLLBACK.getName() + "] | \n\t["
       + StartupOption.ROLLINGUPGRADE.getName() + " <"
       + RollingUpgradeStartupOption.DOWNGRADE.name().toLowerCase() + "|"
-      + RollingUpgradeStartupOption.ROLLBACK.name().toLowerCase() + "> ] | ["
-      + StartupOption.FINALIZE.getName() + "] | ["
-      + StartupOption.IMPORT.getName() + "] | ["
-      + StartupOption.INITIALIZESHAREDEDITS.getName() + "] | ["
-      + StartupOption.BOOTSTRAPSTANDBY.getName() + "] | ["
-      + StartupOption.RECOVER.getName() + " [ " + StartupOption.FORCE.getName()
-      + " ] ]";
+      + RollingUpgradeStartupOption.ROLLBACK.name().toLowerCase() + "> ] | \n\t["
+      + StartupOption.FINALIZE.getName() + "] | \n\t["
+      + StartupOption.IMPORT.getName() + "] | \n\t["
+      + StartupOption.INITIALIZESHAREDEDITS.getName() + "] | \n\t["
+      + StartupOption.BOOTSTRAPSTANDBY.getName() + "] | \n\t["
+      + StartupOption.RECOVER.getName() + " [ "
+      + StartupOption.FORCE.getName() + "] ] | \n\t["
+      + StartupOption.METADATAVERSION.getName() + " ] "
+      + " ]";
+
   
   public long getProtocolVersion(String protocol, 
                                  long clientVersion) throws IOException {
@@ -1266,6 +1269,8 @@ public class NameNode implements NameNodeStatusMXBean {
               "can't understand option \"" + args[i] + "\"");
           }
         }
+      } else if (StartupOption.METADATAVERSION.getName().equalsIgnoreCase(cmd)) {
+        startOpt = StartupOption.METADATAVERSION;
       } else {
         return null;
       }
@@ -1316,6 +1321,21 @@ public class NameNode implements NameNodeStatusMXBean {
       if (fsn != null)
         fsn.close();
     }
+  }
+
+  /**
+   * Verify that configured directories exist, then print the metadata versions
+   * of the software and the image.
+   *
+   * @param conf configuration to use
+   * @throws IOException
+   */
+  private static boolean printMetadataVersion(Configuration conf)
+    throws IOException {
+    final FSImage fsImage = new FSImage(conf);
+    final FSNamesystem fs = new FSNamesystem(conf, fsImage, false);
+    return fsImage.recoverTransitionRead(
+      StartupOption.METADATAVERSION, fs, null);
   }
 
   public static NameNode createNameNode(String argv[], Configuration conf)
@@ -1381,6 +1401,11 @@ public class NameNode implements NameNodeStatusMXBean {
       case RECOVER: {
         NameNode.doRecovery(startOpt, conf);
         return null;
+      }
+      case METADATAVERSION: {
+        printMetadataVersion(conf);
+        terminate(0);
+        return null; // avoid javac warning
       }
       default: {
         DefaultMetricsSystem.initialize("NameNode");
