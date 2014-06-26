@@ -214,6 +214,13 @@ public class FSImage implements Closeable {
 
 
     int layoutVersion = storage.getLayoutVersion();
+    if (startOpt == StartupOption.METADATAVERSION) {
+      System.out.println("HDFS Image Version: " + layoutVersion);
+      System.out.println("Software format version: " +
+        HdfsConstants.NAMENODE_LAYOUT_VERSION);
+      return false;
+    }
+
     if (layoutVersion < Storage.LAST_PRE_UPGRADE_LAYOUT_VERSION) {
       NNStorage.checkVersionUpgradable(storage.getLayoutVersion());
     }
@@ -289,6 +296,12 @@ public class FSImage implements Closeable {
                       storage.dirIterator(); it.hasNext();) {
       StorageDirectory sd = it.next();
       StorageState curState;
+      if (startOpt == StartupOption.METADATAVERSION) {
+        /* All we need is the layout version. */
+        storage.readProperties(sd);
+        return true;
+      }
+
       try {
         curState = sd.analyzeStorage(startOpt, storage);
         // sd is locked but not opened

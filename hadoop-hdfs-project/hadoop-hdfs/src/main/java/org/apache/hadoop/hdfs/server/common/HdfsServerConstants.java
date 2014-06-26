@@ -92,7 +92,8 @@ public final class HdfsServerConstants {
     RECOVER  ("-recover"),
     FORCE("-force"),
     NONINTERACTIVE("-nonInteractive"),
-    RENAMERESERVED("-renameReserved");
+    RENAMERESERVED("-renameReserved"),
+    METADATAVERSION("-metadataVersion");
 
     private static final Pattern ENUM_WITH_ROLLING_UPGRADE_OPTION = Pattern.compile(
         "(\\w+)\\((\\w+)\\)");

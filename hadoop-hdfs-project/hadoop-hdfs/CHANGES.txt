@@ -225,6 +225,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6595. Allow the maximum threads for balancing on datanodes to be
     configurable. (Benoy Antony via szetszwo)
 
+    HDFS-6572. Add an option to the NameNode that prints the software and
+    on-disk image versions. (Charles Lamb via cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
