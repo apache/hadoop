@@ -111,6 +111,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10674. Improve PureJavaCrc32 performance and use java.util.zip.CRC32
     for Java 7 and above. (szetszwo)
 
+    HADOOP-10754. Reenable several HA ZooKeeper-related tests on Windows.
+    (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES 
