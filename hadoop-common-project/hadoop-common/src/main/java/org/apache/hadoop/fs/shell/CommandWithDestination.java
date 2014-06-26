@@ -267,6 +267,9 @@ abstract class CommandWithDestination extends FsCommand {
         dst.refreshStatus(); // need to update stat to know it exists now
       }      
       super.recursePath(src);
+      if (dst.stat.isDirectory()) {
+        preserveAttributes(src, dst);
+      }
     } finally {
       dst = savedDst;
     }
@@ -298,44 +301,7 @@ abstract class CommandWithDestination extends FsCommand {
     try {
       in = src.fs.open(src.path);
       copyStreamToTarget(in, target);
-      if (shouldPreserve(FileAttribute.TIMESTAMPS)) {
-        target.fs.setTimes(
-          target.path,
-          src.stat.getModificationTime(),
-          src.stat.getAccessTime());
-      }
-      if (shouldPreserve(FileAttribute.OWNERSHIP)) {
-        target.fs.setOwner(
-          target.path,
-          src.stat.getOwner(),
-          src.stat.getGroup());
-      }
-      if (shouldPreserve(FileAttribute.PERMISSION) ||
-          shouldPreserve(FileAttribute.ACL)) {
-        target.fs.setPermission(
-          target.path,
-          src.stat.getPermission());
-      }
-      if (shouldPreserve(FileAttribute.ACL)) {
-        FsPermission perm = src.stat.getPermission();
-        if (perm.getAclBit()) {
-          List<AclEntry> srcEntries =
-              src.fs.getAclStatus(src.path).getEntries();
-          List<AclEntry> srcFullEntries =
-              AclUtil.getAclFromPermAndEntries(perm, srcEntries);
-          target.fs.setAcl(target.path, srcFullEntries);
-        }
-      }
-      if (shouldPreserve(FileAttribute.XATTR)) {
-        Map<String, byte[]> srcXAttrs = src.fs.getXAttrs(src.path);
-        if (srcXAttrs != null) {
-          Iterator<Entry<String, byte[]>> iter = srcXAttrs.entrySet().iterator();
-          while (iter.hasNext()) {
-            Entry<String, byte[]> entry = iter.next();
-            target.fs.setXAttr(target.path, entry.getKey(), entry.getValue());
-          }
-        }
-      }
+      preserveAttributes(src, target);
     } finally {
       IOUtils.closeStream(in);
     }
@@ -362,6 +328,56 @@ abstract class CommandWithDestination extends FsCommand {
       targetFs.rename(tempTarget, target);
     } finally {
       targetFs.close(); // last ditch effort to ensure temp file is removed
+    }
+  }
+
+  /**
+   * Preserve the attributes of the source to the target.
+   * The method calls {@link #shouldPreserve(FileAttribute)} to check what
+   * attribute to preserve.
+   * @param src source to preserve
+   * @param target where to preserve attributes
+   * @throws IOException if fails to preserve attributes
+   */
+  protected void preserveAttributes(PathData src, PathData target)
+      throws IOException {
+    if (shouldPreserve(FileAttribute.TIMESTAMPS)) {
+      target.fs.setTimes(
+          target.path,
+          src.stat.getModificationTime(),
+          src.stat.getAccessTime());
+    }
+    if (shouldPreserve(FileAttribute.OWNERSHIP)) {
+      target.fs.setOwner(
+          target.path,
+          src.stat.getOwner(),
+          src.stat.getGroup());
+    }
+    if (shouldPreserve(FileAttribute.PERMISSION) ||
+        shouldPreserve(FileAttribute.ACL)) {
+      target.fs.setPermission(
+          target.path,
+          src.stat.getPermission());
+    }
+    if (shouldPreserve(FileAttribute.ACL)) {
+      FsPermission perm = src.stat.getPermission();
+      if (perm.getAclBit()) {
+        List<AclEntry> srcEntries =
+            src.fs.getAclStatus(src.path).getEntries();
+        List<AclEntry> srcFullEntries =
+            AclUtil.getAclFromPermAndEntries(perm, srcEntries);
+        target.fs.setAcl(target.path, srcFullEntries);
+      }
+    }
+    if (shouldPreserve(FileAttribute.XATTR)) {
+      Map<String, byte[]> srcXAttrs = src.fs.getXAttrs(src.path);
+      if (srcXAttrs != null) {
+        Iterator<Entry<String, byte[]>> iter = srcXAttrs.entrySet().iterator();
+        while (iter.hasNext()) {
+          Entry<String, byte[]> entry = iter.next();
+          target.fs.setXAttr(target.path, entry.getKey(), entry.getValue());
+        }
+      }
     }
   }
 
