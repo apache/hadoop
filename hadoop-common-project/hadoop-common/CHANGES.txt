@@ -288,6 +288,8 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10479. Fix new findbugs warnings in hadoop-minikdc.
     (Swarnim Kulkarni via wheat9)
 
+    HADOOP-10715. Remove public GraphiteSink#setWriter (Babak Behzad via raviprak)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES

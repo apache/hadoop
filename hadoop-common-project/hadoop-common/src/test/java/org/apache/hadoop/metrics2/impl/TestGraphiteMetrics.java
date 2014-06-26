@@ -28,15 +28,16 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static org.mockito.Mockito.*;
-
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.sink.GraphiteSink;
 import org.junit.Test;
+
+import static org.mockito.Mockito.*;
 import org.mockito.ArgumentCaptor;
+import org.mockito.internal.util.reflection.Whitebox;
 
 public class TestGraphiteMetrics {
     private AbstractMetric makeMetric(String name, Number value) {
@@ -57,14 +58,13 @@ public class TestGraphiteMetrics {
         metrics.add(makeMetric("foo2", 2.25));
         MetricsRecord record = new MetricsRecordImpl(MsInfo.Context, (long) 10000, tags, metrics);
 
-        OutputStreamWriter writer = mock(OutputStreamWriter.class);
+        OutputStreamWriter mockWriter = mock(OutputStreamWriter.class);
         ArgumentCaptor<String> argument = ArgumentCaptor.forClass(String.class);
-
-        sink.setWriter(writer);
+        Whitebox.setInternalState(sink, "writer", mockWriter);
         sink.putMetrics(record);
 
         try {
-            verify(writer).write(argument.capture());
+            verify(mockWriter).write(argument.capture());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -89,14 +89,13 @@ public class TestGraphiteMetrics {
         metrics.add(makeMetric("foo2", 2));
         MetricsRecord record = new MetricsRecordImpl(MsInfo.Context, (long) 10000, tags, metrics);
 
-        OutputStreamWriter writer = mock(OutputStreamWriter.class);
+        OutputStreamWriter mockWriter = mock(OutputStreamWriter.class);
         ArgumentCaptor<String> argument = ArgumentCaptor.forClass(String.class);
-
-        sink.setWriter(writer);
+        Whitebox.setInternalState(sink, "writer", mockWriter);
         sink.putMetrics(record);
 
         try {
-            verify(writer).write(argument.capture());
+            verify(mockWriter).write(argument.capture());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -122,26 +121,26 @@ public class TestGraphiteMetrics {
 
       OutputStreamWriter writer = mock(OutputStreamWriter.class);
 
-      sink.setWriter(writer);
+      Whitebox.setInternalState(sink, "writer", writer);
       sink.close();
       sink.putMetrics(record);
     }
 
     @Test
     public void testClose(){
-      GraphiteSink sink = new GraphiteSink();
-      Writer mockWriter = mock(Writer.class);
-      sink.setWriter(mockWriter);
-      try {
-        sink.close();
-      } catch (IOException ioe) {
-        ioe.printStackTrace();
-      }
+        GraphiteSink sink = new GraphiteSink();
+        Writer mockWriter = mock(Writer.class);
+        Whitebox.setInternalState(sink, "writer", mockWriter);
+        try {
+            sink.close();
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+        }
 
-      try {
-        verify(mockWriter).close();
-      } catch (IOException ioe) {
-        ioe.printStackTrace();
-      }
+        try {
+            verify(mockWriter).close();
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+        }
     }
 }
