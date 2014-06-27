@@ -262,7 +262,7 @@ class CapacitySchedulerPage extends RmView {
           "    var q = $('.q', data.rslt.obj).first().text();",
           "    if (q == 'root') q = '';",
           "    else q = '^' + q.substr(q.lastIndexOf('.') + 1) + '$';",
-          "    $('#apps').dataTable().fnFilter(q, 3, true);",
+          "    $('#apps').dataTable().fnFilter(q, 4, true);",
           "  });",
           "  $('#cs').show();",
           "});")._().

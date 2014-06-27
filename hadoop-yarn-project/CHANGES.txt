@@ -281,6 +281,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2163. WebUI: Order of AppId in apps table should be consistent with
     ApplicationId.compareTo(). (Wangda Tan via raviprak)
 
+    YARN-2104. Scheduler queue filter failed to work because index of queue
+    column changed. (Wangda Tan via jlowe)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
