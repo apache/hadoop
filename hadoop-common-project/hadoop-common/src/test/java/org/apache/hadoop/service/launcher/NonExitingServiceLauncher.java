@@ -34,10 +34,6 @@ public class NonExitingServiceLauncher<S extends Service> extends
     super(serviceClassName);
   }
 
-  public void setService(S s) {
-    super.setService(s);
-  }
-
   @Override
   protected void exit(ExitUtil.ExitException ee) {
     exitException = ee;
