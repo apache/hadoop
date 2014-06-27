@@ -137,7 +137,7 @@ class DefaultSchedulerPage extends RmView {
           "  $('#cs').bind('select_node.jstree', function(e, data) {",
           "    var q = $('.q', data.rslt.obj).first().text();",
             "    if (q == 'root') q = '';",
-          "    $('#apps').dataTable().fnFilter(q, 3);",
+          "    $('#apps').dataTable().fnFilter(q, 4);",
           "  });",
           "  $('#cs').show();",
           "});")._();
