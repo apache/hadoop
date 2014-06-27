@@ -314,14 +314,26 @@
  {@link org.apache.hadoop.conf.Configuration} instance. As the launcher is
  the entry point for an application, this implies that the HDFS, YARN or other
  default configurations will not have been forced in through the constructors
- of <code>HdfsConfiguration</code> or <code>YARNConfiguration</code>.
+ of <code>HdfsConfiguration</code> or <code>YarnConfiguration</code>.
  <p>
- There are three strategies for dealing with this
+ What the launcher does do is use reflection to try and create instances of
+ these classes -simply to force in the common resources. If the classes are
+ not on the classpath this fact will be logged.
+ <p>
+ Applications may consider it essential to either force load in the relevant
+ configuration, or pass it down to the service being created. In which
+ case further measures may be needed.
+ 
+ <p><b>1: Creation in an extended <code>ServiceLauncher</code></b></p>
+ 
  <p>
  Subclass the Service launcher and override its {@link org.apache.hadoop.service.launcher.ServiceLauncher#createConfiguration()}
  method with one that creates the right configuration. This is good if a single
  launcher can be created for all services launched by a module, such as
- HDFS or YARN. It does imply a dedicated script to invoke the custom main() method.
+ HDFS or YARN. It does imply a dedicated script to invoke the custom <code>main()</code> method.
+
+ <p><b>2: Creation in <code>bindArgs()</code></b></p>
+
  <p>
  In the {@link org.apache.hadoop.service.launcher.LaunchableService#bindArgs(Configuration, List)},
  a new configuration is created:
@@ -329,7 +341,7 @@
  <pre>
  public Configuration bindArgs(Configuration config, List<String> args) throws
  Exception {
-   Configuration newConf = new YARNConfiguration(config);
+   Configuration newConf = new YarnConfiguration(config);
    return newConf;
  }
  </pre>
@@ -338,14 +350,16 @@
  instances created via the service launcher. It does imply that this is
  expected to be only way that services will be launched.
 
+ <p><b>3: Creation in <code>serviceInit()</code></b></p>
+
  <pre>
  protected void serviceInit(Configuration conf) throws Exception {
-   super.serviceInit(new YARNConfiguration(conf));
+   super.serviceInit(new YarnConfiguration(conf));
  }
  </pre>
  <p>
  This is a strategy used by many existing YARN services, and is ideal for
- services which to not implement the LaunchableService interface. Its one
+ services which do not implement the LaunchableService interface. Its one
  weakness is that the configuration is now private to that instance. Some
  YARN services use a single shared configuration instance as a way of propagating
  information between peer services in a {@link org.apache.hadoop.service.CompositeService}.
@@ -353,6 +367,11 @@
 
  </p>
 
+ <b>Summary</b>: the ServiceLauncher makes a best-effort attempt to load the
+ standard Configuration subclasses, but does not fail if they are not present.
+ Services which require a specific subclasses should follow one of the strategies
+ listed; creation in <code>serviceInit()</code> is the recommended policy.
+ 
  <h2>Configuration file loading</h2>
 
  Before the service is bound to the CLI, the ServiceLauncher scans through
