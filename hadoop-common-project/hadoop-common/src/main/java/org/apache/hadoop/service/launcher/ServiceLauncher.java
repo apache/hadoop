@@ -155,7 +155,7 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
    * {@link #coreServiceLaunch(Configuration, List, boolean, boolean)} has completed
    * @return the service
    */
-  public S getService() {
+  public final S getService() {
     return service;
   }
 
@@ -171,7 +171,7 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
    * Get the configuration constructed from the command line arguments.
    * @return the configuration used to create the service
    */
-  public Configuration getConfiguration() {
+  public final Configuration getConfiguration() {
     return configuration;
   }
 
@@ -180,12 +180,12 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
    * @return the exit code. 
    */
   @VisibleForTesting
-  public int getServiceExitCode() {
+  public final int getServiceExitCode() {
     return serviceExitCode;
   }
 
   @VisibleForTesting
-  public ExitUtil.ExitException getServiceException() {
+  public final ExitUtil.ExitException getServiceException() {
     return serviceException;
   }
 
