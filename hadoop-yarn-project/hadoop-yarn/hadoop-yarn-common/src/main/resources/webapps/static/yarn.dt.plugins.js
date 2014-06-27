@@ -119,13 +119,7 @@ function parseHadoopID(data, type, full) {
     return data;
   }
   //Return the visible string rather than the entire HTML tag
-  if (type === 'filter') {
-    return data.split('>')[1].split('<')[0];
-  }
-  //Parse the ID for 'sort', 'type' and undefined
-  //The number after the last '_' and before the end tag '<'
-  var splits = data.split('_');
-  return splits[parseInt(splits.length-1)].split('<')[0];
+  return data.split('>')[1].split('<')[0];
 }
 
 //JSON array element is "20000 attempt_1360183373897_0001_m_000002_0"
