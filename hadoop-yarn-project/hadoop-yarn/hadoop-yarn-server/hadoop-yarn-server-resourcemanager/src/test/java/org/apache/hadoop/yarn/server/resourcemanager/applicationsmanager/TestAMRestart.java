@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -57,8 +58,6 @@ public class TestAMRestart {
   public void testAMRestartWithExistingContainers() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
-    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-      ResourceScheduler.class);
 
     MockRM rm1 = new MockRM(conf);
     rm1.start();
@@ -125,9 +124,9 @@ public class TestAMRestart {
         ContainerId.newInstance(am1.getApplicationAttemptId(), 6);
     nm1.nodeHeartbeat(true);
     SchedulerApplicationAttempt schedulerAttempt =
-        ((CapacityScheduler) rm1.getResourceScheduler())
+        ((AbstractYarnScheduler) rm1.getResourceScheduler())
           .getCurrentAttemptForContainer(containerId6);
-    while (schedulerAttempt.getReservedContainers().size() == 0) {
+    while (schedulerAttempt.getReservedContainers().isEmpty()) {
       System.out.println("Waiting for container " + containerId6
           + " to be reserved.");
       nm1.nodeHeartbeat(true);
@@ -221,7 +220,7 @@ public class TestAMRestart {
 
     // record the scheduler attempt for testing.
     SchedulerApplicationAttempt schedulerNewAttempt =
-        ((CapacityScheduler) rm1.getResourceScheduler())
+        ((AbstractYarnScheduler) rm1.getResourceScheduler())
           .getCurrentAttemptForContainer(containerId2);
     // finish this application
     MockRM.finishAMAndVerifyAppState(app1, rm1, nm1, am2);
