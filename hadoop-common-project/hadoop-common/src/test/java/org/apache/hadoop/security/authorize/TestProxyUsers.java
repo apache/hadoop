@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -50,6 +51,7 @@ public class TestProxyUsers {
   private static final String[] SUDO_GROUP_NAMES =
     new String[] { "sudo_proxied_user" };
   private static final String PROXY_IP = "1.2.3.4";
+  private static final String PROXY_IP_RANGE = "10.222.0.0/16,10.113.221.221";
 
   /**
    * Test the netgroups (groups in ACL rules that start with @)
@@ -294,6 +296,29 @@ public class TestProxyUsers {
     assertNotAuthorized(proxyUserUgi, "1.2.3.4");
     assertNotAuthorized(proxyUserUgi, "1.2.3.5");
   }
+  
+  @Test
+  public void testIPRange() {
+    Configuration conf = new Configuration();
+    conf.set(
+        DefaultImpersonationProvider.getProxySuperuserGroupConfKey(REAL_USER_NAME),
+        "*");
+    conf.set(
+        DefaultImpersonationProvider.getProxySuperuserIpConfKey(REAL_USER_NAME),
+        PROXY_IP_RANGE);
+    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+
+    // First try proxying a group that's allowed
+    UserGroupInformation realUserUgi = UserGroupInformation
+        .createRemoteUser(REAL_USER_NAME);
+    UserGroupInformation proxyUserUgi = UserGroupInformation.createProxyUserForTesting(
+        PROXY_USER_NAME, realUserUgi, GROUP_NAMES);
+
+    // From good IP
+    assertAuthorized(proxyUserUgi, "10.222.0.0");
+    // From bad IP
+    assertNotAuthorized(proxyUserUgi, "10.221.0.0");
+  }
 
   @Test
   public void testWithDuplicateProxyGroups() throws Exception {
@@ -431,4 +456,71 @@ public class TestProxyUsers {
       return null;
     }
   }
+  
+  public static void loadTest(String ipString, int testRange) {
+    Configuration conf = new Configuration();
+    conf.set(
+        DefaultImpersonationProvider.getProxySuperuserGroupConfKey(REAL_USER_NAME),
+        StringUtils.join(",", Arrays.asList(GROUP_NAMES)));
+
+    conf.set(
+        DefaultImpersonationProvider.getProxySuperuserIpConfKey(REAL_USER_NAME),
+        ipString
+        );
+    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+
+
+    // First try proxying a group that's allowed
+    UserGroupInformation realUserUgi = UserGroupInformation
+        .createRemoteUser(REAL_USER_NAME);
+    UserGroupInformation proxyUserUgi = UserGroupInformation.createProxyUserForTesting(
+        PROXY_USER_NAME, realUserUgi, GROUP_NAMES);
+
+    long startTime = System.nanoTime();
+    SecureRandom sr = new SecureRandom();
+    for (int i=1; i < 1000000; i++){
+      try {
+        ProxyUsers.authorize(proxyUserUgi,  "1.2.3."+ sr.nextInt(testRange));
+       } catch (AuthorizationException e) {
+      }
+    }
+    long stopTime = System.nanoTime();
+    long elapsedTime = stopTime - startTime;
+    System.out.println(elapsedTime/1000000 + " ms");
+  }
+  
+  /**
+   * invokes the load Test
+   * A few sample invocations  are as below
+   * TestProxyUsers ip 128 256
+   * TestProxyUsers range 1.2.3.0/25 256
+   * TestProxyUsers ip 4 8
+   * TestProxyUsers range 1.2.3.0/30 8
+   * @param args
+   */
+  public static void main (String[] args){
+    String ipValues = null;
+
+    if (args.length != 3 || (!args[0].equals("ip") && !args[0].equals("range"))) {
+      System.out.println("Invalid invocation. The right syntax is ip/range <numberofIps/cidr> <testRange>");
+    }
+    else {
+      if (args[0].equals("ip")){
+        int numberOfIps =  Integer.parseInt(args[1]);
+        StringBuilder sb = new StringBuilder();
+        for (int i=0; i < numberOfIps; i++){
+          sb.append("1.2.3."+ i + ",");
+        }
+        ipValues = sb.toString();
+      }
+      else if (args[0].equals("range")){
+        ipValues = args[1];
+      }
+
+      int testRange = Integer.parseInt(args[2]);
+
+      loadTest(ipValues, testRange);
+    }
+  }
+
 }

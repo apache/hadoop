@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.security.authorize;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,7 +26,7 @@ import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.MachineList;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -46,8 +44,8 @@ public class DefaultImpersonationProvider implements ImpersonationProvider {
   // acl and list of hosts per proxyuser
   private Map<String, AccessControlList> proxyUserAcl = 
     new HashMap<String, AccessControlList>();
-  private Map<String, Collection<String>> proxyHosts = 
-    new HashMap<String, Collection<String>>();
+  private static Map<String, MachineList> proxyHosts = 
+    new HashMap<String, MachineList>();
   private Configuration conf;
 
   @Override
@@ -70,7 +68,7 @@ public class DefaultImpersonationProvider implements ImpersonationProvider {
     allMatchKeys = conf.getValByRegex(CONF_HADOOP_PROXYUSER_RE_HOSTS);
     for(Entry<String, String> entry : allMatchKeys.entrySet()) {
       proxyHosts.put(entry.getKey(),
-          StringUtils.getTrimmedStringCollection(entry.getValue()));
+          new MachineList(entry.getValue()));
     }
   }
 
@@ -95,27 +93,10 @@ public class DefaultImpersonationProvider implements ImpersonationProvider {
           + " is not allowed to impersonate " + user.getUserName());
     }
 
-    boolean ipAuthorized = false;
-    Collection<String> ipList = proxyHosts.get(
+    MachineList MachineList = proxyHosts.get(
         getProxySuperuserIpConfKey(realUser.getShortUserName()));
 
-    if (isWildcardList(ipList)) {
-      ipAuthorized = true;
-    } else if (ipList != null && !ipList.isEmpty()) {
-      for (String allowedHost : ipList) {
-        InetAddress hostAddr;
-        try {
-          hostAddr = InetAddress.getByName(allowedHost);
-        } catch (UnknownHostException e) {
-          continue;
-        }
-        if (hostAddr.getHostAddress().equals(remoteAddress)) {
-          // Authorization is successful
-          ipAuthorized = true;
-        }
-      }
-    }
-    if(!ipAuthorized) {
+    if(!MachineList.includes(remoteAddress)) {
       throw new AuthorizationException("Unauthorized connection for super-user: "
           + realUser.getUserName() + " from IP " + remoteAddress);
     }
@@ -127,16 +108,6 @@ public class DefaultImpersonationProvider implements ImpersonationProvider {
       return key.substring(0, endIndex); 
     }
     return key;
-  }
-
-  /**
-   * Return true if the configuration specifies the special configuration value
-   * "*", indicating that any group or host list is allowed to use this configuration.
-   */
-  private boolean isWildcardList(Collection<String> list) {
-    return (list != null) &&
-    (list.size() == 1) &&
-    (list.contains("*"));
   }
   
   /**
@@ -180,6 +151,12 @@ public class DefaultImpersonationProvider implements ImpersonationProvider {
 
   @VisibleForTesting
   public Map<String, Collection<String>> getProxyHosts() {
-    return proxyHosts;
+    Map<String, Collection<String>> tmpProxyHosts = 
+        new HashMap<String, Collection<String>>();
+    for (Map.Entry<String, MachineList> proxyHostEntry :proxyHosts.entrySet()) {
+      tmpProxyHosts.put(proxyHostEntry.getKey(), 
+          proxyHostEntry.getValue().getCollection());
+    }
+    return tmpProxyHosts;
   }
 }

@@ -236,6 +236,25 @@ KVNO Timestamp         Principal
   </property>
 ----
 
+  The <<<hadoop.proxyuser.${superuser}.hosts>>> accepts list of ip addresses,
+  ip address ranges in CIDR format and/or host names.
+  
+  For example, by specifying as below in core-site.xml,
+  user named <<<oozie>>> accessing from hosts in the range 
+  10.222.0.0-15 and 10.113.221.221
+  can impersonate any user belonging to any group.
+  
+  ----
+  <property>
+    <name>hadoop.proxyuser.oozie.hosts</name>
+    <value>10.222.0.0/16,10.113.221.221</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.oozie.groups</name>
+    <value>*</value>
+  </property>
+----
+
 ** Secure DataNode
 
   Because the data transfer protocol of DataNode
