@@ -274,6 +274,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-9705. FsShell cp -p does not preserve directory attibutes.
     (Akira AJISAKA via cnauroth)
 
+    HADOOP-10739. Renaming a file into a directory containing the same
+    filename results in a confusing I/O error (chang li via jlowe)
+
   BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
 
     HADOOP-10520. Extended attributes definition and FileSystem APIs for

@@ -104,6 +104,9 @@ class MoveCommands {
         throw new PathIOException(src.toString(),
             "Does not match target filesystem");
       }
+      if (target.exists) {
+        throw new PathExistsException(target.toString());
+      }
       if (!target.fs.rename(src.path, target.path)) {
         // we have no way to know the actual error...
         throw new PathIOException(src.toString());
