@@ -117,6 +117,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10565. Support IP ranges (CIDR) in proxyuser.hosts. (Benoy Antony
     via Arpit Agarwal)
 
+    HADOOP-10649. Allow overriding the default ACL for service authorization
+    (Benoy Antony via Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES 

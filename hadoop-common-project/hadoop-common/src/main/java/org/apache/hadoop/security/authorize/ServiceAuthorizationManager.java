@@ -131,6 +131,10 @@ public class ServiceAuthorizationManager {
       PolicyProvider provider) {
     final Map<Class<?>, AccessControlList> newAcls =
         new IdentityHashMap<Class<?>, AccessControlList>();
+    
+    String defaultAcl = conf.get(
+        CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_AUTHORIZATION_DEFAULT_ACL,
+        AccessControlList.WILDCARD_ACL_VALUE);
 
     // Parse the config file
     Service[] services = provider.getServices();
@@ -139,7 +143,7 @@ public class ServiceAuthorizationManager {
         AccessControlList acl =
             new AccessControlList(
                 conf.get(service.getServiceKey(),
-                    AccessControlList.WILDCARD_ACL_VALUE)
+                    defaultAcl)
             );
         newAcls.put(service.getProtocol(), acl);
       }

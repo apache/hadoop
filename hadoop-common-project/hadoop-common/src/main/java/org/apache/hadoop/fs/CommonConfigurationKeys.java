@@ -131,6 +131,9 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
    * Service Authorization
    */
   public static final String 
+  HADOOP_SECURITY_SERVICE_AUTHORIZATION_DEFAULT_ACL = 
+      "security.service.authorization.default.acl";
+  public static final String 
   HADOOP_SECURITY_SERVICE_AUTHORIZATION_REFRESH_POLICY = 
       "security.refresh.policy.protocol.acl";
   public static final String 
