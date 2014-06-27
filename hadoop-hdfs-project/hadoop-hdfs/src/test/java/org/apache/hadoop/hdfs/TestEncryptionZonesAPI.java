@@ -65,7 +65,11 @@ public class TestEncryptionZonesAPI {
     conf.set(KeyProviderFactory.KEY_PROVIDER_PATH,
         JavaKeyStoreProvider.SCHEME_NAME + "://file" + tmpDir + "/test.jks");
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-    fs = cluster.getFileSystem();
+    fs = createFileSystem(conf);
+  }
+
+  protected FileSystem createFileSystem(Configuration conf) throws IOException {
+    return cluster.getFileSystem();
   }
 
   @After
@@ -400,5 +404,24 @@ public class TestEncryptionZonesAPI {
         return null;
       }
     });
+  }
+
+  /** Test success of Rename EZ on a directory which is already an EZ. */
+  @Test(timeout = 30000)
+  public void testRenameEncryptionZone()
+          throws Exception {
+    final HdfsAdmin dfsAdmin =
+            new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
+    FileSystem.mkdirs(fs, TEST_PATH_WITH_CHILD,
+      new FsPermission((short) 0777));
+    dfsAdmin.createEncryptionZone(TEST_PATH_WITH_CHILD, null);
+    FileSystem.mkdirs(fs, TEST_PATH_WITH_MULTIPLE_CHILDREN,
+       new FsPermission((short) 0777));
+    try {
+      fs.rename(TEST_PATH_WITH_MULTIPLE_CHILDREN, TEST_PATH);
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(
+              "/test/foo/baz can't be moved from an encryption zone.", e);
+    }
   }
 }

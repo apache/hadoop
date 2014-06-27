@@ -262,5 +262,99 @@
         </comparator>
       </comparators>
     </test>
+
+    <test>
+      <description>Test failure of renaming file cross EZ's</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /src</command>
+        <command>-fs NAMENODE -mkdir /dst</command>
+        <command>-fs NAMENODE -ls /</command>-
+        <crypto-admin-command>-createZone -path /src</crypto-admin-command>
+        <crypto-admin-command>-createZone -path /dst</crypto-admin-command>
+        <command>-fs NAMENODE -mkdir /src/subdir</command>
+        <command>-fs NAMENODE -mv /src/subdir /dst</command>-
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /src/subdir</command>
+        <crypto-admin-command>-deleteZone -path /src</crypto-admin-command>
+        <crypto-admin-command>-deleteZone -path /dst</crypto-admin-command>
+        <command>-fs NAMENODE -rmdir /src</command>
+        <command>-fs NAMENODE -rmdir /dst</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>/src/subdir can't be moved from encryption zone /src to encryption zone /dst.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test failure of renaming a non-EZ file into an EZ</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /src</command>
+        <command>-fs NAMENODE -mkdir /dst</command>
+        <command>-fs NAMENODE -ls /</command>-
+        <crypto-admin-command>-createZone -path /dst</crypto-admin-command>
+        <command>-fs NAMENODE -mv /src /dst</command>-
+      </test-commands>
+      <cleanup-commands>
+        <crypto-admin-command>-deleteZone -path /dst</crypto-admin-command>
+        <command>-fs NAMENODE -rmdir /src</command>
+        <command>-fs NAMENODE -rmdir /dst</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>/src can't be moved into an encryption zone</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test failure of renaming a non-EZ file from an EZ</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /src</command>
+        <command>-fs NAMENODE -mkdir /dst</command>
+        <command>-fs NAMENODE -ls /</command>-
+        <crypto-admin-command>-createZone -path /src</crypto-admin-command>
+        <command>-fs NAMENODE -mv /src /dst</command>-
+      </test-commands>
+      <cleanup-commands>
+        <crypto-admin-command>-deleteZone -path /src</crypto-admin-command>
+        <command>-fs NAMENODE -rmdir /src</command>
+        <command>-fs NAMENODE -rmdir /dst</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>/src can't be moved from an encryption zone</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test success of renaming file intra-EZ</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /src</command>
+        <crypto-admin-command>-createZone -path /src</crypto-admin-command>
+        <command>-fs NAMENODE -mkdir /src/subdir1</command>
+        <command>-fs NAMENODE -mkdir /src/subdir2</command>
+        <command>-fs NAMENODE -mv /src/subdir1 /src/subdir2</command>-
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /src/subdir2/subdir1</command>
+        <command>-fs NAMENODE -rmdir /src/subdir2</command>
+        <crypto-admin-command>-deleteZone -path /src</crypto-admin-command>
+        <command>-fs NAMENODE -rmdir /src</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output></expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
   </tests>
 </configuration>

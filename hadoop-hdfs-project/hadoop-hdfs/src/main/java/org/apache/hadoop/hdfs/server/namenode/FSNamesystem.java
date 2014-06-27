@@ -8395,7 +8395,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /** Lookup the encryption zone of a path. */
-  private EncryptionZone getEncryptionZoneForPath(String src) {
+  EncryptionZone getEncryptionZoneForPath(String src) {
     final String[] components = INode.getPathNames(src);
     for (int i = components.length; i > 0; i--) {
       final List<String> l = Arrays.asList(Arrays.copyOfRange(components, 0, i));

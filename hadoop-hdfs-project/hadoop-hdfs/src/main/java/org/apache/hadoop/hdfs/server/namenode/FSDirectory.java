@@ -58,6 +58,7 @@ import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
 import org.apache.hadoop.hdfs.protocol.FsAclPermission;
@@ -544,6 +545,7 @@ public class FSDirectory implements Closeable {
       return false;
     }
     
+    checkEncryptionZoneMoveValidity(src, dst);
     // Ensure dst has quota to accommodate rename
     verifyFsLimitsForRename(srcIIP, dstIIP);
     verifyQuotaForRename(srcIIP.getINodes(), dstIIP.getINodes());
@@ -748,6 +750,7 @@ public class FSDirectory implements Closeable {
       throw new IOException(error);
     }
 
+    checkEncryptionZoneMoveValidity(src, dst);
     final INode dstInode = dstIIP.getLastINode();
     List<INodeDirectorySnapshottable> snapshottableDirs = 
         new ArrayList<INodeDirectorySnapshottable>();
@@ -971,6 +974,37 @@ public class FSDirectory implements Closeable {
     throw new IOException("rename from " + src + " to " + dst + " failed.");
   }
   
+  private void checkEncryptionZoneMoveValidity(String src, String dst)
+    throws IOException {
+    final EncryptionZone srcEZ =
+      getFSNamesystem().getEncryptionZoneForPath(src);
+    final EncryptionZone dstEZ =
+      getFSNamesystem().getEncryptionZoneForPath(dst);
+    final boolean srcInEZ = srcEZ != null;
+    final boolean dstInEZ = dstEZ != null;
+    if (srcInEZ) {
+      if (!dstInEZ) {
+        throw new IOException(src + " can't be moved from an encryption zone.");
+      }
+    } else {
+      if (dstInEZ) {
+        throw new IOException(src + " can't be moved into an encryption zone.");
+      }
+    }
+
+    if (srcInEZ || dstInEZ) {
+      if (!srcEZ.getPath().equals(dstEZ.getPath())) {
+        final StringBuilder sb = new StringBuilder(src);
+        sb.append(" can't be moved from encryption zone ");
+        sb.append(srcEZ.getPath());
+        sb.append(" to encryption zone ");
+        sb.append(dstEZ.getPath());
+        sb.append(".");
+        throw new IOException(sb.toString());
+      }
+    }
+  }
+
   /**
    * Set file replication
    * 

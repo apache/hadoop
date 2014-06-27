@@ -26,6 +26,8 @@ fs-encryption (Unreleased)
     HDFS-6391. Get the Key/IV from the NameNode for encrypted files in
     DFSClient. (Charles Lamb and wang)
 
+    HDFS-6389. Rename restrictions for encryption zones. (clamb)
+
   OPTIMIZATIONS
 
   BUG FIXES
