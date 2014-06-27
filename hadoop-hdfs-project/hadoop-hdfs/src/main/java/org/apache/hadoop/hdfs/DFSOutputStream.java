@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -154,9 +155,8 @@ public class DFSOutputStream extends FSOutputSummer
   private boolean shouldSyncBlock = false; // force blocks to disk upon close
   private final AtomicReference<CachingStrategy> cachingStrategy;
   private boolean failPacket = false;
-  private byte[] key = null;
-  private byte[] iv = null;
-  
+  private FileEncryptionInfo fileEncryptionInfo;
+
   private static class Packet {
     private static final long HEART_BEAT_SEQNO = -1L;
     final long seqno; // sequencenumber of buffer in block
@@ -1564,8 +1564,7 @@ public class DFSOutputStream extends FSOutputSummer
     this.fileId = stat.getFileId();
     this.blockSize = stat.getBlockSize();
     this.blockReplication = stat.getReplication();
-    this.key = stat.getKey();
-    this.iv = stat.getIv();
+    this.fileEncryptionInfo = stat.getFileEncryptionInfo();
     this.progress = progress;
     this.cachingStrategy = new AtomicReference<CachingStrategy>(
         dfsClient.getDefaultWriteCachingStrategy());
@@ -1654,6 +1653,7 @@ public class DFSOutputStream extends FSOutputSummer
           checksum.getBytesPerChecksum());
       streamer = new DataStreamer();
     }
+    this.fileEncryptionInfo = stat.getFileEncryptionInfo();
   }
 
   static DFSOutputStream newStreamForAppend(DFSClient dfsClient, String src,
@@ -2178,26 +2178,15 @@ public class DFSOutputStream extends FSOutputSummer
   /**
    * Returns the size of a file as it was when this stream was opened
    */
-  long getInitialLen() {
+  public long getInitialLen() {
     return initialFileSize;
   }
 
   /**
-   * Get the encryption key for this stream.
-   *
-   * @return byte[] the key.
+   * @return the FileEncryptionInfo for this stream, or null if not encrypted.
    */
-  public byte[] getKey() {
-    return key;
-  }
-
-  /**
-   * Get the encryption initialization vector (IV) for this stream.
-   *
-   * @return byte[] the initialization vector (IV).
-   */
-  public byte[] getIv() {
-    return iv;
+  public FileEncryptionInfo getFileEncryptionInfo() {
+    return fileEncryptionInfo;
   }
 
   /**

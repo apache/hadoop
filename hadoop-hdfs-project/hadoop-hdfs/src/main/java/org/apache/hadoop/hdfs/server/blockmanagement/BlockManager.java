@@ -52,7 +52,7 @@ import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportIterator;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -842,15 +842,15 @@ public class BlockManager {
   public LocatedBlocks createLocatedBlocks(final BlockInfo[] blocks,
       final long fileSizeExcludeBlocksUnderConstruction,
       final boolean isFileUnderConstruction, final long offset,
-      final long length, final boolean needBlockToken, final boolean inSnapshot)
+      final long length, final boolean needBlockToken,
+      final boolean inSnapshot, FileEncryptionInfo feInfo)
       throws IOException {
     assert namesystem.hasReadLock();
     if (blocks == null) {
       return null;
     } else if (blocks.length == 0) {
       return new LocatedBlocks(0, isFileUnderConstruction,
-          Collections.<LocatedBlock>emptyList(), null, false,
-          null /* key */, null /* IV */);
+          Collections.<LocatedBlock>emptyList(), null, false, null);
     } else {
       if (LOG.isDebugEnabled()) {
         LOG.debug("blocks = " + java.util.Arrays.asList(blocks));
@@ -875,8 +875,7 @@ public class BlockManager {
       }
       return new LocatedBlocks(
           fileSizeExcludeBlocksUnderConstruction, isFileUnderConstruction,
-          locatedblocks, lastlb, isComplete,
-              HdfsConstants.KEY, HdfsConstants.IV);
+          locatedblocks, lastlb, isComplete, feInfo);
     }
   }
 

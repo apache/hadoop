@@ -169,6 +169,17 @@ message DataEncryptionKeyProto {
   optional string encryptionAlgorithm = 6;
 }
 
+/**
+ * Encryption information for a file.
+ */
+message FileEncryptionInfoProto {
+  enum CipherType {
+    AES_CTR_NOPADDING = 1;
+  }
+  required CipherType type = 1;
+  required bytes key = 2;
+  required bytes iv = 3;
+}
 
 /**
  * A set of file blocks and their locations.
@@ -179,10 +190,8 @@ message LocatedBlocksProto {
   required bool underConstruction = 3;
   optional LocatedBlockProto lastBlock = 4;
   required bool isLastBlockComplete = 5;
-  optional bytes key = 6;
-  optional bytes iv = 7;
+  optional FileEncryptionInfoProto fileEncryptionInfo = 6;
 }
-
 
 /**
  * Status of a file, directory or symlink
@@ -215,9 +224,8 @@ message HdfsFileStatusProto {
   optional uint64 fileId = 13 [default = 0]; // default as an invalid id
   optional int32 childrenNum = 14 [default = -1];
 
-  // Optional fields for key/iv for encryption
-  optional bytes key = 15;
-  optional bytes iv = 16;
+  // Optional field for file encryption
+  optional FileEncryptionInfoProto fileEncryptionInfo = 15;
 } 
 
 /**

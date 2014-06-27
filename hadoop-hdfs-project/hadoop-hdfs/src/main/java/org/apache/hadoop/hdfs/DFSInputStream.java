@@ -53,6 +53,7 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
@@ -88,8 +89,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
   private final boolean verifyChecksum;
   private LocatedBlocks locatedBlocks = null;
   private long lastBlockBeingWrittenLength = 0;
-  private byte[] key = null;
-  private byte[] iv = null;
+  private FileEncryptionInfo fileEncryptionInfo = null;
   private DatanodeInfo currentNode = null;
   private LocatedBlock currentLocatedBlock = null;
   private long pos = 0;
@@ -299,8 +299,8 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       }
     }
 
-    key = locatedBlocks.getKey();
-    iv = locatedBlocks.getIv();
+    fileEncryptionInfo = locatedBlocks.getFileEncryptionInfo();
+
     currentNode = null;
     return lastBlockBeingWrittenLength;
   }
@@ -1521,22 +1521,8 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     return new ReadStatistics(readStatistics);
   }
 
-  /**
-   * Get the encryption key for this stream.
-   *
-   * @return byte[] the key
-   */
-  public synchronized byte[] getKey() {
-    return key;
-  }
-
-  /**
-   * Get the encryption initialization vector (IV) for this stream.
-   *
-   * @return byte[] the initialization vector (IV).
-   */
-  public synchronized byte[] getIv() {
-    return iv;
+  public synchronized FileEncryptionInfo getFileEncryptionInfo() {
+    return fileEncryptionInfo;
   }
 
   private synchronized void closeCurrentBlockReader() {

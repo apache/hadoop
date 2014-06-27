@@ -23,6 +23,7 @@ import java.util.Comparator;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 
 /**
  * Collection of blocks with their locations and the file length.
@@ -35,27 +36,23 @@ public class LocatedBlocks {
   private final boolean underConstruction;
   private LocatedBlock lastLocatedBlock = null;
   private boolean isLastBlockComplete = false;
-  private final byte[] key;
-  private final byte[] iv;
+  private FileEncryptionInfo fileEncryptionInfo = null;
 
   public LocatedBlocks() {
     fileLength = 0;
     blocks = null;
     underConstruction = false;
-    key = null;
-    iv = null;
   }
 
   public LocatedBlocks(long flength, boolean isUnderConstuction,
     List<LocatedBlock> blks, LocatedBlock lastBlock,
-    boolean isLastBlockCompleted, byte[] key, byte[] iv) {
+    boolean isLastBlockCompleted, FileEncryptionInfo feInfo) {
     fileLength = flength;
     blocks = blks;
     underConstruction = isUnderConstuction;
     this.lastLocatedBlock = lastBlock;
     this.isLastBlockComplete = isLastBlockCompleted;
-    this.key = key;
-    this.iv = iv;
+    this.fileEncryptionInfo = feInfo;
   }
   
   /**
@@ -103,13 +100,12 @@ public class LocatedBlocks {
   public boolean isUnderConstruction() {
     return underConstruction;
   }
-  
-  public byte[] getKey() {
-    return key;
-  }
 
-  public byte[] getIv() {
-    return iv;
+  /**
+   * @return the FileEncryptionInfo for the LocatedBlocks
+   */
+  public FileEncryptionInfo getFileEncryptionInfo() {
+    return fileEncryptionInfo;
   }
 
   /**

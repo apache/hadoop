@@ -94,6 +94,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.CryptoCodec;
+import org.apache.hadoop.crypto.CryptoInputStream;
+import org.apache.hadoop.crypto.CryptoOutputStream;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStorageLocation;
 import org.apache.hadoop.fs.CacheFlag;
@@ -101,6 +104,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
@@ -241,6 +245,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
   private static final DFSHedgedReadMetrics HEDGED_READ_METRIC =
       new DFSHedgedReadMetrics();
   private static ThreadPoolExecutor HEDGED_READ_THREAD_POOL;
+  private final CryptoCodec codec;
   
   /**
    * DFSClient configuration 
@@ -573,6 +578,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
     this.authority = nameNodeUri == null? "null": nameNodeUri.getAuthority();
     this.clientName = "DFSClient_" + dfsClientConf.taskId + "_" + 
         DFSUtil.getRandom().nextInt()  + "_" + Thread.currentThread().getId();
+    this.codec = CryptoCodec.getInstance(conf);
     
     int numResponseToDrop = conf.getInt(
         DFSConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY,
@@ -1267,7 +1273,54 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
 
     return volumeBlockLocations;
   }
-  
+
+  /**
+   * Wraps the stream in a CryptoInputStream if the underlying file is
+   * encrypted.
+   */
+  public HdfsDataInputStream createWrappedInputStream(DFSInputStream dfsis)
+      throws IOException {
+    final FileEncryptionInfo feInfo = dfsis.getFileEncryptionInfo();
+    if (feInfo != null) {
+      // File is encrypted, wrap the stream in a crypto stream.
+      final CryptoInputStream cryptoIn =
+          new CryptoInputStream(dfsis, codec,
+              feInfo.getEncryptedDataEncryptionKey(), feInfo.getIV());
+      return new HdfsDataInputStream(cryptoIn);
+    } else {
+      // No key/IV pair so no encryption.
+      return new HdfsDataInputStream(dfsis);
+    }
+  }
+
+  /**
+   * Wraps the stream in a CryptoOutputStream if the underlying file is
+   * encrypted.
+   */
+  public HdfsDataOutputStream createWrappedOutputStream(DFSOutputStream dfsos,
+      FileSystem.Statistics statistics) throws IOException {
+    return createWrappedOutputStream(dfsos, statistics, 0);
+  }
+
+  /**
+   * Wraps the stream in a CryptoOutputStream if the underlying file is
+   * encrypted.
+   */
+  public HdfsDataOutputStream createWrappedOutputStream(DFSOutputStream dfsos,
+      FileSystem.Statistics statistics, long startPos) throws IOException {
+    final FileEncryptionInfo feInfo = dfsos.getFileEncryptionInfo();
+    if (feInfo != null) {
+      // File is encrypted, wrap the stream in a crypto stream.
+      final CryptoOutputStream cryptoOut =
+          new CryptoOutputStream(dfsos, codec,
+              feInfo.getEncryptedDataEncryptionKey(), feInfo.getIV(), startPos);
+      return new HdfsDataOutputStream(cryptoOut, statistics, startPos);
+    } else {
+      // No key/IV present so no encryption.
+      return new HdfsDataOutputStream(dfsos, statistics, startPos);
+    }
+  }
+
   public DFSInputStream open(String src) 
       throws IOException, UnresolvedLinkException {
     return open(src, dfsClientConf.ioBufferSize, true, null);
@@ -1595,7 +1648,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
       final Progressable progress, final FileSystem.Statistics statistics
       ) throws IOException {
     final DFSOutputStream out = append(src, buffersize, progress);
-    return new HdfsDataOutputStream(out, statistics, out.getInitialLen());
+    return createWrappedOutputStream(out, statistics, out.getInitialLen());
   }
 
   private DFSOutputStream append(String src, int buffersize, Progressable progress) 

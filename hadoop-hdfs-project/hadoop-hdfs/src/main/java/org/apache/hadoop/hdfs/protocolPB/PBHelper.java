@@ -44,7 +44,6 @@ import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.StorageType;
-import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -52,6 +51,7 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveStats;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolStats;
+import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -61,6 +61,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdfs.protocol.FsAclPermission;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
@@ -1133,8 +1134,8 @@ public class PBHelper {
         PBHelper.convertLocatedBlock(lb.getBlocksList()),
         lb.hasLastBlock() ? PBHelper.convert(lb.getLastBlock()) : null,
         lb.getIsLastBlockComplete(),
-        lb.hasKey() ? lb.getKey().toByteArray() : null,
-        lb.hasIv() ? lb.getIv().toByteArray() : null);
+        lb.hasFileEncryptionInfo() ? convert(lb.getFileEncryptionInfo()) :
+            null);
   }
   
   public static LocatedBlocksProto convert(LocatedBlocks lb) {
@@ -1146,11 +1147,8 @@ public class PBHelper {
     if (lb.getLastLocatedBlock() != null) {
       builder.setLastBlock(PBHelper.convert(lb.getLastLocatedBlock()));
     }
-    if (lb.getKey() != null) {
-      builder.setKey(ByteString.copyFrom(lb.getKey()));
-    }
-    if (lb.getIv() != null) {
-      builder.setIv(ByteString.copyFrom(lb.getIv()));
+    if (lb.getFileEncryptionInfo() != null) {
+      builder.setFileEncryptionInfo(convert(lb.getFileEncryptionInfo()));
     }
     return builder.setFileLength(lb.getFileLength())
         .setUnderConstruction(lb.isUnderConstruction())
@@ -1278,8 +1276,8 @@ public class PBHelper {
         fs.hasFileId()? fs.getFileId(): INodeId.GRANDFATHER_INODE_ID,
         fs.hasLocations() ? PBHelper.convert(fs.getLocations()) : null,
         fs.hasChildrenNum() ? fs.getChildrenNum() : -1,
-        fs.hasKey() ? fs.getKey().toByteArray() : null,
-        fs.hasIv() ? fs.getIv().toByteArray() : null);
+        fs.hasFileEncryptionInfo() ? convert(fs.getFileEncryptionInfo()) :
+            null);
   }
 
   public static SnapshottableDirectoryStatus convert(
@@ -1329,11 +1327,8 @@ public class PBHelper {
     if (fs.isSymlink())  {
       builder.setSymlink(ByteString.copyFrom(fs.getSymlinkInBytes()));
     }
-    if (fs.getKey() != null) {
-      builder.setKey(ByteString.copyFrom(fs.getKey()));
-    }
-    if (fs.getIv() != null) {
-      builder.setIv(ByteString.copyFrom(fs.getIv()));
+    if (fs.getFileEncryptionInfo() != null) {
+      builder.setFileEncryptionInfo(convert(fs.getFileEncryptionInfo()));
     }
     if (fs instanceof HdfsLocatedFileStatus) {
       LocatedBlocks locations = ((HdfsLocatedFileStatus)fs).getBlockLocations();
@@ -2280,5 +2275,49 @@ public class PBHelper {
   public static ShmId convert(ShortCircuitShmIdProto shmId) {
     return new ShmId(shmId.getHi(), shmId.getLo());
   }
-}
 
+  public static HdfsProtos.FileEncryptionInfoProto.CipherType
+      convert(CipherSuite type) {
+    switch (type) {
+    case AES_CTR_NOPADDING:
+      return HdfsProtos.FileEncryptionInfoProto.CipherType
+          .AES_CTR_NOPADDING;
+    default:
+      return null;
+    }
+  }
+
+  public static CipherSuite convert(
+      HdfsProtos.FileEncryptionInfoProto.CipherType proto) {
+    switch (proto) {
+    case AES_CTR_NOPADDING:
+      return CipherSuite.AES_CTR_NOPADDING;
+    default:
+      return null;
+    }
+  }
+
+  public static HdfsProtos.FileEncryptionInfoProto convert(
+      FileEncryptionInfo info) {
+    if (info == null) {
+      return null;
+    }
+    return HdfsProtos.FileEncryptionInfoProto.newBuilder()
+        .setType(convert(info.getCipherSuite()))
+        .setKey(getByteString(info.getEncryptedDataEncryptionKey()))
+        .setIv(getByteString(info.getIV()))
+        .build();
+  }
+
+  public static FileEncryptionInfo convert(
+      HdfsProtos.FileEncryptionInfoProto proto) {
+    if (proto == null) {
+      return null;
+    }
+    CipherSuite type = convert(proto.getType());
+    byte[] key = proto.getKey().toByteArray();
+    byte[] iv = proto.getIv().toByteArray();
+    return new FileEncryptionInfo(type, key, iv);
+  }
+
+}

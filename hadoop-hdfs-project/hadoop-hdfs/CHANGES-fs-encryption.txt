@@ -23,6 +23,9 @@ fs-encryption (Unreleased)
     HDFS-6476. Print out the KeyProvider after finding KP successfully on
     startup. (Juan Yu via wang)
 
+    HDFS-6391. Get the Key/IV from the NameNode for encrypted files in
+    DFSClient. (Charles Lamb and wang)
+
   OPTIMIZATIONS
 
   BUG FIXES

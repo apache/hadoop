@@ -31,8 +31,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoCodec;
-import org.apache.hadoop.crypto.CryptoOutputStream;
-import org.apache.hadoop.crypto.CryptoInputStream;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -56,8 +54,6 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.util.Progressable;
-
-import com.google.common.base.Preconditions;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -108,23 +104,8 @@ public class Hdfs extends AbstractFileSystem {
     final DFSOutputStream dfsos = dfs.primitiveCreate(getUriPath(f),
       absolutePermission, createFlag, createParent, replication, blockSize,
       progress, bufferSize, checksumOpt);
-    final byte[] key = dfsos.getKey();
-    final byte[] iv = dfsos.getIv();
-    Preconditions.checkState(!(key == null ^ iv == null),
-      "Only one of the Key and IV were found.");
-    if (false && key != null) {
-
-      /*
-       * The Key and IV were found. Wrap up the output stream with an encryption
-       * wrapper.
-       */
-      final CryptoOutputStream cbos =
-        new CryptoOutputStream(dfsos, factory, key, iv);
-      return new HdfsDataOutputStream(cbos, getStatistics());
-    } else {
-      /* No key/IV present so no encryption. */
-      return new HdfsDataOutputStream(dfsos, getStatistics());
-    }
+    return dfs.createWrappedOutputStream(dfsos, statistics,
+        dfsos.getInitialLen());
   }
 
   @Override
@@ -335,23 +316,7 @@ public class Hdfs extends AbstractFileSystem {
       throws IOException, UnresolvedLinkException {
     final DFSInputStream dfsis = dfs.open(getUriPath(f),
       bufferSize, verifyChecksum);
-    final byte[] key = dfsis.getKey();
-    final byte[] iv = dfsis.getIv();
-    Preconditions.checkState(!(key == null ^ iv == null),
-      "Only one of the Key and IV were found.");
-    if (false && key != null) {
-
-      /*
-       * The Key and IV were found. Wrap up the input stream with an encryption
-       * wrapper.
-       */
-      final CryptoInputStream cbis =
-        new CryptoInputStream(dfsis, factory, key, iv);
-      return new HdfsDataInputStream(cbis);
-    } else {
-      /* No key/IV pair so no encryption. */
-      return new HdfsDataInputStream(dfsis);
-    }
+    return dfs.createWrappedInputStream(dfsis);
   }
 
   @Override

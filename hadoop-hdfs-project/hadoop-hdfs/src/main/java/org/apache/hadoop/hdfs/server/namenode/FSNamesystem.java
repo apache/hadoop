@@ -83,9 +83,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROU
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
-import static org.apache.hadoop.hdfs.protocol.HdfsConstants.CRYPTO_KEY_SIZE;
-import static org.apache.hadoop.hdfs.protocol.HdfsConstants.CRYPTO_XATTR_IV;
-import static org.apache.hadoop.hdfs.protocol.HdfsConstants.CRYPTO_XATTR_KEY_VERSION_ID;
 import static org.apache.hadoop.util.Time.now;
 
 import java.io.*;
@@ -122,6 +119,8 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.CipherSuite;
+import org.apache.hadoop.crypto.CryptoCodec;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
@@ -131,6 +130,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.DirectoryListingStartAfterNotFoundException;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.InvalidPathException;
@@ -154,7 +154,6 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.StorageType;
-import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -530,6 +529,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private KeyProvider.Options providerOptions = null;
 
   private final Map<String, EncryptionZone> encryptionZones;
+  private final CryptoCodec codec;
 
   private volatile boolean imageLoaded = false;
   private final Condition cond;
@@ -747,6 +747,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws IOException {
     initializeKeyProvider(conf);
     providerOptions = KeyProvider.options(conf);
+    this.codec = CryptoCodec.getInstance(conf);
     if (conf.getBoolean(DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY,
                         DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT)) {
       LOG.info("Enabling async auditlog");
@@ -1873,9 +1874,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           length = Math.min(length, fileSize - offset);
           isUc = false;
         }
-        LocatedBlocks blocks =
+
+        final FileEncryptionInfo feInfo = dir.getFileEncryptionInfo(inode,
+            iip.getPathSnapshotId());
+
+        final LocatedBlocks blocks =
           blockManager.createLocatedBlocks(inode.getBlocks(), fileSize,
-            isUc, offset, length, needBlockToken, iip.isSnapshot());
+            isUc, offset, length, needBlockToken, iip.isSnapshot(), feInfo);
         // Set caching information for the located blocks.
         for (LocatedBlock lb: blocks.getLocatedBlocks()) {
           cacheManager.setCachedLocations(lb);
@@ -8296,7 +8301,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     final String keyId = UUID.randomUUID().toString();
     // TODO pass in hdfs://HOST:PORT (HDFS-6490)
     providerOptions.setDescription(src);
-    providerOptions.setBitLength(CRYPTO_KEY_SIZE);
+    providerOptions.setBitLength(codec.getAlgorithmBlockSize()*8);
     try {
       provider.createKey(keyId, providerOptions);
     } catch (NoSuchAlgorithmException e) {

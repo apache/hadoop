@@ -21,6 +21,7 @@ import java.net.URI;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -45,8 +46,7 @@ public class HdfsFileStatus {
   private final String group;
   private final long fileId;
 
-  private final byte[] key;
-  private final byte[] iv;
+  private final FileEncryptionInfo feInfo;
   
   // Used by dir, not including dot and dotdot. Always zero for a regular file.
   private final int childrenNum;
@@ -66,20 +66,12 @@ public class HdfsFileStatus {
    * @param group the group of the path
    * @param path the local name in java UTF8 encoding the same as that in-memory
    * @param fileId the file id
+   * @param feInfo the file's encryption info
    */
   public HdfsFileStatus(long length, boolean isdir, int block_replication,
       long blocksize, long modification_time, long access_time,
       FsPermission permission, String owner, String group, byte[] symlink,
-      byte[] path, long fileId, int childrenNum) {
-    this(length, isdir, block_replication, blocksize, modification_time,
-      access_time, permission, owner, group, symlink, path, fileId,
-      childrenNum, HdfsConstants.KEY, HdfsConstants.IV);
-  }
-
-  public HdfsFileStatus(long length, boolean isdir, int block_replication,
-      long blocksize, long modification_time, long access_time,
-      FsPermission permission, String owner, String group, byte[] symlink,
-    byte[] path, long fileId, int childrenNum, byte[] key, byte[] iv) {
+    byte[] path, long fileId, int childrenNum, FileEncryptionInfo feInfo) {
     this.length = length;
     this.isdir = isdir;
     this.block_replication = (short)block_replication;
@@ -97,8 +89,7 @@ public class HdfsFileStatus {
     this.path = path;
     this.fileId = fileId;
     this.childrenNum = childrenNum;
-    this.key = key;
-    this.iv = iv;
+    this.feInfo = feInfo;
   }
 
   /**
@@ -252,12 +243,8 @@ public class HdfsFileStatus {
     return fileId;
   }
   
-  final public byte[] getKey() {
-    return key;
-  }
-
-  final public byte[] getIv() {
-    return iv;
+  final public FileEncryptionInfo getFileEncryptionInfo() {
+    return feInfo;
   }
 
   final public int getChildrenNum() {
