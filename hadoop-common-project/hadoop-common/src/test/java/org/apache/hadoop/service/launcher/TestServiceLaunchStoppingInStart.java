@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.service.launcher;
 
-import org.apache.hadoop.service.launcher.testservices.InitInConstructorLaunchableService;
 import org.apache.hadoop.service.launcher.testservices.StoppingInStartLaunchableService;
 import org.junit.Test;
 

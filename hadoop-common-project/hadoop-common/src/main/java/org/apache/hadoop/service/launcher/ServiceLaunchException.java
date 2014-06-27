@@ -66,7 +66,7 @@ public class ServiceLaunchException extends ExitUtil.ExitException
    * to build the formatted exception -in the ENGLISH locale.
    * <p>
    * If the last argument is a throwable, it becomes the cause of the exception.
-   * It is still be avaialable as a parameter for the format.
+   * It is still be available as a parameter for the format.
    * @param exitCode exit code
    * @param format format for message to use in exception
    * @param args list of arguments

@@ -45,21 +45,26 @@ import java.util.List;
  * 
  * Workflow
  * <ol>
- *   <li>An instance of the class is created</li>
- *   <li>If it implements LaunchedService, it is given the binding args off the CLI</li>
- *   <li>Its service.init() and service.start() methods are called.</li>
- *   <li>If it implements LaunchedService, runService() is called and its return
- *   code used as the exit code.</li>
- *   <li>Otherwise: it waits for the service to stop, assuming in its start() method
- *   it begins work</li>
- *   <li>If an exception returned an exit code, that becomes the exit code of the
+ *   <li>An instance of the class is created. It must be of the type
+ *   {@link Service}</li>
+ *   <li>If it implements {@link LaunchableService}, 
+ *    it is given the binding args off the CLI</li>
+ *   <li>Its <code>Service.init()</code> and </code>Service.start()</code>
+ *   methods are called.</li>
+ *   <li>If it implements {@link LaunchableService}, <code>runService()</code>
+ *   is called and its return code used as the exit code.</li>
+ *   <li>Otherwise: it waits for the service to stop, assuming that the
+ *   <code>start()</code> method spawns one or more thread to perform work</li>
+ *   <li>If any exception is raised and provides an exit code -that is it implements
+ *   {@link ExitCodeProvider}- that becomes the exit code of the
  *   command.</li>
  * </ol>
- * Error and warning messages are logged to stderr. Why? If the classpath
+ * Error and warning messages are logged to stderr. If the classpath
  * is wrong and logger configurations not on it, then no error messages by
  * the started app will be seen and the caller is left trying to debug
  * using exit codes. 
  * 
+ * @param <S> service class to cast the generated service to.
  */
 @SuppressWarnings("UseOfSystemOutOrSystemErr")
 public class ServiceLauncher<S extends Service> implements LauncherExitCodes {

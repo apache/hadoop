@@ -69,7 +69,7 @@ public abstract class AbstractLaunchableService extends AbstractService
   /**
    * {@inheritDoc}
    * <p>
-   * The action is to signal succes by returnind the exit code 0.
+   * The action is to signal success by returning the exit code 0.
    */
   @Override
   public int execute() throws Exception {
