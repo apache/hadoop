@@ -473,6 +473,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6475. WebHdfs clients fail without retry because incorrect handling
     of StandbyException. (Yongjun Zhang via atm)
 
+    HADOOP-10701. NFS should not validate the access premission only based on
+    the user's primary group (Harsh J via atm)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)

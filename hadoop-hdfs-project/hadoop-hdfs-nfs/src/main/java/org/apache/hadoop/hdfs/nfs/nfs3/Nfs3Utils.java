@@ -160,13 +160,21 @@ public class Nfs3Utils {
   }
 
   public static int getAccessRightsForUserGroup(int uid, int gid,
-      Nfs3FileAttributes attr) {
+      int[] auxGids, Nfs3FileAttributes attr) {
     int mode = attr.getMode();
     if (uid == attr.getUid()) {
       return getAccessRights(mode >> 6, attr.getType());
     }
     if (gid == attr.getGid()) {
       return getAccessRights(mode >> 3, attr.getType());
+    }
+    // Check for membership in auxiliary groups
+    if (auxGids != null) {
+      for (int auxGid : auxGids) {
+        if (attr.getGid() == auxGid) {
+          return getAccessRights(mode >> 3, attr.getType());
+        }
+      }
     }
     return getAccessRights(mode, attr.getType());
   }
