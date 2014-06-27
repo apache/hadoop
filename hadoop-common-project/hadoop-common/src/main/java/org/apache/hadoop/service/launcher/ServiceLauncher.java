@@ -31,7 +31,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -204,13 +203,23 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
    * <li>If it is a {@link LaunchableService}: execute it</li>
    * <li>Otherwise: wait for it to finish.</li>
    * <li>Exit passing the status code to the {@link #exit(int, String)} method.</li>
+   * </ol>
    * @param args arguments to the service. <code>arg[0]</code> is 
    * assumed to be the service classname.
    */
   public void launchServiceAndExit(List<String> args) {
 
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(startupShutdownMessage(serviceClassName, args));
+      StringBuilder builder = new StringBuilder();
+      for (String arg : args) {
+        builder.append('"').append(arg).append("\" ");
+      }
+      LOG.debug(builder.toString());
+    }
     registerFailureHandling();
-    // Currently the config just the default
+    // set up the configs, using reflection to push in the -site.xml files
+    createDefaultConfigs();
     Configuration conf = createConfiguration();
     List<String> processedArgs = extractConfigurationArgs(conf, args);
     ExitUtil.ExitException ee = launchService(conf, processedArgs, true, true);
@@ -227,6 +236,61 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
     return new Configuration();
   }
 
+  /**
+   * List of the standard configurations to create
+   */
+  protected static final String[] defaultConfigs = {
+      "org.apache.hadoop.conf.Configuration",
+      "org.apache.hadoop.hdfs.HdfsConfiguration",
+      "org.apache.hadoop.yarn.conf.YarnConfiguration"
+  };
+
+  /**
+   * Override point: Get a list of configurations to create.
+   * @return the array of configs to attempt to create. If any are off the
+   * classpath, that is logged
+   */
+  @SuppressWarnings("ReturnOfCollectionOrArrayField")
+  protected String[] getConfigurationsToCreate() {
+    return defaultConfigs;
+  }
+
+  /**
+   * This creates all the default configurations, ensuring that 
+   * the resources have been pushed in.
+   * If one cannot be loaded it is logged and the operation continues
+   * -except in the case that the class does load but it isn't actually
+   * a Configuration
+   * @throws ExitUtil.ExitException if a loaded class is of the wrong type
+   */
+  @VisibleForTesting
+  public int createDefaultConfigs() {
+    String[] toCreate = getConfigurationsToCreate();
+    int loaded = 0;
+    for (String classname : toCreate) {
+      try {
+        Class<?> loadClass = getClassLoader().loadClass(classname);
+        Object instance = loadClass.getConstructor().newInstance();
+        if (!(instance instanceof Configuration)) {
+          throw new ExitUtil.ExitException(EXIT_SERVICE_CREATION_FAILURE,
+              "Could not create "+ classname +"- it is not a Configuration");
+        }
+        loaded++;
+      } catch (ClassNotFoundException e) {
+        // class could not be found -implies it is not on the current classpath
+        LOG.debug("Failed to load {} -it is not on the classpath", classname);
+      } catch (ExitUtil.ExitException e) {
+        // rethrow
+        throw e;
+      } catch (Exception e) {
+        // any other exception
+        LOG.info("Failed to create {}", classname, e);
+      }
+    }
+    return loaded;
+  }
+
+  
   /**
    * Launch a service catching all exceptions and downgrading them to exit codes
    * after logging.
@@ -402,7 +466,6 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
     // zero-argument constructor
     Object instance;
     
-    // in Java7+ the exception catch logic should be consolidated
     try {
       Class<?> serviceClass = getClassLoader().loadClass(serviceClassName);
       try {
@@ -411,22 +474,10 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
         // no simple constructor, fall back to a string
         LOG.debug("No empty constructor {}", noEmptyConstructor,
             noEmptyConstructor);
-        instance = serviceClass.getConstructor(String.class).newInstance(
-            serviceClassName);
+        instance = serviceClass.getConstructor(String.class)
+                               .newInstance(serviceClassName);
       }
-    } catch (ClassNotFoundException e) {
-      throw serviceCreationFailure(e);
-    } catch (InstantiationException e) {
-      throw serviceCreationFailure(e);
-    } catch (IllegalAccessException e) {
-      throw serviceCreationFailure(e);
-    } catch (IllegalArgumentException e) {
-      throw serviceCreationFailure(e);
-    } catch (InvocationTargetException e) {
-      throw serviceCreationFailure(e);
-    } catch (NoSuchMethodException e) {
-      throw serviceCreationFailure(e);
-    } catch (SecurityException e) {
+    } catch (Exception e) {
       throw serviceCreationFailure(e);
     }
     if (!(instance instanceof Service)) {
@@ -674,9 +725,9 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
     File file = new File(filename);
     URL fileURL = null;
     if (!file.exists()) {
+      // no configuration file
       exitWithMessage(EXIT_COMMAND_ARGUMENT_ERROR,
           ARG_CONF + ": configuration file not found: " + file);
-      // never called, but retained for completeness
     } else {
       try {
         Configuration c = new Configuration(false);
@@ -709,11 +760,19 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
   /**
    * Exit with a printed message. 
    * @param status status code
-   * @param message message
+   * @param message message message to print before exiting
    * @throws ExitUtil.ExitException if exceptions are disabled
    */
-  private static void exitWithMessage(int status, String message) {
+  public static void exitWithMessage(int status, String message) {
     ExitUtil.terminate(new ServiceLaunchException(status, message));
+  }
+
+  /**
+   * Exit with the usage exit code and message
+   * @throws ExitUtil.ExitException if exceptions are disabled
+   */
+  public static void exitWithUsageMessage() {
+    exitWithMessage(EXIT_USAGE, USAGE_MESSAGE);
   }
 
   /**
@@ -723,8 +782,7 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
    * @param args command line arguments.
    */
   public static void main(String[] args) {
-    List<String> argsList = Arrays.asList(args);
-    serviceMain(argsList);
+    serviceMain(Arrays.asList(args));
   }
 
   /**
@@ -732,9 +790,8 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
    * -hands off to {@link #serviceMain(List)}
    * @param args command line arguments.
    */
-  public static void serviceMain(String ... args) {
-    List<String> argsList = Arrays.asList(args);
-    serviceMain(argsList);
+  public static void serviceMain(String... args) {
+    serviceMain(Arrays.asList(args));
   }
     
   /* ====================================================================== */
@@ -748,21 +805,11 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
 
   public static void serviceMain(List<String> argsList) {
     if (argsList.isEmpty()) {
-      exitWithMessage(EXIT_USAGE, USAGE_MESSAGE);
+      // no arguments: usage message
+      exitWithUsageMessage();
     } else {
-      String serviceClassName = argsList.get(0);
-
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(startupShutdownMessage(serviceClassName, argsList));
-        StringBuilder builder = new StringBuilder();
-        for (String arg : argsList) {
-          builder.append('"').append(arg).append("\" ");
-        }
-        LOG.debug(builder.toString());
-      }
-
       ServiceLauncher<Service> serviceLauncher =
-          new ServiceLauncher<Service>(serviceClassName);
+          new ServiceLauncher<Service>(argsList.get(0));
       serviceLauncher.launchServiceAndExit(argsList);
     }
   }

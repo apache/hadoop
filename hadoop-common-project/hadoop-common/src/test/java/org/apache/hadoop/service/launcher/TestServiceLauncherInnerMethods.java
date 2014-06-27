@@ -70,7 +70,16 @@ public class TestServiceLauncherInnerMethods extends
   public void testBreakableServiceLifecycle() throws Throwable {
     ServiceLauncher<BreakableService> launcher =
         launchService(BreakableService.class, new Configuration());
-    
+  }
+
+  @Test
+  public void testConfigLoading() throws Throwable {
+    ServiceLauncher<BreakableService> launcher =
+        new ServiceLauncher<BreakableService>("BreakableService");
+    String[] configurationsToCreate = launcher.getConfigurationsToCreate();
+    assertTrue(configurationsToCreate.length > 1);
+    int created = launcher.createDefaultConfigs();
+    assertEquals(1, created);
   }
 
 }
