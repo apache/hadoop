@@ -56,4 +56,9 @@ public class SysSecurityHandler extends SecurityHandler {
   public int getGid() {
     return mCredentialsSys.getGID();
   }
+
+  @Override
+  public int[] getAuxGids() {
+    return mCredentialsSys.getAuxGIDs();
+  }
 }
