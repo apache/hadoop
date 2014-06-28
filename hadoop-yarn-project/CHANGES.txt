@@ -180,6 +180,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2171. Improved CapacityScheduling to not lock on nodemanager-count when
     AMs heartbeat in. (Jason Lowe via vinodkv)
 
+    YARN-614. Changed ResourceManager to not count disk failure, node loss and
+    RM restart towards app failures. (Xuan Gong via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES 

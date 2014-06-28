@@ -197,8 +197,14 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
   ApplicationAttemptReport createApplicationAttemptReport();
 
   /**
-   * Return the flag which indicates whether the attempt is preempted by the
-   * scheduler.
+   * Return the flag which indicates whether the attempt failure should be
+   * counted to attempt retry count.
+   * <ul>
+   * There failure types should not be counted to attempt retry count:
+   * <li>preempted by the scheduler.</li>
+   * <li>hardware failures, such as NM failing, lost NM and NM disk errors.</li>
+   * <li>killed by RM because of RM restart or failover.</li>
+   * </ul>
    */
-  boolean isPreempted();
+  boolean shouldCountTowardsMaxAttemptRetry();
 }
