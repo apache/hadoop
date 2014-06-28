@@ -284,6 +284,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2104. Scheduler queue filter failed to work because index of queue
     column changed. (Wangda Tan via jlowe)
 
+    YARN-2201. Made TestRMWebServicesAppsModification be independent of the
+    changes on yarn-default.xml. (Varun Vasudev via zjshen)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES

@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -49,6 +50,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
@@ -93,6 +95,8 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
   private Injector injector;
   private String webserviceUserName = "testuser";
 
+  private boolean setAuthFilter = false;
+
   public class GuiceServletConfig extends GuiceServletContextListener {
 
     @Override
@@ -131,7 +135,6 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
 
   private class TestServletModule extends ServletModule {
     public Configuration conf = new Configuration();
-    boolean setAuthFilter = false;
 
     @Override
     protected void configureServlets() {
@@ -157,6 +160,7 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
     return Guice.createInjector(new TestServletModule() {
       @Override
       protected void configureServlets() {
+        setAuthFilter = false;
         super.configureServlets();
       }
     });
@@ -204,8 +208,8 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
     }
   }
 
-  private boolean isAuthorizationEnabled() {
-    return rm.getConfig().getBoolean(YarnConfiguration.YARN_ACL_ENABLE, false);
+  private boolean isAuthenticationEnabled() {
+    return setAuthFilter;
   }
 
   private WebResource constructWebResource(WebResource r, String... paths) {
@@ -213,7 +217,7 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
     for (String path : paths) {
       rt = rt.path(path);
     }
-    if (isAuthorizationEnabled()) {
+    if (isAuthenticationEnabled()) {
       rt = rt.queryParam("user.name", webserviceUserName);
     }
     return rt;
@@ -280,7 +284,7 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
                 "state").entity(entity, contentType).accept(mediaType)
               .put(ClientResponse.class);
 
-        if (!isAuthorizationEnabled()) {
+        if (!isAuthenticationEnabled()) {
           assertEquals(Status.UNAUTHORIZED, response.getClientResponseStatus());
           continue;
         }
@@ -295,7 +299,7 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
             response.getHeaders().getFirst(HttpHeaders.LOCATION);
         Client c = Client.create();
         WebResource tmp = c.resource(locationHeaderValue);
-        if (isAuthorizationEnabled()) {
+        if (isAuthenticationEnabled()) {
           tmp = tmp.queryParam("user.name", webserviceUserName);
         }
         response = tmp.get(ClientResponse.class);
@@ -361,7 +365,7 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
                 .entity(entity, contentType).accept(mediaType)
                 .put(ClientResponse.class);
 
-          if (!isAuthorizationEnabled()) {
+          if (!isAuthenticationEnabled()) {
             assertEquals(Status.UNAUTHORIZED,
               response.getClientResponseStatus());
             continue;
@@ -426,6 +430,11 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
   @Test(timeout = 30000)
   public void testSingleAppKillUnauthorized() throws Exception {
 
+    boolean isCapacityScheduler =
+        rm.getResourceScheduler() instanceof CapacityScheduler;
+    assumeTrue("Currently this test is only supported on CapacityScheduler",
+      isCapacityScheduler);
+
     // default root queue allows anyone to have admin acl
     CapacitySchedulerConfiguration csconf =
         new CapacitySchedulerConfiguration();
@@ -452,7 +461,7 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
             .constructWebResource("apps", app.getApplicationId().toString(),
               "state").accept(mediaType)
             .entity(info, MediaType.APPLICATION_XML).put(ClientResponse.class);
-      if (!isAuthorizationEnabled()) {
+      if (!isAuthenticationEnabled()) {
         assertEquals(Status.UNAUTHORIZED, response.getClientResponseStatus());
       } else {
         assertEquals(Status.FORBIDDEN, response.getClientResponseStatus());
@@ -475,7 +484,7 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
           this.constructWebResource("apps", testAppId, "state")
             .accept(MediaType.APPLICATION_XML)
             .entity(info, MediaType.APPLICATION_XML).put(ClientResponse.class);
-      if (!isAuthorizationEnabled()) {
+      if (!isAuthenticationEnabled()) {
         assertEquals(Status.UNAUTHORIZED, response.getClientResponseStatus());
         continue;
       }
