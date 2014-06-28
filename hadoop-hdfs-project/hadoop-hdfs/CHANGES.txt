@@ -730,6 +730,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6556. Refine XAttr permissions (umamahesh)
 
+    HDFS-6601. Issues in finalizing rolling upgrade when there is a layout 
+    version change (kihwal)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)

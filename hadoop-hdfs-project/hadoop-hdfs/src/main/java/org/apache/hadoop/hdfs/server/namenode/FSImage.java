@@ -1022,6 +1022,13 @@ public class FSImage implements Closeable {
   }
   
   /**
+   * Update version of all storage directories.
+   */
+  public synchronized void updateStorageVersion() throws IOException {
+    storage.writeAll();
+  }
+
+  /**
    * @see #saveNamespace(FSNamesystem, Canceler)
    */
   public synchronized void saveNamespace(FSNamesystem source)

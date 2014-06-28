@@ -7730,6 +7730,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         // roll the edit log to make sure the standby NameNode can tail
         getFSImage().rollEditLog();
       }
+      getFSImage().updateStorageVersion();
       getFSImage().renameCheckpoint(NameNodeFile.IMAGE_ROLLBACK,
           NameNodeFile.IMAGE);
     } finally {
