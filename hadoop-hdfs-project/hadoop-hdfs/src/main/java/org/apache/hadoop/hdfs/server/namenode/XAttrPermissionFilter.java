@@ -34,7 +34,8 @@ import com.google.common.collect.Lists;
  * USER - extended user attributes: these can be assigned to files and
  * directories to store arbitrary additional information. The access
  * permissions for user attributes are defined by the file permission
- * bits.
+ * bits. For sticky directories, only the owner and privileged user can 
+ * write attributes.
  * <br>
  * TRUSTED - trusted extended attributes: these are visible/accessible
  * only to/by the super user.
