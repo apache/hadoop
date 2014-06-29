@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPB
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMFatalEvent;
@@ -85,6 +86,7 @@ public abstract class RMStateStore extends AbstractService {
   protected static final String DELEGATION_TOKEN_SEQUENCE_NUMBER_PREFIX =
       "RMDTSequenceNumber_";
   protected static final String VERSION_NODE = "RMVersionNode";
+  protected static final String EPOCH_NODE = "EpochNode";
 
   public static final Log LOG = LogFactory.getLog(RMStateStore.class);
 
@@ -520,6 +522,12 @@ public abstract class RMStateStore extends AbstractService {
    */
   protected abstract RMStateVersion getCurrentVersion();
 
+
+  /**
+   * Get the current epoch of RM and increment the value.
+   */
+  public abstract int getAndIncrementEpoch() throws Exception;
+  
   /**
    * Blocking API
    * The derived class must recover state from the store and return a new 

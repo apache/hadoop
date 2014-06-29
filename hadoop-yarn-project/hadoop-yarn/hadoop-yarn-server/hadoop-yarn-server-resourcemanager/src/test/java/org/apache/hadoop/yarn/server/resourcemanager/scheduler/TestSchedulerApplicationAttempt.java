@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 
@@ -61,9 +62,14 @@ public class TestSchedulerApplicationAttempt {
     QueueMetrics newMetrics = newQueue.getMetrics();
 
     ApplicationAttemptId appAttId = createAppAttemptId(0, 0);
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getEpoch()).thenReturn(3);
     SchedulerApplicationAttempt app = new SchedulerApplicationAttempt(appAttId,
-        user, oldQueue, oldQueue.getActiveUsersManager(), null);
+        user, oldQueue, oldQueue.getActiveUsersManager(), rmContext);
     oldMetrics.submitApp(user);
+    
+    // confirm that containerId is calculated based on epoch.
+    assertEquals(app.getNewContainerId(), 0x00c00001);
     
     // Resource request
     Resource requestedResource = Resource.newInstance(1536, 2);

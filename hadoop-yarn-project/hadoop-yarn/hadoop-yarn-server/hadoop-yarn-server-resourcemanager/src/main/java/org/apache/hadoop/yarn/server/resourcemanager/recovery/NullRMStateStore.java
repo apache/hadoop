@@ -48,6 +48,11 @@ public class NullRMStateStore extends RMStateStore {
   }
 
   @Override
+  public synchronized int getAndIncrementEpoch() throws Exception {
+    return 0;
+  }
+
+  @Override
   public RMState loadState() throws Exception {
     throw new UnsupportedOperationException("Cannot load state from null store");
   }

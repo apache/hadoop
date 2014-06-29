@@ -158,6 +158,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
           .getFileSystem(conf).exists(tempAppAttemptFile));
       testRMDTSecretManagerStateStore(fsTester);
       testCheckVersion(fsTester);
+      testEpoch(fsTester);
       testAppDeletion(fsTester);
     } finally {
       cluster.shutdown();
