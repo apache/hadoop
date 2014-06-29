@@ -733,6 +733,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6601. Issues in finalizing rolling upgrade when there is a layout 
     version change (kihwal)
 
+    HDFS-6418. Regression: DFS_NAMENODE_USER_NAME_KEY missing
+    (szetszwo via stevel)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
