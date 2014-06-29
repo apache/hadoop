@@ -20,17 +20,22 @@ package org.apache.hadoop.service.launcher;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Options;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ExitCodeProvider;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.StringUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -66,7 +71,8 @@ import java.util.List;
  * @param <S> service class to cast the generated service to.
  */
 @SuppressWarnings("UseOfSystemOutOrSystemErr")
-public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
+public class ServiceLauncher<S extends Service>
+    implements LauncherExitCodes, LauncherArguments {
 
   /**
    * Logger.
@@ -83,11 +89,6 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
    * The name of this class
    */
   public static final String NAME = "ServiceLauncher";
-
-  /**
-   * Name of the configuration argument on the CLI: {@value} 
-   */
-  public static final String ARG_CONF = "-conf";
 
   /**
    * Usage message.
@@ -221,11 +222,19 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
     // set up the configs, using reflection to push in the -site.xml files
     createDefaultConfigs();
     Configuration conf = createConfiguration();
-    List<String> processedArgs = extractConfigurationArgs(conf, args);
+    List<String> processedArgs = extractCommandOptions(conf, args);
     ExitUtil.ExitException ee = launchService(conf, processedArgs, true, true);
     exit(ee);
   }
 
+  /**
+   * Override point: create an options instance to combine with the 
+   * standard options set.
+   * @return the new options.
+   */
+  protected Options createOptions() {
+    return new Options();
+  }
   /**
    * Override point: create the base configuration for the service.
    * <p>
@@ -660,19 +669,29 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
   }
 
   /**
-   * Extract the configuration arguments and apply them to the configuration,
+   * Extract the command options and apply them to the configuration,
    * building an array of processed arguments to hand down to the service.
    * <p>
    * @param conf configuration to update.
    * @param args main arguments. <code>args[0]</code>is assumed to be the service
    * classname and is skipped.
-   * @return the processed list.
+   * @return the remaining arguments
    * @throws ExitUtil.ExitException if JVM exiting is disabled.
    */
-  public List<String> extractConfigurationArgs(Configuration conf,
+  public List<String> extractCommandOptions(Configuration conf,
+      List<String> args) {
+    int size = args.size();
+    if (size <= 1) {
+      return new ArrayList<String>(0);
+    }
+    List<String> coreArgs = args.subList(1, size);
+
+    return parseCommandArgs(conf, createOptions(), coreArgs);
+  }
+    
+    public List<String> extractConfigurationArgs1(Configuration conf,
       List<String> args) {
 
-    //convert args to a list
     int size = args.size();
     if (size <= 1 ) {
       return new ArrayList<String>(0);
@@ -742,6 +761,67 @@ public class ServiceLauncher<S extends Service> implements LauncherExitCodes {
     }
     return fileURL;
 
+  }
+
+  /**
+   * Parse the command arguments
+   * @param conf configuration to use
+   * @param options custom options; pass in an empty Options if unused
+   * @param args command line argument list
+   * @return the remaining arguments
+   * @throws ServiceLaunchException if processing of arguments failed
+   */
+  @VisibleForTesting
+  public List<String> parseCommandArgs(Configuration conf, 
+      Options options,
+      List<String> args) {
+    StringBuilder argString = new StringBuilder(args.size() * 32);
+    for (String arg : args) {
+      LOG.debug(arg);
+      argString.append("\"").append(arg).append("\" ");
+    }
+    try {
+      GenericOptionsParser parser;
+      String[] argArray = args.toArray(new String[args.size()]);
+      parser = new GenericOptionsParser(
+          conf, options, argArray);
+      if (!parser.isParseSuccessful()) {
+        throw new ServiceLaunchException(EXIT_COMMAND_ARGUMENT_ERROR,
+            E_PARSE_FAILED + " %s", argString);
+      }
+      // for extra strictness, scan the list of configuration files
+      // and bail out if none is set
+
+      CommandLine line = parser.getCommandLine();
+      if (line.hasOption(ARG_CONF)) {
+        verifyConfigurationFilesExist(line.getOptionValues(ARG_CONF));
+      }
+      return Arrays.asList(parser.getRemainingArgs());
+    } catch (IOException e) {
+      // parsing problem: convert to a command argument error with
+      // the original text
+      throw new ServiceLaunchException(EXIT_COMMAND_ARGUMENT_ERROR, e);
+    } catch (RuntimeException e) {
+      // lower level issue such as XML parse failure
+      throw new ServiceLaunchException(EXIT_COMMAND_ARGUMENT_ERROR,
+          E_PARSE_FAILED + " %s : %s", argString, e);
+    }
+  }
+
+  protected void verifyConfigurationFilesExist(String[] filenames) {
+    if (filenames==null) {
+      return;
+    }
+    for (String filename : filenames) {
+      File file = new File(filename);
+      LOG.debug("Conf file {}", file.getAbsolutePath());
+      if (!file.exists()) {
+        // no configuration file
+        throw new ServiceLaunchException(EXIT_COMMAND_ARGUMENT_ERROR,
+            ARG_CONF + ": configuration file not found: %s",
+            file.getAbsolutePath());
+      }
+    }
   }
 
   /**

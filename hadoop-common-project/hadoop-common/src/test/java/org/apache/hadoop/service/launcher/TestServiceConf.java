@@ -19,6 +19,7 @@
 package org.apache.hadoop.service.launcher;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.launcher.testservices.LaunchableRunningService;
 import org.apache.hadoop.service.launcher.testservices.RunningService;
 import org.junit.Test;
@@ -29,6 +30,8 @@ import java.util.List;
 
 public class TestServiceConf extends AbstractServiceLauncherTestBase {
 
+  public static final String DASH_CONF = "-"+LauncherArguments.ARG_CONF;
+
   @Test
   public void testRunService() throws Throwable {
     assertRuns(LaunchableRunningService.NAME);
@@ -36,11 +39,11 @@ public class TestServiceConf extends AbstractServiceLauncherTestBase {
 
   @Test
   public void testConfPropagationOverInitBindings() throws Throwable {
-    Configuration conf = newConf(LaunchableRunningService.FAIL_IN_RUN, "true");
+    Configuration conf = newConf(RunningService.FAIL_IN_RUN, "true");
     assertLaunchOutcome(EXIT_FAIL,
         "failed",
         LaunchableRunningService.NAME,
-        ServiceLauncher.ARG_CONF,
+        DASH_CONF,
         configFile(conf));
   }
 
@@ -48,18 +51,18 @@ public class TestServiceConf extends AbstractServiceLauncherTestBase {
   public void testUnbalancedConfArg() throws Throwable {
     Configuration conf = newConf(RunningService.FAIL_IN_RUN, "true");
     assertLaunchOutcome(EXIT_COMMAND_ARGUMENT_ERROR,
-        "missing",
-        RunningService.NAME,
-        ServiceLauncher.ARG_CONF);
+        LauncherArguments.E_PARSE_FAILED,
+        LaunchableRunningService.NAME,
+        DASH_CONF);
   }
 
   @Test
   public void testConfArgMissingFile() throws Throwable {
     Configuration conf = newConf(RunningService.FAIL_IN_RUN, "true");
     assertLaunchOutcome(EXIT_COMMAND_ARGUMENT_ERROR,
-        "not found",
-        RunningService.NAME,
-        ServiceLauncher.ARG_CONF,
+        LauncherArguments.E_PARSE_FAILED,
+        LaunchableRunningService.NAME,
+        DASH_CONF,
         "no-file.xml");
   }
 
@@ -69,7 +72,7 @@ public class TestServiceConf extends AbstractServiceLauncherTestBase {
     assertLaunchOutcome(EXIT_EXCEPTION_THROWN,
         RunningService.FAILURE_MESSAGE,
         RunningService.NAME,
-        ServiceLauncher.ARG_CONF,
+        DASH_CONF,
         configFile(conf));
   }
 
@@ -80,16 +83,16 @@ public class TestServiceConf extends AbstractServiceLauncherTestBase {
    */
   @Test
   public void testConfExtraction() throws Throwable {
-    ServiceLauncher<RunningService> launcher =
-        new ServiceLauncher<RunningService>(RunningService.NAME);
+    ServiceLauncher<Service> launcher =
+      new ServiceLauncher<Service>(RunningService.NAME);
     Configuration conf = newConf("propagated", "true");
     assertEquals("true", conf.get("propagated", "unset"));
 
     Configuration extracted = new Configuration(false);
 
     List<String> argsList =
-        asList("Name", ServiceLauncher.ARG_CONF, configFile(conf));
-    List<String> args = launcher.extractConfigurationArgs(extracted,
+        asList("Name", DASH_CONF, configFile(conf));
+    List<String> args = launcher.extractCommandOptions(extracted,
         argsList);
     if (!args.isEmpty()) {
       assertEquals("args beginning with " + args.get(0),
@@ -105,8 +108,8 @@ public class TestServiceConf extends AbstractServiceLauncherTestBase {
    */
   @Test
   public void testDualConfArgs() throws Throwable {
-    ServiceLauncher<RunningService> launcher =
-        new ServiceLauncher<RunningService>(RunningService.NAME);
+    ServiceLauncher<Service> launcher =
+        new ServiceLauncher<Service>(RunningService.NAME);
     String key1 = "key1";
     Configuration conf1 = newConf(key1, "true");
     String key2 = "file2";
@@ -115,10 +118,9 @@ public class TestServiceConf extends AbstractServiceLauncherTestBase {
 
     List<String> argsList =
         asList("Name",
-            ServiceLauncher.ARG_CONF, configFile(conf1),
-            ServiceLauncher.ARG_CONF, configFile(conf2))
-        ;
-    List<String> args = launcher.extractConfigurationArgs(extracted,
+            DASH_CONF, configFile(conf1),
+            DASH_CONF, configFile(conf2));
+    List<String> args = launcher.extractCommandOptions(extracted,
         argsList);
     if (!args.isEmpty()) {
       assertEquals("args beginning with " + args.get(0),
@@ -130,17 +132,16 @@ public class TestServiceConf extends AbstractServiceLauncherTestBase {
 
 
   @Test
-  public void testConfArgWrongMissingFiletype() throws Throwable {
+  public void testConfArgWrongFiletype() throws Throwable {
     File file = new File(CONF_FILE_DIR, methodName.getMethodName());
     FileWriter fileWriter = new FileWriter(file);
     fileWriter.write("not-a-conf-file");
     fileWriter.close();
     assertLaunchOutcome(EXIT_COMMAND_ARGUMENT_ERROR,
-        "not loadable",
+        "SAXParseException",
         RunningService.NAME,
-        ServiceLauncher.ARG_CONF,
+        DASH_CONF,
         file.getAbsolutePath());
   }
-
 
 }

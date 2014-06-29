@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * A service which implements {@link LaunchableService} and
@@ -62,6 +63,9 @@ public class LaunchableRunningService extends RunningService implements
   public Configuration bindArgs(Configuration config, List<String> args) throws
       Exception {
     Assert.assertEquals(STATE.NOTINITED, getServiceState());
+    for (String arg : args) {
+      LOG.info(arg);
+    }
     Configuration newConf = new Configuration(config);
     if (args.contains(ARG_FAILING)) {
       LOG.info("CLI contains " + ARG_FAILING);

@@ -35,7 +35,7 @@ public class TestServiceLaunchedRunning extends AbstractServiceLauncherTestBase 
     assertLaunchOutcome(EXIT_FAIL,
         "failed",
         LaunchableRunningService.NAME,
-        ServiceLauncher.ARG_CONF,
+        LauncherArguments.ARG_CONF,
         configFile(conf));
   }
 

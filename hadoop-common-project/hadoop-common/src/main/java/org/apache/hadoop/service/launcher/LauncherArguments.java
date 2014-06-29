@@ -18,27 +18,31 @@
 
 package org.apache.hadoop.service.launcher;
 
-import org.apache.hadoop.service.launcher.testservices.NoArgsAllowedService;
-import org.junit.Test;
+/**
+ * Standard launcher arguments. These are all from
+ * the GenericOptionsParser -simply extracted to constants
+ */
+public interface LauncherArguments {
+  /**
+   * Name of the configuration argument on the CLI: {@value} 
+   */
+  String ARG_CONF = "conf";
 
-public class TestServiceLaunchNoArgsAllowed extends AbstractServiceLauncherTestBase {
+  String ARG_FS = "fs";
+  
+  String ARG_RM = "jt";
 
-  @Test
-  public void testRunService() throws Throwable {
-    assertRuns(NoArgsAllowedService.NAME);
-  }
+  String ARG_DEF = "D";
 
-  @Test
-  public void testOneArg() throws Throwable {
-    assertLaunchOutcome(EXIT_COMMAND_ARGUMENT_ERROR, "1",
-        NoArgsAllowedService.NAME, "one");
-  }
+  String ARG_LIBJARS = "libjars";
 
-  @Test
-  public void testConfsStripped() throws Throwable {
-    assertRuns(NoArgsAllowedService.NAME,
-        LauncherArguments.ARG_CONF,
-        configFile(newConf())); 
-  }
+  String ARG_PATHS = "paths";
 
+  String ARG_FILES = "files";
+
+  String ARG_ARCHIVES = "archives";
+
+  String ARG_TOKEN_CACHE_FILE = "tokenCacheFile";
+
+  String E_PARSE_FAILED = "Failed to parse:";
 }
