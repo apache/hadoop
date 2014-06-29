@@ -30,6 +30,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1365. Changed ApplicationMasterService to allow an app to re-register
     after RM restart. (Anubhav Dhoot via jianhe)
 
+    YARN-2052. Embedded an epoch number in container id to ensure the uniqueness
+    of container id after RM restarts. (Tsuyoshi OZAWA via jianhe)
+
   IMPROVEMENTS
 
     YARN-1479. Invalid NaN values in Hadoop REST API JSON response (Chen He via

@@ -218,7 +218,7 @@ public class TestWorkPreservingRMRestart {
     assertEquals(availableResources, schedulerAttempt.getHeadroom());
 
     // *********** check appSchedulingInfo state ***********
-    assertEquals(4, schedulerAttempt.getNewContainerId());
+    assertEquals((1 << 22) + 1, schedulerAttempt.getNewContainerId());
   }
 
   private void checkCSQueue(MockRM rm,

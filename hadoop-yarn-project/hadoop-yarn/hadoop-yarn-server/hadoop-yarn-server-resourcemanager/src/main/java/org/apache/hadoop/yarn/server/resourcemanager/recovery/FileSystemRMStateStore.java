@@ -43,15 +43,19 @@ import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.EpochProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationAttemptStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RMStateVersionProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
+
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.Epoch;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.EpochPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.RMStateVersionPBImpl;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
@@ -71,7 +75,7 @@ public class FileSystemRMStateStore extends RMStateStore {
 
   protected static final String ROOT_DIR_NAME = "FSRMStateRoot";
   protected static final RMStateVersion CURRENT_VERSION_INFO = RMStateVersion
-    .newInstance(1, 0);
+    .newInstance(1, 1);
 
   protected FileSystem fs;
 
@@ -145,7 +149,30 @@ public class FileSystemRMStateStore extends RMStateStore {
       writeFile(versionNodePath, data);
     }
   }
-
+  
+  @Override
+  public synchronized int getAndIncrementEpoch() throws Exception {
+    Path epochNodePath = getNodePath(rootDirPath, EPOCH_NODE);
+    int currentEpoch = 0;
+    if (fs.exists(epochNodePath)) {
+      // load current epoch
+      FileStatus status = fs.getFileStatus(epochNodePath);
+      byte[] data = readFile(epochNodePath, status.getLen());
+      Epoch epoch = new EpochPBImpl(EpochProto.parseFrom(data));
+      currentEpoch = epoch.getEpoch();
+      // increment epoch and store it
+      byte[] storeData = Epoch.newInstance(currentEpoch + 1).getProto()
+          .toByteArray();
+      updateFile(epochNodePath, storeData);
+    } else {
+      // initialize epoch file with 1 for the next time.
+      byte[] storeData = Epoch.newInstance(currentEpoch + 1).getProto()
+          .toByteArray();
+      writeFile(epochNodePath, storeData);
+    }
+    return currentEpoch;
+  }
+  
   @Override
   public synchronized RMState loadState() throws Exception {
     RMState rmState = new RMState();

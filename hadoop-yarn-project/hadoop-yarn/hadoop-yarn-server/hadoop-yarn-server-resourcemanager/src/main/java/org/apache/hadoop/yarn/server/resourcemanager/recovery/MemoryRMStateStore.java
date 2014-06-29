@@ -43,6 +43,8 @@ import com.google.common.annotations.VisibleForTesting;
 public class MemoryRMStateStore extends RMStateStore {
   
   RMState state = new RMState();
+  private int epoch = 0;
+  
   @VisibleForTesting
   public RMState getState() {
     return state;
@@ -50,6 +52,13 @@ public class MemoryRMStateStore extends RMStateStore {
 
   @Override
   public void checkVersion() throws Exception {
+  }
+
+  @Override
+  public synchronized int getAndIncrementEpoch() throws Exception {
+    int currentEpoch = epoch;
+    epoch = epoch + 1;
+    return currentEpoch;
   }
 
   @Override

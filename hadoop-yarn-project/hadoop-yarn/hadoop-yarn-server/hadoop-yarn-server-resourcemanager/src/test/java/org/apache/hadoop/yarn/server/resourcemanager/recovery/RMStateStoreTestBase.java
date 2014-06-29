@@ -495,6 +495,21 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
       Assert.assertTrue(t instanceof RMStateVersionIncompatibleException);
     }
   }
+  
+  public void testEpoch(RMStateStoreHelper stateStoreHelper)
+      throws Exception {
+    RMStateStore store = stateStoreHelper.getRMStateStore();
+    store.setRMDispatcher(new TestDispatcher());
+    
+    int firstTimeEpoch = store.getAndIncrementEpoch();
+    Assert.assertEquals(0, firstTimeEpoch);
+    
+    int secondTimeEpoch = store.getAndIncrementEpoch();
+    Assert.assertEquals(1, secondTimeEpoch);
+    
+    int thirdTimeEpoch = store.getAndIncrementEpoch();
+    Assert.assertEquals(2, thirdTimeEpoch);
+  }
 
   public void testAppDeletion(RMStateStoreHelper stateStoreHelper)
       throws Exception {

@@ -17,6 +17,7 @@
 */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
+import com.google.common.base.Preconditions;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -40,6 +41,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -106,13 +108,14 @@ public class SchedulerApplicationAttempt {
   public SchedulerApplicationAttempt(ApplicationAttemptId applicationAttemptId, 
       String user, Queue queue, ActiveUsersManager activeUsersManager,
       RMContext rmContext) {
+    Preconditions.checkNotNull("RMContext should not be null", rmContext);
     this.rmContext = rmContext;
     this.appSchedulingInfo = 
         new AppSchedulingInfo(applicationAttemptId, user, queue,  
-            activeUsersManager);
+            activeUsersManager, rmContext.getEpoch());
     this.queue = queue;
-
-    if (rmContext != null && rmContext.getRMApps() != null &&
+    
+    if (rmContext.getRMApps() != null &&
         rmContext.getRMApps()
             .containsKey(applicationAttemptId.getApplicationId())) {
       ApplicationSubmissionContext appSubmissionContext =

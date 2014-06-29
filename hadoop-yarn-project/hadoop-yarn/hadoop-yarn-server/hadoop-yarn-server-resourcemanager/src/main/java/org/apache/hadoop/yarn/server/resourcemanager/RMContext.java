@@ -101,4 +101,6 @@ public interface RMContext {
   ConfigurationProvider getConfigurationProvider();
 
   boolean isWorkPreservingRecoveryEnabled();
+  
+  int getEpoch();
 }
