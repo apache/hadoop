@@ -487,6 +487,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6558. Missing newline in the description of dfsadmin -rollingUpgrade.
     (Chen He via kihwal)
 
+    HDFS-6591. while loop is executed tens of thousands of times in Hedged Read
+    (Liang Xie via cnauroth)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)

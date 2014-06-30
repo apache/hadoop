@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -29,6 +31,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 @InterfaceAudience.Private
 public class DFSClientFaultInjector {
   public static DFSClientFaultInjector instance = new DFSClientFaultInjector();
+  public static AtomicLong exceptionNum = new AtomicLong(0);
 
   public static DFSClientFaultInjector get() {
     return instance;
@@ -47,4 +50,6 @@ public class DFSClientFaultInjector {
   }
 
   public void startFetchFromDatanode() {}
+
+  public void fetchFromDatanodeException() {}
 }
