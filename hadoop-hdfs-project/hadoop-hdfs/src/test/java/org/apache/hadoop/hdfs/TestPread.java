@@ -31,12 +31,16 @@ import java.util.concurrent.Future;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.log4j.Level;
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -49,7 +53,14 @@ import org.mockito.stubbing.Answer;
 public class TestPread {
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 4096;
-  boolean simulatedStorage = false;
+  boolean simulatedStorage;
+  boolean isHedgedRead;
+
+  @Before
+  public void setup() {
+    simulatedStorage = false;
+    isHedgedRead = false;
+  }
 
   private void writeFile(FileSystem fileSys, Path name) throws IOException {
     int replication = 3;// We need > 1 blocks to test out the hedged reads.
@@ -73,7 +84,7 @@ public class TestPread {
     
     // now create the real file
     DFSTestUtil.createFile(fileSys, name, 12 * blockSize, 12 * blockSize,
-        blockSize, (short) 1, seed);
+        blockSize, (short) replication, seed);
   }
   
   private void checkAndEraseData(byte[] actual, int from, byte[] expected, String message) {
@@ -104,8 +115,13 @@ public class TestPread {
     }
 
     if (dfstm != null) {
-      assertEquals("Expected read statistic to be incremented", length, dfstm
-          .getReadStatistics().getTotalBytesRead() - totalRead);
+      if (isHedgedRead) {
+        assertTrue("Expected read statistic to be incremented", length <= dfstm
+            .getReadStatistics().getTotalBytesRead() - totalRead);
+      } else {
+        assertEquals("Expected read statistic to be incremented", length, dfstm
+            .getReadStatistics().getTotalBytesRead() - totalRead);
+      }
     }
   }
   
@@ -208,7 +224,7 @@ public class TestPread {
     stm.readFully(0, actual);
     checkAndEraseData(actual, 0, expected, "Pread Datanode Restart Test");
   }
-  
+
   private void cleanupFile(FileSystem fileSys, Path name) throws IOException {
     assertTrue(fileSys.exists(name));
     assertTrue(fileSys.delete(name, true));
@@ -249,6 +265,7 @@ public class TestPread {
    */
   @Test
   public void testHedgedPreadDFSBasic() throws IOException {
+    isHedgedRead = true;
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE, 5);
     conf.setLong(DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THRESHOLD_MILLIS, 1);
@@ -258,8 +275,72 @@ public class TestPread {
   }
 
   @Test
+  public void testHedgedReadLoopTooManyTimes() throws IOException {
+    Configuration conf = new Configuration();
+    int numHedgedReadPoolThreads = 5;
+    final int hedgedReadTimeoutMillis = 50;
+
+    conf.setInt(DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE,
+        numHedgedReadPoolThreads);
+    conf.setLong(DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THRESHOLD_MILLIS,
+        hedgedReadTimeoutMillis);
+    // Set up the InjectionHandler
+    DFSClientFaultInjector.instance = Mockito
+        .mock(DFSClientFaultInjector.class);
+    DFSClientFaultInjector injector = DFSClientFaultInjector.instance;
+    Mockito.doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        if (true) {
+          Thread.sleep(hedgedReadTimeoutMillis + 1);
+          if (DFSClientFaultInjector.exceptionNum.compareAndSet(0, 1)) {
+            System.out.println("-------------- throw Checksum Exception");
+            throw new ChecksumException("ChecksumException test", 100);
+          }
+        }
+        return null;
+      }
+    }).when(injector).fetchFromDatanodeException();
+
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
+        .format(true).build();
+    DistributedFileSystem fileSys = cluster.getFileSystem();
+    DFSClient dfsClient = fileSys.getClient();
+    FSDataOutputStream output = null;
+    DFSInputStream input = null;
+    String filename = "/hedgedReadMaxOut.dat";
+    try {
+      
+      Path file = new Path(filename);
+      output = fileSys.create(file, (short) 2);
+      byte[] data = new byte[64 * 1024];
+      output.write(data);
+      output.flush();
+      output.write(data);
+      output.flush();
+      output.write(data);
+      output.flush();
+      output.close();
+      byte[] buffer = new byte[64 * 1024];
+      input = dfsClient.open(filename);
+      input.read(0, buffer, 0, 1024);
+      input.close();
+      assertEquals(3, input.getHedgedReadOpsLoopNumForTesting());
+    } catch (BlockMissingException e) {
+      assertTrue(false);
+    } finally {
+      IOUtils.cleanup(null, input);
+      IOUtils.cleanup(null, output);
+      fileSys.close();
+      cluster.shutdown();
+      Mockito.reset(injector);
+    }
+  }
+
+  @Test
   public void testMaxOutHedgedReadPool() throws IOException,
       InterruptedException, ExecutionException {
+    isHedgedRead = true;
     Configuration conf = new Configuration();
     int numHedgedReadPoolThreads = 5;
     final int initialHedgedReadTimeoutMillis = 50000;
@@ -367,7 +448,6 @@ public class TestPread {
   public void testPreadDFSSimulated() throws IOException {
     simulatedStorage = true;
     testPreadDFS();
-    simulatedStorage = false;
   }
   
   /**
