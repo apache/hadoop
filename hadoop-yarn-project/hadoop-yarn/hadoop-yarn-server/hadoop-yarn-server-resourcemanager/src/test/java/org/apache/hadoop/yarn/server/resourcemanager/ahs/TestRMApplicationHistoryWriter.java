@@ -420,7 +420,7 @@ public class TestRMApplicationHistoryWriter {
     int waitCount = 0;
     int allocatedSize = allocated.size();
     while (allocatedSize < request && waitCount++ < 200) {
-      Thread.sleep(100);
+      Thread.sleep(300);
       allocated =
           am.allocate(new ArrayList<ResourceRequest>(),
             new ArrayList<ContainerId>()).getAllocatedContainers();
