@@ -307,6 +307,9 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10715. Remove public GraphiteSink#setWriter (Babak Behzad via raviprak)
 
+    HADOOP-10710. hadoop.auth cookie is not properly constructed according to 
+    RFC2109. (Juan Yu via tucu)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES

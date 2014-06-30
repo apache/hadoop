@@ -425,14 +425,20 @@ public class AuthenticationFilter implements Filter {
    *                cookie. It has no effect if its value < 0.
    *
    * XXX the following code duplicate some logic in Jetty / Servlet API,
-   * because of the fact that Hadoop is stuck at servlet 3.0 and jetty 6
+   * because of the fact that Hadoop is stuck at servlet 2.5 and jetty 6
    * right now.
    */
   public static void createAuthCookie(HttpServletResponse resp, String token,
                                       String domain, String path, long expires,
                                       boolean isSecure) {
-    StringBuilder sb = new StringBuilder(AuthenticatedURL.AUTH_COOKIE).append
-            ("=").append(token);
+    StringBuilder sb = new StringBuilder(AuthenticatedURL.AUTH_COOKIE)
+                           .append("=");
+    if (token != null && token.length() > 0) {
+      sb.append("\"")
+          .append(token)
+          .append("\"");
+    }
+    sb.append("; Version=1");
 
     if (path != null) {
       sb.append("; Path=").append(path);
