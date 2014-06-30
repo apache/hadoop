@@ -165,6 +165,9 @@ Trunk (Unreleased)
     HADOOP-10696. Add optional attributes to KeyProvider Options and Metadata. 
     (tucu)
 
+    HADOOP-10695. KMSClientProvider should respect a configurable timeout. 
+    (yoderme via tucu)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
