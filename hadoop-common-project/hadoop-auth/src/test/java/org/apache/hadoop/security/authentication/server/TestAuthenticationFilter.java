@@ -531,21 +531,17 @@ public class TestAuthenticationFilter {
 
   private static void parseCookieMap(String cookieHeader, HashMap<String,
           String> cookieMap) {
-    for (String pair : cookieHeader.split(";")) {
-      String p = pair.trim();
-      int idx = p.indexOf('=');
-      final String k, v;
-      if (idx == -1) {
-        k = p;
-        v = null;
-      } else if (idx == p.length()) {
-        k = p.substring(0, idx - 1);
-        v = null;
-      } else {
-        k = p.substring(0, idx);
-        v = p.substring(idx + 1);
+    List<HttpCookie> cookies = HttpCookie.parse(cookieHeader);
+    for (HttpCookie cookie : cookies) {
+      if (AuthenticatedURL.AUTH_COOKIE.equals(cookie.getName())) {
+        cookieMap.put(cookie.getName(), cookie.getValue());
+        if (cookie.getPath() != null) {
+          cookieMap.put("Path", cookie.getPath());
+        }
+        if (cookie.getDomain() != null) {
+          cookieMap.put("Domain", cookie.getDomain());
+        }
       }
-      cookieMap.put(k, v);
     }
   }
 
