@@ -736,6 +736,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6418. Regression: DFS_NAMENODE_USER_NAME_KEY missing
     (szetszwo via stevel)
 
+    HDFS-6558. Missing newline in the description of dfsadmin -rollingUpgrade.
+    (Chen He via kihwal)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)

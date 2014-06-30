@@ -293,7 +293,7 @@ public class DFSAdmin extends FsShell {
     static final String USAGE = "-"+NAME+" [<query|prepare|finalize>]";
     static final String DESCRIPTION = USAGE + ":\n"
         + "     query: query the current rolling upgrade status.\n"
-        + "   prepare: prepare a new rolling upgrade."
+        + "   prepare: prepare a new rolling upgrade.\n"
         + "  finalize: finalize the current rolling upgrade.";
 
     /** Check if a command is the rollingUpgrade command
