@@ -15,6 +15,9 @@ Trunk - Unreleased
     YARN-524 TestYarnVersionInfo failing if generated properties doesn't
     include an SVN URL. (stevel)
 
+    YARN-2216 TestRMApplicationHistoryWriter sometimes fails in trunk.
+    (Zhijie Shen via xgong)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
