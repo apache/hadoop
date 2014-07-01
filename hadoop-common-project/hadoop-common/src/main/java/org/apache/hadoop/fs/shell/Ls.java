@@ -19,20 +19,15 @@
 package org.apache.hadoop.fs.shell;
 
 import java.io.IOException;
-import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedList;
-import java.util.Set;
 import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-
-import com.google.common.collect.Sets;
 
 /**
  * Get a listing of all files in that match the file patterns.
@@ -70,7 +65,6 @@ class Ls extends FsCommand {
   protected boolean dirRecurse;
 
   protected boolean humanReadable = false;
-  private Set<URI> aclNotSupportedFsSet = Sets.newHashSet();
 
   protected String formatSize(long size) {
     return humanReadable
