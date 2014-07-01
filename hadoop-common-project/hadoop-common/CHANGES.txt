@@ -489,6 +489,8 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10649. Allow overriding the default ACL for service authorization
     (Benoy Antony via Arpit Agarwal)
 
+    HADOOP-10767. Clean up unused code in Ls shell command. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES 
