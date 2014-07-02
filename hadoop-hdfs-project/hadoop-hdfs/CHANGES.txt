@@ -750,6 +750,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6591. while loop is executed tens of thousands of times in Hedged Read
     (Liang Xie via cnauroth)
 
+    HDFS-6604. The short-circuit cache doesn't correctly time out replicas that
+    haven't been used in a while (cmccabe)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
