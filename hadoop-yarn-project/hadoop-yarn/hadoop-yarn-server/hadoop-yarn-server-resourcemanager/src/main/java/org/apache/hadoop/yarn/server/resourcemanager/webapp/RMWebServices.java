@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.AccessControlException;
+import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
@@ -36,6 +37,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -47,22 +49,38 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -81,17 +99,22 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CredentialsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FairSchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FifoSchedulerInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LocalResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
@@ -757,5 +780,257 @@ public class RMWebServices {
     }
 
     return callerUGI;
+  }
+
+  /**
+   * Generates a new ApplicationId which is then sent to the client
+   * 
+   * @param hsr
+   *          the servlet request
+   * @return Response containing the app id and the maximum resource
+   *         capabilities
+   * @throws AuthorizationException
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  @POST
+  @Path("/apps/new-application")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public Response createNewApplication(@Context HttpServletRequest hsr)
+      throws AuthorizationException, IOException, InterruptedException {
+    init();
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr);
+    if (callerUGI == null) {
+      throw new AuthorizationException("Unable to obtain user name, "
+          + "user not authenticated");
+    }
+
+    NewApplication appId = createNewApplication();
+    return Response.status(Status.OK).entity(appId).build();
+
+  }
+
+  // reuse the code in ClientRMService to create new app
+  // get the new app id and submit app
+  // set location header with new app location
+  /**
+   * Function to submit an app to the RM
+   * 
+   * @param newApp
+   *          structure containing information to construct the
+   *          ApplicationSubmissionContext
+   * @param hsr
+   *          the servlet request
+   * @return Response containing the status code
+   * @throws AuthorizationException
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  @POST
+  @Path("/apps")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public Response submitApplication(ApplicationSubmissionContextInfo newApp,
+      @Context HttpServletRequest hsr) throws AuthorizationException,
+      IOException, InterruptedException {
+
+    init();
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr);
+    if (callerUGI == null) {
+      throw new AuthorizationException("Unable to obtain user name, "
+          + "user not authenticated");
+    }
+
+    ApplicationSubmissionContext appContext =
+        createAppSubmissionContext(newApp);
+    final SubmitApplicationRequest req =
+        SubmitApplicationRequest.newInstance(appContext);
+
+    try {
+      callerUGI
+        .doAs(new PrivilegedExceptionAction<SubmitApplicationResponse>() {
+          @Override
+          public SubmitApplicationResponse run() throws IOException,
+              YarnException {
+            return rm.getClientRMService().submitApplication(req);
+          }
+        });
+    } catch (UndeclaredThrowableException ue) {
+      if (ue.getCause() instanceof YarnException) {
+        throw new BadRequestException(ue.getCause().getMessage());
+      }
+      LOG.info("Submit app request failed", ue);
+      throw ue;
+    }
+
+    String url = hsr.getRequestURL() + "/" + newApp.getApplicationId();
+    return Response.status(Status.ACCEPTED).header(HttpHeaders.LOCATION, url)
+      .build();
+  }
+
+  /**
+   * Function that actually creates the ApplicationId by calling the
+   * ClientRMService
+   * 
+   * @return returns structure containing the app-id and maximum resource
+   *         capabilities
+   */
+  private NewApplication createNewApplication() {
+    GetNewApplicationRequest req =
+        recordFactory.newRecordInstance(GetNewApplicationRequest.class);
+    GetNewApplicationResponse resp;
+    try {
+      resp = rm.getClientRMService().getNewApplication(req);
+    } catch (YarnException e) {
+      String msg = "Unable to create new app from RM web service";
+      LOG.error(msg, e);
+      throw new YarnRuntimeException(msg, e);
+    }
+    NewApplication appId =
+        new NewApplication(resp.getApplicationId().toString(), new ResourceInfo(
+          resp.getMaximumResourceCapability()));
+    return appId;
+  }
+
+  /**
+   * Create the actual ApplicationSubmissionContext to be submitted to the RM
+   * from the information provided by the user.
+   * 
+   * @param newApp
+   *          the information provided by the user
+   * @return returns the constructed ApplicationSubmissionContext
+   * @throws IOException
+   */
+  protected ApplicationSubmissionContext createAppSubmissionContext(
+      ApplicationSubmissionContextInfo newApp) throws IOException {
+
+    // create local resources and app submission context
+
+    ApplicationId appid;
+    String error =
+        "Could not parse application id " + newApp.getApplicationId();
+    try {
+      appid =
+          ConverterUtils.toApplicationId(recordFactory,
+            newApp.getApplicationId());
+    } catch (Exception e) {
+      throw new BadRequestException(error);
+    }
+    ApplicationSubmissionContext appContext =
+        ApplicationSubmissionContext.newInstance(appid,
+          newApp.getApplicationName(), newApp.getQueue(),
+          Priority.newInstance(newApp.getPriority()),
+          createContainerLaunchContext(newApp), newApp.getUnmanagedAM(),
+          newApp.getCancelTokensWhenComplete(), newApp.getMaxAppAttempts(),
+          createAppSubmissionContextResource(newApp),
+          newApp.getApplicationType(),
+          newApp.getKeepContainersAcrossApplicationAttempts());
+    appContext.setApplicationTags(newApp.getApplicationTags());
+
+    return appContext;
+  }
+
+  protected Resource createAppSubmissionContextResource(
+      ApplicationSubmissionContextInfo newApp) throws BadRequestException {
+    if (newApp.getResource().getvCores() > rm.getConfig().getInt(
+      YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+      YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES)) {
+      String msg = "Requested more cores than configured max";
+      throw new BadRequestException(msg);
+    }
+    if (newApp.getResource().getMemory() > rm.getConfig().getInt(
+      YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+      YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB)) {
+      String msg = "Requested more memory than configured max";
+      throw new BadRequestException(msg);
+    }
+    Resource r =
+        Resource.newInstance(newApp.getResource().getMemory(), newApp
+          .getResource().getvCores());
+    return r;
+  }
+
+  /**
+   * Create the ContainerLaunchContext required for the
+   * ApplicationSubmissionContext. This function takes the user information and
+   * generates the ByteBuffer structures required by the ContainerLaunchContext
+   * 
+   * @param newApp
+   *          the information provided by the user
+   * @return
+   * @throws BadRequestException
+   * @throws IOException
+   */
+  protected ContainerLaunchContext createContainerLaunchContext(
+      ApplicationSubmissionContextInfo newApp) throws BadRequestException, IOException {
+
+    // create container launch context
+
+    HashMap<String, ByteBuffer> hmap = new HashMap<String, ByteBuffer>();
+    for (Map.Entry<String, String> entry : newApp
+      .getContainerLaunchContextInfo().getAuxillaryServiceData().entrySet()) {
+      if (entry.getValue().isEmpty() == false) {
+        Base64 decoder = new Base64(0, null, true);
+        byte[] data = decoder.decode(entry.getValue());
+        hmap.put(entry.getKey(), ByteBuffer.wrap(data));
+      }
+    }
+
+    HashMap<String, LocalResource> hlr = new HashMap<String, LocalResource>();
+    for (Map.Entry<String, LocalResourceInfo> entry : newApp
+      .getContainerLaunchContextInfo().getResources().entrySet()) {
+      LocalResourceInfo l = entry.getValue();
+      LocalResource lr =
+          LocalResource.newInstance(
+            ConverterUtils.getYarnUrlFromURI(l.getUrl()), l.getType(),
+            l.getVisibility(), l.getSize(), l.getTimestamp());
+      hlr.put(entry.getKey(), lr);
+    }
+
+    DataOutputBuffer out = new DataOutputBuffer();
+    Credentials cs =
+        createCredentials(newApp.getContainerLaunchContextInfo()
+          .getCredentials());
+    cs.writeTokenStorageToStream(out);
+    ByteBuffer tokens = ByteBuffer.wrap(out.getData());
+
+    ContainerLaunchContext ctx =
+        ContainerLaunchContext.newInstance(hlr, newApp
+          .getContainerLaunchContextInfo().getEnvironment(), newApp
+          .getContainerLaunchContextInfo().getCommands(), hmap, tokens, newApp
+          .getContainerLaunchContextInfo().getAcls());
+
+    return ctx;
+  }
+
+  /**
+   * Generate a Credentials object from the information in the CredentialsInfo
+   * object.
+   * 
+   * @param credentials
+   *          the CredentialsInfo provided by the user.
+   * @return
+   */
+  private Credentials createCredentials(CredentialsInfo credentials) {
+    Credentials ret = new Credentials();
+    try {
+      for (Map.Entry<String, String> entry : credentials.getTokens().entrySet()) {
+        Text alias = new Text(entry.getKey());
+        Token<TokenIdentifier> token = new Token<TokenIdentifier>();
+        token.decodeFromUrlString(entry.getValue());
+        ret.addToken(alias, token);
+      }
+      for (Map.Entry<String, String> entry : credentials.getTokens().entrySet()) {
+        Text alias = new Text(entry.getKey());
+        Base64 decoder = new Base64(0, null, true);
+        byte[] secret = decoder.decode(entry.getValue());
+        ret.addSecretKey(alias, secret);
+      }
+    } catch (IOException ie) {
+      throw new BadRequestException(
+        "Could not parse credentials data; exception message = "
+            + ie.getMessage());
+    }
+    return ret;
   }
 }

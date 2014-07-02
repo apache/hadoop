@@ -88,7 +88,7 @@ public abstract class ApplicationSubmissionContext {
       int maxAppAttempts, Resource resource, String applicationType) {
     return newInstance(applicationId, applicationName, queue, priority,
       amContainer, isUnmanagedAM, cancelTokensWhenComplete, maxAppAttempts,
-      resource, null, false);
+      resource, applicationType, false);
   }
 
   @Public
