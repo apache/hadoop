@@ -28,6 +28,8 @@ fs-encryption (Unreleased)
 
     HDFS-6389. Rename restrictions for encryption zones. (clamb)
 
+    HDFS-6605. Client server negotiation of cipher suite. (wang)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -265,11 +265,11 @@ public class CryptoInputStream extends FilterInputStream implements
   }
   
   private long getCounter(long position) {
-    return position / codec.getAlgorithmBlockSize();
+    return position / codec.getCipherSuite().getAlgorithmBlockSize();
   }
   
   private byte getPadding(long position) {
-    return (byte)(position % codec.getAlgorithmBlockSize());
+    return (byte)(position % codec.getCipherSuite().getAlgorithmBlockSize());
   }
   
   /** Calculate the counter and iv, update the decryptor. */

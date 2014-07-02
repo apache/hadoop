@@ -19,7 +19,6 @@
 package org.apache.hadoop.crypto;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Defines properties of a CipherSuite. Modeled after the ciphers in
@@ -27,14 +26,25 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Private
 public enum CipherSuite {
-  AES_CTR_NOPADDING("AES/CTR/NoPadding", 128);
+  UNKNOWN("Unknown", 0),
+  AES_CTR_NOPADDING("AES/CTR/NoPadding", 16);
 
   private final String name;
-  private final int blockBits;
+  private final int algoBlockSize;
 
-  CipherSuite(String name, int blockBits) {
+  private Integer unknownValue = null;
+
+  CipherSuite(String name, int algoBlockSize) {
     this.name = name;
-    this.blockBits = blockBits;
+    this.algoBlockSize = algoBlockSize;
+  }
+
+  public void setUnknownValue(int unknown) {
+    this.unknownValue = unknown;
+  }
+
+  public int getUnknownValue() {
+    return unknownValue;
   }
 
   /**
@@ -45,17 +55,20 @@ public enum CipherSuite {
   }
 
   /**
-   * @return size of an algorithm block in bits
+   * @return size of an algorithm block in bytes
    */
-  public int getNumberBlockBits() {
-    return blockBits;
+  public int getAlgorithmBlockSize() {
+    return algoBlockSize;
   }
 
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder("{");
-    builder.append("name: " + getName() + ", ");
-    builder.append("numBlockBits: " + getNumberBlockBits());
+    builder.append("name: " + name);
+    builder.append(", algorithmBlockSize: " + algoBlockSize);
+    if (unknownValue != null) {
+      builder.append(", unknownValue: " + unknownValue);
+    }
     builder.append("}");
     return builder.toString();
   }

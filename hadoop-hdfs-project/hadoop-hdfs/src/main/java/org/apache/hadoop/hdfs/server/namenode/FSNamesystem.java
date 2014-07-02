@@ -122,7 +122,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoCodec;
 import org.apache.hadoop.crypto.key.KeyProvider;
-import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import org.apache.hadoop.fs.CacheFlag;
@@ -154,6 +153,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.StorageType;
+import org.apache.hadoop.hdfs.UnknownCipherSuiteException;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -2296,7 +2296,50 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
     }
   }
-  
+
+  /**
+   * If the file is within an encryption zone, select the appropriate 
+   * CipherSuite from the list provided by the client. Since the client may 
+   * be newer, need to handle unknown CipherSuites.
+   *
+   * @param src path of the file
+   * @param cipherSuites client-provided list of supported CipherSuites, 
+   *                     in desired order.
+   * @return chosen CipherSuite, or null if file is not in an EncryptionZone
+   * @throws IOException
+   */
+  private CipherSuite chooseCipherSuite(String src, List<CipherSuite> 
+      cipherSuites) throws UnknownCipherSuiteException {
+    EncryptionZone zone = getEncryptionZoneForPath(src);
+    // Not in an EZ
+    if (zone == null) {
+      return null;
+    }
+    CipherSuite chosen = null;
+    for (CipherSuite c : cipherSuites) {
+      if (c.equals(CipherSuite.UNKNOWN)) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Ignoring unknown CipherSuite provided by client: "
+              + c.getUnknownValue());
+        }
+        continue;
+      }
+      for (CipherSuite supported : CipherSuite.values()) {
+        if (supported.equals(c)) {
+          chosen = c;
+          break;
+        }
+      }
+    }
+    if (chosen == null) {
+      throw new UnknownCipherSuiteException(
+          "No cipher suites provided by the client are supported."
+              + " Client provided: " + Arrays.toString(cipherSuites.toArray())
+              + " NameNode supports: " + Arrays.toString(CipherSuite.values()));
+    }
+    return chosen;
+  }
+
   /**
    * Create a new file entry in the namespace.
    * 
@@ -2306,7 +2349,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   HdfsFileStatus startFile(String src, PermissionStatus permissions,
       String holder, String clientMachine, EnumSet<CreateFlag> flag,
-      boolean createParent, short replication, long blockSize)
+      boolean createParent, short replication, long blockSize, 
+      List<CipherSuite> cipherSuites)
       throws AccessControlException, SafeModeException,
       FileAlreadyExistsException, UnresolvedLinkException,
       FileNotFoundException, ParentNotDirectoryException, IOException {
@@ -2319,7 +2363,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     
     try {
       status = startFileInt(src, permissions, holder, clientMachine, flag,
-          createParent, replication, blockSize, cacheEntry != null);
+          createParent, replication, blockSize, cipherSuites,
+          cacheEntry != null);
     } catch (AccessControlException e) {
       logAuditEvent(false, "create", src);
       throw e;
@@ -2332,16 +2377,26 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private HdfsFileStatus startFileInt(String src, PermissionStatus permissions,
       String holder, String clientMachine, EnumSet<CreateFlag> flag,
       boolean createParent, short replication, long blockSize,
-      boolean logRetryCache) throws AccessControlException, SafeModeException,
+      List<CipherSuite> cipherSuites, boolean logRetryCache)
+      throws AccessControlException, SafeModeException,
       FileAlreadyExistsException, UnresolvedLinkException,
       FileNotFoundException, ParentNotDirectoryException, IOException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: src=" + src
-          + ", holder=" + holder
-          + ", clientMachine=" + clientMachine
-          + ", createParent=" + createParent
-          + ", replication=" + replication
-          + ", createFlag=" + flag.toString());
+      StringBuilder builder = new StringBuilder();
+      builder.append("DIR* NameSystem.startFile: src=" + src
+              + ", holder=" + holder
+              + ", clientMachine=" + clientMachine
+              + ", createParent=" + createParent
+              + ", replication=" + replication
+              + ", createFlag=" + flag.toString()
+              + ", blockSize=" + blockSize);
+      builder.append(", cipherSuites=");
+      if (cipherSuites != null) {
+        builder.append(Arrays.toString(cipherSuites.toArray()));
+      } else {
+        builder.append("null");
+      }
+      NameNode.stateChangeLog.debug(builder.toString());
     }
     if (!DFSUtil.isValidName(src)) {
       throw new InvalidPathException(src);
@@ -2368,7 +2423,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       checkNameNodeSafeMode("Cannot create file" + src);
       src = FSDirectory.resolvePath(src, pathComponents, dir);
       startFileInternal(pc, src, permissions, holder, clientMachine, create,
-          overwrite, createParent, replication, blockSize, logRetryCache);
+          overwrite, createParent, replication, blockSize, cipherSuites,
+          logRetryCache);
       stat = dir.getFileInfo(src, false);
     } catch (StandbyException se) {
       skipSync = true;
@@ -2398,7 +2454,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private void startFileInternal(FSPermissionChecker pc, String src,
       PermissionStatus permissions, String holder, String clientMachine,
       boolean create, boolean overwrite, boolean createParent,
-      short replication, long blockSize, boolean logRetryEntry)
+      short replication, long blockSize, List<CipherSuite> cipherSuites,
+      boolean logRetryEntry)
       throws FileAlreadyExistsException, AccessControlException,
       UnresolvedLinkException, FileNotFoundException,
       ParentNotDirectoryException, IOException {
@@ -2410,6 +2467,25 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throw new FileAlreadyExistsException(src +
           " already exists as a directory");
     }
+
+    FileEncryptionInfo feInfo = null;
+    CipherSuite suite = chooseCipherSuite(src, cipherSuites);
+    if (suite != null) {
+      Preconditions.checkArgument(!suite.equals(CipherSuite.UNKNOWN), 
+          "Chose an UNKNOWN CipherSuite!");
+      // TODO: fill in actual key/iv in HDFS-6474
+      // For now, populate with dummy data
+      byte[] key = new byte[suite.getAlgorithmBlockSize()];
+      for (int i = 0; i < key.length; i++) {
+        key[i] = (byte)i;
+      }
+      byte[] iv = new byte[suite.getAlgorithmBlockSize()];
+      for (int i = 0; i < iv.length; i++) {
+        iv[i] = (byte)(3+i*2);
+      }
+      feInfo = new FileEncryptionInfo(suite, key, iv);
+    }
+
     final INodeFile myFile = INodeFile.valueOf(inode, src, true);
     if (isPermissionEnabled) {
       if (overwrite && myFile != null) {
@@ -2464,6 +2540,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       leaseManager.addLease(newNode.getFileUnderConstructionFeature()
           .getClientName(), src);
+
+      // Set encryption attributes if necessary
+      if (feInfo != null) {
+        dir.setFileEncryptionInfo(src, feInfo);
+        newNode = dir.getInode(newNode.getId()).asFile();
+      }
 
       // record file record in log, record new generation stamp
       getEditLog().logOpenFile(src, newNode, logRetryEntry);
@@ -8301,7 +8383,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     final String keyId = UUID.randomUUID().toString();
     // TODO pass in hdfs://HOST:PORT (HDFS-6490)
     providerOptions.setDescription(src);
-    providerOptions.setBitLength(codec.getAlgorithmBlockSize()*8);
+    providerOptions.setBitLength(codec.getCipherSuite()
+        .getAlgorithmBlockSize()*8);
     try {
       provider.createKey(keyId, providerOptions);
     } catch (NoSuchAlgorithmException e) {
@@ -8396,6 +8479,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /** Lookup the encryption zone of a path. */
   EncryptionZone getEncryptionZoneForPath(String src) {
+    assert hasReadLock();
     final String[] components = INode.getPathNames(src);
     for (int i = components.length; i > 0; i--) {
       final List<String> l = Arrays.asList(Arrays.copyOfRange(components, 0, i));

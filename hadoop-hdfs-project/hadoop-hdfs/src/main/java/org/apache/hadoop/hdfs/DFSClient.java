@@ -94,6 +94,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoCodec;
 import org.apache.hadoop.crypto.CryptoInputStream;
 import org.apache.hadoop.crypto.CryptoOutputStream;
@@ -246,6 +247,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
       new DFSHedgedReadMetrics();
   private static ThreadPoolExecutor HEDGED_READ_THREAD_POOL;
   private final CryptoCodec codec;
+  @VisibleForTesting
+  List<CipherSuite> cipherSuites;
   
   /**
    * DFSClient configuration 
@@ -579,6 +582,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
     this.clientName = "DFSClient_" + dfsClientConf.taskId + "_" + 
         DFSUtil.getRandom().nextInt()  + "_" + Thread.currentThread().getId();
     this.codec = CryptoCodec.getInstance(conf);
+    this.cipherSuites = Lists.newArrayListWithCapacity(1);
+    cipherSuites.add(codec.getCipherSuite());
     
     int numResponseToDrop = conf.getInt(
         DFSConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY,
@@ -1523,7 +1528,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
     }
     final DFSOutputStream result = DFSOutputStream.newStreamForCreate(this,
         src, masked, flag, createParent, replication, blockSize, progress,
-        buffersize, dfsClientConf.createChecksum(checksumOpt), favoredNodeStrs);
+        buffersize, dfsClientConf.createChecksum(checksumOpt),
+        favoredNodeStrs, cipherSuites);
     beginFileLease(result.getFileId(), result);
     return result;
   }
@@ -1570,7 +1576,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
       DataChecksum checksum = dfsClientConf.createChecksum(checksumOpt);
       result = DFSOutputStream.newStreamForCreate(this, src, absPermission,
           flag, createParent, replication, blockSize, progress, buffersize,
-          checksum);
+          checksum, null, cipherSuites);
     }
     beginFileLease(result.getFileId(), result);
     return result;

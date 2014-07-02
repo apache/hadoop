@@ -26,6 +26,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
@@ -249,21 +250,25 @@ public class ClientNamenodeProtocolTranslatorPB implements
   @Override
   public HdfsFileStatus create(String src, FsPermission masked,
       String clientName, EnumSetWritable<CreateFlag> flag,
-      boolean createParent, short replication, long blockSize)
+      boolean createParent, short replication, long blockSize, 
+      List<CipherSuite> cipherSuites)
       throws AccessControlException, AlreadyBeingCreatedException,
       DSQuotaExceededException, FileAlreadyExistsException,
       FileNotFoundException, NSQuotaExceededException,
       ParentNotDirectoryException, SafeModeException, UnresolvedLinkException,
       IOException {
-    CreateRequestProto req = CreateRequestProto.newBuilder()
+    CreateRequestProto.Builder builder = CreateRequestProto.newBuilder()
         .setSrc(src)
         .setMasked(PBHelper.convert(masked))
         .setClientName(clientName)
         .setCreateFlag(PBHelper.convertCreateFlag(flag))
         .setCreateParent(createParent)
         .setReplication(replication)
-        .setBlockSize(blockSize)
-        .build();
+        .setBlockSize(blockSize);
+    if (cipherSuites != null) {
+      builder.addAllCipherSuites(PBHelper.convertCipherSuites(cipherSuites));
+    }
+    CreateRequestProto req = builder.build();
     try {
       CreateResponseProto res = rpcProxy.create(null, req);
       return res.hasFs() ? PBHelper.convert(res.getFs()) : null;

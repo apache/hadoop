@@ -39,13 +39,11 @@ public abstract class CryptoCodec implements Configurable {
         CryptoCodec.class);
     return ReflectionUtils.newInstance(klass, conf);
   }
-  
+
   /**
-   * Get the block size of a block cipher.
-   * For different algorithms, the block size may be different.
-   * @return int the block size
+   * @return the CipherSuite for this codec.
    */
-  public abstract int getAlgorithmBlockSize();
+  public abstract CipherSuite getCipherSuite();
 
   /**
    * Create a {@link org.apache.hadoop.crypto.Encryptor}. 

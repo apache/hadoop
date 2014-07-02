@@ -25,16 +25,19 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class AESCTRCryptoCodec extends CryptoCodec {
+
+  protected static final CipherSuite SUITE = CipherSuite.AES_CTR_NOPADDING;
+
   /**
    * For AES, the algorithm block is fixed size of 128 bits.
    * @see http://en.wikipedia.org/wiki/Advanced_Encryption_Standard
    */
-  private static final int AES_BLOCK_SIZE = 16;
+  private static final int AES_BLOCK_SIZE = SUITE.getAlgorithmBlockSize();
   private static final int CTR_OFFSET = 8;
 
   @Override
-  public int getAlgorithmBlockSize() {
-    return AES_BLOCK_SIZE;
+  public CipherSuite getCipherSuite() {
+    return SUITE;
   }
   
   /**

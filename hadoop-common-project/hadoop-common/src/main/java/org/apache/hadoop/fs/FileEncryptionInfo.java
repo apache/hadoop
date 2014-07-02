@@ -19,7 +19,6 @@ package org.apache.hadoop.fs;
 
 import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.crypto.CipherSuite;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -40,9 +39,9 @@ public class FileEncryptionInfo {
     checkNotNull(suite);
     checkNotNull(key);
     checkNotNull(iv);
-    checkArgument(key.length == suite.getNumberBlockBits() / 8,
+    checkArgument(key.length == suite.getAlgorithmBlockSize(),
         "Unexpected key length");
-    checkArgument(iv.length == suite.getNumberBlockBits() / 8,
+    checkArgument(iv.length == suite.getAlgorithmBlockSize(),
         "Unexpected IV length");
     this.cipherSuite = suite;
     this.key = key;

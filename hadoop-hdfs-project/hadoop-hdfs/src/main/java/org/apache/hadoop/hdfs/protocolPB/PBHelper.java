@@ -2276,25 +2276,49 @@ public class PBHelper {
     return new ShmId(shmId.getHi(), shmId.getLo());
   }
 
-  public static HdfsProtos.FileEncryptionInfoProto.CipherType
-      convert(CipherSuite type) {
-    switch (type) {
+  public static HdfsProtos.CipherSuite convert(CipherSuite suite) {
+    switch (suite) {
+    case UNKNOWN:
+      return HdfsProtos.CipherSuite.UNKNOWN;
     case AES_CTR_NOPADDING:
-      return HdfsProtos.FileEncryptionInfoProto.CipherType
-          .AES_CTR_NOPADDING;
+      return HdfsProtos.CipherSuite.AES_CTR_NOPADDING;
     default:
       return null;
     }
   }
 
-  public static CipherSuite convert(
-      HdfsProtos.FileEncryptionInfoProto.CipherType proto) {
+  public static CipherSuite convert(HdfsProtos.CipherSuite proto) {
     switch (proto) {
     case AES_CTR_NOPADDING:
       return CipherSuite.AES_CTR_NOPADDING;
     default:
+      // Set to UNKNOWN and stash the unknown enum value
+      CipherSuite suite = CipherSuite.UNKNOWN;
+      suite.setUnknownValue(proto.getNumber());
+      return suite;
+    }
+  }
+
+  public static List<HdfsProtos.CipherSuite> convertCipherSuites
+      (List<CipherSuite> suites) {
+    if (suites == null) {
       return null;
     }
+    List<HdfsProtos.CipherSuite> protos =
+        Lists.newArrayListWithCapacity(suites.size());
+    for (CipherSuite suite : suites) {
+      protos.add(convert(suite));
+    }
+    return protos;
+  }
+
+  public static List<CipherSuite> convertCipherSuiteProtos(
+      List<HdfsProtos.CipherSuite> protos) {
+    List<CipherSuite> suites = Lists.newArrayListWithCapacity(protos.size());
+    for (HdfsProtos.CipherSuite proto : protos) {
+      suites.add(convert(proto));
+    }
+    return suites;
   }
 
   public static HdfsProtos.FileEncryptionInfoProto convert(
@@ -2303,7 +2327,7 @@ public class PBHelper {
       return null;
     }
     return HdfsProtos.FileEncryptionInfoProto.newBuilder()
-        .setType(convert(info.getCipherSuite()))
+        .setSuite(convert(info.getCipherSuite()))
         .setKey(getByteString(info.getEncryptedDataEncryptionKey()))
         .setIv(getByteString(info.getIV()))
         .build();
@@ -2314,10 +2338,10 @@ public class PBHelper {
     if (proto == null) {
       return null;
     }
-    CipherSuite type = convert(proto.getType());
+    CipherSuite suite = convert(proto.getSuite());
     byte[] key = proto.getKey().toByteArray();
     byte[] iv = proto.getIv().toByteArray();
-    return new FileEncryptionInfo(type, key, iv);
+    return new FileEncryptionInfo(suite, key, iv);
   }
 
 }

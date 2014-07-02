@@ -26,15 +26,19 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -44,6 +48,7 @@ import org.junit.Test;
 
 import com.google.common.base.Preconditions;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 public class TestEncryptionZonesAPI {
@@ -56,7 +61,7 @@ public class TestEncryptionZonesAPI {
   private final Configuration conf = new Configuration();
   private MiniDFSCluster cluster;
   private static File tmpDir;
-  private FileSystem fs;
+  private DistributedFileSystem fs;
 
   @Before
   public void setUpCluster() throws IOException {
@@ -65,7 +70,7 @@ public class TestEncryptionZonesAPI {
     conf.set(KeyProviderFactory.KEY_PROVIDER_PATH,
         JavaKeyStoreProvider.SCHEME_NAME + "://file" + tmpDir + "/test.jks");
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-    fs = createFileSystem(conf);
+    fs = (DistributedFileSystem) createFileSystem(conf);
   }
 
   protected FileSystem createFileSystem(Configuration conf) throws IOException {
@@ -422,6 +427,68 @@ public class TestEncryptionZonesAPI {
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains(
               "/test/foo/baz can't be moved from an encryption zone.", e);
+    }
+  }
+
+  @Test(timeout = 60000)
+  public void testCipherSuiteNegotiation() throws Exception {
+    final HdfsAdmin dfsAdmin =
+        new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
+    final Path zone = new Path("/zone");
+    fs.mkdirs(zone);
+    dfsAdmin.createEncryptionZone(zone, null);
+    // Create a file in an EZ, which should succeed
+    DFSTestUtil.createFile(fs, new Path(zone, "success1"), 0, (short) 1,
+        0xFEED);
+    // Pass no cipherSuites, fail
+    fs.getClient().cipherSuites = Lists.newArrayListWithCapacity(0);
+    try {
+      DFSTestUtil.createFile(fs, new Path(zone, "fail"), 0, (short) 1,
+          0xFEED);
+      fail("Created a file without specifying a CipherSuite!");
+    } catch (UnknownCipherSuiteException e) {
+      GenericTestUtils.assertExceptionContains("No cipher suites", e);
+    }
+    // Pass some unknown cipherSuites, fail
+    fs.getClient().cipherSuites = Lists.newArrayListWithCapacity(3);
+    fs.getClient().cipherSuites.add(CipherSuite.UNKNOWN);
+    fs.getClient().cipherSuites.add(CipherSuite.UNKNOWN);
+    fs.getClient().cipherSuites.add(CipherSuite.UNKNOWN);
+    try {
+      DFSTestUtil.createFile(fs, new Path(zone, "fail"), 0, (short) 1,
+          0xFEED);
+      fail("Created a file without specifying a CipherSuite!");
+    } catch (UnknownCipherSuiteException e) {
+      GenericTestUtils.assertExceptionContains("No cipher suites", e);
+    }
+    // Pass some unknown and a good cipherSuites, success
+    fs.getClient().cipherSuites = Lists.newArrayListWithCapacity(3);
+    fs.getClient().cipherSuites.add(CipherSuite.AES_CTR_NOPADDING);
+    fs.getClient().cipherSuites.add(CipherSuite.UNKNOWN);
+    fs.getClient().cipherSuites.add(CipherSuite.UNKNOWN);
+    DFSTestUtil.createFile(fs, new Path(zone, "success2"), 0, (short) 1,
+        0xFEED);
+    fs.getClient().cipherSuites = Lists.newArrayListWithCapacity(3);
+    fs.getClient().cipherSuites.add(CipherSuite.UNKNOWN);
+    fs.getClient().cipherSuites.add(CipherSuite.UNKNOWN);
+    fs.getClient().cipherSuites.add(CipherSuite.AES_CTR_NOPADDING);
+    DFSTestUtil.createFile(fs, new Path(zone, "success3"), 4096, (short) 1,
+        0xFEED);
+    // Check that the specified CipherSuite was correctly saved on the NN
+    for (int i=2; i<=3; i++) {
+      LocatedBlocks blocks =
+          fs.getClient().getLocatedBlocks(zone.toString() + "/success2", 0);
+      FileEncryptionInfo feInfo = blocks.getFileEncryptionInfo();
+      assertEquals(feInfo.getCipherSuite(), CipherSuite.AES_CTR_NOPADDING);
+      // TODO: validate against actual key/iv in HDFS-6474
+      byte[] key = feInfo.getEncryptedDataEncryptionKey();
+      for (int j = 0; j < key.length; j++) {
+        assertEquals("Unexpected key byte", (byte)j, key[j]);
+      }
+      byte[] iv = feInfo.getIV();
+      for (int j = 0; j < iv.length; j++) {
+        assertEquals("Unexpected IV byte", (byte)(3+j*2), iv[j]);
+      }
     }
   }
 }

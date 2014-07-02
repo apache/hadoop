@@ -170,13 +170,18 @@ message DataEncryptionKeyProto {
 }
 
 /**
+ * Cipher suite.
+ */
+enum CipherSuite {
+    UNKNOWN = 1;
+    AES_CTR_NOPADDING = 2;
+}
+
+/**
  * Encryption information for a file.
  */
 message FileEncryptionInfoProto {
-  enum CipherType {
-    AES_CTR_NOPADDING = 1;
-  }
-  required CipherType type = 1;
+  required CipherSuite suite = 1;
   required bytes key = 2;
   required bytes iv = 3;
 }

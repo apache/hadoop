@@ -194,8 +194,10 @@ public class CryptoOutputStream extends FilterOutputStream implements
   
   /** Update the {@link #encryptor}: calculate counter and {@link #padding}. */
   private void updateEncryptor() throws IOException {
-    final long counter = streamOffset / codec.getAlgorithmBlockSize();
-    padding = (byte)(streamOffset % codec.getAlgorithmBlockSize());
+    final long counter =
+        streamOffset / codec.getCipherSuite().getAlgorithmBlockSize();
+    padding =
+        (byte)(streamOffset % codec.getCipherSuite().getAlgorithmBlockSize());
     inBuffer.position(padding); // Set proper position for input data.
     codec.calculateIV(initIV, counter, iv);
     encryptor.init(key, iv);

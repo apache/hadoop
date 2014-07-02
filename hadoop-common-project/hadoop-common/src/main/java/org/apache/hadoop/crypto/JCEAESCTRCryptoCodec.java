@@ -92,9 +92,9 @@ public class JCEAESCTRCryptoCodec extends AESCTRCryptoCodec {
         throws GeneralSecurityException {
       this.mode = mode;
       if (provider == null || provider.isEmpty()) {
-        cipher = Cipher.getInstance("AES/CTR/NoPadding");
+        cipher = Cipher.getInstance(SUITE.getName());
       } else {
-        cipher = Cipher.getInstance("AES/CTR/NoPadding", provider);
+        cipher = Cipher.getInstance(SUITE.getName(), provider);
       }
     }
 
