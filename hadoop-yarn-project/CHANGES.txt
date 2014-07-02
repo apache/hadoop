@@ -303,6 +303,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2216 TestRMApplicationHistoryWriter sometimes fails in trunk.
     (Zhijie Shen via xgong)
 
+    YARN-2216 YARN-2065 AM cannot create new containers after restart
+    (Jian He via stevel)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
