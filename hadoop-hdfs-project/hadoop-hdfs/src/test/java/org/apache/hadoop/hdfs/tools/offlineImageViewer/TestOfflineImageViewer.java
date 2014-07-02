@@ -143,6 +143,8 @@ public class TestOfflineImageViewer {
       hdfs.mkdirs(xattr);
       hdfs.setXAttr(xattr, "user.a1", new byte[]{ 0x31, 0x32, 0x33 });
       hdfs.setXAttr(xattr, "user.a2", new byte[]{ 0x37, 0x38, 0x39 });
+      // OIV should be able to handle empty value XAttrs
+      hdfs.setXAttr(xattr, "user.a3", null);
       writtenFiles.put(xattr.toString(), hdfs.getFileStatus(xattr));
 
       // Write results to the fsimage file

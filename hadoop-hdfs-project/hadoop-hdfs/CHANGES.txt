@@ -482,6 +482,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-6572. Add an option to the NameNode that prints the software and
     on-disk image versions. (Charles Lamb via cnauroth)
 
+    HDFS-6603. Add XAttr with ACL test. (Stephen Chu via cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
