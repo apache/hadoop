@@ -230,6 +230,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6603. Add XAttr with ACL test. (Stephen Chu via cnauroth)
 
+    HDFS-6612. MiniDFSNNTopology#simpleFederatedTopology(int)
+    always hardcode nameservice ID. (Juan Yu via wang)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
