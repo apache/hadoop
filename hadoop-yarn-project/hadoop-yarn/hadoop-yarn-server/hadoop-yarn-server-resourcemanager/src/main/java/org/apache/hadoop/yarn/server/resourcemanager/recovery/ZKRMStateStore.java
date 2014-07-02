@@ -279,20 +279,21 @@ public class ZKRMStateStore extends RMStateStore {
 
   private void createRootDir(final String rootPath) throws Exception {
     // For root dirs, we shouldn't use the doMulti helper methods
-    try {
-      new ZKAction<String>() {
-        @Override
-        public String run() throws KeeperException, InterruptedException {
+    new ZKAction<String>() {
+      @Override
+      public String run() throws KeeperException, InterruptedException {
+        try {
           return zkClient.create(rootPath, null, zkAcl, CreateMode.PERSISTENT);
+        } catch (KeeperException ke) {
+          if (ke.code() == Code.NODEEXISTS) {
+            LOG.debug(rootPath + "znode already exists!");
+            return null;
+          } else {
+            throw ke;
+          }
         }
-      }.runWithRetries();
-    } catch (KeeperException ke) {
-      if (ke.code() == Code.NODEEXISTS) {
-        LOG.debug(rootPath + "znode already exists!");
-      } else {
-        throw ke;
       }
-    }
+    }.runWithRetries();
   }
 
   private void logRootNodeAcls(String prefix) throws Exception {

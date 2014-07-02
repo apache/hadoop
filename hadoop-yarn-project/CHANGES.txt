@@ -193,6 +193,9 @@ Release 2.5.0 - UNRELEASED
     TestContainersMonitor#testContainerKillOnMemoryOverflow.
     (Anubhav Dhoot via kasha)
 
+    YARN-2241. ZKRMStateStore: On startup, show nicer messages if znodes already 
+    exist. (Robert Kanter via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 
