@@ -236,6 +236,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6614. shorten TestPread run time with a smaller retry timeout setting.
     (Liang Xie via cnauroth)
 
+    HDFS-6610. TestShortCircuitLocalRead tests sometimes timeout on slow
+    machines. (Charles Lamb via wang)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
