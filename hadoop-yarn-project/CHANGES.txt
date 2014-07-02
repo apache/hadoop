@@ -322,6 +322,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2201. Made TestRMWebServicesAppsModification be independent of the
     changes on yarn-default.xml. (Varun Vasudev via zjshen)
 
+    YARN-2216 YARN-2065 AM cannot create new containers after restart
+    (Jian He via stevel)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
