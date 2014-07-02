@@ -193,6 +193,10 @@ Release 2.5.0 - UNRELEASED
     TestContainersMonitor#testContainerKillOnMemoryOverflow.
     (Anubhav Dhoot via kasha)
 
+    YARN-2022. Preempting an Application Master container can be kept as least priority
+    when multiple applications are marked for preemption by 
+    ProportionalCapacityPreemptionPolicy (Sunil G via mayank)
+
     YARN-2241. ZKRMStateStore: On startup, show nicer messages if znodes already 
     exist. (Robert Kanter via kasha)
 
