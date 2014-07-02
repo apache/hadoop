@@ -189,6 +189,10 @@ Release 2.5.0 - UNRELEASED
     YARN-614. Changed ResourceManager to not count disk failure, node loss and
     RM restart towards app failures. (Xuan Gong via jianhe)
 
+    YARN-2204. Explicitly enable vmem check in
+    TestContainersMonitor#testContainerKillOnMemoryOverflow.
+    (Anubhav Dhoot via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 
