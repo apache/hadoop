@@ -44,16 +44,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
 
 import org.junit.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.ApplicationsRequestScope;
+import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
@@ -138,6 +139,10 @@ public class TestClientRMService {
   
   private final static String QUEUE_1 = "Q-1";
   private final static String QUEUE_2 = "Q-2";
+  private final static String kerberosRule = "RULE:[1:$1@$0](.*@EXAMPLE.COM)s/@.*//\nDEFAULT";
+  static {
+    KerberosName.setRules(kerberosRule);
+  }
   
   @BeforeClass
   public static void setupSecretManager() throws IOException {
@@ -479,6 +484,17 @@ public class TestClientRMService {
       UserGroupInformation.createRemoteUser("owner");
   private static final UserGroupInformation other =
       UserGroupInformation.createRemoteUser("other");
+  private static final UserGroupInformation tester =
+      UserGroupInformation.createRemoteUser("tester");
+  private static final String testerPrincipal = "tester@EXAMPLE.COM";
+  private static final String ownerPrincipal = "owner@EXAMPLE.COM";
+  private static final String otherPrincipal = "other@EXAMPLE.COM";
+  private static final UserGroupInformation testerKerb =
+      UserGroupInformation.createRemoteUser(testerPrincipal);
+  private static final UserGroupInformation ownerKerb =
+      UserGroupInformation.createRemoteUser(ownerPrincipal);
+  private static final UserGroupInformation otherKerb =
+      UserGroupInformation.createRemoteUser(otherPrincipal);
   
   @Test
   public void testTokenRenewalByOwner() throws Exception {
@@ -544,6 +560,147 @@ public class TestClientRMService {
     ClientRMService rmService = new ClientRMService(
         rmContext, null, null, null, null, dtsm);
     rmService.renewDelegationToken(request);
+  }
+
+  @Test
+  public void testTokenCancellationByOwner() throws Exception {
+    // two tests required - one with a kerberos name
+    // and with a short name
+    RMContext rmContext = mock(RMContext.class);
+    final ClientRMService rmService =
+        new ClientRMService(rmContext, null, null, null, null, dtsm);
+    testerKerb.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        checkTokenCancellation(rmService, testerKerb, other);
+        return null;
+      }
+    });
+    owner.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        checkTokenCancellation(owner, other);
+        return null;
+      }
+    });
+  }
+
+  @Test
+  public void testTokenCancellationByRenewer() throws Exception {
+    // two tests required - one with a kerberos name
+    // and with a short name
+    RMContext rmContext = mock(RMContext.class);
+    final ClientRMService rmService =
+        new ClientRMService(rmContext, null, null, null, null, dtsm);
+    testerKerb.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        checkTokenCancellation(rmService, owner, testerKerb);
+        return null;
+      }
+    });
+    other.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        checkTokenCancellation(owner, other);
+        return null;
+      }
+    });
+  }
+
+  @Test
+  public void testTokenCancellationByWrongUser() {
+    // two sets to test -
+    // 1. try to cancel tokens of short and kerberos users as a kerberos UGI
+    // 2. try to cancel tokens of short and kerberos users as a simple auth UGI
+
+    RMContext rmContext = mock(RMContext.class);
+    final ClientRMService rmService =
+        new ClientRMService(rmContext, null, null, null, null, dtsm);
+    UserGroupInformation[] kerbTestOwners =
+        { owner, other, tester, ownerKerb, otherKerb };
+    UserGroupInformation[] kerbTestRenewers =
+        { owner, other, ownerKerb, otherKerb };
+    for (final UserGroupInformation tokOwner : kerbTestOwners) {
+      for (final UserGroupInformation tokRenewer : kerbTestRenewers) {
+        try {
+          testerKerb.doAs(new PrivilegedExceptionAction<Void>() {
+            @Override
+            public Void run() throws Exception {
+              try {
+                checkTokenCancellation(rmService, tokOwner, tokRenewer);
+                Assert.fail("We should not reach here; token owner = "
+                    + tokOwner.getUserName() + ", renewer = "
+                    + tokRenewer.getUserName());
+                return null;
+              } catch (YarnException e) {
+                Assert.assertTrue(e.getMessage().contains(
+                  testerKerb.getUserName()
+                      + " is not authorized to cancel the token"));
+                return null;
+              }
+            }
+          });
+        } catch (Exception e) {
+          Assert.fail("Unexpected exception; " + e.getMessage());
+        }
+      }
+    }
+
+    UserGroupInformation[] simpleTestOwners =
+        { owner, other, ownerKerb, otherKerb, testerKerb };
+    UserGroupInformation[] simpleTestRenewers =
+        { owner, other, ownerKerb, otherKerb };
+    for (final UserGroupInformation tokOwner : simpleTestOwners) {
+      for (final UserGroupInformation tokRenewer : simpleTestRenewers) {
+        try {
+          tester.doAs(new PrivilegedExceptionAction<Void>() {
+            @Override
+            public Void run() throws Exception {
+              try {
+                checkTokenCancellation(tokOwner, tokRenewer);
+                Assert.fail("We should not reach here; token owner = "
+                    + tokOwner.getUserName() + ", renewer = "
+                    + tokRenewer.getUserName());
+                return null;
+              } catch (YarnException ex) {
+                Assert.assertTrue(ex.getMessage().contains(
+                  tester.getUserName()
+                      + " is not authorized to cancel the token"));
+                return null;
+              }
+            }
+          });
+        } catch (Exception e) {
+          Assert.fail("Unexpected exception; " + e.getMessage());
+        }
+      }
+    }
+  }
+
+  private void checkTokenCancellation(UserGroupInformation owner,
+      UserGroupInformation renewer) throws IOException, YarnException {
+    RMContext rmContext = mock(RMContext.class);
+    final ClientRMService rmService =
+        new ClientRMService(rmContext, null, null, null, null, dtsm);
+    checkTokenCancellation(rmService, owner, renewer);
+  }
+
+  private void checkTokenCancellation(ClientRMService rmService,
+      UserGroupInformation owner, UserGroupInformation renewer)
+      throws IOException, YarnException {
+    RMDelegationTokenIdentifier tokenIdentifier =
+        new RMDelegationTokenIdentifier(new Text(owner.getUserName()),
+          new Text(renewer.getUserName()), null);
+    Token<?> token =
+        new Token<RMDelegationTokenIdentifier>(tokenIdentifier, dtsm);
+    org.apache.hadoop.yarn.api.records.Token dToken =
+        BuilderUtils.newDelegationToken(token.getIdentifier(), token.getKind()
+          .toString(), token.getPassword(), token.getService().toString());
+    CancelDelegationTokenRequest request =
+        Records.newRecord(CancelDelegationTokenRequest.class);
+    request.setDelegationToken(dToken);
+    rmService.cancelDelegationToken(request);
   }
 
   @Test (timeout = 30000)

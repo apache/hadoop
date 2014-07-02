@@ -328,6 +328,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2216 YARN-2065 AM cannot create new containers after restart
     (Jian He via stevel)
 
+    YARN-2232. Fixed ResourceManager to allow DelegationToken owners to be able
+    to cancel their own tokens in secure mode. (Varun Vasudev via vinodkv)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
