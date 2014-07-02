@@ -269,6 +269,18 @@ public class TestXAttrWithSnapshot {
   }
 
   /**
+   * Assert exception of removing xattr on read-only snapshot.
+   */
+  @Test
+  public void testRemoveXAttrSnapshotPath() throws Exception {
+    FileSystem.mkdirs(hdfs, path, FsPermission.createImmutable((short) 0700));
+    hdfs.setXAttr(path, name1, value1);
+    SnapshotTestHelper.createSnapshot(hdfs, path, snapshotName);
+    exception.expect(SnapshotAccessControlException.class);
+    hdfs.removeXAttr(snapshotPath, name1);
+  }
+
+  /**
    * Assert exception of setting xattr when exceeding quota.
    */
   @Test
