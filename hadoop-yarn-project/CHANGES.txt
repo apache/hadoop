@@ -33,6 +33,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2052. Embedded an epoch number in container id to ensure the uniqueness
     of container id after RM restarts. (Tsuyoshi OZAWA via jianhe)
 
+    YARN-1713. Added get-new-app and submit-app functionality to RM web services.
+    (Varun Vasudev via vinodkv)
+
   IMPROVEMENTS
 
     YARN-1479. Invalid NaN values in Hadoop REST API JSON response (Chen He via

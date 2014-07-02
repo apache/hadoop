@@ -18,44 +18,42 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
+import java.util.HashMap;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import org.apache.hadoop.yarn.api.records.Resource;
-
-@XmlRootElement
+@XmlRootElement(name = "credentials-info")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class ResourceInfo {
-  int memory;
-  int vCores;
-  
-  public ResourceInfo() {
+public class CredentialsInfo {
+
+  @XmlElementWrapper(name = "tokens")
+  HashMap<String, String> tokens;
+
+  @XmlElementWrapper(name = "secrets")
+  HashMap<String, String> secrets;
+
+  public CredentialsInfo() {
+    tokens = new HashMap<String, String>();
+    secrets = new HashMap<String, String>();
   }
 
-  public ResourceInfo(Resource res) {
-    memory = res.getMemory();
-    vCores = res.getVirtualCores();
+  public HashMap<String, String> getTokens() {
+    return tokens;
   }
 
-  public int getMemory() {
-    return memory;
+  public HashMap<String, String> getSecrets() {
+    return secrets;
   }
 
-  public int getvCores() {
-    return vCores;
-  }
-  
-  @Override
-  public String toString() {
-    return "<memory:" + memory + ", vCores:" + vCores + ">";
+  public void setTokens(HashMap<String, String> tokens) {
+    this.tokens = tokens;
   }
 
-  public void setMemory(int memory) {
-    this.memory = memory;
+  public void setSecrets(HashMap<String, String> secrets) {
+    this.secrets = secrets;
   }
 
-  public void setvCores(int vCores) {
-    this.vCores = vCores;
-  }
 }
