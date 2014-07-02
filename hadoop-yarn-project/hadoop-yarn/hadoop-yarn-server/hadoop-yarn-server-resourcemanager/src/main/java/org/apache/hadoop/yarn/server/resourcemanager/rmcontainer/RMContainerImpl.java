@@ -155,6 +155,7 @@ public class RMContainerImpl implements RMContainer {
   private long creationTime;
   private long finishTime;
   private ContainerStatus finishedStatus;
+  private boolean isAMContainer;
 
   public RMContainerImpl(Container container,
       ApplicationAttemptId appAttemptId, NodeId nodeId, String user,
@@ -176,6 +177,7 @@ public class RMContainerImpl implements RMContainer {
     this.rmContext = rmContext;
     this.eventHandler = rmContext.getDispatcher().getEventHandler();
     this.containerAllocationExpirer = rmContext.getContainerAllocationExpirer();
+    this.isAMContainer = false;
     
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();
@@ -311,6 +313,25 @@ public class RMContainerImpl implements RMContainer {
   @Override
   public String toString() {
     return containerId.toString();
+  }
+  
+  @Override
+  public boolean isAMContainer() {
+    try {
+      readLock.lock();
+      return isAMContainer;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  public void setAMContainer(boolean isAMContainer) {
+    try {
+      writeLock.lock();
+      this.isAMContainer = isAMContainer;
+    } finally {
+      writeLock.unlock();
+    }
   }
   
   @Override
@@ -490,5 +511,4 @@ public class RMContainerImpl implements RMContainer {
     }
     return containerReport;
   }
-
 }

@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerRecoverEvent;
@@ -242,6 +243,20 @@ public abstract class AbstractYarnScheduler
 
       // recover scheduler attempt
       schedulerAttempt.recoverContainer(rmContainer);
+            
+      // set master container for the current running AMContainer for this
+      // attempt.
+      RMAppAttempt appAttempt = rmApp.getCurrentAppAttempt();
+      if (appAttempt != null) {
+        Container masterContainer = appAttempt.getMasterContainer();
+
+        // Mark current running AMContainer's RMContainer based on the master
+        // container ID stored in AppAttempt.
+        if (masterContainer != null
+            && masterContainer.getId().equals(rmContainer.getContainerId())) {
+          ((RMContainerImpl)rmContainer).setAMContainer(true);
+        }
+      }
     }
   }
 

@@ -71,5 +71,7 @@ public interface RMContainer extends EventHandler<RMContainerEvent> {
   ContainerState getContainerState();
   
   ContainerReport createContainerReport();
+  
+  boolean isAMContainer();
 
 }
