@@ -55,10 +55,6 @@ Release 2.5.0 - UNRELEASED
     (Varun Vasudev via vinodkv)
 
   IMPROVEMENTS
-	
-	YARN-2022 Preempting an Application Master container can be kept as least priority
-	when multiple applications are marked for preemption by 
-	ProportionalCapacityPreemptionPolicy (Sunil G via mayank)
 
     YARN-1479. Invalid NaN values in Hadoop REST API JSON response (Chen He via
     jeagles)
@@ -214,6 +210,10 @@ Release 2.5.0 - UNRELEASED
     YARN-2204. Explicitly enable vmem check in
     TestContainersMonitor#testContainerKillOnMemoryOverflow.
     (Anubhav Dhoot via kasha)
+
+    YARN-2022. Preempting an Application Master container can be kept as least priority
+    when multiple applications are marked for preemption by 
+    ProportionalCapacityPreemptionPolicy (Sunil G via mayank)
 
     YARN-2241. ZKRMStateStore: On startup, show nicer messages if znodes already 
     exist. (Robert Kanter via kasha)
