@@ -487,6 +487,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6612. MiniDFSNNTopology#simpleFederatedTopology(int)
     always hardcode nameservice ID. (Juan Yu via wang)
 
+    HDFS-6614. shorten TestPread run time with a smaller retry timeout setting.
+    (Liang Xie via cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
