@@ -26,6 +26,7 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -57,6 +59,7 @@ public class TestXAttrWithSnapshot {
   private static int pathCount = 0;
   private static Path path, snapshotPath;
   private static String snapshotName;
+  private final int SUCCESS = 0;
   // XAttrs
   private static final String name1 = "user.a1";
   private static final byte[] value1 = { 0x31, 0x32, 0x33 };
@@ -349,6 +352,26 @@ public class TestXAttrWithSnapshot {
 
     exception.expect(NSQuotaExceededException.class);
     hdfs.removeXAttr(filePath, name1);
+  }
+
+  /**
+   * Test that users can copy a snapshot while preserving its xattrs.
+   */
+  @Test (timeout = 120000)
+  public void testCopySnapshotShouldPreserveXAttrs() throws Exception {
+    FileSystem.mkdirs(hdfs, path, FsPermission.createImmutable((short) 0700));
+    hdfs.setXAttr(path, name1, value1);
+    hdfs.setXAttr(path, name2, value2);
+    SnapshotTestHelper.createSnapshot(hdfs, path, snapshotName);
+    Path snapshotCopy = new Path(path.toString() + "-copy");
+    String[] argv = new String[] { "-cp", "-px", snapshotPath.toUri().toString(),
+        snapshotCopy.toUri().toString() };
+    int ret = ToolRunner.run(new FsShell(conf), argv);
+    assertEquals("cp -px is not working on a snapshot", SUCCESS, ret);
+
+    Map<String, byte[]> xattrs = hdfs.getXAttrs(snapshotCopy);
+    assertArrayEquals(value1, xattrs.get(name1));
+    assertArrayEquals(value2, xattrs.get(name2));
   }
 
   /**

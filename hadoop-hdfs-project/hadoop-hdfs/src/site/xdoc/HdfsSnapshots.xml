@@ -97,7 +97,9 @@
     <li>Listing the files in snapshot <code>s0</code>:
       <source>hdfs dfs -ls /foo/.snapshot/s0</source></li>
     <li>Copying a file from snapshot <code>s0</code>:
-      <source>hdfs dfs -cp /foo/.snapshot/s0/bar /tmp</source></li>
+      <source>hdfs dfs -cp -ptopax /foo/.snapshot/s0/bar /tmp</source>
+      <p>Note that this example uses the preserve option to preserve
+         timestamps, ownership, permission, ACLs and XAttrs.</p></li>
   </ul>
   </subsection>
   </section>
