@@ -820,6 +820,7 @@ public class TestRMAppAttemptTransitions {
       applicationAttempt.getAppAttemptState());
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
     verifyApplicationAttemptFinished(RMAppAttemptState.FAILED);
+    verifyAMCrashAtAllocatedDiagnosticInfo(applicationAttempt.getDiagnostics());
   }
   
   @Test
@@ -1235,6 +1236,13 @@ public class TestRMAppAttemptTransitions {
       applicationAttempt.getAppAttemptState());
     assertFalse(transferStateFromPreviousAttempt);
     verifyApplicationAttemptFinished(RMAppAttemptState.FAILED);
+  }
+
+  private void verifyAMCrashAtAllocatedDiagnosticInfo(String diagnostics) {
+    assertTrue("Diagnostic information does not contain application proxy URL",
+      diagnostics.contains(applicationAttempt.getWebProxyBase()));
+    assertTrue("Diagnostic information does not point the logs to the users",
+      diagnostics.contains("logs"));
   }
 
   private void verifyTokenCount(ApplicationAttemptId appAttemptId, int count) {

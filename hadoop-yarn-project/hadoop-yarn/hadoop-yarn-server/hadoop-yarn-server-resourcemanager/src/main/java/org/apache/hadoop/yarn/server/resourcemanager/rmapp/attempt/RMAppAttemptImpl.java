@@ -1273,14 +1273,14 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     this.amContainerExitStatus = status.getExitStatus();
   }
 
-  private static String getAMContainerCrashedDiagnostics(
+  private String getAMContainerCrashedDiagnostics(
       RMAppAttemptContainerFinishedEvent finishEvent) {
     ContainerStatus status = finishEvent.getContainerStatus();
     String diagnostics =
         "AM Container for " + finishEvent.getApplicationAttemptId()
-            + " exited with " + " exitCode: " + status.getExitStatus()
-            + " due to: " + status.getDiagnostics() + "."
-            + "Failing this attempt.";
+        + " exited with " + " exitCode: " + status.getExitStatus() + ". "
+        + "Check application tracking page: " + this.getTrackingUrl()
+        + " . Then, click on links to logs of each attempt for detailed output. ";
     return diagnostics;
   }
 
