@@ -18,6 +18,18 @@ Trunk - Unreleased
     YARN-2216 TestRMApplicationHistoryWriter sometimes fails in trunk.
     (Zhijie Shen via xgong)
 
+Release 2.6.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
