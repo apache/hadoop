@@ -81,6 +81,27 @@ Maven build goals:
     the final tar file. This option requires that -Dsnappy.lib is also given,
     and it ignores the -Dsnappy.prefix option.
 
+ OpenSSL build options:
+
+   OpenSSL includes a crypto library that can be utilized by the native code.
+   It is currently an optional component, meaning that Hadoop can be built with
+   or without this dependency.
+
+  * Use -Drequire.openssl to fail the build if libcrypto.so is not found.
+    If this option is not specified and the openssl library is missing,
+    we silently build a version of libhadoop.so that cannot make use of
+    openssl. This option is recommended if you plan on making use of openssl 
+    and want to get more repeatable builds.
+  * Use -Dopenssl.prefix to specify a nonstandard location for the libcrypto
+    header files and library files. You do not need this option if you have
+    installed openssl using a package manager.
+  * Use -Dopenssl.lib to specify a nonstandard location for the libcrypto library
+    files. Similarly to openssl.prefix, you do not need this option if you have
+    installed openssl using a package manager.
+  * Use -Dbundle.openssl to copy the contents of the openssl.lib directory into
+    the final tar file. This option requires that -Dopenssl.lib is also given,
+    and it ignores the -Dopenssl.prefix option.
+
    Tests options:
 
   * Use -DskipTests to skip tests when running the following Maven goals:

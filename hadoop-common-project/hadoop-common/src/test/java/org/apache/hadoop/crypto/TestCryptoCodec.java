@@ -17,38 +17,165 @@
  */
 package org.apache.hadoop.crypto;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.junit.AfterClass;
+import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.RandomDatum;
+import org.apache.hadoop.util.NativeCodeLoader;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestCryptoCodec {
-  private static CryptoCodec codec;
+  private static final Log LOG= LogFactory.getLog(TestCryptoCodec.class);
+  private static final byte[] key = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 
+    0x07, 0x08, 0x09, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16};
+  private static final byte[] iv = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 
+    0x07, 0x08, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
+  private static final int bufferSize = 4096;
   
-  @BeforeClass
-  public static void init() throws Exception {
-    Configuration conf = new Configuration();
-    codec = CryptoCodec.getInstance(conf);
-  }
-  
-  @AfterClass
-  public static void shutdown() throws Exception {
-  }
+  private Configuration conf = new Configuration();
+  private int count = 10000;
+  private int seed = new Random().nextInt();
   
   @Test(timeout=120000)
-  public void testSecureRandom() throws Exception {
-    // len = 16
-    checkSecureRandom(16);
-    
-    // len = 32
-    checkSecureRandom(32);
-    
-    // len = 128
-    checkSecureRandom(128);
+  public void testJceAesCtrCryptoCodec() throws Exception {
+    cryptoCodecTest(conf, seed, 0, 
+        "org.apache.hadoop.crypto.JceAesCtrCryptoCodec");
+    cryptoCodecTest(conf, seed, count, 
+        "org.apache.hadoop.crypto.JceAesCtrCryptoCodec");
   }
   
-  private void checkSecureRandom(int len) {
+  @Test(timeout=1200000)
+  public void testOpensslAesCtrCryptoCodec() throws Exception {
+    if (NativeCodeLoader.buildSupportsOpenssl()) {
+      Assert.assertTrue(OpensslCipher.isNativeCodeLoaded());
+    }
+    if (OpensslCipher.isNativeCodeLoaded()) {
+      cryptoCodecTest(conf, seed, 0, 
+          "org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec");
+      cryptoCodecTest(conf, seed, count, 
+          "org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec");
+    }
+  }
+  
+  private void cryptoCodecTest(Configuration conf, int seed, int count, 
+      String codecClass) throws IOException, GeneralSecurityException {
+    CryptoCodec codec = null;
+    try {
+      codec = (CryptoCodec)ReflectionUtils.newInstance(
+          conf.getClassByName(codecClass), conf);
+    } catch (ClassNotFoundException cnfe) {
+      throw new IOException("Illegal crypto codec!");
+    }
+    LOG.info("Created a Codec object of type: " + codecClass);
+    
+    // Generate data
+    DataOutputBuffer data = new DataOutputBuffer();
+    RandomDatum.Generator generator = new RandomDatum.Generator(seed);
+    for(int i = 0; i < count; ++i) {
+      generator.next();
+      RandomDatum key = generator.getKey();
+      RandomDatum value = generator.getValue();
+      
+      key.write(data);
+      value.write(data);
+    }
+    LOG.info("Generated " + count + " records");
+    
+    // Encrypt data
+    DataOutputBuffer encryptedDataBuffer = new DataOutputBuffer();
+    CryptoOutputStream out = new CryptoOutputStream(encryptedDataBuffer, 
+        codec, bufferSize, key, iv);
+    out.write(data.getData(), 0, data.getLength());
+    out.flush();
+    out.close();
+    LOG.info("Finished encrypting data");
+    
+    // Decrypt data
+    DataInputBuffer decryptedDataBuffer = new DataInputBuffer();
+    decryptedDataBuffer.reset(encryptedDataBuffer.getData(), 0, 
+        encryptedDataBuffer.getLength());
+    CryptoInputStream in = new CryptoInputStream(decryptedDataBuffer, 
+        codec, bufferSize, key, iv);
+    DataInputStream dataIn = new DataInputStream(new BufferedInputStream(in));
+    
+    // Check
+    DataInputBuffer originalData = new DataInputBuffer();
+    originalData.reset(data.getData(), 0, data.getLength());
+    DataInputStream originalIn = new DataInputStream(
+        new BufferedInputStream(originalData));
+    
+    for(int i=0; i < count; ++i) {
+      RandomDatum k1 = new RandomDatum();
+      RandomDatum v1 = new RandomDatum();
+      k1.readFields(originalIn);
+      v1.readFields(originalIn);
+      
+      RandomDatum k2 = new RandomDatum();
+      RandomDatum v2 = new RandomDatum();
+      k2.readFields(dataIn);
+      v2.readFields(dataIn);
+      assertTrue("original and encrypted-then-decrypted-output not equal",
+                 k1.equals(k2) && v1.equals(v2));
+      
+      // original and encrypted-then-decrypted-output have the same hashCode
+      Map<RandomDatum, String> m = new HashMap<RandomDatum, String>();
+      m.put(k1, k1.toString());
+      m.put(v1, v1.toString());
+      String result = m.get(k2);
+      assertEquals("k1 and k2 hashcode not equal", result, k1.toString());
+      result = m.get(v2);
+      assertEquals("v1 and v2 hashcode not equal", result, v1.toString());
+    }
+
+    // Decrypt data byte-at-a-time
+    originalData.reset(data.getData(), 0, data.getLength());
+    decryptedDataBuffer.reset(encryptedDataBuffer.getData(), 0, 
+        encryptedDataBuffer.getLength());
+    in = new CryptoInputStream(decryptedDataBuffer, 
+        codec, bufferSize, key, iv);
+
+    // Check
+    originalIn = new DataInputStream(new BufferedInputStream(originalData));
+    int expected;
+    do {
+      expected = originalIn.read();
+      assertEquals("Decrypted stream read by byte does not match",
+        expected, in.read());
+    } while (expected != -1);
+
+    LOG.info("SUCCESS! Completed checking " + count + " records");
+    
+    // Check secure random generator
+    testSecureRandom(codec);
+  }
+  
+  /** Test secure random generator */
+  private void testSecureRandom(CryptoCodec codec) {
+    // len = 16
+    checkSecureRandom(codec, 16);
+    // len = 32
+    checkSecureRandom(codec, 32);
+    // len = 128
+    checkSecureRandom(codec, 128);
+  }
+  
+  private void checkSecureRandom(CryptoCodec codec, int len) {
     byte[] rand = new byte[len];
     byte[] rand1 = new byte[len];
     codec.generateSecureRandom(rand);
@@ -56,28 +183,6 @@ public class TestCryptoCodec {
     
     Assert.assertEquals(len, rand.length);
     Assert.assertEquals(len, rand1.length);
-    Assert.assertFalse(bytesArrayEquals(rand, rand1));
-  }
-  
-  private boolean bytesArrayEquals(byte[] expected, byte[] actual) {
-    if ((expected == null  && actual != null) || 
-        (expected != null && actual == null)) {
-      return false;
-    }
-    if (expected == null && actual == null) {
-      return true;
-    }
-    
-    if (expected.length != actual.length) {
-      return false;
-    }
-    
-    for (int i = 0; i < expected.length; i++) {
-      if (expected[i] != actual[i]) {
-        return false;
-      }
-    }
-    
-    return true;
+    Assert.assertFalse(Arrays.equals(rand, rand1));
   }
 }

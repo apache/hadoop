@@ -22,6 +22,7 @@ import static org.junit.Assert.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.crypto.OpensslCipher;
 import org.apache.hadoop.io.compress.Lz4Codec;
 import org.apache.hadoop.io.compress.SnappyCodec;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
@@ -53,6 +54,9 @@ public class TestNativeCodeLoader {
     assertFalse(ZlibFactory.getLibraryName().isEmpty());
     if (NativeCodeLoader.buildSupportsSnappy()) {
       assertFalse(SnappyCodec.getLibraryName().isEmpty());
+    }
+    if (NativeCodeLoader.buildSupportsOpenssl()) {
+      assertFalse(OpensslCipher.getLibraryName().isEmpty());
     }
     assertFalse(Lz4Codec.getLibraryName().isEmpty());
     LOG.info("TestNativeCodeLoader: libhadoop.so is loaded.");

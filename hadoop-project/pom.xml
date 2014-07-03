@@ -1031,6 +1031,7 @@
         <!-- attempt to open a file at this path. -->
         <java.security.egd>file:/dev/urandom</java.security.egd>
         <bundle.snappy.in.bin>true</bundle.snappy.in.bin>
+        <bundle.openssl.in.bin>true</bundle.openssl.in.bin>
       </properties>
       <build>
         <plugins>
@@ -1041,6 +1042,7 @@
               <environmentVariables>
                 <!-- Specify where to look for the native DLL on Windows -->
                 <PATH>${env.PATH};${hadoop.common.build.dir}/bin;${snappy.lib}</PATH>
+                <PATH>${env.PATH};${hadoop.common.build.dir}/bin;${openssl.lib}</PATH>
               </environmentVariables>
             </configuration>
           </plugin>

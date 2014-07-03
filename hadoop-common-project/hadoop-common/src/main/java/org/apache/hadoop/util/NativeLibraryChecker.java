@@ -20,6 +20,7 @@ package org.apache.hadoop.util;
 
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.OpensslCipher;
 import org.apache.hadoop.io.compress.Lz4Codec;
 import org.apache.hadoop.io.compress.SnappyCodec;
 import org.apache.hadoop.io.compress.bzip2.Bzip2Factory;
@@ -57,12 +58,14 @@ public class NativeLibraryChecker {
     boolean nativeHadoopLoaded = NativeCodeLoader.isNativeCodeLoaded();
     boolean zlibLoaded = false;
     boolean snappyLoaded = false;
+    boolean opensslLoaded = false;
     // lz4 is linked within libhadoop
     boolean lz4Loaded = nativeHadoopLoaded;
     boolean bzip2Loaded = Bzip2Factory.isNativeBzip2Loaded(conf);
     String hadoopLibraryName = "";
     String zlibLibraryName = "";
     String snappyLibraryName = "";
+    String opensslLibraryName = "";
     String lz4LibraryName = "";
     String bzip2LibraryName = "";
     if (nativeHadoopLoaded) {
@@ -76,6 +79,11 @@ public class NativeLibraryChecker {
       if (snappyLoaded && NativeCodeLoader.buildSupportsSnappy()) {
         snappyLibraryName = SnappyCodec.getLibraryName();
       }
+      opensslLoaded = NativeCodeLoader.buildSupportsOpenssl() &&
+          OpensslCipher.isNativeCodeLoaded();
+      if (opensslLoaded) {
+        opensslLibraryName = OpensslCipher.getLibraryName();
+      }
       if (lz4Loaded) {
         lz4LibraryName = Lz4Codec.getLibraryName();
       }
@@ -84,11 +92,12 @@ public class NativeLibraryChecker {
       }
     }
     System.out.println("Native library checking:");
-    System.out.printf("hadoop: %b %s\n", nativeHadoopLoaded, hadoopLibraryName);
-    System.out.printf("zlib:   %b %s\n", zlibLoaded, zlibLibraryName);
-    System.out.printf("snappy: %b %s\n", snappyLoaded, snappyLibraryName);
-    System.out.printf("lz4:    %b %s\n", lz4Loaded, lz4LibraryName);
-    System.out.printf("bzip2:  %b %s\n", bzip2Loaded, bzip2LibraryName);
+    System.out.printf("hadoop:  %b %s\n", nativeHadoopLoaded, hadoopLibraryName);
+    System.out.printf("zlib:    %b %s\n", zlibLoaded, zlibLibraryName);
+    System.out.printf("snappy:  %b %s\n", snappyLoaded, snappyLibraryName);
+    System.out.printf("lz4:     %b %s\n", lz4Loaded, lz4LibraryName);
+    System.out.printf("bzip2:   %b %s\n", bzip2Loaded, bzip2LibraryName);
+    System.out.printf("openssl: %b %s\n", opensslLoaded, opensslLibraryName);
     if ((!nativeHadoopLoaded) ||
         (checkAll && !(zlibLoaded && snappyLoaded && lz4Loaded && bzip2Loaded))) {
       // return 1 to indicated check failed

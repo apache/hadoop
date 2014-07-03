@@ -10,6 +10,9 @@ fs-encryption (Unreleased)
 
   IMPROVEMENTS
 
+    HADOOP-10693. Implementation of AES-CTR CryptoCodec using JNI to OpenSSL
+    (hitliuyi via cmccabe)
+
     HDFS-6387. HDFS CLI admin tool for creating & deleting an
     encryption zone. (clamb)
 

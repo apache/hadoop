@@ -35,7 +35,7 @@ public abstract class CryptoCodec implements Configurable {
   
   public static CryptoCodec getInstance(Configuration conf) {
     final Class<? extends CryptoCodec> klass = conf.getClass(
-        HADOOP_SECURITY_CRYPTO_CODEC_CLASS_KEY, JCEAESCTRCryptoCodec.class, 
+        HADOOP_SECURITY_CRYPTO_CODEC_CLASS_KEY, JceAesCtrCryptoCodec.class, 
         CryptoCodec.class);
     return ReflectionUtils.newInstance(klass, conf);
   }
