@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3native;
 
 import java.io.BufferedOutputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -37,15 +38,16 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BufferedFSInputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -55,6 +57,8 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.util.Progressable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * <p>
@@ -81,8 +85,8 @@ import org.apache.hadoop.util.Progressable;
 @InterfaceStability.Stable
 public class NativeS3FileSystem extends FileSystem {
   
-  public static final Log LOG = 
-    LogFactory.getLog(NativeS3FileSystem.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(NativeS3FileSystem.class);
   
   private static final String FOLDER_SUFFIX = "_$folder$";
   static final String PATH_DELIMITER = Path.SEPARATOR;
@@ -97,6 +101,7 @@ public class NativeS3FileSystem extends FileSystem {
     private long pos = 0;
     
     public NativeS3FsInputStream(NativeFileSystemStore store, Statistics statistics, InputStream in, String key) {
+      Preconditions.checkNotNull(in, "Null input stream");
       this.store = store;
       this.statistics = statistics;
       this.in = in;
@@ -105,13 +110,20 @@ public class NativeS3FileSystem extends FileSystem {
     
     @Override
     public synchronized int read() throws IOException {
-      int result = -1;
+      int result;
       try {
         result = in.read();
       } catch (IOException e) {
-        LOG.info("Received IOException while reading '" + key + "', attempting to reopen.");
-        seek(pos);
-        result = in.read();
+        LOG.info("Received IOException while reading '{}', attempting to reopen",
+            key);
+        LOG.debug("{}", e, e);
+        try {
+          seek(pos);
+          result = in.read();
+        } catch (EOFException eof) {
+          LOG.debug("EOF on input stream read: {}", eof, eof);
+          result = -1;
+        }
       } 
       if (result != -1) {
         pos++;
@@ -124,12 +136,17 @@ public class NativeS3FileSystem extends FileSystem {
     @Override
     public synchronized int read(byte[] b, int off, int len)
       throws IOException {
-      
+      if (in == null) {
+        throw new EOFException("Cannot read closed stream");
+      }
       int result = -1;
       try {
         result = in.read(b, off, len);
+      } catch (EOFException eof) {
+        throw eof;
       } catch (IOException e) {
-        LOG.info("Received IOException while reading '" + key + "', attempting to reopen.");
+        LOG.info( "Received IOException while reading '{}'," +
+                  " attempting to reopen.", key);
         seek(pos);
         result = in.read(b, off, len);
       }
@@ -143,17 +160,53 @@ public class NativeS3FileSystem extends FileSystem {
     }
 
     @Override
-    public void close() throws IOException {
-      in.close();
+    public synchronized void close() throws IOException {
+      closeInnerStream();
+    }
+
+    /**
+     * Close the inner stream if not null. Even if an exception
+     * is raised during the close, the field is set to null
+     * @throws IOException if raised by the close() operation.
+     */
+    private void closeInnerStream() throws IOException {
+      if (in != null) {
+        try {
+          in.close();
+        } finally {
+          in = null;
+        }
+      }
+    }
+
+    /**
+     * Update inner stream with a new stream and position
+     * @param newStream new stream -must not be null
+     * @param newpos new position
+     * @throws IOException IO exception on a failure to close the existing
+     * stream.
+     */
+    private synchronized void updateInnerStream(InputStream newStream, long newpos) throws IOException {
+      Preconditions.checkNotNull(newStream, "Null newstream argument");
+      closeInnerStream();
+      in = newStream;
+      this.pos = newpos;
     }
 
     @Override
-    public synchronized void seek(long pos) throws IOException {
-      in.close();
-      LOG.info("Opening key '" + key + "' for reading at position '" + pos + "'");
-      in = store.retrieve(key, pos);
-      this.pos = pos;
+    public synchronized void seek(long newpos) throws IOException {
+      if (newpos < 0) {
+        throw new EOFException(
+            FSExceptionMessages.NEGATIVE_SEEK);
+      }
+      if (pos != newpos) {
+        // the seek is attempting to move the current position
+        LOG.debug("Opening key '{}' for reading at position '{}", key, newpos);
+        InputStream newStream = store.retrieve(key, newpos);
+        updateInnerStream(newStream, newpos);
+      }
     }
+
     @Override
     public synchronized long getPos() throws IOException {
       return pos;
@@ -214,7 +267,7 @@ public class NativeS3FileSystem extends FileSystem {
       }
 
       backupStream.close();
-      LOG.info("OutputStream for key '" + key + "' closed. Now beginning upload");
+      LOG.info("OutputStream for key '{}' closed. Now beginning upload", key);
       
       try {
         byte[] md5Hash = digest == null ? null : digest.digest();
@@ -226,7 +279,7 @@ public class NativeS3FileSystem extends FileSystem {
         super.close();
         closed = true;
       } 
-      LOG.info("OutputStream for key '" + key + "' upload complete");
+      LOG.info("OutputStream for key '{}' upload complete", key);
     }
 
     @Override
@@ -339,7 +392,7 @@ public class NativeS3FileSystem extends FileSystem {
       Progressable progress) throws IOException {
 
     if (exists(f) && !overwrite) {
-      throw new IOException("File already exists:"+f);
+      throw new FileAlreadyExistsException("File already exists: " + f);
     }
     
     if(LOG.isDebugEnabled()) {
@@ -367,7 +420,7 @@ public class NativeS3FileSystem extends FileSystem {
     String key = pathToKey(absolutePath);
     if (status.isDirectory()) {
       if (!recurse && listStatus(f).length > 0) {
-        throw new IOException("Can not delete " + f + " at is a not empty directory and recurse option is false");
+        throw new IOException("Can not delete " + f + " as is a not empty directory and recurse option is false");
       }
 
       createParent(f);
@@ -538,7 +591,7 @@ public class NativeS3FileSystem extends FileSystem {
     try {
       FileStatus fileStatus = getFileStatus(f);
       if (fileStatus.isFile()) {
-        throw new IOException(String.format(
+        throw new FileAlreadyExistsException(String.format(
             "Can't make directory for path '%s' since it is a file.", f));
 
       }
@@ -556,7 +609,7 @@ public class NativeS3FileSystem extends FileSystem {
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
     FileStatus fs = getFileStatus(f); // will throw if the file doesn't exist
     if (fs.isDirectory()) {
-      throw new IOException("'" + f + "' is a directory");
+      throw new FileNotFoundException("'" + f + "' is a directory");
     }
     LOG.info("Opening '" + f + "' for reading");
     Path absolutePath = makeAbsolute(f);

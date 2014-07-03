@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs;
 
+import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -318,8 +319,8 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
 
     @Override
     public synchronized void seek(long pos) throws IOException {
-      if(pos>getFileLength()) {
-        throw new IOException("Cannot seek after EOF");
+      if (pos > getFileLength()) {
+        throw new EOFException("Cannot seek after EOF");
       }
       super.seek(pos);
     }
