@@ -16,18 +16,16 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.fs.swift.exceptions;
+package org.apache.hadoop.fs.swift.contract;
 
-/**
- * Exception raised when trying to create a file that already exists
- * and the overwrite flag is set to false.
- */
-public class SwiftPathExistsException extends SwiftException {
-  public SwiftPathExistsException(String message) {
-    super(message);
-  }
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.contract.AbstractContractDeleteTest;
+import org.apache.hadoop.fs.contract.AbstractFSContract;
 
-  public SwiftPathExistsException(String message, Throwable cause) {
-    super(message, cause);
+public class TestSwiftContractDelete extends AbstractContractDeleteTest {
+
+  @Override
+  protected AbstractFSContract createContract(Configuration conf) {
+    return new SwiftContract(conf);
   }
 }

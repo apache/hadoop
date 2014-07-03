@@ -16,28 +16,27 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.fs.swift.exceptions;
+package org.apache.hadoop.fs.swift.contract;
 
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.contract.AbstractContractOpenTest;
+import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 
-/**
- * Exception raised when an operation is meant to work on a directory, but
- * the target path is not a directory
- */
-public class SwiftNotDirectoryException extends SwiftException {
-  private final Path path;
+public class TestSwiftContractOpen extends AbstractContractOpenTest {
 
-  public SwiftNotDirectoryException(Path path) {
-    this(path, "");
+  @Override
+  protected AbstractFSContract createContract(Configuration conf) {
+    return new SwiftContract(conf);
   }
 
-  public SwiftNotDirectoryException(Path path,
-                                    String message) {
-    super(path.toString() + message);
-    this.path = path;
+  @Override
+  public void testOpenReadDir() throws Throwable {
+    ContractTestUtils.skip("Skipping object-store quirk");
   }
 
-  public Path getPath() {
-    return path;
+  @Override
+  public void testOpenReadDirWithChild() throws Throwable {
+    ContractTestUtils.skip("Skipping object-store quirk");
   }
 }

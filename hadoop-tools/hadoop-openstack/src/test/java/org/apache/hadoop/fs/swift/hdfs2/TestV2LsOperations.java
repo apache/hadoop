@@ -111,7 +111,7 @@ public class TestV2LsOperations extends SwiftFileSystemBaseTest {
   @Test(timeout = SWIFT_TEST_TIMEOUT)
   public void testListFilesSubDir() throws Throwable {
     createTestSubdirs();
-    Path dir = path("/test");
+    Path dir = path("/test/subdir");
     Path child = new Path(dir, "text.txt");
     SwiftTestUtils.writeTextFile(fs, child, "text", false);
     assertListFilesFinds(fs, dir, child, false);
@@ -120,7 +120,7 @@ public class TestV2LsOperations extends SwiftFileSystemBaseTest {
   @Test(timeout = SWIFT_TEST_TIMEOUT)
   public void testListFilesRecursive() throws Throwable {
     createTestSubdirs();
-    Path dir = path("/test");
+    Path dir = path("/test/recursive");
     Path child = new Path(dir, "hadoop/a/a.txt");
     SwiftTestUtils.writeTextFile(fs, child, "text", false);
     assertListFilesFinds(fs, dir, child, true);
