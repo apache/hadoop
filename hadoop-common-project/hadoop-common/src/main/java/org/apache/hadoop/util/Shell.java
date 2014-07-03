@@ -621,7 +621,7 @@ abstract public class Shell {
    * This is an IOException with exit code added.
    */
   public static class ExitCodeException extends IOException {
-    int exitCode;
+    private final int exitCode;
     
     public ExitCodeException(int exitCode, String message) {
       super(message);
@@ -630,6 +630,16 @@ abstract public class Shell {
     
     public int getExitCode() {
       return exitCode;
+    }
+
+    @Override
+    public String toString() {
+      final StringBuilder sb =
+          new StringBuilder("ExitCodeException ");
+      sb.append("exitCode=").append(exitCode)
+        .append(": ");
+      sb.append(super.getMessage());
+      return sb.toString();
     }
   }
   
