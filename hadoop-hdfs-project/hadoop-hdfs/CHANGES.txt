@@ -256,6 +256,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6620. Snapshot docs should specify about preserve options with cp command
     (Stephen Chu via umamahesh)
 
+    HDFS-6493. Change dfs.namenode.startup.delay.block.deletion to second
+    instead of millisecond. (Juan Yu via wang)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)

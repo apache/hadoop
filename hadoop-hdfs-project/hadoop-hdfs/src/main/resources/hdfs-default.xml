@@ -1996,4 +1996,16 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.namenode.startup.delay.block.deletion.sec</name>
+  <value>0</value>
+  <description>The delay in seconds at which we will pause the blocks deletion
+    after Namenode startup. By default it's disabled.
+    In the case a directory has large number of directories and files are
+    deleted, suggested delay is one hour to give the administrator enough time
+    to notice large number of pending deletion blocks and take corrective
+    action.
+  </description>
+</property>
+
 </configuration>
