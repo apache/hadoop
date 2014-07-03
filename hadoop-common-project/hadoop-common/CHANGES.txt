@@ -512,6 +512,8 @@ Release 2.5.0 - UNRELEASED
     HADOOP-9495 Define behaviour of Seekable.seek(), write tests,
     fix all hadoop implementations for compliance
 
+    HADOOP-10312 Shell.ExitCodeException to have more useful toString (stevel)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -698,8 +700,6 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10710. hadoop.auth cookie is not properly constructed according to 
     RFC2109. (Juan Yu via tucu)
-
-    HADOOP-10312 Shell.ExitCodeException to have more useful toString (stevel)
 
 Release 2.4.1 - 2014-06-23 
 
