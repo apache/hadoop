@@ -259,27 +259,6 @@ public class HdfsAdmin {
   }
 
   /**
-   * Delete the encryption zone rooted at path. Path must refer to an existing,
-   * empty directory. Otherwise, an IOException is thrown. This method removes
-   * those extended attributes on the directory which indicate that it is part
-   * of an encryption zone. Following successful completion of this call, any
-   * new files created in the directory (or it's children) will not be
-   * encrypted. The directory is not removed by this method.
-   *
-   * @param path The path of the root of the encryption zone.
-   *
-   * @throws IOException if there was a general IO exception
-   *
-   * @throws AccessControlException if the caller does not have access to path
-   *
-   * @throws FileNotFoundException if the path does not exist
-   */
-  public void deleteEncryptionZone(Path path)
-    throws IOException, AccessControlException, FileNotFoundException {
-    dfs.deleteEncryptionZone(path);
-  }
-
-  /**
    * Return a list of all {@EncryptionZone}s in the HDFS hierarchy which are
    * visible to the caller. If the caller is the HDFS admin, then the returned
    * EncryptionZone instances will have the key id field filled in. If the

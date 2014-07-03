@@ -71,7 +71,6 @@
         <crypto-admin-command>-createZone -path /foo</crypto-admin-command>
       </test-commands>
       <cleanup-commands>
-        <crypto-admin-command>-deleteZone -path /foo</crypto-admin-command>
         <command>-fs NAMENODE -rmdir /foo</command>
       </cleanup-commands>
       <comparators>
@@ -90,7 +89,6 @@
         <crypto-admin-command>-createZone -path /foo</crypto-admin-command>
       </test-commands>
       <cleanup-commands>
-        <crypto-admin-command>-deleteZone -path /foo</crypto-admin-command>
         <command>-fs NAMENODE -rmdir /foo</command>
       </cleanup-commands>
       <comparators>
@@ -112,7 +110,6 @@
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /foo/bar</command>
-        <crypto-admin-command>-deleteZone -path /foo</crypto-admin-command>
         <command>-fs NAMENODE -rmdir /foo</command>
       </cleanup-commands>
       <comparators>
@@ -169,7 +166,6 @@
         <crypto-admin-command>-createZone -path /foo -keyId mykey</crypto-admin-command>
       </test-commands>
       <cleanup-commands>
-        <crypto-admin-command>-deleteZone -path /foo</crypto-admin-command>
         <command>-fs NAMENODE -rmdir /foo</command>
       </cleanup-commands>
       <comparators>
@@ -181,74 +177,13 @@
     </test>
 
     <test>
-      <description>Test failure of deleting an EZ passing a directory that doesn't exist.</description>
-      <test-commands>
-        <command>-fs NAMENODE -ls /</command>-
-        <crypto-admin-command>-deleteZone -path /foo</crypto-admin-command>
-      </test-commands>
-      <cleanup-commands>
-      </cleanup-commands>
-      <comparators>
-        <comparator>
-          <type>SubstringComparator</type>
-          <expected-output>Directory /foo is not the root of an encryption zone.</expected-output>
-        </comparator>
-      </comparators>
-    </test>
-
-    <test>
-      <description>Test failure of deleting an EZ which is not empty.</description>
-      <test-commands>
-        <command>-fs NAMENODE -mkdir /foo</command>
-        <command>-fs NAMENODE -ls /</command>-
-        <crypto-admin-command>-createZone -path /foo</crypto-admin-command>
-        <command>-fs NAMENODE -touchz /foo/bar</command>
-        <crypto-admin-command>-deleteZone -path /foo</crypto-admin-command>
-      </test-commands>
-      <cleanup-commands>
-        <command>-fs NAMENODE -rm /foo/bar</command>
-        <crypto-admin-command>-deleteZone -path /foo</crypto-admin-command>
-        <command>-fs NAMENODE -rmdir /foo</command>
-      </cleanup-commands>
-      <comparators>
-        <comparator>
-          <type>SubstringComparator</type>
-          <expected-output>Attempt to delete an encryption zone for a non-empty directory.</expected-output>
-        </comparator>
-      </comparators>
-    </test>
-
-    <test>
-      <description>Test failure of deleting an EZ on a subdir that is not the root of an EZ.</description>
-      <test-commands>
-        <command>-fs NAMENODE -mkdir /foo</command>
-        <command>-fs NAMENODE -ls /</command>-
-        <crypto-admin-command>-createZone -path /foo</crypto-admin-command>
-        <command>-fs NAMENODE -mkdir /foo/bar</command>
-        <crypto-admin-command>-deleteZone -path /foo/bar</crypto-admin-command>
-      </test-commands>
-      <cleanup-commands>
-        <command>-fs NAMENODE -rmdir /foo/bar</command>
-        <crypto-admin-command>-deleteZone -path /foo</crypto-admin-command>
-        <command>-fs NAMENODE -rmdir /foo</command>
-      </cleanup-commands>
-      <comparators>
-        <comparator>
-          <type>SubstringComparator</type>
-          <expected-output>Directory /foo/bar is not the root of an encryption zone.</expected-output>
-        </comparator>
-      </comparators>
-    </test>
-
-    <test>
-      <description>Test success of creating and deleting an encryption zone a few levels down.</description>
+      <description>Test success of creating an encryption zone a few levels down.</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /foo</command>
         <command>-fs NAMENODE -mkdir /foo/bar</command>
         <command>-fs NAMENODE -mkdir /foo/bar/baz</command>
         <command>-fs NAMENODE -ls /</command>-
         <crypto-admin-command>-createZone -path /foo/bar/baz</crypto-admin-command>
-        <crypto-admin-command>-deleteZone -path /foo/bar/baz</crypto-admin-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /foo/bar/baz</command>
@@ -258,7 +193,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Deleted encryption zone /foo/bar/baz</expected-output>
+          <expected-output>Added encryption zone /foo/bar/baz</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -276,8 +211,6 @@
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /src/subdir</command>
-        <crypto-admin-command>-deleteZone -path /src</crypto-admin-command>
-        <crypto-admin-command>-deleteZone -path /dst</crypto-admin-command>
         <command>-fs NAMENODE -rmdir /src</command>
         <command>-fs NAMENODE -rmdir /dst</command>
       </cleanup-commands>
@@ -299,7 +232,6 @@
         <command>-fs NAMENODE -mv /src /dst</command>-
       </test-commands>
       <cleanup-commands>
-        <crypto-admin-command>-deleteZone -path /dst</crypto-admin-command>
         <command>-fs NAMENODE -rmdir /src</command>
         <command>-fs NAMENODE -rmdir /dst</command>
       </cleanup-commands>
@@ -321,7 +253,6 @@
         <command>-fs NAMENODE -mv /src /dst</command>-
       </test-commands>
       <cleanup-commands>
-        <crypto-admin-command>-deleteZone -path /src</crypto-admin-command>
         <command>-fs NAMENODE -rmdir /src</command>
         <command>-fs NAMENODE -rmdir /dst</command>
       </cleanup-commands>
@@ -345,7 +276,6 @@
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /src/subdir2/subdir1</command>
         <command>-fs NAMENODE -rmdir /src/subdir2</command>
-        <crypto-admin-command>-deleteZone -path /src</crypto-admin-command>
         <command>-fs NAMENODE -rmdir /src</command>
       </cleanup-commands>
       <comparators>

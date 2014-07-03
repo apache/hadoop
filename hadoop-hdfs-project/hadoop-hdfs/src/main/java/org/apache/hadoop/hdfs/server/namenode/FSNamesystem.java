@@ -3650,6 +3650,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         checkPermission(pc, src, false, null, FsAction.WRITE, null,
             FsAction.ALL, true, false);
       }
+
+      final EncryptionZone ez = getEncryptionZoneForPath(src);
+      if (ez != null) {
+        encryptionZones.remove(src);
+      }
+
       long mtime = now();
       // Unlink the target directory from directory tree
       long filesRemoved = dir.delete(src, collectedBlocks, removedINodes,
@@ -8393,73 +8399,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return keyId;
   }
 
-  /**
-   * Delete the encryption zone on directory src.
-   *
-   * @param src the path of a directory which is the root of the encryption
-   * zone. The directory must be empty and must be marked as an encryption
-   * zone.
-   *
-   * @throws AccessControlException if the caller is not the superuser.
-   *
-   * @throws UnresolvedLinkException if the path can't be resolved.
-   *
-   * @throws SafeModeException if the Namenode is in safe mode.
-   */
-  void deleteEncryptionZone(final String src)
-    throws IOException, UnresolvedLinkException,
-      SafeModeException, AccessControlException {
-    final CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return; // Return previous response
-    }
-
-    boolean success = false;
-    try {
-      deleteEncryptionZoneInt(src, cacheEntry != null);
-      encryptionZones.remove(src);
-      success = true;
-    } catch (AccessControlException e) {
-      logAuditEvent(false, "deleteEncryptionZone", src);
-      throw e;
-    } finally {
-      RetryCache.setState(cacheEntry, success);
-    }
-  }
-
-  private void deleteEncryptionZoneInt(final String srcArg,
-    final boolean logRetryCache) throws IOException {
-    String src = srcArg;
-    HdfsFileStatus resultingStat = null;
-    checkSuperuserPrivilege();
-    checkOperation(OperationCategory.WRITE);
-    final byte[][] pathComponents =
-      FSDirectory.getPathComponentsForReservedPath(src);
-    writeLock();
-    try {
-      checkSuperuserPrivilege();
-      checkOperation(OperationCategory.WRITE);
-      checkNameNodeSafeMode("Cannot delete encryption zone on " + src);
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
-      final EncryptionZone ez = encryptionZones.get(src);
-      if (ez == null) {
-        throw new IOException("Directory " + src +
-          " is not the root of an encryption zone.");
-      }
-      final List<XAttr> removedXAttrs = dir.deleteEncryptionZone(src);
-      if (removedXAttrs != null && !removedXAttrs.isEmpty()) {
-        getEditLog().logRemoveXAttrs(src, removedXAttrs);
-      }
-      encryptionZones.remove(src);
-      resultingStat = getAuditFileInfo(src, false);
-    } finally {
-      writeUnlock();
-    }
-    getEditLog().logSync();
-    logAuditEvent(true, "deleteEncryptionZone", src, null, resultingStat);
-  }
-
   List<EncryptionZone> listEncryptionZones() throws IOException {
+
     boolean success = false;
     checkSuperuserPrivilege();
     checkOperation(OperationCategory.READ);

@@ -30,6 +30,8 @@ fs-encryption (Unreleased)
 
     HDFS-6605. Client server negotiation of cipher suite. (wang)
 
+    HDFS-6625. Remove the Delete Encryption Zone function (clamb)
+
   OPTIMIZATIONS
 
   BUG FIXES

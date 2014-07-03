@@ -41,13 +41,6 @@ message CreateEncryptionZoneRequestProto {
 message CreateEncryptionZoneResponseProto {
 }
 
-message DeleteEncryptionZoneRequestProto {
-  required string src = 1;
-}
-
-message DeleteEncryptionZoneResponseProto {
-}
-
 message ListEncryptionZonesRequestProto {
 }
 

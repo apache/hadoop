@@ -2848,17 +2848,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
     }
   }
 
-  public void deleteEncryptionZone(String src) throws IOException {
-    checkOpen();
-    try {
-      namenode.deleteEncryptionZone(src);
-    } catch (RemoteException re) {
-      throw re.unwrapRemoteException(AccessControlException.class,
-                                     SafeModeException.class,
-                                     UnresolvedPathException.class);
-    }
-  }
-
   public List<EncryptionZone> listEncryptionZones() throws IOException {
     checkOpen();
     try {

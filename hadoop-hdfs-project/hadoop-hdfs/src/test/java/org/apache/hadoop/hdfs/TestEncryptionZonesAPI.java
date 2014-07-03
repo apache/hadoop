@@ -85,7 +85,7 @@ public class TestEncryptionZonesAPI {
   }
 
   /** Test failure of Create EZ on a directory that doesn't exist. */
-  @Test(timeout = 30000)
+  @Test(timeout = 60000)
   public void testCreateEncryptionZoneDirectoryDoesntExist() throws Exception {
     final HdfsAdmin dfsAdmin =
       new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
@@ -98,7 +98,7 @@ public class TestEncryptionZonesAPI {
   }
 
   /** Test failure of Create EZ on a directory which is already an EZ. */
-  @Test(timeout = 30000)
+  @Test(timeout = 60000)
   public void testCreateEncryptionZoneWhichAlreadyExists()
     throws Exception {
     final HdfsAdmin dfsAdmin =
@@ -114,7 +114,7 @@ public class TestEncryptionZonesAPI {
   }
 
   /** Test success of Create EZ in which a key is created. */
-  @Test(timeout = 30000)
+  @Test(timeout = 60000)
   public void testCreateEncryptionZoneAndGenerateKeyDirectoryEmpty()
     throws Exception {
     final HdfsAdmin dfsAdmin =
@@ -124,7 +124,7 @@ public class TestEncryptionZonesAPI {
   }
 
   /** Test failure of Create EZ operation in an existing EZ. */
-  @Test(timeout = 30000)
+  @Test(timeout = 60000)
   public void testCreateEncryptionZoneInExistingEncryptionZone()
     throws Exception {
     final HdfsAdmin dfsAdmin =
@@ -142,7 +142,7 @@ public class TestEncryptionZonesAPI {
   }
 
   /** Test failure of creating an EZ using a non-empty directory. */
-  @Test(timeout = 30000)
+  @Test(timeout = 60000)
   public void testCreateEncryptionZoneAndGenerateKeyDirectoryNotEmpty()
     throws Exception {
     final HdfsAdmin dfsAdmin =
@@ -159,7 +159,7 @@ public class TestEncryptionZonesAPI {
   }
 
   /** Test failure of creating an EZ passing a key that doesn't exist. */
-  @Test(timeout = 30000)
+  @Test(timeout = 60000)
   public void testCreateEncryptionZoneKeyDoesntExist() throws Exception {
     final HdfsAdmin dfsAdmin =
       new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
@@ -174,7 +174,7 @@ public class TestEncryptionZonesAPI {
   }
 
   /** Test success of creating an EZ when they key exists. */
-  @Test(timeout = 30000)
+  @Test(timeout = 60000)
   public void testCreateEncryptionZoneKeyExist() throws Exception {
     final HdfsAdmin dfsAdmin =
       new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
@@ -198,9 +198,9 @@ public class TestEncryptionZonesAPI {
     provider.flush();
   }
 
-  /** Test failure of create/delete encryption zones as a non super user. */
-  @Test(timeout = 30000)
-  public void testCreateAndDeleteEncryptionZoneAsNonSuperUser()
+  /** Test failure of create encryption zones as a non super user. */
+  @Test(timeout = 60000)
+  public void testCreateEncryptionZoneAsNonSuperUser()
     throws Exception {
     final HdfsAdmin dfsAdmin =
       new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
@@ -225,120 +225,28 @@ public class TestEncryptionZonesAPI {
           return null;
         }
       });
-    dfsAdmin.createEncryptionZone(TEST_PATH, null);
-
-    user.doAs(new PrivilegedExceptionAction<Object>() {
-      @Override
-      public Object run() throws Exception {
-        final HdfsAdmin userAdmin =
-                new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
-        try {
-          userAdmin.deleteEncryptionZone(TEST_PATH);
-          fail("deleteEncryptionZone is superuser-only operation");
-        } catch (AccessControlException e) {
-          GenericTestUtils.assertExceptionContains(
-                  "Superuser privilege is required", e);
-        }
-        return null;
-      }
-    });
-  }
-
-  /** Test failure of deleting an EZ passing a directory that doesn't exist. */
-  @Test(timeout = 30000)
-  public void testDeleteEncryptionZoneDirectoryDoesntExist() throws Exception {
-    final HdfsAdmin dfsAdmin =
-      new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
-    try {
-      dfsAdmin.deleteEncryptionZone(TEST_PATH);
-      fail("Directory doesn't exist");
-    } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains(
-        "is not the root of an encryption zone", e);
-    }
-  }
-
-  /** Test failure of deleting an EZ which is not empty. */
-  @Test(timeout = 30000)
-  public void testDeleteEncryptionZoneAndGenerateKeyDirectoryNotEmpty()
-    throws Exception {
-    final HdfsAdmin dfsAdmin =
-      new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
-    FileSystem.mkdirs(fs, TEST_PATH, new FsPermission((short) 0777));
-    dfsAdmin.createEncryptionZone(TEST_PATH, null);
-    FileSystem.create(fs, new Path("/test/foo"),
-      new FsPermission((short) 0777));
-    try {
-      dfsAdmin.deleteEncryptionZone(TEST_PATH);
-      fail("Directory not empty");
-    } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains("non-empty directory", e);
-    }
-  }
-
-  /** Test success of deleting an EZ. */
-  @Test(timeout = 30000)
-  public void testDeleteEncryptionZone()
-    throws Exception {
-    final HdfsAdmin dfsAdmin =
-      new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
-    FileSystem.mkdirs(fs, TEST_PATH, new FsPermission((short) 0777));
-    dfsAdmin.createEncryptionZone(TEST_PATH, null);
-    List<EncryptionZone> zones = dfsAdmin.listEncryptionZones();
-    Preconditions.checkState(zones.size() == 1, "More than one zone found?");
-    dfsAdmin.deleteEncryptionZone(TEST_PATH);
-    zones = dfsAdmin.listEncryptionZones();
-    Preconditions.checkState(zones.size() == 0, "More than one zone found?");
   }
 
   /**
-   * Test failure of deleting an EZ on a subdir that is not the root of an EZ.
+   * Test success of creating an encryption zone a few levels down.
    */
-  @Test(timeout = 30000)
-  public void testDeleteEncryptionZoneInExistingEncryptionZone()
+  @Test(timeout = 60000)
+  public void testCreateEncryptionZoneDownAFewLevels()
     throws Exception {
     final HdfsAdmin dfsAdmin =
       new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
-    FileSystem.mkdirs(fs, TEST_PATH, new FsPermission((short) 0777));
-    dfsAdmin.createEncryptionZone(TEST_PATH, null);
-    FileSystem.mkdirs(fs, TEST_PATH_WITH_CHILD, new FsPermission((short) 0777));
-    try {
-      dfsAdmin.deleteEncryptionZone(TEST_PATH_WITH_CHILD);
-      fail("EZ in an EZ");
-    } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains(
-        "is not the root of an encryption zone", e);
-    }
-  }
-
-  /**
-   * Test success of creating and deleting an encryption zone a few levels down.
-   */
-  @Test(timeout = 30000)
-  public void testCreateAndDeleteEncryptionZoneDownAFewLevels()
-    throws Exception {
-    final HdfsAdmin dfsAdmin =
-      new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
-    FileSystem.mkdirs(fs, TEST_PATH, new FsPermission((short) 0777));
-    dfsAdmin.createEncryptionZone(TEST_PATH, null);
     FileSystem.mkdirs(fs, TEST_PATH_WITH_MULTIPLE_CHILDREN,
       new FsPermission((short) 0777));
-    try {
-      dfsAdmin.deleteEncryptionZone(TEST_PATH_WITH_MULTIPLE_CHILDREN);
-      fail("EZ in an EZ");
-    } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains(
-        "is not the root of an encryption zone", e);
-    }
+    dfsAdmin.createEncryptionZone(TEST_PATH_WITH_MULTIPLE_CHILDREN, null);
     final List<EncryptionZone> zones = dfsAdmin.listEncryptionZones();
     Preconditions.checkState(zones.size() == 1, "More than one zone found?");
     final EncryptionZone ez = zones.get(0);
       GenericTestUtils.assertMatches(ez.toString(),
-         "EncryptionZone \\[path=/test, keyId=");
+         "EncryptionZone \\[path=/test/foo/baz, keyId=");
   }
 
   /** Test failure of creating an EZ using a non-empty directory. */
-  @Test(timeout = 30000)
+  @Test(timeout = 60000)
   public void testCreateFileInEncryptionZone() throws Exception {
     final HdfsAdmin dfsAdmin =
       new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
@@ -353,7 +261,7 @@ public class TestEncryptionZonesAPI {
   }
 
   /** Test listing encryption zones. */
-  @Test(timeout = 30000)
+  @Test(timeout = 60000)
   public void testListEncryptionZones() throws Exception {
     final HdfsAdmin dfsAdmin =
       new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
@@ -377,7 +285,7 @@ public class TestEncryptionZonesAPI {
   }
 
   /** Test listing encryption zones as a non super user. */
-  @Test(timeout = 30000)
+  @Test(timeout = 60000)
   public void testListEncryptionZonesAsNonSuperUser() throws Exception {
     final HdfsAdmin dfsAdmin =
       new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
@@ -412,7 +320,7 @@ public class TestEncryptionZonesAPI {
   }
 
   /** Test success of Rename EZ on a directory which is already an EZ. */
-  @Test(timeout = 30000)
+  @Test(timeout = 60000)
   public void testRenameEncryptionZone()
           throws Exception {
     final HdfsAdmin dfsAdmin =

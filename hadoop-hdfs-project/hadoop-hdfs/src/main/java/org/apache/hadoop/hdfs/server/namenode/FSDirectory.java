@@ -2716,29 +2716,6 @@ public class FSDirectory implements Closeable {
     }
   }
 
-  List<XAttr> deleteEncryptionZone(String src)
-    throws IOException {
-    writeLock();
-    try {
-      if (isNonEmptyDirectory(src)) {
-        throw new IOException(
-          "Attempt to delete an encryption zone for a non-empty directory.");
-      }
-      final XAttr keyIdXAttr =
-        XAttrHelper.buildXAttr(CRYPTO_XATTR_ENCRYPTION_ZONE, null);
-      List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
-      xattrs.add(keyIdXAttr);
-      final List<XAttr> removedXAttrs = unprotectedRemoveXAttrs(src, xattrs);
-      if (removedXAttrs == null || removedXAttrs.isEmpty()) {
-        throw new IOException(
-          src + " does not appear to be the root of an encryption zone");
-      }
-      return removedXAttrs;
-    } finally {
-      writeUnlock();
-    }
-  }
-
   /**
    * Set the FileEncryptionInfo for an INode.
    */

@@ -32,8 +32,6 @@ import org.apache.hadoop.tools.TableListing;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 
-import com.google.common.base.Joiner;
-
 /**
  * This class implements crypto command-line operations.
  */
@@ -169,53 +167,6 @@ public class CryptoAdmin extends Configured implements Tool {
     }
   }
 
-  private static class DeleteZoneCommand implements Command {
-    @Override
-    public String getName() {
-      return "-deleteZone";
-    }
-
-    @Override
-    public String getShortUsage() {
-      return "[" + getName() + " -path <path> " + "]\n";
-    }
-
-    @Override
-    public String getLongUsage() {
-      final TableListing listing = getOptionDescriptionListing();
-      listing.addRow("<path>", "The path of the encryption zone to delete. " +
-        "It must be an empty directory and an existing encryption zone.");
-      return getShortUsage() + "\n" +
-        "Delete an encryption zone.\n\n" +
-        listing.toString();
-    }
-
-    @Override
-    public int run(Configuration conf, List<String> args) throws IOException {
-      final String path = StringUtils.popOptionWithArgument("-path", args);
-      if (path == null) {
-        System.err.println("You must specify a path with -path.");
-        return 1;
-      }
-
-      if (!args.isEmpty()) {
-        System.err.println("Can't understand argument: " + args.get(0));
-        return 1;
-      }
-
-      final DistributedFileSystem dfs = getDFS(conf);
-      try {
-        dfs.deleteEncryptionZone(new Path(path));
-        System.out.println("Deleted encryption zone " + path);
-      } catch (IOException e) {
-        System.err.println(prettifyException(e));
-        return 2;
-      }
-
-      return 0;
-    }
-  }
-
   private static class ListZonesCommand implements Command {
     @Override
     public String getName() {
@@ -315,7 +266,6 @@ public class CryptoAdmin extends Configured implements Tool {
 
   private static final Command[] COMMANDS = {
     new CreateZoneCommand(),
-    new DeleteZoneCommand(),
     new ListZonesCommand(),
     new HelpCommand(),
   };

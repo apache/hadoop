@@ -1805,11 +1805,6 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /* HDFS only */
-  public void deleteEncryptionZone(Path path) throws IOException {
-    dfs.deleteEncryptionZone(getPathName(path));
-  }
-
-  /* HDFS only */
   public List<EncryptionZone> listEncryptionZones() throws IOException {
     return dfs.listEncryptionZones();
   }

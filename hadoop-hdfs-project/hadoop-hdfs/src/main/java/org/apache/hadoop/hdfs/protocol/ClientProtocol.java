@@ -1267,13 +1267,6 @@ public interface ClientProtocol {
     throws IOException;
 
   /**
-   * Delete an encryption zone
-   */
-  @AtMostOnce
-  public void deleteEncryptionZone(String src)
-    throws IOException;
-
-  /**
    * Return a list of all {@EncryptionZone}s in the HDFS hierarchy which are
    * visible to the caller. If the caller is the HDFS admin, then the returned
    * EncryptionZone instances will have the key id field filled in. If the

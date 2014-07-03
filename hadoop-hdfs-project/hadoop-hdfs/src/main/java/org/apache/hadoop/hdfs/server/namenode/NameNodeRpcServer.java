@@ -1414,11 +1414,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override
-  public void deleteEncryptionZone(String src) throws IOException {
-    namesystem.deleteEncryptionZone(src);
-  }
-
-  @Override
   public List<EncryptionZone> listEncryptionZones() throws IOException {
     return namesystem.listEncryptionZones();
   }

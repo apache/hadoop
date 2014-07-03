@@ -772,8 +772,6 @@ service ClientNamenodeProtocol {
       returns(RemoveXAttrResponseProto);
   rpc createEncryptionZone(CreateEncryptionZoneRequestProto)
       returns(CreateEncryptionZoneResponseProto);
-  rpc deleteEncryptionZone(DeleteEncryptionZoneRequestProto)
-      returns(DeleteEncryptionZoneResponseProto);
   rpc listEncryptionZones(ListEncryptionZonesRequestProto)
       returns(ListEncryptionZonesResponseProto);
 }
