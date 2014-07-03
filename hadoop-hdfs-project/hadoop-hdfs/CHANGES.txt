@@ -505,6 +505,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6610. TestShortCircuitLocalRead tests sometimes timeout on slow
     machines. (Charles Lamb via wang)
 
+    HDFS-6620. Snapshot docs should specify about preserve options with cp command
+    (Stephen Chu via umamahesh)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
