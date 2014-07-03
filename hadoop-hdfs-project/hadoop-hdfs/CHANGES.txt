@@ -262,6 +262,8 @@ Release 2.6.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-6613. Improve logging in caching classes. (wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
