@@ -134,6 +134,15 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10767. Clean up unused code in Ls shell command. (cnauroth)
 
+    HADOOP-9361 Strictly define the expected behavior of filesystem APIs and
+    write tests to verify compliance (stevel)
+
+    HADOOP-9651 Filesystems to throw FileAlreadyExistsException in
+    createFile(path, overwrite=false) when the file exists (stevel)
+    
+    HADOOP-9495 Define behaviour of Seekable.seek(), write tests,
+    fix all hadoop implementations for compliance
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -290,6 +299,11 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10739. Renaming a file into a directory containing the same
     filename results in a confusing I/O error (chang li via jlowe)
+
+    HADOOP-10533 S3 input stream NPEs in MapReduce join (stevel)
+
+    HADOOP-10419 BufferedFSInputStream NPEs on getPos() on a closed stream
+    (stevel)
 
   BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
 
