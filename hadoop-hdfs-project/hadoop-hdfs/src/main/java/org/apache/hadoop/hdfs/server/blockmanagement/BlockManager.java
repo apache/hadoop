@@ -1226,8 +1226,14 @@ public class BlockManager {
     nodesToProcess = Math.min(nodes.size(), nodesToProcess);
 
     int blockCnt = 0;
-    for(int nodeCnt = 0; nodeCnt < nodesToProcess; nodeCnt++ ) {
-      blockCnt += invalidateWorkForOneNode(nodes.get(nodeCnt));
+    for (DatanodeInfo dnInfo : nodes) {
+      int blocks = invalidateWorkForOneNode(dnInfo);
+      if (blocks > 0) {
+        blockCnt += blocks;
+        if (--nodesToProcess == 0) {
+          break;
+        }
+      }
     }
     return blockCnt;
   }

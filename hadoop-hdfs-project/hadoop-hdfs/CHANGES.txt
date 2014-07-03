@@ -264,6 +264,8 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6613. Improve logging in caching classes. (wang)
 
+    HDFS-6511. BlockManager#computeInvalidateWork() could do nothing. (Juan Yu via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
