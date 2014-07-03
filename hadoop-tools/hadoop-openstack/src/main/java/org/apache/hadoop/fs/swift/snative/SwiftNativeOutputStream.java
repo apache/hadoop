@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.swift.exceptions.SwiftConnectionClosedException;
 import org.apache.hadoop.fs.swift.exceptions.SwiftException;
 import org.apache.hadoop.fs.swift.exceptions.SwiftInternalStateException;
 import org.apache.hadoop.fs.swift.util.SwiftUtils;
@@ -109,7 +110,7 @@ class SwiftNativeOutputStream extends OutputStream {
    */
   private synchronized void verifyOpen() throws SwiftException {
     if (closed) {
-      throw new SwiftException("Output stream is closed");
+      throw new SwiftConnectionClosedException();
     }
   }
 

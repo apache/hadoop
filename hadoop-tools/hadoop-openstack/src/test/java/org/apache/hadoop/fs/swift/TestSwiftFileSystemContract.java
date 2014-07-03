@@ -23,8 +23,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.swift.exceptions.SwiftNotDirectoryException;
 import org.apache.hadoop.fs.swift.snative.SwiftNativeFileSystem;
 import org.apache.hadoop.fs.swift.util.SwiftTestUtils;
 
@@ -46,6 +46,14 @@ public class TestSwiftFileSystemContract
         extends FileSystemContractBaseTest {
   private static final Log LOG =
           LogFactory.getLog(TestSwiftFileSystemContract.class);
+
+  /**
+   * Override this if the filesystem is not case sensitive
+   * @return true if the case detection/preservation tests should run
+   */
+  protected boolean filesystemIsCaseSensitive() {
+    return false;
+  }
 
   @Override
   protected void setUp() throws Exception {
@@ -89,9 +97,8 @@ public class TestSwiftFileSystemContract
     try {
       fs.mkdirs(testSubDir);
       fail("Should throw IOException.");
-    } catch (SwiftNotDirectoryException e) {
+    } catch (ParentNotDirectoryException e) {
       // expected
-      assertEquals(filepath,e.getPath());
     }
     //now verify that the subdir path does not exist
     SwiftTestUtils.assertPathDoesNotExist(fs, "subdir after mkdir", testSubDir);
@@ -100,7 +107,7 @@ public class TestSwiftFileSystemContract
     try {
       fs.mkdirs(testDeepSubDir);
       fail("Should throw IOException.");
-    } catch (SwiftNotDirectoryException e) {
+    } catch (ParentNotDirectoryException e) {
       // expected
     }
     SwiftTestUtils.assertPathDoesNotExist(fs, "testDeepSubDir  after mkdir",
