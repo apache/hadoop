@@ -1954,6 +1954,22 @@ public class TestRMContainerAllocator {
     TaskAttemptEvent abortedEvent = allocator.createContainerFinishedEvent(
         abortedStatus, attemptId);
     Assert.assertEquals(TaskAttemptEventType.TA_KILL, abortedEvent.getType());
+    
+    ContainerId containerId2 = ContainerId.newInstance(applicationAttemptId, 2);
+    ContainerStatus status2 = ContainerStatus.newInstance(containerId2,
+        ContainerState.RUNNING, "", 0);
+
+    ContainerStatus preemptedStatus = ContainerStatus.newInstance(containerId2,
+        ContainerState.RUNNING, "", ContainerExitStatus.PREEMPTED);
+
+    TaskAttemptEvent event2 = allocator.createContainerFinishedEvent(status2,
+        attemptId);
+    Assert.assertEquals(TaskAttemptEventType.TA_CONTAINER_COMPLETED,
+        event2.getType());
+
+    TaskAttemptEvent abortedEvent2 = allocator.createContainerFinishedEvent(
+        preemptedStatus, attemptId);
+    Assert.assertEquals(TaskAttemptEventType.TA_KILL, abortedEvent2.getType());
   }
   
   @Test
