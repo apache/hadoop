@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -1373,10 +1374,10 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
   @Override
   public synchronized void seek(long targetPos) throws IOException {
     if (targetPos > getFileLength()) {
-      throw new IOException("Cannot seek after EOF");
+      throw new EOFException("Cannot seek after EOF");
     }
     if (targetPos < 0) {
-      throw new IOException("Cannot seek to negative offset");
+      throw new EOFException("Cannot seek to negative offset");
     }
     if (closed) {
       throw new IOException("Stream is closed!");
