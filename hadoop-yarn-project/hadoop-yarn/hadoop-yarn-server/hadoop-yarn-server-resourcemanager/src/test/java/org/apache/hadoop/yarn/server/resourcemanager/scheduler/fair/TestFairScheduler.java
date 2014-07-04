@@ -25,6 +25,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -3076,5 +3078,72 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     ApplicationAttemptId appAttId =
         createSchedulingRequest(1024, 1, "queue1", "user1", 3);
     scheduler.moveApplication(appAttId.getApplicationId(), "queue2");
+  }
+
+  @Test
+  public void testLowestCommonAncestorForNonRootParent() throws Exception {
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    FSLeafQueue aQueue = mock(FSLeafQueue.class);
+    FSLeafQueue bQueue = mock(FSLeafQueue.class);
+    when(aQueue.getName()).thenReturn("root.queue1.a");
+    when(bQueue.getName()).thenReturn("root.queue1.b");
+
+    QueueManager queueManager = scheduler.getQueueManager();
+    FSParentQueue queue1 = queueManager.getParentQueue("queue1", true);
+    queue1.addChildQueue(aQueue);
+    queue1.addChildQueue(bQueue);
+
+    FSQueue ancestorQueue =
+        scheduler.findLowestCommonAncestorQueue(aQueue, bQueue);
+    assertEquals(ancestorQueue, queue1);
+  }
+
+  @Test
+  public void testLowestCommonAncestorRootParent() throws Exception {
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    FSLeafQueue aQueue = mock(FSLeafQueue.class);
+    FSLeafQueue bQueue = mock(FSLeafQueue.class);
+    when(aQueue.getName()).thenReturn("root.a");
+    when(bQueue.getName()).thenReturn("root.b");
+
+    QueueManager queueManager = scheduler.getQueueManager();
+    FSParentQueue queue1 = queueManager.getParentQueue("root", false);
+    queue1.addChildQueue(aQueue);
+    queue1.addChildQueue(bQueue);
+
+    FSQueue ancestorQueue =
+        scheduler.findLowestCommonAncestorQueue(aQueue, bQueue);
+    assertEquals(ancestorQueue, queue1);
+  }
+
+  @Test
+  public void testLowestCommonAncestorDeeperHierarchy() throws Exception {
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    FSQueue aQueue = mock(FSLeafQueue.class);
+    FSQueue bQueue = mock(FSLeafQueue.class);
+    FSQueue a1Queue = mock(FSLeafQueue.class);
+    FSQueue b1Queue = mock(FSLeafQueue.class);
+    when(a1Queue.getName()).thenReturn("root.queue1.a.a1");
+    when(b1Queue.getName()).thenReturn("root.queue1.b.b1");
+    when(aQueue.getChildQueues()).thenReturn(Arrays.asList(a1Queue));
+    when(bQueue.getChildQueues()).thenReturn(Arrays.asList(b1Queue));
+
+    QueueManager queueManager = scheduler.getQueueManager();
+    FSParentQueue queue1 = queueManager.getParentQueue("queue1", true);
+    queue1.addChildQueue(aQueue);
+    queue1.addChildQueue(bQueue);
+
+    FSQueue ancestorQueue =
+        scheduler.findLowestCommonAncestorQueue(a1Queue, b1Queue);
+    assertEquals(ancestorQueue, queue1);
   }
 }

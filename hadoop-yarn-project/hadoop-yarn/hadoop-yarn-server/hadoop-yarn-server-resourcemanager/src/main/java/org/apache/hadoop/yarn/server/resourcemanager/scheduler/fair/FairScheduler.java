@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import com.google.common.base.Preconditions;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -93,6 +92,7 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 
 /**
  * A scheduler that schedules resources between a set of queues. The scheduler
@@ -1468,8 +1468,9 @@ public class FairScheduler extends
       maxRunningEnforcer.updateRunnabilityOnAppRemoval(attempt, oldQueue);
     }
   }
-  
-  private FSQueue findLowestCommonAncestorQueue(FSQueue queue1, FSQueue queue2) {
+
+  @VisibleForTesting
+  FSQueue findLowestCommonAncestorQueue(FSQueue queue1, FSQueue queue2) {
     // Because queue names include ancestors, separated by periods, we can find
     // the lowest common ancestors by going from the start of the names until
     // there's a character that doesn't match.
@@ -1481,7 +1482,7 @@ public class FairScheduler extends
     for (int i = 0; i < Math.max(name1.length(), name2.length()); i++) {
       if (name1.length() <= i || name2.length() <= i ||
           name1.charAt(i) != name2.charAt(i)) {
-        return queueMgr.getQueue(name1.substring(lastPeriodIndex));
+        return queueMgr.getQueue(name1.substring(0, lastPeriodIndex));
       } else if (name1.charAt(i) == '.') {
         lastPeriodIndex = i;
       }
