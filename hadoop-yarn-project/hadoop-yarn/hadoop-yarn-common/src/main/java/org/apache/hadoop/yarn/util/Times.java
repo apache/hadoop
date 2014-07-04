@@ -21,10 +21,14 @@ package org.apache.hadoop.yarn.util;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 
 @Private
 public class Times {
+  private static final Log LOG = LogFactory.getLog(Times.class);
+
   static final ThreadLocal<SimpleDateFormat> dateFormat =
       new ThreadLocal<SimpleDateFormat>() {
         @Override protected SimpleDateFormat initialValue() {
@@ -36,12 +40,30 @@ public class Times {
     return Times.elapsed(started, finished, true);
   }
 
+  // A valid elapsed is supposed to be non-negative. If finished/current time
+  // is ahead of the started time, return -1 to indicate invalid elapsed time,
+  // and record a warning log.
   public static long elapsed(long started, long finished, boolean isRunning) {
     if (finished > 0 && started > 0) {
-      return finished - started;
+      long elapsed = finished - started;
+      if (elapsed >= 0) {
+        return elapsed;
+      } else {
+        LOG.warn("Finished time " + finished
+            + " is ahead of started time " + started);
+        return -1;
+      }
     }
     if (isRunning) {
-      return started > 0 ? System.currentTimeMillis() - started : 0;
+      long current = System.currentTimeMillis();
+      long elapsed = started > 0 ? current - started : 0;
+      if (elapsed >= 0) {
+        return elapsed;
+      } else {
+        LOG.warn("Current time " + current
+            + " is ahead of started time " + started);
+        return -1;
+      }
     } else {
       return -1;
     }
