@@ -15,6 +15,9 @@ Release 2.6.0 - UNRELEASED
 
   BUG FIXES
 
+    YARN-2251. Avoid negative elapsed time in JHS/MRAM web UI and services.
+    (Zhijie Shen via junping_du)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
