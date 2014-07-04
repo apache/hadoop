@@ -23,6 +23,9 @@ Trunk (Unreleased)
     Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
     Alexander Stojanovich, Brian Swan, and Min Wei via cnauroth)
     
+    HADOOP-10719. Add generateEncryptedKey and decryptEncryptedKey 
+    methods to KeyProvider. (asuresh via tucu)
+
   IMPROVEMENTS
 
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution
