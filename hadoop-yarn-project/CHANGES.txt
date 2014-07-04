@@ -334,6 +334,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2232. Fixed ResourceManager to allow DelegationToken owners to be able
     to cancel their own tokens in secure mode. (Varun Vasudev via vinodkv)
 
+    YARN-2250. FairScheduler.findLowestCommonAncestorQueue returns null when
+    queues not identical (Krisztian Horvath via Sandy Ryza)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
