@@ -270,7 +270,6 @@ import org.mortbay.util.ajax.JSON;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -528,7 +527,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private KeyProvider provider = null;
   private KeyProvider.Options providerOptions = null;
 
-  private final Map<String, EncryptionZone> encryptionZones;
   private final CryptoCodec codec;
 
   private volatile boolean imageLoaded = false;
@@ -855,7 +853,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         auditLoggers.get(0) instanceof DefaultAuditLogger;
       this.retryCache = ignoreRetryCache ? null : initRetryCache(conf);
       this.nnConf = new NNConf(conf);
-      this.encryptionZones = new HashMap<String, EncryptionZone>();
     } catch(IOException e) {
       LOG.error(getClass().getSimpleName() + " initialization failed.", e);
       close();
@@ -2308,11 +2305,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @return chosen CipherSuite, or null if file is not in an EncryptionZone
    * @throws IOException
    */
-  private CipherSuite chooseCipherSuite(String src, List<CipherSuite> 
-      cipherSuites) throws UnknownCipherSuiteException {
-    EncryptionZone zone = getEncryptionZoneForPath(src);
+  private CipherSuite chooseCipherSuite(INodesInPath srcIIP, List<CipherSuite>
+      cipherSuites)
+      throws UnknownCipherSuiteException, UnresolvedLinkException,
+        SnapshotAccessControlException {
     // Not in an EZ
-    if (zone == null) {
+    if (!dir.isInAnEZ(srcIIP)) {
       return null;
     }
     CipherSuite chosen = null;
@@ -2469,7 +2467,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     FileEncryptionInfo feInfo = null;
-    CipherSuite suite = chooseCipherSuite(src, cipherSuites);
+    CipherSuite suite = chooseCipherSuite(iip, cipherSuites);
     if (suite != null) {
       Preconditions.checkArgument(!suite.equals(CipherSuite.UNKNOWN), 
           "Chose an UNKNOWN CipherSuite!");
@@ -3649,11 +3647,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (enforcePermission && isPermissionEnabled) {
         checkPermission(pc, src, false, null, FsAction.WRITE, null,
             FsAction.ALL, true, false);
-      }
-
-      final EncryptionZone ez = getEncryptionZoneForPath(src);
-      if (ez != null) {
-        encryptionZones.remove(src);
       }
 
       long mtime = now();
@@ -8365,17 +8358,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       checkNameNodeSafeMode("Cannot create encryption zone on " + src);
       src = FSDirectory.resolvePath(src, pathComponents, dir);
 
-      EncryptionZone ez = getEncryptionZoneForPath(src);
-      if (ez != null) {
-        throw new IOException("Directory " + src +
-          " is already in an encryption zone. (" + ez.getPath() + ")");
-      }
-
       final XAttr keyIdXAttr = dir.createEncryptionZone(src, keyId);
       List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
       xAttrs.add(keyIdXAttr);
       getEditLog().logSetXAttrs(src, xAttrs, logRetryCache);
-      encryptionZones.put(src, new EncryptionZone(src, keyId));
       resultingStat = getAuditFileInfo(src, false);
     } finally {
       writeUnlock();
@@ -8400,7 +8386,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   List<EncryptionZone> listEncryptionZones() throws IOException {
-
     boolean success = false;
     checkSuperuserPrivilege();
     checkOperation(OperationCategory.READ);
@@ -8408,29 +8393,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     try {
       checkSuperuserPrivilege();
       checkOperation(OperationCategory.READ);
-      final List<EncryptionZone> ret =
-          Lists.newArrayList(encryptionZones.values());
+      final List<EncryptionZone> ret = dir.listEncryptionZones();
       success = true;
       return ret;
     } finally {
       readUnlock();
       logAuditEvent(success, "listEncryptionZones", null);
     }
-  }
-
-  /** Lookup the encryption zone of a path. */
-  EncryptionZone getEncryptionZoneForPath(String src) {
-    assert hasReadLock();
-    final String[] components = INode.getPathNames(src);
-    for (int i = components.length; i > 0; i--) {
-      final List<String> l = Arrays.asList(Arrays.copyOfRange(components, 0, i));
-      String p = Joiner.on(Path.SEPARATOR).join(l);
-      final EncryptionZone ret = encryptionZones.get(p);
-      if (ret != null) {
-        return ret;
-      }
-    }
-    return null;
   }
 
   /**

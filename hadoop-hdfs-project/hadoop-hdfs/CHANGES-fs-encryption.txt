@@ -35,6 +35,8 @@ fs-encryption (Unreleased)
 
     HDFS-6625. Remove the Delete Encryption Zone function (clamb)
 
+    HDFS-6516. List of Encryption Zones should be based on inodes (clamb)
+
   OPTIMIZATIONS
 
   BUG FIXES
