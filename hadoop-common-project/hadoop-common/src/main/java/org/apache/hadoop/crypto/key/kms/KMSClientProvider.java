@@ -84,8 +84,9 @@ public class KMSClientProvider extends KeyProvider {
       byte[] material = (valueMap.containsKey(KMSRESTConstants.MATERIAL_FIELD))
           ? Base64.decodeBase64((String) valueMap.get(KMSRESTConstants.MATERIAL_FIELD))
           : null;
-      keyVersion = new KMSKeyVersion((String)
-          valueMap.get(KMSRESTConstants.VERSION_NAME_FIELD), material);
+      String versionName = (String)valueMap.get(KMSRESTConstants.VERSION_NAME_FIELD);
+      String keyName = (String)valueMap.get(KMSRESTConstants.NAME_FIELD);
+      keyVersion = new KMSKeyVersion(keyName, versionName, material);
     }
     return keyVersion;
   }
@@ -362,8 +363,8 @@ public class KMSClientProvider extends KeyProvider {
   }
 
   public static class KMSKeyVersion extends KeyVersion {
-    public KMSKeyVersion(String versionName, byte[] material) {
-      super(versionName, material);
+    public KMSKeyVersion(String keyName, String versionName, byte[] material) {
+      super(keyName, versionName, material);
     }
   }
 

@@ -64,7 +64,7 @@ public class TestKeyProvider {
   @Test
   public void testKeyMaterial() throws Exception {
     byte[] key1 = new byte[]{1,2,3,4};
-    KeyProvider.KeyVersion obj = new KeyProvider.KeyVersion("key1@1", key1);
+    KeyProvider.KeyVersion obj = new KeyProvider.KeyVersion("key1", "key1@1", key1);
     assertEquals("key1@1", obj.getVersionName());
     assertArrayEquals(new byte[]{1,2,3,4}, obj.getMaterial());
   }

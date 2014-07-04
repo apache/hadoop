@@ -168,6 +168,9 @@ Trunk (Unreleased)
     HADOOP-10695. KMSClientProvider should respect a configurable timeout. 
     (yoderme via tucu)
 
+    HADOOP-10757. KeyProvider KeyVersion should provide the key name. 
+    (asuresh via tucu)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
