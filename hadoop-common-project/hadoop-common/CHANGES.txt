@@ -174,6 +174,9 @@ Trunk (Unreleased)
     HADOOP-10757. KeyProvider KeyVersion should provide the key name. 
     (asuresh via tucu)
 
+    HADOOP-10769. Create KeyProvider extension to handle delegation tokens.
+    (Arun Suresh via atm)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
