@@ -30,7 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ChecksumException;
 
 /**
- * This class provides inteface and utilities for processing checksums for
+ * This class provides interface and utilities for processing checksums for
  * DFS data transfers.
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
