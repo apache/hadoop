@@ -12,6 +12,9 @@ Release 2.6.0 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-5866. TestFixedLengthInputFormat fails in windows.
+    (Varun Vasudev via cnauroth)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
