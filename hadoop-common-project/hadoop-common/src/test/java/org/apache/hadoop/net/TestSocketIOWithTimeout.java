@@ -151,7 +151,7 @@ public class TestSocketIOWithTimeout {
       // simulate a partial write scenario.  Attempts were made to switch the
       // test from using a pipe to a network socket and also to use larger and
       // larger buffers in doIO.  Nothing helped the situation though.
-      if (!Shell.WINDOWS) {
+      if (!Shell.WINDOWS && !Shell.PPC_64) {
         try {
           out.write(1);
           fail("Did not throw");

@@ -34,6 +34,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.Iterator;
@@ -682,6 +683,12 @@ public class TestCacheDirectives {
         } finally {
           namesystem.readUnlock();
         }
+
+        LOG.info(logString + " cached blocks: have " + numCachedBlocks +
+            " / " + expectedCachedBlocks + ".  " +
+            "cached replicas: have " + numCachedReplicas +
+            " / " + expectedCachedReplicas);
+
         if (expectedCachedBlocks == -1 ||
             numCachedBlocks == expectedCachedBlocks) {
           if (expectedCachedReplicas == -1 ||
@@ -689,10 +696,6 @@ public class TestCacheDirectives {
             return true;
           }
         }
-        LOG.info(logString + " cached blocks: have " + numCachedBlocks +
-            " / " + expectedCachedBlocks + ".  " +
-            "cached replicas: have " + numCachedReplicas +
-            " / " + expectedCachedReplicas);
         return false;
       }
     }, 500, 60000);
@@ -1415,7 +1418,10 @@ public class TestCacheDirectives {
       for (DataNode dn : cluster.getDataNodes()) {
         DatanodeDescriptor descriptor =
             datanodeManager.getDatanode(dn.getDatanodeId());
-        Assert.assertTrue(descriptor.getPendingCached().isEmpty());
+        Assert.assertTrue("Pending cached list of " + descriptor +
+                " is not empty, "
+                + Arrays.toString(descriptor.getPendingCached().toArray()), 
+            descriptor.getPendingCached().isEmpty());
       }
     } finally {
       cluster.getNamesystem().readUnlock();
@@ -1430,10 +1436,6 @@ public class TestCacheDirectives {
     int numCachedReplicas = (int) ((CACHE_CAPACITY*NUM_DATANODES)/BLOCK_SIZE);
     DFSTestUtil.createFile(dfs, fileName, fileLen, (short) NUM_DATANODES,
         0xFADED);
-    // Set up a log appender watcher
-    final LogVerificationAppender appender = new LogVerificationAppender();
-    final Logger logger = Logger.getRootLogger();
-    logger.addAppender(appender);
     dfs.addCachePool(new CachePoolInfo("pool"));
     dfs.addCacheDirective(new CacheDirectiveInfo.Builder().setPool("pool")
         .setPath(fileName).setReplication((short) 1).build());

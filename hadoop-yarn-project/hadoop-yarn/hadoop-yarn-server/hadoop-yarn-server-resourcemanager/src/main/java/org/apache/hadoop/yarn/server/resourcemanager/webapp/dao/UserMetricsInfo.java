@@ -43,6 +43,9 @@ public class UserMetricsInfo {
   protected long reservedMB;
   protected long pendingMB;
   protected long allocatedMB;
+  protected long reservedVirtualCores;
+  protected long pendingVirtualCores;
+  protected long allocatedVirtualCores;
 
   @XmlTransient
   protected boolean userMetricsAvailable;
@@ -59,7 +62,7 @@ public class UserMetricsInfo {
 
     if (userMetrics != null) {
       this.userMetricsAvailable = true;
-      
+
       this.appsSubmitted = userMetrics.getAppsSubmitted();
       this.appsCompleted = metrics.getAppsCompleted();
       this.appsPending = metrics.getAppsPending();
@@ -70,10 +73,14 @@ public class UserMetricsInfo {
       this.runningContainers = userMetrics.getAllocatedContainers();
       this.pendingContainers = userMetrics.getPendingContainers();
       this.reservedContainers = userMetrics.getReservedContainers();
-      
+
       this.reservedMB = userMetrics.getReservedMB();
       this.pendingMB = userMetrics.getPendingMB();
       this.allocatedMB = userMetrics.getAllocatedMB();
+
+      this.reservedVirtualCores = userMetrics.getReservedVirtualCores();
+      this.pendingVirtualCores = userMetrics.getPendingVirtualCores();
+      this.allocatedVirtualCores = userMetrics.getAllocatedVirtualCores();
     }
   }
 
@@ -115,6 +122,18 @@ public class UserMetricsInfo {
 
   public long getPendingMB() {
     return this.pendingMB;
+  }
+
+  public long getReservedVirtualCores() {
+    return this.reservedVirtualCores;
+  }
+
+  public long getAllocatedVirtualCores() {
+    return this.allocatedVirtualCores;
+  }
+
+  public long getPendingVirtualCores() {
+    return this.pendingVirtualCores;
   }
 
   public int getReservedContainers() {

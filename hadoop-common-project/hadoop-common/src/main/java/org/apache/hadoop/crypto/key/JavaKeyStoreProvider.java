@@ -173,7 +173,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
       } catch (UnrecoverableKeyException e) {
         throw new IOException("Can't recover key " + key + " from " + path, e);
       }
-      return new KeyVersion(versionName, key.getEncoded());
+      return new KeyVersion(getBaseName(versionName), versionName, key.getEncoded());
     } finally {
       readLock.unlock();
     }
@@ -270,14 +270,14 @@ public class JavaKeyStoreProvider extends KeyProvider {
             e);
       }
       Metadata meta = new Metadata(options.getCipher(), options.getBitLength(),
-          options.getDescription(), new Date(), 1);
+          options.getDescription(), options.getAttributes(), new Date(), 1);
       if (options.getBitLength() != 8 * material.length) {
         throw new IOException("Wrong key length. Required " +
             options.getBitLength() + ", but got " + (8 * material.length));
       }
       cache.put(name, meta);
       String versionName = buildVersionName(name, 0);
-      return innerSetKeyVersion(versionName, material, meta.getCipher());
+      return innerSetKeyVersion(name, versionName, material, meta.getCipher());
     } finally {
       writeLock.unlock();
     }
@@ -316,7 +316,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
     }
   }
 
-  KeyVersion innerSetKeyVersion(String versionName, byte[] material,
+  KeyVersion innerSetKeyVersion(String name, String versionName, byte[] material,
                                 String cipher) throws IOException {
     try {
       keyStore.setKeyEntry(versionName, new SecretKeySpec(material, cipher),
@@ -326,7 +326,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
           e);
     }
     changed = true;
-    return new KeyVersion(versionName, material);
+    return new KeyVersion(name, versionName, material);
   }
 
   @Override
@@ -344,7 +344,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
       }
       int nextVersion = meta.addVersion();
       String versionName = buildVersionName(name, nextVersion);
-      return innerSetKeyVersion(versionName, material, meta.getCipher());
+      return innerSetKeyVersion(name, versionName, material, meta.getCipher());
     } finally {
       writeLock.unlock();
     }

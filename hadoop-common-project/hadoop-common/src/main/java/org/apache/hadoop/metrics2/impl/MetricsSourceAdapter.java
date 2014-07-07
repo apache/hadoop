@@ -30,6 +30,7 @@ import javax.management.ObjectName;
 import javax.management.ReflectionException;
 
 import static com.google.common.base.Preconditions.*;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -226,7 +227,13 @@ class MetricsSourceAdapter implements DynamicMBean {
       mbeanName = null;
     }
   }
+  
+  @VisibleForTesting
+  ObjectName getMBeanName() {
+    return mbeanName;
+  }
 
+  
   private void updateInfoCache() {
     LOG.debug("Updating info cache...");
     infoCache = infoBuilder.reset(lastRecs).get();

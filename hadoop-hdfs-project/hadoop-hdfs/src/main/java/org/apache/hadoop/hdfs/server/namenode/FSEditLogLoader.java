@@ -376,8 +376,7 @@ public class FSEditLogLoader {
                 "for append");
           }
           LocatedBlock lb = fsNamesys.prepareFileForWrite(path,
-              oldFile, addCloseOp.clientName, addCloseOp.clientMachine, null,
-              false, iip.getLatestSnapshotId(), false);
+              oldFile, addCloseOp.clientName, addCloseOp.clientMachine, false, iip.getLatestSnapshotId(), false);
           newFile = INodeFile.valueOf(fsDir.getINode(path),
               path, true);
           
@@ -740,7 +739,13 @@ public class FSEditLogLoader {
     }
     case OP_ROLLING_UPGRADE_FINALIZE: {
       final long finalizeTime = ((RollingUpgradeOp) op).getTime();
-      fsNamesys.finalizeRollingUpgradeInternal(finalizeTime);
+      if (fsNamesys.isRollingUpgrade()) {
+        // Only do it when NN is actually doing rolling upgrade.
+        // We can get FINALIZE without corresponding START, if NN is restarted
+        // before this op is consumed and a new checkpoint is created.
+        fsNamesys.finalizeRollingUpgradeInternal(finalizeTime);
+      }
+      fsNamesys.getFSImage().updateStorageVersion();
       fsNamesys.getFSImage().renameCheckpoint(NameNodeFile.IMAGE_ROLLBACK,
           NameNodeFile.IMAGE);
       break;

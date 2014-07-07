@@ -43,8 +43,6 @@ import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
@@ -85,6 +83,8 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.GSet;
 import org.apache.hadoop.util.LightWeightGSet;
 import org.apache.hadoop.util.Time;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
@@ -99,7 +99,7 @@ import com.google.common.collect.Lists;
  */
 @InterfaceAudience.LimitedPrivate({"HDFS"})
 public final class CacheManager {
-  public static final Log LOG = LogFactory.getLog(CacheManager.class);
+  public static final Logger LOG = LoggerFactory.getLogger(CacheManager.class);
 
   private static final float MIN_CACHED_BLOCKS_PERCENT = 0.001f;
 
@@ -205,8 +205,8 @@ public final class CacheManager {
           DFS_NAMENODE_PATH_BASED_CACHE_BLOCK_MAP_ALLOCATION_PERCENT,
           DFS_NAMENODE_PATH_BASED_CACHE_BLOCK_MAP_ALLOCATION_PERCENT_DEFAULT);
     if (cachedBlocksPercent < MIN_CACHED_BLOCKS_PERCENT) {
-      LOG.info("Using minimum value " + MIN_CACHED_BLOCKS_PERCENT +
-        " for " + DFS_NAMENODE_PATH_BASED_CACHE_BLOCK_MAP_ALLOCATION_PERCENT);
+      LOG.info("Using minimum value {} for {}", MIN_CACHED_BLOCKS_PERCENT,
+        DFS_NAMENODE_PATH_BASED_CACHE_BLOCK_MAP_ALLOCATION_PERCENT);
       cachedBlocksPercent = MIN_CACHED_BLOCKS_PERCENT;
     }
     this.cachedBlocks = new LightWeightGSet<CachedBlock, CachedBlock>(
@@ -346,10 +346,8 @@ public final class CacheManager {
    */
   private static long validateExpiryTime(CacheDirectiveInfo info,
       long maxRelativeExpiryTime) throws InvalidRequestException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Validating directive " + info
-          + " pool maxRelativeExpiryTime " + maxRelativeExpiryTime);
-    }
+    LOG.trace("Validating directive {} pool maxRelativeExpiryTime {}", info,
+        maxRelativeExpiryTime);
     final long now = new Date().getTime();
     final long maxAbsoluteExpiryTime = now + maxRelativeExpiryTime;
     if (info == null || info.getExpiration() == null) {
@@ -539,7 +537,7 @@ public final class CacheManager {
       LOG.warn("addDirective of " + info + " failed: ", e);
       throw e;
     }
-    LOG.info("addDirective of " + info + " successful.");
+    LOG.info("addDirective of {} successful.", info);
     return directive.toInfo();
   }
 
@@ -641,8 +639,7 @@ public final class CacheManager {
       LOG.warn("modifyDirective of " + idString + " failed: ", e);
       throw e;
     }
-    LOG.info("modifyDirective of " + idString + " successfully applied " +
-        info+ ".");
+    LOG.info("modifyDirective of {} successfully applied {}.", idString, info);
   }
 
   private void removeInternal(CacheDirective directive)
@@ -779,7 +776,7 @@ public final class CacheManager {
       LOG.info("addCachePool of " + info + " failed: ", e);
       throw e;
     }
-    LOG.info("addCachePool of " + info + " successful.");
+    LOG.info("addCachePool of {} successful.", info);
     return pool.getInfo(true);
   }
 
@@ -842,8 +839,8 @@ public final class CacheManager {
       LOG.info("modifyCachePool of " + info + " failed: ", e);
       throw e;
     }
-    LOG.info("modifyCachePool of " + info.getPoolName() + " successful; "
-        + bld.toString());
+    LOG.info("modifyCachePool of {} successful; {}", info.getPoolName(), 
+        bld.toString());
   }
 
   /**
@@ -935,11 +932,9 @@ public final class CacheManager {
     if (metrics != null) {
       metrics.addCacheBlockReport((int) (endTime - startTime));
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Processed cache report from "
-          + datanodeID + ", blocks: " + blockIds.size()
-          + ", processing time: " + (endTime - startTime) + " msecs");
-    }
+    LOG.debug("Processed cache report from {}, blocks: {}, " +
+        "processing time: {} msecs", datanodeID, blockIds.size(), 
+        (endTime - startTime));
   }
 
   private void processCacheReportImpl(final DatanodeDescriptor datanode,
@@ -950,6 +945,8 @@ public final class CacheManager {
     CachedBlocksList pendingCachedList = datanode.getPendingCached();
     for (Iterator<Long> iter = blockIds.iterator(); iter.hasNext(); ) {
       long blockId = iter.next();
+      LOG.trace("Cache report from datanode {} has block {}", datanode,
+          blockId);
       CachedBlock cachedBlock =
           new CachedBlock(blockId, (short)0, false);
       CachedBlock prevCachedBlock = cachedBlocks.get(cachedBlock);
@@ -959,15 +956,18 @@ public final class CacheManager {
         cachedBlock = prevCachedBlock;
       } else {
         cachedBlocks.put(cachedBlock);
+        LOG.trace("Added block {}  to cachedBlocks", cachedBlock);
       }
       // Add the block to the datanode's implicit cached block list
       // if it's not already there.  Similarly, remove it from the pending
       // cached block list if it exists there.
       if (!cachedBlock.isPresent(cachedList)) {
         cachedList.add(cachedBlock);
+        LOG.trace("Added block {} to CACHED list.", cachedBlock);
       }
       if (cachedBlock.isPresent(pendingCachedList)) {
         pendingCachedList.remove(cachedBlock);
+        LOG.trace("Removed block {} from PENDING_CACHED list.", cachedBlock);
       }
     }
   }

@@ -28,6 +28,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.junit.After;
 import org.junit.Assert;
 
 import org.apache.commons.logging.Log;
@@ -78,7 +81,14 @@ public class TestRM {
 
   // Milliseconds to sleep for when waiting for something to happen
   private final static int WAIT_SLEEP_MS = 100;
-  
+
+  @After
+  public void tearDown() {
+    ClusterMetrics.destroy();
+    QueueMetrics.clearQueueMetrics();
+    DefaultMetricsSystem.shutdown();
+  }
+
   @Test
   public void testGetNewAppId() throws Exception {
     Logger rootLogger = LogManager.getRootLogger();

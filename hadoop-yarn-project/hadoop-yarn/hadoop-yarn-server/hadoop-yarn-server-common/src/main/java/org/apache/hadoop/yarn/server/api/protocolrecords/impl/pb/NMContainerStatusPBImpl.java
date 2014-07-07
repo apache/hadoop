@@ -196,6 +196,18 @@ public class NMContainerStatusPBImpl extends NMContainerStatus {
     this.priority = priority;
   }
 
+  @Override
+  public long getCreationTime() {
+    NMContainerStatusProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getCreationTime();
+  }
+
+  @Override
+  public void setCreationTime(long creationTime) {
+    maybeInitBuilder();
+    builder.setCreationTime(creationTime);
+  }
+
   private void mergeLocalToBuilder() {
     if (this.containerId != null
         && !((ContainerIdPBImpl) containerId).getProto().equals(

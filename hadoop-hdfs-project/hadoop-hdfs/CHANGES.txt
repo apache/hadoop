@@ -254,6 +254,25 @@ Trunk (Unreleased)
     HDFS-5794. Fix the inconsistency of layout version number of 
     ADD_DATANODE_AND_STORAGE_UUIDS between trunk and branch-2. (jing9)
 
+Release 2.6.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HDFS-6613. Improve logging in caching classes. (wang)
+
+    HDFS-6511. BlockManager#computeInvalidateWork() could do nothing. (Juan Yu via wang)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HDFS-6617. Flake TestDFSZKFailoverController.testManualFailoverWithDFSHAAdmin
+    due to a long edit log sync op. (Liang Xie via cnauroth)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -453,12 +472,60 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6480. Move waitForReady() from FSDirectory to FSNamesystem. (wheat9)
 
+    HDFS-6403. Add metrics for log warnings reported by JVM pauses. (Yongjun
+    Zhang via atm)
+
+    HDFS-6557. Move the reference of fsimage to FSNamesystem. (wheat9)
+
+    HDFS-4667. Capture renamed files/directories in snapshot diff report. (jing9
+    and Binglin Chang via jing9)
+
+    HDFS-6507. Improve DFSAdmin to support HA cluster better.
+    (Zesheng Wu via vinayakumarb)
+
+    HDFS-6578. add toString method to DatanodeStorage for easier debugging.
+    (Yongjun Zhang via Arpit Agarwal)
+
+    HDFS-6562. Refactor rename() in FSDirectory. (wheat9)
+
+    HDFS-6486. Add user doc for XAttrs via WebHDFS. (Yi Liu via umamahesh)
+
+    HDFS-6430. HTTPFS - Implement XAttr support. (Yi Liu via tucu)
+
+    HDFS-6593. Move SnapshotDiffInfo out of INodeDirectorySnapshottable.
+    (Jing Zhao via wheat9)
+
+    HDFS-6595. Allow the maximum threads for balancing on datanodes to be
+    configurable. (Benoy Antony via szetszwo)
+
+    HDFS-6572. Add an option to the NameNode that prints the software and
+    on-disk image versions. (Charles Lamb via cnauroth)
+
+    HDFS-6603. Add XAttr with ACL test. (Stephen Chu via cnauroth)
+
+    HDFS-6612. MiniDFSNNTopology#simpleFederatedTopology(int)
+    always hardcode nameservice ID. (Juan Yu via wang)
+
+    HDFS-6614. shorten TestPread run time with a smaller retry timeout setting.
+    (Liang Xie via cnauroth)
+
+    HDFS-6610. TestShortCircuitLocalRead tests sometimes timeout on slow
+    machines. (Charles Lamb via wang)
+
+    HDFS-6620. Snapshot docs should specify about preserve options with cp command
+    (Stephen Chu via umamahesh)
+
+    HDFS-6493. Change dfs.namenode.startup.delay.block.deletion to second
+    instead of millisecond. (Juan Yu via wang)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
 
     HDFS-6460. Ignore stale and decommissioned nodes in
     NetworkTopology#sortByDistance. (Yongjun Zhang via wang)
+
+    HDFS-6583. Remove clientNode in FileUnderConstructionFeature. (wheat9)
 
   BUG FIXES 
 
@@ -670,6 +737,50 @@ Release 2.5.0 - UNRELEASED
     HDFS-6563. NameNode cannot save fsimage in certain circumstances when
     snapshots are in use. (atm)
 
+    HDFS-3848. A Bug in recoverLeaseInternal method of FSNameSystem class
+    (Hooman Peiro Sajjad  and Chen He via kihwal)
+
+    HDFS-6549. Add support for accessing the NFS gateway from the AIX NFS
+    client. (atm)
+
+    HDFS-6535. HDFS quota update is wrong when file is appended. (George Wong
+    via jing9)
+
+    HDFS-6222. Remove background token renewer from webhdfs.
+    (Rushabh Shah and Daryn Sharp via cnauroth)
+
+    HDFS-6580. FSNamesystem.mkdirsInt should call the getAuditFileInfo()
+    wrapper. (Zhilei Xu via wheat9)
+
+    HDFS-6587. Bug in TestBPOfferService can cause test failure. (Zhilei Xu
+    via Arpit Agarwal)
+
+    HDFS-6598. Fix a typo in message issued from explorer.js. (Yongjun Zhang
+    via wheat9)
+
+    HDFS-6475. WebHdfs clients fail without retry because incorrect handling
+    of StandbyException. (Yongjun Zhang via atm)
+
+    HADOOP-10701. NFS should not validate the access premission only based on
+    the user's primary group (Harsh J via atm)
+
+    HDFS-6556. Refine XAttr permissions (umamahesh)
+
+    HDFS-6601. Issues in finalizing rolling upgrade when there is a layout 
+    version change (kihwal)
+
+    HDFS-6418. Regression: DFS_NAMENODE_USER_NAME_KEY missing
+    (szetszwo via stevel)
+
+    HDFS-6558. Missing newline in the description of dfsadmin -rollingUpgrade.
+    (Chen He via kihwal)
+
+    HDFS-6591. while loop is executed tens of thousands of times in Hedged Read
+    (Liang Xie via cnauroth)
+
+    HDFS-6604. The short-circuit cache doesn't correctly time out replicas that
+    haven't been used in a while (cmccabe)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
@@ -738,6 +849,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6492. Support create-time xattrs and atomically setting multiple
     xattrs. (wang)
+
+    HDFS-6312. WebHdfs HA failover is broken on secure clusters. 
+    (daryn via tucu)
 
 Release 2.4.1 - 2014-06-23 
 

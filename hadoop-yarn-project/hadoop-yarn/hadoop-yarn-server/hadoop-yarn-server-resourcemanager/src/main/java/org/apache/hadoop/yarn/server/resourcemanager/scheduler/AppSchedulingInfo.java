@@ -57,7 +57,10 @@ public class AppSchedulingInfo {
   private final String queueName;
   Queue queue;
   final String user;
-  private final AtomicInteger containerIdCounter = new AtomicInteger(0);
+  // TODO making containerIdCounter long
+  private final AtomicInteger containerIdCounter;
+  private final int EPOCH_BIT_MASK = 0x3ff;
+  private final int EPOCH_BIT_SHIFT = 22;
 
   final Set<Priority> priorities = new TreeSet<Priority>(
       new org.apache.hadoop.yarn.server.resourcemanager.resource.Priority.Comparator());
@@ -70,15 +73,19 @@ public class AppSchedulingInfo {
   
   /* Allocated by scheduler */
   boolean pending = true; // for app metrics
-
+  
+ 
   public AppSchedulingInfo(ApplicationAttemptId appAttemptId,
-      String user, Queue queue, ActiveUsersManager activeUsersManager) {
+      String user, Queue queue, ActiveUsersManager activeUsersManager,
+      int epoch) {
     this.applicationAttemptId = appAttemptId;
     this.applicationId = appAttemptId.getApplicationId();
     this.queue = queue;
     this.queueName = queue.getQueueName();
     this.user = user;
     this.activeUsersManager = activeUsersManager;
+    this.containerIdCounter = new AtomicInteger(
+        (epoch & EPOCH_BIT_MASK) << EPOCH_BIT_SHIFT);
   }
 
   public ApplicationId getApplicationId() {
@@ -413,9 +420,6 @@ public class AppSchedulingInfo {
   }
 
   public synchronized void recoverContainer(RMContainer rmContainer) {
-    // ContainerIdCounter on recovery will be addressed in YARN-2052
-    this.containerIdCounter.incrementAndGet();
-
     QueueMetrics metrics = queue.getMetrics();
     if (pending) {
       // If there was any container to recover, the application was

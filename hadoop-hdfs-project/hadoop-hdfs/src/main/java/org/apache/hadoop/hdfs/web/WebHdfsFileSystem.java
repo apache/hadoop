@@ -69,11 +69,14 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.security.token.TokenSelector;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelector;
 import org.apache.hadoop.util.Progressable;
 import org.mortbay.util.ajax.JSON;
 
@@ -98,7 +101,7 @@ public class WebHdfsFileSystem extends FileSystem
 
   /** Delegation token kind */
   public static final Text TOKEN_KIND = new Text("WEBHDFS delegation");
-  protected TokenAspect<? extends WebHdfsFileSystem> tokenAspect;
+  private boolean canRefreshDelegationToken;
 
   private UserGroupInformation ugi;
   private URI uri;
@@ -127,13 +130,8 @@ public class WebHdfsFileSystem extends FileSystem
     return "http";
   }
 
-  /**
-   * Initialize tokenAspect. This function is intended to
-   * be overridden by SWebHdfsFileSystem.
-   */
-  protected synchronized void initializeTokenAspect() {
-    tokenAspect = new TokenAspect<WebHdfsFileSystem>(this, tokenServiceName,
-        TOKEN_KIND);
+  protected Text getTokenKind() {
+    return TOKEN_KIND;
   }
 
   @Override
@@ -162,7 +160,6 @@ public class WebHdfsFileSystem extends FileSystem
     this.tokenServiceName = isLogicalUri ?
         HAUtil.buildTokenServiceForLogicalUri(uri)
         : SecurityUtil.buildTokenService(getCanonicalUri());
-    initializeTokenAspect();
 
     if (!isHA) {
       this.retryPolicy =
@@ -195,10 +192,8 @@ public class WebHdfsFileSystem extends FileSystem
     }
 
     this.workingDir = getHomeDirectory();
-
-    if (UserGroupInformation.isSecurityEnabled()) {
-      tokenAspect.initDelegationToken(ugi);
-    }
+    this.canRefreshDelegationToken = UserGroupInformation.isSecurityEnabled();
+    this.delegationToken = null;
   }
 
   @Override
@@ -213,9 +208,44 @@ public class WebHdfsFileSystem extends FileSystem
     return b;
   }
 
+  TokenSelector<DelegationTokenIdentifier> tokenSelector =
+      new AbstractDelegationTokenSelector<DelegationTokenIdentifier>(getTokenKind()){};
+
+  // the first getAuthParams() for a non-token op will either get the
+  // internal token from the ugi or lazy fetch one
   protected synchronized Token<?> getDelegationToken() throws IOException {
-    tokenAspect.ensureTokenInitialized();
+    if (canRefreshDelegationToken && delegationToken == null) {
+      Token<?> token = tokenSelector.selectToken(
+          new Text(getCanonicalServiceName()), ugi.getTokens());
+      // ugi tokens are usually indicative of a task which can't
+      // refetch tokens.  even if ugi has credentials, don't attempt
+      // to get another token to match hdfs/rpc behavior
+      if (token != null) {
+        LOG.debug("Using UGI token: " + token);
+        canRefreshDelegationToken = false; 
+      } else {
+        token = getDelegationToken(null);
+        if (token != null) {
+          LOG.debug("Fetched new token: " + token);
+        } else { // security is disabled
+          canRefreshDelegationToken = false;
+        }
+      }
+      setDelegationToken(token);
+    }
     return delegationToken;
+  }
+
+  @VisibleForTesting
+  synchronized boolean replaceExpiredDelegationToken() throws IOException {
+    boolean replaced = false;
+    if (canRefreshDelegationToken) {
+      Token<?> token = getDelegationToken(null);
+      LOG.debug("Replaced expired token: " + token);
+      setDelegationToken(token);
+      replaced = (token != null);
+    }
+    return replaced;
   }
 
   @Override
@@ -288,8 +318,8 @@ public class WebHdfsFileSystem extends FileSystem
     final int code = conn.getResponseCode();
     // server is demanding an authentication we don't support
     if (code == HttpURLConnection.HTTP_UNAUTHORIZED) {
-      throw new IOException(
-          new AuthenticationException(conn.getResponseMessage()));
+      // match hdfs/rpc exception
+      throw new AccessControlException(conn.getResponseMessage());
     }
     if (code != op.getExpectedHttpResponseCode()) {
       final Map<?, ?> m;
@@ -309,7 +339,15 @@ public class WebHdfsFileSystem extends FileSystem
         return m;
       }
 
-      final RemoteException re = JsonUtil.toRemoteException(m);
+      IOException re = JsonUtil.toRemoteException(m);
+      // extract UGI-related exceptions and unwrap InvalidToken
+      // the NN mangles these exceptions but the DN does not and may need
+      // to re-fetch a token if either report the token is expired
+      if (re.getMessage().startsWith("Failed to obtain user group information:")) {
+        String[] parts = re.getMessage().split(":\\s+", 3);
+        re = new RemoteException(parts[1], parts[2]);
+        re = ((RemoteException)re).unwrapRemoteException(InvalidToken.class);
+      }
       throw unwrapException? toIOException(re): re;
     }
     return null;
@@ -344,8 +382,6 @@ public class WebHdfsFileSystem extends FileSystem
    */
   private synchronized void resetStateToFailOver() {
     currentNNAddrIndex = (currentNNAddrIndex + 1) % nnAddrs.length;
-    delegationToken = null;
-    tokenAspect.reset();
   }
 
   /**
@@ -371,7 +407,7 @@ public class WebHdfsFileSystem extends FileSystem
     // Skip adding delegation token for token operations because these
     // operations require authentication.
     Token<?> token = null;
-    if (UserGroupInformation.isSecurityEnabled() && !op.getRequireAuth()) {
+    if (!op.getRequireAuth()) {
       token = getDelegationToken();
     }
     if (token != null) {
@@ -542,11 +578,17 @@ public class WebHdfsFileSystem extends FileSystem
             validateResponse(op, conn, false);
           }
           return getResponse(conn);
-        } catch (IOException ioe) {
-          Throwable cause = ioe.getCause();
-          if (cause != null && cause instanceof AuthenticationException) {
-            throw ioe; // no retries for auth failures
+        } catch (AccessControlException ace) {
+          // no retries for auth failures
+          throw ace;
+        } catch (InvalidToken it) {
+          // try to replace the expired token with a new one.  the attempt
+          // to acquire a new token must be outside this operation's retry
+          // so if it fails after its own retries, this operation fails too.
+          if (op.getRequireAuth() || !replaceExpiredDelegationToken()) {
+            throw it;
           }
+        } catch (IOException ioe) {
           shouldRetry(ioe, retry);
         }
       }
@@ -712,6 +754,17 @@ public class WebHdfsFileSystem extends FileSystem
           }
         }
       };
+    }
+  }
+
+  class FsPathConnectionRunner extends AbstractFsPathRunner<HttpURLConnection> {
+    FsPathConnectionRunner(Op op, Path fspath, Param<?,?>... parameters) {
+      super(op, fspath, parameters);
+    }
+    @Override
+    HttpURLConnection getResponse(final HttpURLConnection conn)
+        throws IOException {
+      return conn;
     }
   }
   
@@ -1079,16 +1132,41 @@ public class WebHdfsFileSystem extends FileSystem
       ) throws IOException {
     statistics.incrementReadOps(1);
     final HttpOpParam.Op op = GetOpParam.Op.OPEN;
-    final URL url = toUrl(op, f, new BufferSizeParam(buffersize));
+    // use a runner so the open can recover from an invalid token
+    FsPathConnectionRunner runner =
+        new FsPathConnectionRunner(op, f, new BufferSizeParam(buffersize));
     return new FSDataInputStream(new OffsetUrlInputStream(
-        new OffsetUrlOpener(url), new OffsetUrlOpener(null)));
+        new UnresolvedUrlOpener(runner), new OffsetUrlOpener(null)));
   }
 
   @Override
-  public void close() throws IOException {
-    super.close();
-    synchronized (this) {
-      tokenAspect.removeRenewAction();
+  public synchronized void close() throws IOException {
+    try {
+      if (canRefreshDelegationToken && delegationToken != null) {
+        cancelDelegationToken(delegationToken);
+      }
+    } catch (IOException ioe) {
+      LOG.debug("Token cancel failed: "+ioe);
+    } finally {
+      super.close();
+    }
+  }
+
+  // use FsPathConnectionRunner to ensure retries for InvalidTokens
+  class UnresolvedUrlOpener extends ByteRangeInputStream.URLOpener {
+    private final FsPathConnectionRunner runner;
+    UnresolvedUrlOpener(FsPathConnectionRunner runner) {
+      super(null);
+      this.runner = runner;
+    }
+
+    @Override
+    protected HttpURLConnection connect(long offset, boolean resolved)
+        throws IOException {
+      assert offset == 0;
+      HttpURLConnection conn = runner.run();
+      setURL(conn.getURL());
+      return conn;
     }
   }
 
@@ -1141,7 +1219,7 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   static class OffsetUrlInputStream extends ByteRangeInputStream {
-    OffsetUrlInputStream(OffsetUrlOpener o, OffsetUrlOpener r)
+    OffsetUrlInputStream(UnresolvedUrlOpener o, OffsetUrlOpener r)
         throws IOException {
       super(o, r);
     }

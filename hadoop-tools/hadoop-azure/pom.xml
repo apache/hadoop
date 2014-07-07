@@ -37,22 +37,6 @@
   </properties>
 
   <build>
-  
-    <testResources>
-      <testResource>
-        <directory>src/test/resources</directory>
-        <includes>
-          <include>log4j.properties</include>
-        </includes>
-      </testResource>
-      <testResource>
-        <directory>src/test/resources</directory>
-        <includes>
-          <include>azure-test.xml</include>
-        </includes>
-      </testResource>
-    </testResources>
-  
     <plugins>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -196,6 +180,12 @@
       <artifactId>hadoop-common</artifactId>
       <scope>test</scope>
       <type>test-jar</type>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-all</artifactId>
+      <scope>test</scope>
     </dependency>
     
   </dependencies>

@@ -17,27 +17,25 @@
  */
 package org.apache.hadoop.security.authorize;
 
-import java.util.Iterator;
-import java.util.Set;
-import java.util.List;
-
-import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.util.NativeCodeLoader;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.util.NativeCodeLoader;
+import org.junit.Test;
 
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
@@ -221,8 +219,8 @@ public class TestAccessControlList {
   @Test
   public void testAccessControlList() throws Exception {
     AccessControlList acl;
-    Set<String> users;
-    Set<String> groups;
+    Collection<String> users;
+    Collection<String> groups;
     
     acl = new AccessControlList("drwho tardis");
     users = acl.getUsers();
@@ -273,8 +271,8 @@ public class TestAccessControlList {
   @Test
   public void testAddRemoveAPI() {
     AccessControlList acl;
-    Set<String> users;
-    Set<String> groups;
+    Collection<String> users;
+    Collection<String> groups;
     acl = new AccessControlList(" ");
     assertEquals(0, acl.getUsers().size());
     assertEquals(0, acl.getGroups().size());

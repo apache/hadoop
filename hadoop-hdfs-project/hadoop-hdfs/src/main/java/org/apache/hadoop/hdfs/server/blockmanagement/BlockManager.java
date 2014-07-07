@@ -265,8 +265,8 @@ public class BlockManager {
     heartbeatManager = datanodeManager.getHeartbeatManager();
 
     final long pendingPeriod = conf.getLong(
-        DFSConfigKeys.DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_MS_KEY,
-        DFSConfigKeys.DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_MS_DEFAULT);
+        DFSConfigKeys.DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_KEY,
+        DFSConfigKeys.DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_DEFAULT) * 1000L;
     invalidateBlocks = new InvalidateBlocks(
         datanodeManager.blockInvalidateLimit, pendingPeriod);
 
@@ -1229,8 +1229,14 @@ public class BlockManager {
     nodesToProcess = Math.min(nodes.size(), nodesToProcess);
 
     int blockCnt = 0;
-    for(int nodeCnt = 0; nodeCnt < nodesToProcess; nodeCnt++ ) {
-      blockCnt += invalidateWorkForOneNode(nodes.get(nodeCnt));
+    for (DatanodeInfo dnInfo : nodes) {
+      int blocks = invalidateWorkForOneNode(dnInfo);
+      if (blocks > 0) {
+        blockCnt += blocks;
+        if (--nodesToProcess == 0) {
+          break;
+        }
+      }
     }
     return blockCnt;
   }
@@ -1752,6 +1758,7 @@ public class BlockManager {
     }
     blockLog.info("BLOCK* processReport: from storage " + storage.getStorageID()
         + " node " + nodeID + ", blocks: " + newReport.getNumberOfBlocks()
+        + ", hasStaleStorages: " + node.hasStaleStorages()
         + ", processing time: " + (endTime - startTime) + " msecs");
     return !node.hasStaleStorages();
   }

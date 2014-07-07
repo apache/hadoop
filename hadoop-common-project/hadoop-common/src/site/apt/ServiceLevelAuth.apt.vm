@@ -100,11 +100,15 @@ security.ha.service.protocol.acl      | ACL for HAService protocol used by HAAdm
    Example: <<<user1,user2 group1,group2>>>.
 
    Add a blank at the beginning of the line if only a list of groups is to
-   be provided, equivalently a comman-separated list of users followed by
+   be provided, equivalently a comma-separated list of users followed by
    a space or nothing implies only a set of given users.
 
    A special value of <<<*>>> implies that all users are allowed to access the
-   service.
+   service. 
+   
+   If access control list is not defined for a service, the value of
+   <<<security.service.authorization.default.acl>>> is applied. If 
+   <<<security.service.authorization.default.acl>>> is not defined, <<<*>>>  is applied.
 
 ** Refreshing Service Level Authorization Configuration
 

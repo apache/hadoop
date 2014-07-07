@@ -50,4 +50,15 @@ public class TestTimes {
     elapsed = Times.elapsed(5, 10, false);
     Assert.assertEquals("Elapsed time is not 5", 5, elapsed);
   }
+
+  @Test
+  public void testFinishTimesAheadOfStartTimes() {
+    long elapsed = Times.elapsed(10, 5, true);
+    Assert.assertEquals("Elapsed time is not -1", -1, elapsed);
+    elapsed = Times.elapsed(10, 5, false);
+    Assert.assertEquals("Elapsed time is not -1", -1, elapsed);
+    // use Long.MAX_VALUE to ensure started time is after the current one
+    elapsed = Times.elapsed(Long.MAX_VALUE, 0, true);
+    Assert.assertEquals("Elapsed time is not -1", -1, elapsed);
+  }
 }

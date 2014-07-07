@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.HashMap;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -143,7 +144,7 @@ public class TestSnapshotDiffReport {
       hdfs.createSnapshot(snapshotDir, genSnapshotName(snapshotDir));
     }
     // modify file10
-    hdfs.setReplication(file10, (short) (REPLICATION - 1));
+    hdfs.setReplication(file10, (short) (REPLICATION + 1));
   }
   
   /** check the correctness of the diff reports */
@@ -166,11 +167,11 @@ public class TestSnapshotDiffReport {
       } else if (entry.getType() == DiffType.DELETE) {
         assertTrue(report.getDiffList().contains(entry));
         assertTrue(inverseReport.getDiffList().contains(
-            new DiffReportEntry(DiffType.CREATE, entry.getRelativePath())));
+            new DiffReportEntry(DiffType.CREATE, entry.getSourcePath())));
       } else if (entry.getType() == DiffType.CREATE) {
         assertTrue(report.getDiffList().contains(entry));
         assertTrue(inverseReport.getDiffList().contains(
-            new DiffReportEntry(DiffType.DELETE, entry.getRelativePath())));
+            new DiffReportEntry(DiffType.DELETE, entry.getSourcePath())));
       }
     }
   }
@@ -329,5 +330,166 @@ public class TestSnapshotDiffReport {
         new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
         new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("subsub1")));
   }
-  
+
+  /**
+   * Rename a directory to its prior descendant, and verify the diff report.
+   */
+  @Test
+  public void testDiffReportWithRename() throws Exception {
+    final Path root = new Path("/");
+    final Path sdir1 = new Path(root, "dir1");
+    final Path sdir2 = new Path(root, "dir2");
+    final Path foo = new Path(sdir1, "foo");
+    final Path bar = new Path(foo, "bar");
+    hdfs.mkdirs(bar);
+    hdfs.mkdirs(sdir2);
+
+    // create snapshot on root
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s1");
+
+    // /dir1/foo/bar -> /dir2/bar
+    final Path bar2 = new Path(sdir2, "bar");
+    hdfs.rename(bar, bar2);
+
+    // /dir1/foo -> /dir2/bar/foo
+    final Path foo2 = new Path(bar2, "foo");
+    hdfs.rename(foo, foo2);
+
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s2");
+    // let's delete /dir2 to make things more complicated
+    hdfs.delete(sdir2, true);
+
+    verifyDiffReport(root, "s1", "s2",
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir1")),
+        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir1/foo"),
+            DFSUtil.string2Bytes("dir2/bar/foo")),
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir2")),
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("dir1/foo/bar")),
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir1/foo")),
+        new DiffReportEntry(DiffType.RENAME, DFSUtil
+            .string2Bytes("dir1/foo/bar"), DFSUtil.string2Bytes("dir2/bar")));
+  }
+
+  /**
+   * Rename a file/dir outside of the snapshottable dir should be reported as
+   * deleted. Rename a file/dir from outside should be reported as created.
+   */
+  @Test
+  public void testDiffReportWithRenameOutside() throws Exception {
+    final Path root = new Path("/");
+    final Path dir1 = new Path(root, "dir1");
+    final Path dir2 = new Path(root, "dir2");
+    final Path foo = new Path(dir1, "foo");
+    final Path fileInFoo = new Path(foo, "file");
+    final Path bar = new Path(dir2, "bar");
+    final Path fileInBar = new Path(bar, "file");
+    DFSTestUtil.createFile(hdfs, fileInFoo, BLOCKSIZE, REPLICATION, seed);
+    DFSTestUtil.createFile(hdfs, fileInBar, BLOCKSIZE, REPLICATION, seed);
+
+    // create snapshot on /dir1
+    SnapshotTestHelper.createSnapshot(hdfs, dir1, "s0");
+
+    // move bar into dir1
+    final Path newBar = new Path(dir1, "newBar");
+    hdfs.rename(bar, newBar);
+    // move foo out of dir1 into dir2
+    final Path newFoo = new Path(dir2, "new");
+    hdfs.rename(foo, newFoo);
+
+    SnapshotTestHelper.createSnapshot(hdfs, dir1, "s1");
+    verifyDiffReport(dir1, "s0", "s1",
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes(newBar
+            .getName())),
+        new DiffReportEntry(DiffType.DELETE,
+            DFSUtil.string2Bytes(foo.getName())));
+  }
+
+  /**
+   * Renaming a file/dir then delete the ancestor dir of the rename target
+   * should be reported as deleted.
+   */
+  @Test
+  public void testDiffReportWithRenameAndDelete() throws Exception {
+    final Path root = new Path("/");
+    final Path dir1 = new Path(root, "dir1");
+    final Path dir2 = new Path(root, "dir2");
+    final Path foo = new Path(dir1, "foo");
+    final Path fileInFoo = new Path(foo, "file");
+    final Path bar = new Path(dir2, "bar");
+    final Path fileInBar = new Path(bar, "file");
+    DFSTestUtil.createFile(hdfs, fileInFoo, BLOCKSIZE, REPLICATION, seed);
+    DFSTestUtil.createFile(hdfs, fileInBar, BLOCKSIZE, REPLICATION, seed);
+
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s0");
+    hdfs.rename(fileInFoo, fileInBar, Rename.OVERWRITE);
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s1");
+    verifyDiffReport(root, "s0", "s1",
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir1/foo")),
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir2/bar")),
+        new DiffReportEntry(DiffType.DELETE, DFSUtil
+            .string2Bytes("dir2/bar/file")),
+        new DiffReportEntry(DiffType.RENAME,
+            DFSUtil.string2Bytes("dir1/foo/file"),
+            DFSUtil.string2Bytes("dir2/bar/file")));
+
+    // delete bar
+    hdfs.delete(bar, true);
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s2");
+    verifyDiffReport(root, "s0", "s2",
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir1/foo")),
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir2")),
+        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("dir2/bar")),
+        new DiffReportEntry(DiffType.DELETE,
+            DFSUtil.string2Bytes("dir1/foo/file")));
+  }
+
+  @Test
+  public void testDiffReportWithRenameToNewDir() throws Exception {
+    final Path root = new Path("/");
+    final Path foo = new Path(root, "foo");
+    final Path fileInFoo = new Path(foo, "file");
+    DFSTestUtil.createFile(hdfs, fileInFoo, BLOCKSIZE, REPLICATION, seed);
+
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s0");
+    final Path bar = new Path(root, "bar");
+    hdfs.mkdirs(bar);
+    final Path fileInBar = new Path(bar, "file");
+    hdfs.rename(fileInFoo, fileInBar);
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s1");
+
+    verifyDiffReport(root, "s0", "s1",
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("foo")),
+        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("bar")),
+        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("foo/file"),
+            DFSUtil.string2Bytes("bar/file")));
+  }
+
+  /**
+   * Rename a file and then append some data to it
+   */
+  @Test
+  public void testDiffReportWithRenameAndAppend() throws Exception {
+    final Path root = new Path("/");
+    final Path foo = new Path(root, "foo");
+    DFSTestUtil.createFile(hdfs, foo, BLOCKSIZE, REPLICATION, seed);
+
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s0");
+    final Path bar = new Path(root, "bar");
+    hdfs.rename(foo, bar);
+    DFSTestUtil.appendFile(hdfs, bar, 10); // append 10 bytes
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s1");
+
+    // we always put modification on the file before rename
+    verifyDiffReport(root, "s0", "s1",
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("foo")),
+        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("foo"),
+            DFSUtil.string2Bytes("bar")));
+  }
 }

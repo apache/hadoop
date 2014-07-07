@@ -379,6 +379,7 @@ public class Client {
     private int maxIdleTime; //connections will be culled if it was idle for 
     //maxIdleTime msecs
     private final RetryPolicy connectionRetryPolicy;
+    private final int maxRetriesOnSasl;
     private int maxRetriesOnSocketTimeouts;
     private boolean tcpNoDelay; // if T then disable Nagle's Algorithm
     private boolean doPing; //do we need to send ping message
@@ -406,6 +407,7 @@ public class Client {
       this.rpcTimeout = remoteId.getRpcTimeout();
       this.maxIdleTime = remoteId.getMaxIdleTime();
       this.connectionRetryPolicy = remoteId.connectionRetryPolicy;
+      this.maxRetriesOnSasl = remoteId.getMaxRetriesOnSasl();
       this.maxRetriesOnSocketTimeouts = remoteId.getMaxRetriesOnSocketTimeouts();
       this.tcpNoDelay = remoteId.getTcpNoDelay();
       this.doPing = remoteId.getDoPing();
@@ -693,7 +695,6 @@ public class Client {
           LOG.debug("Connecting to "+server);
         }
         short numRetries = 0;
-        final short MAX_RETRIES = 5;
         Random rand = null;
         while (true) {
           setupConnection();
@@ -721,8 +722,8 @@ public class Client {
               if (rand == null) {
                 rand = new Random();
               }
-              handleSaslConnectionFailure(numRetries++, MAX_RETRIES, ex, rand,
-                  ticket);
+              handleSaslConnectionFailure(numRetries++, maxRetriesOnSasl, ex,
+                  rand, ticket);
               continue;
             }
             if (authMethod != AuthMethod.SIMPLE) {
@@ -1478,6 +1479,7 @@ public class Client {
     private final int maxIdleTime; //connections will be culled if it was idle for 
     //maxIdleTime msecs
     private final RetryPolicy connectionRetryPolicy;
+    private final int maxRetriesOnSasl;
     // the max. no. of retries for socket connections on time out exceptions
     private final int maxRetriesOnSocketTimeouts;
     private final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
@@ -1498,6 +1500,9 @@ public class Client {
       this.maxIdleTime = conf.getInt(
           CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
           CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_DEFAULT);
+      this.maxRetriesOnSasl = conf.getInt(
+          CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_KEY,
+          CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_DEFAULT);
       this.maxRetriesOnSocketTimeouts = conf.getInt(
           CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY,
           CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_DEFAULT);
@@ -1531,6 +1536,10 @@ public class Client {
       return maxIdleTime;
     }
     
+    public int getMaxRetriesOnSasl() {
+      return maxRetriesOnSasl;
+    }
+
     /** max connection retries on socket time outs */
     public int getMaxRetriesOnSocketTimeouts() {
       return maxRetriesOnSocketTimeouts;

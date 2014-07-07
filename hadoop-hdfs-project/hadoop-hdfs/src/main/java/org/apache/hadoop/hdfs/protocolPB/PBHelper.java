@@ -1751,24 +1751,29 @@ public class PBHelper {
     }
     DiffType type = DiffType.getTypeFromLabel(entry
         .getModificationLabel());
-    return type == null ? null : 
-      new DiffReportEntry(type, entry.getFullpath().toByteArray());
+    return type == null ? null : new DiffReportEntry(type, entry.getFullpath()
+        .toByteArray(), entry.hasTargetPath() ? entry.getTargetPath()
+        .toByteArray() : null);
   }
   
   public static SnapshotDiffReportEntryProto convert(DiffReportEntry entry) {
     if (entry == null) {
       return null;
     }
-    byte[] fullPath = entry.getRelativePath();
-    ByteString fullPathString = ByteString
-        .copyFrom(fullPath == null ? DFSUtil.EMPTY_BYTES : fullPath);
-    
+    ByteString sourcePath = ByteString
+        .copyFrom(entry.getSourcePath() == null ? DFSUtil.EMPTY_BYTES : entry
+            .getSourcePath());
     String modification = entry.getType().getLabel();
-    
-    SnapshotDiffReportEntryProto entryProto = SnapshotDiffReportEntryProto
-        .newBuilder().setFullpath(fullPathString)
-        .setModificationLabel(modification).build();
-    return entryProto;
+    SnapshotDiffReportEntryProto.Builder builder = SnapshotDiffReportEntryProto
+        .newBuilder().setFullpath(sourcePath)
+        .setModificationLabel(modification);
+    if (entry.getType() == DiffType.RENAME) {
+      ByteString targetPath = ByteString
+          .copyFrom(entry.getTargetPath() == null ? DFSUtil.EMPTY_BYTES : entry
+              .getTargetPath());
+      builder.setTargetPath(targetPath);
+    }
+    return builder.build();
   }
   
   public static SnapshotDiffReport convert(SnapshotDiffReportProto reportProto) {

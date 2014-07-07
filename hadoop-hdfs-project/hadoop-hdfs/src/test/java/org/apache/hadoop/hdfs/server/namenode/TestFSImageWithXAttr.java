@@ -49,6 +49,8 @@ public class TestFSImageWithXAttr {
   private static final byte[] newValue1 = {0x31, 0x31, 0x31};
   private static final String name2 = "user.a2";
   private static final byte[] value2 = {0x37, 0x38, 0x39};
+  private static final String name3 = "user.a3";
+  private static final byte[] value3 = {};
 
   @BeforeClass
   public static void setUp() throws IOException {
@@ -70,25 +72,29 @@ public class TestFSImageWithXAttr {
     
     fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
     fs.setXAttr(path, name2, value2, EnumSet.of(XAttrSetFlag.CREATE));
+    fs.setXAttr(path, name3, null, EnumSet.of(XAttrSetFlag.CREATE));
     
     restart(fs, persistNamespace);
     
     Map<String, byte[]> xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 2);
+    Assert.assertEquals(xattrs.size(), 3);
     Assert.assertArrayEquals(value1, xattrs.get(name1));
     Assert.assertArrayEquals(value2, xattrs.get(name2));
+    Assert.assertArrayEquals(value3, xattrs.get(name3));
     
     fs.setXAttr(path, name1, newValue1, EnumSet.of(XAttrSetFlag.REPLACE));
     
     restart(fs, persistNamespace);
     
     xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 2);
+    Assert.assertEquals(xattrs.size(), 3);
     Assert.assertArrayEquals(newValue1, xattrs.get(name1));
     Assert.assertArrayEquals(value2, xattrs.get(name2));
+    Assert.assertArrayEquals(value3, xattrs.get(name3));
 
     fs.removeXAttr(path, name1);
     fs.removeXAttr(path, name2);
+    fs.removeXAttr(path, name3);
 
     restart(fs, persistNamespace);
     xattrs = fs.getXAttrs(path);

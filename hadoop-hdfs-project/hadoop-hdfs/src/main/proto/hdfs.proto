@@ -294,6 +294,7 @@ message SnapshottableDirectoryListingProto {
 message SnapshotDiffReportEntryProto {
   required bytes fullpath = 1;
   required string modificationLabel = 2;
+  optional bytes targetPath = 3;
 }
 
 /**

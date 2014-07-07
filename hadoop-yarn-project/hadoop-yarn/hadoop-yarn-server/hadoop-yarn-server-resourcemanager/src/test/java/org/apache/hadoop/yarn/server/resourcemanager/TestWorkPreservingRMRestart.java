@@ -62,6 +62,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -218,7 +219,7 @@ public class TestWorkPreservingRMRestart {
     assertEquals(availableResources, schedulerAttempt.getHeadroom());
 
     // *********** check appSchedulingInfo state ***********
-    assertEquals(4, schedulerAttempt.getNewContainerId());
+    assertEquals((1 << 22) + 1, schedulerAttempt.getNewContainerId());
   }
 
   private void checkCSQueue(MockRM rm,
@@ -534,6 +535,73 @@ public class TestWorkPreservingRMRestart {
     assertNull(scheduler.getRMContainer(runningContainer.getContainerId()));
     assertNull(scheduler.getRMContainer(completedContainer.getContainerId()));
   }
+
+  @Test (timeout = 600000)
+  public void testAppReregisterOnRMWorkPreservingRestart() throws Exception {
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+
+    // start RM
+    rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    // create app and launch the AM
+    RMApp app0 = rm1.submitApp(200);
+    MockAM am0 = MockRM.launchAM(app0, rm1, nm1);
+
+    // start new RM
+    rm2 = new MockRM(conf, memStore);
+    rm2.start();
+    rm2.waitForState(app0.getApplicationId(), RMAppState.ACCEPTED);
+    rm2.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.LAUNCHED);
+
+    am0.setAMRMProtocol(rm2.getApplicationMasterService());
+    am0.registerAppAttempt(false);
+
+    rm2.waitForState(app0.getApplicationId(), RMAppState.RUNNING);
+    rm2.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.RUNNING);
+  }
+  
+  @Test (timeout = 30000)
+  public void testAMContainerStatusWithRMRestart() throws Exception {  
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+    rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 8192, rm1.getResourceTrackerService());
+    nm1.registerNode();
+    RMApp app1_1 = rm1.submitApp(1024);
+    MockAM am1_1 = MockRM.launchAndRegisterAM(app1_1, rm1, nm1);
+    
+    RMAppAttempt attempt0 = app1_1.getCurrentAppAttempt();
+    AbstractYarnScheduler scheduler =
+        ((AbstractYarnScheduler) rm1.getResourceScheduler());
+    
+    Assert.assertTrue(scheduler.getRMContainer(
+        attempt0.getMasterContainer().getId()).isAMContainer());
+
+    // Re-start RM
+    rm2 = new MockRM(conf, memStore);
+    rm2.start();
+    nm1.setResourceTrackerService(rm2.getResourceTrackerService());
+
+    List<NMContainerStatus> am1_1Containers =
+        createNMContainerStatusForApp(am1_1);
+    nm1.registerNode(am1_1Containers, null);
+
+    // Wait for RM to settle down on recovering containers;
+    waitForNumContainersToRecover(2, rm2, am1_1.getApplicationAttemptId());
+
+    scheduler = ((AbstractYarnScheduler) rm2.getResourceScheduler());
+    Assert.assertTrue(scheduler.getRMContainer(
+        attempt0.getMasterContainer().getId()).isAMContainer());
+  }
+
 
   private void asserteMetrics(QueueMetrics qm, int appsSubmitted,
       int appsPending, int appsRunning, int appsCompleted,

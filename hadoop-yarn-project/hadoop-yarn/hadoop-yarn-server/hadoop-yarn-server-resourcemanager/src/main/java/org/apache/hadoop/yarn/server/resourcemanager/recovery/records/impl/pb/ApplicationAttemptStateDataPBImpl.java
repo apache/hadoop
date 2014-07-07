@@ -253,6 +253,19 @@ public class ApplicationAttemptStateDataPBImpl extends
   }
 
   @Override
+  public int getAMContainerExitStatus() {
+    ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getAmContainerExitStatus();
+  }
+
+  @Override
+  public void setAMContainerExitStatus(int exitStatus) {
+    maybeInitBuilder();
+    builder.setAmContainerExitStatus(exitStatus);
+  }
+
+
+  @Override
   public boolean equals(Object other) {
     if (other == null)
       return false;
@@ -281,5 +294,4 @@ public class ApplicationAttemptStateDataPBImpl extends
   private FinalApplicationStatus convertFromProtoFormat(FinalApplicationStatusProto s) {
     return ProtoUtils.convertFromProtoFormat(s);
   }
-
 }

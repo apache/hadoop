@@ -39,11 +39,13 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMFatalEvent;
@@ -84,6 +86,7 @@ public abstract class RMStateStore extends AbstractService {
   protected static final String DELEGATION_TOKEN_SEQUENCE_NUMBER_PREFIX =
       "RMDTSequenceNumber_";
   protected static final String VERSION_NODE = "RMVersionNode";
+  protected static final String EPOCH_NODE = "EpochNode";
 
   public static final Log LOG = LogFactory.getLog(RMStateStore.class);
 
@@ -258,19 +261,21 @@ public abstract class RMStateStore extends AbstractService {
     RMAppAttemptState state;
     String finalTrackingUrl = "N/A";
     String diagnostics;
+    int exitStatus = ContainerExitStatus.INVALID;
     FinalApplicationStatus amUnregisteredFinalStatus;
 
     public ApplicationAttemptState(ApplicationAttemptId attemptId,
         Container masterContainer, Credentials appAttemptCredentials,
         long startTime) {
       this(attemptId, masterContainer, appAttemptCredentials, startTime, null,
-        null, "", null);
+        null, "", null, ContainerExitStatus.INVALID);
     }
 
     public ApplicationAttemptState(ApplicationAttemptId attemptId,
         Container masterContainer, Credentials appAttemptCredentials,
         long startTime, RMAppAttemptState state, String finalTrackingUrl,
-        String diagnostics, FinalApplicationStatus amUnregisteredFinalStatus) {
+        String diagnostics, FinalApplicationStatus amUnregisteredFinalStatus,
+        int exitStatus) {
       this.attemptId = attemptId;
       this.masterContainer = masterContainer;
       this.appAttemptCredentials = appAttemptCredentials;
@@ -279,6 +284,7 @@ public abstract class RMStateStore extends AbstractService {
       this.finalTrackingUrl = finalTrackingUrl;
       this.diagnostics = diagnostics == null ? "" : diagnostics;
       this.amUnregisteredFinalStatus = amUnregisteredFinalStatus;
+      this.exitStatus = exitStatus;
     }
 
     public Container getMasterContainer() {
@@ -304,6 +310,9 @@ public abstract class RMStateStore extends AbstractService {
     }
     public FinalApplicationStatus getFinalApplicationStatus() {
       return amUnregisteredFinalStatus;
+    }
+    public int getAMContainerExitStatus(){
+      return this.exitStatus;
     }
   }
   
@@ -513,6 +522,12 @@ public abstract class RMStateStore extends AbstractService {
    */
   protected abstract RMStateVersion getCurrentVersion();
 
+
+  /**
+   * Get the current epoch of RM and increment the value.
+   */
+  public abstract int getAndIncrementEpoch() throws Exception;
+  
   /**
    * Blocking API
    * The derived class must recover state from the store and return a new 

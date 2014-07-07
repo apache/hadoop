@@ -30,11 +30,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
  * namespaces are defined: user, trusted, security and system.
  *   1) USER namespace attributes may be used by any user to store
  *   arbitrary information. Access permissions in this namespace are
- *   defined by a file directory's permission bits.
+ *   defined by a file directory's permission bits. For sticky directories,
+ *   only the owner and privileged user can write attributes.
  * <br>
  *   2) TRUSTED namespace attributes are only visible and accessible to
- *   privileged users (a file or directory's owner or the fs
- *   admin). This namespace is available from both user space
+ *   privileged users. This namespace is available from both user space
  *   (filesystem API) and fs kernel.
  * <br>
  *   3) SYSTEM namespace attributes are used by the fs kernel to store

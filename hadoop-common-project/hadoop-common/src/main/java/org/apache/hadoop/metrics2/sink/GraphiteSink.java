@@ -50,10 +50,6 @@ public class GraphiteSink implements MetricsSink, Closeable {
     private String metricsPrefix = null;
     private Socket socket = null;
 
-    public void setWriter(Writer writer) {
-        this.writer = writer;
-    }
-
     @Override
     public void init(SubsetConfiguration conf) {
         // Get Graphite host configurations.
@@ -68,7 +64,7 @@ public class GraphiteSink implements MetricsSink, Closeable {
         try {
             // Open an connection to Graphite server.
             socket = new Socket(serverHost, serverPort);
-            setWriter(new OutputStreamWriter(socket.getOutputStream()));
+            writer = new OutputStreamWriter(socket.getOutputStream());
         } catch (Exception e) {
             throw new MetricsException("Error creating connection, "
                     + serverHost + ":" + serverPort, e);

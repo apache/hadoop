@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
@@ -38,7 +39,7 @@ import org.junit.Test;
 public class TestProtocolRecords {
 
   @Test
-  public void testContainerRecoveryReport() {
+  public void testNMContainerStatus() {
     ApplicationId appId = ApplicationId.newInstance(123456789, 1);
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(appId, 1);
     ContainerId containerId = ContainerId.newInstance(attemptId, 1);
@@ -47,7 +48,7 @@ public class TestProtocolRecords {
     NMContainerStatus report =
         NMContainerStatus.newInstance(containerId,
           ContainerState.COMPLETE, resource, "diagnostics",
-          ContainerExitStatus.ABORTED);
+          ContainerExitStatus.ABORTED, Priority.newInstance(10), 1234);
     NMContainerStatus reportProto =
         new NMContainerStatusPBImpl(
           ((NMContainerStatusPBImpl) report).getProto());
@@ -58,15 +59,8 @@ public class TestProtocolRecords {
     Assert.assertEquals(ContainerState.COMPLETE,
       reportProto.getContainerState());
     Assert.assertEquals(containerId, reportProto.getContainerId());
-  }
-
-  public static NMContainerStatus createContainerRecoveryReport(
-      ApplicationAttemptId appAttemptId, int id, ContainerState containerState) {
-    ContainerId containerId = ContainerId.newInstance(appAttemptId, id);
-    NMContainerStatus containerReport =
-        NMContainerStatus.newInstance(containerId, containerState,
-          Resource.newInstance(1024, 1), "diagnostics", 0);
-    return containerReport;
+    Assert.assertEquals(Priority.newInstance(10), reportProto.getPriority());
+    Assert.assertEquals(1234, reportProto.getCreationTime());
   }
 
   @Test
@@ -78,7 +72,7 @@ public class TestProtocolRecords {
     NMContainerStatus containerReport =
         NMContainerStatus.newInstance(containerId,
           ContainerState.RUNNING, Resource.newInstance(1024, 1), "diagnostics",
-          0);
+          0, Priority.newInstance(10), 1234);
     List<NMContainerStatus> reports = Arrays.asList(containerReport);
     RegisterNodeManagerRequest request =
         RegisterNodeManagerRequest.newInstance(

@@ -16,28 +16,16 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.fs.swift.exceptions;
+package org.apache.hadoop.fs.contract.localfs;
 
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.contract.AbstractContractSeekTest;
+import org.apache.hadoop.fs.contract.AbstractFSContract;
 
-/**
- * Exception raised when an operation is meant to work on a directory, but
- * the target path is not a directory
- */
-public class SwiftNotDirectoryException extends SwiftException {
-  private final Path path;
+public class TestLocalFSContractSeek extends AbstractContractSeekTest {
 
-  public SwiftNotDirectoryException(Path path) {
-    this(path, "");
-  }
-
-  public SwiftNotDirectoryException(Path path,
-                                    String message) {
-    super(path.toString() + message);
-    this.path = path;
-  }
-
-  public Path getPath() {
-    return path;
+  @Override
+  protected AbstractFSContract createContract(Configuration conf) {
+    return new LocalFSContract(conf);
   }
 }

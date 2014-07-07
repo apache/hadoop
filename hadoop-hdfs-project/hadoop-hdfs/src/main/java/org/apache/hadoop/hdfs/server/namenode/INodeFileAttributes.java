@@ -36,6 +36,8 @@ public interface INodeFileAttributes extends INodeAttributes {
   /** @return the header as a long. */
   public long getHeaderLong();
 
+  public boolean metadataEquals(INodeFileAttributes other);
+
   /** A copy of the inode file attributes */
   public static class SnapshotCopy extends INodeAttributes.SnapshotCopy
       implements INodeFileAttributes {
@@ -69,6 +71,15 @@ public interface INodeFileAttributes extends INodeAttributes {
     @Override
     public long getHeaderLong() {
       return header;
+    }
+
+    @Override
+    public boolean metadataEquals(INodeFileAttributes other) {
+      return other != null
+          && getHeaderLong()== other.getHeaderLong()
+          && getPermissionLong() == other.getPermissionLong()
+          && getAclFeature() == other.getAclFeature()
+          && getXAttrFeature() == other.getXAttrFeature();
     }
   }
 }

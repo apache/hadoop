@@ -53,8 +53,10 @@ public interface INodeDirectoryAttributes extends INodeAttributes {
     @Override
     public boolean metadataEquals(INodeDirectoryAttributes other) {
       return other != null
-          && this.getQuotaCounts().equals(other.getQuotaCounts())
-          && getPermissionLong() == other.getPermissionLong();
+          && getQuotaCounts().equals(other.getQuotaCounts())
+          && getPermissionLong() == other.getPermissionLong()
+          && getAclFeature() == other.getAclFeature()
+          && getXAttrFeature() == other.getXAttrFeature();
     }
   }
 

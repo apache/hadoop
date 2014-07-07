@@ -33,7 +33,6 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiff;
@@ -144,6 +143,15 @@ public class INodeFile extends INodeWithAdditionalFields
     return this;
   }
 
+  @Override
+  public boolean metadataEquals(INodeFileAttributes other) {
+    return other != null
+        && getHeaderLong()== other.getHeaderLong()
+        && getPermissionLong() == other.getPermissionLong()
+        && getAclFeature() == other.getAclFeature()
+        && getXAttrFeature() == other.getXAttrFeature();
+  }
+
   /* Start of Under-Construction Feature */
 
   /**
@@ -161,12 +169,11 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   /** Convert this file to an {@link INodeFileUnderConstruction}. */
-  INodeFile toUnderConstruction(String clientName, String clientMachine,
-      DatanodeDescriptor clientNode) {
+  INodeFile toUnderConstruction(String clientName, String clientMachine) {
     Preconditions.checkState(!isUnderConstruction(),
         "file is already under construction");
     FileUnderConstructionFeature uc = new FileUnderConstructionFeature(
-        clientName, clientMachine, clientNode);
+        clientName, clientMachine);
     addFeature(uc);
     return this;
   }

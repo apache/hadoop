@@ -296,13 +296,7 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
         int capabilityComparison =
             this.getCapability().compareTo(other.getCapability());
         if (capabilityComparison == 0) {
-          int numContainersComparison =
-              this.getNumContainers() - other.getNumContainers();
-          if (numContainersComparison == 0) {
-            return 0;
-          } else {
-            return numContainersComparison;
-          }
+          return this.getNumContainers() - other.getNumContainers();
         } else {
           return capabilityComparison;
         }

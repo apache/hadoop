@@ -17,6 +17,7 @@
  */
 
 package org.apache.hadoop.minikdc;
+import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.text.StrSubstitutor;
@@ -56,7 +57,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringReader;
@@ -126,9 +127,9 @@ public class MiniKdc {
               + file.getAbsolutePath());
     }
     Properties userConf = new Properties();
-    FileReader r = null;
+    InputStreamReader r = null;
     try {
-      r = new FileReader(file);
+      r = new InputStreamReader(new FileInputStream(file), Charsets.UTF_8);
       userConf.load(r);
     } finally {
       if (r != null) {
@@ -438,7 +439,7 @@ public class MiniKdc {
     BufferedReader r = null;
 
     try {
-      r = new BufferedReader(new InputStreamReader(is2));
+      r = new BufferedReader(new InputStreamReader(is2, Charsets.UTF_8));
       String line = r.readLine();
 
       while (line != null) {

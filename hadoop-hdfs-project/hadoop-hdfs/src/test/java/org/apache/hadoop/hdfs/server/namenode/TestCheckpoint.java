@@ -1334,7 +1334,8 @@ public class TestCheckpoint {
     SecondaryNameNode secondary2 = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf)
-          .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
+          .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(
+              conf.get(DFSConfigKeys.DFS_NAMESERVICES)))
           .build();
       Configuration snConf1 = new HdfsConfiguration(cluster.getConfiguration(0));
       Configuration snConf2 = new HdfsConfiguration(cluster.getConfiguration(1));

@@ -267,6 +267,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     // attempt1 is loaded correctly
     assertNotNull(attemptState);
     assertEquals(attemptId1, attemptState.getAttemptId());
+    assertEquals(-1000, attemptState.getAMContainerExitStatus());
     // attempt1 container is loaded correctly
     assertEquals(containerId1, attemptState.getMasterContainer().getId());
     // attempt1 applicationToken is loaded correctly
@@ -308,7 +309,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
           oldAttemptState.getAppAttemptCredentials(),
           oldAttemptState.getStartTime(), RMAppAttemptState.FINISHED,
           "myTrackingUrl", "attemptDiagnostics",
-          FinalApplicationStatus.SUCCEEDED);
+          FinalApplicationStatus.SUCCEEDED, 100);
     store.updateApplicationAttemptState(newAttemptState);
 
     // test updating the state of an app/attempt whose initial state was not
@@ -331,7 +332,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
           oldAttemptState.getAppAttemptCredentials(),
           oldAttemptState.getStartTime(), RMAppAttemptState.FINISHED,
           "myTrackingUrl", "attemptDiagnostics",
-          FinalApplicationStatus.SUCCEEDED);
+          FinalApplicationStatus.SUCCEEDED, 111);
     store.updateApplicationAttemptState(dummyAttempt);
 
     // let things settle down
@@ -370,6 +371,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     assertEquals(RMAppAttemptState.FINISHED, updatedAttemptState.getState());
     assertEquals("myTrackingUrl", updatedAttemptState.getFinalTrackingUrl());
     assertEquals("attemptDiagnostics", updatedAttemptState.getDiagnostics());
+    assertEquals(100, updatedAttemptState.getAMContainerExitStatus());
     assertEquals(FinalApplicationStatus.SUCCEEDED,
       updatedAttemptState.getFinalApplicationStatus());
 
@@ -492,6 +494,21 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     } catch (Throwable t) {
       Assert.assertTrue(t instanceof RMStateVersionIncompatibleException);
     }
+  }
+  
+  public void testEpoch(RMStateStoreHelper stateStoreHelper)
+      throws Exception {
+    RMStateStore store = stateStoreHelper.getRMStateStore();
+    store.setRMDispatcher(new TestDispatcher());
+    
+    int firstTimeEpoch = store.getAndIncrementEpoch();
+    Assert.assertEquals(0, firstTimeEpoch);
+    
+    int secondTimeEpoch = store.getAndIncrementEpoch();
+    Assert.assertEquals(1, secondTimeEpoch);
+    
+    int thirdTimeEpoch = store.getAndIncrementEpoch();
+    Assert.assertEquals(2, thirdTimeEpoch);
   }
 
   public void testAppDeletion(RMStateStoreHelper stateStoreHelper)

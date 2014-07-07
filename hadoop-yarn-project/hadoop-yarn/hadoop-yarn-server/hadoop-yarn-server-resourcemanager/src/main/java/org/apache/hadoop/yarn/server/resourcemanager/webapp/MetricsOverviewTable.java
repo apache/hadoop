@@ -72,6 +72,9 @@ public class MetricsOverviewTable extends HtmlBlock {
         th().$class("ui-state-default")._("Memory Used")._().
         th().$class("ui-state-default")._("Memory Total")._().
         th().$class("ui-state-default")._("Memory Reserved")._().
+        th().$class("ui-state-default")._("VCores Used")._().
+        th().$class("ui-state-default")._("VCores Total")._().
+        th().$class("ui-state-default")._("VCores Reserved")._().
         th().$class("ui-state-default")._("Active Nodes")._().
         th().$class("ui-state-default")._("Decommissioned Nodes")._().
         th().$class("ui-state-default")._("Lost Nodes")._().
@@ -94,6 +97,9 @@ public class MetricsOverviewTable extends HtmlBlock {
         td(StringUtils.byteDesc(clusterMetrics.getAllocatedMB() * BYTES_IN_MB)).
         td(StringUtils.byteDesc(clusterMetrics.getTotalMB() * BYTES_IN_MB)).
         td(StringUtils.byteDesc(clusterMetrics.getReservedMB() * BYTES_IN_MB)).
+        td(String.valueOf(clusterMetrics.getAllocatedVirtualCores())).
+        td(String.valueOf(clusterMetrics.getTotalVirtualCores())).
+        td(String.valueOf(clusterMetrics.getReservedVirtualCores())).
         td().a(url("nodes"),String.valueOf(clusterMetrics.getActiveNodes()))._().
         td().a(url("nodes/decommissioned"),String.valueOf(clusterMetrics.getDecommissionedNodes()))._().
         td().a(url("nodes/lost"),String.valueOf(clusterMetrics.getLostNodes()))._().
@@ -120,6 +126,9 @@ public class MetricsOverviewTable extends HtmlBlock {
             th().$class("ui-state-default")._("Memory Used")._().
             th().$class("ui-state-default")._("Memory Pending")._().
             th().$class("ui-state-default")._("Memory Reserved")._().
+            th().$class("ui-state-default")._("VCores Used")._().
+            th().$class("ui-state-default")._("VCores Pending")._().
+            th().$class("ui-state-default")._("VCores Reserved")._().
           _().
         _().
         tbody().$class("ui-widget-content").
@@ -139,6 +148,9 @@ public class MetricsOverviewTable extends HtmlBlock {
             td(StringUtils.byteDesc(userMetrics.getAllocatedMB() * BYTES_IN_MB)).
             td(StringUtils.byteDesc(userMetrics.getPendingMB() * BYTES_IN_MB)).
             td(StringUtils.byteDesc(userMetrics.getReservedMB() * BYTES_IN_MB)).
+            td(String.valueOf(userMetrics.getAllocatedVirtualCores())).
+            td(String.valueOf(userMetrics.getPendingVirtualCores())).
+            td(String.valueOf(userMetrics.getReservedVirtualCores())).
           _().
         _()._();
         

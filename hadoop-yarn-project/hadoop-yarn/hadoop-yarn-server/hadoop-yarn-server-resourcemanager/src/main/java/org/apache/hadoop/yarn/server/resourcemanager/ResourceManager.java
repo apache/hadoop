@@ -482,6 +482,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
       if(recoveryEnabled) {
         try {
           rmStore.checkVersion();
+          if (rmContext.isWorkPreservingRecoveryEnabled()) {
+            rmContext.setEpoch(rmStore.getAndIncrementEpoch());
+          }
           RMState state = rmStore.loadState();
           recover(state);
         } catch (Exception e) {

@@ -16,18 +16,33 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.fs.swift.exceptions;
+package org.apache.hadoop.fs.contract.hdfs;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.contract.AbstractContractMkdirTest;
+import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+
+import java.io.IOException;
 
 /**
- * Exception raised when trying to create a file that already exists
- * and the overwrite flag is set to false.
+ * Test dir operations on a the local FS.
  */
-public class SwiftPathExistsException extends SwiftException {
-  public SwiftPathExistsException(String message) {
-    super(message);
+public class TestHDFSContractMkdir extends AbstractContractMkdirTest {
+
+  @BeforeClass
+  public static void createCluster() throws IOException {
+    HDFSContract.createCluster();
   }
 
-  public SwiftPathExistsException(String message, Throwable cause) {
-    super(message, cause);
+  @AfterClass
+  public static void teardownCluster() throws IOException {
+    HDFSContract.destroyCluster();
+  }
+
+  @Override
+  protected AbstractFSContract createContract(Configuration conf) {
+    return new HDFSContract(conf);
   }
 }

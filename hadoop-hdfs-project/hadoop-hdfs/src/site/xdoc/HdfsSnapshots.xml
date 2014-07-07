@@ -97,7 +97,9 @@
     <li>Listing the files in snapshot <code>s0</code>:
       <source>hdfs dfs -ls /foo/.snapshot/s0</source></li>
     <li>Copying a file from snapshot <code>s0</code>:
-      <source>hdfs dfs -cp /foo/.snapshot/s0/bar /tmp</source></li>
+      <source>hdfs dfs -cp -ptopax /foo/.snapshot/s0/bar /tmp</source>
+      <p>Note that this example uses the preserve option to preserve
+         timestamps, ownership, permission, ACLs and XAttrs.</p></li>
   </ul>
   </subsection>
   </section>
@@ -255,7 +257,35 @@
       <tr><td>fromSnapshot</td><td>The name of the starting snapshot.</td></tr>
       <tr><td>toSnapshot</td><td>The name of the ending snapshot.</td></tr>
     </table></li>
+    <li>Results:
+      <table>
+        <tr><td>+</td><td>The file/directory has been created.</td></tr>
+        <tr><td>-</td><td>The file/directory has been deleted.</td></tr>
+        <tr><td>M</td><td>The file/directory has been modified.</td></tr>
+        <tr><td>R</td><td>The file/directory has been renamed.</td></tr>
+      </table>
+    </li>
   </ul>
+  <p>
+    A <em>RENAME</em> entry indicates a file/directory has been renamed but
+    is still under the same snapshottable directory. A file/directory is
+    reported as deleted if it was renamed to outside of the snapshottble directory.
+    A file/directory renamed from outside of the snapshottble directory is
+    reported as newly created.
+  </p>
+  <p>
+    The snapshot difference report does not guarantee the same operation sequence.
+    For example, if we rename the directory <em>"/foo"</em> to <em>"/foo2"</em>, and
+    then append new data to the file <em>"/foo2/bar"</em>, the difference report will
+    be:
+    <source>
+    R. /foo -> /foo2
+    M. /foo/bar
+    </source>
+    I.e., the changes on the files/directories under a renamed directory is
+    reported using the original path before the rename (<em>"/foo/bar"</em> in
+    the above example).
+  </p>
   <p>
     See also the corresponding Java API
     <code>SnapshotDiffReport getSnapshotDiffReport(Path path, String fromSnapshot, String toSnapshot)</code>

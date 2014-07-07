@@ -58,7 +58,7 @@
           var msg = '<p>Path does not exist on HDFS or WebHDFS is disabled.  Please check your path or enable WebHDFS</p>';
           break;
         default:
-          var msg = '<p>Failed to retreive data from ' + url + ': ' + err + '</p>';
+          var msg = '<p>Failed to retrieve data from ' + url + ': ' + err + '</p>';
         }
       show_err_msg(msg);
     };

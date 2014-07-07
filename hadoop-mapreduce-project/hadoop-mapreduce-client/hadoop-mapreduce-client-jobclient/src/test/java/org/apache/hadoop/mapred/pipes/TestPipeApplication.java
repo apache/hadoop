@@ -183,6 +183,8 @@ public class TestPipeApplication {
       output.setWriter(wr);
       conf.set(Submitter.PRESERVE_COMMANDFILE, "true");
 
+      initStdOut(conf);
+
       Application<WritableComparable<IntWritable>, Writable, IntWritable, Text> application = new Application<WritableComparable<IntWritable>, Writable, IntWritable, Text>(
               conf, rReader, output, reporter, IntWritable.class, Text.class);
       application.getDownlink().flush();

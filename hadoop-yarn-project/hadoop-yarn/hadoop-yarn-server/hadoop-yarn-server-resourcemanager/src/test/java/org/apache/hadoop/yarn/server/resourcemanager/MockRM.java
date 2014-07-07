@@ -166,6 +166,19 @@ public class MockRM extends ResourceManager {
     }
   }
 
+  public MockAM waitForNewAMToLaunchAndRegister(ApplicationId appId, int attemptSize,
+      MockNM nm) throws Exception {
+    RMApp app = getRMContext().getRMApps().get(appId);
+    Assert.assertNotNull(app);
+    while (app.getAppAttempts().size() != attemptSize) {
+      System.out.println("Application " + appId
+          + " is waiting for AM to restart. Current has "
+          + app.getAppAttempts().size() + " attempts.");
+      Thread.sleep(200);
+    }
+    return launchAndRegisterAM(app, this, nm);
+  }
+
   public void waitForState(MockNM nm, ContainerId containerId,
       RMContainerState containerState) throws Exception {
     RMContainer container = getResourceScheduler().getRMContainer(containerId);
@@ -551,6 +564,7 @@ public class MockRM extends ResourceManager {
       throws Exception {
     rm.waitForState(app.getApplicationId(), RMAppState.ACCEPTED);
     RMAppAttempt attempt = app.getCurrentAppAttempt();
+    System.out.println("Launch AM " + attempt.getAppAttemptId());
     nm.nodeHeartbeat(true);
     MockAM am = rm.sendAMLaunched(attempt.getAppAttemptId());
     rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.LAUNCHED);

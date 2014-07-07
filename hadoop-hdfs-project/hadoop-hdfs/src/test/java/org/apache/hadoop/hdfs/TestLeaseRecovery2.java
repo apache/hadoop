@@ -153,6 +153,15 @@ public class TestLeaseRecovery2 {
     verifyFile(dfs, filepath1, actual, size);
   }
 
+  @Test
+  public void testLeaseRecoverByAnotherUser() throws Exception {
+    byte [] actual = new byte[FILE_SIZE];
+    cluster.setLeasePeriod(SHORT_LEASE_PERIOD, LONG_LEASE_PERIOD);
+    Path filepath = createFile("/immediateRecoverLease-x", 0, true);
+    recoverLeaseUsingCreate2(filepath);
+    verifyFile(dfs, filepath, actual, 0);
+  }
+
   private Path createFile(final String filestr, final int size,
       final boolean triggerLeaseRenewerInterrupt)
   throws IOException, InterruptedException {
@@ -196,7 +205,7 @@ public class TestLeaseRecovery2 {
   }
 
   private void recoverLeaseUsingCreate(Path filepath)
-  throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     FileSystem dfs2 = getFSAsAnotherUser(conf);
     for(int i = 0; i < 10; i++) {
       AppendTestUtil.LOG.info("i=" + i);
@@ -214,6 +223,20 @@ public class TestLeaseRecovery2 {
       }
     }
     fail("recoverLeaseUsingCreate failed");
+  }
+
+  private void recoverLeaseUsingCreate2(Path filepath)
+          throws Exception {
+    FileSystem dfs2 = getFSAsAnotherUser(conf);
+    int size = AppendTestUtil.nextInt(FILE_SIZE);
+    DistributedFileSystem dfsx = (DistributedFileSystem) dfs2;
+    //create file using dfsx
+    Path filepath2 = new Path("/immediateRecoverLease-x2");
+    FSDataOutputStream stm = dfsx.create(filepath2, true, BUF_SIZE,
+        REPLICATION_NUM, BLOCK_SIZE);
+    assertTrue(dfsx.dfs.exists("/immediateRecoverLease-x2"));
+    try {Thread.sleep(10000);} catch (InterruptedException e) {}
+    dfsx.append(filepath);
   }
 
   private void verifyFile(FileSystem dfs, Path filepath, byte[] actual,

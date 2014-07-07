@@ -37,8 +37,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ChecksumException;
@@ -47,6 +45,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.io.nativeio.NativeIO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Manages caching for an FsDatasetImpl by using the mmap(2) and mlock(2)
@@ -101,7 +101,8 @@ public class FsDatasetCache {
     }
   }
 
-  private static final Log LOG = LogFactory.getLog(FsDatasetCache.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FsDatasetCache
+      .class);
 
   /**
    * Stores MappableBlock objects and the states they're in.
@@ -245,21 +246,17 @@ public class FsDatasetCache {
     ExtendedBlockId key = new ExtendedBlockId(blockId, bpid);
     Value prevValue = mappableBlockMap.get(key);
     if (prevValue != null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Block with id " + blockId + ", pool " + bpid +
-            " already exists in the FsDatasetCache with state " +
-            prevValue.state);
-      }
+      LOG.debug("Block with id {}, pool {} already exists in the "
+              + "FsDatasetCache with state {}", blockId, bpid, prevValue.state
+      );
       numBlocksFailedToCache.incrementAndGet();
       return;
     }
     mappableBlockMap.put(key, new Value(null, State.CACHING));
     volumeExecutor.execute(
         new CachingTask(key, blockFileName, length, genstamp));
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Initiating caching for Block with id " + blockId +
-          ", pool " + bpid);
-    }
+    LOG.debug("Initiating caching for Block with id {}, pool {}", blockId,
+        bpid);
   }
 
   synchronized void uncacheBlock(String bpid, long blockId) {
@@ -270,44 +267,34 @@ public class FsDatasetCache {
             processBlockMunlockRequest(key)) {
       // TODO: we probably want to forcibly uncache the block (and close the 
       // shm) after a certain timeout has elapsed.
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(key + " is anchored, and can't be uncached now.");
-      }
+      LOG.debug("{} is anchored, and can't be uncached now.", key);
       return;
     }
     if (prevValue == null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Block with id " + blockId + ", pool " + bpid + " " +
-            "does not need to be uncached, because it is not currently " +
-            "in the mappableBlockMap.");
-      }
+      LOG.debug("Block with id {}, pool {} does not need to be uncached, "
+          + "because it is not currently in the mappableBlockMap.", blockId,
+          bpid);
       numBlocksFailedToUncache.incrementAndGet();
       return;
     }
     switch (prevValue.state) {
     case CACHING:
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Cancelling caching for block with id " + blockId +
-            ", pool " + bpid + ".");
-      }
+      LOG.debug("Cancelling caching for block with id {}, pool {}.", blockId,
+          bpid);
       mappableBlockMap.put(key,
           new Value(prevValue.mappableBlock, State.CACHING_CANCELLED));
       break;
     case CACHED:
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Block with id " + blockId + ", pool " + bpid + " " +
-            "has been scheduled for uncaching.");
-      }
+      LOG.debug(
+          "Block with id {}, pool {} has been scheduled for uncaching" + ".",
+          blockId, bpid);
       mappableBlockMap.put(key,
           new Value(prevValue.mappableBlock, State.UNCACHING));
       uncachingExecutor.execute(new UncachingTask(key));
       break;
     default:
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Block with id " + blockId + ", pool " + bpid + " " +
-            "does not need to be uncached, because it is " +
-            "in state " + prevValue.state + ".");
-      }
+      LOG.debug("Block with id {}, pool {} does not need to be uncached, "
+          + "because it is in state {}.", blockId, bpid, prevValue.state);
       numBlocksFailedToUncache.incrementAndGet();
       break;
     }
@@ -386,10 +373,8 @@ public class FsDatasetCache {
           }
           mappableBlockMap.put(key, new Value(mappableBlock, State.CACHED));
         }
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Successfully cached " + key + ".  We are now caching " +
-              newUsedBytes + " bytes in total.");
-        }
+        LOG.debug("Successfully cached {}.  We are now caching {} bytes in"
+            + " total.", key, newUsedBytes);
         dataset.datanode.getShortCircuitRegistry().processBlockMlockEvent(key);
         numBlocksCached.addAndGet(1);
         dataset.datanode.getMetrics().incrBlocksCached(1);
@@ -399,12 +384,10 @@ public class FsDatasetCache {
         IOUtils.closeQuietly(metaIn);
         if (!success) {
           if (reservedBytes) {
-            newUsedBytes = usedBytesCount.release(length);
+            usedBytesCount.release(length);
           }
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Caching of " + key + " was aborted.  We are now " +
-                "caching only " + newUsedBytes + " + bytes in total.");
-          }
+          LOG.debug("Caching of {} was aborted.  We are now caching only {} "
+                  + "bytes in total.", key, usedBytesCount.get());
           if (mappableBlock != null) {
             mappableBlock.close();
           }
@@ -444,10 +427,7 @@ public class FsDatasetCache {
           usedBytesCount.release(value.mappableBlock.getLength());
       numBlocksCached.addAndGet(-1);
       dataset.datanode.getMetrics().incrBlocksUncached(1);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Uncaching of " + key + " completed.  " +
-            "usedBytes = " + newUsedBytes);
-      }
+      LOG.debug("Uncaching of {} completed. usedBytes = {}", key, newUsedBytes);
     }
   }
 

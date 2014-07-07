@@ -36,8 +36,8 @@ public class SWebHdfsFileSystem extends WebHdfsFileSystem {
   }
 
   @Override
-  protected synchronized void initializeTokenAspect() {
-    tokenAspect = new TokenAspect<SWebHdfsFileSystem>(this, tokenServiceName, TOKEN_KIND);
+  protected Text getTokenKind() {
+    return TOKEN_KIND;
   }
 
   @Override

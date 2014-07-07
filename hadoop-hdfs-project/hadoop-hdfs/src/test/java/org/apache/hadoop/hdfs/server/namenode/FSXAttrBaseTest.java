@@ -32,12 +32,20 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
+
+import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
+import static org.apache.hadoop.fs.permission.AclEntryType.USER;
+import static org.apache.hadoop.fs.permission.FsAction.ALL;
+import static org.apache.hadoop.fs.permission.FsAction.READ;
+import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import org.junit.After;
@@ -60,7 +68,7 @@ public class FSXAttrBaseTest {
   protected static MiniDFSCluster dfsCluster;
   protected static Configuration conf;
   private static int pathCount = 0;
-  private static Path path;
+  protected static Path path;
   
   // XAttrs
   protected static final String name1 = "user.a1";
@@ -73,10 +81,16 @@ public class FSXAttrBaseTest {
 
   protected FileSystem fs;
 
+  private static final UserGroupInformation BRUCE =
+      UserGroupInformation.createUserForTesting("bruce", new String[] { });
+  private static final UserGroupInformation DIANA =
+      UserGroupInformation.createUserForTesting("diana", new String[] { });
+
   @BeforeClass
   public static void init() throws Exception {
     conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, true);
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY, 3);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY, MAX_SIZE);
     initCluster(true);
@@ -388,6 +402,21 @@ public class FSXAttrBaseTest {
     fs.removeXAttr(path, name3);
   }
 
+  @Test(timeout = 120000)
+  public void testRenameFileWithXAttr() throws Exception {
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
+    fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
+    fs.setXAttr(path, name2, value2, EnumSet.of(XAttrSetFlag.CREATE));
+    Path renamePath = new Path(path.toString() + "-rename");
+    fs.rename(path, renamePath);
+    Map<String, byte[]> xattrs = fs.getXAttrs(renamePath);
+    Assert.assertEquals(xattrs.size(), 2);
+    Assert.assertArrayEquals(value1, xattrs.get(name1));
+    Assert.assertArrayEquals(value2, xattrs.get(name2));
+    fs.removeXAttr(renamePath, name1);
+    fs.removeXAttr(renamePath, name2);
+  }
+
   /**
    * Test the listXAttrs api.
    * listXAttrs on a path that doesn't exist.
@@ -535,6 +564,50 @@ public class FSXAttrBaseTest {
     Assert.assertArrayEquals(value1, xattrs.get(name1));
     Assert.assertArrayEquals(value2, xattrs.get(name2));
   }
+
+  @Test(timeout = 120000)
+  public void testXAttrAcl() throws Exception {
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short) 0750));
+    fs.setOwner(path, BRUCE.getUserName(), null);
+    FileSystem fsAsBruce = createFileSystem(BRUCE);
+    FileSystem fsAsDiana = createFileSystem(DIANA);
+    fsAsBruce.setXAttr(path, name1, value1);
+
+    Map<String, byte[]> xattrs;
+    try {
+      xattrs = fsAsDiana.getXAttrs(path);
+      Assert.fail("Diana should not have read access to get xattrs");
+    } catch (AccessControlException e) {
+      // Ignore
+    }
+
+    // Give Diana read permissions to the path
+    fsAsBruce.modifyAclEntries(path, Lists.newArrayList(
+        aclEntry(ACCESS, USER, DIANA.getUserName(), READ)));
+    xattrs = fsAsDiana.getXAttrs(path);
+    Assert.assertArrayEquals(value1, xattrs.get(name1));
+
+    try {
+      fsAsDiana.removeXAttr(path, name1);
+      Assert.fail("Diana should not have write access to remove xattrs");
+    } catch (AccessControlException e) {
+      // Ignore
+    }
+
+    try {
+      fsAsDiana.setXAttr(path, name2, value2);
+      Assert.fail("Diana should not have write access to set xattrs");
+    } catch (AccessControlException e) {
+      // Ignore
+    }
+
+    fsAsBruce.modifyAclEntries(path, Lists.newArrayList(
+        aclEntry(ACCESS, USER, DIANA.getUserName(), ALL)));
+    fsAsDiana.setXAttr(path, name2, value2);
+    Assert.assertArrayEquals(value2, fsAsDiana.getXAttrs(path).get(name2));
+    fsAsDiana.removeXAttr(path, name1);
+    fsAsDiana.removeXAttr(path, name2);
+  }
   
   /**
    * Creates a FileSystem for the super-user.
@@ -544,6 +617,18 @@ public class FSXAttrBaseTest {
    */
   protected FileSystem createFileSystem() throws Exception {
     return dfsCluster.getFileSystem();
+  }
+
+  /**
+   * Creates a FileSystem for a specific user.
+   *
+   * @param user UserGroupInformation specific user
+   * @return FileSystem for specific user
+   * @throws Exception if creation fails
+   */
+  protected FileSystem createFileSystem(UserGroupInformation user)
+      throws Exception {
+    return DFSTestUtil.getFileSystemAs(user, conf);
   }
   
   /**

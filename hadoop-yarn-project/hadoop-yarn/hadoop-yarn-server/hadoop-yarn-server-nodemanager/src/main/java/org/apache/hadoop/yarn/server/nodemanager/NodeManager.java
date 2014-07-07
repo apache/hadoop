@@ -84,7 +84,8 @@ public class NodeManager extends CompositeService
   private NMStateStoreService nmStore = null;
   
   private AtomicBoolean isStopping = new AtomicBoolean(false);
-  
+  private boolean rmWorkPreservingRestartEnabled;
+
   public NodeManager() {
     super(NodeManager.class.getName());
   }
@@ -172,6 +173,10 @@ public class NodeManager extends CompositeService
   protected void serviceInit(Configuration conf) throws Exception {
 
     conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
+
+    rmWorkPreservingRestartEnabled = conf.getBoolean(YarnConfiguration
+            .RM_WORK_PRESERVING_RECOVERY_ENABLED,
+        YarnConfiguration.DEFAULT_RM_WORK_PRESERVING_RECOVERY_ENABLED);
 
     initAndStartRecoveryStore(conf);
 
@@ -276,8 +281,12 @@ public class NodeManager extends CompositeService
         try {
           LOG.info("Notifying ContainerManager to block new container-requests");
           containerManager.setBlockNewContainerRequests(true);
-          LOG.info("Cleaning up running containers on resync");
-          containerManager.cleanupContainersOnNMResync();
+          if (!rmWorkPreservingRestartEnabled) {
+            LOG.info("Cleaning up running containers on resync");
+            containerManager.cleanupContainersOnNMResync();
+          } else {
+            LOG.info("Preserving containers on resync");
+          }
           ((NodeStatusUpdaterImpl) nodeStatusUpdater)
             .rebootNodeStatusUpdaterAndRegisterWithRM();
         } catch (YarnRuntimeException e) {

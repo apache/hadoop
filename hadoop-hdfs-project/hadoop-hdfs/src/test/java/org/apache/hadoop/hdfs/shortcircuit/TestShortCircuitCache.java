@@ -197,11 +197,12 @@ public class TestShortCircuitCache {
   @Test(timeout=60000)
   public void testExpiry() throws Exception {
     final ShortCircuitCache cache =
-        new ShortCircuitCache(2, 1, 1, 10000000, 1, 10000, 0);
+        new ShortCircuitCache(2, 1, 1, 10000000, 1, 10000000, 0);
     final TestFileDescriptorPair pair = new TestFileDescriptorPair();
     ShortCircuitReplicaInfo replicaInfo1 =
       cache.fetchOrCreate(
-        new ExtendedBlockId(123, "test_bp1"), new SimpleReplicaCreator(123, cache, pair));
+        new ExtendedBlockId(123, "test_bp1"),
+          new SimpleReplicaCreator(123, cache, pair));
     Preconditions.checkNotNull(replicaInfo1.getReplica());
     Preconditions.checkState(replicaInfo1.getInvalidTokenException() == null);
     pair.compareWith(replicaInfo1.getReplica().getDataStream(),

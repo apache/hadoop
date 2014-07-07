@@ -304,7 +304,7 @@ public class ApplicationCLI extends YarnCLI {
       containerReportStr.print("\tContainer-Id : ");
       containerReportStr.println(containerReport.getContainerId());
       containerReportStr.print("\tStart-Time : ");
-      containerReportStr.println(containerReport.getStartTime());
+      containerReportStr.println(containerReport.getCreationTime());
       containerReportStr.print("\tFinish-Time : ");
       containerReportStr.println(containerReport.getFinishTime());
       containerReportStr.print("\tState : ");
@@ -525,7 +525,7 @@ public class ApplicationCLI extends YarnCLI {
         "Finish Time", "State", "Host", "LOG-URL");
     for (ContainerReport containerReport : appsReport) {
       writer.printf(CONTAINER_PATTERN, containerReport.getContainerId(),
-          containerReport.getStartTime(), containerReport.getFinishTime(),
+          containerReport.getCreationTime(), containerReport.getFinishTime(),
           containerReport.getContainerState(), containerReport
               .getAssignedNode(), containerReport.getLogUrl());
     }

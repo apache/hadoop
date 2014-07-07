@@ -15,6 +15,27 @@ Trunk - Unreleased
     YARN-524 TestYarnVersionInfo failing if generated properties doesn't
     include an SVN URL. (stevel)
 
+    YARN-2216 TestRMApplicationHistoryWriter sometimes fails in trunk.
+    (Zhijie Shen via xgong)
+
+Release 2.6.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    YARN-2242. Improve exception information on AM launch crashes. (Li Lu 
+    via junping_du)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    YARN-2251. Avoid negative elapsed time in JHS/MRAM web UI and services.
+    (Zhijie Shen via junping_du)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -41,6 +62,18 @@ Release 2.5.0 - UNRELEASED
 
     YARN-1339. Recover DeletionService state upon nodemanager restart. (Jason Lowe
     via junping_du)
+
+    YARN-1365. Changed ApplicationMasterService to allow an app to re-register
+    after RM restart. (Anubhav Dhoot via jianhe)
+
+    YARN-2052. Embedded an epoch number in container id to ensure the uniqueness
+    of container id after RM restarts. (Tsuyoshi OZAWA via jianhe)
+
+    YARN-1713. Added get-new-app and submit-app functionality to RM web services.
+    (Varun Vasudev via vinodkv)
+
+    YARN-1367. Changed NM to not kill containers on NM resync if RM work-preserving
+    restart is enabled. (Anubhav Dhoot via jianhe)
 
   IMPROVEMENTS
 
@@ -170,6 +203,42 @@ Release 2.5.0 - UNRELEASED
     YARN-2159. Better logging in SchedulerNode#allocateContainer.
     (Ray Chiang via kasha)
 
+    YARN-2191. Added a new test to ensure NM will clean up completed applications
+    in the case of RM restart. (Wangda Tan via jianhe)
+
+    YARN-2195. Clean a piece of code in ResourceRequest. (Wei Yan via devaraj)
+
+    YARN-2074. Changed ResourceManager to not count AM preemptions towards app
+    failures. (Jian He via vinodkv)
+
+    YARN-2192. TestRMHA fails when run with a mix of Schedulers.
+    (Anubhav Dhoot via kasha)
+
+    YARN-2109. Fix TestRM to work with both schedulers. (Anubhav Dhoot via kasha)
+
+    YARN-2072. RM/NM UIs and webservices are missing vcore information.
+    (Nathan Roberts via tgraves)
+
+    YARN-2152. Added missing information into ContainerTokenIdentifier so that
+    NodeManagers can report the same to RM when RM restarts. (Jian He via vinodkv)
+
+    YARN-2171. Improved CapacityScheduling to not lock on nodemanager-count when
+    AMs heartbeat in. (Jason Lowe via vinodkv)
+
+    YARN-614. Changed ResourceManager to not count disk failure, node loss and
+    RM restart towards app failures. (Xuan Gong via jianhe)
+
+    YARN-2204. Explicitly enable vmem check in
+    TestContainersMonitor#testContainerKillOnMemoryOverflow.
+    (Anubhav Dhoot via kasha)
+
+    YARN-2022. Preempting an Application Master container can be kept as least priority
+    when multiple applications are marked for preemption by 
+    ProportionalCapacityPreemptionPolicy (Sunil G via mayank)
+
+    YARN-2241. ZKRMStateStore: On startup, show nicer messages if znodes already 
+    exist. (Robert Kanter via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -258,6 +327,33 @@ Release 2.5.0 - UNRELEASED
     YARN-2167. LeveldbIterator should get closed in
     NMLeveldbStateStoreService#loadLocalizationState() within finally block
     (Junping Du via jlowe)
+
+    YARN-2187. FairScheduler: Disable max-AM-share check by default.
+    (Robert Kanter via kasha)
+
+    YARN-2111. In FairScheduler.attemptScheduling, we don't count containers
+    as assigned if they have 0 memory but non-zero cores (Sandy Ryza)
+
+    YARN-2204. TestAMRestart#testAMRestartWithExistingContainers assumes
+    CapacityScheduler. (Robert Kanter via kasha)
+
+    YARN-2163. WebUI: Order of AppId in apps table should be consistent with
+    ApplicationId.compareTo(). (Wangda Tan via raviprak)
+
+    YARN-2104. Scheduler queue filter failed to work because index of queue
+    column changed. (Wangda Tan via jlowe)
+
+    YARN-2201. Made TestRMWebServicesAppsModification be independent of the
+    changes on yarn-default.xml. (Varun Vasudev via zjshen)
+
+    YARN-2216 YARN-2065 AM cannot create new containers after restart
+    (Jian He via stevel)
+
+    YARN-2232. Fixed ResourceManager to allow DelegationToken owners to be able
+    to cancel their own tokens in secure mode. (Varun Vasudev via vinodkv)
+
+    YARN-2250. FairScheduler.findLowestCommonAncestorQueue returns null when
+    queues not identical (Krisztian Horvath via Sandy Ryza)
 
 Release 2.4.1 - 2014-06-23 
 

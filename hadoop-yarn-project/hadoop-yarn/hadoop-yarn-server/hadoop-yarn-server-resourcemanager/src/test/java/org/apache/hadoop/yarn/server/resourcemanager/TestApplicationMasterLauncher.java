@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
+import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -194,28 +195,17 @@ public class TestApplicationMasterLauncher {
 
     // request for containers
     int request = 2;
-    try {
-      AllocateResponse ar =
-          am.allocate("h1", 1000, request, new ArrayList<ContainerId>());
-    } catch (Exception e) {
-      Assert.assertEquals("Application Master is trying to allocate before "
-          + "registering for: " + attempt.getAppAttemptId().getApplicationId(),
-        e.getMessage());
-      thrown = true;
-    }
+    AllocateResponse ar =
+        am.allocate("h1", 1000, request, new ArrayList<ContainerId>());
+    Assert.assertTrue(ar.getAMCommand() == AMCommand.AM_RESYNC);
+
     // kick the scheduler
     nm1.nodeHeartbeat(true);
-    try {
-      AllocateResponse amrs =
-          am.allocate(new ArrayList<ResourceRequest>(),
-            new ArrayList<ContainerId>());
-    } catch (Exception e) {
-      Assert.assertEquals("Application Master is trying to allocate before "
-          + "registering for: " + attempt.getAppAttemptId().getApplicationId(),
-        e.getMessage());
-      thrown = true;
-    }
-    Assert.assertTrue(thrown);
+    AllocateResponse amrs =
+        am.allocate(new ArrayList<ResourceRequest>(),
+          new ArrayList<ContainerId>());
+    Assert.assertTrue(ar.getAMCommand() == AMCommand.AM_RESYNC);
+
     am.registerAppAttempt();
     thrown = false;
     try {
@@ -228,5 +218,17 @@ public class TestApplicationMasterLauncher {
       thrown = true;
     }
     Assert.assertTrue(thrown);
+
+    // Simulate an AM that was disconnected and app attempt was removed
+    // (responseMap does not contain attemptid)
+    am.unregisterAppAttempt();
+    nm1.nodeHeartbeat(attempt.getAppAttemptId(), 1,
+        ContainerState.COMPLETE);
+    am.waitForState(RMAppAttemptState.FINISHED);
+
+    AllocateResponse amrs2 =
+        am.allocate(new ArrayList<ResourceRequest>(),
+            new ArrayList<ContainerId>());
+    Assert.assertTrue(amrs2.getAMCommand() == AMCommand.AM_SHUTDOWN);
   }
 }

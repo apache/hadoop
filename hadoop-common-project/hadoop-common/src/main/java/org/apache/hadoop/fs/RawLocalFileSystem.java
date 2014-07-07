@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 import java.io.BufferedOutputStream;
 import java.io.DataOutput;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -105,6 +106,10 @@ public class RawLocalFileSystem extends FileSystem {
     
     @Override
     public void seek(long pos) throws IOException {
+      if (pos < 0) {
+        throw new EOFException(
+          FSExceptionMessages.NEGATIVE_SEEK);
+      }
       fis.getChannel().position(pos);
       this.position = pos;
     }
@@ -256,7 +261,7 @@ public class RawLocalFileSystem extends FileSystem {
       boolean createParent, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
     if (exists(f) && !overwrite) {
-      throw new IOException("File already exists: "+f);
+      throw new FileAlreadyExistsException("File already exists: " + f);
     }
     Path parent = f.getParent();
     if (parent != null && !mkdirs(parent)) {
@@ -272,7 +277,7 @@ public class RawLocalFileSystem extends FileSystem {
       EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
     if (exists(f) && !flags.contains(CreateFlag.OVERWRITE)) {
-      throw new IOException("File already exists: "+f);
+      throw new FileAlreadyExistsException("File already exists: " + f);
     }
     return new FSDataOutputStream(new BufferedOutputStream(
         new LocalFSFileOutputStream(f, false), bufferSize), statistics);
@@ -344,6 +349,10 @@ public class RawLocalFileSystem extends FileSystem {
   @Override
   public boolean delete(Path p, boolean recursive) throws IOException {
     File f = pathToFile(p);
+    if (!f.exists()) {
+      //no path, return false "nothing to delete"
+      return false;
+    }
     if (f.isFile()) {
       return f.delete();
     } else if (!recursive && f.isDirectory() && 
@@ -412,9 +421,13 @@ public class RawLocalFileSystem extends FileSystem {
     if(parent != null) {
       File parent2f = pathToFile(parent);
       if(parent2f != null && parent2f.exists() && !parent2f.isDirectory()) {
-        throw new FileAlreadyExistsException("Parent path is not a directory: " 
+        throw new ParentNotDirectoryException("Parent path is not a directory: "
             + parent);
       }
+    }
+    if (p2f.exists() && !p2f.isDirectory()) {
+      throw new FileNotFoundException("Destination exists" +
+              " and is not a directory: " + p2f.getCanonicalPath());
     }
     return (parent == null || mkdirs(parent)) &&
       (p2f.mkdir() || p2f.isDirectory());
