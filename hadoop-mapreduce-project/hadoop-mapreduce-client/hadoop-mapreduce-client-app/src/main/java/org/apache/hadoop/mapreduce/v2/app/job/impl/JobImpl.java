@@ -1218,22 +1218,25 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     boolean smallNumReduceTasks = (numReduceTasks <= sysMaxReduces);
     boolean smallInput = (dataInputLength <= sysMaxBytes);
     // ignoring overhead due to UberAM and statics as negligible here:
+    long requiredMapMB = conf.getLong(MRJobConfig.MAP_MEMORY_MB, 0);
+    long requiredReduceMB = conf.getLong(MRJobConfig.REDUCE_MEMORY_MB, 0);
+    long requiredMB = Math.max(requiredMapMB, requiredReduceMB);
+    int requiredMapCores = conf.getInt(
+            MRJobConfig.MAP_CPU_VCORES, 
+            MRJobConfig.DEFAULT_MAP_CPU_VCORES);
+    int requiredReduceCores = conf.getInt(
+            MRJobConfig.REDUCE_CPU_VCORES, 
+            MRJobConfig.DEFAULT_REDUCE_CPU_VCORES);
+    int requiredCores = Math.max(requiredMapCores, requiredReduceCores);    
+    if (numReduceTasks == 0) {
+      requiredMB = requiredMapMB;
+      requiredCores = requiredMapCores;
+    }
     boolean smallMemory =
-        ( (Math.max(conf.getLong(MRJobConfig.MAP_MEMORY_MB, 0),
-            conf.getLong(MRJobConfig.REDUCE_MEMORY_MB, 0))
-            <= sysMemSizeForUberSlot)
-            || (sysMemSizeForUberSlot == JobConf.DISABLED_MEMORY_LIMIT));
-    boolean smallCpu =
-        (
-            Math.max(
-                conf.getInt(
-                    MRJobConfig.MAP_CPU_VCORES, 
-                    MRJobConfig.DEFAULT_MAP_CPU_VCORES), 
-                conf.getInt(
-                    MRJobConfig.REDUCE_CPU_VCORES, 
-                    MRJobConfig.DEFAULT_REDUCE_CPU_VCORES)) 
-             <= sysCPUSizeForUberSlot
-        );
+        (requiredMB <= sysMemSizeForUberSlot)
+        || (sysMemSizeForUberSlot == JobConf.DISABLED_MEMORY_LIMIT);
+    
+    boolean smallCpu = requiredCores <= sysCPUSizeForUberSlot;
     boolean notChainJob = !isChainJob(conf);
 
     // User has overall veto power over uberization, or user can modify

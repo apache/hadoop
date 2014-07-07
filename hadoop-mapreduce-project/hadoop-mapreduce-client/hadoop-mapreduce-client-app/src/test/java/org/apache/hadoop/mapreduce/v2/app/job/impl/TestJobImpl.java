@@ -657,6 +657,15 @@ public class TestJobImpl {
     conf.setInt(MRJobConfig.JOB_UBERTASK_MAXMAPS, 1);
     isUber = testUberDecision(conf);
     Assert.assertFalse(isUber);
+    
+ // enable uber mode of 0 reducer no matter how much memory assigned to reducer
+    conf = new Configuration();
+    conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, true);  
+    conf.setInt(MRJobConfig.NUM_REDUCES, 0);           
+    conf.setInt(MRJobConfig.REDUCE_MEMORY_MB, 2048);
+    conf.setInt(MRJobConfig.REDUCE_CPU_VCORES, 10);
+    isUber = testUberDecision(conf);
+    Assert.assertTrue(isUber);
   }
 
   private boolean testUberDecision(Configuration conf) {
