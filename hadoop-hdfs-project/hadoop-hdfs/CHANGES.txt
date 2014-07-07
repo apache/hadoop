@@ -270,6 +270,9 @@ Release 2.6.0 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-6617. Flake TestDFSZKFailoverController.testManualFailoverWithDFSHAAdmin
+    due to a long edit log sync op. (Liang Xie via cnauroth)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
