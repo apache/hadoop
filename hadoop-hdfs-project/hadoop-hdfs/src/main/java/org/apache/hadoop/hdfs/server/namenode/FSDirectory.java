@@ -2230,15 +2230,16 @@ public class FSDirectory implements Closeable {
   public final void addToInodeMap(INode inode) {
     if (inode instanceof INodeWithAdditionalFields) {
       inodeMap.put(inode);
-      final XAttrFeature xaf = inode.getXAttrFeature();
-      if (xaf != null) {
-        final List<XAttr> xattrs = xaf.getXAttrs();
-        for (XAttr xattr : xattrs) {
-          final String xaName = XAttrHelper.getPrefixName(xattr);
-          if (CRYPTO_XATTR_ENCRYPTION_ZONE.equals(xaName)) {
-            encryptionZones.put(inode.getId(),
-              new EncryptionZoneInt(new String(xattr.getValue()),
-                                    inode.getId()));
+      if (!inode.isSymlink()) {
+        final XAttrFeature xaf = inode.getXAttrFeature();
+        if (xaf != null) {
+          final List<XAttr> xattrs = xaf.getXAttrs();
+          for (XAttr xattr : xattrs) {
+            final String xaName = XAttrHelper.getPrefixName(xattr);
+            if (CRYPTO_XATTR_ENCRYPTION_ZONE.equals(xaName)) {
+              encryptionZones.put(inode.getId(), new EncryptionZoneInt(
+                  new String(xattr.getValue()), inode.getId()));
+            }
           }
         }
       }

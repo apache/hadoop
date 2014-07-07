@@ -37,6 +37,8 @@ fs-encryption (Unreleased)
 
     HDFS-6516. List of Encryption Zones should be based on inodes (clamb)
 
+    HDFS-6629. Not able to create symlinks after HDFS-6516 (umamaheswararao)
+
   OPTIMIZATIONS
 
   BUG FIXES
