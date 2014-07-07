@@ -134,6 +134,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5900. Changed to the interpret container preemption exit code as a
     task attempt killing event. (Mayank Bansal via zjshen)
 
+    MAPREDUCE-5868. Fixed an issue with TestPipeApplication that was causing the
+    nightly builds to fail. (Akira Ajisaka via vinodkv)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
