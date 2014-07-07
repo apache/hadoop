@@ -297,6 +297,10 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5868. Fixed an issue with TestPipeApplication that was causing the
     nightly builds to fail. (Akira Ajisaka via vinodkv)
 
+    MAPREDUCE-5517. Fixed MapReduce ApplicationMaster to not validate reduce side
+    resource configuration for deciding uber-mode on map-only jobs. (Siqi Li via
+    vinodkv)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
