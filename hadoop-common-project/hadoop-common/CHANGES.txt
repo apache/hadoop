@@ -523,6 +523,8 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10312 Shell.ExitCodeException to have more useful toString (stevel)
 
+    HADOOP-10782. Fix typo in DataChecksum class. (Jingguo Yao via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES 
