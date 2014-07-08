@@ -730,7 +730,7 @@
       <dependency>
         <groupId>org.apache.bookkeeper</groupId>
         <artifactId>bookkeeper-server</artifactId>
-        <version>4.0.0</version>
+        <version>4.2.3</version>
         <scope>compile</scope>
       </dependency>
       <dependency>
