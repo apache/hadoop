@@ -855,22 +855,5 @@ digest:hdfs-zkfcs:vlUvLnd8MlacsE80rDuu6ONESbM=:rwcda
 
  *** <<Current limitations>> 
 
-      1) NameNode format command will not format the BookKeeper data automatically. 
-         We have to clean the data manually from BookKeeper cluster 
-         and create the /ledgers/available path in Zookeeper. 
-----
-$ zkCli.sh create /ledgers 0
-$ zkCli.sh create /ledgers/available 0
-----
-         Note:
-          bookkeeper://zk1:2181;zk2:2181;zk3:2181/hdfsjournal
-          The final part /hdfsjournal specifies the znode in zookeeper where
-          ledger metadata will be stored. Administrators may set this to anything
-          they wish.
-
-      2) Security in BookKeeper. BookKeeper does not support SASL nor SSL for
+      1) Security in BookKeeper. BookKeeper does not support SASL nor SSL for
          connections between the NameNode and BookKeeper storage nodes.
-
-      3) Auto-Recovery of storage node failures. Work inprogress 
-      {{{https://issues.apache.org/jira/browse/BOOKKEEPER-237 }BOOKKEEPER-237}}.
-         Currently we have the tools to manually recover the data from failed storage nodes.

@@ -532,6 +532,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-4286. Changes from BOOKKEEPER-203 broken capability of including 
     bookkeeper-server jar in hidden package of BKJM (Rakesh R via umamahesh)
 
+    HDFS-4221. Remove the format limitation point from BKJM documentation as HDFS-3810
+    closed. (Rakesh R via umamahesh)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
