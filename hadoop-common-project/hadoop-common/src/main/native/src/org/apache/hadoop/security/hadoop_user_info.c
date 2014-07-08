@@ -193,7 +193,7 @@ int hadoop_user_info_getgroups(struct hadoop_user_info *uinfo)
   ngroups = uinfo->gids_size;
   ret = getgrouplist(uinfo->pwd.pw_name, uinfo->pwd.pw_gid, 
                          uinfo->gids, &ngroups);
-  if (ret > 0) {
+  if (ret >= 0) {
     uinfo->num_gids = ngroups;
     ret = put_primary_gid_first(uinfo);
     if (ret) {
