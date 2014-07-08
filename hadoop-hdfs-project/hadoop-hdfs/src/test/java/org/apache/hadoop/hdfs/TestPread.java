@@ -284,6 +284,7 @@ public class TestPread {
         numHedgedReadPoolThreads);
     conf.setLong(DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THRESHOLD_MILLIS,
         hedgedReadTimeoutMillis);
+    conf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, 0);
     // Set up the InjectionHandler
     DFSClientFaultInjector.instance = Mockito
         .mock(DFSClientFaultInjector.class);
@@ -329,11 +330,11 @@ public class TestPread {
     } catch (BlockMissingException e) {
       assertTrue(false);
     } finally {
+      Mockito.reset(injector);
       IOUtils.cleanup(null, input);
       IOUtils.cleanup(null, output);
       fileSys.close();
       cluster.shutdown();
-      Mockito.reset(injector);
     }
   }
 
