@@ -27,10 +27,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -139,35 +137,6 @@ public class FSDirectory implements Closeable {
   private long yieldCount = 0; // keep track of lock yield count.
   private final int inodeXAttrsLimit; //inode xattrs max limit
 
-  /*
-   * EncryptionZoneInt is the internal representation of an encryption
-   * zone. The external representation of an EZ is embodied in an
-   * EncryptionZone and contains the EZ's pathname.
-   */
-  private class EncryptionZoneInt {
-    private final String keyId;
-    private final long inodeId;
-
-    EncryptionZoneInt(String keyId, long inodeId) {
-      this.keyId = keyId;
-      this.inodeId = inodeId;
-    }
-
-    String getKeyId() {
-      return keyId;
-    }
-
-    long getINodeId() {
-      return inodeId;
-    }
-
-    String getFullPathName() {
-      return getInode(inodeId).getFullPathName();
-    }
-  }
-
-  private final Map<Long, EncryptionZoneInt> encryptionZones;
-
   // lock to protect the directory and BlockMap
   private final ReentrantReadWriteLock dirLock;
 
@@ -203,6 +172,8 @@ public class FSDirectory implements Closeable {
   public int getWriteHoldCount() {
     return this.dirLock.getWriteHoldCount();
   }
+
+  final EncryptionZoneManager ezManager;
 
   /**
    * Caches frequently used file names used in {@link INode} to reuse 
@@ -252,7 +223,8 @@ public class FSDirectory implements Closeable {
         + " times");
     nameCache = new NameCache<ByteArray>(threshold);
     namesystem = ns;
-    encryptionZones = new HashMap<Long, EncryptionZoneInt>();
+
+    ezManager = new EncryptionZoneManager(this);
   }
     
   private FSNamesystem getFSNamesystem() {
@@ -550,7 +522,7 @@ public class FSDirectory implements Closeable {
       return false;
     }
     
-    checkEncryptionZoneMoveValidity(srcIIP, dstIIP, src);
+    ezManager.checkMoveValidity(srcIIP, dstIIP, src);
     // Ensure dst has quota to accommodate rename
     verifyFsLimitsForRename(srcIIP, dstIIP);
     verifyQuotaForRename(srcIIP.getINodes(), dstIIP.getINodes());
@@ -629,7 +601,7 @@ public class FSDirectory implements Closeable {
       throw new IOException(error);
     }
 
-    checkEncryptionZoneMoveValidity(srcIIP, dstIIP, src);
+    ezManager.checkMoveValidity(srcIIP, dstIIP, src);
     final INode dstInode = dstIIP.getLastINode();
     List<INodeDirectorySnapshottable> snapshottableDirs = 
         new ArrayList<INodeDirectorySnapshottable>();
@@ -937,58 +909,9 @@ public class FSDirectory implements Closeable {
     throws UnresolvedLinkException, SnapshotAccessControlException {
     readLock();
     try {
-      return (getEncryptionZoneForPath(iip) != null);
+      return ezManager.isInAnEZ(iip);
     } finally {
       readUnlock();
-    }
-  }
-
-  private EncryptionZoneInt getEncryptionZoneForPath(INodesInPath iip) {
-    Preconditions.checkNotNull(iip);
-    final INode[] inodes = iip.getINodes();
-    for (int i = inodes.length -1; i >= 0; i--) {
-      final INode inode = inodes[i];
-      if (inode != null) {
-        final EncryptionZoneInt ezi = encryptionZones.get(inode.getId());
-        if (ezi != null) {
-          return ezi;
-        }
-      }
-    }
-    return null;
-  }
-
-  private void checkEncryptionZoneMoveValidity(INodesInPath srcIIP,
-    INodesInPath dstIIP, String src)
-    throws IOException {
-    final boolean srcInEZ = (getEncryptionZoneForPath(srcIIP) != null);
-    final boolean dstInEZ = (getEncryptionZoneForPath(dstIIP) != null);
-    if (srcInEZ) {
-      if (!dstInEZ) {
-        throw new IOException(src + " can't be moved from an encryption zone.");
-      }
-    } else {
-      if (dstInEZ) {
-        throw new IOException(src + " can't be moved into an encryption zone.");
-      }
-    }
-
-    if (srcInEZ || dstInEZ) {
-      final EncryptionZoneInt srcEZI = getEncryptionZoneForPath(srcIIP);
-      final EncryptionZoneInt dstEZI = getEncryptionZoneForPath(dstIIP);
-      Preconditions.checkArgument(srcEZI != null, "couldn't find src EZ?");
-      Preconditions.checkArgument(dstEZI != null, "couldn't find dst EZ?");
-      if (srcEZI != dstEZI) {
-        final String srcEZPath = srcEZI.getFullPathName();
-        final String dstEZPath = dstEZI.getFullPathName();
-        final StringBuilder sb = new StringBuilder(src);
-        sb.append(" can't be moved from encryption zone ");
-        sb.append(srcEZPath);
-        sb.append(" to encryption zone ");
-        sb.append(dstEZPath);
-        sb.append(".");
-        throw new IOException(sb.toString());
-      }
     }
   }
 
@@ -2157,8 +2080,8 @@ public class FSDirectory implements Closeable {
           for (XAttr xattr : xattrs) {
             final String xaName = XAttrHelper.getPrefixName(xattr);
             if (CRYPTO_XATTR_ENCRYPTION_ZONE.equals(xaName)) {
-              encryptionZones.put(inode.getId(), new EncryptionZoneInt(
-                  new String(xattr.getValue()), inode.getId()));
+              ezManager.addEncryptionZone(inode.getId(),
+                  new String(xattr.getValue()));
             }
           }
         }
@@ -2174,7 +2097,7 @@ public class FSDirectory implements Closeable {
       for (INode inode : inodes) {
         if (inode != null && inode instanceof INodeWithAdditionalFields) {
           inodeMap.remove(inode);
-          encryptionZones.remove(inode.getId());
+          ezManager.removeEncryptionZone(inode.getId());
         }
       }
     }
@@ -2700,27 +2623,7 @@ public class FSDirectory implements Closeable {
     throws IOException {
     writeLock();
     try {
-      if (isNonEmptyDirectory(src)) {
-        throw new IOException(
-          "Attempt to create an encryption zone for a non-empty directory.");
-      }
-
-      final INodesInPath srcIIP = getINodesInPath4Write(src, false);
-      final EncryptionZoneInt ezi = getEncryptionZoneForPath(srcIIP);
-      if (ezi != null) {
-        throw new IOException("Directory " + src +
-          " is already in an encryption zone. (" + ezi.getFullPathName() + ")");
-      }
-
-      final XAttr keyIdXAttr =
-        XAttrHelper.buildXAttr(CRYPTO_XATTR_ENCRYPTION_ZONE, keyId.getBytes());
-      final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
-      xattrs.add(keyIdXAttr);
-      final INode inode = unprotectedSetXAttrs(src, xattrs,
-        EnumSet.of(XAttrSetFlag.CREATE));
-      encryptionZones.put(inode.getId(),
-          new EncryptionZoneInt(keyId, inode.getId()));
-      return keyIdXAttr;
+      return ezManager.createEncryptionZone(src, keyId);
     } finally {
       writeUnlock();
     }
@@ -2729,12 +2632,7 @@ public class FSDirectory implements Closeable {
   List<EncryptionZone> listEncryptionZones() throws IOException {
     readLock();
     try {
-      final List<EncryptionZone> ret =
-        Lists.newArrayListWithExpectedSize(encryptionZones.size());
-      for (EncryptionZoneInt ezi : encryptionZones.values()) {
-        ret.add(new EncryptionZone(ezi.getFullPathName(), ezi.getKeyId()));
-      }
-      return ret;
+      return ezManager.listEncryptionZones();
     } finally {
       readUnlock();
     }
@@ -2823,9 +2721,7 @@ public class FSDirectory implements Closeable {
     for (XAttr xattr : newXAttrs) {
       final String xaName = XAttrHelper.getPrefixName(xattr);
       if (CRYPTO_XATTR_ENCRYPTION_ZONE.equals(xaName)) {
-        final EncryptionZoneInt ez =
-            new EncryptionZoneInt(new String(xattr.getValue()), inode.getId());
-        encryptionZones.put(inode.getId(), ez);
+        ezManager.addEncryptionZone(inode.getId(), new String(xattr.getValue()));
       }
     }
 
@@ -3084,7 +2980,7 @@ public class FSDirectory implements Closeable {
    * @throws UnresolvedLinkException if symlink can't be resolved
    * @throws SnapshotAccessControlException if path is in RO snapshot
    */
-  private INodesInPath getINodesInPath4Write(String src, boolean resolveLink)
+  INodesInPath getINodesInPath4Write(String src, boolean resolveLink)
           throws UnresolvedLinkException, SnapshotAccessControlException {
     final byte[][] components = INode.getPathComponents(src);
     INodesInPath inodesInPath = INodesInPath.resolve(rootDir, components,

@@ -39,6 +39,9 @@ fs-encryption (Unreleased)
 
     HDFS-6629. Not able to create symlinks after HDFS-6516 (umamaheswararao)
 
+    HDFS-6635. Refactor encryption zone functionality into new
+    EncryptionZoneManager class. (wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
