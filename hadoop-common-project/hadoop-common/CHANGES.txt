@@ -12,6 +12,9 @@ Release 2.6.0 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-10781. Unportable getgrouplist() usage breaks FreeBSD (Dmitry
+    Sivachenko via Colin Patrick McCabe)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -308,9 +311,6 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10419 BufferedFSInputStream NPEs on getPos() on a closed stream
     (stevel)
-
-    HADOOP-10781. Unportable getgrouplist() usage breaks FreeBSD (Dmitry
-    Sivachenko via Colin Patrick McCabe)
 
   BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
 
