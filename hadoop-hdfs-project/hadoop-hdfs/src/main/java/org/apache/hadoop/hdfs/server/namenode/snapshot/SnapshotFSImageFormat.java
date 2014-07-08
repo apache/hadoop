@@ -41,6 +41,8 @@ import org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff;
 import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
+import com.google.common.base.Preconditions;
+
 /**
  * A helper class defining static methods for reading/writing snapshot related
  * information from/to FSImage.
@@ -52,17 +54,19 @@ public class SnapshotFSImageFormat {
    * @param out The {@link DataOutput} to write.
    * @throws IOException
    */
-  public static void saveSnapshots(INodeDirectorySnapshottable current,
-      DataOutput out) throws IOException {
+  public static void saveSnapshots(INodeDirectory current, DataOutput out)
+      throws IOException {
+    DirectorySnapshottableFeature sf = current.getDirectorySnapshottableFeature();
+    Preconditions.checkArgument(sf != null);
     // list of snapshots in snapshotsByNames
-    ReadOnlyList<Snapshot> snapshots = current.getSnapshotsByNames();
+    ReadOnlyList<Snapshot> snapshots = sf.getSnapshotList();
     out.writeInt(snapshots.size());
     for (Snapshot s : snapshots) {
       // write the snapshot id
       out.writeInt(s.getId());
     }
     // snapshot quota
-    out.writeInt(current.getSnapshotQuota());
+    out.writeInt(sf.getSnapshotQuota());
   }
 
   /**
@@ -216,19 +220,22 @@ public class SnapshotFSImageFormat {
    * @param loader
    *          The loader
    */
-  public static void loadSnapshotList(
-      INodeDirectorySnapshottable snapshottableParent, int numSnapshots,
-      DataInput in, FSImageFormat.Loader loader) throws IOException {
+  public static void loadSnapshotList(INodeDirectory snapshottableParent,
+      int numSnapshots, DataInput in, FSImageFormat.Loader loader)
+      throws IOException {
+    DirectorySnapshottableFeature sf = snapshottableParent
+        .getDirectorySnapshottableFeature();
+    Preconditions.checkArgument(sf != null);
     for (int i = 0; i < numSnapshots; i++) {
       // read snapshots
       final Snapshot s = loader.getSnapshot(in);
       s.getRoot().setParent(snapshottableParent);
-      snapshottableParent.addSnapshot(s);
+      sf.addSnapshot(s);
     }
     int snapshotQuota = in.readInt();
     snapshottableParent.setSnapshotQuota(snapshotQuota);
   }
-  
+
   /**
    * Load the {@link SnapshotDiff} list for the INodeDirectoryWithSnapshot
    * directory.
