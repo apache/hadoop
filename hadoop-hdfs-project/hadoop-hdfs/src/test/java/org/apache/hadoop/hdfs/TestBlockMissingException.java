@@ -51,6 +51,8 @@ public class TestBlockMissingException {
     long blockSize = 1024L;
     int numBlocks = 4;
     conf = new HdfsConfiguration();
+    // Set short retry timeouts so this test runs faster
+    conf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, 10);
     try {
       dfs = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
       dfs.waitActive();
