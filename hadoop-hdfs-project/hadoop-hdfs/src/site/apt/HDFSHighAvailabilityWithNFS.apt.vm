@@ -838,20 +838,18 @@ digest:hdfs-zkfcs:vlUvLnd8MlacsE80rDuu6ONESbM=:rwcda
 
      $ mvn clean package -Pdist
 
-     This will generate a jar with the BookKeeperJournalManager, all the dependencies
-     needed by the journal manager,
+     This will generate a jar with the BookKeeperJournalManager, 
      hadoop-hdfs/src/contrib/bkjournal/target/hadoop-hdfs-bkjournal-<VERSION>.jar
 
-     Note that the -Pdist part of the build command is important, as otherwise
-     the dependencies would not be packaged in the jar. The dependencies included in
-     the jar are {{{http://maven.apache.org/plugins/maven-shade-plugin/}shaded}} to
-     avoid conflicts with other dependencies of the NameNode.
+     Note that the -Pdist part of the build command is important, this would
+     copy the dependent bookkeeper-server jar under 
+     hadoop-hdfs/src/contrib/bkjournal/target/lib.
 
  *** <<Putting the BookKeeperJournalManager in the NameNode classpath>>
 
-    To run a HDFS namenode using BookKeeper as a backend, copy the bkjournal
-    jar, generated above, into the lib directory of hdfs. In the standard 
-    distribution of HDFS, this is at $HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/
+    To run a HDFS namenode using BookKeeper as a backend, copy the bkjournal and
+    bookkeeper-server jar, mentioned above, into the lib directory of hdfs. In the 
+    standard distribution of HDFS, this is at $HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/
 
     cp hadoop-hdfs/src/contrib/bkjournal/target/hadoop-hdfs-bkjournal-<VERSION>.jar $HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/
 
