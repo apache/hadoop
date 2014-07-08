@@ -2306,11 +2306,11 @@ public class DataNode extends Configured
 
   @Override // ClientDataNodeProtocol
   public long getReplicaVisibleLength(final ExtendedBlock block) throws IOException {
-    checkWriteAccess(block);
+    checkReadAccess(block);
     return data.getReplicaVisibleLength(block);
   }
 
-  private void checkWriteAccess(final ExtendedBlock block) throws IOException {
+  private void checkReadAccess(final ExtendedBlock block) throws IOException {
     if (isBlockTokenEnabled) {
       Set<TokenIdentifier> tokenIds = UserGroupInformation.getCurrentUser()
           .getTokenIdentifiers();
