@@ -411,13 +411,15 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
+    String responseState = json.getString("state");
     boolean valid = false;
     for (RMAppState state : states) {
-      if (state.toString().equals(json.getString("state"))) {
+      if (state.toString().equals(responseState)) {
         valid = true;
       }
     }
-    assertTrue("app state incorrect", valid);
+    String msg = "app state incorrect, got " + responseState;
+    assertTrue(msg, valid);
     return;
   }
 
@@ -441,7 +443,8 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
         valid = true;
       }
     }
-    assertTrue("app state incorrect", valid);
+    String msg = "app state incorrect, got " + state;
+    assertTrue(msg, valid);
     return;
   }
 

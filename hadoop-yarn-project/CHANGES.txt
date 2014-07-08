@@ -340,6 +340,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2250. FairScheduler.findLowestCommonAncestorQueue returns null when
     queues not identical (Krisztian Horvath via Sandy Ryza)
 
+    YARN-2158. Improved assertion messages of TestRMWebServicesAppsModification.
+    (Varun Vasudev via zjshen)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
