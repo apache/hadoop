@@ -179,6 +179,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6959. Make the HDFS home directory location customizable. (yzhang via
     cmccabe)
 
+    HDFS-6609. Use DirectorySnapshottableFeature to represent a snapshottable
+    directory. (Jing Zhao via wheat9)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

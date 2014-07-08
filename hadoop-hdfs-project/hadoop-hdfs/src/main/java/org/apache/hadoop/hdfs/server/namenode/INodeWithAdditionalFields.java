@@ -315,8 +315,9 @@ public abstract class INodeWithAdditionalFields extends INode
   }
 
   protected <T extends Feature> T getFeature(Class<? extends Feature> clazz) {
+    Preconditions.checkArgument(clazz != null);
     for (Feature f : features) {
-      if (f.getClass() == clazz) {
+      if (clazz.isAssignableFrom(f.getClass())) {
         @SuppressWarnings("unchecked")
         T ret = (T) f;
         return ret;

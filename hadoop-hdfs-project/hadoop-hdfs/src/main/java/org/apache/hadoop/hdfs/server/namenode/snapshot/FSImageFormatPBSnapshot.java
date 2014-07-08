@@ -127,9 +127,8 @@ public class FSImageFormatPBSnapshot {
     }
 
     /**
-     * Load the snapshots section from fsimage. Also convert snapshottable
-     * directories into {@link INodeDirectorySnapshottable}.
-     *
+     * Load the snapshots section from fsimage. Also add snapshottable feature
+     * to snapshottable directories.
      */
     public void loadSnapshotSection(InputStream in) throws IOException {
       SnapshotManager sm = fsn.getSnapshotManager();
@@ -139,16 +138,13 @@ public class FSImageFormatPBSnapshot {
       sm.setSnapshotCounter(section.getSnapshotCounter());
       for (long sdirId : section.getSnapshottableDirList()) {
         INodeDirectory dir = fsDir.getInode(sdirId).asDirectory();
-        final INodeDirectorySnapshottable sdir;
         if (!dir.isSnapshottable()) {
-          sdir = new INodeDirectorySnapshottable(dir);
-          fsDir.addToInodeMap(sdir);
+          dir.addSnapshottableFeature();
         } else {
           // dir is root, and admin set root to snapshottable before
-          sdir = (INodeDirectorySnapshottable) dir;
-          sdir.setSnapshotQuota(INodeDirectorySnapshottable.SNAPSHOT_LIMIT);
+          dir.setSnapshotQuota(DirectorySnapshottableFeature.SNAPSHOT_LIMIT);
         }
-        sm.addSnapshottable(sdir);
+        sm.addSnapshottable(dir);
       }
       loadSnapshots(in, snum);
     }
@@ -160,12 +156,11 @@ public class FSImageFormatPBSnapshot {
         INodeDirectory root = loadINodeDirectory(pbs.getRoot(),
             parent.getLoaderContext());
         int sid = pbs.getSnapshotId();
-        INodeDirectorySnapshottable parent = (INodeDirectorySnapshottable) fsDir
-            .getInode(root.getId()).asDirectory();
+        INodeDirectory parent = fsDir.getInode(root.getId()).asDirectory();
         Snapshot snapshot = new Snapshot(sid, root, parent);
         // add the snapshot to parent, since we follow the sequence of
         // snapshotsByNames when saving, we do not need to sort when loading
-        parent.addSnapshot(snapshot);
+        parent.getDirectorySnapshottableFeature().addSnapshot(snapshot);
         snapshotMap.put(sid, snapshot);
       }
     }
@@ -373,14 +368,15 @@ public class FSImageFormatPBSnapshot {
           .setSnapshotCounter(sm.getSnapshotCounter())
           .setNumSnapshots(sm.getNumSnapshots());
 
-      INodeDirectorySnapshottable[] snapshottables = sm.getSnapshottableDirs();
-      for (INodeDirectorySnapshottable sdir : snapshottables) {
+      INodeDirectory[] snapshottables = sm.getSnapshottableDirs();
+      for (INodeDirectory sdir : snapshottables) {
         b.addSnapshottableDir(sdir.getId());
       }
       b.build().writeDelimitedTo(out);
       int i = 0;
-      for(INodeDirectorySnapshottable sdir : snapshottables) {
-        for(Snapshot s : sdir.getSnapshotsByNames()) {
+      for(INodeDirectory sdir : snapshottables) {
+        for (Snapshot s : sdir.getDirectorySnapshottableFeature()
+            .getSnapshotList()) {
           Root sroot = s.getRoot();
           SnapshotSection.Snapshot.Builder sb = SnapshotSection.Snapshot
               .newBuilder().setSnapshotId(s.getId());

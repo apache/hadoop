@@ -59,7 +59,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiffList;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
@@ -74,8 +73,8 @@ import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.base.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 
 /**
  * Contains inner classes for reading or writing the on-disk format for
@@ -555,21 +554,17 @@ public class FSImageFormat {
       if (!toLoadSubtree) {
         return;
       }
-      
+
       // Step 2. Load snapshots if parent is snapshottable
       int numSnapshots = in.readInt();
       if (numSnapshots >= 0) {
-        final INodeDirectorySnapshottable snapshottableParent
-            = INodeDirectorySnapshottable.valueOf(parent, parent.getLocalName());
         // load snapshots and snapshotQuota
-        SnapshotFSImageFormat.loadSnapshotList(snapshottableParent,
-            numSnapshots, in, this);
-        if (snapshottableParent.getSnapshotQuota() > 0) {
+        SnapshotFSImageFormat.loadSnapshotList(parent, numSnapshots, in, this);
+        if (parent.getDirectorySnapshottableFeature().getSnapshotQuota() > 0) {
           // add the directory to the snapshottable directory list in 
           // SnapshotManager. Note that we only add root when its snapshot quota
           // is positive.
-          this.namesystem.getSnapshotManager().addSnapshottable(
-              snapshottableParent);
+          this.namesystem.getSnapshotManager().addSnapshottable(parent);
         }
       }
 
@@ -832,7 +827,10 @@ public class FSImageFormat {
       if (withSnapshot) {
         dir.addSnapshotFeature(null);
       }
-      return snapshottable ? new INodeDirectorySnapshottable(dir) : dir;
+      if (snapshottable) {
+        dir.addSnapshottableFeature();
+      }
+      return dir;
     } else if (numBlocks == -2) {
       //symlink
       if (!FileSystem.areSymlinksEnabled()) {
@@ -1383,10 +1381,8 @@ public class FSImageFormat {
 
       // 2. Write INodeDirectorySnapshottable#snapshotsByNames to record all
       // Snapshots
-      if (current instanceof INodeDirectorySnapshottable) {
-        INodeDirectorySnapshottable snapshottableNode =
-            (INodeDirectorySnapshottable) current;
-        SnapshotFSImageFormat.saveSnapshots(snapshottableNode, out);
+      if (current.isDirectory() && current.asDirectory().isSnapshottable()) {
+        SnapshotFSImageFormat.saveSnapshots(current.asDirectory(), out);
       } else {
         out.writeInt(-1); // # of snapshots
       }

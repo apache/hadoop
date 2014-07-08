@@ -44,6 +44,8 @@ import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.metrics2.util.MBeans;
 
+import com.google.common.base.Preconditions;
+
 /**
  * Manage snapshottable directories and their snapshots.
  * 
@@ -66,8 +68,8 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   private int snapshotCounter = 0;
   
   /** All snapshottable directories in the namesystem. */
-  private final Map<Long, INodeDirectorySnapshottable> snapshottables
-      = new HashMap<Long, INodeDirectorySnapshottable>();
+  private final Map<Long, INodeDirectory> snapshottables =
+      new HashMap<Long, INodeDirectory>();
 
   public SnapshotManager(final FSDirectory fsdir) {
     this.fsdir = fsdir;
@@ -84,7 +86,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
       return;
     }
 
-    for(INodeDirectorySnapshottable s : snapshottables.values()) {
+    for(INodeDirectory s : snapshottables.values()) {
       if (s.isAncestorDirectory(dir)) {
         throw new SnapshotException(
             "Nested snapshottable directories not allowed: path=" + path
@@ -112,33 +114,30 @@ public class SnapshotManager implements SnapshotStatsMXBean {
       checkNestedSnapshottable(d, path);
     }
 
-
-    final INodeDirectorySnapshottable s;
     if (d.isSnapshottable()) {
       //The directory is already a snapshottable directory.
-      s = (INodeDirectorySnapshottable)d; 
-      s.setSnapshotQuota(INodeDirectorySnapshottable.SNAPSHOT_LIMIT);
+      d.setSnapshotQuota(DirectorySnapshottableFeature.SNAPSHOT_LIMIT);
     } else {
-      s = d.replaceSelf4INodeDirectorySnapshottable(iip.getLatestSnapshotId(),
-          fsdir.getINodeMap());
+      d.addSnapshottableFeature();
     }
-    addSnapshottable(s);
+    addSnapshottable(d);
   }
   
   /** Add the given snapshottable directory to {@link #snapshottables}. */
-  public void addSnapshottable(INodeDirectorySnapshottable dir) {
+  public void addSnapshottable(INodeDirectory dir) {
+    Preconditions.checkArgument(dir.isSnapshottable());
     snapshottables.put(dir.getId(), dir);
   }
 
   /** Remove the given snapshottable directory from {@link #snapshottables}. */
-  private void removeSnapshottable(INodeDirectorySnapshottable s) {
+  private void removeSnapshottable(INodeDirectory s) {
     snapshottables.remove(s.getId());
   }
   
   /** Remove snapshottable directories from {@link #snapshottables} */
-  public void removeSnapshottable(List<INodeDirectorySnapshottable> toRemove) {
+  public void removeSnapshottable(List<INodeDirectory> toRemove) {
     if (toRemove != null) {
-      for (INodeDirectorySnapshottable s : toRemove) {
+      for (INodeDirectory s : toRemove) {
         removeSnapshottable(s);
       }
     }
@@ -152,22 +151,22 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   public void resetSnapshottable(final String path) throws IOException {
     final INodesInPath iip = fsdir.getINodesInPath4Write(path);
     final INodeDirectory d = INodeDirectory.valueOf(iip.getLastINode(), path);
-    if (!d.isSnapshottable()) {
+    DirectorySnapshottableFeature sf = d.getDirectorySnapshottableFeature();
+    if (sf == null) {
       // the directory is already non-snapshottable
       return;
     }
-    final INodeDirectorySnapshottable s = (INodeDirectorySnapshottable) d;
-    if (s.getNumSnapshots() > 0) {
+    if (sf.getNumSnapshots() > 0) {
       throw new SnapshotException("The directory " + path + " has snapshot(s). "
           + "Please redo the operation after removing all the snapshots.");
     }
 
-    if (s == fsdir.getRoot()) {
-      s.setSnapshotQuota(0); 
+    if (d == fsdir.getRoot()) {
+      d.setSnapshotQuota(0);
     } else {
-      s.replaceSelf(iip.getLatestSnapshotId(), fsdir.getINodeMap());
+      d.removeSnapshottableFeature();
     }
-    removeSnapshottable(s);
+    removeSnapshottable(d);
   }
 
   /**
@@ -180,10 +179,15 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   *           Throw IOException when the given path does not lead to an
   *           existing snapshottable directory.
   */
-  public INodeDirectorySnapshottable getSnapshottableRoot(final String path
-      ) throws IOException {
-    final INodesInPath i = fsdir.getINodesInPath4Write(path);
-    return INodeDirectorySnapshottable.valueOf(i.getLastINode(), path);
+  public INodeDirectory getSnapshottableRoot(final String path)
+      throws IOException {
+    final INodeDirectory dir = INodeDirectory.valueOf(fsdir
+        .getINodesInPath4Write(path).getLastINode(), path);
+    if (!dir.isSnapshottable()) {
+      throw new SnapshotException(
+          "Directory is not a snapshottable directory: " + path);
+    }
+    return dir;
   }
 
   /**
@@ -202,7 +206,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    */
   public String createSnapshot(final String path, String snapshotName
       ) throws IOException {
-    INodeDirectorySnapshottable srcRoot = getSnapshottableRoot(path);
+    INodeDirectory srcRoot = getSnapshottableRoot(path);
 
     if (snapshotCounter == getMaxSnapshotID()) {
       // We have reached the maximum allowable snapshot ID and since we don't
@@ -235,7 +239,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     // parse the path, and check if the path is a snapshot path
     // the INodeDirectorySnapshottable#valueOf method will throw Exception 
     // if the path is not for a snapshottable directory
-    INodeDirectorySnapshottable srcRoot = getSnapshottableRoot(path);
+    INodeDirectory srcRoot = getSnapshottableRoot(path);
     srcRoot.removeSnapshot(snapshotName, collectedBlocks, removedINodes);
     numSnapshots.getAndDecrement();
   }
@@ -258,8 +262,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
       final String newSnapshotName) throws IOException {
     // Find the source root directory path where the snapshot was taken.
     // All the check for path has been included in the valueOf method.
-    final INodeDirectorySnapshottable srcRoot
-        = INodeDirectorySnapshottable.valueOf(fsdir.getINode(path), path);
+    final INodeDirectory srcRoot = getSnapshottableRoot(path);
     // Note that renameSnapshot and createSnapshot are synchronized externally
     // through FSNamesystem's write lock
     srcRoot.renameSnapshot(path, oldSnapshotName, newSnapshotName);
@@ -285,9 +288,9 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     snapshotCounter = counter;
   }
 
-  INodeDirectorySnapshottable[] getSnapshottableDirs() {
+  INodeDirectory[] getSnapshottableDirs() {
     return snapshottables.values().toArray(
-        new INodeDirectorySnapshottable[snapshottables.size()]);
+        new INodeDirectory[snapshottables.size()]);
   }
 
   /**
@@ -299,8 +302,9 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     out.writeInt(numSnapshots.get());
 
     // write all snapshots.
-    for(INodeDirectorySnapshottable snapshottableDir : snapshottables.values()) {
-      for(Snapshot s : snapshottableDir.getSnapshotsByNames()) {
+    for(INodeDirectory snapshottableDir : snapshottables.values()) {
+      for (Snapshot s : snapshottableDir.getDirectorySnapshottableFeature()
+          .getSnapshotList()) {
         s.write(out);
       }
     }
@@ -339,16 +343,16 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     
     List<SnapshottableDirectoryStatus> statusList = 
         new ArrayList<SnapshottableDirectoryStatus>();
-    for (INodeDirectorySnapshottable dir : snapshottables.values()) {
+    for (INodeDirectory dir : snapshottables.values()) {
       if (userName == null || userName.equals(dir.getUserName())) {
         SnapshottableDirectoryStatus status = new SnapshottableDirectoryStatus(
             dir.getModificationTime(), dir.getAccessTime(),
             dir.getFsPermission(), dir.getUserName(), dir.getGroupName(),
             dir.getLocalNameBytes(), dir.getId(), 
             dir.getChildrenNum(Snapshot.CURRENT_STATE_ID),
-            dir.getNumSnapshots(),
-            dir.getSnapshotQuota(), dir.getParent() == null ? 
-                DFSUtil.EMPTY_BYTES : 
+            dir.getDirectorySnapshottableFeature().getNumSnapshots(),
+            dir.getDirectorySnapshottableFeature().getSnapshotQuota(),
+            dir.getParent() == null ? DFSUtil.EMPTY_BYTES :
                 DFSUtil.string2Bytes(dir.getParent().getFullPathName()));
         statusList.add(status);
       }
@@ -364,20 +368,18 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    */
   public SnapshotDiffReport diff(final String path, final String from,
       final String to) throws IOException {
+    // Find the source root directory path where the snapshots were taken.
+    // All the check for path has been included in the valueOf method.
+    final INodeDirectory snapshotRoot = getSnapshottableRoot(path);
+
     if ((from == null || from.isEmpty())
         && (to == null || to.isEmpty())) {
       // both fromSnapshot and toSnapshot indicate the current tree
       return new SnapshotDiffReport(path, from, to,
           Collections.<DiffReportEntry> emptyList());
     }
-
-    // Find the source root directory path where the snapshots were taken.
-    // All the check for path has been included in the valueOf method.
-    INodesInPath inodesInPath = fsdir.getINodesInPath4Write(path.toString());
-    final INodeDirectorySnapshottable snapshotRoot = INodeDirectorySnapshottable
-        .valueOf(inodesInPath.getLastINode(), path);
-
-    final SnapshotDiffInfo diffs = snapshotRoot.computeDiff(from, to);
+    final SnapshotDiffInfo diffs = snapshotRoot
+        .getDirectorySnapshottableFeature().computeDiff(snapshotRoot, from, to);
     return diffs != null ? diffs.generateReport() : new SnapshotDiffReport(
         path, from, to, Collections.<DiffReportEntry> emptyList());
   }
@@ -412,7 +414,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     getSnapshottableDirectories() {
     List<SnapshottableDirectoryStatus.Bean> beans =
         new ArrayList<SnapshottableDirectoryStatus.Bean>();
-    for (INodeDirectorySnapshottable d : getSnapshottableDirs()) {
+    for (INodeDirectory d : getSnapshottableDirs()) {
       beans.add(toBean(d));
     }
     return beans.toArray(new SnapshottableDirectoryStatus.Bean[beans.size()]);
@@ -421,20 +423,19 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   @Override // SnapshotStatsMXBean
   public SnapshotInfo.Bean[] getSnapshots() {
     List<SnapshotInfo.Bean> beans = new ArrayList<SnapshotInfo.Bean>();
-    for (INodeDirectorySnapshottable d : getSnapshottableDirs()) {
-      for (Snapshot s : d.getSnapshotList()) {
+    for (INodeDirectory d : getSnapshottableDirs()) {
+      for (Snapshot s : d.getDirectorySnapshottableFeature().getSnapshotList()) {
         beans.add(toBean(s));
       }
     }
     return beans.toArray(new SnapshotInfo.Bean[beans.size()]);
   }
 
-  public static SnapshottableDirectoryStatus.Bean toBean(
-      INodeDirectorySnapshottable d) {
+  public static SnapshottableDirectoryStatus.Bean toBean(INodeDirectory d) {
     return new SnapshottableDirectoryStatus.Bean(
         d.getFullPathName(),
-        d.getNumSnapshots(),
-        d.getSnapshotQuota(),
+        d.getDirectorySnapshottableFeature().getNumSnapshots(),
+        d.getDirectorySnapshottableFeature().getSnapshotQuota(),
         d.getModificationTime(),
         Short.valueOf(Integer.toOctalString(
             d.getFsPermissionShort())),

@@ -282,10 +282,10 @@ public class TestSnapshotDeletion {
     checkQuotaUsageComputation(dir, 14L, BLOCKSIZE * REPLICATION * 4);
     
     // get two snapshots for later use
-    Snapshot snapshot0 = ((INodeDirectorySnapshottable) fsdir.getINode(dir
-        .toString())).getSnapshot(DFSUtil.string2Bytes("s0"));
-    Snapshot snapshot1 = ((INodeDirectorySnapshottable) fsdir.getINode(dir
-        .toString())).getSnapshot(DFSUtil.string2Bytes("s1"));
+    Snapshot snapshot0 = fsdir.getINode(dir.toString()).asDirectory()
+        .getSnapshot(DFSUtil.string2Bytes("s0"));
+    Snapshot snapshot1 = fsdir.getINode(dir.toString()).asDirectory()
+        .getSnapshot(DFSUtil.string2Bytes("s1"));
     
     // Case 2 + Case 3: delete noChangeDirParent, noChangeFile, and
     // metaChangeFile2. Note that when we directly delete a directory, the 
@@ -510,8 +510,7 @@ public class TestSnapshotDeletion {
     }
     
     // check 1. there is no snapshot s0
-    final INodeDirectorySnapshottable dirNode = 
-        (INodeDirectorySnapshottable) fsdir.getINode(dir.toString());
+    final INodeDirectory dirNode = fsdir.getINode(dir.toString()).asDirectory();
     Snapshot snapshot0 = dirNode.getSnapshot(DFSUtil.string2Bytes("s0"));
     assertNull(snapshot0);
     Snapshot snapshot1 = dirNode.getSnapshot(DFSUtil.string2Bytes("s1"));

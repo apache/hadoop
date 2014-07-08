@@ -430,30 +430,31 @@ public class TestSnapshot {
         .asDirectory();
     assertTrue(rootNode.isSnapshottable());
     // root is snapshottable dir, but with 0 snapshot quota
-    assertEquals(0, ((INodeDirectorySnapshottable) rootNode).getSnapshotQuota());
+    assertEquals(0, rootNode.getDirectorySnapshottableFeature()
+        .getSnapshotQuota());
     
     hdfs.allowSnapshot(root);
     rootNode = fsdir.getINode4Write(root.toString()).asDirectory();
     assertTrue(rootNode.isSnapshottable());
-    assertEquals(INodeDirectorySnapshottable.SNAPSHOT_LIMIT,
-        ((INodeDirectorySnapshottable) rootNode).getSnapshotQuota());
+    assertEquals(DirectorySnapshottableFeature.SNAPSHOT_LIMIT,
+        rootNode.getDirectorySnapshottableFeature().getSnapshotQuota());
     // call allowSnapshot again
     hdfs.allowSnapshot(root);
     rootNode = fsdir.getINode4Write(root.toString()).asDirectory();
     assertTrue(rootNode.isSnapshottable());
-    assertEquals(INodeDirectorySnapshottable.SNAPSHOT_LIMIT,
-        ((INodeDirectorySnapshottable) rootNode).getSnapshotQuota());
+    assertEquals(DirectorySnapshottableFeature.SNAPSHOT_LIMIT,
+        rootNode.getDirectorySnapshottableFeature().getSnapshotQuota());
     
     // disallowSnapshot on dir
     hdfs.disallowSnapshot(root);
     rootNode = fsdir.getINode4Write(root.toString()).asDirectory();
     assertTrue(rootNode.isSnapshottable());
-    assertEquals(0, ((INodeDirectorySnapshottable) rootNode).getSnapshotQuota());
+    assertEquals(0, rootNode.getDirectorySnapshottableFeature().getSnapshotQuota());
     // do it again
     hdfs.disallowSnapshot(root);
     rootNode = fsdir.getINode4Write(root.toString()).asDirectory();
     assertTrue(rootNode.isSnapshottable());
-    assertEquals(0, ((INodeDirectorySnapshottable) rootNode).getSnapshotQuota());
+    assertEquals(0, rootNode.getDirectorySnapshottableFeature().getSnapshotQuota());
   }
 
   /**

@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
 import org.apache.log4j.Level;
@@ -153,8 +154,7 @@ public class TestINodeFileUnderConstructionWithSnapshot {
     // deleted list, with size BLOCKSIZE*2
     INodeFile fileNode = (INodeFile) fsdir.getINode(file.toString());
     assertEquals(BLOCKSIZE * 2, fileNode.computeFileSize());
-    INodeDirectorySnapshottable dirNode = (INodeDirectorySnapshottable) fsdir
-        .getINode(dir.toString());
+    INodeDirectory dirNode = fsdir.getINode(dir.toString()).asDirectory();
     DirectoryDiff last = dirNode.getDiffs().getLast();
     
     // 2. append without closing stream
@@ -162,7 +162,7 @@ public class TestINodeFileUnderConstructionWithSnapshot {
     out.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));
     
     // re-check nodeInDeleted_S0
-    dirNode = (INodeDirectorySnapshottable) fsdir.getINode(dir.toString());
+    dirNode = fsdir.getINode(dir.toString()).asDirectory();
     assertEquals(BLOCKSIZE * 2, fileNode.computeFileSize(last.getSnapshotId()));
     
     // 3. take snapshot --> close stream
@@ -172,7 +172,7 @@ public class TestINodeFileUnderConstructionWithSnapshot {
     // check: an INodeFileUnderConstructionWithSnapshot with size BLOCKSIZE*3 should
     // have been stored in s1's deleted list
     fileNode = (INodeFile) fsdir.getINode(file.toString());
-    dirNode = (INodeDirectorySnapshottable) fsdir.getINode(dir.toString());
+    dirNode = fsdir.getINode(dir.toString()).asDirectory();
     last = dirNode.getDiffs().getLast();
     assertTrue(fileNode.isWithSnapshot());
     assertEquals(BLOCKSIZE * 3, fileNode.computeFileSize(last.getSnapshotId()));
