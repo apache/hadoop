@@ -272,6 +272,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6638. Shorten test run time with a smaller retry timeout setting.
     (Liang Xie via cnauroth)
 
+    HDFS-6627. Rename DataNode#checkWriteAccess to checkReadAccess.
+    (Liang Xie via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
