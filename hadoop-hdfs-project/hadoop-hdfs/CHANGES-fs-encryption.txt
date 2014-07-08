@@ -6,8 +6,6 @@ fs-encryption (Unreleased)
 
   NEW FEATURES
 
-    HDFS-6388. HDFS integration with KeyProvider. (clamb)
-
   IMPROVEMENTS
 
     HADOOP-10693. Implementation of AES-CTR CryptoCodec using JNI to OpenSSL
@@ -17,6 +15,8 @@ fs-encryption (Unreleased)
     encryption zone. (clamb)
 
     HDFS-6386. HDFS Encryption Zones (clamb)
+
+    HDFS-6388. HDFS integration with KeyProvider. (clamb)
 
     HDFS-6473. Protocol and API for Encryption Zones (clamb)
 
