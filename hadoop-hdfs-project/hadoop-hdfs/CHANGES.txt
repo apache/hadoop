@@ -529,6 +529,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6604. The short-circuit cache doesn't correctly time out replicas that
     haven't been used in a while (cmccabe)
 
+    HDFS-4286. Changes from BOOKKEEPER-203 broken capability of including 
+    bookkeeper-server jar in hidden package of BKJM (Rakesh R via umamahesh)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
