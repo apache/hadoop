@@ -12,6 +12,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6511. BlockManager#computeInvalidateWork() could do nothing. (Juan Yu via wang)
 
+    HDFS-6638. Shorten test run time with a smaller retry timeout setting.
+    (Liang Xie via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES

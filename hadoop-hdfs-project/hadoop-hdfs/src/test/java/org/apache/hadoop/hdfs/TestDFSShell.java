@@ -1463,7 +1463,8 @@ public class TestDFSShell {
     Path root = new Path("/test/get");
     final Path remotef = new Path(root, fname);
     final Configuration conf = new HdfsConfiguration();
-
+    // Set short retry timeouts so this test runs faster
+    conf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, 10);
     TestGetRunner runner = new TestGetRunner() {
     	private int count = 0;
     	private final FsShell shell = new FsShell(conf);
