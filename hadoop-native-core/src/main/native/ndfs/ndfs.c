@@ -593,6 +593,11 @@ static int ndfs_unlink(struct hdfs_internal *bfs,
     if (err) {
         goto done;
     }
+    if (resp->result == 0) {
+        err = hadoop_lerr_alloc(ENOENT, "ndfs_unlink(%s, recursive=%d): "
+                    "deletion failed on the server", uri, recursive);
+        goto done;
+    }
 
 done:
     free(path);

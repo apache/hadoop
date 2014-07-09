@@ -1382,7 +1382,7 @@ static int jni_unlink(hdfsFS bfs, const char *path, int recursive)
         return -1;
     }
     if (!jVal.z) {
-        errno = EIO;
+        errno = ENOENT;
         return -1;
     }
     return 0;
