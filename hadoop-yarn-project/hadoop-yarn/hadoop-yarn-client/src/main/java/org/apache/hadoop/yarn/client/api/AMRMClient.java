@@ -207,14 +207,21 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
   
   /**
    * Request additional containers and receive new container allocations.
-   * Requests made via <code>addContainerRequest</code> are sent to the 
-   * <code>ResourceManager</code>. New containers assigned to the master are 
-   * retrieved. Status of completed containers and node health updates are 
-   * also retrieved.
-   * This also doubles up as a heartbeat to the ResourceManager and must be 
-   * made periodically.
-   * The call may not always return any new allocations of containers.
-   * App should not make concurrent allocate requests. May cause request loss.
+   * Requests made via <code>addContainerRequest</code> are sent to the
+   * <code>ResourceManager</code>. New containers assigned to the master are
+   * retrieved. Status of completed containers and node health updates are also
+   * retrieved. This also doubles up as a heartbeat to the ResourceManager and
+   * must be made periodically. The call may not always return any new
+   * allocations of containers. App should not make concurrent allocate
+   * requests. May cause request loss.
+   * 
+   * <p>
+   * Note : If the user has not removed container requests that have already
+   * been satisfied, then the re-register may end up sending the entire
+   * container requests to the RM (including matched requests). Which would mean
+   * the RM could end up giving it a lot of new allocated containers.
+   * </p>
+   * 
    * @param progressIndicator Indicates progress made by the master
    * @return the response of the allocate request
    * @throws YarnException
