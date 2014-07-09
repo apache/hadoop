@@ -6,6 +6,8 @@ Release 2.6.0 - UNRELEASED
 
   NEW FEATURES
 
+    YARN-2131. Add a way to format the RMStateStore. (Robert Kanter via kasha)
+
   IMPROVEMENTS
 
     YARN-2242. Improve exception information on AM launch crashes. (Li Lu 

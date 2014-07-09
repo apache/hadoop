@@ -157,8 +157,16 @@ Usage: yarn [--config confdir] COMMAND
   Start the ResourceManager
 
 -------
-  Usage: yarn resourcemanager
+  Usage: yarn resourcemanager [-format]
 -------
+
+*---------------+--------------+
+|| COMMAND_OPTIONS || Description                   |
+*---------------+--------------+
+| -format | Formats the RMStateStore. This will clear the RMStateStore and is
+|         | useful if past applications are no longer needed. This should be run
+|         | only when the ResourceManager is not running.
+*---------------+--------------+
 
 ** nodemanager
 

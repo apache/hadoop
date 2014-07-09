@@ -138,4 +138,9 @@ public class NullRMStateStore extends RMStateStore {
     return null;
   }
 
+  @Override
+  public void deleteStore() throws Exception {
+    // Do nothing
+  }
+
 }
