@@ -54,7 +54,7 @@
       <item name="FileSystem Shell" href="hadoop-project-dist/hadoop-common/FileSystemShell.html"/>
       <item name="Hadoop Compatibility" href="hadoop-project-dist/hadoop-common/Compatibility.html"/>
       <item name="FileSystem Specification"
-        href="hadoop-project-dist/hadoop-common/index.html"/>
+        href="hadoop-project-dist/hadoop-common/filesystem/index.html"/>
     </menu>
 
     <menu name="Common" inherit="top">

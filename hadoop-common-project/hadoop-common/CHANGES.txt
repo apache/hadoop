@@ -295,6 +295,8 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10312 Shell.ExitCodeException to have more useful toString (stevel)
 
+    HADOOP-10801 dead link in site.xml (Akira AJISAKA via stevel)
+
   BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
 
     HADOOP-10520. Extended attributes definition and FileSystem APIs for
