@@ -1440,6 +1440,12 @@ public class DFSAdmin extends FsShell {
     } else if ("-fetchImage".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
           + " [-fetchImage <local directory>]");
+    } else if ("-shutdownDatanode".equals(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+          + " [-shutdownDatanode <datanode_host:ipc_port> [upgrade]]");
+    } else if ("-getDatanodeInfo".equals(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+          + " [-getDatanodeInfo <datanode_host:ipc_port>]");
     } else {
       System.err.println("Usage: java DFSAdmin");
       System.err.println("Note: Administrative commands can only be run as the HDFS superuser.");
