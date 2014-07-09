@@ -805,6 +805,13 @@ public class ZKRMStateStore extends RMStateStore {
     }
   }
 
+  @Override
+  public synchronized void deleteStore() throws Exception {
+    if (existsWithRetries(zkRootNodePath, true) != null) {
+      deleteWithRetries(zkRootNodePath, true);
+    }
+  }
+
   // ZK related code
   /**
    * Watcher implementation which forward events to the ZKRMStateStore This
@@ -957,6 +964,29 @@ public class ZKRMStateStore extends RMStateStore {
         return zkClient.exists(path, watch);
       }
     }.runWithRetries();
+  }
+
+  private void deleteWithRetries(
+      final String path, final boolean watch) throws Exception {
+    new ZKAction<Void>() {
+      @Override
+      Void run() throws KeeperException, InterruptedException {
+        recursiveDeleteWithRetriesHelper(path, watch);
+        return null;
+      }
+    }.runWithRetries();
+  }
+
+  /**
+   * Helper method that deletes znodes recursively
+   */
+  private void recursiveDeleteWithRetriesHelper(String path, boolean watch)
+          throws KeeperException, InterruptedException {
+    List<String> children = zkClient.getChildren(path, watch);
+    for (String child : children) {
+      recursiveDeleteWithRetriesHelper(path + "/" + child, false);
+    }
+    zkClient.delete(path, -1);
   }
 
   /**

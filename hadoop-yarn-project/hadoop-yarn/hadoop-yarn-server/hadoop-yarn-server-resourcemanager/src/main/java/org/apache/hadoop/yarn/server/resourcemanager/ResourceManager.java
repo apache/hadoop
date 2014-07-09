@@ -1035,12 +1035,17 @@ public class ResourceManager extends CompositeService implements Recoverable {
     StringUtils.startupShutdownMessage(ResourceManager.class, argv, LOG);
     try {
       Configuration conf = new YarnConfiguration();
-      ResourceManager resourceManager = new ResourceManager();
-      ShutdownHookManager.get().addShutdownHook(
-        new CompositeServiceShutdownHook(resourceManager),
-        SHUTDOWN_HOOK_PRIORITY);
-      resourceManager.init(conf);
-      resourceManager.start();
+      // If -format, then delete RMStateStore; else startup normally
+      if (argv.length == 1 && argv[0].equals("-format")) {
+        deleteRMStateStore(conf);
+      } else {
+        ResourceManager resourceManager = new ResourceManager();
+        ShutdownHookManager.get().addShutdownHook(
+          new CompositeServiceShutdownHook(resourceManager),
+          SHUTDOWN_HOOK_PRIORITY);
+        resourceManager.init(conf);
+        resourceManager.start();
+      }
     } catch (Throwable t) {
       LOG.fatal("Error starting ResourceManager", t);
       System.exit(-1);
@@ -1076,5 +1081,24 @@ public class ResourceManager extends CompositeService implements Recoverable {
   public static InetSocketAddress getBindAddress(Configuration conf) {
     return conf.getSocketAddr(YarnConfiguration.RM_ADDRESS,
       YarnConfiguration.DEFAULT_RM_ADDRESS, YarnConfiguration.DEFAULT_RM_PORT);
+  }
+
+  /**
+   * Deletes the RMStateStore
+   *
+   * @param conf
+   * @throws Exception
+   */
+  private static void deleteRMStateStore(Configuration conf) throws Exception {
+    RMStateStore rmStore = RMStateStoreFactory.getStore(conf);
+    rmStore.init(conf);
+    rmStore.start();
+    try {
+      LOG.info("Deleting ResourceManager state store...");
+      rmStore.deleteStore();
+      LOG.info("State store deleted");
+    } finally {
+      rmStore.stop();
+    }
   }
 }

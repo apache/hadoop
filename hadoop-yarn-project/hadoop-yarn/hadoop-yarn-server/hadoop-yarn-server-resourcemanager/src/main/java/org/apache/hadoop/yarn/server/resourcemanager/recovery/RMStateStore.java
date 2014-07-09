@@ -845,4 +845,10 @@ public abstract class RMStateStore extends AbstractService {
       handleStoreEvent(event);
     }
   }
+
+  /**
+   * Derived classes must implement this method to delete the state store
+   * @throws Exception
+   */
+  public abstract void deleteStore() throws Exception;
 }
