@@ -278,7 +278,7 @@ public class AclEntry {
     }
 
     if (includePermission) {
-      if (split.length < index) {
+      if (split.length <= index) {
         throw new HadoopIllegalArgumentException("Invalid <aclSpec> : "
             + aclStr);
       }
