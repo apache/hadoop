@@ -518,6 +518,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-5411. Update Bookkeeper dependency to 4.2.3. (Rakesh R via umamahesh)
 
+    HDFS-6631. TestPread#testHedgedReadLoopTooManyTimes fails intermittently.
+    (Liang Xie via cnauroth)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)

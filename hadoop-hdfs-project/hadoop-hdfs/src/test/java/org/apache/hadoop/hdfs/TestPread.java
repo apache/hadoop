@@ -292,11 +292,12 @@ public class TestPread {
     DFSClientFaultInjector.instance = Mockito
         .mock(DFSClientFaultInjector.class);
     DFSClientFaultInjector injector = DFSClientFaultInjector.instance;
+    final int sleepMs = 100;
     Mockito.doAnswer(new Answer<Void>() {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
         if (true) {
-          Thread.sleep(hedgedReadTimeoutMillis + 1);
+          Thread.sleep(hedgedReadTimeoutMillis + sleepMs);
           if (DFSClientFaultInjector.exceptionNum.compareAndSet(0, 1)) {
             System.out.println("-------------- throw Checksum Exception");
             throw new ChecksumException("ChecksumException test", 100);
@@ -305,6 +306,15 @@ public class TestPread {
         return null;
       }
     }).when(injector).fetchFromDatanodeException();
+    Mockito.doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        if (true) {
+          Thread.sleep(sleepMs * 2);
+        }
+        return null;
+      }
+    }).when(injector).readFromDatanodeDelay();
 
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
         .format(true).build();
