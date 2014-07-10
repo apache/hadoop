@@ -28,6 +28,12 @@ fs-encryption (Unreleased)
     HADOOP-10713. Refactor CryptoCodec#generateSecureRandom to take a byte[]. 
     (wang via yliu)
 
+    HADOOP-10693. Implementation of AES-CTR CryptoCodec using JNI to OpenSSL. 
+    (Yi Liu via cmccabe)
+
+    HADOOP-10803. Update OpensslCipher#getInstance to accept CipherSuite#name
+    format. (Yi Liu)
+
   OPTIMIZATIONS
 
   BUG FIXES

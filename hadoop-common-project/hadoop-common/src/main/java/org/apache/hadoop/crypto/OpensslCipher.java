@@ -19,6 +19,7 @@ package org.apache.hadoop.crypto;
 
 import java.nio.ByteBuffer;
 import java.security.NoSuchAlgorithmException;
+import java.util.StringTokenizer;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -45,11 +46,34 @@ public final class OpensslCipher {
   public static final int DECRYPT_MODE = 0;
   
   /** Currently only support AES/CTR/NoPadding. */
-  public static final int AES_CTR = 0;
-  public static final int PADDING_NOPADDING = 0;
+  private static enum AlgMode {
+    AES_CTR;
+    
+    static int get(String algorithm, String mode) 
+        throws NoSuchAlgorithmException {
+      try {
+        return AlgMode.valueOf(algorithm + "_" + mode).ordinal();
+      } catch (Exception e) {
+        throw new NoSuchAlgorithmException("Doesn't support algorithm: " + 
+            algorithm + " and mode: " + mode);
+      }
+    }
+  }
+  
+  private static enum Padding {
+    NoPadding;
+    
+    static int get(String padding) throws NoSuchPaddingException {
+      try {
+        return Padding.valueOf(padding).ordinal();
+      } catch (Exception e) {
+        throw new NoSuchPaddingException("Doesn't support padding: " + padding);
+      }
+    }
+  }
   
   private long context = 0;
-  private final int algorithm;
+  private final int alg;
   private final int padding;
   
   private static boolean nativeCipherLoaded = false;
@@ -69,26 +93,71 @@ public final class OpensslCipher {
     return nativeCipherLoaded;
   }
   
-  private OpensslCipher(long context, int algorithm, int padding) {
+  private OpensslCipher(long context, int alg, int padding) {
     this.context = context;
-    this.algorithm = algorithm;
+    this.alg = alg;
     this.padding = padding;
   }
   
   /**
    * Return an <code>OpensslCipher<code> object that implements the specified
-   * algorithm.
+   * transformation.
    * 
-   * @param algorithm currently only supports {@link #AES_CTR}
-   * @param padding currently only supports {@link #PADDING_NOPADDING}
-   * @return OpensslCipher an <code>OpensslCipher<code> object 
-   * @throws NoSuchAlgorithmException
-   * @throws NoSuchPaddingException
+   * @param transformation the name of the transformation, e.g., 
+   * AES/CTR/NoPadding.
+   * @return OpensslCipher an <code>OpensslCipher<code> object
+   * @throws NoSuchAlgorithmException if <code>transformation</code> is null, 
+   * empty, in an invalid format, or if Openssl doesn't implement the 
+   * specified algorithm.
+   * @throws NoSuchPaddingException if <code>transformation</code> contains 
+   * a padding scheme that is not available.
    */
-  public static final OpensslCipher getInstance(int algorithm, 
-      int padding) throws NoSuchAlgorithmException, NoSuchPaddingException {
-    long context = initContext(algorithm, padding);
-    return new OpensslCipher(context, algorithm, padding);
+  public static final OpensslCipher getInstance(String transformation) 
+      throws NoSuchAlgorithmException, NoSuchPaddingException {
+    Transform transform = tokenizeTransformation(transformation);
+    int algMode = AlgMode.get(transform.alg, transform.mode);
+    int padding = Padding.get(transform.padding);
+    long context = initContext(algMode, padding);
+    return new OpensslCipher(context, algMode, padding);
+  }
+  
+  /** Nested class for algorithm, mode and padding. */
+  private static class Transform {
+    final String alg;
+    final String mode;
+    final String padding;
+    
+    public Transform(String alg, String mode, String padding) {
+      this.alg = alg;
+      this.mode = mode;
+      this.padding = padding;
+    }
+  }
+  
+  private static Transform tokenizeTransformation(String transformation) 
+      throws NoSuchAlgorithmException {
+    if (transformation == null) {
+      throw new NoSuchAlgorithmException("No transformation given.");
+    }
+    
+    /*
+     * Array containing the components of a Cipher transformation:
+     * 
+     * index 0: algorithm (e.g., AES)
+     * index 1: mode (e.g., CTR)
+     * index 2: padding (e.g., NoPadding)
+     */
+    String[] parts = new String[3];
+    int count = 0;
+    StringTokenizer parser = new StringTokenizer(transformation, "/");
+    while (parser.hasMoreTokens() && count < 3) {
+      parts[count++] = parser.nextToken().trim();
+    }
+    if (count != 3 || parser.hasMoreTokens()) {
+      throw new NoSuchAlgorithmException("Invalid transformation format: " + 
+          transformation);
+    }
+    return new Transform(parts[0], parts[1], parts[2]);
   }
   
   /**
@@ -99,7 +168,7 @@ public final class OpensslCipher {
    * @param iv crypto iv
    */
   public void init(int mode, byte[] key, byte[] iv) {
-    context = init(context, mode, algorithm, padding, key, iv);
+    context = init(context, mode, alg, padding, key, iv);
   }
   
   /**

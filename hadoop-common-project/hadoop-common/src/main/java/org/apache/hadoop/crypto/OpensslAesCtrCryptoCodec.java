@@ -70,8 +70,7 @@ public class OpensslAesCtrCryptoCodec extends AesCtrCryptoCodec {
     
     public OpensslAesCtrCipher(int mode) throws GeneralSecurityException {
       this.mode = mode;
-      cipher = OpensslCipher.getInstance(OpensslCipher.AES_CTR, 
-          OpensslCipher.PADDING_NOPADDING);
+      cipher = OpensslCipher.getInstance(SUITE.getName());
     }
 
     @Override

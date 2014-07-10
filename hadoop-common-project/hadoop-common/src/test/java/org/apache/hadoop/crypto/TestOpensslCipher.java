@@ -38,21 +38,18 @@ public class TestOpensslCipher {
     if (!OpensslCipher.isNativeCodeLoaded()) {
       return;
     }
-    OpensslCipher cipher = OpensslCipher.getInstance(OpensslCipher.AES_CTR, 
-        OpensslCipher.PADDING_NOPADDING);
+    OpensslCipher cipher = OpensslCipher.getInstance("AES/CTR/NoPadding");
     Assert.assertTrue(cipher != null);
     
     try {
-      cipher = OpensslCipher.getInstance(OpensslCipher.AES_CTR + 100, 
-          OpensslCipher.PADDING_NOPADDING);
+      cipher = OpensslCipher.getInstance("AES2/CTR/NoPadding");
       Assert.fail("Should specify correct algorithm.");
     } catch (NoSuchAlgorithmException e) {
       // Expect NoSuchAlgorithmException
     }
     
     try {
-      cipher = OpensslCipher.getInstance(OpensslCipher.AES_CTR, 
-          OpensslCipher.PADDING_NOPADDING + 100);
+      cipher = OpensslCipher.getInstance("AES/CTR/NoPadding2");
       Assert.fail("Should specify correct padding.");
     } catch (NoSuchPaddingException e) {
       // Expect NoSuchPaddingException
@@ -64,8 +61,7 @@ public class TestOpensslCipher {
     if (!OpensslCipher.isNativeCodeLoaded()) {
       return;
     }
-    OpensslCipher cipher = OpensslCipher.getInstance(OpensslCipher.AES_CTR, 
-        OpensslCipher.PADDING_NOPADDING);
+    OpensslCipher cipher = OpensslCipher.getInstance("AES/CTR/NoPadding");
     Assert.assertTrue(cipher != null);
     
     cipher.init(OpensslCipher.ENCRYPT_MODE, key, iv);
@@ -100,8 +96,7 @@ public class TestOpensslCipher {
     if (!OpensslCipher.isNativeCodeLoaded()) {
       return;
     }
-    OpensslCipher cipher = OpensslCipher.getInstance(OpensslCipher.AES_CTR, 
-        OpensslCipher.PADDING_NOPADDING);
+    OpensslCipher cipher = OpensslCipher.getInstance("AES/CTR/NoPadding");
     Assert.assertTrue(cipher != null);
     
     cipher.init(OpensslCipher.ENCRYPT_MODE, key, iv);
