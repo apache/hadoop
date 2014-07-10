@@ -275,6 +275,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6627. Rename DataNode#checkWriteAccess to checkReadAccess.
     (Liang Xie via cnauroth)
 
+    HDFS-6645. Add test for successive Snapshots between XAttr modifications.
+    (Stephen Chu via jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES
