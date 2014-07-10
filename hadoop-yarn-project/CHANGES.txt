@@ -369,6 +369,8 @@ Release 2.5.0 - UNRELEASED
     YARN-2158. Improved assertion messages of TestRMWebServicesAppsModification.
     (Varun Vasudev via zjshen)
 
+    YARN-2269. Remove external links from YARN UI. (Craig Welch via xgong)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
