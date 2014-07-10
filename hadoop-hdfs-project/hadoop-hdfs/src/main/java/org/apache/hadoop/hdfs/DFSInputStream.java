@@ -1044,6 +1044,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
           throw new IOException("truncated return from reader.read(): " +
                                 "excpected " + len + ", got " + nread);
         }
+        DFSClientFaultInjector.get().readFromDatanodeDelay();
         return;
       } catch (ChecksumException e) {
         String msg = "fetchBlockByteRange(). Got a checksum exception for "
