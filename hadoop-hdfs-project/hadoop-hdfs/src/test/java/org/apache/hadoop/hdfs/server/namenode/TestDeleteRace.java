@@ -146,4 +146,62 @@ public class TestDeleteRace {
       }
     }
   }
+
+  private class RenameThread extends Thread {
+    private FileSystem fs;
+    private Path from;
+    private Path to;
+
+    RenameThread(FileSystem fs, Path from, Path to) {
+      this.fs = fs;
+      this.from = from;
+      this.to = to;
+    }
+
+    @Override
+    public void run() {
+      try {
+        Thread.sleep(1000);
+        LOG.info("Renaming " + from + " to " + to);
+
+        fs.rename(from, to);
+        LOG.info("Renamed " + from + " to " + to);
+      } catch (Exception e) {
+        LOG.info(e);
+      }
+    }
+  }
+
+  @Test
+  public void testRenameRace() throws Exception {
+    try {
+      conf.setClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
+          SlowBlockPlacementPolicy.class, BlockPlacementPolicy.class);
+      cluster = new MiniDFSCluster.Builder(conf).build();
+      FileSystem fs = cluster.getFileSystem();
+      Path dirPath1 = new Path("/testRenameRace1");
+      Path dirPath2 = new Path("/testRenameRace2");
+      Path filePath = new Path("/testRenameRace1/file1");
+      
+
+      fs.mkdirs(dirPath1);
+      FSDataOutputStream out = fs.create(filePath);
+      Thread renameThread = new RenameThread(fs, dirPath1, dirPath2);
+      renameThread.start();
+
+      // write data and close to make sure a block is allocated.
+      out.write(new byte[32], 0, 32);
+      out.close();
+
+      // Restart name node so that it replays edit. If old path was
+      // logged in edit, it will fail to come up.
+      cluster.restartNameNode(0);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+
+
+  }
 }
