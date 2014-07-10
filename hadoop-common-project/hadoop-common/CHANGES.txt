@@ -15,6 +15,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10781. Unportable getgrouplist() usage breaks FreeBSD (Dmitry
     Sivachenko via Colin Patrick McCabe)
 
+    HADOOP-10507. FsShell setfacl can throw ArrayIndexOutOfBoundsException when
+    no perm is specified. (Stephen Chu and Sathish Gurram via cnauroth)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
