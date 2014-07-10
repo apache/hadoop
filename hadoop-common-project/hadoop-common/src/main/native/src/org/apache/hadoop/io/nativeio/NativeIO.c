@@ -404,34 +404,6 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_mlock_1native(
 #endif
 }
 
-/**
- * public static native void munlock_native(
- *   ByteBuffer buffer, long offset);
- *
- * The "00024" in the function name is an artifact of how JNI encodes
- * special characters. U+0024 is '$'.
- */
-JNIEXPORT void JNICALL
-Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_munlock_1native(
-  JNIEnv *env, jclass clazz,
-  jobject buffer, jlong len)
-{
-#ifdef UNIX
-  void* buf = (void*)(*env)->GetDirectBufferAddress(env, buffer);
-  PASS_EXCEPTIONS(env);
-
-  if (munlock(buf, len)) {
-    CHECK_DIRECT_BUFFER_ADDRESS(buf);
-    throw_ioe(env, errno);
-  }
-#endif
-
-#ifdef WINDOWS
-  THROW(env, "java/io/IOException",
-    "The function POSIX.munlock_native() is not supported on Windows");
-#endif
-}
-
 #ifdef __FreeBSD__
 static int toFreeBSDFlags(int flags)
 {

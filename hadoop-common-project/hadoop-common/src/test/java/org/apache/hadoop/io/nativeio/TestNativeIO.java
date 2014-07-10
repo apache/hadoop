@@ -607,8 +607,8 @@ public class TestNativeIO {
         sum += mapbuf.get(i);
       }
       assertEquals("Expected sums to be equal", bufSum, sum);
-      // munlock the buffer
-      NativeIO.POSIX.munlock(mapbuf, fileSize);
+      // munmap the buffer, which also implicitly unlocks it
+      NativeIO.POSIX.munmap(mapbuf);
     } finally {
       if (channel != null) {
         channel.close();
