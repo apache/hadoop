@@ -3525,7 +3525,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       getEditLog().logDelete(src, mtime, logRetryCache);
       incrDeletedFileCount(filesRemoved);
       // Blocks/INodes will be handled later
-      removePathAndBlocks(src, null, null);
+      removePathAndBlocks(src, null, removedINodes, true);
       ret = true;
     } finally {
       writeUnlock();
@@ -3534,13 +3534,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     removeBlocks(collectedBlocks); // Incremental deletion of blocks
     collectedBlocks.clear();
 
-    dir.writeLock();
-    try {
-      dir.removeFromInodeMap(removedINodes);
-    } finally {
-      dir.writeUnlock();
-    }
-    removedINodes.clear();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* Namesystem.delete: "
         + src +" is removed");
@@ -3578,14 +3571,24 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @param blocks Containing the list of blocks to be deleted from blocksMap
    * @param removedINodes Containing the list of inodes to be removed from 
    *                      inodesMap
+   * @param acquireINodeMapLock Whether to acquire the lock for inode removal
    */
   void removePathAndBlocks(String src, BlocksMapUpdateInfo blocks,
-      List<INode> removedINodes) {
+      List<INode> removedINodes, final boolean acquireINodeMapLock) {
     assert hasWriteLock();
     leaseManager.removeLeaseWithPrefixPath(src);
     // remove inodes from inodesMap
     if (removedINodes != null) {
-      dir.removeFromInodeMap(removedINodes);
+      if (acquireINodeMapLock) {
+        dir.writeLock();
+      }
+      try {
+        dir.removeFromInodeMap(removedINodes);
+      } finally {
+        if (acquireINodeMapLock) {
+          dir.writeUnlock();
+        }
+      }
       removedINodes.clear();
     }
     if (blocks == null) {
