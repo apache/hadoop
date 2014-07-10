@@ -21,6 +21,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6645. Add test for successive Snapshots between XAttr modifications.
     (Stephen Chu via jing9)
 
+    HDFS-6643. Refactor INodeWithAdditionalFields.PermissionStatusFormat and
+    INodeFile.HeaderFormat. (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
