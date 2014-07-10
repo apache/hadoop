@@ -65,6 +65,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2181. Added preemption info to logs and RM web UI. (Wangda Tan via
     jianhe)
 
+    YARN-2088. Fixed a bug in GetApplicationsRequestPBImpl#mergeLocalToBuilder.
+    (Binglin Chang via jianhe)
+
   IMPROVEMENTS
 
     YARN-1479. Invalid NaN values in Hadoop REST API JSON response (Chen He via

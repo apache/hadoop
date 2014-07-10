@@ -72,6 +72,9 @@ public class TestGetApplicationsRequest {
     GetApplicationsRequest requestFromProto = new GetApplicationsRequestPBImpl(
         ((GetApplicationsRequestPBImpl)request).getProto());
     
+    // verify the whole record equals with original record
+    Assert.assertEquals(requestFromProto, request);
+
     // verify all properties are the same as original request
     Assert.assertEquals(
         "ApplicationStates from proto is not the same with original request",
