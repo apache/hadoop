@@ -3101,10 +3101,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               : "Holder " + holder + " does not have any open files."));
     }
     // No further modification is allowed on a deleted file.
-    // A file is considered deleted, if it has no parent or is marked
+    // A file is considered deleted, if it is not in the inodeMap or is marked
     // as deleted in the snapshot feature.
-    if (file.getParent() == null || (file.isWithSnapshot() &&
-        file.getFileWithSnapshotFeature().isCurrentFileDeleted())) {
+    if (isFileDeleted(file)) {
       throw new FileNotFoundException(src);
     }
     String clientName = file.getFileUnderConstructionFeature().getClientName();
@@ -6251,6 +6250,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return blockId;
   }
 
+  private boolean isFileDeleted(INodeFile file) {
+    // Not in the inodeMap or in the snapshot but marked deleted.
+    if (dir.getInode(file.getId()) == null || 
+        file.getParent() == null || (file.isWithSnapshot() &&
+        file.getFileWithSnapshotFeature().isCurrentFileDeleted())) {
+      return true;
+    }
+    return false;
+  }
+
   private INodeFile checkUCBlock(ExtendedBlock block,
       String clientName) throws IOException {
     assert hasWriteLock();
@@ -6267,7 +6276,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     
     // check file inode
     final INodeFile file = ((INode)storedBlock.getBlockCollection()).asFile();
-    if (file == null || !file.isUnderConstruction()) {
+    if (file == null || !file.isUnderConstruction() || isFileDeleted(file)) {
       throw new IOException("The file " + storedBlock + 
           " belonged to does not exist or it is not under construction.");
     }
