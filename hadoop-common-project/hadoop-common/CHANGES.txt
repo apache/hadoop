@@ -391,6 +391,8 @@ Release 2.6.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-10808. Remove unused native code for munlock. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES

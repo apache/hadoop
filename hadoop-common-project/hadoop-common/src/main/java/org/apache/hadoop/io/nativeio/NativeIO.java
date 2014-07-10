@@ -292,8 +292,6 @@ public class NativeIO {
 
     static native void mlock_native(
         ByteBuffer buffer, long len) throws NativeIOException;
-    static native void munlock_native(
-        ByteBuffer buffer, long len) throws NativeIOException;
 
     /**
      * Locks the provided direct ByteBuffer into memory, preventing it from
@@ -311,23 +309,6 @@ public class NativeIO {
         throw new IOException("Cannot mlock a non-direct ByteBuffer");
       }
       mlock_native(buffer, len);
-    }
-
-    /**
-     * Unlocks a locked direct ByteBuffer, allowing it to swap out of memory.
-     * This is a no-op if the ByteBuffer was not previously locked.
-     * 
-     * See the munlock(2) man page for more information.
-     * 
-     * @throws NativeIOException
-     */
-    public static void munlock(ByteBuffer buffer, long len)
-        throws IOException {
-      assertCodeLoaded();
-      if (!buffer.isDirect()) {
-        throw new IOException("Cannot munlock a non-direct ByteBuffer");
-      }
-      munlock_native(buffer, len);
     }
     
     /**
