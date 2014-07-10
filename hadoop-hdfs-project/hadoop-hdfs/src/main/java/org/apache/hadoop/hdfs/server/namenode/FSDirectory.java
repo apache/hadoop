@@ -656,7 +656,7 @@ public class FSDirectory implements Closeable {
                 dstIIP.getLatestSnapshotId(), collectedBlocks, removedINodes,
                 true).get(Quota.NAMESPACE);
             getFSNamesystem().removePathAndBlocks(src, collectedBlocks,
-                removedINodes);
+                removedINodes, false);
           }
         }
 
@@ -1194,7 +1194,7 @@ public class FSDirectory implements Closeable {
 
     if (filesRemoved >= 0) {
       getFSNamesystem().removePathAndBlocks(src, collectedBlocks, 
-          removedINodes);
+          removedINodes, false);
     }
   }
   
