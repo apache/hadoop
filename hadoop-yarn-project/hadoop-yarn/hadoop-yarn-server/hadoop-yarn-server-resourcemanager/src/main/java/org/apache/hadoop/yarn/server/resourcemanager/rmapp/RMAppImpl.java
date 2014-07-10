@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -65,6 +66,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppStartAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -78,6 +80,7 @@ import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class RMAppImpl implements RMApp, Recoverable {
@@ -1201,5 +1204,26 @@ public class RMAppImpl implements RMApp, Recoverable {
   @Override
   public Set<NodeId> getRanNodes() {
     return ranNodes;
+  }
+  
+  @Override
+  public RMAppMetrics getRMAppMetrics() {
+    Resource resourcePreempted = Resource.newInstance(0, 0);
+    int numAMContainerPreempted = 0;
+    int numNonAMContainerPreempted = 0;
+    for (RMAppAttempt attempt : attempts.values()) {
+      if (null != attempt) {
+        RMAppAttemptMetrics attemptMetrics =
+            attempt.getRMAppAttemptMetrics();
+        Resources.addTo(resourcePreempted,
+            attemptMetrics.getResourcePreempted());
+        numAMContainerPreempted += attemptMetrics.getIsPreempted() ? 1 : 0;
+        numNonAMContainerPreempted +=
+            attemptMetrics.getNumNonAMContainersPreempted();
+      }
+    }
+
+    return new RMAppMetrics(resourcePreempted,
+        numNonAMContainerPreempted, numAMContainerPreempted);
   }
 }
