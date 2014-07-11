@@ -111,7 +111,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
   public static final String NATURAL_TERMINATION_FACTOR =
       "yarn.resourcemanager.monitor.capacity.preemption.natural_termination_factor";
 
-  //the dispatcher to send preempt and kill events
+  // the dispatcher to send preempt and kill events
   public EventHandler<ContainerPreemptEvent> dispatcher;
 
   private final Clock clock;
@@ -437,8 +437,9 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
   private Map<ApplicationAttemptId,Set<RMContainer>> getContainersToPreempt(
       List<TempQueue> queues, Resource clusterResource) {
 
-    Map<ApplicationAttemptId,Set<RMContainer>> list =
+    Map<ApplicationAttemptId,Set<RMContainer>> preemptMap =
         new HashMap<ApplicationAttemptId,Set<RMContainer>>();
+    List<RMContainer> skippedAMContainerlist = new ArrayList<RMContainer>();
 
     for (TempQueue qT : queues) {
       // we act only if we are violating balance by more than
@@ -449,26 +450,83 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
         // accounts for natural termination of containers
         Resource resToObtain =
           Resources.multiply(qT.toBePreempted, naturalTerminationFactor);
+        Resource skippedAMSize = Resource.newInstance(0, 0);
 
         // lock the leafqueue while we scan applications and unreserve
-        synchronized(qT.leafQueue) {
-          NavigableSet<FiCaSchedulerApp> ns =
-            (NavigableSet<FiCaSchedulerApp>) qT.leafQueue.getApplications();
+        synchronized (qT.leafQueue) {
+          NavigableSet<FiCaSchedulerApp> ns = 
+              (NavigableSet<FiCaSchedulerApp>) qT.leafQueue.getApplications();
           Iterator<FiCaSchedulerApp> desc = ns.descendingIterator();
           qT.actuallyPreempted = Resources.clone(resToObtain);
           while (desc.hasNext()) {
             FiCaSchedulerApp fc = desc.next();
-            if (Resources.lessThanOrEqual(rc, clusterResource,
-                resToObtain, Resources.none())) {
+            if (Resources.lessThanOrEqual(rc, clusterResource, resToObtain,
+                Resources.none())) {
               break;
             }
-            list.put(fc.getApplicationAttemptId(),
-            preemptFrom(fc, clusterResource, resToObtain));
+            preemptMap.put(
+                fc.getApplicationAttemptId(),
+                preemptFrom(fc, clusterResource, resToObtain,
+                    skippedAMContainerlist, skippedAMSize));
           }
+          Resource maxAMCapacityForThisQueue = Resources.multiply(
+              Resources.multiply(clusterResource,
+                  qT.leafQueue.getAbsoluteCapacity()),
+              qT.leafQueue.getMaxAMResourcePerQueuePercent());
+
+          // Can try preempting AMContainers (still saving atmost
+          // maxAMCapacityForThisQueue AMResource's) if more resources are
+          // required to be preempted from this Queue.
+          preemptAMContainers(clusterResource, preemptMap,
+              skippedAMContainerlist, resToObtain, skippedAMSize,
+              maxAMCapacityForThisQueue);
         }
       }
     }
-    return list;
+    return preemptMap;
+  }
+
+  /**
+   * As more resources are needed for preemption, saved AMContainers has to be
+   * rescanned. Such AMContainers can be preempted based on resToObtain, but 
+   * maxAMCapacityForThisQueue resources will be still retained.
+   *  
+   * @param clusterResource
+   * @param preemptMap
+   * @param skippedAMContainerlist
+   * @param resToObtain
+   * @param skippedAMSize
+   * @param maxAMCapacityForThisQueue
+   */
+  private void preemptAMContainers(Resource clusterResource,
+      Map<ApplicationAttemptId, Set<RMContainer>> preemptMap,
+      List<RMContainer> skippedAMContainerlist, Resource resToObtain,
+      Resource skippedAMSize, Resource maxAMCapacityForThisQueue) {
+    for (RMContainer c : skippedAMContainerlist) {
+      // Got required amount of resources for preemption, can stop now
+      if (Resources.lessThanOrEqual(rc, clusterResource, resToObtain,
+          Resources.none())) {
+        break;
+      }
+      // Once skippedAMSize reaches down to maxAMCapacityForThisQueue,
+      // container selection iteration for preemption will be stopped. 
+      if (Resources.lessThanOrEqual(rc, clusterResource, skippedAMSize,
+          maxAMCapacityForThisQueue)) {
+        break;
+      }
+      Set<RMContainer> contToPrempt = preemptMap.get(c
+          .getApplicationAttemptId());
+      if (null == contToPrempt) {
+        contToPrempt = new HashSet<RMContainer>();
+        preemptMap.put(c.getApplicationAttemptId(), contToPrempt);
+      }
+      contToPrempt.add(c);
+      
+      Resources.subtractFrom(resToObtain, c.getContainer().getResource());
+      Resources.subtractFrom(skippedAMSize, c.getContainer()
+          .getResource());
+    }
+    skippedAMContainerlist.clear();
   }
 
   /**
@@ -480,8 +538,9 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
    * @param rsrcPreempt
    * @return
    */
-  private Set<RMContainer> preemptFrom(
-      FiCaSchedulerApp app, Resource clusterResource, Resource rsrcPreempt) {
+  private Set<RMContainer> preemptFrom(FiCaSchedulerApp app,
+      Resource clusterResource, Resource rsrcPreempt,
+      List<RMContainer> skippedAMContainerlist, Resource skippedAMSize) {
     Set<RMContainer> ret = new HashSet<RMContainer>();
     ApplicationAttemptId appId = app.getApplicationAttemptId();
 
@@ -512,6 +571,12 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       if (Resources.lessThanOrEqual(rc, clusterResource,
             rsrcPreempt, Resources.none())) {
         return ret;
+      }
+      // Skip AM Container from preemption for now.
+      if (c.isAMContainer()) {
+        skippedAMContainerlist.add(c);
+        Resources.addTo(skippedAMSize, c.getContainer().getResource());
+        continue;
       }
       ret.add(c);
       Resources.subtractFrom(rsrcPreempt, c.getContainer().getResource());
