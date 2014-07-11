@@ -53,8 +53,6 @@ Trunk (Unreleased)
     HDFS-3030. Remove getProtocolVersion and getProtocolSignature from translators.
     (jitendra)
 
-    HDFS-2976. Remove unnecessary method (tokenRefetchNeeded) in DFSClient.
-
     HDFS-3111. Missing license headers in trunk. (umamahesh)
 
     HDFS-3091. Update the usage limitations of ReplaceDatanodeOnFailure policy in
@@ -285,6 +283,9 @@ Release 2.6.0 - UNRELEASED
     in WebHdfs document (missed webhdfs/v1). (Stephen Chu via jing9)
 
     HDFS-5202. Support Centralized Cache Management on Windows. (cnauroth)
+
+    HDFS-2976. Remove unnecessary method (tokenRefetchNeeded) in DFSClient.
+    (Uma Maheswara Rao G)
 
   OPTIMIZATIONS
 
