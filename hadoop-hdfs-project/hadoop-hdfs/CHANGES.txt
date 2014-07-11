@@ -93,8 +93,6 @@ Trunk (Unreleased)
     HDFS-3768. Exception in TestJettyHelper is incorrect. 
     (Eli Reisman via jghoman)
 
-    HDFS-3851. DFSOutputStream class code cleanup. (Jing Zhao via suresh)
-
     HDFS-2580. NameNode#main(...) can make use of GenericOptionsParser. (harsh)
 
     HDFS-2127. Add a test that ensure AccessControlExceptions contain
@@ -283,6 +281,8 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-2976. Remove unnecessary method (tokenRefetchNeeded) in DFSClient.
     (Uma Maheswara Rao G)
+
+    HDFS-3851. DFSOutputStream class code cleanup. (Jing Zhao via suresh)
 
   OPTIMIZATIONS
 
