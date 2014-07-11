@@ -32,6 +32,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-2976. Remove unnecessary method (tokenRefetchNeeded) in DFSClient.
     (Uma Maheswara Rao G)
 
+    HDFS-3851. DFSOutputStream class code cleanup. (Jing Zhao via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
