@@ -32,20 +32,33 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class FileEncryptionInfo {
 
   private final CipherSuite cipherSuite;
-  private final byte[] key;
+  private final byte[] edek;
   private final byte[] iv;
+  private final String ezKeyVersionName;
 
-  public FileEncryptionInfo(CipherSuite suite, byte[] key, byte[] iv) {
+  /**
+   * Create a FileEncryptionInfo.
+   *
+   * @param suite CipherSuite used to encrypt the file
+   * @param edek encrypted data encryption key (EDEK) of the file
+   * @param iv initialization vector (IV) used to encrypt the file
+   * @param ezKeyVersionName name of the KeyVersion used to encrypt the
+   *                         encrypted data encryption key.
+   */
+  public FileEncryptionInfo(final CipherSuite suite, final byte[] edek,
+      final byte[] iv, final String ezKeyVersionName) {
     checkNotNull(suite);
-    checkNotNull(key);
+    checkNotNull(edek);
     checkNotNull(iv);
-    checkArgument(key.length == suite.getAlgorithmBlockSize(),
+    checkNotNull(ezKeyVersionName);
+    checkArgument(edek.length == suite.getAlgorithmBlockSize(),
         "Unexpected key length");
     checkArgument(iv.length == suite.getAlgorithmBlockSize(),
         "Unexpected IV length");
     this.cipherSuite = suite;
-    this.key = key;
+    this.edek = edek;
     this.iv = iv;
+    this.ezKeyVersionName = ezKeyVersionName;
   }
 
   /**
@@ -57,25 +70,32 @@ public class FileEncryptionInfo {
   }
 
   /**
-   * @return encrypted data encryption key for the file
+   * @return encrypted data encryption key (EDEK) for the file
    */
   public byte[] getEncryptedDataEncryptionKey() {
-    return key;
+    return edek;
   }
 
   /**
-   * @return initialization vector for the cipher used to encrypt the file
+   * @return initialization vector (IV) for the cipher used to encrypt the file
    */
   public byte[] getIV() {
     return iv;
   }
 
+  /**
+   * @return name of the encryption zone KeyVersion used to encrypt the
+   * encrypted data encryption key (EDEK).
+   */
+  public String getEzKeyVersionName() { return ezKeyVersionName; }
+
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder("{");
     builder.append("cipherSuite: " + cipherSuite);
-    builder.append(", key: " + Hex.encodeHexString(key));
+    builder.append(", edek: " + Hex.encodeHexString(edek));
     builder.append(", iv: " + Hex.encodeHexString(iv));
+    builder.append(", ezKeyVersionName: " + ezKeyVersionName);
     builder.append("}");
     return builder.toString();
   }

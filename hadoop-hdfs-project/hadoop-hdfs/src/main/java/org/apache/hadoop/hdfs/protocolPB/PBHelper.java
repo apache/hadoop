@@ -2335,6 +2335,7 @@ public class PBHelper {
         .setSuite(convert(info.getCipherSuite()))
         .setKey(getByteString(info.getEncryptedDataEncryptionKey()))
         .setIv(getByteString(info.getIV()))
+        .setEzKeyVersionName(info.getEzKeyVersionName())
         .build();
   }
 
@@ -2346,7 +2347,8 @@ public class PBHelper {
     CipherSuite suite = convert(proto.getSuite());
     byte[] key = proto.getKey().toByteArray();
     byte[] iv = proto.getIv().toByteArray();
-    return new FileEncryptionInfo(suite, key, iv);
+    String ezKeyVersionName = proto.getEzKeyVersionName();
+    return new FileEncryptionInfo(suite, key, iv, ezKeyVersionName);
   }
 
 }

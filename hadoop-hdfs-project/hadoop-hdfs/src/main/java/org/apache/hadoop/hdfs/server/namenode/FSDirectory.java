@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_FILE_ENCRYPTION_INFO;
 import static org.apache.hadoop.util.Time.now;
@@ -35,6 +36,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
@@ -162,7 +164,7 @@ public class FSDirectory implements Closeable {
   }
 
   boolean hasReadLock() {
-    return this.dirLock.getReadHoldCount() > 0;
+    return this.dirLock.getReadHoldCount() > 0 || hasWriteLock();
   }
 
   public int getReadHoldCount() {
@@ -173,7 +175,8 @@ public class FSDirectory implements Closeable {
     return this.dirLock.getWriteHoldCount();
   }
 
-  final EncryptionZoneManager ezManager;
+  @VisibleForTesting
+  public final EncryptionZoneManager ezManager;
 
   /**
    * Caches frequently used file names used in {@link INode} to reuse 
@@ -224,7 +227,7 @@ public class FSDirectory implements Closeable {
     nameCache = new NameCache<ByteArray>(threshold);
     namesystem = ns;
 
-    ezManager = new EncryptionZoneManager(this);
+    ezManager = new EncryptionZoneManager(this, conf, ns.getProvider());
   }
     
   private FSNamesystem getFSNamesystem() {
@@ -902,16 +905,6 @@ public class FSDirectory implements Closeable {
         srcParent.addSpaceConsumed(newSrcCounts.get(Quota.NAMESPACE),
                 newSrcCounts.get(Quota.DISKSPACE), false);
       }
-    }
-  }
-
-  boolean isInAnEZ(INodesInPath iip)
-    throws UnresolvedLinkException, SnapshotAccessControlException {
-    readLock();
-    try {
-      return ezManager.isInAnEZ(iip);
-    } finally {
-      readUnlock();
     }
   }
 
@@ -2618,12 +2611,46 @@ public class FSDirectory implements Closeable {
 
     return newXAttrs;
   }
-  
-  XAttr createEncryptionZone(String src, String keyId)
+
+  boolean isInAnEZ(INodesInPath iip)
+      throws UnresolvedLinkException, SnapshotAccessControlException {
+    readLock();
+    try {
+      return ezManager.isInAnEZ(iip);
+    } finally {
+      readUnlock();
+    }
+  }
+
+  KeyVersion getLatestKeyVersion(INodesInPath iip) {
+    readLock();
+    try {
+      return ezManager.getLatestKeyVersion(iip);
+    } finally {
+      readUnlock();
+    }
+  }
+
+  KeyVersion updateLatestKeyVersion(INodesInPath iip) throws
+      IOException {
+    // No locking, this operation does not involve any FSDirectory operations
+    return ezManager.updateLatestKeyVersion(iip);
+  }
+
+  boolean isValidKeyVersion(INodesInPath iip, String keyVersionName) {
+    readLock();
+    try {
+      return ezManager.isValidKeyVersion(iip, keyVersionName);
+    } finally {
+      readUnlock();
+    }
+  }
+
+  XAttr createEncryptionZone(String src, String keyId, KeyVersion keyVersion)
     throws IOException {
     writeLock();
     try {
-      return ezManager.createEncryptionZone(src, keyId);
+      return ezManager.createEncryptionZone(src, keyId, keyVersion);
     } finally {
       writeUnlock();
     }

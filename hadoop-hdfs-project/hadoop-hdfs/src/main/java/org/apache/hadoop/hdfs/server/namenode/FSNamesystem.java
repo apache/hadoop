@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
@@ -100,6 +101,7 @@ import java.io.StringWriter;
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.URI;
+import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -133,6 +135,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoCodec;
 import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import org.apache.hadoop.fs.CacheFlag;
@@ -533,7 +536,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   private final NNConf nnConf;
 
-  private KeyProvider provider = null;
+  private KeyProviderCryptoExtension provider = null;
   private KeyProvider.Options providerOptions = null;
 
   private final CryptoCodec codec;
@@ -929,7 +932,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         LOG.error(err);
         throw new RuntimeException(err);
       }
-      provider = providers.get(0);
+      provider = KeyProviderCryptoExtension
+          .createKeyProviderCryptoExtension(providers.get(0));
       if (provider.isTransient()) {
         final String err =
             "A KeyProvider was found but it is a transient provider.";
@@ -2310,7 +2314,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * CipherSuite from the list provided by the client. Since the client may 
    * be newer, need to handle unknown CipherSuites.
    *
-   * @param src path of the file
+   * @param srcIIP path of the file
    * @param cipherSuites client-provided list of supported CipherSuites, 
    *                     in desired order.
    * @return chosen CipherSuite, or null if file is not in an EncryptionZone
@@ -2347,6 +2351,62 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               + " NameNode supports: " + Arrays.toString(CipherSuite.values()));
     }
     return chosen;
+  }
+
+  /**
+   * Create a new FileEncryptionInfo for a path. Also chooses an
+   * appropriate CipherSuite to use from the list provided by the
+   * client.
+   *
+   * @param src Target path
+   * @param pathComponents Target path split up into path components
+   * @param cipherSuites List of CipherSuites provided by the client
+   * @return a new FileEncryptionInfo, or null if path is not within an
+   * encryption
+   * zone.
+   * @throws IOException
+   */
+  private FileEncryptionInfo newFileEncryptionInfo(String src,
+      byte[][] pathComponents, List<CipherSuite> cipherSuites)
+      throws IOException {
+    INodesInPath iip = null;
+    CipherSuite suite = null;
+    KeyVersion latestEZKeyVersion = null;
+    readLock();
+    try {
+      src = FSDirectory.resolvePath(src, pathComponents, dir);
+      iip = dir.getINodesInPath4Write(src);
+      // Nothing to do if the path is not within an EZ
+      if (!dir.isInAnEZ(iip)) {
+        return null;
+      }
+      suite = chooseCipherSuite(iip, cipherSuites);
+      if (suite != null) {
+        Preconditions.checkArgument(!suite.equals(CipherSuite.UNKNOWN),
+            "Chose an UNKNOWN CipherSuite!");
+      }
+      latestEZKeyVersion = dir.getLatestKeyVersion(iip);
+    } finally {
+      readUnlock();
+    }
+
+    // If the latest key version is null, need to fetch it and update
+    if (latestEZKeyVersion == null) {
+      latestEZKeyVersion = dir.updateLatestKeyVersion(iip);
+    }
+    Preconditions.checkState(latestEZKeyVersion != null);
+
+    // Generate the EDEK while not holding the lock
+    KeyProviderCryptoExtension.EncryptedKeyVersion edek = null;
+    try {
+      edek = provider.generateEncryptedKey(latestEZKeyVersion);
+    } catch (GeneralSecurityException e) {
+      throw new IOException(e);
+    }
+    Preconditions.checkNotNull(edek);
+
+    return new FileEncryptionInfo(suite, edek.getEncryptedKey().getMaterial(),
+        edek.getIv(), edek.getKeyVersionName());
   }
 
   /**
@@ -2426,26 +2486,62 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     boolean overwrite = flag.contains(CreateFlag.OVERWRITE);
 
     waitForLoadingFSImage();
-    writeLock();
+
+    /*
+     * We want to avoid holding any locks while creating a new
+     * FileEncryptionInfo, since this can be very slow. Since the path can
+     * flip flop between being in an encryption zone and not in the meantime,
+     * we need to recheck the preconditions and generate a new
+     * FileEncryptionInfo in some circumstances.
+     *
+     * A special RetryStartFileException is used to indicate that we should
+     * retry creation of a FileEncryptionInfo.
+     */
     try {
-      checkOperation(OperationCategory.WRITE);
-      checkNameNodeSafeMode("Cannot create file" + src);
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
-      startFileInternal(pc, src, permissions, holder, clientMachine, create,
-          overwrite, createParent, replication, blockSize, cipherSuites,
-          logRetryCache);
-      stat = dir.getFileInfo(src, false);
-    } catch (StandbyException se) {
-      skipSync = true;
-      throw se;
+      boolean shouldContinue = true;
+      int iters = 0;
+      while (shouldContinue) {
+        skipSync = false;
+        if (iters >= 10) {
+          throw new IOException("Too many retries because of encryption zone " +
+              "operations, something might be broken!");
+        }
+        shouldContinue = false;
+        iters++;
+        // Optimistically generate a FileEncryptionInfo for this path.
+        FileEncryptionInfo feInfo =
+            newFileEncryptionInfo(src, pathComponents, cipherSuites);
+
+        // Try to create the file with this feInfo
+        writeLock();
+        try {
+          checkOperation(OperationCategory.WRITE);
+          checkNameNodeSafeMode("Cannot create file" + src);
+          src = FSDirectory.resolvePath(src, pathComponents, dir);
+          startFileInternal(pc, src, permissions, holder, clientMachine, create,
+              overwrite, createParent, replication, blockSize, feInfo,
+              logRetryCache);
+          stat = dir.getFileInfo(src, false);
+        } catch (StandbyException se) {
+          skipSync = true;
+          throw se;
+        } catch (RetryStartFileException e) {
+          shouldContinue = true;
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Preconditions failed, retrying creation of " +
+                    "FileEncryptionInfo", e);
+          }
+        } finally {
+          writeUnlock();
+        }
+      }
     } finally {
-      writeUnlock();
       // There might be transactions logged while trying to recover the lease.
       // They need to be sync'ed even when an exception was thrown.
       if (!skipSync) {
         getEditLog().logSync();
       }
-    } 
+    }
 
     logAuditEvent(true, "create", src, null, stat);
     return stat;
@@ -2463,11 +2559,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private void startFileInternal(FSPermissionChecker pc, String src,
       PermissionStatus permissions, String holder, String clientMachine,
       boolean create, boolean overwrite, boolean createParent,
-      short replication, long blockSize, List<CipherSuite> cipherSuites,
+      short replication, long blockSize, FileEncryptionInfo feInfo,
       boolean logRetryEntry)
       throws FileAlreadyExistsException, AccessControlException,
       UnresolvedLinkException, FileNotFoundException,
-      ParentNotDirectoryException, IOException {
+      ParentNotDirectoryException, RetryStartFileException, IOException {
     assert hasWriteLock();
     // Verify that the destination does not exist as a directory already.
     final INodesInPath iip = dir.getINodesInPath4Write(src);
@@ -2477,22 +2573,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           " already exists as a directory");
     }
 
-    FileEncryptionInfo feInfo = null;
-    CipherSuite suite = chooseCipherSuite(iip, cipherSuites);
-    if (suite != null) {
-      Preconditions.checkArgument(!suite.equals(CipherSuite.UNKNOWN), 
-          "Chose an UNKNOWN CipherSuite!");
-      // TODO: fill in actual key/iv in HDFS-6474
-      // For now, populate with dummy data
-      byte[] key = new byte[suite.getAlgorithmBlockSize()];
-      for (int i = 0; i < key.length; i++) {
-        key[i] = (byte)i;
+    if (!dir.isInAnEZ(iip)) {
+      // If the path is not in an EZ, we don't need an feInfo.
+      // Null it out in case one was already generated.
+      feInfo = null;
+    } else {
+      // The path is now within an EZ, but no feInfo. Retry.
+      if (feInfo == null) {
+        throw new RetryStartFileException();
       }
-      byte[] iv = new byte[suite.getAlgorithmBlockSize()];
-      for (int i = 0; i < iv.length; i++) {
-        iv[i] = (byte)(3+i*2);
+      // It's in an EZ and we have a provided feInfo. Make sure the
+      // keyVersion of the encryption key used matches one of the keyVersions of
+      // the key of the encryption zone.
+      if (!dir.isValidKeyVersion(iip, feInfo.getEzKeyVersionName())) {
+        throw new RetryStartFileException();
       }
-      feInfo = new FileEncryptionInfo(suite, key, iv);
     }
 
     final INodeFile myFile = INodeFile.valueOf(inode, src, true);
@@ -8319,12 +8414,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     String keyId = keyIdArg;
     boolean success = false;
     try {
+      KeyVersion keyVersion;
       if (keyId == null || keyId.isEmpty()) {
-        keyId = createNewKey(src);
+        keyId = UUID.randomUUID().toString();
+        keyVersion = createNewKey(keyId, src);
         createdKey = true;
       } else {
-        if (provider.getCurrentKey(keyId) == null) {
-
+        keyVersion = provider.getCurrentKey(keyId);
+        if (keyVersion == null) {
           /*
            * It would be nice if we threw something more specific than
            * IOException when the key is not found, but the KeyProvider API
@@ -8336,7 +8433,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           throw new IOException("Key " + keyId + " doesn't exist.");
         }
       }
-      createEncryptionZoneInt(src, keyId, cacheEntry != null);
+      createEncryptionZoneInt(src, keyId, keyVersion, cacheEntry != null);
       success = true;
     } catch (AccessControlException e) {
       logAuditEvent(false, "createEncryptionZone", src);
@@ -8351,7 +8448,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   private void createEncryptionZoneInt(final String srcArg, String keyId,
-    final boolean logRetryCache) throws IOException {
+    final KeyVersion keyVersion, final boolean logRetryCache) throws
+      IOException {
     String src = srcArg;
     HdfsFileStatus resultingStat = null;
     checkSuperuserPrivilege();
@@ -8365,7 +8463,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       checkNameNodeSafeMode("Cannot create encryption zone on " + src);
       src = FSDirectory.resolvePath(src, pathComponents, dir);
 
-      final XAttr keyIdXAttr = dir.createEncryptionZone(src, keyId);
+      final XAttr keyIdXAttr = dir.createEncryptionZone(src, keyId, keyVersion);
       List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
       xAttrs.add(keyIdXAttr);
       getEditLog().logSetXAttrs(src, xAttrs, logRetryCache);
@@ -8377,19 +8475,29 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     logAuditEvent(true, "createEncryptionZone", src, null, resultingStat);
   }
 
-  private String createNewKey(String src)
+  /**
+   * Create a new key on the KeyProvider for an encryption zone.
+   *
+   * @param keyId id of the key
+   * @param src path of the encryption zone.
+   * @return KeyVersion of the created key
+   * @throws IOException
+   */
+  private KeyVersion createNewKey(String keyId, String src)
     throws IOException {
-    final String keyId = UUID.randomUUID().toString();
+    Preconditions.checkNotNull(keyId);
+    Preconditions.checkNotNull(src);
     // TODO pass in hdfs://HOST:PORT (HDFS-6490)
     providerOptions.setDescription(src);
     providerOptions.setBitLength(codec.getCipherSuite()
         .getAlgorithmBlockSize()*8);
+    KeyVersion version = null;
     try {
-      provider.createKey(keyId, providerOptions);
+      version = provider.createKey(keyId, providerOptions);
     } catch (NoSuchAlgorithmException e) {
       throw new IOException(e);
     }
-    return keyId;
+    return version;
   }
 
   List<EncryptionZone> listEncryptionZones() throws IOException {

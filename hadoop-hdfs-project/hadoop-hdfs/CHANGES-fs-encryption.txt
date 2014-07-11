@@ -39,6 +39,9 @@ fs-encryption (Unreleased)
     HDFS-6635. Refactor encryption zone functionality into new
     EncryptionZoneManager class. (wang)
 
+    HDFS-6474. Namenode needs to get the actual keys and iv from the
+    KeyProvider. (wang)
+
   OPTIMIZATIONS
 
   BUG FIXES

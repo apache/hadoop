@@ -21,17 +21,20 @@ import java.io.File;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -39,16 +42,20 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.namenode.EncryptionZoneManager;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.base.Preconditions;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.fail;
 
 public class TestEncryptionZonesAPI {
@@ -71,6 +78,7 @@ public class TestEncryptionZonesAPI {
         JavaKeyStoreProvider.SCHEME_NAME + "://file" + tmpDir + "/test.jks");
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     fs = (DistributedFileSystem) createFileSystem(conf);
+    Logger.getLogger(EncryptionZoneManager.class).setLevel(Level.TRACE);
   }
 
   protected FileSystem createFileSystem(Configuration conf) throws IOException {
@@ -382,21 +390,80 @@ public class TestEncryptionZonesAPI {
     fs.getClient().cipherSuites.add(CipherSuite.AES_CTR_NOPADDING);
     DFSTestUtil.createFile(fs, new Path(zone, "success3"), 4096, (short) 1,
         0xFEED);
+    // Check KeyProvider state
+    // Flushing the KP on the NN, since it caches, and init a test one
+    cluster.getNamesystem().getProvider().flush();
+    KeyProvider provider = KeyProviderFactory.getProviders(conf).get(0);
+    List<String> keys = provider.getKeys();
+    assertEquals("Expected NN to have created one key per zone", 1,
+        keys.size());
+    List<KeyProvider.KeyVersion> allVersions = Lists.newArrayList();
+    for (String key : keys) {
+      List<KeyProvider.KeyVersion> versions = provider.getKeyVersions(key);
+      assertEquals("Should only have one key version per key", 1,
+          versions.size());
+      allVersions.addAll(versions);
+    }
     // Check that the specified CipherSuite was correctly saved on the NN
     for (int i=2; i<=3; i++) {
-      LocatedBlocks blocks =
-          fs.getClient().getLocatedBlocks(zone.toString() + "/success2", 0);
-      FileEncryptionInfo feInfo = blocks.getFileEncryptionInfo();
+      FileEncryptionInfo feInfo =
+          getFileEncryptionInfo(new Path(zone.toString() +
+              "/success" + i));
       assertEquals(feInfo.getCipherSuite(), CipherSuite.AES_CTR_NOPADDING);
-      // TODO: validate against actual key/iv in HDFS-6474
-      byte[] key = feInfo.getEncryptedDataEncryptionKey();
-      for (int j = 0; j < key.length; j++) {
-        assertEquals("Unexpected key byte", (byte)j, key[j]);
-      }
-      byte[] iv = feInfo.getIV();
-      for (int j = 0; j < iv.length; j++) {
-        assertEquals("Unexpected IV byte", (byte)(3+j*2), iv[j]);
-      }
     }
+  }
+
+  private void validateFiles(Path p1, Path p2, int len) throws Exception {
+    FSDataInputStream in1 = fs.open(p1);
+    FSDataInputStream in2 = fs.open(p2);
+    for (int i=0; i<len; i++) {
+      assertEquals("Mismatch at byte " + i, in1.read(), in2.read());
+    }
+    in1.close();
+    in2.close();
+  }
+
+  private FileEncryptionInfo getFileEncryptionInfo(Path path) throws Exception {
+    LocatedBlocks blocks = fs.getClient().getLocatedBlocks(path.toString(), 0);
+    return blocks.getFileEncryptionInfo();
+  }
+
+  @Test(timeout = 120000)
+  public void testReadWrite() throws Exception {
+    final HdfsAdmin dfsAdmin =
+        new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
+    // Create a base file for comparison
+    final Path baseFile = new Path("/base");
+    final int len = 8192;
+    DFSTestUtil.createFile(fs, baseFile, len, (short) 1, 0xFEED);
+    // Create the first enc file
+    final Path zone = new Path("/zone");
+    fs.mkdirs(zone);
+    dfsAdmin.createEncryptionZone(zone, null);
+    final Path encFile1 = new Path(zone, "myfile");
+    DFSTestUtil.createFile(fs, encFile1, len, (short) 1, 0xFEED);
+    // Read them back in and compare byte-by-byte
+    validateFiles(baseFile, encFile1, len);
+    // Roll the key of the encryption zone
+    List<EncryptionZone> zones = dfsAdmin.listEncryptionZones();
+    assertEquals("Expected 1 EZ", 1, zones.size());
+    String keyId = zones.get(0).getKeyId();
+    cluster.getNamesystem().getProvider().rollNewVersion(keyId);
+    cluster.getNamesystem().getFSDirectory().ezManager.kickMonitor();
+    // Read them back in and compare byte-by-byte
+    validateFiles(baseFile, encFile1, len);
+    // Write a new enc file and validate
+    final Path encFile2 = new Path(zone, "myfile2");
+    DFSTestUtil.createFile(fs, encFile2, len, (short) 1, 0xFEED);
+    // FEInfos should be different
+    FileEncryptionInfo feInfo1 = getFileEncryptionInfo(encFile1);
+    FileEncryptionInfo feInfo2 = getFileEncryptionInfo(encFile2);
+    assertFalse("EDEKs should be different", Arrays.equals(
+        feInfo1.getEncryptedDataEncryptionKey(),
+        feInfo2.getEncryptedDataEncryptionKey()));
+    assertNotEquals("Key was rolled, versions should be different",
+        feInfo1.getEzKeyVersionName(), feInfo2.getEzKeyVersionName());
+    // Contents still equal
+    validateFiles(encFile1, encFile2, len);
   }
 }

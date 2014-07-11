@@ -184,6 +184,7 @@ message FileEncryptionInfoProto {
   required CipherSuite suite = 1;
   required bytes key = 2;
   required bytes iv = 3;
+  required string ezKeyVersionName = 4;
 }
 
 /**

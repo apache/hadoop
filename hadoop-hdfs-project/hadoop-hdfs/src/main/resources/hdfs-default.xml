@@ -2008,4 +2008,15 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.namenode.key.version.refresh.interval.ms</name>
+  <value>300000</value>
+  <description>How frequently the namenode will attempt to fetch the latest
+      key version of encryption zone keys from the configured KeyProvider, in
+      milliseconds. New key versions are created when a key is rolled. This
+      setting thus controls the window of staleness where an old key version
+      is used after a key is rolled.
+  </description>
+</property>
+
 </configuration>
