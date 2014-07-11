@@ -8,6 +8,15 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2131. Add a way to format the RMStateStore. (Robert Kanter via kasha)
 
+    YARN-1367. Changed NM to not kill containers on NM resync if RM work-preserving
+    restart is enabled. (Anubhav Dhoot via jianhe)
+
+    YARN-1366. Changed AMRMClient to re-register with RM and send outstanding requests
+    back to RM on work-preserving RM restart. (Rohith via jianhe)
+
+    YARN-2181. Added preemption info to logs and RM web UI. (Wangda Tan via
+    jianhe)
+
   IMPROVEMENTS
 
     YARN-2242. Improve exception information on AM launch crashes. (Li Lu 
@@ -19,6 +28,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2251. Avoid negative elapsed time in JHS/MRAM web UI and services.
     (Zhijie Shen via junping_du)
+
+    YARN-2088. Fixed a bug in GetApplicationsRequestPBImpl#mergeLocalToBuilder.
+    (Binglin Chang via jianhe)
 
 Release 2.5.0 - UNRELEASED
 
@@ -55,18 +67,6 @@ Release 2.5.0 - UNRELEASED
 
     YARN-1713. Added get-new-app and submit-app functionality to RM web services.
     (Varun Vasudev via vinodkv)
-
-    YARN-1367. Changed NM to not kill containers on NM resync if RM work-preserving
-    restart is enabled. (Anubhav Dhoot via jianhe)
-
-    YARN-1366. Changed AMRMClient to re-register with RM and send outstanding requests
-    back to RM on work-preserving RM restart. (Rohith via jianhe)
-
-    YARN-2181. Added preemption info to logs and RM web UI. (Wangda Tan via
-    jianhe)
-
-    YARN-2088. Fixed a bug in GetApplicationsRequestPBImpl#mergeLocalToBuilder.
-    (Binglin Chang via jianhe)
 
   IMPROVEMENTS
 
