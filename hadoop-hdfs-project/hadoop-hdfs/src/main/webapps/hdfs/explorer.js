@@ -103,7 +103,7 @@
     }
 
     var url = '/webhdfs/v1' + abs_path + '?op=GET_BLOCK_LOCATIONS';
-    $.ajax({"url": url, "crossDomain": true}).done(function(data) {
+    $.get(url).done(function(data) {
       var d = get_response(data, "LocatedBlocks");
       if (d === null) {
         show_err_msg(get_response_err_msg(data));
