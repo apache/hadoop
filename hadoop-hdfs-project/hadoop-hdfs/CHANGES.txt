@@ -45,6 +45,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6630. Unable to fetch the block information by Browsing the file system on
     Namenode UI through IE9 ( Haohui Mai via vinayakumarb)
 
+    HADOOP-8158. Interrupting hadoop fs -put from the command line
+    causes a LeaseExpiredException. (daryn via harsh)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
