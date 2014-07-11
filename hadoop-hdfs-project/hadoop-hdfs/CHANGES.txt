@@ -198,9 +198,6 @@ Trunk (Unreleased)
     HDFS-3834. Remove unused static fields NAME, DESCRIPTION and Usage from
     Command. (Jing Zhao via suresh)
 
-    HADOOP-8158. Interrupting hadoop fs -put from the command line
-    causes a LeaseExpiredException. (daryn via harsh)
-
     HDFS-2434. TestNameNodeMetrics.testCorruptBlock fails intermittently.
     (Jing Zhao via suresh)
 
@@ -299,6 +296,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6630. Unable to fetch the block information by Browsing the file system on
     Namenode UI through IE9 ( Haohui Mai via vinayakumarb)
+
+    HADOOP-8158. Interrupting hadoop fs -put from the command line
+    causes a LeaseExpiredException. (daryn via harsh)
 
 Release 2.5.0 - UNRELEASED
 
