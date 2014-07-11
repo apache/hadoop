@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ChecksumFileSystem;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -54,6 +55,7 @@ import org.apache.hadoop.mapred.Task.CombineValuesIterator;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
+import org.apache.hadoop.mapreduce.CryptoUtils;
 import org.apache.hadoop.mapreduce.task.reduce.MapOutput.MapOutputComparator;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -225,6 +227,10 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
   
   protected MergeThread<InMemoryMapOutput<K,V>, K,V> createInMemoryMerger() {
     return new InMemoryMerger(this);
+  }
+
+  protected MergeThread<CompressAwarePath,K,V> createOnDiskMerger() {
+    return new OnDiskMerger(this);
   }
 
   TaskAttemptID getReduceId() {
@@ -452,11 +458,10 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
                                            mergeOutputSize).suffix(
                                                Task.MERGED_OUTPUT_PREFIX);
 
-      Writer<K,V> writer = 
-        new Writer<K,V>(jobConf, rfs, outputPath,
-                        (Class<K>) jobConf.getMapOutputKeyClass(),
-                        (Class<V>) jobConf.getMapOutputValueClass(),
-                        codec, null);
+      FSDataOutputStream out = CryptoUtils.wrapIfNecessary(jobConf, rfs.create(outputPath));
+      Writer<K, V> writer = new Writer<K, V>(jobConf, out,
+          (Class<K>) jobConf.getMapOutputKeyClass(),
+          (Class<V>) jobConf.getMapOutputValueClass(), codec, null, true);
 
       RawKeyValueIterator rIter = null;
       CompressAwarePath compressAwarePath;
@@ -536,11 +541,12 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
       Path outputPath = 
         localDirAllocator.getLocalPathForWrite(inputs.get(0).toString(), 
             approxOutputSize, jobConf).suffix(Task.MERGED_OUTPUT_PREFIX);
-      Writer<K,V> writer = 
-        new Writer<K,V>(jobConf, rfs, outputPath, 
-                        (Class<K>) jobConf.getMapOutputKeyClass(), 
-                        (Class<V>) jobConf.getMapOutputValueClass(),
-                        codec, null);
+
+      FSDataOutputStream out = CryptoUtils.wrapIfNecessary(jobConf, rfs.create(outputPath));
+      Writer<K, V> writer = new Writer<K, V>(jobConf, out,
+          (Class<K>) jobConf.getMapOutputKeyClass(),
+          (Class<V>) jobConf.getMapOutputValueClass(), codec, null, true);
+
       RawKeyValueIterator iter  = null;
       CompressAwarePath compressAwarePath;
       Path tmpDir = new Path(reduceId.toString());
@@ -716,8 +722,10 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
             keyClass, valueClass, memDiskSegments, numMemDiskSegments,
             tmpDir, comparator, reporter, spilledRecordsCounter, null, 
             mergePhase);
-        Writer<K,V> writer = new Writer<K,V>(job, fs, outputPath,
-            keyClass, valueClass, codec, null);
+
+        FSDataOutputStream out = CryptoUtils.wrapIfNecessary(job, fs.create(outputPath));
+        Writer<K, V> writer = new Writer<K, V>(job, out, keyClass, valueClass,
+            codec, null, true);
         try {
           Merger.writeFile(rIter, writer, reporter, job);
           writer.close();

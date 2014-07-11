@@ -1,0 +1,15 @@
+Hadoop MapReduce Change Log
+
+fs-encryption (Unreleased)
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+    MAPREDUCE-5890. Support for encrypting Intermediate 
+    data and spills in local filesystem. (asuresh via tucu)
+
+  IMPROVEMENTS
+
+  BUG FIXES
+

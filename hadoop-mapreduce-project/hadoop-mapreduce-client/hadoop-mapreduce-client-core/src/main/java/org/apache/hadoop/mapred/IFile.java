@@ -90,13 +90,11 @@ public class IFile {
     
     DataOutputBuffer buffer = new DataOutputBuffer();
 
-    public Writer(Configuration conf, FileSystem fs, Path file, 
-                  Class<K> keyClass, Class<V> valueClass,
-                  CompressionCodec codec,
-                  Counters.Counter writesCounter) throws IOException {
-      this(conf, fs.create(file), keyClass, valueClass, codec,
-           writesCounter);
-      ownOutputStream = true;
+    public Writer(Configuration conf, FSDataOutputStream out,
+        Class<K> keyClass, Class<V> valueClass,
+        CompressionCodec codec, Counters.Counter writesCounter)
+        throws IOException {
+      this(conf, out, keyClass, valueClass, codec, writesCounter, false);
     }
     
     protected Writer(Counters.Counter writesCounter) {
@@ -105,7 +103,8 @@ public class IFile {
 
     public Writer(Configuration conf, FSDataOutputStream out, 
         Class<K> keyClass, Class<V> valueClass,
-        CompressionCodec codec, Counters.Counter writesCounter)
+        CompressionCodec codec, Counters.Counter writesCounter,
+        boolean ownOutputStream)
         throws IOException {
       this.writtenRecordsCounter = writesCounter;
       this.checksumOut = new IFileOutputStream(out);
@@ -137,11 +136,7 @@ public class IFile {
         this.valueSerializer = serializationFactory.getSerializer(valueClass);
         this.valueSerializer.open(buffer);
       }
-    }
-
-    public Writer(Configuration conf, FileSystem fs, Path file) 
-    throws IOException {
-      this(conf, fs, file, null, null, null, null);
+      this.ownOutputStream = ownOutputStream;
     }
 
     public void close() throws IOException {
