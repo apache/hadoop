@@ -551,6 +551,19 @@ public class NativeIO {
       return access0(path, desiredAccess.accessRight());
     }
 
+    /**
+     * Extends both the minimum and maximum working set size of the current
+     * process.  This method gets the current minimum and maximum working set
+     * size, adds the requested amount to each and then sets the minimum and
+     * maximum working set size to the new values.  Controlling the working set
+     * size of the process also controls the amount of memory it can lock.
+     *
+     * @param delta amount to increment minimum and maximum working set size
+     * @throws IOException for any error
+     * @see POSIX#mlock(ByteBuffer, long)
+     */
+    public static native void extendWorkingSetSize(long delta) throws IOException;
+
     static {
       if (NativeCodeLoader.isNativeCodeLoaded()) {
         try {

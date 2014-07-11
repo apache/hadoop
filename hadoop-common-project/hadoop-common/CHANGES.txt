@@ -10,6 +10,8 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10808. Remove unused native code for munlock. (cnauroth)
 
+    HADOOP-10815. Implement Windows equivalent of mlock. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
