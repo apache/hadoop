@@ -270,7 +270,7 @@ Centralized Cache Management in HDFS
 ** {Native Libraries}
 
   In order to lock block files into memory, the DataNode relies on native JNI
-  code found in <<<libhadoop.so>>>. Be sure to
+  code found in <<<libhadoop.so>>> or <<<hadoop.dll>>> on Windows. Be sure to
   {{{../hadoop-common/NativeLibraries.html}enable JNI}} if you are using HDFS
   centralized cache management.
 
@@ -283,11 +283,11 @@ Centralized Cache Management in HDFS
   * dfs.datanode.max.locked.memory
 
     This determines the maximum amount of memory a DataNode will use for caching.
-    The "locked-in-memory size" ulimit (<<<ulimit -l>>>) of the DataNode user
-    also needs to be increased to match this parameter (see below section on
-    {{OS Limits}}). When setting this value, please remember that you will need
-    space in memory for other things as well, such as the DataNode and
-    application JVM heaps and the operating system page cache.
+    On Unix-like systems, the "locked-in-memory size" ulimit (<<<ulimit -l>>>) of
+    the DataNode user also needs to be increased to match this parameter (see
+    below section on {{OS Limits}}). When setting this value, please remember
+    that you will need space in memory for other things as well, such as the
+    DataNode and application JVM heaps and the operating system page cache.
 
 *** Optional
 
@@ -339,3 +339,6 @@ Centralized Cache Management in HDFS
   "unlimited," indicating that there is no limit.  Note that it's typical for
   <<<ulimit -l>>> to output the memory lock limit in KB, but
   dfs.datanode.max.locked.memory must be specified in bytes.
+
+  This information does not apply to deployments on Windows.  Windows has no
+  direct equivalent of <<<ulimit -l>>>.
