@@ -39,6 +39,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6646. [ HDFS Rolling Upgrade - Shell ] shutdownDatanode and getDatanodeInfo
     usage is missed ( Brahma Reddy Battula via vinayakumarb)
 
+    HDFS-6630. Unable to fetch the block information by Browsing the file system on
+    Namenode UI through IE9 ( Haohui Mai via vinayakumarb)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
