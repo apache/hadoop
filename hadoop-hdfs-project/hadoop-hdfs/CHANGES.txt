@@ -281,6 +281,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6643. Refactor INodeWithAdditionalFields.PermissionStatusFormat and
     INodeFile.HeaderFormat. (szetszwo)
 
+    HDFS-6640. Syntax for MKDIRS, CREATESYMLINK, and SETXATTR are given wrongly
+    in WebHdfs document (missed webhdfs/v1). (Stephen Chu via jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES
