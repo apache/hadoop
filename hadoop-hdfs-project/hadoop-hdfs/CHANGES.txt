@@ -27,6 +27,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-6640. Syntax for MKDIRS, CREATESYMLINK, and SETXATTR are given wrongly
     in WebHdfs document (missed webhdfs/v1). (Stephen Chu via jing9)
 
+    HDFS-5202. Support Centralized Cache Management on Windows. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
