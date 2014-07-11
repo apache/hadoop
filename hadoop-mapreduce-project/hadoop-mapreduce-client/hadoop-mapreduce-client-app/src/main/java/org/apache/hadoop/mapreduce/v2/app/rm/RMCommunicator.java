@@ -185,7 +185,7 @@ public abstract class RMCommunicator extends AbstractService
       // if unregistration failed, isLastAMRetry needs to be recalculated
       // to see whether AM really has the chance to retry
       RunningAppContext raContext = (RunningAppContext) context;
-      raContext.computeIsLastAMRetry();
+      raContext.resetIsLastAMRetry();
     }
   }
 
