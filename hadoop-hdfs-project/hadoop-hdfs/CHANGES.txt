@@ -29,6 +29,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-5202. Support Centralized Cache Management on Windows. (cnauroth)
 
+    HDFS-2976. Remove unnecessary method (tokenRefetchNeeded) in DFSClient.
+    (Uma Maheswara Rao G)
+
   OPTIMIZATIONS
 
   BUG FIXES
