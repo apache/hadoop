@@ -160,6 +160,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5866. TestFixedLengthInputFormat fails in windows.
     (Varun Vasudev via cnauroth)
 
+    MAPREDUCE-5956. Made MR AM not use maxAttempts to determine if the current
+    attempt is the last retry. (Wangda Tan via zjshen)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
