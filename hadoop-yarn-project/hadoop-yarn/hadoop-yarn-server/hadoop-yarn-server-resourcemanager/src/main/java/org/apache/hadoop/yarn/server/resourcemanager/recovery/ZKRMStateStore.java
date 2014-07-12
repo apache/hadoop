@@ -44,16 +44,21 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationAttemptStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RMStateVersionProto;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.EpochProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMZKUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
+
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.Epoch;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.EpochPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.RMStateVersionPBImpl;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.zookeeper.CreateMode;
@@ -81,7 +86,7 @@ public class ZKRMStateStore extends RMStateStore {
 
   protected static final String ROOT_ZNODE_NAME = "ZKRMStateRoot";
   protected static final RMStateVersion CURRENT_VERSION_INFO = RMStateVersion
-      .newInstance(1, 0);
+      .newInstance(1, 1);
   private static final String RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME =
       "RMDelegationTokensRoot";
   private static final String RM_DT_SEQUENTIAL_NUMBER_ZNODE_NAME =
@@ -102,6 +107,7 @@ public class ZKRMStateStore extends RMStateStore {
    *
    * ROOT_DIR_PATH
    * |--- VERSION_INFO
+   * |--- EPOCH_NODE
    * |--- RM_ZK_FENCING_LOCK
    * |--- RM_APP_ROOT
    * |     |----- (#ApplicationId1)
@@ -273,20 +279,21 @@ public class ZKRMStateStore extends RMStateStore {
 
   private void createRootDir(final String rootPath) throws Exception {
     // For root dirs, we shouldn't use the doMulti helper methods
-    try {
-      new ZKAction<String>() {
-        @Override
-        public String run() throws KeeperException, InterruptedException {
+    new ZKAction<String>() {
+      @Override
+      public String run() throws KeeperException, InterruptedException {
+        try {
           return zkClient.create(rootPath, null, zkAcl, CreateMode.PERSISTENT);
+        } catch (KeeperException ke) {
+          if (ke.code() == Code.NODEEXISTS) {
+            LOG.debug(rootPath + "znode already exists!");
+            return null;
+          } else {
+            throw ke;
+          }
         }
-      }.runWithRetries();
-    } catch (KeeperException ke) {
-      if (ke.code() == Code.NODEEXISTS) {
-        LOG.debug(rootPath + "znode already exists!");
-      } else {
-        throw ke;
       }
-    }
+    }.runWithRetries();
   }
 
   private void logRootNodeAcls(String prefix) throws Exception {
@@ -389,6 +396,28 @@ public class ZKRMStateStore extends RMStateStore {
       return version;
     }
     return null;
+  }
+
+  @Override
+  public synchronized int getAndIncrementEpoch() throws Exception {
+    String epochNodePath = getNodePath(zkRootNodePath, EPOCH_NODE);
+    int currentEpoch = 0;
+    if (existsWithRetries(epochNodePath, true) != null) {
+      // load current epoch
+      byte[] data = getDataWithRetries(epochNodePath, true);
+      Epoch epoch = new EpochPBImpl(EpochProto.parseFrom(data));
+      currentEpoch = epoch.getEpoch();
+      // increment epoch and store it
+      byte[] storeData = Epoch.newInstance(currentEpoch + 1).getProto()
+          .toByteArray();
+      setDataWithRetries(epochNodePath, storeData, -1);
+    } else {
+      // initialize epoch node with 1 for the next time.
+      byte[] storeData = Epoch.newInstance(currentEpoch + 1).getProto()
+          .toByteArray();
+      createWithRetries(epochNodePath, storeData, zkAcl, CreateMode.PERSISTENT);
+    }
+    return currentEpoch;
   }
 
   @Override
@@ -538,12 +567,12 @@ public class ZKRMStateStore extends RMStateStore {
 
         ApplicationAttemptState attemptState =
             new ApplicationAttemptState(attemptId,
-                attemptStateData.getMasterContainer(), credentials,
-                attemptStateData.getStartTime(),
-                attemptStateData.getState(),
-                attemptStateData.getFinalTrackingUrl(),
-                attemptStateData.getDiagnostics(),
-                attemptStateData.getFinalApplicationStatus());
+              attemptStateData.getMasterContainer(), credentials,
+              attemptStateData.getStartTime(), attemptStateData.getState(),
+              attemptStateData.getFinalTrackingUrl(),
+              attemptStateData.getDiagnostics(),
+              attemptStateData.getFinalApplicationStatus(),
+              attemptStateData.getAMContainerExitStatus());
 
         appState.attempts.put(attemptState.getAttemptId(), attemptState);
       }
@@ -776,6 +805,13 @@ public class ZKRMStateStore extends RMStateStore {
     }
   }
 
+  @Override
+  public synchronized void deleteStore() throws Exception {
+    if (existsWithRetries(zkRootNodePath, true) != null) {
+      deleteWithRetries(zkRootNodePath, true);
+    }
+  }
+
   // ZK related code
   /**
    * Watcher implementation which forward events to the ZKRMStateStore This
@@ -928,6 +964,29 @@ public class ZKRMStateStore extends RMStateStore {
         return zkClient.exists(path, watch);
       }
     }.runWithRetries();
+  }
+
+  private void deleteWithRetries(
+      final String path, final boolean watch) throws Exception {
+    new ZKAction<Void>() {
+      @Override
+      Void run() throws KeeperException, InterruptedException {
+        recursiveDeleteWithRetriesHelper(path, watch);
+        return null;
+      }
+    }.runWithRetries();
+  }
+
+  /**
+   * Helper method that deletes znodes recursively
+   */
+  private void recursiveDeleteWithRetriesHelper(String path, boolean watch)
+          throws KeeperException, InterruptedException {
+    List<String> children = zkClient.getChildren(path, watch);
+    for (String child : children) {
+      recursiveDeleteWithRetriesHelper(path + "/" + child, false);
+    }
+    zkClient.delete(path, -1);
   }
 
   /**

@@ -43,6 +43,8 @@ public class NodeInfo {
   protected int numContainers;
   protected long usedMemoryMB;
   protected long availMemoryMB;
+  protected long usedVirtualCores;
+  protected long availableVirtualCores;
 
   public NodeInfo() {
   } // JAXB needs this
@@ -57,6 +59,8 @@ public class NodeInfo {
       this.numContainers = report.getNumContainers();
       this.usedMemoryMB = report.getUsedResource().getMemory();
       this.availMemoryMB = report.getAvailableResource().getMemory();
+      this.usedVirtualCores = report.getUsedResource().getVirtualCores();
+      this.availableVirtualCores = report.getAvailableResource().getVirtualCores();
     }
     this.id = id.toString();
     this.rack = ni.getRackName();
@@ -83,7 +87,7 @@ public class NodeInfo {
   public String getNodeHTTPAddress() {
     return this.nodeHTTPAddress;
   }
-  
+
   public void setNodeHTTPAddress(String nodeHTTPAddress) {
     this.nodeHTTPAddress = nodeHTTPAddress;
   }
@@ -110,6 +114,14 @@ public class NodeInfo {
 
   public long getAvailableMemory() {
     return this.availMemoryMB;
+  }
+
+  public long getUsedVirtualCores() {
+    return this.usedVirtualCores;
+  }
+
+  public long getAvailableVirtualCores() {
+    return this.availableVirtualCores;
   }
 
 }

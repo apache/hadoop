@@ -82,6 +82,11 @@ public class DatanodeStorage {
   }
 
   @Override
+  public String toString() {
+    return "DatanodeStorage["+ storageID + "," + storageType + "," + state +"]";
+  }
+  
+  @Override
   public boolean equals(Object other){
     if (other == this) {
       return true;

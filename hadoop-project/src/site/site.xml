@@ -51,8 +51,10 @@
       <item name="Single Node Setup" href="hadoop-project-dist/hadoop-common/SingleCluster.html"/>
       <item name="Cluster Setup" href="hadoop-project-dist/hadoop-common/ClusterSetup.html"/>
       <item name="Hadoop Commands Reference" href="hadoop-project-dist/hadoop-common/CommandsManual.html"/>
-      <item name="File System Shell" href="hadoop-project-dist/hadoop-common/FileSystemShell.html"/>
+      <item name="FileSystem Shell" href="hadoop-project-dist/hadoop-common/FileSystemShell.html"/>
       <item name="Hadoop Compatibility" href="hadoop-project-dist/hadoop-common/Compatibility.html"/>
+      <item name="FileSystem Specification"
+        href="hadoop-project-dist/hadoop-common/filesystem/index.html"/>
     </menu>
 
     <menu name="Common" inherit="top">

@@ -25,6 +25,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.GlobFilter;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.XAttrCodec;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -38,9 +40,11 @@ import org.json.simple.JSONObject;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * FileSystem operation executors used by {@link HttpFSServer}.
@@ -233,6 +237,50 @@ public class FSOperations {
     Map response = new LinkedHashMap();
     response.put(HttpFSFileSystem.FILE_CHECKSUM_JSON, json);
     return response;
+  }
+
+  /**
+   * Converts xAttrs to a JSON object.
+   *
+   * @param xAttrs file xAttrs.
+   * @param encoding format of xattr values.
+   *
+   * @return The JSON representation of the xAttrs.
+   * @throws IOException 
+   */
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  private static Map xAttrsToJSON(Map<String, byte[]> xAttrs, 
+      XAttrCodec encoding) throws IOException {
+    Map jsonMap = new LinkedHashMap();
+    JSONArray jsonArray = new JSONArray();
+    if (xAttrs != null) {
+      for (Entry<String, byte[]> e : xAttrs.entrySet()) {
+        Map json = new LinkedHashMap();
+        json.put(HttpFSFileSystem.XATTR_NAME_JSON, e.getKey());
+        if (e.getValue() != null) {
+          json.put(HttpFSFileSystem.XATTR_VALUE_JSON, 
+              XAttrCodec.encodeValue(e.getValue(), encoding));
+        }
+        jsonArray.add(json);
+      }
+    }
+    jsonMap.put(HttpFSFileSystem.XATTRS_JSON, jsonArray);
+    return jsonMap;
+  }
+
+  /**
+   * Converts xAttr names to a JSON object.
+   *
+   * @param names file xAttr names.
+   *
+   * @return The JSON representation of the xAttr names.
+   * @throws IOException 
+   */
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  private static Map xAttrNamesToJSON(List<String> names) throws IOException {
+    Map jsonMap = new LinkedHashMap();
+    jsonMap.put(HttpFSFileSystem.XATTRNAMES_JSON, JSONArray.toJSONString(names));
+    return jsonMap;
   }
 
   /**
@@ -1099,4 +1147,132 @@ public class FSOperations {
 
   }
 
+  /**
+   * Executor that performs a setxattr FileSystemAccess files system operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSSetXAttr implements 
+      FileSystemAccess.FileSystemExecutor<Void> {
+
+    private Path path;
+    private String name;
+    private byte[] value;
+    private EnumSet<XAttrSetFlag> flag;
+
+    public FSSetXAttr(String path, String name, String encodedValue, 
+        EnumSet<XAttrSetFlag> flag) throws IOException {
+      this.path = new Path(path);
+      this.name = name;
+      this.value = XAttrCodec.decodeValue(encodedValue);
+      this.flag = flag;
+    }
+
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      fs.setXAttr(path, name, value, flag);
+      return null;
+    }
+  }
+
+  /**
+   * Executor that performs a removexattr FileSystemAccess files system 
+   * operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSRemoveXAttr implements 
+      FileSystemAccess.FileSystemExecutor<Void> {
+
+    private Path path;
+    private String name;
+
+    public FSRemoveXAttr(String path, String name) {
+      this.path = new Path(path);
+      this.name = name;
+    }
+
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      fs.removeXAttr(path, name);
+      return null;
+    }
+  }
+
+  /**
+   * Executor that performs listing xattrs FileSystemAccess files system 
+   * operation.
+   */
+  @SuppressWarnings("rawtypes")
+  @InterfaceAudience.Private
+  public static class FSListXAttrs implements 
+      FileSystemAccess.FileSystemExecutor<Map> {
+    private Path path;
+
+    /**
+     * Creates listing xattrs executor.
+     *
+     * @param path the path to retrieve the xattrs.
+     */
+    public FSListXAttrs(String path) {
+      this.path = new Path(path);
+    }
+
+    /**
+     * Executes the filesystem operation.
+     *
+     * @param fs filesystem instance to use.
+     *
+     * @return Map a map object (JSON friendly) with the xattr names.
+     *
+     * @throws IOException thrown if an IO error occured.
+     */
+    @Override
+    public Map execute(FileSystem fs) throws IOException {
+      List<String> names = fs.listXAttrs(path);
+      return xAttrNamesToJSON(names);
+    }
+  }
+
+  /**
+   * Executor that performs getting xattrs FileSystemAccess files system 
+   * operation.
+   */
+  @SuppressWarnings("rawtypes")
+  @InterfaceAudience.Private
+  public static class FSGetXAttrs implements 
+      FileSystemAccess.FileSystemExecutor<Map> {
+    private Path path;
+    private List<String> names;
+    private XAttrCodec encoding;
+
+    /**
+     * Creates getting xattrs executor.
+     *
+     * @param path the path to retrieve the xattrs.
+     */
+    public FSGetXAttrs(String path, List<String> names, XAttrCodec encoding) {
+      this.path = new Path(path);
+      this.names = names;
+      this.encoding = encoding;
+    }
+
+    /**
+     * Executes the filesystem operation.
+     *
+     * @param fs filesystem instance to use.
+     *
+     * @return Map a map object (JSON friendly) with the xattrs.
+     *
+     * @throws IOException thrown if an IO error occured.
+     */
+    @Override
+    public Map execute(FileSystem fs) throws IOException {
+      Map<String, byte[]> xattrs = null;
+      if (names != null && !names.isEmpty()) {
+        xattrs = fs.getXAttrs(path, names);
+      } else {
+        xattrs = fs.getXAttrs(path);
+      }
+      return xAttrsToJSON(xattrs, encoding);
+    }
+  }
 }

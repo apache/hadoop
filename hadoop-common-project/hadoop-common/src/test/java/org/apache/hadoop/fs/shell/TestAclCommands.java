@@ -84,6 +84,19 @@ public class TestAclCommands {
   }
 
   @Test
+  public void testSetfaclValidationsWithoutPermissions() throws Exception {
+    List<AclEntry> parsedList = new ArrayList<AclEntry>();
+    try {
+      parsedList = AclEntry.parseAclSpec("user:user1:", true);
+    } catch (IllegalArgumentException e) {
+    }
+    assertTrue(parsedList.size() == 0);
+    assertFalse("setfacl should fail with less arguments",
+        0 == runCommand(new String[] { "-setfacl", "-m", "user:user1:",
+            "/path" }));
+  }
+
+  @Test
   public void testMultipleAclSpecParsing() throws Exception {
     List<AclEntry> parsedList = AclEntry.parseAclSpec(
         "group::rwx,user:user1:rwx,user:user2:rw-,"

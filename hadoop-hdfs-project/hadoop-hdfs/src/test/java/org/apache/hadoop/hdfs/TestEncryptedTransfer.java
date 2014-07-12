@@ -202,6 +202,8 @@ public class TestEncryptedTransfer {
     MiniDFSCluster cluster = null;
     try {
       Configuration conf = new Configuration();
+      // Set short retry timeouts so this test runs faster
+      conf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, 10);
       cluster = new MiniDFSCluster.Builder(conf).build();
       
       FileSystem fs = getFileSystem(conf);

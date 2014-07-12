@@ -69,6 +69,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -292,7 +293,7 @@ public class TestRMRestart {
     AllocateResponse allocResponse = am1.allocate(
         new ArrayList<ResourceRequest>(),
         new ArrayList<ContainerId>());
-    Assert.assertTrue(allocResponse.getAMCommand() == AMCommand.AM_RESYNC);
+    Assert.assertEquals(AMCommand.AM_SHUTDOWN, allocResponse.getAMCommand());
     
     // NM should be rebooted on heartbeat, even first heartbeat for nm2
     NodeHeartbeatResponse hbResponse = nm1.nodeHeartbeat(true);
@@ -1647,7 +1648,7 @@ public class TestRMRestart {
     rm1.waitForState(attemptId1, RMAppAttemptState.ALLOCATED);
     MockAM am1 = rm1.sendAMLaunched(attempt1.getAppAttemptId());
     am1.registerAppAttempt();
-    am1.allocate("127.0.0.1" , 1000, 1, new ArrayList<ContainerId>()); 
+    am1.allocate("127.0.0.1" , 1000, 1, new ArrayList<ContainerId>());
     nm1.nodeHeartbeat(true);
     List<Container> conts = am1.allocate(new ArrayList<ResourceRequest>(),
         new ArrayList<ContainerId>()).getAllocatedContainers();
@@ -1851,7 +1852,8 @@ public class TestRMRestart {
     ContainerId containerId = ContainerId.newInstance(appAttemptId, id);
     NMContainerStatus containerReport =
         NMContainerStatus.newInstance(containerId, containerState,
-          Resource.newInstance(1024, 1), "recover container", 0);
+          Resource.newInstance(1024, 1), "recover container", 0,
+          Priority.newInstance(0), 0);
     return containerReport;
   }
 

@@ -292,8 +292,6 @@ public class NativeIO {
 
     static native void mlock_native(
         ByteBuffer buffer, long len) throws NativeIOException;
-    static native void munlock_native(
-        ByteBuffer buffer, long len) throws NativeIOException;
 
     /**
      * Locks the provided direct ByteBuffer into memory, preventing it from
@@ -311,23 +309,6 @@ public class NativeIO {
         throw new IOException("Cannot mlock a non-direct ByteBuffer");
       }
       mlock_native(buffer, len);
-    }
-
-    /**
-     * Unlocks a locked direct ByteBuffer, allowing it to swap out of memory.
-     * This is a no-op if the ByteBuffer was not previously locked.
-     * 
-     * See the munlock(2) man page for more information.
-     * 
-     * @throws NativeIOException
-     */
-    public static void munlock(ByteBuffer buffer, long len)
-        throws IOException {
-      assertCodeLoaded();
-      if (!buffer.isDirect()) {
-        throw new IOException("Cannot munlock a non-direct ByteBuffer");
-      }
-      munlock_native(buffer, len);
     }
     
     /**
@@ -569,6 +550,19 @@ public class NativeIO {
         throws IOException {
       return access0(path, desiredAccess.accessRight());
     }
+
+    /**
+     * Extends both the minimum and maximum working set size of the current
+     * process.  This method gets the current minimum and maximum working set
+     * size, adds the requested amount to each and then sets the minimum and
+     * maximum working set size to the new values.  Controlling the working set
+     * size of the process also controls the amount of memory it can lock.
+     *
+     * @param delta amount to increment minimum and maximum working set size
+     * @throws IOException for any error
+     * @see POSIX#mlock(ByteBuffer, long)
+     */
+    public static native void extendWorkingSetSize(long delta) throws IOException;
 
     static {
       if (NativeCodeLoader.isNativeCodeLoaded()) {

@@ -29,8 +29,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import org.junit.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -52,6 +50,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.api.records.Token;
@@ -60,15 +59,18 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -200,8 +202,6 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     ApplicationId appId = ApplicationId.newInstance(1, 1);
     ApplicationAttemptId validAppAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
-    ApplicationAttemptId invalidAppAttemptId =
-        ApplicationAttemptId.newInstance(appId, 2);
     
     ContainerId validContainerId =
         ContainerId.newInstance(validAppAttemptId, 0);
@@ -215,7 +215,11 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     
     org.apache.hadoop.yarn.api.records.Token validContainerToken =
         containerTokenSecretManager.createContainerToken(validContainerId,
-            validNode, user, r);
+            validNode, user, r, Priority.newInstance(10), 1234);
+    ContainerTokenIdentifier identifier =
+        BuilderUtils.newContainerTokenIdentifier(validContainerToken);
+    Assert.assertEquals(Priority.newInstance(10), identifier.getPriority());
+    Assert.assertEquals(1234, identifier.getCreationTime());
     
     StringBuilder sb;
     // testInvalidNMToken ... creating NMToken using different secret manager.
@@ -263,27 +267,14 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
         testStartContainer(rpc, validAppAttemptId, validNode,
             validContainerToken, invalidNMToken, true)));
     
-    // using appAttempt-2 token for launching container for appAttempt-1.
-    invalidNMToken =
-        nmTokenSecretManagerRM.createNMToken(invalidAppAttemptId, validNode,
-            user);
-    sb = new StringBuilder("\nNMToken for application attempt : ");
-    sb.append(invalidAppAttemptId.toString())
-      .append(" was used for starting container with container token")
-      .append(" issued for application attempt : ")
-      .append(validAppAttemptId.toString());
-    Assert.assertTrue(testStartContainer(rpc, validAppAttemptId, validNode,
-        validContainerToken, invalidNMToken, true).contains(sb.toString()));
-    
     // using correct tokens. nmtoken for app attempt should get saved.
     conf.setInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS,
         4 * 60 * 1000);
     validContainerToken =
         containerTokenSecretManager.createContainerToken(validContainerId,
-            validNode, user, r);
-    
-    testStartContainer(rpc, validAppAttemptId, validNode, validContainerToken,
-        validNMToken, false);
+            validNode, user, r, Priority.newInstance(0), 0);
+    Assert.assertTrue(testStartContainer(rpc, validAppAttemptId, validNode,
+      validContainerToken, validNMToken, false).isEmpty());
     Assert.assertTrue(nmTokenSecretManagerNM
         .isAppAttemptNMTokenKeyPresent(validAppAttemptId));
     
@@ -325,6 +316,18 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     Assert.assertTrue(testGetContainer(rpc, validAppAttemptId, validNode,
         validContainerId, validNMToken, false).contains(sb.toString()));
 
+    // using appAttempt-1 NMtoken for launching container for appAttempt-2 should
+    // succeed.
+    ApplicationAttemptId attempt2 = ApplicationAttemptId.newInstance(appId, 2);
+    Token attempt1NMToken =
+        nmTokenSecretManagerRM
+          .createNMToken(validAppAttemptId, validNode, user);
+    org.apache.hadoop.yarn.api.records.Token newContainerToken =
+        containerTokenSecretManager.createContainerToken(
+          ContainerId.newInstance(attempt2, 1), validNode, user, r,
+            Priority.newInstance(0), 0);
+    Assert.assertTrue(testStartContainer(rpc, attempt2, validNode,
+      newContainerToken, attempt1NMToken, false).isEmpty());
   }
 
   private void waitForContainerToFinishOnNM(ContainerId containerId) {
@@ -590,7 +593,7 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     // Creating modified containerToken
     Token containerToken =
         tamperedContainerTokenSecretManager.createContainerToken(cId, nodeId,
-            user, r);
+            user, r, Priority.newInstance(0), 0);
     Token nmToken =
         nmTokenSecretManagerInRM.createNMToken(appAttemptId, nodeId, user);
     YarnRPC rpc = YarnRPC.create(conf);

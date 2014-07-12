@@ -118,7 +118,7 @@ public class TestMRAppMaster {
     ContainerId containerId = ConverterUtils.toContainerId(containerIdStr);
     MRAppMasterTest appMaster =
         new MRAppMasterTest(applicationAttemptId, containerId, "host", -1, -1,
-            System.currentTimeMillis(), MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
+            System.currentTimeMillis());
     JobConf conf = new JobConf();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
     MRAppMaster.initAndStartAppMaster(appMaster, conf, userName);
@@ -147,8 +147,7 @@ public class TestMRAppMaster {
     ContainerId containerId = ConverterUtils.toContainerId(containerIdStr);
     MRAppMaster appMaster =
         new MRAppMasterTest(applicationAttemptId, containerId, "host", -1, -1,
-            System.currentTimeMillis(), MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS,
-            false, false);
+            System.currentTimeMillis(), false, false);
     boolean caught = false;
     try {
       MRAppMaster.initAndStartAppMaster(appMaster, conf, userName);
@@ -186,8 +185,7 @@ public class TestMRAppMaster {
     ContainerId containerId = ConverterUtils.toContainerId(containerIdStr);
     MRAppMaster appMaster =
         new MRAppMasterTest(applicationAttemptId, containerId, "host", -1, -1,
-            System.currentTimeMillis(), MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS,
-            false, false);
+            System.currentTimeMillis(), false, false);
     boolean caught = false;
     try {
       MRAppMaster.initAndStartAppMaster(appMaster, conf, userName);
@@ -225,8 +223,7 @@ public class TestMRAppMaster {
     ContainerId containerId = ConverterUtils.toContainerId(containerIdStr);
     MRAppMaster appMaster =
         new MRAppMasterTest(applicationAttemptId, containerId, "host", -1, -1,
-            System.currentTimeMillis(), MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS,
-            false, false);
+            System.currentTimeMillis(), false, false);
     boolean caught = false;
     try {
       MRAppMaster.initAndStartAppMaster(appMaster, conf, userName);
@@ -264,8 +261,7 @@ public class TestMRAppMaster {
     ContainerId containerId = ConverterUtils.toContainerId(containerIdStr);
     MRAppMaster appMaster =
         new MRAppMasterTest(applicationAttemptId, containerId, "host", -1, -1,
-            System.currentTimeMillis(), MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS,
-            false, false);
+            System.currentTimeMillis(), false, false);
     boolean caught = false;
     try {
       MRAppMaster.initAndStartAppMaster(appMaster, conf, userName);
@@ -285,8 +281,9 @@ public class TestMRAppMaster {
   @Test (timeout = 30000)
   public void testMRAppMasterMaxAppAttempts() throws IOException,
       InterruptedException {
-    int[] maxAppAttemtps = new int[] { 1, 2, 3 };
-    Boolean[] expectedBools = new Boolean[]{ true, true, false };
+    // No matter what's the maxAppAttempt or attempt id, the isLastRetry always
+    // equals to false
+    Boolean[] expectedBools = new Boolean[]{ false, false, false };
 
     String applicationAttemptIdStr = "appattempt_1317529182569_0004_000002";
     String containerIdStr = "container_1317529182569_0004_000002_1";
@@ -301,10 +298,10 @@ public class TestMRAppMaster {
     File stagingDir =
         new File(MRApps.getStagingAreaDir(conf, userName).toString());
     stagingDir.mkdirs();
-    for (int i = 0; i < maxAppAttemtps.length; ++i) {
+    for (int i = 0; i < expectedBools.length; ++i) {
       MRAppMasterTest appMaster =
           new MRAppMasterTest(applicationAttemptId, containerId, "host", -1, -1,
-              System.currentTimeMillis(), maxAppAttemtps[i], false, true);
+              System.currentTimeMillis(), false, true);
       MRAppMaster.initAndStartAppMaster(appMaster, conf, userName);
       assertEquals("isLastAMRetry is correctly computed.", expectedBools[i],
           appMaster.isLastAMRetry());
@@ -399,7 +396,7 @@ public class TestMRAppMaster {
 
     MRAppMasterTest appMaster =
         new MRAppMasterTest(applicationAttemptId, containerId, "host", -1, -1,
-          System.currentTimeMillis(), 1, false, true);
+          System.currentTimeMillis(), false, true);
     MRAppMaster.initAndStartAppMaster(appMaster, conf, userName);
 
     // Now validate the task credentials
@@ -466,16 +463,15 @@ class MRAppMasterTest extends MRAppMaster {
 
   public MRAppMasterTest(ApplicationAttemptId applicationAttemptId,
       ContainerId containerId, String host, int port, int httpPort,
-      long submitTime, int maxAppAttempts) {
+      long submitTime) {
     this(applicationAttemptId, containerId, host, port, httpPort,
-        submitTime, maxAppAttempts, true, true);
+        submitTime, true, true);
   }
   public MRAppMasterTest(ApplicationAttemptId applicationAttemptId,
       ContainerId containerId, String host, int port, int httpPort,
-      long submitTime, int maxAppAttempts, boolean overrideInit,
+      long submitTime, boolean overrideInit,
       boolean overrideStart) {
-    super(applicationAttemptId, containerId, host, port, httpPort, submitTime,
-        maxAppAttempts);
+    super(applicationAttemptId, containerId, host, port, httpPort, submitTime);
     this.overrideInit = overrideInit;
     this.overrideStart = overrideStart;
     mockContainerAllocator = mock(ContainerAllocator.class);

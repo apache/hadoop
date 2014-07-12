@@ -388,10 +388,10 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_mlock_1native(
   JNIEnv *env, jclass clazz,
   jobject buffer, jlong len)
 {
-#ifdef UNIX
   void* buf = (void*)(*env)->GetDirectBufferAddress(env, buffer);
   PASS_EXCEPTIONS(env);
 
+#ifdef UNIX
   if (mlock(buf, len)) {
     CHECK_DIRECT_BUFFER_ADDRESS(buf);
     throw_ioe(env, errno);
@@ -399,36 +399,10 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_mlock_1native(
 #endif
 
 #ifdef WINDOWS
-  THROW(env, "java/io/IOException",
-    "The function POSIX.mlock_native() is not supported on Windows");
-#endif
-}
-
-/**
- * public static native void munlock_native(
- *   ByteBuffer buffer, long offset);
- *
- * The "00024" in the function name is an artifact of how JNI encodes
- * special characters. U+0024 is '$'.
- */
-JNIEXPORT void JNICALL
-Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_munlock_1native(
-  JNIEnv *env, jclass clazz,
-  jobject buffer, jlong len)
-{
-#ifdef UNIX
-  void* buf = (void*)(*env)->GetDirectBufferAddress(env, buffer);
-  PASS_EXCEPTIONS(env);
-
-  if (munlock(buf, len)) {
+  if (!VirtualLock(buf, len)) {
     CHECK_DIRECT_BUFFER_ADDRESS(buf);
-    throw_ioe(env, errno);
+    throw_ioe(env, GetLastError());
   }
-#endif
-
-#ifdef WINDOWS
-  THROW(env, "java/io/IOException",
-    "The function POSIX.munlock_native() is not supported on Windows");
 #endif
 }
 
@@ -1005,6 +979,40 @@ cleanup:
   if (path) (*env)->ReleaseStringChars(env, jpath, path);
 
   return (jboolean)allowed;
+#endif
+}
+
+/*
+ * Class:     org_apache_hadoop_io_nativeio_NativeIO_Windows
+ * Method:    extendWorkingSetSize
+ * Signature: (J)V
+ *
+ * The "00024" in the function name is an artifact of how JNI encodes
+ * special characters. U+0024 is '$'.
+ */
+JNIEXPORT void JNICALL
+Java_org_apache_hadoop_io_nativeio_NativeIO_00024Windows_extendWorkingSetSize(
+  JNIEnv *env, jclass clazz, jlong delta)
+{
+#ifdef UNIX
+  THROW(env, "java/io/IOException",
+    "The function extendWorkingSetSize(delta) is not supported on Unix");
+#endif
+
+#ifdef WINDOWS
+  SIZE_T min, max;
+  HANDLE hProcess = GetCurrentProcess();
+  if (!GetProcessWorkingSetSize(hProcess, &min, &max)) {
+    throw_ioe(env, GetLastError());
+    return;
+  }
+  if (!SetProcessWorkingSetSizeEx(hProcess, min + delta, max + delta,
+      QUOTA_LIMITS_HARDWS_MIN_DISABLE | QUOTA_LIMITS_HARDWS_MAX_DISABLE)) {
+    throw_ioe(env, GetLastError());
+    return;
+  }
+  // There is no need to call CloseHandle on the pseudo-handle returned from
+  // GetCurrentProcess.
 #endif
 }
 

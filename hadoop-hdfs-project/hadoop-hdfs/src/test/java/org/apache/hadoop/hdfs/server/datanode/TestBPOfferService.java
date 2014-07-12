@@ -435,8 +435,9 @@ public class TestBPOfferService {
   }
 
   private ReceivedDeletedBlockInfo[] waitForBlockReceived(
-      ExtendedBlock fakeBlock,
-      DatanodeProtocolClientSideTranslatorPB mockNN) throws Exception {
+      final ExtendedBlock fakeBlock,
+      final DatanodeProtocolClientSideTranslatorPB mockNN) throws Exception {
+    final String fakeBlockPoolId = fakeBlock.getBlockPoolId();
     final ArgumentCaptor<StorageReceivedDeletedBlocks[]> captor =
       ArgumentCaptor.forClass(StorageReceivedDeletedBlocks[].class);
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
@@ -444,9 +445,9 @@ public class TestBPOfferService {
       @Override
       public Boolean get() {
         try {
-          Mockito.verify(mockNN1).blockReceivedAndDeleted(
+          Mockito.verify(mockNN).blockReceivedAndDeleted(
             Mockito.<DatanodeRegistration>anyObject(),
-            Mockito.eq(FAKE_BPID),
+            Mockito.eq(fakeBlockPoolId),
             captor.capture());
           return true;
         } catch (Throwable t) {

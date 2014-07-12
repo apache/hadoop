@@ -237,7 +237,7 @@ public class BookKeeperJournalManager implements JournalManager {
         zkPathLatch.countDown();
       }
     };
-    ZkUtils.createFullPathOptimistic(zkc, zkAvailablePath, new byte[0],
+    ZkUtils.asyncCreateFullPathOptimistic(zkc, zkAvailablePath, new byte[0],
         Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT, callback, null);
 
     try {

@@ -145,6 +145,24 @@ Trunk (Unreleased)
     MAPREDUCE-5867. Fix NPE in KillAMPreemptionPolicy related to 
     ProportionalCapacityPreemptionPolicy (Sunil G via devaraj)
 
+Release 2.6.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    MAPREDUCE-5866. TestFixedLengthInputFormat fails in windows.
+    (Varun Vasudev via cnauroth)
+
+    MAPREDUCE-5956. Made MR AM not use maxAttempts to determine if the current
+    attempt is the last retry. (Wangda Tan via zjshen)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -213,6 +231,12 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5834. Increased test-timeouts in TestGridMixClasses to avoid
     occassional failures. (Mit Desai via vinodkv)
 
+    MAPREDUCE-5896. InputSplits should indicate which locations have the block 
+    cached in memory. (Sandy Ryza via kasha)
+
+    MAPREDUCE-5844. Add a configurable delay to reducer-preemption. 
+    (Maysam Yabandeh via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -267,6 +291,19 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5924. Changed TaskAttemptImpl to ignore TA_COMMIT_PENDING event
     at COMMIT_PENDING state. (Zhijie Shen via jianhe)
 
+    MAPREDUCE-5939. StartTime showing up as the epoch time in JHS UI after
+    upgrade (Chen He via jlowe)
+
+    MAPREDUCE-5900. Changed to the interpret container preemption exit code as a
+    task attempt killing event. (Mayank Bansal via zjshen)
+
+    MAPREDUCE-5868. Fixed an issue with TestPipeApplication that was causing the
+    nightly builds to fail. (Akira Ajisaka via vinodkv)
+
+    MAPREDUCE-5517. Fixed MapReduce ApplicationMaster to not validate reduce side
+    resource configuration for deciding uber-mode on map-only jobs. (Siqi Li via
+    vinodkv)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
@@ -274,6 +311,10 @@ Release 2.4.1 - 2014-06-23
   NEW FEATURES
 
   IMPROVEMENTS
+
+    MAPREDUCE-5830. Added back the private API HostUtil.getTaskLogUrl(..) for
+    binary compatibility with older clients like Hive 0.13. (Akira Ajisaka via
+    vinodkv)
 
   OPTIMIZATIONS
 

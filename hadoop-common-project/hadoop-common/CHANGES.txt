@@ -12,7 +12,20 @@ Trunk (Unreleased)
   NEW FEATURES
 
     HADOOP-10433. Key Management Server based on KeyProvider API. (tucu)
+
+    HADOOP-9629. Support Windows Azure Storage - Blob as a file system in Hadoop.
+    (Dexter Bradshaw, Mostafa Elhemali, Xi Fang, Johannes Klein, David Lao,
+    Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
+    Alexander Stojanovic, Brian Swan, and Min Wei via cnauroth)
+
+    HADOOP-10728. Metrics system for Windows Azure Storage Filesystem.
+    (Dexter Bradshaw, Mostafa Elhemali, Xi Fang, Johannes Klein, David Lao,
+    Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
+    Alexander Stojanovich, Brian Swan, and Min Wei via cnauroth)
     
+    HADOOP-10719. Add generateEncryptedKey and decryptEncryptedKey 
+    methods to KeyProvider. (asuresh via tucu)
+
   IMPROVEMENTS
 
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution
@@ -148,6 +161,26 @@ Trunk (Unreleased)
     HADOOP-10563. Remove the dependency of jsp in trunk. (wheat9)
 
     HADOOP-10485. Remove dead classes in hadoop-streaming. (wheat9)
+
+    HADOOP-10607. Create API to separate credential/password storage from
+    applications. (Larry McCay via omalley)
+
+    HADOOP-10696. Add optional attributes to KeyProvider Options and Metadata. 
+    (tucu)
+
+    HADOOP-10695. KMSClientProvider should respect a configurable timeout. 
+    (yoderme via tucu)
+
+    HADOOP-10757. KeyProvider KeyVersion should provide the key name. 
+    (asuresh via tucu)
+
+    HADOOP-10769. Create KeyProvider extension to handle delegation tokens.
+    (Arun Suresh via atm)
+
+    HADOOP-10812. Delegate KeyProviderExtension#toString to underlying
+    KeyProvider. (wang)
+
+    HADOOP-10736. Add key attributes to the key shell. (Mike Yoder via wang)
 
   BUG FIXES
 
@@ -336,11 +369,43 @@ Trunk (Unreleased)
     HADOOP-10611. KMS, keyVersion name should not be assumed to be 
     keyName@versionNumber. (tucu)
 
+    HADOOP-10717. HttpServer2 should load jsp DTD from local jars instead of
+    going remote. (Dapeng Sun via wheat9)
+
+    HADOOP-10689. InputStream is not closed in
+    AzureNativeFileSystemStore#retrieve(). (Chen He via cnauroth)
+
+    HADOOP-10690. Lack of synchronization on access to InputStream in
+    NativeAzureFileSystem#NativeAzureFsInputStream#close().
+    (Chen He via cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
 
     HADOOP-8589. ViewFs tests fail when tests and home dirs are nested (sanjay Radia)
+
+Release 2.6.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HADOOP-10808. Remove unused native code for munlock. (cnauroth)
+
+    HADOOP-10815. Implement Windows equivalent of mlock. (cnauroth)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-10781. Unportable getgrouplist() usage breaks FreeBSD (Dmitry
+    Sivachenko via Colin Patrick McCabe)
+
+    HADOOP-10507. FsShell setfacl can throw ArrayIndexOutOfBoundsException when
+    no perm is specified. (Stephen Chu and Sathish Gurram via cnauroth)
 
 Release 2.5.0 - UNRELEASED
 
@@ -352,10 +417,7 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-9704. Write metrics sink plugin for Hadoop/Graphite (Chu Tong, Alex Newman and Babak Behzad via raviprak)
 
-    HADOOP-9629. Support Windows Azure Storage - Blob as a file system in Hadoop.
-    (Dexter Bradshaw, Mostafa Elhemali, Xi Fang, Johannes Klein, David Lao,
-    Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
-    Alexander Stojanovic, Brian Swan, and Min Wei via cnauroth)
+    HADOOP-8943. Support multiple group mapping providers. (Kai Zheng via brandonli)
 
   IMPROVEMENTS
 
@@ -435,6 +497,48 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10557. FsShell -cp -pa option for preserving extended ACLs.
     (Akira Ajisaka via cnauroth)
+
+    HADOOP-10279. Create multiplexer, a requirement for the fair queue.
+    (Chris Li via Arpit Agarwal)
+
+    HADOOP-10659. Refactor AccessControlList to reuse utility functions
+    and to improve performance. (Benoy Antony via Arpit Agarwal)
+
+    HADOOP-10665. Make Hadoop Authentication Handler loads case in-sensitive
+    (Benoy Antony via vinayakumarb)
+
+    HADOOP-10652. Refactor Proxyusers to use AccessControlList. (Benoy
+    Antony via Arpit Agarwal)
+
+    HADOOP-10747. Support configurable retries on SASL connection failures in
+    RPC client. (cnauroth)
+
+    HADOOP-10674. Improve PureJavaCrc32 performance and use java.util.zip.CRC32
+    for Java 7 and above. (szetszwo)
+
+    HADOOP-10754. Reenable several HA ZooKeeper-related tests on Windows.
+    (cnauroth)
+
+    HADOOP-10565. Support IP ranges (CIDR) in proxyuser.hosts. (Benoy Antony
+    via Arpit Agarwal)
+
+    HADOOP-10649. Allow overriding the default ACL for service authorization
+    (Benoy Antony via Arpit Agarwal)
+
+    HADOOP-10767. Clean up unused code in Ls shell command. (cnauroth)
+
+    HADOOP-9361 Strictly define the expected behavior of filesystem APIs and
+    write tests to verify compliance (stevel)
+
+    HADOOP-9651 Filesystems to throw FileAlreadyExistsException in
+    createFile(path, overwrite=false) when the file exists (stevel)
+    
+    HADOOP-9495 Define behaviour of Seekable.seek(), write tests,
+    fix all hadoop implementations for compliance
+
+    HADOOP-10312 Shell.ExitCodeException to have more useful toString (stevel)
+
+    HADOOP-10782. Fix typo in DataChecksum class. (Jingguo Yao via suresh)
 
   OPTIMIZATIONS
 
@@ -568,6 +672,30 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10699. Fix build native library on mac osx (Binglin Chang via
     jlowe)
 
+    HADOOP-10660. GraphiteSink should implement Closeable (Chen He and Ted Yu via raviprak)
+
+    HADOOP-10716. Cannot use more than 1 har filesystem.
+    (Rushabh Shah via cnauroth)
+
+    HADOOP-9559. When metrics system is restarted MBean names get incorrectly
+    flagged as dupes. (Mostafa Elhemali and Mike Liddell via cnauroth)
+
+    HADOOP-10746. TestSocketIOWithTimeout#testSocketIOWithTimeout fails on
+    Power PC. (Jinghui Wang via Arpit Agarwal)
+
+    HADOOP-9705. FsShell cp -p does not preserve directory attibutes.
+    (Akira AJISAKA via cnauroth)
+
+    HADOOP-10739. Renaming a file into a directory containing the same
+    filename results in a confusing I/O error (chang li via jlowe)
+
+    HADOOP-10533 S3 input stream NPEs in MapReduce join (stevel)
+
+    HADOOP-10419 BufferedFSInputStream NPEs on getPos() on a closed stream
+    (stevel)
+
+    HADOOP-10801 dead link in site.xml (Akira AJISAKA via stevel)
+
   BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
 
     HADOOP-10520. Extended attributes definition and FileSystem APIs for
@@ -588,6 +716,18 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10561. Copy command with preserve option should handle Xattrs.
     (Yi Liu via cnauroth)
+
+    HADOOP-10590. ServiceAuthorizationManager is not threadsafe. (Benoy Antony via vinayakumarb)
+
+    HADOOP-10711. Cleanup some extra dependencies from hadoop-auth. (rkanter via tucu)
+
+    HADOOP-10479. Fix new findbugs warnings in hadoop-minikdc.
+    (Swarnim Kulkarni via wheat9)
+
+    HADOOP-10715. Remove public GraphiteSink#setWriter (Babak Behzad via raviprak)
+
+    HADOOP-10710. hadoop.auth cookie is not properly constructed according to 
+    RFC2109. (Juan Yu via tucu)
 
 Release 2.4.1 - 2014-06-23 
 

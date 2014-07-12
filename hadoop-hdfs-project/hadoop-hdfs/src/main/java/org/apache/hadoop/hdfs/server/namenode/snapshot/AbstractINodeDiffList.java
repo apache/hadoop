@@ -227,32 +227,34 @@ abstract class AbstractINodeDiffList<N extends INode,
     D diff = getDiffById(snapshotId);
     return diff == null ? Snapshot.CURRENT_STATE_ID : diff.getSnapshotId();
   }
-  
-  /**
-   * Check if changes have happened between two snapshots.
-   * @param earlier The snapshot taken earlier
-   * @param later The snapshot taken later
-   * @return Whether or not modifications (including diretory/file metadata
-   *         change, file creation/deletion under the directory) have happened
-   *         between snapshots.
-   */
-  final boolean changedBetweenSnapshots(Snapshot earlier, Snapshot later) {
+
+  final int[] changedBetweenSnapshots(Snapshot from, Snapshot to) {
+    Snapshot earlier = from;
+    Snapshot later = to;
+    if (Snapshot.ID_COMPARATOR.compare(from, to) > 0) {
+      earlier = to;
+      later = from;
+    }
+
     final int size = diffs.size();
     int earlierDiffIndex = Collections.binarySearch(diffs, earlier.getId());
+    int laterDiffIndex = later == null ? size : Collections
+        .binarySearch(diffs, later.getId());
     if (-earlierDiffIndex - 1 == size) {
       // if the earlierSnapshot is after the latest SnapshotDiff stored in
       // diffs, no modification happened after the earlierSnapshot
-      return false;
+      return null;
     }
-    if (later != null) {
-      int laterDiffIndex = Collections.binarySearch(diffs, later.getId());
-      if (laterDiffIndex == -1 || laterDiffIndex == 0) {
-        // if the laterSnapshot is the earliest SnapshotDiff stored in diffs, or
-        // before it, no modification happened before the laterSnapshot
-        return false;
-      }
+    if (laterDiffIndex == -1 || laterDiffIndex == 0) {
+      // if the laterSnapshot is the earliest SnapshotDiff stored in diffs, or
+      // before it, no modification happened before the laterSnapshot
+      return null;
     }
-    return true;
+    earlierDiffIndex = earlierDiffIndex < 0 ? (-earlierDiffIndex - 1)
+        : earlierDiffIndex;
+    laterDiffIndex = laterDiffIndex < 0 ? (-laterDiffIndex - 1)
+        : laterDiffIndex;
+    return new int[]{earlierDiffIndex, laterDiffIndex};
   }
 
   /**

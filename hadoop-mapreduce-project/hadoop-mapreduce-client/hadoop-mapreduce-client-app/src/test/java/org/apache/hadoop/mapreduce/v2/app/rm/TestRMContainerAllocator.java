@@ -16,7 +16,7 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.mapreduce.v2.app;
+package org.apache.hadoop.mapreduce.v2.app.rm;
 
 import static org.mockito.Matchers.anyFloat;
 import static org.mockito.Matchers.anyInt;
@@ -40,6 +40,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.mapreduce.v2.app.AppContext;
+import org.apache.hadoop.mapreduce.v2.app.ClusterInfo;
+import org.apache.hadoop.mapreduce.v2.app.ControlledClock;
+import org.apache.hadoop.mapreduce.v2.app.MRApp;
 import org.junit.Assert;
 
 import org.apache.commons.logging.Log;
@@ -65,10 +69,6 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptKillEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.TaskAttemptImpl;
-import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
-import org.apache.hadoop.mapreduce.v2.app.rm.ContainerFailedEvent;
-import org.apache.hadoop.mapreduce.v2.app.rm.ContainerRequestEvent;
-import org.apache.hadoop.mapreduce.v2.app.rm.RMContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.preemption.NoopAMPreemptionPolicy;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -80,6 +80,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -420,6 +421,115 @@ public class TestRMContainerAllocator {
         .getMessage();
     Assert.assertTrue("No reducer rampDown preemption message",
         killEventMessage.contains(RMContainerAllocator.RAMPDOWN_DIAGNOSTIC));
+  }
+
+  @Test(timeout = 30000)
+  public void testPreemptReducers() throws Exception {
+    LOG.info("Running testPreemptReducers");
+
+    Configuration conf = new Configuration();
+    MyResourceManager rm = new MyResourceManager(conf);
+    rm.start();
+    DrainDispatcher dispatcher = (DrainDispatcher) rm.getRMContext()
+        .getDispatcher();
+
+    // Submit the application
+    RMApp app = rm.submitApp(1024);
+    dispatcher.await();
+
+    MockNM amNodeManager = rm.registerNode("amNM:1234", 2048);
+    amNodeManager.nodeHeartbeat(true);
+    dispatcher.await();
+
+    ApplicationAttemptId appAttemptId = app.getCurrentAppAttempt()
+        .getAppAttemptId();
+    rm.sendAMLaunched(appAttemptId);
+    dispatcher.await();
+
+    JobId jobId = MRBuilderUtils.newJobId(appAttemptId.getApplicationId(), 0);
+    Job mockJob = mock(Job.class);
+    when(mockJob.getReport()).thenReturn(
+        MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
+            0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
+    MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
+        appAttemptId, mockJob, new SystemClock());
+    allocator.setMapResourceRequest(1024);
+    allocator.setReduceResourceRequest(1024);
+    RMContainerAllocator.AssignedRequests assignedRequests =
+        allocator.getAssignedRequests();
+    RMContainerAllocator.ScheduledRequests scheduledRequests =
+        allocator.getScheduledRequests();
+    ContainerRequestEvent event1 =
+        createReq(jobId, 1, 2048, new String[] { "h1" }, false, false);
+    scheduledRequests.maps.put(mock(TaskAttemptId.class),
+        new RMContainerRequestor.ContainerRequest(event1, null));
+    assignedRequests.reduces.put(mock(TaskAttemptId.class),
+        mock(Container.class));
+
+    allocator.preemptReducesIfNeeded();
+    Assert.assertEquals("The reducer is not preempted",
+        1, assignedRequests.preemptionWaitingReduces.size());
+  }
+
+  @Test(timeout = 30000)
+  public void testNonAggressivelyPreemptReducers() throws Exception {
+    LOG.info("Running testPreemptReducers");
+
+    final int preemptThreshold = 2; //sec
+    Configuration conf = new Configuration();
+    conf.setInt(
+        MRJobConfig.MR_JOB_REDUCER_PREEMPT_DELAY_SEC,
+        preemptThreshold);
+
+    MyResourceManager rm = new MyResourceManager(conf);
+    rm.start();
+    DrainDispatcher dispatcher = (DrainDispatcher) rm.getRMContext()
+        .getDispatcher();
+
+    // Submit the application
+    RMApp app = rm.submitApp(1024);
+    dispatcher.await();
+
+    MockNM amNodeManager = rm.registerNode("amNM:1234", 2048);
+    amNodeManager.nodeHeartbeat(true);
+    dispatcher.await();
+
+    ApplicationAttemptId appAttemptId = app.getCurrentAppAttempt()
+        .getAppAttemptId();
+    rm.sendAMLaunched(appAttemptId);
+    dispatcher.await();
+
+    JobId jobId = MRBuilderUtils.newJobId(appAttemptId.getApplicationId(), 0);
+    Job mockJob = mock(Job.class);
+    when(mockJob.getReport()).thenReturn(
+        MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
+            0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
+    ControlledClock clock = new ControlledClock(null);
+    clock.setTime(1);
+    MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
+        appAttemptId, mockJob, clock);
+    allocator.setMapResourceRequest(1024);
+    allocator.setReduceResourceRequest(1024);
+    RMContainerAllocator.AssignedRequests assignedRequests =
+        allocator.getAssignedRequests();
+    RMContainerAllocator.ScheduledRequests scheduledRequests =
+        allocator.getScheduledRequests();
+    ContainerRequestEvent event1 =
+        createReq(jobId, 1, 2048, new String[] { "h1" }, false, false);
+    scheduledRequests.maps.put(mock(TaskAttemptId.class),
+        new RMContainerRequestor.ContainerRequest(event1, null, clock.getTime()));
+    assignedRequests.reduces.put(mock(TaskAttemptId.class),
+        mock(Container.class));
+
+    clock.setTime(clock.getTime() + 1);
+    allocator.preemptReducesIfNeeded();
+    Assert.assertEquals("The reducer is aggressively preeempted", 0,
+        assignedRequests.preemptionWaitingReduces.size());
+
+    clock.setTime(clock.getTime() + (preemptThreshold) * 1000);
+    allocator.preemptReducesIfNeeded();
+    Assert.assertEquals("The reducer is not preeempted", 1,
+        assignedRequests.preemptionWaitingReduces.size());
   }
 
   @Test
@@ -1849,6 +1959,22 @@ public class TestRMContainerAllocator {
     TaskAttemptEvent abortedEvent = allocator.createContainerFinishedEvent(
         abortedStatus, attemptId);
     Assert.assertEquals(TaskAttemptEventType.TA_KILL, abortedEvent.getType());
+    
+    ContainerId containerId2 = ContainerId.newInstance(applicationAttemptId, 2);
+    ContainerStatus status2 = ContainerStatus.newInstance(containerId2,
+        ContainerState.RUNNING, "", 0);
+
+    ContainerStatus preemptedStatus = ContainerStatus.newInstance(containerId2,
+        ContainerState.RUNNING, "", ContainerExitStatus.PREEMPTED);
+
+    TaskAttemptEvent event2 = allocator.createContainerFinishedEvent(status2,
+        attemptId);
+    Assert.assertEquals(TaskAttemptEventType.TA_CONTAINER_COMPLETED,
+        event2.getType());
+
+    TaskAttemptEvent abortedEvent2 = allocator.createContainerFinishedEvent(
+        preemptedStatus, attemptId);
+    Assert.assertEquals(TaskAttemptEventType.TA_KILL, abortedEvent2.getType());
   }
   
   @Test

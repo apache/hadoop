@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.swift;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.swift.exceptions.SwiftOperationFailedException;
 import org.apache.hadoop.fs.swift.util.SwiftTestUtils;
 import org.junit.Test;
 
@@ -220,7 +221,11 @@ public class TestSwiftFileSystemRename extends SwiftFileSystemBaseTest {
     fs.mkdirs(testdir);
     Path parent = testdir.getParent();
     //the outcome here is ambiguous, so is not checked
-    fs.rename(testdir, parent);
+    try {
+      fs.rename(testdir, parent);
+    } catch (SwiftOperationFailedException e) {
+      // allowed
+    }
     assertExists("Source directory has been deleted ", testdir);
   }
 

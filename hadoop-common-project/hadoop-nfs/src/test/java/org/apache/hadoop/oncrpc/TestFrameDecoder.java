@@ -66,6 +66,18 @@ public class TestFrameDecoder {
 
     @Override
     protected void handleInternal(ChannelHandlerContext ctx, RpcInfo info) {
+      // This is just like what's done in RpcProgramMountd#handleInternal and
+      // RpcProgramNfs3#handleInternal.
+      RpcCall rpcCall = (RpcCall) info.header();
+      final int procedure = rpcCall.getProcedure();
+      if (procedure != 0) {
+        boolean portMonitorSuccess = doPortMonitoring(info.remoteAddress());
+        if (!portMonitorSuccess) {
+          sendRejectedReply(rpcCall, info.remoteAddress(), ctx);
+          return;
+        }
+      }
+      
       resultSize = info.data().readableBytes();
       RpcAcceptedReply reply = RpcAcceptedReply.getAcceptInstance(1234,
           new VerifierNone());
@@ -190,6 +202,20 @@ public class TestFrameDecoder {
 
     // Verify the server rejected the request.
     assertEquals(0, resultSize);
+    
+    // Ensure that the NULL procedure does in fact succeed.
+    xdrOut = new XDR();
+    createPortmapXDRheader(xdrOut, 0);
+    int headerSize = xdrOut.size();
+    buffer = new byte[bufsize];
+    xdrOut.writeFixedOpaque(buffer);
+    int requestSize = xdrOut.size() - headerSize;
+    
+    // Send the request to the server
+    testRequest(xdrOut, serverPort);
+
+    // Verify the server did not reject the request.
+    assertEquals(requestSize, resultSize);
   }
   
   private static int startRpcServer(boolean allowInsecurePorts) {

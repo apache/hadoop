@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.mapred.LocatedFileStatusFetcher;
+import org.apache.hadoop.mapred.SplitLocationInfo;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
@@ -359,6 +360,15 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
                                 String[] hosts) {
     return new FileSplit(file, start, length, hosts);
   }
+  
+  /**
+   * A factory that makes the split for this class. It can be overridden
+   * by sub-classes to make sub-types
+   */
+  protected FileSplit makeSplit(Path file, long start, long length, 
+                                String[] hosts, String[] inMemoryHosts) {
+    return new FileSplit(file, start, length, hosts, inMemoryHosts);
+  }
 
   /** 
    * Generate the list of files and make them into FileSplits.
@@ -392,17 +402,20 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
           while (((double) bytesRemaining)/splitSize > SPLIT_SLOP) {
             int blkIndex = getBlockIndex(blkLocations, length-bytesRemaining);
             splits.add(makeSplit(path, length-bytesRemaining, splitSize,
-                                     blkLocations[blkIndex].getHosts()));
+                        blkLocations[blkIndex].getHosts(),
+                        blkLocations[blkIndex].getCachedHosts()));
             bytesRemaining -= splitSize;
           }
 
           if (bytesRemaining != 0) {
             int blkIndex = getBlockIndex(blkLocations, length-bytesRemaining);
             splits.add(makeSplit(path, length-bytesRemaining, bytesRemaining,
-                       blkLocations[blkIndex].getHosts()));
+                       blkLocations[blkIndex].getHosts(),
+                       blkLocations[blkIndex].getCachedHosts()));
           }
         } else { // not splitable
-          splits.add(makeSplit(path, 0, length, blkLocations[0].getHosts()));
+          splits.add(makeSplit(path, 0, length, blkLocations[0].getHosts(),
+                      blkLocations[0].getCachedHosts()));
         }
       } else { 
         //Create empty hosts array for zero length files

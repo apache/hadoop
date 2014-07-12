@@ -21,6 +21,7 @@ import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.ProviderUtils;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -29,7 +30,9 @@ import java.security.NoSuchAlgorithmException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -61,7 +64,7 @@ public class TestKeyProvider {
   @Test
   public void testKeyMaterial() throws Exception {
     byte[] key1 = new byte[]{1,2,3,4};
-    KeyProvider.KeyVersion obj = new KeyProvider.KeyVersion("key1@1", key1);
+    KeyProvider.KeyVersion obj = new KeyProvider.KeyVersion("key1", "key1@1", key1);
     assertEquals("key1@1", obj.getVersionName());
     assertArrayEquals(new byte[]{1,2,3,4}, obj.getMaterial());
   }
@@ -72,7 +75,7 @@ public class TestKeyProvider {
     DateFormat format = new SimpleDateFormat("y/m/d");
     Date date = format.parse("2013/12/25");
     KeyProvider.Metadata meta = new KeyProvider.Metadata("myCipher", 100, null,
-        date, 123);
+        null, date, 123);
     assertEquals("myCipher", meta.getCipher());
     assertEquals(100, meta.getBitLength());
     assertNull(meta.getDescription());
@@ -82,6 +85,7 @@ public class TestKeyProvider {
     assertEquals(meta.getCipher(), second.getCipher());
     assertEquals(meta.getBitLength(), second.getBitLength());
     assertNull(second.getDescription());
+    assertTrue(second.getAttributes().isEmpty());
     assertEquals(meta.getCreated(), second.getCreated());
     assertEquals(meta.getVersions(), second.getVersions());
     int newVersion = second.addVersion();
@@ -92,17 +96,21 @@ public class TestKeyProvider {
     //Metadata with description
     format = new SimpleDateFormat("y/m/d");
     date = format.parse("2013/12/25");
+    Map<String, String> attributes = new HashMap<String, String>();
+    attributes.put("a", "A");
     meta = new KeyProvider.Metadata("myCipher", 100,
-        "description", date, 123);
+        "description", attributes, date, 123);
     assertEquals("myCipher", meta.getCipher());
     assertEquals(100, meta.getBitLength());
     assertEquals("description", meta.getDescription());
+    assertEquals(attributes, meta.getAttributes());
     assertEquals(date, meta.getCreated());
     assertEquals(123, meta.getVersions());
     second = new KeyProvider.Metadata(meta.serialize());
     assertEquals(meta.getCipher(), second.getCipher());
     assertEquals(meta.getBitLength(), second.getBitLength());
     assertEquals(meta.getDescription(), second.getDescription());
+    assertEquals(meta.getAttributes(), second.getAttributes());
     assertEquals(meta.getCreated(), second.getCreated());
     assertEquals(meta.getVersions(), second.getVersions());
     newVersion = second.addVersion();
@@ -116,15 +124,19 @@ public class TestKeyProvider {
     Configuration conf = new Configuration();
     conf.set(KeyProvider.DEFAULT_CIPHER_NAME, "myCipher");
     conf.setInt(KeyProvider.DEFAULT_BITLENGTH_NAME, 512);
+    Map<String, String> attributes = new HashMap<String, String>();
+    attributes.put("a", "A");
     KeyProvider.Options options = KeyProvider.options(conf);
     assertEquals("myCipher", options.getCipher());
     assertEquals(512, options.getBitLength());
     options.setCipher("yourCipher");
     options.setDescription("description");
+    options.setAttributes(attributes);
     options.setBitLength(128);
     assertEquals("yourCipher", options.getCipher());
     assertEquals(128, options.getBitLength());
     assertEquals("description", options.getDescription());
+    assertEquals(attributes, options.getAttributes());
     options = KeyProvider.options(new Configuration());
     assertEquals(KeyProvider.DEFAULT_CIPHER, options.getCipher());
     assertEquals(KeyProvider.DEFAULT_BITLENGTH, options.getBitLength());
@@ -133,13 +145,13 @@ public class TestKeyProvider {
   @Test
   public void testUnnestUri() throws Exception {
     assertEquals(new Path("hdfs://nn.example.com/my/path"),
-        KeyProvider.unnestUri(new URI("myscheme://hdfs@nn.example.com/my/path")));
+        ProviderUtils.unnestUri(new URI("myscheme://hdfs@nn.example.com/my/path")));
     assertEquals(new Path("hdfs://nn/my/path?foo=bar&baz=bat#yyy"),
-        KeyProvider.unnestUri(new URI("myscheme://hdfs@nn/my/path?foo=bar&baz=bat#yyy")));
+        ProviderUtils.unnestUri(new URI("myscheme://hdfs@nn/my/path?foo=bar&baz=bat#yyy")));
     assertEquals(new Path("inner://hdfs@nn1.example.com/my/path"),
-        KeyProvider.unnestUri(new URI("outer://inner@hdfs@nn1.example.com/my/path")));
+        ProviderUtils.unnestUri(new URI("outer://inner@hdfs@nn1.example.com/my/path")));
     assertEquals(new Path("user:///"),
-        KeyProvider.unnestUri(new URI("outer://user/")));
+        ProviderUtils.unnestUri(new URI("outer://user/")));
   }
 
   private static class MyKeyProvider extends KeyProvider {
@@ -166,7 +178,7 @@ public class TestKeyProvider {
 
     @Override
     public Metadata getMetadata(String name) throws IOException {
-      return new Metadata(CIPHER, 128, "description", new Date(), 0);
+      return new Metadata(CIPHER, 128, "description", null, new Date(), 0);
     }
 
     @Override

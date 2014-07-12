@@ -86,6 +86,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUpdateSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
@@ -600,6 +602,9 @@ public class TestRMAppAttemptTransitions {
             any(List.class), 
             any(List.class))).
     thenReturn(allocation);
+    RMContainer rmContainer = mock(RMContainerImpl.class);
+    when(scheduler.getRMContainer(container.getId())).
+        thenReturn(rmContainer);
     
     applicationAttempt.handle(
         new RMAppAttemptContainerAllocatedEvent(
@@ -815,6 +820,7 @@ public class TestRMAppAttemptTransitions {
       applicationAttempt.getAppAttemptState());
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
     verifyApplicationAttemptFinished(RMAppAttemptState.FAILED);
+    verifyAMCrashAtAllocatedDiagnosticInfo(applicationAttempt.getDiagnostics());
   }
   
   @Test
@@ -1230,6 +1236,13 @@ public class TestRMAppAttemptTransitions {
       applicationAttempt.getAppAttemptState());
     assertFalse(transferStateFromPreviousAttempt);
     verifyApplicationAttemptFinished(RMAppAttemptState.FAILED);
+  }
+
+  private void verifyAMCrashAtAllocatedDiagnosticInfo(String diagnostics) {
+    assertTrue("Diagnostic information does not contain application proxy URL",
+      diagnostics.contains(applicationAttempt.getWebProxyBase()));
+    assertTrue("Diagnostic information does not point the logs to the users",
+      diagnostics.contains("logs"));
   }
 
   private void verifyTokenCount(ApplicationAttemptId appAttemptId, int count) {

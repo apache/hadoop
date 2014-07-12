@@ -19,6 +19,8 @@ package org.apache.hadoop.fs;
 
 import java.util.Arrays;
 
+import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
@@ -28,11 +30,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
  * namespaces are defined: user, trusted, security and system.
  *   1) USER namespace attributes may be used by any user to store
  *   arbitrary information. Access permissions in this namespace are
- *   defined by a file directory's permission bits.
+ *   defined by a file directory's permission bits. For sticky directories,
+ *   only the owner and privileged user can write attributes.
  * <br>
  *   2) TRUSTED namespace attributes are only visible and accessible to
- *   privileged users (a file or directory's owner or the fs
- *   admin). This namespace is available from both user space
+ *   privileged users. This namespace is available from both user space
  *   (filesystem API) and fs kernel.
  * <br>
  *   3) SYSTEM namespace attributes are used by the fs kernel to store
@@ -105,42 +107,47 @@ public class XAttr {
   
   @Override
   public int hashCode() {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + ((name == null) ? 0 : name.hashCode());
-    result = prime * result + ((ns == null) ? 0 : ns.hashCode());
-    result = prime * result + Arrays.hashCode(value);
-    return result;
+    return new HashCodeBuilder(811, 67)
+        .append(name)
+        .append(ns)
+        .append(value)
+        .toHashCode();
   }
 
   @Override
   public boolean equals(Object obj) {
-    if (this == obj) {
-      return true;
-    }
-    if (obj == null) {
+    if (obj == null) { return false; }
+    if (obj == this) { return true; }
+    if (obj.getClass() != getClass()) {
       return false;
     }
-    if (getClass() != obj.getClass()) {
-      return false;
-    }
-    XAttr other = (XAttr) obj;
-    if (name == null) {
-      if (other.name != null) {
-        return false;
-      }
-    } else if (!name.equals(other.name)) {
-      return false;
-    }
-    if (ns != other.ns) {
-      return false;
-    }
-    if (!Arrays.equals(value, other.value)) {
-      return false;
-    }
-    return true;
+    XAttr rhs = (XAttr) obj;
+    return new EqualsBuilder()
+        .append(ns, rhs.ns)
+        .append(name, rhs.name)
+        .append(value, rhs.value)
+        .isEquals();
   }
-  
+
+  /**
+   * Similar to {@link #equals(Object)}, except ignores the XAttr value.
+   *
+   * @param obj to compare equality
+   * @return if the XAttrs are equal, ignoring the XAttr value
+   */
+  public boolean equalsIgnoreValue(Object obj) {
+    if (obj == null) { return false; }
+    if (obj == this) { return true; }
+    if (obj.getClass() != getClass()) {
+      return false;
+    }
+    XAttr rhs = (XAttr) obj;
+    return new EqualsBuilder()
+        .append(ns, rhs.ns)
+        .append(name, rhs.name)
+        .isEquals();
+  }
+
   @Override
   public String toString() {
     return "XAttr [ns=" + ns + ", name=" + name + ", value="

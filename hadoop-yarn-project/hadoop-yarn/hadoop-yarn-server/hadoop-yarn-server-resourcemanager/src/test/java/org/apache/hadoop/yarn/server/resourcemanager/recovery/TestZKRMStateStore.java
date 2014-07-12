@@ -120,7 +120,9 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     testRMAppStateStore(zkTester);
     testRMDTSecretManagerStateStore(zkTester);
     testCheckVersion(zkTester);
+    testEpoch(zkTester);
     testAppDeletion(zkTester);
+    testDeleteStore(zkTester);
   }
 
   private Configuration createHARMConf(

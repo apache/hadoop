@@ -45,6 +45,7 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.AccessControlException;
 import org.mockito.Mockito;
+import org.mockito.internal.util.reflection.Whitebox;
 
 /**
  * This is a utility class to expose NameNode functionality for unit tests.
@@ -177,8 +178,9 @@ public class NameNodeAdapter {
   }
 
   public static FSImage spyOnFsImage(NameNode nn1) {
-    FSImage spy = Mockito.spy(nn1.getNamesystem().dir.fsImage);
-    nn1.getNamesystem().dir.fsImage = spy;
+    FSNamesystem fsn = nn1.getNamesystem();
+    FSImage spy = Mockito.spy(fsn.getFSImage());
+    Whitebox.setInternalState(fsn, "fsImage", spy);
     return spy;
   }
   

@@ -84,6 +84,7 @@ public class MBeans {
     } catch (Exception e) {
       LOG.warn("Error unregistering "+ mbeanName, e);
     }
+    DefaultMetricsSystem.removeMBeanName(mbeanName);
   }
 
   static private ObjectName getMBeanName(String serviceName, String nameName) {

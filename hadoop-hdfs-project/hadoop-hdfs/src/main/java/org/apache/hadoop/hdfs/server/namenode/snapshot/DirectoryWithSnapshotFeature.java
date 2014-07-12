@@ -20,8 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -30,8 +28,6 @@ import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
-import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
-import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.server.namenode.Content;
 import org.apache.hadoop.hdfs.server.namenode.ContentSummaryComputationContext;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
@@ -52,7 +48,9 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import com.google.common.base.Preconditions;
 
 /**
- * Feature for directory with snapshot-related information.
+ * Feature used to store and process the snapshot diff information for a
+ * directory. In particular, it contains a directory diff list recording changes
+ * made to the directory and its children for each snapshot.
  */
 @InterfaceAudience.Private
 public class DirectoryWithSnapshotFeature implements INode.Feature {
@@ -160,59 +158,6 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
           dirList.add(node.asDirectory());
         }
       }
-    }
-
-    /**
-     * Interpret the diff and generate a list of {@link DiffReportEntry}.
-     * @param parentPath The relative path of the parent.
-     * @param fromEarlier True indicates {@code diff=later-earlier},
-     *                    False indicates {@code diff=earlier-later}
-     * @return A list of {@link DiffReportEntry} as the diff report.
-     */
-    public List<DiffReportEntry> generateReport(byte[][] parentPath,
-        boolean fromEarlier) {
-      List<DiffReportEntry> cList = new ArrayList<DiffReportEntry>();
-      List<DiffReportEntry> dList = new ArrayList<DiffReportEntry>();
-      int c = 0, d = 0;
-      List<INode> created = getList(ListType.CREATED);
-      List<INode> deleted = getList(ListType.DELETED);
-      byte[][] fullPath = new byte[parentPath.length + 1][];
-      System.arraycopy(parentPath, 0, fullPath, 0, parentPath.length);
-      for (; c < created.size() && d < deleted.size(); ) {
-        INode cnode = created.get(c);
-        INode dnode = deleted.get(d);
-        if (cnode.compareTo(dnode.getLocalNameBytes()) == 0) {
-          fullPath[fullPath.length - 1] = cnode.getLocalNameBytes();
-          // must be the case: delete first and then create an inode with the
-          // same name
-          cList.add(new DiffReportEntry(DiffType.CREATE, fullPath));
-          dList.add(new DiffReportEntry(DiffType.DELETE, fullPath));
-          c++;
-          d++;
-        } else if (cnode.compareTo(dnode.getLocalNameBytes()) < 0) {
-          fullPath[fullPath.length - 1] = cnode.getLocalNameBytes();
-          cList.add(new DiffReportEntry(fromEarlier ? DiffType.CREATE
-              : DiffType.DELETE, fullPath));
-          c++;
-        } else {
-          fullPath[fullPath.length - 1] = dnode.getLocalNameBytes();
-          dList.add(new DiffReportEntry(fromEarlier ? DiffType.DELETE
-              : DiffType.CREATE, fullPath));
-          d++;
-        }
-      }
-      for (; d < deleted.size(); d++) {
-        fullPath[fullPath.length - 1] = deleted.get(d).getLocalNameBytes();
-        dList.add(new DiffReportEntry(fromEarlier ? DiffType.DELETE
-            : DiffType.CREATE, fullPath));
-      }
-      for (; c < created.size(); c++) {
-        fullPath[fullPath.length - 1] = created.get(c).getLocalNameBytes();
-        cList.add(new DiffReportEntry(fromEarlier ? DiffType.CREATE
-            : DiffType.DELETE, fullPath));
-      }
-      dList.addAll(cList);
-      return dList;
     }
   }
 
@@ -724,34 +669,21 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
    */
   boolean computeDiffBetweenSnapshots(Snapshot fromSnapshot,
       Snapshot toSnapshot, ChildrenDiff diff, INodeDirectory currentINode) {
-    Snapshot earlier = fromSnapshot;
-    Snapshot later = toSnapshot;
-    if (Snapshot.ID_COMPARATOR.compare(fromSnapshot, toSnapshot) > 0) {
-      earlier = toSnapshot;
-      later = fromSnapshot;
-    }
-
-    boolean modified = diffs.changedBetweenSnapshots(earlier, later);
-    if (!modified) {
+    int[] diffIndexPair = diffs.changedBetweenSnapshots(fromSnapshot,
+        toSnapshot);
+    if (diffIndexPair == null) {
       return false;
     }
-
-    final List<DirectoryDiff> difflist = diffs.asList();
-    final int size = difflist.size();
-    int earlierDiffIndex = Collections.binarySearch(difflist, earlier.getId());
-    int laterDiffIndex = later == null ? size : Collections
-        .binarySearch(difflist, later.getId());
-    earlierDiffIndex = earlierDiffIndex < 0 ? (-earlierDiffIndex - 1)
-        : earlierDiffIndex;
-    laterDiffIndex = laterDiffIndex < 0 ? (-laterDiffIndex - 1)
-        : laterDiffIndex;
+    int earlierDiffIndex = diffIndexPair[0];
+    int laterDiffIndex = diffIndexPair[1];
 
     boolean dirMetadataChanged = false;
     INodeDirectoryAttributes dirCopy = null;
+    List<DirectoryDiff> difflist = diffs.asList();
     for (int i = earlierDiffIndex; i < laterDiffIndex; i++) {
       DirectoryDiff sdiff = difflist.get(i);
       diff.combinePosterior(sdiff.diff, null);
-      if (dirMetadataChanged == false && sdiff.snapshotINode != null) {
+      if (!dirMetadataChanged && sdiff.snapshotINode != null) {
         if (dirCopy == null) {
           dirCopy = sdiff.snapshotINode;
         } else if (!dirCopy.metadataEquals(sdiff.snapshotINode)) {
@@ -763,7 +695,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
     if (!diff.isEmpty() || dirMetadataChanged) {
       return true;
     } else if (dirCopy != null) {
-      for (int i = laterDiffIndex; i < size; i++) {
+      for (int i = laterDiffIndex; i < difflist.size(); i++) {
         if (!dirCopy.metadataEquals(difflist.get(i).snapshotINode)) {
           return true;
         }

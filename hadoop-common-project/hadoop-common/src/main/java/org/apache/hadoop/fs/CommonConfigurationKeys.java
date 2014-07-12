@@ -131,6 +131,9 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
    * Service Authorization
    */
   public static final String 
+  HADOOP_SECURITY_SERVICE_AUTHORIZATION_DEFAULT_ACL = 
+      "security.service.authorization.default.acl";
+  public static final String 
   HADOOP_SECURITY_SERVICE_AUTHORIZATION_REFRESH_POLICY = 
       "security.refresh.policy.protocol.acl";
   public static final String 
@@ -252,6 +255,10 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   
   public static final String  IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY = "ipc.client.fallback-to-simple-auth-allowed";
   public static final boolean IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT = false;
+
+  public static final String IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_KEY =
+    "ipc.client.connect.max.retries.on.sasl";
+  public static final int    IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_DEFAULT = 5;
 
   /** How often the server scans for idle connections */
   public static final String IPC_CLIENT_CONNECTION_IDLESCANINTERVAL_KEY =

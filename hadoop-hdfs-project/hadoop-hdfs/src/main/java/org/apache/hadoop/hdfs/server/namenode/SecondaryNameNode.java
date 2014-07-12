@@ -1064,7 +1064,7 @@ public class SecondaryNameNode implements Runnable,
       } finally {
         dstNamesystem.writeUnlock();
       }
-      dstNamesystem.dir.imageLoadComplete();
+      dstNamesystem.imageLoadComplete();
     }
     // error simulation code for junit test
     CheckpointFaultInjector.getInstance().duringMerge();   

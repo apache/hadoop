@@ -22,6 +22,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -29,7 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ChecksumException;
 
 /**
- * This class provides inteface and utilities for processing checksums for
+ * This class provides interface and utilities for processing checksums for
  * DFS data transfers.
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
@@ -72,6 +73,13 @@ public class DataChecksum implements Checksum {
     }
   }
 
+  /**
+   * Create a Crc32 Checksum object. The implementation of the Crc32 algorithm
+   * is chosen depending on the platform.
+   */
+  public static Checksum newCrc32() {
+    return Shell.isJava7OrAbove()? new CRC32(): new PureJavaCrc32();
+  }
 
   public static DataChecksum newDataChecksum(Type type, int bytesPerChecksum ) {
     if ( bytesPerChecksum <= 0 ) {
@@ -82,7 +90,7 @@ public class DataChecksum implements Checksum {
     case NULL :
       return new DataChecksum(type, new ChecksumNull(), bytesPerChecksum );
     case CRC32 :
-      return new DataChecksum(type, new PureJavaCrc32(), bytesPerChecksum );
+      return new DataChecksum(type, newCrc32(), bytesPerChecksum );
     case CRC32C:
       return new DataChecksum(type, new PureJavaCrc32C(), bytesPerChecksum);
     default:

@@ -36,7 +36,6 @@ import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
 import org.apache.hadoop.hdfs.util.XMLUtils;
@@ -149,7 +148,7 @@ public class FSImageSerialization {
 
     INodeFile file = new INodeFile(inodeId, name, perm, modificationTime,
         modificationTime, blocks, blockReplication, preferredBlockSize);
-    file.toUnderConstruction(clientName, clientMachine, null);
+    file.toUnderConstruction(clientName, clientMachine);
     return file;
   }
 
@@ -241,7 +240,7 @@ public class FSImageSerialization {
 
     writeQuota(node.getQuotaCounts(), out);
 
-    if (node instanceof INodeDirectorySnapshottable) {
+    if (node.isSnapshottable()) {
       out.writeBoolean(true);
     } else {
       out.writeBoolean(false);

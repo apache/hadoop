@@ -67,4 +67,5 @@ message NMContainerStatusProto {
   optional PriorityProto priority = 4;
   optional string diagnostics = 5 [default = "N/A"];
   optional int32 container_exit_status = 6;
+  optional int64 creation_time = 7;
 }

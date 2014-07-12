@@ -22,6 +22,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
 /**
  * An interface for the implementation of a user-to-groups mapping service
@@ -30,6 +31,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public interface GroupMappingServiceProvider {
+  public static final String GROUP_MAPPING_CONFIG_PREFIX = CommonConfigurationKeysPublic.HADOOP_SECURITY_GROUP_MAPPING;
   
   /**
    * Get all various group memberships of a given user.

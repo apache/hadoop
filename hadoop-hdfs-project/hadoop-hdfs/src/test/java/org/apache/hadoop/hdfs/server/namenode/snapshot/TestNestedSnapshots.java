@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import static org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable.SNAPSHOT_LIMIT;
+import static org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature.SNAPSHOT_LIMIT;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -312,10 +312,9 @@ public class TestNestedSnapshots {
   public void testIdCmp() {
     final PermissionStatus perm = PermissionStatus.createImmutable(
         "user", "group", FsPermission.createImmutable((short)0));
-    final INodeDirectory dir = new INodeDirectory(0,
+    final INodeDirectory snapshottable = new INodeDirectory(0,
         DFSUtil.string2Bytes("foo"), perm, 0L);
-    final INodeDirectorySnapshottable snapshottable
-        = new INodeDirectorySnapshottable(dir);
+    snapshottable.addSnapshottableFeature();
     final Snapshot[] snapshots = {
       new Snapshot(1, "s1", snapshottable),
       new Snapshot(1, "s1", snapshottable),
@@ -362,7 +361,7 @@ public class TestNestedSnapshots {
     
     hdfs.allowSnapshot(sub);
     subNode = fsdir.getINode(sub.toString());
-    assertTrue(subNode instanceof INodeDirectorySnapshottable);
+    assertTrue(subNode.isDirectory() && subNode.asDirectory().isSnapshottable());
     
     hdfs.disallowSnapshot(sub);
     subNode = fsdir.getINode(sub.toString());

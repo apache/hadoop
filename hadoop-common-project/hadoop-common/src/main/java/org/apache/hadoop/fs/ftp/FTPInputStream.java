@@ -103,7 +103,7 @@ public class FTPInputStream extends FSInputStream {
   @Override
   public synchronized void close() throws IOException {
     if (closed) {
-      throw new IOException("Stream closed");
+      return;
     }
     super.close();
     closed = true;

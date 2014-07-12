@@ -22,11 +22,13 @@ import java.io.IOException;
 import java.io.DataInput;
 import java.io.DataOutput;
 
+import org.apache.hadoop.mapred.SplitLocationInfo;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -41,6 +43,7 @@ public class FileSplit extends InputSplit implements Writable {
   private long start;
   private long length;
   private String[] hosts;
+  private SplitLocationInfo[] hostInfos;
 
   public FileSplit() {}
 
@@ -57,6 +60,31 @@ public class FileSplit extends InputSplit implements Writable {
     this.length = length;
     this.hosts = hosts;
   }
+  
+  /** Constructs a split with host and cached-blocks information
+  *
+  * @param file the file name
+  * @param start the position of the first byte in the file to process
+  * @param length the number of bytes in the file to process
+  * @param hosts the list of hosts containing the block
+  * @param inMemoryHosts the list of hosts containing the block in memory
+  */
+ public FileSplit(Path file, long start, long length, String[] hosts,
+     String[] inMemoryHosts) {
+   this(file, start, length, hosts);
+   hostInfos = new SplitLocationInfo[hosts.length];
+   for (int i = 0; i < hosts.length; i++) {
+     // because N will be tiny, scanning is probably faster than a HashSet
+     boolean inMemory = false;
+     for (String inMemoryHost : inMemoryHosts) {
+       if (inMemoryHost.equals(hosts[i])) {
+         inMemory = true;
+         break;
+       }
+     }
+     hostInfos[i] = new SplitLocationInfo(hosts[i], inMemory);
+   }
+ }
  
   /** The file containing this split's data. */
   public Path getPath() { return file; }
@@ -97,5 +125,11 @@ public class FileSplit extends InputSplit implements Writable {
     } else {
       return this.hosts;
     }
+  }
+  
+  @Override
+  @Evolving
+  public SplitLocationInfo[] getLocationInfo() throws IOException {
+    return hostInfos;
   }
 }

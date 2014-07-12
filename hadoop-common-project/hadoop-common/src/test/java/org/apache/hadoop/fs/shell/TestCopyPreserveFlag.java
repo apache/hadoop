@@ -74,6 +74,8 @@ public class TestCopyPreserveFlag {
     output.close();
     fs.setTimes(FROM, MODIFICATION_TIME, 0);
     fs.setPermission(FROM, PERMISSIONS);
+    fs.setTimes(new Path("d1"), MODIFICATION_TIME, 0);
+    fs.setPermission(new Path("d1"), PERMISSIONS);
   }
 
   @After
@@ -131,5 +133,23 @@ public class TestCopyPreserveFlag {
   public void testCpWithoutP() throws Exception {
       run(new Cp(), FROM.toString(), TO.toString());
       assertAttributesChanged();
+  }
+
+  @Test(timeout = 10000)
+  public void testDirectoryCpWithP() throws Exception {
+    run(new Cp(), "-p", "d1", "d3");
+    assertEquals(fs.getFileStatus(new Path("d1")).getModificationTime(),
+        fs.getFileStatus(new Path("d3")).getModificationTime());
+    assertEquals(fs.getFileStatus(new Path("d1")).getPermission(),
+        fs.getFileStatus(new Path("d3")).getPermission());
+  }
+
+  @Test(timeout = 10000)
+  public void testDirectoryCpWithoutP() throws Exception {
+    run(new Cp(), "d1", "d4");
+    assertTrue(fs.getFileStatus(new Path("d1")).getModificationTime() !=
+        fs.getFileStatus(new Path("d4")).getModificationTime());
+    assertTrue(!fs.getFileStatus(new Path("d1")).getPermission()
+        .equals(fs.getFileStatus(new Path("d4")).getPermission()));
   }
 }

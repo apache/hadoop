@@ -21,9 +21,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
-import org.apache.hadoop.hdfs.server.namenode.INode.Feature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
-import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
+import org.apache.hadoop.hdfs.util.LongBitFormat;
 import org.apache.hadoop.util.LightWeightGSet.LinkedElement;
 
 import com.google.common.base.Preconditions;
@@ -36,26 +35,28 @@ import com.google.common.base.Preconditions;
 public abstract class INodeWithAdditionalFields extends INode
     implements LinkedElement {
   static enum PermissionStatusFormat {
-    MODE(0, 16),
-    GROUP(MODE.OFFSET + MODE.LENGTH, 25),
-    USER(GROUP.OFFSET + GROUP.LENGTH, 23);
+    MODE(null, 16),
+    GROUP(MODE.BITS, 25),
+    USER(GROUP.BITS, 23);
 
-    final int OFFSET;
-    final int LENGTH; //bit length
-    final long MASK;
+    final LongBitFormat BITS;
 
-    PermissionStatusFormat(int offset, int length) {
-      OFFSET = offset;
-      LENGTH = length;
-      MASK = ((-1L) >>> (64 - LENGTH)) << OFFSET;
+    private PermissionStatusFormat(LongBitFormat previous, int length) {
+      BITS = new LongBitFormat(name(), previous, length, 0);
     }
 
-    long retrieve(long record) {
-      return (record & MASK) >>> OFFSET;
+    static String getUser(long permission) {
+      final int n = (int)USER.BITS.retrieve(permission);
+      return SerialNumberManager.INSTANCE.getUser(n);
     }
 
-    long combine(long bits, long record) {
-      return (record & ~MASK) | (bits << OFFSET);
+    static String getGroup(long permission) {
+      final int n = (int)GROUP.BITS.retrieve(permission);
+      return SerialNumberManager.INSTANCE.getGroup(n);
+    }
+    
+    static short getMode(long permission) {
+      return (short)MODE.BITS.retrieve(permission);
     }
 
     /** Encode the {@link PermissionStatus} to a long. */
@@ -63,12 +64,12 @@ public abstract class INodeWithAdditionalFields extends INode
       long permission = 0L;
       final int user = SerialNumberManager.INSTANCE.getUserSerialNumber(
           ps.getUserName());
-      permission = USER.combine(user, permission);
+      permission = USER.BITS.combine(user, permission);
       final int group = SerialNumberManager.INSTANCE.getGroupSerialNumber(
           ps.getGroupName());
-      permission = GROUP.combine(group, permission);
+      permission = GROUP.BITS.combine(group, permission);
       final int mode = ps.getPermission().toShort();
-      permission = MODE.combine(mode, permission);
+      permission = MODE.BITS.combine(mode, permission);
       return permission;
     }
   }
@@ -162,7 +163,7 @@ public abstract class INodeWithAdditionalFields extends INode
   }
 
   private final void updatePermissionStatus(PermissionStatusFormat f, long n) {
-    this.permission = f.combine(n, permission);
+    this.permission = f.BITS.combine(n, permission);
   }
 
   @Override
@@ -170,9 +171,7 @@ public abstract class INodeWithAdditionalFields extends INode
     if (snapshotId != Snapshot.CURRENT_STATE_ID) {
       return getSnapshotINode(snapshotId).getUserName();
     }
-
-    int n = (int)PermissionStatusFormat.USER.retrieve(permission);
-    return SerialNumberManager.INSTANCE.getUser(n);
+    return PermissionStatusFormat.getUser(permission);
   }
 
   @Override
@@ -186,9 +185,7 @@ public abstract class INodeWithAdditionalFields extends INode
     if (snapshotId != Snapshot.CURRENT_STATE_ID) {
       return getSnapshotINode(snapshotId).getGroupName();
     }
-
-    int n = (int)PermissionStatusFormat.GROUP.retrieve(permission);
-    return SerialNumberManager.INSTANCE.getGroup(n);
+    return PermissionStatusFormat.getGroup(permission);
   }
 
   @Override
@@ -208,7 +205,7 @@ public abstract class INodeWithAdditionalFields extends INode
 
   @Override
   public final short getFsPermissionShort() {
-    return (short)PermissionStatusFormat.MODE.retrieve(permission);
+    return PermissionStatusFormat.getMode(permission);
   }
   @Override
   void setPermission(FsPermission permission) {
@@ -318,8 +315,9 @@ public abstract class INodeWithAdditionalFields extends INode
   }
 
   protected <T extends Feature> T getFeature(Class<? extends Feature> clazz) {
+    Preconditions.checkArgument(clazz != null);
     for (Feature f : features) {
-      if (f.getClass() == clazz) {
+      if (clazz.isAssignableFrom(f.getClass())) {
         @SuppressWarnings("unchecked")
         T ret = (T) f;
         return ret;

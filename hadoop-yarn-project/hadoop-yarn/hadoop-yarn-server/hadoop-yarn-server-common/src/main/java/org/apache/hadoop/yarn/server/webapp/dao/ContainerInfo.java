@@ -57,7 +57,7 @@ public class ContainerInfo {
       assignedNodeId = container.getAssignedNode().toString();
     }
     priority = container.getPriority().getPriority();
-    startedTime = container.getStartTime();
+    startedTime = container.getCreationTime();
     finishedTime = container.getFinishTime();
     elapsedTime = Times.elapsed(startedTime, finishedTime);
     diagnosticsInfo = container.getDiagnosticsInfo();

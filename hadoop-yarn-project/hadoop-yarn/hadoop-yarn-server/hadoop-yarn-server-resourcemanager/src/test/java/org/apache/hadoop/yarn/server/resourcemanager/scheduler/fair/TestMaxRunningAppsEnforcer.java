@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.junit.Before;
@@ -40,6 +41,7 @@ public class TestMaxRunningAppsEnforcer {
   private MaxRunningAppsEnforcer maxAppsEnforcer;
   private int appNum;
   private TestFairScheduler.MockClock clock;
+  private RMContext rmContext;
   
   @Before
   public void setup() throws Exception {
@@ -59,13 +61,16 @@ public class TestMaxRunningAppsEnforcer {
     userMaxApps = allocConf.userMaxApps;
     maxAppsEnforcer = new MaxRunningAppsEnforcer(scheduler);
     appNum = 0;
+    rmContext = mock(RMContext.class);
+    when(rmContext.getEpoch()).thenReturn(0);
   }
   
   private FSSchedulerApp addApp(FSLeafQueue queue, String user) {
     ApplicationId appId = ApplicationId.newInstance(0l, appNum++);
     ApplicationAttemptId attId = ApplicationAttemptId.newInstance(appId, 0);
     boolean runnable = maxAppsEnforcer.canAppBeRunnable(queue, user);
-    FSSchedulerApp app = new FSSchedulerApp(attId, user, queue, null, null);
+    FSSchedulerApp app = new FSSchedulerApp(attId, user, queue, null,
+        rmContext);
     queue.addApp(app, runnable);
     if (runnable) {
       maxAppsEnforcer.trackRunnableApp(app);

@@ -355,6 +355,7 @@ public class FSEditLogLoader {
             lastInodeId);
         newFile = fsDir.unprotectedAddFile(inodeId,
             path, addCloseOp.permissions, addCloseOp.aclEntries,
+            addCloseOp.xAttrs,
             replication, addCloseOp.mtime, addCloseOp.atime,
             addCloseOp.blockSize, true, addCloseOp.clientName,
             addCloseOp.clientMachine);
@@ -375,8 +376,7 @@ public class FSEditLogLoader {
                 "for append");
           }
           LocatedBlock lb = fsNamesys.prepareFileForWrite(path,
-              oldFile, addCloseOp.clientName, addCloseOp.clientMachine, null,
-              false, iip.getLatestSnapshotId(), false);
+              oldFile, addCloseOp.clientName, addCloseOp.clientMachine, false, iip.getLatestSnapshotId(), false);
           newFile = INodeFile.valueOf(fsDir.getINode(path),
               path, true);
           
@@ -739,7 +739,13 @@ public class FSEditLogLoader {
     }
     case OP_ROLLING_UPGRADE_FINALIZE: {
       final long finalizeTime = ((RollingUpgradeOp) op).getTime();
-      fsNamesys.finalizeRollingUpgradeInternal(finalizeTime);
+      if (fsNamesys.isRollingUpgrade()) {
+        // Only do it when NN is actually doing rolling upgrade.
+        // We can get FINALIZE without corresponding START, if NN is restarted
+        // before this op is consumed and a new checkpoint is created.
+        fsNamesys.finalizeRollingUpgradeInternal(finalizeTime);
+      }
+      fsNamesys.getFSImage().updateStorageVersion();
       fsNamesys.getFSImage().renameCheckpoint(NameNodeFile.IMAGE_ROLLBACK,
           NameNodeFile.IMAGE);
       break;
@@ -804,7 +810,7 @@ public class FSEditLogLoader {
     }
     case OP_SET_XATTR: {
       SetXAttrOp setXAttrOp = (SetXAttrOp) op;
-      fsDir.unprotectedSetXAttr(setXAttrOp.src, setXAttrOp.xAttr, 
+      fsDir.unprotectedSetXAttrs(setXAttrOp.src, setXAttrOp.xAttrs,
           EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(setXAttrOp.rpcClientId, setXAttrOp.rpcCallId);
@@ -813,7 +819,8 @@ public class FSEditLogLoader {
     }
     case OP_REMOVE_XATTR: {
       RemoveXAttrOp removeXAttrOp = (RemoveXAttrOp) op;
-      fsDir.unprotectedRemoveXAttr(removeXAttrOp.src, removeXAttrOp.xAttr);
+      fsDir.unprotectedRemoveXAttrs(removeXAttrOp.src,
+          removeXAttrOp.xAttrs);
       break;
     }
     default:

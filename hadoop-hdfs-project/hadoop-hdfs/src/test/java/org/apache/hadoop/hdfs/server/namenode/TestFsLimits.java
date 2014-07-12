@@ -19,12 +19,9 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
-import static org.apache.hadoop.util.Time.now;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.anyObject;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
@@ -57,7 +54,7 @@ public class TestFsLimits {
     FSEditLog editLog = mock(FSEditLog.class);
     doReturn(editLog).when(fsImage).getEditLog();
     FSNamesystem fsn = new FSNamesystem(conf, fsImage);
-    fsn.getFSDirectory().setReady(fsIsReady);
+    fsn.setImageLoaded(fsIsReady);
     return fsn;
   }
 

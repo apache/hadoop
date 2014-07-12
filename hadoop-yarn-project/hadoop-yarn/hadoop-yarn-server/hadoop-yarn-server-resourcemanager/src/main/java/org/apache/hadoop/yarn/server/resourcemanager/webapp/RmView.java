@@ -77,7 +77,7 @@ public class RmView extends TwoColumnLayout {
     StringBuilder sb = new StringBuilder();
     return sb
       .append("[\n")
-      .append("{'sType':'numeric', 'aTargets': [0]")
+      .append("{'sType':'string', 'aTargets': [0]")
       .append(", 'mRender': parseHadoopID }")
 
       .append("\n, {'sType':'numeric', 'aTargets': [5, 6]")

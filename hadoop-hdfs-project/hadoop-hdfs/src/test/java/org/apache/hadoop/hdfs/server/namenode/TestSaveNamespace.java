@@ -61,6 +61,7 @@ import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.log4j.Level;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.internal.util.reflection.Whitebox;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -124,14 +125,14 @@ public class TestSaveNamespace {
     FSNamesystem fsn = FSNamesystem.loadFromDisk(conf);
 
     // Replace the FSImage with a spy
-    FSImage originalImage = fsn.dir.fsImage;
+    FSImage originalImage = fsn.getFSImage();
     NNStorage storage = originalImage.getStorage();
 
     NNStorage spyStorage = spy(storage);
     originalImage.storage = spyStorage;
 
     FSImage spyImage = spy(originalImage);
-    fsn.dir.fsImage = spyImage;
+    Whitebox.setInternalState(fsn, "fsImage", spyImage);
 
     boolean shouldFail = false; // should we expect the save operation to fail
     // inject fault
@@ -233,11 +234,11 @@ public class TestSaveNamespace {
     FSNamesystem fsn = FSNamesystem.loadFromDisk(conf);
 
     // Replace the FSImage with a spy
-    FSImage originalImage = fsn.dir.fsImage;
+    FSImage originalImage = fsn.getFSImage();
     NNStorage storage = originalImage.getStorage();
 
     FSImage spyImage = spy(originalImage);
-    fsn.dir.fsImage = spyImage;
+    Whitebox.setInternalState(fsn, "fsImage", spyImage);
     
     FileSystem fs = FileSystem.getLocal(conf);
     File rootDir = storage.getStorageDir(0).getRoot();
@@ -367,14 +368,15 @@ public class TestSaveNamespace {
     FSNamesystem fsn = FSNamesystem.loadFromDisk(conf);
 
     // Replace the FSImage with a spy
-    final FSImage originalImage = fsn.dir.fsImage;
+    final FSImage originalImage = fsn.getFSImage();
     NNStorage storage = originalImage.getStorage();
     storage.close(); // unlock any directories that FSNamesystem's initialization may have locked
 
     NNStorage spyStorage = spy(storage);
     originalImage.storage = spyStorage;
     FSImage spyImage = spy(originalImage);
-    fsn.dir.fsImage = spyImage;
+    Whitebox.setInternalState(fsn, "fsImage", spyImage);
+
     spyImage.storage.setStorageDirectories(
         FSNamesystem.getNamespaceDirs(conf), 
         FSNamesystem.getNamespaceEditsDirs(conf));
@@ -504,7 +506,7 @@ public class TestSaveNamespace {
     FSNamesystem fsn = FSNamesystem.loadFromDisk(conf);
 
     // Replace the FSImage with a spy
-    final FSImage image = fsn.dir.fsImage;
+    final FSImage image = fsn.getFSImage();
     NNStorage storage = image.getStorage();
     storage.close(); // unlock any directories that FSNamesystem's initialization may have locked
     storage.setStorageDirectories(

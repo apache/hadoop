@@ -88,6 +88,25 @@ HDFS NFS Gateway
   </property>
 ----
 
+   The AIX NFS client has a {{{https://issues.apache.org/jira/browse/HDFS-6549}few known issues}}
+   that prevent it from working correctly by default with the HDFS NFS
+   Gateway. If you want to be able to access the HDFS NFS Gateway from AIX, you
+   should set the following configuration setting to enable work-arounds for these
+   issues:
+
+----
+<property>
+  <name>nfs.aix.compatibility.mode.enabled</name>
+  <value>true</value>
+</property>
+----
+
+   Note that regular, non-AIX clients should NOT enable AIX compatibility mode.
+   The work-arounds implemented by AIX compatibility mode effectively disable
+   safeguards to ensure that listing of directory contents via NFS returns
+   consistent results, and that all data sent to the NFS server can be assured to
+   have been committed.
+
    It's strongly recommended for the users to update a few configuration properties based on their use
    cases. All the related configuration properties can be added or updated in hdfs-site.xml.
   
@@ -321,6 +340,22 @@ HDFS NFS Gateway
 
   Then the users can access HDFS as part of the local file system except that, 
   hard link and random write are not supported yet.
+
+* {Allow mounts from unprivileged clients}
+
+  In environments where root access on client machines is not generally
+  available, some measure of security can be obtained by ensuring that only NFS
+  clients originating from privileged ports can connect to the NFS server. This
+  feature is referred to as "port monitoring." This feature is not enabled by default
+  in the HDFS NFS Gateway, but can be optionally enabled by setting the
+  following config in hdfs-site.xml on the NFS Gateway machine:
+
+-------------------------------------------------------------------
+<property>
+  <name>nfs.port.monitoring.disabled</name>
+  <value>false</value>
+</property>
+-------------------------------------------------------------------
 
 * {User authentication and mapping}
 

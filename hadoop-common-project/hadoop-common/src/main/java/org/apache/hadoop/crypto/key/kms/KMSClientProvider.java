@@ -17,15 +17,16 @@
  */
 package org.apache.hadoop.crypto.key.kms;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.security.authentication.client.PseudoAuthenticator;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.http.client.utils.URIBuilder;
@@ -70,18 +71,27 @@ public class KMSClientProvider extends KeyProvider {
   private static final String HTTP_PUT = "PUT";
   private static final String HTTP_DELETE = "DELETE";
 
+
+  private static final String CONFIG_PREFIX = "hadoop.security.kms.client.";
+
+  /* It's possible to specify a timeout, in seconds, in the config file */
+  public static final String TIMEOUT_ATTR = CONFIG_PREFIX + "timeout";
+  public static final int DEFAULT_TIMEOUT = 60;
+
   private static KeyVersion parseJSONKeyVersion(Map valueMap) {
     KeyVersion keyVersion = null;
     if (!valueMap.isEmpty()) {
       byte[] material = (valueMap.containsKey(KMSRESTConstants.MATERIAL_FIELD))
           ? Base64.decodeBase64((String) valueMap.get(KMSRESTConstants.MATERIAL_FIELD))
           : null;
-      keyVersion = new KMSKeyVersion((String)
-          valueMap.get(KMSRESTConstants.VERSION_NAME_FIELD), material);
+      String versionName = (String)valueMap.get(KMSRESTConstants.VERSION_NAME_FIELD);
+      String keyName = (String)valueMap.get(KMSRESTConstants.NAME_FIELD);
+      keyVersion = new KMSKeyVersion(keyName, versionName, material);
     }
     return keyVersion;
   }
 
+  @SuppressWarnings("unchecked")
   private static Metadata parseJSONMetadata(Map valueMap) {
     Metadata metadata = null;
     if (!valueMap.isEmpty()) {
@@ -89,6 +99,7 @@ public class KMSClientProvider extends KeyProvider {
           (String) valueMap.get(KMSRESTConstants.CIPHER_FIELD),
           (Integer) valueMap.get(KMSRESTConstants.LENGTH_FIELD),
           (String) valueMap.get(KMSRESTConstants.DESCRIPTION_FIELD),
+          (Map<String, String>) valueMap.get(KMSRESTConstants.ATTRIBUTES_FIELD),
           new Date((Long) valueMap.get(KMSRESTConstants.CREATED_FIELD)),
           (Integer) valueMap.get(KMSRESTConstants.VERSIONS_FIELD));
     }
@@ -138,6 +149,7 @@ public class KMSClientProvider extends KeyProvider {
 
   private String kmsUrl;
   private SSLFactory sslFactory;
+  private ConnectionConfigurator configurator;
 
   @Override
   public String toString() {
@@ -146,8 +158,44 @@ public class KMSClientProvider extends KeyProvider {
     return sb.toString();
   }
 
+  /**
+   * This small class exists to set the timeout values for a connection
+   */
+  private static class TimeoutConnConfigurator
+          implements ConnectionConfigurator {
+    private ConnectionConfigurator cc;
+    private int timeout;
+
+    /**
+     * Sets the timeout and wraps another connection configurator
+     * @param timeout - will set both connect and read timeouts - in seconds
+     * @param cc - another configurator to wrap - may be null
+     */
+    public TimeoutConnConfigurator(int timeout, ConnectionConfigurator cc) {
+      this.timeout = timeout;
+      this.cc = cc;
+    }
+
+    /**
+     * Calls the wrapped configure() method, then sets timeouts
+     * @param conn the {@link HttpURLConnection} instance to configure.
+     * @return the connection
+     * @throws IOException
+     */
+    @Override
+    public HttpURLConnection configure(HttpURLConnection conn)
+            throws IOException {
+      if (cc != null) {
+        conn = cc.configure(conn);
+      }
+      conn.setConnectTimeout(timeout * 1000);  // conversion to milliseconds
+      conn.setReadTimeout(timeout * 1000);
+      return conn;
+    }
+  }
+
   public KMSClientProvider(URI uri, Configuration conf) throws IOException {
-    Path path = unnestUri(uri);
+    Path path = ProviderUtils.unnestUri(uri);
     URL url = path.toUri().toURL();
     kmsUrl = createServiceURL(url);
     if ("https".equalsIgnoreCase(url.getProtocol())) {
@@ -158,6 +206,8 @@ public class KMSClientProvider extends KeyProvider {
         throw new IOException(ex);
       }
     }
+    int timeout = conf.getInt(TIMEOUT_ATTR, DEFAULT_TIMEOUT);
+    configurator = new TimeoutConnConfigurator(timeout, sslFactory);
   }
 
   private String createServiceURL(URL url) throws IOException {
@@ -219,7 +269,7 @@ public class KMSClientProvider extends KeyProvider {
     HttpURLConnection conn;
     try {
       AuthenticatedURL authUrl = new AuthenticatedURL(new PseudoAuthenticator(),
-          sslFactory);
+          configurator);
       conn = authUrl.openConnection(url, new AuthenticatedURL.Token());
     } catch (AuthenticationException ex) {
       throw new IOException(ex);
@@ -313,8 +363,8 @@ public class KMSClientProvider extends KeyProvider {
   }
 
   public static class KMSKeyVersion extends KeyVersion {
-    public KMSKeyVersion(String versionName, byte[] material) {
-      super(versionName, material);
+    public KMSKeyVersion(String keyName, String versionName, byte[] material) {
+      super(keyName, versionName, material);
     }
   }
 
@@ -350,8 +400,8 @@ public class KMSClientProvider extends KeyProvider {
 
   public static class KMSMetadata extends Metadata {
     public KMSMetadata(String cipher, int bitLength, String description,
-        Date created, int versions) {
-      super(cipher, bitLength, description, created, versions);
+        Map<String, String> attributes, Date created, int versions) {
+      super(cipher, bitLength, description, attributes, created, versions);
     }
   }
 
@@ -414,6 +464,9 @@ public class KMSClientProvider extends KeyProvider {
     if (options.getDescription() != null) {
       jsonKey.put(KMSRESTConstants.DESCRIPTION_FIELD,
           options.getDescription());
+    }
+    if (options.getAttributes() != null && !options.getAttributes().isEmpty()) {
+      jsonKey.put(KMSRESTConstants.ATTRIBUTES_FIELD, options.getAttributes());
     }
     URL url = createURL(KMSRESTConstants.KEYS_RESOURCE, null, null, null);
     HttpURLConnection conn = createConnection(url, HTTP_POST);

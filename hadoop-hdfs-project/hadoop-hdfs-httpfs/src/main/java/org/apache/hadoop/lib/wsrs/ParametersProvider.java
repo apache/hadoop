@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.lib.wsrs;
 
+import com.google.common.collect.Lists;
 import com.sun.jersey.api.core.HttpContext;
 import com.sun.jersey.core.spi.component.ComponentContext;
 import com.sun.jersey.core.spi.component.ComponentScope;
@@ -31,6 +32,7 @@ import javax.ws.rs.core.MultivaluedMap;
 import java.lang.reflect.Type;
 import java.text.MessageFormat;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -56,10 +58,11 @@ public class ParametersProvider
   @Override
   @SuppressWarnings("unchecked")
   public Parameters getValue(HttpContext httpContext) {
-    Map<String, Param<?>> map = new HashMap<String, Param<?>>();
-    MultivaluedMap<String, String> queryString =
+    Map<String, List<Param<?>>> map = new HashMap<String, List<Param<?>>>();
+    Map<String, List<String>> queryString =
       httpContext.getRequest().getQueryParameters();
-    String str = queryString.getFirst(driverParam);
+    String str = ((MultivaluedMap<String, String>) queryString).
+        getFirst(driverParam);
     if (str == null) {
       throw new IllegalArgumentException(
         MessageFormat.format("Missing Operation parameter [{0}]",
@@ -77,24 +80,38 @@ public class ParametersProvider
         MessageFormat.format("Unsupported Operation [{0}]", op));
     }
     for (Class<Param<?>> paramClass : paramsDef.get(op)) {
-      Param<?> param;
-      try {
-        param = paramClass.newInstance();
-      } catch (Exception ex) {
-        throw new UnsupportedOperationException(
-          MessageFormat.format(
-            "Param class [{0}] does not have default constructor",
-            paramClass.getName()));
+      Param<?> param = newParam(paramClass);
+      List<Param<?>> paramList = Lists.newArrayList();
+      List<String> ps = queryString.get(param.getName());
+      if (ps != null) {
+        for (String p : ps) {
+          try {
+            param.parseParam(p);
+          }
+          catch (Exception ex) {
+            throw new IllegalArgumentException(ex.toString(), ex);
+          }
+          paramList.add(param);
+          param = newParam(paramClass);
+        }
+      } else {
+        paramList.add(param);
       }
-      try {
-        param.parseParam(queryString.getFirst(param.getName()));
-      }
-      catch (Exception ex) {
-        throw new IllegalArgumentException(ex.toString(), ex);
-      }
-      map.put(param.getName(), param);
+
+      map.put(param.getName(), paramList);
     }
     return new Parameters(map);
+  }
+
+  private Param<?> newParam(Class<Param<?>> paramClass) {
+    try {
+      return paramClass.newInstance();
+    } catch (Exception ex) {
+      throw new UnsupportedOperationException(
+        MessageFormat.format(
+          "Param class [{0}] does not have default constructor",
+          paramClass.getName()));
+    }
   }
 
   @Override

@@ -47,6 +47,8 @@ import org.junit.runners.Parameterized;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.webapp.WebAppContext;
 
+import com.google.common.collect.Lists;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
@@ -59,6 +61,8 @@ import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 @RunWith(value = Parameterized.class)
 public abstract class BaseTestHttpFSWith extends HFSTestCase {
@@ -90,6 +94,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     Configuration conf = new Configuration(false);
     conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, fsDefaultName);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, true);
     File hdfsSite = new File(new File(homeDir, "conf"), "hdfs-site.xml");
     OutputStream os = new FileOutputStream(hdfsSite);
     conf.writeXml(os);
@@ -481,6 +486,198 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     Assert.assertEquals(httpContentSummary.getSpaceConsumed(), hdfsContentSummary.getSpaceConsumed());
     Assert.assertEquals(httpContentSummary.getSpaceQuota(), hdfsContentSummary.getSpaceQuota());
   }
+  
+  /** Set xattr */
+  private void testSetXAttr() throws Exception {
+    if (!isLocalFS()) {
+      FileSystem fs = FileSystem.get(getProxiedFSConf());
+      fs.mkdirs(getProxiedFSTestDir());
+      Path path = new Path(getProxiedFSTestDir(), "foo.txt");
+      OutputStream os = fs.create(path);
+      os.write(1);
+      os.close();
+      fs.close();
+ 
+      final String name1 = "user.a1";
+      final byte[] value1 = new byte[]{0x31, 0x32, 0x33};
+      final String name2 = "user.a2";
+      final byte[] value2 = new byte[]{0x41, 0x42, 0x43};
+      final String name3 = "user.a3";
+      final byte[] value3 = null;
+      final String name4 = "trusted.a1";
+      final byte[] value4 = new byte[]{0x31, 0x32, 0x33};
+      final String name5 = "a1";
+      fs = getHttpFSFileSystem();
+      fs.setXAttr(path, name1, value1);
+      fs.setXAttr(path, name2, value2);
+      fs.setXAttr(path, name3, value3);
+      fs.setXAttr(path, name4, value4);
+      try {
+        fs.setXAttr(path, name5, value1);
+        Assert.fail("Set xAttr with incorrect name format should fail.");
+      } catch (IOException e) {
+      } catch (IllegalArgumentException e) {
+      }
+      fs.close();
+
+      fs = FileSystem.get(getProxiedFSConf());
+      Map<String, byte[]> xAttrs = fs.getXAttrs(path);
+      fs.close();
+      Assert.assertEquals(4, xAttrs.size());
+      Assert.assertArrayEquals(value1, xAttrs.get(name1));
+      Assert.assertArrayEquals(value2, xAttrs.get(name2));
+      Assert.assertArrayEquals(new byte[0], xAttrs.get(name3));
+      Assert.assertArrayEquals(value4, xAttrs.get(name4));
+    }
+  }
+
+  /** Get xattrs */
+  private void testGetXAttrs() throws Exception {
+    if (!isLocalFS()) {
+      FileSystem fs = FileSystem.get(getProxiedFSConf());
+      fs.mkdirs(getProxiedFSTestDir());
+      Path path = new Path(getProxiedFSTestDir(), "foo.txt");
+      OutputStream os = fs.create(path);
+      os.write(1);
+      os.close();
+      fs.close();
+
+      final String name1 = "user.a1";
+      final byte[] value1 = new byte[]{0x31, 0x32, 0x33};
+      final String name2 = "user.a2";
+      final byte[] value2 = new byte[]{0x41, 0x42, 0x43};
+      final String name3 = "user.a3";
+      final byte[] value3 = null;
+      final String name4 = "trusted.a1";
+      final byte[] value4 = new byte[]{0x31, 0x32, 0x33};
+      fs = FileSystem.get(getProxiedFSConf());
+      fs.setXAttr(path, name1, value1);
+      fs.setXAttr(path, name2, value2);
+      fs.setXAttr(path, name3, value3);
+      fs.setXAttr(path, name4, value4);
+      fs.close();
+
+      // Get xattrs with names parameter
+      fs = getHttpFSFileSystem();
+      List<String> names = Lists.newArrayList();
+      names.add(name1);
+      names.add(name2);
+      names.add(name3);
+      names.add(name4);
+      Map<String, byte[]> xAttrs = fs.getXAttrs(path, names);
+      fs.close();
+      Assert.assertEquals(4, xAttrs.size());
+      Assert.assertArrayEquals(value1, xAttrs.get(name1));
+      Assert.assertArrayEquals(value2, xAttrs.get(name2));
+      Assert.assertArrayEquals(new byte[0], xAttrs.get(name3));
+      Assert.assertArrayEquals(value4, xAttrs.get(name4));
+
+      // Get specific xattr
+      fs = getHttpFSFileSystem();
+      byte[] value = fs.getXAttr(path, name1);
+      Assert.assertArrayEquals(value1, value);
+      final String name5 = "a1";
+      try {
+        value = fs.getXAttr(path, name5);
+        Assert.fail("Get xAttr with incorrect name format should fail.");
+      } catch (IOException e) {
+      } catch (IllegalArgumentException e) {
+      }
+      fs.close();
+
+      // Get all xattrs
+      fs = getHttpFSFileSystem();
+      xAttrs = fs.getXAttrs(path);
+      fs.close();
+      Assert.assertEquals(4, xAttrs.size());
+      Assert.assertArrayEquals(value1, xAttrs.get(name1));
+      Assert.assertArrayEquals(value2, xAttrs.get(name2));
+      Assert.assertArrayEquals(new byte[0], xAttrs.get(name3));
+      Assert.assertArrayEquals(value4, xAttrs.get(name4));
+    }
+  }
+
+  /** Remove xattr */
+  private void testRemoveXAttr() throws Exception {
+    if (!isLocalFS()) {
+      FileSystem fs = FileSystem.get(getProxiedFSConf());
+      fs.mkdirs(getProxiedFSTestDir());
+      Path path = new Path(getProxiedFSTestDir(), "foo.txt");
+      OutputStream os = fs.create(path);
+      os.write(1);
+      os.close();
+      fs.close();
+
+      final String name1 = "user.a1";
+      final byte[] value1 = new byte[]{0x31, 0x32, 0x33};
+      final String name2 = "user.a2";
+      final byte[] value2 = new byte[]{0x41, 0x42, 0x43};
+      final String name3 = "user.a3";
+      final byte[] value3 = null;
+      final String name4 = "trusted.a1";
+      final byte[] value4 = new byte[]{0x31, 0x32, 0x33};
+      final String name5 = "a1";
+      fs = FileSystem.get(getProxiedFSConf());
+      fs.setXAttr(path, name1, value1);
+      fs.setXAttr(path, name2, value2);
+      fs.setXAttr(path, name3, value3);
+      fs.setXAttr(path, name4, value4);
+      fs.close();
+
+      fs = getHttpFSFileSystem();
+      fs.removeXAttr(path, name1);
+      fs.removeXAttr(path, name3);
+      fs.removeXAttr(path, name4);
+      try {
+        fs.removeXAttr(path, name5);
+        Assert.fail("Remove xAttr with incorrect name format should fail.");
+      } catch (IOException e) {
+      } catch (IllegalArgumentException e) {
+      }
+
+      fs = FileSystem.get(getProxiedFSConf());
+      Map<String, byte[]> xAttrs = fs.getXAttrs(path);
+      fs.close();
+      Assert.assertEquals(1, xAttrs.size());
+      Assert.assertArrayEquals(value2, xAttrs.get(name2));
+    }
+  }
+
+  /** List xattrs */
+  private void testListXAttrs() throws Exception {
+    if (!isLocalFS()) {
+      FileSystem fs = FileSystem.get(getProxiedFSConf());
+      fs.mkdirs(getProxiedFSTestDir());
+      Path path = new Path(getProxiedFSTestDir(), "foo.txt");
+      OutputStream os = fs.create(path);
+      os.write(1);
+      os.close();
+      fs.close();
+
+      final String name1 = "user.a1";
+      final byte[] value1 = new byte[]{0x31, 0x32, 0x33};
+      final String name2 = "user.a2";
+      final byte[] value2 = new byte[]{0x41, 0x42, 0x43};
+      final String name3 = "user.a3";
+      final byte[] value3 = null;
+      final String name4 = "trusted.a1";
+      final byte[] value4 = new byte[]{0x31, 0x32, 0x33};
+      fs = FileSystem.get(getProxiedFSConf());
+      fs.setXAttr(path, name1, value1);
+      fs.setXAttr(path, name2, value2);
+      fs.setXAttr(path, name3, value3);
+      fs.setXAttr(path, name4, value4);
+      fs.close();
+
+      fs = getHttpFSFileSystem();
+      List<String> names = fs.listXAttrs(path);
+      Assert.assertEquals(4, names.size());
+      Assert.assertTrue(names.contains(name1));
+      Assert.assertTrue(names.contains(name2));
+      Assert.assertTrue(names.contains(name3));
+      Assert.assertTrue(names.contains(name4));
+    }
+  }
 
   /**
    * Runs assertions testing that two AclStatus objects contain the same info
@@ -587,7 +784,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
   protected enum Operation {
     GET, OPEN, CREATE, APPEND, CONCAT, RENAME, DELETE, LIST_STATUS, WORKING_DIRECTORY, MKDIRS,
     SET_TIMES, SET_PERMISSION, SET_OWNER, SET_REPLICATION, CHECKSUM, CONTENT_SUMMARY,
-    FILEACLS, DIRACLS
+    FILEACLS, DIRACLS, SET_XATTR, GET_XATTRS, REMOVE_XATTR, LIST_XATTRS
   }
 
   private void operation(Operation op) throws Exception {
@@ -644,6 +841,18 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
         break;
       case DIRACLS:
         testDirAcls();
+        break;
+      case SET_XATTR:
+        testSetXAttr();
+        break;
+      case REMOVE_XATTR:
+        testRemoveXAttr();
+        break;
+      case GET_XATTRS:
+        testGetXAttrs();
+        break;
+      case LIST_XATTRS:
+        testListXAttrs();
         break;
     }
   }

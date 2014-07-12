@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.fs;
 
-import java.io.*;
+import java.io.EOFException;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
 
@@ -26,8 +29,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.util.PureJavaCrc32;
 
 /****************************************************************
  * Abstract Checksumed FileSystem.
@@ -147,7 +150,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
         if (!Arrays.equals(version, CHECKSUM_VERSION))
           throw new IOException("Not a checksum file: "+sumFile);
         this.bytesPerSum = sums.readInt();
-        set(fs.verifyChecksum, new PureJavaCrc32(), bytesPerSum, 4);
+        set(fs.verifyChecksum, DataChecksum.newCrc32(), bytesPerSum, 4);
       } catch (FileNotFoundException e) {         // quietly ignore
         set(fs.verifyChecksum, null, 1, 0);
       } catch (IOException e) {                   // loudly ignore
@@ -259,8 +262,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     private Path file;
     private long fileLen = -1L;
 
-    FSDataBoundedInputStream(FileSystem fs, Path file, InputStream in)
-        throws IOException {
+    FSDataBoundedInputStream(FileSystem fs, Path file, InputStream in) {
       super(in);
       this.fs = fs;
       this.file = file;
@@ -317,8 +319,8 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
 
     @Override
     public synchronized void seek(long pos) throws IOException {
-      if(pos>getFileLength()) {
-        throw new IOException("Cannot seek after EOF");
+      if (pos > getFileLength()) {
+        throw new EOFException("Cannot seek after EOF");
       }
       super.seek(pos);
     }
@@ -379,7 +381,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
                           long blockSize,
                           Progressable progress)
       throws IOException {
-      super(new PureJavaCrc32(), fs.getBytesPerSum(), 4);
+      super(DataChecksum.newCrc32(), fs.getBytesPerSum(), 4);
       int bytesPerSum = fs.getBytesPerSum();
       this.datas = fs.getRawFileSystem().create(file, overwrite, bufferSize, 
                                          replication, blockSize, progress);

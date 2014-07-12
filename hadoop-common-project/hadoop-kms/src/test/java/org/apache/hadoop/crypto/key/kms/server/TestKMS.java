@@ -38,10 +38,12 @@ import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.LoginContext;
 import java.io.File;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.io.Writer;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.ServerSocket;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URL;
 import java.security.Principal;
@@ -490,6 +492,49 @@ public class TestKMS {
         // getKeysMetadata() empty
         Assert.assertEquals(0, kp.getKeysMetadata().length);
 
+        // createKey() no description, no tags
+        options = new KeyProvider.Options(conf);
+        options.setCipher("AES/CTR/NoPadding");
+        options.setBitLength(128);
+        kp.createKey("k2", options);
+        KeyProvider.Metadata meta = kp.getMetadata("k2");
+        Assert.assertNull(meta.getDescription());
+        Assert.assertTrue(meta.getAttributes().isEmpty());
+
+        // createKey() description, no tags
+        options = new KeyProvider.Options(conf);
+        options.setCipher("AES/CTR/NoPadding");
+        options.setBitLength(128);
+        options.setDescription("d");
+        kp.createKey("k3", options);
+        meta = kp.getMetadata("k3");
+        Assert.assertEquals("d", meta.getDescription());
+        Assert.assertTrue(meta.getAttributes().isEmpty());
+
+        Map<String, String> attributes = new HashMap<String, String>();
+        attributes.put("a", "A");
+
+        // createKey() no description, tags
+        options = new KeyProvider.Options(conf);
+        options.setCipher("AES/CTR/NoPadding");
+        options.setBitLength(128);
+        options.setAttributes(attributes);
+        kp.createKey("k4", options);
+        meta = kp.getMetadata("k4");
+        Assert.assertNull(meta.getDescription());
+        Assert.assertEquals(attributes, meta.getAttributes());
+
+        // createKey() description, tags
+        options = new KeyProvider.Options(conf);
+        options.setCipher("AES/CTR/NoPadding");
+        options.setBitLength(128);
+        options.setDescription("d");
+        options.setAttributes(attributes);
+        kp.createKey("k5", options);
+        meta = kp.getMetadata("k5");
+        Assert.assertEquals("d", meta.getDescription());
+        Assert.assertEquals(attributes, meta.getAttributes());
+
         return null;
       }
     });
@@ -808,4 +853,44 @@ public class TestKMS {
     });
   }
 
+  /**
+   * Test the configurable timeout in the KMSClientProvider.  Open up a
+   * socket, but don't accept connections for it.  This leads to a timeout
+   * when the KMS client attempts to connect.
+   * @throws Exception
+   */
+  @Test
+  public void testKMSTimeout() throws Exception {
+    File confDir = getTestDir();
+    Configuration conf = createBaseKMSConf(confDir);
+    conf.setInt(KMSClientProvider.TIMEOUT_ATTR, 1);
+    writeConf(confDir, conf);
+
+    ServerSocket sock;
+    int port;
+    try {
+      sock = new ServerSocket(0, 50, InetAddress.getByName("localhost"));
+      port = sock.getLocalPort();
+    } catch ( Exception e ) {
+      /* Problem creating socket?  Just bail. */
+      return;
+    }
+
+    URL url = new URL("http://localhost:" + port + "/kms");
+    URI uri = createKMSUri(url);
+
+    boolean caughtTimeout = false;
+    try {
+      KeyProvider kp = new KMSClientProvider(uri, conf);
+      kp.getKeys();
+    } catch (SocketTimeoutException e) {
+      caughtTimeout = true;
+    } catch (IOException e) {
+      Assert.assertTrue("Caught unexpected exception" + e.toString(), false);
+    }
+
+    Assert.assertTrue(caughtTimeout);
+
+    sock.close();
+  }
 }

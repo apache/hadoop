@@ -42,6 +42,7 @@ public class KMSRESTConstants {
   public static final String CIPHER_FIELD = "cipher";
   public static final String LENGTH_FIELD = "length";
   public static final String DESCRIPTION_FIELD = "description";
+  public static final String ATTRIBUTES_FIELD = "attributes";
   public static final String CREATED_FIELD = "created";
   public static final String VERSIONS_FIELD = "versions";
   public static final String MATERIAL_FIELD = "material";

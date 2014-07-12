@@ -58,7 +58,7 @@ public interface RMContainer extends EventHandler<RMContainerEvent> {
 
   Priority getAllocatedPriority();
 
-  long getStartTime();
+  long getCreationTime();
 
   long getFinishTime();
 
@@ -71,5 +71,7 @@ public interface RMContainer extends EventHandler<RMContainerEvent> {
   ContainerState getContainerState();
   
   ContainerReport createContainerReport();
+  
+  boolean isAMContainer();
 
 }

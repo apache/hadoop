@@ -60,4 +60,9 @@ public abstract class SecurityHandler {
   public int getGid() {
     throw new UnsupportedOperationException();
   }
+
+  /** Used by AUTH_SYS */
+  public int[] getAuxGids() {
+    throw new UnsupportedOperationException();
+  }
 }

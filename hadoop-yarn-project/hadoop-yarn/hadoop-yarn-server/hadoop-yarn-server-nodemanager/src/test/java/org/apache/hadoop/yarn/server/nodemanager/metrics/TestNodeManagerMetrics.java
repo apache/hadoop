@@ -31,8 +31,11 @@ public class TestNodeManagerMetrics {
     NodeManagerMetrics metrics = NodeManagerMetrics.create();
     Resource total = Records.newRecord(Resource.class);
     total.setMemory(8*GiB);
+    total.setVirtualCores(16);
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(1*GiB);
+    resource.setVirtualCores(2);
+
 
     metrics.addResource(total);
 
@@ -57,12 +60,12 @@ public class TestNodeManagerMetrics {
     metrics.initingContainer();
     metrics.runningContainer();
 
-    checkMetrics(5, 1, 1, 1, 1, 1, 2, 2, 6);
+    checkMetrics(5, 1, 1, 1, 1, 1, 2, 2, 6, 4, 12);
   }
 
   private void checkMetrics(int launched, int completed, int failed, int killed,
                             int initing, int running, int allocatedGB,
-                            int allocatedContainers, int availableGB) {
+                            int allocatedContainers, int availableGB, int allocatedVCores, int availableVCores) {
     MetricsRecordBuilder rb = getMetrics("NodeManagerMetrics");
     assertCounter("ContainersLaunched", launched, rb);
     assertCounter("ContainersCompleted", completed, rb);
@@ -71,7 +74,10 @@ public class TestNodeManagerMetrics {
     assertGauge("ContainersIniting", initing, rb);
     assertGauge("ContainersRunning", running, rb);
     assertGauge("AllocatedGB", allocatedGB, rb);
+    assertGauge("AllocatedVCores", allocatedVCores, rb);
     assertGauge("AllocatedContainers", allocatedContainers, rb);
     assertGauge("AvailableGB", availableGB, rb);
+    assertGauge("AvailableVCores",availableVCores, rb);
+
   }
 }

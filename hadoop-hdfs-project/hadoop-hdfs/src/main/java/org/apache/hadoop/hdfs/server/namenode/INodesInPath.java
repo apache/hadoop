@@ -27,7 +27,6 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import com.google.common.base.Preconditions;
@@ -208,8 +207,7 @@ public class INodesInPath {
       final byte[] childName = components[count + 1];
       
       // check if the next byte[] in components is for ".snapshot"
-      if (isDotSnapshotDir(childName)
-          && isDir && dir instanceof INodeDirectorySnapshottable) {
+      if (isDotSnapshotDir(childName) && isDir && dir.isSnapshottable()) {
         // skip the ".snapshot" in components
         count++;
         index++;
@@ -222,8 +220,7 @@ public class INodesInPath {
           break;
         }
         // Resolve snapshot root
-        final Snapshot s = ((INodeDirectorySnapshottable)dir).getSnapshot(
-            components[count + 1]);
+        final Snapshot s = dir.getSnapshot(components[count + 1]);
         if (s == null) {
           //snapshot not found
           curNode = null;

@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.NameNodeProxies;
+import org.apache.hadoop.hdfs.NameNodeProxies.ProxyAndInfo;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -292,7 +293,7 @@ public class DFSAdmin extends FsShell {
     static final String USAGE = "-"+NAME+" [<query|prepare|finalize>]";
     static final String DESCRIPTION = USAGE + ":\n"
         + "     query: query the current rolling upgrade status.\n"
-        + "   prepare: prepare a new rolling upgrade."
+        + "   prepare: prepare a new rolling upgrade.\n"
         + "  finalize: finalize the current rolling upgrade.";
 
     /** Check if a command is the rollingUpgrade command
@@ -498,25 +499,60 @@ public class DFSAdmin extends FsShell {
       printUsage("-safemode");
       return;
     }
-    DistributedFileSystem dfs = getDFS();
-    boolean inSafeMode = dfs.setSafeMode(action);
 
-    //
-    // If we are waiting for safemode to exit, then poll and
-    // sleep till we are out of safemode.
-    //
-    if (waitExitSafe) {
-      while (inSafeMode) {
-        try {
-          Thread.sleep(5000);
-        } catch (java.lang.InterruptedException e) {
-          throw new IOException("Wait Interrupted");
+    DistributedFileSystem dfs = getDFS();
+    Configuration dfsConf = dfs.getConf();
+    URI dfsUri = dfs.getUri();
+    boolean isHaEnabled = HAUtil.isLogicalUri(dfsConf, dfsUri);
+
+    if (isHaEnabled) {
+      String nsId = dfsUri.getHost();
+      List<ProxyAndInfo<ClientProtocol>> proxies =
+          HAUtil.getProxiesForAllNameNodesInNameservice(
+          dfsConf, nsId, ClientProtocol.class);
+      for (ProxyAndInfo<ClientProtocol> proxy : proxies) {
+        ClientProtocol haNn = proxy.getProxy();
+        boolean inSafeMode = haNn.setSafeMode(action, false);
+        if (waitExitSafe) {
+          inSafeMode = waitExitSafeMode(haNn, inSafeMode);
         }
-        inSafeMode = dfs.setSafeMode(SafeModeAction.SAFEMODE_GET);
+        System.out.println("Safe mode is " + (inSafeMode ? "ON" : "OFF")
+            + " in " + proxy.getAddress());
       }
+    } else {
+      boolean inSafeMode = dfs.setSafeMode(action);
+      if (waitExitSafe) {
+        inSafeMode = waitExitSafeMode(dfs, inSafeMode);
+      }
+      System.out.println("Safe mode is " + (inSafeMode ? "ON" : "OFF"));
     }
 
-    System.out.println("Safe mode is " + (inSafeMode ? "ON" : "OFF"));
+  }
+
+  private boolean waitExitSafeMode(DistributedFileSystem dfs, boolean inSafeMode)
+      throws IOException {
+    while (inSafeMode) {
+      try {
+        Thread.sleep(5000);
+      } catch (java.lang.InterruptedException e) {
+        throw new IOException("Wait Interrupted");
+      }
+      inSafeMode = dfs.setSafeMode(SafeModeAction.SAFEMODE_GET, false);
+    }
+    return inSafeMode;
+  }
+
+  private boolean waitExitSafeMode(ClientProtocol nn, boolean inSafeMode)
+      throws IOException {
+    while (inSafeMode) {
+      try {
+        Thread.sleep(5000);
+      } catch (java.lang.InterruptedException e) {
+        throw new IOException("Wait Interrupted");
+      }
+      inSafeMode = nn.setSafeMode(SafeModeAction.SAFEMODE_GET, false);
+    }
+    return inSafeMode;
   }
 
   /**
@@ -561,7 +597,24 @@ public class DFSAdmin extends FsShell {
     int exitCode = -1;
 
     DistributedFileSystem dfs = getDFS();
-    dfs.saveNamespace();
+    Configuration dfsConf = dfs.getConf();
+    URI dfsUri = dfs.getUri();
+    boolean isHaEnabled = HAUtil.isLogicalUri(dfsConf, dfsUri);
+
+    if (isHaEnabled) {
+      String nsId = dfsUri.getHost();
+      List<ProxyAndInfo<ClientProtocol>> proxies =
+          HAUtil.getProxiesForAllNameNodesInNameservice(dfsConf,
+          nsId, ClientProtocol.class);
+      for (ProxyAndInfo<ClientProtocol> proxy : proxies) {
+        proxy.getProxy().saveNamespace();
+        System.out.println("Save namespace successful for " +
+            proxy.getAddress());
+      }
+    } else {
+      dfs.saveNamespace();
+      System.out.println("Save namespace successful");
+    }
     exitCode = 0;
    
     return exitCode;
@@ -583,15 +636,30 @@ public class DFSAdmin extends FsShell {
    */
   public int restoreFailedStorage(String arg) throws IOException {
     int exitCode = -1;
-
     if(!arg.equals("check") && !arg.equals("true") && !arg.equals("false")) {
       System.err.println("restoreFailedStorage valid args are true|false|check");
       return exitCode;
     }
     
     DistributedFileSystem dfs = getDFS();
-    Boolean res = dfs.restoreFailedStorage(arg);
-    System.out.println("restoreFailedStorage is set to " + res);
+    Configuration dfsConf = dfs.getConf();
+    URI dfsUri = dfs.getUri();
+    boolean isHaEnabled = HAUtil.isLogicalUri(dfsConf, dfsUri);
+
+    if (isHaEnabled) {
+      String nsId = dfsUri.getHost();
+      List<ProxyAndInfo<ClientProtocol>> proxies =
+          HAUtil.getProxiesForAllNameNodesInNameservice(dfsConf,
+          nsId, ClientProtocol.class);
+      for (ProxyAndInfo<ClientProtocol> proxy : proxies) {
+        Boolean res = proxy.getProxy().restoreFailedStorage(arg);
+        System.out.println("restoreFailedStorage is set to " + res + " for "
+            + proxy.getAddress());
+      }
+    } else {
+      Boolean res = dfs.restoreFailedStorage(arg);
+      System.out.println("restoreFailedStorage is set to " + res);
+    }
     exitCode = 0;
 
     return exitCode;
@@ -607,7 +675,24 @@ public class DFSAdmin extends FsShell {
     int exitCode = -1;
 
     DistributedFileSystem dfs = getDFS();
-    dfs.refreshNodes();
+    Configuration dfsConf = dfs.getConf();
+    URI dfsUri = dfs.getUri();
+    boolean isHaEnabled = HAUtil.isLogicalUri(dfsConf, dfsUri);
+
+    if (isHaEnabled) {
+      String nsId = dfsUri.getHost();
+      List<ProxyAndInfo<ClientProtocol>> proxies =
+          HAUtil.getProxiesForAllNameNodesInNameservice(dfsConf,
+          nsId, ClientProtocol.class);
+      for (ProxyAndInfo<ClientProtocol> proxy: proxies) {
+        proxy.getProxy().refreshNodes();
+        System.out.println("Refresh nodes successful for " +
+            proxy.getAddress());
+      }
+    } else {
+      dfs.refreshNodes();
+      System.out.println("Refresh nodes successful");
+    }
     exitCode = 0;
    
     return exitCode;
@@ -641,7 +726,24 @@ public class DFSAdmin extends FsShell {
     }
 
     DistributedFileSystem dfs = (DistributedFileSystem) fs;
-    dfs.setBalancerBandwidth(bandwidth);
+    Configuration dfsConf = dfs.getConf();
+    URI dfsUri = dfs.getUri();
+    boolean isHaEnabled = HAUtil.isLogicalUri(dfsConf, dfsUri);
+
+    if (isHaEnabled) {
+      String nsId = dfsUri.getHost();
+      List<ProxyAndInfo<ClientProtocol>> proxies =
+          HAUtil.getProxiesForAllNameNodesInNameservice(dfsConf,
+          nsId, ClientProtocol.class);
+      for (ProxyAndInfo<ClientProtocol> proxy : proxies) {
+        proxy.getProxy().setBalancerBandwidth(bandwidth);
+        System.out.println("Balancer bandwidth is set to " + bandwidth +
+            " for " + proxy.getAddress());
+      }
+    } else {
+      dfs.setBalancerBandwidth(bandwidth);
+      System.out.println("Balancer bandwidth is set to " + bandwidth);
+    }
     exitCode = 0;
 
     return exitCode;
@@ -937,11 +1039,18 @@ public class DFSAdmin extends FsShell {
       if (!HAUtil.isAtLeastOneActive(namenodes)) {
         throw new IOException("Cannot finalize with no NameNode active");
       }
-      for (ClientProtocol haNn : namenodes) {
-        haNn.finalizeUpgrade();
+
+      List<ProxyAndInfo<ClientProtocol>> proxies =
+          HAUtil.getProxiesForAllNameNodesInNameservice(dfsConf,
+          nsId, ClientProtocol.class);
+      for (ProxyAndInfo<ClientProtocol> proxy : proxies) {
+        proxy.getProxy().finalizeUpgrade();
+        System.out.println("Finalize upgrade successful for " +
+            proxy.getAddress());
       }
     } else {
       dfs.finalizeUpgrade();
+      System.out.println("Finalize upgrade successful");
     }
     
     return 0;
@@ -958,9 +1067,25 @@ public class DFSAdmin extends FsShell {
   public int metaSave(String[] argv, int idx) throws IOException {
     String pathname = argv[idx];
     DistributedFileSystem dfs = getDFS();
-    dfs.metaSave(pathname);
-    System.out.println("Created metasave file " + pathname + " in the log " +
-        "directory of namenode " + dfs.getUri());
+    Configuration dfsConf = dfs.getConf();
+    URI dfsUri = dfs.getUri();
+    boolean isHaEnabled = HAUtil.isLogicalUri(dfsConf, dfsUri);
+
+    if (isHaEnabled) {
+      String nsId = dfsUri.getHost();
+      List<ProxyAndInfo<ClientProtocol>> proxies =
+          HAUtil.getProxiesForAllNameNodesInNameservice(dfsConf,
+          nsId, ClientProtocol.class);
+      for (ProxyAndInfo<ClientProtocol> proxy : proxies) {
+        proxy.getProxy().metaSave(pathname);
+        System.out.println("Created metasave file " + pathname + " in the log "
+            + "directory of namenode " + proxy.getAddress());
+      }
+    } else {
+      dfs.metaSave(pathname);
+      System.out.println("Created metasave file " + pathname + " in the log " +
+          "directory of namenode " + dfs.getUri());
+    }
     return 0;
   }
 
@@ -1022,20 +1147,37 @@ public class DFSAdmin extends FsShell {
   public int refreshServiceAcl() throws IOException {
     // Get the current configuration
     Configuration conf = getConf();
-    
+
     // for security authorization
     // server principal for this call   
     // should be NN's one.
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY, 
         conf.get(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, ""));
 
-    // Create the client
-    RefreshAuthorizationPolicyProtocol refreshProtocol =
-        NameNodeProxies.createProxy(conf, FileSystem.getDefaultUri(conf),
-            RefreshAuthorizationPolicyProtocol.class).getProxy();
-    
-    // Refresh the authorization policy in-effect
-    refreshProtocol.refreshServiceAcl();
+    DistributedFileSystem dfs = getDFS();
+    URI dfsUri = dfs.getUri();
+    boolean isHaEnabled = HAUtil.isLogicalUri(conf, dfsUri);
+
+    if (isHaEnabled) {
+      // Run refreshServiceAcl for all NNs if HA is enabled
+      String nsId = dfsUri.getHost();
+      List<ProxyAndInfo<RefreshAuthorizationPolicyProtocol>> proxies =
+          HAUtil.getProxiesForAllNameNodesInNameservice(conf, nsId,
+              RefreshAuthorizationPolicyProtocol.class);
+      for (ProxyAndInfo<RefreshAuthorizationPolicyProtocol> proxy : proxies) {
+        proxy.getProxy().refreshServiceAcl();
+        System.out.println("Refresh service acl successful for "
+            + proxy.getAddress());
+      }
+    } else {
+      // Create the client
+      RefreshAuthorizationPolicyProtocol refreshProtocol =
+          NameNodeProxies.createProxy(conf, FileSystem.getDefaultUri(conf),
+              RefreshAuthorizationPolicyProtocol.class).getProxy();
+      // Refresh the authorization policy in-effect
+      refreshProtocol.refreshServiceAcl();
+      System.out.println("Refresh service acl successful");
+    }
     
     return 0;
   }
@@ -1054,14 +1196,32 @@ public class DFSAdmin extends FsShell {
     // should be NN's one.
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY, 
         conf.get(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, ""));
- 
-    // Create the client
-    RefreshUserMappingsProtocol refreshProtocol =
-      NameNodeProxies.createProxy(conf, FileSystem.getDefaultUri(conf),
-          RefreshUserMappingsProtocol.class).getProxy();
 
-    // Refresh the user-to-groups mappings
-    refreshProtocol.refreshUserToGroupsMappings();
+    DistributedFileSystem dfs = getDFS();
+    URI dfsUri = dfs.getUri();
+    boolean isHaEnabled = HAUtil.isLogicalUri(conf, dfsUri);
+
+    if (isHaEnabled) {
+      // Run refreshUserToGroupsMapings for all NNs if HA is enabled
+      String nsId = dfsUri.getHost();
+      List<ProxyAndInfo<RefreshUserMappingsProtocol>> proxies =
+          HAUtil.getProxiesForAllNameNodesInNameservice(conf, nsId,
+              RefreshUserMappingsProtocol.class);
+      for (ProxyAndInfo<RefreshUserMappingsProtocol> proxy : proxies) {
+        proxy.getProxy().refreshUserToGroupsMappings();
+        System.out.println("Refresh user to groups mapping successful for "
+            + proxy.getAddress());
+      }
+    } else {
+      // Create the client
+      RefreshUserMappingsProtocol refreshProtocol =
+          NameNodeProxies.createProxy(conf, FileSystem.getDefaultUri(conf),
+              RefreshUserMappingsProtocol.class).getProxy();
+
+      // Refresh the user-to-groups mappings
+      refreshProtocol.refreshUserToGroupsMappings();
+      System.out.println("Refresh user to groups mapping successful");
+    }
     
     return 0;
   }
@@ -1082,13 +1242,31 @@ public class DFSAdmin extends FsShell {
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY, 
         conf.get(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, ""));
 
-    // Create the client
-    RefreshUserMappingsProtocol refreshProtocol =
-      NameNodeProxies.createProxy(conf, FileSystem.getDefaultUri(conf),
-          RefreshUserMappingsProtocol.class).getProxy();
+    DistributedFileSystem dfs = getDFS();
+    URI dfsUri = dfs.getUri();
+    boolean isHaEnabled = HAUtil.isLogicalUri(conf, dfsUri);
 
-    // Refresh the user-to-groups mappings
-    refreshProtocol.refreshSuperUserGroupsConfiguration();
+    if (isHaEnabled) {
+      // Run refreshSuperUserGroupsConfiguration for all NNs if HA is enabled
+      String nsId = dfsUri.getHost();
+      List<ProxyAndInfo<RefreshUserMappingsProtocol>> proxies =
+          HAUtil.getProxiesForAllNameNodesInNameservice(conf, nsId,
+              RefreshUserMappingsProtocol.class);
+      for (ProxyAndInfo<RefreshUserMappingsProtocol> proxy : proxies) {
+        proxy.getProxy().refreshSuperUserGroupsConfiguration();
+        System.out.println("Refresh super user groups configuration " +
+            "successful for " + proxy.getAddress());
+      }
+    } else {
+      // Create the client
+      RefreshUserMappingsProtocol refreshProtocol =
+          NameNodeProxies.createProxy(conf, FileSystem.getDefaultUri(conf),
+              RefreshUserMappingsProtocol.class).getProxy();
+
+      // Refresh the user-to-groups mappings
+      refreshProtocol.refreshSuperUserGroupsConfiguration();
+      System.out.println("Refresh super user groups configuration successful");
+    }
 
     return 0;
   }
@@ -1102,15 +1280,33 @@ public class DFSAdmin extends FsShell {
     // should be NN's one.
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY, 
         conf.get(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, ""));
- 
-    // Create the client
-    RefreshCallQueueProtocol refreshProtocol =
-      NameNodeProxies.createProxy(conf, FileSystem.getDefaultUri(conf),
-          RefreshCallQueueProtocol.class).getProxy();
 
-    // Refresh the call queue
-    refreshProtocol.refreshCallQueue();
-    
+    DistributedFileSystem dfs = getDFS();
+    URI dfsUri = dfs.getUri();
+    boolean isHaEnabled = HAUtil.isLogicalUri(conf, dfsUri);
+
+    if (isHaEnabled) {
+      // Run refreshCallQueue for all NNs if HA is enabled
+      String nsId = dfsUri.getHost();
+      List<ProxyAndInfo<RefreshCallQueueProtocol>> proxies =
+          HAUtil.getProxiesForAllNameNodesInNameservice(conf, nsId,
+              RefreshCallQueueProtocol.class);
+      for (ProxyAndInfo<RefreshCallQueueProtocol> proxy : proxies) {
+        proxy.getProxy().refreshCallQueue();
+        System.out.println("Refresh call queue successful for "
+            + proxy.getAddress());
+      }
+    } else {
+      // Create the client
+      RefreshCallQueueProtocol refreshProtocol =
+          NameNodeProxies.createProxy(conf, FileSystem.getDefaultUri(conf),
+              RefreshCallQueueProtocol.class).getProxy();
+
+      // Refresh the call queue
+      refreshProtocol.refreshCallQueue();
+      System.out.println("Refresh call queue successful");
+    }
+
     return 0;
   }
 
@@ -1244,6 +1440,12 @@ public class DFSAdmin extends FsShell {
     } else if ("-fetchImage".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
           + " [-fetchImage <local directory>]");
+    } else if ("-shutdownDatanode".equals(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+          + " [-shutdownDatanode <datanode_host:ipc_port> [upgrade]]");
+    } else if ("-getDatanodeInfo".equals(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+          + " [-getDatanodeInfo <datanode_host:ipc_port>]");
     } else {
       System.err.println("Usage: java DFSAdmin");
       System.err.println("Note: Administrative commands can only be run as the HDFS superuser.");

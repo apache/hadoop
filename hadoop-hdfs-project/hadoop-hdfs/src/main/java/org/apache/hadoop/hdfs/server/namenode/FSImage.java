@@ -214,6 +214,13 @@ public class FSImage implements Closeable {
 
 
     int layoutVersion = storage.getLayoutVersion();
+    if (startOpt == StartupOption.METADATAVERSION) {
+      System.out.println("HDFS Image Version: " + layoutVersion);
+      System.out.println("Software format version: " +
+        HdfsConstants.NAMENODE_LAYOUT_VERSION);
+      return false;
+    }
+
     if (layoutVersion < Storage.LAST_PRE_UPGRADE_LAYOUT_VERSION) {
       NNStorage.checkVersionUpgradable(storage.getLayoutVersion());
     }
@@ -289,6 +296,12 @@ public class FSImage implements Closeable {
                       storage.dirIterator(); it.hasNext();) {
       StorageDirectory sd = it.next();
       StorageState curState;
+      if (startOpt == StartupOption.METADATAVERSION) {
+        /* All we need is the layout version. */
+        storage.readProperties(sd);
+        return true;
+      }
+
       try {
         curState = sd.analyzeStorage(startOpt, storage);
         // sd is locked but not opened
@@ -495,7 +508,6 @@ public class FSImage implements Closeable {
     FSImage realImage = target.getFSImage();
     FSImage ckptImage = new FSImage(conf, 
                                     checkpointDirs, checkpointEditsDirs);
-    target.dir.fsImage = ckptImage;
     // load from the checkpoint dirs
     try {
       ckptImage.recoverTransitionRead(StartupOption.REGULAR, target, null);
@@ -507,7 +519,6 @@ public class FSImage implements Closeable {
     realImage.getEditLog().setNextTxId(ckptImage.getEditLog().getLastWrittenTxId()+1);
     realImage.initEditLog(StartupOption.IMPORT);
 
-    target.dir.fsImage = realImage;
     realImage.getStorage().setBlockPoolID(ckptImage.getBlockPoolID());
 
     // and save it but keep the same checkpointTime
@@ -1010,6 +1021,13 @@ public class FSImage implements Closeable {
     }
   }
   
+  /**
+   * Update version of all storage directories.
+   */
+  public synchronized void updateStorageVersion() throws IOException {
+    storage.writeAll();
+  }
+
   /**
    * @see #saveNamespace(FSNamesystem, Canceler)
    */

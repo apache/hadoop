@@ -126,6 +126,9 @@ abstract public class Shell {
   public static final boolean LINUX   = (osType == OSType.OS_TYPE_LINUX);
   public static final boolean OTHER   = (osType == OSType.OS_TYPE_OTHER);
 
+  public static final boolean PPC_64
+                = System.getProperties().getProperty("os.arch").contains("ppc64");
+
   /** a Unix command to get the current user's groups list */
   public static String[] getGroupsCommand() {
     return (WINDOWS)? new String[]{"cmd", "/c", "groups"}
@@ -618,7 +621,7 @@ abstract public class Shell {
    * This is an IOException with exit code added.
    */
   public static class ExitCodeException extends IOException {
-    int exitCode;
+    private final int exitCode;
     
     public ExitCodeException(int exitCode, String message) {
       super(message);
@@ -627,6 +630,16 @@ abstract public class Shell {
     
     public int getExitCode() {
       return exitCode;
+    }
+
+    @Override
+    public String toString() {
+      final StringBuilder sb =
+          new StringBuilder("ExitCodeException ");
+      sb.append("exitCode=").append(exitCode)
+        .append(": ");
+      sb.append(super.getMessage());
+      return sb.toString();
     }
   }
   

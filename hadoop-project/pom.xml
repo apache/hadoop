@@ -392,6 +392,11 @@
         <artifactId>jetty-util</artifactId>
         <version>6.1.26</version>
       </dependency>
+      <dependency>
+        <groupId>javax.servlet.jsp</groupId>
+        <artifactId>jsp-api</artifactId>
+        <version>2.1</version>
+      </dependency>
 
       <dependency>
         <groupId>org.glassfish</groupId>
@@ -717,7 +722,7 @@
       <dependency>
         <groupId>org.apache.bookkeeper</groupId>
         <artifactId>bookkeeper-server</artifactId>
-        <version>4.0.0</version>
+        <version>4.2.3</version>
         <scope>compile</scope>
       </dependency>
       <dependency>
@@ -772,6 +777,12 @@
         <groupId>org.fusesource.leveldbjni</groupId>
         <artifactId>leveldbjni-all</artifactId>
         <version>1.8</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.directory.server</groupId>
+        <artifactId>apacheds-kerberos-codec</artifactId>
+        <version>2.0.0-M15</version>
       </dependency>
 
       <dependency>

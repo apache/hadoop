@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -65,6 +66,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppStartAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -686,7 +688,12 @@ public class RMAppImpl implements RMApp, Recoverable {
         ApplicationAttemptId.newInstance(applicationId, attempts.size() + 1);
     RMAppAttempt attempt =
         new RMAppAttemptImpl(appAttemptId, rmContext, scheduler, masterService,
-          submissionContext, conf, maxAppAttempts == attempts.size());
+          submissionContext, conf,
+          // The newly created attempt maybe last attempt if (number of
+          // previously failed attempts(which should not include Preempted,
+          // hardware error and NM resync) + 1) equal to the max-attempt
+          // limit.
+          maxAppAttempts == (getNumFailedAppAttempts() + 1));
     attempts.put(appAttemptId, attempt);
     currentAttempt = attempt;
   }
@@ -794,7 +801,7 @@ public class RMAppImpl implements RMApp, Recoverable {
           && (app.currentAttempt.getState() == RMAppAttemptState.KILLED
               || app.currentAttempt.getState() == RMAppAttemptState.FINISHED
               || (app.currentAttempt.getState() == RMAppAttemptState.FAILED
-                  && app.attempts.size() == app.maxAppAttempts))) {
+                  && app.getNumFailedAppAttempts() == app.maxAppAttempts))) {
         return RMAppState.ACCEPTED;
       }
 
@@ -885,7 +892,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       msg = "Unmanaged application " + this.getApplicationId()
               + " failed due to " + failedEvent.getDiagnostics()
               + ". Failing the application.";
-    } else if (this.attempts.size() >= this.maxAppAttempts) {
+    } else if (getNumFailedAppAttempts() >= this.maxAppAttempts) {
       msg = "Application " + this.getApplicationId() + " failed "
               + this.maxAppAttempts + " times due to "
               + failedEvent.getDiagnostics() + ". Failing the application.";
@@ -1102,6 +1109,18 @@ public class RMAppImpl implements RMApp, Recoverable {
     };
   }
 
+  private int getNumFailedAppAttempts() {
+    int completedAttempts = 0;
+    // Do not count AM preemption, hardware failures or NM resync
+    // as attempt failure.
+    for (RMAppAttempt attempt : attempts.values()) {
+      if (attempt.shouldCountTowardsMaxAttemptRetry()) {
+        completedAttempts++;
+      }
+    }
+    return completedAttempts;
+  }
+
   private static final class AttemptFailedTransition implements
       MultipleArcTransition<RMAppImpl, RMAppEvent, RMAppState> {
 
@@ -1113,8 +1132,9 @@ public class RMAppImpl implements RMApp, Recoverable {
 
     @Override
     public RMAppState transition(RMAppImpl app, RMAppEvent event) {
+
       if (!app.submissionContext.getUnmanagedAM()
-          && app.attempts.size() < app.maxAppAttempts) {
+          && app.getNumFailedAppAttempts() < app.maxAppAttempts) {
         boolean transferStateFromPreviousAttempt = false;
         RMAppFailedAttemptEvent failedEvent = (RMAppFailedAttemptEvent) event;
         transferStateFromPreviousAttempt =
@@ -1184,5 +1204,26 @@ public class RMAppImpl implements RMApp, Recoverable {
   @Override
   public Set<NodeId> getRanNodes() {
     return ranNodes;
+  }
+  
+  @Override
+  public RMAppMetrics getRMAppMetrics() {
+    Resource resourcePreempted = Resource.newInstance(0, 0);
+    int numAMContainerPreempted = 0;
+    int numNonAMContainerPreempted = 0;
+    for (RMAppAttempt attempt : attempts.values()) {
+      if (null != attempt) {
+        RMAppAttemptMetrics attemptMetrics =
+            attempt.getRMAppAttemptMetrics();
+        Resources.addTo(resourcePreempted,
+            attemptMetrics.getResourcePreempted());
+        numAMContainerPreempted += attemptMetrics.getIsPreempted() ? 1 : 0;
+        numNonAMContainerPreempted +=
+            attemptMetrics.getNumNonAMContainersPreempted();
+      }
+    }
+
+    return new RMAppMetrics(resourcePreempted,
+        numNonAMContainerPreempted, numAMContainerPreempted);
   }
 }

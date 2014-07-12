@@ -24,6 +24,7 @@ import java.io.DataOutput;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.fs.Path;
 
 /** A section of an input file.  Returned by {@link
@@ -33,7 +34,7 @@ import org.apache.hadoop.fs.Path;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class FileSplit extends org.apache.hadoop.mapreduce.InputSplit 
-                       implements InputSplit {
+                       implements InputSplitWithLocationInfo {
   org.apache.hadoop.mapreduce.lib.input.FileSplit fs; 
   protected FileSplit() {
     fs = new org.apache.hadoop.mapreduce.lib.input.FileSplit();
@@ -61,6 +62,20 @@ public class FileSplit extends org.apache.hadoop.mapreduce.InputSplit
     fs = new org.apache.hadoop.mapreduce.lib.input.FileSplit(file, start,
            length, hosts);
   }
+  
+  /** Constructs a split with host information
+  *
+  * @param file the file name
+  * @param start the position of the first byte in the file to process
+  * @param length the number of bytes in the file to process
+  * @param hosts the list of hosts containing the block, possibly null
+  * @param inMemoryHosts the list of hosts containing the block in memory
+  */
+ public FileSplit(Path file, long start, long length, String[] hosts,
+     String[] inMemoryHosts) {
+   fs = new org.apache.hadoop.mapreduce.lib.input.FileSplit(file, start,
+          length, hosts, inMemoryHosts);
+ }
   
   public FileSplit(org.apache.hadoop.mapreduce.lib.input.FileSplit fs) {
     this.fs = fs;
@@ -92,4 +107,9 @@ public class FileSplit extends org.apache.hadoop.mapreduce.InputSplit
     return fs.getLocations();
   }
   
+  @Override
+  @Evolving
+  public SplitLocationInfo[] getLocationInfo() throws IOException {
+    return fs.getLocationInfo();
+  }
 }
