@@ -297,10 +297,16 @@ public class CommonConfigurationKeysPublic {
   public static final String  HADOOP_SECURITY_IMPERSONATION_PROVIDER_CLASS =
     "hadoop.security.impersonation.provider.class";
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
-  public static final String HADOOP_SECURITY_SECURE_RANDOM_ALGORITHM_KEY = 
-      "hadoop.security.secure.random.algorithm";
-  /** Defalt value for HADOOP_SECURITY_SECURE_RANDOM_ALGORITHM_KEY */
-  public static final String HADOOP_SECURITY_SECURE_RANDOM_ALGORITHM_DEFAULT = 
+  public static final String HADOOP_SECURITY_JAVA_SECURE_RANDOM_ALGORITHM_KEY = 
+      "hadoop.security.java.secure.random.algorithm";
+  /** Defalt value for HADOOP_SECURITY_JAVA_SECURE_RANDOM_ALGORITHM_KEY */
+  public static final String HADOOP_SECURITY_JAVA_SECURE_RANDOM_ALGORITHM_DEFAULT = 
       "SHA1PRNG";
+  public static final String HADOOP_SECURITY_SECURE_RANDOM_IMPL_KEY = 
+      "hadoop.security.secure.random.impl";
+  public static final String HADOOP_SECURITY_SECURE_RANDOM_DEVICE_FILE_PATH_KEY = 
+      "hadoop.security.random.device.file.path";
+  public static final String HADOOP_SECURITY_SECURE_RANDOM_DEVICE_FILE_PATH_DEFAULT = 
+      "/dev/urandom";
 }
 

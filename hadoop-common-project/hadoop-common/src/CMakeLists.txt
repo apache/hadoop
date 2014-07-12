@@ -167,7 +167,8 @@ find_path(OPENSSL_INCLUDE_DIR
 if (OPENSSL_LIBRARY AND OPENSSL_INCLUDE_DIR)
     GET_FILENAME_COMPONENT(HADOOP_OPENSSL_LIBRARY ${OPENSSL_LIBRARY} NAME)
     SET(OPENSSL_SOURCE_FILES
-        "${D}/crypto/OpensslCipher.c")
+        "${D}/crypto/OpensslCipher.c"
+        "${D}/crypto/random/OpensslSecureRandom.c")
 else (OPENSSL_LIBRARY AND OPENSSL_INCLUDE_DIR)
     SET(OPENSSL_INCLUDE_DIR "")
     SET(OPENSSL_SOURCE_FILES "")

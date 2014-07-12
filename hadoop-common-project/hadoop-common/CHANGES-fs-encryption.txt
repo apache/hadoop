@@ -6,6 +6,9 @@ fs-encryption (Unreleased)
 
   NEW FEATURES
 
+    HADOOP-10734. Implement high-performance secure random number sources.
+    (Yi Liu via Colin Patrick McCabe)
+
   IMPROVEMENTS
 
     HADOOP-10603. Crypto input and output streams implementing Hadoop stream

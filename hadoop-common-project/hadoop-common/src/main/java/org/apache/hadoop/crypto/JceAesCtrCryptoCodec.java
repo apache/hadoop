@@ -32,8 +32,8 @@ import org.apache.hadoop.conf.Configuration;
 import com.google.common.base.Preconditions;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_SECURE_RANDOM_ALGORITHM_KEY;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_SECURE_RANDOM_ALGORITHM_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_JAVA_SECURE_RANDOM_ALGORITHM_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_JAVA_SECURE_RANDOM_ALGORITHM_DEFAULT;
 
 /**
  * Implement the AES-CTR crypto codec using JCE provider.
@@ -57,8 +57,8 @@ public class JceAesCtrCryptoCodec extends AesCtrCryptoCodec {
     this.conf = conf;
     provider = conf.get(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY);
     final String secureRandomAlg = conf.get(
-        HADOOP_SECURITY_SECURE_RANDOM_ALGORITHM_KEY, 
-        HADOOP_SECURITY_SECURE_RANDOM_ALGORITHM_DEFAULT);
+        HADOOP_SECURITY_JAVA_SECURE_RANDOM_ALGORITHM_KEY, 
+        HADOOP_SECURITY_JAVA_SECURE_RANDOM_ALGORITHM_DEFAULT);
     try {
       random = (provider != null) ? 
           SecureRandom.getInstance(secureRandomAlg, provider) : 

@@ -1477,10 +1477,26 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
-  <name>hadoop.security.secure.random.algorithm</name>
+  <name>hadoop.security.java.secure.random.algorithm</name>
   <value></value>
   <description>
-    The secure random algorithm. 
+    The java secure random algorithm. 
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.secure.random.impl</name>
+  <value></value>
+  <description>
+    Implementation of secure random. 
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.random.device.file.path</name>
+  <value></value>
+  <description>
+    OS security random dev path, it's /dev/urandom in linux.
   </description>
 </property>
 

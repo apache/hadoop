@@ -17,23 +17,34 @@
  */
 package org.apache.hadoop.crypto;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_SECURE_RANDOM_IMPL_KEY;
+
+import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
+import java.util.Random;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.crypto.random.OsSecureRandom;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Implement the AES-CTR crypto codec using JNI into OpenSSL.
  */
 @InterfaceAudience.Private
 public class OpensslAesCtrCryptoCodec extends AesCtrCryptoCodec {
+  private static final Log LOG =
+      LogFactory.getLog(OpensslAesCtrCryptoCodec.class.getName());
+
   private Configuration conf;
-  private SecureRandom random = new SecureRandom();
+  private Random random;
   
   public OpensslAesCtrCryptoCodec() {
   }
@@ -41,6 +52,26 @@ public class OpensslAesCtrCryptoCodec extends AesCtrCryptoCodec {
   @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
+    final Class<? extends Random> klass = conf.getClass(
+        HADOOP_SECURITY_SECURE_RANDOM_IMPL_KEY, OsSecureRandom.class, 
+        Random.class);
+    try {
+      random = ReflectionUtils.newInstance(klass, conf);
+    } catch (Exception e) {
+      LOG.info("Unable to use " + klass.getName() + ".  Falling back to " +
+          "Java SecureRandom.", e);
+      this.random = new SecureRandom();
+    }
+  }
+
+  @Override
+  protected void finalize() throws Throwable {
+    try {
+      Closeable r = (Closeable) this.random;
+      r.close();
+    } catch (ClassCastException e) {
+    }
+    super.finalize();
   }
 
   @Override
