@@ -58,6 +58,13 @@ int main(void)
     EXPECT_NONNULL(hdfs_bld);
     fs = hdfsBuilderConnect(hdfs_bld);
     EXPECT_NONNULL(fs);
+    hdfsDelete(fs, "/abc", 1);
+    EXPECT_INT_ZERO(hdfsCreateDirectory(fs, "/abc"));
+    EXPECT_INT_ZERO(hdfsCreateDirectory(fs, "/abc/1"));
+    EXPECT_INT_ZERO(hdfsCreateDirectory(fs, "/abc/2"));
+    EXPECT_INT_ZERO(hdfsCreateDirectory(fs, "/abc/3"));
+    EXPECT_INT_ZERO(hdfsCreateDirectory(fs, "/abc/alpha"));
+    EXPECT_INT_ZERO(hdfsDelete(fs, "/abc", 1));
     EXPECT_INT_ZERO(hdfsDisconnect(fs));
     if (dfs_cluster) {
         EXPECT_INT_ZERO(nmdShutdown(dfs_cluster));

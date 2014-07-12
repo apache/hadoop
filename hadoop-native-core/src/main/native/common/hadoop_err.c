@@ -63,6 +63,8 @@ static const char *errno_to_class(int code)
         return "org.apache.hadoop.native.HadoopCore.OutOfMemoryException";
     case ESHUTDOWN:
         return "org.apache.hadoop.native.HadoopCore.ShutdownException";
+    case ENOTSUP:
+        return "org.apache.hadoop.native.HadoopCore.NotSupportedException";
     default:
         return "org.apache.hadoop.native.HadoopCore.IOException";
     }
