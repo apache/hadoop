@@ -180,6 +180,8 @@ Trunk (Unreleased)
     HADOOP-10812. Delegate KeyProviderExtension#toString to underlying
     KeyProvider. (wang)
 
+    HADOOP-10736. Add key attributes to the key shell. (Mike Yoder via wang)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
