@@ -34,6 +34,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-3851. DFSOutputStream class code cleanup. (Jing Zhao via suresh)
 
+    HDFS-2856. Fix block protocol so that Datanodes don't require root or jsvc.
+    (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -58,8 +58,8 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferClient;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
-import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
@@ -211,14 +211,16 @@ public class JspHelper {
   }
 
   public static void streamBlockInAscii(InetSocketAddress addr, String poolId,
-      long blockId, Token<BlockTokenIdentifier> blockToken, long genStamp,
+      long blockId, final Token<BlockTokenIdentifier> blockToken, long genStamp,
       long blockSize, long offsetIntoBlock, long chunkSizeToView,
       JspWriter out, final Configuration conf, DFSClient.Conf dfsConf,
-      final DataEncryptionKey encryptionKey)
+      final DFSClient dfs, final SaslDataTransferClient saslClient)
           throws IOException {
     if (chunkSizeToView == 0) return;
     int amtToRead = (int)Math.min(chunkSizeToView, blockSize - offsetIntoBlock);
       
+    DatanodeID datanodeId = new DatanodeID(addr.getAddress().getHostAddress(),
+      addr.getHostName(), poolId, addr.getPort(), 0, 0, 0);
     BlockReader blockReader = new BlockReaderFactory(dfsConf).
       setInetSocketAddress(addr).
       setBlock(new ExtendedBlock(poolId, blockId, 0, genStamp)).
@@ -229,21 +231,21 @@ public class JspHelper {
       setVerifyChecksum(true).
       setClientName("JspHelper").
       setClientCacheContext(ClientContext.getFromConf(conf)).
-      setDatanodeInfo(new DatanodeInfo(
-          new DatanodeID(addr.getAddress().getHostAddress(),
-              addr.getHostName(), poolId, addr.getPort(), 0, 0, 0))).
+      setDatanodeInfo(new DatanodeInfo(datanodeId)).
       setCachingStrategy(CachingStrategy.newDefaultStrategy()).
       setConfiguration(conf).
       setRemotePeerFactory(new RemotePeerFactory() {
         @Override
-        public Peer newConnectedPeer(InetSocketAddress addr)
+        public Peer newConnectedPeer(InetSocketAddress addr,
+            Token<BlockTokenIdentifier> blockToken, DatanodeID datanodeId)
             throws IOException {
           Peer peer = null;
           Socket sock = NetUtils.getDefaultSocketFactory(conf).createSocket();
           try {
             sock.connect(addr, HdfsServerConstants.READ_TIMEOUT);
             sock.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
-            peer = TcpPeerServer.peerFromSocketAndKey(sock, encryptionKey);
+            peer = TcpPeerServer.peerFromSocketAndKey(saslClient, sock, dfs,
+                blockToken, datanodeId);
           } finally {
             if (peer == null) {
               IOUtils.closeSocket(sock);

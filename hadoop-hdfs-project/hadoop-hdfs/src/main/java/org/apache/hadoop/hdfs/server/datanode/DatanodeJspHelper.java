@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferClient;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
@@ -510,7 +511,7 @@ public class DatanodeJspHelper {
       JspHelper.streamBlockInAscii(new InetSocketAddress(req.getServerName(),
           datanodePort), bpid, blockId, blockToken, genStamp, blockSize,
           startOffset, chunkSizeToView, out, conf, dfs.getConf(),
-          dfs.getDataEncryptionKey());
+          dfs, getSaslDataTransferClient(req));
     } catch (Exception e) {
       out.print(e);
     }
@@ -669,7 +670,7 @@ public class DatanodeJspHelper {
     out.print("<textarea cols=\"100\" rows=\"25\" wrap=\"virtual\" style=\"width:100%\" READONLY>");
     JspHelper.streamBlockInAscii(addr, poolId, blockId, accessToken, genStamp,
         blockSize, startOffset, chunkSizeToView, out, conf, dfs.getConf(),
-        dfs.getDataEncryptionKey());
+        dfs, getSaslDataTransferClient(req));
     out.print("</textarea>");
     dfs.close();
   }
@@ -702,4 +703,16 @@ public class DatanodeJspHelper {
     return sb.toString();
   }
 
+  /**
+   * Gets the {@link SaslDataTransferClient} from the {@link DataNode} attached
+   * to the servlet context.
+   *
+   * @return SaslDataTransferClient from DataNode
+   */
+  private static SaslDataTransferClient getSaslDataTransferClient(
+      HttpServletRequest req) {
+    DataNode dataNode = (DataNode)req.getSession().getServletContext()
+      .getAttribute("datanode");
+    return dataNode.saslClient;
+  }
 }
