@@ -22,6 +22,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2242. Improve exception information on AM launch crashes. (Li Lu 
     via junping_du)
 
+    YARN-2274. FairScheduler: Add debug information about cluster capacity, 
+    availability and reservations. (kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
