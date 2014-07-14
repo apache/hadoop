@@ -45,7 +45,7 @@ static void throw_ioexception(JNIEnv* env, DWORD errnum)
     FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
     NULL, *(DWORD*) (&errnum), // reinterpret cast
     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-    (LPSTR*)&buffer, 0, NULL);
+    buffer, 0, NULL);
 
   if (len > 0)
   {

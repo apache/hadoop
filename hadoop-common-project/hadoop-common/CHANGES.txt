@@ -410,6 +410,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10780. hadoop_user_info_alloc fails on FreeBSD due to incorrect
     sysconf use (Dmitry Sivachenko via Colin Patrick McCabe)
 
+    HADOOP-10810. Clean up native code compilation warnings. (cnauroth)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
