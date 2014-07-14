@@ -53,6 +53,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2088. Fixed a bug in GetApplicationsRequestPBImpl#mergeLocalToBuilder.
     (Binglin Chang via jianhe)
 
+    YARN-2260. Fixed ResourceManager's RMNode to correctly remember containers
+    when nodes resync during work-preserving RM restart. (Jian He via vinodkv)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
