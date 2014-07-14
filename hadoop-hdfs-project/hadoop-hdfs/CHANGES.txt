@@ -5,6 +5,9 @@ HDFS-6584: Archival Storage
     HDFS-6677. Change INodeFile and FSImage to support storage policy ID.
     (szetszwo)
 
+    HDFS-6670. Add block storage policy support with default HOT, WARM and COLD
+    policies.  (szetszwo)
+
 Trunk (Unreleased)
 
   INCOMPATIBLE CHANGES

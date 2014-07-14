@@ -29,7 +29,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Unstable
 public enum StorageType {
   DISK,
-  SSD;
+  SSD,
+  ARCHIVE;
 
   public static final StorageType DEFAULT = DISK;
+  
+  public static final StorageType[] EMPTY_ARRAY = {};
 }

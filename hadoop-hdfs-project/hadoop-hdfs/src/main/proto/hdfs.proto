@@ -134,6 +134,7 @@ message FsPermissionProto {
 enum StorageTypeProto {
   DISK = 1;
   SSD = 2;
+  ARCHIVE = 3;
 }
 
 /**
