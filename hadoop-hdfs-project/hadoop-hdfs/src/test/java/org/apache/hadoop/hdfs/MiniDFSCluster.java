@@ -663,73 +663,81 @@ public class MiniDFSCluster {
       boolean checkDataNodeHostConfig,
       Configuration[] dnConfOverlays)
   throws IOException {
-    ExitUtil.disableSystemExit();
-
-    synchronized (MiniDFSCluster.class) {
-      instanceId = instanceCount++;
-    }
-
-    this.conf = conf;
-    base_dir = new File(determineDfsBaseDir());
-    data_dir = new File(base_dir, "data");
-    this.waitSafeMode = waitSafeMode;
-    this.checkExitOnShutdown = checkExitOnShutdown;
-    
-    int replication = conf.getInt(DFS_REPLICATION_KEY, 3);
-    conf.setInt(DFS_REPLICATION_KEY, Math.min(replication, numDataNodes));
-    int safemodeExtension = conf.getInt(
-        DFS_NAMENODE_SAFEMODE_EXTENSION_TESTING_KEY, 0);
-    conf.setInt(DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, safemodeExtension);
-    conf.setInt(DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 3); // 3 second
-    conf.setClass(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY, 
-                   StaticMapping.class, DNSToSwitchMapping.class);
-    
-    // In an HA cluster, in order for the StandbyNode to perform checkpoints,
-    // it needs to know the HTTP port of the Active. So, if ephemeral ports
-    // are chosen, disable checkpoints for the test.
-    if (!nnTopology.allHttpPortsSpecified() &&
-        nnTopology.isHA()) {
-      LOG.info("MiniDFSCluster disabling checkpointing in the Standby node " +
-          "since no HTTP ports have been specified.");
-      conf.setBoolean(DFS_HA_STANDBY_CHECKPOINTS_KEY, false);
-    }
-    if (!nnTopology.allIpcPortsSpecified() &&
-        nnTopology.isHA()) {
-      LOG.info("MiniDFSCluster disabling log-roll triggering in the "
-          + "Standby node since no IPC ports have been specified.");
-      conf.setInt(DFS_HA_LOGROLL_PERIOD_KEY, -1);
-    }
-    
-    federation = nnTopology.isFederated();
+    boolean success = false;
     try {
-      createNameNodesAndSetConf(
-          nnTopology, manageNameDfsDirs, manageNameDfsSharedDirs,
-          enableManagedDfsDirsRedundancy,
-          format, startOpt, clusterId, conf);
-    } catch (IOException ioe) {
-      LOG.error("IOE creating namenodes. Permissions dump:\n" +
-          createPermissionsDiagnosisString(data_dir));
-      throw ioe;
-    }
-    if (format) {
-      if (data_dir.exists() && !FileUtil.fullyDelete(data_dir)) {
-        throw new IOException("Cannot remove data directory: " + data_dir +
+      ExitUtil.disableSystemExit();
+
+      synchronized (MiniDFSCluster.class) {
+        instanceId = instanceCount++;
+      }
+
+      this.conf = conf;
+      base_dir = new File(determineDfsBaseDir());
+      data_dir = new File(base_dir, "data");
+      this.waitSafeMode = waitSafeMode;
+      this.checkExitOnShutdown = checkExitOnShutdown;
+    
+      int replication = conf.getInt(DFS_REPLICATION_KEY, 3);
+      conf.setInt(DFS_REPLICATION_KEY, Math.min(replication, numDataNodes));
+      int safemodeExtension = conf.getInt(
+          DFS_NAMENODE_SAFEMODE_EXTENSION_TESTING_KEY, 0);
+      conf.setInt(DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, safemodeExtension);
+      conf.setInt(DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 3); // 3 second
+      conf.setClass(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY, 
+                     StaticMapping.class, DNSToSwitchMapping.class);
+    
+      // In an HA cluster, in order for the StandbyNode to perform checkpoints,
+      // it needs to know the HTTP port of the Active. So, if ephemeral ports
+      // are chosen, disable checkpoints for the test.
+      if (!nnTopology.allHttpPortsSpecified() &&
+          nnTopology.isHA()) {
+        LOG.info("MiniDFSCluster disabling checkpointing in the Standby node " +
+            "since no HTTP ports have been specified.");
+        conf.setBoolean(DFS_HA_STANDBY_CHECKPOINTS_KEY, false);
+      }
+      if (!nnTopology.allIpcPortsSpecified() &&
+          nnTopology.isHA()) {
+        LOG.info("MiniDFSCluster disabling log-roll triggering in the "
+            + "Standby node since no IPC ports have been specified.");
+        conf.setInt(DFS_HA_LOGROLL_PERIOD_KEY, -1);
+      }
+    
+      federation = nnTopology.isFederated();
+      try {
+        createNameNodesAndSetConf(
+            nnTopology, manageNameDfsDirs, manageNameDfsSharedDirs,
+            enableManagedDfsDirsRedundancy,
+            format, startOpt, clusterId, conf);
+      } catch (IOException ioe) {
+        LOG.error("IOE creating namenodes. Permissions dump:\n" +
             createPermissionsDiagnosisString(data_dir));
+        throw ioe;
+      }
+      if (format) {
+        if (data_dir.exists() && !FileUtil.fullyDelete(data_dir)) {
+          throw new IOException("Cannot remove data directory: " + data_dir +
+              createPermissionsDiagnosisString(data_dir));
+        }
+      }
+    
+      if (startOpt == StartupOption.RECOVER) {
+        return;
+      }
+
+      // Start the DataNodes
+      startDataNodes(conf, numDataNodes, storageType, manageDataDfsDirs,
+          dnStartOpt != null ? dnStartOpt : startOpt,
+          racks, hosts, simulatedCapacities, setupHostsFile,
+          checkDataNodeAddrConfig, checkDataNodeHostConfig, dnConfOverlays);
+      waitClusterUp();
+      //make sure ProxyUsers uses the latest conf
+      ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+      success = true;
+    } finally {
+      if (!success) {
+        shutdown();
       }
     }
-    
-    if (startOpt == StartupOption.RECOVER) {
-      return;
-    }
-
-    // Start the DataNodes
-    startDataNodes(conf, numDataNodes, storageType, manageDataDfsDirs,
-        dnStartOpt != null ? dnStartOpt : startOpt,
-        racks, hosts, simulatedCapacities, setupHostsFile,
-        checkDataNodeAddrConfig, checkDataNodeHostConfig, dnConfOverlays);
-    waitClusterUp();
-    //make sure ProxyUsers uses the latest conf
-    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
   }
   
   /**

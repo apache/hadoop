@@ -303,6 +303,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-8158. Interrupting hadoop fs -put from the command line
     causes a LeaseExpiredException. (daryn via harsh)
 
+    HDFS-6678. MiniDFSCluster may still be partially running after initialization
+    fails. (cnauroth)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
