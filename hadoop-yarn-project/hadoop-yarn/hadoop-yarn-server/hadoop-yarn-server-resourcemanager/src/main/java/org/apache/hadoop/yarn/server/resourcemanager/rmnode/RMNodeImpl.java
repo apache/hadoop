@@ -20,9 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -105,8 +104,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private String nodeManagerVersion;
 
   /* set of containers that have just launched */
-  private final Map<ContainerId, ContainerStatus> justLaunchedContainers = 
-    new HashMap<ContainerId, ContainerStatus>();
+  private final Set<ContainerId> launchedContainers =
+    new HashSet<ContainerId>();
 
   /* set of containers that need to be cleaned */
   private final Set<ContainerId> containersToClean = new TreeSet<ContainerId>(
@@ -476,6 +475,13 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         // Increment activeNodes explicitly because this is a new node.
         ClusterMetrics.getMetrics().incrNumActiveNodes();
         containers = startEvent.getNMContainerStatuses();
+        if (containers != null && !containers.isEmpty()) {
+          for (NMContainerStatus container : containers) {
+            if (container.getContainerState() == ContainerState.RUNNING) {
+              rmNode.launchedContainers.add(container.getContainerId());
+            }
+          }
+        }
       }
       
       if (null != startEvent.getRunningApplications()) {
@@ -664,14 +670,14 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
         // Process running containers
         if (remoteContainer.getState() == ContainerState.RUNNING) {
-          if (!rmNode.justLaunchedContainers.containsKey(containerId)) {
+          if (!rmNode.launchedContainers.contains(containerId)) {
             // Just launched container. RM knows about it the first time.
-            rmNode.justLaunchedContainers.put(containerId, remoteContainer);
+            rmNode.launchedContainers.add(containerId);
             newlyLaunchedContainers.add(remoteContainer);
           }
         } else {
           // A finished container
-          rmNode.justLaunchedContainers.remove(containerId);
+          rmNode.launchedContainers.remove(containerId);
           completedContainers.add(remoteContainer);
         }
       }
@@ -747,5 +753,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   @VisibleForTesting
   public int getQueueSize() {
     return nodeUpdateQueue.size();
+  }
+
+  // For test only.
+  @VisibleForTesting
+  public Set<ContainerId> getLaunchedContainers() {
+    return this.launchedContainers;
   }
  }
