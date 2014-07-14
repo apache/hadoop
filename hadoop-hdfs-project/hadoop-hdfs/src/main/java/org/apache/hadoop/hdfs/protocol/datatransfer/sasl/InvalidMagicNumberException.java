@@ -15,27 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.hdfs.protocol.datatransfer.sasl;
+
+import static org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil.SASL_TRANSFER_MAGIC_NUMBER;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 
-import org.apache.hadoop.hdfs.net.Peer;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
-import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.classification.InterfaceAudience;
 
-public interface RemotePeerFactory {
+/**
+ * Indicates that SASL protocol negotiation expected to read a pre-defined magic
+ * number, but the expected value was not seen.
+ */
+@InterfaceAudience.Private
+public class InvalidMagicNumberException extends IOException {
+
+  private static final long serialVersionUID = 1L;
+
   /**
-   * @param addr          The address to connect to.
-   * @param blockToken    Token used during optional SASL negotiation
-   * @param datanodeId    ID of destination DataNode
-   * @return              A new Peer connected to the address.
+   * Creates a new InvalidMagicNumberException.
    *
-   * @throws IOException  If there was an error connecting or creating 
-   *                      the remote socket, encrypted stream, etc.
+   * @param magicNumber expected value
    */
-  Peer newConnectedPeer(InetSocketAddress addr,
-      Token<BlockTokenIdentifier> blockToken, DatanodeID datanodeId)
-      throws IOException;
+  public InvalidMagicNumberException(int magicNumber) {
+    super(String.format("Received %x instead of %x from client.",
+        magicNumber, SASL_TRANSFER_MAGIC_NUMBER));
+  }
 }

@@ -19,9 +19,7 @@ package org.apache.hadoop.hdfs.net;
 
 import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferEncryptor;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
-import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.net.unix.DomainSocket;
 
 import java.io.InputStream;
@@ -51,11 +49,8 @@ public class EncryptedPeer implements Peer {
    */
   private final ReadableByteChannel channel;
 
-  public EncryptedPeer(Peer enclosedPeer, DataEncryptionKey key)
-      throws IOException {
+  public EncryptedPeer(Peer enclosedPeer, IOStreamPair ios) {
     this.enclosedPeer = enclosedPeer;
-    IOStreamPair ios = DataTransferEncryptor.getEncryptedStreams(
-        enclosedPeer.getOutputStream(), enclosedPeer.getInputStream(), key);
     this.in = ios.in;
     this.out = ios.out;
     this.channel = ios.in instanceof ReadableByteChannel ? 
