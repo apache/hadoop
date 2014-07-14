@@ -379,6 +379,7 @@ Java_org_apache_hadoop_io_compress_zlib_ZlibCompressor_getLibraryName(JNIEnv *en
       return (*env)->NewStringUTF(env, dl_info.dli_fname);
     }
   }
+  return (*env)->NewStringUTF(env, "Unavailable");
 #endif
 
 #ifdef WINDOWS
