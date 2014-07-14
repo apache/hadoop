@@ -1453,6 +1453,37 @@
 </property>
 
 <property>
+  <name>dfs.data.transfer.protection</name>
+  <value></value>
+  <description>
+    A comma-separated list of SASL protection values used for secured
+    connections to the DataNode when reading or writing block data.  Possible
+    values are authentication, integrity and privacy.  authentication means
+    authentication only and no integrity or privacy; integrity implies
+    authentication and integrity are enabled; and privacy implies all of
+    authentication, integrity and privacy are enabled.  If
+    dfs.encrypt.data.transfer is set to true, then it supersedes the setting for
+    dfs.data.transfer.protection and enforces that all connections must use a
+    specialized encrypted SASL handshake.  This property is ignored for
+    connections to a DataNode listening on a privileged port.  In this case, it
+    is assumed that the use of a privileged port establishes sufficient trust.
+  </description>
+</property>
+
+<property>
+  <name>dfs.data.transfer.saslproperties.resolver.class</name>
+  <value></value>
+  <description>
+    SaslPropertiesResolver used to resolve the QOP used for a connection to the
+    DataNode when reading or writing block data.  If not specified, the full set
+    of values specified in dfs.data.transfer.protection is used while
+    determining the QOP used for the connection. If a class is specified, then
+    the QOP values returned by the class will be used while determining the QOP
+    used for the connection.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.hdfs-blocks-metadata.enabled</name>
   <value>false</value>
   <description>

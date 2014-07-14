@@ -15,27 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.hdfs.protocol.datatransfer.sasl;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 
-import org.apache.hadoop.hdfs.net.Peer;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
-import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 
-public interface RemotePeerFactory {
+/**
+ * Creates a new {@link DataEncryptionKey} on demand.
+ */
+@InterfaceAudience.Private
+public interface DataEncryptionKeyFactory {
+
   /**
-   * @param addr          The address to connect to.
-   * @param blockToken    Token used during optional SASL negotiation
-   * @param datanodeId    ID of destination DataNode
-   * @return              A new Peer connected to the address.
+   * Creates a new DataEncryptionKey.
    *
-   * @throws IOException  If there was an error connecting or creating 
-   *                      the remote socket, encrypted stream, etc.
+   * @return DataEncryptionKey newly created
+   * @throws IOException for any error
    */
-  Peer newConnectedPeer(InetSocketAddress addr,
-      Token<BlockTokenIdentifier> blockToken, DatanodeID datanodeId)
-      throws IOException;
+  DataEncryptionKey newDataEncryptionKey() throws IOException;
 }

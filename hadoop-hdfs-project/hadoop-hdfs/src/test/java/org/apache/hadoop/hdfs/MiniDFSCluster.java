@@ -19,12 +19,15 @@ package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY;
@@ -1308,15 +1311,42 @@ public class MiniDFSCluster {
       }
 
       SecureResources secureResources = null;
-      if (UserGroupInformation.isSecurityEnabled()) {
+      if (UserGroupInformation.isSecurityEnabled() &&
+          conf.get(DFS_DATA_TRANSFER_PROTECTION_KEY) == null) {
         try {
           secureResources = SecureDataNodeStarter.getSecureResources(dnConf);
         } catch (Exception ex) {
           ex.printStackTrace();
         }
       }
-      DataNode dn = DataNode.instantiateDataNode(dnArgs, dnConf,
-                                                 secureResources);
+      final int maxRetriesOnSasl = conf.getInt(
+        IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_KEY,
+        IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_DEFAULT);
+      int numRetries = 0;
+      DataNode dn = null;
+      while (true) {
+        try {
+          dn = DataNode.instantiateDataNode(dnArgs, dnConf,
+                                            secureResources);
+          break;
+        } catch (IOException e) {
+          // Work around issue testing security where rapidly starting multiple
+          // DataNodes using the same principal gets rejected by the KDC as a
+          // replay attack.
+          if (UserGroupInformation.isSecurityEnabled() &&
+              numRetries < maxRetriesOnSasl) {
+            try {
+              Thread.sleep(1000);
+            } catch (InterruptedException ie) {
+              Thread.currentThread().interrupt();
+              break;
+            }
+            ++numRetries;
+            continue;
+          }
+          throw e;
+        }
+      }
       if(dn == null)
         throw new IOException("Cannot start DataNode in "
             + dnConf.get(DFS_DATANODE_DATA_DIR_KEY));

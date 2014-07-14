@@ -33,9 +33,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.net.TcpPeerServer;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.CacheReplicationMonitor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
@@ -48,6 +50,7 @@ import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitCache;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitReplica;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.token.Token;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 
@@ -192,7 +195,8 @@ public class BlockReaderTestUtil {
       setAllowShortCircuitLocalReads(true).
       setRemotePeerFactory(new RemotePeerFactory() {
         @Override
-        public Peer newConnectedPeer(InetSocketAddress addr)
+        public Peer newConnectedPeer(InetSocketAddress addr,
+            Token<BlockTokenIdentifier> blockToken, DatanodeID datanodeId)
             throws IOException {
           Peer peer = null;
           Socket sock = NetUtils.

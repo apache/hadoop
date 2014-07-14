@@ -120,17 +120,19 @@ Java_org_apache_hadoop_net_unix_DomainSocketWatcher_00024FdSet_remove(
 JNIEnv *env, jobject obj, jint fd)
 {
   struct fd_set_data *sd;
-  struct pollfd *pollfd, *last_pollfd;
+  struct pollfd *pollfd = NULL, *last_pollfd;
   int used_size, i;
 
   sd = (struct fd_set_data*)(intptr_t)(*env)->
       GetLongField(env, obj, fd_set_data_fid);
   used_size = sd->used_size;
   for (i = 0; i < used_size; i++) {
-    pollfd = sd->pollfd + i;
-    if (pollfd->fd == fd) break;
+    if (sd->pollfd[i].fd == fd) {
+      pollfd = sd->pollfd + i;
+      break;
+    }
   }
-  if (i == used_size) {
+  if (pollfd == NULL) {
     (*env)->Throw(env, newRuntimeException(env, "failed to remove fd %d "
           "from the FdSet because it was never present.", fd));
     return;
