@@ -1,5 +1,10 @@
 Hadoop HDFS Change Log
 
+HDFS-6584: Archival Storage
+
+    HDFS-6677. Change INodeFile and FSImage to support storage policy ID.
+    (szetszwo)
+
 Trunk (Unreleased)
 
   INCOMPATIBLE CHANGES

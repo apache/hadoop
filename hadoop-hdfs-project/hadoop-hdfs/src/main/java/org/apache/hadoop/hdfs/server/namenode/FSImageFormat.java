@@ -774,7 +774,7 @@ public class FSImageFormat {
         counter.increment();
       }
       final INodeFile file = new INodeFile(inodeId, localName, permissions,
-          modificationTime, atime, blocks, replication, blockSize);
+          modificationTime, atime, blocks, replication, blockSize, (byte)0);
       if (underConstruction) {
         file.toUnderConstruction(clientName, clientMachine);
       }
@@ -875,7 +875,7 @@ public class FSImageFormat {
       final long preferredBlockSize = in.readLong();
 
       return new INodeFileAttributes.SnapshotCopy(name, permissions, null, modificationTime,
-          accessTime, replication, preferredBlockSize, null);
+          accessTime, replication, preferredBlockSize, (byte)0, null);
     }
 
     public INodeDirectoryAttributes loadINodeDirectoryAttributes(DataInput in)

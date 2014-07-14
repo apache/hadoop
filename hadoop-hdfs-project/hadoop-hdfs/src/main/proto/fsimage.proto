@@ -134,6 +134,7 @@ message INodeSection {
     optional FileUnderConstructionFeature fileUC = 7;
     optional AclFeatureProto acl = 8;
     optional XAttrFeatureProto xAttrs = 9;
+    optional uint32 storagePolicyID = 10;
   }
 
   message INodeDirectory {
