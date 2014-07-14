@@ -524,6 +524,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6647. Edit log corruption when pipeline recovery occurs for deleted 
     file present in snapshot (kihwal)
 
+    HDFS-6378. NFS registration should timeout instead of hanging when
+    portmap/rpcbind is not available (Abhiraj Butala via brandonli)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
