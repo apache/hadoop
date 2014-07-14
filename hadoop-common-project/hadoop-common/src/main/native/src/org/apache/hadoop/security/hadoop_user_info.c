@@ -36,7 +36,7 @@
 struct hadoop_user_info *hadoop_user_info_alloc(void)
 {
   struct hadoop_user_info *uinfo;
-  size_t buf_sz;
+  long buf_sz;
   char *buf;
 
   uinfo = calloc(1, sizeof(struct hadoop_user_info));
