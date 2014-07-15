@@ -237,6 +237,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5844. Add a configurable delay to reducer-preemption. 
     (Maysam Yabandeh via kasha)
 
+    MAPREDUCE-5790. Made it easier to enable hprof profile options by default.
+    (Gera Shegalov via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES 
