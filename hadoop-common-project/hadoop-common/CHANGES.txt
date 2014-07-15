@@ -381,6 +381,8 @@ Trunk (Unreleased)
 
     HADOOP-10831. UserProvider is not thread safe. (Benoy Antony via umamahesh)
 
+    HADOOP-10834. Typo in CredentialShell usage. (Benoy Antony via umamahesh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
