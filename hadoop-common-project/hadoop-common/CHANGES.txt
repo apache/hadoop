@@ -379,6 +379,8 @@ Trunk (Unreleased)
     NativeAzureFileSystem#NativeAzureFsInputStream#close().
     (Chen He via cnauroth)
 
+    HADOOP-10831. UserProvider is not thread safe. (Benoy Antony via umamahesh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
