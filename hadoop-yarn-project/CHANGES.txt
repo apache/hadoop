@@ -36,6 +36,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1713. Added get-new-app and submit-app functionality to RM web services.
     (Varun Vasudev via vinodkv)
 
+    YARN-2233. Implemented ResourceManager web-services to create, renew and
+    cancel delegation tokens. (Varun Vasudev via vinodkv)
+
   IMPROVEMENTS
 
     YARN-1479. Invalid NaN values in Hadoop REST API JSON response (Chen He via
