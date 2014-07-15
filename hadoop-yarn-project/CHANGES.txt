@@ -25,6 +25,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2274. FairScheduler: Add debug information about cluster capacity, 
     availability and reservations. (kasha)
 
+    YARN-2228. Augmented TimelineServer to load pseudo authentication filter when
+    authentication = simple. (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

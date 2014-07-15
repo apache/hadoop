@@ -1218,6 +1218,24 @@
   </property>
 
   <property>
+    <name>yarn.timeline-service.http-authentication.type</name>
+    <value>simple</value>
+    <description>
+      Defines authentication used for the timeline server HTTP endpoint.
+      Supported values are: simple | kerberos | #AUTHENTICATION_HANDLER_CLASSNAME#
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.timeline-service.http-authentication.simple.anonymous.allowed</name>
+    <value>true</value>
+    <description>
+      Indicates if anonymous requests are allowed by the timeline server when using
+      'simple' authentication.
+    </description>
+  </property>
+
+  <property>
     <description>The Kerberos principal for the timeline server.</description>
     <name>yarn.timeline-service.principal</name>
     <value></value>
