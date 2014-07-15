@@ -259,6 +259,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2241. ZKRMStateStore: On startup, show nicer messages if znodes already 
     exist. (Robert Kanter via kasha)
 
+	YARN-1408 Preemption caused Invalid State Event: ACQUIRED at KILLED and 
+	caused a task timeout for 30mins. (Sunil G via mayank)
+
   OPTIMIZATIONS
 
   BUG FIXES 
