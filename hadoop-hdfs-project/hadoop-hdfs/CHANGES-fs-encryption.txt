@@ -42,6 +42,8 @@ fs-encryption (Unreleased)
     HDFS-6474. Namenode needs to get the actual keys and iv from the
     KeyProvider. (wang)
 
+    HDFS-6619. Clean up encryption-related tests. (wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
