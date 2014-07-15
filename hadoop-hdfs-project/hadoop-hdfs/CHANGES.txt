@@ -56,6 +56,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6678. MiniDFSCluster may still be partially running after initialization
     fails. (cnauroth)
 
+    HDFS-5809. BlockPoolSliceScanner and high speed hdfs appending make
+    datanode to drop into infinite loop (cmccabe)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
