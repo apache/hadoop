@@ -194,4 +194,16 @@ public class TestNfsExports {
     } while ((System.nanoTime() - startNanos) / NanosPerMillis < 5000);
     Assert.assertEquals(AccessPrivilege.NONE, ap);
   }
+
+  @Test(expected=IllegalArgumentException.class)
+  public void testInvalidHost() {
+      NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod,
+        "foo#bar");
+  }
+
+  @Test(expected=IllegalArgumentException.class)
+  public void testInvalidSeparator() {
+      NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod,
+        "foo ro : bar rw");
+  }
 }

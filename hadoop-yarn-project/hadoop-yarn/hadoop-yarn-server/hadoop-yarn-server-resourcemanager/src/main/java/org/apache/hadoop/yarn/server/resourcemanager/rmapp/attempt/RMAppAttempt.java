@@ -207,4 +207,10 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
    * </ul>
    */
   boolean shouldCountTowardsMaxAttemptRetry();
+  
+  /**
+   * Get metrics from the {@link RMAppAttempt}
+   * @return metrics
+   */
+  RMAppAttemptMetrics getRMAppAttemptMetrics();
 }

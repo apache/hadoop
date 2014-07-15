@@ -57,8 +57,8 @@ public class TestXAttrWithSnapshot {
   private static Configuration conf;
   private static DistributedFileSystem hdfs;
   private static int pathCount = 0;
-  private static Path path, snapshotPath;
-  private static String snapshotName;
+  private static Path path, snapshotPath, snapshotPath2, snapshotPath3;
+  private static String snapshotName, snapshotName2, snapshotName3;
   private final int SUCCESS = 0;
   // XAttrs
   private static final String name1 = "user.a1";
@@ -90,7 +90,11 @@ public class TestXAttrWithSnapshot {
     ++pathCount;
     path = new Path("/p" + pathCount);
     snapshotName = "snapshot" + pathCount;
+    snapshotName2 = snapshotName + "-2";
+    snapshotName3 = snapshotName + "-3";
     snapshotPath = new Path(path, new Path(".snapshot", snapshotName));
+    snapshotPath2 = new Path(path, new Path(".snapshot", snapshotName2));
+    snapshotPath3 = new Path(path, new Path(".snapshot", snapshotName3));
   }
 
   /**
@@ -258,6 +262,62 @@ public class TestXAttrWithSnapshot {
     Assert.assertEquals(2, xattrs.size());
     Assert.assertArrayEquals(value1, xattrs.get(name1));
     Assert.assertArrayEquals(value2, xattrs.get(name2));
+  }
+
+  /**
+   * Test successive snapshots in between modifications of XAttrs.
+   * Also verify that snapshot XAttrs are not altered when a
+   * snapshot is deleted.
+   */
+  @Test
+  public void testSuccessiveSnapshotXAttrChanges() throws Exception {
+    // First snapshot
+    FileSystem.mkdirs(hdfs, path, FsPermission.createImmutable((short) 0700));
+    hdfs.setXAttr(path, name1, value1);
+    SnapshotTestHelper.createSnapshot(hdfs, path, snapshotName);
+    Map<String, byte[]> xattrs = hdfs.getXAttrs(snapshotPath);
+    Assert.assertEquals(1, xattrs.size());
+    Assert.assertArrayEquals(value1, xattrs.get(name1));
+
+    // Second snapshot
+    hdfs.setXAttr(path, name1, newValue1);
+    hdfs.setXAttr(path, name2, value2);
+    SnapshotTestHelper.createSnapshot(hdfs, path, snapshotName2);
+    xattrs = hdfs.getXAttrs(snapshotPath2);
+    Assert.assertEquals(2, xattrs.size());
+    Assert.assertArrayEquals(newValue1, xattrs.get(name1));
+    Assert.assertArrayEquals(value2, xattrs.get(name2));
+
+    // Third snapshot
+    hdfs.setXAttr(path, name1, value1);
+    hdfs.removeXAttr(path, name2);
+    SnapshotTestHelper.createSnapshot(hdfs, path, snapshotName3);
+    xattrs = hdfs.getXAttrs(snapshotPath3);
+    Assert.assertEquals(1, xattrs.size());
+    Assert.assertArrayEquals(value1, xattrs.get(name1));
+
+    // Check that the first and second snapshots'
+    // XAttrs have stayed constant
+    xattrs = hdfs.getXAttrs(snapshotPath);
+    Assert.assertEquals(1, xattrs.size());
+    Assert.assertArrayEquals(value1, xattrs.get(name1));
+    xattrs = hdfs.getXAttrs(snapshotPath2);
+    Assert.assertEquals(2, xattrs.size());
+    Assert.assertArrayEquals(newValue1, xattrs.get(name1));
+    Assert.assertArrayEquals(value2, xattrs.get(name2));
+
+    // Remove the second snapshot and verify the first and
+    // third snapshots' XAttrs have stayed constant
+    hdfs.deleteSnapshot(path, snapshotName2);
+    xattrs = hdfs.getXAttrs(snapshotPath);
+    Assert.assertEquals(1, xattrs.size());
+    Assert.assertArrayEquals(value1, xattrs.get(name1));
+    xattrs = hdfs.getXAttrs(snapshotPath3);
+    Assert.assertEquals(1, xattrs.size());
+    Assert.assertArrayEquals(value1, xattrs.get(name1));
+
+    hdfs.deleteSnapshot(path, snapshotName);
+    hdfs.deleteSnapshot(path, snapshotName3);
   }
 
   /**

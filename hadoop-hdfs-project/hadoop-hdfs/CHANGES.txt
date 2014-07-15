@@ -53,8 +53,6 @@ Trunk (Unreleased)
     HDFS-3030. Remove getProtocolVersion and getProtocolSignature from translators.
     (jitendra)
 
-    HDFS-2976. Remove unnecessary method (tokenRefetchNeeded) in DFSClient.
-
     HDFS-3111. Missing license headers in trunk. (umamahesh)
 
     HDFS-3091. Update the usage limitations of ReplaceDatanodeOnFailure policy in
@@ -95,8 +93,6 @@ Trunk (Unreleased)
     HDFS-3768. Exception in TestJettyHelper is incorrect. 
     (Eli Reisman via jghoman)
 
-    HDFS-3851. DFSOutputStream class code cleanup. (Jing Zhao via suresh)
-
     HDFS-2580. NameNode#main(...) can make use of GenericOptionsParser. (harsh)
 
     HDFS-2127. Add a test that ensure AccessControlExceptions contain
@@ -128,6 +124,9 @@ Trunk (Unreleased)
     HDFS-6246. Remove 'dfs.support.append' flag from trunk code. (umamahesh)
 
     HDFS-6252. Phase out the old web UI in HDFS. (wheat9)
+
+    HDFS-6609. Use DirectorySnapshottableFeature to represent a snapshottable
+    directory. (Jing Zhao via wheat9)
 
   OPTIMIZATIONS
 
@@ -197,9 +196,6 @@ Trunk (Unreleased)
     HDFS-3834. Remove unused static fields NAME, DESCRIPTION and Usage from
     Command. (Jing Zhao via suresh)
 
-    HADOOP-8158. Interrupting hadoop fs -put from the command line
-    causes a LeaseExpiredException. (daryn via harsh)
-
     HDFS-2434. TestNameNodeMetrics.testCorruptBlock fails intermittently.
     (Jing Zhao via suresh)
 
@@ -266,12 +262,55 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6511. BlockManager#computeInvalidateWork() could do nothing. (Juan Yu via wang)
 
+    HDFS-6638. Shorten test run time with a smaller retry timeout setting.
+    (Liang Xie via cnauroth)
+
+    HDFS-6627. Rename DataNode#checkWriteAccess to checkReadAccess.
+    (Liang Xie via cnauroth)
+
+    HDFS-6645. Add test for successive Snapshots between XAttr modifications.
+    (Stephen Chu via jing9)
+
+    HDFS-6643. Refactor INodeWithAdditionalFields.PermissionStatusFormat and
+    INodeFile.HeaderFormat. (szetszwo)
+
+    HDFS-6640. Syntax for MKDIRS, CREATESYMLINK, and SETXATTR are given wrongly
+    in WebHdfs document (missed webhdfs/v1). (Stephen Chu via jing9)
+
+    HDFS-5202. Support Centralized Cache Management on Windows. (cnauroth)
+
+    HDFS-2976. Remove unnecessary method (tokenRefetchNeeded) in DFSClient.
+    (Uma Maheswara Rao G)
+
+    HDFS-3851. DFSOutputStream class code cleanup. (Jing Zhao via suresh)
+
+    HDFS-2856. Fix block protocol so that Datanodes don't require root or jsvc.
+    (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
 
     HDFS-6617. Flake TestDFSZKFailoverController.testManualFailoverWithDFSHAAdmin
     due to a long edit log sync op. (Liang Xie via cnauroth)
+
+    HDFS-6646. [ HDFS Rolling Upgrade - Shell ] shutdownDatanode and getDatanodeInfo
+    usage is missed ( Brahma Reddy Battula via vinayakumarb)
+
+    HDFS-6630. Unable to fetch the block information by Browsing the file system on
+    Namenode UI through IE9 ( Haohui Mai via vinayakumarb)
+
+    HADOOP-8158. Interrupting hadoop fs -put from the command line
+    causes a LeaseExpiredException. (daryn via harsh)
+
+    HDFS-6678. MiniDFSCluster may still be partially running after initialization
+    fails. (cnauroth)
+
+    HDFS-5809. BlockPoolSliceScanner and high speed hdfs appending make
+    datanode to drop into infinite loop (cmccabe)
+
+    HDFS-6456. NFS should throw error for invalid entry in 
+    dfs.nfs.exports.allowed.hosts (Abhiraj Butala via brandonli)
 
 Release 2.5.0 - UNRELEASED
 
@@ -781,6 +820,23 @@ Release 2.5.0 - UNRELEASED
     HDFS-6604. The short-circuit cache doesn't correctly time out replicas that
     haven't been used in a while (cmccabe)
 
+    HDFS-4286. Changes from BOOKKEEPER-203 broken capability of including 
+    bookkeeper-server jar in hidden package of BKJM (Rakesh R via umamahesh)
+
+    HDFS-4221. Remove the format limitation point from BKJM documentation as HDFS-3810
+    closed. (Rakesh R via umamahesh)
+
+    HDFS-5411. Update Bookkeeper dependency to 4.2.3. (Rakesh R via umamahesh)
+
+    HDFS-6631. TestPread#testHedgedReadLoopTooManyTimes fails intermittently.
+    (Liang Xie via cnauroth)
+
+    HDFS-6647. Edit log corruption when pipeline recovery occurs for deleted 
+    file present in snapshot (kihwal)
+
+    HDFS-6378. NFS registration should timeout instead of hanging when
+    portmap/rpcbind is not available (Abhiraj Butala via brandonli)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
@@ -852,6 +908,12 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6312. WebHdfs HA failover is broken on secure clusters. 
     (daryn via tucu)
+
+    HDFS-6618. FSNamesystem#delete drops the FSN lock between removing INodes
+    from the tree and deleting them from the inode map (kihwal via cmccabe)
+
+    HDFS-6622. Rename and AddBlock may race and produce invalid edits (kihwal
+    via cmccabe)
 
 Release 2.4.1 - 2014-06-23 
 

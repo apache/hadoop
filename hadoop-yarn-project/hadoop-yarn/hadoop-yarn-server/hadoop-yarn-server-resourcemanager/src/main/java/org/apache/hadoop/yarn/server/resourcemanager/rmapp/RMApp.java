@@ -223,4 +223,11 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    * @return the external user-facing state of ApplicationMaster.
    */
   YarnApplicationState createApplicationState();
+  
+  /**
+   * Get RMAppMetrics of the {@link RMApp}.
+   * 
+   * @return metrics
+   */
+  RMAppMetrics getRMAppMetrics();
 }

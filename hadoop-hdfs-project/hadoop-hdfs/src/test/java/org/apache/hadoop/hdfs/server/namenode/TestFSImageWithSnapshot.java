@@ -43,7 +43,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.util.Canceler;
@@ -194,8 +193,8 @@ public class TestFSImageWithSnapshot {
     fsn = cluster.getNamesystem();
     hdfs = cluster.getFileSystem();
     
-    INodeDirectorySnapshottable rootNode = 
-        (INodeDirectorySnapshottable) fsn.dir.getINode4Write(root.toString());
+    INodeDirectory rootNode = fsn.dir.getINode4Write(root.toString())
+        .asDirectory();
     assertTrue("The children list of root should be empty", 
         rootNode.getChildrenList(Snapshot.CURRENT_STATE_ID).isEmpty());
     // one snapshot on root: s1

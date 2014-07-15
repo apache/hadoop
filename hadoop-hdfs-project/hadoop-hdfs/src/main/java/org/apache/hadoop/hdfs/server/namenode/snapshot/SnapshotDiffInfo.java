@@ -99,7 +99,7 @@ class SnapshotDiffInfo {
   }
 
   /** The root directory of the snapshots */
-  private final INodeDirectorySnapshottable snapshotRoot;
+  private final INodeDirectory snapshotRoot;
   /** The starting point of the difference */
   private final Snapshot from;
   /** The end point of the difference */
@@ -122,8 +122,8 @@ class SnapshotDiffInfo {
   private final Map<Long, RenameEntry> renameMap =
       new HashMap<Long, RenameEntry>();
 
-  SnapshotDiffInfo(INodeDirectorySnapshottable snapshotRoot, Snapshot start,
-      Snapshot end) {
+  SnapshotDiffInfo(INodeDirectory snapshotRoot, Snapshot start, Snapshot end) {
+    Preconditions.checkArgument(snapshotRoot.isSnapshottable());
     this.snapshotRoot = snapshotRoot;
     this.from = start;
     this.to = end;

@@ -19,12 +19,15 @@ package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY;
@@ -660,73 +663,81 @@ public class MiniDFSCluster {
       boolean checkDataNodeHostConfig,
       Configuration[] dnConfOverlays)
   throws IOException {
-    ExitUtil.disableSystemExit();
-
-    synchronized (MiniDFSCluster.class) {
-      instanceId = instanceCount++;
-    }
-
-    this.conf = conf;
-    base_dir = new File(determineDfsBaseDir());
-    data_dir = new File(base_dir, "data");
-    this.waitSafeMode = waitSafeMode;
-    this.checkExitOnShutdown = checkExitOnShutdown;
-    
-    int replication = conf.getInt(DFS_REPLICATION_KEY, 3);
-    conf.setInt(DFS_REPLICATION_KEY, Math.min(replication, numDataNodes));
-    int safemodeExtension = conf.getInt(
-        DFS_NAMENODE_SAFEMODE_EXTENSION_TESTING_KEY, 0);
-    conf.setInt(DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, safemodeExtension);
-    conf.setInt(DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 3); // 3 second
-    conf.setClass(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY, 
-                   StaticMapping.class, DNSToSwitchMapping.class);
-    
-    // In an HA cluster, in order for the StandbyNode to perform checkpoints,
-    // it needs to know the HTTP port of the Active. So, if ephemeral ports
-    // are chosen, disable checkpoints for the test.
-    if (!nnTopology.allHttpPortsSpecified() &&
-        nnTopology.isHA()) {
-      LOG.info("MiniDFSCluster disabling checkpointing in the Standby node " +
-          "since no HTTP ports have been specified.");
-      conf.setBoolean(DFS_HA_STANDBY_CHECKPOINTS_KEY, false);
-    }
-    if (!nnTopology.allIpcPortsSpecified() &&
-        nnTopology.isHA()) {
-      LOG.info("MiniDFSCluster disabling log-roll triggering in the "
-          + "Standby node since no IPC ports have been specified.");
-      conf.setInt(DFS_HA_LOGROLL_PERIOD_KEY, -1);
-    }
-    
-    federation = nnTopology.isFederated();
+    boolean success = false;
     try {
-      createNameNodesAndSetConf(
-          nnTopology, manageNameDfsDirs, manageNameDfsSharedDirs,
-          enableManagedDfsDirsRedundancy,
-          format, startOpt, clusterId, conf);
-    } catch (IOException ioe) {
-      LOG.error("IOE creating namenodes. Permissions dump:\n" +
-          createPermissionsDiagnosisString(data_dir));
-      throw ioe;
-    }
-    if (format) {
-      if (data_dir.exists() && !FileUtil.fullyDelete(data_dir)) {
-        throw new IOException("Cannot remove data directory: " + data_dir +
+      ExitUtil.disableSystemExit();
+
+      synchronized (MiniDFSCluster.class) {
+        instanceId = instanceCount++;
+      }
+
+      this.conf = conf;
+      base_dir = new File(determineDfsBaseDir());
+      data_dir = new File(base_dir, "data");
+      this.waitSafeMode = waitSafeMode;
+      this.checkExitOnShutdown = checkExitOnShutdown;
+    
+      int replication = conf.getInt(DFS_REPLICATION_KEY, 3);
+      conf.setInt(DFS_REPLICATION_KEY, Math.min(replication, numDataNodes));
+      int safemodeExtension = conf.getInt(
+          DFS_NAMENODE_SAFEMODE_EXTENSION_TESTING_KEY, 0);
+      conf.setInt(DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, safemodeExtension);
+      conf.setInt(DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 3); // 3 second
+      conf.setClass(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY, 
+                     StaticMapping.class, DNSToSwitchMapping.class);
+    
+      // In an HA cluster, in order for the StandbyNode to perform checkpoints,
+      // it needs to know the HTTP port of the Active. So, if ephemeral ports
+      // are chosen, disable checkpoints for the test.
+      if (!nnTopology.allHttpPortsSpecified() &&
+          nnTopology.isHA()) {
+        LOG.info("MiniDFSCluster disabling checkpointing in the Standby node " +
+            "since no HTTP ports have been specified.");
+        conf.setBoolean(DFS_HA_STANDBY_CHECKPOINTS_KEY, false);
+      }
+      if (!nnTopology.allIpcPortsSpecified() &&
+          nnTopology.isHA()) {
+        LOG.info("MiniDFSCluster disabling log-roll triggering in the "
+            + "Standby node since no IPC ports have been specified.");
+        conf.setInt(DFS_HA_LOGROLL_PERIOD_KEY, -1);
+      }
+    
+      federation = nnTopology.isFederated();
+      try {
+        createNameNodesAndSetConf(
+            nnTopology, manageNameDfsDirs, manageNameDfsSharedDirs,
+            enableManagedDfsDirsRedundancy,
+            format, startOpt, clusterId, conf);
+      } catch (IOException ioe) {
+        LOG.error("IOE creating namenodes. Permissions dump:\n" +
             createPermissionsDiagnosisString(data_dir));
+        throw ioe;
+      }
+      if (format) {
+        if (data_dir.exists() && !FileUtil.fullyDelete(data_dir)) {
+          throw new IOException("Cannot remove data directory: " + data_dir +
+              createPermissionsDiagnosisString(data_dir));
+        }
+      }
+    
+      if (startOpt == StartupOption.RECOVER) {
+        return;
+      }
+
+      // Start the DataNodes
+      startDataNodes(conf, numDataNodes, storageType, manageDataDfsDirs,
+          dnStartOpt != null ? dnStartOpt : startOpt,
+          racks, hosts, simulatedCapacities, setupHostsFile,
+          checkDataNodeAddrConfig, checkDataNodeHostConfig, dnConfOverlays);
+      waitClusterUp();
+      //make sure ProxyUsers uses the latest conf
+      ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+      success = true;
+    } finally {
+      if (!success) {
+        shutdown();
       }
     }
-    
-    if (startOpt == StartupOption.RECOVER) {
-      return;
-    }
-
-    // Start the DataNodes
-    startDataNodes(conf, numDataNodes, storageType, manageDataDfsDirs,
-        dnStartOpt != null ? dnStartOpt : startOpt,
-        racks, hosts, simulatedCapacities, setupHostsFile,
-        checkDataNodeAddrConfig, checkDataNodeHostConfig, dnConfOverlays);
-    waitClusterUp();
-    //make sure ProxyUsers uses the latest conf
-    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
   }
   
   /**
@@ -1308,15 +1319,42 @@ public class MiniDFSCluster {
       }
 
       SecureResources secureResources = null;
-      if (UserGroupInformation.isSecurityEnabled()) {
+      if (UserGroupInformation.isSecurityEnabled() &&
+          conf.get(DFS_DATA_TRANSFER_PROTECTION_KEY) == null) {
         try {
           secureResources = SecureDataNodeStarter.getSecureResources(dnConf);
         } catch (Exception ex) {
           ex.printStackTrace();
         }
       }
-      DataNode dn = DataNode.instantiateDataNode(dnArgs, dnConf,
-                                                 secureResources);
+      final int maxRetriesOnSasl = conf.getInt(
+        IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_KEY,
+        IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_DEFAULT);
+      int numRetries = 0;
+      DataNode dn = null;
+      while (true) {
+        try {
+          dn = DataNode.instantiateDataNode(dnArgs, dnConf,
+                                            secureResources);
+          break;
+        } catch (IOException e) {
+          // Work around issue testing security where rapidly starting multiple
+          // DataNodes using the same principal gets rejected by the KDC as a
+          // replay attack.
+          if (UserGroupInformation.isSecurityEnabled() &&
+              numRetries < maxRetriesOnSasl) {
+            try {
+              Thread.sleep(1000);
+            } catch (InterruptedException ie) {
+              Thread.currentThread().interrupt();
+              break;
+            }
+            ++numRetries;
+            continue;
+          }
+          throw e;
+        }
+      }
       if(dn == null)
         throw new IOException("Cannot start DataNode in "
             + dnConf.get(DFS_DATANODE_DATA_DIR_KEY));

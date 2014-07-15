@@ -515,6 +515,13 @@ public class FileSystemRMStateStore extends RMStateStore {
     deleteFile(nodeCreatePath);
   }
 
+  @Override
+  public synchronized void deleteStore() throws IOException {
+    if (fs.exists(rootDirPath)) {
+      fs.delete(rootDirPath, true);
+    }
+  }
+
   private Path getAppDir(Path root, String appId) {
     return getNodePath(root, appId);
   }

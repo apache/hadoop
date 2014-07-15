@@ -671,7 +671,7 @@
 
   <property>
     <name>mapreduce.task.profile.params</name>
-    <value></value>
+    <value>-agentlib:hprof=cpu=samples,heap=sites,force=n,thread=y,verbose=n,file=%s</value>
     <description>JVM profiler parameters used to profile map and reduce task
       attempts. This string may contain a single format specifier %s that will
       be replaced by the path to profile.out in the task attempt log directory.

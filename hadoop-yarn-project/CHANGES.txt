@@ -24,10 +24,27 @@ Release 2.6.0 - UNRELEASED
 
   NEW FEATURES
 
+    YARN-2131. Add a way to format the RMStateStore. (Robert Kanter via kasha)
+
+    YARN-1367. Changed NM to not kill containers on NM resync if RM work-preserving
+    restart is enabled. (Anubhav Dhoot via jianhe)
+
+    YARN-1366. Changed AMRMClient to re-register with RM and send outstanding requests
+    back to RM on work-preserving RM restart. (Rohith via jianhe)
+
+    YARN-2181. Added preemption info to logs and RM web UI. (Wangda Tan via
+    jianhe)
+
   IMPROVEMENTS
 
     YARN-2242. Improve exception information on AM launch crashes. (Li Lu 
     via junping_du)
+
+    YARN-2274. FairScheduler: Add debug information about cluster capacity, 
+    availability and reservations. (kasha)
+
+    YARN-2228. Augmented TimelineServer to load pseudo authentication filter when
+    authentication = simple. (Zhijie Shen via vinodkv)
 
   OPTIMIZATIONS
 
@@ -35,6 +52,12 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2251. Avoid negative elapsed time in JHS/MRAM web UI and services.
     (Zhijie Shen via junping_du)
+
+    YARN-2088. Fixed a bug in GetApplicationsRequestPBImpl#mergeLocalToBuilder.
+    (Binglin Chang via jianhe)
+
+    YARN-2260. Fixed ResourceManager's RMNode to correctly remember containers
+    when nodes resync during work-preserving RM restart. (Jian He via vinodkv)
 
 Release 2.5.0 - UNRELEASED
 
@@ -71,9 +94,6 @@ Release 2.5.0 - UNRELEASED
 
     YARN-1713. Added get-new-app and submit-app functionality to RM web services.
     (Varun Vasudev via vinodkv)
-
-    YARN-1367. Changed NM to not kill containers on NM resync if RM work-preserving
-    restart is enabled. (Anubhav Dhoot via jianhe)
 
   IMPROVEMENTS
 
@@ -228,7 +248,7 @@ Release 2.5.0 - UNRELEASED
     YARN-614. Changed ResourceManager to not count disk failure, node loss and
     RM restart towards app failures. (Xuan Gong via jianhe)
 
-    YARN-2204. Explicitly enable vmem check in
+    YARN-2224. Explicitly enable vmem check in
     TestContainersMonitor#testContainerKillOnMemoryOverflow.
     (Anubhav Dhoot via kasha)
 
@@ -354,6 +374,11 @@ Release 2.5.0 - UNRELEASED
 
     YARN-2250. FairScheduler.findLowestCommonAncestorQueue returns null when
     queues not identical (Krisztian Horvath via Sandy Ryza)
+
+    YARN-2158. Improved assertion messages of TestRMWebServicesAppsModification.
+    (Varun Vasudev via zjshen)
+
+    YARN-2269. Remove external links from YARN UI. (Craig Welch via xgong)
 
 Release 2.4.1 - 2014-06-23 
 

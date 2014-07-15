@@ -97,14 +97,12 @@ public interface INodeAttributes {
 
     @Override
     public final String getUserName() {
-      final int n = (int)PermissionStatusFormat.USER.retrieve(permission);
-      return SerialNumberManager.INSTANCE.getUser(n);
+      return PermissionStatusFormat.getUser(permission);
     }
 
     @Override
     public final String getGroupName() {
-      final int n = (int)PermissionStatusFormat.GROUP.retrieve(permission);
-      return SerialNumberManager.INSTANCE.getGroup(n);
+      return PermissionStatusFormat.getGroup(permission);
     }
 
     @Override
@@ -114,7 +112,7 @@ public interface INodeAttributes {
 
     @Override
     public final short getFsPermissionShort() {
-      return (short)PermissionStatusFormat.MODE.retrieve(permission);
+      return PermissionStatusFormat.getMode(permission);
     }
     
     @Override

@@ -131,7 +131,7 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
     } catch (IOException e) {
       String request = set ? "Registration" : "Unregistration";
       LOG.error(request + " failure with " + host + ":" + port
-          + ", portmap entry: " + mapEntry, e);
+          + ", portmap entry: " + mapEntry);
       throw new RuntimeException(request + " failure", e);
     }
   }

@@ -71,7 +71,16 @@ public class NfsExports {
   
   private static final Pattern CIDR_FORMAT_LONG = 
       Pattern.compile(SLASH_FORMAT_LONG);
-  
+
+  // Hostnames are composed of series of 'labels' concatenated with dots.
+  // Labels can be between 1-63 characters long, and can only take
+  // letters, digits & hyphens. They cannot start and end with hyphens. For
+  // more details, refer RFC-1123 & http://en.wikipedia.org/wiki/Hostname
+  private static final String LABEL_FORMAT =
+      "[a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?";
+  private static final Pattern HOSTNAME_FORMAT =
+      Pattern.compile("^(" + LABEL_FORMAT + "\\.)*" + LABEL_FORMAT + "$");
+
   static class AccessCacheEntry implements LightWeightCache.Entry{
     private final String hostAddr;
     private AccessPrivilege access;
@@ -381,10 +390,14 @@ public class NfsExports {
         LOG.debug("Using Regex match for '" + host + "' and " + privilege);
       }
       return new RegexMatch(privilege, host);
+    } else if (HOSTNAME_FORMAT.matcher(host).matches()) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Using exact match for '" + host + "' and " + privilege);
+      }
+      return new ExactMatch(privilege, host);
+    } else {
+      throw new IllegalArgumentException("Invalid hostname provided '" + host
+          + "'");
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Using exact match for '" + host + "' and " + privilege);
-    }
-    return new ExactMatch(privilege, host);
   }
 }

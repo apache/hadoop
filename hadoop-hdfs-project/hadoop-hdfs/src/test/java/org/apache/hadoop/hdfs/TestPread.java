@@ -284,15 +284,17 @@ public class TestPread {
         numHedgedReadPoolThreads);
     conf.setLong(DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THRESHOLD_MILLIS,
         hedgedReadTimeoutMillis);
+    conf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, 0);
     // Set up the InjectionHandler
     DFSClientFaultInjector.instance = Mockito
         .mock(DFSClientFaultInjector.class);
     DFSClientFaultInjector injector = DFSClientFaultInjector.instance;
+    final int sleepMs = 100;
     Mockito.doAnswer(new Answer<Void>() {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
         if (true) {
-          Thread.sleep(hedgedReadTimeoutMillis + 1);
+          Thread.sleep(hedgedReadTimeoutMillis + sleepMs);
           if (DFSClientFaultInjector.exceptionNum.compareAndSet(0, 1)) {
             System.out.println("-------------- throw Checksum Exception");
             throw new ChecksumException("ChecksumException test", 100);
@@ -301,6 +303,15 @@ public class TestPread {
         return null;
       }
     }).when(injector).fetchFromDatanodeException();
+    Mockito.doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        if (true) {
+          Thread.sleep(sleepMs * 2);
+        }
+        return null;
+      }
+    }).when(injector).readFromDatanodeDelay();
 
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
         .format(true).build();
@@ -329,11 +340,11 @@ public class TestPread {
     } catch (BlockMissingException e) {
       assertTrue(false);
     } finally {
+      Mockito.reset(injector);
       IOUtils.cleanup(null, input);
       IOUtils.cleanup(null, output);
       fileSys.close();
       cluster.shutdown();
-      Mockito.reset(injector);
     }
   }
 

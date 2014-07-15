@@ -18,13 +18,19 @@
 
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+
 import java.util.ArrayList;
 
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INode;
-import org.junit.*;
-import static org.mockito.Mockito.*;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
+import org.junit.Assert;
+import org.junit.Test;
 
 
 /**
@@ -40,7 +46,7 @@ public class TestSnapshotManager {
   public void testSnapshotLimits() throws Exception {
     // Setup mock objects for SnapshotManager.createSnapshot.
     //
-    INodeDirectorySnapshottable ids = mock(INodeDirectorySnapshottable.class);
+    INodeDirectory ids = mock(INodeDirectory.class);
     FSDirectory fsdir = mock(FSDirectory.class);
 
     SnapshotManager sm = spy(new SnapshotManager(fsdir));

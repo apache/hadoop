@@ -561,6 +561,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_ENCRYPT_DATA_TRANSFER_DEFAULT = false;
   public static final String DFS_DATA_ENCRYPTION_ALGORITHM_KEY = "dfs.encrypt.data.transfer.algorithm";
   public static final String DFS_TRUSTEDCHANNEL_RESOLVER_CLASS = "dfs.trustedchannel.resolver.class";
+  public static final String DFS_DATA_TRANSFER_PROTECTION_KEY = "dfs.data.transfer.protection";
+  public static final String DFS_DATA_TRANSFER_SASL_PROPS_RESOLVER_CLASS_KEY = "dfs.data.transfer.saslproperties.resolver.class";
   public static final String DFS_NAMENODE_KEY_VERSION_REFRESH_INTERVAL_MS_KEY = "dfs.namenode.key.version.refresh.interval.ms";
   public static final int DFS_NAMENODE_KEY_VERSION_REFRESH_INTERVAL_MS_DEFAULT = 5*60*1000;
   

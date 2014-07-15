@@ -36,7 +36,7 @@
 struct hadoop_user_info *hadoop_user_info_alloc(void)
 {
   struct hadoop_user_info *uinfo;
-  size_t buf_sz;
+  long buf_sz;
   char *buf;
 
   uinfo = calloc(1, sizeof(struct hadoop_user_info));
@@ -193,7 +193,7 @@ int hadoop_user_info_getgroups(struct hadoop_user_info *uinfo)
   ngroups = uinfo->gids_size;
   ret = getgrouplist(uinfo->pwd.pw_name, uinfo->pwd.pw_gid, 
                          uinfo->gids, &ngroups);
-  if (ret > 0) {
+  if (ret >= 0) {
     uinfo->num_gids = ngroups;
     ret = put_primary_gid_first(uinfo);
     if (ret) {

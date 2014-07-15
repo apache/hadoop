@@ -72,6 +72,7 @@ public class TimelineClientImpl extends TimelineClient {
 
   private static final Log LOG = LogFactory.getLog(TimelineClientImpl.class);
   private static final String RESOURCE_URI_STR = "/ws/v1/timeline/";
+  private static final String URL_PARAM_USER_NAME = "user.name";
   private static final Joiner JOINER = Joiner.on("");
   private static Options opts;
   static {
@@ -84,17 +85,18 @@ public class TimelineClientImpl extends TimelineClient {
   private Client client;
   private URI resURI;
   private boolean isEnabled;
-  private TimelineAuthenticatedURLConnectionFactory urlFactory;
+  private KerberosAuthenticatedURLConnectionFactory urlFactory;
 
   public TimelineClientImpl() {
     super(TimelineClientImpl.class.getName());
     ClientConfig cc = new DefaultClientConfig();
     cc.getClasses().add(YarnJacksonJaxbJsonProvider.class);
     if (UserGroupInformation.isSecurityEnabled()) {
-      urlFactory = new TimelineAuthenticatedURLConnectionFactory();
+      urlFactory = new KerberosAuthenticatedURLConnectionFactory();
       client = new Client(new URLConnectionClientHandler(urlFactory), cc);
     } else {
-      client = Client.create(cc);
+      client = new Client(new URLConnectionClientHandler(
+          new PseudoAuthenticatedURLConnectionFactory()), cc);
     }
   }
 
@@ -177,7 +179,23 @@ public class TimelineClientImpl extends TimelineClient {
         .post(ClientResponse.class, entities);
   }
 
-  private static class TimelineAuthenticatedURLConnectionFactory
+  private static class PseudoAuthenticatedURLConnectionFactory
+    implements HttpURLConnectionFactory {
+
+    @Override
+    public HttpURLConnection getHttpURLConnection(URL url) throws IOException {
+      Map<String, String> params = new HashMap<String, String>();
+      params.put(URL_PARAM_USER_NAME,
+          UserGroupInformation.getCurrentUser().getShortUserName());
+      url = TimelineAuthenticator.appendParams(url, params);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("URL with delegation token: " + url);
+      }
+      return (HttpURLConnection) url.openConnection();
+    }
+
+  }
+  private static class KerberosAuthenticatedURLConnectionFactory
       implements HttpURLConnectionFactory {
 
     private AuthenticatedURL.Token token;
@@ -185,7 +203,7 @@ public class TimelineClientImpl extends TimelineClient {
     private Token<TimelineDelegationTokenIdentifier> dToken;
     private Text service;
 
-    public TimelineAuthenticatedURLConnectionFactory() {
+    public KerberosAuthenticatedURLConnectionFactory() {
       token = new AuthenticatedURL.Token();
       authenticator = new TimelineAuthenticator();
     }

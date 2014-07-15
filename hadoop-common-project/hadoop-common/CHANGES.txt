@@ -177,6 +177,11 @@ Trunk (Unreleased)
     HADOOP-10769. Create KeyProvider extension to handle delegation tokens.
     (Arun Suresh via atm)
 
+    HADOOP-10812. Delegate KeyProviderExtension#toString to underlying
+    KeyProvider. (wang)
+
+    HADOOP-10736. Add key attributes to the key shell. (Mike Yoder via wang)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -374,6 +379,10 @@ Trunk (Unreleased)
     NativeAzureFileSystem#NativeAzureFsInputStream#close().
     (Chen He via cnauroth)
 
+    HADOOP-10831. UserProvider is not thread safe. (Benoy Antony via umamahesh)
+
+    HADOOP-10834. Typo in CredentialShell usage. (Benoy Antony via umamahesh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -388,9 +397,24 @@ Release 2.6.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-10808. Remove unused native code for munlock. (cnauroth)
+
+    HADOOP-10815. Implement Windows equivalent of mlock. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HADOOP-10781. Unportable getgrouplist() usage breaks FreeBSD (Dmitry
+    Sivachenko via Colin Patrick McCabe)
+
+    HADOOP-10507. FsShell setfacl can throw ArrayIndexOutOfBoundsException when
+    no perm is specified. (Stephen Chu and Sathish Gurram via cnauroth)
+
+    HADOOP-10780. hadoop_user_info_alloc fails on FreeBSD due to incorrect
+    sysconf use (Dmitry Sivachenko via Colin Patrick McCabe)
+
+    HADOOP-10810. Clean up native code compilation warnings. (cnauroth)
 
 Release 2.5.0 - UNRELEASED
 
@@ -678,6 +702,8 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10419 BufferedFSInputStream NPEs on getPos() on a closed stream
     (stevel)
+
+    HADOOP-10801 dead link in site.xml (Akira AJISAKA via stevel)
 
   BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
 

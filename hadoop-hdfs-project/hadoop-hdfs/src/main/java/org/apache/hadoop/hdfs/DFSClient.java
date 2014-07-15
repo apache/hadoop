@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT;
@@ -140,6 +142,7 @@ import org.apache.hadoop.hdfs.protocol.CachePoolIterator;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
@@ -158,16 +161,19 @@ import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
-import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferEncryptor;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Op;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
 import org.apache.hadoop.hdfs.protocol.datatransfer.TrustedChannelResolver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
+import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataEncryptionKeyFactory;
+import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil;
+import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferClient;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -214,7 +220,8 @@ import com.google.common.net.InetAddresses;
  *
  ********************************************************/
 @InterfaceAudience.Private
-public class DFSClient implements java.io.Closeable, RemotePeerFactory {
+public class DFSClient implements java.io.Closeable, RemotePeerFactory,
+    DataEncryptionKeyFactory {
   public static final Log LOG = LogFactory.getLog(DFSClient.class);
   public static final long SERVER_DEFAULTS_VALIDITY_PERIOD = 60 * 60 * 1000L; // 1 hour
   static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
@@ -238,7 +245,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
   private final Random r = new Random();
   private SocketAddress[] localInterfaceAddrs;
   private DataEncryptionKey encryptionKey;
-  final TrustedChannelResolver trustedChannelResolver;
+  final SaslDataTransferClient saslClient;
   private final CachingStrategy defaultReadCachingStrategy;
   private final CachingStrategy defaultWriteCachingStrategy;
   private final ClientContext clientContext;
@@ -646,7 +653,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
     if (numThreads > 0) {
       this.initThreadsNumForHedgedReads(numThreads);
     }
-    this.trustedChannelResolver = TrustedChannelResolver.getInstance(getConfiguration());
+    this.saslClient = new SaslDataTransferClient(
+      DataTransferSaslUtil.getSaslPropertiesResolver(conf),
+      TrustedChannelResolver.getInstance(conf),
+      conf.getBoolean(
+        IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
+        IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT));
   }
   
   /**
@@ -1864,23 +1876,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
                                      UnresolvedPathException.class);
      }
    }
-
-  /**
-   * Get the checksum of the whole file of a range of the file. Note that the
-   * range always starts from the beginning of the file.
-   * @param src The file path
-   * @param length The length of the range
-   * @return The checksum 
-   * @see DistributedFileSystem#getFileChecksum(Path)
-   */
-  public MD5MD5CRC32FileChecksum getFileChecksum(String src, long length)
-      throws IOException {
-    checkOpen();
-    Preconditions.checkArgument(length >= 0);
-    return getFileChecksum(src, length, clientName, namenode,
-        socketFactory, dfsClientConf.socketTimeout, getDataEncryptionKey(),
-        dfsClientConf.connectToDnViaHostname);
-  }
   
   @InterfaceAudience.Private
   public void clearDataEncryptionKey() {
@@ -1900,11 +1895,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
     return d == null ? false : d.getEncryptDataTransfer();
   }
   
-  @InterfaceAudience.Private
-  public DataEncryptionKey getDataEncryptionKey()
-      throws IOException {
-    if (shouldEncryptData() && 
-        !this.trustedChannelResolver.isTrusted()) {
+  @Override
+  public DataEncryptionKey newDataEncryptionKey() throws IOException {
+    if (shouldEncryptData()) {
       synchronized (this) {
         if (encryptionKey == null ||
             encryptionKey.expiryDate < Time.now()) {
@@ -1919,22 +1912,17 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
   }
 
   /**
-   * Get the checksum of the whole file or a range of the file.
+   * Get the checksum of the whole file of a range of the file. Note that the
+   * range always starts from the beginning of the file.
    * @param src The file path
    * @param length the length of the range, i.e., the range is [0, length]
-   * @param clientName the name of the client requesting the checksum.
-   * @param namenode the RPC proxy for the namenode
-   * @param socketFactory to create sockets to connect to DNs
-   * @param socketTimeout timeout to use when connecting and waiting for a response
-   * @param encryptionKey the key needed to communicate with DNs in this cluster
-   * @param connectToDnViaHostname whether the client should use hostnames instead of IPs
    * @return The checksum 
+   * @see DistributedFileSystem#getFileChecksum(Path)
    */
-  private static MD5MD5CRC32FileChecksum getFileChecksum(String src,
-      long length, String clientName, ClientProtocol namenode,
-      SocketFactory socketFactory, int socketTimeout,
-      DataEncryptionKey encryptionKey, boolean connectToDnViaHostname)
+  public MD5MD5CRC32FileChecksum getFileChecksum(String src, long length)
       throws IOException {
+    checkOpen();
+    Preconditions.checkArgument(length >= 0);
     //get block locations for the file range
     LocatedBlocks blockLocations = callGetBlockLocations(namenode, src, 0,
         length);
@@ -1969,7 +1957,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
       final DatanodeInfo[] datanodes = lb.getLocations();
       
       //try each datanode location of the block
-      final int timeout = 3000 * datanodes.length + socketTimeout;
+      final int timeout = 3000 * datanodes.length + dfsClientConf.socketTimeout;
       boolean done = false;
       for(int j = 0; !done && j < datanodes.length; j++) {
         DataOutputStream out = null;
@@ -1977,8 +1965,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
         
         try {
           //connect to a datanode
-          IOStreamPair pair = connectToDN(socketFactory, connectToDnViaHostname,
-              encryptionKey, datanodes[j], timeout);
+          IOStreamPair pair = connectToDN(datanodes[j], timeout, lb);
           out = new DataOutputStream(new BufferedOutputStream(pair.out,
               HdfsConstants.SMALL_BUFFER_SIZE));
           in = new DataInputStream(pair.in);
@@ -2034,9 +2021,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
           } else {
             LOG.debug("Retrieving checksum from an earlier-version DataNode: " +
                       "inferring checksum by reading first byte");
-            ct = inferChecksumTypeByReading(
-                clientName, socketFactory, socketTimeout, lb, datanodes[j],
-                encryptionKey, connectToDnViaHostname);
+            ct = inferChecksumTypeByReading(lb, datanodes[j]);
           }
 
           if (i == 0) { // first block
@@ -2110,16 +2095,13 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
    * Connect to the given datanode's datantrasfer port, and return
    * the resulting IOStreamPair. This includes encryption wrapping, etc.
    */
-  private static IOStreamPair connectToDN(
-      SocketFactory socketFactory, boolean connectToDnViaHostname,
-      DataEncryptionKey encryptionKey, DatanodeInfo dn, int timeout)
-      throws IOException
-  {
+  private IOStreamPair connectToDN(DatanodeInfo dn, int timeout,
+      LocatedBlock lb) throws IOException {
     boolean success = false;
     Socket sock = null;
     try {
       sock = socketFactory.createSocket();
-      String dnAddr = dn.getXferAddr(connectToDnViaHostname);
+      String dnAddr = dn.getXferAddr(getConf().connectToDnViaHostname);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Connecting to datanode " + dnAddr);
       }
@@ -2128,13 +2110,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
   
       OutputStream unbufOut = NetUtils.getOutputStream(sock);
       InputStream unbufIn = NetUtils.getInputStream(sock);
-      IOStreamPair ret;
-      if (encryptionKey != null) {
-        ret = DataTransferEncryptor.getEncryptedStreams(
-                unbufOut, unbufIn, encryptionKey);
-      } else {
-        ret = new IOStreamPair(unbufIn, unbufOut);        
-      }
+      IOStreamPair ret = saslClient.newSocketSend(sock, unbufOut, unbufIn, this,
+        lb.getBlockToken(), dn);
       success = true;
       return ret;
     } finally {
@@ -2150,21 +2127,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
    * with older HDFS versions which did not include the checksum type in
    * OpBlockChecksumResponseProto.
    *
-   * @param in input stream from datanode
-   * @param out output stream to datanode
    * @param lb the located block
-   * @param clientName the name of the DFSClient requesting the checksum
    * @param dn the connected datanode
    * @return the inferred checksum type
    * @throws IOException if an error occurs
    */
-  private static Type inferChecksumTypeByReading(
-      String clientName, SocketFactory socketFactory, int socketTimeout,
-      LocatedBlock lb, DatanodeInfo dn,
-      DataEncryptionKey encryptionKey, boolean connectToDnViaHostname)
+  private Type inferChecksumTypeByReading(LocatedBlock lb, DatanodeInfo dn)
       throws IOException {
-    IOStreamPair pair = connectToDN(socketFactory, connectToDnViaHostname,
-        encryptionKey, dn, socketTimeout);
+    IOStreamPair pair = connectToDN(dn, dfsClientConf.socketTimeout, lb);
 
     try {
       DataOutputStream out = new DataOutputStream(new BufferedOutputStream(pair.out,
@@ -2938,7 +2908,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
   }
 
   @Override // RemotePeerFactory
-  public Peer newConnectedPeer(InetSocketAddress addr) throws IOException {
+  public Peer newConnectedPeer(InetSocketAddress addr,
+      Token<BlockTokenIdentifier> blockToken, DatanodeID datanodeId)
+      throws IOException {
     Peer peer = null;
     boolean success = false;
     Socket sock = null;
@@ -2947,8 +2919,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
       NetUtils.connect(sock, addr,
         getRandomLocalInterfaceAddr(),
         dfsClientConf.socketTimeout);
-      peer = TcpPeerServer.peerFromSocketAndKey(sock, 
-          getDataEncryptionKey());
+      peer = TcpPeerServer.peerFromSocketAndKey(saslClient, sock, this,
+          blockToken, datanodeId);
       success = true;
       return peer;
     } finally {

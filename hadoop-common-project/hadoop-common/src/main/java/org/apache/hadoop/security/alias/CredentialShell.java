@@ -264,7 +264,7 @@ public class CredentialShell extends Configured implements Tool {
                   alias + " from CredentialProvider " + provider.toString() +
                   ". Continue?:");
           if (!cont) {
-            out.println("Nothing has been be deleted.");
+            out.println("Nothing has been deleted.");
           }
           return cont;
         } catch (IOException e) {

@@ -52,4 +52,6 @@ public class DFSClientFaultInjector {
   public void startFetchFromDatanode() {}
 
   public void fetchFromDatanodeException() {}
+
+  public void readFromDatanodeDelay() {}
 }
