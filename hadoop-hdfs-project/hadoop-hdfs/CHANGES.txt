@@ -59,6 +59,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-5809. BlockPoolSliceScanner and high speed hdfs appending make
     datanode to drop into infinite loop (cmccabe)
 
+    HDFS-6456. NFS should throw error for invalid entry in 
+    dfs.nfs.exports.allowed.hosts (Abhiraj Butala via brandonli)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
