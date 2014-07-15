@@ -496,6 +496,8 @@ public class TestRPC {
       caught = true;
     }
     assertTrue(caught);
+    rb = getMetrics(server.rpcDetailedMetrics.name());
+    assertCounter("IOExceptionNumOps", 1L, rb);
 
     proxy.testServerGet();
 

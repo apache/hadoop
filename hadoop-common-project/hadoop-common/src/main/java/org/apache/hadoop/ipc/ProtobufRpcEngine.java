@@ -579,24 +579,35 @@ public class ProtobufRpcEngine implements RpcEngine {
             .mergeFrom(request.theRequestRead).build();
         
         Message result;
+        long startTime = Time.now();
+        int qTime = (int) (startTime - receiveTime);
+        Exception exception = null;
         try {
-          long startTime = Time.now();
           server.rpcDetailedMetrics.init(protocolImpl.protocolClass);
           result = service.callBlockingMethod(methodDescriptor, null, param);
-          int processingTime = (int) (Time.now() - startTime);
-          int qTime = (int) (startTime - receiveTime);
-          if (LOG.isDebugEnabled()) {
-            LOG.info("Served: " + methodName + " queueTime= " + qTime +
-                      " procesingTime= " + processingTime);
-          }
-          server.rpcMetrics.addRpcQueueTime(qTime);
-          server.rpcMetrics.addRpcProcessingTime(processingTime);
-          server.rpcDetailedMetrics.addProcessingTime(methodName,
-              processingTime);
         } catch (ServiceException e) {
+          exception = (Exception) e.getCause();
           throw (Exception) e.getCause();
         } catch (Exception e) {
+          exception = e;
           throw e;
+        } finally {
+          int processingTime = (int) (Time.now() - startTime);
+          if (LOG.isDebugEnabled()) {
+            String msg = "Served: " + methodName + " queueTime= " + qTime +
+                " procesingTime= " + processingTime;
+            if (exception != null) {
+              msg += " exception= " + exception.getClass().getSimpleName();
+            }
+            LOG.debug(msg);
+          }
+          String detailedMetricsName = (exception == null) ?
+              methodName :
+              exception.getClass().getSimpleName();
+          server.rpcMetrics.addRpcQueueTime(qTime);
+          server.rpcMetrics.addRpcProcessingTime(processingTime);
+          server.rpcDetailedMetrics.addProcessingTime(detailedMetricsName,
+              processingTime);
         }
         return new RpcResponseWrapper(result);
       }

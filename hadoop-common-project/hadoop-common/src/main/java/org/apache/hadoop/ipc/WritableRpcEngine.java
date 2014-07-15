@@ -471,37 +471,29 @@ public class WritableRpcEngine implements RpcEngine {
           
 
           // Invoke the protocol method
+       long startTime = Time.now();
+       int qTime = (int) (startTime-receivedTime);
+       Exception exception = null;
        try {
-          long startTime = Time.now();
-          Method method = 
+          Method method =
               protocolImpl.protocolClass.getMethod(call.getMethodName(),
               call.getParameterClasses());
           method.setAccessible(true);
           server.rpcDetailedMetrics.init(protocolImpl.protocolClass);
           Object value = 
               method.invoke(protocolImpl.protocolImpl, call.getParameters());
-          int processingTime = (int) (Time.now() - startTime);
-          int qTime = (int) (startTime-receivedTime);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Served: " + call.getMethodName() +
-                      " queueTime= " + qTime +
-                      " procesingTime= " + processingTime);
-          }
-          server.rpcMetrics.addRpcQueueTime(qTime);
-          server.rpcMetrics.addRpcProcessingTime(processingTime);
-          server.rpcDetailedMetrics.addProcessingTime(call.getMethodName(),
-                                               processingTime);
           if (server.verbose) log("Return: "+value);
-
           return new ObjectWritable(method.getReturnType(), value);
 
         } catch (InvocationTargetException e) {
           Throwable target = e.getTargetException();
           if (target instanceof IOException) {
+            exception = (IOException)target;
             throw (IOException)target;
           } else {
             IOException ioe = new IOException(target.toString());
             ioe.setStackTrace(target.getStackTrace());
+            exception = ioe;
             throw ioe;
           }
         } catch (Throwable e) {
@@ -510,8 +502,27 @@ public class WritableRpcEngine implements RpcEngine {
           }
           IOException ioe = new IOException(e.toString());
           ioe.setStackTrace(e.getStackTrace());
+          exception = ioe;
           throw ioe;
-        }
+        } finally {
+         int processingTime = (int) (Time.now() - startTime);
+         if (LOG.isDebugEnabled()) {
+           String msg = "Served: " + call.getMethodName() +
+               " queueTime= " + qTime +
+               " procesingTime= " + processingTime;
+           if (exception != null) {
+             msg += " exception= " + exception.getClass().getSimpleName();
+           }
+           LOG.debug(msg);
+         }
+         String detailedMetricsName = (exception == null) ?
+             call.getMethodName() :
+             exception.getClass().getSimpleName();
+         server.rpcMetrics.addRpcQueueTime(qTime);
+         server.rpcMetrics.addRpcProcessingTime(processingTime);
+         server.rpcDetailedMetrics.addProcessingTime(detailedMetricsName,
+             processingTime);
+       }
       }
     }
   }

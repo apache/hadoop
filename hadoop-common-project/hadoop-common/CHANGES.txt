@@ -16,6 +16,9 @@ Release 2.6.0 - UNRELEASED
     if the override value is same as the final parameter value.
     (Ravi Prakash via suresh)
 
+    HADOOP-10673. Update rpc metrics when the call throws an exception. (Ming Ma
+    via jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES
