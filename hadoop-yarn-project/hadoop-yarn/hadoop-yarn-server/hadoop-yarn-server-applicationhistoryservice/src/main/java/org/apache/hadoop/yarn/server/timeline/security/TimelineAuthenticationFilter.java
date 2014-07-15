@@ -38,7 +38,8 @@ public class TimelineAuthenticationFilter extends AuthenticationFilter {
     // to replace the name here to use the customized Kerberos + DT service
     // instead of the standard Kerberos handler.
     Properties properties = super.getConfiguration(configPrefix, filterConfig);
-    if (properties.getProperty(AUTH_TYPE).equals("kerberos")) {
+    String authType = properties.getProperty(AUTH_TYPE);
+    if (authType != null && authType.equals("kerberos")) {
       properties.setProperty(
           AUTH_TYPE, TimelineClientAuthenticationService.class.getName());
     }

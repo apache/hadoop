@@ -19,26 +19,26 @@
 package org.apache.hadoop.yarn.server.timeline.webapp;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
-import java.io.IOException;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.inject.Singleton;
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
 import javax.ws.rs.core.MediaType;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
+import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
@@ -46,12 +46,11 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AdminACLsManager;
 import org.apache.hadoop.yarn.server.timeline.TestMemoryTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
-import org.apache.hadoop.yarn.server.timeline.webapp.TimelineWebServices.AboutInfo;
+import org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFilter;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.junit.Assert;
@@ -74,11 +73,11 @@ public class TestTimelineWebServices extends JerseyTest {
   private static TimelineStore store;
   private static TimelineACLsManager timelineACLsManager;
   private static AdminACLsManager adminACLsManager;
-  private static String remoteUser;
   private long beforeTime;
 
   private Injector injector = Guice.createInjector(new ServletModule() {
 
+    @SuppressWarnings("unchecked")
     @Override
     protected void configureServlets() {
       bind(YarnJacksonJaxbJsonProvider.class);
@@ -98,7 +97,35 @@ public class TestTimelineWebServices extends JerseyTest {
       adminACLsManager = new AdminACLsManager(conf);
       bind(TimelineACLsManager.class).toInstance(timelineACLsManager);
       serve("/*").with(GuiceContainer.class);
-      filter("/*").through(TestFilter.class);
+      TimelineAuthenticationFilter taFilter = new TimelineAuthenticationFilter();
+      FilterConfig filterConfig = mock(FilterConfig.class);
+      when(filterConfig.getInitParameter(AuthenticationFilter.CONFIG_PREFIX))
+          .thenReturn(null);
+      when(filterConfig.getInitParameter(AuthenticationFilter.AUTH_TYPE))
+          .thenReturn("simple");
+      when(filterConfig.getInitParameter(
+          PseudoAuthenticationHandler.ANONYMOUS_ALLOWED)).thenReturn("true");
+      Enumeration<Object> names = mock(Enumeration.class);
+      when(names.hasMoreElements()).thenReturn(true, true, false);
+      when(names.nextElement()).thenReturn(
+          AuthenticationFilter.AUTH_TYPE,
+          PseudoAuthenticationHandler.ANONYMOUS_ALLOWED);
+      when(filterConfig.getInitParameterNames()).thenReturn(names);
+      try {
+        taFilter.init(filterConfig);
+      } catch (ServletException e) {
+        Assert.fail("Unable to initialize TimelineAuthenticationFilter: " +
+            e.getMessage());
+      }
+
+      taFilter = spy(taFilter);
+      try {
+        doNothing().when(taFilter).init(any(FilterConfig.class));
+      } catch (ServletException e) {
+        Assert.fail("Unable to initialize TimelineAuthenticationFilter: " +
+            e.getMessage());
+      }
+      filter("/*").through(taFilter);
     }
 
   });
@@ -382,6 +409,7 @@ public class TestTimelineWebServices extends JerseyTest {
     entities.addEntity(entity);
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
+        .queryParam("user.name", "tester")
         .accept(MediaType.APPLICATION_JSON)
         .type(MediaType.APPLICATION_JSON)
         .post(ClientResponse.class, entities);
@@ -401,7 +429,17 @@ public class TestTimelineWebServices extends JerseyTest {
     entity.setStartTime(System.currentTimeMillis());
     entities.addEntity(entity);
     WebResource r = resource();
+    // No owner, will be rejected
     ClientResponse response = r.path("ws").path("v1").path("timeline")
+        .accept(MediaType.APPLICATION_JSON)
+        .type(MediaType.APPLICATION_JSON)
+        .post(ClientResponse.class, entities);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(ClientResponse.Status.FORBIDDEN,
+        response.getClientResponseStatus());
+
+    response = r.path("ws").path("v1").path("timeline")
+        .queryParam("user.name", "tester")
         .accept(MediaType.APPLICATION_JSON)
         .type(MediaType.APPLICATION_JSON)
         .post(ClientResponse.class, entities);
@@ -425,7 +463,6 @@ public class TestTimelineWebServices extends JerseyTest {
   public void testPostEntitiesWithYarnACLsEnabled() throws Exception {
     AdminACLsManager oldAdminACLsManager =
         timelineACLsManager.setAdminACLsManager(adminACLsManager);
-    remoteUser = "tester";
     try {
       TimelineEntities entities = new TimelineEntities();
       TimelineEntity entity = new TimelineEntity();
@@ -435,6 +472,7 @@ public class TestTimelineWebServices extends JerseyTest {
       entities.addEntity(entity);
       WebResource r = resource();
       ClientResponse response = r.path("ws").path("v1").path("timeline")
+          .queryParam("user.name", "tester")
           .accept(MediaType.APPLICATION_JSON)
           .type(MediaType.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
@@ -444,8 +482,8 @@ public class TestTimelineWebServices extends JerseyTest {
       Assert.assertEquals(0, putResponse.getErrors().size());
 
       // override/append timeline data in the same entity with different user
-      remoteUser = "other";
       response = r.path("ws").path("v1").path("timeline")
+          .queryParam("user.name", "other")
           .accept(MediaType.APPLICATION_JSON)
           .type(MediaType.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
@@ -457,7 +495,6 @@ public class TestTimelineWebServices extends JerseyTest {
           putResponse.getErrors().get(0).getErrorCode());
     } finally {
       timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
-      remoteUser = null;
     }
   }
 
@@ -465,7 +502,6 @@ public class TestTimelineWebServices extends JerseyTest {
   public void testGetEntityWithYarnACLsEnabled() throws Exception {
     AdminACLsManager oldAdminACLsManager =
         timelineACLsManager.setAdminACLsManager(adminACLsManager);
-    remoteUser = "tester";
     try {
       TimelineEntities entities = new TimelineEntities();
       TimelineEntity entity = new TimelineEntity();
@@ -475,6 +511,7 @@ public class TestTimelineWebServices extends JerseyTest {
       entities.addEntity(entity);
       WebResource r = resource();
       ClientResponse response = r.path("ws").path("v1").path("timeline")
+          .queryParam("user.name", "tester")
           .accept(MediaType.APPLICATION_JSON)
           .type(MediaType.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
@@ -482,6 +519,7 @@ public class TestTimelineWebServices extends JerseyTest {
       // 1. No field specification
       response = r.path("ws").path("v1").path("timeline")
           .path("test type 3").path("test id 3")
+          .queryParam("user.name", "tester")
           .accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
@@ -492,6 +530,7 @@ public class TestTimelineWebServices extends JerseyTest {
       response = r.path("ws").path("v1").path("timeline")
           .path("test type 3").path("test id 3")
           .queryParam("fields", "relatedentities")
+          .queryParam("user.name", "tester")
           .accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
@@ -502,6 +541,7 @@ public class TestTimelineWebServices extends JerseyTest {
       response = r.path("ws").path("v1").path("timeline")
           .path("test type 3").path("test id 3")
           .queryParam("fields", "primaryfilters")
+          .queryParam("user.name", "tester")
           .accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
@@ -510,9 +550,9 @@ public class TestTimelineWebServices extends JerseyTest {
           TimelineStore.SystemFilter.ENTITY_OWNER.toString()));
 
       // get entity with other user
-      remoteUser = "other";
       response = r.path("ws").path("v1").path("timeline")
           .path("test type 3").path("test id 3")
+          .queryParam("user.name", "other")
           .accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
@@ -520,7 +560,6 @@ public class TestTimelineWebServices extends JerseyTest {
           response.getClientResponseStatus());
     } finally {
       timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
-      remoteUser = null;
     }
   }
 
@@ -528,7 +567,6 @@ public class TestTimelineWebServices extends JerseyTest {
   public void testGetEntitiesWithYarnACLsEnabled() {
     AdminACLsManager oldAdminACLsManager =
         timelineACLsManager.setAdminACLsManager(adminACLsManager);
-    remoteUser = "tester";
     try {
       TimelineEntities entities = new TimelineEntities();
       TimelineEntity entity = new TimelineEntity();
@@ -538,11 +576,11 @@ public class TestTimelineWebServices extends JerseyTest {
       entities.addEntity(entity);
       WebResource r = resource();
       ClientResponse response = r.path("ws").path("v1").path("timeline")
+          .queryParam("user.name", "tester")
           .accept(MediaType.APPLICATION_JSON)
           .type(MediaType.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
 
-      remoteUser = "other";
       entities = new TimelineEntities();
       entity = new TimelineEntity();
       entity.setEntityId("test id 5");
@@ -551,11 +589,13 @@ public class TestTimelineWebServices extends JerseyTest {
       entities.addEntity(entity);
       r = resource();
       response = r.path("ws").path("v1").path("timeline")
+          .queryParam("user.name", "other")
           .accept(MediaType.APPLICATION_JSON)
           .type(MediaType.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
 
       response = r.path("ws").path("v1").path("timeline")
+          .queryParam("user.name", "other")
           .path("test type 4")
           .accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
@@ -566,7 +606,6 @@ public class TestTimelineWebServices extends JerseyTest {
       assertEquals("test id 5", entities.getEntities().get(0).getEntityId());
     } finally {
       timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
-      remoteUser = null;
     }
   }
 
@@ -574,7 +613,6 @@ public class TestTimelineWebServices extends JerseyTest {
   public void testGetEventsWithYarnACLsEnabled() {
     AdminACLsManager oldAdminACLsManager =
         timelineACLsManager.setAdminACLsManager(adminACLsManager);
-    remoteUser = "tester";
     try {
       TimelineEntities entities = new TimelineEntities();
       TimelineEntity entity = new TimelineEntity();
@@ -588,11 +626,11 @@ public class TestTimelineWebServices extends JerseyTest {
       entities.addEntity(entity);
       WebResource r = resource();
       ClientResponse response = r.path("ws").path("v1").path("timeline")
+          .queryParam("user.name", "tester")
           .accept(MediaType.APPLICATION_JSON)
           .type(MediaType.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
 
-      remoteUser = "other";
       entities = new TimelineEntities();
       entity = new TimelineEntity();
       entity.setEntityId("test id 6");
@@ -605,12 +643,14 @@ public class TestTimelineWebServices extends JerseyTest {
       entities.addEntity(entity);
       r = resource();
       response = r.path("ws").path("v1").path("timeline")
+          .queryParam("user.name", "other")
           .accept(MediaType.APPLICATION_JSON)
           .type(MediaType.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
 
       response = r.path("ws").path("v1").path("timeline")
           .path("test type 5").path("events")
+          .queryParam("user.name", "other")
           .queryParam("entityId", "test id 5,test id 6")
           .accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
@@ -620,43 +660,7 @@ public class TestTimelineWebServices extends JerseyTest {
       assertEquals("test id 6", events.getAllEvents().get(0).getEntityId());
     } finally {
       timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
-      remoteUser = null;
     }
   }
 
-  @Singleton
-  private static class TestFilter implements Filter {
-
-    @Override
-    public void init(FilterConfig filterConfig) throws ServletException {
-    }
-
-    @Override
-    public void doFilter(ServletRequest request, ServletResponse response,
-        FilterChain chain) throws IOException, ServletException {
-      if (request instanceof HttpServletRequest) {
-        request =
-            new TestHttpServletRequestWrapper((HttpServletRequest) request);
-      }
-      chain.doFilter(request, response);
-    }
-
-    @Override
-    public void destroy() {
-    }
-
-  }
-
-  private static class TestHttpServletRequestWrapper extends HttpServletRequestWrapper {
-
-    public TestHttpServletRequestWrapper(HttpServletRequest request) {
-      super(request);
-    }
-
-    @Override
-    public String getRemoteUser() {
-      return TestTimelineWebServices.remoteUser;
-    }
-
-  }
 }

@@ -81,6 +81,8 @@ public class GenericExceptionHandler implements ExceptionMapper<Exception> {
       s = Response.Status.NOT_FOUND;
     } else if (e instanceof IOException) {
       s = Response.Status.NOT_FOUND;
+    } else if (e instanceof ForbiddenException) {
+      s = Response.Status.FORBIDDEN;
     } else if (e instanceof UnsupportedOperationException) {
       s = Response.Status.BAD_REQUEST;
     } else if (e instanceof IllegalArgumentException) {
