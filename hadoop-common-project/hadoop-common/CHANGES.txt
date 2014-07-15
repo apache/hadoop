@@ -12,6 +12,10 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10815. Implement Windows equivalent of mlock. (cnauroth)
 
+    HADOOP-7664. Remove warmings when overriding final parameter configuration
+    if the override value is same as the final parameter value.
+    (Ravi Prakash via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
