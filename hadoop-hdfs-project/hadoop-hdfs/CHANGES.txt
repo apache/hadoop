@@ -287,6 +287,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-2856. Fix block protocol so that Datanodes don't require root or jsvc.
     (cnauroth)
 
+    HDFS-5624. Add HDFS tests for ACLs in combination with viewfs.
+    (Stephen Chu via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
