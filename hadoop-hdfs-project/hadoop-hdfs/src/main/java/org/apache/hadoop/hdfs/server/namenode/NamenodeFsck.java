@@ -126,6 +126,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
   private boolean showBlocks = false;
   private boolean showLocations = false;
   private boolean showRacks = false;
+  private boolean showprogress = false;
   private boolean showCorruptFileBlocks = false;
 
   /**
@@ -203,6 +204,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       else if (key.equals("blocks")) { this.showBlocks = true; }
       else if (key.equals("locations")) { this.showLocations = true; }
       else if (key.equals("racks")) { this.showRacks = true; }
+      else if (key.equals("showprogress")) { this.showprogress = true; }
       else if (key.equals("openforwrite")) {this.showOpenFiles = true; }
       else if (key.equals("listcorruptfileblocks")) {
         this.showCorruptFileBlocks = true;
@@ -381,10 +383,13 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     } else if (showFiles) {
       out.print(path + " " + fileLen + " bytes, " +
         blocks.locatedBlockCount() + " block(s): ");
-    } else {
+    } else if (showprogress) {
       out.print('.');
     }
-    if (res.totalFiles % 100 == 0) { out.println(); out.flush(); }
+    if ((showprogress) && res.totalFiles % 100 == 0) {
+      out.println();
+      out.flush();
+    }
     int missing = 0;
     int corrupt = 0;
     long missize = 0;

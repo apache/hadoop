@@ -127,7 +127,7 @@ User Commands
    Runs a HDFS filesystem checking utility.
    See {{{../hadoop-hdfs/HdfsUserGuide.html#fsck}fsck}} for more info.
 
-   Usage: <<<hadoop fsck [GENERIC_OPTIONS] <path> [-move | -delete | -openforwrite] [-files [-blocks [-locations | -racks]]]>>>
+   Usage: <<<hadoop fsck [GENERIC_OPTIONS] <path> [-move | -delete | -openforwrite] [-files [-blocks [-locations | -racks]]] [-showprogress]>>>
 
 *------------------+---------------------------------------------+
 ||  COMMAND_OPTION || Description
@@ -147,6 +147,8 @@ User Commands
 |   -locations     | Print out locations for every block.
 *------------------+---------------------------------------------+
 |   -racks         | Print out network topology for data-node locations.
+*------------------+---------------------------------------------+
+|   -showprogress  | Print out show progress in output. Default is OFF (no progress).
 *------------------+---------------------------------------------+
 
 * <<<fetchdt>>>
