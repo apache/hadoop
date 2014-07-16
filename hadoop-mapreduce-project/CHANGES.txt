@@ -153,6 +153,9 @@ Release 2.6.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-5971. Move the default options for distcp -p to
+    DistCpOptionSwitch. (clamb via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES

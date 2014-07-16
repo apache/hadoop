@@ -162,6 +162,7 @@ public enum DistCpOptionSwitch {
   BANDWIDTH(DistCpConstants.CONF_LABEL_BANDWIDTH_MB,
       new Option("bandwidth", true, "Specify bandwidth per map in MB"));
 
+  static final String PRESERVE_STATUS_DEFAULT = "-prbugpc";
   private final String confLabel;
   private final Option option;
 
