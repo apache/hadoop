@@ -44,6 +44,12 @@ public abstract class MetricsSystem implements MetricsSystemMXBean {
   public abstract <T> T register(String name, String desc, T source);
 
   /**
+   * Unregister a metrics source
+   * @param name of the source. This is the name you use to call register()
+   */
+  public abstract void unregisterSource(String name);
+
+  /**
    * Register a metrics source (deriving name and description from the object)
    * @param <T>   the actual type of the source object
    * @param source  object to register

@@ -22,6 +22,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10845. Add common tests for ACLs in combination with viewfs.
     (Stephen Chu via cnauroth)
 
+    HADOOP-10839. Add unregisterSource() to MetricsSystem API.
+    (Shanyu Zhao via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES

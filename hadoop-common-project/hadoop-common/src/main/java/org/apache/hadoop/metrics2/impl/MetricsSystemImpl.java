@@ -232,6 +232,17 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     return source;
   }
 
+  @Override public synchronized
+  void unregisterSource(String name) {
+    if (sources.containsKey(name)) {
+      sources.get(name).stop();
+      sources.remove(name);
+    }
+    if (allSources.containsKey(name)) {
+      allSources.remove(name);
+    }
+  }
+
   synchronized
   void registerSource(String name, String desc, MetricsSource source) {
     checkNotNull(config, "config");
