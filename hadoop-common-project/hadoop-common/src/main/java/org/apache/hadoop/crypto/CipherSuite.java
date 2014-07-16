@@ -72,4 +72,14 @@ public enum CipherSuite {
     builder.append("}");
     return builder.toString();
   }
+  
+  public static void checkName(String name) {
+    CipherSuite[] suites = CipherSuite.values();
+    for (CipherSuite suite : suites) {
+      if (suite.getName().equals(name)) {
+        return;
+      }
+    }
+    throw new IllegalArgumentException("Invalid cipher suite name: " + name);
+  }
 }

@@ -285,6 +285,14 @@ public class CommonConfigurationKeysPublic {
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String HADOOP_SECURITY_CRYPTO_CODEC_CLASS_KEY =
     "hadoop.security.crypto.codec.class";
+  public static final String HADOOP_SECURITY_CRYPTO_CODEC_CLASS_DEFAULT = 
+    "org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec," +
+    "org.apache.hadoop.crypto.JceAesCtrCryptoCodec";
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_KEY =
+    "hadoop.security.crypto.cipher.suite";
+  public static final String HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_DEFAULT = 
+    "AES/CTR/NoPadding";
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY =
       "hadoop.security.crypto.jce.provider";
@@ -302,8 +310,10 @@ public class CommonConfigurationKeysPublic {
   /** Defalt value for HADOOP_SECURITY_JAVA_SECURE_RANDOM_ALGORITHM_KEY */
   public static final String HADOOP_SECURITY_JAVA_SECURE_RANDOM_ALGORITHM_DEFAULT = 
       "SHA1PRNG";
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String HADOOP_SECURITY_SECURE_RANDOM_IMPL_KEY = 
       "hadoop.security.secure.random.impl";
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String HADOOP_SECURITY_SECURE_RANDOM_DEVICE_FILE_PATH_KEY = 
       "hadoop.security.random.device.file.path";
   public static final String HADOOP_SECURITY_SECURE_RANDOM_DEVICE_FILE_PATH_DEFAULT = 

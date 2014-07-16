@@ -29,7 +29,8 @@ public class TestCryptoStreamsWithOpensslAesCtrCryptoCodec
   public static void init() throws Exception {
     Configuration conf = new Configuration();
     conf.set(HADOOP_SECURITY_CRYPTO_CODEC_CLASS_KEY, 
-        OpensslAesCtrCryptoCodec.class.getName());
+        OpensslAesCtrCryptoCodec.class.getName() + "," + 
+            JceAesCtrCryptoCodec.class.getName());
     codec = CryptoCodec.getInstance(conf);
   }
 }

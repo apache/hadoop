@@ -1453,10 +1453,20 @@ for ldap providers in the same way as above does.
 
 <property>
   <name>hadoop.security.crypto.codec.class</name>
-  <value></value>
+  <value>org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec,
+  org.apache.hadoop.crypto.JceAesCtrCryptoCodec</value>
   <description>
-    The default implementation of CryptoCodec which is used for encryption 
-    and decryption. 
+    Comma list of CryptoCodec implementations which are used for encryption 
+    and decryption. The first implementation will be used if avaiable, others
+    are fallbacks.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.crypto.cipher.suite</name>
+  <value>AES/CTR/NoPadding</value>
+  <description>
+    Cipher suite for crypto codec.
   </description>
 </property>
 

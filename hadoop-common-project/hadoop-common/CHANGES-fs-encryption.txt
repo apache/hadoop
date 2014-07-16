@@ -37,6 +37,9 @@ fs-encryption (Unreleased)
     HADOOP-10803. Update OpensslCipher#getInstance to accept CipherSuite#name
     format. (Yi Liu)
 
+    HADOOP-10735. Fall back AesCtrCryptoCodec implementation from OpenSSL to
+    JCE if non native support. (Yi Liu)
+
   OPTIMIZATIONS
 
   BUG FIXES

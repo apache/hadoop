@@ -18,13 +18,23 @@
 package org.apache.hadoop.crypto;
 
 import java.security.GeneralSecurityException;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
+
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CODEC_CLASS_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CODEC_CLASS_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_DEFAULT;
 
 /**
  * Crypto codec class, encapsulates encryptor/decryptor pair.
@@ -32,12 +42,57 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class CryptoCodec implements Configurable {
+  public static Logger LOG = LoggerFactory.getLogger(CryptoCodec.class);
   
   public static CryptoCodec getInstance(Configuration conf) {
-    final Class<? extends CryptoCodec> klass = conf.getClass(
-        HADOOP_SECURITY_CRYPTO_CODEC_CLASS_KEY, JceAesCtrCryptoCodec.class, 
-        CryptoCodec.class);
-    return ReflectionUtils.newInstance(klass, conf);
+    List<Class<? extends CryptoCodec>> klasses = getCodecClasses(conf);
+    String name = conf.get(HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_KEY, 
+        HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_DEFAULT);
+    CipherSuite.checkName(name);
+    CryptoCodec codec = null;
+    for (Class<? extends CryptoCodec> klass : klasses) {
+      try {
+        CryptoCodec c = ReflectionUtils.newInstance(klass, conf);
+        if (c.getCipherSuite().getName().equalsIgnoreCase(name)) {
+          if (codec == null) {
+            LOG.debug("Using crypto codec {}.", klass.getName());
+            codec = c;
+          }
+        } else {
+          LOG.warn("Crypto codec {} doesn't meet the cipher suite {}.", 
+              klass.getName(), name);
+        }
+      } catch (Exception e) {
+        LOG.warn("Crypto codec {} is not available.", klass.getName());
+      }
+    }
+    
+    if (codec != null) {
+      return codec;
+    }
+    
+    throw new RuntimeException("No available crypto codec which meets " + 
+        "the cipher suite " + name + ".");
+  }
+  
+  private static List<Class<? extends CryptoCodec>> getCodecClasses(
+      Configuration conf) {
+    List<Class<? extends CryptoCodec>> result = Lists.newArrayList();
+    String codecString = conf.get(HADOOP_SECURITY_CRYPTO_CODEC_CLASS_KEY,
+        HADOOP_SECURITY_CRYPTO_CODEC_CLASS_DEFAULT);
+    for (String c : Splitter.on(',').trimResults().omitEmptyStrings().
+        split(codecString)) {
+      try {
+        Class<?> cls = conf.getClassByName(c);
+        result.add(cls.asSubclass(CryptoCodec.class));
+      } catch (ClassCastException e) {
+        LOG.warn("Class " + c + " is not a CryptoCodec.");
+      } catch (ClassNotFoundException e) {
+        LOG.warn("Crypto codec " + c + " not found.");
+      }
+    }
+    
+    return result;
   }
 
   /**
