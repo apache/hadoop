@@ -380,6 +380,23 @@ public class TestMetricsSystemImpl {
     ms.shutdown();
   }
 
+  @Test public void testUnregisterSource() {
+    MetricsSystem ms = new MetricsSystemImpl();
+    TestSource ts1 = new TestSource("ts1");
+    TestSource ts2 = new TestSource("ts2");
+    ms.register("ts1", "", ts1);
+    ms.register("ts2", "", ts2);
+    MetricsSource s1 = ms.getSource("ts1");
+    assertNotNull(s1);
+    // should work when metrics system is not started
+    ms.unregisterSource("ts1");
+    s1 = ms.getSource("ts1");
+    assertNull(s1);
+    MetricsSource s2 = ms.getSource("ts2");
+    assertNotNull(s2);
+    ms.shutdown();
+  }
+
   private void checkMetricsRecords(List<MetricsRecord> recs) {
     LOG.debug(recs);
     MetricsRecord r = recs.get(0);
