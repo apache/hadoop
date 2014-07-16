@@ -144,6 +144,9 @@ Release 2.5.0 - UNRELEASED
     resource configuration for deciding uber-mode on map-only jobs. (Siqi Li via
     vinodkv)
 
+    MAPREDUCE-5952. LocalContainerLauncher#renameMapOutputForReduce incorrectly 
+    assumes a single dir for mapOutIndex. (Gera Shegalov via kasha)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
