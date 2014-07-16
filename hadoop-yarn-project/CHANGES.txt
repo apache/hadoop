@@ -59,6 +59,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2260. Fixed ResourceManager's RMNode to correctly remember containers
     when nodes resync during work-preserving RM restart. (Jian He via vinodkv)
 
+    YARN-2264. Fixed a race condition in DrainDispatcher which may cause random
+    test failures. (Li Lu via jianhe)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
