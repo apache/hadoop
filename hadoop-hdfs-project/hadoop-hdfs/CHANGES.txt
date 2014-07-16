@@ -65,6 +65,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-6456. NFS should throw error for invalid entry in 
     dfs.nfs.exports.allowed.hosts (Abhiraj Butala via brandonli)
 
+    HDFS-6689. NFS doesn't return correct lookup access for direcories (brandonli)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

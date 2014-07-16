@@ -154,6 +154,8 @@ public class Nfs3Utils {
     if (isSet(mode, Nfs3Constant.ACCESS_MODE_EXECUTE)) {
       if (type == NfsFileType.NFSREG.toValue()) {
         rtn |= Nfs3Constant.ACCESS3_EXECUTE;
+      } else {
+        rtn |= Nfs3Constant.ACCESS3_LOOKUP;
       }
     }
     return rtn;
