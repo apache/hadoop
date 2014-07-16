@@ -44,6 +44,8 @@ fs-encryption (Unreleased)
 
     HDFS-6619. Clean up encryption-related tests. (wang)
 
+    HDFS-6405. Test Crypto streams in HDFS. (yliu via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES

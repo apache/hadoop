@@ -28,6 +28,7 @@ import java.util.Random;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.ByteBufferReadable;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.HasEnhancedByteBufferAccess;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.ReadOption;
@@ -146,6 +147,25 @@ public abstract class CryptoStreamsTestBase {
     in.close();
   }
   
+  /** Test crypto writing with different buffer size. */
+  @Test(timeout = 120000)
+  public void testWrite() throws Exception {
+    // Default buffer size
+    writeCheck(defaultBufferSize);
+
+    // Small buffer size
+    writeCheck(smallBufferSize);
+  }
+
+  private void writeCheck(int bufferSize) throws Exception {
+    OutputStream out = getOutputStream(bufferSize);
+    writeData(out);
+
+    if (out instanceof FSDataOutputStream) {
+      Assert.assertEquals(((FSDataOutputStream) out).getPos(), getDataLen());
+    }
+  }
+
   /** Test crypto with different IV. */
   @Test(timeout=120000)
   public void testCryptoIV() throws Exception {
