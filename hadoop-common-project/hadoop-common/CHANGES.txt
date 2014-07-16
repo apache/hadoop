@@ -19,6 +19,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10673. Update rpc metrics when the call throws an exception. (Ming Ma
     via jing9)
 
+    HADOOP-10845. Add common tests for ACLs in combination with viewfs.
+    (Stephen Chu via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
