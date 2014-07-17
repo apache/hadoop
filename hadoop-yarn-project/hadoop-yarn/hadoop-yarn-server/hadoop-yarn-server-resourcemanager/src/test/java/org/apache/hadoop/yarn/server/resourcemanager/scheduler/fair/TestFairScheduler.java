@@ -793,13 +793,13 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     ApplicationAttemptId id11 = createAppAttemptId(1, 1);
-    scheduler.addApplication(id11.getApplicationId(), "root.queue1", "user1");
+    scheduler.addApplication(id11.getApplicationId(), "root.queue1", "user1", true);
     scheduler.addApplicationAttempt(id11, false, true);
     ApplicationAttemptId id21 = createAppAttemptId(2, 1);
-    scheduler.addApplication(id21.getApplicationId(), "root.queue2", "user1");
+    scheduler.addApplication(id21.getApplicationId(), "root.queue2", "user1", true);
     scheduler.addApplicationAttempt(id21, false, true);
     ApplicationAttemptId id22 = createAppAttemptId(2, 2);
-    scheduler.addApplication(id22.getApplicationId(), "root.queue2", "user1");
+    scheduler.addApplication(id22.getApplicationId(), "root.queue2", "user1", true);
     scheduler.addApplicationAttempt(id22, false, true);
 
     int minReqSize = 
@@ -1561,7 +1561,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.handle(nodeEvent2);
     
     ApplicationAttemptId appId = createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
-    scheduler.addApplication(appId.getApplicationId(), "queue1", "user1");
+    scheduler.addApplication(appId.getApplicationId(), "queue1", "user1", true);
     scheduler.addApplicationAttempt(appId, false, true);
     
     // 1 request with 2 nodes on the same rack. another request with 1 node on
@@ -1843,7 +1843,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     ApplicationAttemptId attId =
         ApplicationAttemptId.newInstance(applicationId, this.ATTEMPT_ID++);
-    scheduler.addApplication(attId.getApplicationId(), queue, user);
+    scheduler.addApplication(attId.getApplicationId(), queue, user, true);
 
     numTries = 0;
     while (application.getFinishTime() == 0 && numTries < MAX_TRIES) {
@@ -2720,7 +2720,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // send application request
     ApplicationAttemptId appAttemptId =
             createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
-    fs.addApplication(appAttemptId.getApplicationId(), "queue11", "user11");
+    fs.addApplication(appAttemptId.getApplicationId(), "queue11", "user11", true);
     fs.addApplicationAttempt(appAttemptId, false, true);
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
     ResourceRequest request =
