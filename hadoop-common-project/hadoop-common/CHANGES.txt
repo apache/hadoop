@@ -384,6 +384,9 @@ Trunk (Unreleased)
     HADOOP-10816. KeyShell returns -1 on error to the shell, should be 1.
     (Mike Yoder via wang)
 
+    HADOOP-10840. Fix OutOfMemoryError caused by metrics system in Azure File
+    System. (Shanyu Zhao via cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
