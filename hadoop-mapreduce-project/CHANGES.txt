@@ -5,6 +5,8 @@ Release 2.6.0 - UNRELEASED
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
+    MAPREDUCE-5910. Make MR AM resync with RM in case of work-preserving
+    RM-restart. Contributed by Rohith
 
   IMPROVEMENTS
 
