@@ -50,6 +50,7 @@ import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3.S3Exception;
@@ -225,6 +226,7 @@ public class NativeS3FileSystem extends FileSystem {
     private OutputStream backupStream;
     private MessageDigest digest;
     private boolean closed;
+    private LocalDirAllocator lDirAlloc;
     
     public NativeS3FsOutputStream(Configuration conf,
         NativeFileSystemStore store, String key, Progressable progress,
@@ -246,11 +248,10 @@ public class NativeS3FileSystem extends FileSystem {
     }
 
     private File newBackupFile() throws IOException {
-      File dir = new File(conf.get("fs.s3.buffer.dir"));
-      if (!dir.mkdirs() && !dir.exists()) {
-        throw new IOException("Cannot create S3 buffer directory: " + dir);
+      if (lDirAlloc == null) {
+        lDirAlloc = new LocalDirAllocator("fs.s3.buffer.dir");
       }
-      File result = File.createTempFile("output-", ".tmp", dir);
+      File result = lDirAlloc.createTmpFileForWrite("output-", LocalDirAllocator.SIZE_UNKNOWN, conf);
       result.deleteOnExit();
       return result;
     }
