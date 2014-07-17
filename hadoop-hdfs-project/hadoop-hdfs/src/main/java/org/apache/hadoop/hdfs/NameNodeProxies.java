@@ -163,7 +163,8 @@ public class NameNodeProxies {
 
       Text dtService;
       if (failoverProxyProvider.useLogicalURI()) {
-        dtService = HAUtil.buildTokenServiceForLogicalUri(nameNodeUri);
+        dtService = HAUtil.buildTokenServiceForLogicalUri(nameNodeUri,
+            HdfsConstants.HDFS_URI_SCHEME);
       } else {
         dtService = SecurityUtil.buildTokenService(
             NameNode.getAddress(nameNodeUri));
@@ -224,7 +225,8 @@ public class NameNodeProxies {
           new Class[] { xface }, dummyHandler);
       Text dtService;
       if (failoverProxyProvider.useLogicalURI()) {
-        dtService = HAUtil.buildTokenServiceForLogicalUri(nameNodeUri);
+        dtService = HAUtil.buildTokenServiceForLogicalUri(nameNodeUri,
+            HdfsConstants.HDFS_URI_SCHEME);
       } else {
         dtService = SecurityUtil.buildTokenService(
             NameNode.getAddress(nameNodeUri));

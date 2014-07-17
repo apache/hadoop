@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
@@ -299,7 +300,8 @@ public class TestDelegationTokensWithHA {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("test");
     
     URI haUri = new URI("hdfs://my-ha-uri/");
-    token.setService(HAUtil.buildTokenServiceForLogicalUri(haUri));
+    token.setService(HAUtil.buildTokenServiceForLogicalUri(haUri,
+        HdfsConstants.HDFS_URI_SCHEME));
     ugi.addToken(token);
 
     Collection<InetSocketAddress> nnAddrs = new HashSet<InetSocketAddress>();
@@ -355,7 +357,8 @@ public class TestDelegationTokensWithHA {
   @Test
   public void testDFSGetCanonicalServiceName() throws Exception {
     URI hAUri = HATestUtil.getLogicalUri(cluster);
-    String haService = HAUtil.buildTokenServiceForLogicalUri(hAUri).toString();
+    String haService = HAUtil.buildTokenServiceForLogicalUri(hAUri,
+        HdfsConstants.HDFS_URI_SCHEME).toString();
     assertEquals(haService, dfs.getCanonicalServiceName());
     final String renewer = UserGroupInformation.getCurrentUser().getShortUserName();
     final Token<DelegationTokenIdentifier> token =
@@ -371,7 +374,8 @@ public class TestDelegationTokensWithHA {
     Configuration conf = dfs.getConf();
     URI haUri = HATestUtil.getLogicalUri(cluster);
     AbstractFileSystem afs =  AbstractFileSystem.createFileSystem(haUri, conf);    
-    String haService = HAUtil.buildTokenServiceForLogicalUri(haUri).toString();
+    String haService = HAUtil.buildTokenServiceForLogicalUri(haUri,
+        HdfsConstants.HDFS_URI_SCHEME).toString();
     assertEquals(haService, afs.getCanonicalServiceName());
     Token<?> token = afs.getDelegationTokens(
         UserGroupInformation.getCurrentUser().getShortUserName()).get(0);

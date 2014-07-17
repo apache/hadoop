@@ -326,6 +326,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6693. TestDFSAdminWithHA fails on windows ( vinayakumarb )
 
+    HDFS-6667. In HDFS HA mode, Distcp/SLive with webhdfs on secure cluster fails
+    with Client cannot authenticate via:[TOKEN, KERBEROS] error. (jing9)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
