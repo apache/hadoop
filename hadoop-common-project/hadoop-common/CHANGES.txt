@@ -51,6 +51,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-9921. daemon scripts should remove pid file on stop call after stop
     or process is found not running ( vinayakumarb )
 
+    HADOOP-10591.  Compression codecs must used pooled direct buffers or
+    deallocate direct buffers when stream is closed (cmccabe)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

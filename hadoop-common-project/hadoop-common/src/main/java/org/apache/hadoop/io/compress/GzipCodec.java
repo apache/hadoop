@@ -104,10 +104,11 @@ public class GzipCodec extends DefaultCodec {
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out) 
     throws IOException {
-    return (ZlibFactory.isNativeZlibLoaded(conf)) ?
-               new CompressorStream(out, createCompressor(),
-                                    conf.getInt("io.file.buffer.size", 4*1024)) :
-               new GzipOutputStream(out);
+    if (!ZlibFactory.isNativeZlibLoaded(conf)) {
+      return new GzipOutputStream(out);
+    }
+    return CompressionCodec.Util.
+        createOutputStreamWithCodecPool(this, conf, out);
   }
   
   @Override
@@ -137,8 +138,9 @@ public class GzipCodec extends DefaultCodec {
 
   @Override
   public CompressionInputStream createInputStream(InputStream in)
-  throws IOException {
-    return createInputStream(in, null);
+      throws IOException {
+    return CompressionCodec.Util.
+        createInputStreamWithCodecPool(this, conf, in);
   }
 
   @Override
