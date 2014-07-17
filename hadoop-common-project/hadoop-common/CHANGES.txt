@@ -381,6 +381,9 @@ Trunk (Unreleased)
 
     HADOOP-10834. Typo in CredentialShell usage. (Benoy Antony via umamahesh)
 
+    HADOOP-10816. KeyShell returns -1 on error to the shell, should be 1.
+    (Mike Yoder via wang)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
