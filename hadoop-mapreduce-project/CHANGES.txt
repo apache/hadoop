@@ -17,6 +17,9 @@ Trunk (Unreleased)
     MAPREDUCE-5232. Add a configuration to be able to log classpath and other
     system properties on mapreduce JVMs startup.  (Sangjin Lee via vinodkv)
 
+    MAPREDUCE-5910. Make MR AM resync with RM in case of work-preserving
+    RM-restart. (Rohith via jianhe)
+
   IMPROVEMENTS
 
     MAPREDUCE-3481. [Gridmix] Improve Gridmix STRESS mode. (amarrk)

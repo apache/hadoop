@@ -389,6 +389,7 @@ public class RMContainerAllocator extends RMContainerRequestor
           removed = true;
           assignedRequests.remove(aId);
           containersReleased++;
+          pendingRelease.add(containerId);
           release(containerId);
         }
       }
@@ -641,6 +642,15 @@ public class RMContainerAllocator extends RMContainerRequestor
     if (response.getAMCommand() != null) {
       switch(response.getAMCommand()) {
       case AM_RESYNC:
+          LOG.info("ApplicationMaster is out of sync with ResourceManager,"
+              + " hence resyncing.");
+          lastResponseID = 0;
+
+          // Registering to allow RM to discover an active AM for this
+          // application
+          register();
+          addOutstandingRequestOnResync();
+          break;
       case AM_SHUTDOWN:
         // This can happen if the RM has been restarted. If it is in that state,
         // this application must clean itself up.
@@ -700,6 +710,7 @@ public class RMContainerAllocator extends RMContainerRequestor
         LOG.error("Container complete event for unknown container id "
             + cont.getContainerId());
       } else {
+        pendingRelease.remove(cont.getContainerId());
         assignedRequests.remove(attemptID);
         
         // send the container completed event to Task attempt
@@ -991,6 +1002,7 @@ public class RMContainerAllocator extends RMContainerRequestor
     
     private void containerNotAssigned(Container allocated) {
       containersReleased++;
+      pendingRelease.add(allocated.getId());
       release(allocated.getId());      
     }
     
