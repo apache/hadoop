@@ -128,6 +128,22 @@ public class TestCredShell {
   }
   
   @Test
+  public void testPromptForCredentialWithEmptyPasswd() throws Exception {
+    String[] args1 = {"create", "credential1", "--provider", 
+        "jceks://file" + tmpDir + "/credstore.jceks"};
+    ArrayList<String> passwords = new ArrayList<String>();
+    passwords.add(null);
+    passwords.add("p@ssw0rd");
+    int rc = 0;
+    CredentialShell shell = new CredentialShell();
+    shell.setConf(new Configuration());
+    shell.setPasswordReader(new MockPasswordReader(passwords));
+    rc = shell.run(args1);
+    assertEquals(outContent.toString(), -1, rc);
+    assertTrue(outContent.toString().contains("Passwords don't match"));
+  }
+
+  @Test
   public void testPromptForCredential() throws Exception {
     String[] args1 = {"create", "credential1", "--provider", 
         "jceks://file" + tmpDir + "/credstore.jceks"};
@@ -142,7 +158,7 @@ public class TestCredShell {
     assertEquals(0, rc);
     assertTrue(outContent.toString().contains("credential1 has been successfully " +
         "created."));
-
+    
     String[] args2 = {"delete", "credential1", "--provider", 
         "jceks://file" + tmpDir + "/credstore.jceks"};
     rc = shell.run(args2);
@@ -162,7 +178,7 @@ public class TestCredShell {
     public char[] readPassword(String prompt) {
       if (passwords.size() == 0) return null;
       String pass = passwords.remove(0);
-      return pass.toCharArray();
+      return pass == null ? null : pass.toCharArray();
     }
 
     @Override

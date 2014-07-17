@@ -420,6 +420,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10732. Fix locking in credential update. (Ted Yu via omalley)
 
+    HADOOP-10733. Fix potential null dereference in CredShell. (Ted Yu via
+    omalley)
+
   OPTIMIZATIONS
 
   BUG FIXES
