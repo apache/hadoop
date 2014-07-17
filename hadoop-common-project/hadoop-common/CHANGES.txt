@@ -158,9 +158,6 @@ Trunk (Unreleased)
 
     HADOOP-10485. Remove dead classes in hadoop-streaming. (wheat9)
 
-    HADOOP-10607. Create API to separate credential/password storage from
-    applications. (Larry McCay via omalley)
-
     HADOOP-10696. Add optional attributes to KeyProvider Options and Metadata. 
     (tucu)
 
@@ -417,6 +414,11 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10839. Add unregisterSource() to MetricsSystem API.
     (Shanyu Zhao via cnauroth)
+
+    HADOOP-10607. Create an API to separate credentials/password storage
+    from applications (Larry McCay via omalley)
+
+    HADOOP-10732. Fix locking in credential update. (Ted Yu via omalley)
 
   OPTIMIZATIONS
 
