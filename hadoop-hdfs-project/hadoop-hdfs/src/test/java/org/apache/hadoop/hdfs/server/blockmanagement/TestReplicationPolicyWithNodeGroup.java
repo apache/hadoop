@@ -36,7 +36,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.StorageType;
+import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.NetworkTopology;
@@ -258,7 +258,7 @@ public class TestReplicationPolicyWithNodeGroup {
       List<DatanodeStorageInfo> chosenNodes,
       Set<Node> excludedNodes) {
     return replicator.chooseTarget(filename, numOfReplicas, writer, chosenNodes,
-        false, excludedNodes, BLOCK_SIZE, StorageType.DEFAULT);
+        false, excludedNodes, BLOCK_SIZE, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY);
   }
 
   /**
@@ -340,7 +340,7 @@ public class TestReplicationPolicyWithNodeGroup {
     Set<Node> excludedNodes = new HashSet<Node>();
     excludedNodes.add(dataNodes[1]); 
     targets = repl.chooseTarget(filename, 4, dataNodes[0], chosenNodes, false, 
-        excludedNodes, BLOCK_SIZE, StorageType.DEFAULT);
+        excludedNodes, BLOCK_SIZE, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY);
     assertEquals(targets.length, 4);
     assertEquals(storages[0], targets[0]);
 
@@ -358,7 +358,7 @@ public class TestReplicationPolicyWithNodeGroup {
     excludedNodes.add(dataNodes[1]); 
     chosenNodes.add(storages[2]);
     targets = repl.chooseTarget(filename, 1, dataNodes[0], chosenNodes, true,
-        excludedNodes, BLOCK_SIZE, StorageType.DEFAULT);
+        excludedNodes, BLOCK_SIZE, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY);
     System.out.println("targets=" + Arrays.asList(targets));
     assertEquals(2, targets.length);
     //make sure that the chosen node is in the target.

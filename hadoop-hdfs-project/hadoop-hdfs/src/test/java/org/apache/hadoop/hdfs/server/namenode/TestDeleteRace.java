@@ -27,11 +27,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
@@ -107,10 +107,10 @@ public class TestDeleteRace {
                                       boolean returnChosenNodes,
                                       Set<Node> excludedNodes,
                                       long blocksize,
-                                      StorageType storageType) {
+                                      final BlockStoragePolicy storagePolicy) {
       DatanodeStorageInfo[] results = super.chooseTarget(srcPath,
           numOfReplicas, writer, chosenNodes, returnChosenNodes, excludedNodes,
-          blocksize, storageType);
+          blocksize, storagePolicy);
       try {
         Thread.sleep(3000);
       } catch (InterruptedException e) {}

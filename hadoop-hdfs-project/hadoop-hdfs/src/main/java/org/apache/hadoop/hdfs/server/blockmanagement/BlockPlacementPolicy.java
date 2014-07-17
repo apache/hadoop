@@ -27,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -75,7 +76,7 @@ public abstract class BlockPlacementPolicy {
                                              boolean returnChosenNodes,
                                              Set<Node> excludedNodes,
                                              long blocksize,
-                                             StorageType storageType);
+                                             BlockStoragePolicy storagePolicy);
   
   /**
    * Same as {@link #chooseTarget(String, int, Node, Set, long, List, StorageType)}
@@ -89,14 +90,14 @@ public abstract class BlockPlacementPolicy {
       Set<Node> excludedNodes,
       long blocksize,
       List<DatanodeDescriptor> favoredNodes,
-      StorageType storageType) {
+      BlockStoragePolicy storagePolicy) {
     // This class does not provide the functionality of placing
     // a block in favored datanodes. The implementations of this class
     // are expected to provide this functionality
 
     return chooseTarget(src, numOfReplicas, writer, 
         new ArrayList<DatanodeStorageInfo>(numOfReplicas), false,
-        excludedNodes, blocksize, storageType);
+        excludedNodes, blocksize, storagePolicy);
   }
 
   /**

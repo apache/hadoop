@@ -46,14 +46,14 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.LogVerificationAppender;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.StorageType;
+import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager.StatefulBlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager.StatefulBlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSClusterStats;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
@@ -228,7 +228,7 @@ public class TestReplicationPolicy {
       List<DatanodeStorageInfo> chosenNodes,
       Set<Node> excludedNodes) {
     return replicator.chooseTarget(filename, numOfReplicas, writer, chosenNodes,
-        false, excludedNodes, BLOCK_SIZE, StorageType.DEFAULT);
+        false, excludedNodes, BLOCK_SIZE, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY);
   }
 
   /**
@@ -295,7 +295,7 @@ public class TestReplicationPolicy {
     excludedNodes.add(dataNodes[1]); 
     chosenNodes.add(storages[2]);
     targets = replicator.chooseTarget(filename, 1, dataNodes[0], chosenNodes, true,
-        excludedNodes, BLOCK_SIZE, StorageType.DEFAULT);
+        excludedNodes, BLOCK_SIZE, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY);
     System.out.println("targets=" + Arrays.asList(targets));
     assertEquals(2, targets.length);
     //make sure that the chosen node is in the target.
@@ -630,7 +630,7 @@ public class TestReplicationPolicy {
           .getNamesystem().getBlockManager().getBlockPlacementPolicy();
       DatanodeStorageInfo[] targets = replicator.chooseTarget(filename, 3,
           staleNodeInfo, new ArrayList<DatanodeStorageInfo>(), false, null,
-          BLOCK_SIZE, StorageType.DEFAULT);
+          BLOCK_SIZE, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY);
 
       assertEquals(targets.length, 3);
       assertFalse(isOnSameRack(targets[0], staleNodeInfo));
@@ -656,7 +656,7 @@ public class TestReplicationPolicy {
       // Call chooseTarget
       targets = replicator.chooseTarget(filename, 3, staleNodeInfo,
           new ArrayList<DatanodeStorageInfo>(), false, null, BLOCK_SIZE,
-          StorageType.DEFAULT);
+          TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY);
       assertEquals(targets.length, 3);
       assertTrue(isOnSameRack(targets[0], staleNodeInfo));
       

@@ -8,6 +8,9 @@ HDFS-6584: Archival Storage
     HDFS-6670. Add block storage policy support with default HOT, WARM and COLD
     policies.  (szetszwo)
 
+    HDFS-6671. Change BlockPlacementPolicy to consider block storage policy
+    in replicaiton.  (szetszwo)
+
 Trunk (Unreleased)
 
   INCOMPATIBLE CHANGES

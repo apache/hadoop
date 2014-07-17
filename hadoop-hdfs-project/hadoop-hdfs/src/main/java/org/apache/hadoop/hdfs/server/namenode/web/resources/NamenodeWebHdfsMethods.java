@@ -26,7 +26,6 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -56,7 +55,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.AclStatus;
-import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -202,11 +200,8 @@ public class NamenodeWebHdfsMethods {
       final DatanodeDescriptor clientNode = bm.getDatanodeManager(
           ).getDatanodeByHost(getRemoteAddress());
       if (clientNode != null) {
-        final DatanodeStorageInfo[] storages = bm.getBlockPlacementPolicy()
-            .chooseTarget(path, 1, clientNode,
-                new ArrayList<DatanodeStorageInfo>(), false, null, blocksize,
-                // TODO: get storage type from the file
-                StorageType.DEFAULT);
+        final DatanodeStorageInfo[] storages = bm.chooseTarget4WebHDFS(
+            path, clientNode, blocksize);
         if (storages.length > 0) {
           return storages[0].getDatanodeDescriptor();
         }

@@ -22,12 +22,14 @@ import static org.apache.hadoop.util.Time.now;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.StorageType;
@@ -117,9 +119,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
                                     boolean returnChosenNodes,
                                     Set<Node> excludedNodes,
                                     long blocksize,
-                                    StorageType storageType) {
+                                    final BlockStoragePolicy storagePolicy) {
     return chooseTarget(numOfReplicas, writer, chosenNodes, returnChosenNodes,
-        excludedNodes, blocksize, storageType);
+        excludedNodes, blocksize, storagePolicy);
   }
 
   @Override
@@ -129,17 +131,19 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       Set<Node> excludedNodes,
       long blocksize,
       List<DatanodeDescriptor> favoredNodes,
-      StorageType storageType) {
+      BlockStoragePolicy storagePolicy) {
     try {
       if (favoredNodes == null || favoredNodes.size() == 0) {
         // Favored nodes not specified, fall back to regular block placement.
         return chooseTarget(src, numOfReplicas, writer,
             new ArrayList<DatanodeStorageInfo>(numOfReplicas), false, 
-            excludedNodes, blocksize, storageType);
+            excludedNodes, blocksize, storagePolicy);
       }
 
       Set<Node> favoriteAndExcludedNodes = excludedNodes == null ?
           new HashSet<Node>() : new HashSet<Node>(excludedNodes);
+      final List<StorageType> storageTypes = storagePolicy.chooseStorageTypes(
+          (short)numOfReplicas);
 
       // Choose favored nodes
       List<DatanodeStorageInfo> results = new ArrayList<DatanodeStorageInfo>();
@@ -152,12 +156,13 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         final DatanodeStorageInfo target = chooseLocalStorage(favoredNode,
             favoriteAndExcludedNodes, blocksize, 
             getMaxNodesPerRack(results.size(), numOfReplicas)[1],
-            results, avoidStaleNodes, storageType);
+            results, avoidStaleNodes, storageTypes.get(0));
         if (target == null) {
           LOG.warn("Could not find a target for file " + src
               + " with favored node " + favoredNode); 
           continue;
         }
+        storageTypes.remove(0);
         favoriteAndExcludedNodes.add(target.getDatanodeDescriptor());
       }
 
@@ -166,7 +171,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         numOfReplicas -= results.size();
         DatanodeStorageInfo[] remainingTargets = 
             chooseTarget(src, numOfReplicas, writer, results,
-                false, favoriteAndExcludedNodes, blocksize, storageType);
+                false, favoriteAndExcludedNodes, blocksize, storagePolicy);
         for (int i = 0; i < remainingTargets.length; i++) {
           results.add(remainingTargets[i]);
         }
@@ -177,7 +182,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       // Fall back to regular block placement disregarding favored nodes hint
       return chooseTarget(src, numOfReplicas, writer, 
           new ArrayList<DatanodeStorageInfo>(numOfReplicas), false, 
-          excludedNodes, blocksize, storageType);
+          excludedNodes, blocksize, storagePolicy);
     }
   }
 
@@ -188,7 +193,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
                                     boolean returnChosenNodes,
                                     Set<Node> excludedNodes,
                                     long blocksize,
-                                    StorageType storageType) {
+                                    final BlockStoragePolicy storagePolicy) {
     if (numOfReplicas == 0 || clusterMap.getNumOfLeaves()==0) {
       return DatanodeStorageInfo.EMPTY_ARRAY;
     }
@@ -213,8 +218,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       
     boolean avoidStaleNodes = (stats != null
         && stats.isAvoidingStaleDataNodesForWrite());
-    Node localNode = chooseTarget(numOfReplicas, writer,
-        excludedNodes, blocksize, maxNodesPerRack, results, avoidStaleNodes, storageType);
+    final Node localNode = chooseTarget(numOfReplicas, writer, excludedNodes,
+        blocksize, maxNodesPerRack, results, avoidStaleNodes, storagePolicy);
     if (!returnChosenNodes) {  
       results.removeAll(chosenStorage);
     }
@@ -247,13 +252,13 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
    * @return local node of writer (not chosen node)
    */
   private Node chooseTarget(int numOfReplicas,
-                                          Node writer,
-                                          Set<Node> excludedNodes,
-                                          long blocksize,
-                                          int maxNodesPerRack,
-                                          List<DatanodeStorageInfo> results,
-                                          final boolean avoidStaleNodes,
-                                          StorageType storageType) {
+                            Node writer,
+                            final Set<Node> excludedNodes,
+                            final long blocksize,
+                            final int maxNodesPerRack,
+                            final List<DatanodeStorageInfo> results,
+                            final boolean avoidStaleNodes,
+                            final BlockStoragePolicy storagePolicy) {
     if (numOfReplicas == 0 || clusterMap.getNumOfLeaves()==0) {
       return writer;
     }
@@ -268,10 +273,12 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     // Keep a copy of original excludedNodes
     final Set<Node> oldExcludedNodes = avoidStaleNodes ? 
         new HashSet<Node>(excludedNodes) : null;
+    final List<StorageType> storageTypes = chooseStorageTypes(storagePolicy,
+        (short)totalReplicasExpected, results); 
     try {
       if (numOfResults == 0) {
         writer = chooseLocalStorage(writer, excludedNodes, blocksize,
-            maxNodesPerRack, results, avoidStaleNodes, storageType)
+            maxNodesPerRack, results, avoidStaleNodes, storageTypes.remove(0))
                 .getDatanodeDescriptor();
         if (--numOfReplicas == 0) {
           return writer;
@@ -280,7 +287,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       final DatanodeDescriptor dn0 = results.get(0).getDatanodeDescriptor();
       if (numOfResults <= 1) {
         chooseRemoteRack(1, dn0, excludedNodes, blocksize, maxNodesPerRack,
-            results, avoidStaleNodes, storageType);
+            results, avoidStaleNodes, storageTypes.remove(0));
         if (--numOfReplicas == 0) {
           return writer;
         }
@@ -289,20 +296,20 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         final DatanodeDescriptor dn1 = results.get(1).getDatanodeDescriptor();
         if (clusterMap.isOnSameRack(dn0, dn1)) {
           chooseRemoteRack(1, dn0, excludedNodes, blocksize, maxNodesPerRack,
-              results, avoidStaleNodes, storageType);
+              results, avoidStaleNodes, storageTypes.remove(0));
         } else if (newBlock){
           chooseLocalRack(dn1, excludedNodes, blocksize, maxNodesPerRack,
-              results, avoidStaleNodes, storageType);
+              results, avoidStaleNodes, storageTypes.remove(0));
         } else {
           chooseLocalRack(writer, excludedNodes, blocksize, maxNodesPerRack,
-              results, avoidStaleNodes, storageType);
+              results, avoidStaleNodes, storageTypes.remove(0));
         }
         if (--numOfReplicas == 0) {
           return writer;
         }
       }
       chooseRandom(numOfReplicas, NodeBase.ROOT, excludedNodes, blocksize,
-          maxNodesPerRack, results, avoidStaleNodes, storageType);
+          maxNodesPerRack, results, avoidStaleNodes, storageTypes.remove(0));
     } catch (NotEnoughReplicasException e) {
       final String message = "Failed to place enough replicas, still in need of "
           + (totalReplicasExpected - results.size()) + " to reach "
@@ -327,7 +334,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         // if the NotEnoughReplicasException was thrown in chooseRandom().
         numOfReplicas = totalReplicasExpected - results.size();
         return chooseTarget(numOfReplicas, writer, oldExcludedNodes, blocksize,
-            maxNodesPerRack, results, false, storageType);
+            maxNodesPerRack, results, false, storagePolicy);
       }
     }
     return writer;
@@ -664,7 +671,29 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     }
     return true;
   }
-    
+  
+  private static List<StorageType> chooseStorageTypes(
+      final BlockStoragePolicy storagePolicy, final short replication,
+      final Iterable<DatanodeStorageInfo> chosen) {
+    return storagePolicy.chooseStorageTypes(
+        replication, new Iterable<StorageType>() {
+          @Override
+          public Iterator<StorageType> iterator() {
+            return new Iterator<StorageType>() {
+              final Iterator<DatanodeStorageInfo> i = chosen.iterator();
+              @Override
+              public boolean hasNext() {return i.hasNext();}
+              @Override
+              public StorageType next() {return i.next().getStorageType();}
+              @Override
+              public void remove() {
+                throw new UnsupportedOperationException();
+              }
+            };
+          }
+        });
+  }
+
   /**
    * Return a pipeline of nodes.
    * The pipeline is formed finding a shortest path that 

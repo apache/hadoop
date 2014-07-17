@@ -42,10 +42,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
-import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportIterator;
@@ -252,6 +252,7 @@ public class BlockManager {
 
   /** for block replicas placement */
   private BlockPlacementPolicy blockplacement;
+  private final BlockStoragePolicy.Suite storagePolicySuite;
 
   /** Check whether name system is running before terminating */
   private boolean checkNSRunning = true;
@@ -274,6 +275,7 @@ public class BlockManager {
     blockplacement = BlockPlacementPolicy.getInstance(
         conf, stats, datanodeManager.getNetworkTopology(), 
         datanodeManager.getHost2DatanodeMap());
+    storagePolicySuite = BlockStoragePolicy.readBlockStorageSuite(conf);
     pendingReplications = new PendingReplicationBlocks(conf.getInt(
       DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY,
       DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_DEFAULT) * 1000L);
@@ -443,8 +445,8 @@ public class BlockManager {
     return datanodeManager;
   }
 
-  /** @return the BlockPlacementPolicy */
-  public BlockPlacementPolicy getBlockPlacementPolicy() {
+  @VisibleForTesting
+  BlockPlacementPolicy getBlockPlacementPolicy() {
     return blockplacement;
   }
 
@@ -725,7 +727,6 @@ public class BlockManager {
     final List<DatanodeStorageInfo> locations
         = new ArrayList<DatanodeStorageInfo>(blocksMap.numNodes(block));
     for(DatanodeStorageInfo storage : blocksMap.getStorages(block)) {
-      final String storageID = storage.getStorageID();
       // filter invalidate replicas
       if(!invalidateBlocks.contains(storage.getDatanodeDescriptor(), block)) {
         locations.add(storage);
@@ -1351,7 +1352,7 @@ public class BlockManager {
       // choose replication targets: NOT HOLDING THE GLOBAL LOCK
       // It is costly to extract the filename for which chooseTargets is called,
       // so for now we pass in the block collection itself.
-      rw.chooseTargets(blockplacement, excludedNodes);
+      rw.chooseTargets(blockplacement, storagePolicySuite, excludedNodes);
     }
 
     namesystem.writeLock();
@@ -1452,24 +1453,46 @@ public class BlockManager {
     return scheduledWork;
   }
 
+  /** Choose target for WebHDFS redirection. */
+  public DatanodeStorageInfo[] chooseTarget4WebHDFS(String src,
+      DatanodeDescriptor clientnode, long blocksize) {
+    return blockplacement.chooseTarget(src, 1, clientnode,
+        Collections.<DatanodeStorageInfo>emptyList(), false, null, blocksize,
+        storagePolicySuite.getDefaultPolicy());
+  }
+
+  /** Choose target for getting additional datanodes for an existing pipeline. */
+  public DatanodeStorageInfo[] chooseTarget4AdditionalDatanode(String src,
+      int numAdditionalNodes,
+      DatanodeDescriptor clientnode,
+      List<DatanodeStorageInfo> chosen,
+      Set<Node> excludes,
+      long blocksize,
+      byte storagePolicyID) {
+    
+    final BlockStoragePolicy storagePolicy = storagePolicySuite.getPolicy(storagePolicyID);
+    return blockplacement.chooseTarget(src, numAdditionalNodes, clientnode,
+        chosen, true, excludes, blocksize, storagePolicy);
+  }
+
   /**
-   * Choose target datanodes according to the replication policy.
+   * Choose target datanodes for creating a new block.
    * 
    * @throws IOException
    *           if the number of targets < minimum replication.
-   * @see BlockPlacementPolicy#chooseTarget(String, int, Node,
-   *      List, boolean, Set, long)
    */
-  public DatanodeStorageInfo[] chooseTarget(final String src,
+  public DatanodeStorageInfo[] chooseTarget4NewBlock(final String src,
       final int numOfReplicas, final DatanodeDescriptor client,
       final Set<Node> excludedNodes,
-      final long blocksize, List<String> favoredNodes) throws IOException {
+      final long blocksize,
+      final List<String> favoredNodes,
+      final byte storagePolicyID) throws IOException {
     List<DatanodeDescriptor> favoredDatanodeDescriptors = 
         getDatanodeDescriptors(favoredNodes);
+    final BlockStoragePolicy storagePolicy = storagePolicySuite.getPolicy(storagePolicyID);
     final DatanodeStorageInfo[] targets = blockplacement.chooseTarget(src,
         numOfReplicas, client, excludedNodes, blocksize, 
-        // TODO: get storage type from file
-        favoredDatanodeDescriptors, StorageType.DEFAULT);
+        favoredDatanodeDescriptors, storagePolicy);
     if (targets.length < minReplication) {
       throw new IOException("File " + src + " could only be replicated to "
           + targets.length + " nodes instead of minReplication (="
@@ -3498,10 +3521,12 @@ public class BlockManager {
     }
     
     private void chooseTargets(BlockPlacementPolicy blockplacement,
+        BlockStoragePolicy.Suite storagePolicySuite,
         Set<Node> excludedNodes) {
       targets = blockplacement.chooseTarget(bc.getName(),
           additionalReplRequired, srcNode, liveReplicaStorages, false,
-          excludedNodes, block.getNumBytes(), StorageType.DEFAULT);
+          excludedNodes, block.getNumBytes(),
+          storagePolicySuite.getPolicy(bc.getStoragePolicyID()));
     }
   }
 

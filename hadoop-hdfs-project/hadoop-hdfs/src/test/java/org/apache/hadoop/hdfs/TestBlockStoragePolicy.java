@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -27,14 +28,18 @@ import org.junit.Test;
 
 /** Test {@link BlockStoragePolicy} */
 public class TestBlockStoragePolicy {
+  public static final BlockStoragePolicy.Suite POLICY_SUITE;
+  public static final BlockStoragePolicy DEFAULT_STORAGE_POLICY;
+  static {
+    final Configuration conf = new HdfsConfiguration();
+    POLICY_SUITE = BlockStoragePolicy.readBlockStorageSuite(conf);
+    DEFAULT_STORAGE_POLICY = POLICY_SUITE.getDefaultPolicy();
+  }
+
   static final EnumSet<StorageType> none = EnumSet.noneOf(StorageType.class);
   static final EnumSet<StorageType> archive = EnumSet.of(StorageType.ARCHIVE);
   static final EnumSet<StorageType> disk = EnumSet.of(StorageType.DISK);
   static final EnumSet<StorageType> both = EnumSet.of(StorageType.DISK, StorageType.ARCHIVE);
-
-  static {
-    HdfsConfiguration.init();
-  }
 
   @Test
   public void testDefaultPolicies() throws Exception {
@@ -49,19 +54,19 @@ public class TestBlockStoragePolicy {
     expectedPolicyStrings.put(HOT,
         "BlockStoragePolicy{HOT:12, storageTypes=[DISK], creationFallbacks=[], replicationFallbacks=[ARCHIVE]");
 
-    final Configuration conf = new Configuration();
-    final BlockStoragePolicy[] policies = BlockStoragePolicy.readBlockStoragePolicies(conf);
-    for(int i = 0; i < policies.length; i++) {
-      if (policies[i] != null) {
-        final String s = policies[i].toString();
-        Assert.assertEquals(expectedPolicyStrings.get((byte)i), s);
+    for(byte i = 1; i < 16; i++) {
+      final BlockStoragePolicy policy = POLICY_SUITE.getPolicy(i); 
+      if (policy != null) {
+        final String s = policy.toString();
+        Assert.assertEquals(expectedPolicyStrings.get(i), s);
       }
     }
+    Assert.assertEquals(POLICY_SUITE.getPolicy(HOT), POLICY_SUITE.getDefaultPolicy());
     
     { // check Cold policy
-      final BlockStoragePolicy cold = policies[COLD];
+      final BlockStoragePolicy cold = POLICY_SUITE.getPolicy(COLD);
       for(short replication = 1; replication < 6; replication++) {
-        final StorageType[] computed = cold.getStoragteTypes(replication);
+        final List<StorageType> computed = cold.chooseStorageTypes(replication);
         assertStorageType(computed, replication, StorageType.ARCHIVE);
       }
       assertCreationFallback(cold, null, null, null);
@@ -69,9 +74,9 @@ public class TestBlockStoragePolicy {
     }
     
     { // check Warm policy
-      final BlockStoragePolicy warm = policies[WARM];
+      final BlockStoragePolicy warm = POLICY_SUITE.getPolicy(WARM);
       for(short replication = 1; replication < 6; replication++) {
-        final StorageType[] computed = warm.getStoragteTypes(replication);
+        final List<StorageType> computed = warm.chooseStorageTypes(replication);
         assertStorageType(computed, replication, StorageType.DISK, StorageType.ARCHIVE);
       }
       assertCreationFallback(warm, StorageType.DISK, StorageType.DISK, StorageType.ARCHIVE);
@@ -79,9 +84,9 @@ public class TestBlockStoragePolicy {
     }
 
     { // check Hot policy
-      final BlockStoragePolicy hot = policies[HOT];
+      final BlockStoragePolicy hot = POLICY_SUITE.getPolicy(HOT);
       for(short replication = 1; replication < 6; replication++) {
-        final StorageType[] computed = hot.getStoragteTypes(replication);
+        final List<StorageType> computed = hot.chooseStorageTypes(replication);
         assertStorageType(computed, replication, StorageType.DISK);
       }
       assertCreationFallback(hot, null, null, null);
@@ -89,13 +94,13 @@ public class TestBlockStoragePolicy {
     }
   }
 
-  static void assertStorageType(StorageType[] computed, short replication,
+  static void assertStorageType(List<StorageType> computed, short replication,
       StorageType... answers) {
-    Assert.assertEquals(replication, computed.length);
+    Assert.assertEquals(replication, computed.size());
     final StorageType last = answers[answers.length - 1];
-    for(int i = 0; i < computed.length; i++) {
+    for(int i = 0; i < computed.size(); i++) {
       final StorageType expected = i < answers.length? answers[i]: last;
-      Assert.assertEquals(expected, computed[i]);
+      Assert.assertEquals(expected, computed.get(i));
     }
   }
 

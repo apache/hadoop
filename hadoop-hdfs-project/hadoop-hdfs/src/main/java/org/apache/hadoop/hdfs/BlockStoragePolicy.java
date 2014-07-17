@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs;
 
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.LinkedList;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -46,6 +48,28 @@ public class BlockStoragePolicy {
   public static final int ID_BIT_LENGTH = 4;
   public static final int ID_MAX = (1 << ID_BIT_LENGTH) - 1;
 
+  /** A block storage policy suite. */
+  public static class Suite {
+    private final byte defaultPolicyID;
+    private final BlockStoragePolicy[] policies;
+    
+    private Suite(byte defaultPolicyID, BlockStoragePolicy[] policies) {
+      this.defaultPolicyID = defaultPolicyID;
+      this.policies = policies;
+    }
+    
+    /** @return the corresponding policy. */
+    public BlockStoragePolicy getPolicy(byte id) {
+      // id == 0 means policy not specified. 
+      return id == 0? getDefaultPolicy(): policies[id];
+    }
+
+    /** @return the default policy. */
+    public BlockStoragePolicy getDefaultPolicy() {
+      return getPolicy(defaultPolicyID);
+    }
+  }
+
   /** A 4-bit policy ID */
   private final byte id;
   /** Policy name */
@@ -70,26 +94,48 @@ public class BlockStoragePolicy {
   /**
    * @return a list of {@link StorageType}s for storing the replicas of a block.
    */
-  StorageType[] getStoragteTypes(short replication) {
-    final StorageType[] types = new StorageType[replication];
+  public List<StorageType> chooseStorageTypes(final short replication) {
+    final List<StorageType> types = new LinkedList<StorageType>();
     int i = 0;
-    for(; i < types.length && i < storageTypes.length; i++) {
-      types[i] = storageTypes[i];
+    for(; i < replication && i < storageTypes.length; i++) {
+      types.add(storageTypes[i]);
     }
     final StorageType last = storageTypes[storageTypes.length - 1];
-    for(; i < types.length; i++) {
-      types[i] = last;
+    for(; i < replication; i++) {
+      types.add(last);
+    }
+    return types;
+  }
+
+  /**
+   * Choose the storage types for storing the remaining replicas, given the
+   * replication number and the storage types of the chosen replicas.
+   *
+   * @param replication the replication number.
+   * @param chosen the storage types of the chosen replicas.
+   * @return a list of {@link StorageType}s for storing the replicas of a block.
+   */
+  public List<StorageType> chooseStorageTypes(final short replication,
+      final Iterable<StorageType> chosen) {
+    final List<StorageType> types = chooseStorageTypes(replication);
+
+    //remove the chosen storage types
+    for(StorageType c : chosen) {
+      final int i = types.indexOf(c);
+      if (i >= 0) {
+        types.remove(i);
+      }
     }
     return types;
   }
 
   /** @return the fallback {@link StorageType} for creation. */
-  StorageType getCreationFallback(EnumSet<StorageType> unavailables) {
+  public StorageType getCreationFallback(EnumSet<StorageType> unavailables) {
     return getFallback(unavailables, creationFallbacks);
   }
   
   /** @return the fallback {@link StorageType} for replication. */
-  StorageType getReplicationFallback(EnumSet<StorageType> unavailables) {
+  public StorageType getReplicationFallback(EnumSet<StorageType> unavailables) {
     return getFallback(unavailables, replicationFallbacks);
   }
   
@@ -111,21 +157,28 @@ public class BlockStoragePolicy {
     return null;
   }
   
-  private static byte parseID(String string) {
-    final byte id = Byte.parseByte(string);
-    if (id < 1) {
-      throw new IllegalArgumentException(
-          "Invalid block storage policy ID: id = " + id + " < 1");
+  private static byte parseID(String idString, String element, Configuration conf) {
+    Byte id = null;
+    try {
+      id = Byte.parseByte(idString);
+    } catch(NumberFormatException nfe) {
+      throwIllegalArgumentException("Failed to parse policy ID \"" + idString
+          + "\" to a " + ID_BIT_LENGTH + "-bit integer", conf);
     }
-    if (id > 15) {
-      throw new IllegalArgumentException(
-          "Invalid block storage policy ID: id = " + id + " > MAX = " + ID_MAX);
+    if (id < 0) {
+      throwIllegalArgumentException("Invalid policy ID: id = " + id
+          + " < 1 in \"" + element + "\"", conf);
+    } else if (id == 0) {
+      throw new IllegalArgumentException("Policy ID 0 is reserved: " + element);
+    } else if (id > ID_MAX) {
+      throwIllegalArgumentException("Invalid policy ID: id = " + id
+          + " > MAX = " + ID_MAX + " in \"" + element + "\"", conf);
     }
     return id;
   }
 
   private static StorageType[] parseStorageTypes(String[] strings) {
-    if (strings == null) {
+    if (strings == null || strings.length == 0) {
       return StorageType.EMPTY_ARRAY;
     }
     final StorageType[] types = new StorageType[strings.length];
@@ -137,14 +190,24 @@ public class BlockStoragePolicy {
   
   private static StorageType[] readStorageTypes(byte id, String keyPrefix,
       Configuration conf) {
-    final String[] values = conf.getStrings(keyPrefix + id);
-    return parseStorageTypes(values);
+    final String key = keyPrefix + id;
+    final String[] values = conf.getStrings(key);
+    try {
+      return parseStorageTypes(values);
+    } catch(Exception e) {
+      throw new IllegalArgumentException("Failed to parse " + key
+          + " \"" + conf.get(key), e);
+    }
   }
 
-  public static BlockStoragePolicy readBlockStoragePolicy(byte id, String name,
+  private static BlockStoragePolicy readBlockStoragePolicy(byte id, String name,
       Configuration conf) {
     final StorageType[] storageTypes = readStorageTypes(id, 
         DFS_BLOCK_STORAGE_POLICY_KEY_PREFIX, conf);
+    if (storageTypes.length == 0) {
+      throw new IllegalArgumentException(
+          DFS_BLOCK_STORAGE_POLICY_KEY_PREFIX + id + " is missing or is empty.");
+    }
     final StorageType[] creationFallbacks = readStorageTypes(id, 
         DFS_BLOCK_STORAGE_POLICY_CREATION_FALLBACK_KEY_PREFIX, conf);
     final StorageType[] replicationFallbacks = readStorageTypes(id, 
@@ -153,23 +216,53 @@ public class BlockStoragePolicy {
         replicationFallbacks);
   }
 
-  public static BlockStoragePolicy[] readBlockStoragePolicies(
-      Configuration conf) {
-    final BlockStoragePolicy[] policies = new BlockStoragePolicy[ID_MAX + 1];
+  /** Read {@link Suite} from conf. */
+  public static Suite readBlockStorageSuite(Configuration conf) {
+    final BlockStoragePolicy[] policies = new BlockStoragePolicy[1 << ID_BIT_LENGTH];
     final String[] values = conf.getStrings(DFS_BLOCK_STORAGE_POLICIES_KEY);
+    byte firstID = -1;
     for(String v : values) {
       v = v.trim();
       final int i = v.indexOf(':');
-      final String name = v.substring(0, i);
-      final byte id = parseID(v.substring(i + 1));
+      if (i < 0) {
+        throwIllegalArgumentException("Failed to parse element \"" + v
+            + "\" (expected format is NAME:ID)", conf);
+      } else if (i == 0) {
+        throwIllegalArgumentException("Policy name is missing in \"" + v + "\"", conf);
+      } else if (i == v.length() - 1) {
+        throwIllegalArgumentException("Policy ID is missing in \"" + v + "\"", conf);
+      }
+      final String name = v.substring(0, i).trim();
+      for(int j = 1; j < policies.length; j++) {
+        if (policies[j] != null && policies[j].name.equals(name)) {
+          throwIllegalArgumentException("Policy name duplication: \""
+              + name + "\" appears more than once", conf);
+        }
+      }
+      
+      final byte id = parseID(v.substring(i + 1).trim(), v, conf);
       if (policies[id] != null) {
-        throw new IllegalArgumentException(
-            "Policy duplication: ID " + id + " appears more than once in "
-            + DFS_BLOCK_STORAGE_POLICIES_KEY);
+        throwIllegalArgumentException("Policy duplication: ID " + id
+            + " appears more than once", conf);
       }
       policies[id] = readBlockStoragePolicy(id, name, conf);
-      LOG.info(policies[id]);
+      String prefix = "";
+      if (firstID == -1) {
+        firstID = id;
+        prefix = "(default) ";
+      }
+      LOG.info(prefix + policies[id]);
     }
-    return policies;
+    if (firstID == -1) {
+      throwIllegalArgumentException("Empty list is not allowed", conf);
+    }
+    return new Suite(firstID, policies);
   }
+
+  private static void throwIllegalArgumentException(String message,
+      Configuration conf) {
+    throw new IllegalArgumentException(message + " in "
+        + DFS_BLOCK_STORAGE_POLICIES_KEY + " \""
+        + conf.get(DFS_BLOCK_STORAGE_POLICIES_KEY) + "\".");
+ }
 }
