@@ -793,14 +793,14 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     ApplicationAttemptId id11 = createAppAttemptId(1, 1);
-    scheduler.addApplication(id11.getApplicationId(), "root.queue1", "user1", true);
-    scheduler.addApplicationAttempt(id11, false, true);
+    scheduler.addApplication(id11.getApplicationId(), "root.queue1", "user1", false);
+    scheduler.addApplicationAttempt(id11, false, false);
     ApplicationAttemptId id21 = createAppAttemptId(2, 1);
-    scheduler.addApplication(id21.getApplicationId(), "root.queue2", "user1", true);
-    scheduler.addApplicationAttempt(id21, false, true);
+    scheduler.addApplication(id21.getApplicationId(), "root.queue2", "user1", false);
+    scheduler.addApplicationAttempt(id21, false, false);
     ApplicationAttemptId id22 = createAppAttemptId(2, 2);
-    scheduler.addApplication(id22.getApplicationId(), "root.queue2", "user1", true);
-    scheduler.addApplicationAttempt(id22, false, true);
+    scheduler.addApplication(id22.getApplicationId(), "root.queue2", "user1", false);
+    scheduler.addApplicationAttempt(id22, false, false);
 
     int minReqSize = 
         FairSchedulerConfiguration.DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_MB;
@@ -1561,8 +1561,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.handle(nodeEvent2);
     
     ApplicationAttemptId appId = createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
-    scheduler.addApplication(appId.getApplicationId(), "queue1", "user1", true);
-    scheduler.addApplicationAttempt(appId, false, true);
+    scheduler.addApplication(appId.getApplicationId(), "queue1", "user1", false);
+    scheduler.addApplicationAttempt(appId, false, false);
     
     // 1 request with 2 nodes on the same rack. another request with 1 node on
     // a different rack
@@ -1843,7 +1843,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     ApplicationAttemptId attId =
         ApplicationAttemptId.newInstance(applicationId, this.ATTEMPT_ID++);
-    scheduler.addApplication(attId.getApplicationId(), queue, user, true);
+    scheduler.addApplication(attId.getApplicationId(), queue, user, false);
 
     numTries = 0;
     while (application.getFinishTime() == 0 && numTries < MAX_TRIES) {
@@ -2720,8 +2720,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // send application request
     ApplicationAttemptId appAttemptId =
             createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
-    fs.addApplication(appAttemptId.getApplicationId(), "queue11", "user11", true);
-    fs.addApplicationAttempt(appAttemptId, false, true);
+    fs.addApplication(appAttemptId.getApplicationId(), "queue11", "user11", false);
+    fs.addApplicationAttempt(appAttemptId, false, false);
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
     ResourceRequest request =
             createResourceRequest(1024, 1, ResourceRequest.ANY, 1, 1, true);
