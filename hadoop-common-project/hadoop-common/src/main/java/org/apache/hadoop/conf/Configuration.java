@@ -78,6 +78,9 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.alias.CredentialProvider;
+import org.apache.hadoop.security.alias.CredentialProvider.CredentialEntry;
+import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
@@ -1759,6 +1762,79 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public void setStrings(String name, String... values) {
     set(name, StringUtils.arrayToString(values));
+  }
+
+  /**
+   * Get the value for a known password configuration element.
+   * In order to enable the elimination of clear text passwords in config,
+   * this method attempts to resolve the property name as an alias through
+   * the CredentialProvider API and conditionally fallsback to config.
+   * @param name property name
+   * @return password
+   */
+  public char[] getPassword(String name) throws IOException {
+    char[] pass = null;
+
+    pass = getPasswordFromCredenitalProviders(name);
+
+    if (pass == null) {
+      pass = getPasswordFromConfig(name);
+    }
+
+    return pass;
+  }
+
+  /**
+   * Try and resolve the provided element name as a credential provider
+   * alias.
+   * @param name alias of the provisioned credential
+   * @return password or null if not found
+   * @throws IOException
+   */
+  protected char[] getPasswordFromCredenitalProviders(String name)
+      throws IOException {
+    char[] pass = null;
+    try {
+      List<CredentialProvider> providers =
+          CredentialProviderFactory.getProviders(this);
+
+      if (providers != null) {
+        for (CredentialProvider provider : providers) {
+          try {
+            CredentialEntry entry = provider.getCredentialEntry(name);
+            if (entry != null) {
+              pass = entry.getCredential();
+              break;
+            }
+          }
+          catch (IOException ioe) {
+            throw new IOException("Can't get key " + name + " from key provider" +
+            		"of type: " + provider.getClass().getName() + ".", ioe);
+          }
+        }
+      }
+    }
+    catch (IOException ioe) {
+      throw new IOException("Configuration problem with provider path.", ioe);
+    }
+
+    return pass;
+  }
+
+  /**
+   * Fallback to clear text passwords in configuration.
+   * @param name
+   * @return clear text password or null
+   */
+  protected char[] getPasswordFromConfig(String name) {
+    char[] pass = null;
+    if (getBoolean(CredentialProvider.CLEAR_TEXT_FALLBACK, true)) {
+      String passStr = get(name);
+      if (passStr != null) {
+        pass = passStr.toCharArray();
+      }
+    }
+    return pass;
   }
 
   /**
