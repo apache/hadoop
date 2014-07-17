@@ -28,6 +28,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2228. Augmented TimelineServer to load pseudo authentication filter when
     authentication = simple. (Zhijie Shen via vinodkv)
 
+    YARN-1341. Recover NMTokens upon nodemanager restart. (Jason Lowe via 
+    junping_du)
+
   OPTIMIZATIONS
 
   BUG FIXES

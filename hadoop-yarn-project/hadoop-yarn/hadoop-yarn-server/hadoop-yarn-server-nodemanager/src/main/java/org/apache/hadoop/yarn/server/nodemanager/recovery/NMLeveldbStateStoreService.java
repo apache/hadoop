@@ -35,11 +35,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
+import org.apache.hadoop.yarn.server.api.records.MasterKey;
+import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.fusesource.leveldbjni.JniDBFactory;
@@ -71,6 +75,14 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private static final String LOCALIZATION_COMPLETED_SUFFIX = "completed/";
   private static final String LOCALIZATION_FILECACHE_SUFFIX = "filecache/";
   private static final String LOCALIZATION_APPCACHE_SUFFIX = "appcache/";
+
+  private static final String CURRENT_MASTER_KEY_SUFFIX = "CurrentMasterKey";
+  private static final String PREV_MASTER_KEY_SUFFIX = "PreviousMasterKey";
+  private static final String NM_TOKENS_KEY_PREFIX = "NMTokens/";
+  private static final String NM_TOKENS_CURRENT_MASTER_KEY =
+      NM_TOKENS_KEY_PREFIX + CURRENT_MASTER_KEY_SUFFIX;
+  private static final String NM_TOKENS_PREV_MASTER_KEY =
+      NM_TOKENS_KEY_PREFIX + PREV_MASTER_KEY_SUFFIX;
 
   private DB db;
 
@@ -361,6 +373,93 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     String key = DELETION_TASK_KEY_PREFIX + taskId;
     try {
       db.delete(bytes(key));
+    } catch (DBException e) {
+      throw new IOException(e.getMessage(), e);
+    }
+  }
+
+
+  @Override
+  public RecoveredNMTokenState loadNMTokenState() throws IOException {
+    RecoveredNMTokenState state = new RecoveredNMTokenState();
+    state.applicationMasterKeys =
+        new HashMap<ApplicationAttemptId, MasterKey>();
+    LeveldbIterator iter = null;
+    try {
+      iter = new LeveldbIterator(db);
+      iter.seek(bytes(NM_TOKENS_KEY_PREFIX));
+      while (iter.hasNext()) {
+        Entry<byte[], byte[]> entry = iter.next();
+        String fullKey = asString(entry.getKey());
+        if (!fullKey.startsWith(NM_TOKENS_KEY_PREFIX)) {
+          break;
+        }
+        String key = fullKey.substring(NM_TOKENS_KEY_PREFIX.length());
+        if (key.equals(CURRENT_MASTER_KEY_SUFFIX)) {
+          state.currentMasterKey = parseMasterKey(entry.getValue());
+        } else if (key.equals(PREV_MASTER_KEY_SUFFIX)) {
+          state.previousMasterKey = parseMasterKey(entry.getValue());
+        } else if (key.startsWith(
+            ApplicationAttemptId.appAttemptIdStrPrefix)) {
+          ApplicationAttemptId attempt;
+          try {
+            attempt = ConverterUtils.toApplicationAttemptId(key);
+          } catch (IllegalArgumentException e) {
+            throw new IOException("Bad application master key state for "
+                + fullKey, e);
+          }
+          state.applicationMasterKeys.put(attempt,
+              parseMasterKey(entry.getValue()));
+        }
+      }
+    } catch (DBException e) {
+      throw new IOException(e.getMessage(), e);
+    } finally {
+      if (iter != null) {
+        iter.close();
+      }
+    }
+    return state;
+  }
+
+  @Override
+  public void storeNMTokenCurrentMasterKey(MasterKey key)
+      throws IOException {
+    storeMasterKey(NM_TOKENS_CURRENT_MASTER_KEY, key);
+  }
+
+  @Override
+  public void storeNMTokenPreviousMasterKey(MasterKey key)
+      throws IOException {
+    storeMasterKey(NM_TOKENS_PREV_MASTER_KEY, key);
+  }
+
+  @Override
+  public void storeNMTokenApplicationMasterKey(
+      ApplicationAttemptId attempt, MasterKey key) throws IOException {
+    storeMasterKey(NM_TOKENS_KEY_PREFIX + attempt, key);
+  }
+
+  @Override
+  public void removeNMTokenApplicationMasterKey(
+      ApplicationAttemptId attempt) throws IOException {
+    String key = NM_TOKENS_KEY_PREFIX + attempt;
+    try {
+      db.delete(bytes(key));
+    } catch (DBException e) {
+      throw new IOException(e.getMessage(), e);
+    }
+  }
+
+  private MasterKey parseMasterKey(byte[] keyData) throws IOException {
+    return new MasterKeyPBImpl(MasterKeyProto.parseFrom(keyData));
+  }
+
+  private void storeMasterKey(String dbKey, MasterKey key)
+      throws IOException {
+    MasterKeyPBImpl pb = (MasterKeyPBImpl) key;
+    try {
+      db.put(bytes(dbKey), pb.getProto().toByteArray());
     } catch (DBException e) {
       throw new IOException(e.getMessage(), e);
     }
