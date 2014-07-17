@@ -373,6 +373,8 @@ public class NativeAzureFileSystem extends FileSystem {
   private Path workingDir;
   private long blockSize = MAX_AZURE_BLOCK_SIZE;
   private AzureFileSystemInstrumentation instrumentation;
+  private String metricsSourceName;
+  private boolean isClosed = false;
   private static boolean suppressRetryPolicy = false;
   // A counter to create unique (within-process) names for my metrics sources.
   private static AtomicInteger metricsSourceNameCounter = new AtomicInteger();
@@ -482,11 +484,10 @@ public class NativeAzureFileSystem extends FileSystem {
 
     // Make sure the metrics system is available before interacting with Azure
     AzureFileSystemMetricsSystem.fileSystemStarted();
-    String sourceName = newMetricsSourceName(),
-        sourceDesc = "Azure Storage Volume File System metrics";
-    instrumentation = DefaultMetricsSystem.instance().register(sourceName,
-        sourceDesc, new AzureFileSystemInstrumentation(conf));
-    AzureFileSystemMetricsSystem.registerSource(sourceName, sourceDesc,
+    metricsSourceName = newMetricsSourceName();
+    String sourceDesc = "Azure Storage Volume File System metrics";
+    instrumentation = new AzureFileSystemInstrumentation(conf);
+    AzureFileSystemMetricsSystem.registerSource(metricsSourceName, sourceDesc,
         instrumentation);
 
     store.initialize(uri, conf, instrumentation);
@@ -502,7 +503,6 @@ public class NativeAzureFileSystem extends FileSystem {
       LOG.debug("  blockSize  = "
           + conf.getLong(AZURE_BLOCK_SIZE_PROPERTY_NAME, MAX_AZURE_BLOCK_SIZE));
     }
-
   }
 
   private NativeFileSystemStore createDefaultStore(Configuration conf) {
@@ -1337,7 +1337,11 @@ public class NativeAzureFileSystem extends FileSystem {
   }
 
   @Override
-  public void close() throws IOException {
+  public synchronized void close() throws IOException {
+    if (isClosed) {
+      return;
+    }
+    
     // Call the base close() to close any resources there.
     super.close();
     // Close the store
@@ -1349,12 +1353,14 @@ public class NativeAzureFileSystem extends FileSystem {
 
     long startTime = System.currentTimeMillis();
 
+    AzureFileSystemMetricsSystem.unregisterSource(metricsSourceName);
     AzureFileSystemMetricsSystem.fileSystemClosed();
 
     if (LOG.isDebugEnabled()) {
         LOG.debug("Submitting metrics when file system closed took "
                 + (System.currentTimeMillis() - startTime) + " ms.");
     }
+    isClosed = true;
   }
 
   /**
@@ -1496,6 +1502,13 @@ public class NativeAzureFileSystem extends FileSystem {
       LOG.debug("Deleting files with dangling temp data in " + root);
     }
     handleFilesWithDanglingTempData(root, new DanglingFileDeleter());
+  }
+
+  @Override
+  protected void finalize() throws Throwable {
+    LOG.debug("finalize() called.");
+    close();
+    super.finalize();
   }
 
   /**
