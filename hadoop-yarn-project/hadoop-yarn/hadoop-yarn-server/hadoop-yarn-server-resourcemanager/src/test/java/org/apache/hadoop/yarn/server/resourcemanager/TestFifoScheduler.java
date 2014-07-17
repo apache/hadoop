@@ -228,7 +228,7 @@ public class TestFifoScheduler {
     scheduler.handle(new NodeAddedSchedulerEvent(node));
 
     ApplicationId appId = ApplicationId.newInstance(0, 1);
-    scheduler.addApplication(appId, "queue1", "user1");
+    scheduler.addApplication(appId, "queue1", "user1", true);
 
     NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node);
     try {

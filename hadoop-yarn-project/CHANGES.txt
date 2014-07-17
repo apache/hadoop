@@ -62,6 +62,10 @@ Release 2.6.0 - UNRELEASED
     YARN-2264. Fixed a race condition in DrainDispatcher which may cause random
     test failures. (Li Lu via jianhe)
 
+    YARN-2219. Changed ResourceManager to avoid AMs and NMs getting exceptions
+    after RM recovery but before scheduler learns about apps and app-attempts.
+    (Jian He via vinodkv)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
