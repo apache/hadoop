@@ -157,7 +157,7 @@ public class WebHdfsFileSystem extends FileSystem
     // getCanonicalUri() in order to handle the case where no port is
     // specified in the URI
     this.tokenServiceName = isLogicalUri ?
-        HAUtil.buildTokenServiceForLogicalUri(uri)
+        HAUtil.buildTokenServiceForLogicalUri(uri, getScheme())
         : SecurityUtil.buildTokenService(getCanonicalUri());
 
     if (!isHA) {
