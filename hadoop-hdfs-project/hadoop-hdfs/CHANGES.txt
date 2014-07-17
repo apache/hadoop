@@ -321,6 +321,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6689. NFS doesn't return correct lookup access for direcories (brandonli)
 
+    HDFS-6478. RemoteException can't be retried properly for non-HA scenario.
+    (Ming Ma via jing9)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

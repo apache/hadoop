@@ -333,19 +333,18 @@ public class NameNodeProxies {
         address, conf, ugi, NamenodeProtocolPB.class, 0);
     if (withRetries) { // create the proxy with retries
       RetryPolicy timeoutPolicy = RetryPolicies.exponentialBackoffRetry(5, 200,
-          TimeUnit.MILLISECONDS);
-      Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap 
-                     = new HashMap<Class<? extends Exception>, RetryPolicy>();
-      RetryPolicy methodPolicy = RetryPolicies.retryByException(timeoutPolicy,
-          exceptionToPolicyMap);
-      Map<String, RetryPolicy> methodNameToPolicyMap 
-                     = new HashMap<String, RetryPolicy>();
-      methodNameToPolicyMap.put("getBlocks", methodPolicy);
-      methodNameToPolicyMap.put("getAccessKeys", methodPolicy);
-      proxy = (NamenodeProtocolPB) RetryProxy.create(NamenodeProtocolPB.class,
-          proxy, methodNameToPolicyMap);
+              TimeUnit.MILLISECONDS);
+      Map<String, RetryPolicy> methodNameToPolicyMap
+           = new HashMap<String, RetryPolicy>();
+      methodNameToPolicyMap.put("getBlocks", timeoutPolicy);
+      methodNameToPolicyMap.put("getAccessKeys", timeoutPolicy);
+      NamenodeProtocol translatorProxy =
+          new NamenodeProtocolTranslatorPB(proxy);
+      return (NamenodeProtocol) RetryProxy.create(
+          NamenodeProtocol.class, translatorProxy, methodNameToPolicyMap);
+    } else {
+      return new NamenodeProtocolTranslatorPB(proxy);
     }
-    return new NamenodeProtocolTranslatorPB(proxy);
   }
   
   private static ClientProtocol createNNProxyWithClientProtocol(
@@ -379,29 +378,27 @@ public class NameNodeProxies {
                  = new HashMap<Class<? extends Exception>, RetryPolicy>();
       remoteExceptionToPolicyMap.put(AlreadyBeingCreatedException.class,
           createPolicy);
-    
-      Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap
-                 = new HashMap<Class<? extends Exception>, RetryPolicy>();
-      exceptionToPolicyMap.put(RemoteException.class, RetryPolicies
-          .retryByRemoteException(defaultPolicy,
-              remoteExceptionToPolicyMap));
-      RetryPolicy methodPolicy = RetryPolicies.retryByException(
-          defaultPolicy, exceptionToPolicyMap);
+
+      RetryPolicy methodPolicy = RetryPolicies.retryByRemoteException(
+          defaultPolicy, remoteExceptionToPolicyMap);
       Map<String, RetryPolicy> methodNameToPolicyMap 
                  = new HashMap<String, RetryPolicy>();
     
       methodNameToPolicyMap.put("create", methodPolicy);
-    
-      proxy = (ClientNamenodeProtocolPB) RetryProxy.create(
-          ClientNamenodeProtocolPB.class,
-          new DefaultFailoverProxyProvider<ClientNamenodeProtocolPB>(
-              ClientNamenodeProtocolPB.class, proxy),
+
+      ClientProtocol translatorProxy =
+        new ClientNamenodeProtocolTranslatorPB(proxy);
+      return (ClientProtocol) RetryProxy.create(
+          ClientProtocol.class,
+          new DefaultFailoverProxyProvider<ClientProtocol>(
+              ClientProtocol.class, translatorProxy),
           methodNameToPolicyMap,
           defaultPolicy);
+    } else {
+      return new ClientNamenodeProtocolTranslatorPB(proxy);
     }
-    return new ClientNamenodeProtocolTranslatorPB(proxy);
   }
-  
+
   private static Object createNameNodeProxy(InetSocketAddress address,
       Configuration conf, UserGroupInformation ugi, Class<?> xface,
       int rpcTimeout) throws IOException {
