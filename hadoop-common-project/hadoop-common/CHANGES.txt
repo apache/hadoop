@@ -28,6 +28,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10607. Create an API to separate credentials/password storage
     from applications (Larry McCay via omalley)
 
+    HADOOP-10732. Fix locking in credential update. (Ted Yu via omalley)
+
   OPTIMIZATIONS
 
   BUG FIXES
