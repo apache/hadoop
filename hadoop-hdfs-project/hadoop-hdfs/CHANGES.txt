@@ -324,6 +324,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-6478. RemoteException can't be retried properly for non-HA scenario.
     (Ming Ma via jing9)
 
+    HDFS-6693. TestDFSAdminWithHA fails on windows ( vinayakumarb )
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
