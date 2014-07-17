@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- Put site-specific property overrides in this file. -->
+
+<configuration>
+<property>
+<name>nativetask.nonsorttest.inputpath</name>
+<value>./sorttest/input</value>
+</property>
+<property>
+<name>nativetask.nonsorttest.filesize</name>
+<value>4194304</value>
+</property>
+<property>
+<name>nonsorttest.native.outputdir.tmp</name>
+<value>./sorttest/output/tmp</value>
+</property>
+<property>
+<name>nonsorttest.native.outputdir</name>
+<value>./sorttest/output/native</value>
+</property>
+<property>
+<name>nonsorttest.normal.outputdir</name>
+<value>./sort/output/normal</value>
+</property>
+<property>
+<name>mapred.job.tracker</name>
+<value>local</value>
+</property>
+</configuration>

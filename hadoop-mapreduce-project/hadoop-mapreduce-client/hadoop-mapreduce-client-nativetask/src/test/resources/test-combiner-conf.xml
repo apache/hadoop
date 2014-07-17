@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- Put site-specific property overrides in this file. -->
+
+<configuration>
+<property>
+<name>nativetask.combinertest.inputpath</name>
+<value>./combinertest/input</value>
+</property>
+<property>
+<name>nativetask.combiner.wordcount.filesize</name>
+<value>20971520</value>
+</property>
+
+<property>
+<name>nativetask.combinertest.outputdir</name>
+<value>./combinertest/output/native</value>
+</property>
+<property>
+<name>normal.combinertest.outputdir</name>
+<value>./combinertest/output/normal</value>
+</property>
+<property>
+<name>oldAPI.nativetask.combinertest.outputdir</name>
+<value>./combinertest/oldapi/output/native</value>
+</property>
+<property>
+<name>oldAPI.normal.combinertest.outputdir</name>
+<value>./combinertest/oldapi/output/normal</value>
+</property>
+<property>
+<name>mapred.job.tracker</name>
+<value>local</value>
+</property>
+</configuration>

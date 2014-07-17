@@ -226,6 +226,10 @@ public class Text extends BinaryComparable
     this.length = len;
   }
 
+  public void setLength(int len) {
+    this.length = len;
+  }
+
   /**
    * Append a range of bytes to the end of the given text
    * @param utf8 the data to copy from
@@ -260,7 +264,7 @@ public class Text extends BinaryComparable
    * @param len the number of bytes we need
    * @param keepData should the old data be kept
    */
-  private void setCapacity(int len, boolean keepData) {
+  public void setCapacity(int len, boolean keepData) {
     if (bytes == null || bytes.length < len) {
       if (bytes != null && keepData) {
         bytes = Arrays.copyOf(bytes, Math.max(len,length << 1));

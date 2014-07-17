@@ -385,11 +385,19 @@ public class MapTask extends Task {
        ReflectionUtils.newInstance(
                         job.getClass(JobContext.MAP_OUTPUT_COLLECTOR_CLASS_ATTR,
                         MapOutputBuffer.class, MapOutputCollector.class), job);
-    LOG.info("Map output collector class = " + collector.getClass().getName());
     MapOutputCollector.Context context =
                            new MapOutputCollector.Context(this, job, reporter);
-    collector.init(context);
-    return collector;
+
+    try {
+      collector.init(context);
+    } catch (Exception e) {
+      LOG.warn("Nativetask falling back to Java MapOutputCollector", e);
+      collector = new MapOutputBuffer();
+      collector.init(context);
+    } finally {
+      LOG.info("Map output collector class = " + collector.getClass().getName());
+      return collector;
+    }
   }
 
   @SuppressWarnings("unchecked")

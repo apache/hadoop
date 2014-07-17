@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- Put site-specific property overrides in this file. -->
+
+<configuration>
+<property>
+<name>mapred.output.compress</name>
+<value>false</value>
+</property>
+<property>
+<name>mapred.output.value.class</name>
+<value>org.apache.hadoop.io.IntWritable</value>
+</property>
+<property>
+<name>nativetask.compress.filesize</name>
+<value>100000</value>
+</property>
+<property>
+<name>mapreduce.reduce.class</name>
+<value>org.apache.hadoop.mapred.nativetask.kvtest.HashSumReducer</value>
+</property>
+<property>
+<name>mapred.compress.map.output</name>
+<value>true</value>
+</property>
+<property>
+<name>mapred.output.compression.type</name>
+<value>BLOCK</value>
+</property>
+<property>
+<name>mapred.map.output.compression.codec</name>
+<value>org.apache.hadoop.io.compress.Lz4Codec</value>
+</property>
+<property>
+<name>hadoop.native.lib</name>
+<value>true</value>
+</property>
+</configuration>

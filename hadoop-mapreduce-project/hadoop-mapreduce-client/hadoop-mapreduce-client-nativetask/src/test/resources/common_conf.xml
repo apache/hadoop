@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- Put site-specific property overrides in this file. -->
+
+<configuration>
+<property>
+<name>mapred.job.tracker</name>
+<value>local</value>
+</property>
+
+<property>
+<name>keep.failed.task.files</name>
+<value>true</value>
+</property>
+
+  <property>
+  <name>keep.task.files.pattern</name>
+  <value>.*_m_</value>
+  <description>Keep all files from tasks whose task names match the given
+               regular expression. Defaults to none.</description>
+  </property>
+
+<property>
+<name>nativetask.kvsize.max.largekv</name>
+<value>1048576</value>
+</property>
+
+<property>
+<name>native.processor.buffer.kb</name>
+<value>128</value>
+</property>
+
+<property>
+<name>nativetask.output.manager</name>
+<value>org.apache.hadoop.mapred.nativetask.util.LocalJobOutputFiles</value>
+</property>
+
+</configuration>
