@@ -423,6 +423,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10733. Fix potential null dereference in CredShell. (Ted Yu via
     omalley)
 
+    HADOOP-10610. Upgrade S3n s3.fs.buffer.dir to support multi directories.
+    (Ted Malaska via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES
