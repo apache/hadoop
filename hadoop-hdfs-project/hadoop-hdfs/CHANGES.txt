@@ -42,6 +42,8 @@ Release 2.6.0 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HDFS-6690. Deduplicate xattr names in memory. (wang)
+
   BUG FIXES
 
     HDFS-6617. Flake TestDFSZKFailoverController.testManualFailoverWithDFSHAAdmin
