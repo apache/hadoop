@@ -72,11 +72,11 @@ public class TestReaddir {
   public static void setup() throws Exception {
     String currentUser = System.getProperty("user.name");
     config.set(
-            DefaultImpersonationProvider.getProxySuperuserGroupConfKey(currentUser),
-            "*");
+            DefaultImpersonationProvider.getTestProvider().
+                getProxySuperuserGroupConfKey(currentUser), "*");
     config.set(
-            DefaultImpersonationProvider.getProxySuperuserIpConfKey(currentUser),
-            "*");
+            DefaultImpersonationProvider.getTestProvider().
+                getProxySuperuserIpConfKey(currentUser), "*");
     ProxyUsers.refreshSuperUserGroupsConfiguration(config);
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(1).build();
     cluster.waitActive();

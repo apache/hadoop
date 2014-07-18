@@ -328,8 +328,10 @@ public class TestJspHelper {
     String user = "TheNurse";
     conf.set(DFSConfigKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     
-    conf.set(DefaultImpersonationProvider.getProxySuperuserGroupConfKey(realUser), "*");
-    conf.set(DefaultImpersonationProvider.getProxySuperuserIpConfKey(realUser), "*");
+    conf.set(DefaultImpersonationProvider.getTestProvider().
+        getProxySuperuserGroupConfKey(realUser), "*");
+    conf.set(DefaultImpersonationProvider.getTestProvider().
+        getProxySuperuserIpConfKey(realUser), "*");
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
     UserGroupInformation.setConfiguration(conf);
     UserGroupInformation ugi;

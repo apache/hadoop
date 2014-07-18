@@ -36,6 +36,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10610. Upgrade S3n s3.fs.buffer.dir to support multi directories.
     (Ted Malaska via atm)
 
+    HADOOP-10817. ProxyUsers configuration should support configurable 
+    prefixes. (tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
