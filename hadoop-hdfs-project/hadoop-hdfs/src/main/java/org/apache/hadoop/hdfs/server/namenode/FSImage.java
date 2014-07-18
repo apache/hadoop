@@ -225,6 +225,7 @@ public class FSImage implements Closeable {
       NNStorage.checkVersionUpgradable(storage.getLayoutVersion());
     }
     if (startOpt != StartupOption.UPGRADE
+        && startOpt != StartupOption.UPGRADEONLY
         && !RollingUpgradeStartupOption.STARTED.matches(startOpt)
         && layoutVersion < Storage.LAST_PRE_UPGRADE_LAYOUT_VERSION
         && layoutVersion != HdfsConstants.NAMENODE_LAYOUT_VERSION) {
@@ -263,6 +264,7 @@ public class FSImage implements Closeable {
     // 3. Do transitions
     switch(startOpt) {
     case UPGRADE:
+    case UPGRADEONLY:
       doUpgrade(target);
       return false; // upgrade saved image already
     case IMPORT:
@@ -748,11 +750,13 @@ public class FSImage implements Closeable {
       editLog.recoverUnclosedStreams();
     } else if (HAUtil.isHAEnabled(conf, nameserviceId)
         && (startOpt == StartupOption.UPGRADE
+            || startOpt == StartupOption.UPGRADEONLY
             || RollingUpgradeStartupOption.ROLLBACK.matches(startOpt))) {
       // This NN is HA, but we're doing an upgrade or a rollback of rolling
       // upgrade so init the edit log for write.
       editLog.initJournalsForWrite();
-      if (startOpt == StartupOption.UPGRADE) {
+      if (startOpt == StartupOption.UPGRADE
+          || startOpt == StartupOption.UPGRADEONLY) {
         long sharedLogCTime = editLog.getSharedLogCTime();
         if (this.storage.getCTime() < sharedLogCTime) {
           throw new IOException("It looks like the shared log is already " +

@@ -21,6 +21,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.net.URI;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 
 import org.apache.hadoop.conf.Configuration;
@@ -30,11 +32,15 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 /**
  * This class tests various upgrade cases from earlier versions to current
  * version with and without clusterid.
  */
+@RunWith(value = Parameterized.class)
 public class TestStartupOptionUpgrade {
 
   private Configuration conf;
@@ -42,10 +48,21 @@ public class TestStartupOptionUpgrade {
   private int layoutVersion;
   NNStorage storage;
 
+  @Parameters
+  public static Collection<Object[]> startOption() {
+    Object[][] params = new Object[][] { { StartupOption.UPGRADE },
+        { StartupOption.UPGRADEONLY } };
+    return Arrays.asList(params);
+  }
+
+  public TestStartupOptionUpgrade(StartupOption startOption) {
+    super();
+    this.startOpt = startOption;
+  }
+  
   @Before
   public void setUp() throws Exception {
     conf = new HdfsConfiguration();
-    startOpt = StartupOption.UPGRADE;
     startOpt.setClusterId(null);
     storage = new NNStorage(conf,
       Collections.<URI>emptyList(),
