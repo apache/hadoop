@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.web;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.io.Text;
 
+import com.google.common.annotations.VisibleForTesting;
+
 public class SWebHdfsFileSystem extends WebHdfsFileSystem {
 
   public static final Text TOKEN_KIND = new Text("SWEBHDFS delegation");
@@ -41,7 +43,9 @@ public class SWebHdfsFileSystem extends WebHdfsFileSystem {
   }
 
   @Override
-  protected int getDefaultPort() {
-    return DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT;
+  @VisibleForTesting
+  public int getDefaultPort() {
+    return getConf().getInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY,
+        DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT);
   }
 }
