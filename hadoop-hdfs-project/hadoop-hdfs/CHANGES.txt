@@ -40,6 +40,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-5624. Add HDFS tests for ACLs in combination with viewfs.
     (Stephen Chu via cnauroth)
 
+    HDFS-6655. Add 'header banner' to 'explorer.html' also in Namenode UI
+    (vinayakumarb)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
