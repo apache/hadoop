@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.test.PathUtils;
@@ -102,6 +103,7 @@ public class TestReplicationPolicyConsiderLoad {
     }
   }
 
+  private final double EPSILON = 0.0001;
   /**
    * Tests that chooseTarget with considerLoad set to true correctly calculates
    * load with decommissioned nodes.
@@ -110,14 +112,6 @@ public class TestReplicationPolicyConsiderLoad {
   public void testChooseTargetWithDecomNodes() throws IOException {
     namenode.getNamesystem().writeLock();
     try {
-      // Decommission DNs so BlockPlacementPolicyDefault.isGoodTarget()
-      // returns false
-      for (int i = 0; i < 3; i++) {
-        DatanodeInfo d = dnManager.getDatanodeByXferAddr(
-            dnrList.get(i).getIpAddr(),
-            dnrList.get(i).getXferPort());
-        d.setDecommissioned();
-      }
       String blockPoolId = namenode.getNamesystem().getBlockPoolId();
       dnManager.handleHeartbeat(dnrList.get(3),
           BlockManagerTestUtil.getStorageReportsForDatanode(dataNodes[3]),
@@ -134,6 +128,20 @@ public class TestReplicationPolicyConsiderLoad {
           blockPoolId, dataNodes[5].getCacheCapacity(),
           dataNodes[5].getCacheRemaining(),
           4, 0, 0);
+      // value in the above heartbeats
+      final int load = 2 + 4 + 4;
+      
+      FSNamesystem fsn = namenode.getNamesystem();
+      assertEquals((double)load/6, fsn.getInServiceXceiverAverage(), EPSILON);
+      
+      // Decommission DNs so BlockPlacementPolicyDefault.isGoodTarget()
+      // returns false
+      for (int i = 0; i < 3; i++) {
+        DatanodeDescriptor d = dnManager.getDatanode(dnrList.get(i));
+        dnManager.startDecommission(d);
+        d.setDecommissioned();
+      }
+      assertEquals((double)load/3, fsn.getInServiceXceiverAverage(), EPSILON);
 
       // Call chooseTarget()
       DatanodeStorageInfo[] targets = namenode.getNamesystem().getBlockManager()
