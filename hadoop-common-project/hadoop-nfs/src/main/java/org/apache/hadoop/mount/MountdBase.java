@@ -19,11 +19,15 @@ package org.apache.hadoop.mount;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.oncrpc.RpcProgram;
 import org.apache.hadoop.oncrpc.SimpleTcpServer;
 import org.apache.hadoop.oncrpc.SimpleUdpServer;
 import org.apache.hadoop.portmap.PortmapMapping;
 import org.apache.hadoop.util.ShutdownHookManager;
+
+import static org.apache.hadoop.util.ExitUtil.terminate;
 
 /**
  * Main class for starting mountd daemon. This daemon implements the NFS
@@ -33,6 +37,7 @@ import org.apache.hadoop.util.ShutdownHookManager;
  * handle for requested directory and returns it to the client.
  */
 abstract public class MountdBase {
+  public static final Log LOG = LogFactory.getLog(MountdBase.class);
   private final RpcProgram rpcProgram;
   private int udpBoundPort; // Will set after server starts
   private int tcpBoundPort; // Will set after server starts
@@ -40,11 +45,11 @@ abstract public class MountdBase {
   public RpcProgram getRpcProgram() {
     return rpcProgram;
   }
-  
+
   /**
    * Constructor
    * @param program
-   * @throws IOException 
+   * @throws IOException
    */
   public MountdBase(RpcProgram program) throws IOException {
     rpcProgram = program;
@@ -74,11 +79,16 @@ abstract public class MountdBase {
     if (register) {
       ShutdownHookManager.get().addShutdownHook(new Unregister(),
           SHUTDOWN_HOOK_PRIORITY);
-      rpcProgram.register(PortmapMapping.TRANSPORT_UDP, udpBoundPort);
-      rpcProgram.register(PortmapMapping.TRANSPORT_TCP, tcpBoundPort);
+      try {
+        rpcProgram.register(PortmapMapping.TRANSPORT_UDP, udpBoundPort);
+        rpcProgram.register(PortmapMapping.TRANSPORT_TCP, tcpBoundPort);
+      } catch (Throwable e) {
+        LOG.fatal("Failed to start the server. Cause:", e);
+        terminate(1, e);
+      }
     }
   }
-  
+
   /**
    * Priority of the mountd shutdown hook.
    */
@@ -91,5 +101,5 @@ abstract public class MountdBase {
       rpcProgram.unregister(PortmapMapping.TRANSPORT_TCP, tcpBoundPort);
     }
   }
-  
+
 }

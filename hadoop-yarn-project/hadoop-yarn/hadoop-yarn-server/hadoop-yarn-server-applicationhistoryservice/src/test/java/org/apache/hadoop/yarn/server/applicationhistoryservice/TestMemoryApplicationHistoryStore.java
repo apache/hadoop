@@ -198,7 +198,7 @@ public class TestMemoryApplicationHistoryStore extends
       writeContainerFinishData(containerId);
     }
     long usedMemoryAfter = (runtime.totalMemory() - runtime.freeMemory()) / mb;
-    Assert.assertTrue((usedMemoryAfter - usedMemoryBefore) < 200);
+    Assert.assertTrue((usedMemoryAfter - usedMemoryBefore) < 400);
   }
 
 }

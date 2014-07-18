@@ -28,8 +28,6 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Provides access to the <code>AccessControlList</code>s used by KMS,
@@ -52,13 +50,11 @@ public class KMSACLs implements Runnable {
 
   public static final int RELOADER_SLEEP_MILLIS = 1000;
 
-  Map<Type, AccessControlList> acls;
-  private ReadWriteLock lock;
+  private volatile Map<Type, AccessControlList> acls;
   private ScheduledExecutorService executorService;
   private long lastReload;
 
   KMSACLs(Configuration conf) {
-    lock = new ReentrantReadWriteLock();
     if (conf == null) {
       conf = loadACLs();
     }
@@ -70,17 +66,13 @@ public class KMSACLs implements Runnable {
   }
 
   private void setACLs(Configuration conf) {
-    lock.writeLock().lock();
-    try {
-      acls = new HashMap<Type, AccessControlList>();
-      for (Type aclType : Type.values()) {
-        String aclStr = conf.get(aclType.getConfigKey(), ACL_DEFAULT);
-        acls.put(aclType, new AccessControlList(aclStr));
-        LOG.info("'{}' ACL '{}'", aclType, aclStr);
-      }
-    } finally {
-      lock.writeLock().unlock();
+    Map<Type, AccessControlList> tempAcls = new HashMap<Type, AccessControlList>();
+    for (Type aclType : Type.values()) {
+      String aclStr = conf.get(aclType.getConfigKey(), ACL_DEFAULT);
+      tempAcls.put(aclType, new AccessControlList(aclStr));
+      LOG.info("'{}' ACL '{}'", aclType, aclStr);
     }
+    acls = tempAcls;
   }
 
   @Override
@@ -120,14 +112,7 @@ public class KMSACLs implements Runnable {
 
   public boolean hasAccess(Type type, String user) {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
-    AccessControlList acl = null;
-    lock.readLock().lock();
-    try {
-      acl = acls.get(type);
-    } finally {
-      lock.readLock().unlock();
-    }
-    return acl.isUserAllowed(ugi);
+    return acls.get(type).isUserAllowed(ugi);
   }
 
 }

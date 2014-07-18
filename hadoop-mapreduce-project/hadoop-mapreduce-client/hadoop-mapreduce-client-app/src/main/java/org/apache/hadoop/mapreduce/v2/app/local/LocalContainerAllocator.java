@@ -64,6 +64,7 @@ public class LocalContainerAllocator extends RMCommunicator
   private int nmPort;
   private int nmHttpPort;
   private ContainerId containerId;
+  protected int lastResponseID;
 
   private final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
@@ -119,6 +120,11 @@ public class LocalContainerAllocator extends RMCommunicator
     if (allocateResponse.getAMCommand() != null) {
       switch(allocateResponse.getAMCommand()) {
       case AM_RESYNC:
+        LOG.info("ApplicationMaster is out of sync with ResourceManager,"
+            + " hence resyncing.");        
+        this.lastResponseID = 0;
+        register();
+        break;
       case AM_SHUTDOWN:
         LOG.info("Event from RM: shutting down Application Master");
         // This can happen if the RM has been restarted. If it is in that state,

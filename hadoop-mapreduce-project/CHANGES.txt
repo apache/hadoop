@@ -17,6 +17,9 @@ Trunk (Unreleased)
     MAPREDUCE-5232. Add a configuration to be able to log classpath and other
     system properties on mapreduce JVMs startup.  (Sangjin Lee via vinodkv)
 
+    MAPREDUCE-5910. Make MR AM resync with RM in case of work-preserving
+    RM-restart. (Rohith via jianhe)
+
   IMPROVEMENTS
 
     MAPREDUCE-3481. [Gridmix] Improve Gridmix STRESS mode. (amarrk)
@@ -153,6 +156,9 @@ Release 2.6.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-5971. Move the default options for distcp -p to
+    DistCpOptionSwitch. (clamb via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -237,6 +243,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5844. Add a configurable delay to reducer-preemption. 
     (Maysam Yabandeh via kasha)
 
+    MAPREDUCE-5790. Made it easier to enable hprof profile options by default.
+    (Gera Shegalov via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -303,6 +312,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5517. Fixed MapReduce ApplicationMaster to not validate reduce side
     resource configuration for deciding uber-mode on map-only jobs. (Siqi Li via
     vinodkv)
+
+    MAPREDUCE-5952. LocalContainerLauncher#renameMapOutputForReduce incorrectly 
+    assumes a single dir for mapOutIndex. (Gera Shegalov via kasha)
 
 Release 2.4.1 - 2014-06-23 
 

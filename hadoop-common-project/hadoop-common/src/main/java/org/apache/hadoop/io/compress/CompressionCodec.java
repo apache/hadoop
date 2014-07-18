@@ -24,6 +24,7 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 
 /**
  * This class encapsulates a streaming compression/decompression pair.
@@ -113,4 +114,58 @@ public interface CompressionCodec {
    * @return the extension including the '.'
    */
   String getDefaultExtension();
+
+  static class Util {
+    /**
+     * Create an output stream with a codec taken from the global CodecPool.
+     *
+     * @param codec       The codec to use to create the output stream.
+     * @param conf        The configuration to use if we need to create a new codec.
+     * @param out         The output stream to wrap.
+     * @return            The new output stream
+     * @throws IOException
+     */
+    static CompressionOutputStream createOutputStreamWithCodecPool(
+        CompressionCodec codec, Configuration conf, OutputStream out)
+        throws IOException {
+      Compressor compressor = CodecPool.getCompressor(codec, conf);
+      CompressionOutputStream stream = null;
+      try {
+        stream = codec.createOutputStream(out, compressor);
+      } finally {
+        if (stream == null) {
+          CodecPool.returnCompressor(compressor);
+        } else {
+          stream.setTrackedCompressor(compressor);
+        }
+      }
+      return stream;
+    }
+
+    /**
+     * Create an input stream with a codec taken from the global CodecPool.
+     *
+     * @param codec       The codec to use to create the input stream.
+     * @param conf        The configuration to use if we need to create a new codec.
+     * @param in          The input stream to wrap.
+     * @return            The new input stream
+     * @throws IOException
+     */
+    static CompressionInputStream createInputStreamWithCodecPool(
+        CompressionCodec codec,  Configuration conf, InputStream in)
+          throws IOException {
+      Decompressor decompressor = CodecPool.getDecompressor(codec);
+      CompressionInputStream stream = null;
+      try {
+        stream = codec.createInputStream(in, decompressor);
+      } finally {
+        if (stream == null) {
+          CodecPool.returnDecompressor(decompressor);
+        } else {
+          stream.setTrackedDecompressor(decompressor);
+        }
+      }
+      return stream;
+    }
+  }
 }

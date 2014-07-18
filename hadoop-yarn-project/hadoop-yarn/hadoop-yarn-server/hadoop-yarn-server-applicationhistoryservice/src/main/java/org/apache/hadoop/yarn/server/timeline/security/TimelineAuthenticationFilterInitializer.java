@@ -47,9 +47,9 @@ import org.apache.hadoop.security.SecurityUtil;
 public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
 
   /**
-   * The configuration prefix of timeline Kerberos + DT authentication
+   * The configuration prefix of timeline HTTP authentication
    */
-  public static final String PREFIX = "yarn.timeline-service.http.authentication.";
+  public static final String PREFIX = "yarn.timeline-service.http-authentication.";
 
   private static final String SIGNATURE_SECRET_FILE =
       TimelineAuthenticationFilter.SIGNATURE_SECRET + ".file";

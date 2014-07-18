@@ -41,6 +41,8 @@ public abstract class CompressionInputStream extends InputStream implements Seek
   protected final InputStream in;
   protected long maxAvailableData = 0L;
 
+  private Decompressor trackedDecompressor;
+
   /**
    * Create a compression input stream that reads
    * the decompressed bytes from the given stream.
@@ -58,6 +60,10 @@ public abstract class CompressionInputStream extends InputStream implements Seek
   @Override
   public void close() throws IOException {
     in.close();
+    if (trackedDecompressor != null) {
+      CodecPool.returnDecompressor(trackedDecompressor);
+      trackedDecompressor = null;
+    }
   }
   
   /**
@@ -111,5 +117,9 @@ public abstract class CompressionInputStream extends InputStream implements Seek
   @Override
   public boolean seekToNewSource(long targetPos) throws UnsupportedOperationException {
     throw new UnsupportedOperationException();
+  }
+
+  void setTrackedDecompressor(Decompressor decompressor) {
+    trackedDecompressor = decompressor;
   }
 }

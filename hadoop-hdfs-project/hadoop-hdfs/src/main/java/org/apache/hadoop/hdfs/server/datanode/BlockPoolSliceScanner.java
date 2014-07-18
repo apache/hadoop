@@ -310,18 +310,11 @@ class BlockPoolSliceScanner {
     }
   }
   
-  private synchronized void updateScanStatus(Block block, 
+  private synchronized void updateScanStatus(BlockScanInfo info,
                                              ScanType type,
                                              boolean scanOk) {
-    BlockScanInfo info = blockMap.get(block);
-    
-    if ( info != null ) {
-      delBlockInfo(info);
-    } else {
-      // It might already be removed. Thats ok, it will be caught next time.
-      info = new BlockScanInfo(block);
-    }
-    
+    delBlockInfo(info);
+
     long now = Time.monotonicNow();
     info.lastScanType = type;
     info.lastScanTime = now;
@@ -334,8 +327,8 @@ class BlockPoolSliceScanner {
     }
     
     if (verificationLog != null) {
-      verificationLog.append(now, block.getGenerationStamp(),
-          block.getBlockId());
+      verificationLog.append(now, info.getGenerationStamp(),
+          info.getBlockId());
     }
   }
   
@@ -434,11 +427,13 @@ class BlockPoolSliceScanner {
           totalTransientErrors++;
         }
         
-        updateScanStatus(block.getLocalBlock(), ScanType.VERIFICATION_SCAN, true);
+        updateScanStatus((BlockScanInfo)block.getLocalBlock(),
+            ScanType.VERIFICATION_SCAN, true);
 
         return;
       } catch (IOException e) {
-        updateScanStatus(block.getLocalBlock(), ScanType.VERIFICATION_SCAN, false);
+        updateScanStatus((BlockScanInfo)block.getLocalBlock(),
+            ScanType.VERIFICATION_SCAN, false);
 
         // If the block does not exists anymore, then its not an error
         if (!dataset.contains(block)) {
@@ -497,7 +492,7 @@ class BlockPoolSliceScanner {
   
   // Picks one block and verifies it
   private void verifyFirstBlock() {
-    Block block = null;
+    BlockScanInfo block = null;
     synchronized (this) {
       if (!blockInfoSet.isEmpty()) {
         block = blockInfoSet.first();

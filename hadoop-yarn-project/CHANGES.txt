@@ -43,6 +43,12 @@ Release 2.6.0 - UNRELEASED
     YARN-2274. FairScheduler: Add debug information about cluster capacity, 
     availability and reservations. (kasha)
 
+    YARN-2228. Augmented TimelineServer to load pseudo authentication filter when
+    authentication = simple. (Zhijie Shen via vinodkv)
+
+    YARN-1341. Recover NMTokens upon nodemanager restart. (Jason Lowe via 
+    junping_du)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -52,6 +58,16 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2088. Fixed a bug in GetApplicationsRequestPBImpl#mergeLocalToBuilder.
     (Binglin Chang via jianhe)
+
+    YARN-2260. Fixed ResourceManager's RMNode to correctly remember containers
+    when nodes resync during work-preserving RM restart. (Jian He via vinodkv)
+
+    YARN-2264. Fixed a race condition in DrainDispatcher which may cause random
+    test failures. (Li Lu via jianhe)
+
+    YARN-2219. Changed ResourceManager to avoid AMs and NMs getting exceptions
+    after RM recovery but before scheduler learns about apps and app-attempts.
+    (Jian He via vinodkv)
 
 Release 2.5.0 - UNRELEASED
 
@@ -88,6 +104,9 @@ Release 2.5.0 - UNRELEASED
 
     YARN-1713. Added get-new-app and submit-app functionality to RM web services.
     (Varun Vasudev via vinodkv)
+
+    YARN-2233. Implemented ResourceManager web-services to create, renew and
+    cancel delegation tokens. (Varun Vasudev via vinodkv)
 
   IMPROVEMENTS
 
@@ -252,6 +271,9 @@ Release 2.5.0 - UNRELEASED
 
     YARN-2241. ZKRMStateStore: On startup, show nicer messages if znodes already 
     exist. (Robert Kanter via kasha)
+
+	YARN-1408 Preemption caused Invalid State Event: ACQUIRED at KILLED and 
+	caused a task timeout for 30mins. (Sunil G via mayank)
 
   OPTIMIZATIONS
 

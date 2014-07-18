@@ -29,6 +29,8 @@ import org.apache.hadoop.classification.InterfaceStability;
  * abstraction to separate credential storage from users of them. It
  * is intended to support getting or storing passwords in a variety of ways,
  * including third party bindings.
+ * 
+ * <code>CredentialProvider</code> implementations must be thread safe.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable

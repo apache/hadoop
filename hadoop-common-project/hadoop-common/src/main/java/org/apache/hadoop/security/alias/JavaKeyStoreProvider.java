@@ -230,6 +230,7 @@ public class JavaKeyStoreProvider extends CredentialProvider {
 
   CredentialEntry innerSetCredential(String alias, char[] material)
       throws IOException {
+    writeLock.lock();
     try {
       keyStore.setKeyEntry(alias, new SecretKeySpec(
           new String(material).getBytes("UTF-8"), "AES"),
@@ -237,6 +238,8 @@ public class JavaKeyStoreProvider extends CredentialProvider {
     } catch (KeyStoreException e) {
       throw new IOException("Can't store credential " + alias + " in " + this,
           e);
+    } finally {
+      writeLock.unlock();
     }
     changed = true;
     return new CredentialEntry(alias, material);

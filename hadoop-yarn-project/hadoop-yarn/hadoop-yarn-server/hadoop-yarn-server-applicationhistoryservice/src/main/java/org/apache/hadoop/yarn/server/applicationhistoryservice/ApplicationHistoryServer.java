@@ -28,7 +28,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ExitUtil;
@@ -178,23 +177,20 @@ public class ApplicationHistoryServer extends CompositeService {
 
   protected void startWebApp() {
     Configuration conf = getConfig();
-    // Play trick to make the customized filter will only be loaded by the
-    // timeline server when security is enabled and Kerberos authentication
-    // is used.
-    if (UserGroupInformation.isSecurityEnabled()
-        && conf
-            .get(TimelineAuthenticationFilterInitializer.PREFIX + "type", "")
-            .equals("kerberos")) {
-      String initializers = conf.get("hadoop.http.filter.initializers");
-      initializers =
-          initializers == null || initializers.length() == 0 ? "" : ","
-              + initializers;
-      if (!initializers.contains(
-          TimelineAuthenticationFilterInitializer.class.getName())) {
-        conf.set("hadoop.http.filter.initializers",
-            TimelineAuthenticationFilterInitializer.class.getName()
-            + initializers);
-      }
+    // Always load pseudo authentication filter to parse "user.name" in an URL
+    // to identify a HTTP request's user in insecure mode.
+    // When Kerberos authentication type is set (i.e., secure mode is turned on),
+    // the customized filter will be loaded by the timeline server to do Kerberos
+    // + DT authentication.
+    String initializers = conf.get("hadoop.http.filter.initializers");
+    initializers =
+        initializers == null || initializers.length() == 0 ? "" : ","
+            + initializers;
+    if (!initializers.contains(
+        TimelineAuthenticationFilterInitializer.class.getName())) {
+      conf.set("hadoop.http.filter.initializers",
+          TimelineAuthenticationFilterInitializer.class.getName()
+              + initializers);
     }
     String bindAddress = WebAppUtils.getAHSWebAppURLWithoutScheme(conf);
     LOG.info("Instantiating AHSWebApp at " + bindAddress);

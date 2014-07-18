@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.viewfs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -28,9 +29,16 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
+import org.apache.hadoop.fs.permission.AclEntry;
+import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.AclUtil;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.viewfs.ConfigUtil;
@@ -38,6 +46,7 @@ import org.apache.hadoop.fs.viewfs.ViewFileSystem;
 import org.apache.hadoop.fs.viewfs.ViewFileSystem.MountPoint;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.junit.After;
 import org.junit.Assert;
@@ -96,7 +105,6 @@ public class ViewFileSystemBaseTest {
     // in the test root
     
     // Set up the defaultMT in the config with our mount point links
-    //Configuration conf = new Configuration();
     conf = ViewFileSystemTestSetup.createConfig();
     setupMountPoints();
     fsView = FileSystem.get(FsConstants.VIEWFS_URI, conf);
@@ -720,4 +728,49 @@ public class ViewFileSystemBaseTest {
     Assert.assertTrue("Other-readable permission not set!",
         perms.getOtherAction().implies(FsAction.READ));
   }
+
+  /**
+   * Verify the behavior of ACL operations on paths above the root of
+   * any mount table entry.
+   */
+
+  @Test(expected=AccessControlException.class)
+  public void testInternalModifyAclEntries() throws IOException {
+    fsView.modifyAclEntries(new Path("/internalDir"),
+        new ArrayList<AclEntry>());
+  }
+
+  @Test(expected=AccessControlException.class)
+  public void testInternalRemoveAclEntries() throws IOException {
+    fsView.removeAclEntries(new Path("/internalDir"),
+        new ArrayList<AclEntry>());
+  }
+
+  @Test(expected=AccessControlException.class)
+  public void testInternalRemoveDefaultAcl() throws IOException {
+    fsView.removeDefaultAcl(new Path("/internalDir"));
+  }
+
+  @Test(expected=AccessControlException.class)
+  public void testInternalRemoveAcl() throws IOException {
+    fsView.removeAcl(new Path("/internalDir"));
+  }
+
+  @Test(expected=AccessControlException.class)
+  public void testInternalSetAcl() throws IOException {
+    fsView.setAcl(new Path("/internalDir"), new ArrayList<AclEntry>());
+  }
+
+  @Test
+  public void testInternalGetAclStatus() throws IOException {
+    final UserGroupInformation currentUser =
+        UserGroupInformation.getCurrentUser();
+    AclStatus aclStatus = fsView.getAclStatus(new Path("/internalDir"));
+    assertEquals(aclStatus.getOwner(), currentUser.getUserName());
+    assertEquals(aclStatus.getGroup(), currentUser.getGroupNames()[0]);
+    assertEquals(aclStatus.getEntries(),
+        AclUtil.getMinimalAcl(PERMISSION_555));
+    assertFalse(aclStatus.isStickyBit());
+  }
+
 }
