@@ -420,6 +420,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private final CacheManager cacheManager;
   private final DatanodeStatistics datanodeStatistics;
 
+  private String nameserviceId;
+
   private RollingUpgradeInfo rollingUpgradeInfo = null;
   /**
    * A flag that indicates whether the checkpointer should checkpoint a rollback
@@ -791,7 +793,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       // block allocation has to be persisted in HA using a shared edits directory
       // so that the standby has up-to-date namespace information
-      String nameserviceId = DFSUtil.getNamenodeNameServiceId(conf);
+      nameserviceId = DFSUtil.getNamenodeNameServiceId(conf);
       this.haEnabled = HAUtil.isHAEnabled(conf, nameserviceId);  
       
       // Sanity check the HA-related config.
@@ -8502,22 +8504,31 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Create a new key on the KeyProvider for an encryption zone.
    *
-   * @param keyId id of the key
+   * @param keyIdArg id of the key
    * @param src path of the encryption zone.
    * @return KeyVersion of the created key
    * @throws IOException
    */
-  private KeyVersion createNewKey(String keyId, String src)
+  private KeyVersion createNewKey(String keyIdArg, String src)
     throws IOException {
-    Preconditions.checkNotNull(keyId);
+    Preconditions.checkNotNull(keyIdArg);
     Preconditions.checkNotNull(src);
-    // TODO pass in hdfs://HOST:PORT (HDFS-6490)
-    providerOptions.setDescription(src);
+    final StringBuilder sb = new StringBuilder("hdfs://");
+    if (nameserviceId != null) {
+      sb.append(nameserviceId);
+    }
+    sb.append(src);
+    if (!src.endsWith("/")) {
+      sb.append('/');
+    }
+    sb.append(keyIdArg);
+    final String keyId = sb.toString();
+    providerOptions.setDescription(keyId);
     providerOptions.setBitLength(codec.getCipherSuite()
         .getAlgorithmBlockSize()*8);
     KeyVersion version = null;
     try {
-      version = provider.createKey(keyId, providerOptions);
+      version = provider.createKey(keyIdArg, providerOptions);
     } catch (NoSuchAlgorithmException e) {
       throw new IOException(e);
     }

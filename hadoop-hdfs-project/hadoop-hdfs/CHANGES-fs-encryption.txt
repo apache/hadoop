@@ -46,6 +46,9 @@ fs-encryption (Unreleased)
 
     HDFS-6405. Test Crypto streams in HDFS. (yliu via wang)
 
+    HDFS-6490. Fix the keyid format for generated keys in
+    FSNamesystem.createEncryptionZone (clamb)
+
   OPTIMIZATIONS
 
   BUG FIXES
