@@ -298,6 +298,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-4120. Add a new "-skipSharedEditsCheck" option for BootstrapStandby
     (Liang Xie and Rakesh R via vinayakumarb)
 
+    HDFS-6597. Add a new option to NN upgrade to terminate the process after
+    upgrade on NN is completed. (Danilo Vunjak via cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
