@@ -254,6 +254,8 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6583. Remove clientNode in FileUnderConstructionFeature. (wheat9)
 
+    HDFS-6599. 2.4 addBlock is 10 to 20 times slower compared to 0.23 (daryn)
+
   BUG FIXES 
 
     HDFS-6112. NFS Gateway docs are incorrect for allowed hosts configuration.
