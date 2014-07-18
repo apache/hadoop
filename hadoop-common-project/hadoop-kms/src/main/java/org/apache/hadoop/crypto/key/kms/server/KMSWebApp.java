@@ -22,6 +22,7 @@ import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.CachingKeyProvider;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.http.HttpServer2;
@@ -150,10 +151,17 @@ public class KMSWebApp implements ServletContextListener {
             kmsConf.get(KeyProviderFactory.KEY_PROVIDER_PATH));
       }
       keyProvider = providers.get(0);
-      long timeOutMillis =
-          kmsConf.getLong(KMSConfiguration.KEY_CACHE_TIMEOUT_KEY,
-              KMSConfiguration.KEY_CACHE_TIMEOUT_DEFAULT);
-      keyProvider = new KMSCacheKeyProvider(keyProvider, timeOutMillis);
+      if (kmsConf.getBoolean(KMSConfiguration.KEY_CACHE_ENABLE,
+          KMSConfiguration.KEY_CACHE_ENABLE_DEFAULT)) {
+        long keyTimeOutMillis =
+            kmsConf.getLong(KMSConfiguration.KEY_CACHE_TIMEOUT_KEY,
+                KMSConfiguration.KEY_CACHE_TIMEOUT_DEFAULT);
+        long currKeyTimeOutMillis =
+            kmsConf.getLong(KMSConfiguration.CURR_KEY_CACHE_TIMEOUT_KEY,
+                KMSConfiguration.CURR_KEY_CACHE_TIMEOUT_DEFAULT);
+        keyProvider = new CachingKeyProvider(keyProvider, keyTimeOutMillis,
+            currKeyTimeOutMillis);
+      }
 
       LOG.info("KMS Started");
     } catch (Throwable ex) {
