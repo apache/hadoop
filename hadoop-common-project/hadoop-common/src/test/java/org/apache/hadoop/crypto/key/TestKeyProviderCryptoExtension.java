@@ -45,6 +45,7 @@ public class TestKeyProviderCryptoExtension {
         kpExt.generateEncryptedKey(kv);
     Assert.assertEquals(KeyProviderCryptoExtension.EEK, 
         ek1.getEncryptedKey().getVersionName());
+    Assert.assertEquals("foo", ek1.getKeyName());
     Assert.assertNotNull(ek1.getEncryptedKey().getMaterial());
     Assert.assertEquals(kv.getMaterial().length, 
         ek1.getEncryptedKey().getMaterial().length);
