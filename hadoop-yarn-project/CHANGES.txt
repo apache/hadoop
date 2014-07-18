@@ -31,6 +31,8 @@ Release 2.6.0 - UNRELEASED
     YARN-1341. Recover NMTokens upon nodemanager restart. (Jason Lowe via 
     junping_du)
 
+    YARN-2208. AMRMTokenManager need to have a way to roll over AMRMToken. (xgong)
+
   OPTIMIZATIONS
 
   BUG FIXES
