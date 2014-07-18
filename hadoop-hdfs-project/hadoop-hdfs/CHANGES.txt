@@ -43,9 +43,6 @@ Release 2.6.0 - UNRELEASED
     HDFS-6655. Add 'header banner' to 'explorer.html' also in Namenode UI
     (vinayakumarb)
 
-    HDFS-4120. Add a new "-skipSharedEditsCheck" option for BootstrapStandby
-    (Rakesh R via vinayakumarb)
-
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
