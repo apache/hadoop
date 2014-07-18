@@ -304,6 +304,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6700. BlockPlacementPolicy shoud choose storage but not datanode for
     deletion. (szetszwo)
 
+    HDFS-6616. Add exclude-datanodes feature to WebHDFS redirection so that it
+    will not redirect retries to the same datanode. (zhaoyunjiong via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
