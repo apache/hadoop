@@ -180,6 +180,9 @@ Trunk (Unreleased)
     HADOOP-10841. EncryptedKeyVersion should have a key name property. 
     (asuresh via tucu)
 
+    HADOOP-10842. CryptoExtension generateEncryptedKey method should 
+    receive the key name. (asuresh via tucu)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.

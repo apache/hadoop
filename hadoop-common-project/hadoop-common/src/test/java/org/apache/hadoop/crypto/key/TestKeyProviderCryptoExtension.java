@@ -42,7 +42,7 @@ public class TestKeyProviderCryptoExtension {
         KeyProviderCryptoExtension.createKeyProviderCryptoExtension(kp);
     
     KeyProviderCryptoExtension.EncryptedKeyVersion ek1 = 
-        kpExt.generateEncryptedKey(kv);
+        kpExt.generateEncryptedKey(kv.getName());
     Assert.assertEquals(KeyProviderCryptoExtension.EEK, 
         ek1.getEncryptedKey().getVersionName());
     Assert.assertEquals("foo", ek1.getKeyName());
@@ -56,7 +56,7 @@ public class TestKeyProviderCryptoExtension {
     Assert.assertEquals(kv.getMaterial().length, k1.getMaterial().length);
 
     KeyProviderCryptoExtension.EncryptedKeyVersion ek2 = 
-        kpExt.generateEncryptedKey(kv);
+        kpExt.generateEncryptedKey(kv.getName());
     KeyProvider.KeyVersion k2 = kpExt.decryptEncryptedKey(ek2);
     boolean eq = true;
     for (int i = 0; eq && i < ek2.getEncryptedKey().getMaterial().length; i++) {
