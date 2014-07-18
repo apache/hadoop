@@ -46,7 +46,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -585,15 +585,14 @@ public class TestDNFencing {
     }
 
     @Override
-    public DatanodeDescriptor chooseReplicaToDelete(BlockCollection inode,
+    public DatanodeStorageInfo chooseReplicaToDelete(BlockCollection inode,
         Block block, short replicationFactor,
-        Collection<DatanodeDescriptor> first,
-        Collection<DatanodeDescriptor> second) {
+        Collection<DatanodeStorageInfo> first,
+        Collection<DatanodeStorageInfo> second) {
       
-      Collection<DatanodeDescriptor> chooseFrom =
-        !first.isEmpty() ? first : second;
+      Collection<DatanodeStorageInfo> chooseFrom = !first.isEmpty() ? first : second;
 
-      List<DatanodeDescriptor> l = Lists.newArrayList(chooseFrom);
+      List<DatanodeStorageInfo> l = Lists.newArrayList(chooseFrom);
       return l.get(DFSUtil.getRandom().nextInt(l.size()));
     }
   }
