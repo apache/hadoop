@@ -285,5 +285,32 @@ public class CommonConfigurationKeysPublic {
   /** Class to override Impersonation provider */
   public static final String  HADOOP_SECURITY_IMPERSONATION_PROVIDER_CLASS =
     "hadoop.security.impersonation.provider.class";
+
+  //  <!--- KMSClientProvider configurations —>
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String KMS_CLIENT_ENC_KEY_CACHE_SIZE =
+      "hadoop.security.kms.client.encrypted.key.cache.size";
+  /** Default value for KMS_CLIENT_ENC_KEY_CACHE_SIZE */
+  public static final int KMS_CLIENT_ENC_KEY_CACHE_SIZE_DEFAULT = 500;
+
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String KMS_CLIENT_ENC_KEY_CACHE_LOW_WATERMARK =
+      "hadoop.security.kms.client.encrypted.key.cache.low-watermark";
+  /** Default value for KMS_CLIENT_ENC_KEY_CACHE_LOW_WATERMARK */
+  public static final float KMS_CLIENT_ENC_KEY_CACHE_LOW_WATERMARK_DEFAULT =
+      0.3f;
+
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String KMS_CLIENT_ENC_KEY_CACHE_NUM_REFILL_THREADS =
+      "hadoop.security.kms.client.encrypted.key.cache.num.refill.threads";
+  /** Default value for KMS_CLIENT_ENC_KEY_NUM_REFILL_THREADS */
+  public static final int KMS_CLIENT_ENC_KEY_CACHE_NUM_REFILL_THREADS_DEFAULT =
+      2;
+
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String KMS_CLIENT_ENC_KEY_CACHE_EXPIRY_MS =
+      "hadoop.security.kms.client.encrypted.key.cache.expiry";
+  /** Default value for KMS_CLIENT_ENC_KEY_CACHE_EXPIRY (12 hrs)*/
+  public static final int KMS_CLIENT_ENC_KEY_CACHE_EXPIRY_DEFAULT = 43200000;
 }
 

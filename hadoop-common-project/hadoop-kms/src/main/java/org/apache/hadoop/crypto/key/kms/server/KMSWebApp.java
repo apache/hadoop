@@ -20,10 +20,12 @@ package org.apache.hadoop.crypto.key.kms.server;
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.CachingKeyProvider;
 import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -35,6 +37,7 @@ import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
+
 import java.io.File;
 import java.net.URL;
 import java.util.List;
@@ -55,6 +58,10 @@ public class KMSWebApp implements ServletContextListener {
       "unauthorized.calls.meter";
   private static final String UNAUTHENTICATED_CALLS_METER = METRICS_PREFIX +
       "unauthenticated.calls.meter";
+  private static final String GENERATE_EEK_METER = METRICS_PREFIX +
+      "generate_eek.calls.meter";
+  private static final String DECRYPT_EEK_METER = METRICS_PREFIX +
+      "decrypt_eek.calls.meter";
 
   private static Logger LOG;
   private static MetricRegistry metricRegistry;
@@ -66,8 +73,10 @@ public class KMSWebApp implements ServletContextListener {
   private static Meter keyCallsMeter;
   private static Meter unauthorizedCallsMeter;
   private static Meter unauthenticatedCallsMeter;
+  private static Meter decryptEEKCallsMeter;
+  private static Meter generateEEKCallsMeter;
   private static Meter invalidCallsMeter;
-  private static KeyProvider keyProvider;
+  private static KeyProviderCryptoExtension keyProviderCryptoExtension;
 
   static {
     SLF4JBridgeHandler.removeHandlersForRootLogger();
@@ -122,6 +131,10 @@ public class KMSWebApp implements ServletContextListener {
       metricRegistry = new MetricRegistry();
       jmxReporter = JmxReporter.forRegistry(metricRegistry).build();
       jmxReporter.start();
+      generateEEKCallsMeter = metricRegistry.register(GENERATE_EEK_METER,
+          new Meter());
+      decryptEEKCallsMeter = metricRegistry.register(DECRYPT_EEK_METER,
+          new Meter());
       adminCallsMeter = metricRegistry.register(ADMIN_CALLS_METER, new Meter());
       keyCallsMeter = metricRegistry.register(KEY_CALLS_METER, new Meter());
       invalidCallsMeter = metricRegistry.register(INVALID_CALLS_METER,
@@ -150,7 +163,7 @@ public class KMSWebApp implements ServletContextListener {
             "the first provider",
             kmsConf.get(KeyProviderFactory.KEY_PROVIDER_PATH));
       }
-      keyProvider = providers.get(0);
+      KeyProvider keyProvider = providers.get(0);
       if (kmsConf.getBoolean(KMSConfiguration.KEY_CACHE_ENABLE,
           KMSConfiguration.KEY_CACHE_ENABLE_DEFAULT)) {
         long keyTimeOutMillis =
@@ -162,6 +175,11 @@ public class KMSWebApp implements ServletContextListener {
         keyProvider = new CachingKeyProvider(keyProvider, keyTimeOutMillis,
             currKeyTimeOutMillis);
       }
+      keyProviderCryptoExtension = KeyProviderCryptoExtension.
+          createKeyProviderCryptoExtension(keyProvider);
+      keyProviderCryptoExtension = 
+          new EagerKeyGeneratorKeyProviderCryptoExtension(kmsConf, 
+              keyProviderCryptoExtension);
 
       LOG.info("KMS Started");
     } catch (Throwable ex) {
@@ -208,6 +226,14 @@ public class KMSWebApp implements ServletContextListener {
     return invalidCallsMeter;
   }
 
+  public static Meter getGenerateEEKCallsMeter() {
+    return generateEEKCallsMeter;
+  }
+
+  public static Meter getDecryptEEKCallsMeter() {
+    return decryptEEKCallsMeter;
+  }
+
   public static Meter getUnauthorizedCallsMeter() {
     return unauthorizedCallsMeter;
   }
@@ -216,7 +242,7 @@ public class KMSWebApp implements ServletContextListener {
     return unauthenticatedCallsMeter;
   }
 
-  public static KeyProvider getKeyProvider() {
-    return keyProvider;
+  public static KeyProviderCryptoExtension getKeyProvider() {
+    return keyProviderCryptoExtension;
   }
 }
