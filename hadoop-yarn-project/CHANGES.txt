@@ -33,6 +33,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2208. AMRMTokenManager need to have a way to roll over AMRMToken. (xgong)
 
+    YARN-2323. FairShareComparator creates too many Resource objects (Hong Zhiguo
+    via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
