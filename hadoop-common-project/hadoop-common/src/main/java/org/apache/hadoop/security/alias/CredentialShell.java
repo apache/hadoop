@@ -373,12 +373,12 @@ public class CredentialShell extends Configured implements Tool {
       char[] newPassword2 = c.readPassword("Enter password again: ");
       noMatch = !Arrays.equals(newPassword1, newPassword2);
       if (noMatch) {
-        Arrays.fill(newPassword1, ' ');
+        if (newPassword1 != null) Arrays.fill(newPassword1, ' ');
         c.format("Passwords don't match. Try again.%n");
       } else {
         cred = newPassword1;
       }
-      Arrays.fill(newPassword2, ' ');
+      if (newPassword2 != null) Arrays.fill(newPassword2, ' ');
     } while (noMatch);
     return cred;
   }

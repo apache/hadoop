@@ -25,14 +25,18 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
+import org.apache.hadoop.yarn.server.api.records.MasterKey;
+import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 
 public class NMMemoryStateStoreService extends NMStateStoreService {
   private Map<TrackerKey, TrackerState> trackerStates;
   private Map<Integer, DeletionServiceDeleteTaskProto> deleteTasks;
+  private RecoveredNMTokenState nmTokenState;
 
   public NMMemoryStateStoreService() {
     super(NMMemoryStateStoreService.class.getName());
@@ -113,8 +117,12 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
 
   @Override
   protected void initStorage(Configuration conf) {
+    nmTokenState = new RecoveredNMTokenState();
+    nmTokenState.applicationMasterKeys =
+        new HashMap<ApplicationAttemptId, MasterKey>();
     trackerStates = new HashMap<TrackerKey, TrackerState>();
     deleteTasks = new HashMap<Integer, DeletionServiceDeleteTaskProto>();
+
   }
 
   @Override
@@ -145,6 +153,47 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   @Override
   public synchronized void removeDeletionTask(int taskId) throws IOException {
     deleteTasks.remove(taskId);
+  }
+
+
+  @Override
+  public RecoveredNMTokenState loadNMTokenState() throws IOException {
+    // return a copy so caller can't modify our state
+    RecoveredNMTokenState result = new RecoveredNMTokenState();
+    result.currentMasterKey = nmTokenState.currentMasterKey;
+    result.previousMasterKey = nmTokenState.previousMasterKey;
+    result.applicationMasterKeys =
+        new HashMap<ApplicationAttemptId, MasterKey>(
+            nmTokenState.applicationMasterKeys);
+    return result;
+  }
+
+  @Override
+  public void storeNMTokenCurrentMasterKey(MasterKey key)
+      throws IOException {
+    MasterKeyPBImpl keypb = (MasterKeyPBImpl) key;
+    nmTokenState.currentMasterKey = new MasterKeyPBImpl(keypb.getProto());
+  }
+
+  @Override
+  public void storeNMTokenPreviousMasterKey(MasterKey key)
+      throws IOException {
+    MasterKeyPBImpl keypb = (MasterKeyPBImpl) key;
+    nmTokenState.previousMasterKey = new MasterKeyPBImpl(keypb.getProto());
+  }
+
+  @Override
+  public void storeNMTokenApplicationMasterKey(ApplicationAttemptId attempt,
+      MasterKey key) throws IOException {
+    MasterKeyPBImpl keypb = (MasterKeyPBImpl) key;
+    nmTokenState.applicationMasterKeys.put(attempt,
+        new MasterKeyPBImpl(keypb.getProto()));
+  }
+
+  @Override
+  public void removeNMTokenApplicationMasterKey(ApplicationAttemptId attempt)
+      throws IOException {
+    nmTokenState.applicationMasterKeys.remove(attempt);
   }
 
 

@@ -81,6 +81,7 @@ public class BootstrapStandby implements Tool, Configurable {
   
   private boolean force = false;
   private boolean interactive = true;
+  private boolean skipSharedEditsCheck = false;
 
   // Exit/return codes.
   static final int ERR_CODE_FAILED_CONNECT = 2;
@@ -117,6 +118,8 @@ public class BootstrapStandby implements Tool, Configurable {
         force = true;
       } else if ("-nonInteractive".equals(arg)) {
         interactive = false;
+      } else if ("-skipSharedEditsCheck".equals(arg)) {
+        skipSharedEditsCheck = true;
       } else {
         printUsage();
         throw new HadoopIllegalArgumentException(
@@ -127,7 +130,7 @@ public class BootstrapStandby implements Tool, Configurable {
 
   private void printUsage() {
     System.err.println("Usage: " + this.getClass().getSimpleName() +
-        "[-force] [-nonInteractive]");
+        " [-force] [-nonInteractive] [-skipSharedEditsCheck]");
   }
   
   private NamenodeProtocol createNNProtocolProxy()
@@ -200,7 +203,7 @@ public class BootstrapStandby implements Tool, Configurable {
 
       // Ensure that we have enough edits already in the shared directory to
       // start up from the last checkpoint on the active.
-      if (!checkLogsAvailableForRead(image, imageTxId, curTxId)) {
+      if (!skipSharedEditsCheck && !checkLogsAvailableForRead(image, imageTxId, curTxId)) {
         return ERR_CODE_LOGS_UNAVAILABLE;
       }
 

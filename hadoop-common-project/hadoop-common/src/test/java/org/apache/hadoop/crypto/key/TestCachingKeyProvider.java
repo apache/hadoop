@@ -15,17 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.crypto.key.kms.server;
+package org.apache.hadoop.crypto.key;
 
-import org.apache.hadoop.crypto.key.KeyProvider;
+import java.util.Date;
+
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import java.util.Date;
-
-public class TestKMSCacheKeyProvider {
+public class TestCachingKeyProvider {
 
   @Test
   public void testCurrentKey() throws Exception {
@@ -33,7 +32,7 @@ public class TestKMSCacheKeyProvider {
     KeyProvider mockProv = Mockito.mock(KeyProvider.class);
     Mockito.when(mockProv.getCurrentKey(Mockito.eq("k1"))).thenReturn(mockKey);
     Mockito.when(mockProv.getCurrentKey(Mockito.eq("k2"))).thenReturn(null);
-    KeyProvider cache = new KMSCacheKeyProvider(mockProv, 100);
+    KeyProvider cache = new CachingKeyProvider(mockProv, 100, 100);
 
     // asserting caching
     Assert.assertEquals(mockKey, cache.getCurrentKey("k1"));
@@ -45,7 +44,7 @@ public class TestKMSCacheKeyProvider {
     Mockito.verify(mockProv, Mockito.times(2)).getCurrentKey(Mockito.eq("k1"));
 
     // asserting no caching when key is not known
-    cache = new KMSCacheKeyProvider(mockProv, 100);
+    cache = new CachingKeyProvider(mockProv, 100, 100);
     Assert.assertEquals(null, cache.getCurrentKey("k2"));
     Mockito.verify(mockProv, Mockito.times(1)).getCurrentKey(Mockito.eq("k2"));
     Assert.assertEquals(null, cache.getCurrentKey("k2"));
@@ -56,25 +55,56 @@ public class TestKMSCacheKeyProvider {
   public void testKeyVersion() throws Exception {
     KeyProvider.KeyVersion mockKey = Mockito.mock(KeyProvider.KeyVersion.class);
     KeyProvider mockProv = Mockito.mock(KeyProvider.class);
-    Mockito.when(mockProv.getKeyVersion(Mockito.eq("k1@0"))).thenReturn(mockKey);
+    Mockito.when(mockProv.getKeyVersion(Mockito.eq("k1@0")))
+        .thenReturn(mockKey);
     Mockito.when(mockProv.getKeyVersion(Mockito.eq("k2@0"))).thenReturn(null);
-    KeyProvider cache = new KMSCacheKeyProvider(mockProv, 100);
+    KeyProvider cache = new CachingKeyProvider(mockProv, 100, 100);
 
     // asserting caching
     Assert.assertEquals(mockKey, cache.getKeyVersion("k1@0"));
-    Mockito.verify(mockProv, Mockito.times(1)).getKeyVersion(Mockito.eq("k1@0"));
+    Mockito.verify(mockProv, Mockito.times(1))
+        .getKeyVersion(Mockito.eq("k1@0"));
     Assert.assertEquals(mockKey, cache.getKeyVersion("k1@0"));
-    Mockito.verify(mockProv, Mockito.times(1)).getKeyVersion(Mockito.eq("k1@0"));
+    Mockito.verify(mockProv, Mockito.times(1))
+        .getKeyVersion(Mockito.eq("k1@0"));
     Thread.sleep(200);
     Assert.assertEquals(mockKey, cache.getKeyVersion("k1@0"));
-    Mockito.verify(mockProv, Mockito.times(2)).getKeyVersion(Mockito.eq("k1@0"));
+    Mockito.verify(mockProv, Mockito.times(2))
+        .getKeyVersion(Mockito.eq("k1@0"));
 
     // asserting no caching when key is not known
-    cache = new KMSCacheKeyProvider(mockProv, 100);
+    cache = new CachingKeyProvider(mockProv, 100, 100);
     Assert.assertEquals(null, cache.getKeyVersion("k2@0"));
-    Mockito.verify(mockProv, Mockito.times(1)).getKeyVersion(Mockito.eq("k2@0"));
+    Mockito.verify(mockProv, Mockito.times(1))
+        .getKeyVersion(Mockito.eq("k2@0"));
     Assert.assertEquals(null, cache.getKeyVersion("k2@0"));
-    Mockito.verify(mockProv, Mockito.times(2)).getKeyVersion(Mockito.eq("k2@0"));
+    Mockito.verify(mockProv, Mockito.times(2))
+        .getKeyVersion(Mockito.eq("k2@0"));
+  }
+
+  @Test
+  public void testMetadata() throws Exception {
+    KeyProvider.Metadata mockMeta = Mockito.mock(KeyProvider.Metadata.class);
+    KeyProvider mockProv = Mockito.mock(KeyProvider.class);
+    Mockito.when(mockProv.getMetadata(Mockito.eq("k1"))).thenReturn(mockMeta);
+    Mockito.when(mockProv.getMetadata(Mockito.eq("k2"))).thenReturn(null);
+    KeyProvider cache = new CachingKeyProvider(mockProv, 100, 100);
+
+    // asserting caching
+    Assert.assertEquals(mockMeta, cache.getMetadata("k1"));
+    Mockito.verify(mockProv, Mockito.times(1)).getMetadata(Mockito.eq("k1"));
+    Assert.assertEquals(mockMeta, cache.getMetadata("k1"));
+    Mockito.verify(mockProv, Mockito.times(1)).getMetadata(Mockito.eq("k1"));
+    Thread.sleep(200);
+    Assert.assertEquals(mockMeta, cache.getMetadata("k1"));
+    Mockito.verify(mockProv, Mockito.times(2)).getMetadata(Mockito.eq("k1"));
+
+    // asserting no caching when key is not known
+    cache = new CachingKeyProvider(mockProv, 100, 100);
+    Assert.assertEquals(null, cache.getMetadata("k2"));
+    Mockito.verify(mockProv, Mockito.times(1)).getMetadata(Mockito.eq("k2"));
+    Assert.assertEquals(null, cache.getMetadata("k2"));
+    Mockito.verify(mockProv, Mockito.times(2)).getMetadata(Mockito.eq("k2"));
   }
 
   @Test
@@ -82,7 +112,7 @@ public class TestKMSCacheKeyProvider {
     KeyProvider.KeyVersion mockKey = Mockito.mock(KeyProvider.KeyVersion.class);
     KeyProvider mockProv = Mockito.mock(KeyProvider.class);
     Mockito.when(mockProv.getCurrentKey(Mockito.eq("k1"))).thenReturn(mockKey);
-    KeyProvider cache = new KMSCacheKeyProvider(mockProv, 100);
+    KeyProvider cache = new CachingKeyProvider(mockProv, 100, 100);
     Assert.assertEquals(mockKey, cache.getCurrentKey("k1"));
     Mockito.verify(mockProv, Mockito.times(1)).getCurrentKey(Mockito.eq("k1"));
     cache.rollNewVersion("k1");
@@ -100,21 +130,23 @@ public class TestKMSCacheKeyProvider {
     KeyProvider.KeyVersion mockKey = Mockito.mock(KeyProvider.KeyVersion.class);
     KeyProvider mockProv = Mockito.mock(KeyProvider.class);
     Mockito.when(mockProv.getCurrentKey(Mockito.eq("k1"))).thenReturn(mockKey);
-    Mockito.when(mockProv.getKeyVersion(Mockito.eq("k1@0"))).thenReturn(mockKey);
+    Mockito.when(mockProv.getKeyVersion(Mockito.eq("k1@0")))
+        .thenReturn(mockKey);
     Mockito.when(mockProv.getMetadata(Mockito.eq("k1"))).thenReturn(
         new KMSClientProvider.KMSMetadata("c", 0, "l", null, new Date(), 1));
-    KeyProvider cache = new KMSCacheKeyProvider(mockProv, 100);
+    KeyProvider cache = new CachingKeyProvider(mockProv, 100, 100);
     Assert.assertEquals(mockKey, cache.getCurrentKey("k1"));
     Mockito.verify(mockProv, Mockito.times(1)).getCurrentKey(Mockito.eq("k1"));
     Assert.assertEquals(mockKey, cache.getKeyVersion("k1@0"));
-    Mockito.verify(mockProv, Mockito.times(1)).getKeyVersion(Mockito.eq("k1@0"));
+    Mockito.verify(mockProv, Mockito.times(1))
+        .getKeyVersion(Mockito.eq("k1@0"));
     cache.deleteKey("k1");
 
     // asserting the cache is purged
     Assert.assertEquals(mockKey, cache.getCurrentKey("k1"));
     Mockito.verify(mockProv, Mockito.times(2)).getCurrentKey(Mockito.eq("k1"));
     Assert.assertEquals(mockKey, cache.getKeyVersion("k1@0"));
-    Mockito.verify(mockProv, Mockito.times(2)).getKeyVersion(Mockito.eq("k1@0"));
+    Mockito.verify(mockProv, Mockito.times(2))
+        .getKeyVersion(Mockito.eq("k1@0"));
   }
-
 }

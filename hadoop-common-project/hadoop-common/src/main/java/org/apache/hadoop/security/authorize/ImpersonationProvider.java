@@ -18,10 +18,25 @@
 
 package org.apache.hadoop.security.authorize;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.security.UserGroupInformation;
 
+@InterfaceStability.Unstable
+@InterfaceAudience.Public
 public interface ImpersonationProvider  extends Configurable {
+
+
+  /**
+   * Specifies the configuration prefix for the proxy user properties and
+   * initializes the provider.
+   *
+   * @param configurationPrefix the configuration prefix for the proxy user
+   * properties
+   */
+  public void init(String configurationPrefix);
+
   /**
    * Authorize the superuser which is doing doAs
    * 

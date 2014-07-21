@@ -34,7 +34,13 @@ public abstract class CompressionOutputStream extends OutputStream {
    * The output stream to be compressed. 
    */
   protected final OutputStream out;
-  
+
+  /**
+   * If non-null, this is the Compressor object that we should call
+   * CodecPool#returnCompressor on when this stream is closed.
+   */
+  private Compressor trackedCompressor;
+
   /**
    * Create a compression output stream that writes
    * the compressed bytes to the given stream.
@@ -43,11 +49,19 @@ public abstract class CompressionOutputStream extends OutputStream {
   protected CompressionOutputStream(OutputStream out) {
     this.out = out;
   }
-  
+
+  void setTrackedCompressor(Compressor compressor) {
+    trackedCompressor = compressor;
+  }
+
   @Override
   public void close() throws IOException {
     finish();
     out.close();
+    if (trackedCompressor != null) {
+      CodecPool.returnCompressor(trackedCompressor);
+      trackedCompressor = null;
+    }
   }
   
   @Override

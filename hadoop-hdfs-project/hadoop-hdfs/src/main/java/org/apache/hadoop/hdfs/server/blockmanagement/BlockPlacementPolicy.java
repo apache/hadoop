@@ -124,11 +124,12 @@ public abstract class BlockPlacementPolicy {
                    listed in the previous parameter.
    * @return the replica that is the best candidate for deletion
    */
-  abstract public DatanodeDescriptor chooseReplicaToDelete(BlockCollection srcBC,
-                                      Block block, 
-                                      short replicationFactor,
-                                      Collection<DatanodeDescriptor> existingReplicas,
-                                      Collection<DatanodeDescriptor> moreExistingReplicas);
+  abstract public DatanodeStorageInfo chooseReplicaToDelete(
+      BlockCollection srcBC,
+      Block block, 
+      short replicationFactor,
+      Collection<DatanodeStorageInfo> existingReplicas,
+      Collection<DatanodeStorageInfo> moreExistingReplicas);
 
   /**
    * Used to setup a BlockPlacementPolicy object. This should be defined by 
@@ -175,21 +176,23 @@ public abstract class BlockPlacementPolicy {
    * @param exactlyOne The List of replica nodes on rack with only one replica
    * @param cur current replica to remove
    */
-  public void adjustSetsWithChosenReplica(final Map<String, 
-      List<DatanodeDescriptor>> rackMap,
-      final List<DatanodeDescriptor> moreThanOne,
-      final List<DatanodeDescriptor> exactlyOne, final DatanodeInfo cur) {
+  public void adjustSetsWithChosenReplica(
+      final Map<String, List<DatanodeStorageInfo>> rackMap,
+      final List<DatanodeStorageInfo> moreThanOne,
+      final List<DatanodeStorageInfo> exactlyOne,
+      final DatanodeStorageInfo cur) {
     
-    String rack = getRack(cur);
-    final List<DatanodeDescriptor> datanodes = rackMap.get(rack);
-    datanodes.remove(cur);
-    if (datanodes.isEmpty()) {
+    final String rack = getRack(cur.getDatanodeDescriptor());
+    final List<DatanodeStorageInfo> storages = rackMap.get(rack);
+    storages.remove(cur);
+    if (storages.isEmpty()) {
       rackMap.remove(rack);
     }
     if (moreThanOne.remove(cur)) {
-      if (datanodes.size() == 1) {
-        moreThanOne.remove(datanodes.get(0));
-        exactlyOne.add(datanodes.get(0));
+      if (storages.size() == 1) {
+        final DatanodeStorageInfo remaining = storages.get(0);
+        moreThanOne.remove(remaining);
+        exactlyOne.add(remaining);
       }
     } else {
       exactlyOne.remove(cur);
@@ -214,28 +217,28 @@ public abstract class BlockPlacementPolicy {
    * @param exactlyOne remains contains the remaining nodes
    */
   public void splitNodesWithRack(
-      Collection<DatanodeDescriptor> dataNodes,
-      final Map<String, List<DatanodeDescriptor>> rackMap,
-      final List<DatanodeDescriptor> moreThanOne,
-      final List<DatanodeDescriptor> exactlyOne) {
-    for(DatanodeDescriptor node : dataNodes) {
-      final String rackName = getRack(node);
-      List<DatanodeDescriptor> datanodeList = rackMap.get(rackName);
-      if (datanodeList == null) {
-        datanodeList = new ArrayList<DatanodeDescriptor>();
-        rackMap.put(rackName, datanodeList);
+      final Iterable<DatanodeStorageInfo> storages,
+      final Map<String, List<DatanodeStorageInfo>> rackMap,
+      final List<DatanodeStorageInfo> moreThanOne,
+      final List<DatanodeStorageInfo> exactlyOne) {
+    for(DatanodeStorageInfo s: storages) {
+      final String rackName = getRack(s.getDatanodeDescriptor());
+      List<DatanodeStorageInfo> storageList = rackMap.get(rackName);
+      if (storageList == null) {
+        storageList = new ArrayList<DatanodeStorageInfo>();
+        rackMap.put(rackName, storageList);
       }
-      datanodeList.add(node);
+      storageList.add(s);
     }
     
     // split nodes into two sets
-    for(List<DatanodeDescriptor> datanodeList : rackMap.values()) {
-      if (datanodeList.size() == 1) {
+    for(List<DatanodeStorageInfo> storageList : rackMap.values()) {
+      if (storageList.size() == 1) {
         // exactlyOne contains nodes on rack with only one replica
-        exactlyOne.add(datanodeList.get(0));
+        exactlyOne.add(storageList.get(0));
       } else {
         // moreThanOne contains nodes on rack with more than one replica
-        moreThanOne.addAll(datanodeList);
+        moreThanOne.addAll(storageList);
       }
     }
   }

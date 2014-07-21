@@ -79,4 +79,19 @@
     </description>
   </property>
 
+  <property>
+    <name>hadoop.kms.acl.GENERATE_EEK</name>
+    <value>*</value>
+    <description>
+      ACL for generateEncryptedKey CryptoExtension operations
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.acl.DECRYPT_EEK</name>
+    <value>*</value>
+    <description>
+      ACL for decrypt EncryptedKey CryptoExtension operations
+    </description>
+  </property>
 </configuration>

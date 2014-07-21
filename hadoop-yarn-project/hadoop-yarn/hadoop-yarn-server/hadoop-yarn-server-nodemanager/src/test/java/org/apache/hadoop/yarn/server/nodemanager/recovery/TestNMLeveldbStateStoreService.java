@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.recovery;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -28,6 +29,8 @@ import java.util.Map;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.service.ServiceStateException;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
@@ -37,12 +40,17 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
+import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.LocalResourceTrackerState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredDeletionServiceState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredLocalizationState;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredNMTokenState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredUserResources;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.records.NMDBSchemaVersion;
+import org.apache.hadoop.yarn.server.security.BaseNMTokenSecretManager;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -96,6 +104,36 @@ public class TestNMLeveldbStateStoreService {
   public void testEmptyState() throws IOException {
     assertTrue(stateStore.canRecover());
     verifyEmptyState();
+  }
+  
+  @Test
+  public void testCheckVersion() throws IOException {
+    // default version
+    NMDBSchemaVersion defaultVersion = stateStore.getCurrentVersion();
+    Assert.assertEquals(defaultVersion, stateStore.loadVersion());
+
+    // compatible version
+    NMDBSchemaVersion compatibleVersion =
+        NMDBSchemaVersion.newInstance(defaultVersion.getMajorVersion(),
+          defaultVersion.getMinorVersion() + 2);
+    stateStore.storeVersion(compatibleVersion);
+    Assert.assertEquals(compatibleVersion, stateStore.loadVersion());
+    restartStateStore();
+    // overwrite the compatible version
+    Assert.assertEquals(defaultVersion, stateStore.loadVersion());
+
+    // incompatible version
+    NMDBSchemaVersion incompatibleVersion =
+      NMDBSchemaVersion.newInstance(defaultVersion.getMajorVersion() + 1,
+          defaultVersion.getMinorVersion());
+    stateStore.storeVersion(incompatibleVersion);
+    try {
+      restartStateStore();
+      Assert.fail("Incompatible version, should expect fail here.");
+    } catch (ServiceStateException e) {
+      Assert.assertTrue("Exception message mismatch", 
+        e.getMessage().contains("Incompatible version for NM state:"));
+    }
   }
 
   @Test
@@ -459,5 +497,81 @@ public class TestNMLeveldbStateStoreService {
     restartStateStore();
     state = stateStore.loadDeletionServiceState();
     assertTrue(state.getTasks().isEmpty());
+  }
+
+  @Test
+  public void testNMTokenStorage() throws IOException {
+    // test empty when no state
+    RecoveredNMTokenState state = stateStore.loadNMTokenState();
+    assertNull(state.getCurrentMasterKey());
+    assertNull(state.getPreviousMasterKey());
+    assertTrue(state.getApplicationMasterKeys().isEmpty());
+
+    // store a master key and verify recovered
+    NMTokenSecretManagerForTest secretMgr = new NMTokenSecretManagerForTest();
+    MasterKey currentKey = secretMgr.generateKey();
+    stateStore.storeNMTokenCurrentMasterKey(currentKey);
+    restartStateStore();
+    state = stateStore.loadNMTokenState();
+    assertEquals(currentKey, state.getCurrentMasterKey());
+    assertNull(state.getPreviousMasterKey());
+    assertTrue(state.getApplicationMasterKeys().isEmpty());
+
+    // store a previous key and verify recovered
+    MasterKey prevKey = secretMgr.generateKey();
+    stateStore.storeNMTokenPreviousMasterKey(prevKey);
+    restartStateStore();
+    state = stateStore.loadNMTokenState();
+    assertEquals(currentKey, state.getCurrentMasterKey());
+    assertEquals(prevKey, state.getPreviousMasterKey());
+    assertTrue(state.getApplicationMasterKeys().isEmpty());
+
+    // store a few application keys and verify recovered
+    ApplicationAttemptId attempt1 = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(1, 1), 1);
+    MasterKey attemptKey1 = secretMgr.generateKey();
+    stateStore.storeNMTokenApplicationMasterKey(attempt1, attemptKey1);
+    ApplicationAttemptId attempt2 = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(2, 3), 4);
+    MasterKey attemptKey2 = secretMgr.generateKey();
+    stateStore.storeNMTokenApplicationMasterKey(attempt2, attemptKey2);
+    restartStateStore();
+    state = stateStore.loadNMTokenState();
+    assertEquals(currentKey, state.getCurrentMasterKey());
+    assertEquals(prevKey, state.getPreviousMasterKey());
+    Map<ApplicationAttemptId, MasterKey> loadedAppKeys =
+        state.getApplicationMasterKeys();
+    assertEquals(2, loadedAppKeys.size());
+    assertEquals(attemptKey1, loadedAppKeys.get(attempt1));
+    assertEquals(attemptKey2, loadedAppKeys.get(attempt2));
+
+    // add/update/remove keys and verify recovered
+    ApplicationAttemptId attempt3 = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(5, 6), 7);
+    MasterKey attemptKey3 = secretMgr.generateKey();
+    stateStore.storeNMTokenApplicationMasterKey(attempt3, attemptKey3);
+    stateStore.removeNMTokenApplicationMasterKey(attempt1);
+    attemptKey2 = prevKey;
+    stateStore.storeNMTokenApplicationMasterKey(attempt2, attemptKey2);
+    prevKey = currentKey;
+    stateStore.storeNMTokenPreviousMasterKey(prevKey);
+    currentKey = secretMgr.generateKey();
+    stateStore.storeNMTokenCurrentMasterKey(currentKey);
+    restartStateStore();
+    state = stateStore.loadNMTokenState();
+    assertEquals(currentKey, state.getCurrentMasterKey());
+    assertEquals(prevKey, state.getPreviousMasterKey());
+    loadedAppKeys = state.getApplicationMasterKeys();
+    assertEquals(2, loadedAppKeys.size());
+    assertNull(loadedAppKeys.get(attempt1));
+    assertEquals(attemptKey2, loadedAppKeys.get(attempt2));
+    assertEquals(attemptKey3, loadedAppKeys.get(attempt3));
+  }
+
+  private static class NMTokenSecretManagerForTest extends
+      BaseNMTokenSecretManager {
+    public MasterKey generateKey() {
+      return createNewMasterKey().getMasterKey();
+    }
   }
 }

@@ -72,22 +72,35 @@ Hadoop Key Management Server (KMS) - Documentation Sets ${project.version}
   KMS caches keys for short period of time to avoid excessive hits to the
   underlying key provider.
 
-  The cache is used with the following 2 methods only, <<<getCurrentKey()>>>
-  and <<<getKeyVersion()>>>.
+  The Cache is enabled by default (can be dissabled by setting the
+  <<<hadoop.kms.cache.enable>>> boolean property to false)
+
+  The cache is used with the following 3 methods only, <<<getCurrentKey()>>>
+  and <<<getKeyVersion()>>> and <<<getMetadata()>>>.
 
   For the <<<getCurrentKey()>>> method, cached entries are kept for a maximum
-  of 1000 millisecond regardless the number of times the key is being access
+  of 30000 millisecond regardless the number of times the key is being access
   (to avoid stale keys to be considered current).
 
   For the <<<getKeyVersion()>>> method, cached entries are kept with a default
-  inactivity timeout of 10000 milliseconds. This time out is configurable via
-  the following property in the <<<etc/hadoop/kms-site.xml>>> configuration
-  file:
+  inactivity timeout of 600000 milliseconds (10 mins). This time out is
+  configurable via the following property in the <<<etc/hadoop/kms-site.xml>>>
+  configuration file:
 
 +---+
   <property>
+    <name>hadoop.kms.cache.enable</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <name>hadoop.kms.cache.timeout.ms</name>
-    <value>10000</value>
+    <value>600000</value>
+  </property>
+
+  <property>
+    <name>hadoop.kms.current.key.cache.timeout.ms</name>
+    <value>30000</value>
   </property>
 +---+
 
@@ -266,6 +279,25 @@ $ keytool -genkey -alias tomcat -keyalg RSA
         to provide the key material when creating or rolling a key.
     </description>
   </property>
+
+  <property>
+    <name>hadoop.kms.acl.GENERATE_EEK</name>
+    <value>*</value>
+    <description>
+      ACL for generateEncryptedKey
+      CryptoExtension operations
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.acl.DECRYPT_EEK</name>
+    <value>*</value>
+    <description>
+      ACL for decrypt EncryptedKey
+      CryptoExtension operations
+    </description>
+  </property>
+</configuration>
 +---+
 
 ** KMS HTTP REST API
@@ -382,6 +414,70 @@ Content-Type: application/json
   "material"    : "<material>",    //base64
 }
 +---+
+
+
+*** Generate Encrypted Key for Current KeyVersion
+
+  <REQUEST:>
+
++---+
+GET http://HOST:PORT/kms/v1/key/<key-name>/_eek?eek_op=generate&num_keys=<number-of-keys-to-generate>
++---+
+
+  <RESPONSE:>
+
++---+
+200 OK
+Content-Type: application/json
+[
+  {
+    "versionName"         : "encryptionVersionName",
+    "iv"                  : "<iv>",          //base64
+    "encryptedKeyVersion" : {
+        "versionName"       : "EEK",
+        "material"          : "<material>",    //base64
+    }
+  },
+  {
+    "versionName"         : "encryptionVersionName",
+    "iv"                  : "<iv>",          //base64
+    "encryptedKeyVersion" : {
+        "versionName"       : "EEK",
+        "material"          : "<material>",    //base64
+    }
+  },
+  ...
+]
++---+
+
+*** Decrypt Encrypted Key
+
+  <REQUEST:>
+
++---+
+POST http://HOST:PORT/kms/v1/keyversion/<version-name>/_eek?ee_op=decrypt
+Content-Type: application/json
+
+{
+  "name"        : "<key-name>",
+  "iv"          : "<iv>",          //base64
+  "material"    : "<material>",    //base64
+}
+
++---+
+
+  <RESPONSE:>
+
++---+
+200 OK
+Content-Type: application/json
+
+{
+  "name"        : "EK",
+  "material"    : "<material>",    //base64
+}
++---+
+
 
 *** Get Key Version
 

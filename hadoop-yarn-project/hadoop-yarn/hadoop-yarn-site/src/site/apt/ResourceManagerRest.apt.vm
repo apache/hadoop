@@ -2707,3 +2707,223 @@ Server: Jetty(6.1.26)
 +---+
 
 
+* Cluster {Delegation Tokens API}
+
+  The Delegation Tokens API can be used to create, renew and cancel YARN ResourceManager delegation tokens. All delegation token requests must be carried out on a Kerberos authenticated connection(using SPNEGO). Carrying out operations on a non-kerberos connection will result in a FORBIDDEN response. In case of renewing a token, only the renewer specified when creating the token can renew the token. Other users(including the owner) are forbidden from renewing tokens. It should be noted that when cancelling or renewing a token, the token to be cancelled or renewed is specified by setting a header.
+
+  This feature is currently in the alpha stage and may change in the future.
+
+** URI
+
+  Use the following URI to create and cancel delegation tokens.
+
+------
+  * http://<rm http address:port>/ws/v1/cluster/delegation-token
+------
+
+  Use the following URI to renew delegation tokens.
+
+------
+  * http://<rm http address:port>/ws/v1/cluster/delegation-token/expiration
+------
+
+** HTTP Operations Supported
+
+------
+  * POST
+  * DELETE
+------
+
+** Query Parameters Supported
+
+------
+  None
+------
+
+** Elements of the <delegation-token> object
+
+  The response from the delegation tokens API contains one of the fields listed below.
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                   |
+*---------------+--------------+-------------------------------+
+| token         | string       | The delegation token          |
+*---------------+--------------+-------------------------------+
+| renewer       | string       | The user who is allowed to renew the delegation token |
+*---------------+--------------+-------------------------------+
+| owner         | string       | The owner of the delegation token |
+*---------------+--------------+-------------------------------+
+| kind          | string       | The kind of delegation token  |
+*---------------+--------------+-------------------------------+
+| expiration-time | long       | The expiration time of the token |
+*---------------+--------------+-------------------------------+
+| max-validity  | long         | The maximum validity of the token |
+*---------------+--------------+-------------------------------+
+
+** Response Examples
+
+*** Creating a token
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  POST http://<rm http address:port>/ws/v1/cluster/delegation-token
+  Accept: application/json
+  Content-Type: application/json
+  {
+    "renewer" : "test-renewer"
+  }
+------
+
+  Response Header
+
++---+
+  HTTP/1.1 200 OK
+  WWW-Authenticate: Negotiate ...
+  Date: Sat, 28 Jun 2014 18:08:11 GMT
+  Server: Jetty(6.1.26)
+  Set-Cookie: ...
+  Content-Type: application/json
++---+
+
+  Response body
+
++---+
+  {
+    "token":"MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUckiEZpigFHSJTKaQECFN9EMM9BzfPoDxu572EVUpzqhnSGE1JNX0RFTEVHQVRJT05fVE9LRU4A",
+    "renewer":"test-renewer",
+    "owner":"client@EXAMPLE.COM",
+    "kind":"RM_DELEGATION_TOKEN",
+    "expiration-time":"1405153616489",
+    "max-validity":"1405672016489"
+  }
++---+
+
+  <<XML response>>
+
+  HTTP Request
+
+------
+  POST http://<rm http address:port>/ws/v1/cluster/delegation-token
+  Accept: application/xml
+  Content-Type: application/xml
+  <delegation-token>
+    <renewer>test-renewer</renewer>
+  </delegation-token>
+------
+
+  Response Header
+
++---+
+  HTTP/1.1 200 OK
+  WWW-Authenticate: Negotiate ...
+  Date: Sat, 28 Jun 2014 18:08:11 GMT
+  Content-Length: 423
+  Server: Jetty(6.1.26)
+  Set-Cookie: ...
+  Content-Type: application/xml
++---+
+
+  Response Body
+
++---+
+  <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  <delegation-token>
+    <token>MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUckgZ8yigFHSI4jMgcCFDTG8X6XFFn2udQngzSXQL8vWaKIE1JNX0RFTEVHQVRJT05fVE9LRU4A</token>
+    <renewer>test-renewer</renewer>
+    <owner>client@EXAMPLE.COM</owner>
+    <kind>RM_DELEGATION_TOKEN</kind>
+    <expiration-time>1405153180466</expiration-time>
+    <max-validity>1405671580466</max-validity>
+  </delegation-token>
++---+
+
+*** Renewing a token
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  POST http://<rm http address:port>/ws/v1/cluster/delegation-token/expiration
+  Accept: application/json
+  Hadoop-YARN-RM-Delegation-Token: MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUbjqcHHigFHB7ZFxwQCFKWD3znCkDSy6SQIjRCLDydxbxvgE1JNX0RFTEVHQVRJT05fVE9LRU4A
+  Content-Type: application/json
+------
+
+  Response Header
+
++---+
+  HTTP/1.1 200 OK
+  WWW-Authenticate: Negotiate ...
+  Date: Sat, 28 Jun 2014 18:08:11 GMT
+  Server: Jetty(6.1.26)
+  Set-Cookie: ...
+  Content-Type: application/json
++---+
+
+  Response body
+
++---+
+  {
+    "expiration-time":"1404112520402"
+  }
++---+
+
+  <<XML response>>
+
+  HTTP Request
+
+------
+  POST http://<rm http address:port>/ws/v1/cluster/delegation-token/expiration
+  Accept: application/xml
+  Content-Type: application/xml
+  Hadoop-YARN-RM-Delegation-Token: MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUbjqcHHigFHB7ZFxwQCFKWD3znCkDSy6SQIjRCLDydxbxvgE1JNX0RFTEVHQVRJT05fVE9LRU4A
+------
+
+  Response Header
+
++---+
+  HTTP/1.1 200 OK
+  WWW-Authenticate: Negotiate ...
+  Date: Sat, 28 Jun 2014 18:08:11 GMT
+  Content-Length: 423
+  Server: Jetty(6.1.26)
+  Set-Cookie: ...
+  Content-Type: application/xml
++---+
+
+  Response Body
+
++---+
+  <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  <delegation-token>
+    <expiration-time>1404112520402</expiration-time>
+  </delegation-token>
++---+
+
+*** Cancelling a token
+
+  HTTP Request
+
+-----
+DELETE http://<rm http address:port>/ws/v1/cluster/delegation-token
+Hadoop-YARN-RM-Delegation-Token: MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUbjqcHHigFHB7ZFxwQCFKWD3znCkDSy6SQIjRCLDydxbxvgE1JNX0RFTEVHQVRJT05fVE9LRU4A
+Accept: application/xml
+-----
+
+  Response Header
+
++---+
+  HTTP/1.1 200 OK
+  WWW-Authenticate: Negotiate ...
+  Date: Sun, 29 Jun 2014 07:25:18 GMT
+  Transfer-Encoding: chunked
+  Server: Jetty(6.1.26)
+  Set-Cookie: ...
+  Content-Type: application/xml
++---+
+
+  No response body.

@@ -1038,7 +1038,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       // This will start a new log segment and write to the seen_txid file, so
       // we shouldn't do it when coming up in standby state
-      if (!haEnabled || (haEnabled && startOpt == StartupOption.UPGRADE)) {
+      if (!haEnabled || (haEnabled && startOpt == StartupOption.UPGRADE)
+          || (haEnabled && startOpt == StartupOption.UPGRADEONLY)) {
         fsImage.openEditLogForWrite();
       }
       success = true;
@@ -2400,7 +2401,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // Generate the EDEK while not holding the lock
     KeyProviderCryptoExtension.EncryptedKeyVersion edek = null;
     try {
-      edek = provider.generateEncryptedKey(latestEZKeyVersion);
+      edek = provider.generateEncryptedKey("");
     } catch (GeneralSecurityException e) {
       throw new IOException(e);
     }
@@ -7557,7 +7558,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   @Override // FSClusterStats
   public int getNumDatanodesInService() {
-    return getNumLiveDataNodes() - getNumDecomLiveDataNodes();
+    return datanodeStatistics.getNumDatanodesInService();
+  }
+  
+  @Override // for block placement strategy
+  public double getInServiceXceiverAverage() {
+    double avgLoad = 0;
+    final int nodes = getNumDatanodesInService();
+    if (nodes != 0) {
+      final int xceivers = datanodeStatistics.getInServiceXceiverCount();
+      avgLoad = (double)xceivers/nodes;
+    }
+    return avgLoad;
   }
 
   public SnapshotManager getSnapshotManager() {
