@@ -69,7 +69,8 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
   protected DatanodeStorageInfo chooseLocalStorage(Node localMachine,
       Set<Node> excludedNodes, long blocksize, int maxNodesPerRack,
       List<DatanodeStorageInfo> results, boolean avoidStaleNodes,
-      StorageType storageType) throws NotEnoughReplicasException {
+      StorageType storageType, boolean fallbackToLocalRack
+      ) throws NotEnoughReplicasException {
     // if no local machine, randomly choose one node
     if (localMachine == null)
       return chooseRandom(NodeBase.ROOT, excludedNodes, 
@@ -95,6 +96,10 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
         blocksize, maxNodesPerRack, results, avoidStaleNodes, storageType);
     if (chosenStorage != null) {
       return chosenStorage;
+    }
+
+    if (!fallbackToLocalRack) {
+      return null;
     }
     // try a node on local rack
     return chooseLocalRack(localMachine, excludedNodes, 
