@@ -172,6 +172,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5957. AM throws ClassNotFoundException with job classloader
     enabled if custom output format/committer is used (Sangjin Lee via jlowe)
 
+    MAPREDUCE-5756. CombineFileInputFormat.getSplits() including directories
+    in its results (Jason Dere via jlowe)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
