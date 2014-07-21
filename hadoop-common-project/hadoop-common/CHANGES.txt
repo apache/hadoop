@@ -441,6 +441,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10817. ProxyUsers configuration should support configurable 
     prefixes. (tucu)
 
+    HADOOP-10755. Support negative caching of user-group mapping.
+    (Lei Xu via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES

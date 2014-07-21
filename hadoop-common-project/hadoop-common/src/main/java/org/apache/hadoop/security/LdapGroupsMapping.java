@@ -201,7 +201,8 @@ public class LdapGroupsMapping
     } catch (CommunicationException e) {
       LOG.warn("Connection is closed, will try to reconnect");
     } catch (NamingException e) {
-      LOG.warn("Exception trying to get groups for user " + user, e);
+      LOG.warn("Exception trying to get groups for user " + user + ": "
+          + e.getMessage());
       return emptyResults;
     }
 
@@ -215,7 +216,8 @@ public class LdapGroupsMapping
       } catch (CommunicationException e) {
         LOG.warn("Connection being closed, reconnecting failed, retryCount = " + retryCount);
       } catch (NamingException e) {
-        LOG.warn("Exception trying to get groups for user " + user, e);
+        LOG.warn("Exception trying to get groups for user " + user + ":"
+            + e.getMessage());
         return emptyResults;
       }
     }
