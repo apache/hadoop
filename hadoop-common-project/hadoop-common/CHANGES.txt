@@ -468,6 +468,10 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10857.  Native Libraries Guide doen't mention a dependency on
     openssl-development package (ozawa via cmccabe)
 
+    HADOOP-10866. RawLocalFileSystem fails to read symlink targets via the stat
+    command when the format of the stat command uses non-curly quotes (yzhang
+    via cmccabe)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

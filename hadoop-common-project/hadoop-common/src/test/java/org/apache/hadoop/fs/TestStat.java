@@ -45,15 +45,15 @@ public class TestStat extends FileSystemTestHelper {
     final String doesNotExist;
     final String directory;
     final String file;
-    final String symlink;
+    final String[] symlinks;
     final String stickydir;
 
     StatOutput(String doesNotExist, String directory, String file,
-        String symlink, String stickydir) {
+        String[] symlinks, String stickydir) {
       this.doesNotExist = doesNotExist;
       this.directory = directory;
       this.file = file;
-      this.symlink = symlink;
+      this.symlinks = symlinks;
       this.stickydir = stickydir;
     }
 
@@ -78,10 +78,12 @@ public class TestStat extends FileSystemTestHelper {
       status = stat.getFileStatusForTesting();
       assertTrue(status.isFile());
 
-      br = new BufferedReader(new StringReader(symlink));
-      stat.parseExecResult(br);
-      status = stat.getFileStatusForTesting();
-      assertTrue(status.isSymlink());
+      for (String symlink : symlinks) {
+        br = new BufferedReader(new StringReader(symlink));
+        stat.parseExecResult(br);
+        status = stat.getFileStatusForTesting();
+        assertTrue(status.isSymlink());
+      }
 
       br = new BufferedReader(new StringReader(stickydir));
       stat.parseExecResult(br);
@@ -93,22 +95,30 @@ public class TestStat extends FileSystemTestHelper {
 
   @Test(timeout=10000)
   public void testStatLinux() throws Exception {
+    String[] symlinks = new String[] {
+        "6,symbolic link,1373584236,1373584236,777,andrew,andrew,`link' -> `target'",
+        "6,symbolic link,1373584236,1373584236,777,andrew,andrew,'link' -> 'target'"
+    };
     StatOutput linux = new StatOutput(
         "stat: cannot stat `watermelon': No such file or directory",
         "4096,directory,1373584236,1373586485,755,andrew,root,`.'",
         "0,regular empty file,1373584228,1373584228,644,andrew,andrew,`target'",
-        "6,symbolic link,1373584236,1373584236,777,andrew,andrew,`link' -> `target'",
+        symlinks,
         "4096,directory,1374622334,1375124212,1755,andrew,andrew,`stickydir'");
     linux.test();
   }
 
   @Test(timeout=10000)
   public void testStatFreeBSD() throws Exception {
+    String[] symlinks = new String[] {
+        "6,Symbolic Link,1373508941,1373508941,120755,awang,awang,`link' -> `target'"
+    };
+    
     StatOutput freebsd = new StatOutput(
         "stat: symtest/link: stat: No such file or directory",
         "512,Directory,1373583695,1373583669,40755,awang,awang,`link' -> `'",
         "0,Regular File,1373508937,1373508937,100644,awang,awang,`link' -> `'",
-        "6,Symbolic Link,1373508941,1373508941,120755,awang,awang,`link' -> `target'",
+        symlinks,
         "512,Directory,1375139537,1375139537,41755,awang,awang,`link' -> `'");
     freebsd.test();
   }
