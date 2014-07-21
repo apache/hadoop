@@ -459,6 +459,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10591.  Compression codecs must used pooled direct buffers or
     deallocate direct buffers when stream is closed (cmccabe)
 
+    HADOOP-10857.  Native Libraries Guide doen't mention a dependency on
+    openssl-development package (ozawa via cmccabe)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

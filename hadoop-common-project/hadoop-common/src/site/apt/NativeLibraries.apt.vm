@@ -116,6 +116,8 @@ Native Libraries Guide
 
      * zlib-development package (stable version >= 1.2.0)
 
+     * openssl-development package(e.g. libssl-dev)
+
    Once you installed the prerequisite packages use the standard hadoop
    pom.xml file and pass along the native flag to build the native hadoop 
    library:
