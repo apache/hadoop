@@ -321,6 +321,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6700. BlockPlacementPolicy shoud choose storage but not datanode for
     deletion. (szetszwo)
 
+    HDFS-6616. Add exclude-datanodes feature to WebHDFS redirection so that it
+    will not redirect retries to the same datanode. (zhaoyunjiong via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -611,6 +614,8 @@ Release 2.5.0 - UNRELEASED
     NetworkTopology#sortByDistance. (Yongjun Zhang via wang)
 
     HDFS-6583. Remove clientNode in FileUnderConstructionFeature. (wheat9)
+
+    HDFS-6599. 2.4 addBlock is 10 to 20 times slower compared to 0.23 (daryn)
 
   BUG FIXES 
 

@@ -1456,10 +1456,10 @@ public class BlockManager {
 
   /** Choose target for WebHDFS redirection. */
   public DatanodeStorageInfo[] chooseTarget4WebHDFS(String src,
-      DatanodeDescriptor clientnode, long blocksize) {
+      DatanodeDescriptor clientnode, Set<Node> excludes, long blocksize) {
     return blockplacement.chooseTarget(src, 1, clientnode,
-        Collections.<DatanodeStorageInfo>emptyList(), false, null, blocksize,
-        storagePolicySuite.getDefaultPolicy());
+        Collections.<DatanodeStorageInfo>emptyList(), false, excludes,
+        blocksize, storagePolicySuite.getDefaultPolicy());
   }
 
   /** Choose target for getting additional datanodes for an existing pipeline. */

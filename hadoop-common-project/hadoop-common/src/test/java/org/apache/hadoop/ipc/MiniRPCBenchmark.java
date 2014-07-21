@@ -327,8 +327,8 @@ public class MiniRPCBenchmark {
     String shortUserName =
       UserGroupInformation.createRemoteUser(user).getShortUserName();
     try {
-      conf.setStrings(DefaultImpersonationProvider.getProxySuperuserGroupConfKey(shortUserName),
-          GROUP_NAME_1);
+      conf.setStrings(DefaultImpersonationProvider.getTestProvider().
+              getProxySuperuserGroupConfKey(shortUserName), GROUP_NAME_1);
       configureSuperUserIPAddresses(conf, shortUserName);
       // start the server
       miniServer = new MiniServer(conf, user, keytabFile);
@@ -411,7 +411,7 @@ public class MiniRPCBenchmark {
     }
     builder.append("127.0.1.1,");
     builder.append(InetAddress.getLocalHost().getCanonicalHostName());
-    conf.setStrings(DefaultImpersonationProvider.getProxySuperuserIpConfKey(superUserShortName),
-        builder.toString());
+    conf.setStrings(DefaultImpersonationProvider.getTestProvider().
+            getProxySuperuserIpConfKey(superUserShortName), builder.toString());
   }
 }
