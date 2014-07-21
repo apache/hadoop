@@ -579,7 +579,7 @@ public abstract class CombineFileInputFormat<K, V>
         blocks = new OneBlockInfo[0];
       } else {
 
-        if(locations.length == 0) {
+        if(locations.length == 0 && !stat.isDirectory()) {
           locations = new BlockLocation[] { new BlockLocation() };
         }
 
