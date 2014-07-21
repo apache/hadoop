@@ -23,6 +23,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5956. Made MR AM not use maxAttempts to determine if the current
     attempt is the last retry. (Wangda Tan via zjshen)
 
+    MAPREDUCE-5957. AM throws ClassNotFoundException with job classloader
+    enabled if custom output format/committer is used (Sangjin Lee via jlowe)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
