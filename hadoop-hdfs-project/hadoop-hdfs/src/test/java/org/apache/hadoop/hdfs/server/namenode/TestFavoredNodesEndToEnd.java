@@ -18,32 +18,41 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
-import java.util.ArrayList;
-import java.util.Random;
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Random;
 
+import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.junit.Test;
+import org.apache.log4j.Level;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Test;
 
 
 public class TestFavoredNodesEndToEnd {
+  {
+    ((Log4JLogger)LogFactory.getLog(BlockPlacementPolicy.class)).getLogger().setLevel(Level.ALL);
+  }
+
   private static MiniDFSCluster cluster;
   private static Configuration conf;
   private final static int NUM_DATA_NODES = 10;
@@ -79,7 +88,7 @@ public class TestFavoredNodesEndToEnd {
       InetSocketAddress datanode[] = getDatanodes(rand);
       Path p = new Path("/filename"+i);
       FSDataOutputStream out = dfs.create(p, FsPermission.getDefault(), true,
-          4096, (short)3, (long)4096, null, datanode);
+          4096, (short)3, 4096L, null, datanode);
       out.write(SOME_BYTES);
       out.close();
       BlockLocation[] locations = getBlockLocations(p);
@@ -98,14 +107,13 @@ public class TestFavoredNodesEndToEnd {
     //get some other nodes. In other words, the write to hdfs should not fail
     //and if we do getBlockLocations on the file, we should see one blklocation
     //and three hosts for that
-    Random rand = new Random(System.currentTimeMillis());
     InetSocketAddress arbitraryAddrs[] = new InetSocketAddress[3];
     for (int i = 0; i < 3; i++) {
       arbitraryAddrs[i] = getArbitraryLocalHostAddr();
     }
     Path p = new Path("/filename-foo-bar");
     FSDataOutputStream out = dfs.create(p, FsPermission.getDefault(), true,
-        4096, (short)3, (long)4096, null, arbitraryAddrs);
+        4096, (short)3, 4096L, null, arbitraryAddrs);
     out.write(SOME_BYTES);
     out.close();
     getBlockLocations(p);
@@ -113,35 +121,41 @@ public class TestFavoredNodesEndToEnd {
 
   @Test(timeout=180000)
   public void testWhenSomeNodesAreNotGood() throws Exception {
+    // 4 favored nodes
+    final InetSocketAddress addrs[] = new InetSocketAddress[4];
+    final String[] hosts = new String[addrs.length];
+    for (int i = 0; i < addrs.length; i++) {
+      addrs[i] = datanodes.get(i).getXferAddress();
+      hosts[i] = addrs[i].getAddress().getHostAddress() + ":" + addrs[i].getPort();
+    }
+
     //make some datanode not "good" so that even if the client prefers it,
     //the namenode would not give it as a replica to write to
     DatanodeInfo d = cluster.getNameNode().getNamesystem().getBlockManager()
            .getDatanodeManager().getDatanodeByXferAddr(
-               datanodes.get(0).getXferAddress().getAddress().getHostAddress(), 
-               datanodes.get(0).getXferAddress().getPort());
+               addrs[0].getAddress().getHostAddress(), addrs[0].getPort());
     //set the decommission status to true so that 
     //BlockPlacementPolicyDefault.isGoodTarget returns false for this dn
     d.setDecommissioned();
-    InetSocketAddress addrs[] = new InetSocketAddress[3];
-    for (int i = 0; i < 3; i++) {
-      addrs[i] = datanodes.get(i).getXferAddress();
-    }
     Path p = new Path("/filename-foo-bar-baz");
+    final short replication = (short)3;
     FSDataOutputStream out = dfs.create(p, FsPermission.getDefault(), true,
-        4096, (short)3, (long)4096, null, addrs);
+        4096, replication, 4096L, null, addrs);
     out.write(SOME_BYTES);
     out.close();
     //reset the state
     d.stopDecommission();
+
     BlockLocation[] locations = getBlockLocations(p);
+    Assert.assertEquals(replication, locations[0].getNames().length);;
     //also make sure that the datanode[0] is not in the list of hosts
-    String datanode0 = 
-        datanodes.get(0).getXferAddress().getAddress().getHostAddress()
-        + ":" + datanodes.get(0).getXferAddress().getPort();
-    for (int i = 0; i < 3; i++) {
-      if (locations[0].getNames()[i].equals(datanode0)) {
-        fail(datanode0 + " not supposed to be a replica for the block");
-      }
+    for (int i = 0; i < replication; i++) {
+      final String loc = locations[0].getNames()[i];
+      int j = 0;
+      for(; j < hosts.length && !loc.equals(hosts[j]); j++);
+      Assert.assertTrue("j=" + j, j > 0);
+      Assert.assertTrue("loc=" + loc + " not in host list "
+          + Arrays.asList(hosts) + ", j=" + j, j < hosts.length);
     }
   }
 
