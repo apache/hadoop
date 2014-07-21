@@ -119,18 +119,21 @@ public abstract class BlockPlacementPolicy {
    * @param srcBC block collection of file to which block-to-be-deleted belongs
    * @param block The block to be deleted
    * @param replicationFactor The required number of replicas for this block
-   * @param existingReplicas The replica locations of this block that are present
-                  on at least two unique racks. 
-   * @param moreExistingReplicas Replica locations of this block that are not
-                   listed in the previous parameter.
+   * @param moreThanOne The replica locations of this block that are present
+   *                    on more than one unique racks.
+   * @param exactlyOne Replica locations of this block that  are present
+   *                    on exactly one unique racks.
+   * @param excessTypes The excess {@link StorageType}s according to the
+   *                    {@link BlockStoragePolicy}.
    * @return the replica that is the best candidate for deletion
    */
   abstract public DatanodeStorageInfo chooseReplicaToDelete(
       BlockCollection srcBC,
       Block block, 
       short replicationFactor,
-      Collection<DatanodeStorageInfo> existingReplicas,
-      Collection<DatanodeStorageInfo> moreExistingReplicas);
+      Collection<DatanodeStorageInfo> moreThanOne,
+      Collection<DatanodeStorageInfo> exactlyOne,
+      List<StorageType> excessTypes);
 
   /**
    * Used to setup a BlockPlacementPolicy object. This should be defined by 

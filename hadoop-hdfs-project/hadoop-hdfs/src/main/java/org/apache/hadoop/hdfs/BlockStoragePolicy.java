@@ -118,15 +118,40 @@ public class BlockStoragePolicy {
   public List<StorageType> chooseStorageTypes(final short replication,
       final Iterable<StorageType> chosen) {
     final List<StorageType> types = chooseStorageTypes(replication);
+    diff(types, chosen, null);
+    return types;
+  }
 
-    //remove the chosen storage types
-    for(StorageType c : chosen) {
-      final int i = types.indexOf(c);
+  /**
+   * Compute the list difference t = t - c.
+   * Further, if e is not null, set e = e + c - t;
+   */
+  private static void diff(List<StorageType> t, Iterable<StorageType> c,
+      List<StorageType> e) {
+    for(StorageType storagetype : c) {
+      final int i = t.indexOf(storagetype);
       if (i >= 0) {
-        types.remove(i);
+        t.remove(i);
+      } else if (e != null) {
+        e.add(storagetype);
       }
     }
-    return types;
+  }
+
+  /**
+   * Choose excess storage types for deletion, given the
+   * replication number and the storage types of the chosen replicas.
+   *
+   * @param replication the replication number.
+   * @param chosen the storage types of the chosen replicas.
+   * @return a list of {@link StorageType}s for deletion.
+   */
+  public List<StorageType> chooseExcess(final short replication,
+      final Iterable<StorageType> chosen) {
+    final List<StorageType> types = chooseStorageTypes(replication);
+    final List<StorageType> excess = new LinkedList<StorageType>();
+    diff(types, chosen, excess);
+    return excess;
   }
 
   /** @return the fallback {@link StorageType} for creation. */
@@ -264,5 +289,5 @@ public class BlockStoragePolicy {
     throw new IllegalArgumentException(message + " in "
         + DFS_BLOCK_STORAGE_POLICIES_KEY + " \""
         + conf.get(DFS_BLOCK_STORAGE_POLICIES_KEY) + "\".");
- }
+  }
 }

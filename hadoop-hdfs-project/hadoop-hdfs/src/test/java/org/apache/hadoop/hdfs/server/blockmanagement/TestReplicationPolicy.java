@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.LogVerificationAppender;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -933,8 +934,10 @@ public class TestReplicationPolicy {
     // replica nodes, while storages[2] and dataNodes[5] are in second set.
     assertEquals(2, first.size());
     assertEquals(2, second.size());
+    List<StorageType> excessTypes = new ArrayList<StorageType>();
+    excessTypes.add(StorageType.DEFAULT);
     DatanodeStorageInfo chosen = replicator.chooseReplicaToDelete(
-        null, null, (short)3, first, second);
+        null, null, (short)3, first, second, excessTypes);
     // Within first set, storages[1] with less free space
     assertEquals(chosen, storages[1]);
 
@@ -942,8 +945,9 @@ public class TestReplicationPolicy {
     assertEquals(0, first.size());
     assertEquals(3, second.size());
     // Within second set, storages[5] with less free space
+    excessTypes.add(StorageType.DEFAULT);
     chosen = replicator.chooseReplicaToDelete(
-        null, null, (short)2, first, second);
+        null, null, (short)2, first, second, excessTypes);
     assertEquals(chosen, storages[5]);
   }
   

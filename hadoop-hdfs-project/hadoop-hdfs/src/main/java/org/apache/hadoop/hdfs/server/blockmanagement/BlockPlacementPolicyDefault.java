@@ -22,7 +22,6 @@ import static org.apache.hadoop.util.Time.now;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -273,8 +272,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     // Keep a copy of original excludedNodes
     final Set<Node> oldExcludedNodes = avoidStaleNodes ? 
         new HashSet<Node>(excludedNodes) : null;
-    final List<StorageType> storageTypes = chooseStorageTypes(storagePolicy,
-        (short)totalReplicasExpected, results); 
+    final List<StorageType> storageTypes = storagePolicy.chooseStorageTypes(
+        (short)totalReplicasExpected, DatanodeStorageInfo.toStorageTypes(results));
     try {
       if (numOfResults == 0) {
         writer = chooseLocalStorage(writer, excludedNodes, blocksize,
@@ -671,28 +670,6 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     }
     return true;
   }
-  
-  private static List<StorageType> chooseStorageTypes(
-      final BlockStoragePolicy storagePolicy, final short replication,
-      final Iterable<DatanodeStorageInfo> chosen) {
-    return storagePolicy.chooseStorageTypes(
-        replication, new Iterable<StorageType>() {
-          @Override
-          public Iterator<StorageType> iterator() {
-            return new Iterator<StorageType>() {
-              final Iterator<DatanodeStorageInfo> i = chosen.iterator();
-              @Override
-              public boolean hasNext() {return i.hasNext();}
-              @Override
-              public StorageType next() {return i.next().getStorageType();}
-              @Override
-              public void remove() {
-                throw new UnsupportedOperationException();
-              }
-            };
-          }
-        });
-  }
 
   /**
    * Return a pipeline of nodes.
@@ -759,7 +736,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   public DatanodeStorageInfo chooseReplicaToDelete(BlockCollection bc,
       Block block, short replicationFactor,
       Collection<DatanodeStorageInfo> first,
-      Collection<DatanodeStorageInfo> second) {
+      Collection<DatanodeStorageInfo> second,
+      final List<StorageType> excessTypes) {
     long oldestHeartbeat =
       now() - heartbeatInterval * tolerateHeartbeatMultiplier;
     DatanodeStorageInfo oldestHeartbeatStorage = null;
@@ -769,6 +747,10 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     // Pick the node with the oldest heartbeat or with the least free space,
     // if all hearbeats are within the tolerable heartbeat interval
     for(DatanodeStorageInfo storage : pickupReplicaSet(first, second)) {
+      if (!excessTypes.contains(storage.getStorageType())) {
+        continue;
+      }
+
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
       long free = node.getRemaining();
       long lastHeartbeat = node.getLastUpdate();
@@ -781,9 +763,10 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         minSpaceStorage = storage;
       }
     }
-
-    return oldestHeartbeatStorage != null? oldestHeartbeatStorage
-        : minSpaceStorage;
+    final DatanodeStorageInfo storage = oldestHeartbeatStorage != null?
+        oldestHeartbeatStorage : minSpaceStorage;
+    excessTypes.remove(storage.getStorageType());
+    return storage;
   }
 
   /**

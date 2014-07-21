@@ -11,6 +11,9 @@ HDFS-6584: Archival Storage
     HDFS-6671. Change BlockPlacementPolicy to consider block storage policy
     in replicaiton.  (szetszwo)
 
+    HDFS-6710. Change BlockPlacementPolicy to consider block storage policy
+    in replica deletion.  (szetszwo)
+
 Trunk (Unreleased)
 
   INCOMPATIBLE CHANGES
