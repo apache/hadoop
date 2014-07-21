@@ -61,6 +61,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2244. FairScheduler missing handling of containers for unknown 
     application attempts. (Anubhav Dhoot via kasha)
 
+    YARN-2321. NodeManager web UI can incorrectly report Pmem enforcement
+    (Leitao Guo via jlowe)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
