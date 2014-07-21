@@ -43,3 +43,5 @@ fs-encryption (Unreleased)
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HADOOP-10871. incorrect prototype in OpensslSecureRandom.c (cmccabe)

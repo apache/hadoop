@@ -82,7 +82,7 @@ static __dlsym_RAND_bytes dlsym_RAND_bytes;
 static __dlsym_ERR_get_error dlsym_ERR_get_error;
 #endif
 
-static ENGINE * openssl_rand_init();
+static ENGINE * openssl_rand_init(void);
 static void openssl_rand_clean(ENGINE *eng, int clean_locks);
 static int openssl_rand_bytes(unsigned char *buf, int num);
 
@@ -157,7 +157,7 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_crypto_random_OpensslSecureRandom_
                       env, openssl, "ERR_get_error");
 #endif
 
-  openssl_rand_init(env);
+  openssl_rand_init();
 }
 
 JNIEXPORT jboolean JNICALL Java_org_apache_hadoop_crypto_random_OpensslSecureRandom_nextRandBytes___3B
@@ -283,7 +283,7 @@ static unsigned long pthreads_thread_id(void)
  * If using an Intel chipset with RDRAND, the high-performance hardware
  * random number generator will be used.
  */
-static ENGINE * openssl_rand_init()
+static ENGINE * openssl_rand_init(void)
 {
   locks_setup();
   
