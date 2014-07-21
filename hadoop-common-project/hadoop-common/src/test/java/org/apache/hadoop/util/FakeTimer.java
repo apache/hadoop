@@ -16,31 +16,37 @@
  * limitations under the License.
  */
 
-option java_package = "org.apache.hadoop.yarn.proto";
-option java_outer_classname = "YarnServerNodemanagerRecoveryProtos";
-option java_generic_services = true;
-option java_generate_equals_and_hash = true;
-package hadoop.yarn;
+package org.apache.hadoop.util;
 
-import "yarn_protos.proto";
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
-message DeletionServiceDeleteTaskProto {
-  optional int32 id = 1;
-  optional string user = 2;
-  optional string subdir = 3;
-  optional int64 deletionTime = 4;
-  repeated string basedirs = 5;
-  repeated int32 successorIds = 6;
+/**
+ * FakeTimer can be used for test purposes to control the return values
+ * from {{@link Timer}}.
+ */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+public class FakeTimer extends Timer {
+  private long nowMillis;
+
+  /** Constructs a FakeTimer with a non-zero value */
+  public FakeTimer() {
+    nowMillis = 1000;  // Initialize with a non-trivial value.
+  }
+
+  @Override
+  public long now() {
+    return nowMillis;
+  }
+
+  @Override
+  public long monotonicNow() {
+    return nowMillis;
+  }
+
+  /** Increases the time by milliseconds */
+  public void advance(long advMillis) {
+    nowMillis += advMillis;
+  }
 }
-
-message LocalizedResourceProto {
-  optional LocalResourceProto resource = 1;
-  optional string localPath = 2;
-  optional int64 size = 3;
-}
-
-message NMDBSchemaVersionProto {
-  optional int32 majorVersion = 1;
-  optional int32 minorVersion = 2;
-}
-

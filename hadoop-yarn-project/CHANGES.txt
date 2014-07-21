@@ -54,6 +54,8 @@ Release 2.6.0 - UNRELEASED
     YARN-2323. FairShareComparator creates too many Resource objects (Hong Zhiguo
     via Sandy Ryza)
 
+    YARN-2045. Data persisted in NM should be versioned (Junping Du via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -76,6 +78,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2244. FairScheduler missing handling of containers for unknown 
     application attempts. (Anubhav Dhoot via kasha)
+
+    YARN-2321. NodeManager web UI can incorrectly report Pmem enforcement
+    (Leitao Guo via jlowe)
 
 Release 2.5.0 - UNRELEASED
 
