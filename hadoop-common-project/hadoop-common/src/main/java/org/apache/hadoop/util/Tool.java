@@ -27,7 +27,7 @@ import org.apache.hadoop.conf.Configurable;
  * 
  * <p><code>Tool</code>, is the standard for any Map-Reduce tool/application. 
  * The tool/application should delegate the handling of 
- * <a href="{@docRoot}/org/apache/hadoop/util/GenericOptionsParser.html#GenericOptions">
+ * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/CommandsManual.html#Generic_Options">
  * standard command-line options</a> to {@link ToolRunner#run(Tool, String[])} 
  * and only handle its custom arguments.</p>
  * 
