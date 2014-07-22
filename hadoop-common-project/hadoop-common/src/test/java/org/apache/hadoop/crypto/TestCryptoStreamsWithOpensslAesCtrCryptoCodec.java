@@ -20,17 +20,12 @@ package org.apache.hadoop.crypto;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.BeforeClass;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CODEC_CLASS_KEY;
-
 public class TestCryptoStreamsWithOpensslAesCtrCryptoCodec 
     extends TestCryptoStreams {
   
   @BeforeClass
   public static void init() throws Exception {
     Configuration conf = new Configuration();
-    conf.set(HADOOP_SECURITY_CRYPTO_CODEC_CLASS_KEY, 
-        OpensslAesCtrCryptoCodec.class.getName() + "," + 
-            JceAesCtrCryptoCodec.class.getName());
     codec = CryptoCodec.getInstance(conf);
   }
 }

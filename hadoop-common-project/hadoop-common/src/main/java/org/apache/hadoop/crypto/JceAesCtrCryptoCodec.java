@@ -26,6 +26,8 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 
@@ -40,6 +42,9 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY
  */
 @InterfaceAudience.Private
 public class JceAesCtrCryptoCodec extends AesCtrCryptoCodec {
+  private static final Log LOG =
+      LogFactory.getLog(JceAesCtrCryptoCodec.class.getName());
+  
   private Configuration conf;
   private String provider;
   private SecureRandom random;
@@ -64,7 +69,8 @@ public class JceAesCtrCryptoCodec extends AesCtrCryptoCodec {
           SecureRandom.getInstance(secureRandomAlg, provider) : 
             SecureRandom.getInstance(secureRandomAlg);
     } catch (GeneralSecurityException e) {
-      throw new IllegalArgumentException(e);
+      LOG.warn(e.getMessage());
+      random = new SecureRandom();
     }
   }
 

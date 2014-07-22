@@ -82,4 +82,34 @@ public enum CipherSuite {
     }
     throw new IllegalArgumentException("Invalid cipher suite name: " + name);
   }
+  
+  /**
+   * Convert to CipherSuite from name, {@link #algoBlockSize} is fixed for
+   * certain cipher suite, just need to compare the name.
+   * @param name cipher suite name
+   * @return CipherSuite cipher suite
+   */
+  public static CipherSuite convert(String name) {
+    CipherSuite[] suites = CipherSuite.values();
+    for (CipherSuite suite : suites) {
+      if (suite.getName().equals(name)) {
+        return suite;
+      }
+    }
+    throw new IllegalArgumentException("Invalid cipher suite name: " + name);
+  }
+  
+  /**
+   * Returns suffix of cipher suite configuration.
+   * @return String configuration suffix
+   */
+  public String getConfigSuffix() {
+    String[] parts = name.split("/");
+    StringBuilder suffix = new StringBuilder();
+    for (String part : parts) {
+      suffix.append(".").append(part.toLowerCase());
+    }
+    
+    return suffix.toString();
+  }
 }

@@ -1452,13 +1452,21 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
-  <name>hadoop.security.crypto.codec.class</name>
-  <value>org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec,
-  org.apache.hadoop.crypto.JceAesCtrCryptoCodec</value>
+  <name>hadoop.security.crypto.codec.classes.EXAMPLECIPHERSUITE</name>
+  <value></value>
   <description>
-    Comma list of CryptoCodec implementations which are used for encryption 
-    and decryption. The first implementation will be used if avaiable, others
-    are fallbacks.
+    The prefix for a given crypto codec, contains a comma-separated
+    list of implementation classes for a given crypto codec (eg EXAMPLECIPHERSUITE).
+    The first implementation will be used if available, others are fallbacks.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.crypto.codec.classes.aes.ctr.nopadding</name>
+  <value>org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec,org.apache.hadoop.crypto.JceAesCtrCryptoCodec</value>
+  <description>
+    Comma-separated list of crypto codec implementations for AES/CTR/NoPadding. 
+    The first implementation will be used if available, others are fallbacks.
   </description>
 </property>
 
@@ -1488,7 +1496,7 @@ for ldap providers in the same way as above does.
 
 <property>
   <name>hadoop.security.java.secure.random.algorithm</name>
-  <value></value>
+  <value>SHA1PRNG</value>
   <description>
     The java secure random algorithm. 
   </description>
@@ -1504,9 +1512,9 @@ for ldap providers in the same way as above does.
 
 <property>
   <name>hadoop.security.random.device.file.path</name>
-  <value></value>
+  <value>/dev/urandom</value>
   <description>
-    OS security random dev path, it's /dev/urandom in linux.
+    OS security random device file path.
   </description>
 </property>
 

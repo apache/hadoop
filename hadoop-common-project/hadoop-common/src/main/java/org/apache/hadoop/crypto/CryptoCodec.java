@@ -31,8 +31,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CODEC_CLASS_KEY;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CODEC_CLASS_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_DEFAULT;
 
@@ -44,23 +43,28 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY
 public abstract class CryptoCodec implements Configurable {
   public static Logger LOG = LoggerFactory.getLogger(CryptoCodec.class);
   
-  public static CryptoCodec getInstance(Configuration conf) {
-    List<Class<? extends CryptoCodec>> klasses = getCodecClasses(conf);
-    String name = conf.get(HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_KEY, 
-        HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_DEFAULT);
-    CipherSuite.checkName(name);
+  /**
+   * Get crypto codec for specified algorithm/mode/padding.
+   * @param conf the configuration
+   * @param CipherSuite algorithm/mode/padding
+   * @return CryptoCodec the codec object
+   */
+  public static CryptoCodec getInstance(Configuration conf, 
+      CipherSuite cipherSuite) {
+    List<Class<? extends CryptoCodec>> klasses = getCodecClasses(
+        conf, cipherSuite);
     CryptoCodec codec = null;
     for (Class<? extends CryptoCodec> klass : klasses) {
       try {
         CryptoCodec c = ReflectionUtils.newInstance(klass, conf);
-        if (c.getCipherSuite().getName().equalsIgnoreCase(name)) {
+        if (c.getCipherSuite().getName().equals(cipherSuite.getName())) {
           if (codec == null) {
             LOG.debug("Using crypto codec {}.", klass.getName());
             codec = c;
           }
         } else {
           LOG.warn("Crypto codec {} doesn't meet the cipher suite {}.", 
-              klass.getName(), name);
+              klass.getName(), cipherSuite.getName());
         }
       } catch (Exception e) {
         LOG.warn("Crypto codec {} is not available.", klass.getName());
@@ -72,14 +76,27 @@ public abstract class CryptoCodec implements Configurable {
     }
     
     throw new RuntimeException("No available crypto codec which meets " + 
-        "the cipher suite " + name + ".");
+        "the cipher suite " + cipherSuite.getName() + ".");
+  }
+  
+  /**
+   * Get crypto codec for algorithm/mode/padding in config value 
+   * hadoop.security.crypto.cipher.suite
+   * @param conf the configuration
+   * @return CryptoCodec the codec object
+   */
+  public static CryptoCodec getInstance(Configuration conf) {
+    String name = conf.get(HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_KEY, 
+        HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_DEFAULT);
+    return getInstance(conf, CipherSuite.convert(name));
   }
   
   private static List<Class<? extends CryptoCodec>> getCodecClasses(
-      Configuration conf) {
+      Configuration conf, CipherSuite cipherSuite) {
     List<Class<? extends CryptoCodec>> result = Lists.newArrayList();
-    String codecString = conf.get(HADOOP_SECURITY_CRYPTO_CODEC_CLASS_KEY,
-        HADOOP_SECURITY_CRYPTO_CODEC_CLASS_DEFAULT);
+    String configName = HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX + 
+        cipherSuite.getConfigSuffix();
+    String codecString = conf.get(configName);
     for (String c : Splitter.on(',').trimResults().omitEmptyStrings().
         split(codecString)) {
       try {

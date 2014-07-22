@@ -1301,8 +1301,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     if (feInfo != null) {
       // File is encrypted, wrap the stream in a crypto stream.
       final CryptoInputStream cryptoIn =
-          new CryptoInputStream(dfsis, codec,
-              feInfo.getEncryptedDataEncryptionKey(), feInfo.getIV());
+          new CryptoInputStream(dfsis, CryptoCodec.getInstance(conf, 
+              feInfo.getCipherSuite()), feInfo.getEncryptedDataEncryptionKey(),
+              feInfo.getIV());
       return new HdfsDataInputStream(cryptoIn);
     } else {
       // No key/IV pair so no encryption.

@@ -43,6 +43,9 @@ fs-encryption (Unreleased)
     HADOOP-10870. Failed to load OpenSSL cipher error logs on systems with old
     openssl versions (cmccabe)
 
+    HADOOP-10853. Refactor get instance of CryptoCodec and support create via
+    algorithm/mode/padding. (Yi Liu)
+
   OPTIMIZATIONS
 
   BUG FIXES
