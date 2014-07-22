@@ -59,6 +59,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -368,7 +369,7 @@ public class Balancer {
         in = new DataInputStream(new BufferedInputStream(unbufIn,
             HdfsConstants.IO_FILE_BUFFER_SIZE));
         
-        sendRequest(out, eb, accessToken);
+        sendRequest(out, eb, StorageType.DEFAULT, accessToken);
         receiveResponse(in);
         bytesMoved.addAndGet(block.getNumBytes());
         LOG.info("Successfully moved " + this);
@@ -400,8 +401,9 @@ public class Balancer {
     
     /* Send a block replace request to the output stream*/
     private void sendRequest(DataOutputStream out, ExtendedBlock eb,
+        StorageType storageType, 
         Token<BlockTokenIdentifier> accessToken) throws IOException {
-      new Sender(out).replaceBlock(eb, accessToken,
+      new Sender(out).replaceBlock(eb, storageType, accessToken,
           source.getStorageID(), proxySource.getDatanode());
     }
     

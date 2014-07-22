@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
@@ -71,11 +72,20 @@ public interface DataTransferProtocol {
 
   /**
    * Write a block to a datanode pipeline.
-   * 
+   * The receiver datanode of this call is the next datanode in the pipeline.
+   * The other downstream datanodes are specified by the targets parameter.
+   * Note that the receiver {@link DatanodeInfo} is not required in the
+   * parameter list since the receiver datanode knows its info.  However, the
+   * {@link StorageType} for storing the replica in the receiver datanode is a 
+   * parameter since the receiver datanode may support multiple storage types.
+   *
    * @param blk the block being written.
+   * @param storageType for storing the replica in the receiver datanode.
    * @param blockToken security token for accessing the block.
    * @param clientName client's name.
-   * @param targets target datanodes in the pipeline.
+   * @param targets other downstream datanodes in the pipeline.
+   * @param targetStorageTypes target {@link StorageType}s corresponding
+   *                           to the target datanodes.
    * @param source source datanode.
    * @param stage pipeline stage.
    * @param pipelineSize the size of the pipeline.
@@ -84,9 +94,11 @@ public interface DataTransferProtocol {
    * @param latestGenerationStamp the latest generation stamp of the block.
    */
   public void writeBlock(final ExtendedBlock blk,
+      final StorageType storageType, 
       final Token<BlockTokenIdentifier> blockToken,
       final String clientName,
       final DatanodeInfo[] targets,
+      final StorageType[] targetStorageTypes, 
       final DatanodeInfo source,
       final BlockConstructionStage stage,
       final int pipelineSize,
@@ -110,7 +122,8 @@ public interface DataTransferProtocol {
   public void transferBlock(final ExtendedBlock blk,
       final Token<BlockTokenIdentifier> blockToken,
       final String clientName,
-      final DatanodeInfo[] targets) throws IOException;
+      final DatanodeInfo[] targets,
+      final StorageType[] targetStorageTypes) throws IOException;
 
   /**
    * Request short circuit access file descriptors from a DataNode.
@@ -148,11 +161,13 @@ public interface DataTransferProtocol {
    * It is used for balancing purpose.
    * 
    * @param blk the block being replaced.
+   * @param storageType the {@link StorageType} for storing the block.
    * @param blockToken security token for accessing the block.
    * @param delHint the hint for deleting the block in the original datanode.
    * @param source the source datanode for receiving the block.
    */
   public void replaceBlock(final ExtendedBlock blk,
+      final StorageType storageType, 
       final Token<BlockTokenIdentifier> blockToken,
       final String delHint,
       final DatanodeInfo source) throws IOException;

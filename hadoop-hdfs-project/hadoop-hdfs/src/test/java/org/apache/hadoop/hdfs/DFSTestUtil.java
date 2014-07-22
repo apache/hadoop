@@ -380,7 +380,7 @@ public class DFSTestUtil {
    */
   public static void waitForReplication(MiniDFSCluster cluster, ExtendedBlock b,
       int racks, int replicas, int neededReplicas)
-      throws IOException, TimeoutException, InterruptedException {
+      throws TimeoutException, InterruptedException {
     int curRacks = 0;
     int curReplicas = 0;
     int curNeededReplicas = 0;
@@ -414,7 +414,7 @@ public class DFSTestUtil {
    */
   public static void waitCorruptReplicas(FileSystem fs, FSNamesystem ns,
       Path file, ExtendedBlock b, int corruptRepls)
-      throws IOException, TimeoutException, InterruptedException {
+      throws TimeoutException, InterruptedException {
     int count = 0;
     final int ATTEMPTS = 50;
     int repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
@@ -839,7 +839,8 @@ public class DFSTestUtil {
 
     // send the request
     new Sender(out).transferBlock(b, new Token<BlockTokenIdentifier>(),
-        dfsClient.clientName, new DatanodeInfo[]{datanodes[1]});
+        dfsClient.clientName, new DatanodeInfo[]{datanodes[1]},
+        new StorageType[]{StorageType.DEFAULT});
     out.flush();
 
     return BlockOpResponseProto.parseDelimitedFrom(in);
