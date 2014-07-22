@@ -823,7 +823,9 @@ public class TestRMAppAttemptTransitions {
       applicationAttempt.getAppAttemptState());
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
     verifyApplicationAttemptFinished(RMAppAttemptState.FAILED);
-    verifyAMCrashAtAllocatedDiagnosticInfo(applicationAttempt.getDiagnostics());
+    boolean shouldCheckURL = (applicationAttempt.getTrackingUrl() != null);
+    verifyAMCrashAtAllocatedDiagnosticInfo(applicationAttempt.getDiagnostics(),
+      exitCode, shouldCheckURL);
   }
   
   @Test
@@ -1241,11 +1243,18 @@ public class TestRMAppAttemptTransitions {
     verifyApplicationAttemptFinished(RMAppAttemptState.FAILED);
   }
 
-  private void verifyAMCrashAtAllocatedDiagnosticInfo(String diagnostics) {
-    assertTrue("Diagnostic information does not contain application proxy URL",
-      diagnostics.contains(applicationAttempt.getWebProxyBase()));
+  private void verifyAMCrashAtAllocatedDiagnosticInfo(String diagnostics,
+        int exitCode, boolean shouldCheckURL) {
     assertTrue("Diagnostic information does not point the logs to the users",
       diagnostics.contains("logs"));
+    assertTrue("Diagnostic information does not contain application attempt id",
+      diagnostics.contains(applicationAttempt.getAppAttemptId().toString()));
+    assertTrue("Diagnostic information does not contain application exit code",
+      diagnostics.contains("exitCode: " + exitCode));
+    if (shouldCheckURL) {
+      assertTrue("Diagnostic information does not contain application proxy URL",
+      diagnostics.contains(applicationAttempt.getWebProxyBase()));
+    }
   }
 
   private void verifyTokenCount(ApplicationAttemptId appAttemptId, int count) {
