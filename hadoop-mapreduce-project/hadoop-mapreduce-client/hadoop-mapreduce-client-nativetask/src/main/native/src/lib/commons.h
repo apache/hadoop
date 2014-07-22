@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <memory.h>
 #include <fcntl.h>

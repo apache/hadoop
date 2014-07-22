@@ -1,0 +1,4 @@
+Changes for Hadoop Native Map Output Collector
+------------------------------------------------
+
+MAPREDUCE-5985. native-task: Fix build on macosx. Contributed by Binglin Chang

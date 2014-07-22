@@ -52,7 +52,7 @@ endfunction(dual_output_directory TGT DIR)
 
 #
 # This macro alters the behavior of find_package and find_library.
-# It does this by setting the CMAKE_FIND_LIBRARY_SUFFIXES global variable. 
+# It does this by setting the CMAKE_FIND_LIBRARY_SUFFIXES global variable.
 # You should save that variable before calling this function and restore it
 # after you have accomplished your goal.
 #
@@ -79,8 +79,8 @@ macro(set_find_shared_library_version LVERS)
 endmacro(set_find_shared_library_version LVERS)
 
 if (NOT GENERATED_JAVAH)
-	#Must identify where the generated headers have been placed
-	  MESSAGE(FATAL_ERROR "You must set the cmake variable GENERATED_JAVAH")
+    #Must identify where the generated headers have been placed
+    MESSAGE(FATAL_ERROR "You must set the cmake variable GENERATED_JAVAH")
 endif (NOT GENERATED_JAVAH)
 find_package(JNI REQUIRED)
 
@@ -91,8 +91,8 @@ SET(CMAKE_FIND_LIBRARY_SUFFIXES STORED_CMAKE_FIND_LIBRARY_SUFFIXES)
 # primitive configs
 set(PRFLAGS "-DSIMPLE_MEMCPY")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${PRFLAGS} -Wall")
-set(CMAKE_LD_FLAGS "${CMAKE_LD_FLAGS} -no-undefined -version-info 0:1:0 
-		-L${_JAVA_HOME}/jre/lib/amd64/server -ljvm")
+set(CMAKE_LD_FLAGS "${CMAKE_LD_FLAGS} -no-undefined -version-info 0:1:0
+    -L${_JAVA_HOME}/jre/lib/amd64/server -ljvm")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS} -g -O2 -DNDEBUG -fPIC")
 set(D main/native/)
 
@@ -125,12 +125,12 @@ CHECK_FUNCTION_EXISTS(strtoul HAVE_STRTOUL)
 
 SET(STORED_CMAKE_FIND_LIBRARY_SUFFIXES CMAKE_FIND_LIBRARY_SUFFIXES)
 set_find_shared_library_version("1")
-find_library(SNAPPY_LIBRARY 
+find_library(SNAPPY_LIBRARY
     NAMES snappy
     PATHS ${CUSTOM_SNAPPY_PREFIX} ${CUSTOM_SNAPPY_PREFIX}/lib
           ${CUSTOM_SNAPPY_PREFIX}/lib64 ${CUSTOM_SNAPPY_LIB})
 SET(CMAKE_FIND_LIBRARY_SUFFIXES STORED_CMAKE_FIND_LIBRARY_SUFFIXES)
-find_path(SNAPPY_INCLUDE_DIR 
+find_path(SNAPPY_INCLUDE_DIR
     NAMES snappy.h
     PATHS ${CUSTOM_SNAPPY_PREFIX} ${CUSTOM_SNAPPY_PREFIX}/include
           ${CUSTOM_SNAPPY_INCLUDE})
@@ -147,15 +147,15 @@ else (SNAPPY_LIBRARY AND SNAPPY_INCLUDE_DIR)
 endif (SNAPPY_LIBRARY AND SNAPPY_INCLUDE_DIR)
 
 include_directories(
-	  ${GENERATED_JAVAH}
-		${D}
+    ${GENERATED_JAVAH}
+    ${D}
     ${D}/src
-		${D}/src/util
-		${D}/src/lib
-		${D}/test
+    ${D}/src/util
+    ${D}/src/lib
+    ${D}/test
     ${CMAKE_CURRENT_SOURCE_DIR}
-		#${CMAKE_CURRENT_SOURCE_DIR}/src
-		#${CMAKE_BINARY_DIR}
+    #${CMAKE_CURRENT_SOURCE_DIR}/src
+    #${CMAKE_BINARY_DIR}
     ${JNI_INCLUDE_DIRS}
     ${SNAPPY_INCLUDE_DIR}
 )
@@ -165,6 +165,13 @@ CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
 
 
 SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    # macosx does not have -lrt
+    set(NT_DEPEND_LIBRARY dl pthread z ${SNAPPY_LIBRARY} ${JAVA_JVM_LIBRARY})
+else (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    set(NT_DEPEND_LIBRARY dl rt pthread z ${SNAPPY_LIBRARY} ${JAVA_JVM_LIBRARY})
+endif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
 add_dual_library(nativetask
     ${D}/lz4/lz4.c
@@ -208,60 +215,51 @@ add_dual_library(nativetask
     ${D}/src/util/Timer.cc
     ${D}/src/util/WritableUtils.cc
 )
-target_link_libraries(nativetask
-	#${LIB_DL}
-	  dl
-		rt
-		pthread
-		z
-		${SNAPPY_LIBRARY}
-		${JAVA_JVM_LIBRARY}
-)
 
-add_executable(nttest 
+target_link_libraries(nativetask ${NT_DEPEND_LIBRARY})
+
+add_executable(nttest
     ${D}/gtest/gtest-all.cc
-    ${D}/test/lib/TestByteArray.cc      
-    ${D}/test/lib/TestByteBuffer.cc      
-    ${D}/test/lib/TestComparatorForDualPivotQuickSort.cc 
-    ${D}/test/lib/TestComparatorForStdSort.cc 
-    ${D}/test/lib/TestFixSizeContainer.cc 
-    ${D}/test/lib/TestMemoryPool.cc 
-    ${D}/test/lib/TestIterator.cc 
-    ${D}/test/lib/TestKVBuffer.cc 
-    ${D}/test/lib/TestMemBlockIterator.cc 
-    ${D}/test/lib/TestMemoryBlock.cc 
-    ${D}/test/lib/TestPartitionBucket.cc 
-    ${D}/test/lib/TestReadBuffer.cc 
-    ${D}/test/lib/TestReadWriteBuffer.cc 
-    ${D}/test/lib/TestTrackingCollector.cc 
-    ${D}/test/util/TestChecksum.cc             
-    ${D}/test/util/TestHash.cc                 
-    ${D}/test/util/TestStringUtil.cc           
-    ${D}/test/util/TestSyncUtils.cc            
-    ${D}/test/util/TestWritableUtils.cc        
-    ${D}/test/TestCommand.cc                   
-    ${D}/test/TestConfig.cc                   
-    ${D}/test/TestCounter.cc                   
-    ${D}/test/TestCompressions.cc              
-    ${D}/test/TestFileSystem.cc                
-    ${D}/test/TestIFile.cc                     
-    ${D}/test/TestPrimitives.cc                
-    ${D}/test/TestSort.cc                      
-    ${D}/test/TestMain.cc                      
+    ${D}/test/lib/TestByteArray.cc
+    ${D}/test/lib/TestByteBuffer.cc
+    ${D}/test/lib/TestComparatorForDualPivotQuickSort.cc
+    ${D}/test/lib/TestComparatorForStdSort.cc
+    ${D}/test/lib/TestFixSizeContainer.cc
+    ${D}/test/lib/TestMemoryPool.cc
+    ${D}/test/lib/TestIterator.cc
+    ${D}/test/lib/TestKVBuffer.cc
+    ${D}/test/lib/TestMemBlockIterator.cc
+    ${D}/test/lib/TestMemoryBlock.cc
+    ${D}/test/lib/TestPartitionBucket.cc
+    ${D}/test/lib/TestReadBuffer.cc
+    ${D}/test/lib/TestReadWriteBuffer.cc
+    ${D}/test/lib/TestTrackingCollector.cc
+    ${D}/test/util/TestChecksum.cc
+    ${D}/test/util/TestHash.cc
+    ${D}/test/util/TestStringUtil.cc
+    ${D}/test/util/TestSyncUtils.cc
+    ${D}/test/util/TestWritableUtils.cc
+    ${D}/test/TestCommand.cc
+    ${D}/test/TestConfig.cc
+    ${D}/test/TestCounter.cc
+    ${D}/test/TestCompressions.cc
+    ${D}/test/TestFileSystem.cc
+    ${D}/test/TestIFile.cc
+    ${D}/test/TestPrimitives.cc
+    ${D}/test/TestSort.cc
+    ${D}/test/TestMain.cc
     ${D}/test/test_commons.cc)
-set(CMAKE_EXE_LINKER_FLAGS "-L${_JAVA_HOME}/jre/lib/amd64/server -ljvm")
-target_link_libraries(nttest 
-   	nativetask_static
-	  dl
-	  rt
-	  pthread
-	  z
-	  ${SNAPPY_LIBRARY}
-		#	  ${JAVA_JVM_LIBRARY}
+
+
+IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    # macos clang with libc++ does not have tr1/tuple, just tuple
+    SET_TARGET_PROPERTIES(nttest PROPERTIES COMPILE_FLAGS "-DGTEST_USE_OWN_TR1_TUPLE=1")
+ENDIF()
+
+target_link_libraries(nttest
+     nativetask_static
+     ${NT_DEPEND_LIBRARY}
 )
-#if (NEED_LINK_DL)
-#   set(LIB_DL dl)
-#endif (NEED_LINK_DL)
 
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     #
