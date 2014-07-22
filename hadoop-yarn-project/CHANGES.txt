@@ -56,6 +56,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2045. Data persisted in NM should be versioned (Junping Du via jlowe)
 
+    YARN-2013. The diagnostics is always the ExitCodeException stack when the container 
+    crashes. (Tsuyoshi OZAWA via junping_du)
+
   OPTIMIZATIONS
 
   BUG FIXES
