@@ -177,9 +177,10 @@ public class FSDownload implements Callable<Path> {
   /**
    * Returns true if all ancestors of the specified path have the 'execute'
    * permission set for all users (i.e. that other users can traverse
-   * the directory heirarchy to the given path)
+   * the directory hierarchy to the given path)
    */
-  private static boolean ancestorsHaveExecutePermissions(FileSystem fs,
+  @VisibleForTesting
+  static boolean ancestorsHaveExecutePermissions(FileSystem fs,
       Path path, LoadingCache<Path,Future<FileStatus>> statCache)
       throws IOException {
     Path current = path;

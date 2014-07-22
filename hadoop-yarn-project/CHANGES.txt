@@ -397,6 +397,9 @@ Release 2.5.0 - UNRELEASED
 
     YARN-2269. Remove External links from YARN UI. (Craig Welch via xgong)
 
+    YARN-2270. Made TestFSDownload#testDownloadPublicWithStatCache be skipped
+    when there’s no ancestor permissions. (Akira Ajisaka via zjshen)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
