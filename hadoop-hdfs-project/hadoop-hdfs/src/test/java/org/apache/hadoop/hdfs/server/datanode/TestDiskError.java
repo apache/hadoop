@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -147,9 +148,9 @@ public class TestDiskError {
 
     DataChecksum checksum = DataChecksum.newDataChecksum(
         DataChecksum.Type.CRC32, 512);
-    new Sender(out).writeBlock(block.getBlock(),
+    new Sender(out).writeBlock(block.getBlock(), StorageType.DEFAULT,
         BlockTokenSecretManager.DUMMY_TOKEN, "",
-        new DatanodeInfo[0], null,
+        new DatanodeInfo[0], new StorageType[0], null,
         BlockConstructionStage.PIPELINE_SETUP_CREATE, 1, 0L, 0L, 0L,
         checksum, CachingStrategy.newDefaultStrategy());
     out.flush();

@@ -137,6 +137,13 @@ enum StorageTypeProto {
 }
 
 /**
+ * A list of storage types. 
+ */
+message StorageTypesProto {
+  repeated StorageTypeProto storageTypes = 1;
+}
+
+/**
  * A list of storage IDs. 
  */
 message StorageUuidsProto {
