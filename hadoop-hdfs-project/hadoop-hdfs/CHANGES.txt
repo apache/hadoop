@@ -354,6 +354,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6704. Fix the command to launch JournalNode in HDFS-HA document.
     (Akira AJISAKA via jing9)
 
+    HDFS-6731. Run "hdfs zkfc-formatZK" on a server in a non-namenode will cause
+    a null pointer exception. (Masatake Iwasaki via brandonli)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
