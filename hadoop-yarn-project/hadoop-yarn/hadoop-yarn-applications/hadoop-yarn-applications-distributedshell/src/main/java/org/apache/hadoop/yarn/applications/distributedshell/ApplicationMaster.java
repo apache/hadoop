@@ -83,6 +83,7 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
@@ -94,7 +95,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.LogManager;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -522,6 +522,8 @@ public class ApplicationMaster {
           + appAttemptID.toString(), e);
     }
 
+    // Note: Credentials, Token, UserGroupInformation, DataOutputBuffer class
+    // are marked as LimitedPrivate
     Credentials credentials =
         UserGroupInformation.getCurrentUser().getCredentials();
     DataOutputBuffer dob = new DataOutputBuffer();
@@ -900,11 +902,6 @@ public class ApplicationMaster {
     public void run() {
       LOG.info("Setting up container launch container for containerid="
           + container.getId());
-      ContainerLaunchContext ctx = Records
-          .newRecord(ContainerLaunchContext.class);
-
-      // Set the environment
-      ctx.setEnvironment(shellEnv);
 
       // Set the local resources
       Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
@@ -935,16 +932,13 @@ public class ApplicationMaster {
           return;
         }
 
-        LocalResource shellRsrc = Records.newRecord(LocalResource.class);
-        shellRsrc.setType(LocalResourceType.FILE);
-        shellRsrc.setVisibility(LocalResourceVisibility.APPLICATION);
+        URL yarnUrl = null;
         try {
-          shellRsrc.setResource(ConverterUtils.getYarnUrlFromURI(new URI(
-            renamedScriptPath.toString())));
+          yarnUrl = ConverterUtils.getYarnUrlFromURI(
+            new URI(renamedScriptPath.toString()));
         } catch (URISyntaxException e) {
           LOG.error("Error when trying to use shell script path specified"
               + " in env, path=" + renamedScriptPath, e);
-
           // A failure scenario on bad input such as invalid shell script path
           // We know we cannot continue launching the container
           // so we should release it.
@@ -953,13 +947,13 @@ public class ApplicationMaster {
           numFailedContainers.incrementAndGet();
           return;
         }
-        shellRsrc.setTimestamp(shellScriptPathTimestamp);
-        shellRsrc.setSize(shellScriptPathLen);
+        LocalResource shellRsrc = LocalResource.newInstance(yarnUrl,
+          LocalResourceType.FILE, LocalResourceVisibility.APPLICATION,
+          shellScriptPathLen, shellScriptPathTimestamp);
         localResources.put(Shell.WINDOWS ? ExecBatScripStringtPath :
             ExecShellStringPath, shellRsrc);
         shellCommand = Shell.WINDOWS ? windows_command : linux_bash_command;
       }
-      ctx.setLocalResources(localResources);
 
       // Set the necessary command to execute on the allocated container
       Vector<CharSequence> vargs = new Vector<CharSequence>(5);
@@ -986,16 +980,18 @@ public class ApplicationMaster {
 
       List<String> commands = new ArrayList<String>();
       commands.add(command.toString());
-      ctx.setCommands(commands);
 
-      // Set up tokens for the container too. Today, for normal shell commands,
-      // the container in distribute-shell doesn't need any tokens. We are
-      // populating them mainly for NodeManagers to be able to download any
-      // files in the distributed file-system. The tokens are otherwise also
-      // useful in cases, for e.g., when one is running a "hadoop dfs" command
-      // inside the distributed shell.
-      ctx.setTokens(allTokens.duplicate());
+      // Set up ContainerLaunchContext, setting local resource, environment,
+      // command and token for constructor.
 
+      // Note for tokens: Set up tokens for the container too. Today, for normal
+      // shell commands, the container in distribute-shell doesn't need any
+      // tokens. We are populating them mainly for NodeManagers to be able to
+      // download anyfiles in the distributed file-system. The tokens are
+      // otherwise also useful in cases, for e.g., when one is running a
+      // "hadoop dfs" command inside the distributed shell.
+      ContainerLaunchContext ctx = ContainerLaunchContext.newInstance(
+        localResources, shellEnv, commands, null, allTokens.duplicate(), null);
       containerListener.addContainer(container.getId(), container);
       nmClientAsync.startContainerAsync(container, ctx);
     }
@@ -1024,15 +1020,13 @@ public class ApplicationMaster {
     // setup requirements for hosts
     // using * as any host will do for the distributed shell app
     // set the priority for the request
-    Priority pri = Records.newRecord(Priority.class);
     // TODO - what is the range for priority? how to decide?
-    pri.setPriority(requestPriority);
+    Priority pri = Priority.newInstance(requestPriority);
 
     // Set up resource type requirements
     // For now, memory and CPU are supported so we set memory and cpu requirements
-    Resource capability = Records.newRecord(Resource.class);
-    capability.setMemory(containerMemory);
-    capability.setVirtualCores(containerVirtualCores);
+    Resource capability = Resource.newInstance(containerMemory,
+      containerVirtualCores);
 
     ContainerRequest request = new ContainerRequest(capability, null, null,
         pri);
