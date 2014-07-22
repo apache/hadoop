@@ -13,6 +13,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5971. Move the default options for distcp -p to
     DistCpOptionSwitch. (clamb via wang)
 
+    MAPREDUCE-5963. ShuffleHandler DB schema should be versioned with
+    compatible/incompatible changes (Junping Du via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES
