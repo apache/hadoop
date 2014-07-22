@@ -396,6 +396,9 @@ Trunk (Unreleased)
     HADOOP-10840. Fix OutOfMemoryError caused by metrics system in Azure File
     System. (Shanyu Zhao via cnauroth)
 
+    HADOOP-10826. Iteration on KeyProviderFactory.serviceLoader is 
+    thread-unsafe. (benoyantony viat tucu)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
