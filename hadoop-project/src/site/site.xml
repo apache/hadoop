@@ -88,7 +88,7 @@
       <item name="HDFS NFS Gateway" href="hadoop-project-dist/hadoop-hdfs/HdfsNfsGateway.html"/>
       <item name="HDFS Rolling Upgrade" href="hadoop-project-dist/hadoop-hdfs/HdfsRollingUpgrade.html"/>
       <item name="Extended Attributes" href="hadoop-project-dist/hadoop-hdfs/ExtendedAttributes.html"/>
-      <item name="HDFS Support For Multihoming" href="hadoop-project-dist/hadoop-hdfs/HdfsMultihoming.html"/>
+      <item name="HDFS Support for Multihoming" href="hadoop-project-dist/hadoop-hdfs/HdfsMultihoming.html"/>
     </menu>
 
     <menu name="MapReduce" inherit="top">
