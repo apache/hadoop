@@ -60,35 +60,6 @@ public class EncryptionZoneManager {
 
   }
 
-  /**
-   * Protects the <tt>encryptionZones</tt> map and its contents.
-   */
-  private final ReentrantReadWriteLock lock;
-
-  private void readLock() {
-    lock.readLock().lock();
-  }
-
-  private void readUnlock() {
-    lock.readLock().unlock();
-  }
-
-  private void writeLock() {
-    lock.writeLock().lock();
-  }
-
-  private void writeUnlock() {
-    lock.writeLock().unlock();
-  }
-
-  public boolean hasWriteLock() {
-    return lock.isWriteLockedByCurrentThread();
-  }
-
-  public boolean hasReadLock() {
-    return lock.getReadHoldCount() > 0 || hasWriteLock();
-  }
-
   private final Map<Long, EncryptionZoneInt> encryptionZones;
   private final FSDirectory dir;
   private final KeyProvider provider;
@@ -101,7 +72,6 @@ public class EncryptionZoneManager {
   public EncryptionZoneManager(FSDirectory dir, KeyProvider provider) {
     this.dir = dir;
     this.provider = provider;
-    lock = new ReentrantReadWriteLock();
     encryptionZones = new HashMap<Long, EncryptionZoneInt>();
   }
 
@@ -116,12 +86,7 @@ public class EncryptionZoneManager {
   void addEncryptionZone(Long inodeId, String keyId) {
     assert dir.hasWriteLock();
     final EncryptionZoneInt ez = new EncryptionZoneInt(inodeId, keyId);
-    writeLock();
-    try {
-      encryptionZones.put(inodeId, ez);
-    } finally {
-      writeUnlock();
-    }
+    encryptionZones.put(inodeId, ez);
   }
 
   /**
@@ -131,12 +96,7 @@ public class EncryptionZoneManager {
    */
   void removeEncryptionZone(Long inodeId) {
     assert dir.hasWriteLock();
-    writeLock();
-    try {
-      encryptionZones.remove(inodeId);
-    } finally {
-      writeUnlock();
-    }
+    encryptionZones.remove(inodeId);
   }
 
   /**
@@ -147,12 +107,7 @@ public class EncryptionZoneManager {
   boolean isInAnEZ(INodesInPath iip)
       throws UnresolvedLinkException, SnapshotAccessControlException {
     assert dir.hasReadLock();
-    readLock();
-    try {
-      return (getEncryptionZoneForPath(iip) != null);
-    } finally {
-      readUnlock();
-    }
+    return (getEncryptionZoneForPath(iip) != null);
   }
 
   /**
@@ -172,16 +127,12 @@ public class EncryptionZoneManager {
    * Called while holding the FSDirectory lock.
    */
   String getKeyName(final INodesInPath iip) {
-    readLock();
-    try {
-      EncryptionZoneInt ezi = getEncryptionZoneForPath(iip);
-      if (ezi == null) {
-        return null;
-      }
-      return ezi.getKeyName();
-    } finally {
-      readUnlock();
+    assert dir.hasReadLock();
+    EncryptionZoneInt ezi = getEncryptionZoneForPath(iip);
+    if (ezi == null) {
+      return null;
     }
+    return ezi.getKeyName();
   }
 
   /**
@@ -191,7 +142,7 @@ public class EncryptionZoneManager {
    * Must be called while holding the manager lock.
    */
   private EncryptionZoneInt getEncryptionZoneForPath(INodesInPath iip) {
-    assert hasReadLock();
+    assert dir.hasReadLock();
     Preconditions.checkNotNull(iip);
     final INode[] inodes = iip.getINodes();
     for (int i = inodes.length - 1; i >= 0; i--) {
@@ -220,41 +171,36 @@ public class EncryptionZoneManager {
   void checkMoveValidity(INodesInPath srcIIP, INodesInPath dstIIP, String src)
       throws IOException {
     assert dir.hasReadLock();
-    readLock();
-    try {
-      final EncryptionZoneInt srcEZI = getEncryptionZoneForPath(srcIIP);
-      final EncryptionZoneInt dstEZI = getEncryptionZoneForPath(dstIIP);
-      final boolean srcInEZ = (srcEZI != null);
-      final boolean dstInEZ = (dstEZI != null);
-      if (srcInEZ) {
-        if (!dstInEZ) {
-          throw new IOException(
-              src + " can't be moved from an encryption zone.");
-        }
-      } else {
-        if (dstInEZ) {
-          throw new IOException(
-              src + " can't be moved into an encryption zone.");
-        }
+    final EncryptionZoneInt srcEZI = getEncryptionZoneForPath(srcIIP);
+    final EncryptionZoneInt dstEZI = getEncryptionZoneForPath(dstIIP);
+    final boolean srcInEZ = (srcEZI != null);
+    final boolean dstInEZ = (dstEZI != null);
+    if (srcInEZ) {
+      if (!dstInEZ) {
+        throw new IOException(
+            src + " can't be moved from an encryption zone.");
       }
+    } else {
+      if (dstInEZ) {
+        throw new IOException(
+            src + " can't be moved into an encryption zone.");
+      }
+    }
 
-      if (srcInEZ || dstInEZ) {
-        Preconditions.checkState(srcEZI != null, "couldn't find src EZ?");
-        Preconditions.checkState(dstEZI != null, "couldn't find dst EZ?");
-        if (srcEZI != dstEZI) {
-          final String srcEZPath = getFullPathName(srcEZI);
-          final String dstEZPath = getFullPathName(dstEZI);
-          final StringBuilder sb = new StringBuilder(src);
-          sb.append(" can't be moved from encryption zone ");
-          sb.append(srcEZPath);
-          sb.append(" to encryption zone ");
-          sb.append(dstEZPath);
-          sb.append(".");
-          throw new IOException(sb.toString());
-        }
+    if (srcInEZ || dstInEZ) {
+      Preconditions.checkState(srcEZI != null, "couldn't find src EZ?");
+      Preconditions.checkState(dstEZI != null, "couldn't find dst EZ?");
+      if (srcEZI != dstEZI) {
+        final String srcEZPath = getFullPathName(srcEZI);
+        final String dstEZPath = getFullPathName(dstEZI);
+        final StringBuilder sb = new StringBuilder(src);
+        sb.append(" can't be moved from encryption zone ");
+        sb.append(srcEZPath);
+        sb.append(" to encryption zone ");
+        sb.append(dstEZPath);
+        sb.append(".");
+        throw new IOException(sb.toString());
       }
-    } finally {
-      readUnlock();
     }
   }
 
@@ -266,34 +212,29 @@ public class EncryptionZoneManager {
   XAttr createEncryptionZone(String src, String keyId, KeyVersion keyVersion)
       throws IOException {
     assert dir.hasWriteLock();
-    writeLock();
-    try {
-      if (dir.isNonEmptyDirectory(src)) {
-        throw new IOException(
-            "Attempt to create an encryption zone for a non-empty directory.");
-      }
-
-      final INodesInPath srcIIP = dir.getINodesInPath4Write(src, false);
-      EncryptionZoneInt ezi = getEncryptionZoneForPath(srcIIP);
-      if (ezi != null) {
-        throw new IOException("Directory " + src + " is already in an " +
-            "encryption zone. (" + getFullPathName(ezi) + ")");
-      }
-
-      final XAttr keyIdXAttr = XAttrHelper
-          .buildXAttr(CRYPTO_XATTR_ENCRYPTION_ZONE, keyId.getBytes());
-
-      final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
-      xattrs.add(keyIdXAttr);
-      // updating the xattr will call addEncryptionZone,
-      // done this way to handle edit log loading
-      dir.unprotectedSetXAttrs(src, xattrs, EnumSet.of(XAttrSetFlag.CREATE));
-      // Re-get the new encryption zone add the latest key version
-      ezi = getEncryptionZoneForPath(srcIIP);
-      return keyIdXAttr;
-    } finally {
-      writeUnlock();
+    if (dir.isNonEmptyDirectory(src)) {
+      throw new IOException(
+          "Attempt to create an encryption zone for a non-empty directory.");
     }
+
+    final INodesInPath srcIIP = dir.getINodesInPath4Write(src, false);
+    EncryptionZoneInt ezi = getEncryptionZoneForPath(srcIIP);
+    if (ezi != null) {
+      throw new IOException("Directory " + src + " is already in an " +
+          "encryption zone. (" + getFullPathName(ezi) + ")");
+    }
+
+    final XAttr keyIdXAttr = XAttrHelper
+        .buildXAttr(CRYPTO_XATTR_ENCRYPTION_ZONE, keyId.getBytes());
+
+    final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
+    xattrs.add(keyIdXAttr);
+    // updating the xattr will call addEncryptionZone,
+    // done this way to handle edit log loading
+    dir.unprotectedSetXAttrs(src, xattrs, EnumSet.of(XAttrSetFlag.CREATE));
+    // Re-get the new encryption zone add the latest key version
+    ezi = getEncryptionZoneForPath(srcIIP);
+    return keyIdXAttr;
   }
 
   /**
@@ -303,16 +244,11 @@ public class EncryptionZoneManager {
    */
   List<EncryptionZone> listEncryptionZones() throws IOException {
     assert dir.hasReadLock();
-    readLock();
-    try {
-      final List<EncryptionZone> ret =
-          Lists.newArrayListWithExpectedSize(encryptionZones.size());
-      for (EncryptionZoneInt ezi : encryptionZones.values()) {
-        ret.add(new EncryptionZone(getFullPathName(ezi), ezi.getKeyName()));
-      }
-      return ret;
-    } finally {
-      readUnlock();
+    final List<EncryptionZone> ret =
+        Lists.newArrayListWithExpectedSize(encryptionZones.size());
+    for (EncryptionZoneInt ezi : encryptionZones.values()) {
+      ret.add(new EncryptionZone(getFullPathName(ezi), ezi.getKeyName()));
     }
+    return ret;
   }
 }
