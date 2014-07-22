@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+#include "common/hadoop_err.h"
 #include "common/string.h"
 
 #include <errno.h>
@@ -63,6 +64,31 @@ int strdupto(char **dst, const char *src)
     strcpy(ndst, src);
     *dst = ndst;
     return 0;
+}
+
+struct hadoop_err *vdynprintf(char **out, const char *fmt, va_list ap)
+{
+    char *str;
+
+    if (vasprintf(&str, fmt, ap) < 0) {
+        return hadoop_lerr_alloc(ENOMEM, "vdynprintf: OOM");
+    }
+    if (*out) {
+        free(*out);
+    }
+    *out = str;
+    return NULL;
+}
+
+struct hadoop_err *dynprintf(char **out, const char *fmt, ...)
+{
+    struct hadoop_err *err;
+    va_list ap;
+
+    va_start(ap, fmt);
+    err = vdynprintf(out, fmt, ap);
+    va_end(ap);
+    return err;
 }
 
 // vim: ts=4:sw=4:tw=79:et

@@ -154,8 +154,9 @@ add_executable(varint-unit rpc/varint-unit.c
 add_utest(varint-unit)
 
 add_executable(string-unit common/string-unit.c
-    common/string.c test/test.c)
+    common/hadoop_err.c common/string.c test/test.c)
 add_utest(string-unit)
+target_link_libraries(string-unit ${LIBUV_LIB})
 
 add_executable(htable-unit common/htable-unit.c
     common/htable.c test/test.c)
@@ -177,7 +178,7 @@ add_utest(hadoop_err-unit)
 target_link_libraries(hadoop_err-unit ${LIBUV_LIB})
 
 add_executable(uri-unit common/uri-unit.c
-    common/uri.c common/hadoop_err.c test/test.c)
+    common/uri.c common/hadoop_err.c common/string.c test/test.c)
 add_utest(uri-unit)
 target_link_libraries(uri-unit ${URIPARSER_LIB} ${LIBUV_LIB})
 

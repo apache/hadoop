@@ -19,89 +19,71 @@
 #ifndef HADOOP_CORE_COMMON_URI
 #define HADOOP_CORE_COMMON_URI
 
+#include <inttypes.h>
 #include <uriparser/Uri.h>
 
-/**
- * Parse an absolute URI.
- *
- * @param str           The string to parse.  If there is not a slash at the
- *                          end, one will be added.
- * @param state         (inout) The URI parser state to use.
- *                          On success, state->uri will be set to a non-NULL
- *                          value.
- * @param uri           (out param) The URI object to fill.
- * @param def_scheme    The default scheme to add if there is no scheme.
- *
- * @return              NULL on success; the URI parsing problem otherwise.
- */
-struct hadoop_err *uri_parse_abs(const char *str, UriParserStateA *state,
-            UriUriA *uri, const char *def_scheme);
+struct hadoop_uri {
+    /** The text we parsed to create this URI. */
+    char *text;
+
+    /** URI structure. */
+    UriUriA uri;
+
+    /** URI Scheme or NULL. */
+    char *scheme;
+
+    /** User info or NULL. */
+    char *user_info;
+
+    /** Authority or NULL. */
+    char *auth;
+
+    /** URI Port. */
+    uint16_t port;
+
+    /** URI path. */
+    char *path;
+};
+
+#define H_URI_APPEND_SLASH              0x01
+#define H_URI_PARSE_SCHEME              0x02
+#define H_URI_PARSE_USER_INFO           0x04
+#define H_URI_PARSE_AUTH                0x08
+#define H_URI_PARSE_PORT                0x10
+#define H_URI_PARSE_PATH                0x20
+#define H_URI_PARSE_ALL \
+        (H_URI_PARSE_SCHEME | \
+        H_URI_PARSE_USER_INFO | \
+        H_URI_PARSE_AUTH | \
+        H_URI_PARSE_PORT | \
+        H_URI_PARSE_PATH)
 
 /**
- * Parse a relative or absolute URI.
+ * Parse a Hadoop URI.
  *
- * @param str           The string to parse.
- * @param state         (inout) The URI parser state to use.
- *                          On success, state->uri will be set to a non-NULL
- *                          value.
- * @param uri           (out param) The URI object to fill.
- *
- * @return              NULL on success; the URI parsing problem otherwise.
+ * @param text          The text to parse.
+ * @param base          If non-NULL, the URI to use as a base if the URI we're
+ *                          parsing is relative.
+ * @param out           (out param) The URI.
+ * @param flags         Parse flags.
  */
-struct hadoop_err *uri_parse(const char *str, UriParserStateA *state,
-            UriUriA *uri, UriUriA *base_uri);
+struct hadoop_err *hadoop_uri_parse(const char *text,
+                struct hadoop_uri *base, struct hadoop_uri **out, int flags);
 
 /**
- * Get the scheme of a URI.
+ * Dynamically allocate a string representing the hadoop_uri.
  *
- * We disallow schemes with non-ASCII characters.
- *
- * @param uri           The Uri object.
- * @param scheme        (out param) the scheme.
- *
- * @return              NULL on success; the URI parsing problem otherwise.
+ * @param uri           The URI.
+ * @param out           (out param)
  */
-struct hadoop_err *uri_get_scheme(UriUriA *uri, char **scheme);
+struct hadoop_err *hadoop_uri_to_str(const struct hadoop_uri *uri, char **out);
 
 /**
- * Get the user_info of a URI.
+ * Free a Hadoop URI.
  *
- * @param uri           The Uri object.
- * @param user_info     (out param) the user_info.
- *
- * @return              NULL on success; the URI parsing problem otherwise.
+ * @param uri           The URI to free.
  */
-struct hadoop_err *uri_get_user_info(UriUriA *uri, char **user_info);
-
-/**
- * Get the authority of a URI.
- *
- * @param uri           The Uri object.
- * @param authority     (out param) the authority.
- *
- * @return              NULL on success; the URI parsing problem otherwise.
- */
-struct hadoop_err *uri_get_authority(UriUriA *uri, char **authority);
-
-/**
- * Get the port of a URI.
- *
- * @param uri           The Uri object.
- * @param port          (out param) the port, or 0 if there was no port.
- *
- * @return              NULL on success; the URI parsing problem otherwise.
- */
-struct hadoop_err *uri_get_port(UriUriA *uri, uint16_t *port);
-
-/**
- * Get the path of a URI.
- *
- * @param uri       The Uri object.
- * @param path      (out param) the path.
- *
- * @return          NULL on success; the URI parsing problem otherwise.
- */
-struct hadoop_err *uri_get_path(UriUriA *uri, char **path);
+void hadoop_uri_free(struct hadoop_uri *uri);
 
 #endif
 

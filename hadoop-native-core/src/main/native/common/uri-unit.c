@@ -40,65 +40,32 @@ static int check_uri_params(const char *scheme, const char *escheme,
 }
 
 static struct hadoop_err *test_parse_uri(const char *uri_str,
-            const char *escheme, const char *euser, const char *eauth,
+            const char *escheme, const char *euser_info, const char *eauth,
             int eport, const char *epath)
 {
-    UriParserStateA base_uri_state, uri_state;
-    UriUriA base_uri, uri;
+    struct hadoop_uri *base = NULL, *uri = NULL;
     struct hadoop_err *err = NULL;
-    char *scheme = NULL, *user = NULL, *auth = NULL;
-    char *path = NULL;
-    uint16_t port;
 
-    memset(&uri_state, 0, sizeof(uri_state));
-    err = uri_parse_abs("hdfs:///home/cmccabe/", &base_uri_state,
-            &base_uri, "hdfs");
+    err = hadoop_uri_parse("hdfs:///home/cmccabe/", NULL, &base,
+                H_URI_APPEND_SLASH | H_URI_PARSE_ALL);
     if (err)
         goto done;
-    err = uri_parse(uri_str, &uri_state, &uri, &base_uri);
+    err = hadoop_uri_parse(uri_str, base, &uri, H_URI_PARSE_ALL);
     if (err)
         goto done;
-    err = uri_get_scheme(&uri, &scheme);
-    if (err)
-        goto done;
-    err = uri_get_user_info(&uri, &user);
-    if (err)
-        goto done;
-    // Get the authority, which we typically treat as a hostname.
-    err = uri_get_authority(&uri, &auth);
-    if (err)
-        goto done;
-    err = uri_get_path(&uri, &path);
-    if (err)
-        goto done;
-    err = uri_get_port(&uri, &port);
-    if (err)
-        goto done;
-//    fprintf(stderr, "test_parse_uri(%s): "
-//            "scheme=%s, user=%s, auth=%s, path=%s\n",
-//            uri_str, scheme, user, auth, path);
-    err = NULL;
-    if (check_uri_params(scheme, escheme,
-                         user, euser,
-                         auth, eauth,
-                        port, eport,
-                         path, epath)) {
+    if (check_uri_params(uri->scheme, escheme,
+                         uri->user_info, euser_info,
+                         uri->auth, eauth, uri->port, eport,
+                         uri->path, epath)) {
         err = hadoop_lerr_alloc(EINVAL, "check_uri_params: failed.");
         if (err)
             goto done;
     }
+    err = NULL;
 
 done:
-    if (base_uri_state.uri) {
-        uriFreeUriMembersA(&base_uri);
-    }
-    if (uri_state.uri) {
-        uriFreeUriMembersA(&uri);
-    }
-    free(scheme);
-    free(user);
-    free(auth);
-    free(path);
+    hadoop_uri_free(base);
+    hadoop_uri_free(uri);
     return err;
 }
 

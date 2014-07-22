@@ -47,6 +47,29 @@ void hex_buf_print(FILE *fp, const void *buf, int32_t buf_len,
  */
 int strdupto(char **dst, const char *src);
 
+/**
+ * Print to a dynamically allocated string.
+ *
+ * @param out       (out param) where to place the dynamically allocated
+ *                      string.  If *out is non-NULL, it will be freed.  *out
+ *                      may appear as an input parameter as well.
+ * @param fmt       printf-style format string.
+ * @param ap        printf-style arguments.
+ */
+struct hadoop_err *vdynprintf(char **out, const char *fmt, va_list ap);
+
+/**
+ * Print to a dynamically allocated string.
+ *
+ * @param out       (out param) where to place the dynamically allocated
+ *                      string.  If *out is non-NULL, it will be freed.  *out
+ *                      may appear as an input parameter as well.
+ * @param fmt       printf-style format string.
+ * @param ...       printf-style arguments.
+ */
+struct hadoop_err *dynprintf(char **out, const char *fmt, ...)
+        __attribute__((format(printf, 2, 3)));
+
 #endif
 
 // vim: ts=4:sw=4:tw=79:et

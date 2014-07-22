@@ -42,7 +42,7 @@ void release_file_info_entry(hdfsFileInfo *hdfsFileInfo)
 int hadoopfs_errno_and_retcode(struct hadoop_err *err)
 {
     if (err) {
-        fputs(hadoop_err_msg(err), stderr);
+        fprintf(stderr, "%s\n", hadoop_err_msg(err));
         errno = hadoop_err_code(err);
         hadoop_err_free(err);
         return -1;
@@ -53,8 +53,7 @@ int hadoopfs_errno_and_retcode(struct hadoop_err *err)
 void *hadoopfs_errno_and_retptr(struct hadoop_err *err, void *ptr)
 {
     if (err) {
-        fputs(hadoop_err_msg(err), stderr);
-        errno = hadoop_err_code(err);
+        fprintf(stderr, "%s\n", hadoop_err_msg(err));
         hadoop_err_free(err);
         return NULL;
     }

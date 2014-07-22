@@ -24,6 +24,7 @@
 #include <inttypes.h>
 
 struct hadoop_err;
+struct hadoop_uri;
 struct hconf;
 
 /**
@@ -122,10 +123,7 @@ struct hdfsBuilder {
     const char *userName;
     struct hdfsBuilderConfOpt *opts;
     struct hconf *hconf;
-    char *uri_scheme;
-    char *uri_user_info;
-    char *uri_authority;
-    uint16_t uri_port;
+    struct hadoop_uri *uri;
 };
 
 /**

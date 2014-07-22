@@ -190,82 +190,72 @@ static struct hadoop_err *hdfs_builder_parse_conn_uri(
                                     struct hdfsBuilder *hdfs_bld)
 {
     int ret;
-    uint16_t port;
-    const char *uri_str;
-    char *malloced_uri_str = NULL;
-    UriParserStateA uri_state;
-    UriUriA uri;
+    char *uri_str = NULL, *uri_dbg = NULL;
     struct hadoop_err *err = NULL;
 
-    memset(&uri_state, 0, sizeof(uri_state));
-    uri_str = hdfs_bld->nn;
-    if (uri_str) {
-        // If the connection URI was set via hdfsBuilderSetNameNode, it may
-        // not be a real URI, but just a <hostname>:<port> pair.  This won't
-        // parse correctly unless we add a hdfs:// scheme in front of it.
-        if ((!index(uri_str, '/')) && (index(uri_str, ':'))) {
-            if (asprintf(&malloced_uri_str, "hdfs://%s", uri_str) < 0) {
-                malloced_uri_str = NULL;
-                err = hadoop_lerr_alloc(ENOMEM, "uri_parse: OOM "
-                                        "adding default scheme");
+    if (hdfs_bld->nn) {
+        if ((!index(hdfs_bld->nn, '/')) && (index(hdfs_bld->nn, ':'))) {
+            // If the connection URI was set via hdfsBuilderSetNameNode, it may
+            // not be a real URI, but just a <hostname>:<port> pair.  This won't
+            // parse correctly unless we add a hdfs:// scheme in front of it.
+            err = dynprintf(&uri_str, "hdfs://%s", hdfs_bld->nn);
+            if (err)
+                goto done;
+        } else {
+            uri_str = strdup(hdfs_bld->nn);
+            if (!uri_str) {
+                err = hadoop_lerr_alloc(ENOMEM, "hdfs_builder_parse_conn_uri: OOM");
                 goto done;
             }
-            uri_str = malloced_uri_str;
         }
     } else {
-        uri_str = hconf_get(hdfs_bld->hconf, "fs.defaultFS");
+        const char *default_fs = hconf_get(hdfs_bld->hconf, "fs.defaultFS");
+        if (!default_fs) {
+            default_fs = "file:///";
+        }
+        uri_str = strdup(default_fs);
         if (!uri_str) {
-            uri_str = "file:///";
+            err = hadoop_lerr_alloc(ENOMEM, "hdfs_builder_parse_conn_uri: OOM");
+            goto done;
         }
     }
-    err = uri_parse_abs(uri_str, &uri_state, &uri, DEFAULT_SCHEME);
+    err = hadoop_uri_parse(uri_str, NULL, &hdfs_bld->uri,
+                     H_URI_APPEND_SLASH | H_URI_PARSE_ALL);
     if (err)
         goto done;
-    err = uri_get_scheme(&uri, &hdfs_bld->uri_scheme);
-    if (err)
-        goto done; 
-    // Get the user_info.  We default to the userName passed in to the hdfs
-    // builder.
-    err = uri_get_user_info(&uri, &hdfs_bld->uri_user_info);
-    if (err)
-        goto done;
-    if (hdfs_bld->uri_user_info[0] == '\0') {
+    if (hdfs_bld->uri->user_info[0] == '\0') {
         // If we still don't have an authority, fill in the authority from the
         // current user name.
-        free(hdfs_bld->uri_user_info);
-        hdfs_bld->uri_user_info = NULL;
-        ret = geteuid_string(&hdfs_bld->uri_user_info);
+        free(hdfs_bld->uri->user_info);
+        hdfs_bld->uri->user_info = NULL;
+        ret = geteuid_string(&hdfs_bld->uri->user_info);
         if (ret) {
             err = hadoop_lerr_alloc(ret, "geteuid_string failed: error "
                                     "%d", ret);
             goto done;
         }
     }
-    // Get the authority, which we typically treat as a hostname.
-    err = uri_get_authority(&uri, &hdfs_bld->uri_authority);
+    err = hadoop_uri_to_str(hdfs_bld->uri, &uri_dbg);
     if (err)
         goto done;
-    // Get the port, or 0.
-    err = uri_get_port(&uri, &port);
-    if (err)
-        goto done;
-    fprintf(stderr, "hdfs_builder_parse_conn_uri: "
-            "uri_scheme=%s, uri_user_info=%s, "
-            "uri_authority=%s, port=%d\n",
-            hdfs_bld->uri_scheme, hdfs_bld->uri_user_info,
-            hdfs_bld->uri_authority, port);
-    // The URI's port overrides the port supplied via
-    // hdfsBuilderSetNameNodePort.
-    if (port) {
-        hdfs_bld->port = port;
+    fprintf(stderr, "hdfs_builder_parse_conn_uri: %s\n", uri_dbg);
+    if (hdfs_bld->port == 0) {
+        hdfs_bld->port = hdfs_bld->uri->port;
+    } else {
+        if (hdfs_bld->port != hdfs_bld->uri->port) {
+            err = hadoop_lerr_alloc(EINVAL, "The connection URI specified "
+                    "port %d, but hdfsBuilderSetNameNodePort specified port "
+                    "%d.  Please only specify the port once, preferrably in "
+                    "the URI.", hdfs_bld->uri->port, hdfs_bld->port);
+            goto done;
+        }
+        hdfs_bld->uri->port = hdfs_bld->port;
     }
     err = NULL;
 
 done:
-    free(malloced_uri_str);
-    if (uri_state.uri) {
-        uriFreeUriMembersA(&uri);
-    }
+    free(uri_dbg);
+    free(uri_str);
     return err;
 }
 
@@ -296,7 +286,7 @@ hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld)
         goto done;
 
     // Find out the native filesystems we should use for this URI.
-    if (asprintf(&fs_list_key, "%s.native.handler.", bld->uri_scheme) < 0) {
+    if (asprintf(&fs_list_key, "%s.native.handler.", bld->uri->scheme) < 0) {
         fs_list_key = NULL;
         err = hadoop_lerr_alloc(ENOMEM, "hdfsBuilderConnect: OOM");
         goto done;
@@ -385,6 +375,7 @@ void hdfsFreeBuilder(struct hdfsBuilder *bld)
         free(cur);
         cur = next;
     }
+    hadoop_uri_free(bld->uri);
     hconf_free(bld->hconf);
     free(bld);
 }

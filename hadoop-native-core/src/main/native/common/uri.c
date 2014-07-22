@@ -18,11 +18,13 @@
 
 #include "common/hadoop_err.h"
 #include "common/uri.h"
+#include "common/string.h"
 
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <uriparser/Uri.h>
 
 static struct hadoop_err *uri_err_to_hadoop_err(int err)
 {
@@ -54,115 +56,6 @@ static struct hadoop_err *uri_err_to_hadoop_err(int err)
     default:
         return hadoop_lerr_alloc(EIO, "unknown uri error.");
     }
-}
-
-struct hadoop_err *uri_parse_abs(const char *str, UriParserStateA *state,
-            UriUriA *uri, const char *def_scheme)
-{
-    int ret;
-    struct hadoop_err *err = NULL;
-    size_t str_len;
-    const char *effective_str = NULL;
-    char *malloced_str = NULL, *nmalloced_str;
-
-    // If the URI doesn't end with a slash, append one.
-    // This is necessary to get AddBaseUri to act like we expect when using
-    // this absolute URI as a base.
-    state->uri = NULL;
-    str_len = strlen(str);
-    if ((str_len == 0) || (str[str_len - 1] != '/')) {
-        if (asprintf(&malloced_str, "%s/", str) < 0) {
-            err = hadoop_lerr_alloc(ENOMEM, "uri_parse_abs: OOM");
-            malloced_str = NULL;
-            goto done;
-        }
-        effective_str = malloced_str;
-    } else {
-        effective_str = str;
-    }
-    state->uri = uri;
-    ret = uriParseUriA(state, effective_str);
-    if (ret) {
-        state->uri = NULL;
-        err = hadoop_err_prepend(uri_err_to_hadoop_err(ret),
-            0, "uri_parse: failed to parse '%s' as URI",
-            effective_str);
-        goto done;
-    }
-    if (uri->scheme.first == NULL) {
-        // If the URI doesn't have a scheme, prepend the default one to the
-        // string, and re-parse.  This is necessary because AddBaseUri refuses
-        // to rebase URIs on absolute URIs without a scheme.
-        if (asprintf(&nmalloced_str, "%s://%s", def_scheme,
-                     effective_str) < 0) {
-            err = hadoop_lerr_alloc(ENOMEM, "uri_parse_abs: OOM");
-            goto done;
-        }
-        free(malloced_str);
-        malloced_str = nmalloced_str;
-        effective_str = malloced_str;
-        uriFreeUriMembersA(uri);
-        state->uri = uri;
-        ret = uriParseUriA(state, effective_str);
-        if (ret) {
-            state->uri = NULL;
-            err = hadoop_err_prepend(uri_err_to_hadoop_err(ret),
-                0, "uri_parse: failed to parse '%s' as URI",
-                effective_str);
-            goto done;
-        }
-    }
-    err = NULL;
-done:
-    if (err) {
-        if (state->uri) {
-            uriFreeUriMembersA(state->uri);
-            state->uri = NULL;
-        }
-    }
-    return err;
-}
-
-struct hadoop_err *uri_parse(const char *str, UriParserStateA *state,
-            UriUriA *uri, UriUriA *base_uri)
-{
-    int ret;
-    struct hadoop_err *err = NULL;
-    UriUriA first_uri;
-
-    state->uri = &first_uri;
-    ret = uriParseUriA(state, str);
-    if (ret) {
-        state->uri = NULL;
-        err = hadoop_err_prepend(uri_err_to_hadoop_err(ret),
-            0, "uri_parse: failed to parse '%s' as a URI", str);
-        goto done;
-    }
-//    fprintf(stderr, "str=%s, base_path=%s, base_uri->absolutePath=%d\n",
-//            str, base_path, base_uri.absolutePath);
-//        fprintf(stderr, "uriAddBaseUriA base_path=%s, str=%s, ret %d\n", base_path, str, ret); 
-    ret = uriAddBaseUriA(uri, &first_uri, base_uri);
-    if (ret) {
-        err = hadoop_err_prepend(uri_err_to_hadoop_err(ret),
-            0, "uri_parse: failed to add base URI");
-        goto done;
-    }
-    uriFreeUriMembersA(&first_uri);
-    state->uri = uri;
-    ret = uriNormalizeSyntaxA(uri);
-    if (ret) {
-        err = hadoop_err_prepend(uri_err_to_hadoop_err(ret),
-            0, "uri_parse: failed to normalize URI");
-        goto done;
-    }
-done:
-    if (err) {
-        if (state->uri) {
-            uriFreeUriMembersA(uri);
-            state->uri = NULL;
-        }
-    }
-    return err;
 }
 
 static struct hadoop_err *text_range_to_str(struct UriTextRangeStructA *text,
@@ -204,29 +97,7 @@ done:
     return NULL;
 }
 
-struct hadoop_err *uri_get_scheme(UriUriA *uri, char **out)
-{
-    struct hadoop_err *err;
-    char *scheme = NULL;
-
-    err = text_range_to_str(&uri->scheme, &scheme, "");
-    if (err)
-        return err;
-    *out = scheme;
-    return NULL;
-}
-
-struct hadoop_err *uri_get_user_info(UriUriA *uri, char **user_info)
-{
-    return text_range_to_str(&uri->userInfo, user_info, "");
-}
-
-struct hadoop_err *uri_get_authority(UriUriA *uri, char **authority)
-{
-    return text_range_to_str(&uri->hostText, authority, "");
-}
-
-struct hadoop_err *uri_get_port(UriUriA *uri, uint16_t *out)
+static struct hadoop_err *uri_get_port(UriUriA *uri, uint16_t *out)
 {
     struct hadoop_err *err;
     char *port_str = NULL;
@@ -245,7 +116,7 @@ struct hadoop_err *uri_get_port(UriUriA *uri, uint16_t *out)
     return NULL;
 }
 
-struct hadoop_err *uri_get_path(UriUriA *uri, char **out)
+static struct hadoop_err *uri_get_path(UriUriA *uri, char **out)
 {
     struct UriPathSegmentStructA *cur;
     size_t i = 0, path_len = 0;
@@ -293,6 +164,144 @@ struct hadoop_err *uri_get_path(UriUriA *uri, char **out)
     path[i] = '\0';
     *out = path;
     return NULL;
+}
+
+struct hadoop_err *hadoop_uri_parse(const char *input,
+                struct hadoop_uri *base, struct hadoop_uri **out, int flags)
+{
+    struct hadoop_err *err;
+    struct hadoop_uri *uri;
+    UriUriA rel;
+    UriParserStateA state;
+    int ret;
+
+    memset(&state, 0, sizeof(state));
+    uri = calloc(1, sizeof(struct hadoop_uri));
+    if (!uri)
+        goto oom;
+    if (flags & H_URI_APPEND_SLASH) {
+        // Append a slash to the URI if needed.
+        size_t input_len = strlen(input);
+        if ((input_len == 0) || (input[input_len - 1] != '/')) {
+            err = dynprintf(&uri->text, "%s/", input);
+            if (err)
+                goto error;
+        }
+    }
+    if (!uri->text) {
+        // Copy the input string.
+        uri->text = strdup(input);
+        if (!uri->text)
+            goto oom;
+    }
+    if (base) {
+        // Parse the supplied text.
+        state.uri = &rel;
+        ret = uriParseUriA(&state, uri->text);
+        if (ret) {
+            state.uri = NULL;
+            err = hadoop_err_prepend(uri_err_to_hadoop_err(ret),
+                    0, "uri_parse: failed to parse '%s' as a URI", uri->text);
+            goto error;
+        }
+    //    fprintf(stderr, "str=%s, base_path=%s, base_uri->absolutePath=%d\n",
+    //            str, base_path, base_uri.absolutePath);
+    //        fprintf(stderr, "uriAddBaseUriA base_path=%s, str=%s, ret %d\n", base_path, str, ret);
+        // Add the supplied 'base' URI.
+        ret = uriAddBaseUriA(&uri->uri, &rel, &base->uri);
+        if (ret) {
+            err = hadoop_err_prepend(uri_err_to_hadoop_err(ret),
+                        0, "uri_parse: failed to add base URI");
+            goto error;
+        }
+        uriFreeUriMembersA(state.uri);
+        state.uri = &uri->uri;
+    } else {
+        // Parse the supplied text.
+        state.uri = &uri->uri;
+        ret = uriParseUriA(&state, uri->text);
+        if (ret) {
+            state.uri = NULL;
+            err = hadoop_err_prepend(uri_err_to_hadoop_err(ret),
+                    0, "uri_parse: failed to parse '%s' as a URI", uri->text);
+            goto error;
+        }
+    }
+    ret = uriNormalizeSyntaxA(&uri->uri);
+    if (ret) {
+        err = hadoop_err_prepend(uri_err_to_hadoop_err(ret),
+                    0, "uri_parse: failed to normalize URI");
+        goto error;
+    }
+    if (flags & H_URI_PARSE_SCHEME) {
+        err = text_range_to_str(&uri->uri.scheme, &uri->scheme, "");
+        if (err)
+            goto error;
+    }
+    if (flags & H_URI_PARSE_USER_INFO) {
+        err = text_range_to_str(&uri->uri.userInfo, &uri->user_info, "");
+        if (err)
+            goto error;
+    }
+    if (flags & H_URI_PARSE_AUTH) {
+        err = text_range_to_str(&uri->uri.hostText, &uri->auth, "");
+        if (err)
+            goto error;
+    }
+    if (flags & H_URI_PARSE_PORT) {
+        err = uri_get_port(&uri->uri, &uri->port);
+        if (err)
+            goto error;
+    }
+    if (flags & H_URI_PARSE_PATH) {
+        err = uri_get_path(&uri->uri, &uri->path);
+        if (err)
+            goto error;
+    }
+    *out = uri;
+    return NULL;
+
+oom:
+    err = hadoop_lerr_alloc(ENOMEM, "uri_parse(%s): OOM", uri->text);
+error:
+    if (state.uri) {
+        uriFreeUriMembersA(state.uri);
+    }
+    if (uri) {
+        free(uri->text);
+        free(uri->scheme);
+        free(uri->user_info);
+        free(uri->auth);
+        free(uri->path);
+        free(uri);
+    }
+    return err;
+}
+
+static const char *check_null(const char *str)
+{
+    return str ? str : "(null)";
+}
+
+struct hadoop_err *hadoop_uri_to_str(const struct hadoop_uri *uri, char **out)
+{
+    return dynprintf(out, "[scheme=%s, user_info=%s, auth=%s, "
+                     "port=%d, path=%s]",
+              check_null(uri->scheme), check_null(uri->user_info),
+              check_null(uri->auth), uri->port, check_null(uri->path));
+}
+
+void hadoop_uri_free(struct hadoop_uri *uri)
+{
+    if (!uri)
+        return;
+    uriFreeUriMembersA(&uri->uri);
+    free(uri->text);
+    free(uri->scheme);
+    free(uri->user_info);
+    free(uri->auth);
+    free(uri->path);
+    free(uri);
 }
 
 // vim: ts=4:sw=4:tw=79:et
