@@ -883,8 +883,8 @@ public class NetworkTopology {
    * @param seed Used to seed the pseudo-random generator that randomizes the
    *          set of nodes at each network distance.
    */
-  public void sortByDistance(Node reader, Node[] nodes,
-      int activeLen, long seed) {
+  public void sortByDistance(Node reader, Node[] nodes, int activeLen,
+      long seed, boolean randomizeBlockLocationsPerBlock) {
     /** Sort weights for the nodes array */
     int[] weights = new int[activeLen];
     for (int i=0; i<activeLen; i++) {
@@ -906,8 +906,11 @@ public class NetworkTopology {
     // Seed is normally the block id
     // This means we use the same pseudo-random order for each block, for
     // potentially better page cache usage.
+    // Seed is not used if we want to randomize block location for every block
     Random rand = getRandom();
-    rand.setSeed(seed);
+    if (!randomizeBlockLocationsPerBlock) {
+      rand.setSeed(seed);
+    }
     int idx = 0;
     for (List<Node> list: tree.values()) {
       if (list != null) {

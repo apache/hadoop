@@ -311,6 +311,9 @@ Release 2.6.0 - UNRELEASED
     datanodes and change datanode to write block replicas using the specified
     storage type. (szetszwo)
 
+    HDFS-6701. Make seed optional in NetworkTopology#sortByDistance.
+    (Ashwin Shankar via wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
