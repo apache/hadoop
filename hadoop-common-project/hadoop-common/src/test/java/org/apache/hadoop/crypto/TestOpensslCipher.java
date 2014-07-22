@@ -24,6 +24,7 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.ShortBufferException;
 
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.Assume;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -35,9 +36,7 @@ public class TestOpensslCipher {
   
   @Test(timeout=120000)
   public void testGetInstance() throws Exception {
-    if (!OpensslCipher.isNativeCodeLoaded()) {
-      return;
-    }
+    Assume.assumeTrue(OpensslCipher.getLoadingFailureReason() == null);
     OpensslCipher cipher = OpensslCipher.getInstance("AES/CTR/NoPadding");
     Assert.assertTrue(cipher != null);
     
@@ -58,9 +57,7 @@ public class TestOpensslCipher {
   
   @Test(timeout=120000)
   public void testUpdateArguments() throws Exception {
-    if (!OpensslCipher.isNativeCodeLoaded()) {
-      return;
-    }
+    Assume.assumeTrue(OpensslCipher.getLoadingFailureReason() == null);
     OpensslCipher cipher = OpensslCipher.getInstance("AES/CTR/NoPadding");
     Assert.assertTrue(cipher != null);
     
@@ -93,9 +90,7 @@ public class TestOpensslCipher {
   
   @Test(timeout=120000)
   public void testDoFinalArguments() throws Exception {
-    if (!OpensslCipher.isNativeCodeLoaded()) {
-      return;
-    }
+    Assume.assumeTrue(OpensslCipher.getLoadingFailureReason() == null);
     OpensslCipher cipher = OpensslCipher.getInstance("AES/CTR/NoPadding");
     Assert.assertTrue(cipher != null);
     

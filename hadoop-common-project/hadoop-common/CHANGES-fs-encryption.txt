@@ -40,6 +40,9 @@ fs-encryption (Unreleased)
     HADOOP-10735. Fall back AesCtrCryptoCodec implementation from OpenSSL to
     JCE if non native support. (Yi Liu)
 
+    HADOOP-10870. Failed to load OpenSSL cipher error logs on systems with old
+    openssl versions (cmccabe)
+
   OPTIMIZATIONS
 
   BUG FIXES

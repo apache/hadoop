@@ -38,6 +38,7 @@ import org.apache.hadoop.io.RandomDatum;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 
 public class TestCryptoCodec {
@@ -62,15 +63,12 @@ public class TestCryptoCodec {
   
   @Test(timeout=1200000)
   public void testOpensslAesCtrCryptoCodec() throws Exception {
-    if (NativeCodeLoader.buildSupportsOpenssl()) {
-      Assert.assertTrue(OpensslCipher.isNativeCodeLoaded());
-    }
-    if (OpensslCipher.isNativeCodeLoaded()) {
-      cryptoCodecTest(conf, seed, 0, 
-          "org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec");
-      cryptoCodecTest(conf, seed, count, 
-          "org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec");
-    }
+    Assume.assumeTrue(NativeCodeLoader.buildSupportsOpenssl());
+    Assert.assertEquals(null, OpensslCipher.getLoadingFailureReason());
+    cryptoCodecTest(conf, seed, 0, 
+        "org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec");
+    cryptoCodecTest(conf, seed, count, 
+        "org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec");
   }
   
   private void cryptoCodecTest(Configuration conf, int seed, int count, 

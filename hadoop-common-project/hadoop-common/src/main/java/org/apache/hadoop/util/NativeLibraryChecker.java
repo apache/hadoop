@@ -58,14 +58,14 @@ public class NativeLibraryChecker {
     boolean nativeHadoopLoaded = NativeCodeLoader.isNativeCodeLoaded();
     boolean zlibLoaded = false;
     boolean snappyLoaded = false;
-    boolean opensslLoaded = false;
     // lz4 is linked within libhadoop
     boolean lz4Loaded = nativeHadoopLoaded;
     boolean bzip2Loaded = Bzip2Factory.isNativeBzip2Loaded(conf);
+    boolean openSslLoaded = false;
+    String openSslDetail = "";
     String hadoopLibraryName = "";
     String zlibLibraryName = "";
     String snappyLibraryName = "";
-    String opensslLibraryName = "";
     String lz4LibraryName = "";
     String bzip2LibraryName = "";
     if (nativeHadoopLoaded) {
@@ -79,10 +79,12 @@ public class NativeLibraryChecker {
       if (snappyLoaded && NativeCodeLoader.buildSupportsSnappy()) {
         snappyLibraryName = SnappyCodec.getLibraryName();
       }
-      opensslLoaded = NativeCodeLoader.buildSupportsOpenssl() &&
-          OpensslCipher.isNativeCodeLoaded();
-      if (opensslLoaded) {
-        opensslLibraryName = OpensslCipher.getLibraryName();
+      if (OpensslCipher.getLoadingFailureReason() != null) {
+        openSslDetail = OpensslCipher.getLoadingFailureReason();
+        openSslLoaded = false;
+      } else {
+        openSslDetail = OpensslCipher.getLibraryName();
+        openSslLoaded = true;
       }
       if (lz4Loaded) {
         lz4LibraryName = Lz4Codec.getLibraryName();
@@ -97,7 +99,7 @@ public class NativeLibraryChecker {
     System.out.printf("snappy:  %b %s\n", snappyLoaded, snappyLibraryName);
     System.out.printf("lz4:     %b %s\n", lz4Loaded, lz4LibraryName);
     System.out.printf("bzip2:   %b %s\n", bzip2Loaded, bzip2LibraryName);
-    System.out.printf("openssl: %b %s\n", opensslLoaded, opensslLibraryName);
+    System.out.printf("openssl: %b %s\n", openSslLoaded, openSslDetail);
     if ((!nativeHadoopLoaded) ||
         (checkAll && !(zlibLoaded && snappyLoaded && lz4Loaded && bzip2Loaded))) {
       // return 1 to indicated check failed

@@ -76,21 +76,26 @@ public final class OpensslCipher {
   private final int alg;
   private final int padding;
   
-  private static boolean nativeCipherLoaded = false;
+  private static final String loadingFailureReason;
+
   static {
-    if (NativeCodeLoader.isNativeCodeLoaded() &&
-        NativeCodeLoader.buildSupportsOpenssl()) {
-      try {
+    String loadingFailure = null;
+    try {
+      if (!NativeCodeLoader.buildSupportsOpenssl()) {
+        loadingFailure = "build does not support openssl.";
+      } else {
         initIDs();
-        nativeCipherLoaded = true;
-      } catch (Throwable t) {
-        LOG.error("Failed to load OpenSSL Cipher.", t);
       }
+    } catch (Throwable t) {
+      loadingFailure = t.getMessage();
+      LOG.debug("Failed to load OpenSSL Cipher.", t);
+    } finally {
+      loadingFailureReason = loadingFailure;
     }
   }
   
-  public static boolean isNativeCodeLoaded() {
-    return nativeCipherLoaded;
+  public static String getLoadingFailureReason() {
+    return loadingFailureReason;
   }
   
   private OpensslCipher(long context, int alg, int padding) {

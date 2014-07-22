@@ -47,8 +47,9 @@ public class OpensslAesCtrCryptoCodec extends AesCtrCryptoCodec {
   private Random random;
   
   public OpensslAesCtrCryptoCodec() {
-    if (!OpensslCipher.isNativeCodeLoaded()) {
-      throw new RuntimeException("Failed to load OpenSSL Cipher.");
+    String loadingFailureReason = OpensslCipher.getLoadingFailureReason();
+    if (loadingFailureReason != null) {
+      throw new RuntimeException(loadingFailureReason);
     }
   }
 
