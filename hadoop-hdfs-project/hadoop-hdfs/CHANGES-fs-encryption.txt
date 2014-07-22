@@ -49,6 +49,9 @@ fs-encryption (Unreleased)
     HDFS-6490. Fix the keyid format for generated keys in
     FSNamesystem.createEncryptionZone (clamb)
 
+    HDFS-6716. Update usage of KeyProviderCryptoExtension APIs on NameNode.
+    (wang)
+
   OPTIMIZATIONS
 
   BUG FIXES

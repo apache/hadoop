@@ -227,7 +227,7 @@ public class FSDirectory implements Closeable {
     nameCache = new NameCache<ByteArray>(threshold);
     namesystem = ns;
 
-    ezManager = new EncryptionZoneManager(this, conf, ns.getProvider());
+    ezManager = new EncryptionZoneManager(this, ns.getProvider());
   }
     
   private FSNamesystem getFSNamesystem() {
@@ -2623,25 +2623,10 @@ public class FSDirectory implements Closeable {
     }
   }
 
-  KeyVersion getLatestKeyVersion(INodesInPath iip) {
+  String getKeyName(INodesInPath iip) {
     readLock();
     try {
-      return ezManager.getLatestKeyVersion(iip);
-    } finally {
-      readUnlock();
-    }
-  }
-
-  KeyVersion updateLatestKeyVersion(INodesInPath iip) throws
-      IOException {
-    // No locking, this operation does not involve any FSDirectory operations
-    return ezManager.updateLatestKeyVersion(iip);
-  }
-
-  boolean isValidKeyVersion(INodesInPath iip, String keyVersionName) {
-    readLock();
-    try {
-      return ezManager.isValidKeyVersion(iip, keyVersionName);
+      return ezManager.getKeyName(iip);
     } finally {
       readUnlock();
     }

@@ -347,7 +347,6 @@ public class TestEncryptionZones {
     assertEquals("Expected 1 EZ", 1, zones.size());
     String keyId = zones.get(0).getKeyId();
     cluster.getNamesystem().getProvider().rollNewVersion(keyId);
-    cluster.getNamesystem().getFSDirectory().ezManager.kickMonitor();
     // Read them back in and compare byte-by-byte
     validateFiles(baseFile, encFile1, len);
     // Write a new enc file and validate

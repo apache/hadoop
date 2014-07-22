@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
+import static org.apache.hadoop.crypto.key.KeyProviderCryptoExtension
+    .EncryptedKeyVersion;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
@@ -2356,59 +2358,26 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /**
-   * Create a new FileEncryptionInfo for a path. Also chooses an
-   * appropriate CipherSuite to use from the list provided by the
-   * client.
+   * Invoke KeyProvider APIs to generate an encrypted data encryption key for an
+   * encryption zone. Should not be called with any locks held.
    *
-   * @param src Target path
-   * @param pathComponents Target path split up into path components
-   * @param cipherSuites List of CipherSuites provided by the client
-   * @return a new FileEncryptionInfo, or null if path is not within an
-   * encryption
-   * zone.
+   * @param ezKeyName key name of an encryption zone
+   * @return New EDEK, or null if ezKeyName is null
    * @throws IOException
    */
-  private FileEncryptionInfo newFileEncryptionInfo(String src,
-      byte[][] pathComponents, List<CipherSuite> cipherSuites)
-      throws IOException {
-    INodesInPath iip = null;
-    CipherSuite suite = null;
-    KeyVersion latestEZKeyVersion = null;
-    readLock();
-    try {
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
-      iip = dir.getINodesInPath4Write(src);
-      // Nothing to do if the path is not within an EZ
-      if (!dir.isInAnEZ(iip)) {
-        return null;
-      }
-      suite = chooseCipherSuite(iip, cipherSuites);
-      if (suite != null) {
-        Preconditions.checkArgument(!suite.equals(CipherSuite.UNKNOWN),
-            "Chose an UNKNOWN CipherSuite!");
-      }
-      latestEZKeyVersion = dir.getLatestKeyVersion(iip);
-    } finally {
-      readUnlock();
+  private EncryptedKeyVersion generateEncryptedDataEncryptionKey(String
+      ezKeyName) throws IOException {
+    if (ezKeyName == null) {
+      return null;
     }
-
-    // If the latest key version is null, need to fetch it and update
-    if (latestEZKeyVersion == null) {
-      latestEZKeyVersion = dir.updateLatestKeyVersion(iip);
-    }
-    Preconditions.checkState(latestEZKeyVersion != null);
-
-    // Generate the EDEK while not holding the lock
-    KeyProviderCryptoExtension.EncryptedKeyVersion edek = null;
+    EncryptedKeyVersion edek = null;
     try {
-      edek = provider.generateEncryptedKey("");
+      edek = provider.generateEncryptedKey(ezKeyName);
     } catch (GeneralSecurityException e) {
       throw new IOException(e);
     }
     Preconditions.checkNotNull(edek);
-
-    return new FileEncryptionInfo(suite, edek.getEncryptedKey().getMaterial(),
-        edek.getIv(), edek.getKeyVersionName());
+    return edek;
   }
 
   /**
@@ -2490,11 +2459,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     waitForLoadingFSImage();
 
     /*
-     * We want to avoid holding any locks while creating a new
-     * FileEncryptionInfo, since this can be very slow. Since the path can
+     * We want to avoid holding any locks while doing KeyProvider operations,
+     * since they can be very slow. Since the path can
      * flip flop between being in an encryption zone and not in the meantime,
-     * we need to recheck the preconditions and generate a new
-     * FileEncryptionInfo in some circumstances.
+     * we need to recheck the preconditions and redo KeyProvider operations
+     * in some situations.
      *
      * A special RetryStartFileException is used to indicate that we should
      * retry creation of a FileEncryptionInfo.
@@ -2510,18 +2479,45 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
         shouldContinue = false;
         iters++;
-        // Optimistically generate a FileEncryptionInfo for this path.
-        FileEncryptionInfo feInfo =
-            newFileEncryptionInfo(src, pathComponents, cipherSuites);
 
-        // Try to create the file with this feInfo
+        // Optimistically determine CipherSuite and ezKeyName if the path is
+        // currently within an encryption zone
+        CipherSuite suite = null;
+        String ezKeyName = null;
+        readLock();
+        try {
+          src = FSDirectory.resolvePath(src, pathComponents, dir);
+          INodesInPath iip = dir.getINodesInPath4Write(src);
+          // Nothing to do if the path is not within an EZ
+          if (dir.isInAnEZ(iip)) {
+            suite = chooseCipherSuite(iip, cipherSuites);
+            if (suite != null) {
+              Preconditions.checkArgument(!suite.equals(CipherSuite.UNKNOWN),
+                  "Chose an UNKNOWN CipherSuite!");
+            }
+            ezKeyName = dir.getKeyName(iip);
+            Preconditions.checkState(ezKeyName != null);
+          }
+        } finally {
+          readUnlock();
+        }
+
+        Preconditions.checkState(
+            (suite == null && ezKeyName == null) ||
+            (suite != null && ezKeyName != null),
+            "Both suite and ezKeyName should both be null or not null");
+        // Generate EDEK if necessary while not holding the lock
+        EncryptedKeyVersion edek =
+            generateEncryptedDataEncryptionKey(ezKeyName);
+
+        // Try to create the file with the computed cipher suite and EDEK
         writeLock();
         try {
           checkOperation(OperationCategory.WRITE);
           checkNameNodeSafeMode("Cannot create file" + src);
           src = FSDirectory.resolvePath(src, pathComponents, dir);
           startFileInternal(pc, src, permissions, holder, clientMachine, create,
-              overwrite, createParent, replication, blockSize, feInfo,
+              overwrite, createParent, replication, blockSize, suite, edek,
               logRetryCache);
           stat = dir.getFileInfo(src, false);
         } catch (StandbyException se) {
@@ -2561,8 +2557,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private void startFileInternal(FSPermissionChecker pc, String src,
       PermissionStatus permissions, String holder, String clientMachine,
       boolean create, boolean overwrite, boolean createParent,
-      short replication, long blockSize, FileEncryptionInfo feInfo,
-      boolean logRetryEntry)
+      short replication, long blockSize, CipherSuite suite,
+      EncryptedKeyVersion edek, boolean logRetryEntry)
       throws FileAlreadyExistsException, AccessControlException,
       UnresolvedLinkException, FileNotFoundException,
       ParentNotDirectoryException, RetryStartFileException, IOException {
@@ -2575,21 +2571,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           " already exists as a directory");
     }
 
-    if (!dir.isInAnEZ(iip)) {
-      // If the path is not in an EZ, we don't need an feInfo.
-      // Null it out in case one was already generated.
-      feInfo = null;
-    } else {
-      // The path is now within an EZ, but no feInfo. Retry.
-      if (feInfo == null) {
+    FileEncryptionInfo feInfo = null;
+    if (dir.isInAnEZ(iip)) {
+      // The path is now within an EZ, but we're missing encryption parameters
+      if (suite == null || edek == null) {
         throw new RetryStartFileException();
       }
-      // It's in an EZ and we have a provided feInfo. Make sure the
-      // keyVersion of the encryption key used matches one of the keyVersions of
-      // the key of the encryption zone.
-      if (!dir.isValidKeyVersion(iip, feInfo.getEzKeyVersionName())) {
+      // Path is within an EZ and we have provided encryption parameters.
+      // Make sure that the generated EDEK matches the settings of the EZ.
+      String ezKeyName = dir.getKeyName(iip);
+      if (!ezKeyName.equals(edek.getKeyName())) {
         throw new RetryStartFileException();
       }
+      feInfo = new FileEncryptionInfo(suite, edek.getEncryptedKey()
+          .getMaterial(), edek.getIv(), edek.getKeyVersionName());
+      Preconditions.checkNotNull(feInfo);
     }
 
     final INodeFile myFile = INodeFile.valueOf(inode, src, true);
