@@ -54,6 +54,8 @@ fs-encryption (Unreleased)
 
     HDFS-6718. Remove EncryptionZoneManager lock. (wang)
 
+    HDFS-6720. Remove KeyProvider in EncryptionZoneManager. (wang)
+
   OPTIMIZATIONS
 
   BUG FIXES

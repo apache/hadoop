@@ -1799,9 +1799,9 @@ public class DistributedFileSystem extends FileSystem {
   }
   
   /* HDFS only */
-  public void createEncryptionZone(Path path, String keyId)
+  public void createEncryptionZone(Path path, String keyName)
     throws IOException {
-    dfs.createEncryptionZone(getPathName(path), keyId);
+    dfs.createEncryptionZone(getPathName(path), keyName);
   }
 
   /* HDFS only */

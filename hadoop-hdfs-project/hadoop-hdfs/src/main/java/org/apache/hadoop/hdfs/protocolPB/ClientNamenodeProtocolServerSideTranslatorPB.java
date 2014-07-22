@@ -1287,7 +1287,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     RpcController controller, CreateEncryptionZoneRequestProto req)
     throws ServiceException {
     try {
-      server.createEncryptionZone(req.getSrc(), req.getKeyId());
+      server.createEncryptionZone(req.getSrc(), req.getKeyName());
       return CreateEncryptionZoneResponseProto.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);

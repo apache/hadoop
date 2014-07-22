@@ -2209,7 +2209,7 @@ public class PBHelper {
       final EncryptionZoneProto.Builder builder =
         EncryptionZoneProto.newBuilder();
       builder.setPath(a.getPath());
-      builder.setKeyId(a.getKeyId());
+      builder.setKeyName(a.getKeyName());
       ret.add(builder.build());
     }
     return ret;
@@ -2221,7 +2221,7 @@ public class PBHelper {
       Lists.newArrayListWithCapacity(ezs.size());
     for (EncryptionZoneProto a : ezs) {
       final EncryptionZone ez =
-        new EncryptionZone(a.getPath(), a.getKeyId());
+        new EncryptionZone(a.getPath(), a.getKeyName());
       ret.add(ez);
     }
     return ret;

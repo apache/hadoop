@@ -93,12 +93,12 @@ public class TestCryptoCLI  extends CLITestHelperDFS {
   }
 
   /* Helper function to create a key in the Key Provider. */
-  private void createAKey(String keyId, Configuration conf)
+  private void createAKey(String keyName, Configuration conf)
     throws NoSuchAlgorithmException, IOException {
     final KeyProvider provider =
         dfsCluster.getNameNode().getNamesystem().getProvider();
     final KeyProvider.Options options = KeyProvider.options(conf);
-    provider.createKey(keyId, options);
+    provider.createKey(keyName, options);
     provider.flush();
     }
 

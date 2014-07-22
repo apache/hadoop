@@ -2807,11 +2807,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
   
-  public void createEncryptionZone(String src, String keyId)
+  public void createEncryptionZone(String src, String keyName)
     throws IOException {
     checkOpen();
     try {
-      namenode.createEncryptionZone(src, keyId);
+      namenode.createEncryptionZone(src, keyName);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      SafeModeException.class,

@@ -1284,13 +1284,13 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public void createEncryptionZone(String src, String keyId)
+  public void createEncryptionZone(String src, String keyName)
     throws IOException {
     final CreateEncryptionZoneRequestProto.Builder builder =
       CreateEncryptionZoneRequestProto.newBuilder();
     builder.setSrc(src);
-    if (keyId != null && !keyId.isEmpty()) {
-      builder.setKeyId(keyId);
+    if (keyName != null && !keyName.isEmpty()) {
+      builder.setKeyName(keyName);
     }
     CreateEncryptionZoneRequestProto req = builder.build();
     try {

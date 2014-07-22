@@ -105,18 +105,18 @@ public class TestEncryptionZones {
   }
 
   /**
-   * Checks that an encryption zone with the specified keyId and path (if not
+   * Checks that an encryption zone with the specified keyName and path (if not
    * null) is present.
    *
    * @throws IOException if a matching zone could not be found
    */
-  public void assertZonePresent(String keyId, String path) throws IOException {
+  public void assertZonePresent(String keyName, String path) throws IOException {
     final List<EncryptionZone> zones = dfsAdmin.listEncryptionZones();
     boolean match = false;
     for (EncryptionZone zone : zones) {
-      boolean matchKey = (keyId == null);
+      boolean matchKey = (keyName == null);
       boolean matchPath = (path == null);
-      if (keyId != null && zone.getKeyId().equals(keyId)) {
+      if (keyName != null && zone.getKeyName().equals(keyName)) {
         matchKey = true;
       }
       if (path != null && zone.getPath().equals(path)) {
@@ -127,7 +127,7 @@ public class TestEncryptionZones {
         break;
       }
     }
-    assertTrue("Did not find expected encryption zone with keyId " + keyId +
+    assertTrue("Did not find expected encryption zone with keyName " + keyName +
             " path " + path, match
     );
   }
@@ -135,11 +135,11 @@ public class TestEncryptionZones {
   /**
    * Helper function to create a key in the Key Provider.
    */
-  private void createKey(String keyId)
+  private void createKey(String keyName)
       throws NoSuchAlgorithmException, IOException {
     KeyProvider provider = cluster.getNameNode().getNamesystem().getProvider();
     final KeyProvider.Options options = KeyProvider.options(conf);
-    provider.createKey(keyId, options);
+    provider.createKey(keyName, options);
     provider.flush();
   }
 
@@ -204,9 +204,9 @@ public class TestEncryptionZones {
     /* Test failure of creating an EZ passing a key that doesn't exist. */
     final Path zone2 = new Path("/zone2");
     fsWrapper.mkdir(zone2, FsPermission.getDirDefault(), false);
-    final String myKeyId = "mykeyid";
+    final String myKeyName = "mykeyname";
     try {
-      dfsAdmin.createEncryptionZone(zone2, myKeyId);
+      dfsAdmin.createEncryptionZone(zone2, myKeyName);
       fail("expected key doesn't exist");
     } catch (IOException e) {
       assertExceptionContains("doesn't exist.", e);
@@ -214,10 +214,10 @@ public class TestEncryptionZones {
     assertNumZones(1);
 
     /* Test success of creating an EZ when they key exists. */
-    createKey(myKeyId);
-    dfsAdmin.createEncryptionZone(zone2, myKeyId);
+    createKey(myKeyName);
+    dfsAdmin.createEncryptionZone(zone2, myKeyName);
     assertNumZones(++numZones);
-    assertZonePresent(myKeyId, zone2.toString());
+    assertZonePresent(myKeyName, zone2.toString());
 
     /* Test failure of create encryption zones as a non super user. */
     final UserGroupInformation user = UserGroupInformation.
@@ -345,8 +345,8 @@ public class TestEncryptionZones {
     // Roll the key of the encryption zone
     List<EncryptionZone> zones = dfsAdmin.listEncryptionZones();
     assertEquals("Expected 1 EZ", 1, zones.size());
-    String keyId = zones.get(0).getKeyId();
-    cluster.getNamesystem().getProvider().rollNewVersion(keyId);
+    String keyName = zones.get(0).getKeyName();
+    cluster.getNamesystem().getProvider().rollNewVersion(keyName);
     // Read them back in and compare byte-by-byte
     validateFiles(baseFile, encFile1, len);
     // Write a new enc file and validate

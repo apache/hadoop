@@ -5,11 +5,9 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
@@ -20,7 +18,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-import static org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants
     .CRYPTO_XATTR_ENCRYPTION_ZONE;
 
@@ -62,16 +59,14 @@ public class EncryptionZoneManager {
 
   private final Map<Long, EncryptionZoneInt> encryptionZones;
   private final FSDirectory dir;
-  private final KeyProvider provider;
 
   /**
    * Construct a new EncryptionZoneManager.
    *
    * @param dir Enclosing FSDirectory
    */
-  public EncryptionZoneManager(FSDirectory dir, KeyProvider provider) {
+  public EncryptionZoneManager(FSDirectory dir) {
     this.dir = dir;
-    this.provider = provider;
     encryptionZones = new HashMap<Long, EncryptionZoneInt>();
   }
 
@@ -81,11 +76,11 @@ public class EncryptionZoneManager {
    * Called while holding the FSDirectory lock.
    *
    * @param inodeId of the encryption zone
-   * @param keyId   encryption zone key id
+   * @param keyName encryption zone key name
    */
-  void addEncryptionZone(Long inodeId, String keyId) {
+  void addEncryptionZone(Long inodeId, String keyName) {
     assert dir.hasWriteLock();
-    final EncryptionZoneInt ez = new EncryptionZoneInt(inodeId, keyId);
+    final EncryptionZoneInt ez = new EncryptionZoneInt(inodeId, keyName);
     encryptionZones.put(inodeId, ez);
   }
 
@@ -209,7 +204,7 @@ public class EncryptionZoneManager {
    * <p/>
    * Called while holding the FSDirectory lock.
    */
-  XAttr createEncryptionZone(String src, String keyId, KeyVersion keyVersion)
+  XAttr createEncryptionZone(String src, String keyName)
       throws IOException {
     assert dir.hasWriteLock();
     if (dir.isNonEmptyDirectory(src)) {
@@ -224,17 +219,16 @@ public class EncryptionZoneManager {
           "encryption zone. (" + getFullPathName(ezi) + ")");
     }
 
-    final XAttr keyIdXAttr = XAttrHelper
-        .buildXAttr(CRYPTO_XATTR_ENCRYPTION_ZONE, keyId.getBytes());
+    final XAttr ezXAttr = XAttrHelper
+        .buildXAttr(CRYPTO_XATTR_ENCRYPTION_ZONE, keyName.getBytes());
 
     final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
-    xattrs.add(keyIdXAttr);
+    xattrs.add(ezXAttr);
     // updating the xattr will call addEncryptionZone,
     // done this way to handle edit log loading
     dir.unprotectedSetXAttrs(src, xattrs, EnumSet.of(XAttrSetFlag.CREATE));
-    // Re-get the new encryption zone add the latest key version
     ezi = getEncryptionZoneForPath(srcIIP);
-    return keyIdXAttr;
+    return ezXAttr;
   }
 
   /**

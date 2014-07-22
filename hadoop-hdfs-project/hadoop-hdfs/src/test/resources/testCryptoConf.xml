@@ -145,7 +145,7 @@
       <test-commands>
         <command>-fs NAMENODE -mkdir /foo</command>
         <command>-fs NAMENODE -ls /</command>-
-        <crypto-admin-command>-createZone -path /foo -keyId doesntexist</crypto-admin-command>
+        <crypto-admin-command>-createZone -path /foo -keyName doesntexist</crypto-admin-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /foo</command>
@@ -163,7 +163,7 @@
       <test-commands>
         <command>-fs NAMENODE -mkdir /foo</command>
         <command>-fs NAMENODE -ls /</command>-
-        <crypto-admin-command>-createZone -path /foo -keyId mykey</crypto-admin-command>
+        <crypto-admin-command>-createZone -path /foo -keyName mykey</crypto-admin-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /foo</command>

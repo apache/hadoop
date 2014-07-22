@@ -124,7 +124,7 @@ public class CryptoAdmin extends Configured implements Tool {
 
     @Override
     public String getShortUsage() {
-      return "[" + getName() + " [-keyId <keyId>] -path <path> " + "]\n";
+      return "[" + getName() + " [-keyName <keyName>] -path <path> " + "]\n";
     }
 
     @Override
@@ -132,7 +132,8 @@ public class CryptoAdmin extends Configured implements Tool {
       final TableListing listing = getOptionDescriptionListing();
       listing.addRow("<path>", "The path of the encryption zone to create. " +
         "It must be an empty directory.");
-      listing.addRow("<keyId>", "The keyId of the new encryption zone.");
+      listing.addRow("<keyName>", "Name of the key to use for the " +
+          "encryption zone. A new key will be generated if unspecified.");
       return getShortUsage() + "\n" +
         "Create a new encryption zone.\n\n" +
         listing.toString();
@@ -146,8 +147,8 @@ public class CryptoAdmin extends Configured implements Tool {
         return 1;
       }
 
-      final String keyId =
-          StringUtils.popOptionWithArgument("-keyId", args);
+      final String keyName =
+          StringUtils.popOptionWithArgument("-keyName", args);
 
       if (!args.isEmpty()) {
         System.err.println("Can't understand argument: " + args.get(0));
@@ -156,7 +157,7 @@ public class CryptoAdmin extends Configured implements Tool {
 
       final DistributedFileSystem dfs = getDFS(conf);
       try {
-        dfs.createEncryptionZone(new Path(path), keyId);
+        dfs.createEncryptionZone(new Path(path), keyName);
         System.out.println("Added encryption zone " + path);
       } catch (IOException e) {
         System.err.println(prettifyException(e));
@@ -198,7 +199,7 @@ public class CryptoAdmin extends Configured implements Tool {
           .wrapWidth(MAX_LINE_WIDTH).hideHeaders().build();
         final List<EncryptionZone> ezs = dfs.listEncryptionZones();
         for (EncryptionZone ez : ezs) {
-          listing.addRow(ez.getPath(), ez.getKeyId());
+          listing.addRow(ez.getPath(), ez.getKeyName());
         }
         System.out.println(listing.toString());
       } catch (IOException e) {

@@ -1263,7 +1263,7 @@ public interface ClientProtocol {
    * Create an encryption zone
    */
   @AtMostOnce
-  public void createEncryptionZone(String src, String keyId)
+  public void createEncryptionZone(String src, String keyName)
     throws IOException;
 
   /**

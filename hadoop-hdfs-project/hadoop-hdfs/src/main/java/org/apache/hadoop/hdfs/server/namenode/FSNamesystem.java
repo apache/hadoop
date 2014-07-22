@@ -8421,13 +8421,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
   
   /**
-   * Create an encryption zone on directory src either using keyIdArg if
-   * supplied or generating a keyId if it's null.
+   * Create an encryption zone on directory src. If provided,
+   * will use an existing key, else will generate a new key.
    *
    * @param src the path of a directory which will be the root of the
    * encryption zone. The directory must be empty.
    *
-   * @param keyIdArg an optional keyId of a key in the configured
+   * @param keyNameArg an optional name of a key in the configured
    * KeyProvider. If this is null, then a a new key is generated.
    *
    * @throws AccessControlException if the caller is not the superuser.
@@ -8436,7 +8436,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    *
    * @throws SafeModeException if the Namenode is in safe mode.
    */
-  void createEncryptionZone(final String src, String keyIdArg)
+  void createEncryptionZone(final String src, String keyNameArg)
     throws IOException, UnresolvedLinkException,
       SafeModeException, AccessControlException {
     final CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
@@ -8445,16 +8445,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     boolean createdKey = false;
-    String keyId = keyIdArg;
+    String keyName = keyNameArg;
     boolean success = false;
     try {
-      KeyVersion keyVersion;
-      if (keyId == null || keyId.isEmpty()) {
-        keyId = UUID.randomUUID().toString();
-        keyVersion = createNewKey(keyId, src);
+      if (keyName == null || keyName.isEmpty()) {
+        keyName = UUID.randomUUID().toString();
+        createNewKey(keyName, src);
         createdKey = true;
       } else {
-        keyVersion = provider.getCurrentKey(keyId);
+        KeyVersion keyVersion = provider.getCurrentKey(keyName);
         if (keyVersion == null) {
           /*
            * It would be nice if we threw something more specific than
@@ -8464,10 +8463,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
            * update this to match it, or better yet, just rethrow the
            * KeyProvider's exception.
            */
-          throw new IOException("Key " + keyId + " doesn't exist.");
+          throw new IOException("Key " + keyName + " doesn't exist.");
         }
       }
-      createEncryptionZoneInt(src, keyId, keyVersion, cacheEntry != null);
+      createEncryptionZoneInt(src, keyName, cacheEntry != null);
       success = true;
     } catch (AccessControlException e) {
       logAuditEvent(false, "createEncryptionZone", src);
@@ -8476,14 +8475,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       RetryCache.setState(cacheEntry, success);
       if (!success && createdKey) {
         /* Unwind key creation. */
-        provider.deleteKey(keyId);
+        provider.deleteKey(keyName);
       }
     }
   }
 
-  private void createEncryptionZoneInt(final String srcArg, String keyId,
-    final KeyVersion keyVersion, final boolean logRetryCache) throws
-      IOException {
+  private void createEncryptionZoneInt(final String srcArg, String keyName,
+      final boolean logRetryCache) throws IOException {
     String src = srcArg;
     HdfsFileStatus resultingStat = null;
     checkSuperuserPrivilege();
@@ -8497,9 +8495,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       checkNameNodeSafeMode("Cannot create encryption zone on " + src);
       src = FSDirectory.resolvePath(src, pathComponents, dir);
 
-      final XAttr keyIdXAttr = dir.createEncryptionZone(src, keyId, keyVersion);
+      final XAttr ezXAttr = dir.createEncryptionZone(src, keyName);
       List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
-      xAttrs.add(keyIdXAttr);
+      xAttrs.add(ezXAttr);
       getEditLog().logSetXAttrs(src, xAttrs, logRetryCache);
       resultingStat = getAuditFileInfo(src, false);
     } finally {
@@ -8512,14 +8510,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Create a new key on the KeyProvider for an encryption zone.
    *
-   * @param keyIdArg id of the key
+   * @param keyNameArg name of the key
    * @param src path of the encryption zone.
    * @return KeyVersion of the created key
    * @throws IOException
    */
-  private KeyVersion createNewKey(String keyIdArg, String src)
+  private KeyVersion createNewKey(String keyNameArg, String src)
     throws IOException {
-    Preconditions.checkNotNull(keyIdArg);
+    Preconditions.checkNotNull(keyNameArg);
     Preconditions.checkNotNull(src);
     final StringBuilder sb = new StringBuilder("hdfs://");
     if (nameserviceId != null) {
@@ -8529,14 +8527,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (!src.endsWith("/")) {
       sb.append('/');
     }
-    sb.append(keyIdArg);
-    final String keyId = sb.toString();
-    providerOptions.setDescription(keyId);
+    sb.append(keyNameArg);
+    final String keyName = sb.toString();
+    providerOptions.setDescription(keyName);
     providerOptions.setBitLength(codec.getCipherSuite()
         .getAlgorithmBlockSize()*8);
     KeyVersion version = null;
     try {
-      version = provider.createKey(keyIdArg, providerOptions);
+      version = provider.createKey(keyNameArg, providerOptions);
     } catch (NoSuchAlgorithmException e) {
       throw new IOException(e);
     }

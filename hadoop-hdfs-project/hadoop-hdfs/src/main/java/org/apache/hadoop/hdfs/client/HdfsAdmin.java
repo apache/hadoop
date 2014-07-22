@@ -231,21 +231,16 @@ public class HdfsAdmin {
   }
 
   /**
-   * Create an encryption zone rooted at path using the optional encryption key
-   * id. An encryption zone is a portion of the HDFS file system hierarchy in
-   * which all files are encrypted with the same key, but possibly different
-   * key versions per file.
-   * <p/>
-   * Path must refer to an empty, existing directory. Otherwise an IOException
-   * will be thrown. keyId specifies the id of an encryption key in the
-   * KeyProvider that the Namenode has been configured to use. If keyId is
-   * null, then a key is generated in the KeyProvider using {@link
-   * java.util.UUID} to generate a key id.
+   * Create an encryption zone rooted at an empty existing directory. An
+   * encryption zone has an associated encryption key used when reading and
+   * writing files within the zone. An existing key can be specified,
+   * else a new key will be generated for the encryption zone.
    *
-   * @param path The path of the root of the encryption zone.
+   * @param path The path of the root of the encryption zone. Must refer to
+   *             an empty, existing directory.
    *
-   * @param keyId An optional keyId in the KeyProvider. If null, then
-   * a key is generated.
+   * @param keyName Optional name of key available at the KeyProvider. If null,
+   *                then a key is generated.
    *
    * @throws IOException if there was a general IO exception
    *
@@ -253,18 +248,15 @@ public class HdfsAdmin {
    *
    * @throws FileNotFoundException if the path does not exist
    */
-  public void createEncryptionZone(Path path, String keyId)
+  public void createEncryptionZone(Path path, String keyName)
     throws IOException, AccessControlException, FileNotFoundException {
-    dfs.createEncryptionZone(path, keyId);
+    dfs.createEncryptionZone(path, keyName);
   }
 
   /**
-   * Return a list of all {@EncryptionZone}s in the HDFS hierarchy which are
-   * visible to the caller. If the caller is the HDFS admin, then the returned
-   * EncryptionZone instances will have the key id field filled in. If the
-   * caller is not the HDFS admin, then the EncryptionZone instances will only
-   * have the path field filled in and only those zones that are visible to the
-   * user are returned.
+   * Return a list of all {@link EncryptionZone}s in the HDFS hierarchy which
+   * are visible to the caller. If the caller is an HDFS superuser,
+   * then the key name of each encryption zone will also be provided.
    *
    * @throws IOException if there was a general IO exception
    *

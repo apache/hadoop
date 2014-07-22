@@ -1413,9 +1413,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
   
   @Override
-  public void createEncryptionZone(String src, String keyId)
+  public void createEncryptionZone(String src, String keyName)
     throws IOException {
-    namesystem.createEncryptionZone(src, keyId);
+    namesystem.createEncryptionZone(src, keyName);
   }
 
   @Override

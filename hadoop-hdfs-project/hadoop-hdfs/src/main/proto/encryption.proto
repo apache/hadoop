@@ -35,7 +35,7 @@ import "hdfs.proto";
 
 message CreateEncryptionZoneRequestProto {
   required string src = 1;
-  optional string keyId = 2;
+  optional string keyName = 2;
 }
 
 message CreateEncryptionZoneResponseProto {
@@ -46,7 +46,7 @@ message ListEncryptionZonesRequestProto {
 
 message EncryptionZoneProto {
   required string path = 1;
-  required string keyId = 2;
+  required string keyName = 2;
 }
 
 message ListEncryptionZonesResponseProto {

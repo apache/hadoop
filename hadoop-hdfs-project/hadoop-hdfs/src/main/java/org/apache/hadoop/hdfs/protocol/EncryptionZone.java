@@ -24,32 +24,32 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * A simple class for representing an encryption zone. Presently an encryption
- * zone only has a path (the root of the encryption zone) and a key id.
+ * zone only has a path (the root of the encryption zone) and a key name.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class EncryptionZone {
 
   private final String path;
-  private final String keyId;
+  private final String keyName;
 
-  public EncryptionZone(String path, String keyId) {
+  public EncryptionZone(String path, String keyName) {
     this.path = path;
-    this.keyId = keyId;
+    this.keyName = keyName;
   }
 
   public String getPath() {
     return path;
   }
 
-  public String getKeyId() {
-    return keyId;
+  public String getKeyName() {
+    return keyName;
   }
 
   @Override
   public int hashCode() {
     return new HashCodeBuilder(13, 31).
-      append(path).append(keyId).
+      append(path).append(keyName).
       toHashCode();
   }
 
@@ -68,12 +68,12 @@ public class EncryptionZone {
     EncryptionZone rhs = (EncryptionZone) obj;
     return new EqualsBuilder().
       append(path, rhs.path).
-      append(keyId, rhs.keyId).
+      append(keyName, rhs.keyName).
       isEquals();
   }
 
   @Override
   public String toString() {
-    return "EncryptionZone [path=" + path + ", keyId=" + keyId + "]";
+    return "EncryptionZone [path=" + path + ", keyName=" + keyName + "]";
   }
 }
