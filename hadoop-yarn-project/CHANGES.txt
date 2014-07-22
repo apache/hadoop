@@ -56,6 +56,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2045. Data persisted in NM should be versioned (Junping Du via jlowe)
 
+    YARN-2013. The diagnostics is always the ExitCodeException stack when the container 
+    crashes. (Tsuyoshi OZAWA via junping_du)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -408,6 +411,9 @@ Release 2.5.0 - UNRELEASED
     (Varun Vasudev via zjshen)
 
     YARN-2269. Remove external links from YARN UI. (Craig Welch via xgong)
+
+    YARN-2270. Made TestFSDownload#testDownloadPublicWithStatCache be skipped
+    when there’s no ancestor permissions. (Akira Ajisaka via zjshen)
 
 Release 2.4.1 - 2014-06-23 
 

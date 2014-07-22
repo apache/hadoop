@@ -324,6 +324,10 @@ Release 2.6.0 - UNRELEASED
     HDFS-6616. Add exclude-datanodes feature to WebHDFS redirection so that it
     will not redirect retries to the same datanode. (zhaoyunjiong via szetszwo)
 
+    HDFS-6702. Change DFSClient to pass the StorageType from the namenode to
+    datanodes and change datanode to write block replicas using the specified
+    storage type. (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

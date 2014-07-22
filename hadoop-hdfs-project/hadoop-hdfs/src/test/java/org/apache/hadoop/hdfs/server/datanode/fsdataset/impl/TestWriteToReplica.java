@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
@@ -147,7 +148,7 @@ public class TestWriteToReplica {
     };
     
     ReplicaMap replicasMap = dataSet.volumeMap;
-    FsVolumeImpl vol = dataSet.volumes.getNextVolume(0);
+    FsVolumeImpl vol = dataSet.volumes.getNextVolume(StorageType.DEFAULT, 0);
     ReplicaInfo replicaInfo = new FinalizedReplica(
         blocks[FINALIZED].getLocalBlock(), vol, vol.getCurrentDir().getParentFile());
     replicasMap.add(bpid, replicaInfo);
@@ -357,7 +358,7 @@ public class TestWriteToReplica {
     }
  
     try {
-      dataSet.createRbw(blocks[FINALIZED]);
+      dataSet.createRbw(StorageType.DEFAULT, blocks[FINALIZED]);
       Assert.fail("Should not have created a replica that's already " +
       		"finalized " + blocks[FINALIZED]);
     } catch (ReplicaAlreadyExistsException e) {
@@ -375,7 +376,7 @@ public class TestWriteToReplica {
     }
 
     try {
-      dataSet.createRbw(blocks[TEMPORARY]);
+      dataSet.createRbw(StorageType.DEFAULT, blocks[TEMPORARY]);
       Assert.fail("Should not have created a replica that had created as " +
       		"temporary " + blocks[TEMPORARY]);
     } catch (ReplicaAlreadyExistsException e) {
@@ -385,7 +386,7 @@ public class TestWriteToReplica {
         0L, blocks[RBW].getNumBytes());  // expect to be successful
     
     try {
-      dataSet.createRbw(blocks[RBW]);
+      dataSet.createRbw(StorageType.DEFAULT, blocks[RBW]);
       Assert.fail("Should not have created a replica that had created as RBW " +
           blocks[RBW]);
     } catch (ReplicaAlreadyExistsException e) {
@@ -401,7 +402,7 @@ public class TestWriteToReplica {
     }
 
     try {
-      dataSet.createRbw(blocks[RWR]);
+      dataSet.createRbw(StorageType.DEFAULT, blocks[RWR]);
       Assert.fail("Should not have created a replica that was waiting to be " +
       		"recovered " + blocks[RWR]);
     } catch (ReplicaAlreadyExistsException e) {
@@ -417,7 +418,7 @@ public class TestWriteToReplica {
     }
 
     try {
-      dataSet.createRbw(blocks[RUR]);
+      dataSet.createRbw(StorageType.DEFAULT, blocks[RUR]);
       Assert.fail("Should not have created a replica that was under recovery " +
           blocks[RUR]);
     } catch (ReplicaAlreadyExistsException e) {
@@ -434,45 +435,45 @@ public class TestWriteToReplica {
           e.getMessage().contains(ReplicaNotFoundException.NON_EXISTENT_REPLICA));
     }
     
-    dataSet.createRbw(blocks[NON_EXISTENT]);
+    dataSet.createRbw(StorageType.DEFAULT, blocks[NON_EXISTENT]);
   }
   
   private void testWriteToTemporary(FsDatasetImpl dataSet, ExtendedBlock[] blocks) throws IOException {
     try {
-      dataSet.createTemporary(blocks[FINALIZED]);
+      dataSet.createTemporary(StorageType.DEFAULT, blocks[FINALIZED]);
       Assert.fail("Should not have created a temporary replica that was " +
       		"finalized " + blocks[FINALIZED]);
     } catch (ReplicaAlreadyExistsException e) {
     }
  
     try {
-      dataSet.createTemporary(blocks[TEMPORARY]);
+      dataSet.createTemporary(StorageType.DEFAULT, blocks[TEMPORARY]);
       Assert.fail("Should not have created a replica that had created as" +
       		"temporary " + blocks[TEMPORARY]);
     } catch (ReplicaAlreadyExistsException e) {
     }
     
     try {
-      dataSet.createTemporary(blocks[RBW]);
+      dataSet.createTemporary(StorageType.DEFAULT, blocks[RBW]);
       Assert.fail("Should not have created a replica that had created as RBW " +
           blocks[RBW]);
     } catch (ReplicaAlreadyExistsException e) {
     }
     
     try {
-      dataSet.createTemporary(blocks[RWR]);
+      dataSet.createTemporary(StorageType.DEFAULT, blocks[RWR]);
       Assert.fail("Should not have created a replica that was waiting to be " +
       		"recovered " + blocks[RWR]);
     } catch (ReplicaAlreadyExistsException e) {
     }
     
     try {
-      dataSet.createTemporary(blocks[RUR]);
+      dataSet.createTemporary(StorageType.DEFAULT, blocks[RUR]);
       Assert.fail("Should not have created a replica that was under recovery " +
           blocks[RUR]);
     } catch (ReplicaAlreadyExistsException e) {
     }
     
-    dataSet.createTemporary(blocks[NON_EXISTENT]);
+    dataSet.createTemporary(StorageType.DEFAULT, blocks[NON_EXISTENT]);
   }
 }
