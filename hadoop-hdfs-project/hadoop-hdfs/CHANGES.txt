@@ -537,6 +537,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6632. Reintroduce dfs.http.port / dfs.https.port in branch-2.
     (Yongjun Zhang via wheat9)
 
+    HDFS-6703. NFS: Files can be deleted from a read-only mount
+    (Srikanth Upputuri via brandonli)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
