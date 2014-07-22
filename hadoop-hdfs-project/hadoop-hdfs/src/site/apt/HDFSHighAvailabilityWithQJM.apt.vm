@@ -416,8 +416,8 @@ HDFS High Availability Using the Quorum Journal Manager
 
   After all of the necessary configuration options have been set, you must
   start the JournalNode daemons on the set of machines where they will run. This
-  can be done by running the command "<hdfs-daemon.sh journalnode>" and waiting
-  for the daemon to start on each of the relevant machines.
+  can be done by running the command "<hadoop-daemon.sh start journalnode>" and
+  waiting for the daemon to start on each of the relevant machines.
 
   Once the JournalNodes have been started, one must initially synchronize the
   two HA NameNodes' on-disk metadata.
