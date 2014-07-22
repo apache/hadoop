@@ -60,7 +60,9 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -90,28 +92,14 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
 @RunWith(Parameterized.class)
 public class TestRMWebServicesDelegationTokens extends JerseyTest {
 
-  private static final File testRootDir = new File("target",
-    TestRMWebServicesDelegationTokens.class.getName() + "-root");
+  private static File testRootDir;
   private static File httpSpnegoKeytabFile = new File(
     KerberosTestUtils.getKeytabFile());
-
   private static String httpSpnegoPrincipal = KerberosTestUtils
     .getServerPrincipal();
-
-  private static boolean miniKDCStarted = false;
   private static MiniKdc testMiniKDC;
-  static {
-    try {
-      testMiniKDC = new MiniKdc(MiniKdc.createConf(), testRootDir);
-    } catch (Exception e) {
-      assertTrue("Couldn't create MiniKDC", false);
-    }
-  }
-
   private static MockRM rm;
-
   private Injector injector;
-
   private boolean isKerberosAuth = false;
 
   // Make sure the test uses the published header string
@@ -237,7 +225,6 @@ public class TestRMWebServicesDelegationTokens extends JerseyTest {
       .contextListenerClass(GuiceServletConfig.class)
       .filterClass(com.google.inject.servlet.GuiceFilter.class)
       .contextPath("jersey-guice-filter").servletPath("/").build());
-    setupKDC();
     switch (run) {
     case 0:
     default:
@@ -249,17 +236,14 @@ public class TestRMWebServicesDelegationTokens extends JerseyTest {
     }
   }
 
-  private void setupKDC() throws Exception {
-    if (miniKDCStarted == false) {
-      testMiniKDC.start();
-      getKdc().createPrincipal(httpSpnegoKeytabFile, "HTTP/localhost",
-        "client", "client2", "client3");
-      miniKDCStarted = true;
-    }
-  }
-
-  private MiniKdc getKdc() {
-    return testMiniKDC;
+  @BeforeClass
+  public static void setupKDC() throws Exception {
+    testRootDir = new File("target",
+      TestRMWebServicesDelegationTokens.class.getName() + "-root");
+    testMiniKDC = new MiniKdc(MiniKdc.createConf(), testRootDir);
+    testMiniKDC.start();
+    testMiniKDC.createPrincipal(httpSpnegoKeytabFile, "HTTP/localhost",
+      "client", "client2", "client3");
   }
 
   @Before
@@ -268,6 +252,13 @@ public class TestRMWebServicesDelegationTokens extends JerseyTest {
     super.setUp();
     httpSpnegoKeytabFile.deleteOnExit();
     testRootDir.deleteOnExit();
+  }
+
+  @AfterClass
+  public static void shutdownKdc() {
+    if (testMiniKDC != null) {
+      testMiniKDC.stop();
+    }
   }
 
   @After
