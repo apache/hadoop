@@ -76,8 +76,10 @@ class SchedulingAlgorithms {
       boolean s2Needy = s2.getRunningTasks() < minShare2;
       minShareRatio1 = s1.getRunningTasks() / Math.max(minShare1, 1.0);
       minShareRatio2 = s2.getRunningTasks() / Math.max(minShare2, 1.0);
-      tasksToWeightRatio1 = s1.getRunningTasks() / s1.getWeight();
-      tasksToWeightRatio2 = s2.getRunningTasks() / s2.getWeight();
+      tasksToWeightRatio1 = fixTaskToWeightRatio(s1.getRunningTasks() / s1
+          .getWeight());
+      tasksToWeightRatio2 = fixTaskToWeightRatio(s2.getRunningTasks() / s2
+          .getWeight());
       int res = 0;
       if (s1Needy && !s2Needy)
         res = -1;
@@ -96,6 +98,16 @@ class SchedulingAlgorithms {
       }
       return res;
     }
+  }
+
+  // A zero weight with zero running task can cause NaN will cannot compare
+  // correctly. Instead set to inifinty as we want it to be treated similar
+  // to zero weight schedulable with any number of running task.
+  private static double fixTaskToWeightRatio(double ratio) {
+    if (Double.isNaN(ratio)) {
+      return Double.POSITIVE_INFINITY;
+    }
+    return ratio;
   }
 
   /** 

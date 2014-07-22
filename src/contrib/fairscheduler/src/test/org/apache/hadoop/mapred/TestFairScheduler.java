@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -3089,6 +3090,101 @@ public class TestFairScheduler extends TestCase {
     checkAssignment("tt2", "attempt_test_0002_r_000001_0 on tt2");
     assertNull(scheduler.assignTasks(tracker("tt1")));
     assertNull(scheduler.assignTasks(tracker("tt2")));
+  }
+
+
+
+  class TestJobSchedulableSort extends JobSchedulable {
+
+    private final double testFairShare;
+    private int demand;
+    private String name;
+    private int runningTasks;
+    private double testweight = 1.0;
+    private long startTime;
+
+    public TestJobSchedulableSort(String name, int demand, int runningTasks,
+                                  double fairShare) {
+      this.name = name;
+      this.demand = demand;
+      this.runningTasks = runningTasks;
+      this.testFairShare = fairShare;
+      this.startTime = System.currentTimeMillis();
+    }
+
+    public void updateWeight(double weight) {
+      this.testweight = weight;
+    }
+
+    public void updateRunningTasks(int runningTasks) {
+      this.runningTasks = runningTasks;
+    }
+
+    @Override
+    public String getName() {
+      return name;
+    }
+
+    @Override
+    public int getRunningTasks() {
+      return runningTasks;
+    }
+
+    @Override
+    public int getDemand() {
+      return demand;
+    }
+
+    @Override
+    public double getWeight() {
+      return testweight;
+    }
+
+
+    @Override
+    public double getFairShare() {
+      return testFairShare;
+    }
+
+    @Override
+    public long getStartTime() {
+      return startTime;
+    }
+  }
+
+  public void testFairShareComparator()
+  {
+    List<TestJobSchedulableSort> jobs = new ArrayList<TestJobSchedulableSort>();
+    final int iterations = 100;
+    int jobCount = 100;
+
+    Comparator<Schedulable> comparator = new
+        SchedulingAlgorithms.FairShareComparator();
+
+    TestJobSchedulableSort s1 = new TestJobSchedulableSort("job_Z", 100,
+        10, 4.0);
+    s1.updateWeight(1);
+    TestJobSchedulableSort s2 = new TestJobSchedulableSort("job_Y", 100,
+        0, 4.0);
+    s2.updateWeight(0.0);
+    TestJobSchedulableSort s3 = new TestJobSchedulableSort("job_X", 100,
+        1, 4.0);
+    s3.updateWeight(0.0);
+
+    // Verify that when weight is set to zero (s2 in this case),
+    // the ratio does not become NaN.
+    // because Math.signum(anyNumber - NaN) or Math.signum(NaN - anyNumber)
+    // is always zero. That would cause sorting to fail because it would use
+    // job names to sort when one number is NaN and not otherwise causing
+    // s1>s2 (by name) and s2>s3 (by name) but s1<s3 (by running task to
+    // weight)
+
+    // s2 has inifinite ratio and should compare larger
+    assertTrue(comparator.compare(s1, s2) < 0);
+    // s2 and s3 have infinite ratio and s2 should compare larger by name
+    assertTrue(comparator.compare(s2, s3) > 0);
+    // s3 has a higher running task to weight ratio (infinity)
+    assertTrue(comparator.compare(s1, s3) < 0);
   }
   
   
