@@ -350,6 +350,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-6680. BlockPlacementPolicyDefault does not choose favored nodes
     correctly.  (szetszwo) 
 
+    HDFS-6712. Document HDFS Multihoming Settings. (Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
