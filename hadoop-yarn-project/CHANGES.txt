@@ -415,6 +415,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2270. Made TestFSDownload#testDownloadPublicWithStatCache be skipped
     when there’s no ancestor permissions. (Akira Ajisaka via zjshen)
 
+    YARN-2319. Made the MiniKdc instance start/close before/after the class of
+    TestRMWebServicesDelegationTokens. (Wenwu Peng via zjshen)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
