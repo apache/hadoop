@@ -59,6 +59,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2013. The diagnostics is always the ExitCodeException stack when the container 
     crashes. (Tsuyoshi OZAWA via junping_du)
 
+    YARN-2295. Refactored DistributedShell to use public APIs of protocol records.
+    (Li Lu via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
