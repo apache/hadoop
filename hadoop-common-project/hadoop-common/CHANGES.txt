@@ -333,6 +333,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10864. Tool documentenation is broken. (Akira Ajisaka
     via Arpit Agarwal)
 
+    HADOOP-10872. TestPathData fails intermittently with "Mkdirs failed
+    to create d1". (Yongjun Zhang via Arpit Agarwal)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
