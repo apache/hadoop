@@ -17,6 +17,9 @@ HDFS-6584: Archival Storage
     HDFS-6679. Bump NameNodeLayoutVersion and update editsStored test files.
     (vinayakumarb via szetszwo)
 
+    HDFS-6686. Change BlockPlacementPolicy to use fallback when some storage
+    types are unavailable.  (szetszwo)
+
 Trunk (Unreleased)
 
   INCOMPATIBLE CHANGES
