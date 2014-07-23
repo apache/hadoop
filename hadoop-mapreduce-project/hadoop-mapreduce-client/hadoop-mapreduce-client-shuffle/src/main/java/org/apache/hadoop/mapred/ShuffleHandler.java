@@ -82,10 +82,13 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.NMDBSchemaVersionProto;
 import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
 import org.apache.hadoop.yarn.server.api.AuxiliaryService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.records.NMDBSchemaVersion;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.records.impl.pb.NMDBSchemaVersionPBImpl;
 import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.fusesource.leveldbjni.JniDBFactory;
@@ -125,6 +128,7 @@ import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 import org.jboss.netty.util.CharsetUtil;
 import org.mortbay.jetty.HttpHeaders;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ByteString;
@@ -146,8 +150,9 @@ public class ShuffleHandler extends AuxiliaryService {
       Pattern.CASE_INSENSITIVE);
 
   private static final String STATE_DB_NAME = "mapreduce_shuffle_state";
-  private static final String STATE_DB_SCHEMA_VERSION_KEY = "schema-version";
-  private static final String STATE_DB_SCHEMA_VERSION = "1.0";
+  private static final String STATE_DB_SCHEMA_VERSION_KEY = "shuffle-schema-version";
+  protected static final NMDBSchemaVersion CURRENT_VERSION_INFO = 
+      NMDBSchemaVersion.newInstance(1, 0);
 
   private int port;
   private ChannelFactory selector;
@@ -466,18 +471,15 @@ public class ShuffleHandler extends AuxiliaryService {
     Path dbPath = new Path(recoveryRoot, STATE_DB_NAME);
     LOG.info("Using state database at " + dbPath + " for recovery");
     File dbfile = new File(dbPath.toString());
-    byte[] schemaVersionData;
     try {
       stateDb = JniDBFactory.factory.open(dbfile, options);
-      schemaVersionData = stateDb.get(bytes(STATE_DB_SCHEMA_VERSION_KEY));
     } catch (NativeDB.DBException e) {
       if (e.isNotFound() || e.getMessage().contains(" does not exist ")) {
         LOG.info("Creating state database at " + dbfile);
         options.createIfMissing(true);
         try {
           stateDb = JniDBFactory.factory.open(dbfile, options);
-          schemaVersionData = bytes(STATE_DB_SCHEMA_VERSION);
-          stateDb.put(bytes(STATE_DB_SCHEMA_VERSION_KEY), schemaVersionData);
+          storeVersion();
         } catch (DBException dbExc) {
           throw new IOException("Unable to create state store", dbExc);
         }
@@ -485,15 +487,69 @@ public class ShuffleHandler extends AuxiliaryService {
         throw e;
       }
     }
-    if (schemaVersionData != null) {
-      String schemaVersion = asString(schemaVersionData);
-      // only support exact schema matches for now
-      if (!STATE_DB_SCHEMA_VERSION.equals(schemaVersion)) {
-        throw new IOException("Incompatible state database schema, found "
-            + schemaVersion + " expected " + STATE_DB_SCHEMA_VERSION);
-      }
+    checkVersion();
+  }
+  
+  @VisibleForTesting
+  NMDBSchemaVersion loadVersion() throws IOException {
+    byte[] data = stateDb.get(bytes(STATE_DB_SCHEMA_VERSION_KEY));
+    // if version is not stored previously, treat it as 1.0.
+    if (data == null || data.length == 0) {
+      return NMDBSchemaVersion.newInstance(1, 0);
+    }
+    NMDBSchemaVersion version =
+        new NMDBSchemaVersionPBImpl(NMDBSchemaVersionProto.parseFrom(data));
+    return version;
+  }
+
+  private void storeSchemaVersion(NMDBSchemaVersion version) throws IOException {
+    String key = STATE_DB_SCHEMA_VERSION_KEY;
+    byte[] data = 
+        ((NMDBSchemaVersionPBImpl) version).getProto().toByteArray();
+    try {
+      stateDb.put(bytes(key), data);
+    } catch (DBException e) {
+      throw new IOException(e.getMessage(), e);
+    }
+  }
+  
+  private void storeVersion() throws IOException {
+    storeSchemaVersion(CURRENT_VERSION_INFO);
+  }
+  
+  // Only used for test
+  @VisibleForTesting
+  void storeVersion(NMDBSchemaVersion version) throws IOException {
+    storeSchemaVersion(version);
+  }
+
+  protected NMDBSchemaVersion getCurrentVersion() {
+    return CURRENT_VERSION_INFO;
+  }
+  
+  /**
+   * 1) Versioning scheme: major.minor. For e.g. 1.0, 1.1, 1.2...1.25, 2.0 etc.
+   * 2) Any incompatible change of DB schema is a major upgrade, and any
+   *    compatible change of DB schema is a minor upgrade.
+   * 3) Within a minor upgrade, say 1.1 to 1.2:
+   *    overwrite the version info and proceed as normal.
+   * 4) Within a major upgrade, say 1.2 to 2.0:
+   *    throw exception and indicate user to use a separate upgrade tool to
+   *    upgrade shuffle info or remove incompatible old state.
+   */
+  private void checkVersion() throws IOException {
+    NMDBSchemaVersion loadedVersion = loadVersion();
+    LOG.info("Loaded state DB schema version info " + loadedVersion);
+    if (loadedVersion.equals(getCurrentVersion())) {
+      return;
+    }
+    if (loadedVersion.isCompatibleTo(getCurrentVersion())) {
+      LOG.info("Storing state DB schedma version info " + getCurrentVersion());
+      storeVersion();
     } else {
-      throw new IOException("State database schema version not found");
+      throw new IOException(
+        "Incompatible version for state DB schema: expecting DB schema version " 
+            + getCurrentVersion() + ", but loading version " + loadedVersion);
     }
   }
 

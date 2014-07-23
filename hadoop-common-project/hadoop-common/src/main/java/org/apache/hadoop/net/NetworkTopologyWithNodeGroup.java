@@ -279,8 +279,8 @@ public class NetworkTopologyWithNodeGroup extends NetworkTopology {
    *          set of nodes at each network distance.
    */
   @Override
-  public void sortByDistance( Node reader, Node[] nodes,
-      int activeLen, long seed) {
+  public void sortByDistance(Node reader, Node[] nodes, int activeLen,
+      long seed, boolean randomizeBlockLocationsPerBlock) {
     // If reader is not a datanode (not in NetworkTopology tree), we need to
     // replace this reader with a sibling leaf node in tree.
     if (reader != null && !this.contains(reader)) {
@@ -293,7 +293,8 @@ public class NetworkTopologyWithNodeGroup extends NetworkTopology {
         return;
       }
     }
-    super.sortByDistance(reader, nodes, nodes.length, seed);
+    super.sortByDistance(reader, nodes, nodes.length, seed,
+        randomizeBlockLocationsPerBlock);
   }
 
   /** InnerNodeWithNodeGroup represents a switch/router of a data center, rack

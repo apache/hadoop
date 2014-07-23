@@ -1035,8 +1035,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
     StringUtils.startupShutdownMessage(ResourceManager.class, argv, LOG);
     try {
       Configuration conf = new YarnConfiguration();
-      // If -format, then delete RMStateStore; else startup normally
-      if (argv.length == 1 && argv[0].equals("-format")) {
+      // If -format-state-store, then delete RMStateStore; else startup normally
+      if (argv.length == 1 && argv[0].equals("-format-state-store")) {
         deleteRMStateStore(conf);
       } else {
         ResourceManager resourceManager = new ResourceManager();

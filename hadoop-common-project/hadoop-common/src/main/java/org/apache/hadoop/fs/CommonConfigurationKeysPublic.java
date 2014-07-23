@@ -250,6 +250,12 @@ public class CommonConfigurationKeysPublic {
   public static final long HADOOP_SECURITY_GROUPS_CACHE_SECS_DEFAULT =
     300;
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String  HADOOP_SECURITY_GROUPS_NEGATIVE_CACHE_SECS =
+    "hadoop.security.groups.negative-cache.secs";
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final long HADOOP_SECURITY_GROUPS_NEGATIVE_CACHE_SECS_DEFAULT =
+    30;
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String HADOOP_SECURITY_GROUPS_CACHE_WARN_AFTER_MS =
     "hadoop.security.groups.cache.warn.after.ms";
   public static final long HADOOP_SECURITY_GROUPS_CACHE_WARN_AFTER_MS_DEFAULT =

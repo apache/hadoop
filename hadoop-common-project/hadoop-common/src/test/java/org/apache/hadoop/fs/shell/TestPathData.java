@@ -35,19 +35,22 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestPathData {
+  private static final String TEST_ROOT_DIR = 
+      System.getProperty("test.build.data","build/test/data") + "/testPD";
   protected Configuration conf;
   protected FileSystem fs;
   protected Path testDir;
-
+  
   @Before
   public void initialize() throws Exception {
     conf = new Configuration();
     fs = FileSystem.getLocal(conf);
-    testDir = new Path(
-        System.getProperty("test.build.data", "build/test/data") + "/testPD"
-    );
+    testDir = new Path(TEST_ROOT_DIR);
+    
     // don't want scheme on the path, just an absolute path
     testDir = new Path(fs.makeQualified(testDir).toUri().getPath());
+    fs.mkdirs(testDir);
+
     FileSystem.setDefaultUri(conf, fs.getUri());    
     fs.setWorkingDirectory(testDir);
     fs.mkdirs(new Path("d1"));
@@ -60,6 +63,7 @@ public class TestPathData {
 
   @After
   public void cleanup() throws Exception {
+    fs.delete(testDir, true);
     fs.close();
   }
 
