@@ -8448,6 +8448,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     String keyName = keyNameArg;
     boolean success = false;
     try {
+      if (provider == null) {
+        throw new IOException(
+            "Can't create an encryption zone for " + src +
+            " since no key provider is available.");
+      }
       if (keyName == null || keyName.isEmpty()) {
         keyName = UUID.randomUUID().toString();
         createNewKey(keyName, src);

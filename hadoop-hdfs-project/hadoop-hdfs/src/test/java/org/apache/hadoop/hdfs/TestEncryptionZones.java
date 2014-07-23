@@ -68,6 +68,7 @@ public class TestEncryptionZones {
   private MiniDFSCluster cluster;
   private HdfsAdmin dfsAdmin;
   private DistributedFileSystem fs;
+  private File testRootDir;
 
   protected FileSystemTestWrapper fsWrapper;
   protected FileContextTestWrapper fcWrapper;
@@ -78,14 +79,14 @@ public class TestEncryptionZones {
     fsHelper = new FileSystemTestHelper();
     // Set up java key store
     String testRoot = fsHelper.getTestRootDir();
-    File testRootDir = new File(testRoot).getAbsoluteFile();
+    testRootDir = new File(testRoot).getAbsoluteFile();
     conf.set(KeyProviderFactory.KEY_PROVIDER_PATH,
         JavaKeyStoreProvider.SCHEME_NAME + "://file" + testRootDir + "/test.jks"
     );
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     Logger.getLogger(EncryptionZoneManager.class).setLevel(Level.TRACE);
     fs = cluster.getFileSystem();
-    fsWrapper = new FileSystemTestWrapper(cluster.getFileSystem());
+    fsWrapper = new FileSystemTestWrapper(fs);
     fcWrapper = new FileContextTestWrapper(
         FileContext.getFileContext(cluster.getURI(), conf));
     dfsAdmin = new HdfsAdmin(cluster.getURI(), conf);
@@ -429,4 +430,25 @@ public class TestEncryptionZones {
     }
   }
 
+  @Test(timeout = 120000)
+  public void testCreateEZWithNoProvider() throws Exception {
+
+    final Configuration clusterConf = cluster.getConfiguration(0);
+    clusterConf.set(KeyProviderFactory.KEY_PROVIDER_PATH, "");
+    cluster.restartNameNode(true);
+    /* Test failure of create EZ on a directory that doesn't exist. */
+    final Path zone1 = new Path("/zone1");
+    /* Normal creation of an EZ */
+    fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
+    try {
+      dfsAdmin.createEncryptionZone(zone1, null);
+      fail("expected exception");
+    } catch (IOException e) {
+      assertExceptionContains("since no key provider is available", e);
+    }
+    clusterConf.set(KeyProviderFactory.KEY_PROVIDER_PATH,
+        JavaKeyStoreProvider.SCHEME_NAME + "://file" + testRootDir + "/test.jks"
+    );
+    cluster.restartNameNode(true);
+  }
 }

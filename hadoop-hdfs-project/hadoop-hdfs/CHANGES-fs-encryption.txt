@@ -59,3 +59,6 @@ fs-encryption (Unreleased)
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HDFS-6733. Creating encryption zone results in NPE when
+    KeyProvider is null. (clamb)
