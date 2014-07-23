@@ -42,6 +42,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10755. Support negative caching of user-group mapping.
     (Lei Xu via wang)
 
+    HADOOP-10855. Allow Text to be read with a known Length. (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
