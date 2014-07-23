@@ -56,6 +56,9 @@ fs-encryption (Unreleased)
 
     HDFS-6720. Remove KeyProvider in EncryptionZoneManager. (wang)
 
+    HDFS-6738. Remove unnecessary getEncryptionZoneForPath call in
+    EZManager#createEncryptionZone. (clamb)
+
   OPTIMIZATIONS
 
   BUG FIXES

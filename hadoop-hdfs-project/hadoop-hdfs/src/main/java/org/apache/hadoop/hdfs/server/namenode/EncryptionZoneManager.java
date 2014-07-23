@@ -227,7 +227,6 @@ public class EncryptionZoneManager {
     // updating the xattr will call addEncryptionZone,
     // done this way to handle edit log loading
     dir.unprotectedSetXAttrs(src, xattrs, EnumSet.of(XAttrSetFlag.CREATE));
-    ezi = getEncryptionZoneForPath(srcIIP);
     return ezXAttr;
   }
 
