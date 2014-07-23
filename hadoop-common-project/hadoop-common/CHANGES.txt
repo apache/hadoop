@@ -72,6 +72,9 @@ Release 2.6.0 - UNRELEASED
     command when the format of the stat command uses non-curly quotes (yzhang
     via cmccabe)
 
+    HADOOP-10830. Missing lock in JavaKeyStoreProvider.createCredentialEntry.
+    (Benoy Antony via umamahesh)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -370,9 +373,6 @@ Release 2.5.0 - UNRELEASED
     (stevel)
 
     HADOOP-10801 dead link in site.xml (Akira AJISAKA via stevel)
-
-    HADOOP-10830. Missing lock in JavaKeyStoreProvider.createCredentialEntry.
-    (Benoy Antony via umamahesh)
 
   BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
 
