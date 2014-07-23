@@ -357,6 +357,10 @@ Release 2.6.0 - UNRELEASED
     HDFS-6731. Run "hdfs zkfc-formatZK" on a server in a non-namenode will cause
     a null pointer exception. (Masatake Iwasaki via brandonli)
 
+    HDFS-6114. Block Scan log rolling will never happen if blocks written
+    continuously leading to huge size of dncp_block_verification.log.curr
+    (vinayakumarb via cmccabe)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
