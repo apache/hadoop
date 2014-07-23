@@ -53,7 +53,12 @@ public class NfsExports {
       long expirationPeriodNano = conf.getLong(
           Nfs3Constant.NFS_EXPORTS_CACHE_EXPIRYTIME_MILLIS_KEY,
           Nfs3Constant.NFS_EXPORTS_CACHE_EXPIRYTIME_MILLIS_DEFAULT) * 1000 * 1000;
-      exports = new NfsExports(cacheSize, expirationPeriodNano, matchHosts);
+      try {
+        exports = new NfsExports(cacheSize, expirationPeriodNano, matchHosts);
+      } catch (IllegalArgumentException e) {
+        LOG.error("Invalid NFS Exports provided: ", e);
+        return exports;
+      }
     }
     return exports;
   }

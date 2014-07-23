@@ -2123,8 +2123,11 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     if (!doPortMonitoring(remoteAddress)) {
       return false;
     }
-    
+
     // Check export table
+    if (exports == null) {
+        return false;
+    }
     InetAddress client = ((InetSocketAddress) remoteAddress).getAddress();
     AccessPrivilege access = exports.getAccessPrivilege(client);
     if (access == AccessPrivilege.NONE) {
