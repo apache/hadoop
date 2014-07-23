@@ -2510,7 +2510,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
    *
    * @param path Path to get extended attributes
-   * @return Map<String, byte[]> describing the XAttrs of the file or directory
+   * @return List<String> of the XAttr names of the file or directory
    * @throws IOException
    */
   public List<String> listXAttrs(Path path) throws IOException {

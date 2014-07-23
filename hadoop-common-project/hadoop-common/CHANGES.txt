@@ -44,6 +44,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10855. Allow Text to be read with a known Length. (todd)
 
+    HADOOP-10887. Add XAttrs to ViewFs and make XAttrs + ViewFileSystem
+    internal dir behavior consistent. (Stephen Chu via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
