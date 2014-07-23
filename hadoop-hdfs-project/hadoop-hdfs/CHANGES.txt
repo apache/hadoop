@@ -331,6 +331,9 @@ Release 2.6.0 - UNRELEASED
     datanodes and change datanode to write block replicas using the specified
     storage type. (szetszwo)
 
+    HDFS-6701. Make seed optional in NetworkTopology#sortByDistance.
+    (Ashwin Shankar via wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -367,6 +370,12 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6667. In HDFS HA mode, Distcp/SLive with webhdfs on secure cluster fails
     with Client cannot authenticate via:[TOKEN, KERBEROS] error. (jing9)
+
+    HDFS-6704. Fix the command to launch JournalNode in HDFS-HA document.
+    (Akira AJISAKA via jing9)
+
+    HDFS-6731. Run "hdfs zkfc-formatZK" on a server in a non-namenode will cause
+    a null pointer exception. (Masatake Iwasaki via brandonli)
 
 Release 2.5.0 - UNRELEASED
 
@@ -615,6 +624,8 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6680. BlockPlacementPolicyDefault does not choose favored nodes
     correctly.  (szetszwo) 
+
+    HDFS-6712. Document HDFS Multihoming Settings. (Arpit Agarwal)
 
   OPTIMIZATIONS
 
@@ -897,6 +908,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6378. NFS registration should timeout instead of hanging when
     portmap/rpcbind is not available (Abhiraj Butala via brandonli)
+
+    HDFS-6703. NFS: Files can be deleted from a read-only mount
+    (Srikanth Upputuri via brandonli)
 
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 

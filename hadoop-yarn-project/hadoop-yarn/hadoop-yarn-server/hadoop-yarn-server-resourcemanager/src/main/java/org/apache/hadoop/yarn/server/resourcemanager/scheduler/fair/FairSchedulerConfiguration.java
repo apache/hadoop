@@ -123,6 +123,11 @@ public class FairSchedulerConfiguration extends Configuration {
   protected static final String MAX_ASSIGN = CONF_PREFIX + "max.assign";
   protected static final int DEFAULT_MAX_ASSIGN = -1;
 
+  /** The update interval for calculating resources in FairScheduler .*/
+  public static final String UPDATE_INTERVAL_MS =
+      CONF_PREFIX + "update-interval-ms";
+  public static final int DEFAULT_UPDATE_INTERVAL_MS = 500;
+
   public FairSchedulerConfiguration() {
     super();
   }
@@ -245,6 +250,10 @@ public class FairSchedulerConfiguration extends Configuration {
       throw new AllocationConfigurationException(
           "Error reading resource config", ex);
     }
+  }
+
+  public long getUpdateInterval() {
+    return getLong(UPDATE_INTERVAL_MS, DEFAULT_UPDATE_INTERVAL_MS);
   }
   
   private static int findResource(String val, String units)

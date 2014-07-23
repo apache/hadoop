@@ -94,7 +94,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     scheduler = (FairScheduler)resourceManager.getResourceScheduler();
 
     scheduler.setClock(clock);
-    scheduler.UPDATE_INTERVAL = 60 * 1000;
+    scheduler.updateInterval = 60 * 1000;
   }
 
   private void registerNodeAndSubmitApp(

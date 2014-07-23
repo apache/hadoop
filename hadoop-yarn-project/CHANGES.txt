@@ -59,6 +59,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2013. The diagnostics is always the ExitCodeException stack when the container 
     crashes. (Tsuyoshi OZAWA via junping_du)
 
+    YARN-2295. Refactored DistributedShell to use public APIs of protocol records.
+    (Li Lu via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -84,6 +87,12 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2321. NodeManager web UI can incorrectly report Pmem enforcement
     (Leitao Guo via jlowe)
+
+    YARN-2273. NPE in ContinuousScheduling thread when we lose a node. 
+    (Wei Yan via kasha)
+
+    YARN-2313. Livelock can occur in FairScheduler when there are lots of
+    running apps (Tsuyoshi Ozawa via Sandy Ryza)
 
 Release 2.5.0 - UNRELEASED
 
@@ -414,6 +423,9 @@ Release 2.5.0 - UNRELEASED
 
     YARN-2270. Made TestFSDownload#testDownloadPublicWithStatCache be skipped
     when there’s no ancestor permissions. (Akira Ajisaka via zjshen)
+
+    YARN-2319. Made the MiniKdc instance start/close before/after the class of
+    TestRMWebServicesDelegationTokens. (Wenwu Peng via zjshen)
 
 Release 2.4.1 - 2014-06-23 
 
