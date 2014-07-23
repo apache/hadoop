@@ -355,12 +355,6 @@ public class TestParam {
   public void testXAttrNameParam() {
     final XAttrNameParam p = new XAttrNameParam("user.a1");
     Assert.assertEquals(p.getXAttrName(), "user.a1");
-    try {
-      new XAttrNameParam("a1");
-      Assert.fail();
-    } catch (IllegalArgumentException e) {
-      LOG.info("EXPECTED: " + e);
-    }
   }
   
   @Test

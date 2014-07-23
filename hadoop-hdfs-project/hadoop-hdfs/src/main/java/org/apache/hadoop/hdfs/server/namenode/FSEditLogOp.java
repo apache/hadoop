@@ -3553,6 +3553,7 @@ public abstract class FSEditLogOp {
       XAttrEditLogProto p = XAttrEditLogProto.parseDelimitedFrom(in);
       src = p.getSrc();
       xAttrs = PBHelper.convertXAttrs(p.getXAttrsList());
+      readRpcIds(in, logVersion);
     }
 
     @Override
@@ -3563,18 +3564,22 @@ public abstract class FSEditLogOp {
       }
       b.addAllXAttrs(PBHelper.convertXAttrProto(xAttrs));
       b.build().writeDelimitedTo(out);
+      // clientId and callId
+      writeRpcIds(rpcClientId, rpcCallId, out);
     }
 
     @Override
     protected void toXml(ContentHandler contentHandler) throws SAXException {
       XMLUtils.addSaxString(contentHandler, "SRC", src);
       appendXAttrsToXml(contentHandler, xAttrs);
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
     }
 
     @Override
     void fromXml(Stanza st) throws InvalidXmlException {
       src = st.getValue("SRC");
       xAttrs = readXAttrsFromXml(st);
+      readRpcIdsFromXml(st);
     }
   }
   

@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.FileNotFoundException;
 import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
 import java.util.List;
@@ -46,6 +45,7 @@ import static org.apache.hadoop.fs.permission.AclEntryType.USER;
 import static org.apache.hadoop.fs.permission.FsAction.ALL;
 import static org.apache.hadoop.fs.permission.FsAction.READ;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import org.junit.After;
@@ -261,11 +261,12 @@ public class FSXAttrBaseTest {
       fs.setXAttr(path, "user.", value1, EnumSet.of(XAttrSetFlag.CREATE, 
           XAttrSetFlag.REPLACE));
       Assert.fail("Setting xattr with empty name should fail.");
+    } catch (RemoteException e) {
+      assertEquals("Unexpected RemoteException: " + e, e.getClassName(),
+          HadoopIllegalArgumentException.class.getCanonicalName());
+      GenericTestUtils.assertExceptionContains("XAttr name cannot be empty", e);
     } catch (HadoopIllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains("XAttr name cannot be empty", e);
-    } catch (IllegalArgumentException e) {
-      GenericTestUtils.assertExceptionContains("Invalid value: \"user.\" does " + 
-          "not belong to the domain ^(user\\.|trusted\\.|system\\.|security\\.).+", e);
     }
     
     // Set xattr with invalid name: "a1"
@@ -274,11 +275,12 @@ public class FSXAttrBaseTest {
           XAttrSetFlag.REPLACE));
       Assert.fail("Setting xattr with invalid name prefix or without " +
           "name prefix should fail.");
+    } catch (RemoteException e) {
+      assertEquals("Unexpected RemoteException: " + e, e.getClassName(),
+          HadoopIllegalArgumentException.class.getCanonicalName());
+      GenericTestUtils.assertExceptionContains("XAttr name must be prefixed", e);
     } catch (HadoopIllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains("XAttr name must be prefixed", e);
-    } catch (IllegalArgumentException e) {
-      GenericTestUtils.assertExceptionContains("Invalid value: \"a1\" does " + 
-          "not belong to the domain ^(user\\.|trusted\\.|system\\.|security\\.).+", e);
     }
     
     // Set xattr without XAttrSetFlag
@@ -341,9 +343,18 @@ public class FSXAttrBaseTest {
   }
   
   /**
-   * Tests for getting xattr
-   * 1. To get xattr which does not exist.
-   * 2. To get multiple xattrs.
+   * getxattr tests. Test that getxattr throws an exception if any of
+   * the following are true:
+   * an xattr that was requested doesn't exist
+   * the caller specifies an unknown namespace
+   * the caller doesn't have access to the namespace
+   * the caller doesn't have permission to get the value of the xattr
+   * the caller does not have search access to the parent directory
+   * the caller has only read access to the owning directory
+   * the caller has only search access to the owning directory and
+   * execute/search access to the actual entity
+   * the caller does not have search access to the owning directory and read
+   * access to the actual entity
    */
   @Test(timeout = 120000)
   public void testGetXAttrs() throws Exception {
@@ -351,21 +362,159 @@ public class FSXAttrBaseTest {
     fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
     fs.setXAttr(path, name2, value2, EnumSet.of(XAttrSetFlag.CREATE));
     
-    // XAttr does not exist.
-    byte[] value = fs.getXAttr(path, name3);
-    Assert.assertEquals(value, null);
+    /* An XAttr that was requested does not exist. */
+    try {
+      final byte[] value = fs.getXAttr(path, name3);
+      Assert.fail("expected IOException");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(
+          "At least one of the attributes provided was not found.", e);
+    }
     
-    List<String> names = Lists.newArrayList();
-    names.add(name1);
-    names.add(name2);
-    names.add(name3);
-    Map<String, byte[]> xattrs = fs.getXAttrs(path, names);
-    Assert.assertEquals(xattrs.size(), 2);
-    Assert.assertArrayEquals(value1, xattrs.get(name1));
-    Assert.assertArrayEquals(value2, xattrs.get(name2));
+    /* Throw an exception if an xattr that was requested does not exist. */
+    {
+      final List<String> names = Lists.newArrayList();
+      names.add(name1);
+      names.add(name2);
+      names.add(name3);
+      try {
+        final Map<String, byte[]> xattrs = fs.getXAttrs(path, names);
+        Assert.fail("expected IOException");
+      } catch (IOException e) {
+        GenericTestUtils.assertExceptionContains(
+            "At least one of the attributes provided was not found.", e);
+      }
+    }
     
     fs.removeXAttr(path, name1);
     fs.removeXAttr(path, name2);
+
+    /* Unknown namespace should throw an exception. */
+    try {
+      final byte[] xattr = fs.getXAttr(path, "wackynamespace.foo");
+      Assert.fail("expected IOException");
+    } catch (Exception e) {
+      GenericTestUtils.assertExceptionContains
+          ("An XAttr name must be prefixed with user/trusted/security/system, " +
+           "followed by a '.'",
+          e);
+    }
+
+    /*
+     * The 'trusted' namespace should not be accessible and should throw an
+     * exception.
+     */
+    final UserGroupInformation user = UserGroupInformation.
+        createUserForTesting("user", new String[] {"mygroup"});
+    fs.setXAttr(path, "trusted.foo", "1234".getBytes());
+    try {
+      user.doAs(new PrivilegedExceptionAction<Object>() {
+          @Override
+          public Object run() throws Exception {
+            final FileSystem userFs = dfsCluster.getFileSystem();
+            final byte[] xattr = userFs.getXAttr(path, "trusted.foo");
+            return null;
+          }
+        });
+      Assert.fail("expected IOException");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("User doesn't have permission", e);
+    }
+
+    fs.setXAttr(path, name1, "1234".getBytes());
+
+    /*
+     * Test that an exception is thrown if the caller doesn't have permission to
+     * get the value of the xattr.
+     */
+
+    /* Set access so that only the owner has access. */
+    fs.setPermission(path, new FsPermission((short) 0700));
+    try {
+      user.doAs(new PrivilegedExceptionAction<Object>() {
+          @Override
+          public Object run() throws Exception {
+            final FileSystem userFs = dfsCluster.getFileSystem();
+            final byte[] xattr = userFs.getXAttr(path, name1);
+            return null;
+          }
+        });
+      Assert.fail("expected IOException");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("Permission denied", e);
+    }
+
+    /*
+     * The caller must have search access to the parent directory.
+     */
+    final Path childDir = new Path(path, "child" + pathCount);
+    /* Set access to parent so that only the owner has access. */
+    FileSystem.mkdirs(fs, childDir, FsPermission.createImmutable((short)0700));
+    fs.setXAttr(childDir, name1, "1234".getBytes());
+    try {
+      user.doAs(new PrivilegedExceptionAction<Object>() {
+          @Override
+          public Object run() throws Exception {
+            final FileSystem userFs = dfsCluster.getFileSystem();
+            final byte[] xattr = userFs.getXAttr(childDir, name1);
+            return null;
+          }
+        });
+      Assert.fail("expected IOException");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("Permission denied", e);
+    }
+
+    /* Check that read access to the owning directory is not good enough. */
+    fs.setPermission(path, new FsPermission((short) 0704));
+    try {
+      user.doAs(new PrivilegedExceptionAction<Object>() {
+          @Override
+          public Object run() throws Exception {
+            final FileSystem userFs = dfsCluster.getFileSystem();
+            final byte[] xattr = userFs.getXAttr(childDir, name1);
+            return null;
+          }
+        });
+      Assert.fail("expected IOException");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("Permission denied", e);
+    }
+
+    /*
+     * Check that search access to the owning directory and search/execute
+     * access to the actual entity with extended attributes is not good enough.
+     */
+    fs.setPermission(path, new FsPermission((short) 0701));
+    fs.setPermission(childDir, new FsPermission((short) 0701));
+    try {
+      user.doAs(new PrivilegedExceptionAction<Object>() {
+          @Override
+          public Object run() throws Exception {
+            final FileSystem userFs = dfsCluster.getFileSystem();
+            final byte[] xattr = userFs.getXAttr(childDir, name1);
+            return null;
+          }
+        });
+      Assert.fail("expected IOException");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("Permission denied", e);
+    }
+
+    /*
+     * Check that search access to the owning directory and read access to
+     * the actual entity with the extended attribute is good enough.
+     */
+    fs.setPermission(path, new FsPermission((short) 0701));
+    fs.setPermission(childDir, new FsPermission((short) 0704));
+    user.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          final FileSystem userFs = dfsCluster.getFileSystem();
+          final byte[] xattr = userFs.getXAttr(childDir, name1);
+          return null;
+        }
+      });
   }
   
   /**
@@ -400,6 +549,166 @@ public class FSXAttrBaseTest {
     Assert.assertArrayEquals(new byte[0], xattrs.get(name3));
     
     fs.removeXAttr(path, name3);
+  }
+
+  /**
+   * removexattr tests. Test that removexattr throws an exception if any of
+   * the following are true:
+   * an xattr that was requested doesn't exist
+   * the caller specifies an unknown namespace
+   * the caller doesn't have access to the namespace
+   * the caller doesn't have permission to get the value of the xattr
+   * the caller does not have "execute" (scan) access to the parent directory
+   * the caller has only read access to the owning directory
+   * the caller has only execute access to the owning directory and execute
+   * access to the actual entity
+   * the caller does not have execute access to the owning directory and write
+   * access to the actual entity
+   */
+  @Test(timeout = 120000)
+  public void testRemoveXAttrPermissions() throws Exception {
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
+    fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
+    fs.setXAttr(path, name2, value2, EnumSet.of(XAttrSetFlag.CREATE));
+    fs.setXAttr(path, name3, null, EnumSet.of(XAttrSetFlag.CREATE));
+
+    try {
+      fs.removeXAttr(path, name2);
+      fs.removeXAttr(path, name2);
+      Assert.fail("expected IOException");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("No matching attributes found", e);
+    }
+
+    /* Unknown namespace should throw an exception. */
+    final String expectedExceptionString = "An XAttr name must be prefixed " +
+        "with user/trusted/security/system, followed by a '.'";
+    try {
+      fs.removeXAttr(path, "wackynamespace.foo");
+      Assert.fail("expected IOException");
+    } catch (RemoteException e) {
+      assertEquals("Unexpected RemoteException: " + e, e.getClassName(),
+          HadoopIllegalArgumentException.class.getCanonicalName());
+      GenericTestUtils.assertExceptionContains(expectedExceptionString, e);
+    } catch (HadoopIllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains(expectedExceptionString, e);
+    }
+
+    /*
+     * The 'trusted' namespace should not be accessible and should throw an
+     * exception.
+     */
+    final UserGroupInformation user = UserGroupInformation.
+        createUserForTesting("user", new String[] {"mygroup"});
+    fs.setXAttr(path, "trusted.foo", "1234".getBytes());
+    try {
+      user.doAs(new PrivilegedExceptionAction<Object>() {
+          @Override
+          public Object run() throws Exception {
+            final FileSystem userFs = dfsCluster.getFileSystem();
+            userFs.removeXAttr(path, "trusted.foo");
+            return null;
+          }
+        });
+      Assert.fail("expected IOException");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("User doesn't have permission", e);
+    } finally {
+      fs.removeXAttr(path, "trusted.foo");
+    }
+
+    /*
+     * Test that an exception is thrown if the caller doesn't have permission to
+     * get the value of the xattr.
+     */
+
+    /* Set access so that only the owner has access. */
+    fs.setPermission(path, new FsPermission((short) 0700));
+    try {
+      user.doAs(new PrivilegedExceptionAction<Object>() {
+          @Override
+          public Object run() throws Exception {
+            final FileSystem userFs = dfsCluster.getFileSystem();
+            userFs.removeXAttr(path, name1);
+            return null;
+          }
+        });
+      Assert.fail("expected IOException");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("Permission denied", e);
+    }
+
+    /*
+     * The caller must have "execute" (scan) access to the parent directory.
+     */
+    final Path childDir = new Path(path, "child" + pathCount);
+    /* Set access to parent so that only the owner has access. */
+    FileSystem.mkdirs(fs, childDir, FsPermission.createImmutable((short)0700));
+    fs.setXAttr(childDir, name1, "1234".getBytes());
+    try {
+      user.doAs(new PrivilegedExceptionAction<Object>() {
+          @Override
+          public Object run() throws Exception {
+            final FileSystem userFs = dfsCluster.getFileSystem();
+            userFs.removeXAttr(childDir, name1);
+            return null;
+          }
+        });
+      Assert.fail("expected IOException");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("Permission denied", e);
+    }
+
+    /* Check that read access to the owning directory is not good enough. */
+    fs.setPermission(path, new FsPermission((short) 0704));
+    try {
+      user.doAs(new PrivilegedExceptionAction<Object>() {
+          @Override
+          public Object run() throws Exception {
+            final FileSystem userFs = dfsCluster.getFileSystem();
+            userFs.removeXAttr(childDir, name1);
+            return null;
+          }
+        });
+      Assert.fail("expected IOException");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("Permission denied", e);
+    }
+
+    /*
+     * Check that execute access to the owning directory and scan access to
+     * the actual entity with extended attributes is not good enough.
+     */
+    fs.setPermission(path, new FsPermission((short) 0701));
+    fs.setPermission(childDir, new FsPermission((short) 0701));
+    try {
+      user.doAs(new PrivilegedExceptionAction<Object>() {
+          @Override
+          public Object run() throws Exception {
+            final FileSystem userFs = dfsCluster.getFileSystem();
+            userFs.removeXAttr(childDir, name1);
+            return null;
+          }
+        });
+      Assert.fail("expected IOException");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("Permission denied", e);
+    }
+
+    /*
+     * Check that execute access to the owning directory and write access to
+     * the actual entity with extended attributes is good enough.
+     */
+    fs.setPermission(path, new FsPermission((short) 0701));
+    fs.setPermission(childDir, new FsPermission((short) 0706));
+    user.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          final FileSystem userFs = dfsCluster.getFileSystem();
+          userFs.removeXAttr(childDir, name1);
+          return null;
+        }
+      });
   }
 
   @Test(timeout = 120000)

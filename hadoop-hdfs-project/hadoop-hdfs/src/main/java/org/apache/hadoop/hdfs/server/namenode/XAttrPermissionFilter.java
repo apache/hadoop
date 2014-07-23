@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.security.AccessControlException;
 
 import com.google.common.collect.Lists;
+import com.google.common.base.Preconditions;
 
 /**
  * There are four types of extended attributes <XAttr> defined by the
@@ -60,8 +61,20 @@ public class XAttrPermissionFilter {
     throw new AccessControlException("User doesn't have permission for xattr: "
         + XAttrHelper.getPrefixName(xAttr));
   }
-  
-  static List<XAttr> filterXAttrsForApi(FSPermissionChecker pc, 
+
+  static void checkPermissionForApi(FSPermissionChecker pc,
+                                    List<XAttr> xAttrs) throws AccessControlException {
+    Preconditions.checkArgument(xAttrs != null);
+    if (xAttrs.isEmpty()) {
+      return;
+    }
+
+    for (XAttr xAttr : xAttrs) {
+      checkPermissionForApi(pc, xAttr);
+    }
+  }
+
+  static List<XAttr> filterXAttrsForApi(FSPermissionChecker pc,
       List<XAttr> xAttrs) {
     assert xAttrs != null : "xAttrs can not be null";
     if (xAttrs == null || xAttrs.isEmpty()) {
