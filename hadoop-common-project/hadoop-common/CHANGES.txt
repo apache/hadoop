@@ -399,6 +399,9 @@ Trunk (Unreleased)
     HADOOP-10826. Iteration on KeyProviderFactory.serviceLoader is 
     thread-unsafe. (benoyantony viat tucu)
 
+    HADOOP-10881. Clarify usage of encryption and encrypted encryption
+    key in KeyProviderCryptoExtension. (wang)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)

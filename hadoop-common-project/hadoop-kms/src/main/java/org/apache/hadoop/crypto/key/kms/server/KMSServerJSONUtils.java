@@ -64,12 +64,12 @@ public class KMSServerJSONUtils {
     Map json = new LinkedHashMap();
     if (encryptedKeyVersion != null) {
       json.put(KMSRESTConstants.VERSION_NAME_FIELD,
-          encryptedKeyVersion.getKeyVersionName());
+          encryptedKeyVersion.getEncryptionKeyVersionName());
       json.put(KMSRESTConstants.IV_FIELD,
           Base64.encodeBase64URLSafeString(
-              encryptedKeyVersion.getIv()));
+              encryptedKeyVersion.getEncryptedKeyIv()));
       json.put(KMSRESTConstants.ENCRYPTED_KEY_VERSION_FIELD,
-          toJSON(encryptedKeyVersion.getEncryptedKey()));
+          toJSON(encryptedKeyVersion.getEncryptedKeyVersion()));
     }
     return json;
   }

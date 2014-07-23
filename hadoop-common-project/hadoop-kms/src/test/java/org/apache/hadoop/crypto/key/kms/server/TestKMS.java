@@ -485,10 +485,10 @@ public class TestKMS {
 
         EncryptedKeyVersion ek1 = kpExt.generateEncryptedKey(kv.getName());
         Assert.assertEquals(KeyProviderCryptoExtension.EEK,
-            ek1.getEncryptedKey().getVersionName());
-        Assert.assertNotNull(ek1.getEncryptedKey().getMaterial());
+            ek1.getEncryptedKeyVersion().getVersionName());
+        Assert.assertNotNull(ek1.getEncryptedKeyVersion().getMaterial());
         Assert.assertEquals(kv.getMaterial().length,
-            ek1.getEncryptedKey().getMaterial().length);
+            ek1.getEncryptedKeyVersion().getMaterial().length);
         KeyProvider.KeyVersion k1 = kpExt.decryptEncryptedKey(ek1);
         Assert.assertEquals(KeyProviderCryptoExtension.EK, k1.getVersionName());
         KeyProvider.KeyVersion k1a = kpExt.decryptEncryptedKey(ek1);
@@ -498,8 +498,8 @@ public class TestKMS {
         EncryptedKeyVersion ek2 = kpExt.generateEncryptedKey(kv.getName());
         KeyProvider.KeyVersion k2 = kpExt.decryptEncryptedKey(ek2);
         boolean isEq = true;
-        for (int i = 0; isEq && i < ek2.getEncryptedKey().getMaterial().length;
-            i++) {
+        for (int i = 0; isEq && i < ek2.getEncryptedKeyVersion()
+            .getMaterial().length; i++) {
           isEq = k2.getMaterial()[i] == k1.getMaterial()[i];
         }
         Assert.assertFalse(isEq);
