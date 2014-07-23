@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.security.authorize;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -26,8 +28,11 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
+@InterfaceStability.Unstable
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce", "HBase", "Hive"})
 public class ProxyUsers {
+
+  public static final String CONF_HADOOP_PROXYUSER = "hadoop.proxyuser";
 
   private static volatile ImpersonationProvider sip ;
 
@@ -54,14 +59,30 @@ public class ProxyUsers {
   }
 
   /**
-   * refresh configuration
-   * @param conf
+   * Refreshes configuration using the specified Proxy user prefix for
+   * properties.
+   *
+   * @param conf configuration
+   * @param proxyUserPrefix proxy user configuration prefix
    */
-  public static void refreshSuperUserGroupsConfiguration(Configuration conf) { 
+  public static void refreshSuperUserGroupsConfiguration(Configuration conf,
+      String proxyUserPrefix) {
+    Preconditions.checkArgument(proxyUserPrefix != null && 
+        !proxyUserPrefix.isEmpty(), "prefix cannot be NULL or empty");
     // sip is volatile. Any assignment to it as well as the object's state
     // will be visible to all the other threads. 
-    sip = getInstance(conf);
+    ImpersonationProvider ip = getInstance(conf);
+    ip.init(proxyUserPrefix);
+    sip = ip;
     ProxyServers.refresh(conf);
+  }
+
+  /**
+   * Refreshes configuration using the default Proxy user prefix for properties.
+   * @param conf configuration
+   */
+  public static void refreshSuperUserGroupsConfiguration(Configuration conf) {
+    refreshSuperUserGroupsConfiguration(conf, CONF_HADOOP_PROXYUSER);
   }
   
   /**

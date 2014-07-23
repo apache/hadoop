@@ -25,6 +25,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.CachingStrategyProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpCopyBlockProto;
@@ -121,10 +122,13 @@ public abstract class Receiver implements DataTransferProtocol {
   /** Receive OP_WRITE_BLOCK */
   private void opWriteBlock(DataInputStream in) throws IOException {
     final OpWriteBlockProto proto = OpWriteBlockProto.parseFrom(vintPrefixed(in));
+    final DatanodeInfo[] targets = PBHelper.convert(proto.getTargetsList());
     writeBlock(PBHelper.convert(proto.getHeader().getBaseHeader().getBlock()),
+        PBHelper.convertStorageType(proto.getStorageType()),
         PBHelper.convert(proto.getHeader().getBaseHeader().getToken()),
         proto.getHeader().getClientName(),
-        PBHelper.convert(proto.getTargetsList()),
+        targets,
+        PBHelper.convertStorageTypes(proto.getTargetStorageTypesList(), targets.length),
         PBHelper.convert(proto.getSource()),
         fromProto(proto.getStage()),
         proto.getPipelineSize(),
@@ -140,10 +144,12 @@ public abstract class Receiver implements DataTransferProtocol {
   private void opTransferBlock(DataInputStream in) throws IOException {
     final OpTransferBlockProto proto =
       OpTransferBlockProto.parseFrom(vintPrefixed(in));
+    final DatanodeInfo[] targets = PBHelper.convert(proto.getTargetsList());
     transferBlock(PBHelper.convert(proto.getHeader().getBaseHeader().getBlock()),
         PBHelper.convert(proto.getHeader().getBaseHeader().getToken()),
         proto.getHeader().getClientName(),
-        PBHelper.convert(proto.getTargetsList()));
+        targets,
+        PBHelper.convertStorageTypes(proto.getTargetStorageTypesList(), targets.length));
   }
 
   /** Receive {@link Op#REQUEST_SHORT_CIRCUIT_FDS} */
@@ -176,6 +182,7 @@ public abstract class Receiver implements DataTransferProtocol {
   private void opReplaceBlock(DataInputStream in) throws IOException {
     OpReplaceBlockProto proto = OpReplaceBlockProto.parseFrom(vintPrefixed(in));
     replaceBlock(PBHelper.convert(proto.getHeader().getBlock()),
+        PBHelper.convertStorageType(proto.getStorageType()),
         PBHelper.convert(proto.getHeader().getToken()),
         proto.getDelHint(),
         PBHelper.convert(proto.getSource()));

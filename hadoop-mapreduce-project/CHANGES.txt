@@ -17,6 +17,9 @@ Trunk (Unreleased)
     MAPREDUCE-5232. Add a configuration to be able to log classpath and other
     system properties on mapreduce JVMs startup.  (Sangjin Lee via vinodkv)
 
+    MAPREDUCE-5910. Make MR AM resync with RM in case of work-preserving
+    RM-restart. (Rohith via jianhe)
+
   IMPROVEMENTS
 
     MAPREDUCE-3481. [Gridmix] Improve Gridmix STRESS mode. (amarrk)
@@ -153,6 +156,12 @@ Release 2.6.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-5971. Move the default options for distcp -p to
+    DistCpOptionSwitch. (clamb via wang)
+
+    MAPREDUCE-5963. ShuffleHandler DB schema should be versioned with
+    compatible/incompatible changes (Junping Du via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -162,6 +171,12 @@ Release 2.6.0 - UNRELEASED
 
     MAPREDUCE-5956. Made MR AM not use maxAttempts to determine if the current
     attempt is the last retry. (Wangda Tan via zjshen)
+
+    MAPREDUCE-5957. AM throws ClassNotFoundException with job classloader
+    enabled if custom output format/committer is used (Sangjin Lee via jlowe)
+
+    MAPREDUCE-5756. CombineFileInputFormat.getSplits() including directories
+    in its results (Jason Dere via jlowe)
 
 Release 2.5.0 - UNRELEASED
 
@@ -306,6 +321,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5517. Fixed MapReduce ApplicationMaster to not validate reduce side
     resource configuration for deciding uber-mode on map-only jobs. (Siqi Li via
     vinodkv)
+
+    MAPREDUCE-5952. LocalContainerLauncher#renameMapOutputForReduce incorrectly 
+    assumes a single dir for mapOutIndex. (Gera Shegalov via kasha)
 
 Release 2.4.1 - 2014-06-23 
 

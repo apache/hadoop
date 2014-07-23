@@ -34,9 +34,21 @@ public class KMSConfiguration {
 
   public static final String CONFIG_PREFIX = "hadoop.kms.";
 
+  // Property to Enable/Disable Caching
+  public static final String KEY_CACHE_ENABLE = CONFIG_PREFIX +
+      "cache.enable";
+  // Timeout for the Key and Metadata Cache
   public static final String KEY_CACHE_TIMEOUT_KEY = CONFIG_PREFIX +
       "cache.timeout.ms";
-  public static final long KEY_CACHE_TIMEOUT_DEFAULT = 10 * 1000; // 10 secs
+  // TImeout for the Current Key cache
+  public static final String CURR_KEY_CACHE_TIMEOUT_KEY = CONFIG_PREFIX +
+      "current.key.cache.timeout.ms";
+
+  public static final boolean KEY_CACHE_ENABLE_DEFAULT = true;
+  // 10 mins
+  public static final long KEY_CACHE_TIMEOUT_DEFAULT = 10 * 60 * 1000;
+  // 30 secs
+  public static final long CURR_KEY_CACHE_TIMEOUT_DEFAULT = 30 * 1000;
 
   static Configuration getConfiguration(boolean loadHadoopDefaults,
       String ... resources) {

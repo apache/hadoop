@@ -26,7 +26,6 @@ import static org.apache.hadoop.hdfs.protocol.HdfsConstants.HA_DT_SERVICE_PREFIX
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -38,14 +37,13 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.NameNodeProxies.ProxyAndInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
-import org.apache.hadoop.hdfs.server.namenode.ha.AbstractNNFailoverProxyProvider;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.ha.AbstractNNFailoverProxyProvider;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
@@ -259,12 +257,11 @@ public class HAUtil {
   /**
    * Parse the file system URI out of the provided token.
    */
-  public static URI getServiceUriFromToken(final String scheme,
-                                           Token<?> token) {
+  public static URI getServiceUriFromToken(final String scheme, Token<?> token) {
     String tokStr = token.getService().toString();
-
-    if (tokStr.startsWith(HA_DT_SERVICE_PREFIX)) {
-      tokStr = tokStr.replaceFirst(HA_DT_SERVICE_PREFIX, "");
+    final String prefix = buildTokenServicePrefixForLogicalUri(scheme);
+    if (tokStr.startsWith(prefix)) {
+      tokStr = tokStr.replaceFirst(prefix, "");
     }
     return URI.create(scheme + "://" + tokStr);
   }
@@ -273,10 +270,13 @@ public class HAUtil {
    * Get the service name used in the delegation token for the given logical
    * HA service.
    * @param uri the logical URI of the cluster
+   * @param scheme the scheme of the corresponding FileSystem
    * @return the service name
    */
-  public static Text buildTokenServiceForLogicalUri(URI uri) {
-    return new Text(HA_DT_SERVICE_PREFIX + uri.getHost());
+  public static Text buildTokenServiceForLogicalUri(final URI uri,
+      final String scheme) {
+    return new Text(buildTokenServicePrefixForLogicalUri(scheme)
+        + uri.getHost());
   }
   
   /**
@@ -286,7 +286,11 @@ public class HAUtil {
   public static boolean isTokenForLogicalUri(Token<?> token) {
     return token.getService().toString().startsWith(HA_DT_SERVICE_PREFIX);
   }
-  
+
+  public static String buildTokenServicePrefixForLogicalUri(String scheme) {
+    return HA_DT_SERVICE_PREFIX + scheme + ":";
+  }
+
   /**
    * Locate a delegation token associated with the given HA cluster URI, and if
    * one is found, clone it to also represent the underlying namenode address.
@@ -298,7 +302,9 @@ public class HAUtil {
   public static void cloneDelegationTokenForLogicalUri(
       UserGroupInformation ugi, URI haUri,
       Collection<InetSocketAddress> nnAddrs) {
-    Text haService = HAUtil.buildTokenServiceForLogicalUri(haUri);
+    // this cloning logic is only used by hdfs
+    Text haService = HAUtil.buildTokenServiceForLogicalUri(haUri,
+        HdfsConstants.HDFS_URI_SCHEME);
     Token<DelegationTokenIdentifier> haToken =
         tokenSelector.selectToken(haService, ugi.getTokens());
     if (haToken != null) {
@@ -309,8 +315,9 @@ public class HAUtil {
         Token<DelegationTokenIdentifier> specificToken =
             new Token.PrivateToken<DelegationTokenIdentifier>(haToken);
         SecurityUtil.setTokenService(specificToken, singleNNAddr);
-        Text alias =
-            new Text(HA_DT_SERVICE_PREFIX + "//" + specificToken.getService());
+        Text alias = new Text(
+            buildTokenServicePrefixForLogicalUri(HdfsConstants.HDFS_URI_SCHEME)
+                + "//" + specificToken.getService());
         ugi.addToken(alias, specificToken);
         LOG.debug("Mapped HA service delegation token for logical URI " +
             haUri + " to namenode " + singleNNAddr);

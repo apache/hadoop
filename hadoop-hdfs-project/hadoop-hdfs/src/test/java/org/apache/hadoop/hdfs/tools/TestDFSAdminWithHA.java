@@ -21,6 +21,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 
 import com.google.common.base.Charsets;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -46,6 +47,7 @@ public class TestDFSAdminWithHA {
   private PrintStream originErr;
 
   private static final String NSID = "ns1";
+  private static String newLine = System.getProperty("line.separator");
 
   private void assertOutputMatches(String string) {
     String errOutput = new String(out.toByteArray(), Charsets.UTF_8);
@@ -99,6 +101,14 @@ public class TestDFSAdminWithHA {
     System.err.flush();
     System.setOut(originOut);
     System.setErr(originErr);
+    if (admin != null) {
+      admin.close();
+    }
+    if (cluster != null) {
+      cluster.shutdown();
+    }
+    out.reset();
+    err.reset();
   }
 
   @Test(timeout = 30000)
@@ -108,25 +118,25 @@ public class TestDFSAdminWithHA {
     int exitCode = admin.run(new String[] {"-safemode", "enter"});
     assertEquals(err.toString().trim(), 0, exitCode);
     String message = "Safe mode is ON in.*";
-    assertOutputMatches(message + "\n" + message + "\n");
+    assertOutputMatches(message + newLine + message + newLine);
 
     // Get safemode
     exitCode = admin.run(new String[] {"-safemode", "get"});
     assertEquals(err.toString().trim(), 0, exitCode);
     message = "Safe mode is ON in.*";
-    assertOutputMatches(message + "\n" + message + "\n");
+    assertOutputMatches(message + newLine + message + newLine);
 
     // Leave safemode
     exitCode = admin.run(new String[] {"-safemode", "leave"});
     assertEquals(err.toString().trim(), 0, exitCode);
     message = "Safe mode is OFF in.*";
-    assertOutputMatches(message + "\n" + message + "\n");
+    assertOutputMatches(message + newLine + message + newLine);
 
     // Get safemode
     exitCode = admin.run(new String[] {"-safemode", "get"});
     assertEquals(err.toString().trim(), 0, exitCode);
     message = "Safe mode is OFF in.*";
-    assertOutputMatches(message + "\n" + message + "\n");
+    assertOutputMatches(message + newLine + message + newLine);
   }
 
   @Test (timeout = 30000)
@@ -136,12 +146,12 @@ public class TestDFSAdminWithHA {
     int exitCode = admin.run(new String[] {"-safemode", "enter"});
     assertEquals(err.toString().trim(), 0, exitCode);
     String message = "Safe mode is ON in.*";
-    assertOutputMatches(message + "\n" + message + "\n");
+    assertOutputMatches(message + newLine + message + newLine);
 
     exitCode = admin.run(new String[] {"-saveNamespace"});
     assertEquals(err.toString().trim(), 0, exitCode);
     message = "Save namespace successful for.*";
-    assertOutputMatches(message + "\n" + message + "\n");
+    assertOutputMatches(message + newLine + message + newLine);
   }
 
   @Test (timeout = 30000)
@@ -151,17 +161,17 @@ public class TestDFSAdminWithHA {
     assertEquals(err.toString().trim(), 0, exitCode);
     String message = "restoreFailedStorage is set to false for.*";
     // Default is false
-    assertOutputMatches(message + "\n" + message + "\n");
+    assertOutputMatches(message + newLine + message + newLine);
 
     exitCode = admin.run(new String[] {"-restoreFailedStorage", "true"});
     assertEquals(err.toString().trim(), 0, exitCode);
     message = "restoreFailedStorage is set to true for.*";
-    assertOutputMatches(message + "\n" + message + "\n");
+    assertOutputMatches(message + newLine + message + newLine);
 
     exitCode = admin.run(new String[] {"-restoreFailedStorage", "false"});
     assertEquals(err.toString().trim(), 0, exitCode);
     message = "restoreFailedStorage is set to false for.*";
-    assertOutputMatches(message + "\n" + message + "\n");
+    assertOutputMatches(message + newLine + message + newLine);
   }
 
   @Test (timeout = 30000)
@@ -170,7 +180,7 @@ public class TestDFSAdminWithHA {
     int exitCode = admin.run(new String[] {"-refreshNodes"});
     assertEquals(err.toString().trim(), 0, exitCode);
     String message = "Refresh nodes successful for.*";
-    assertOutputMatches(message + "\n" + message + "\n");
+    assertOutputMatches(message + newLine + message + newLine);
   }
 
   @Test (timeout = 30000)
@@ -179,7 +189,7 @@ public class TestDFSAdminWithHA {
     int exitCode = admin.run(new String[] {"-setBalancerBandwidth", "10"});
     assertEquals(err.toString().trim(), 0, exitCode);
     String message = "Balancer bandwidth is set to 10 for.*";
-    assertOutputMatches(message + "\n" + message + "\n");
+    assertOutputMatches(message + newLine + message + newLine);
   }
 
   @Test (timeout = 30000)
@@ -189,7 +199,7 @@ public class TestDFSAdminWithHA {
     assertEquals(err.toString().trim(), 0, exitCode);
     String message = "Created metasave file dfs.meta in the log directory"
         + " of namenode.*";
-    assertOutputMatches(message + "\n" + message + "\n");
+    assertOutputMatches(message + newLine + message + newLine);
   }
 
   @Test (timeout = 30000)
@@ -198,7 +208,7 @@ public class TestDFSAdminWithHA {
     int exitCode = admin.run(new String[] {"-refreshServiceAcl"});
     assertEquals(err.toString().trim(), 0, exitCode);
     String message = "Refresh service acl successful for.*";
-    assertOutputMatches(message + "\n" + message + "\n");
+    assertOutputMatches(message + newLine + message + newLine);
   }
 
   @Test (timeout = 30000)
@@ -207,7 +217,7 @@ public class TestDFSAdminWithHA {
     int exitCode = admin.run(new String[] {"-refreshUserToGroupsMappings"});
     assertEquals(err.toString().trim(), 0, exitCode);
     String message = "Refresh user to groups mapping successful for.*";
-    assertOutputMatches(message + "\n" + message + "\n");
+    assertOutputMatches(message + newLine + message + newLine);
   }
 
   @Test (timeout = 30000)
@@ -217,7 +227,7 @@ public class TestDFSAdminWithHA {
         new String[] {"-refreshSuperUserGroupsConfiguration"});
     assertEquals(err.toString().trim(), 0, exitCode);
     String message = "Refresh super user groups configuration successful for.*";
-    assertOutputMatches(message + "\n" + message + "\n");
+    assertOutputMatches(message + newLine + message + newLine);
   }
 
   @Test (timeout = 30000)
@@ -226,6 +236,6 @@ public class TestDFSAdminWithHA {
     int exitCode = admin.run(new String[] {"-refreshCallQueue"});
     assertEquals(err.toString().trim(), 0, exitCode);
     String message = "Refresh call queue successful for.*";
-    assertOutputMatches(message + "\n" + message + "\n");
+    assertOutputMatches(message + newLine + message + newLine);
   }
 }

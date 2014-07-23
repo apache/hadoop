@@ -12,6 +12,8 @@ Trunk (Unreleased)
     HDFS-5570. Deprecate hftp / hsftp and replace them with webhdfs / swebhdfs.
     (wheat9)
 
+    HDFS-2538. option to disable fsck dots (Mohammad Kamrul Islam via aw)
+
   NEW FEATURES
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
@@ -287,7 +289,34 @@ Release 2.6.0 - UNRELEASED
     HDFS-2856. Fix block protocol so that Datanodes don't require root or jsvc.
     (cnauroth)
 
+    HDFS-5624. Add HDFS tests for ACLs in combination with viewfs.
+    (Stephen Chu via cnauroth)
+
+    HDFS-6655. Add 'header banner' to 'explorer.html' also in Namenode UI
+    (vinayakumarb)
+
+    HDFS-4120. Add a new "-skipSharedEditsCheck" option for BootstrapStandby
+    (Liang Xie and Rakesh R via vinayakumarb)
+
+    HDFS-6597. Add a new option to NN upgrade to terminate the process after
+    upgrade on NN is completed. (Danilo Vunjak via cnauroth)
+
+    HDFS-6700. BlockPlacementPolicy shoud choose storage but not datanode for
+    deletion. (szetszwo)
+
+    HDFS-6616. Add exclude-datanodes feature to WebHDFS redirection so that it
+    will not redirect retries to the same datanode. (zhaoyunjiong via szetszwo)
+
+    HDFS-6702. Change DFSClient to pass the StorageType from the namenode to
+    datanodes and change datanode to write block replicas using the specified
+    storage type. (szetszwo)
+
+    HDFS-6701. Make seed optional in NetworkTopology#sortByDistance.
+    (Ashwin Shankar via wang)
+
   OPTIMIZATIONS
+
+    HDFS-6690. Deduplicate xattr names in memory. (wang)
 
   BUG FIXES
 
@@ -308,6 +337,25 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-5809. BlockPoolSliceScanner and high speed hdfs appending make
     datanode to drop into infinite loop (cmccabe)
+
+    HDFS-6456. NFS should throw error for invalid entry in 
+    dfs.nfs.exports.allowed.hosts (Abhiraj Butala via brandonli)
+
+    HDFS-6689. NFS doesn't return correct lookup access for direcories (brandonli)
+
+    HDFS-6478. RemoteException can't be retried properly for non-HA scenario.
+    (Ming Ma via jing9)
+
+    HDFS-6693. TestDFSAdminWithHA fails on windows ( vinayakumarb )
+
+    HDFS-6667. In HDFS HA mode, Distcp/SLive with webhdfs on secure cluster fails
+    with Client cannot authenticate via:[TOKEN, KERBEROS] error. (jing9)
+
+    HDFS-6704. Fix the command to launch JournalNode in HDFS-HA document.
+    (Akira AJISAKA via jing9)
+
+    HDFS-6731. Run "hdfs zkfc-formatZK" on a server in a non-namenode will cause
+    a null pointer exception. (Masatake Iwasaki via brandonli)
 
 Release 2.5.0 - UNRELEASED
 
@@ -554,6 +602,11 @@ Release 2.5.0 - UNRELEASED
     HDFS-6493. Change dfs.namenode.startup.delay.block.deletion to second
     instead of millisecond. (Juan Yu via wang)
 
+    HDFS-6680. BlockPlacementPolicyDefault does not choose favored nodes
+    correctly.  (szetszwo) 
+
+    HDFS-6712. Document HDFS Multihoming Settings. (Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
@@ -562,6 +615,8 @@ Release 2.5.0 - UNRELEASED
     NetworkTopology#sortByDistance. (Yongjun Zhang via wang)
 
     HDFS-6583. Remove clientNode in FileUnderConstructionFeature. (wheat9)
+
+    HDFS-6599. 2.4 addBlock is 10 to 20 times slower compared to 0.23 (daryn)
 
   BUG FIXES 
 
@@ -833,6 +888,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6378. NFS registration should timeout instead of hanging when
     portmap/rpcbind is not available (Abhiraj Butala via brandonli)
+
+    HDFS-6703. NFS: Files can be deleted from a read-only mount
+    (Srikanth Upputuri via brandonli)
 
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 

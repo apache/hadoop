@@ -610,6 +610,36 @@ public class TestWorkPreservingRMRestart {
         attempt0.getMasterContainer().getId()).isAMContainer());
   }
 
+  @Test (timeout = 20000)
+  public void testRecoverSchedulerAppAndAttemptSynchronously() throws Exception {
+    // start RM
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+    rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    // create app and launch the AM
+    RMApp app0 = rm1.submitApp(200);
+    MockAM am0 = MockRM.launchAndRegisterAM(app0, rm1, nm1);
+
+    rm2 = new MockRM(conf, memStore);
+    rm2.start();
+    nm1.setResourceTrackerService(rm2.getResourceTrackerService());
+    // scheduler app/attempt is immediately available after RM is re-started.
+    Assert.assertNotNull(rm2.getResourceScheduler().getSchedulerAppInfo(
+      am0.getApplicationAttemptId()));
+
+    // getTransferredContainers should not throw NPE.
+    ((AbstractYarnScheduler) rm2.getResourceScheduler())
+      .getTransferredContainers(am0.getApplicationAttemptId());
+
+    List<NMContainerStatus> containers = createNMContainerStatusForApp(am0);
+    nm1.registerNode(containers, null);
+    waitForNumContainersToRecover(2, rm2, am0.getApplicationAttemptId());
+  }
 
   private void asserteMetrics(QueueMetrics qm, int appsSubmitted,
       int appsPending, int appsRunning, int appsCompleted,

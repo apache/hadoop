@@ -36,10 +36,6 @@ Trunk (Unreleased)
 
     HADOOP-7595. Upgrade dependency to Avro 1.5.3. (Alejandro Abdelnur via atm)
 
-    HADOOP-7664. Remove warmings when overriding final parameter configuration
-    if the override value is same as the final parameter value.
-    (Ravi Prakash via suresh)
-
     HADOOP-8078. Add capability to turn on security in unit tests. (Jaimin 
     Jetly via jitendra)
 
@@ -162,9 +158,6 @@ Trunk (Unreleased)
 
     HADOOP-10485. Remove dead classes in hadoop-streaming. (wheat9)
 
-    HADOOP-10607. Create API to separate credential/password storage from
-    applications. (Larry McCay via omalley)
-
     HADOOP-10696. Add optional attributes to KeyProvider Options and Metadata. 
     (tucu)
 
@@ -181,6 +174,20 @@ Trunk (Unreleased)
     KeyProvider. (wang)
 
     HADOOP-10736. Add key attributes to the key shell. (Mike Yoder via wang)
+
+    HADOOP-10824. Refactor KMSACLs to avoid locking. (Benoy Antony via umamahesh)
+
+    HADOOP-10841. EncryptedKeyVersion should have a key name property. 
+    (asuresh via tucu)
+
+    HADOOP-10842. CryptoExtension generateEncryptedKey method should 
+    receive the key name. (asuresh via tucu)
+
+    HADOOP-10750. KMSKeyProviderCache should be in hadoop-common. 
+    (asuresh via tucu)
+
+    HADOOP-10720. KMS: Implement generateEncryptedKey and decryptEncryptedKey
+    in the REST API. (asuresh via tucu)
 
   BUG FIXES
 
@@ -383,6 +390,18 @@ Trunk (Unreleased)
 
     HADOOP-10834. Typo in CredentialShell usage. (Benoy Antony via umamahesh)
 
+    HADOOP-10816. KeyShell returns -1 on error to the shell, should be 1.
+    (Mike Yoder via wang)
+
+    HADOOP-10840. Fix OutOfMemoryError caused by metrics system in Azure File
+    System. (Shanyu Zhao via cnauroth)
+
+    HADOOP-10826. Iteration on KeyProviderFactory.serviceLoader is 
+    thread-unsafe. (benoyantony viat tucu)
+
+    HADOOP-10881. Clarify usage of encryption and encrypted encryption
+    key in KeyProviderCryptoExtension. (wang)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -401,6 +420,38 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10815. Implement Windows equivalent of mlock. (cnauroth)
 
+    HADOOP-7664. Remove warmings when overriding final parameter configuration
+    if the override value is same as the final parameter value.
+    (Ravi Prakash via suresh)
+
+    HADOOP-10673. Update rpc metrics when the call throws an exception. (Ming Ma
+    via jing9)
+
+    HADOOP-10845. Add common tests for ACLs in combination with viewfs.
+    (Stephen Chu via cnauroth)
+
+    HADOOP-10839. Add unregisterSource() to MetricsSystem API.
+    (Shanyu Zhao via cnauroth)
+
+    HADOOP-10607. Create an API to separate credentials/password storage
+    from applications (Larry McCay via omalley)
+
+    HADOOP-10732. Fix locking in credential update. (Ted Yu via omalley)
+
+    HADOOP-10733. Fix potential null dereference in CredShell. (Ted Yu via
+    omalley)
+
+    HADOOP-10610. Upgrade S3n s3.fs.buffer.dir to support multi directories.
+    (Ted Malaska via atm)
+
+    HADOOP-10817. ProxyUsers configuration should support configurable 
+    prefixes. (tucu)
+
+    HADOOP-10755. Support negative caching of user-group mapping.
+    (Lei Xu via wang)
+
+    HADOOP-10855. Allow Text to be read with a known Length. (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -415,6 +466,19 @@ Release 2.6.0 - UNRELEASED
     sysconf use (Dmitry Sivachenko via Colin Patrick McCabe)
 
     HADOOP-10810. Clean up native code compilation warnings. (cnauroth)
+
+    HADOOP-9921. daemon scripts should remove pid file on stop call after stop
+    or process is found not running ( vinayakumarb )
+
+    HADOOP-10591.  Compression codecs must used pooled direct buffers or
+    deallocate direct buffers when stream is closed (cmccabe)
+
+    HADOOP-10857.  Native Libraries Guide doen't mention a dependency on
+    openssl-development package (ozawa via cmccabe)
+
+    HADOOP-10866. RawLocalFileSystem fails to read symlink targets via the stat
+    command when the format of the stat command uses non-curly quotes (yzhang
+    via cmccabe)
 
 Release 2.5.0 - UNRELEASED
 
@@ -737,6 +801,9 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10710. hadoop.auth cookie is not properly constructed according to 
     RFC2109. (Juan Yu via tucu)
+
+    HADOOP-10864. Tool documentenation is broken. (Akira Ajisaka
+    via Arpit Agarwal)
 
 Release 2.4.1 - 2014-06-23 
 

@@ -50,6 +50,7 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.AclUtil;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.viewfs.InodeTree.INode;
 import org.apache.hadoop.fs.viewfs.InodeTree.INodeLink;
@@ -870,6 +871,47 @@ public class ViewFileSystem extends FileSystem {
     @Override
     public short getDefaultReplication(Path f) {
       throw new NotInMountpointException(f, "getDefaultReplication");
+    }
+
+    @Override
+    public void modifyAclEntries(Path path, List<AclEntry> aclSpec)
+        throws IOException {
+      checkPathIsSlash(path);
+      throw readOnlyMountTable("modifyAclEntries", path);
+    }
+
+    @Override
+    public void removeAclEntries(Path path, List<AclEntry> aclSpec)
+        throws IOException {
+      checkPathIsSlash(path);
+      throw readOnlyMountTable("removeAclEntries", path);
+    }
+
+    @Override
+    public void removeDefaultAcl(Path path) throws IOException {
+      checkPathIsSlash(path);
+      throw readOnlyMountTable("removeDefaultAcl", path);
+    }
+
+    @Override
+    public void removeAcl(Path path) throws IOException {
+      checkPathIsSlash(path);
+      throw readOnlyMountTable("removeAcl", path);
+    }
+
+    @Override
+    public void setAcl(Path path, List<AclEntry> aclSpec) throws IOException {
+      checkPathIsSlash(path);
+      throw readOnlyMountTable("setAcl", path);
+    }
+
+    @Override
+    public AclStatus getAclStatus(Path path) throws IOException {
+      checkPathIsSlash(path);
+      return new AclStatus.Builder().owner(ugi.getUserName())
+          .group(ugi.getGroupNames()[0])
+          .addEntries(AclUtil.getMinimalAcl(PERMISSION_555))
+          .stickyBit(false).build();
     }
   }
 }

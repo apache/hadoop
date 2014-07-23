@@ -18,16 +18,37 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import static org.apache.hadoop.fs.CreateFlag.CREATE;
+import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.junit.Assert.assertTrue;
+
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.InputStream;
 import java.io.IOException;
+import java.io.LineNumberReader;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
-import org.junit.Assert;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.AbstractFileSystem;
@@ -45,15 +66,13 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.FakeFSDataInputStream;
 
-import static org.apache.hadoop.fs.CreateFlag.*;
-
-
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.*;
-import org.mockito.ArgumentMatcher;
-import org.mockito.Matchers;
-import static org.mockito.Mockito.*;
+import org.junit.After;
+import org.junit.Assert;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 public class TestDefaultContainerExecutor {
 
@@ -188,6 +207,92 @@ public class TestDefaultContainerExecutor {
       }
     } finally {
       deleteTmpFiles();
+    }
+  }
+
+  @Test
+  public void testContainerLaunchError()
+      throws IOException, InterruptedException {
+
+    Path localDir = new Path(BASE_TMP_PATH, "localDir");
+    List<String> localDirs = new ArrayList<String>();
+    localDirs.add(localDir.toString());
+    List<String> logDirs = new ArrayList<String>();
+    Path logDir = new Path(BASE_TMP_PATH, "logDir");
+    logDirs.add(logDir.toString());
+
+    Configuration conf = new Configuration();
+    conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "077");
+       conf.set(YarnConfiguration.NM_LOCAL_DIRS, localDir.toString());
+    conf.set(YarnConfiguration.NM_LOG_DIRS, logDir.toString());
+    
+    FileContext lfs = FileContext.getLocalFSFileContext(conf);
+    DefaultContainerExecutor mockExec = spy(new DefaultContainerExecutor(lfs));
+    mockExec.setConf(conf);
+    doAnswer(
+        new Answer() {
+          @Override
+          public Object answer(InvocationOnMock invocationOnMock)
+              throws Throwable {
+            String diagnostics = (String) invocationOnMock.getArguments()[0];
+            assertTrue("Invalid Diagnostics message: " + diagnostics,
+                diagnostics.contains("No such file or directory"));
+            return null;
+          }
+        }
+    ).when(mockExec).logOutput(any(String.class));
+
+    String appSubmitter = "nobody";
+    String appId = "APP_ID";
+    String containerId = "CONTAINER_ID";
+    Container container = mock(Container.class);
+    ContainerId cId = mock(ContainerId.class);
+    ContainerLaunchContext context = mock(ContainerLaunchContext.class);
+    HashMap<String, String> env = new HashMap<String, String>();
+
+    when(container.getContainerId()).thenReturn(cId);
+    when(container.getLaunchContext()).thenReturn(context);
+    try {
+      doAnswer(new Answer() {
+        @Override
+        public Object answer(InvocationOnMock invocationOnMock)
+            throws Throwable {
+          ContainerDiagnosticsUpdateEvent event =
+              (ContainerDiagnosticsUpdateEvent) invocationOnMock
+                  .getArguments()[0];
+          assertTrue("Invalid Diagnostics message: "
+                  + event.getDiagnosticsUpdate(),
+              event.getDiagnosticsUpdate().contains("No such file or directory")
+          );
+          return null;
+        }
+      }).when(container).handle(any(ContainerDiagnosticsUpdateEvent.class));
+
+      when(cId.toString()).thenReturn(containerId);
+      when(cId.getApplicationAttemptId()).thenReturn(
+          ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 0));
+
+      when(context.getEnvironment()).thenReturn(env);
+
+      mockExec.createUserLocalDirs(localDirs, appSubmitter);
+      mockExec.createUserCacheDirs(localDirs, appSubmitter);
+      mockExec.createAppDirs(localDirs, appSubmitter, appId);
+      mockExec.createAppLogDirs(appId, logDirs);
+
+      Path scriptPath = new Path("file:///bin/echo");
+      Path tokensPath = new Path("file:///dev/null");
+      Path workDir = localDir;
+      Path pidFile = new Path(workDir, "pid.txt");
+
+      mockExec.init();
+      mockExec.activateContainer(cId, pidFile);
+      int ret = mockExec
+          .launchContainer(container, scriptPath, tokensPath, appSubmitter,
+              appId, workDir, localDirs, localDirs);
+      Assert.assertNotSame(0, ret);
+    } finally {
+      mockExec.deleteAsUser(appSubmitter, localDir);
+      mockExec.deleteAsUser(appSubmitter, logDir);
     }
   }
 

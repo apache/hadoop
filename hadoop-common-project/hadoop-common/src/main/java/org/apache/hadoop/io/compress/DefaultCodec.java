@@ -51,14 +51,8 @@ public class DefaultCodec implements Configurable, CompressionCodec, DirectDecom
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out) 
   throws IOException {
-    // This may leak memory if called in a loop. The createCompressor() call
-    // may cause allocation of an untracked direct-backed buffer if native
-    // libs are being used (even if you close the stream).  A Compressor
-    // object should be reused between successive calls.
-    LOG.warn("DefaultCodec.createOutputStream() may leak memory. "
-        + "Create a compressor first.");
-    return new CompressorStream(out, createCompressor(), 
-                                conf.getInt("io.file.buffer.size", 4*1024));
+    return CompressionCodec.Util.
+        createOutputStreamWithCodecPool(this, conf, out);
   }
 
   @Override
@@ -82,8 +76,8 @@ public class DefaultCodec implements Configurable, CompressionCodec, DirectDecom
   @Override
   public CompressionInputStream createInputStream(InputStream in) 
   throws IOException {
-    return new DecompressorStream(in, createDecompressor(),
-                                  conf.getInt("io.file.buffer.size", 4*1024));
+    return CompressionCodec.Util.
+        createInputStreamWithCodecPool(this, conf, in);
   }
 
   @Override

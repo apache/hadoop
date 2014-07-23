@@ -312,10 +312,12 @@ public class TestWrites {
         System.getProperty("user.name"));
     String currentUser = System.getProperty("user.name");
     config.set(
-            DefaultImpersonationProvider.getProxySuperuserGroupConfKey(currentUser),
+            DefaultImpersonationProvider.getTestProvider().
+                getProxySuperuserGroupConfKey(currentUser),
             "*");
     config.set(
-            DefaultImpersonationProvider.getProxySuperuserIpConfKey(currentUser),
+            DefaultImpersonationProvider.getTestProvider().
+                getProxySuperuserIpConfKey(currentUser),
             "*");
     ProxyUsers.refreshSuperUserGroupsConfiguration(config);
 

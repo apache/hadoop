@@ -50,7 +50,7 @@ public class OptionsParser {
     protected String[] flatten(Options options, String[] arguments, boolean stopAtNonOption) {
       for (int index = 0; index < arguments.length; index++) {
         if (arguments[index].equals("-" + DistCpOptionSwitch.PRESERVE_STATUS.getSwitch())) {
-          arguments[index] = "-prbugpc";
+          arguments[index] = DistCpOptionSwitch.PRESERVE_STATUS_DEFAULT;
         }
       }
       return super.flatten(options, arguments, stopAtNonOption);

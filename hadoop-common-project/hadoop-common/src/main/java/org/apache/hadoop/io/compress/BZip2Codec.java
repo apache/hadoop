@@ -100,7 +100,8 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out)
       throws IOException {
-    return createOutputStream(out, createCompressor());
+    return CompressionCodec.Util.
+        createOutputStreamWithCodecPool(this, conf, out);
   }
 
   /**
@@ -153,7 +154,8 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
   @Override
   public CompressionInputStream createInputStream(InputStream in)
       throws IOException {
-    return createInputStream(in, createDecompressor());
+    return CompressionCodec.Util.
+        createInputStreamWithCodecPool(this, conf, in);
   }
 
   /**

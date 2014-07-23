@@ -33,7 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.Timer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -58,23 +58,34 @@ public class Groups {
   private final Map<String, List<String>> staticUserToGroupsMap = 
       new HashMap<String, List<String>>();
   private final long cacheTimeout;
+  private final long negativeCacheTimeout;
   private final long warningDeltaMs;
+  private final Timer timer;
 
   public Groups(Configuration conf) {
+    this(conf, new Timer());
+  }
+
+  public Groups(Configuration conf, Timer timer) {
     impl = 
       ReflectionUtils.newInstance(
           conf.getClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING, 
                         ShellBasedUnixGroupsMapping.class, 
                         GroupMappingServiceProvider.class), 
           conf);
-    
+
     cacheTimeout = 
       conf.getLong(CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS, 
           CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS_DEFAULT) * 1000;
+    negativeCacheTimeout =
+      conf.getLong(CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_NEGATIVE_CACHE_SECS,
+          CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_NEGATIVE_CACHE_SECS_DEFAULT) * 1000;
     warningDeltaMs =
       conf.getLong(CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_WARN_AFTER_MS,
         CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_WARN_AFTER_MS_DEFAULT);
     parseStaticMapping(conf);
+
+    this.timer = timer;
 
     if(LOG.isDebugEnabled())
       LOG.debug("Group mapping impl=" + impl.getClass().getName() + 
@@ -111,7 +122,29 @@ public class Groups {
       staticUserToGroupsMap.put(user, groups);
     }
   }
+
+  /**
+   * Determine whether the CachedGroups is expired.
+   * @param groups cached groups for one user.
+   * @return true if groups is expired from useToGroupsMap.
+   */
+  private boolean hasExpired(CachedGroups groups, long startMs) {
+    if (groups == null) {
+      return true;
+    }
+    long timeout = cacheTimeout;
+    if (isNegativeCacheEnabled() && groups.getGroups().isEmpty()) {
+      // This CachedGroups is in the negative cache, thus it should expire
+      // sooner.
+      timeout = negativeCacheTimeout;
+    }
+    return groups.getTimestamp() + timeout <= startMs;
+  }
   
+  private boolean isNegativeCacheEnabled() {
+    return negativeCacheTimeout > 0;
+  }
+
   /**
    * Get the group memberships of a given user.
    * @param user User's name
@@ -126,18 +159,22 @@ public class Groups {
     }
     // Return cached value if available
     CachedGroups groups = userToGroupsMap.get(user);
-    long startMs = Time.monotonicNow();
-    // if cache has a value and it hasn't expired
-    if (groups != null && (groups.getTimestamp() + cacheTimeout > startMs)) {
+    long startMs = timer.monotonicNow();
+    if (!hasExpired(groups, startMs)) {
       if(LOG.isDebugEnabled()) {
         LOG.debug("Returning cached groups for '" + user + "'");
+      }
+      if (groups.getGroups().isEmpty()) {
+        // Even with enabling negative cache, getGroups() has the same behavior
+        // that throws IOException if the groups for the user is empty.
+        throw new IOException("No groups found for user " + user);
       }
       return groups.getGroups();
     }
 
     // Create and cache user's groups
     List<String> groupList = impl.getGroups(user);
-    long endMs = Time.monotonicNow();
+    long endMs = timer.monotonicNow();
     long deltaMs = endMs - startMs ;
     UserGroupInformation.metrics.addGetGroups(deltaMs);
     if (deltaMs > warningDeltaMs) {
@@ -146,6 +183,9 @@ public class Groups {
     }
     groups = new CachedGroups(groupList, endMs);
     if (groups.getGroups().isEmpty()) {
+      if (isNegativeCacheEnabled()) {
+        userToGroupsMap.put(user, groups);
+      }
       throw new IOException("No groups found for user " + user);
     }
     userToGroupsMap.put(user, groups);

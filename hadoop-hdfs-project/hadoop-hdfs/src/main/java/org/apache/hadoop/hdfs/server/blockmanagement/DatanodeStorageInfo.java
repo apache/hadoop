@@ -22,6 +22,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
@@ -289,5 +290,22 @@ public class DatanodeStorageInfo {
   @Override
   public String toString() {
     return "[" + storageType + "]" + storageID + ":" + state;
+  }
+
+  /** @return the first {@link DatanodeStorageInfo} corresponding to
+   *          the given datanode
+   */
+  static DatanodeStorageInfo getDatanodeStorageInfo(
+      final Iterable<DatanodeStorageInfo> infos,
+      final DatanodeDescriptor datanode) {
+    if (datanode == null) {
+      return null;
+    }
+    for(DatanodeStorageInfo storage : infos) {
+      if (storage.getDatanodeDescriptor() == datanode) {
+        return storage;
+      }
+    }
+    return null;
   }
 }

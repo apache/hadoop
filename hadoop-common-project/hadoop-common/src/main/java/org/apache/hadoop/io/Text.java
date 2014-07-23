@@ -292,9 +292,7 @@ public class Text extends BinaryComparable
   @Override
   public void readFields(DataInput in) throws IOException {
     int newLength = WritableUtils.readVInt(in);
-    setCapacity(newLength, false);
-    in.readFully(bytes, 0, newLength);
-    length = newLength;
+    readWithKnownLength(in, newLength);
   }
   
   public void readFields(DataInput in, int maxLength) throws IOException {
@@ -306,15 +304,24 @@ public class Text extends BinaryComparable
       throw new IOException("tried to deserialize " + newLength +
           " bytes of data, but maxLength = " + maxLength);
     }
-    setCapacity(newLength, false);
-    in.readFully(bytes, 0, newLength);
-    length = newLength;
+    readWithKnownLength(in, newLength);
   }
 
   /** Skips over one Text in the input. */
   public static void skip(DataInput in) throws IOException {
     int length = WritableUtils.readVInt(in);
     WritableUtils.skipFully(in, length);
+  }
+
+  /**
+   * Read a Text object whose length is already known.
+   * This allows creating Text from a stream which uses a different serialization
+   * format.
+   */
+  public void readWithKnownLength(DataInput in, int len) throws IOException {
+    setCapacity(len, false);
+    in.readFully(bytes, 0, len);
+    length = len;
   }
 
   /** serialize

@@ -516,6 +516,13 @@ public abstract class NativeAzureFileSystemBaseTest {
     assertNotNull(status);
   }
 
+  @Test
+  public void testCloseFileSystemTwice() throws Exception {
+    //make sure close() can be called multiple times without doing any harm
+    fs.close();
+    fs.close();
+  }
+
   private boolean testModifiedTime(Path testPath, long time) throws Exception {
     FileStatus fileStatus = fs.getFileStatus(testPath);
     final long errorMargin = modifiedTimeErrorMargin;
