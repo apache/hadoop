@@ -437,7 +437,9 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
         throw new FileNotFoundException("Parent directory doesn't exist: "
             + parent);
       } else if (!mkdirs(parent)) {
-        throw new IOException("Mkdirs failed to create " + parent);
+        throw new IOException("Mkdirs failed to create " + parent
+            + " (exists=" + exists(parent) + ", cwd=" + getWorkingDirectory()
+            + ")");
       }
     }
     final FSDataOutputStream out;
