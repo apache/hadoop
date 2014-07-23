@@ -135,7 +135,7 @@ public class FairScheduler extends
   public static final Resource CONTAINER_RESERVED = Resources.createResource(-1);
 
   // How often fair shares are re-calculated (ms)
-  protected long UPDATE_INTERVAL = 500;
+  protected long updateInterval;
   private final int UPDATE_DEBUG_FREQUENCY = 5;
   private int updatesToSkipForDebug = UPDATE_DEBUG_FREQUENCY;
 
@@ -244,13 +244,13 @@ public class FairScheduler extends
 
   /**
    * A runnable which calls {@link FairScheduler#update()} every
-   * <code>UPDATE_INTERVAL</code> milliseconds.
+   * <code>updateInterval</code> milliseconds.
    */
   private class UpdateThread implements Runnable {
     public void run() {
       while (true) {
         try {
-          Thread.sleep(UPDATE_INTERVAL);
+          Thread.sleep(updateInterval);
           update();
           preemptTasksIfNecessary();
         } catch (Exception e) {
@@ -1205,6 +1205,15 @@ public class FairScheduler extends
     preemptionInterval = this.conf.getPreemptionInterval();
     waitTimeBeforeKill = this.conf.getWaitTimeBeforeKill();
     usePortForNodeName = this.conf.getUsePortForNodeName();
+
+    updateInterval = this.conf.getUpdateInterval();
+    if (updateInterval < 0) {
+      updateInterval = FairSchedulerConfiguration.DEFAULT_UPDATE_INTERVAL_MS;
+      LOG.warn(FairSchedulerConfiguration.UPDATE_INTERVAL_MS
+              + " is invalid, so using default value " +
+              + FairSchedulerConfiguration.DEFAULT_UPDATE_INTERVAL_MS
+              + " ms instead");
+    }
 
     rootMetrics = FSQueueMetrics.forQueue("root", null, true, conf);
     // This stores per-application scheduling information
