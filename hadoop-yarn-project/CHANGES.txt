@@ -94,6 +94,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2313. Livelock can occur in FairScheduler when there are lots of
     running apps (Tsuyoshi Ozawa via Sandy Ryza)
 
+    YARN-2147. client lacks delegation token exception details when
+    application submit fails (Chen He via jlowe)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
