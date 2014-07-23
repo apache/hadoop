@@ -1074,10 +1074,11 @@ public class FSEditLog implements LogsPurgeable {
     logEdit(op);
   }
   
-  void logRemoveXAttrs(String src, List<XAttr> xAttrs) {
+  void logRemoveXAttrs(String src, List<XAttr> xAttrs, boolean toLogRpcIds) {
     final RemoveXAttrOp op = RemoveXAttrOp.getInstance();
     op.src = src;
     op.xAttrs = xAttrs;
+    logRpcIds(op, toLogRpcIds);
     logEdit(op);
   }
 

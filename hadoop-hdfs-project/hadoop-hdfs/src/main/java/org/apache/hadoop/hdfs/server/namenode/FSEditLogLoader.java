@@ -825,6 +825,10 @@ public class FSEditLogLoader {
       RemoveXAttrOp removeXAttrOp = (RemoveXAttrOp) op;
       fsDir.unprotectedRemoveXAttrs(removeXAttrOp.src,
           removeXAttrOp.xAttrs);
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(removeXAttrOp.rpcClientId,
+            removeXAttrOp.rpcCallId);
+      }
       break;
     }
     default:
