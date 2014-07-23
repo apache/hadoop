@@ -575,7 +575,8 @@ class BPOfferService {
     switch(cmd.getAction()) {
     case DatanodeProtocol.DNA_TRANSFER:
       // Send a copy of a block to another datanode
-      dn.transferBlocks(bcmd.getBlockPoolId(), bcmd.getBlocks(), bcmd.getTargets());
+      dn.transferBlocks(bcmd.getBlockPoolId(), bcmd.getBlocks(),
+          bcmd.getTargets(), bcmd.getTargetStorageTypes());
       dn.metrics.incrBlocksReplicated(bcmd.getBlocks().length);
       break;
     case DatanodeProtocol.DNA_INVALIDATE:

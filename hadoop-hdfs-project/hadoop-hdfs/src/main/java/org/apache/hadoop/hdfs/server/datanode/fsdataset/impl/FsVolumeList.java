@@ -18,13 +18,17 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.VolumeChoosingPolicy;
-import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.hadoop.util.Time;
 
 class FsVolumeList {
   /**
@@ -52,11 +56,18 @@ class FsVolumeList {
    * by a single thread and next volume is chosen with no concurrent
    * update to {@link #volumes}.
    * @param blockSize free space needed on the volume
+   * @param storageType the desired {@link StorageType} 
    * @return next volume to store the block in.
    */
-  // TODO should choose volume with storage type
-  synchronized FsVolumeImpl getNextVolume(long blockSize) throws IOException {
-    return blockChooser.chooseVolume(volumes, blockSize);
+  synchronized FsVolumeImpl getNextVolume(StorageType storageType,
+      long blockSize) throws IOException {
+    final List<FsVolumeImpl> list = new ArrayList<FsVolumeImpl>(volumes.size());
+    for(FsVolumeImpl v : volumes) {
+      if (v.getStorageType() == storageType) {
+        list.add(v);
+      }
+    }
+    return blockChooser.chooseVolume(list, blockSize);
   }
     
   long getDfsUsed() throws IOException {

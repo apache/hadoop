@@ -25,6 +25,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.CachingStrategyProto;
@@ -111,9 +112,11 @@ public class Sender implements DataTransferProtocol {
 
   @Override
   public void writeBlock(final ExtendedBlock blk,
+      final StorageType storageType, 
       final Token<BlockTokenIdentifier> blockToken,
       final String clientName,
       final DatanodeInfo[] targets,
+      final StorageType[] targetStorageTypes, 
       final DatanodeInfo source,
       final BlockConstructionStage stage,
       final int pipelineSize,
@@ -130,7 +133,9 @@ public class Sender implements DataTransferProtocol {
 
     OpWriteBlockProto.Builder proto = OpWriteBlockProto.newBuilder()
       .setHeader(header)
+      .setStorageType(PBHelper.convertStorageType(storageType))
       .addAllTargets(PBHelper.convert(targets, 1))
+      .addAllTargetStorageTypes(PBHelper.convertStorageTypes(targetStorageTypes, 1))
       .setStage(toProto(stage))
       .setPipelineSize(pipelineSize)
       .setMinBytesRcvd(minBytesRcvd)
@@ -150,12 +155,14 @@ public class Sender implements DataTransferProtocol {
   public void transferBlock(final ExtendedBlock blk,
       final Token<BlockTokenIdentifier> blockToken,
       final String clientName,
-      final DatanodeInfo[] targets) throws IOException {
+      final DatanodeInfo[] targets,
+      final StorageType[] targetStorageTypes) throws IOException {
     
     OpTransferBlockProto proto = OpTransferBlockProto.newBuilder()
       .setHeader(DataTransferProtoUtil.buildClientHeader(
           blk, clientName, blockToken))
       .addAllTargets(PBHelper.convert(targets))
+      .addAllTargetStorageTypes(PBHelper.convertStorageTypes(targetStorageTypes))
       .build();
 
     send(out, Op.TRANSFER_BLOCK, proto);
@@ -196,11 +203,13 @@ public class Sender implements DataTransferProtocol {
   
   @Override
   public void replaceBlock(final ExtendedBlock blk,
+      final StorageType storageType, 
       final Token<BlockTokenIdentifier> blockToken,
       final String delHint,
       final DatanodeInfo source) throws IOException {
     OpReplaceBlockProto proto = OpReplaceBlockProto.newBuilder()
       .setHeader(DataTransferProtoUtil.buildBaseHeader(blk, blockToken))
+      .setStorageType(PBHelper.convertStorageType(storageType))
       .setDelHint(delHint)
       .setSource(PBHelper.convertDatanodeInfo(source))
       .build();
