@@ -620,6 +620,16 @@ public class FSImageFormat {
     INodeDirectory parentINode = fsDir.rootDir;
     for (long i = 0; i < numFiles; i++) {
       pathComponents = FSImageSerialization.readPathComponents(in);
+      for (int j=0; j < pathComponents.length; j++) {
+        byte[] newComponent = renameReservedComponentOnUpgrade
+            (pathComponents[j], getLayoutVersion());
+        if (!Arrays.equals(newComponent, pathComponents[j])) {
+          String oldPath = DFSUtil.byteArray2PathString(pathComponents);
+          pathComponents[j] = newComponent;
+          String newPath = DFSUtil.byteArray2PathString(pathComponents);
+          LOG.info("Renaming reserved path " + oldPath + " to " + newPath);
+        }
+      }
       final INode newNode = loadINode(
           pathComponents[pathComponents.length-1], false, in, counter);
 
@@ -933,6 +943,7 @@ public class FSImageFormat {
           oldnode = namesystem.dir.getInode(cons.getId()).asFile();
           inSnapshot = true;
         } else {
+          path = renameReservedPathsOnUpgrade(path, getLayoutVersion());
           final INodesInPath iip = fsDir.getLastINodeInPath(path);
           oldnode = INodeFile.valueOf(iip.getINode(0), path);
         }
