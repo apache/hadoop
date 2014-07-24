@@ -34,7 +34,7 @@ import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
-import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredNMTokenState;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredNMTokensState;
 import org.apache.hadoop.yarn.server.security.BaseNMTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
 
@@ -64,8 +64,9 @@ public class NMTokenSecretManagerInNM extends BaseNMTokenSecretManager {
     this.stateStore = stateStore;
   }
   
-  public synchronized void recover(RecoveredNMTokenState state)
+  public synchronized void recover()
       throws IOException {
+    RecoveredNMTokensState state = stateStore.loadNMTokensState();
     MasterKey key = state.getCurrentMasterKey();
     if (key != null) {
       super.currentMasterKey =

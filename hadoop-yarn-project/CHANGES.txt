@@ -62,6 +62,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2295. Refactored DistributedShell to use public APIs of protocol records.
     (Li Lu via jianhe)
 
+    YARN-1342. Recover container tokens upon nodemanager restart. (Jason Lowe via
+    devaraj)
+
   OPTIMIZATIONS
 
   BUG FIXES

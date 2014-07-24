@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
@@ -80,7 +81,7 @@ public class NMNullStateStoreService extends NMStateStoreService {
   }
 
   @Override
-  public RecoveredNMTokenState loadNMTokenState() throws IOException {
+  public RecoveredNMTokensState loadNMTokensState() throws IOException {
     throw new UnsupportedOperationException(
         "Recovery not supported by this state store");
   }
@@ -102,6 +103,33 @@ public class NMNullStateStoreService extends NMStateStoreService {
 
   @Override
   public void removeNMTokenApplicationMasterKey(ApplicationAttemptId attempt)
+      throws IOException {
+  }
+
+  @Override
+  public RecoveredContainerTokensState loadContainerTokensState()
+      throws IOException {
+    throw new UnsupportedOperationException(
+        "Recovery not supported by this state store");
+  }
+
+  @Override
+  public void storeContainerTokenCurrentMasterKey(MasterKey key)
+      throws IOException {
+  }
+
+  @Override
+  public void storeContainerTokenPreviousMasterKey(MasterKey key)
+      throws IOException {
+  }
+
+  @Override
+  public void storeContainerToken(ContainerId containerId,
+      Long expirationTime) throws IOException {
+  }
+
+  @Override
+  public void removeContainerToken(ContainerId containerId)
       throws IOException {
   }
 

@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
@@ -102,7 +103,7 @@ public abstract class NMStateStoreService extends AbstractService {
     }
   }
 
-  public static class RecoveredNMTokenState {
+  public static class RecoveredNMTokensState {
     MasterKey currentMasterKey;
     MasterKey previousMasterKey;
     Map<ApplicationAttemptId, MasterKey> applicationMasterKeys;
@@ -117,6 +118,24 @@ public abstract class NMStateStoreService extends AbstractService {
 
     public Map<ApplicationAttemptId, MasterKey> getApplicationMasterKeys() {
       return applicationMasterKeys;
+    }
+  }
+
+  public static class RecoveredContainerTokensState {
+    MasterKey currentMasterKey;
+    MasterKey previousMasterKey;
+    Map<ContainerId, Long> activeTokens;
+
+    public MasterKey getCurrentMasterKey() {
+      return currentMasterKey;
+    }
+
+    public MasterKey getPreviousMasterKey() {
+      return previousMasterKey;
+    }
+
+    public Map<ContainerId, Long> getActiveTokens() {
+      return activeTokens;
     }
   }
 
@@ -193,7 +212,8 @@ public abstract class NMStateStoreService extends AbstractService {
   public abstract void removeDeletionTask(int taskId) throws IOException;
 
 
-  public abstract RecoveredNMTokenState loadNMTokenState() throws IOException;
+  public abstract RecoveredNMTokensState loadNMTokensState()
+      throws IOException;
 
   public abstract void storeNMTokenCurrentMasterKey(MasterKey key)
       throws IOException;
@@ -206,6 +226,22 @@ public abstract class NMStateStoreService extends AbstractService {
 
   public abstract void removeNMTokenApplicationMasterKey(
       ApplicationAttemptId attempt) throws IOException;
+
+
+  public abstract RecoveredContainerTokensState loadContainerTokensState()
+      throws IOException;
+
+  public abstract void storeContainerTokenCurrentMasterKey(MasterKey key)
+      throws IOException;
+
+  public abstract void storeContainerTokenPreviousMasterKey(MasterKey key)
+      throws IOException;
+
+  public abstract void storeContainerToken(ContainerId containerId,
+      Long expirationTime) throws IOException;
+
+  public abstract void removeContainerToken(ContainerId containerId)
+      throws IOException;
 
 
   protected abstract void initStorage(Configuration conf) throws IOException;
