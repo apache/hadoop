@@ -206,6 +206,9 @@ Release 2.5.0 - UNRELEASED
 	YARN-1408 Preemption caused Invalid State Event: ACQUIRED at KILLED and caused 
 	a task timeout for 30mins. (Sunil G via mayank)
 
+    YARN-2300. Improved the documentation of the sample requests for RM REST API -
+    submitting an app. (Varun Vasudev via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES 
