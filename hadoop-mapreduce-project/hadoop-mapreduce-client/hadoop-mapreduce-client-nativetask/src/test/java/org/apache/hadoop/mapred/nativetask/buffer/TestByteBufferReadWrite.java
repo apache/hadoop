@@ -17,20 +17,20 @@
  */
 package org.apache.hadoop.mapred.nativetask.buffer;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 
+import com.google.common.base.Charsets;
+import com.google.common.primitives.Shorts;
 import org.apache.hadoop.mapred.nativetask.NativeDataTarget;
 
 import junit.framework.Assert;
 import junit.framework.TestCase;
+import org.mockito.Mockito;
 
-public class TestByteBufferReadWrite extends TestCase{
-  
-  
+public class TestByteBufferReadWrite extends TestCase {
   public void testReadWrite() throws IOException {
     byte[] buff = new byte[10000];
-    
+
     InputBuffer input = new InputBuffer(buff);
     MockDataTarget target = new MockDataTarget(buff);
     ByteBufferDataWriter writer = new ByteBufferDataWriter(target);
@@ -48,7 +48,7 @@ public class TestByteBufferReadWrite extends TestCase{
     writer.writeBytes("goodboy");
     writer.writeChars("hello");
     writer.writeUTF("native task");
-    
+
     int length = target.getOutputBuffer().length();
     input.rewind(0, length);
     ByteBufferDataReader reader = new ByteBufferDataReader(input);
@@ -84,7 +84,29 @@ public class TestByteBufferReadWrite extends TestCase{
     
     Assert.assertEquals(0, input.remaining());
   }
-  
+
+  /**
+   * Test that Unicode characters outside the basic multilingual plane,
+   * such as this cat face, are properly encoded.
+   */
+  public void testCatFace() throws IOException {
+    byte[] buff = new byte[10];
+    MockDataTarget target = new MockDataTarget(buff);
+    ByteBufferDataWriter writer = new ByteBufferDataWriter(target);
+    String catFace = "\uD83D\uDE38";
+    writer.writeUTF(catFace);
+
+    // Check that our own decoder can read it
+    InputBuffer input = new InputBuffer(buff);
+    input.rewind(0, buff.length);
+    ByteBufferDataReader reader = new ByteBufferDataReader(input);
+    assertEquals(catFace, reader.readUTF());
+
+    // Check that the standard Java one can read it too
+    String fromJava = new java.io.DataInputStream(new ByteArrayInputStream(buff)).readUTF();
+    assertEquals(catFace, fromJava);
+  }
+
   public void testShortOfSpace() throws IOException {
     byte[] buff = new byte[10];
     MockDataTarget target = new MockDataTarget(buff);
@@ -100,20 +122,8 @@ public class TestByteBufferReadWrite extends TestCase{
 
   public void testFlush() throws IOException {
     byte[] buff = new byte[10];
-    final Counter flushCount = new Counter();
-    final Flag finishFlag = new Flag();
-    MockDataTarget target = new MockDataTarget(buff) {
-      @Override
-      public void sendData() throws IOException {
-        flushCount.increase();
-      }
-      
-      @Override
-      public void finishSendData() throws IOException {
-        finishFlag.set(true);
-      }
-    };
-    
+    MockDataTarget target = Mockito.spy(new MockDataTarget(buff));
+
     ByteBufferDataWriter writer = new ByteBufferDataWriter(target);
     Assert.assertEquals(false, writer.hasUnFlushedData()); 
     
@@ -121,10 +131,9 @@ public class TestByteBufferReadWrite extends TestCase{
     writer.write(new byte[100]);
 
     Assert.assertEquals(true, writer.hasUnFlushedData()); 
-    writer.close();    
-    Assert.assertEquals(11, flushCount.get());
-    Assert.assertEquals(true, finishFlag.get()); 
-
+    writer.close();
+    Mockito.verify(target, Mockito.times(11)).sendData();
+    Mockito.verify(target).finishSendData();
   }
   
   private static String toString(byte[] str) throws UnsupportedEncodingException {
@@ -140,42 +149,14 @@ public class TestByteBufferReadWrite extends TestCase{
     }
     
     @Override
-    public void sendData() throws IOException {
-      
-    }
+    public void sendData() throws IOException {}
 
     @Override
-    public void finishSendData() throws IOException {
-       
-    }
+    public void finishSendData() throws IOException {}
 
     @Override
     public OutputBuffer getOutputBuffer() {
       return out;
     }    
-  }
-  
-  private static class Counter {
-    private int count;
-    
-    public int get() {
-      return count;
-    }
-    
-    public void increase() {
-      count++;
-    }
-  }
-  
-  private static class Flag {
-    private boolean value;
-    
-    public void set(boolean status) {
-      this.value = status;
-    }
-    
-    public boolean get() {
-      return this.value;
-    }
   }
 }
