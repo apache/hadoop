@@ -30,7 +30,7 @@ import org.apache.hadoop.conf.Configuration;
  * <p><code>ToolRunner</code> can be used to run classes implementing 
  * <code>Tool</code> interface. It works in conjunction with 
  * {@link GenericOptionsParser} to parse the 
- * <a href="{@docRoot}/org/apache/hadoop/util/GenericOptionsParser.html#GenericOptions">
+ * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/CommandsManual.html#Generic_Options">
  * generic hadoop command line arguments</a> and modifies the 
  * <code>Configuration</code> of the <code>Tool</code>. The 
  * application-specific options are passed along without being modified.
