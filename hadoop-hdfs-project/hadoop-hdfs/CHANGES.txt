@@ -730,6 +730,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6622. Rename and AddBlock may race and produce invalid edits (kihwal
     via cmccabe)
 
+    HDFS-6723. New NN webUI no longer displays decommissioned state for dead node.
+    (Ming Ma via wheat9)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
