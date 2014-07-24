@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.util;
+package org.apache.hadoop.util;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
@@ -29,7 +29,7 @@ import org.junit.Test;
 import com.google.common.collect.Lists;
 
 public class TestDirectBufferPool {
-  final DirectBufferPool pool = new DirectBufferPool();
+  final org.apache.hadoop.util.DirectBufferPool pool = new org.apache.hadoop.util.DirectBufferPool();
   
   @Test
   public void testBasics() {

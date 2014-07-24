@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.util;
+package org.apache.hadoop.util;
 
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * A simple class for pooling direct ByteBuffers. This is necessary
@@ -40,7 +41,8 @@ import com.google.common.annotations.VisibleForTesting;
  * allocated at the same size. There is no attempt to reuse larger
  * buffers to satisfy smaller allocations.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public class DirectBufferPool {
 
   // Essentially implement a multimap with weak values.

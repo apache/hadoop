@@ -47,6 +47,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10887. Add XAttrs to ViewFs and make XAttrs + ViewFileSystem
     internal dir behavior consistent. (Stephen Chu via wang)
 
+    HADOOP-10882. Move DirectBufferPool into common util. (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
