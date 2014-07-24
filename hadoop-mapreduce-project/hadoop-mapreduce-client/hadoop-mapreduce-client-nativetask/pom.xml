@@ -63,6 +63,12 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-common</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -82,14 +88,7 @@
             <include>**/buffer/Test*.java</include>
             <include>**/handlers/Test*.java</include>
             <include>**/serde/Test*.java</include>
-            <include>**/combinertest/*Test.java</include>
-            <include>**/compresstest/*Test.java</include>
-            <include>**/nonsorttest/*Test.java</include>
-            <include>**/kvtest/*Test.java</include>
           </includes>
-          <additionalClasspathElements>
-            <additionalClasspathElement>${basedir}/../hadoop-mapreduce-client-common/target/classes</additionalClasspathElement>
-          </additionalClasspathElements>
         </configuration>
       </plugin>
     </plugins>
@@ -183,6 +182,28 @@
                 </configuration>
               </execution>
             </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <properties>
+                <property>
+                  <name>listener</name>
+                  <value>org.apache.hadoop.test.TimedOutTestsListener</value>
+                </property>
+              </properties>
+              <includes>
+                <include>**/TestTaskContext.java</include>
+                <include>**/buffer/Test*.java</include>
+                <include>**/handlers/Test*.java</include>
+                <include>**/serde/Test*.java</include>
+                <include>**/combinertest/*Test.java</include>
+                <include>**/compresstest/*Test.java</include>
+                <include>**/nonsorttest/*Test.java</include>
+                <include>**/kvtest/*Test.java</include>
+              </includes>
+            </configuration>
           </plugin>
         </plugins>
       </build>
