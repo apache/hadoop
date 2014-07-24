@@ -4,3 +4,4 @@ Changes for Hadoop Native Map Output Collector
 MAPREDUCE-5985. native-task: Fix build on macosx. Contributed by Binglin Chang
 MAPREDUCE-5994. Simplify ByteUtils and fix failing test. (todd)
 MAPREDUCE-5996. native-task: Rename system tests into standard directory layout (todd)
+MAPREDUCE-5997. native-task: Use DirectBufferPool from Hadoop Common (todd)

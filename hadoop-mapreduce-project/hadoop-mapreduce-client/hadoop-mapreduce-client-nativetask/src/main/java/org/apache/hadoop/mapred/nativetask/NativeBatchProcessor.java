@@ -24,12 +24,13 @@ import java.nio.ByteBuffer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapred.nativetask.buffer.BufferType;
-import org.apache.hadoop.mapred.nativetask.buffer.DirectBufferPool;
 import org.apache.hadoop.mapred.nativetask.buffer.InputBuffer;
 import org.apache.hadoop.mapred.nativetask.buffer.OutputBuffer;
 import org.apache.hadoop.mapred.nativetask.util.ReadWriteBuffer;
 import org.apache.hadoop.mapred.nativetask.util.ConfigUtil;
+import org.apache.hadoop.util.DirectBufferPool;
 
 /**
  * used to create channel, transfer data and command between Java and native
@@ -126,9 +127,8 @@ public class NativeBatchProcessor implements INativeHandler {
       NativeRuntime.releaseNativeObject(nativeHandlerAddr);
       nativeHandlerAddr = 0;
     }
-    if (null != in && null != in.getByteBuffer() && in.getByteBuffer().isDirect()) {
-      DirectBufferPool.getInstance().returnBuffer(in.getByteBuffer());
-    }
+    IOUtils.cleanup(LOG, in);
+    in = null;
   }
 
   @Override

@@ -18,11 +18,16 @@
 
 package org.apache.hadoop.mapred.nativetask.buffer;
 
+import org.apache.hadoop.util.DirectBufferPool;
+
+import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-public class InputBuffer {
+public class InputBuffer implements Closeable {
+
+  static DirectBufferPool bufferPool = new DirectBufferPool();
 
   private ByteBuffer byteBuffer;
   private final BufferType type;
@@ -36,7 +41,7 @@ public class InputBuffer {
 
       switch (type) {
       case DIRECT_BUFFER:
-        this.byteBuffer = DirectBufferPool.getInstance().borrowBuffer(capacity);
+        this.byteBuffer = bufferPool.getBuffer(capacity);
         this.byteBuffer.order(ByteOrder.BIG_ENDIAN);
         break;
       case HEAP_BUFFER:
@@ -117,5 +122,13 @@ public class InputBuffer {
       return null;
     }
     return byteBuffer.array();
+  }
+
+  @Override
+  public void close() {
+    if (byteBuffer != null && byteBuffer.isDirect()) {
+      bufferPool.returnBuffer(byteBuffer);
+      byteBuffer = null;
+    }
   }
 }
