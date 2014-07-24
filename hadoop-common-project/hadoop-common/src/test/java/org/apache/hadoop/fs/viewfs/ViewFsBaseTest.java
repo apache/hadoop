@@ -747,4 +747,34 @@ public class ViewFsBaseTest {
         AclUtil.getMinimalAcl(PERMISSION_555));
     assertFalse(aclStatus.isStickyBit());
   }
+
+  @Test(expected=AccessControlException.class)
+  public void testInternalSetXAttr() throws IOException {
+    fcView.setXAttr(new Path("/internalDir"), "xattrName", null);
+  }
+
+  @Test(expected=NotInMountpointException.class)
+  public void testInternalGetXAttr() throws IOException {
+    fcView.getXAttr(new Path("/internalDir"), "xattrName");
+  }
+
+  @Test(expected=NotInMountpointException.class)
+  public void testInternalGetXAttrs() throws IOException {
+    fcView.getXAttrs(new Path("/internalDir"));
+  }
+
+  @Test(expected=NotInMountpointException.class)
+  public void testInternalGetXAttrsWithNames() throws IOException {
+    fcView.getXAttrs(new Path("/internalDir"), new ArrayList<String>());
+  }
+
+  @Test(expected=NotInMountpointException.class)
+  public void testInternalListXAttr() throws IOException {
+    fcView.listXAttrs(new Path("/internalDir"));
+  }
+
+  @Test(expected=AccessControlException.class)
+  public void testInternalRemoveXAttr() throws IOException {
+    fcView.removeXAttr(new Path("/internalDir"), "xattrName");
+  }
 }

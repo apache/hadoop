@@ -388,7 +388,11 @@ public class DelegationTokenRenewer extends AbstractService {
       // If user provides incorrect token then it should not be added for
       // renewal.
       for (DelegationTokenToRenew dtr : tokenList) {
-        renewToken(dtr);
+        try {
+          renewToken(dtr);
+        } catch (IOException ioe) {
+          throw new IOException("Failed to renew token: " + dtr.token, ioe);
+        }
       }
       for (DelegationTokenToRenew dtr : tokenList) {
         addTokenToList(dtr);

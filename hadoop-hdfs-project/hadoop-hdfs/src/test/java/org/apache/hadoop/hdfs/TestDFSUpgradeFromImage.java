@@ -70,6 +70,9 @@ public class TestDFSUpgradeFromImage {
   private static final String HADOOP_DFS_DIR_TXT = "hadoop-dfs-dir.txt";
   private static final String HADOOP22_IMAGE = "hadoop-22-dfs-dir.tgz";
   private static final String HADOOP1_BBW_IMAGE = "hadoop1-bbw.tgz";
+  private static final String HADOOP1_RESERVED_IMAGE = "hadoop-1-reserved.tgz";
+  private static final String HADOOP023_RESERVED_IMAGE =
+      "hadoop-0.23-reserved.tgz";
   private static final String HADOOP2_RESERVED_IMAGE = "hadoop-2-reserved.tgz";
 
   private static class ReferenceFileInfo {
@@ -322,6 +325,140 @@ public class TestDFSUpgradeFromImage {
       int md5failures = appender.countExceptionsWithMessage(
           " is corrupt with MD5 checksum of ");
       assertEquals("Upgrade did not fail with bad MD5", 1, md5failures);
+    }
+  }
+
+  /**
+   * Test upgrade from a branch-1.2 image with reserved paths
+   */
+  @Test
+  public void testUpgradeFromRel1ReservedImage() throws Exception {
+    unpackStorage(HADOOP1_RESERVED_IMAGE);
+    MiniDFSCluster cluster = null;
+    // Try it once without setting the upgrade flag to ensure it fails
+    final Configuration conf = new Configuration();
+    // Try it again with a custom rename string
+    try {
+      FSImageFormat.setRenameReservedPairs(
+          ".snapshot=.user-snapshot," +
+              ".reserved=.my-reserved");
+      cluster =
+          new MiniDFSCluster.Builder(conf)
+              .format(false)
+              .startupOption(StartupOption.UPGRADE)
+              .numDataNodes(0).build();
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      // Make sure the paths were renamed as expected
+      // Also check that paths are present after a restart, checks that the
+      // upgraded fsimage has the same state.
+      final String[] expected = new String[] {
+          "/.my-reserved",
+          "/.user-snapshot",
+          "/.user-snapshot/.user-snapshot",
+          "/.user-snapshot/open",
+          "/dir1",
+          "/dir1/.user-snapshot",
+          "/dir2",
+          "/dir2/.user-snapshot",
+          "/user",
+          "/user/andrew",
+          "/user/andrew/.user-snapshot",
+      };
+      for (int i=0; i<2; i++) {
+        // Restart the second time through this loop
+        if (i==1) {
+          cluster.finalizeCluster(conf);
+          cluster.restartNameNode(true);
+        }
+        ArrayList<Path> toList = new ArrayList<Path>();
+        toList.add(new Path("/"));
+        ArrayList<String> found = new ArrayList<String>();
+        while (!toList.isEmpty()) {
+          Path p = toList.remove(0);
+          FileStatus[] statuses = dfs.listStatus(p);
+          for (FileStatus status: statuses) {
+            final String path = status.getPath().toUri().getPath();
+            System.out.println("Found path " + path);
+            found.add(path);
+            if (status.isDirectory()) {
+              toList.add(status.getPath());
+            }
+          }
+        }
+        for (String s: expected) {
+          assertTrue("Did not find expected path " + s, found.contains(s));
+        }
+        assertEquals("Found an unexpected path while listing filesystem",
+            found.size(), expected.length);
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Test upgrade from a 0.23.11 image with reserved paths
+   */
+  @Test
+  public void testUpgradeFromRel023ReservedImage() throws Exception {
+    unpackStorage(HADOOP023_RESERVED_IMAGE);
+    MiniDFSCluster cluster = null;
+    // Try it once without setting the upgrade flag to ensure it fails
+    final Configuration conf = new Configuration();
+    // Try it again with a custom rename string
+    try {
+      FSImageFormat.setRenameReservedPairs(
+          ".snapshot=.user-snapshot," +
+              ".reserved=.my-reserved");
+      cluster =
+          new MiniDFSCluster.Builder(conf)
+              .format(false)
+              .startupOption(StartupOption.UPGRADE)
+              .numDataNodes(0).build();
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      // Make sure the paths were renamed as expected
+      // Also check that paths are present after a restart, checks that the
+      // upgraded fsimage has the same state.
+      final String[] expected = new String[] {
+          "/.user-snapshot",
+          "/dir1",
+          "/dir1/.user-snapshot",
+          "/dir2",
+          "/dir2/.user-snapshot"
+      };
+      for (int i=0; i<2; i++) {
+        // Restart the second time through this loop
+        if (i==1) {
+          cluster.finalizeCluster(conf);
+          cluster.restartNameNode(true);
+        }
+        ArrayList<Path> toList = new ArrayList<Path>();
+        toList.add(new Path("/"));
+        ArrayList<String> found = new ArrayList<String>();
+        while (!toList.isEmpty()) {
+          Path p = toList.remove(0);
+          FileStatus[] statuses = dfs.listStatus(p);
+          for (FileStatus status: statuses) {
+            final String path = status.getPath().toUri().getPath();
+            System.out.println("Found path " + path);
+            found.add(path);
+            if (status.isDirectory()) {
+              toList.add(status.getPath());
+            }
+          }
+        }
+        for (String s: expected) {
+          assertTrue("Did not find expected path " + s, found.contains(s));
+        }
+        assertEquals("Found an unexpected path while listing filesystem",
+            found.size(), expected.length);
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 

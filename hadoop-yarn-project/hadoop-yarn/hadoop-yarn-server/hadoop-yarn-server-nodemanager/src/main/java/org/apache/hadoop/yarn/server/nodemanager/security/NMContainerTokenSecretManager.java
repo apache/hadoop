@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.security;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -33,6 +34,9 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerTokensState;
 import org.apache.hadoop.yarn.server.security.BaseContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
 
@@ -49,14 +53,74 @@ public class NMContainerTokenSecretManager extends
   
   private MasterKeyData previousMasterKey;
   private final TreeMap<Long, List<ContainerId>> recentlyStartedContainerTracker;
-
+  private final NMStateStoreService stateStore;
   
   private String nodeHostAddr;
   
   public NMContainerTokenSecretManager(Configuration conf) {
+    this(conf, new NMNullStateStoreService());
+  }
+
+  public NMContainerTokenSecretManager(Configuration conf,
+      NMStateStoreService stateStore) {
     super(conf);
     recentlyStartedContainerTracker =
         new TreeMap<Long, List<ContainerId>>();
+    this.stateStore = stateStore;
+  }
+
+  public synchronized void recover()
+      throws IOException {
+    RecoveredContainerTokensState state =
+        stateStore.loadContainerTokensState();
+    MasterKey key = state.getCurrentMasterKey();
+    if (key != null) {
+      super.currentMasterKey =
+          new MasterKeyData(key, createSecretKey(key.getBytes().array()));
+    }
+
+    key = state.getPreviousMasterKey();
+    if (key != null) {
+      previousMasterKey =
+          new MasterKeyData(key, createSecretKey(key.getBytes().array()));
+    }
+
+    // restore the serial number from the current master key
+    if (super.currentMasterKey != null) {
+      super.serialNo = super.currentMasterKey.getMasterKey().getKeyId() + 1;
+    }
+
+    for (Entry<ContainerId, Long> entry : state.getActiveTokens().entrySet()) {
+      ContainerId containerId = entry.getKey();
+      Long expTime = entry.getValue();
+      List<ContainerId> containerList =
+          recentlyStartedContainerTracker.get(expTime);
+      if (containerList == null) {
+        containerList = new ArrayList<ContainerId>();
+        recentlyStartedContainerTracker.put(expTime, containerList);
+      }
+      if (!containerList.contains(containerId)) {
+        containerList.add(containerId);
+      }
+    }
+  }
+
+  private void updateCurrentMasterKey(MasterKeyData key) {
+    super.currentMasterKey = key;
+    try {
+      stateStore.storeContainerTokenCurrentMasterKey(key.getMasterKey());
+    } catch (IOException e) {
+      LOG.error("Unable to update current master key in state store", e);
+    }
+  }
+
+  private void updatePreviousMasterKey(MasterKeyData key) {
+    previousMasterKey = key;
+    try {
+      stateStore.storeContainerTokenPreviousMasterKey(key.getMasterKey());
+    } catch (IOException e) {
+      LOG.error("Unable to update previous master key in state store", e);
+    }
   }
 
   /**
@@ -68,21 +132,16 @@ public class NMContainerTokenSecretManager extends
    */
   @Private
   public synchronized void setMasterKey(MasterKey masterKeyRecord) {
-    LOG.info("Rolling master-key for container-tokens, got key with id "
-        + masterKeyRecord.getKeyId());
-    if (super.currentMasterKey == null) {
-      super.currentMasterKey =
-          new MasterKeyData(masterKeyRecord, createSecretKey(masterKeyRecord
-            .getBytes().array()));
-    } else {
-      if (super.currentMasterKey.getMasterKey().getKeyId() != masterKeyRecord
-          .getKeyId()) {
-        // Update keys only if the key has changed.
-        this.previousMasterKey = super.currentMasterKey;
-        super.currentMasterKey =
-            new MasterKeyData(masterKeyRecord, createSecretKey(masterKeyRecord
-              .getBytes().array()));
+    // Update keys only if the key has changed.
+    if (super.currentMasterKey == null || super.currentMasterKey.getMasterKey()
+          .getKeyId() != masterKeyRecord.getKeyId()) {
+      LOG.info("Rolling master-key for container-tokens, got key with id "
+          + masterKeyRecord.getKeyId());
+      if (super.currentMasterKey != null) {
+        updatePreviousMasterKey(super.currentMasterKey);
       }
+      updateCurrentMasterKey(new MasterKeyData(masterKeyRecord,
+          createSecretKey(masterKeyRecord.getBytes().array())));
     }
   }
 
@@ -137,14 +196,19 @@ public class NMContainerTokenSecretManager extends
 
     removeAnyContainerTokenIfExpired();
     
+    ContainerId containerId = tokenId.getContainerID();
     Long expTime = tokenId.getExpiryTimeStamp();
     // We might have multiple containers with same expiration time.
     if (!recentlyStartedContainerTracker.containsKey(expTime)) {
       recentlyStartedContainerTracker
         .put(expTime, new ArrayList<ContainerId>());
     }
-    recentlyStartedContainerTracker.get(expTime).add(tokenId.getContainerID());
-
+    recentlyStartedContainerTracker.get(expTime).add(containerId);
+    try {
+      stateStore.storeContainerToken(containerId, expTime);
+    } catch (IOException e) {
+      LOG.error("Unable to store token for container " + containerId, e);
+    }
   }
 
   protected synchronized void removeAnyContainerTokenIfExpired() {
@@ -155,6 +219,13 @@ public class NMContainerTokenSecretManager extends
     while (containersI.hasNext()) {
       Entry<Long, List<ContainerId>> containerEntry = containersI.next();
       if (containerEntry.getKey() < currTime) {
+        for (ContainerId container : containerEntry.getValue()) {
+          try {
+            stateStore.removeContainerToken(container);
+          } catch (IOException e) {
+            LOG.error("Unable to remove token for container " + container, e);
+          }
+        }
         containersI.remove();
       } else {
         break;

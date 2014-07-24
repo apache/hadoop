@@ -189,6 +189,9 @@ Trunk (Unreleased)
     HADOOP-10720. KMS: Implement generateEncryptedKey and decryptEncryptedKey
     in the REST API. (asuresh via tucu)
 
+    HADOOP-10891. Add EncryptedKeyVersion factory method to
+    KeyProviderCryptoExtension. (wang)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -451,6 +454,11 @@ Release 2.6.0 - UNRELEASED
     (Lei Xu via wang)
 
     HADOOP-10855. Allow Text to be read with a known Length. (todd)
+
+    HADOOP-10887. Add XAttrs to ViewFs and make XAttrs + ViewFileSystem
+    internal dir behavior consistent. (Stephen Chu via wang)
+
+    HADOOP-10882. Move DirectBufferPool into common util. (todd)
 
   OPTIMIZATIONS
 
@@ -810,6 +818,12 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10872. TestPathData fails intermittently with "Mkdirs failed
     to create d1". (Yongjun Zhang via Arpit Agarwal)
+
+    HADOOP-10890. TestDFVariations.testMount fails intermittently. (Yongjun
+    Zhang via Arpit Agarwal)
+
+    HADOOP-10894. Fix dead link in ToolRunner documentation. (Akira Ajisaka
+    via Arpit Agarwal)
 
 Release 2.4.1 - 2014-06-23 
 

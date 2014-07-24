@@ -252,6 +252,9 @@ Trunk (Unreleased)
     HDFS-5794. Fix the inconsistency of layout version number of 
     ADD_DATANODE_AND_STORAGE_UUIDS between trunk and branch-2. (jing9)
 
+    HDFS-6657. Remove link to 'Legacy UI' in trunk's Namenode UI.
+    (Vinayakumar B via wheat 9)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -356,6 +359,16 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6731. Run "hdfs zkfc-formatZK" on a server in a non-namenode will cause
     a null pointer exception. (Masatake Iwasaki via brandonli)
+
+    HDFS-6114. Block Scan log rolling will never happen if blocks written
+    continuously leading to huge size of dncp_block_verification.log.curr
+    (vinayakumarb via cmccabe)
+
+    HDFS-6455. NFS: Exception should be added in NFS log for invalid separator in
+    nfs.exports.allowed.hosts. (Abhiraj Butala via brandonli)
+
+    HDFS-6715. Webhdfs wont fail over when it gets java.io.IOException: Namenode
+    is in startup mode. (jing9)
 
 Release 2.5.0 - UNRELEASED
 
@@ -892,6 +905,12 @@ Release 2.5.0 - UNRELEASED
     HDFS-6703. NFS: Files can be deleted from a read-only mount
     (Srikanth Upputuri via brandonli)
 
+    HDFS-6422. getfattr in CLI doesn't throw exception or return non-0 return code 
+    when xattr doesn't exist. (Charles Lamb via umamahesh)
+
+    HDFS-6696. Name node cannot start if the path of a file under
+    construction contains ".snapshot". (wang)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
@@ -969,6 +988,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6622. Rename and AddBlock may race and produce invalid edits (kihwal
     via cmccabe)
+
+    HDFS-6723. New NN webUI no longer displays decommissioned state for dead node.
+    (Ming Ma via wheat9)
 
 Release 2.4.1 - 2014-06-23 
 
