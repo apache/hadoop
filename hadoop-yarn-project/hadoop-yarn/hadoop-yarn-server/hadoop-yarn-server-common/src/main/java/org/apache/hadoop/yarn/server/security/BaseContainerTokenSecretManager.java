@@ -43,7 +43,7 @@ public class BaseContainerTokenSecretManager extends
   private static Log LOG = LogFactory
     .getLog(BaseContainerTokenSecretManager.class);
 
-  private int serialNo = new SecureRandom().nextInt();
+  protected int serialNo = new SecureRandom().nextInt();
 
   protected final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
   protected final Lock readLock = readWriteLock.readLock();

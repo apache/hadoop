@@ -913,5 +913,39 @@ public class ViewFileSystem extends FileSystem {
           .addEntries(AclUtil.getMinimalAcl(PERMISSION_555))
           .stickyBit(false).build();
     }
+
+    @Override
+    public void setXAttr(Path path, String name, byte[] value,
+                         EnumSet<XAttrSetFlag> flag) throws IOException {
+      checkPathIsSlash(path);
+      throw readOnlyMountTable("setXAttr", path);
+    }
+
+    @Override
+    public byte[] getXAttr(Path path, String name) throws IOException {
+      throw new NotInMountpointException(path, "getXAttr");
+    }
+
+    @Override
+    public Map<String, byte[]> getXAttrs(Path path) throws IOException {
+      throw new NotInMountpointException(path, "getXAttrs");
+    }
+
+    @Override
+    public Map<String, byte[]> getXAttrs(Path path, List<String> names)
+        throws IOException {
+      throw new NotInMountpointException(path, "getXAttrs");
+    }
+
+    @Override
+    public List<String> listXAttrs(Path path) throws IOException {
+      throw new NotInMountpointException(path, "listXAttrs");
+    }
+
+    @Override
+    public void removeXAttr(Path path, String name) throws IOException {
+      checkPathIsSlash(path);
+      throw readOnlyMountTable("removeXAttr", path);
+    }
   }
 }

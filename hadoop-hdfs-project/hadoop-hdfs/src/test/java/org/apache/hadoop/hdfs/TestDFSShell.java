@@ -2653,6 +2653,75 @@ public class TestDFSShell {
     }
   }
 
+  /*
+   * 1. Test that CLI throws an exception and returns non-0 when user does
+   * not have permission to read an xattr.
+   * 2. Test that CLI throws an exception and returns non-0 when a non-existent
+   * xattr is requested.
+   */
+  @Test (timeout = 120000)
+  public void testGetFAttrErrors() throws Exception {
+    final UserGroupInformation user = UserGroupInformation.
+        createUserForTesting("user", new String[] {"mygroup"});
+    MiniDFSCluster cluster = null;
+    PrintStream bakErr = null;
+    try {
+      final Configuration conf = new HdfsConfiguration();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+
+      final FileSystem fs = cluster.getFileSystem();
+      final Path p = new Path("/foo");
+      fs.mkdirs(p);
+      bakErr = System.err;
+
+      final FsShell fshell = new FsShell(conf);
+      final ByteArrayOutputStream out = new ByteArrayOutputStream();
+      System.setErr(new PrintStream(out));
+
+      // No permission for "other".
+      fs.setPermission(p, new FsPermission((short) 0700));
+
+      {
+        final int ret = ToolRunner.run(fshell, new String[] {
+            "-setfattr", "-n", "user.a1", "-v", "1234", "/foo"});
+        assertEquals("Returned should be 0", 0, ret);
+        out.reset();
+      }
+
+      user.doAs(new PrivilegedExceptionAction<Object>() {
+          @Override
+          public Object run() throws Exception {
+            int ret = ToolRunner.run(fshell, new String[] {
+                "-getfattr", "-n", "user.a1", "/foo"});
+            String str = out.toString();
+            assertTrue("xattr value was incorrectly returned",
+                str.indexOf("1234") == -1);
+            out.reset();
+            return null;
+          }
+        });
+
+      {
+        final int ret = ToolRunner.run(fshell, new String[]{
+            "-getfattr", "-n", "user.nonexistent", "/foo"});
+        String str = out.toString();
+        assertTrue("xattr value was incorrectly returned",
+          str.indexOf(
+              "getfattr: At least one of the attributes provided was not found")
+               >= 0);
+        out.reset();
+      }
+    } finally {
+      if (bakErr != null) {
+        System.setErr(bakErr);
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
   /**
    * Test that the server trash configuration is respected when
    * the client configuration is not set.

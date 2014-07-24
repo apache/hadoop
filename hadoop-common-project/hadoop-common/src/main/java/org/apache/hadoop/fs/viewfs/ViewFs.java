@@ -26,6 +26,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -48,6 +49,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.local.LocalConfigKeys;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclUtil;
@@ -651,6 +653,50 @@ public class ViewFs extends AbstractFileSystem {
         fsState.resolve(getUriPath(path), true);
     return res.targetFileSystem.getAclStatus(res.remainingPath);
   }
+
+  @Override
+  public void setXAttr(Path path, String name, byte[] value,
+                       EnumSet<XAttrSetFlag> flag) throws IOException {
+    InodeTree.ResolveResult<AbstractFileSystem> res =
+        fsState.resolve(getUriPath(path), true);
+    res.targetFileSystem.setXAttr(res.remainingPath, name, value, flag);
+  }
+
+  @Override
+  public byte[] getXAttr(Path path, String name) throws IOException {
+    InodeTree.ResolveResult<AbstractFileSystem> res =
+        fsState.resolve(getUriPath(path), true);
+    return res.targetFileSystem.getXAttr(res.remainingPath, name);
+  }
+
+  @Override
+  public Map<String, byte[]> getXAttrs(Path path) throws IOException {
+    InodeTree.ResolveResult<AbstractFileSystem> res =
+        fsState.resolve(getUriPath(path), true);
+    return res.targetFileSystem.getXAttrs(res.remainingPath);
+  }
+
+  @Override
+  public Map<String, byte[]> getXAttrs(Path path, List<String> names)
+      throws IOException {
+    InodeTree.ResolveResult<AbstractFileSystem> res =
+        fsState.resolve(getUriPath(path), true);
+    return res.targetFileSystem.getXAttrs(res.remainingPath, names);
+  }
+
+  @Override
+  public List<String> listXAttrs(Path path) throws IOException {
+    InodeTree.ResolveResult<AbstractFileSystem> res =
+        fsState.resolve(getUriPath(path), true);
+    return res.targetFileSystem.listXAttrs(res.remainingPath);
+  }
+
+  @Override
+  public void removeXAttr(Path path, String name) throws IOException {
+    InodeTree.ResolveResult<AbstractFileSystem> res =
+        fsState.resolve(getUriPath(path), true);
+    res.targetFileSystem.removeXAttr(res.remainingPath, name);
+  }
   
   
   /*
@@ -920,6 +966,40 @@ public class ViewFs extends AbstractFileSystem {
           .group(ugi.getGroupNames()[0])
           .addEntries(AclUtil.getMinimalAcl(PERMISSION_555))
           .stickyBit(false).build();
+    }
+
+    @Override
+    public void setXAttr(Path path, String name, byte[] value,
+                         EnumSet<XAttrSetFlag> flag) throws IOException {
+      checkPathIsSlash(path);
+      throw readOnlyMountTable("setXAttr", path);
+    }
+
+    @Override
+    public byte[] getXAttr(Path path, String name) throws IOException {
+      throw new NotInMountpointException(path, "getXAttr");
+    }
+
+    @Override
+    public Map<String, byte[]> getXAttrs(Path path) throws IOException {
+      throw new NotInMountpointException(path, "getXAttrs");
+    }
+
+    @Override
+    public Map<String, byte[]> getXAttrs(Path path, List<String> names)
+        throws IOException {
+      throw new NotInMountpointException(path, "getXAttrs");
+    }
+
+    @Override
+    public List<String> listXAttrs(Path path) throws IOException {
+      throw new NotInMountpointException(path, "listXAttrs");
+    }
+
+    @Override
+    public void removeXAttr(Path path, String name) throws IOException {
+      checkPathIsSlash(path);
+      throw readOnlyMountTable("removeXAttr", path);
     }
   }
 }

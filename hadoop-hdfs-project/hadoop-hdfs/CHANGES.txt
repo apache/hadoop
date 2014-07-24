@@ -357,6 +357,13 @@ Release 2.6.0 - UNRELEASED
     HDFS-6731. Run "hdfs zkfc-formatZK" on a server in a non-namenode will cause
     a null pointer exception. (Masatake Iwasaki via brandonli)
 
+    HDFS-6114. Block Scan log rolling will never happen if blocks written
+    continuously leading to huge size of dncp_block_verification.log.curr
+    (vinayakumarb via cmccabe)
+
+    HDFS-6455. NFS: Exception should be added in NFS log for invalid separator in
+    nfs.exports.allowed.hosts. (Abhiraj Butala via brandonli)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -891,6 +898,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6703. NFS: Files can be deleted from a read-only mount
     (Srikanth Upputuri via brandonli)
+
+    HDFS-6422. getfattr in CLI doesn't throw exception or return non-0 return code 
+    when xattr doesn't exist. (Charles Lamb via umamahesh)
 
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 

@@ -194,15 +194,18 @@ public class JavaKeyStoreProvider extends CredentialProvider {
   @Override
   public CredentialEntry createCredentialEntry(String alias, char[] credential)
       throws IOException {
+    writeLock.lock();
     try {
       if (keyStore.containsAlias(alias) || cache.containsKey(alias)) {
         throw new IOException("Credential " + alias + " already exists in " + this);
       }
+      return innerSetCredential(alias, credential);
     } catch (KeyStoreException e) {
       throw new IOException("Problem looking up credential " + alias + " in " + this,
           e);
+    } finally {
+      writeLock.unlock();
     }
-    return innerSetCredential(alias, credential);
   }
 
   @Override

@@ -205,6 +205,12 @@ Properties that can be placed in yarn-site.xml
       instead. Defaults to true. If a queue placement policy is given in the
       allocations file, this property is ignored.
 
+ * <<<yarn.scheduler.fair.update-interval-ms>>>
+ 
+    * The interval at which to lock the scheduler and recalculate fair shares,
+      recalculate demand, and check whether anything is due for preemption.
+      Defaults to 500 ms. 
+
 Allocation file format
 
   The allocation file must be in XML format. The format contains five types of

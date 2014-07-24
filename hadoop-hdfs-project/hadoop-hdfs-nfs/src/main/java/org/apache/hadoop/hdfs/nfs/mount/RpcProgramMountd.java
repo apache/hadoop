@@ -104,6 +104,10 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
 
   @Override
   public XDR mnt(XDR xdr, XDR out, int xid, InetAddress client) {
+    if (hostsMatcher == null) {
+      return MountResponse.writeMNTResponse(Nfs3Status.NFS3ERR_ACCES, out, xid,
+          null);
+    }
     AccessPrivilege accessPrivilege = hostsMatcher.getAccessPrivilege(client);
     if (accessPrivilege == AccessPrivilege.NONE) {
       return MountResponse.writeMNTResponse(Nfs3Status.NFS3ERR_ACCES, out, xid,
@@ -208,16 +212,23 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
     } else if (mntproc == MNTPROC.UMNTALL) {
       umntall(out, xid, client);
     } else if (mntproc == MNTPROC.EXPORT) {
-      // Currently only support one NFS export 
+      // Currently only support one NFS export
       List<NfsExports> hostsMatchers = new ArrayList<NfsExports>();
-      hostsMatchers.add(hostsMatcher);
-      out = MountResponse.writeExportList(out, xid, exports, hostsMatchers);
+      if (hostsMatcher != null) {
+        hostsMatchers.add(hostsMatcher);
+        out = MountResponse.writeExportList(out, xid, exports, hostsMatchers);
+      } else {
+        // This means there are no valid exports provided.
+        RpcAcceptedReply.getInstance(xid,
+          RpcAcceptedReply.AcceptState.PROC_UNAVAIL, new VerifierNone()).write(
+          out);
+      }
     } else {
       // Invalid procedure
       RpcAcceptedReply.getInstance(xid,
           RpcAcceptedReply.AcceptState.PROC_UNAVAIL, new VerifierNone()).write(
           out);
-    }  
+    }
     ChannelBuffer buf = ChannelBuffers.wrappedBuffer(out.asReadOnlyWrap().buffer());
     RpcResponse rsp = new RpcResponse(buf, info.remoteAddress());
     RpcUtil.sendRpcResponse(ctx, rsp);
