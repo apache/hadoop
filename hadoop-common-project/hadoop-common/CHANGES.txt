@@ -189,6 +189,9 @@ Trunk (Unreleased)
     HADOOP-10720. KMS: Implement generateEncryptedKey and decryptEncryptedKey
     in the REST API. (asuresh via tucu)
 
+    HADOOP-10891. Add EncryptedKeyVersion factory method to
+    KeyProviderCryptoExtension. (wang)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.

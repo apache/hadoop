@@ -80,6 +80,30 @@ public class KeyProviderCryptoExtension extends
     }
 
     /**
+     * Factory method to create a new EncryptedKeyVersion that can then be
+     * passed into {@link #decryptEncryptedKey}. Note that the fields of the
+     * returned EncryptedKeyVersion will only partially be populated; it is not
+     * necessarily suitable for operations besides decryption.
+     *
+     * @param encryptionKeyVersionName Version name of the encryption key used
+     *                                 to encrypt the encrypted key.
+     * @param encryptedKeyIv           Initialization vector of the encrypted
+     *                                 key. The IV of the encryption key used to
+     *                                 encrypt the encrypted key is derived from
+     *                                 this IV.
+     * @param encryptedKeyMaterial     Key material of the encrypted key.
+     * @return EncryptedKeyVersion suitable for decryption.
+     */
+    public static EncryptedKeyVersion createForDecryption(String
+        encryptionKeyVersionName, byte[] encryptedKeyIv,
+        byte[] encryptedKeyMaterial) {
+      KeyVersion encryptedKeyVersion = new KeyVersion(null, null,
+          encryptedKeyMaterial);
+      return new EncryptedKeyVersion(null, encryptionKeyVersionName,
+          encryptedKeyIv, encryptedKeyVersion);
+    }
+
+    /**
      * @return Name of the encryption key used to encrypt the encrypted key.
      */
     public String getEncryptionKeyName() {
