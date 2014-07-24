@@ -339,6 +339,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10890. TestDFVariations.testMount fails intermittently. (Yongjun
     Zhang via Arpit Agarwal)
 
+    HADOOP-10894. Fix dead link in ToolRunner documentation. (Akira Ajisaka
+    via Arpit Agarwal)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
