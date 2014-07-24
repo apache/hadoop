@@ -73,7 +73,7 @@ public class TestNMTokenSecretManagerInNM {
 
     // restart and verify key is still there and token still valid
     secretMgr = new NMTokenSecretManagerInNM(stateStore);
-    secretMgr.recover(stateStore.loadNMTokenState());
+    secretMgr.recover();
     secretMgr.setNodeId(nodeId);
     assertEquals(currentKey, secretMgr.getCurrentKey());
     assertTrue(secretMgr.isAppAttemptNMTokenKeyPresent(attempt1));
@@ -88,7 +88,7 @@ public class TestNMTokenSecretManagerInNM {
 
     // restart and verify attempt1 key is still valid due to prev key persist
     secretMgr = new NMTokenSecretManagerInNM(stateStore);
-    secretMgr.recover(stateStore.loadNMTokenState());
+    secretMgr.recover();
     secretMgr.setNodeId(nodeId);
     assertEquals(currentKey, secretMgr.getCurrentKey());
     assertFalse(secretMgr.isAppAttemptNMTokenKeyPresent(attempt1));
@@ -101,7 +101,7 @@ public class TestNMTokenSecretManagerInNM {
     currentKey = keygen.generateKey();
     secretMgr.setMasterKey(currentKey);
     secretMgr = new NMTokenSecretManagerInNM(stateStore);
-    secretMgr.recover(stateStore.loadNMTokenState());
+    secretMgr.recover();
     secretMgr.setNodeId(nodeId);
     assertEquals(currentKey, secretMgr.getCurrentKey());
     assertFalse(secretMgr.isAppAttemptNMTokenKeyPresent(attempt1));
@@ -117,7 +117,7 @@ public class TestNMTokenSecretManagerInNM {
     // remove last attempt, restart, verify both tokens are now bad
     secretMgr.appFinished(attempt2.getApplicationId());
     secretMgr = new NMTokenSecretManagerInNM(stateStore);
-    secretMgr.recover(stateStore.loadNMTokenState());
+    secretMgr.recover();
     secretMgr.setNodeId(nodeId);
     assertEquals(currentKey, secretMgr.getCurrentKey());
     assertFalse(secretMgr.isAppAttemptNMTokenKeyPresent(attempt1));
