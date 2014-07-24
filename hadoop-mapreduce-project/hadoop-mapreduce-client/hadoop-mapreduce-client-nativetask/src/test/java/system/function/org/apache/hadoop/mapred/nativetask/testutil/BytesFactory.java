@@ -19,6 +19,8 @@ package org.apache.hadoop.mapred.nativetask.testutil;
 
 import java.util.Random;
 
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.ByteWritable;
 import org.apache.hadoop.io.BytesWritable;
@@ -39,17 +41,17 @@ public class BytesFactory {
   public static Object newObject(byte[] seed, String className) {
     r.setSeed(seed.hashCode());
     if (className.equals(IntWritable.class.getName())) {
-      return new IntWritable(BytesUtil.toInt(seed));
+      return new IntWritable(Ints.fromByteArray(seed));
     } else if (className.equals(FloatWritable.class.getName())) {
       return new FloatWritable(r.nextFloat());
     } else if (className.equals(DoubleWritable.class.getName())) {
       return new DoubleWritable(r.nextDouble());
     } else if (className.equals(LongWritable.class.getName())) {
-      return new LongWritable(BytesUtil.toLong(seed));
+      return new LongWritable(Longs.fromByteArray(seed));
     } else if (className.equals(VIntWritable.class.getName())) {
-      return new VIntWritable(BytesUtil.toInt(seed));
+      return new VIntWritable(Ints.fromByteArray(seed));
     } else if (className.equals(VLongWritable.class.getName())) {
-      return new VLongWritable(BytesUtil.toLong(seed));
+      return new VLongWritable(Longs.fromByteArray(seed));
     } else if (className.equals(BooleanWritable.class.getName())) {
       return new BooleanWritable(seed[0] % 2 == 1 ? true : false);
     } else if (className.equals(Text.class.getName())) {
@@ -75,24 +77,25 @@ public class BytesFactory {
   public static <VTYPE> byte[] toBytes(VTYPE obj) {
     final String className = obj.getClass().getName();
     if (className.equals(IntWritable.class.getName())) {
-      return BytesUtil.toBytes(((IntWritable) obj).get());
+      return Ints.toByteArray(((IntWritable) obj).get());
     } else if (className.equals(FloatWritable.class.getName())) {
       return BytesUtil.toBytes(((FloatWritable) obj).get());
     } else if (className.equals(DoubleWritable.class.getName())) {
       return BytesUtil.toBytes(((DoubleWritable) obj).get());
     } else if (className.equals(LongWritable.class.getName())) {
-      return BytesUtil.toBytes(((LongWritable) obj).get());
+      return Longs.toByteArray(((LongWritable) obj).get());
     } else if (className.equals(VIntWritable.class.getName())) {
-      return BytesUtil.toBytes(((VIntWritable) obj).get());
+      return Ints.toByteArray(((VIntWritable) obj).get());
     } else if (className.equals(VLongWritable.class.getName())) {
-      return BytesUtil.toBytes(((VLongWritable) obj).get());
+      return Longs.toByteArray(((VLongWritable) obj).get());
     } else if (className.equals(BooleanWritable.class.getName())) {
       return BytesUtil.toBytes(((BooleanWritable) obj).get());
     } else if (className.equals(Text.class.getName())) {
-      return BytesUtil.toBytes(((Text) obj).toString());
+      return ((Text)obj).copyBytes();
     } else if (className.equals(ByteWritable.class.getName())) {
-      return BytesUtil.toBytes(((ByteWritable) obj).get());
+      return Ints.toByteArray((int) ((ByteWritable) obj).get());
     } else if (className.equals(BytesWritable.class.getName())) {
+      // TODO: copyBytes instead?
       return ((BytesWritable) obj).getBytes();
     } else {
       return new byte[0];

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.mapred.nativetask.utils;
 
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 import junit.framework.Assert;
 import junit.framework.TestCase;
 
@@ -24,27 +26,18 @@ import org.apache.hadoop.mapred.nativetask.util.BytesUtil;
 
 @SuppressWarnings({ "deprecation" })
 public class TestBytesUtil extends TestCase {
-
-  public void testBytesStringConversion() {
-
-    final String str = "I am good!";
-    final byte[] bytes = BytesUtil.toBytes(str);
-
-    Assert.assertEquals(str, BytesUtil.fromBytes(bytes));
- }
-
   public void testBytesIntConversion() {
     final int a = 1000;
-    final byte[] intBytes = BytesUtil.toBytes(a);
+    final byte[] intBytes = Ints.toByteArray(a);
 
-    Assert.assertEquals(a, BytesUtil.toInt(intBytes));
+    Assert.assertEquals(a, BytesUtil.toInt(intBytes, 0));
   }
 
   public void testBytesLongConversion() {
     final long l = 1000000L;
-    final byte[] longBytes = BytesUtil.toBytes(l);
+    final byte[] longBytes = Longs.toByteArray(l);
 
-    Assert.assertEquals(l, BytesUtil.toLong(longBytes));
+    Assert.assertEquals(l, BytesUtil.toLong(longBytes, 0));
   }
 
   public void testBytesFloatConversion() {

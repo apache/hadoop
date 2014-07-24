@@ -20,20 +20,16 @@ package org.apache.hadoop.mapred.nativetask;
 
 import java.io.IOException;
 
+import com.google.common.base.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.Task.TaskReporter;
-import org.apache.hadoop.mapred.nativetask.util.BytesUtil;
 import org.apache.hadoop.mapred.nativetask.util.ConfigUtil;
 import org.apache.hadoop.mapred.nativetask.util.SnappyUtil;
 import org.apache.hadoop.util.VersionInfo;
@@ -93,7 +89,7 @@ public class NativeRuntime {
    */
   public synchronized static long createNativeObject(String clazz) {
     assertNativeLibraryLoaded();
-    final long ret = JNICreateNativeObject(BytesUtil.toBytes(clazz));
+    final long ret = JNICreateNativeObject(clazz.getBytes(Charsets.UTF_8));
     if (ret == 0) {
       LOG.warn("Can't create NativeObject for class " + clazz + ", probably not exist.");
     }
@@ -108,7 +104,7 @@ public class NativeRuntime {
    */
   public synchronized static long registerLibrary(String libraryName, String clazz) {
     assertNativeLibraryLoaded();
-    final long ret = JNIRegisterModule(BytesUtil.toBytes(libraryName), BytesUtil.toBytes(clazz));
+    final long ret = JNIRegisterModule(libraryName.getBytes(Charsets.UTF_8), clazz.getBytes(Charsets.UTF_8));
     if (ret != 0) {
       LOG.warn("Can't create NativeObject for class " + clazz + ", probably not exist.");
     }

@@ -18,107 +18,38 @@
 
 package org.apache.hadoop.mapred.nativetask.util;
 
-import java.io.UnsupportedEncodingException;
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 
 public class BytesUtil {
 
-  public static final int SIZEOF_INT = Integer.SIZE / Byte.SIZE;
-  public static final int SIZEOF_LONG = Long.SIZE / Byte.SIZE;
-
-  public static byte[] toBytes(String str) {
-    if (str == null) {
-      return null;
-    }
-    try {
-      return str.getBytes("utf-8");
-    } catch (final UnsupportedEncodingException e) {
-      throw new RuntimeException(e.getMessage());
-    }
-  }
-
-  public static String fromBytes(byte[] data) {
-    if (data == null) {
-      return null;
-    }
-    try {
-      return new String(data, "utf-8");
-    } catch (final UnsupportedEncodingException e) {
-      throw new RuntimeException(e.getMessage());
-    }
-  }
-
   /**
-   * Converts a byte array to an int value
-   * @param bytes byte array
-   * @return the int value
-   */
-  public static int toInt(byte[] bytes) {
-    return toInt(bytes, 0, SIZEOF_INT);
-  }
-
-  /**
-   * Converts a byte array to an int value
-   * @param bytes byte array
-   * @param offset offset into array
-   * @param length length of int (has to be {@link #SIZEOF_INT})
-   * @return the int value
-   * @throws RuntimeException if length is not {@link #SIZEOF_INT} or
-   * if there's not enough room in the array at the offset indicated.
-   */
-  public static int toInt(byte[] bytes, int offset, final int length) {
-    if (length != SIZEOF_INT || offset + length > bytes.length) {
-      throw new RuntimeException(
-        "toInt exception. length not equals to SIZE of Int or buffer overflow");
-    }
-    int n = 0;
-    for (int i = offset; i< offset + length; i++) {
-      n <<= 4;
-      n ^= bytes[i] & 0xff;
-    }
-    return n;
-  }
-
-  /**
-   * Converts a byte array to a long value.
-   * @param bytes array
-   * @return the long value
-   */
-  public static long toLong(byte[] bytes) {
-    return toLong(bytes, 0, SIZEOF_LONG);
-  }
-
-   /**
-   * Converts a byte array to a long value.
+   * Converts a big-endian byte array to a long value.
    *
    * @param bytes array of bytes
    * @param offset offset into array
-   * @return the long value
    */
   public static long toLong(byte[] bytes, int offset) {
-    return toLong(bytes, offset, SIZEOF_LONG);
+    return Longs.fromBytes(bytes[offset],
+      bytes[offset + 1],
+      bytes[offset + 2],
+      bytes[offset + 3],
+      bytes[offset + 4],
+      bytes[offset + 5],
+      bytes[offset + 6],
+      bytes[offset + 7]);
   }
 
   /**
-   * Converts a byte array to a long value.
-   *
-   * @param bytes array of bytes
-   * @param offset offset into array
-   * @param length length of data (must be {@link #SIZEOF_LONG})
-   * @return the long value
-   * @throws RuntimeException if length is not {@link #SIZEOF_LONG} or
-   * if there's not enough room in the array at the offset indicated.
+   * Convert a big-endian integer from a byte array to a primitive value.
+   * @param bytes the array to parse from
+   * @param offset the offset in the array
    */
-  public static long toLong(byte[] bytes, int offset, final int length) {
-    if (length != SIZEOF_LONG || offset + length > bytes.length) {
-      throw new RuntimeException(
-        "toLong exception. length not equals to SIZE of Long or buffer overflow");
-    }
-    long l = 0;
-    for (int i = offset; i < offset + length; i++) {
-      l <<= 8;
-      l ^= bytes[i] & 0xff;
-    }
-    return l;
+  public static int toInt(byte[] bytes, int offset) {
+    return Ints.fromBytes(bytes[offset],
+      bytes[offset + 1],
+      bytes[offset + 2],
+      bytes[offset + 3]);
   }
 
   /**
@@ -137,7 +68,7 @@ public class BytesUtil {
    * @return Float made from passed byte array.
    */
   public static float toFloat(byte [] bytes, int offset) {
-    return Float.intBitsToFloat(toInt(bytes, offset, SIZEOF_INT));
+    return Float.intBitsToFloat(toInt(bytes, offset));
   }
 
   /**
@@ -154,7 +85,7 @@ public class BytesUtil {
    * @return Return double made from passed bytes.
    */
   public static double toDouble(final byte [] bytes, final int offset) {
-    return Double.longBitsToDouble(toLong(bytes, offset, SIZEOF_LONG));
+    return Double.longBitsToDouble(toLong(bytes, offset));
   }
 
   /**
@@ -211,45 +142,12 @@ public class BytesUtil {
   }
 
   /**
-   * Convert an int value to a byte array.  Big-endian.  Same as what DataOutputStream.writeInt
-   * does.
-   *
-   * @param val value
-   * @return the byte array
-   */
-  public static byte[] toBytes(int val) {
-    byte [] b = new byte[4];
-    for(int i = 3; i > 0; i--) {
-      b[i] = (byte) val;
-      val >>>= 8;
-    }
-    b[0] = (byte) val;
-    return b;
-  }
-
-  /**
-   * Convert a long value to a byte array using big-endian.
-   *
-   * @param val value to convert
-   * @return the byte array
-   */
-  public static byte[] toBytes(long val) {
-    byte [] b = new byte[8];
-    for (int i = 7; i > 0; i--) {
-      b[i] = (byte) val;
-      val >>>= 8;
-    }
-    b[0] = (byte) val;
-    return b;
-  }
-
-  /**
    * @param f float value
    * @return the float represented as byte []
    */
   public static byte [] toBytes(final float f) {
     // Encode it as int
-    return toBytes(Float.floatToRawIntBits(f));
+    return Ints.toByteArray(Float.floatToRawIntBits(f));
   }
 
   /**
@@ -261,7 +159,7 @@ public class BytesUtil {
    */
   public static byte [] toBytes(final double d) {
     // Encode it as a long
-    return toBytes(Double.doubleToRawLongBits(d));
+    return Longs.toByteArray(Double.doubleToRawLongBits(d));
   }
 
 }

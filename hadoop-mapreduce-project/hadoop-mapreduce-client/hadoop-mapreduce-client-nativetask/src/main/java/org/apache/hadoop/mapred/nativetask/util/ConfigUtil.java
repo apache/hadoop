@@ -21,14 +21,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.base.Charsets;
 import org.apache.hadoop.conf.Configuration;
 
 public class ConfigUtil {
   public static byte[][] toBytes(Configuration conf) {
     List<byte[]> nativeConfigs = new ArrayList<byte[]>();
     for (Map.Entry<String, String> e : conf) {
-      nativeConfigs.add(BytesUtil.toBytes(e.getKey()));
-      nativeConfigs.add(BytesUtil.toBytes(e.getValue()));
+      nativeConfigs.add(e.getKey().getBytes(Charsets.UTF_8));
+      nativeConfigs.add(e.getValue().getBytes(Charsets.UTF_8));
     }
     return nativeConfigs.toArray(new byte[nativeConfigs.size()][]);
   }

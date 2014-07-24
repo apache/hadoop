@@ -20,12 +20,12 @@ package org.apache.hadoop.mapred.nativetask.kvtest;
 import java.io.IOException;
 import java.util.zip.CRC32;
 
+import com.google.common.primitives.Longs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.nativetask.testutil.BytesFactory;
 import org.apache.hadoop.mapred.nativetask.testutil.TestConstants;
-import org.apache.hadoop.mapred.nativetask.util.BytesUtil;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -63,7 +63,7 @@ public class KVJob {
         resultlong += crc32.getValue();
       }
       final VTYPE V = null;
-      context.write(key, (VTYPE) BytesFactory.newObject(BytesUtil.toBytes(resultlong), V.getClass().getName()));
+      context.write(key, (VTYPE) BytesFactory.newObject(Longs.toByteArray(resultlong), V.getClass().getName()));
     }
   }
 

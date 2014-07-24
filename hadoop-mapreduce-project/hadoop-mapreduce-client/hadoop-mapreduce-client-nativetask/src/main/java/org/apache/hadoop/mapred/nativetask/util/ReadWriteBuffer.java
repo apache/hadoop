@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapred.nativetask.util;
 
+import com.google.common.base.Charsets;
+
 public class ReadWriteBuffer {
   private byte[] _buff;
   private int _writePoint;
@@ -127,13 +129,13 @@ public class ReadWriteBuffer {
   }
 
   public void writeString(String str) {
-    final byte[] bytes = BytesUtil.toBytes(str);
+    final byte[] bytes = str.getBytes(Charsets.UTF_8);
     writeBytes(bytes, 0, bytes.length);
   }
 
   public String readString() {
     final byte[] bytes = readBytes();
-    return BytesUtil.fromBytes(bytes);
+    return new String(bytes, Charsets.UTF_8);
   }
 
   private void checkWriteSpaceAndResizeIfNecessary(int toBeWritten) {
