@@ -212,18 +212,25 @@ public class TestNNStorageRetentionManager {
     tc.addImage("/foo1/current/" + getImageFileName(300), false);
     tc.addImage("/foo1/current/" + getImageFileName(400), false);
 
+    // Segments containing txns upto txId 250 are extra and should be purged.
     tc.addLog("/foo2/current/" + getFinalizedEditsFileName(1, 100), true);
-    // Without lowering the max segments to retain, we'd retain all segments
-    // going back to txid 150 (300 - 150).
     tc.addLog("/foo2/current/" + getFinalizedEditsFileName(101, 175), true);
+    tc.addLog("/foo2/current/" + getInProgressEditsFileName(176) + ".empty",
+        true);
     tc.addLog("/foo2/current/" + getFinalizedEditsFileName(176, 200), true);
     tc.addLog("/foo2/current/" + getFinalizedEditsFileName(201, 225), true);
+    tc.addLog("/foo2/current/" + getInProgressEditsFileName(226) + ".corrupt",
+        true);
     tc.addLog("/foo2/current/" + getFinalizedEditsFileName(226, 240), true);
     // Only retain 2 extra segments. The 301-350 and 351-400 segments are
     // considered required, not extra.
     tc.addLog("/foo2/current/" + getFinalizedEditsFileName(241, 275), false);
     tc.addLog("/foo2/current/" + getFinalizedEditsFileName(276, 300), false);
+    tc.addLog("/foo2/current/" + getInProgressEditsFileName(301) + ".empty",
+        false);
     tc.addLog("/foo2/current/" + getFinalizedEditsFileName(301, 350), false);
+    tc.addLog("/foo2/current/" + getInProgressEditsFileName(351) + ".corrupt",
+        false);
     tc.addLog("/foo2/current/" + getFinalizedEditsFileName(351, 400), false);
     tc.addLog("/foo2/current/" + getInProgressEditsFileName(401), false);
     runTest(tc);

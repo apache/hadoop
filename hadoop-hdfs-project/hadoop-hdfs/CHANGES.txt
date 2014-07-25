@@ -370,6 +370,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6715. Webhdfs wont fail over when it gets java.io.IOException: Namenode
     is in startup mode. (jing9)
 
+    HDFS-5919. FileJournalManager doesn't purge empty and corrupt inprogress edits
+    files (vinayakumarb)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
