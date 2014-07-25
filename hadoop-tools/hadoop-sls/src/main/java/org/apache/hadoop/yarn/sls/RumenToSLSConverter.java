@@ -21,6 +21,8 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.Options;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.ObjectWriter;
@@ -42,6 +44,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+@Private
+@Unstable
 public class RumenToSLSConverter {
   private static final String EOL = System.getProperty("line.separator");
 

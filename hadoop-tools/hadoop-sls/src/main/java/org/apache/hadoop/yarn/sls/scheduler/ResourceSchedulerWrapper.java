@@ -36,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configurable;
@@ -92,6 +93,8 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SlidingWindowReservoir;
 import com.codahale.metrics.Timer;
 
+@Private
+@Unstable
 final public class ResourceSchedulerWrapper
     extends AbstractYarnScheduler<SchedulerApplicationAttempt, SchedulerNode>
     implements SchedulerWrapper, ResourceScheduler, Configurable {

@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.sls.nodemanager;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
@@ -36,6 +38,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode
         .UpdatedContainerInfo;
 
+@Private
+@Unstable
 public class NodeInfo {
   private static int NODE_ID = 0;
 
@@ -43,6 +47,8 @@ public class NodeInfo {
     return NodeId.newInstance(host, port);
   }
 
+  @Private
+  @Unstable
   private static class FakeRMNodeImpl implements RMNode {
     private NodeId nodeId;
     private String hostName;
@@ -164,7 +170,7 @@ public class NodeInfo {
       perNode = resourceOption;
     }
   }
-  
+
   public static RMNode newNodeInfo(String rackName, String hostName,
                               final ResourceOption resourceOption, int port) {
     final NodeId nodeId = newNodeID(hostName, port);
