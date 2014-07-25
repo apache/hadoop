@@ -145,14 +145,14 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       List<DatanodeStorageInfo> results = new ArrayList<DatanodeStorageInfo>();
       boolean avoidStaleNodes = stats != null
           && stats.isAvoidingStaleDataNodesForWrite();
-      for (int i = 0; i < Math.min(favoredNodes.size(), numOfReplicas); i++) {
+      for (int i = 0; i < favoredNodes.size() && results.size() < numOfReplicas; i++) {
         DatanodeDescriptor favoredNode = favoredNodes.get(i);
         // Choose a single node which is local to favoredNode.
         // 'results' is updated within chooseLocalNode
         final DatanodeStorageInfo target = chooseLocalStorage(favoredNode,
             favoriteAndExcludedNodes, blocksize, 
             getMaxNodesPerRack(results.size(), numOfReplicas)[1],
-            results, avoidStaleNodes, storageType);
+            results, avoidStaleNodes, storageType, false);
         if (target == null) {
           LOG.warn("Could not find a target for file " + src
               + " with favored node " + favoredNode); 
@@ -271,7 +271,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     try {
       if (numOfResults == 0) {
         writer = chooseLocalStorage(writer, excludedNodes, blocksize,
-            maxNodesPerRack, results, avoidStaleNodes, storageType)
+            maxNodesPerRack, results, avoidStaleNodes, storageType, true)
                 .getDatanodeDescriptor();
         if (--numOfReplicas == 0) {
           return writer;
@@ -345,12 +345,14 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
                                              int maxNodesPerRack,
                                              List<DatanodeStorageInfo> results,
                                              boolean avoidStaleNodes,
-                                             StorageType storageType)
+                                             StorageType storageType,
+                                             boolean fallbackToLocalRack)
       throws NotEnoughReplicasException {
     // if no local machine, randomly choose one node
-    if (localMachine == null)
+    if (localMachine == null) {
       return chooseRandom(NodeBase.ROOT, excludedNodes, blocksize,
           maxNodesPerRack, results, avoidStaleNodes, storageType);
+    }
     if (preferLocalNode && localMachine instanceof DatanodeDescriptor) {
       DatanodeDescriptor localDatanode = (DatanodeDescriptor) localMachine;
       // otherwise try local machine first
@@ -363,7 +365,11 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
           }
         }
       } 
-    }      
+    }
+
+    if (!fallbackToLocalRack) {
+      return null;
+    }
     // try a node on local rack
     return chooseLocalRack(localMachine, excludedNodes, blocksize,
         maxNodesPerRack, results, avoidStaleNodes, storageType);
@@ -636,15 +642,11 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
 
     // check the communication traffic of the target machine
     if (considerLoad) {
-      double avgLoad = 0;
-      if (stats != null) {
-        int size = stats.getNumDatanodesInService();
-        if (size != 0) {
-          avgLoad = (double)stats.getTotalLoad()/size;
-        }
-      }
-      if (node.getXceiverCount() > (2.0 * avgLoad)) {
-        logNodeIsNotChosen(storage, "the node is too busy ");
+      final double maxLoad = 2.0 * stats.getInServiceXceiverAverage();
+      final int nodeLoad = node.getXceiverCount();
+      if (nodeLoad > maxLoad) {
+        logNodeIsNotChosen(storage,
+            "the node is too busy (load:"+nodeLoad+" > "+maxLoad+") ");
         return false;
       }
     }
@@ -727,31 +729,34 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   }
 
   @Override
-  public DatanodeDescriptor chooseReplicaToDelete(BlockCollection bc,
+  public DatanodeStorageInfo chooseReplicaToDelete(BlockCollection bc,
       Block block, short replicationFactor,
-      Collection<DatanodeDescriptor> first,
-      Collection<DatanodeDescriptor> second) {
+      Collection<DatanodeStorageInfo> first,
+      Collection<DatanodeStorageInfo> second) {
     long oldestHeartbeat =
       now() - heartbeatInterval * tolerateHeartbeatMultiplier;
-    DatanodeDescriptor oldestHeartbeatNode = null;
+    DatanodeStorageInfo oldestHeartbeatStorage = null;
     long minSpace = Long.MAX_VALUE;
-    DatanodeDescriptor minSpaceNode = null;
+    DatanodeStorageInfo minSpaceStorage = null;
 
     // Pick the node with the oldest heartbeat or with the least free space,
     // if all hearbeats are within the tolerable heartbeat interval
-    for(DatanodeDescriptor node : pickupReplicaSet(first, second)) {
+    for(DatanodeStorageInfo storage : pickupReplicaSet(first, second)) {
+      final DatanodeDescriptor node = storage.getDatanodeDescriptor();
       long free = node.getRemaining();
       long lastHeartbeat = node.getLastUpdate();
       if(lastHeartbeat < oldestHeartbeat) {
         oldestHeartbeat = lastHeartbeat;
-        oldestHeartbeatNode = node;
+        oldestHeartbeatStorage = storage;
       }
       if (minSpace > free) {
         minSpace = free;
-        minSpaceNode = node;
+        minSpaceStorage = storage;
       }
     }
-    return oldestHeartbeatNode != null ? oldestHeartbeatNode : minSpaceNode;
+
+    return oldestHeartbeatStorage != null? oldestHeartbeatStorage
+        : minSpaceStorage;
   }
 
   /**
@@ -760,9 +765,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
    * replica while second set contains remaining replica nodes.
    * So pick up first set if not empty. If first is empty, then pick second.
    */
-  protected Collection<DatanodeDescriptor> pickupReplicaSet(
-      Collection<DatanodeDescriptor> first,
-      Collection<DatanodeDescriptor> second) {
+  protected Collection<DatanodeStorageInfo> pickupReplicaSet(
+      Collection<DatanodeStorageInfo> first,
+      Collection<DatanodeStorageInfo> second) {
     return first.isEmpty() ? second : first;
   }
   

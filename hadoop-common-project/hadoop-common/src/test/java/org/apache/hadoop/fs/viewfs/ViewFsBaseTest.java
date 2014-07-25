@@ -22,10 +22,14 @@ import static org.apache.hadoop.fs.FileContextTestHelper.checkFileStatus;
 import static org.apache.hadoop.fs.FileContextTestHelper.exists;
 import static org.apache.hadoop.fs.FileContextTestHelper.isDir;
 import static org.apache.hadoop.fs.FileContextTestHelper.isFile;
+import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -39,8 +43,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.AclUtil;
 import org.apache.hadoop.fs.viewfs.ViewFs.MountPoint;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.junit.After;
 import org.junit.Assert;
@@ -694,5 +702,79 @@ public class ViewFsBaseTest {
   @Test(expected=AccessControlException.class) 
   public void testInternalSetOwner() throws IOException {
     fcView.setOwner(new Path("/internalDir"), "foo", "bar");
+  }
+
+  /**
+   * Verify the behavior of ACL operations on paths above the root of
+   * any mount table entry.
+   */
+
+  @Test(expected=AccessControlException.class)
+  public void testInternalModifyAclEntries() throws IOException {
+    fcView.modifyAclEntries(new Path("/internalDir"),
+        new ArrayList<AclEntry>());
+  }
+
+  @Test(expected=AccessControlException.class)
+  public void testInternalRemoveAclEntries() throws IOException {
+    fcView.removeAclEntries(new Path("/internalDir"),
+        new ArrayList<AclEntry>());
+  }
+
+  @Test(expected=AccessControlException.class)
+  public void testInternalRemoveDefaultAcl() throws IOException {
+    fcView.removeDefaultAcl(new Path("/internalDir"));
+  }
+
+  @Test(expected=AccessControlException.class)
+  public void testInternalRemoveAcl() throws IOException {
+    fcView.removeAcl(new Path("/internalDir"));
+  }
+
+  @Test(expected=AccessControlException.class)
+  public void testInternalSetAcl() throws IOException {
+    fcView.setAcl(new Path("/internalDir"), new ArrayList<AclEntry>());
+  }
+
+  @Test
+  public void testInternalGetAclStatus() throws IOException {
+    final UserGroupInformation currentUser =
+        UserGroupInformation.getCurrentUser();
+    AclStatus aclStatus = fcView.getAclStatus(new Path("/internalDir"));
+    assertEquals(aclStatus.getOwner(), currentUser.getUserName());
+    assertEquals(aclStatus.getGroup(), currentUser.getGroupNames()[0]);
+    assertEquals(aclStatus.getEntries(),
+        AclUtil.getMinimalAcl(PERMISSION_555));
+    assertFalse(aclStatus.isStickyBit());
+  }
+
+  @Test(expected=AccessControlException.class)
+  public void testInternalSetXAttr() throws IOException {
+    fcView.setXAttr(new Path("/internalDir"), "xattrName", null);
+  }
+
+  @Test(expected=NotInMountpointException.class)
+  public void testInternalGetXAttr() throws IOException {
+    fcView.getXAttr(new Path("/internalDir"), "xattrName");
+  }
+
+  @Test(expected=NotInMountpointException.class)
+  public void testInternalGetXAttrs() throws IOException {
+    fcView.getXAttrs(new Path("/internalDir"));
+  }
+
+  @Test(expected=NotInMountpointException.class)
+  public void testInternalGetXAttrsWithNames() throws IOException {
+    fcView.getXAttrs(new Path("/internalDir"), new ArrayList<String>());
+  }
+
+  @Test(expected=NotInMountpointException.class)
+  public void testInternalListXAttr() throws IOException {
+    fcView.listXAttrs(new Path("/internalDir"));
+  }
+
+  @Test(expected=AccessControlException.class)
+  public void testInternalRemoveXAttr() throws IOException {
+    fcView.removeXAttr(new Path("/internalDir"), "xattrName");
   }
 }

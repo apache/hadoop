@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -28,20 +29,20 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Provides access to the <code>AccessControlList</code>s used by KMS,
  * hot-reloading them if the <code>kms-acls.xml</code> file where the ACLs
  * are defined has been updated.
  */
+@InterfaceAudience.Private
 public class KMSACLs implements Runnable {
   private static final Logger LOG = LoggerFactory.getLogger(KMSACLs.class);
 
 
   public enum Type {
-    CREATE, DELETE, ROLLOVER, GET, GET_KEYS, GET_METADATA, SET_KEY_MATERIAL;
+    CREATE, DELETE, ROLLOVER, GET, GET_KEYS, GET_METADATA,
+    SET_KEY_MATERIAL, GENERATE_EEK, DECRYPT_EEK;
 
     public String getConfigKey() {
       return KMSConfiguration.CONFIG_PREFIX + "acl." + this.toString();
@@ -52,13 +53,11 @@ public class KMSACLs implements Runnable {
 
   public static final int RELOADER_SLEEP_MILLIS = 1000;
 
-  Map<Type, AccessControlList> acls;
-  private ReadWriteLock lock;
+  private volatile Map<Type, AccessControlList> acls;
   private ScheduledExecutorService executorService;
   private long lastReload;
 
   KMSACLs(Configuration conf) {
-    lock = new ReentrantReadWriteLock();
     if (conf == null) {
       conf = loadACLs();
     }
@@ -70,17 +69,13 @@ public class KMSACLs implements Runnable {
   }
 
   private void setACLs(Configuration conf) {
-    lock.writeLock().lock();
-    try {
-      acls = new HashMap<Type, AccessControlList>();
-      for (Type aclType : Type.values()) {
-        String aclStr = conf.get(aclType.getConfigKey(), ACL_DEFAULT);
-        acls.put(aclType, new AccessControlList(aclStr));
-        LOG.info("'{}' ACL '{}'", aclType, aclStr);
-      }
-    } finally {
-      lock.writeLock().unlock();
+    Map<Type, AccessControlList> tempAcls = new HashMap<Type, AccessControlList>();
+    for (Type aclType : Type.values()) {
+      String aclStr = conf.get(aclType.getConfigKey(), ACL_DEFAULT);
+      tempAcls.put(aclType, new AccessControlList(aclStr));
+      LOG.info("'{}' ACL '{}'", aclType, aclStr);
     }
+    acls = tempAcls;
   }
 
   @Override
@@ -120,14 +115,7 @@ public class KMSACLs implements Runnable {
 
   public boolean hasAccess(Type type, String user) {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
-    AccessControlList acl = null;
-    lock.readLock().lock();
-    try {
-      acl = acls.get(type);
-    } finally {
-      lock.readLock().unlock();
-    }
-    return acl.isUserAllowed(ugi);
+    return acls.get(type).isUserAllowed(ugi);
   }
 
 }

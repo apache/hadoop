@@ -35,11 +35,19 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
+import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.NMDBSchemaVersionProto;
+import org.apache.hadoop.yarn.server.api.records.MasterKey;
+import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.records.NMDBSchemaVersion;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.records.impl.pb.NMDBSchemaVersionPBImpl;
 import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.fusesource.leveldbjni.JniDBFactory;
@@ -50,14 +58,18 @@ import org.iq80.leveldb.Logger;
 import org.iq80.leveldb.Options;
 import org.iq80.leveldb.WriteBatch;
 
+import com.google.common.annotations.VisibleForTesting;
+
 public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   public static final Log LOG =
       LogFactory.getLog(NMLeveldbStateStoreService.class);
 
   private static final String DB_NAME = "yarn-nm-state";
-  private static final String DB_SCHEMA_VERSION_KEY = "schema-version";
-  private static final String DB_SCHEMA_VERSION = "1.0";
+  private static final String DB_SCHEMA_VERSION_KEY = "nm-schema-version";
+  
+  private static final NMDBSchemaVersion CURRENT_VERSION_INFO = NMDBSchemaVersion
+      .newInstance(1, 0);
 
   private static final String DELETION_TASK_KEY_PREFIX =
       "DeletionService/deltask_";
@@ -71,6 +83,20 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private static final String LOCALIZATION_COMPLETED_SUFFIX = "completed/";
   private static final String LOCALIZATION_FILECACHE_SUFFIX = "filecache/";
   private static final String LOCALIZATION_APPCACHE_SUFFIX = "appcache/";
+
+  private static final String CURRENT_MASTER_KEY_SUFFIX = "CurrentMasterKey";
+  private static final String PREV_MASTER_KEY_SUFFIX = "PreviousMasterKey";
+  private static final String NM_TOKENS_KEY_PREFIX = "NMTokens/";
+  private static final String NM_TOKENS_CURRENT_MASTER_KEY =
+      NM_TOKENS_KEY_PREFIX + CURRENT_MASTER_KEY_SUFFIX;
+  private static final String NM_TOKENS_PREV_MASTER_KEY =
+      NM_TOKENS_KEY_PREFIX + PREV_MASTER_KEY_SUFFIX;
+  private static final String CONTAINER_TOKENS_KEY_PREFIX =
+      "ContainerTokens/";
+  private static final String CONTAINER_TOKENS_CURRENT_MASTER_KEY =
+      CONTAINER_TOKENS_KEY_PREFIX + CURRENT_MASTER_KEY_SUFFIX;
+  private static final String CONTAINER_TOKENS_PREV_MASTER_KEY =
+      CONTAINER_TOKENS_KEY_PREFIX + PREV_MASTER_KEY_SUFFIX;
 
   private DB db;
 
@@ -122,7 +148,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
             key.substring(0, userEndPos+1)));
       }
     } catch (DBException e) {
-      throw new IOException(e.getMessage(), e);
+      throw new IOException(e);
     } finally {
       if (iter != null) {
         iter.close();
@@ -241,7 +267,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), proto.toByteArray());
     } catch (DBException e) {
-      throw new IOException(e.getMessage(), e);
+      throw new IOException(e);
     }
   }
 
@@ -264,7 +290,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         batch.close();
       }
     } catch (DBException e) {
-      throw new IOException(e.getMessage(), e);
+      throw new IOException(e);
     }
   }
 
@@ -287,7 +313,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         batch.close();
       }
     } catch (DBException e) {
-      throw new IOException(e.getMessage(), e);
+      throw new IOException(e);
     }
   }
 
@@ -336,7 +362,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
             DeletionServiceDeleteTaskProto.parseFrom(entry.getValue()));
       }
     } catch (DBException e) {
-      throw new IOException(e.getMessage(), e);
+      throw new IOException(e);
     } finally {
       if (iter != null) {
         iter.close();
@@ -352,7 +378,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), taskProto.toByteArray());
     } catch (DBException e) {
-      throw new IOException(e.getMessage(), e);
+      throw new IOException(e);
     }
   }
 
@@ -362,7 +388,178 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.delete(bytes(key));
     } catch (DBException e) {
-      throw new IOException(e.getMessage(), e);
+      throw new IOException(e);
+    }
+  }
+
+
+  @Override
+  public RecoveredNMTokensState loadNMTokensState() throws IOException {
+    RecoveredNMTokensState state = new RecoveredNMTokensState();
+    state.applicationMasterKeys =
+        new HashMap<ApplicationAttemptId, MasterKey>();
+    LeveldbIterator iter = null;
+    try {
+      iter = new LeveldbIterator(db);
+      iter.seek(bytes(NM_TOKENS_KEY_PREFIX));
+      while (iter.hasNext()) {
+        Entry<byte[], byte[]> entry = iter.next();
+        String fullKey = asString(entry.getKey());
+        if (!fullKey.startsWith(NM_TOKENS_KEY_PREFIX)) {
+          break;
+        }
+        String key = fullKey.substring(NM_TOKENS_KEY_PREFIX.length());
+        if (key.equals(CURRENT_MASTER_KEY_SUFFIX)) {
+          state.currentMasterKey = parseMasterKey(entry.getValue());
+        } else if (key.equals(PREV_MASTER_KEY_SUFFIX)) {
+          state.previousMasterKey = parseMasterKey(entry.getValue());
+        } else if (key.startsWith(
+            ApplicationAttemptId.appAttemptIdStrPrefix)) {
+          ApplicationAttemptId attempt;
+          try {
+            attempt = ConverterUtils.toApplicationAttemptId(key);
+          } catch (IllegalArgumentException e) {
+            throw new IOException("Bad application master key state for "
+                + fullKey, e);
+          }
+          state.applicationMasterKeys.put(attempt,
+              parseMasterKey(entry.getValue()));
+        }
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    } finally {
+      if (iter != null) {
+        iter.close();
+      }
+    }
+    return state;
+  }
+
+  @Override
+  public void storeNMTokenCurrentMasterKey(MasterKey key)
+      throws IOException {
+    storeMasterKey(NM_TOKENS_CURRENT_MASTER_KEY, key);
+  }
+
+  @Override
+  public void storeNMTokenPreviousMasterKey(MasterKey key)
+      throws IOException {
+    storeMasterKey(NM_TOKENS_PREV_MASTER_KEY, key);
+  }
+
+  @Override
+  public void storeNMTokenApplicationMasterKey(
+      ApplicationAttemptId attempt, MasterKey key) throws IOException {
+    storeMasterKey(NM_TOKENS_KEY_PREFIX + attempt, key);
+  }
+
+  @Override
+  public void removeNMTokenApplicationMasterKey(
+      ApplicationAttemptId attempt) throws IOException {
+    String key = NM_TOKENS_KEY_PREFIX + attempt;
+    try {
+      db.delete(bytes(key));
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  private MasterKey parseMasterKey(byte[] keyData) throws IOException {
+    return new MasterKeyPBImpl(MasterKeyProto.parseFrom(keyData));
+  }
+
+  private void storeMasterKey(String dbKey, MasterKey key)
+      throws IOException {
+    MasterKeyPBImpl pb = (MasterKeyPBImpl) key;
+    try {
+      db.put(bytes(dbKey), pb.getProto().toByteArray());
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+
+  @Override
+  public RecoveredContainerTokensState loadContainerTokensState()
+      throws IOException {
+    RecoveredContainerTokensState state = new RecoveredContainerTokensState();
+    state.activeTokens = new HashMap<ContainerId, Long>();
+    LeveldbIterator iter = null;
+    try {
+      iter = new LeveldbIterator(db);
+      iter.seek(bytes(CONTAINER_TOKENS_KEY_PREFIX));
+      final int containerTokensKeyPrefixLength =
+          CONTAINER_TOKENS_KEY_PREFIX.length();
+      while (iter.hasNext()) {
+        Entry<byte[], byte[]> entry = iter.next();
+        String fullKey = asString(entry.getKey());
+        if (!fullKey.startsWith(CONTAINER_TOKENS_KEY_PREFIX)) {
+          break;
+        }
+        String key = fullKey.substring(containerTokensKeyPrefixLength);
+        if (key.equals(CURRENT_MASTER_KEY_SUFFIX)) {
+          state.currentMasterKey = parseMasterKey(entry.getValue());
+        } else if (key.equals(PREV_MASTER_KEY_SUFFIX)) {
+          state.previousMasterKey = parseMasterKey(entry.getValue());
+        } else if (key.startsWith(ConverterUtils.CONTAINER_PREFIX)) {
+          loadContainerToken(state, fullKey, key, entry.getValue());
+        }
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    } finally {
+      if (iter != null) {
+        iter.close();
+      }
+    }
+    return state;
+  }
+
+  private static void loadContainerToken(RecoveredContainerTokensState state,
+      String key, String containerIdStr, byte[] value) throws IOException {
+    ContainerId containerId;
+    Long expTime;
+    try {
+      containerId = ConverterUtils.toContainerId(containerIdStr);
+      expTime = Long.parseLong(asString(value));
+    } catch (IllegalArgumentException e) {
+      throw new IOException("Bad container token state for " + key, e);
+    }
+    state.activeTokens.put(containerId, expTime);
+  }
+
+  @Override
+  public void storeContainerTokenCurrentMasterKey(MasterKey key)
+      throws IOException {
+    storeMasterKey(CONTAINER_TOKENS_CURRENT_MASTER_KEY, key);
+  }
+
+  @Override
+  public void storeContainerTokenPreviousMasterKey(MasterKey key)
+      throws IOException {
+    storeMasterKey(CONTAINER_TOKENS_PREV_MASTER_KEY, key);
+  }
+
+  @Override
+  public void storeContainerToken(ContainerId containerId, Long expTime)
+      throws IOException {
+    String key = CONTAINER_TOKENS_KEY_PREFIX + containerId;
+    try {
+      db.put(bytes(key), bytes(expTime.toString()));
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void removeContainerToken(ContainerId containerId)
+      throws IOException {
+    String key = CONTAINER_TOKENS_KEY_PREFIX + containerId;
+    try {
+      db.delete(bytes(key));
+    } catch (DBException e) {
+      throw new IOException(e);
     }
   }
 
@@ -376,22 +573,16 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     options.logger(new LeveldbLogger());
     LOG.info("Using state database at " + storeRoot + " for recovery");
     File dbfile = new File(storeRoot.toString());
-    byte[] schemaVersionData = null;
     try {
       db = JniDBFactory.factory.open(dbfile, options);
-      try {
-        schemaVersionData = db.get(bytes(DB_SCHEMA_VERSION_KEY));
-      } catch (DBException e) {
-        throw new IOException(e.getMessage(), e);
-      }
     } catch (NativeDB.DBException e) {
       if (e.isNotFound() || e.getMessage().contains(" does not exist ")) {
         LOG.info("Creating state database at " + dbfile);
         options.createIfMissing(true);
         try {
           db = JniDBFactory.factory.open(dbfile, options);
-          schemaVersionData = bytes(DB_SCHEMA_VERSION);
-          db.put(bytes(DB_SCHEMA_VERSION_KEY), schemaVersionData);
+          // store version
+          storeVersion();
         } catch (DBException dbErr) {
           throw new IOException(dbErr.getMessage(), dbErr);
         }
@@ -399,16 +590,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         throw e;
       }
     }
-    if (schemaVersionData != null) {
-      String schemaVersion = asString(schemaVersionData);
-      // only support exact schema matches for now
-      if (!DB_SCHEMA_VERSION.equals(schemaVersion)) {
-        throw new IOException("Incompatible state database schema, found "
-            + schemaVersion + " expected " + DB_SCHEMA_VERSION);
-      }
-    } else {
-      throw new IOException("State database schema version not found");
-    }
+    checkVersion();
   }
 
   private Path createStorageDir(Configuration conf) throws IOException {
@@ -433,4 +615,68 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       LOG.info(message);
     }
   }
+
+
+  NMDBSchemaVersion loadVersion() throws IOException {
+    byte[] data = db.get(bytes(DB_SCHEMA_VERSION_KEY));
+    // if version is not stored previously, treat it as 1.0.
+    if (data == null || data.length == 0) {
+      return NMDBSchemaVersion.newInstance(1, 0);
+    }
+    NMDBSchemaVersion version =
+        new NMDBSchemaVersionPBImpl(NMDBSchemaVersionProto.parseFrom(data));
+    return version;
+  }
+
+  private void storeVersion() throws IOException {
+    dbStoreVersion(CURRENT_VERSION_INFO);
+  }
+  
+  // Only used for test
+  @VisibleForTesting
+  void storeVersion(NMDBSchemaVersion state) throws IOException {
+    dbStoreVersion(state);
+  }
+  
+  private void dbStoreVersion(NMDBSchemaVersion state) throws IOException {
+    String key = DB_SCHEMA_VERSION_KEY;
+    byte[] data = 
+        ((NMDBSchemaVersionPBImpl) state).getProto().toByteArray();
+    try {
+      db.put(bytes(key), data);
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  NMDBSchemaVersion getCurrentVersion() {
+    return CURRENT_VERSION_INFO;
+  }
+  
+  /**
+   * 1) Versioning scheme: major.minor. For e.g. 1.0, 1.1, 1.2...1.25, 2.0 etc.
+   * 2) Any incompatible change of state-store is a major upgrade, and any
+   *    compatible change of state-store is a minor upgrade.
+   * 3) Within a minor upgrade, say 1.1 to 1.2:
+   *    overwrite the version info and proceed as normal.
+   * 4) Within a major upgrade, say 1.2 to 2.0:
+   *    throw exception and indicate user to use a separate upgrade tool to
+   *    upgrade NM state or remove incompatible old state.
+   */
+  private void checkVersion() throws IOException {
+    NMDBSchemaVersion loadedVersion = loadVersion();
+    LOG.info("Loaded NM state version info " + loadedVersion);
+    if (loadedVersion != null && loadedVersion.equals(getCurrentVersion())) {
+      return;
+    }
+    if (loadedVersion.isCompatibleTo(getCurrentVersion())) {
+      LOG.info("Storing NM state version info " + getCurrentVersion());
+      storeVersion();
+    } else {
+      throw new IOException(
+        "Incompatible version for NM state: expecting NM state version " 
+            + getCurrentVersion() + ", but loading version " + loadedVersion);
+    }
+  }
+  
 }

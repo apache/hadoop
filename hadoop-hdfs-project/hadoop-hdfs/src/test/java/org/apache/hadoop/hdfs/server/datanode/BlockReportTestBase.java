@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -324,7 +325,7 @@ public abstract class BlockReportTestBase {
   public void blockReport_03() throws IOException {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path filePath = new Path("/" + METHOD_NAME + ".dat");
-    ArrayList<Block> blocks = writeFile(METHOD_NAME, FILE_SIZE, filePath);
+    writeFile(METHOD_NAME, FILE_SIZE, filePath);
 
     // all blocks belong to the same file, hence same BP
     DataNode dn = cluster.getDataNodes().get(DN_N0);
@@ -363,7 +364,7 @@ public abstract class BlockReportTestBase {
     // Create a bogus new block which will not be present on the namenode.
     ExtendedBlock b = new ExtendedBlock(
         poolId, rand.nextLong(), 1024L, rand.nextLong());
-    dn.getFSDataset().createRbw(b);
+    dn.getFSDataset().createRbw(StorageType.DEFAULT, b);
 
     DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
     StorageBlockReport[] reports = getBlockReports(dn, poolId, false, false);

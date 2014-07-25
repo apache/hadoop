@@ -40,6 +40,34 @@ Release 2.6.0 - UNRELEASED
     YARN-2242. Improve exception information on AM launch crashes. (Li Lu 
     via junping_du)
 
+    YARN-2274. FairScheduler: Add debug information about cluster capacity, 
+    availability and reservations. (kasha)
+
+    YARN-2228. Augmented TimelineServer to load pseudo authentication filter when
+    authentication = simple. (Zhijie Shen via vinodkv)
+
+    YARN-1341. Recover NMTokens upon nodemanager restart. (Jason Lowe via 
+    junping_du)
+
+    YARN-2208. AMRMTokenManager need to have a way to roll over AMRMToken. (xgong)
+
+    YARN-2323. FairShareComparator creates too many Resource objects (Hong Zhiguo
+    via Sandy Ryza)
+
+    YARN-2045. Data persisted in NM should be versioned (Junping Du via jlowe)
+
+    YARN-2013. The diagnostics is always the ExitCodeException stack when the container 
+    crashes. (Tsuyoshi OZAWA via junping_du)
+
+    YARN-2295. Refactored DistributedShell to use public APIs of protocol records.
+    (Li Lu via jianhe)
+
+    YARN-1342. Recover container tokens upon nodemanager restart. (Jason Lowe via
+    devaraj)
+
+    YARN-2214. FairScheduler: preemptContainerPreCheck() in FSParentQueue delays 
+    convergence towards fairness. (Ashwin Shankar via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -49,6 +77,31 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2088. Fixed a bug in GetApplicationsRequestPBImpl#mergeLocalToBuilder.
     (Binglin Chang via jianhe)
+
+    YARN-2260. Fixed ResourceManager's RMNode to correctly remember containers
+    when nodes resync during work-preserving RM restart. (Jian He via vinodkv)
+
+    YARN-2264. Fixed a race condition in DrainDispatcher which may cause random
+    test failures. (Li Lu via jianhe)
+
+    YARN-2219. Changed ResourceManager to avoid AMs and NMs getting exceptions
+    after RM recovery but before scheduler learns about apps and app-attempts.
+    (Jian He via vinodkv)
+
+    YARN-2244. FairScheduler missing handling of containers for unknown 
+    application attempts. (Anubhav Dhoot via kasha)
+
+    YARN-2321. NodeManager web UI can incorrectly report Pmem enforcement
+    (Leitao Guo via jlowe)
+
+    YARN-2273. NPE in ContinuousScheduling thread when we lose a node. 
+    (Wei Yan via kasha)
+
+    YARN-2313. Livelock can occur in FairScheduler when there are lots of
+    running apps (Tsuyoshi Ozawa via Sandy Ryza)
+
+    YARN-2147. client lacks delegation token exception details when
+    application submit fails (Chen He via jlowe)
 
 Release 2.5.0 - UNRELEASED
 
@@ -85,6 +138,9 @@ Release 2.5.0 - UNRELEASED
 
     YARN-1713. Added get-new-app and submit-app functionality to RM web services.
     (Varun Vasudev via vinodkv)
+
+    YARN-2233. Implemented ResourceManager web-services to create, renew and
+    cancel delegation tokens. (Varun Vasudev via vinodkv)
 
   IMPROVEMENTS
 
@@ -250,6 +306,12 @@ Release 2.5.0 - UNRELEASED
     YARN-2241. ZKRMStateStore: On startup, show nicer messages if znodes already 
     exist. (Robert Kanter via kasha)
 
+	YARN-1408 Preemption caused Invalid State Event: ACQUIRED at KILLED and 
+	caused a task timeout for 30mins. (Sunil G via mayank)
+
+    YARN-2300. Improved the documentation of the sample requests for RM REST API -
+    submitting an app. (Varun Vasudev via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -370,6 +432,14 @@ Release 2.5.0 - UNRELEASED
     (Varun Vasudev via zjshen)
 
     YARN-2269. Remove external links from YARN UI. (Craig Welch via xgong)
+
+    YARN-2270. Made TestFSDownload#testDownloadPublicWithStatCache be skipped
+    when there’s no ancestor permissions. (Akira Ajisaka via zjshen)
+
+    YARN-2319. Made the MiniKdc instance start/close before/after the class of
+    TestRMWebServicesDelegationTokens. (Wenwu Peng via zjshen)
+
+    YARN-2335. Annotate all hadoop-sls APIs as @Private. (Wei Yan via kasha)
 
 Release 2.4.1 - 2014-06-23 
 

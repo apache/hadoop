@@ -22,10 +22,13 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
+import org.apache.hadoop.yarn.server.api.records.MasterKey;
 
 // The state store to use when state isn't being stored
 public class NMNullStateStoreService extends NMStateStoreService {
@@ -75,6 +78,59 @@ public class NMNullStateStoreService extends NMStateStoreService {
 
   @Override
   public void removeDeletionTask(int taskId) throws IOException {
+  }
+
+  @Override
+  public RecoveredNMTokensState loadNMTokensState() throws IOException {
+    throw new UnsupportedOperationException(
+        "Recovery not supported by this state store");
+  }
+
+  @Override
+  public void storeNMTokenCurrentMasterKey(MasterKey key)
+      throws IOException {
+  }
+
+  @Override
+  public void storeNMTokenPreviousMasterKey(MasterKey key)
+      throws IOException {
+  }
+
+  @Override
+  public void storeNMTokenApplicationMasterKey(ApplicationAttemptId attempt,
+      MasterKey key) throws IOException {
+  }
+
+  @Override
+  public void removeNMTokenApplicationMasterKey(ApplicationAttemptId attempt)
+      throws IOException {
+  }
+
+  @Override
+  public RecoveredContainerTokensState loadContainerTokensState()
+      throws IOException {
+    throw new UnsupportedOperationException(
+        "Recovery not supported by this state store");
+  }
+
+  @Override
+  public void storeContainerTokenCurrentMasterKey(MasterKey key)
+      throws IOException {
+  }
+
+  @Override
+  public void storeContainerTokenPreviousMasterKey(MasterKey key)
+      throws IOException {
+  }
+
+  @Override
+  public void storeContainerToken(ContainerId containerId,
+      Long expirationTime) throws IOException {
+  }
+
+  @Override
+  public void removeContainerToken(ContainerId containerId)
+      throws IOException {
   }
 
   @Override

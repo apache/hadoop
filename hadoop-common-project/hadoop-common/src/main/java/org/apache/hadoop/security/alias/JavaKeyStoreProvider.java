@@ -194,15 +194,18 @@ public class JavaKeyStoreProvider extends CredentialProvider {
   @Override
   public CredentialEntry createCredentialEntry(String alias, char[] credential)
       throws IOException {
+    writeLock.lock();
     try {
       if (keyStore.containsAlias(alias) || cache.containsKey(alias)) {
         throw new IOException("Credential " + alias + " already exists in " + this);
       }
+      return innerSetCredential(alias, credential);
     } catch (KeyStoreException e) {
       throw new IOException("Problem looking up credential " + alias + " in " + this,
           e);
+    } finally {
+      writeLock.unlock();
     }
-    return innerSetCredential(alias, credential);
   }
 
   @Override
@@ -230,6 +233,7 @@ public class JavaKeyStoreProvider extends CredentialProvider {
 
   CredentialEntry innerSetCredential(String alias, char[] material)
       throws IOException {
+    writeLock.lock();
     try {
       keyStore.setKeyEntry(alias, new SecretKeySpec(
           new String(material).getBytes("UTF-8"), "AES"),
@@ -237,6 +241,8 @@ public class JavaKeyStoreProvider extends CredentialProvider {
     } catch (KeyStoreException e) {
       throw new IOException("Can't store credential " + alias + " in " + this,
           e);
+    } finally {
+      writeLock.unlock();
     }
     changed = true;
     return new CredentialEntry(alias, material);

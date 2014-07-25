@@ -345,7 +345,8 @@ public class DatanodeManager {
   
   /** Sort the located blocks by the distance to the target host. */
   public void sortLocatedBlocks(final String targethost,
-      final List<LocatedBlock> locatedblocks) {
+      final List<LocatedBlock> locatedblocks,
+      boolean randomizeBlockLocationsPerBlock) {
     //sort the blocks
     // As it is possible for the separation of node manager and datanode, 
     // here we should get node but not datanode only .
@@ -372,8 +373,8 @@ public class DatanodeManager {
           --lastActiveIndex;
       }
       int activeLen = lastActiveIndex + 1;      
-      networktopology.sortByDistance(client, b.getLocations(), activeLen,
-          b.getBlock().getBlockId());
+      networktopology.sortByDistance(client, b.getLocations(), activeLen, b
+          .getBlock().getBlockId(), randomizeBlockLocationsPerBlock);
     }
   }
   
@@ -820,7 +821,9 @@ public class DatanodeManager {
   }
 
   /** Start decommissioning the specified datanode. */
-  private void startDecommission(DatanodeDescriptor node) {
+  @InterfaceAudience.Private
+  @VisibleForTesting
+  public void startDecommission(DatanodeDescriptor node) {
     if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
       for (DatanodeStorageInfo storage : node.getStorageInfos()) {
         LOG.info("Start Decommissioning " + node + " " + storage

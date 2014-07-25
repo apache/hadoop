@@ -169,6 +169,15 @@ public class NodeManager extends CompositeService
     }
   }
 
+  private void recoverTokens(NMTokenSecretManagerInNM nmTokenSecretManager,
+      NMContainerTokenSecretManager containerTokenSecretManager)
+          throws IOException {
+    if (nmStore.canRecover()) {
+      nmTokenSecretManager.recover();
+      containerTokenSecretManager.recover();
+    }
+  }
+
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
 
@@ -181,10 +190,12 @@ public class NodeManager extends CompositeService
     initAndStartRecoveryStore(conf);
 
     NMContainerTokenSecretManager containerTokenSecretManager =
-        new NMContainerTokenSecretManager(conf);
+        new NMContainerTokenSecretManager(conf, nmStore);
 
     NMTokenSecretManagerInNM nmTokenSecretManager =
-        new NMTokenSecretManagerInNM();
+        new NMTokenSecretManagerInNM(nmStore);
+
+    recoverTokens(nmTokenSecretManager, containerTokenSecretManager);
     
     this.aclsManager = new ApplicationACLsManager(conf);
 

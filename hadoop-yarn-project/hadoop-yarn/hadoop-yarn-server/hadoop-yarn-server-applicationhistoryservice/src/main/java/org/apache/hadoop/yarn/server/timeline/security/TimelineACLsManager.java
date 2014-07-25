@@ -51,7 +51,8 @@ public class TimelineACLsManager {
   public boolean checkAccess(UserGroupInformation callerUGI,
       TimelineEntity entity) throws YarnException, IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Verifying the access of " + callerUGI.getShortUserName()
+      LOG.debug("Verifying the access of "
+          + (callerUGI == null ? null : callerUGI.getShortUserName())
           + " on the timeline entity "
           + new EntityIdentifier(entity.getEntityId(), entity.getEntityType()));
     }

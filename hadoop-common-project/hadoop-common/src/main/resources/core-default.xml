@@ -198,6 +198,20 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
+  <name>hadoop.security.groups.negative-cache.secs</name>
+  <value>30</value>
+  <description>
+    Expiration time for entries in the the negative user-to-group mapping
+    caching, in seconds. This is useful when invalid users are retrying
+    frequently. It is suggested to set a small value for this expiration, since
+    a transient error in group lookup could temporarily lock out a legitimate
+    user.
+
+    Set this to zero or negative value to disable negative user-to-group caching.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.groups.cache.warn.after.ms</name>
   <value>5000</value>
   <description>
@@ -1454,5 +1468,38 @@ for ldap providers in the same way as above does.
   <name>fs.har.impl.disable.cache</name>
   <value>true</value>
   <description>Don't cache 'har' filesystem instances.</description>
+</property>
+
+<!--- KMSClientProvider configurations -->
+<property>
+  <name>hadoop.security.kms.client.encrypted.key.cache.size</name>
+  <value>500</value>
+  <description>
+    Size of the EncryptedKeyVersion cache Queue for each key
+  </description>
+</property>
+<property>
+  <name>hadoop.security.kms.client.encrypted.key.cache.low-watermark</name>
+  <value>0.3f</value>
+  <description>
+    If size of the EncryptedKeyVersion cache Queue falls below the
+    low watermark, this cache queue will be scheduled for a refill
+  </description>
+</property>
+<property>
+  <name>hadoop.security.kms.client.encrypted.key.cache.num.refill.threads</name>
+  <value>2</value>
+  <description>
+    Number of threads to use for refilling depleted EncryptedKeyVersion
+    cache Queues
+  </description>
+</property>
+<property>
+  <name>"hadoop.security.kms.client.encrypted.key.cache.expiry</name>
+  <value>43200000</value>
+  <description>
+    Cache expiry time for a Key, after which the cache Queue for this
+    key will be dropped. Default = 12hrs
+  </description>
 </property>
 </configuration>

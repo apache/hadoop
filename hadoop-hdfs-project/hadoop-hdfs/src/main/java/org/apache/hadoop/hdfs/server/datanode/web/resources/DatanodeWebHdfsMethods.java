@@ -128,7 +128,8 @@ public class DatanodeWebHdfsMethods {
             "://" + nnId);
     boolean isLogical = HAUtil.isLogicalUri(conf, nnUri);
     if (isLogical) {
-      token.setService(HAUtil.buildTokenServiceForLogicalUri(nnUri));
+      token.setService(HAUtil.buildTokenServiceForLogicalUri(nnUri,
+          HdfsConstants.HDFS_URI_SCHEME));
     } else {
       token.setService(SecurityUtil.buildTokenService(nnUri));
     }

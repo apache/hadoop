@@ -324,9 +324,7 @@ public final class AzureBlobStorageTestAccount {
     String sourceName = NativeAzureFileSystem.newMetricsSourceName();
     String sourceDesc = "Azure Storage Volume File System metrics";
 
-    AzureFileSystemInstrumentation instrumentation =
-        DefaultMetricsSystem.instance().register(sourceName,
-                sourceDesc, new AzureFileSystemInstrumentation(conf));
+    AzureFileSystemInstrumentation instrumentation = new AzureFileSystemInstrumentation(conf);
 
     AzureFileSystemMetricsSystem.registerSource(
         sourceName, sourceDesc, instrumentation);

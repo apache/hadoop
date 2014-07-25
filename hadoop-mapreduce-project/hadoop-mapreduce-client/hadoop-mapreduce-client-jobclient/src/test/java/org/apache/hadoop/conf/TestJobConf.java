@@ -29,11 +29,7 @@ public class TestJobConf {
   @Test
   public void testProfileParamsDefaults() {
     JobConf configuration = new JobConf();
-
-    Assert.assertNull(configuration.get(MRJobConfig.TASK_PROFILE_PARAMS));
-
     String result = configuration.getProfileParams();
-
     Assert.assertNotNull(result);
     Assert.assertTrue(result.contains("file=%s"));
     Assert.assertTrue(result.startsWith("-agentlib:hprof"));

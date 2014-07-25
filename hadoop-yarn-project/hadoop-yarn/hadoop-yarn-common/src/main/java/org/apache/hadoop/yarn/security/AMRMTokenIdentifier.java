@@ -44,6 +44,7 @@ public class AMRMTokenIdentifier extends TokenIdentifier {
   public static final Text KIND_NAME = new Text("YARN_AM_RM_TOKEN");
 
   private ApplicationAttemptId applicationAttemptId;
+  private int keyId = Integer.MIN_VALUE;
 
   public AMRMTokenIdentifier() {
   }
@@ -51,6 +52,13 @@ public class AMRMTokenIdentifier extends TokenIdentifier {
   public AMRMTokenIdentifier(ApplicationAttemptId appAttemptId) {
     this();
     this.applicationAttemptId = appAttemptId;
+  }
+
+  public AMRMTokenIdentifier(ApplicationAttemptId appAttemptId,
+      int masterKeyId) {
+    this();
+    this.applicationAttemptId = appAttemptId;
+    this.keyId = masterKeyId;
   }
 
   @Private
@@ -64,6 +72,7 @@ public class AMRMTokenIdentifier extends TokenIdentifier {
     out.writeLong(appId.getClusterTimestamp());
     out.writeInt(appId.getId());
     out.writeInt(this.applicationAttemptId.getAttemptId());
+    out.writeInt(this.keyId);
   }
 
   @Override
@@ -75,6 +84,7 @@ public class AMRMTokenIdentifier extends TokenIdentifier {
         ApplicationId.newInstance(clusterTimeStamp, appId);
     this.applicationAttemptId =
         ApplicationAttemptId.newInstance(applicationId, attemptId);
+    this.keyId = in.readInt();
   }
 
   @Override
@@ -90,6 +100,10 @@ public class AMRMTokenIdentifier extends TokenIdentifier {
     }
     return UserGroupInformation.createRemoteUser(this.applicationAttemptId
         .toString());
+  }
+
+  public int getKeyId() {
+    return this.keyId;
   }
 
   // TODO: Needed?

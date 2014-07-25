@@ -124,7 +124,7 @@ public class HdfsConstants {
    * of a delgation token, indicating that the URI is a logical (HA)
    * URI.
    */
-  public static final String HA_DT_SERVICE_PREFIX = "ha-hdfs:";
+  public static final String HA_DT_SERVICE_PREFIX = "ha-";
 
 
   /**

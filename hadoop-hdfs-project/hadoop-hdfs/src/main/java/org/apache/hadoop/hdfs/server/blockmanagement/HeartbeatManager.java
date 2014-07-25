@@ -151,6 +151,16 @@ class HeartbeatManager implements DatanodeStatistics {
   }
   
   @Override
+  public synchronized int getInServiceXceiverCount() {
+    return stats.nodesInServiceXceiverCount;
+  }
+  
+  @Override
+  public synchronized int getNumDatanodesInService() {
+    return stats.nodesInService;
+  }
+  
+  @Override
   public synchronized long getCacheCapacity() {
     return stats.cacheCapacity;
   }
@@ -178,7 +188,7 @@ class HeartbeatManager implements DatanodeStatistics {
   }
 
   synchronized void register(final DatanodeDescriptor d) {
-    if (!datanodes.contains(d)) {
+    if (!d.isAlive) {
       addDatanode(d);
 
       //update its timestamp
@@ -191,6 +201,8 @@ class HeartbeatManager implements DatanodeStatistics {
   }
 
   synchronized void addDatanode(final DatanodeDescriptor d) {
+    // update in-service node count
+    stats.add(d);
     datanodes.add(d);
     d.isAlive = true;
   }
@@ -323,6 +335,9 @@ class HeartbeatManager implements DatanodeStatistics {
     private long cacheCapacity = 0L;
     private long cacheUsed = 0L;
 
+    private int nodesInService = 0;
+    private int nodesInServiceXceiverCount = 0;
+
     private int expiredHeartbeats = 0;
 
     private void add(final DatanodeDescriptor node) {
@@ -330,6 +345,8 @@ class HeartbeatManager implements DatanodeStatistics {
       blockPoolUsed += node.getBlockPoolUsed();
       xceiverCount += node.getXceiverCount();
       if (!(node.isDecommissionInProgress() || node.isDecommissioned())) {
+        nodesInService++;
+        nodesInServiceXceiverCount += node.getXceiverCount();
         capacityTotal += node.getCapacity();
         capacityRemaining += node.getRemaining();
       } else {
@@ -344,6 +361,8 @@ class HeartbeatManager implements DatanodeStatistics {
       blockPoolUsed -= node.getBlockPoolUsed();
       xceiverCount -= node.getXceiverCount();
       if (!(node.isDecommissionInProgress() || node.isDecommissioned())) {
+        nodesInService--;
+        nodesInServiceXceiverCount -= node.getXceiverCount();
         capacityTotal -= node.getCapacity();
         capacityRemaining -= node.getRemaining();
       } else {

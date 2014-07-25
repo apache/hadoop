@@ -36,29 +36,27 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.nio.channels.ClosedChannelException;
 import java.security.MessageDigest;
 import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
-import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferEncryptor;
-import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferEncryptor.InvalidMagicNumberException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Op;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Receiver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
+import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataEncryptionKeyFactory;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ClientReadStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumResponseProto;
@@ -85,7 +83,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
 
 import com.google.common.base.Preconditions;
-import com.google.common.net.InetAddresses;
 import com.google.protobuf.ByteString;
 
 
@@ -174,24 +171,11 @@ class DataXceiver extends Receiver implements Runnable {
       dataXceiverServer.addPeer(peer, Thread.currentThread());
       peer.setWriteTimeout(datanode.getDnConf().socketWriteTimeout);
       InputStream input = socketIn;
-      if ((!peer.hasSecureChannel()) && dnConf.encryptDataTransfer &&
-          !dnConf.trustedChannelResolver.isTrusted(getClientAddress(peer))){
-        IOStreamPair encryptedStreams = null;
-        try {
-          encryptedStreams = DataTransferEncryptor.getEncryptedStreams(socketOut,
-              socketIn, datanode.blockPoolTokenSecretManager,
-              dnConf.encryptionAlgorithm);
-        } catch (InvalidMagicNumberException imne) {
-          LOG.info("Failed to read expected encryption handshake from client " +
-              "at " + peer.getRemoteAddressString() + ". Perhaps the client " +
-              "is running an older version of Hadoop which does not support " +
-              "encryption");
-          return;
-        }
-        input = encryptedStreams.in;
-        socketOut = encryptedStreams.out;
-      }
-      input = new BufferedInputStream(input, HdfsConstants.SMALL_BUFFER_SIZE);
+      IOStreamPair saslStreams = datanode.saslServer.receive(peer, socketOut,
+        socketIn, datanode.getDatanodeId());
+      input = new BufferedInputStream(saslStreams.in,
+        HdfsConstants.SMALL_BUFFER_SIZE);
+      socketOut = saslStreams.out;
       
       super.initialize(new DataInputStream(input));
       
@@ -262,19 +246,6 @@ class DataXceiver extends Receiver implements Runnable {
         IOUtils.closeStream(in);
       }
     }
-  }
-  
-  /**
-   * Returns InetAddress from peer
-   * The getRemoteAddressString is the form  /ip-address:port
-   * The ip-address is extracted from peer and InetAddress is formed
-   * @param peer
-   * @return
-   * @throws UnknownHostException
-   */
-  private static InetAddress getClientAddress(Peer peer) {
-    return InetAddresses.forString(
-        peer.getRemoteAddressString().split(":")[0].substring(1));
   }
 
   @Override
@@ -554,9 +525,11 @@ class DataXceiver extends Receiver implements Runnable {
 
   @Override
   public void writeBlock(final ExtendedBlock block,
+      final StorageType storageType, 
       final Token<BlockTokenIdentifier> blockToken,
       final String clientname,
       final DatanodeInfo[] targets,
+      final StorageType[] targetStorageTypes, 
       final DatanodeInfo srcDataNode,
       final BlockConstructionStage stage,
       final int pipelineSize,
@@ -620,12 +593,13 @@ class DataXceiver extends Receiver implements Runnable {
       if (isDatanode || 
           stage != BlockConstructionStage.PIPELINE_CLOSE_RECOVERY) {
         // open a block receiver
-        blockReceiver = new BlockReceiver(block, in, 
+        blockReceiver = new BlockReceiver(block, storageType, in,
             peer.getRemoteAddressString(),
             peer.getLocalAddressString(),
             stage, latestGenerationStamp, minBytesRcvd, maxBytesRcvd,
             clientname, srcDataNode, datanode, requestedChecksum,
             cachingStrategy);
+        
         storageUuid = blockReceiver.getStorageUuid();
       } else {
         storageUuid = datanode.data.recoverClose(
@@ -656,25 +630,20 @@ class DataXceiver extends Receiver implements Runnable {
           OutputStream unbufMirrorOut = NetUtils.getOutputStream(mirrorSock,
               writeTimeout);
           InputStream unbufMirrorIn = NetUtils.getInputStream(mirrorSock);
-          if (dnConf.encryptDataTransfer &&
-              !dnConf.trustedChannelResolver.isTrusted(mirrorSock.getInetAddress())) {
-            IOStreamPair encryptedStreams =
-                DataTransferEncryptor.getEncryptedStreams(
-                    unbufMirrorOut, unbufMirrorIn,
-                    datanode.blockPoolTokenSecretManager
-                        .generateDataEncryptionKey(block.getBlockPoolId()));
-            
-            unbufMirrorOut = encryptedStreams.out;
-            unbufMirrorIn = encryptedStreams.in;
-          }
+          DataEncryptionKeyFactory keyFactory =
+            datanode.getDataEncryptionKeyFactoryForBlock(block);
+          IOStreamPair saslStreams = datanode.saslClient.socketSend(mirrorSock,
+            unbufMirrorOut, unbufMirrorIn, keyFactory, blockToken, targets[0]);
+          unbufMirrorOut = saslStreams.out;
+          unbufMirrorIn = saslStreams.in;
           mirrorOut = new DataOutputStream(new BufferedOutputStream(unbufMirrorOut,
               HdfsConstants.SMALL_BUFFER_SIZE));
           mirrorIn = new DataInputStream(unbufMirrorIn);
 
-          new Sender(mirrorOut).writeBlock(originalBlock, blockToken,
-              clientname, targets, srcDataNode, stage, pipelineSize,
-              minBytesRcvd, maxBytesRcvd, latestGenerationStamp, requestedChecksum,
-              cachingStrategy);
+          new Sender(mirrorOut).writeBlock(originalBlock, targetStorageTypes[0],
+              blockToken, clientname, targets, targetStorageTypes, srcDataNode,
+              stage, pipelineSize, minBytesRcvd, maxBytesRcvd,
+              latestGenerationStamp, requestedChecksum, cachingStrategy);
 
           mirrorOut.flush();
 
@@ -789,7 +758,8 @@ class DataXceiver extends Receiver implements Runnable {
   public void transferBlock(final ExtendedBlock blk,
       final Token<BlockTokenIdentifier> blockToken,
       final String clientName,
-      final DatanodeInfo[] targets) throws IOException {
+      final DatanodeInfo[] targets,
+      final StorageType[] targetStorageTypes) throws IOException {
     checkAccess(socketOut, true, blk, blockToken,
         Op.TRANSFER_BLOCK, BlockTokenSecretManager.AccessMode.COPY);
     previousOpClientName = clientName;
@@ -798,7 +768,8 @@ class DataXceiver extends Receiver implements Runnable {
     final DataOutputStream out = new DataOutputStream(
         getOutputStream());
     try {
-      datanode.transferReplicaForPipelineRecovery(blk, targets, clientName);
+      datanode.transferReplicaForPipelineRecovery(blk, targets,
+          targetStorageTypes, clientName);
       writeResponse(Status.SUCCESS, null, out);
     } finally {
       IOUtils.closeStream(out);
@@ -976,6 +947,7 @@ class DataXceiver extends Receiver implements Runnable {
 
   @Override
   public void replaceBlock(final ExtendedBlock block,
+      final StorageType storageType, 
       final Token<BlockTokenIdentifier> blockToken,
       final String delHint,
       final DatanodeInfo proxySource) throws IOException {
@@ -1026,17 +998,12 @@ class DataXceiver extends Receiver implements Runnable {
       OutputStream unbufProxyOut = NetUtils.getOutputStream(proxySock,
           dnConf.socketWriteTimeout);
       InputStream unbufProxyIn = NetUtils.getInputStream(proxySock);
-      if (dnConf.encryptDataTransfer && 
-          !dnConf.trustedChannelResolver.isTrusted(
-              proxySock.getInetAddress())) {
-        IOStreamPair encryptedStreams =
-            DataTransferEncryptor.getEncryptedStreams(
-                unbufProxyOut, unbufProxyIn,
-                datanode.blockPoolTokenSecretManager
-                    .generateDataEncryptionKey(block.getBlockPoolId()));
-        unbufProxyOut = encryptedStreams.out;
-        unbufProxyIn = encryptedStreams.in;
-      }
+      DataEncryptionKeyFactory keyFactory =
+        datanode.getDataEncryptionKeyFactoryForBlock(block);
+      IOStreamPair saslStreams = datanode.saslClient.socketSend(proxySock,
+        unbufProxyOut, unbufProxyIn, keyFactory, blockToken, proxySource);
+      unbufProxyOut = saslStreams.out;
+      unbufProxyIn = saslStreams.in;
       
       proxyOut = new DataOutputStream(new BufferedOutputStream(unbufProxyOut, 
           HdfsConstants.SMALL_BUFFER_SIZE));
@@ -1066,8 +1033,8 @@ class DataXceiver extends Receiver implements Runnable {
       DataChecksum remoteChecksum = DataTransferProtoUtil.fromProto(
           checksumInfo.getChecksum());
       // open a block receiver and check if the block does not exist
-      blockReceiver = new BlockReceiver(
-          block, proxyReply, proxySock.getRemoteSocketAddress().toString(),
+      blockReceiver = new BlockReceiver(block, storageType,
+          proxyReply, proxySock.getRemoteSocketAddress().toString(),
           proxySock.getLocalSocketAddress().toString(),
           null, 0, 0, 0, "", null, datanode, remoteChecksum,
           CachingStrategy.newDropBehind());

@@ -2228,68 +2228,48 @@ _01_000001</amContainerLogs>
   {
     "application-id":"application_1404203615263_0001",
     "application-name":"test",
-    "queue":"testqueue",
-    "priority":"3",
     "am-container-spec":
     {
       "local-resources":
       {
         "entry":
-        {
-          "key":"example",
-          "value":
+        [
           {
-            "resource":"http://www.test.com/file.txt",
-            "type":"FILE",
-            "visibility":"APPLICATION",
-            "size":"100",
-            "timestamp":"1404203616003"
+            "key":"AppMaster.jar",
+            "value":
+            {
+              "resource":"hdfs://hdfs-namenode:9000/user/testuser/DistributedShell/demo-app/AppMaster.jar",
+              "type":"FILE",
+              "visibility":"APPLICATION",
+              "size": "43004",
+              "timestamp": "1405452071209"
+            }
           }
-        }
+        ]
+      },
+      "commands":
+      {
+        "command":"{{JAVA_HOME}}/bin/java -Xmx10m org.apache.hadoop.yarn.applications.distributedshell.ApplicationMaster --container_memory 10 --container_vcores 1 --num_containers 1 --priority 0 1><LOG_DIR>/AppMaster.stdout 2><LOG_DIR>/AppMaster.stderr"
       },
       "environment":
       {
         "entry":
-        {
-          "key":"APP_VAR",
-          "value":"ENV_SETTING"
-        }
-      },
-      "commands":
-      {
-        "command":"/bin/sleep 5"
-      },
-      "service-data":
-      {
-        "entry":
-        {
-          "key":"test",
-          "value":"dmFsdWUxMg"
-        }
-      },
-      "credentials":
-      {
-        "tokens":null,
-        "secrets":
-        {
-          "entry":
-          {
-            "key":"secret1",
-            "value":"c2VjcmV0MQ"
-          }
-        }
-      },
-      "application-acls":
-      {
-        "entry":
         [
           {
-            "key":"VIEW_APP",
-            "value":"testuser3, testuser4"
+            "key": "DISTRIBUTEDSHELLSCRIPTTIMESTAMP",
+            "value": "1405459400754"
           },
           {
-            "key":"MODIFY_APP",
-            "value":"testuser1, testuser2"
+            "key": "CLASSPATH",
+            "value": "{{CLASSPATH}}<CPS>./*<CPS>{{HADOOP_CONF_DIR}}<CPS>{{HADOOP_COMMON_HOME}}/share/hadoop/common/*<CPS>{{HADOOP_COMMON_HOME}}/share/hadoop/common/lib/*<CPS>{{HADOOP_HDFS_HOME}}/share/hadoop/hdfs/*<CPS>{{HADOOP_HDFS_HOME}}/share/hadoop/hdfs/lib/*<CPS>{{HADOOP_YARN_HOME}}/share/hadoop/yarn/*<CPS>{{HADOOP_YARN_HOME}}/share/hadoop/yarn/lib/*<CPS>./log4j.properties"
+          },
+          {
+            "key": "DISTRIBUTEDSHELLSCRIPTLEN",
+            "value": "6"
+          },
+          {
+            "key": "DISTRIBUTEDSHELLSCRIPTLOCATION",
+            "value": "hdfs://hdfs-namenode:9000/user/testuser/demo-app/shellCommands"
           }
         ]
       }
@@ -2302,16 +2282,9 @@ _01_000001</amContainerLogs>
       "vCores":"1"
     },
     "application-type":"YARN",
-    "keep-containers-across-application-attempts":"false",
-    "application-tags":
-    {
-      "tag":
-      [
-        "tag 2",
-        "tag1"
-      ]
-    }
+    "keep-containers-across-application-attempts":"false"
   }
+
 +---+
 
   Response Header:
@@ -2349,22 +2322,34 @@ _01_000001</amContainerLogs>
         <entry>
           <key>example</key>
           <value>
-            <resource>http://www.test.com/file.txt</resource>
+            <resource>hdfs://hdfs-namenode:9000/user/testuser/DistributedShell/demo-app/AppMaster.jar</resource>
             <type>FILE</type>
             <visibility>APPLICATION</visibility>
-            <size>100</size>
-            <timestamp>1404204892877</timestamp>
+            <size>43004</size>
+            <timestamp>1405452071209</timestamp>
           </value>
         </entry>
       </local-resources>
       <environment>
         <entry>
-          <key>APP_VAR</key>
-          <value>ENV_SETTING</value>
+          <key>DISTRIBUTEDSHELLSCRIPTTIMESTAMP</key>
+          <value>1405459400754</value>
+        </entry>
+        <entry>
+          <key>CLASSPATH</key>
+          <value>{{CLASSPATH}}&lt;CPS&gt;./*&lt;CPS&gt;{{HADOOP_CONF_DIR}}&lt;CPS&gt;{{HADOOP_COMMON_HOME}}/share/hadoop/common/*&lt;CPS&gt;{{HADOOP_COMMON_HOME}}/share/hadoop/common/lib/*&lt;CPS&gt;{{HADOOP_HDFS_HOME}}/share/hadoop/hdfs/*&lt;CPS&gt;{{HADOOP_HDFS_HOME}}/share/hadoop/hdfs/lib/*&lt;CPS&gt;{{HADOOP_YARN_HOME}}/share/hadoop/yarn/*&lt;CPS&gt;{{HADOOP_YARN_HOME}}/share/hadoop/yarn/lib/*&lt;CPS&gt;./log4j.properties</value>
+        </entry>
+        <entry>
+          <key>DISTRIBUTEDSHELLSCRIPTLEN</key>
+          <value>6</value>
+        </entry>
+        <entry>
+          <key>DISTRIBUTEDSHELLSCRIPTLOCATION</key>
+          <value>hdfs://hdfs-namenode:9000/user/testuser/demo-app/shellCommands</value>
         </entry>
       </environment>
       <commands>
-        <command>/bin/sleep 5</command>
+        <command>{{JAVA_HOME}}/bin/java -Xmx10m org.apache.hadoop.yarn.applications.distributedshell.ApplicationMaster --container_memory 10 --container_vcores 1 --num_containers 1 --priority 0 1&gt;&lt;LOG_DIR&gt;/AppMaster.stdout 2&gt;&lt;LOG_DIR&gt;/AppMaster.stderr</command>
       </commands>
       <service-data>
         <entry>
@@ -2707,3 +2692,223 @@ Server: Jetty(6.1.26)
 +---+
 
 
+* Cluster {Delegation Tokens API}
+
+  The Delegation Tokens API can be used to create, renew and cancel YARN ResourceManager delegation tokens. All delegation token requests must be carried out on a Kerberos authenticated connection(using SPNEGO). Carrying out operations on a non-kerberos connection will result in a FORBIDDEN response. In case of renewing a token, only the renewer specified when creating the token can renew the token. Other users(including the owner) are forbidden from renewing tokens. It should be noted that when cancelling or renewing a token, the token to be cancelled or renewed is specified by setting a header.
+
+  This feature is currently in the alpha stage and may change in the future.
+
+** URI
+
+  Use the following URI to create and cancel delegation tokens.
+
+------
+  * http://<rm http address:port>/ws/v1/cluster/delegation-token
+------
+
+  Use the following URI to renew delegation tokens.
+
+------
+  * http://<rm http address:port>/ws/v1/cluster/delegation-token/expiration
+------
+
+** HTTP Operations Supported
+
+------
+  * POST
+  * DELETE
+------
+
+** Query Parameters Supported
+
+------
+  None
+------
+
+** Elements of the <delegation-token> object
+
+  The response from the delegation tokens API contains one of the fields listed below.
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                   |
+*---------------+--------------+-------------------------------+
+| token         | string       | The delegation token          |
+*---------------+--------------+-------------------------------+
+| renewer       | string       | The user who is allowed to renew the delegation token |
+*---------------+--------------+-------------------------------+
+| owner         | string       | The owner of the delegation token |
+*---------------+--------------+-------------------------------+
+| kind          | string       | The kind of delegation token  |
+*---------------+--------------+-------------------------------+
+| expiration-time | long       | The expiration time of the token |
+*---------------+--------------+-------------------------------+
+| max-validity  | long         | The maximum validity of the token |
+*---------------+--------------+-------------------------------+
+
+** Response Examples
+
+*** Creating a token
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  POST http://<rm http address:port>/ws/v1/cluster/delegation-token
+  Accept: application/json
+  Content-Type: application/json
+  {
+    "renewer" : "test-renewer"
+  }
+------
+
+  Response Header
+
++---+
+  HTTP/1.1 200 OK
+  WWW-Authenticate: Negotiate ...
+  Date: Sat, 28 Jun 2014 18:08:11 GMT
+  Server: Jetty(6.1.26)
+  Set-Cookie: ...
+  Content-Type: application/json
++---+
+
+  Response body
+
++---+
+  {
+    "token":"MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUckiEZpigFHSJTKaQECFN9EMM9BzfPoDxu572EVUpzqhnSGE1JNX0RFTEVHQVRJT05fVE9LRU4A",
+    "renewer":"test-renewer",
+    "owner":"client@EXAMPLE.COM",
+    "kind":"RM_DELEGATION_TOKEN",
+    "expiration-time":"1405153616489",
+    "max-validity":"1405672016489"
+  }
++---+
+
+  <<XML response>>
+
+  HTTP Request
+
+------
+  POST http://<rm http address:port>/ws/v1/cluster/delegation-token
+  Accept: application/xml
+  Content-Type: application/xml
+  <delegation-token>
+    <renewer>test-renewer</renewer>
+  </delegation-token>
+------
+
+  Response Header
+
++---+
+  HTTP/1.1 200 OK
+  WWW-Authenticate: Negotiate ...
+  Date: Sat, 28 Jun 2014 18:08:11 GMT
+  Content-Length: 423
+  Server: Jetty(6.1.26)
+  Set-Cookie: ...
+  Content-Type: application/xml
++---+
+
+  Response Body
+
++---+
+  <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  <delegation-token>
+    <token>MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUckgZ8yigFHSI4jMgcCFDTG8X6XFFn2udQngzSXQL8vWaKIE1JNX0RFTEVHQVRJT05fVE9LRU4A</token>
+    <renewer>test-renewer</renewer>
+    <owner>client@EXAMPLE.COM</owner>
+    <kind>RM_DELEGATION_TOKEN</kind>
+    <expiration-time>1405153180466</expiration-time>
+    <max-validity>1405671580466</max-validity>
+  </delegation-token>
++---+
+
+*** Renewing a token
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  POST http://<rm http address:port>/ws/v1/cluster/delegation-token/expiration
+  Accept: application/json
+  Hadoop-YARN-RM-Delegation-Token: MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUbjqcHHigFHB7ZFxwQCFKWD3znCkDSy6SQIjRCLDydxbxvgE1JNX0RFTEVHQVRJT05fVE9LRU4A
+  Content-Type: application/json
+------
+
+  Response Header
+
++---+
+  HTTP/1.1 200 OK
+  WWW-Authenticate: Negotiate ...
+  Date: Sat, 28 Jun 2014 18:08:11 GMT
+  Server: Jetty(6.1.26)
+  Set-Cookie: ...
+  Content-Type: application/json
++---+
+
+  Response body
+
++---+
+  {
+    "expiration-time":"1404112520402"
+  }
++---+
+
+  <<XML response>>
+
+  HTTP Request
+
+------
+  POST http://<rm http address:port>/ws/v1/cluster/delegation-token/expiration
+  Accept: application/xml
+  Content-Type: application/xml
+  Hadoop-YARN-RM-Delegation-Token: MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUbjqcHHigFHB7ZFxwQCFKWD3znCkDSy6SQIjRCLDydxbxvgE1JNX0RFTEVHQVRJT05fVE9LRU4A
+------
+
+  Response Header
+
++---+
+  HTTP/1.1 200 OK
+  WWW-Authenticate: Negotiate ...
+  Date: Sat, 28 Jun 2014 18:08:11 GMT
+  Content-Length: 423
+  Server: Jetty(6.1.26)
+  Set-Cookie: ...
+  Content-Type: application/xml
++---+
+
+  Response Body
+
++---+
+  <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  <delegation-token>
+    <expiration-time>1404112520402</expiration-time>
+  </delegation-token>
++---+
+
+*** Cancelling a token
+
+  HTTP Request
+
+-----
+DELETE http://<rm http address:port>/ws/v1/cluster/delegation-token
+Hadoop-YARN-RM-Delegation-Token: MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUbjqcHHigFHB7ZFxwQCFKWD3znCkDSy6SQIjRCLDydxbxvgE1JNX0RFTEVHQVRJT05fVE9LRU4A
+Accept: application/xml
+-----
+
+  Response Header
+
++---+
+  HTTP/1.1 200 OK
+  WWW-Authenticate: Negotiate ...
+  Date: Sun, 29 Jun 2014 07:25:18 GMT
+  Transfer-Encoding: chunked
+  Server: Jetty(6.1.26)
+  Set-Cookie: ...
+  Content-Type: application/xml
++---+
+
+  No response body.

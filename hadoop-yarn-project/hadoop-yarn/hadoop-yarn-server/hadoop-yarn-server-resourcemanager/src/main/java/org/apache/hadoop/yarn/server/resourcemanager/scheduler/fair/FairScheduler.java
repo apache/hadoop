@@ -135,7 +135,9 @@ public class FairScheduler extends
   public static final Resource CONTAINER_RESERVED = Resources.createResource(-1);
 
   // How often fair shares are re-calculated (ms)
-  protected long UPDATE_INTERVAL = 500;
+  protected long updateInterval;
+  private final int UPDATE_DEBUG_FREQUENCY = 5;
+  private int updatesToSkipForDebug = UPDATE_DEBUG_FREQUENCY;
 
   private Thread updateThread;
   private Thread schedulingThread;
@@ -242,13 +244,13 @@ public class FairScheduler extends
 
   /**
    * A runnable which calls {@link FairScheduler#update()} every
-   * <code>UPDATE_INTERVAL</code> milliseconds.
+   * <code>updateInterval</code> milliseconds.
    */
   private class UpdateThread implements Runnable {
     public void run() {
       while (true) {
         try {
-          Thread.sleep(UPDATE_INTERVAL);
+          Thread.sleep(updateInterval);
           update();
           preemptTasksIfNecessary();
         } catch (Exception e) {
@@ -275,6 +277,18 @@ public class FairScheduler extends
     // Recursively compute fair shares for all queues
     // and update metrics
     rootQueue.recomputeShares();
+
+    if (LOG.isDebugEnabled()) {
+      if (--updatesToSkipForDebug < 0) {
+        updatesToSkipForDebug = UPDATE_DEBUG_FREQUENCY;
+        LOG.debug("Cluster Capacity: " + clusterResource +
+            "  Allocations: " + rootMetrics.getAllocatedResources() +
+            "  Availability: " + Resource.newInstance(
+            rootMetrics.getAvailableMB(),
+            rootMetrics.getAvailableVirtualCores()) +
+            "  Demand: " + rootQueue.getDemand());
+      }
+    }
   }
 
   /**
@@ -408,7 +422,7 @@ public class FairScheduler extends
     }
   }
   
-  private void warnOrKillContainer(RMContainer container) {
+  protected void warnOrKillContainer(RMContainer container) {
     ApplicationAttemptId appAttemptId = container.getApplicationAttemptId();
     FSSchedulerApp app = getSchedulerApp(appAttemptId);
     FSLeafQueue queue = app.getQueue();
@@ -426,6 +440,7 @@ public class FairScheduler extends
           SchedulerUtils.createPreemptedContainerStatus(
             container.getContainerId(), SchedulerUtils.PREEMPTED_CONTAINER);
 
+        recoverResourceRequestForContainer(container);
         // TODO: Not sure if this ever actually adds this to the list of cleanup
         // containers on the RMNode (see SchedulerNode.releaseContainer()).
         completedContainer(container, status, RMContainerEventType.KILL);
@@ -551,7 +566,7 @@ public class FairScheduler extends
    * configured limits, but the app will not be marked as runnable.
    */
   protected synchronized void addApplication(ApplicationId applicationId,
-      String queueName, String user) {
+      String queueName, String user, boolean isAppRecovering) {
     if (queueName == null || queueName.isEmpty()) {
       String message = "Reject application " + applicationId +
               " submitted by user " + user + " with an empty queue name.";
@@ -588,8 +603,14 @@ public class FairScheduler extends
     LOG.info("Accepted application " + applicationId + " from user: " + user
         + ", in queue: " + queueName + ", currently num of applications: "
         + applications.size());
-    rmContext.getDispatcher().getEventHandler()
+    if (isAppRecovering) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(applicationId + " is recovering. Skip notifying APP_ACCEPTED");
+      }
+    } else {
+      rmContext.getDispatcher().getEventHandler()
         .handle(new RMAppEvent(applicationId, RMAppEventType.APP_ACCEPTED));
+    }
   }
 
   /**
@@ -598,7 +619,7 @@ public class FairScheduler extends
   protected synchronized void addApplicationAttempt(
       ApplicationAttemptId applicationAttemptId,
       boolean transferStateFromPreviousAttempt,
-      boolean shouldNotifyAttemptAdded) {
+      boolean isAttemptRecovering) {
     SchedulerApplication<FSSchedulerApp> application =
         applications.get(applicationAttemptId.getApplicationId());
     String user = application.getUser();
@@ -627,14 +648,15 @@ public class FairScheduler extends
     LOG.info("Added Application Attempt " + applicationAttemptId
         + " to scheduler from user: " + user);
 
-    if (shouldNotifyAttemptAdded) {
-      rmContext.getDispatcher().getEventHandler().handle(
-          new RMAppAttemptEvent(applicationAttemptId,
-              RMAppAttemptEventType.ATTEMPT_ADDED));
-    } else {
+    if (isAttemptRecovering) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Skipping notifying ATTEMPT_ADDED");
+        LOG.debug(applicationAttemptId
+            + " is recovering. Skipping notifying ATTEMPT_ADDED");
       }
+    } else {
+      rmContext.getDispatcher().getEventHandler().handle(
+        new RMAppAttemptEvent(applicationAttemptId,
+            RMAppAttemptEventType.ATTEMPT_ADDED));
     }
   }
 
@@ -879,14 +901,14 @@ public class FairScheduler extends
         // Update application requests
         application.updateResourceRequests(ask);
 
-        LOG.debug("allocate: post-update");
         application.showRequests();
       }
 
       if (LOG.isDebugEnabled()) {
-        LOG.debug("allocate:" +
+        LOG.debug("allocate: post-update" +
             " applicationAttemptId=" + appAttemptId +
-            " #ask=" + ask.size());
+            " #ask=" + ask.size() +
+            " reservation= " + application.getCurrentReservation());
 
         LOG.debug("Preempting " + application.getPreemptionContainers().size()
             + " container(s)");
@@ -904,22 +926,6 @@ public class FairScheduler extends
         application.getHeadroom(), preemptionContainerIds, null, null,
         allocation.getNMTokenList());
     }
-  }
-
-  /**
-   * Process a container which has launched on a node, as reported by the node.
-   */
-  private void containerLaunchedOnNode(ContainerId containerId, FSSchedulerNode node) {
-    // Get the application for the finished container
-    FSSchedulerApp application = getCurrentAttemptForContainer(containerId);
-    if (application == null) {
-      LOG.info("Unknown application "
-          + containerId.getApplicationAttemptId().getApplicationId()
-          + " launched container " + containerId + " on node: " + node);
-      return;
-    }
-
-    application.containerLaunchedOnNode(containerId, node.getNodeID());
   }
 
   /**
@@ -964,37 +970,27 @@ public class FairScheduler extends
     }
   }
 
-  private void continuousScheduling() {
-    while (true) {
-      List<NodeId> nodeIdList = new ArrayList<NodeId>(nodes.keySet());
-      // Sort the nodes by space available on them, so that we offer
-      // containers on emptier nodes first, facilitating an even spread. This
-      // requires holding the scheduler lock, so that the space available on a
-      // node doesn't change during the sort.
-      synchronized (this) {
-        Collections.sort(nodeIdList, nodeAvailableResourceComparator);
-      }
+  void continuousSchedulingAttempt() {
+    List<NodeId> nodeIdList = new ArrayList<NodeId>(nodes.keySet());
+    // Sort the nodes by space available on them, so that we offer
+    // containers on emptier nodes first, facilitating an even spread. This
+    // requires holding the scheduler lock, so that the space available on a
+    // node doesn't change during the sort.
+    synchronized (this) {
+      Collections.sort(nodeIdList, nodeAvailableResourceComparator);
+    }
 
-      // iterate all nodes
-      for (NodeId nodeId : nodeIdList) {
-        if (nodes.containsKey(nodeId)) {
-          FSSchedulerNode node = getFSSchedulerNode(nodeId);
-          try {
-            if (Resources.fitsIn(minimumAllocation,
-                    node.getAvailableResource())) {
-              attemptScheduling(node);
-            }
-          } catch (Throwable ex) {
-            LOG.warn("Error while attempting scheduling for node " + node +
-                    ": " + ex.toString(), ex);
-          }
-        }
-      }
+    // iterate all nodes
+    for (NodeId nodeId : nodeIdList) {
+      FSSchedulerNode node = getFSSchedulerNode(nodeId);
       try {
-        Thread.sleep(getContinuousSchedulingSleepMs());
-      } catch (InterruptedException e) {
-        LOG.warn("Error while doing sleep in continuous scheduling: " +
-                e.toString(), e);
+        if (node != null && Resources.fitsIn(minimumAllocation,
+            node.getAvailableResource())) {
+          attemptScheduling(node);
+        }
+      } catch (Throwable ex) {
+        LOG.error("Error while attempting scheduling for node " + node +
+            ": " + ex.toString(), ex);
       }
     }
   }
@@ -1004,6 +1000,12 @@ public class FairScheduler extends
 
     @Override
     public int compare(NodeId n1, NodeId n2) {
+      if (!nodes.containsKey(n1)) {
+        return 1;
+      }
+      if (!nodes.containsKey(n2)) {
+        return -1;
+      }
       return RESOURCE_CALCULATOR.compare(clusterResource,
               nodes.get(n2).getAvailableResource(),
               nodes.get(n1).getAvailableResource());
@@ -1121,7 +1123,8 @@ public class FairScheduler extends
       }
       AppAddedSchedulerEvent appAddedEvent = (AppAddedSchedulerEvent) event;
       addApplication(appAddedEvent.getApplicationId(),
-        appAddedEvent.getQueue(), appAddedEvent.getUser());
+        appAddedEvent.getQueue(), appAddedEvent.getUser(),
+        appAddedEvent.getIsAppRecovering());
       break;
     case APP_REMOVED:
       if (!(event instanceof AppRemovedSchedulerEvent)) {
@@ -1139,7 +1142,7 @@ public class FairScheduler extends
           (AppAttemptAddedSchedulerEvent) event;
       addApplicationAttempt(appAttemptAddedEvent.getApplicationAttemptId(),
         appAttemptAddedEvent.getTransferStateFromPreviousAttempt(),
-        appAttemptAddedEvent.getShouldNotifyAttemptAdded());
+        appAttemptAddedEvent.getIsAttemptRecovering());
       break;
     case APP_ATTEMPT_REMOVED:
       if (!(event instanceof AppAttemptRemovedSchedulerEvent)) {
@@ -1203,6 +1206,15 @@ public class FairScheduler extends
     waitTimeBeforeKill = this.conf.getWaitTimeBeforeKill();
     usePortForNodeName = this.conf.getUsePortForNodeName();
 
+    updateInterval = this.conf.getUpdateInterval();
+    if (updateInterval < 0) {
+      updateInterval = FairSchedulerConfiguration.DEFAULT_UPDATE_INTERVAL_MS;
+      LOG.warn(FairSchedulerConfiguration.UPDATE_INTERVAL_MS
+              + " is invalid, so using default value " +
+              + FairSchedulerConfiguration.DEFAULT_UPDATE_INTERVAL_MS
+              + " ms instead");
+    }
+
     rootMetrics = FSQueueMetrics.forQueue("root", null, true, conf);
     // This stores per-application scheduling information
     this.applications =
@@ -1227,7 +1239,16 @@ public class FairScheduler extends
           new Runnable() {
             @Override
             public void run() {
-              continuousScheduling();
+              while (!Thread.currentThread().isInterrupted()) {
+                try {
+                  continuousSchedulingAttempt();
+                  Thread.sleep(getContinuousSchedulingSleepMs());
+                } catch (InterruptedException e) {
+                  LOG.error("Continuous scheduling thread interrupted. Exiting. ",
+                      e);
+                  return;
+                }
+              }
             }
           }
       );

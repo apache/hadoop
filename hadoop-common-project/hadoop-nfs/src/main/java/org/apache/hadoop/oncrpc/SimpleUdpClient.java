@@ -60,6 +60,7 @@ public class SimpleUdpClient {
       DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length,
           IPAddress, port);
       socket.send(sendPacket);
+      socket.setSoTimeout(500);
       DatagramPacket receivePacket = new DatagramPacket(receiveData,
           receiveData.length);
       socket.receive(receivePacket);

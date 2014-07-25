@@ -30,6 +30,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHEC
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
+import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -79,6 +81,7 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
@@ -97,6 +100,8 @@ public class TestFileCreation {
     ((Log4JLogger)LogFactory.getLog(FSNamesystem.class)).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
   }
+  private static final String RPC_DETAILED_METRICS =
+      "RpcDetailedActivityForPort";
 
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 8192;
@@ -371,7 +376,7 @@ public class TestFileCreation {
     conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = cluster.getFileSystem();
-    
+
     UserGroupInformation otherUgi = UserGroupInformation.createUserForTesting(
         "testuser", new String[]{"testgroup"});
     FileSystem fs2 = otherUgi.doAs(new PrivilegedExceptionAction<FileSystem>() {
@@ -380,11 +385,15 @@ public class TestFileCreation {
         return FileSystem.get(cluster.getConfiguration(0));
       }
     });
-    
+
+    String metricsName = RPC_DETAILED_METRICS + cluster.getNameNodePort();
+
     try {
       Path p = new Path("/testfile");
       FSDataOutputStream stm1 = fs.create(p);
       stm1.write(1);
+
+      assertCounter("CreateNumOps", 1L, getMetrics(metricsName));
 
       // Create file again without overwrite
       try {
@@ -394,7 +403,9 @@ public class TestFileCreation {
         GenericTestUtils.assertExceptionContains("already being created by",
             abce);
       }
-      
+      // NameNodeProxies' createNNProxyWithClientProtocol has 5 retries.
+      assertCounter("AlreadyBeingCreatedExceptionNumOps",
+          6L, getMetrics(metricsName));
       FSDataOutputStream stm2 = fs2.create(p, true);
       stm2.write(2);
       stm2.close();

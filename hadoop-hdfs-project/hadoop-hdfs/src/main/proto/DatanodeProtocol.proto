@@ -113,6 +113,7 @@ message BlockCommandProto {
   repeated BlockProto blocks = 3;
   repeated DatanodeInfosProto targets = 4;
   repeated StorageUuidsProto targetStorageUuids = 5;
+  repeated StorageTypesProto targetStorageTypes = 6;
 }
 
 /**

@@ -29,6 +29,7 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -65,7 +66,8 @@ public class TestSimulatedFSDataset {
       ExtendedBlock b = new ExtendedBlock(bpid, i, 0, 0); 
       // we pass expected len as zero, - fsdataset should use the sizeof actual
       // data written
-      ReplicaInPipelineInterface bInfo = fsdataset.createRbw(b);
+      ReplicaInPipelineInterface bInfo = fsdataset.createRbw(
+          StorageType.DEFAULT, b);
       ReplicaOutputStreams out = bInfo.createStreams(true,
           DataChecksum.newDataChecksum(DataChecksum.Type.CRC32, 512));
       try {

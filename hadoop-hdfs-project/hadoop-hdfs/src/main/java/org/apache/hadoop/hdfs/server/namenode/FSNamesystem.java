@@ -83,6 +83,9 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROU
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RANDOMIZE_BLOCK_LOCATIONS_PER_BLOCK;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RANDOMIZE_BLOCK_LOCATIONS_PER_BLOCK_DEFAULT;
+
 import static org.apache.hadoop.util.Time.now;
 
 import java.io.BufferedWriter;
@@ -528,6 +531,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   private final FSImage fsImage;
 
+  private boolean randomizeBlockLocationsPerBlock;
+
   /**
    * Notify that loading of this FSDirectory is complete, and
    * it is imageLoaded for use
@@ -837,6 +842,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       alwaysUseDelegationTokensForTests = conf.getBoolean(
           DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY,
           DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_DEFAULT);
+      
+      this.randomizeBlockLocationsPerBlock = conf.getBoolean(
+          DFS_NAMENODE_RANDOMIZE_BLOCK_LOCATIONS_PER_BLOCK,
+          DFS_NAMENODE_RANDOMIZE_BLOCK_LOCATIONS_PER_BLOCK_DEFAULT);
 
       this.dtSecretManager = createDelegationTokenSecretManager(conf);
       this.dir = new FSDirectory(this, conf);
@@ -979,7 +988,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       // This will start a new log segment and write to the seen_txid file, so
       // we shouldn't do it when coming up in standby state
-      if (!haEnabled || (haEnabled && startOpt == StartupOption.UPGRADE)) {
+      if (!haEnabled || (haEnabled && startOpt == StartupOption.UPGRADE)
+          || (haEnabled && startOpt == StartupOption.UPGRADEONLY)) {
         fsImage.openEditLogForWrite();
       }
       success = true;
@@ -1699,17 +1709,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     LocatedBlocks blocks = getBlockLocations(src, offset, length, true, true,
         true);
     if (blocks != null) {
-      blockManager.getDatanodeManager().sortLocatedBlocks(
-          clientMachine, blocks.getLocatedBlocks());
-      
+      blockManager.getDatanodeManager().sortLocatedBlocks(clientMachine,
+          blocks.getLocatedBlocks(), randomizeBlockLocationsPerBlock);
+
       // lastBlock is not part of getLocatedBlocks(), might need to sort it too
       LocatedBlock lastBlock = blocks.getLastLocatedBlock();
       if (lastBlock != null) {
         ArrayList<LocatedBlock> lastBlockList =
             Lists.newArrayListWithCapacity(1);
         lastBlockList.add(lastBlock);
-        blockManager.getDatanodeManager().sortLocatedBlocks(
-                              clientMachine, lastBlockList);
+        blockManager.getDatanodeManager().sortLocatedBlocks(clientMachine,
+            lastBlockList, randomizeBlockLocationsPerBlock);
       }
     }
     return blocks;
@@ -7319,7 +7329,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   @Override // FSClusterStats
   public int getNumDatanodesInService() {
-    return getNumLiveDataNodes() - getNumDecomLiveDataNodes();
+    return datanodeStatistics.getNumDatanodesInService();
+  }
+  
+  @Override // for block placement strategy
+  public double getInServiceXceiverAverage() {
+    double avgLoad = 0;
+    final int nodes = getNumDatanodesInService();
+    if (nodes != 0) {
+      final int xceivers = datanodeStatistics.getInServiceXceiverCount();
+      avgLoad = (double)xceivers/nodes;
+    }
+    return avgLoad;
   }
 
   public SnapshotManager getSnapshotManager() {
@@ -8258,11 +8279,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     nnConf.checkXAttrsConfigFlag();
     FSPermissionChecker pc = getPermissionChecker();
     boolean getAll = xAttrs == null || xAttrs.isEmpty();
-    List<XAttr> filteredXAttrs = null;
     if (!getAll) {
-      filteredXAttrs = XAttrPermissionFilter.filterXAttrsForApi(pc, xAttrs);
-      if (filteredXAttrs.isEmpty()) {
-        return filteredXAttrs;
+      try {
+        XAttrPermissionFilter.checkPermissionForApi(pc, xAttrs);
+      } catch (AccessControlException e) {
+        logAuditEvent(false, "getXAttrs", src);
+        throw e;
       }
     }
     checkOperation(OperationCategory.READ);
@@ -8281,14 +8303,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         if (filteredAll == null || filteredAll.isEmpty()) {
           return null;
         }
-        List<XAttr> toGet = Lists.newArrayListWithCapacity(filteredXAttrs.size());
-        for (XAttr xAttr : filteredXAttrs) {
+        List<XAttr> toGet = Lists.newArrayListWithCapacity(xAttrs.size());
+        for (XAttr xAttr : xAttrs) {
+          boolean foundIt = false;
           for (XAttr a : filteredAll) {
             if (xAttr.getNameSpace() == a.getNameSpace()
                 && xAttr.getName().equals(a.getName())) {
               toGet.add(a);
+              foundIt = true;
               break;
             }
+          }
+          if (!foundIt) {
+            throw new IOException(
+                "At least one of the attributes provided was not found.");
           }
         }
         return toGet;
@@ -8323,17 +8351,42 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       readUnlock();
     }
   }
-  
+
+  /**
+   * Remove an xattr for a file or directory.
+   *
+   * @param src
+   *          - path to remove the xattr from
+   * @param xAttr
+   *          - xAttr to remove
+   * @throws AccessControlException
+   * @throws SafeModeException
+   * @throws UnresolvedLinkException
+   * @throws IOException
+   */
   void removeXAttr(String src, XAttr xAttr) throws IOException {
-    nnConf.checkXAttrsConfigFlag();
-    HdfsFileStatus resultingStat = null;
-    FSPermissionChecker pc = getPermissionChecker();
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return; // Return previous response
+    }
+    boolean success = false;
     try {
-      XAttrPermissionFilter.checkPermissionForApi(pc, xAttr);
+      removeXAttrInt(src, xAttr, cacheEntry != null);
+      success = true;
     } catch (AccessControlException e) {
       logAuditEvent(false, "removeXAttr", src);
       throw e;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
     }
+  }
+
+  void removeXAttrInt(String src, XAttr xAttr, boolean logRetryCache)
+      throws IOException {
+    nnConf.checkXAttrsConfigFlag();
+    HdfsFileStatus resultingStat = null;
+    FSPermissionChecker pc = getPermissionChecker();
+      XAttrPermissionFilter.checkPermissionForApi(pc, xAttr);
     checkOperation(OperationCategory.WRITE);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
@@ -8347,12 +8400,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       xAttrs.add(xAttr);
       List<XAttr> removedXAttrs = dir.removeXAttrs(src, xAttrs);
       if (removedXAttrs != null && !removedXAttrs.isEmpty()) {
-        getEditLog().logRemoveXAttrs(src, removedXAttrs);
+        getEditLog().logRemoveXAttrs(src, removedXAttrs, logRetryCache);
+      } else {
+        throw new IOException(
+            "No matching attributes found for remove operation");
       }
       resultingStat = getAuditFileInfo(src, false);
-    } catch (AccessControlException e) {
-      logAuditEvent(false, "removeXAttr", src);
-      throw e;
     } finally {
       writeUnlock();
     }

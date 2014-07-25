@@ -25,9 +25,15 @@ import java.util.concurrent.Delayed;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
+@Private
+@Unstable
 public class TaskRunner {
+  @Private
+  @Unstable
   public abstract static class Task implements Runnable, Delayed {
     private long start;
     private long end;

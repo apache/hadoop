@@ -147,17 +147,38 @@ public class FairSchedulerTestBase {
       int memory, int vcores, String queueId, String userId, int numContainers,
       int priority) {
     ApplicationAttemptId id = createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
-    scheduler.addApplication(id.getApplicationId(), queueId, userId);
+    scheduler.addApplication(id.getApplicationId(), queueId, userId, false);
     // This conditional is for testAclSubmitApplication where app is rejected
     // and no app is added.
     if (scheduler.getSchedulerApplications().containsKey(id.getApplicationId())) {
-      scheduler.addApplicationAttempt(id, false, true);
+      scheduler.addApplicationAttempt(id, false, false);
     }
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
     ResourceRequest request = createResourceRequest(memory, vcores, ResourceRequest.ANY,
         priority, numContainers, true);
     ask.add(request);
     scheduler.allocate(id, ask,  new ArrayList<ContainerId>(), null, null);
+    RMApp rmApp = mock(RMApp.class);
+    RMAppAttempt rmAppAttempt = mock(RMAppAttempt.class);
+    when(rmApp.getCurrentAppAttempt()).thenReturn(rmAppAttempt);
+    when(rmAppAttempt.getRMAppAttemptMetrics()).thenReturn(
+        new RMAppAttemptMetrics(id));
+    resourceManager.getRMContext().getRMApps()
+        .put(id.getApplicationId(), rmApp);
+    return id;
+  }
+  
+  protected ApplicationAttemptId createSchedulingRequest(String queueId,
+      String userId, List<ResourceRequest> ask) {
+    ApplicationAttemptId id = createAppAttemptId(this.APP_ID++,
+        this.ATTEMPT_ID++);
+    scheduler.addApplication(id.getApplicationId(), queueId, userId, false);
+    // This conditional is for testAclSubmitApplication where app is rejected
+    // and no app is added.
+    if (scheduler.getSchedulerApplications().containsKey(id.getApplicationId())) {
+      scheduler.addApplicationAttempt(id, false, false);
+    }
+    scheduler.allocate(id, ask, new ArrayList<ContainerId>(), null, null);
     RMApp rmApp = mock(RMApp.class);
     RMAppAttempt rmAppAttempt = mock(RMAppAttempt.class);
     when(rmApp.getCurrentAppAttempt()).thenReturn(rmAppAttempt);

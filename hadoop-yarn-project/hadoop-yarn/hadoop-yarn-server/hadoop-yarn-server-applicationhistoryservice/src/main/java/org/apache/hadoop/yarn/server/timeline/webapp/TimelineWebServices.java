@@ -62,11 +62,12 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.timeline.EntityIdentifier;
 import org.apache.hadoop.yarn.server.timeline.GenericObjectMapper;
 import org.apache.hadoop.yarn.server.timeline.NameValuePair;
-import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineReader.Field;
+import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
+import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 
 import com.google.inject.Inject;
@@ -336,6 +337,11 @@ public class TimelineWebServices {
       return new TimelinePutResponse();
     }
     UserGroupInformation callerUGI = getUser(req);
+    if (callerUGI == null) {
+      String msg = "The owner of the posted timeline entities is not set";
+      LOG.error(msg);
+      throw new ForbiddenException(msg);
+    }
     try {
       List<EntityIdentifier> entityIDs = new ArrayList<EntityIdentifier>();
       TimelineEntities entitiesToPut = new TimelineEntities();
@@ -375,8 +381,7 @@ public class TimelineWebServices {
         // the timeline data.
         try {
           if (existingEntity == null) {
-            injectOwnerInfo(entity,
-                callerUGI == null ? "" : callerUGI.getShortUserName());
+            injectOwnerInfo(entity, callerUGI.getShortUserName());
           }
         } catch (YarnException e) {
           // Skip the entity which messes up the primary filter and record the

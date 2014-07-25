@@ -744,14 +744,14 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override // FsDatasetSpi
-  public synchronized ReplicaInPipelineInterface createRbw(ExtendedBlock b) 
-  throws IOException {
-    return createTemporary(b);
+  public synchronized ReplicaInPipelineInterface createRbw(
+      StorageType storageType, ExtendedBlock b) throws IOException {
+    return createTemporary(storageType, b);
   }
 
   @Override // FsDatasetSpi
-  public synchronized ReplicaInPipelineInterface createTemporary(ExtendedBlock b)
-      throws IOException {
+  public synchronized ReplicaInPipelineInterface createTemporary(
+      StorageType storageType, ExtendedBlock b) throws IOException {
     if (isValidBlock(b)) {
           throw new ReplicaAlreadyExistsException("Block " + b + 
               " is valid, and cannot be written to.");

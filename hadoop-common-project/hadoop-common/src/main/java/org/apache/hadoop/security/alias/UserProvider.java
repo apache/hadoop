@@ -55,7 +55,7 @@ public class UserProvider extends CredentialProvider {
   }
 
   @Override
-  public CredentialEntry getCredentialEntry(String alias) {
+  public synchronized CredentialEntry getCredentialEntry(String alias) {
     byte[] bytes = credentials.getSecretKey(new Text(alias));
     if (bytes == null) {
       return null;
@@ -64,7 +64,7 @@ public class UserProvider extends CredentialProvider {
   }
 
   @Override
-  public CredentialEntry createCredentialEntry(String name, char[] credential) 
+  public synchronized CredentialEntry createCredentialEntry(String name, char[] credential) 
       throws IOException {
     Text nameT = new Text(name);
     if (credentials.getSecretKey(nameT) != null) {
@@ -77,7 +77,7 @@ public class UserProvider extends CredentialProvider {
   }
 
   @Override
-  public void deleteCredentialEntry(String name) throws IOException {
+  public synchronized void deleteCredentialEntry(String name) throws IOException {
     byte[] cred = credentials.getSecretKey(new Text(name));
     if (cred != null) {
       credentials.removeSecretKey(new Text(name));
@@ -95,7 +95,7 @@ public class UserProvider extends CredentialProvider {
   }
 
   @Override
-  public void flush() {
+  public synchronized void flush() {
     user.addCredentials(credentials);
   }
 
@@ -112,7 +112,7 @@ public class UserProvider extends CredentialProvider {
   }
 
   @Override
-  public List<String> getAliases() throws IOException {
+  public synchronized List<String> getAliases() throws IOException {
     List<String> list = new ArrayList<String>();
     List<Text> aliases = credentials.getAllSecretKeys();
     for (Text key : aliases) {

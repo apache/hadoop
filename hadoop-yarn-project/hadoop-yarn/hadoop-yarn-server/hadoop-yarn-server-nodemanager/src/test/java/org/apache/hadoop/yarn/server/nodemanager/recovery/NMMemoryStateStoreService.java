@@ -25,14 +25,20 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
+import org.apache.hadoop.yarn.server.api.records.MasterKey;
+import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 
 public class NMMemoryStateStoreService extends NMStateStoreService {
   private Map<TrackerKey, TrackerState> trackerStates;
   private Map<Integer, DeletionServiceDeleteTaskProto> deleteTasks;
+  private RecoveredNMTokensState nmTokenState;
+  private RecoveredContainerTokensState containerTokenState;
 
   public NMMemoryStateStoreService() {
     super(NMMemoryStateStoreService.class.getName());
@@ -113,6 +119,11 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
 
   @Override
   protected void initStorage(Configuration conf) {
+    nmTokenState = new RecoveredNMTokensState();
+    nmTokenState.applicationMasterKeys =
+        new HashMap<ApplicationAttemptId, MasterKey>();
+    containerTokenState = new RecoveredContainerTokensState();
+    containerTokenState.activeTokens = new HashMap<ContainerId, Long>();
     trackerStates = new HashMap<TrackerKey, TrackerState>();
     deleteTasks = new HashMap<Integer, DeletionServiceDeleteTaskProto>();
   }
@@ -145,6 +156,89 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   @Override
   public synchronized void removeDeletionTask(int taskId) throws IOException {
     deleteTasks.remove(taskId);
+  }
+
+
+  @Override
+  public RecoveredNMTokensState loadNMTokensState() throws IOException {
+    // return a copy so caller can't modify our state
+    RecoveredNMTokensState result = new RecoveredNMTokensState();
+    result.currentMasterKey = nmTokenState.currentMasterKey;
+    result.previousMasterKey = nmTokenState.previousMasterKey;
+    result.applicationMasterKeys =
+        new HashMap<ApplicationAttemptId, MasterKey>(
+            nmTokenState.applicationMasterKeys);
+    return result;
+  }
+
+  @Override
+  public void storeNMTokenCurrentMasterKey(MasterKey key)
+      throws IOException {
+    MasterKeyPBImpl keypb = (MasterKeyPBImpl) key;
+    nmTokenState.currentMasterKey = new MasterKeyPBImpl(keypb.getProto());
+  }
+
+  @Override
+  public void storeNMTokenPreviousMasterKey(MasterKey key)
+      throws IOException {
+    MasterKeyPBImpl keypb = (MasterKeyPBImpl) key;
+    nmTokenState.previousMasterKey = new MasterKeyPBImpl(keypb.getProto());
+  }
+
+  @Override
+  public void storeNMTokenApplicationMasterKey(ApplicationAttemptId attempt,
+      MasterKey key) throws IOException {
+    MasterKeyPBImpl keypb = (MasterKeyPBImpl) key;
+    nmTokenState.applicationMasterKeys.put(attempt,
+        new MasterKeyPBImpl(keypb.getProto()));
+  }
+
+  @Override
+  public void removeNMTokenApplicationMasterKey(ApplicationAttemptId attempt)
+      throws IOException {
+    nmTokenState.applicationMasterKeys.remove(attempt);
+  }
+
+
+  @Override
+  public RecoveredContainerTokensState loadContainerTokensState()
+      throws IOException {
+    // return a copy so caller can't modify our state
+    RecoveredContainerTokensState result =
+        new RecoveredContainerTokensState();
+    result.currentMasterKey = containerTokenState.currentMasterKey;
+    result.previousMasterKey = containerTokenState.previousMasterKey;
+    result.activeTokens =
+        new HashMap<ContainerId, Long>(containerTokenState.activeTokens);
+    return result;
+  }
+
+  @Override
+  public void storeContainerTokenCurrentMasterKey(MasterKey key)
+      throws IOException {
+    MasterKeyPBImpl keypb = (MasterKeyPBImpl) key;
+    containerTokenState.currentMasterKey =
+        new MasterKeyPBImpl(keypb.getProto());
+  }
+
+  @Override
+  public void storeContainerTokenPreviousMasterKey(MasterKey key)
+      throws IOException {
+    MasterKeyPBImpl keypb = (MasterKeyPBImpl) key;
+    containerTokenState.previousMasterKey =
+        new MasterKeyPBImpl(keypb.getProto());
+  }
+
+  @Override
+  public void storeContainerToken(ContainerId containerId,
+      Long expirationTime) throws IOException {
+    containerTokenState.activeTokens.put(containerId, expirationTime);
+  }
+
+  @Override
+  public void removeContainerToken(ContainerId containerId)
+      throws IOException {
+    containerTokenState.activeTokens.remove(containerId);
   }
 
 

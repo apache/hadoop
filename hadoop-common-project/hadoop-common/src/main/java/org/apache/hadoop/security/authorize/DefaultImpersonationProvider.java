@@ -24,37 +24,64 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.MachineList;
 
 import com.google.common.annotations.VisibleForTesting;
 
+@InterfaceStability.Unstable
+@InterfaceAudience.Public
 public class DefaultImpersonationProvider implements ImpersonationProvider {
   private static final String CONF_HOSTS = ".hosts";
   private static final String CONF_USERS = ".users";
   private static final String CONF_GROUPS = ".groups";
-  private static final String CONF_HADOOP_PROXYUSER = "hadoop.proxyuser.";
-  private static final String CONF_HADOOP_PROXYUSER_RE = "hadoop\\.proxyuser\\.";
-  private static final String CONF_HADOOP_PROXYUSER_RE_USERS_GROUPS = 
-      CONF_HADOOP_PROXYUSER_RE+"[^.]*(" + Pattern.quote(CONF_USERS) +
-      "|" + Pattern.quote(CONF_GROUPS) + ")";
-  private static final String CONF_HADOOP_PROXYUSER_RE_HOSTS = 
-      CONF_HADOOP_PROXYUSER_RE+"[^.]*"+ Pattern.quote(CONF_HOSTS);
   // acl and list of hosts per proxyuser
   private Map<String, AccessControlList> proxyUserAcl = 
     new HashMap<String, AccessControlList>();
-  private static Map<String, MachineList> proxyHosts = 
+  private Map<String, MachineList> proxyHosts =
     new HashMap<String, MachineList>();
   private Configuration conf;
+
+
+  private static DefaultImpersonationProvider testProvider;
+
+  public static synchronized DefaultImpersonationProvider getTestProvider() {
+    if (testProvider == null) {
+      testProvider = new DefaultImpersonationProvider();
+      testProvider.setConf(new Configuration());
+      testProvider.init(ProxyUsers.CONF_HADOOP_PROXYUSER);
+    }
+    return testProvider;
+  }
 
   @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
+  }
 
-    // get list of users and groups per proxyuser
+  private String configPrefix;
+
+  @Override
+  public void init(String configurationPrefix) {
+    configPrefix = configurationPrefix +
+        (configurationPrefix.endsWith(".") ? "" : ".");
+    
+    // constructing regex to match the following patterns:
+    //   $configPrefix.[ANY].users
+    //   $configPrefix.[ANY].groups
+    //   $configPrefix.[ANY].hosts
+    //
+    String prefixRegEx = configPrefix.replace(".", "\\.");
+    String usersGroupsRegEx = prefixRegEx + "[^.]*(" +
+        Pattern.quote(CONF_USERS) + "|" + Pattern.quote(CONF_GROUPS) + ")";
+    String hostsRegEx = prefixRegEx + "[^.]*" + Pattern.quote(CONF_HOSTS);
+
+  // get list of users and groups per proxyuser
     Map<String,String> allMatchKeys = 
-        conf.getValByRegex(CONF_HADOOP_PROXYUSER_RE_USERS_GROUPS); 
+        conf.getValByRegex(usersGroupsRegEx);
     for(Entry<String, String> entry : allMatchKeys.entrySet()) {  
       String aclKey = getAclKey(entry.getKey());
       if (!proxyUserAcl.containsKey(aclKey)) {
@@ -65,7 +92,7 @@ public class DefaultImpersonationProvider implements ImpersonationProvider {
     }
 
     // get hosts per proxyuser
-    allMatchKeys = conf.getValByRegex(CONF_HADOOP_PROXYUSER_RE_HOSTS);
+    allMatchKeys = conf.getValByRegex(hostsRegEx);
     for(Entry<String, String> entry : allMatchKeys.entrySet()) {
       proxyHosts.put(entry.getKey(),
           new MachineList(entry.getValue()));
@@ -86,8 +113,8 @@ public class DefaultImpersonationProvider implements ImpersonationProvider {
       return;
     }
     
-    AccessControlList acl = proxyUserAcl.get(
-        CONF_HADOOP_PROXYUSER+realUser.getShortUserName());
+    AccessControlList acl = proxyUserAcl.get(configPrefix +
+        realUser.getShortUserName());
     if (acl == null || !acl.isUserAllowed(user)) {
       throw new AuthorizationException("User: " + realUser.getUserName()
           + " is not allowed to impersonate " + user.getUserName());
@@ -116,8 +143,8 @@ public class DefaultImpersonationProvider implements ImpersonationProvider {
    * @param userName name of the superuser
    * @return configuration key for superuser usergroups
    */
-  public static String getProxySuperuserUserConfKey(String userName) {
-    return CONF_HADOOP_PROXYUSER+userName+CONF_USERS;
+  public String getProxySuperuserUserConfKey(String userName) {
+    return configPrefix + userName + CONF_USERS;
   }
 
   /**
@@ -126,8 +153,8 @@ public class DefaultImpersonationProvider implements ImpersonationProvider {
    * @param userName name of the superuser
    * @return configuration key for superuser groups
    */
-  public static String getProxySuperuserGroupConfKey(String userName) {
-    return CONF_HADOOP_PROXYUSER+userName+CONF_GROUPS;
+  public String getProxySuperuserGroupConfKey(String userName) {
+    return configPrefix + userName + CONF_GROUPS;
   }
 
   /**
@@ -136,8 +163,8 @@ public class DefaultImpersonationProvider implements ImpersonationProvider {
    * @param userName name of the superuser
    * @return configuration key for superuser ip-addresses
    */
-  public static String getProxySuperuserIpConfKey(String userName) {
-    return CONF_HADOOP_PROXYUSER+userName+CONF_HOSTS;
+  public String getProxySuperuserIpConfKey(String userName) {
+    return configPrefix + userName + CONF_HOSTS;
   }
 
   @VisibleForTesting

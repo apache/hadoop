@@ -550,8 +550,10 @@ public class TestPBHelper {
     dnInfos[1][0] = DFSTestUtil.getLocalDatanodeInfo();
     dnInfos[1][1] = DFSTestUtil.getLocalDatanodeInfo();
     String[][] storageIDs = {{"s00"}, {"s10", "s11"}};
+    StorageType[][] storageTypes = {{StorageType.DEFAULT},
+        {StorageType.DEFAULT, StorageType.DEFAULT}};
     BlockCommand bc = new BlockCommand(DatanodeProtocol.DNA_TRANSFER, "bp1",
-        blocks, dnInfos, storageIDs);
+        blocks, dnInfos, storageTypes, storageIDs);
     BlockCommandProto bcProto = PBHelper.convert(bc);
     BlockCommand bc2 = PBHelper.convert(bcProto);
     assertEquals(bc.getAction(), bc2.getAction());
