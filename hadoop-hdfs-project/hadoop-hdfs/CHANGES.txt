@@ -1,5 +1,8 @@
 Hadoop HDFS Change Log
 
+    HDFS-6752. Avoid Address bind errors in TestDatanodeConfig#testMemlockLimit
+    (vinayakumarb)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
