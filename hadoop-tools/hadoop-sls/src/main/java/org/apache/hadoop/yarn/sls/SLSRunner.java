@@ -32,6 +32,8 @@ import java.util.Iterator;
 import java.util.Random;
 import java.util.Arrays;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.tools.rumen.JobTraceReader;
 import org.apache.hadoop.tools.rumen.LoggedJob;
@@ -63,6 +65,8 @@ import org.apache.log4j.Logger;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.map.ObjectMapper;
 
+@Private
+@Unstable
 public class SLSRunner {
   // RM, Runner
   private ResourceManager rm;
