@@ -25,6 +25,7 @@ import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.AMRMTokenSecretManagerState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
@@ -136,6 +137,12 @@ public class NullRMStateStore extends RMStateStore {
   protected RMStateVersion getCurrentVersion() {
     // Do nothing
     return null;
+  }
+
+  @Override
+  public void storeOrUpdateAMRMTokenSecretManagerState(
+      AMRMTokenSecretManagerState state, boolean isUpdate) {
+    //DO Nothing
   }
 
   @Override

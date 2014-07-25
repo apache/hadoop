@@ -38,7 +38,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.RMStateVersionPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -161,6 +160,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       testEpoch(fsTester);
       testAppDeletion(fsTester);
       testDeleteStore(fsTester);
+      testAMRMTokenSecretManagerStateStore(fsTester);
     } finally {
       cluster.shutdown();
     }

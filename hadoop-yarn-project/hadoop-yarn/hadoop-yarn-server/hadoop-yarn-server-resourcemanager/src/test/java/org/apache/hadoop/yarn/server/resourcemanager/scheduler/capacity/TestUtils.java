@@ -86,13 +86,12 @@ public class TestUtils {
     
     Configuration conf = new Configuration();
     RMApplicationHistoryWriter writer =  mock(RMApplicationHistoryWriter.class);
-    RMContext rmContext =
+    RMContextImpl rmContext =
         new RMContextImpl(nullDispatcher, cae, null, null, null,
-          new AMRMTokenSecretManager(conf),
+          new AMRMTokenSecretManager(conf, null),
           new RMContainerTokenSecretManager(conf),
           new NMTokenSecretManagerInRM(conf),
           new ClientToAMTokenSecretManagerInRM(), writer);
-    
     return rmContext;
   }
   
