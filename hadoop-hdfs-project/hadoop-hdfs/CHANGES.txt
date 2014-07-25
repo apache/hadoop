@@ -62,6 +62,10 @@ Release 2.6.0 - UNRELEASED
     HDFS-6701. Make seed optional in NetworkTopology#sortByDistance.
     (Ashwin Shankar via wang)
 
+    HDFS-6755. There is an unnecessary sleep in the code path where
+    DFSOutputStream#close gives up its attempt to contact the namenode
+    (mitdesai21 via cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
