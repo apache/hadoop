@@ -321,6 +321,9 @@ Release 2.6.0 - UNRELEASED
     DFSOutputStream#close gives up its attempt to contact the namenode
     (mitdesai21 via cmccabe)
 
+    HDFS-6750. The DataNode should use its shared memory segment to mark
+    short-circuit replicas that have been unlinked as stale (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
