@@ -65,6 +65,9 @@ Release 2.6.0 - UNRELEASED
     YARN-1342. Recover container tokens upon nodemanager restart. (Jason Lowe via
     devaraj)
 
+    YARN-2214. FairScheduler: preemptContainerPreCheck() in FSParentQueue delays 
+    convergence towards fairness. (Ashwin Shankar via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
