@@ -118,6 +118,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-5919. FileJournalManager doesn't purge empty and corrupt inprogress edits
     files (vinayakumarb)
 
+    HDFS-6752. Avoid Address bind errors in TestDatanodeConfig#testMemlockLimit
+    (vinayakumarb)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
