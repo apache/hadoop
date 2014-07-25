@@ -90,6 +90,10 @@ public class TestEncryptionZones {
     fcWrapper = new FileContextTestWrapper(
         FileContext.getFileContext(cluster.getURI(), conf));
     dfsAdmin = new HdfsAdmin(cluster.getURI(), conf);
+    // Need to set the client's KeyProvider to the NN's for JKS,
+    // else the updates do not get flushed properly
+    fs.getClient().provider = cluster.getNameNode().getNamesystem()
+        .getProvider();
   }
 
   @After

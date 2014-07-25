@@ -141,7 +141,6 @@ import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoCodec;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
-import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
@@ -766,7 +765,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   FSNamesystem(Configuration conf, FSImage fsImage, boolean ignoreRetryCache)
       throws IOException {
-    initializeKeyProvider(conf);
+    provider = DFSUtil.createKeyProviderCryptoExtension(conf);
+    if (provider == null) {
+      LOG.info("No KeyProvider found.");
+    } else {
+      LOG.info("Found KeyProvider: " + provider.toString());
+    }
     providerOptions = KeyProvider.options(conf);
     this.codec = CryptoCodec.getInstance(conf);
     if (conf.getBoolean(DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY,
@@ -926,40 +930,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
-  private void initializeKeyProvider(final Configuration conf) {
-    try {
-      final List<KeyProvider> providers = KeyProviderFactory.getProviders(conf);
-      if (providers == null) {
-        return;
-      }
-
-      if (providers.size() == 0) {
-        LOG.info("No KeyProviders found.");
-        return;
-      }
-
-      if (providers.size() > 1) {
-        final String err =
-            "Multiple KeyProviders found. Only one is permitted.";
-        LOG.error(err);
-        throw new RuntimeException(err);
-      }
-      provider = KeyProviderCryptoExtension
-          .createKeyProviderCryptoExtension(providers.get(0));
-      if (provider.isTransient()) {
-        final String err =
-            "A KeyProvider was found but it is a transient provider.";
-        LOG.error(err);
-        throw new RuntimeException(err);
-      }
-      LOG.info("Found KeyProvider: " + provider.toString());
-    } catch (IOException e) {
-      LOG.error("Exception while initializing KeyProvider", e);
-    }
-  }
-
   @VisibleForTesting
-  public KeyProvider getProvider() {
+  public KeyProviderCryptoExtension getProvider() {
     return provider;
   }
 

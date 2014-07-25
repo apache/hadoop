@@ -59,6 +59,9 @@ fs-encryption (Unreleased)
     HDFS-6738. Remove unnecessary getEncryptionZoneForPath call in
     EZManager#createEncryptionZone. (clamb)
 
+    HDFS-6724. Decrypt EDEK before creating
+    CryptoInputStream/CryptoOutputStream. (wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
