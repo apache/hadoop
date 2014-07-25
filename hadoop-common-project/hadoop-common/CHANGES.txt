@@ -12,6 +12,9 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-8943. Support multiple group mapping providers. (Kai Zheng via brandonli)
 
+    HADOOP-9361 Strictly define the expected behavior of filesystem APIs and
+    write tests to verify compliance (stevel)
+
   IMPROVEMENTS
 
     HADOOP-10451. Remove unused field and imports from SaslRpcServer.
@@ -108,9 +111,6 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10747. Support configurable retries on SASL connection failures in
     RPC client. (cnauroth)
 
-    HADOOP-10674. Improve PureJavaCrc32 performance and use java.util.zip.CRC32
-    for Java 7 and above. (szetszwo)
-
     HADOOP-10754. Reenable several HA ZooKeeper-related tests on Windows.
     (cnauroth)
 
@@ -122,9 +122,6 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10767. Clean up unused code in Ls shell command. (cnauroth)
 
-    HADOOP-9361 Strictly define the expected behavior of filesystem APIs and
-    write tests to verify compliance (stevel)
-
     HADOOP-9651 Filesystems to throw FileAlreadyExistsException in
     createFile(path, overwrite=false) when the file exists (stevel)
     
@@ -132,6 +129,9 @@ Release 2.5.0 - UNRELEASED
     fix all hadoop implementations for compliance
 
   OPTIMIZATIONS
+
+    HADOOP-10674. Improve PureJavaCrc32 performance and use java.util.zip.CRC32
+    for Java 7 and above. (szetszwo)
 
   BUG FIXES 
 
@@ -297,27 +297,6 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10801 dead link in site.xml (Akira AJISAKA via stevel)
 
-  BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
-
-    HADOOP-10520. Extended attributes definition and FileSystem APIs for
-    extended attributes. (Yi Liu via wang)
-
-    HADOOP-10546. Javadoc and other small fixes for extended attributes in
-    hadoop-common. (Charles Lamb via wang)
-
-    HADOOP-10521. FsShell commands for extended attributes. (Yi Liu via wang)
-
-    HADOOP-10548. Improve FsShell xattr error handling and other fixes. (Charles Lamb via umamahesh)
-
-    HADOOP-10567. Shift XAttr value encoding code out for reuse. (Yi Liu via umamahesh)
-
-    HADOOP-10621. Remove CRLF for xattr value base64 encoding for better display.(Yi Liu via umamahesh)
-
-    HADOOP-10575. Small fixes for XAttrCommands and test. (Yi Liu via umamahesh)
-
-    HADOOP-10561. Copy command with preserve option should handle Xattrs.
-    (Yi Liu via cnauroth)
-
     HADOOP-10590. ServiceAuthorizationManager is not threadsafe. (Benoy Antony via vinayakumarb)
 
     HADOOP-10711. Cleanup some extra dependencies from hadoop-auth. (rkanter via tucu)
@@ -341,6 +320,27 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10894. Fix dead link in ToolRunner documentation. (Akira Ajisaka
     via Arpit Agarwal)
+
+  BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
+
+    HADOOP-10520. Extended attributes definition and FileSystem APIs for
+    extended attributes. (Yi Liu via wang)
+
+    HADOOP-10546. Javadoc and other small fixes for extended attributes in
+    hadoop-common. (Charles Lamb via wang)
+
+    HADOOP-10521. FsShell commands for extended attributes. (Yi Liu via wang)
+
+    HADOOP-10548. Improve FsShell xattr error handling and other fixes. (Charles Lamb via umamahesh)
+
+    HADOOP-10567. Shift XAttr value encoding code out for reuse. (Yi Liu via umamahesh)
+
+    HADOOP-10621. Remove CRLF for xattr value base64 encoding for better display.(Yi Liu via umamahesh)
+
+    HADOOP-10575. Small fixes for XAttrCommands and test. (Yi Liu via umamahesh)
+
+    HADOOP-10561. Copy command with preserve option should handle Xattrs.
+    (Yi Liu via cnauroth)
 
 Release 2.4.1 - 2014-06-23 
 
