@@ -50,6 +50,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2214. FairScheduler: preemptContainerPreCheck() in FSParentQueue delays 
     convergence towards fairness. (Ashwin Shankar via kasha)
 
+    YARN-2211. Persist AMRMToken master key in RMStateStore for RM recovery.
+    (Xuan Gong via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
