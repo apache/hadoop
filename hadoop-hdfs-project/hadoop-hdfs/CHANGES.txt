@@ -398,6 +398,15 @@ Release 2.5.0 - UNRELEASED
     HDFS-6406. Add capability for NFS gateway to reject connections from
     unprivileged ports. (atm)
 
+    HDFS-2006. Ability to support storing extended attributes per file.
+
+    HDFS-5978. Create a tool to take fsimage and expose read-only WebHDFS API.
+    (Akira Ajisaka via wheat9)
+
+    HDFS-6278. Create HTML5-based UI for SNN. (wheat9)
+
+    HDFS-6279. Create new index page for JN / DN. (wheat9)
+
   IMPROVEMENTS
 
     HDFS-6007. Update documentation about short-circuit local reads (iwasakims
@@ -414,9 +423,6 @@ Release 2.5.0 - UNRELEASED
     HDFS-6119. FSNamesystem code cleanup. (suresh)
 
     HDFS-6158. Clean up dead code for OfflineImageViewer. (wheat9)
-
-    HDFS-5978. Create a tool to take fsimage and expose read-only WebHDFS API.
-    (Akira Ajisaka via wheat9)
 
     HDFS-6164. Remove lsr in OfflineImageViewer. (wheat9)
 
@@ -444,10 +450,6 @@ Release 2.5.0 - UNRELEASED
     (Akira Ajisaka via wheat9)
 
     HDFS-6265. Prepare HDFS codebase for JUnit 4.11. (cnauroth)
-
-    HDFS-6278. Create HTML5-based UI for SNN. (wheat9)
-
-    HDFS-6279. Create new index page for JN / DN. (wheat9)
 
     HDFS-5693. Few NN metrics data points were collected via JMX when NN
     is under heavy load. (Ming Ma via jing9)
@@ -820,9 +822,6 @@ Release 2.5.0 - UNRELEASED
     HDFS-6464. Support multiple xattr.name parameters for WebHDFS getXAttrs.
     (Yi Liu via umamahesh)
 
-    HDFS-6375. Listing extended attributes with the search permission.
-    (Charles Lamb via wang)
-
     HDFS-6539. test_native_mini_dfs is skipped in hadoop-hdfs/pom.xml
     (decstery via cmccabe)
 
@@ -917,6 +916,18 @@ Release 2.5.0 - UNRELEASED
     HDFS-6696. Name node cannot start if the path of a file under
     construction contains ".snapshot". (wang)
 
+    HDFS-6312. WebHdfs HA failover is broken on secure clusters. 
+    (daryn via tucu)
+
+    HDFS-6618. FSNamesystem#delete drops the FSN lock between removing INodes
+    from the tree and deleting them from the inode map (kihwal via cmccabe)
+
+    HDFS-6622. Rename and AddBlock may race and produce invalid edits (kihwal
+    via cmccabe)
+
+    HDFS-6723. New NN webUI no longer displays decommissioned state for dead node.
+    (Ming Ma via wheat9)
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
@@ -985,18 +996,6 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6492. Support create-time xattrs and atomically setting multiple
     xattrs. (wang)
-
-    HDFS-6312. WebHdfs HA failover is broken on secure clusters. 
-    (daryn via tucu)
-
-    HDFS-6618. FSNamesystem#delete drops the FSN lock between removing INodes
-    from the tree and deleting them from the inode map (kihwal via cmccabe)
-
-    HDFS-6622. Rename and AddBlock may race and produce invalid edits (kihwal
-    via cmccabe)
-
-    HDFS-6723. New NN webUI no longer displays decommissioned state for dead node.
-    (Ming Ma via wheat9)
 
 Release 2.4.1 - 2014-06-23 
 
