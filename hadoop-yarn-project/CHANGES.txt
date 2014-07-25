@@ -424,6 +424,8 @@ Release 2.5.0 - UNRELEASED
     YARN-2319. Made the MiniKdc instance start/close before/after the class of
     TestRMWebServicesDelegationTokens. (Wenwu Peng via zjshen)
 
+    YARN-2335. Annotate all hadoop-sls APIs as @Private. (Wei Yan via kasha)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
