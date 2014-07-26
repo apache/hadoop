@@ -444,6 +444,9 @@ Release 2.5.0 - UNRELEASED
 
     YARN-2335. Annotate all hadoop-sls APIs as @Private. (Wei Yan via kasha)
 
+    YARN-1726. ResourceSchedulerWrapper broken due to AbstractYarnScheduler. 
+    (Wei Yan via kasha)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
