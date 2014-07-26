@@ -128,6 +128,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-9495 Define behaviour of Seekable.seek(), write tests,
     fix all hadoop implementations for compliance
 
+    HADOOP-10896. Update compatibility doc to capture visibility of 
+    un-annotated classes/ methods. (kasha)
+
   OPTIMIZATIONS
 
     HADOOP-10674. Improve PureJavaCrc32 performance and use java.util.zip.CRC32
