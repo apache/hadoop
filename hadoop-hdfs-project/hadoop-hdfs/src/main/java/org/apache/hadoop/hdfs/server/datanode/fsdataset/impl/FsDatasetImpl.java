@@ -44,6 +44,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -1232,8 +1233,15 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         }
         volumeMap.remove(bpid, invalidBlks[i]);
       }
+
+      // If a DFSClient has the replica in its cache of short-circuit file
+      // descriptors (and the client is using ShortCircuitShm), invalidate it.
+      datanode.getShortCircuitRegistry().processBlockInvalidation(
+                new ExtendedBlockId(invalidBlks[i].getBlockId(), bpid));
+
       // If the block is cached, start uncaching it.
       cacheManager.uncacheBlock(bpid, invalidBlks[i].getBlockId());
+
       // Delete the block asynchronously to make sure we can do it fast enough.
       // It's ok to unlink the block file before the uncache operation
       // finishes.
