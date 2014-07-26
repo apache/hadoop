@@ -383,6 +383,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6752. Avoid Address bind errors in TestDatanodeConfig#testMemlockLimit
     (vinayakumarb)
 
+    HDFS-6749. FSNamesystem methods should call resolvePath.
+    (Charles Lamb via cnauroth)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
