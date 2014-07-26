@@ -109,6 +109,9 @@ public class FakeSchedulable extends Schedulable {
   public void updateDemand() {}
 
   @Override
+  public void updateWeight() {}
+
+  @Override
   public TaskType getTaskType() {
     return TaskType.MAP;
   }

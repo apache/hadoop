@@ -95,7 +95,18 @@ public class PoolSchedulable extends Schedulable {
           + "; maxTasks is " + maxTasks);
     }
   }
-  
+
+  /**
+   * Ask jobs in the pool to update weights. Its own weight is computed on
+   * the fly
+   */
+  @Override
+  public void updateWeight() {
+    for (JobSchedulable sched: jobScheds) {
+      sched.updateWeight();
+    }
+  }
+
   /**
    * Distribute the pool's fair share among its jobs
    */
@@ -159,6 +170,9 @@ public class PoolSchedulable extends Schedulable {
       comparator = new SchedulingAlgorithms.FairShareComparator();
     } else {
       throw new RuntimeException("Unsupported pool scheduling mode " + mode);
+    }
+    for (JobSchedulable sched: jobScheds) {
+      sched.updateWeight();
     }
     Collections.sort(jobScheds, comparator);
     for (JobSchedulable sched: jobScheds) {

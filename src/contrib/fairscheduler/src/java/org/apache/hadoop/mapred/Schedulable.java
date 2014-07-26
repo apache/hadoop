@@ -95,7 +95,10 @@ abstract class Schedulable {
   
   /** Refresh the Schedulable's demand and those of its children if any. */
   public abstract void updateDemand();
-  
+
+  /** Refresh the Schedulable's weight and those of its children if any */
+  public abstract void updateWeight();
+
   /** 
    * Distribute the fair share assigned to this Schedulable among its 
    * children (used in pools where the internal scheduler is fair sharing). 

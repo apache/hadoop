@@ -701,11 +701,15 @@ public class FairScheduler extends TaskScheduler {
       
       updateRunnability(); // Set job runnability based on user/pool limits 
       
-      // Update demands of jobs and pools
+      // Update demands and weights of jobs and pools
       for (Pool pool: poolMgr.getPools()) {
         pool.getMapSchedulable().updateDemand();
         pool.getReduceSchedulable().updateDemand();
+
+        pool.getMapSchedulable().updateWeight();
+        pool.getReduceSchedulable().updateWeight();
       }
+
       
       // Compute fair shares based on updated demands
       List<PoolSchedulable> mapScheds = getPoolSchedulables(TaskType.MAP);
