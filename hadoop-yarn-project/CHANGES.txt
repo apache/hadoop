@@ -106,6 +106,8 @@ Release 2.6.0 - UNRELEASED
     YARN-2147. client lacks delegation token exception details when
     application submit fails (Chen He via jlowe)
 
+    YARN-1796. container-executor shouldn't require o-r permissions (atm)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
