@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.yarn.sls;
 
-import org.apache.commons.io.FileUtils;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 public class TestSLSRunner {
@@ -30,6 +33,15 @@ public class TestSLSRunner {
   @SuppressWarnings("all")
   public void testSimulatorRunning() throws Exception {
     File tempDir = new File("target", UUID.randomUUID().toString());
+    final List<Throwable> exceptionList =
+        Collections.synchronizedList(new ArrayList<Throwable>());
+
+    Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+      @Override
+      public void uncaughtException(Thread t, Throwable e) {
+        exceptionList.add(e);
+      }
+    });
 
     // start the simulator
     File slsOutputDir = new File(tempDir.getAbsolutePath() + "/slsoutput/");
@@ -38,8 +50,20 @@ public class TestSLSRunner {
             "-output", slsOutputDir.getAbsolutePath()};
     SLSRunner.main(args);
 
-    // wait for 45 seconds before stop
-    Thread.sleep(45 * 1000);
+    // wait for 20 seconds before stop
+    int count = 20;
+    while (count >= 0) {
+      Thread.sleep(1000);
+
+      if (! exceptionList.isEmpty()) {
+        SLSRunner.getRunner().stop();
+        Assert.fail("TestSLSRunner catched exception from child thread " +
+            "(TaskRunner.Task): " + exceptionList.get(0).getMessage());
+        break;
+      }
+      count--;
+    }
+
     SLSRunner.getRunner().stop();
   }
 
