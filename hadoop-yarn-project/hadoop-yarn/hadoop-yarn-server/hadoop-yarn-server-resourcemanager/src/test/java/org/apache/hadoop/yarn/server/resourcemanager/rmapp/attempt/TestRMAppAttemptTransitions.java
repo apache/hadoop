@@ -134,7 +134,8 @@ public class TestRMAppAttemptTransitions {
   private RMAppAttempt applicationAttempt;
 
   private Configuration conf = new Configuration();
-  private AMRMTokenSecretManager amRMTokenManager = spy(new AMRMTokenSecretManager(conf));
+  private AMRMTokenSecretManager amRMTokenManager =
+      spy(new AMRMTokenSecretManager(conf, rmContext));
   private ClientToAMTokenSecretManagerInRM clientToAMTokenManager =
       spy(new ClientToAMTokenSecretManagerInRM());
   private NMTokenSecretManagerInRM nmTokenManager =

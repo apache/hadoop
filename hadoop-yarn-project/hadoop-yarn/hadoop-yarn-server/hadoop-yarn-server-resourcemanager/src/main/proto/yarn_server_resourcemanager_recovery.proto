@@ -16,19 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.sls.scheduler;
+option java_package = "org.apache.hadoop.yarn.proto";
+option java_outer_classname = "YarnServerResourceManagerRecoveryProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package hadoop.yarn;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event
-        .NodeUpdateSchedulerEvent;
+import "yarn_server_common_protos.proto";
 
-@Private
-@Unstable
-public class NodeUpdateSchedulerEventWrapper extends NodeUpdateSchedulerEvent {
-  
-  public NodeUpdateSchedulerEventWrapper(NodeUpdateSchedulerEvent event) {
-    super(new RMNodeWrapper(event.getRMNode()));
-  }
-  
+message AMRMTokenSecretManagerStateProto {
+  optional MasterKeyProto current_master_key = 1;
+  optional MasterKeyProto next_master_key = 2;
 }

@@ -3928,8 +3928,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       StandbyException, IOException {
     FSPermissionChecker pc = getPermissionChecker();  
     checkOperation(OperationCategory.READ);
+    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     readLock();
     try {
+      src = FSDirectory.resolvePath(src, pathComponents, dir);
       checkOperation(OperationCategory.READ);
       if (isPermissionEnabled) {
         checkTraverse(pc, src);
@@ -8391,9 +8393,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     nnConf.checkAclsConfigFlag();
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.READ);
+    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
+      src = FSDirectory.resolvePath(src, pathComponents, dir);
       if (isPermissionEnabled) {
         checkPermission(pc, src, false, null, null, null, null);
       }
@@ -8639,8 +8643,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
     }
     checkOperation(OperationCategory.READ);
+    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     readLock();
     try {
+      src = FSDirectory.resolvePath(src, pathComponents, dir);
       checkOperation(OperationCategory.READ);
       if (isPermissionEnabled) {
         checkPathAccess(pc, src, FsAction.READ);
@@ -8684,8 +8690,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     nnConf.checkXAttrsConfigFlag();
     final FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.READ);
+    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     readLock();
     try {
+      src = FSDirectory.resolvePath(src, pathComponents, dir);
       checkOperation(OperationCategory.READ);
       if (isPermissionEnabled) {
         /* To access xattr names, you need EXECUTE in the owning directory. */

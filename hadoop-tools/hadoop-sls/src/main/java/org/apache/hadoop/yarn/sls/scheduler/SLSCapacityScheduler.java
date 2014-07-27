@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.yarn.sls.scheduler;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.yarn.sls.SLSRunner;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
@@ -100,6 +102,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+@Private
+@Unstable
 public class SLSCapacityScheduler extends CapacityScheduler implements
         SchedulerWrapper,Configurable {
   private static final String EOL = System.getProperty("line.separator");
@@ -725,16 +729,18 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
                            long traceStartTimeMS, long traceEndTimeMS,
                            long simulateStartTimeMS, long simulateEndTimeMS) {
 
-    try {
-      // write job runtime information
-      StringBuilder sb = new StringBuilder();
-      sb.append(appId).append(",").append(traceStartTimeMS).append(",")
-              .append(traceEndTimeMS).append(",").append(simulateStartTimeMS)
-              .append(",").append(simulateEndTimeMS);
-      jobRuntimeLogBW.write(sb.toString() + EOL);
-      jobRuntimeLogBW.flush();
-    } catch (IOException e) {
-      e.printStackTrace();
+    if (metricsON) {
+      try {
+        // write job runtime information
+        StringBuilder sb = new StringBuilder();
+        sb.append(appId).append(",").append(traceStartTimeMS).append(",")
+            .append(traceEndTimeMS).append(",").append(simulateStartTimeMS)
+            .append(",").append(simulateEndTimeMS);
+        jobRuntimeLogBW.write(sb.toString() + EOL);
+        jobRuntimeLogBW.flush();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
     }
   }
 

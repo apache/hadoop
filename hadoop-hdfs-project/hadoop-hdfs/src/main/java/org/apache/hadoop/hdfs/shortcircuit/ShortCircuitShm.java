@@ -306,6 +306,13 @@ public class ShortCircuitShm {
           (slotAddress - baseAddress) / BYTES_PER_SLOT);
     }
 
+    /**
+     * Clear the slot.
+     */
+    void clear() {
+      unsafe.putLongVolatile(null, this.slotAddress, 0);
+    }
+
     private boolean isSet(long flag) {
       long prev = unsafe.getLongVolatile(null, this.slotAddress);
       return (prev & flag) != 0;
@@ -535,6 +542,7 @@ public class ShortCircuitShm {
     }
     allocatedSlots.set(idx, true);
     Slot slot = new Slot(calculateSlotAddress(idx), blockId);
+    slot.clear();
     slot.makeValid();
     slots[idx] = slot;
     if (LOG.isTraceEnabled()) {
@@ -583,7 +591,7 @@ public class ShortCircuitShm {
     Slot slot = new Slot(calculateSlotAddress(slotIdx), blockId);
     if (!slot.isValid()) {
       throw new InvalidRequestException(this + ": slot " + slotIdx +
-          " has not been allocated.");
+          " is not marked as valid.");
     }
     slots[slotIdx] = slot;
     allocatedSlots.set(slotIdx, true);

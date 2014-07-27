@@ -184,8 +184,8 @@ public class TestAMRMTokens {
         // The exception will still have the earlier appAttemptId as it picks it
         // up from the token.
         Assert.assertTrue(t.getCause().getMessage().contains(
-            "Password not found for ApplicationAttempt " +
-            applicationAttemptId.toString()));
+          applicationAttemptId.toString()
+          + " not found in AMRMTokenSecretManager."));
       }
 
     } finally {

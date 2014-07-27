@@ -1026,6 +1026,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
     // recover RMdelegationTokenSecretManager
     rmContext.getRMDelegationTokenSecretManager().recover(state);
 
+    // recover AMRMTokenSecretManager
+    rmContext.getAMRMTokenSecretManager().recover(state);
+
     // recover applications
     rmAppManager.recover(state);
   }

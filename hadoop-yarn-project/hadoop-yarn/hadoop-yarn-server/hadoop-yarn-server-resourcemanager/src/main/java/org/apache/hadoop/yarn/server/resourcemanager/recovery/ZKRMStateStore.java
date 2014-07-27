@@ -44,18 +44,19 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.AMRMTokenSecretManagerStateProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationAttemptStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RMStateVersionProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.EpochProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMZKUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.AMRMTokenSecretManagerState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
-
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.Epoch;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.AMRMTokenSecretManagerStatePBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.EpochPBImpl;
@@ -128,6 +129,9 @@ public class ZKRMStateStore extends RMStateStore {
    *        |      |----- Key_1
    *        |      |----- Key_2
    *                ....
+   * |--- AMRMTOKEN_SECRET_MANAGER_ROOT
+   *        |----- currentMasterKey
+   *        |----- nextMasterKey
    *
    */
   private String zkRootNodePath;
@@ -136,6 +140,7 @@ public class ZKRMStateStore extends RMStateStore {
   private String dtMasterKeysRootPath;
   private String delegationTokensRootPath;
   private String dtSequenceNumberPath;
+  private String amrmTokenSecretManagerRoot;
 
   @VisibleForTesting
   protected String znodeWorkingPath;
@@ -255,6 +260,8 @@ public class ZKRMStateStore extends RMStateStore {
         RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME);
     dtSequenceNumberPath = getNodePath(rmDTSecretManagerRoot,
         RM_DT_SEQUENTIAL_NUMBER_ZNODE_NAME);
+    amrmTokenSecretManagerRoot =
+        getNodePath(zkRootNodePath, AMRMTOKEN_SECRET_MANAGER_ROOT);
   }
 
   @Override
@@ -275,6 +282,7 @@ public class ZKRMStateStore extends RMStateStore {
     createRootDir(dtMasterKeysRootPath);
     createRootDir(delegationTokensRootPath);
     createRootDir(dtSequenceNumberPath);
+    createRootDir(amrmTokenSecretManagerRoot);
   }
 
   private void createRootDir(final String rootPath) throws Exception {
@@ -427,7 +435,25 @@ public class ZKRMStateStore extends RMStateStore {
     loadRMDTSecretManagerState(rmState);
     // recover RM applications
     loadRMAppState(rmState);
+    // recover AMRMTokenSecretManager
+    loadAMRMTokenSecretManagerState(rmState);
     return rmState;
+  }
+
+  private void loadAMRMTokenSecretManagerState(RMState rmState)
+      throws Exception {
+    byte[] data = getDataWithRetries(amrmTokenSecretManagerRoot, true);
+    if (data == null) {
+      LOG.warn("There is no data saved");
+      return;
+    }
+    AMRMTokenSecretManagerStatePBImpl stateData =
+        new AMRMTokenSecretManagerStatePBImpl(
+          AMRMTokenSecretManagerStateProto.parseFrom(data));
+    rmState.amrmTokenSecretManagerState =
+        AMRMTokenSecretManagerState.newInstance(
+          stateData.getCurrentMasterKey(), stateData.getNextMasterKey());
+
   }
 
   private synchronized void loadRMDTSecretManagerState(RMState rmState)
@@ -1110,6 +1136,21 @@ public class ZKRMStateStore extends RMStateStore {
     ZooKeeper zk = new ZooKeeper(zkHostPort, zkSessionTimeout, null);
     zk.register(new ForwardingWatcher());
     return zk;
+  }
+
+  @Override
+  public synchronized void storeOrUpdateAMRMTokenSecretManagerState(
+      AMRMTokenSecretManagerState amrmTokenSecretManagerState,
+      boolean isUpdate) {
+    AMRMTokenSecretManagerState data =
+        AMRMTokenSecretManagerState.newInstance(amrmTokenSecretManagerState);
+    byte[] stateData = data.getProto().toByteArray();
+    try {
+      setDataWithRetries(amrmTokenSecretManagerRoot, stateData, -1);
+    } catch (Exception ex) {
+      LOG.info("Error storing info for AMRMTokenSecretManager", ex);
+      notifyStoreOperationFailed(ex);
+    }
   }
 
 }
