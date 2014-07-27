@@ -42,13 +42,6 @@ public class TextSerializer implements INativeSerializer<Text>, INativeComparabl
 
   @Override
   public void deserialize(DataInput in, int length, Text w) throws IOException {
-    try {
-      w.setCapacity(length, true);
-      w.setLength(length);
-    } catch (final Exception e) {
-      throw new IOException(e);
-    }
-    final byte[] bytes = w.getBytes();
-    in.readFully(bytes, 0, length);
+    w.readWithKnownLength(in, length);
   }
 }
