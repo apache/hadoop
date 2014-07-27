@@ -195,6 +195,15 @@
   </property>
 
   <property>
+    <description>Flag to enable override of the default kerberos authentication
+    filter with the RM authentication filter to allow authentication using
+    delegation tokens(fallback to kerberos if the tokens are missing). Only
+    applicable when the http authentication type is kerberos.</description>
+    <name>yarn.resourcemanager.webapp.delegation-token-auth-filter.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <description>How long to wait until a node manager is considered dead.</description>
     <name>yarn.nm.liveness-monitor.expiry-interval-ms</name>
     <value>600000</value>
