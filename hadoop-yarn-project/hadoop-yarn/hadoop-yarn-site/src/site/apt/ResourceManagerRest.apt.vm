@@ -2912,3 +2912,24 @@ Accept: application/xml
 +---+
 
   No response body.
+
+** Authentication using delegation tokens
+
+  This feature is in the alpha mode and may change in the future.
+
+  You can use delegation tokens to authenticate yourself when using YARN RM webservices. However, this requires setting the right configurations. The conditions for this are:
+
+    * Hadoop is setup in secure mode with the authentication type set to kerberos.
+
+    * Hadoop HTTP authentication is setup with the authentication type set to kerberos
+
+  Once setup, delegation tokens can be fetched using the web services listed above and used as shown in an example below:
+
++---+
+  PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+  Hadoop-YARN-Auth-Delegation-Token: MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUbjqcHHigFHB7ZFxwQCFKWD3znCkDSy6SQIjRCLDydxbxvgE1JNX0RFTEVHQVRJT05fVE9LRU4A
+  Content-Type: application/json; charset=UTF8
+  {
+    "state":"KILLED"
+  }
++---+
