@@ -147,6 +147,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5952. LocalContainerLauncher#renameMapOutputForReduce incorrectly 
     assumes a single dir for mapOutIndex. (Gera Shegalov via kasha)
 
+    MAPREDUCE-6002. Made MR task avoid reporting error to AM when the task process
+    is shutting down. (Wangda Tan via zjshen)
+
 Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES

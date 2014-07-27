@@ -56,6 +56,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -170,7 +171,9 @@ class YarnChild {
       });
     } catch (FSError e) {
       LOG.fatal("FSError from child", e);
-      umbilical.fsError(taskid, e.getMessage());
+      if (!ShutdownHookManager.get().isShutdownInProgress()) {
+        umbilical.fsError(taskid, e.getMessage());
+      }
     } catch (Exception exception) {
       LOG.warn("Exception running child : "
           + StringUtils.stringifyException(exception));
@@ -195,17 +198,22 @@ class YarnChild {
       }
       // Report back any failures, for diagnostic purposes
       if (taskid != null) {
-        umbilical.fatalError(taskid, StringUtils.stringifyException(exception));
+        if (!ShutdownHookManager.get().isShutdownInProgress()) {
+          umbilical.fatalError(taskid,
+              StringUtils.stringifyException(exception));
+        }
       }
     } catch (Throwable throwable) {
       LOG.fatal("Error running child : "
     	        + StringUtils.stringifyException(throwable));
       if (taskid != null) {
-        Throwable tCause = throwable.getCause();
-        String cause = tCause == null
-                                 ? throwable.getMessage()
-                                 : StringUtils.stringifyException(tCause);
-        umbilical.fatalError(taskid, cause);
+        if (!ShutdownHookManager.get().isShutdownInProgress()) {
+          Throwable tCause = throwable.getCause();
+          String cause =
+              tCause == null ? throwable.getMessage() : StringUtils
+                  .stringifyException(tCause);
+          umbilical.fatalError(taskid, cause);
+        }
       }
     } finally {
       RPC.stopProxy(umbilical);
