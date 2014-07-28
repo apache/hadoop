@@ -115,6 +115,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.FinalizeCommand;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
@@ -825,11 +826,23 @@ class NameNodeRpcServer implements NamenodeProtocols {
   throws IOException {
     DatanodeInfo results[] = namesystem.datanodeReport(type);
     if (results == null ) {
-      throw new IOException("Cannot find datanode report");
+      throw new IOException("Failed to get datanode report for " + type
+          + " datanodes.");
     }
     return results;
   }
     
+  @Override // ClientProtocol
+  public DatanodeStorageReport[] getDatanodeStorageReport(
+      DatanodeReportType type) throws IOException {
+    final DatanodeStorageReport[] reports = namesystem.getDatanodeStorageReport(type);
+    if (reports == null ) {
+      throw new IOException("Failed to get datanode storage report for " + type
+          + " datanodes.");
+    }
+    return reports;
+  }
+
   @Override // ClientProtocol
   public boolean setSafeMode(SafeModeAction action, boolean isChecked)
       throws IOException {
