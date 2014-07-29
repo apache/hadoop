@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
@@ -36,7 +37,8 @@ import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 public class NMMemoryStateStoreService extends NMStateStoreService {
   private Map<TrackerKey, TrackerState> trackerStates;
   private Map<Integer, DeletionServiceDeleteTaskProto> deleteTasks;
-  private RecoveredNMTokenState nmTokenState;
+  private RecoveredNMTokensState nmTokenState;
+  private RecoveredContainerTokensState containerTokenState;
 
   public NMMemoryStateStoreService() {
     super(NMMemoryStateStoreService.class.getName());
@@ -117,12 +119,13 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
 
   @Override
   protected void initStorage(Configuration conf) {
-    nmTokenState = new RecoveredNMTokenState();
+    nmTokenState = new RecoveredNMTokensState();
     nmTokenState.applicationMasterKeys =
         new HashMap<ApplicationAttemptId, MasterKey>();
+    containerTokenState = new RecoveredContainerTokensState();
+    containerTokenState.activeTokens = new HashMap<ContainerId, Long>();
     trackerStates = new HashMap<TrackerKey, TrackerState>();
     deleteTasks = new HashMap<Integer, DeletionServiceDeleteTaskProto>();
-
   }
 
   @Override
@@ -157,9 +160,9 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
 
 
   @Override
-  public RecoveredNMTokenState loadNMTokenState() throws IOException {
+  public RecoveredNMTokensState loadNMTokensState() throws IOException {
     // return a copy so caller can't modify our state
-    RecoveredNMTokenState result = new RecoveredNMTokenState();
+    RecoveredNMTokensState result = new RecoveredNMTokensState();
     result.currentMasterKey = nmTokenState.currentMasterKey;
     result.previousMasterKey = nmTokenState.previousMasterKey;
     result.applicationMasterKeys =
@@ -194,6 +197,48 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   public void removeNMTokenApplicationMasterKey(ApplicationAttemptId attempt)
       throws IOException {
     nmTokenState.applicationMasterKeys.remove(attempt);
+  }
+
+
+  @Override
+  public RecoveredContainerTokensState loadContainerTokensState()
+      throws IOException {
+    // return a copy so caller can't modify our state
+    RecoveredContainerTokensState result =
+        new RecoveredContainerTokensState();
+    result.currentMasterKey = containerTokenState.currentMasterKey;
+    result.previousMasterKey = containerTokenState.previousMasterKey;
+    result.activeTokens =
+        new HashMap<ContainerId, Long>(containerTokenState.activeTokens);
+    return result;
+  }
+
+  @Override
+  public void storeContainerTokenCurrentMasterKey(MasterKey key)
+      throws IOException {
+    MasterKeyPBImpl keypb = (MasterKeyPBImpl) key;
+    containerTokenState.currentMasterKey =
+        new MasterKeyPBImpl(keypb.getProto());
+  }
+
+  @Override
+  public void storeContainerTokenPreviousMasterKey(MasterKey key)
+      throws IOException {
+    MasterKeyPBImpl keypb = (MasterKeyPBImpl) key;
+    containerTokenState.previousMasterKey =
+        new MasterKeyPBImpl(keypb.getProto());
+  }
+
+  @Override
+  public void storeContainerToken(ContainerId containerId,
+      Long expirationTime) throws IOException {
+    containerTokenState.activeTokens.put(containerId, expirationTime);
+  }
+
+  @Override
+  public void removeContainerToken(ContainerId containerId)
+      throws IOException {
+    containerTokenState.activeTokens.remove(containerId);
   }
 
 

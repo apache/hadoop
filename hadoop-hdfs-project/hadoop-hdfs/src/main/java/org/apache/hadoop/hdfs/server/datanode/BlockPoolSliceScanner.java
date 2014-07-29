@@ -84,6 +84,10 @@ class BlockPoolSliceScanner {
   
   private final SortedSet<BlockScanInfo> blockInfoSet
       = new TreeSet<BlockScanInfo>(BlockScanInfo.LAST_SCAN_TIME_COMPARATOR);
+
+  private final SortedSet<BlockScanInfo> newBlockInfoSet =
+      new TreeSet<BlockScanInfo>(BlockScanInfo.LAST_SCAN_TIME_COMPARATOR);
+
   private final GSet<Block, BlockScanInfo> blockMap
       = new LightWeightGSet<Block, BlockScanInfo>(
           LightWeightGSet.computeCapacity(0.5, "BlockMap"));
@@ -195,7 +199,7 @@ class BlockPoolSliceScanner {
       BlockScanInfo info = new BlockScanInfo( block );
       info.lastScanTime = scanTime--; 
       //still keep 'info.lastScanType' to NONE.
-      addBlockInfo(info);
+      addBlockInfo(info, false);
     }
 
     RollingLogs rollingLogs = null;
@@ -221,25 +225,42 @@ class BlockPoolSliceScanner {
     // Should we change throttler bandwidth every time bytesLeft changes?
     // not really required.
   }
-  
-  private synchronized void addBlockInfo(BlockScanInfo info) {
-    boolean added = blockInfoSet.add(info);
+
+  /**
+   * Add the BlockScanInfo to sorted set of blockScanInfo
+   * @param info BlockScanInfo to be added
+   * @param isNewBlock true if the block is the new Block, false if
+   *          BlockScanInfo is being updated with new scanTime
+   */
+  private synchronized void addBlockInfo(BlockScanInfo info,
+      boolean isNewBlock) {
+    boolean added = false;
+    if (isNewBlock) {
+      // check whether the block already present
+      boolean exists = blockInfoSet.contains(info);
+      added = !exists && newBlockInfoSet.add(info);
+    } else {
+      added = blockInfoSet.add(info);
+    }
     blockMap.put(info);
     
     if (added) {
       updateBytesToScan(info.getNumBytes(), info.lastScanTime);
     }
   }
-  
+
   private synchronized void delBlockInfo(BlockScanInfo info) {
     boolean exists = blockInfoSet.remove(info);
+    if (!exists){
+      exists = newBlockInfoSet.remove(info);
+    }
     blockMap.remove(info);
 
     if (exists) {
       updateBytesToScan(-info.getNumBytes(), info.lastScanTime);
     }
   }
-  
+
   /** Update blockMap by the given LogEntry */
   private synchronized void updateBlockInfo(LogEntry e) {
     BlockScanInfo info = blockMap.get(new Block(e.blockId, 0, e.genStamp));
@@ -249,7 +270,7 @@ class BlockPoolSliceScanner {
       delBlockInfo(info);
       info.lastScanTime = e.verificationTime;
       info.lastScanType = ScanType.VERIFICATION_SCAN;
-      addBlockInfo(info);
+      addBlockInfo(info, false);
     }
   }
 
@@ -275,14 +296,14 @@ class BlockPoolSliceScanner {
     info = new BlockScanInfo(block.getLocalBlock());    
     info.lastScanTime = getNewBlockScanTime();
     
-    addBlockInfo(info);
+    addBlockInfo(info, true);
     adjustThrottler();
   }
   
   /** Deletes the block from internal structures */
   synchronized void deleteBlock(Block block) {
     BlockScanInfo info = blockMap.get(block);
-    if ( info != null ) {
+    if (info != null) {
       delBlockInfo(info);
     }
   }
@@ -319,7 +340,7 @@ class BlockPoolSliceScanner {
     info.lastScanType = type;
     info.lastScanTime = now;
     info.lastScanOk = scanOk;
-    addBlockInfo(info);
+    addBlockInfo(info, false);
         
     // Don't update meta data if the verification failed.
     if (!scanOk) {
@@ -578,7 +599,7 @@ class BlockPoolSliceScanner {
           delBlockInfo(info);        
           info.lastScanTime = lastScanTime;
           lastScanTime += verifyInterval;
-          addBlockInfo(info);
+          addBlockInfo(info, false);
         }
       }
     }
@@ -674,12 +695,21 @@ class BlockPoolSliceScanner {
       throw e;
     } finally {
       rollVerificationLogs();
+      rollNewBlocksInfo();
       if (LOG.isDebugEnabled()) {
         LOG.debug("Done scanning block pool: " + blockPoolId);
       }
     }
   }
-  
+
+  // add new blocks to scan in next iteration
+  private synchronized void rollNewBlocksInfo() {
+    for (BlockScanInfo newBlock : newBlockInfoSet) {
+      blockInfoSet.add(newBlock);
+    }
+    newBlockInfoSet.clear();
+  }
+
   private synchronized void rollVerificationLogs() {
     if (verificationLog != null) {
       try {

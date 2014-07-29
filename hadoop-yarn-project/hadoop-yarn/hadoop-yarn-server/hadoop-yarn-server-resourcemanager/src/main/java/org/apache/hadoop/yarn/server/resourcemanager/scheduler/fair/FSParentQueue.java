@@ -164,11 +164,6 @@ public class FSParentQueue extends FSQueue {
   public RMContainer preemptContainer() {
     RMContainer toBePreempted = null;
 
-    // If this queue is not over its fair share, reject
-    if (!preemptContainerPreCheck()) {
-      return toBePreempted;
-    }
-
     // Find the childQueue which is most over fair share
     FSQueue candidateQueue = null;
     Comparator<Schedulable> comparator = policy.getComparator();

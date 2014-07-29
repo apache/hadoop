@@ -224,14 +224,15 @@ public class FSLeafQueue extends FSQueue {
   @Override
   public RMContainer preemptContainer() {
     RMContainer toBePreempted = null;
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Queue " + getName() + " is going to preempt a container " +
-          "from its applications.");
-    }
 
     // If this queue is not over its fair share, reject
     if (!preemptContainerPreCheck()) {
       return toBePreempted;
+    }
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Queue " + getName() + " is going to preempt a container " +
+          "from its applications.");
     }
 
     // Choose the app that is most over fair share
@@ -327,5 +328,15 @@ public class FSLeafQueue extends FSQueue {
   public void recoverContainer(Resource clusterResource,
       SchedulerApplicationAttempt schedulerAttempt, RMContainer rmContainer) {
     // TODO Auto-generated method stub
+  }
+
+  /**
+   * Helper method to check if the queue should preempt containers
+   *
+   * @return true if check passes (can preempt) or false otherwise
+   */
+  private boolean preemptContainerPreCheck() {
+    return parent.getPolicy().checkIfUsageOverFairShare(getResourceUsage(),
+        getFairShare());
   }
 }

@@ -18,6 +18,15 @@
 
 package org.apache.hadoop.hdfs.web;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+
+import java.io.IOException;
+import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -29,18 +38,14 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.token.Token;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.io.IOException;
-import java.net.URI;
-
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
+import org.mockito.internal.util.reflection.Whitebox;
 
 public class TestWebHDFSForHA {
   private static final String LOGICAL_NAME = "minidfs";
@@ -177,6 +182,63 @@ public class TestWebHDFSForHA {
       Assert.assertEquals(2, fs.getResolvedNNAddr().length);
     } finally {
       IOUtils.cleanup(null, fs);
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Make sure the WebHdfsFileSystem will retry based on RetriableException when
+   * rpcServer is null in NamenodeWebHdfsMethods while NameNode starts up.
+   */
+  @Test (timeout=120000)
+  public void testRetryWhileNNStartup() throws Exception {
+    final Configuration conf = DFSTestUtil.newHAConfiguration(LOGICAL_NAME);
+    MiniDFSCluster cluster = null;
+    final Map<String, Boolean> resultMap = new HashMap<String, Boolean>();
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).nnTopology(topo)
+          .numDataNodes(0).build();
+      HATestUtil.setFailoverConfigurations(cluster, conf, LOGICAL_NAME);
+      cluster.waitActive();
+      cluster.transitionToActive(0);
+
+      final NameNode namenode = cluster.getNameNode(0);
+      final NamenodeProtocols rpcServer = namenode.getRpcServer();
+      Whitebox.setInternalState(namenode, "rpcServer", null);
+
+      new Thread() {
+        @Override
+        public void run() {
+          boolean result = false;
+          FileSystem fs = null;
+          try {
+            fs = FileSystem.get(WEBHDFS_URI, conf);
+            final Path dir = new Path("/test");
+            result = fs.mkdirs(dir);
+          } catch (IOException e) {
+            result = false;
+          } finally {
+            IOUtils.cleanup(null, fs);
+          }
+          synchronized (TestWebHDFSForHA.this) {
+            resultMap.put("mkdirs", result);
+            TestWebHDFSForHA.this.notifyAll();
+          }
+        }
+      }.start();
+
+      Thread.sleep(1000);
+      Whitebox.setInternalState(namenode, "rpcServer", rpcServer);
+      synchronized (this) {
+        while (!resultMap.containsKey("mkdirs")) {
+          this.wait();
+        }
+        Assert.assertTrue(resultMap.get("mkdirs"));
+      }
+    } finally {
       if (cluster != null) {
         cluster.shutdown();
       }

@@ -71,6 +71,8 @@ public class FileJournalManager implements JournalManager {
     NameNodeFile.EDITS.getName() + "_(\\d+)-(\\d+)");
   private static final Pattern EDITS_INPROGRESS_REGEX = Pattern.compile(
     NameNodeFile.EDITS_INPROGRESS.getName() + "_(\\d+)");
+  private static final Pattern EDITS_INPROGRESS_STALE_REGEX = Pattern.compile(
+      NameNodeFile.EDITS_INPROGRESS.getName() + "_(\\d+).*(\\S+)");
 
   private File currentInProgress = null;
 
@@ -162,8 +164,7 @@ public class FileJournalManager implements JournalManager {
       throws IOException {
     LOG.info("Purging logs older than " + minTxIdToKeep);
     File[] files = FileUtil.listFiles(sd.getCurrentDir());
-    List<EditLogFile> editLogs = 
-      FileJournalManager.matchEditLogs(files);
+    List<EditLogFile> editLogs = matchEditLogs(files, true);
     for (EditLogFile log : editLogs) {
       if (log.getFirstTxId() < minTxIdToKeep &&
           log.getLastTxId() < minTxIdToKeep) {
@@ -244,8 +245,13 @@ public class FileJournalManager implements JournalManager {
   public static List<EditLogFile> matchEditLogs(File logDir) throws IOException {
     return matchEditLogs(FileUtil.listFiles(logDir));
   }
-  
+
   static List<EditLogFile> matchEditLogs(File[] filesInStorage) {
+    return matchEditLogs(filesInStorage, false);
+  }
+
+  private static List<EditLogFile> matchEditLogs(File[] filesInStorage,
+      boolean forPurging) {
     List<EditLogFile> ret = Lists.newArrayList();
     for (File f : filesInStorage) {
       String name = f.getName();
@@ -256,6 +262,7 @@ public class FileJournalManager implements JournalManager {
           long startTxId = Long.parseLong(editsMatch.group(1));
           long endTxId = Long.parseLong(editsMatch.group(2));
           ret.add(new EditLogFile(f, startTxId, endTxId));
+          continue;
         } catch (NumberFormatException nfe) {
           LOG.error("Edits file " + f + " has improperly formatted " +
                     "transaction ID");
@@ -270,10 +277,28 @@ public class FileJournalManager implements JournalManager {
           long startTxId = Long.parseLong(inProgressEditsMatch.group(1));
           ret.add(
               new EditLogFile(f, startTxId, HdfsConstants.INVALID_TXID, true));
+          continue;
         } catch (NumberFormatException nfe) {
           LOG.error("In-progress edits file " + f + " has improperly " +
                     "formatted transaction ID");
           // skip
+        }
+      }
+      if (forPurging) {
+        // Check for in-progress stale edits
+        Matcher staleInprogressEditsMatch = EDITS_INPROGRESS_STALE_REGEX
+            .matcher(name);
+        if (staleInprogressEditsMatch.matches()) {
+          try {
+            long startTxId = Long.valueOf(staleInprogressEditsMatch.group(1));
+            ret.add(new EditLogFile(f, startTxId, HdfsConstants.INVALID_TXID,
+                true));
+            continue;
+          } catch (NumberFormatException nfe) {
+            LOG.error("In-progress stale edits file " + f + " has improperly "
+                + "formatted transaction ID");
+            // skip
+          }
         }
       }
     }

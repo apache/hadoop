@@ -773,4 +773,34 @@ public class ViewFileSystemBaseTest {
     assertFalse(aclStatus.isStickyBit());
   }
 
+  @Test(expected=AccessControlException.class)
+  public void testInternalSetXAttr() throws IOException {
+    fsView.setXAttr(new Path("/internalDir"), "xattrName", null);
+  }
+
+  @Test(expected=NotInMountpointException.class)
+  public void testInternalGetXAttr() throws IOException {
+    fsView.getXAttr(new Path("/internalDir"), "xattrName");
+  }
+
+  @Test(expected=NotInMountpointException.class)
+  public void testInternalGetXAttrs() throws IOException {
+    fsView.getXAttrs(new Path("/internalDir"));
+  }
+
+  @Test(expected=NotInMountpointException.class)
+  public void testInternalGetXAttrsWithNames() throws IOException {
+    fsView.getXAttrs(new Path("/internalDir"), new ArrayList<String>());
+  }
+
+  @Test(expected=NotInMountpointException.class)
+  public void testInternalListXAttr() throws IOException {
+    fsView.listXAttrs(new Path("/internalDir"));
+  }
+
+  @Test(expected=AccessControlException.class)
+  public void testInternalRemoveXAttr() throws IOException {
+    fsView.removeXAttr(new Path("/internalDir"), "xattrName");
+  }
+
 }

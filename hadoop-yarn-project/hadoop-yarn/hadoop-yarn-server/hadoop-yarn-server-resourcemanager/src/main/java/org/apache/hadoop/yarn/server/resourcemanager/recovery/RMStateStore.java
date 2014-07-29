@@ -45,16 +45,14 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPB
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMFatalEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMFatalEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.AMRMTokenSecretManagerState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppNewSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -85,6 +83,8 @@ public abstract class RMStateStore extends AbstractService {
   protected static final String DELEGATION_TOKEN_PREFIX = "RMDelegationToken_";
   protected static final String DELEGATION_TOKEN_SEQUENCE_NUMBER_PREFIX =
       "RMDTSequenceNumber_";
+  protected static final String AMRMTOKEN_SECRET_MANAGER_ROOT =
+      "AMRMTokenSecretManagerRoot";
   protected static final String VERSION_NODE = "RMVersionNode";
   protected static final String EPOCH_NODE = "EpochNode";
 
@@ -412,12 +412,18 @@ public abstract class RMStateStore extends AbstractService {
 
     RMDTSecretManagerState rmSecretManagerState = new RMDTSecretManagerState();
 
+    AMRMTokenSecretManagerState amrmTokenSecretManagerState = null;
+
     public Map<ApplicationId, ApplicationState> getApplicationState() {
       return appState;
     }
 
     public RMDTSecretManagerState getRMDTSecretManagerState() {
       return rmSecretManagerState;
+    }
+
+    public AMRMTokenSecretManagerState getAMRMTokenSecretManagerState() {
+      return amrmTokenSecretManagerState;
     }
   }
     
@@ -712,6 +718,14 @@ public abstract class RMStateStore extends AbstractService {
    */
   protected abstract void removeRMDTMasterKeyState(DelegationKey delegationKey)
       throws Exception;
+
+  /**
+   * Blocking API Derived classes must implement this method to store or update
+   * the state of AMRMToken Master Key
+   */
+  public abstract void storeOrUpdateAMRMTokenSecretManagerState(
+      AMRMTokenSecretManagerState amrmTokenSecretManagerState,
+      boolean isUpdate);
 
   /**
    * Non-blocking API

@@ -189,6 +189,9 @@ Trunk (Unreleased)
     HADOOP-10720. KMS: Implement generateEncryptedKey and decryptEncryptedKey
     in the REST API. (asuresh via tucu)
 
+    HADOOP-10891. Add EncryptedKeyVersion factory method to
+    KeyProviderCryptoExtension. (wang)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -452,6 +455,11 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10855. Allow Text to be read with a known Length. (todd)
 
+    HADOOP-10887. Add XAttrs to ViewFs and make XAttrs + ViewFileSystem
+    internal dir behavior consistent. (Stephen Chu via wang)
+
+    HADOOP-10882. Move DirectBufferPool into common util. (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -480,6 +488,12 @@ Release 2.6.0 - UNRELEASED
     command when the format of the stat command uses non-curly quotes (yzhang
     via cmccabe)
 
+    HADOOP-10830. Missing lock in JavaKeyStoreProvider.createCredentialEntry.
+    (Benoy Antony via umamahesh)
+
+    HADOOP-10876. The constructor of Path should not take an empty URL as a
+    parameter. (Zhihai Xu via wang)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -491,6 +505,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-9704. Write metrics sink plugin for Hadoop/Graphite (Chu Tong, Alex Newman and Babak Behzad via raviprak)
 
     HADOOP-8943. Support multiple group mapping providers. (Kai Zheng via brandonli)
+
+    HADOOP-9361 Strictly define the expected behavior of filesystem APIs and
+    write tests to verify compliance (stevel)
 
   IMPROVEMENTS
 
@@ -586,9 +603,6 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10747. Support configurable retries on SASL connection failures in
     RPC client. (cnauroth)
 
-    HADOOP-10674. Improve PureJavaCrc32 performance and use java.util.zip.CRC32
-    for Java 7 and above. (szetszwo)
-
     HADOOP-10754. Reenable several HA ZooKeeper-related tests on Windows.
     (cnauroth)
 
@@ -600,9 +614,6 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10767. Clean up unused code in Ls shell command. (cnauroth)
 
-    HADOOP-9361 Strictly define the expected behavior of filesystem APIs and
-    write tests to verify compliance (stevel)
-
     HADOOP-9651 Filesystems to throw FileAlreadyExistsException in
     createFile(path, overwrite=false) when the file exists (stevel)
     
@@ -613,7 +624,13 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10782. Fix typo in DataChecksum class. (Jingguo Yao via suresh)
 
+    HADOOP-10896. Update compatibility doc to capture visibility of 
+    un-annotated classes/ methods. (kasha)
+
   OPTIMIZATIONS
+
+    HADOOP-10674. Improve PureJavaCrc32 performance and use java.util.zip.CRC32
+    for Java 7 and above. (szetszwo)
 
   BUG FIXES 
 
@@ -769,6 +786,30 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10801 dead link in site.xml (Akira AJISAKA via stevel)
 
+    HADOOP-10590. ServiceAuthorizationManager is not threadsafe. (Benoy Antony via vinayakumarb)
+
+    HADOOP-10711. Cleanup some extra dependencies from hadoop-auth. (rkanter via tucu)
+
+    HADOOP-10479. Fix new findbugs warnings in hadoop-minikdc.
+    (Swarnim Kulkarni via wheat9)
+
+    HADOOP-10715. Remove public GraphiteSink#setWriter (Babak Behzad via raviprak)
+
+    HADOOP-10710. hadoop.auth cookie is not properly constructed according to 
+    RFC2109. (Juan Yu via tucu)
+
+    HADOOP-10864. Tool documentenation is broken. (Akira Ajisaka
+    via Arpit Agarwal)
+
+    HADOOP-10872. TestPathData fails intermittently with "Mkdirs failed
+    to create d1". (Yongjun Zhang via Arpit Agarwal)
+
+    HADOOP-10890. TestDFVariations.testMount fails intermittently. (Yongjun
+    Zhang via Arpit Agarwal)
+
+    HADOOP-10894. Fix dead link in ToolRunner documentation. (Akira Ajisaka
+    via Arpit Agarwal)
+
   BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
 
     HADOOP-10520. Extended attributes definition and FileSystem APIs for
@@ -789,21 +830,6 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10561. Copy command with preserve option should handle Xattrs.
     (Yi Liu via cnauroth)
-
-    HADOOP-10590. ServiceAuthorizationManager is not threadsafe. (Benoy Antony via vinayakumarb)
-
-    HADOOP-10711. Cleanup some extra dependencies from hadoop-auth. (rkanter via tucu)
-
-    HADOOP-10479. Fix new findbugs warnings in hadoop-minikdc.
-    (Swarnim Kulkarni via wheat9)
-
-    HADOOP-10715. Remove public GraphiteSink#setWriter (Babak Behzad via raviprak)
-
-    HADOOP-10710. hadoop.auth cookie is not properly constructed according to 
-    RFC2109. (Juan Yu via tucu)
-
-    HADOOP-10864. Tool documentenation is broken. (Akira Ajisaka
-    via Arpit Agarwal)
 
 Release 2.4.1 - 2014-06-23 
 

@@ -27,6 +27,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
 
+import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
@@ -54,6 +57,8 @@ import org.apache.hadoop.yarn.sls.scheduler.ContainerSimulator;
 import org.apache.hadoop.yarn.sls.scheduler.TaskRunner;
 import org.apache.hadoop.yarn.sls.utils.SLSUtils;
 
+@Private
+@Unstable
 public class NMSimulator extends TaskRunner.Task {
   // node resource
   private RMNode node;
@@ -103,12 +108,12 @@ public class NMSimulator extends TaskRunner.Task {
   }
 
   @Override
-  public void firstStep() throws YarnException, IOException {
+  public void firstStep() {
     // do nothing
   }
 
   @Override
-  public void middleStep() {
+  public void middleStep() throws Exception {
     // we check the lifetime for each running containers
     ContainerSimulator cs = null;
     synchronized(completedContainerList) {
@@ -132,37 +137,31 @@ public class NMSimulator extends TaskRunner.Task {
     ns.setResponseId(RESPONSE_ID ++);
     ns.setNodeHealthStatus(NodeHealthStatus.newInstance(true, "", 0));
     beatRequest.setNodeStatus(ns);
-    try {
-      NodeHeartbeatResponse beatResponse =
-              rm.getResourceTrackerService().nodeHeartbeat(beatRequest);
-      if (! beatResponse.getContainersToCleanup().isEmpty()) {
-        // remove from queue
-        synchronized(releasedContainerList) {
-          for (ContainerId containerId : beatResponse.getContainersToCleanup()){
-            if (amContainerList.contains(containerId)) {
-              // AM container (not killed?, only release)
-              synchronized(amContainerList) {
-                amContainerList.remove(containerId);
-              }
-              LOG.debug(MessageFormat.format("NodeManager {0} releases " +
-                      "an AM ({1}).", node.getNodeID(), containerId));
-            } else {
-              cs = runningContainers.remove(containerId);
-              containerQueue.remove(cs);
-              releasedContainerList.add(containerId);
-              LOG.debug(MessageFormat.format("NodeManager {0} releases a " +
-                      "container ({1}).", node.getNodeID(), containerId));
+    NodeHeartbeatResponse beatResponse =
+        rm.getResourceTrackerService().nodeHeartbeat(beatRequest);
+    if (! beatResponse.getContainersToCleanup().isEmpty()) {
+      // remove from queue
+      synchronized(releasedContainerList) {
+        for (ContainerId containerId : beatResponse.getContainersToCleanup()){
+          if (amContainerList.contains(containerId)) {
+            // AM container (not killed?, only release)
+            synchronized(amContainerList) {
+              amContainerList.remove(containerId);
             }
+            LOG.debug(MessageFormat.format("NodeManager {0} releases " +
+                "an AM ({1}).", node.getNodeID(), containerId));
+          } else {
+            cs = runningContainers.remove(containerId);
+            containerQueue.remove(cs);
+            releasedContainerList.add(containerId);
+            LOG.debug(MessageFormat.format("NodeManager {0} releases a " +
+                "container ({1}).", node.getNodeID(), containerId));
           }
         }
       }
-      if (beatResponse.getNodeAction() == NodeAction.SHUTDOWN) {
-        lastStep();
-      }
-    } catch (YarnException e) {
-      e.printStackTrace();
-    } catch (IOException e) {
-      e.printStackTrace();
+    }
+    if (beatResponse.getNodeAction() == NodeAction.SHUTDOWN) {
+      lastStep();
     }
   }
 
@@ -257,5 +256,20 @@ public class NMSimulator extends TaskRunner.Task {
     synchronized(completedContainerList) {
       completedContainerList.add(containerId);
     }
+  }
+
+  @VisibleForTesting
+  Map<ContainerId, ContainerSimulator> getRunningContainers() {
+    return runningContainers;
+  }
+
+  @VisibleForTesting
+  List<ContainerId> getAMContainers() {
+    return amContainerList;
+  }
+
+  @VisibleForTesting
+  List<ContainerId> getCompletedContainers() {
+    return completedContainerList;
   }
 }

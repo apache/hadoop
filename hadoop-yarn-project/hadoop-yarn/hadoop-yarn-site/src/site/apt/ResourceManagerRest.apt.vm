@@ -2228,68 +2228,48 @@ _01_000001</amContainerLogs>
   {
     "application-id":"application_1404203615263_0001",
     "application-name":"test",
-    "queue":"testqueue",
-    "priority":"3",
     "am-container-spec":
     {
       "local-resources":
       {
         "entry":
-        {
-          "key":"example",
-          "value":
+        [
           {
-            "resource":"http://www.test.com/file.txt",
-            "type":"FILE",
-            "visibility":"APPLICATION",
-            "size":"100",
-            "timestamp":"1404203616003"
+            "key":"AppMaster.jar",
+            "value":
+            {
+              "resource":"hdfs://hdfs-namenode:9000/user/testuser/DistributedShell/demo-app/AppMaster.jar",
+              "type":"FILE",
+              "visibility":"APPLICATION",
+              "size": "43004",
+              "timestamp": "1405452071209"
+            }
           }
-        }
+        ]
+      },
+      "commands":
+      {
+        "command":"{{JAVA_HOME}}/bin/java -Xmx10m org.apache.hadoop.yarn.applications.distributedshell.ApplicationMaster --container_memory 10 --container_vcores 1 --num_containers 1 --priority 0 1><LOG_DIR>/AppMaster.stdout 2><LOG_DIR>/AppMaster.stderr"
       },
       "environment":
       {
         "entry":
-        {
-          "key":"APP_VAR",
-          "value":"ENV_SETTING"
-        }
-      },
-      "commands":
-      {
-        "command":"/bin/sleep 5"
-      },
-      "service-data":
-      {
-        "entry":
-        {
-          "key":"test",
-          "value":"dmFsdWUxMg"
-        }
-      },
-      "credentials":
-      {
-        "tokens":null,
-        "secrets":
-        {
-          "entry":
-          {
-            "key":"secret1",
-            "value":"c2VjcmV0MQ"
-          }
-        }
-      },
-      "application-acls":
-      {
-        "entry":
         [
           {
-            "key":"VIEW_APP",
-            "value":"testuser3, testuser4"
+            "key": "DISTRIBUTEDSHELLSCRIPTTIMESTAMP",
+            "value": "1405459400754"
           },
           {
-            "key":"MODIFY_APP",
-            "value":"testuser1, testuser2"
+            "key": "CLASSPATH",
+            "value": "{{CLASSPATH}}<CPS>./*<CPS>{{HADOOP_CONF_DIR}}<CPS>{{HADOOP_COMMON_HOME}}/share/hadoop/common/*<CPS>{{HADOOP_COMMON_HOME}}/share/hadoop/common/lib/*<CPS>{{HADOOP_HDFS_HOME}}/share/hadoop/hdfs/*<CPS>{{HADOOP_HDFS_HOME}}/share/hadoop/hdfs/lib/*<CPS>{{HADOOP_YARN_HOME}}/share/hadoop/yarn/*<CPS>{{HADOOP_YARN_HOME}}/share/hadoop/yarn/lib/*<CPS>./log4j.properties"
+          },
+          {
+            "key": "DISTRIBUTEDSHELLSCRIPTLEN",
+            "value": "6"
+          },
+          {
+            "key": "DISTRIBUTEDSHELLSCRIPTLOCATION",
+            "value": "hdfs://hdfs-namenode:9000/user/testuser/demo-app/shellCommands"
           }
         ]
       }
@@ -2302,16 +2282,9 @@ _01_000001</amContainerLogs>
       "vCores":"1"
     },
     "application-type":"YARN",
-    "keep-containers-across-application-attempts":"false",
-    "application-tags":
-    {
-      "tag":
-      [
-        "tag 2",
-        "tag1"
-      ]
-    }
+    "keep-containers-across-application-attempts":"false"
   }
+
 +---+
 
   Response Header:
@@ -2349,22 +2322,34 @@ _01_000001</amContainerLogs>
         <entry>
           <key>example</key>
           <value>
-            <resource>http://www.test.com/file.txt</resource>
+            <resource>hdfs://hdfs-namenode:9000/user/testuser/DistributedShell/demo-app/AppMaster.jar</resource>
             <type>FILE</type>
             <visibility>APPLICATION</visibility>
-            <size>100</size>
-            <timestamp>1404204892877</timestamp>
+            <size>43004</size>
+            <timestamp>1405452071209</timestamp>
           </value>
         </entry>
       </local-resources>
       <environment>
         <entry>
-          <key>APP_VAR</key>
-          <value>ENV_SETTING</value>
+          <key>DISTRIBUTEDSHELLSCRIPTTIMESTAMP</key>
+          <value>1405459400754</value>
+        </entry>
+        <entry>
+          <key>CLASSPATH</key>
+          <value>{{CLASSPATH}}&lt;CPS&gt;./*&lt;CPS&gt;{{HADOOP_CONF_DIR}}&lt;CPS&gt;{{HADOOP_COMMON_HOME}}/share/hadoop/common/*&lt;CPS&gt;{{HADOOP_COMMON_HOME}}/share/hadoop/common/lib/*&lt;CPS&gt;{{HADOOP_HDFS_HOME}}/share/hadoop/hdfs/*&lt;CPS&gt;{{HADOOP_HDFS_HOME}}/share/hadoop/hdfs/lib/*&lt;CPS&gt;{{HADOOP_YARN_HOME}}/share/hadoop/yarn/*&lt;CPS&gt;{{HADOOP_YARN_HOME}}/share/hadoop/yarn/lib/*&lt;CPS&gt;./log4j.properties</value>
+        </entry>
+        <entry>
+          <key>DISTRIBUTEDSHELLSCRIPTLEN</key>
+          <value>6</value>
+        </entry>
+        <entry>
+          <key>DISTRIBUTEDSHELLSCRIPTLOCATION</key>
+          <value>hdfs://hdfs-namenode:9000/user/testuser/demo-app/shellCommands</value>
         </entry>
       </environment>
       <commands>
-        <command>/bin/sleep 5</command>
+        <command>{{JAVA_HOME}}/bin/java -Xmx10m org.apache.hadoop.yarn.applications.distributedshell.ApplicationMaster --container_memory 10 --container_vcores 1 --num_containers 1 --priority 0 1&gt;&lt;LOG_DIR&gt;/AppMaster.stdout 2&gt;&lt;LOG_DIR&gt;/AppMaster.stderr</command>
       </commands>
       <service-data>
         <entry>
@@ -2927,3 +2912,24 @@ Accept: application/xml
 +---+
 
   No response body.
+
+** Authentication using delegation tokens
+
+  This feature is in the alpha mode and may change in the future.
+
+  You can use delegation tokens to authenticate yourself when using YARN RM webservices. However, this requires setting the right configurations. The conditions for this are:
+
+    * Hadoop is setup in secure mode with the authentication type set to kerberos.
+
+    * Hadoop HTTP authentication is setup with the authentication type set to kerberos
+
+  Once setup, delegation tokens can be fetched using the web services listed above and used as shown in an example below:
+
++---+
+  PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+  Hadoop-YARN-Auth-Delegation-Token: MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUbjqcHHigFHB7ZFxwQCFKWD3znCkDSy6SQIjRCLDydxbxvgE1JNX0RFTEVHQVRJT05fVE9LRU4A
+  Content-Type: application/json; charset=UTF8
+  {
+    "state":"KILLED"
+  }
++---+

@@ -62,6 +62,15 @@ Release 2.6.0 - UNRELEASED
     YARN-2295. Refactored DistributedShell to use public APIs of protocol records.
     (Li Lu via jianhe)
 
+    YARN-1342. Recover container tokens upon nodemanager restart. (Jason Lowe via
+    devaraj)
+
+    YARN-2214. FairScheduler: preemptContainerPreCheck() in FSParentQueue delays 
+    convergence towards fairness. (Ashwin Shankar via kasha)
+
+    YARN-2211. Persist AMRMToken master key in RMStateStore for RM recovery.
+    (Xuan Gong via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -93,6 +102,11 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2313. Livelock can occur in FairScheduler when there are lots of
     running apps (Tsuyoshi Ozawa via Sandy Ryza)
+
+    YARN-2147. client lacks delegation token exception details when
+    application submit fails (Chen He via jlowe)
+
+    YARN-1796. container-executor shouldn't require o-r permissions (atm)
 
 Release 2.5.0 - UNRELEASED
 
@@ -132,6 +146,9 @@ Release 2.5.0 - UNRELEASED
 
     YARN-2233. Implemented ResourceManager web-services to create, renew and
     cancel delegation tokens. (Varun Vasudev via vinodkv)
+
+    YARN-2247. Made RM web services authenticate users via kerberos and delegation
+    token. (Varun Vasudev via zjshen)
 
   IMPROVEMENTS
 
@@ -300,6 +317,9 @@ Release 2.5.0 - UNRELEASED
 	YARN-1408 Preemption caused Invalid State Event: ACQUIRED at KILLED and 
 	caused a task timeout for 30mins. (Sunil G via mayank)
 
+    YARN-2300. Improved the documentation of the sample requests for RM REST API -
+    submitting an app. (Varun Vasudev via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -426,6 +446,11 @@ Release 2.5.0 - UNRELEASED
 
     YARN-2319. Made the MiniKdc instance start/close before/after the class of
     TestRMWebServicesDelegationTokens. (Wenwu Peng via zjshen)
+
+    YARN-2335. Annotate all hadoop-sls APIs as @Private. (Wei Yan via kasha)
+
+    YARN-1726. ResourceSchedulerWrapper broken due to AbstractYarnScheduler. 
+    (Wei Yan via kasha)
 
 Release 2.4.1 - 2014-06-23 
 

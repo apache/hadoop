@@ -291,6 +291,12 @@ public class DatanodeStorageInfo {
   public String toString() {
     return "[" + storageType + "]" + storageID + ":" + state;
   }
+  
+  StorageReport toStorageReport() {
+    return new StorageReport(
+        new DatanodeStorage(storageID, state, storageType),
+        false, capacity, dfsUsed, remaining, blockPoolUsed);
+  }
 
   static Iterable<StorageType> toStorageTypes(
       final Iterable<DatanodeStorageInfo> infos) {

@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
@@ -90,6 +91,12 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       NM_TOKENS_KEY_PREFIX + CURRENT_MASTER_KEY_SUFFIX;
   private static final String NM_TOKENS_PREV_MASTER_KEY =
       NM_TOKENS_KEY_PREFIX + PREV_MASTER_KEY_SUFFIX;
+  private static final String CONTAINER_TOKENS_KEY_PREFIX =
+      "ContainerTokens/";
+  private static final String CONTAINER_TOKENS_CURRENT_MASTER_KEY =
+      CONTAINER_TOKENS_KEY_PREFIX + CURRENT_MASTER_KEY_SUFFIX;
+  private static final String CONTAINER_TOKENS_PREV_MASTER_KEY =
+      CONTAINER_TOKENS_KEY_PREFIX + PREV_MASTER_KEY_SUFFIX;
 
   private DB db;
 
@@ -141,7 +148,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
             key.substring(0, userEndPos+1)));
       }
     } catch (DBException e) {
-      throw new IOException(e.getMessage(), e);
+      throw new IOException(e);
     } finally {
       if (iter != null) {
         iter.close();
@@ -260,7 +267,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), proto.toByteArray());
     } catch (DBException e) {
-      throw new IOException(e.getMessage(), e);
+      throw new IOException(e);
     }
   }
 
@@ -283,7 +290,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         batch.close();
       }
     } catch (DBException e) {
-      throw new IOException(e.getMessage(), e);
+      throw new IOException(e);
     }
   }
 
@@ -306,7 +313,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         batch.close();
       }
     } catch (DBException e) {
-      throw new IOException(e.getMessage(), e);
+      throw new IOException(e);
     }
   }
 
@@ -355,7 +362,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
             DeletionServiceDeleteTaskProto.parseFrom(entry.getValue()));
       }
     } catch (DBException e) {
-      throw new IOException(e.getMessage(), e);
+      throw new IOException(e);
     } finally {
       if (iter != null) {
         iter.close();
@@ -371,7 +378,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), taskProto.toByteArray());
     } catch (DBException e) {
-      throw new IOException(e.getMessage(), e);
+      throw new IOException(e);
     }
   }
 
@@ -381,14 +388,14 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.delete(bytes(key));
     } catch (DBException e) {
-      throw new IOException(e.getMessage(), e);
+      throw new IOException(e);
     }
   }
 
 
   @Override
-  public RecoveredNMTokenState loadNMTokenState() throws IOException {
-    RecoveredNMTokenState state = new RecoveredNMTokenState();
+  public RecoveredNMTokensState loadNMTokensState() throws IOException {
+    RecoveredNMTokensState state = new RecoveredNMTokensState();
     state.applicationMasterKeys =
         new HashMap<ApplicationAttemptId, MasterKey>();
     LeveldbIterator iter = null;
@@ -420,7 +427,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         }
       }
     } catch (DBException e) {
-      throw new IOException(e.getMessage(), e);
+      throw new IOException(e);
     } finally {
       if (iter != null) {
         iter.close();
@@ -454,7 +461,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.delete(bytes(key));
     } catch (DBException e) {
-      throw new IOException(e.getMessage(), e);
+      throw new IOException(e);
     }
   }
 
@@ -468,7 +475,91 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(dbKey), pb.getProto().toByteArray());
     } catch (DBException e) {
-      throw new IOException(e.getMessage(), e);
+      throw new IOException(e);
+    }
+  }
+
+
+  @Override
+  public RecoveredContainerTokensState loadContainerTokensState()
+      throws IOException {
+    RecoveredContainerTokensState state = new RecoveredContainerTokensState();
+    state.activeTokens = new HashMap<ContainerId, Long>();
+    LeveldbIterator iter = null;
+    try {
+      iter = new LeveldbIterator(db);
+      iter.seek(bytes(CONTAINER_TOKENS_KEY_PREFIX));
+      final int containerTokensKeyPrefixLength =
+          CONTAINER_TOKENS_KEY_PREFIX.length();
+      while (iter.hasNext()) {
+        Entry<byte[], byte[]> entry = iter.next();
+        String fullKey = asString(entry.getKey());
+        if (!fullKey.startsWith(CONTAINER_TOKENS_KEY_PREFIX)) {
+          break;
+        }
+        String key = fullKey.substring(containerTokensKeyPrefixLength);
+        if (key.equals(CURRENT_MASTER_KEY_SUFFIX)) {
+          state.currentMasterKey = parseMasterKey(entry.getValue());
+        } else if (key.equals(PREV_MASTER_KEY_SUFFIX)) {
+          state.previousMasterKey = parseMasterKey(entry.getValue());
+        } else if (key.startsWith(ConverterUtils.CONTAINER_PREFIX)) {
+          loadContainerToken(state, fullKey, key, entry.getValue());
+        }
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    } finally {
+      if (iter != null) {
+        iter.close();
+      }
+    }
+    return state;
+  }
+
+  private static void loadContainerToken(RecoveredContainerTokensState state,
+      String key, String containerIdStr, byte[] value) throws IOException {
+    ContainerId containerId;
+    Long expTime;
+    try {
+      containerId = ConverterUtils.toContainerId(containerIdStr);
+      expTime = Long.parseLong(asString(value));
+    } catch (IllegalArgumentException e) {
+      throw new IOException("Bad container token state for " + key, e);
+    }
+    state.activeTokens.put(containerId, expTime);
+  }
+
+  @Override
+  public void storeContainerTokenCurrentMasterKey(MasterKey key)
+      throws IOException {
+    storeMasterKey(CONTAINER_TOKENS_CURRENT_MASTER_KEY, key);
+  }
+
+  @Override
+  public void storeContainerTokenPreviousMasterKey(MasterKey key)
+      throws IOException {
+    storeMasterKey(CONTAINER_TOKENS_PREV_MASTER_KEY, key);
+  }
+
+  @Override
+  public void storeContainerToken(ContainerId containerId, Long expTime)
+      throws IOException {
+    String key = CONTAINER_TOKENS_KEY_PREFIX + containerId;
+    try {
+      db.put(bytes(key), bytes(expTime.toString()));
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void removeContainerToken(ContainerId containerId)
+      throws IOException {
+    String key = CONTAINER_TOKENS_KEY_PREFIX + containerId;
+    try {
+      db.delete(bytes(key));
+    } catch (DBException e) {
+      throw new IOException(e);
     }
   }
 
@@ -554,7 +645,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), data);
     } catch (DBException e) {
-      throw new IOException(e.getMessage(), e);
+      throw new IOException(e);
     }
   }
 

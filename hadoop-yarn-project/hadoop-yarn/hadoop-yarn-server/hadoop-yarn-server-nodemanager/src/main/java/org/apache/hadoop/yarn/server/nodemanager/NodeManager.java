@@ -173,8 +173,8 @@ public class NodeManager extends CompositeService
       NMContainerTokenSecretManager containerTokenSecretManager)
           throws IOException {
     if (nmStore.canRecover()) {
-      nmTokenSecretManager.recover(nmStore.loadNMTokenState());
-      // TODO: recover containerTokenSecretManager
+      nmTokenSecretManager.recover();
+      containerTokenSecretManager.recover();
     }
   }
 
@@ -190,7 +190,7 @@ public class NodeManager extends CompositeService
     initAndStartRecoveryStore(conf);
 
     NMContainerTokenSecretManager containerTokenSecretManager =
-        new NMContainerTokenSecretManager(conf);
+        new NMContainerTokenSecretManager(conf, nmStore);
 
     NMTokenSecretManagerInNM nmTokenSecretManager =
         new NMTokenSecretManagerInNM(nmStore);
