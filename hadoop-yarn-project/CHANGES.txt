@@ -53,6 +53,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2211. Persist AMRMToken master key in RMStateStore for RM recovery.
     (Xuan Gong via jianhe)
 
+    YARN-2328. FairScheduler: Verify update and continuous scheduling threads are
+    stopped when the scheduler is stopped. (kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
