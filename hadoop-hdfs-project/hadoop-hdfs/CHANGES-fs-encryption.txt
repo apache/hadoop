@@ -62,6 +62,9 @@ fs-encryption (Unreleased)
     HDFS-6724. Decrypt EDEK before creating
     CryptoInputStream/CryptoOutputStream. (wang)
 
+    HDFS-6509. Create a special /.reserved/raw directory for raw access to
+    encrypted data. (clamb via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES

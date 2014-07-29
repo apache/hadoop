@@ -30,7 +30,6 @@ import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSTestWrapper;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileContextTestWrapper;
@@ -52,7 +51,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-
+import static org.apache.hadoop.hdfs.DFSTestUtil.verifyFilesEqual;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -316,16 +315,6 @@ public class TestEncryptionZones {
     doRenameEncryptionZone(fcWrapper);
   }
 
-  private void validateFiles(Path p1, Path p2, int len) throws Exception {
-    FSDataInputStream in1 = fs.open(p1);
-    FSDataInputStream in2 = fs.open(p2);
-    for (int i = 0; i < len; i++) {
-      assertEquals("Mismatch at byte " + i, in1.read(), in2.read());
-    }
-    in1.close();
-    in2.close();
-  }
-
   private FileEncryptionInfo getFileEncryptionInfo(Path path) throws Exception {
     LocatedBlocks blocks = fs.getClient().getLocatedBlocks(path.toString(), 0);
     return blocks.getFileEncryptionInfo();
@@ -346,14 +335,14 @@ public class TestEncryptionZones {
     final Path encFile1 = new Path(zone, "myfile");
     DFSTestUtil.createFile(fs, encFile1, len, (short) 1, 0xFEED);
     // Read them back in and compare byte-by-byte
-    validateFiles(baseFile, encFile1, len);
+    verifyFilesEqual(fs, baseFile, encFile1, len);
     // Roll the key of the encryption zone
     List<EncryptionZone> zones = dfsAdmin.listEncryptionZones();
     assertEquals("Expected 1 EZ", 1, zones.size());
     String keyName = zones.get(0).getKeyName();
     cluster.getNamesystem().getProvider().rollNewVersion(keyName);
     // Read them back in and compare byte-by-byte
-    validateFiles(baseFile, encFile1, len);
+    verifyFilesEqual(fs, baseFile, encFile1, len);
     // Write a new enc file and validate
     final Path encFile2 = new Path(zone, "myfile2");
     DFSTestUtil.createFile(fs, encFile2, len, (short) 1, 0xFEED);
@@ -366,7 +355,7 @@ public class TestEncryptionZones {
     assertNotEquals("Key was rolled, versions should be different",
         feInfo1.getEzKeyVersionName(), feInfo2.getEzKeyVersionName());
     // Contents still equal
-    validateFiles(encFile1, encFile2, len);
+    verifyFilesEqual(fs, encFile1, encFile2, len);
   }
 
   @Test(timeout = 60000)

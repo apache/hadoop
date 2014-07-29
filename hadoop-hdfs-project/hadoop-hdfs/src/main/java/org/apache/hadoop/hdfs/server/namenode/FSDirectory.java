@@ -120,6 +120,8 @@ public class FSDirectory implements Closeable {
       + DOT_RESERVED_STRING;
   public final static byte[] DOT_RESERVED = 
       DFSUtil.string2Bytes(DOT_RESERVED_STRING);
+  private final static String RAW_STRING = "raw";
+  private final static byte[] RAW = DFSUtil.string2Bytes(RAW_STRING);
   public final static String DOT_INODES_STRING = ".inodes";
   public final static byte[] DOT_INODES = 
       DFSUtil.string2Bytes(DOT_INODES_STRING);
@@ -1315,6 +1317,7 @@ public class FSDirectory implements Closeable {
   DirectoryListing getListing(String src, byte[] startAfter,
       boolean needLocation) throws UnresolvedLinkException, IOException {
     String srcs = normalizePath(src);
+    final boolean isRawPath = isReservedRawName(src);
 
     readLock();
     try {
@@ -1330,7 +1333,7 @@ public class FSDirectory implements Closeable {
       if (!targetNode.isDirectory()) {
         return new DirectoryListing(
             new HdfsFileStatus[]{createFileStatus(HdfsFileStatus.EMPTY_NAME,
-                targetNode, needLocation, snapshot)}, 0);
+                targetNode, needLocation, snapshot, isRawPath)}, 0);
       }
 
       final INodeDirectory dirInode = targetNode.asDirectory();
@@ -1344,7 +1347,7 @@ public class FSDirectory implements Closeable {
       for (int i=0; i<numOfListing && locationBudget>0; i++) {
         INode cur = contents.get(startChild+i);
         listing[i] = createFileStatus(cur.getLocalNameBytes(), cur,
-            needLocation, snapshot);
+            needLocation, snapshot, isRawPath);
         listingCnt++;
         if (needLocation) {
             // Once we  hit lsLimit locations, stop.
@@ -1395,7 +1398,7 @@ public class FSDirectory implements Closeable {
     for (int i = 0; i < numOfListing; i++) {
       Root sRoot = snapshots.get(i + skipSize).getRoot();
       listing[i] = createFileStatus(sRoot.getLocalNameBytes(), sRoot,
-          Snapshot.CURRENT_STATE_ID);
+          Snapshot.CURRENT_STATE_ID, false);
     }
     return new DirectoryListing(
         listing, snapshots.size() - skipSize - numOfListing);
@@ -1403,12 +1406,13 @@ public class FSDirectory implements Closeable {
 
   /** Get the file info for a specific file.
    * @param src The string representation of the path to the file
-   * @param resolveLink whether to throw UnresolvedLinkException 
+   * @param resolveLink whether to throw UnresolvedLinkException
+   * @param isRawPath true if a /.reserved/raw pathname was passed by the user
    * @return object containing information regarding the file
    *         or null if file not found
    */
-  HdfsFileStatus getFileInfo(String src, boolean resolveLink)
-    throws UnresolvedLinkException, IOException {
+  HdfsFileStatus getFileInfo(String src, boolean resolveLink, boolean isRawPath)
+    throws IOException {
     String srcs = normalizePath(src);
     readLock();
     try {
@@ -1418,9 +1422,8 @@ public class FSDirectory implements Closeable {
       final INodesInPath inodesInPath = getLastINodeInPath(srcs, resolveLink);
       final INode i = inodesInPath.getINode(0);
 
-      final int snapshotId = inodesInPath.getPathSnapshotId();
       return i == null? null: createFileStatus(HdfsFileStatus.EMPTY_NAME, i,
-          inodesInPath.getPathSnapshotId());
+          inodesInPath.getPathSnapshotId(), isRawPath);
     } finally {
       readUnlock();
     }
@@ -2259,22 +2262,25 @@ public class FSDirectory implements Closeable {
    * @param path the local name
    * @param node inode
    * @param needLocation if block locations need to be included or not
+   * @param isRawPath true if this is being called on behalf of a path in
+   *                  /.reserved/raw
    * @return a file status
    * @throws IOException if any error occurs
    */
   private HdfsFileStatus createFileStatus(byte[] path, INode node,
-      boolean needLocation, int snapshot) throws IOException {
+      boolean needLocation, int snapshot, boolean isRawPath)
+      throws IOException {
     if (needLocation) {
-      return createLocatedFileStatus(path, node, snapshot);
+      return createLocatedFileStatus(path, node, snapshot, isRawPath);
     } else {
-      return createFileStatus(path, node, snapshot);
+      return createFileStatus(path, node, snapshot, isRawPath);
     }
   }
   /**
    * Create FileStatus by file INode 
    */
    HdfsFileStatus createFileStatus(byte[] path, INode node,
-       int snapshot) throws IOException {
+       int snapshot, boolean isRawPath) throws IOException {
      long size = 0;     // length is zero for directories
      short replication = 0;
      long blocksize = 0;
@@ -2287,7 +2293,8 @@ public class FSDirectory implements Closeable {
      int childrenNum = node.isDirectory() ? 
          node.asDirectory().getChildrenNum(snapshot) : 0;
 
-     FileEncryptionInfo feInfo = getFileEncryptionInfo(node, snapshot);
+     FileEncryptionInfo feInfo = isRawPath ? null :
+         getFileEncryptionInfo(node, snapshot);
 
      return new HdfsFileStatus(
         size, 
@@ -2310,12 +2317,14 @@ public class FSDirectory implements Closeable {
    * Create FileStatus with location info by file INode
    */
   private HdfsLocatedFileStatus createLocatedFileStatus(byte[] path,
-      INode node, int snapshot) throws IOException {
+      INode node, int snapshot, boolean isRawPath) throws IOException {
     assert hasReadLock();
     long size = 0; // length is zero for directories
     short replication = 0;
     long blocksize = 0;
     LocatedBlocks loc = null;
+    final FileEncryptionInfo feInfo = isRawPath ? null :
+        getFileEncryptionInfo(node, snapshot);
     if (node.isFile()) {
       final INodeFile fileNode = node.asFile();
       size = fileNode.computeFileSize(snapshot);
@@ -2326,7 +2335,6 @@ public class FSDirectory implements Closeable {
       final boolean isUc = !inSnapshot && fileNode.isUnderConstruction();
       final long fileSize = !inSnapshot && isUc ? 
           fileNode.computeFileSizeNotIncludingLastUcBlock() : size;
-      final FileEncryptionInfo feInfo = getFileEncryptionInfo(node, snapshot);
 
       loc = getFSNamesystem().getBlockManager().createLocatedBlocks(
           fileNode.getBlocks(), fileSize, isUc, 0L, size, false,
@@ -2337,8 +2345,6 @@ public class FSDirectory implements Closeable {
     }
     int childrenNum = node.isDirectory() ? 
         node.asDirectory().getChildrenNum(snapshot) : 0;
-
-    final FileEncryptionInfo feInfo = getFileEncryptionInfo(node, snapshot);
 
     HdfsLocatedFileStatus status =
         new HdfsLocatedFileStatus(size, node.isDirectory(), replication,
@@ -2894,27 +2900,73 @@ public class FSDirectory implements Closeable {
     return src.startsWith(DOT_RESERVED_PATH_PREFIX);
   }
 
+  static boolean isReservedRawName(String src) {
+    return src.startsWith(DOT_RESERVED_PATH_PREFIX +
+        Path.SEPARATOR + RAW_STRING);
+  }
+
   /**
-   * Resolve the path of /.reserved/.inodes/<inodeid>/... to a regular path
+   * Resolve a /.reserved/... path to a non-reserved path.
+   * <p/>
+   * There are two special hierarchies under /.reserved/:
+   * <p/>
+   * /.reserved/.inodes/<inodeid> performs a path lookup by inodeid,
+   * <p/>
+   * /.reserved/raw/... returns the encrypted (raw) bytes of a file in an
+   * encryption zone. For instance, if /ezone is an encryption zone, then
+   * /ezone/a refers to the decrypted file and /.reserved/raw/ezone/a refers to
+   * the encrypted (raw) bytes of /ezone/a.
+   * <p/>
+   * Pathnames in the /.reserved/raw directory that resolve to files not in an
+   * encryption zone are equivalent to the corresponding non-raw path. Hence,
+   * if /a/b/c refers to a file that is not in an encryption zone, then
+   * /.reserved/raw/a/b/c is equivalent (they both refer to the same
+   * unencrypted file).
    * 
    * @param src path that is being processed
    * @param pathComponents path components corresponding to the path
    * @param fsd FSDirectory
-   * @return if the path indicates an inode, return path after replacing upto
+   * @return if the path indicates an inode, return path after replacing up to
    *         <inodeid> with the corresponding path of the inode, else the path
-   *         in {@code src} as is.
+   *         in {@code src} as is. If the path refers to a path in the "raw"
+   *         directory, return the non-raw pathname.
    * @throws FileNotFoundException if inodeid is invalid
    */
-  static String resolvePath(String src, byte[][] pathComponents, FSDirectory fsd)
+  static String resolvePath(String src, byte[][] pathComponents,
+      FSDirectory fsd) throws FileNotFoundException {
+    final int nComponents = (pathComponents == null) ?
+        0 : pathComponents.length;
+    if (nComponents <= 2) {
+      return src;
+    }
+    if (!Arrays.equals(DOT_RESERVED, pathComponents[1])) {
+      /* This is not a /.reserved/ path so do nothing. */
+      return src;
+    }
+
+    if (Arrays.equals(DOT_INODES, pathComponents[2])) {
+      /* It's a /.reserved/.inodes path. */
+      if (nComponents > 3) {
+        return resolveDotInodesPath(src, pathComponents, fsd);
+      } else {
+        return src;
+      }
+    } else if (Arrays.equals(RAW, pathComponents[2])) {
+      /* It's /.reserved/raw so strip off the /.reserved/raw prefix. */
+      if (nComponents == 3) {
+        return Path.SEPARATOR;
+      } else {
+        return constructRemainingPath("", pathComponents, 3);
+      }
+    } else {
+      /* It's some sort of /.reserved/<unknown> path. Ignore it. */
+      return src;
+    }
+  }
+
+  private static String resolveDotInodesPath(String src,
+      byte[][] pathComponents, FSDirectory fsd)
       throws FileNotFoundException {
-    if (pathComponents == null || pathComponents.length <= 3) {
-      return src;
-    }
-    // Not /.reserved/.inodes
-    if (!Arrays.equals(DOT_RESERVED, pathComponents[1])
-        || !Arrays.equals(DOT_INODES, pathComponents[2])) { // Not .inodes path
-      return src;
-    }
     final String inodeId = DFSUtil.bytes2String(pathComponents[3]);
     final long id;
     try {
@@ -2943,10 +2995,20 @@ public class FSDirectory implements Closeable {
       }
     }
 
-    StringBuilder path = id == INodeId.ROOT_INODE_ID ? new StringBuilder()
-        : new StringBuilder(inode.getFullPathName());
-    for (int i = 4; i < pathComponents.length; i++) {
-      path.append(Path.SEPARATOR).append(DFSUtil.bytes2String(pathComponents[i]));
+    String path = "";
+    if (id != INodeId.ROOT_INODE_ID) {
+      path = inode.getFullPathName();
+    }
+    return constructRemainingPath(path, pathComponents, 4);
+  }
+
+  private static String constructRemainingPath(String pathPrefix,
+      byte[][] pathComponents, int startAt) {
+
+    StringBuilder path = new StringBuilder(pathPrefix);
+    for (int i = startAt; i < pathComponents.length; i++) {
+      path.append(Path.SEPARATOR).append(
+          DFSUtil.bytes2String(pathComponents[i]));
     }
     if (NameNode.LOG.isDebugEnabled()) {
       NameNode.LOG.debug("Resolved path is " + path);
