@@ -49,6 +49,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10882. Move DirectBufferPool into common util. (todd)
 
+    HADOOP-8069. Enable TCP_NODELAY by default for IPC. (Todd Lipcon via
+    Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
