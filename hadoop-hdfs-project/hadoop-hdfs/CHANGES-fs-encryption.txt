@@ -65,6 +65,9 @@ fs-encryption (Unreleased)
     HDFS-6509. Create a special /.reserved/raw directory for raw access to
     encrypted data. (clamb via wang)
 
+    HDFS-6771. Require specification of an encryption key when creating
+    an encryption zone. (wang)
+
   OPTIMIZATIONS
 
   BUG FIXES

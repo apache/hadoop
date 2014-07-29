@@ -124,7 +124,7 @@ public class CryptoAdmin extends Configured implements Tool {
 
     @Override
     public String getShortUsage() {
-      return "[" + getName() + " [-keyName <keyName>] -path <path> " + "]\n";
+      return "[" + getName() + " -keyName <keyName> -path <path> " + "]\n";
     }
 
     @Override
@@ -133,7 +133,7 @@ public class CryptoAdmin extends Configured implements Tool {
       listing.addRow("<path>", "The path of the encryption zone to create. " +
         "It must be an empty directory.");
       listing.addRow("<keyName>", "Name of the key to use for the " +
-          "encryption zone. A new key will be generated if unspecified.");
+          "encryption zone.");
       return getShortUsage() + "\n" +
         "Create a new encryption zone.\n\n" +
         listing.toString();
@@ -149,6 +149,10 @@ public class CryptoAdmin extends Configured implements Tool {
 
       final String keyName =
           StringUtils.popOptionWithArgument("-keyName", args);
+      if (keyName == null) {
+        System.err.println("You must specify a key name with -keyName.");
+        return 1;
+      }
 
       if (!args.isEmpty()) {
         System.err.println("Can't understand argument: " + args.get(0));

@@ -68,12 +68,13 @@ public class TestEncryptionZones {
   private HdfsAdmin dfsAdmin;
   private DistributedFileSystem fs;
   private File testRootDir;
+  private final String TEST_KEY = "testKey";
 
   protected FileSystemTestWrapper fsWrapper;
   protected FileContextTestWrapper fcWrapper;
 
   @Before
-  public void setup() throws IOException {
+  public void setup() throws Exception {
     conf = new HdfsConfiguration();
     fsHelper = new FileSystemTestHelper();
     // Set up java key store
@@ -93,6 +94,8 @@ public class TestEncryptionZones {
     // else the updates do not get flushed properly
     fs.getClient().provider = cluster.getNameNode().getNamesystem()
         .getProvider();
+    // Create a test key
+    createKey(TEST_KEY);
   }
 
   @After
@@ -143,6 +146,8 @@ public class TestEncryptionZones {
       throws NoSuchAlgorithmException, IOException {
     KeyProvider provider = cluster.getNameNode().getNamesystem().getProvider();
     final KeyProvider.Options options = KeyProvider.options(conf);
+    options.setDescription(keyName);
+    options.setBitLength(128);
     provider.createKey(keyName, options);
     provider.flush();
   }
@@ -155,7 +160,7 @@ public class TestEncryptionZones {
     /* Test failure of create EZ on a directory that doesn't exist. */
     final Path zone1 = new Path("/zone1");
     try {
-      dfsAdmin.createEncryptionZone(zone1, null);
+      dfsAdmin.createEncryptionZone(zone1, TEST_KEY);
       fail("expected /test doesn't exist");
     } catch (IOException e) {
       assertExceptionContains("cannot find", e);
@@ -163,13 +168,13 @@ public class TestEncryptionZones {
 
     /* Normal creation of an EZ */
     fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
-    dfsAdmin.createEncryptionZone(zone1, null);
+    dfsAdmin.createEncryptionZone(zone1, TEST_KEY);
     assertNumZones(++numZones);
     assertZonePresent(null, zone1.toString());
 
     /* Test failure of create EZ on a directory which is already an EZ. */
     try {
-      dfsAdmin.createEncryptionZone(zone1, null);
+      dfsAdmin.createEncryptionZone(zone1, TEST_KEY);
     } catch (IOException e) {
       assertExceptionContains("already in an encryption zone", e);
     }
@@ -178,7 +183,7 @@ public class TestEncryptionZones {
     final Path zone1Child = new Path(zone1, "child");
     fsWrapper.mkdir(zone1Child, FsPermission.getDirDefault(), false);
     try {
-      dfsAdmin.createEncryptionZone(zone1Child, null);
+      dfsAdmin.createEncryptionZone(zone1Child, TEST_KEY);
       fail("EZ in an EZ");
     } catch (IOException e) {
       assertExceptionContains("already in an encryption zone", e);
@@ -189,7 +194,7 @@ public class TestEncryptionZones {
     final Path notEmptyChild = new Path(notEmpty, "child");
     fsWrapper.mkdir(notEmptyChild, FsPermission.getDirDefault(), true);
     try {
-      dfsAdmin.createEncryptionZone(notEmpty, null);
+      dfsAdmin.createEncryptionZone(notEmpty, TEST_KEY);
       fail("Created EZ on an non-empty directory with folder");
     } catch (IOException e) {
       assertExceptionContains("create an encryption zone", e);
@@ -199,7 +204,7 @@ public class TestEncryptionZones {
     /* create EZ on a folder with a file fails */
     fsWrapper.createFile(notEmptyChild);
     try {
-      dfsAdmin.createEncryptionZone(notEmpty, null);
+      dfsAdmin.createEncryptionZone(notEmpty, TEST_KEY);
       fail("Created EZ on an non-empty directory with file");
     } catch (IOException e) {
       assertExceptionContains("create an encryption zone", e);
@@ -215,6 +220,21 @@ public class TestEncryptionZones {
     } catch (IOException e) {
       assertExceptionContains("doesn't exist.", e);
     }
+
+    /* Test failure of empty and null key name */
+    try {
+      dfsAdmin.createEncryptionZone(zone2, "");
+      fail("created a zone with empty key name");
+    } catch (IOException e) {
+      assertExceptionContains("Must specify a key name when creating", e);
+    }
+    try {
+      dfsAdmin.createEncryptionZone(zone2, null);
+      fail("created a zone with null key name");
+    } catch (IOException e) {
+      assertExceptionContains("Must specify a key name when creating", e);
+    }
+
     assertNumZones(1);
 
     /* Test success of creating an EZ when they key exists. */
@@ -235,7 +255,7 @@ public class TestEncryptionZones {
         final HdfsAdmin userAdmin =
             new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
         try {
-          userAdmin.createEncryptionZone(nonSuper, null);
+          userAdmin.createEncryptionZone(nonSuper, TEST_KEY);
           fail("createEncryptionZone is superuser-only operation");
         } catch (AccessControlException e) {
           assertExceptionContains("Superuser privilege is required", e);
@@ -247,7 +267,7 @@ public class TestEncryptionZones {
     // Test success of creating an encryption zone a few levels down.
     Path deepZone = new Path("/d/e/e/p/zone");
     fsWrapper.mkdir(deepZone, FsPermission.getDirDefault(), true);
-    dfsAdmin.createEncryptionZone(deepZone, null);
+    dfsAdmin.createEncryptionZone(deepZone, TEST_KEY);
     assertNumZones(++numZones);
     assertZonePresent(null, deepZone.toString());
   }
@@ -266,10 +286,10 @@ public class TestEncryptionZones {
     final Path allPath = new Path(testRoot, "accessall");
 
     fsWrapper.mkdir(superPath, new FsPermission((short) 0700), true);
-    dfsAdmin.createEncryptionZone(superPath, null);
+    dfsAdmin.createEncryptionZone(superPath, TEST_KEY);
 
     fsWrapper.mkdir(allPath, new FsPermission((short) 0707), true);
-    dfsAdmin.createEncryptionZone(allPath, null);
+    dfsAdmin.createEncryptionZone(allPath, TEST_KEY);
 
     user.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
@@ -294,7 +314,7 @@ public class TestEncryptionZones {
     final Path pathFoo = new Path(testRoot, "foo");
     final Path pathFooBaz = new Path(pathFoo, "baz");
     wrapper.mkdir(pathFoo, FsPermission.getDirDefault(), true);
-    dfsAdmin.createEncryptionZone(pathFoo, null);
+    dfsAdmin.createEncryptionZone(pathFoo, TEST_KEY);
     wrapper.mkdir(pathFooBaz, FsPermission.getDirDefault(), true);
     try {
       wrapper.rename(pathFooBaz, testRoot);
@@ -331,7 +351,7 @@ public class TestEncryptionZones {
     // Create the first enc file
     final Path zone = new Path("/zone");
     fs.mkdirs(zone);
-    dfsAdmin.createEncryptionZone(zone, null);
+    dfsAdmin.createEncryptionZone(zone, TEST_KEY);
     final Path encFile1 = new Path(zone, "myfile");
     DFSTestUtil.createFile(fs, encFile1, len, (short) 1, 0xFEED);
     // Read them back in and compare byte-by-byte
@@ -364,7 +384,7 @@ public class TestEncryptionZones {
         new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
     final Path zone = new Path("/zone");
     fs.mkdirs(zone);
-    dfsAdmin.createEncryptionZone(zone, null);
+    dfsAdmin.createEncryptionZone(zone, TEST_KEY);
     // Create a file in an EZ, which should succeed
     DFSTestUtil
         .createFile(fs, new Path(zone, "success1"), 0, (short) 1, 0xFEED);
@@ -434,7 +454,7 @@ public class TestEncryptionZones {
     /* Normal creation of an EZ */
     fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
     try {
-      dfsAdmin.createEncryptionZone(zone1, null);
+      dfsAdmin.createEncryptionZone(zone1, TEST_KEY);
       fail("expected exception");
     } catch (IOException e) {
       assertExceptionContains("since no key provider is available", e);

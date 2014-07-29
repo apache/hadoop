@@ -231,22 +231,16 @@ public class HdfsAdmin {
   }
 
   /**
-   * Create an encryption zone rooted at an empty existing directory. An
-   * encryption zone has an associated encryption key used when reading and
-   * writing files within the zone. An existing key can be specified,
-   * else a new key will be generated for the encryption zone.
+   * Create an encryption zone rooted at an empty existing directory, using the
+   * specified encryption key. An encryption zone has an associated encryption
+   * key used when reading and writing files within the zone.
    *
-   * @param path The path of the root of the encryption zone. Must refer to
-   *             an empty, existing directory.
-   *
-   * @param keyName Optional name of key available at the KeyProvider. If null,
-   *                then a key is generated.
-   *
-   * @throws IOException if there was a general IO exception
-   *
+   * @param path    The path of the root of the encryption zone. Must refer to
+   *                an empty, existing directory.
+   * @param keyName Name of key available at the KeyProvider.
+   * @throws IOException            if there was a general IO exception
    * @throws AccessControlException if the caller does not have access to path
-   *
-   * @throws FileNotFoundException if the path does not exist
+   * @throws FileNotFoundException  if the path does not exist
    */
   public void createEncryptionZone(Path path, String keyName)
     throws IOException, AccessControlException, FileNotFoundException {

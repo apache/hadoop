@@ -8457,24 +8457,19 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       readUnlock();
     }
   }
-  
+
   /**
-   * Create an encryption zone on directory src. If provided,
-   * will use an existing key, else will generate a new key.
+   * Create an encryption zone on directory src using the specified key.
    *
-   * @param src the path of a directory which will be the root of the
-   * encryption zone. The directory must be empty.
-   *
-   * @param keyNameArg an optional name of a key in the configured
-   * KeyProvider. If this is null, then a a new key is generated.
-   *
-   * @throws AccessControlException if the caller is not the superuser.
-   *
+   * @param src     the path of a directory which will be the root of the
+   *                encryption zone. The directory must be empty.
+   * @param keyName name of a key which must be present in the configured
+   *                KeyProvider.
+   * @throws AccessControlException  if the caller is not the superuser.
    * @throws UnresolvedLinkException if the path can't be resolved.
-   *
-   * @throws SafeModeException if the Namenode is in safe mode.
+   * @throws SafeModeException       if the Namenode is in safe mode.
    */
-  void createEncryptionZone(final String src, String keyNameArg)
+  void createEncryptionZone(final String src, final String keyName)
     throws IOException, UnresolvedLinkException,
       SafeModeException, AccessControlException {
     final CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
@@ -8482,8 +8477,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       return; // Return previous response
     }
 
-    boolean createdKey = false;
-    String keyName = keyNameArg;
     boolean success = false;
     try {
       if (provider == null) {
@@ -8492,22 +8485,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             " since no key provider is available.");
       }
       if (keyName == null || keyName.isEmpty()) {
-        keyName = UUID.randomUUID().toString();
-        createNewKey(keyName, src);
-        createdKey = true;
-      } else {
-        KeyVersion keyVersion = provider.getCurrentKey(keyName);
-        if (keyVersion == null) {
-          /*
-           * It would be nice if we threw something more specific than
-           * IOException when the key is not found, but the KeyProvider API
-           * doesn't provide for that. If that API is ever changed to throw
-           * something more specific (e.g. UnknownKeyException) then we can
-           * update this to match it, or better yet, just rethrow the
-           * KeyProvider's exception.
-           */
-          throw new IOException("Key " + keyName + " doesn't exist.");
-        }
+        throw new IOException("Must specify a key name when creating an " +
+            "encryption zone");
+      }
+      KeyVersion keyVersion = provider.getCurrentKey(keyName);
+      if (keyVersion == null) {
+        /*
+         * It would be nice if we threw something more specific than
+         * IOException when the key is not found, but the KeyProvider API
+         * doesn't provide for that. If that API is ever changed to throw
+         * something more specific (e.g. UnknownKeyException) then we can
+         * update this to match it, or better yet, just rethrow the
+         * KeyProvider's exception.
+         */
+        throw new IOException("Key " + keyName + " doesn't exist.");
       }
       createEncryptionZoneInt(src, keyName, cacheEntry != null);
       success = true;
@@ -8516,10 +8507,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throw e;
     } finally {
       RetryCache.setState(cacheEntry, success);
-      if (!success && createdKey) {
-        /* Unwind key creation. */
-        provider.deleteKey(keyName);
-      }
     }
   }
 
@@ -8548,40 +8535,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     getEditLog().logSync();
     logAuditEvent(true, "createEncryptionZone", srcArg, null, resultingStat);
-  }
-
-  /**
-   * Create a new key on the KeyProvider for an encryption zone.
-   *
-   * @param keyNameArg name of the key
-   * @param src path of the encryption zone.
-   * @return KeyVersion of the created key
-   * @throws IOException
-   */
-  private KeyVersion createNewKey(String keyNameArg, String src)
-    throws IOException {
-    Preconditions.checkNotNull(keyNameArg);
-    Preconditions.checkNotNull(src);
-    final StringBuilder sb = new StringBuilder("hdfs://");
-    if (nameserviceId != null) {
-      sb.append(nameserviceId);
-    }
-    sb.append(src);
-    if (!src.endsWith("/")) {
-      sb.append('/');
-    }
-    sb.append(keyNameArg);
-    final String keyName = sb.toString();
-    providerOptions.setDescription(keyName);
-    providerOptions.setBitLength(codec.getCipherSuite()
-        .getAlgorithmBlockSize()*8);
-    KeyVersion version = null;
-    try {
-      version = provider.createKey(keyNameArg, providerOptions);
-    } catch (NoSuchAlgorithmException e) {
-      throw new IOException(e);
-    }
-    return version;
   }
 
   List<EncryptionZone> listEncryptionZones() throws IOException {

@@ -48,7 +48,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.xml.sax.SAXException;
 
-public class TestCryptoCLI  extends CLITestHelperDFS {
+public class TestCryptoAdminCLI extends CLITestHelperDFS {
   protected MiniDFSCluster dfsCluster = null;
   protected FileSystem fs = null;
   protected String namenode = null;

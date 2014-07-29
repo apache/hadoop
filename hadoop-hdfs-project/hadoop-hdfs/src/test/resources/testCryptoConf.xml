@@ -50,7 +50,7 @@
       <description>Test create ez, dir doesn't exist</description>
       <test-commands>
         <command>-fs NAMENODE -ls /test</command>-
-        <crypto-admin-command>-createZone -path /test</crypto-admin-command>
+        <crypto-admin-command>-createZone -path /test -keyName myKey</crypto-admin-command>
       </test-commands>
       <cleanup-commands>
       </cleanup-commands>
@@ -67,8 +67,8 @@
       <test-commands>
         <command>-fs NAMENODE -mkdir /foo</command>
         <command>-fs NAMENODE -ls /</command>-
-        <crypto-admin-command>-createZone -path /foo</crypto-admin-command>
-        <crypto-admin-command>-createZone -path /foo</crypto-admin-command>
+        <crypto-admin-command>-createZone -path /foo -keyName myKey</crypto-admin-command>
+        <crypto-admin-command>-createZone -path /foo -keyName myKey</crypto-admin-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /foo</command>
@@ -82,31 +82,13 @@
     </test>
 
     <test>
-      <description>Test success of create ez in which a key is created</description>
-      <test-commands>
-        <command>-fs NAMENODE -mkdir /foo</command>
-        <command>-fs NAMENODE -ls /</command>-
-        <crypto-admin-command>-createZone -path /foo</crypto-admin-command>
-      </test-commands>
-      <cleanup-commands>
-        <command>-fs NAMENODE -rmdir /foo</command>
-      </cleanup-commands>
-      <comparators>
-        <comparator>
-          <type>SubstringComparator</type>
-          <expected-output>Added encryption zone /foo</expected-output>
-        </comparator>
-      </comparators>
-    </test>
-
-    <test>
       <description>Test failure of Create EZ operation in an existing EZ.</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /foo</command>
         <command>-fs NAMENODE -ls /</command>-
-        <crypto-admin-command>-createZone -path /foo</crypto-admin-command>
+        <crypto-admin-command>-createZone -keyName myKey -path /foo</crypto-admin-command>
         <command>-fs NAMENODE -mkdir /foo/bar</command>
-        <crypto-admin-command>-createZone -path /foo/bar</crypto-admin-command>
+        <crypto-admin-command>-createZone -keyName myKey -path /foo/bar</crypto-admin-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /foo/bar</command>
@@ -126,7 +108,7 @@
         <command>-fs NAMENODE -mkdir /foo</command>
         <command>-fs NAMENODE -touchz /foo/bar</command>
         <command>-fs NAMENODE -ls /</command>-
-        <crypto-admin-command>-createZone -path /foo</crypto-admin-command>
+        <crypto-admin-command>-createZone -keyName myKey -path /foo</crypto-admin-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rm /foo/bar</command>
@@ -159,19 +141,31 @@
     </test>
 
     <test>
-      <description>Test success of creating an EZ when the key exists.</description>
+      <description>Test failure of creating an EZ no path is specified.</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir /foo</command>
-        <command>-fs NAMENODE -ls /</command>-
-        <crypto-admin-command>-createZone -path /foo -keyName mykey</crypto-admin-command>
+        <crypto-admin-command>-createZone -keyName blahKey</crypto-admin-command>
       </test-commands>
       <cleanup-commands>
-        <command>-fs NAMENODE -rmdir /foo</command>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Added encryption zone /foo</expected-output>
+          <expected-output>You must specify a path</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>Test failure of creating an EZ no key is specified.</description>
+      <test-commands>
+        <crypto-admin-command>-createZone -path /foo</crypto-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>You must specify a key name</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -183,7 +177,7 @@
         <command>-fs NAMENODE -mkdir /foo/bar</command>
         <command>-fs NAMENODE -mkdir /foo/bar/baz</command>
         <command>-fs NAMENODE -ls /</command>-
-        <crypto-admin-command>-createZone -path /foo/bar/baz</crypto-admin-command>
+        <crypto-admin-command>-createZone -path /foo/bar/baz -keyName myKey</crypto-admin-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /foo/bar/baz</command>
@@ -204,8 +198,8 @@
         <command>-fs NAMENODE -mkdir /src</command>
         <command>-fs NAMENODE -mkdir /dst</command>
         <command>-fs NAMENODE -ls /</command>-
-        <crypto-admin-command>-createZone -path /src</crypto-admin-command>
-        <crypto-admin-command>-createZone -path /dst</crypto-admin-command>
+        <crypto-admin-command>-createZone -path /src -keyName myKey</crypto-admin-command>
+        <crypto-admin-command>-createZone -path /dst -keyName myKey</crypto-admin-command>
         <command>-fs NAMENODE -mkdir /src/subdir</command>
         <command>-fs NAMENODE -mv /src/subdir /dst</command>-
       </test-commands>
@@ -228,7 +222,7 @@
         <command>-fs NAMENODE -mkdir /src</command>
         <command>-fs NAMENODE -mkdir /dst</command>
         <command>-fs NAMENODE -ls /</command>-
-        <crypto-admin-command>-createZone -path /dst</crypto-admin-command>
+        <crypto-admin-command>-createZone -path /dst -keyName myKey</crypto-admin-command>
         <command>-fs NAMENODE -mv /src /dst</command>-
       </test-commands>
       <cleanup-commands>
@@ -249,7 +243,7 @@
         <command>-fs NAMENODE -mkdir /src</command>
         <command>-fs NAMENODE -mkdir /dst</command>
         <command>-fs NAMENODE -ls /</command>-
-        <crypto-admin-command>-createZone -path /src</crypto-admin-command>
+        <crypto-admin-command>-createZone -path /src -keyName myKey</crypto-admin-command>
         <command>-fs NAMENODE -mv /src /dst</command>-
       </test-commands>
       <cleanup-commands>
@@ -268,7 +262,7 @@
       <description>Test success of renaming file intra-EZ</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /src</command>
-        <crypto-admin-command>-createZone -path /src</crypto-admin-command>
+        <crypto-admin-command>-createZone -path /src -keyName myKey</crypto-admin-command>
         <command>-fs NAMENODE -mkdir /src/subdir1</command>
         <command>-fs NAMENODE -mkdir /src/subdir2</command>
         <command>-fs NAMENODE -mv /src/subdir1 /src/subdir2</command>-
