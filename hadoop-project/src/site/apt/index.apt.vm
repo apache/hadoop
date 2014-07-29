@@ -18,48 +18,48 @@
   
 Apache Hadoop ${project.version}
 
-  Apache Hadoop ${project.version} consists of significant
-  improvements over the previous stable release (hadoop-1.x).
+  Apache Hadoop ${project.version} is a minor release in the 2.x.y release
+  line, building upon the previous stable release 2.4.1.
 
-  Here is a short overview of the improvments to both HDFS and MapReduce.
+  Here is a short overview of the major features and improvements.
 
-  * {HDFS Federation}
+  * {Common}
 
-  In order to scale the name service horizontally, federation uses multiple 
-  independent Namenodes/Namespaces. The Namenodes are federated, that is, the 
-  Namenodes are independent and don't require coordination with each other. 
-  The datanodes are used as common storage for blocks by all the Namenodes. 
-  Each datanode registers with all the Namenodes in the cluster. Datanodes 
-  send periodic heartbeats and block reports and handles commands from the 
-  Namenodes.
+    * Authentication improvements when using an HTTP proxy server. This is
+      useful when accessing WebHDFS via a proxy server.
 
-  More details are available in the 
-  {{{./hadoop-project-dist/hadoop-hdfs/Federation.html}HDFS Federation}}
-  document.
+    * A new Hadoop metrics sink that allows writing directly to Graphite.
 
-  * {MapReduce NextGen aka YARN aka MRv2}
+    * {{{./hadoop-project-dist/hadoop-common/filesystem/index.html}Specification work}}
+      related to the Hadoop Compatible Filesystem (HCFS) effort.
 
-  The new architecture introduced in hadoop-0.23, divides the two major 
-  functions of the JobTracker: resource management and job life-cycle management 
-  into separate components.
+  * {HDFS}
 
-  The new ResourceManager manages the global assignment of compute resources to 
-  applications and the per-application ApplicationMaster manages the 
-  application‚ scheduling and coordination. 
+    * Support for POSIX-style filesystem extended attributes. See the
+      {{{./hadoop-project-dist/hadoop-hdfs/ExtendedAttributes.html}user documentation}}
+      for more details.
 
-  An application is either a single job in the sense of classic MapReduce jobs 
-  or a DAG of such jobs. 
+    * Using the OfflineImageViewer, clients can now browse an fsimage via
+      the WebHDFS API.
 
-  The ResourceManager and per-machine NodeManager daemon, which manages the 
-  user processes on that machine, form the computation fabric. 
+    * The NFS gateway received a number of supportability improvements and
+      bug fixes. The Hadoop portmapper is no longer required to run the gateway,
+      and the gateway is now able to reject connections from unprivileged ports.
 
-  The per-application ApplicationMaster is, in effect, a framework specific 
-  library and is tasked with negotiating resources from the ResourceManager and 
-  working with the NodeManager(s) to execute and monitor the tasks.
+    * The SecondaryNameNode, JournalNode, and DataNode web UIs have been
+      modernized with HTML5 and Javascript.
 
-  More details are available in the 
-  {{{./hadoop-yarn/hadoop-yarn-site/YARN.html}YARN}}
-  document.
+  * {YARN}
+
+    * YARN's REST APIs now support write/modify operations. Users can submit and
+      kill applications through REST APIs.
+
+    * The timeline store in YARN, used for storing generic and
+      application-specific information for applications, supports authentication
+      through Kerberos.
+
+    * The Fair Scheduler supports dynamic hierarchical user queues, user queues
+      are created dynamically at runtime under any specified parent-queue.
 
 Getting Started
 
