@@ -213,6 +213,11 @@ public class EncryptionZoneManager {
     }
 
     final INodesInPath srcIIP = dir.getINodesInPath4Write(src, false);
+    if (srcIIP != null &&
+        srcIIP.getLastINode() != null &&
+        !srcIIP.getLastINode().isDirectory()) {
+      throw new IOException("Attempt to create an encryption zone for a file.");
+    }
     EncryptionZoneInt ezi = getEncryptionZoneForPath(srcIIP);
     if (ezi != null) {
       throw new IOException("Directory " + src + " is already in an " +

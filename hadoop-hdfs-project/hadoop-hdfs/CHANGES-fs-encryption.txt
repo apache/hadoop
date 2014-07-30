@@ -78,3 +78,6 @@ fs-encryption (Unreleased)
 
     HDFS-6733. Creating encryption zone results in NPE when
     KeyProvider is null. (clamb)
+
+    HDFS-6785. Should not be able to create encryption zone using path
+    to a non-directory file. (clamb)

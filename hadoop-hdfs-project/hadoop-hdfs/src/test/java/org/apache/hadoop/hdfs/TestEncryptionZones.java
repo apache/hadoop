@@ -227,6 +227,14 @@ public class TestEncryptionZones {
       assertExceptionContains("create an encryption zone", e);
     }
 
+    /* Test failure of create EZ on a file. */
+    try {
+      dfsAdmin.createEncryptionZone(notEmptyChild, TEST_KEY);
+      fail("Created EZ on a file");
+    } catch (IOException e) {
+      assertExceptionContains("create an encryption zone for a file.", e);
+    }
+
     /* Test failure of creating an EZ passing a key that doesn't exist. */
     final Path zone2 = new Path("/zone2");
     fsWrapper.mkdir(zone2, FsPermission.getDirDefault(), false);
