@@ -115,8 +115,10 @@ public class KMSAuthenticationFilter extends AuthenticationFilter {
       if (queryString != null) {
         requestURL.append("?").append(queryString);
       }
-      KMSAudit.unauthenticated(request.getRemoteHost(), method,
-          requestURL.toString(), kmsResponse.msg);
+
+      KMSWebApp.getKMSAudit().unauthenticated(
+          request.getRemoteHost(), method, requestURL.toString(),
+          kmsResponse.msg);
     }
   }
 

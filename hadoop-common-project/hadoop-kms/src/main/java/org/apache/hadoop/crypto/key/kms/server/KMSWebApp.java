@@ -76,6 +76,7 @@ public class KMSWebApp implements ServletContextListener {
   private static Meter decryptEEKCallsMeter;
   private static Meter generateEEKCallsMeter;
   private static Meter invalidCallsMeter;
+  private static KMSAudit kmsAudit;
   private static KeyProviderCryptoExtension keyProviderCryptoExtension;
 
   static {
@@ -144,6 +145,11 @@ public class KMSWebApp implements ServletContextListener {
       unauthenticatedCallsMeter = metricRegistry.register(
           UNAUTHENTICATED_CALLS_METER, new Meter());
 
+      kmsAudit =
+          new KMSAudit(kmsConf.getLong(
+              KMSConfiguration.KMS_AUDIT_AGGREGATION_DELAY,
+              KMSConfiguration.KMS_AUDIT_AGGREGATION_DELAY_DEFAULT));
+
       // this is required for the the JMXJsonServlet to work properly.
       // the JMXJsonServlet is behind the authentication filter,
       // thus the '*' ACL.
@@ -199,6 +205,7 @@ public class KMSWebApp implements ServletContextListener {
 
   @Override
   public void contextDestroyed(ServletContextEvent sce) {
+    kmsAudit.shutdown();
     acls.stopReloader();
     jmxReporter.stop();
     jmxReporter.close();
@@ -244,5 +251,9 @@ public class KMSWebApp implements ServletContextListener {
 
   public static KeyProviderCryptoExtension getKeyProvider() {
     return keyProviderCryptoExtension;
+  }
+
+  public static KMSAudit getKMSAudit() {
+    return kmsAudit;
   }
 }
