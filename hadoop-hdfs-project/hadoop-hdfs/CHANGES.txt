@@ -324,6 +324,14 @@ Release 2.6.0 - UNRELEASED
     HDFS-6750. The DataNode should use its shared memory segment to mark
     short-circuit replicas that have been unlinked as stale (cmccabe)
 
+    HDFS-6739. Add getDatanodeStorageReport to ClientProtocol. (szetszwo)
+
+    HDFS-6665. Add tests for XAttrs in combination with viewfs.
+    (Stephen Chu via wang)
+
+    HDFS-6778. The extended attributes javadoc should simply refer to the
+    user docs. (clamb via wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -937,6 +945,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6723. New NN webUI no longer displays decommissioned state for dead node.
     (Ming Ma via wheat9)
+
+    HDFS-6717. JIRA HDFS-5804 breaks default nfs-gateway behavior for unsecured config
+    (brandonli)
 
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 

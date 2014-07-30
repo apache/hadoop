@@ -283,6 +283,19 @@ message GetDatanodeReportResponseProto {
   repeated DatanodeInfoProto di = 1;
 }
 
+message GetDatanodeStorageReportRequestProto {
+  required DatanodeReportTypeProto type = 1;
+}
+
+message DatanodeStorageReportProto {
+  required DatanodeInfoProto datanodeInfo = 1;
+  repeated StorageReportProto storageReports = 2;
+}
+
+message GetDatanodeStorageReportResponseProto {
+  repeated DatanodeStorageReportProto datanodeStorageReports = 1;
+}
+
 message GetPreferredBlockSizeRequestProto {
   required string filename = 1;
 }
@@ -674,6 +687,8 @@ service ClientNamenodeProtocol {
   rpc getFsStats(GetFsStatusRequestProto) returns(GetFsStatsResponseProto);
   rpc getDatanodeReport(GetDatanodeReportRequestProto)
       returns(GetDatanodeReportResponseProto);
+  rpc getDatanodeStorageReport(GetDatanodeStorageReportRequestProto)
+      returns(GetDatanodeStorageReportResponseProto);
   rpc getPreferredBlockSize(GetPreferredBlockSizeRequestProto)
       returns(GetPreferredBlockSizeResponseProto);
   rpc setSafeMode(SetSafeModeRequestProto)

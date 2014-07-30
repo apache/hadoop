@@ -26,11 +26,13 @@ import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.AvroTestUtil;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 
 import com.google.common.base.Joiner;
 
 import junit.framework.TestCase;
+import static org.junit.Assert.fail;
 
 public class TestPath extends TestCase {
   /**
@@ -305,6 +307,28 @@ public class TestPath extends TestCase {
     // if the child uri is absolute path
     assertEquals("foo://bar/fud#boo", new Path(new Path(new URI(
         "foo://bar/baz#bud")), new Path(new URI("/fud#boo"))).toString());
+
+    // empty URI
+    URI uri3 = new URI("");
+    assertEquals("", uri3.toString());
+    try {
+      path = new Path(uri3);
+      fail("Expected exception for empty URI");
+    } catch (IllegalArgumentException e) {
+      // expect to receive an IllegalArgumentException
+      GenericTestUtils.assertExceptionContains("Can not create a Path"
+          + " from an empty URI", e);
+    }
+    // null URI
+    uri3 = null;
+    try {
+      path = new Path(uri3);
+      fail("Expected exception for null URI");
+    } catch (IllegalArgumentException e) {
+      // expect to receive an IllegalArgumentException
+      GenericTestUtils.assertExceptionContains("Can not create a Path"
+          + " from a null URI", e);
+    }
   }
 
   /** Test URIs created from Path objects */

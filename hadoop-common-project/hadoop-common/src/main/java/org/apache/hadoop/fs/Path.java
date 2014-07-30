@@ -128,7 +128,20 @@ public class Path implements Comparable {
            "Can not create a Path from an empty string");
     }   
   }
-  
+
+  /** check URI parameter of Path constructor. */
+  private void checkPathArg(URI aUri) throws IllegalArgumentException {
+    // disallow construction of a Path from an empty URI
+    if (aUri == null) {
+      throw new IllegalArgumentException(
+          "Can not create a Path from a null URI");
+    }
+    if (aUri.toString().isEmpty()) {
+      throw new IllegalArgumentException(
+          "Can not create a Path from an empty URI");
+    }
+  }
+
   /** Construct a path from a String.  Path strings are URIs, but with
    * unescaped elements and some additional normalization. */
   public Path(String pathString) throws IllegalArgumentException {
@@ -176,6 +189,7 @@ public class Path implements Comparable {
    * Construct a path from a URI
    */
   public Path(URI aUri) {
+    checkPathArg(aUri);
     uri = aUri.normalize();
   }
   

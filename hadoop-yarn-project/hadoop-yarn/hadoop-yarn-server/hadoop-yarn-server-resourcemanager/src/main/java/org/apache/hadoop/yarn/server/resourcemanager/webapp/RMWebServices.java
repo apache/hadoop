@@ -55,6 +55,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
@@ -680,6 +681,11 @@ public class RMWebServices {
       throw new AuthorizationException(msg);
     }
 
+    if (UserGroupInformation.isSecurityEnabled() && isStaticUser(callerUGI)) {
+      String msg = "The default static user cannot carry out this operation.";
+      return Response.status(Status.FORBIDDEN).entity(msg).build();
+    }
+
     String userName = callerUGI.getUserName();
     RMApp app = null;
     try {
@@ -800,6 +806,13 @@ public class RMWebServices {
     return callerUGI;
   }
 
+  private boolean isStaticUser(UserGroupInformation callerUGI) {
+    String staticUser =
+        conf.get(CommonConfigurationKeys.HADOOP_HTTP_STATIC_USER,
+          CommonConfigurationKeys.DEFAULT_HADOOP_HTTP_STATIC_USER);
+    return staticUser.equals(callerUGI.getUserName());
+  }
+
   /**
    * Generates a new ApplicationId which is then sent to the client
    * 
@@ -821,6 +834,10 @@ public class RMWebServices {
     if (callerUGI == null) {
       throw new AuthorizationException("Unable to obtain user name, "
           + "user not authenticated");
+    }
+    if (UserGroupInformation.isSecurityEnabled() && isStaticUser(callerUGI)) {
+      String msg = "The default static user cannot carry out this operation.";
+      return Response.status(Status.FORBIDDEN).entity(msg).build();
     }
 
     NewApplication appId = createNewApplication();
@@ -857,6 +874,11 @@ public class RMWebServices {
     if (callerUGI == null) {
       throw new AuthorizationException("Unable to obtain user name, "
           + "user not authenticated");
+    }
+
+    if (UserGroupInformation.isSecurityEnabled() && isStaticUser(callerUGI)) {
+      String msg = "The default static user cannot carry out this operation.";
+      return Response.status(Status.FORBIDDEN).entity(msg).build();
     }
 
     ApplicationSubmissionContext appContext =
@@ -975,7 +997,7 @@ public class RMWebServices {
    * 
    * @param newApp
    *          the information provided by the user
-   * @return
+   * @return created context
    * @throws BadRequestException
    * @throws IOException
    */

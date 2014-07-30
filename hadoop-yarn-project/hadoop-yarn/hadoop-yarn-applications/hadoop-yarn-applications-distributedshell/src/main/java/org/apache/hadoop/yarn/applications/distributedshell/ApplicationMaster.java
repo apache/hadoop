@@ -208,7 +208,8 @@ public class ApplicationMaster {
 
   // App Master configuration
   // No. of containers to run shell command on
-  private int numTotalContainers = 1;
+  @VisibleForTesting
+  protected int numTotalContainers = 1;
   // Memory to request for the container on which the shell command will run
   private int containerMemory = 10;
   // VirtualCores to request for the container on which the shell command will run
@@ -594,8 +595,8 @@ public class ApplicationMaster {
 
     List<Container> previousAMRunningContainers =
         response.getContainersFromPreviousAttempts();
-    LOG.info("Received " + previousAMRunningContainers.size()
-        + " previous AM's running containers on AM registration.");
+    LOG.info(appAttemptID + " received " + previousAMRunningContainers.size()
+      + " previous attempts' running containers on AM registration.");
     numAllocatedContainers.addAndGet(previousAMRunningContainers.size());
 
     int numTotalContainersToRequest =
@@ -610,7 +611,7 @@ public class ApplicationMaster {
       ContainerRequest containerAsk = setupContainerAskForRM();
       amRMClient.addContainerRequest(containerAsk);
     }
-    numRequestedContainers.set(numTotalContainersToRequest);
+    numRequestedContainers.set(numTotalContainers);
     try {
       publishApplicationAttemptEvent(timelineClient, appAttemptID.toString(),
           DSEvent.DS_APP_ATTEMPT_END);
@@ -689,7 +690,7 @@ public class ApplicationMaster {
       LOG.info("Got response from RM for container ask, completedCnt="
           + completedContainers.size());
       for (ContainerStatus containerStatus : completedContainers) {
-        LOG.info("Got container status for containerID="
+        LOG.info(appAttemptID + " got container status for containerID="
             + containerStatus.getContainerId() + ", state="
             + containerStatus.getState() + ", exitStatus="
             + containerStatus.getExitStatus() + ", diagnostics="

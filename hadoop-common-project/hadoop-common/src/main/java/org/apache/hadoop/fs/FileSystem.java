@@ -2364,21 +2364,10 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   /**
    * Set an xattr of a file or directory.
-   * The name must be prefixed with user/trusted/security/system and
-   * followed by ".". For example, "user.attr".
+   * The name must be prefixed with the namespace followed by ".". For example,
+   * "user.attr".
    * <p/>
-   * A regular user can only set an xattr for the "user" namespace.
-   * The super user can set an xattr of either the "user" or "trusted" namespaces.
-   * The xattrs of the "security" and "system" namespaces are only used/exposed 
-   * internally by/to the FS impl.
-   * <p/>
-   * The access permissions of an xattr in the "user" namespace are
-   * defined by the file and directory permission bits.
-   * An xattr can only be set when the logged-in user has the correct permissions.
-   * If the xattr exists, it will be replaced.
-   * <p/>
-   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
-   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param path Path to modify
    * @param name xattr name.
@@ -2393,21 +2382,10 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   /**
    * Set an xattr of a file or directory.
-   * The name must be prefixed with user/trusted/security/system and
-   * followed by ".". For example, "user.attr".
+   * The name must be prefixed with the namespace followed by ".". For example,
+   * "user.attr".
    * <p/>
-   * A regular user can only set an xattr for the "user" namespace.
-   * The super user can set an xattr of either the "user" or "trusted" namespaces.
-   * The xattrs of the "security" and "system" namespaces are only used/exposed 
-   * internally by/to the FS impl.
-   * <p/>
-   * The access permissions of an xattr in the "user" namespace are
-   * defined by the file and directory permission bits.
-   * An xattr can only be set if the logged-in user has the correct permissions.
-   * If the xattr exists, it is replaced.
-   * <p/>
-   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
-   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param path Path to modify
    * @param name xattr name.
@@ -2423,20 +2401,10 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   /**
    * Get an xattr name and value for a file or directory.
-   * The name must be prefixed with user/trusted/security/system and
-   * followed by ".". For example, "user.attr".
+   * The name must be prefixed with the namespace followed by ".". For example,
+   * "user.attr".
    * <p/>
-   * 
-   * A regular user can only get an xattr for the "user" namespace.
-   * The super user can get an xattr of either the "user" or "trusted" namespaces.
-   * The xattrs of the "security" and "system" namespaces are only used/exposed 
-   * internally by/to the FS impl.
-   * <p/>
-   * An xattr will only be returned if the logged-in user has the
-   * correct permissions.
-   * <p/>
-   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
-   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param path Path to get extended attribute
    * @param name xattr name.
@@ -2453,13 +2421,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Only those xattrs which the logged-in user has permissions to view
    * are returned.
    * <p/>
-   * A regular user can only get xattrs for the "user" namespace.
-   * The super user can only get xattrs for "user" and "trusted" namespaces.
-   * The xattrs of the "security" and "system" namespaces are only used/exposed
-   * internally by/to the FS impl.
-   * <p/>
-   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
-   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param path Path to get extended attributes
    * @return Map<String, byte[]> describing the XAttrs of the file or directory
@@ -2475,13 +2437,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Only those xattrs which the logged-in user has permissions to view
    * are returned.
    * <p/>
-   * A regular user can only get xattrs for the "user" namespace.
-   * The super user can only get xattrs for "user" and "trusted" namespaces.
-   * The xattrs of the "security" and "system" namespaces are only used/exposed
-   * internally by/to the FS impl.
-   * <p/>
-   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
-   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param path Path to get extended attributes
    * @param names XAttr names.
@@ -2499,14 +2455,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Only those xattr names which the logged-in user has permissions to view
    * are returned.
    * <p/>
-   * A regular user can only get xattr names for the "user" namespace.
-   * The super user can only get xattr names for "user" and "trusted"
-   * namespaces.
-   * The xattrs of the "security" and "system" namespaces are only
-   * used/exposed internally by/to the FS impl.
-   * <p/>
-   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
-   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param path Path to get extended attributes
    * @return List<String> of the XAttr names of the file or directory
@@ -2519,21 +2468,10 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   /**
    * Remove an xattr of a file or directory.
-   * The name must be prefixed with user/trusted/security/system and
-   * followed by ".". For example, "user.attr".
+   * The name must be prefixed with the namespace followed by ".". For example,
+   * "user.attr".
    * <p/>
-   * A regular user can only remove an xattr for the "user" namespace.
-   * The super user can remove an xattr of either the "user" or "trusted" namespaces.
-   * The xattrs of the "security" and "system" namespaces are only used/exposed 
-   * internally by/to the FS impl.
-   * <p/>
-   * The access permissions of an xattr in the "user" namespace are
-   * defined by the file and directory permission bits.
-   * An xattr can only be set when the logged-in user has the correct permissions.
-   * If the xattr exists, it will be replaced.
-   * <p/>
-   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
-   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param path Path to remove extended attribute
    * @param name xattr name
