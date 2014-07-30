@@ -71,6 +71,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6739. Add getDatanodeStorageReport to ClientProtocol. (szetszwo)
 
+    HDFS-6665. Add tests for XAttrs in combination with viewfs.
+    (Stephen Chu via wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
