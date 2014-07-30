@@ -24,6 +24,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.net.BindException;
+import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -42,24 +44,42 @@ public class TestRefreshCallQueue {
   private FileSystem fs;
   static int mockQueueConstructions;
   static int mockQueuePuts;
-  private static final int NNPort = 54222;
-  private static String CALLQUEUE_CONFIG_KEY = "ipc." + NNPort + ".callqueue.impl";
+  private String callQueueConfigKey = "";
+  private final Random rand = new Random();
 
   @Before
   public void setUp() throws Exception {
     // We want to count additional events, so we reset here
     mockQueueConstructions = 0;
     mockQueuePuts = 0;
+    int portRetries = 5;
+    int nnPort;
 
-    config = new Configuration();
-    config.setClass(CALLQUEUE_CONFIG_KEY,
-        MockCallQueue.class, BlockingQueue.class);
-    config.set("hadoop.security.authorization", "true");
+    for (; portRetries > 0; --portRetries) {
+      // Pick a random port in the range [30000,60000).
+      nnPort = 30000 + rand.nextInt(30000);  
+      config = new Configuration();
+      callQueueConfigKey = "ipc." + nnPort + ".callqueue.impl";
+      config.setClass(callQueueConfigKey,
+          MockCallQueue.class, BlockingQueue.class);
+      config.set("hadoop.security.authorization", "true");
 
-    FileSystem.setDefaultUri(config, "hdfs://localhost:" + NNPort);
-    fs = FileSystem.get(config);
-    cluster = new MiniDFSCluster.Builder(config).nameNodePort(NNPort).build();
-    cluster.waitActive();
+      FileSystem.setDefaultUri(config, "hdfs://localhost:" + nnPort);
+      fs = FileSystem.get(config);
+      
+      try {
+        cluster = new MiniDFSCluster.Builder(config).nameNodePort(nnPort).build();
+        cluster.waitActive();
+        break;
+      } catch (BindException be) {
+        // Retry with a different port number.
+      }
+    }
+    
+    if (portRetries == 0) {
+      // Bail if we get very unlucky with our choice of ports.
+      fail("Failed to pick an ephemeral port for the NameNode RPC server.");
+    }
   }
 
   @After
