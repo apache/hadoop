@@ -332,6 +332,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6778. The extended attributes javadoc should simply refer to the
     user docs. (clamb via wang)
 
+    HDFS-6570. add api that enables checking if a user has certain permissions on
+    a file. (Jitendra Pandey via cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
