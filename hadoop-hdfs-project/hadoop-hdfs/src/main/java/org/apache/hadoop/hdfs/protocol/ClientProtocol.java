@@ -1267,17 +1267,11 @@ public interface ClientProtocol {
   
   /**
    * Set xattr of a file or directory.
-   * A regular user only can set xattr of "user" namespace.
-   * A super user can set xattr of "user" and "trusted" namespace.
-   * XAttr of "security" and "system" namespace is only used/exposed 
-   * internally to the FS impl.
+   * The name must be prefixed with the namespace followed by ".". For example,
+   * "user.attr".
    * <p/>
-   * For xattr of "user" namespace, its access permissions are 
-   * defined by the file or directory permission bits.
-   * XAttr will be set only when login user has correct permissions.
-   * <p/>
-   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
-   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * Refer to the HDFS extended attributes user documentation for details.
+   *
    * @param src file or directory
    * @param xAttr <code>XAttr</code> to set
    * @param flag set flag
@@ -1288,18 +1282,13 @@ public interface ClientProtocol {
       throws IOException;
   
   /**
-   * Get xattrs of file or directory. Values in xAttrs parameter are ignored.
-   * If xattrs is null or empty, equals getting all xattrs of the file or 
-   * directory.
-   * Only xattrs which login user has correct permissions will be returned. 
+   * Get xattrs of a file or directory. Values in xAttrs parameter are ignored.
+   * If xAttrs is null or empty, this is the same as getting all xattrs of the
+   * file or directory.  Only those xattrs for which the logged-in user has
+   * permissions to view are returned.
    * <p/>
-   * A regular user only can get xattr of "user" namespace.
-   * A super user can get xattr of "user" and "trusted" namespace.
-   * XAttr of "security" and "system" namespace is only used/exposed 
-   * internally to the FS impl.
-   * <p/>
-   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
-   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * Refer to the HDFS extended attributes user documentation for details.
+   *
    * @param src file or directory
    * @param xAttrs xAttrs to get
    * @return List<XAttr> <code>XAttr</code> list 
@@ -1314,13 +1303,8 @@ public interface ClientProtocol {
    * Only the xattr names for which the logged in user has the permissions to
    * access will be returned.
    * <p/>
-   * A regular user only can get xattr names from the "user" namespace.
-   * A super user can get xattr names of the "user" and "trusted" namespace.
-   * XAttr names of the "security" and "system" namespaces are only used/exposed
-   * internally by the file system impl.
-   * <p/>
-   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
-   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * Refer to the HDFS extended attributes user documentation for details.
+   *
    * @param src file or directory
    * @param xAttrs xAttrs to get
    * @return List<XAttr> <code>XAttr</code> list
@@ -1332,15 +1316,11 @@ public interface ClientProtocol {
   
   /**
    * Remove xattr of a file or directory.Value in xAttr parameter is ignored.
-   * Name must be prefixed with user/trusted/security/system.
+   * The name must be prefixed with the namespace followed by ".". For example,
+   * "user.attr".
    * <p/>
-   * A regular user only can remove xattr of "user" namespace.
-   * A super user can remove xattr of "user" and "trusted" namespace.
-   * XAttr of "security" and "system" namespace is only used/exposed 
-   * internally to the FS impl.
-   * <p/>
-   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
-   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * Refer to the HDFS extended attributes user documentation for details.
+   *
    * @param src file or directory
    * @param xAttr <code>XAttr</code> to remove
    * @throws IOException

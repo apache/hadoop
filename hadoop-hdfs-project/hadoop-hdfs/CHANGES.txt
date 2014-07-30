@@ -329,6 +329,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6665. Add tests for XAttrs in combination with viewfs.
     (Stephen Chu via wang)
 
+    HDFS-6778. The extended attributes javadoc should simply refer to the
+    user docs. (clamb via wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
