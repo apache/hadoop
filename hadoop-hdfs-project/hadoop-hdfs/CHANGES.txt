@@ -394,6 +394,10 @@ Release 2.6.0 - UNRELEASED
     HDFS-6749. FSNamesystem methods should call resolvePath.
     (Charles Lamb via cnauroth)
 
+    HDFS-4629. Using com.sun.org.apache.xml.internal.serialize.* in
+    XmlEditsVisitor.java is JVM vendor specific. Breaks IBM JAVA.
+    (Amir Sanjar via stevel)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
