@@ -68,6 +68,8 @@ fs-encryption (Unreleased)
     HDFS-6771. Require specification of an encryption key when creating
     an encryption zone. (wang)
 
+    HDFS-6730. Create a .RAW extended attribute namespace. (clamb)
+
   OPTIMIZATIONS
 
   BUG FIXES

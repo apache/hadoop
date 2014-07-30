@@ -8594,7 +8594,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     checkXAttrSize(xAttr);
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
-    XAttrPermissionFilter.checkPermissionForApi(pc, xAttr);
+    XAttrPermissionFilter.checkPermissionForApi(pc, xAttr,
+        FSDirectory.isReservedRawName(src));
     checkOperation(OperationCategory.WRITE);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
@@ -8640,10 +8641,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     String src = srcArg;
     nnConf.checkXAttrsConfigFlag();
     FSPermissionChecker pc = getPermissionChecker();
+    final boolean isRawPath = FSDirectory.isReservedRawName(src);
     boolean getAll = xAttrs == null || xAttrs.isEmpty();
     if (!getAll) {
       try {
-        XAttrPermissionFilter.checkPermissionForApi(pc, xAttrs);
+        XAttrPermissionFilter.checkPermissionForApi(pc, xAttrs, isRawPath);
       } catch (AccessControlException e) {
         logAuditEvent(false, "getXAttrs", srcArg);
         throw e;
@@ -8660,7 +8662,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       List<XAttr> all = dir.getXAttrs(src);
       List<XAttr> filteredAll = XAttrPermissionFilter.
-          filterXAttrsForApi(pc, all);
+          filterXAttrsForApi(pc, all, isRawPath);
       if (getAll) {
         return filteredAll;
       } else {
@@ -8696,6 +8698,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   List<XAttr> listXAttrs(String src) throws IOException {
     nnConf.checkXAttrsConfigFlag();
     final FSPermissionChecker pc = getPermissionChecker();
+    final boolean isRawPath = FSDirectory.isReservedRawName(src);
     checkOperation(OperationCategory.READ);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     readLock();
@@ -8708,7 +8711,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       final List<XAttr> all = dir.getXAttrs(src);
       final List<XAttr> filteredAll = XAttrPermissionFilter.
-        filterXAttrsForApi(pc, all);
+        filterXAttrsForApi(pc, all, isRawPath);
       return filteredAll;
     } catch (AccessControlException e) {
       logAuditEvent(false, "listXAttrs", src);
@@ -8753,7 +8756,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     nnConf.checkXAttrsConfigFlag();
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
-      XAttrPermissionFilter.checkPermissionForApi(pc, xAttr);
+    XAttrPermissionFilter.checkPermissionForApi(pc, xAttr,
+        FSDirectory.isReservedRawName(src));
     checkOperation(OperationCategory.WRITE);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
