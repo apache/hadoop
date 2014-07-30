@@ -111,6 +111,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-1796. container-executor shouldn't require o-r permissions (atm)
 
+    YARN-2354. DistributedShell may allocate more containers than client
+    specified after AM restarts. (Li Lu via jianhe)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
