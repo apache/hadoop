@@ -23,6 +23,12 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
@@ -42,6 +48,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.namenode.EncryptionFaultInjector;
 import org.apache.hadoop.hdfs.server.namenode.EncryptionZoneManager;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -103,6 +110,7 @@ public class TestEncryptionZones {
     if (cluster != null) {
       cluster.shutdown();
     }
+    EncryptionFaultInjector.instance = new EncryptionFaultInjector();
   }
 
   public void assertNumZones(final int numZones) throws IOException {
@@ -158,7 +166,8 @@ public class TestEncryptionZones {
     int numZones = 0;
 
     /* Test failure of create EZ on a directory that doesn't exist. */
-    final Path zone1 = new Path("/zone1");
+    final Path zoneParent = new Path("/zones");
+    final Path zone1 = new Path(zoneParent, "zone1");
     try {
       dfsAdmin.createEncryptionZone(zone1, TEST_KEY);
       fail("expected /test doesn't exist");
@@ -187,6 +196,14 @@ public class TestEncryptionZones {
       fail("EZ in an EZ");
     } catch (IOException e) {
       assertExceptionContains("already in an encryption zone", e);
+    }
+
+    /* create EZ on parent of an EZ should fail */
+    try {
+      dfsAdmin.createEncryptionZone(zoneParent, TEST_KEY);
+      fail("EZ over an EZ");
+    } catch (IOException e) {
+      assertExceptionContains("encryption zone for a non-empty directory", e);
     }
 
     /* create EZ on a folder with a folder fails */
@@ -449,6 +466,7 @@ public class TestEncryptionZones {
     final Configuration clusterConf = cluster.getConfiguration(0);
     clusterConf.set(KeyProviderFactory.KEY_PROVIDER_PATH, "");
     cluster.restartNameNode(true);
+    cluster.waitActive();
     /* Test failure of create EZ on a directory that doesn't exist. */
     final Path zone1 = new Path("/zone1");
     /* Normal creation of an EZ */
@@ -462,6 +480,169 @@ public class TestEncryptionZones {
     clusterConf.set(KeyProviderFactory.KEY_PROVIDER_PATH,
         JavaKeyStoreProvider.SCHEME_NAME + "://file" + testRootDir + "/test.jks"
     );
-    cluster.restartNameNode(true);
+    // Try listing EZs as well
+    List<EncryptionZone> zones = dfsAdmin.listEncryptionZones();
+    assertEquals("Expected no zones", 0, zones.size());
+  }
+
+  private class MyInjector extends EncryptionFaultInjector {
+    int generateCount;
+    CountDownLatch ready;
+    CountDownLatch wait;
+
+    public MyInjector() {
+      this.ready = new CountDownLatch(1);
+      this.wait = new CountDownLatch(1);
+    }
+
+    @Override
+    public void startFileAfterGenerateKey() throws IOException {
+      ready.countDown();
+      try {
+        wait.await();
+      } catch (InterruptedException e) {
+        throw new IOException(e);
+      }
+      generateCount++;
+    }
+  }
+
+  private class CreateFileTask implements Callable<Void> {
+    private FileSystemTestWrapper fsWrapper;
+    private Path name;
+
+    CreateFileTask(FileSystemTestWrapper fsWrapper, Path name) {
+      this.fsWrapper = fsWrapper;
+      this.name = name;
+    }
+
+    @Override
+    public Void call() throws Exception {
+      fsWrapper.createFile(name);
+      return null;
+    }
+  }
+
+  private class InjectFaultTask implements Callable<Void> {
+    final Path zone1 = new Path("/zone1");
+    final Path file = new Path(zone1, "file1");
+    final ExecutorService executor = Executors.newSingleThreadExecutor();
+
+    MyInjector injector;
+
+    @Override
+    public Void call() throws Exception {
+      // Set up the injector
+      injector = new MyInjector();
+      EncryptionFaultInjector.instance = injector;
+      Future<Void> future =
+          executor.submit(new CreateFileTask(fsWrapper, file));
+      injector.ready.await();
+      // Do the fault
+      doFault();
+      // Allow create to proceed
+      injector.wait.countDown();
+      future.get();
+      // Cleanup and postconditions
+      doCleanup();
+      return null;
+    }
+
+    public void doFault() throws Exception {}
+
+    public void doCleanup() throws Exception {}
+  }
+
+  /**
+   * Tests the retry logic in startFile. We release the lock while generating
+   * an EDEK, so tricky things can happen in the intervening time.
+   */
+  @Test(timeout = 120000)
+  public void testStartFileRetry() throws Exception {
+    final Path zone1 = new Path("/zone1");
+    final Path file = new Path(zone1, "file1");
+    fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+
+    // Test when the parent directory becomes an EZ
+    executor.submit(new InjectFaultTask() {
+      @Override
+      public void doFault() throws Exception {
+        dfsAdmin.createEncryptionZone(zone1, TEST_KEY);
+      }
+      @Override
+      public void doCleanup() throws Exception {
+        assertEquals("Expected a startFile retry", 2, injector.generateCount);
+        fsWrapper.delete(file, false);
+      }
+    }).get();
+
+    // Test when the parent directory unbecomes an EZ
+    executor.submit(new InjectFaultTask() {
+      @Override
+      public void doFault() throws Exception {
+        fsWrapper.delete(zone1, true);
+      }
+      @Override
+      public void doCleanup() throws Exception {
+        assertEquals("Expected no startFile retries", 1, injector.generateCount);
+        fsWrapper.delete(file, false);
+      }
+    }).get();
+
+    // Test when the parent directory becomes a different EZ
+    fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
+    final String otherKey = "otherKey";
+    createKey(otherKey);
+    dfsAdmin.createEncryptionZone(zone1, TEST_KEY);
+
+    executor.submit(new InjectFaultTask() {
+      @Override
+      public void doFault() throws Exception {
+        fsWrapper.delete(zone1, true);
+        fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
+        dfsAdmin.createEncryptionZone(zone1, otherKey);
+      }
+      @Override
+      public void doCleanup() throws Exception {
+        assertEquals("Expected a startFile retry", 2, injector.generateCount);
+        fsWrapper.delete(zone1, true);
+      }
+    }).get();
+
+    // Test that the retry limit leads to an error
+    fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
+    final String anotherKey = "anotherKey";
+    createKey(anotherKey);
+    dfsAdmin.createEncryptionZone(zone1, anotherKey);
+    String keyToUse = otherKey;
+
+    MyInjector injector = new MyInjector();
+    EncryptionFaultInjector.instance = injector;
+    Future<?> future = executor.submit(new CreateFileTask(fsWrapper, file));
+
+    // Flip-flop between two EZs to repeatedly fail
+    for (int i=0; i<10; i++) {
+      injector.ready.await();
+      fsWrapper.delete(zone1, true);
+      fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
+      dfsAdmin.createEncryptionZone(zone1, keyToUse);
+      if (keyToUse == otherKey) {
+        keyToUse = anotherKey;
+      } else {
+        keyToUse = otherKey;
+      }
+      injector.wait.countDown();
+      injector = new MyInjector();
+      EncryptionFaultInjector.instance = injector;
+    }
+    try {
+      future.get();
+      fail("Expected exception from too many retries");
+    } catch (ExecutionException e) {
+      assertExceptionContains(
+          "Too many retries because of encryption zone operations",
+          e.getCause());
+    }
   }
 }

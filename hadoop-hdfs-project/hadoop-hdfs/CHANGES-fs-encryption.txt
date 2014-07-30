@@ -70,6 +70,8 @@ fs-encryption (Unreleased)
 
     HDFS-6730. Create a .RAW extended attribute namespace. (clamb)
 
+    HDFS-6692. Add more HDFS encryption tests. (wang)
+
   OPTIMIZATIONS
 
   BUG FIXES

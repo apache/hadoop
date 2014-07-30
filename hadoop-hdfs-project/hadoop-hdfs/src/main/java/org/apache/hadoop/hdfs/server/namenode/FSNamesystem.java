@@ -2498,7 +2498,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         // Generate EDEK if necessary while not holding the lock
         EncryptedKeyVersion edek =
             generateEncryptedDataEncryptionKey(ezKeyName);
-
+        EncryptionFaultInjector.getInstance().startFileAfterGenerateKey();
         // Try to create the file with the computed cipher suite and EDEK
         writeLock();
         try {
