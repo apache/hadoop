@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -584,6 +585,7 @@ public class TestINodeFile {
         fs.getAclStatus(testFileInodePath);
         fs.getXAttrs(testFileInodePath);
         fs.listXAttrs(testFileInodePath);
+        fs.access(testFileInodePath, FsAction.READ_WRITE);
       }
       
       // symbolic link related tests

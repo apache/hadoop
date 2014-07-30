@@ -8461,6 +8461,29 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
+  void checkAccess(String src, FsAction mode) throws AccessControlException,
+      FileNotFoundException, UnresolvedLinkException, IOException {
+    checkOperation(OperationCategory.READ);
+    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+    readLock();
+    try {
+      checkOperation(OperationCategory.READ);
+      src = FSDirectory.resolvePath(src, pathComponents, dir);
+      if (dir.getINode(src) == null) {
+        throw new FileNotFoundException("Path not found");
+      }
+      if (isPermissionEnabled) {
+        FSPermissionChecker pc = getPermissionChecker();
+        checkPathAccess(pc, src, mode);
+      }
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "checkAccess", src);
+      throw e;
+    } finally {
+      readUnlock();
+    }
+  }
+
   /**
    * Default AuditLogger implementation; used when no access logger is
    * defined in the config file. It can also be explicitly listed in the

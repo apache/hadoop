@@ -54,6 +54,7 @@ import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.HealthCheckFailedException;
@@ -1438,6 +1439,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override
   public void removeXAttr(String src, XAttr xAttr) throws IOException {
     namesystem.removeXAttr(src, xAttr);
+  }
+
+  @Override
+  public void checkAccess(String path, FsAction mode) throws IOException {
+    namesystem.checkAccess(path, mode);
   }
 }
 

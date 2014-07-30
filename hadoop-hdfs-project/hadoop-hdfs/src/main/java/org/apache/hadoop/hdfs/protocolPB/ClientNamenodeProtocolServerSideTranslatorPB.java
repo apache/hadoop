@@ -174,6 +174,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Update
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpdateBlockForPipelineResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpdatePipelineRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpdatePipelineResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CheckAccessRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CheckAccessResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
@@ -319,6 +321,9 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   
   private static final RemoveXAttrResponseProto
     VOID_REMOVEXATTR_RESPONSE = RemoveXAttrResponseProto.getDefaultInstance();
+
+  private static final CheckAccessResponseProto
+    VOID_CHECKACCESS_RESPONSE = CheckAccessResponseProto.getDefaultInstance();
 
   /**
    * Constructor
@@ -1337,5 +1342,16 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throw new ServiceException(e);
     }
     return VOID_REMOVEXATTR_RESPONSE;
+  }
+
+  @Override
+  public CheckAccessResponseProto checkAccess(RpcController controller,
+     CheckAccessRequestProto req) throws ServiceException {
+    try {
+      server.checkAccess(req.getPath(), PBHelper.convert(req.getMode()));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return VOID_CHECKACCESS_RESPONSE;
   }
 }

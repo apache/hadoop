@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_DEFAULT;
@@ -1116,6 +1117,55 @@ public final class FileContext {
         return fs.getFileStatus(p);
       }
     }.resolve(this, absF);
+  }
+
+  /**
+   * Checks if the user can access a path.  The mode specifies which access
+   * checks to perform.  If the requested permissions are granted, then the
+   * method returns normally.  If access is denied, then the method throws an
+   * {@link AccessControlException}.
+   * <p/>
+   * The default implementation of this method calls {@link #getFileStatus(Path)}
+   * and checks the returned permissions against the requested permissions.
+   * Note that the getFileStatus call will be subject to authorization checks.
+   * Typically, this requires search (execute) permissions on each directory in
+   * the path's prefix, but this is implementation-defined.  Any file system
+   * that provides a richer authorization model (such as ACLs) may override the
+   * default implementation so that it checks against that model instead.
+   * <p>
+   * In general, applications should avoid using this method, due to the risk of
+   * time-of-check/time-of-use race conditions.  The permissions on a file may
+   * change immediately after the access call returns.  Most applications should
+   * prefer running specific file system actions as the desired user represented
+   * by a {@link UserGroupInformation}.
+   *
+   * @param path Path to check
+   * @param mode type of access to check
+   * @throws AccessControlException if access is denied
+   * @throws FileNotFoundException if the path does not exist
+   * @throws UnsupportedFileSystemException if file system for <code>path</code>
+   *   is not supported
+   * @throws IOException see specific implementation
+   * 
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws 
+   *           undeclared exception to RPC server
+   */
+  @InterfaceAudience.LimitedPrivate({"HDFS", "Hive"})
+  public void access(final Path path, final FsAction mode)
+      throws AccessControlException, FileNotFoundException,
+      UnsupportedFileSystemException, IOException {
+    final Path absPath = fixRelativePart(path);
+    new FSLinkResolver<Void>() {
+      @Override
+      public Void next(AbstractFileSystem fs, Path p) throws IOException,
+          UnresolvedLinkException {
+        fs.access(p, mode);
+        return null;
+      }
+    }.resolve(this, absPath);
   }
 
   /**
