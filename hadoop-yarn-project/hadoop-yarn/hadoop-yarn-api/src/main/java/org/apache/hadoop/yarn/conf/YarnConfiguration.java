@@ -126,6 +126,10 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_RM_ADDRESS =
     "0.0.0.0:" + DEFAULT_RM_PORT;
 
+  /** The actual bind address for the RM.*/
+  public static final String RM_BIND_HOST =
+    RM_PREFIX + "bind-host";
+
   /** The number of threads used to handle applications manager requests.*/
   public static final String RM_CLIENT_THREAD_COUNT =
     RM_PREFIX + "client.thread-count";
@@ -545,6 +549,10 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NM_ADDRESS = "0.0.0.0:"
       + DEFAULT_NM_PORT;
   
+  /** The actual bind address or the NM.*/
+  public static final String NM_BIND_HOST =
+    NM_PREFIX + "bind-host";
+
   /** who will execute(launch) the containers.*/
   public static final String NM_CONTAINER_EXECUTOR = 
     NM_PREFIX + "container-executor.class";
@@ -1131,6 +1139,10 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_TIMELINE_SERVICE_PORT = 10200;
   public static final String DEFAULT_TIMELINE_SERVICE_ADDRESS = "0.0.0.0:"
       + DEFAULT_TIMELINE_SERVICE_PORT;
+
+  /** The listening endpoint for the timeline service application.*/
+  public static final String TIMELINE_SERVICE_BIND_HOST =
+      TIMELINE_SERVICE_PREFIX + "bind-host";
 
   /** The number of threads to handle client RPC API requests. */
   public static final String TIMELINE_SERVICE_HANDLER_THREAD_COUNT =

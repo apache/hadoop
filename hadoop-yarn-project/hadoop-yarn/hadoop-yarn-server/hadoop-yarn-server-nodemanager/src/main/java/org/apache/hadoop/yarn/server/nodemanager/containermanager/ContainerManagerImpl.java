@@ -275,6 +275,7 @@ public class ContainerManagerImpl extends CompositeService implements
     YarnRPC rpc = YarnRPC.create(conf);
 
     InetSocketAddress initialAddress = conf.getSocketAddr(
+        YarnConfiguration.NM_BIND_HOST,
         YarnConfiguration.NM_ADDRESS,
         YarnConfiguration.DEFAULT_NM_ADDRESS,
         YarnConfiguration.DEFAULT_NM_PORT);
@@ -296,7 +297,22 @@ public class ContainerManagerImpl extends CompositeService implements
     		" server is still starting.");
     this.setBlockNewContainerRequests(true);
     server.start();
-    InetSocketAddress connectAddress = NetUtils.getConnectAddress(server);
+    
+    InetSocketAddress connectAddress;
+    String bindHost = conf.get(YarnConfiguration.NM_BIND_HOST);
+    String nmAddress = conf.getTrimmed(YarnConfiguration.NM_ADDRESS);
+    if (bindHost == null || bindHost.isEmpty() ||
+	nmAddress == null || nmAddress.isEmpty()) {
+      connectAddress = NetUtils.getConnectAddress(server);
+    } else {
+      //a bind-host case with an address, to support overriding the first hostname
+      //found when querying for our hostname with the specified address, combine
+      //the specified address with the actual port listened on by the server
+      connectAddress = NetUtils.getConnectAddress(
+	new InetSocketAddress(nmAddress.split(":")[0],
+			      server.getListenerAddress().getPort()));
+    }
+
     NodeId nodeId = NodeId.newInstance(
         connectAddress.getAddress().getCanonicalHostName(),
         connectAddress.getPort());
@@ -304,6 +320,7 @@ public class ContainerManagerImpl extends CompositeService implements
     this.context.getNMTokenSecretManager().setNodeId(nodeId);
     this.context.getContainerTokenSecretManager().setNodeId(nodeId);
     LOG.info("ContainerManager started at " + connectAddress);
+    LOG.info("ContainerManager bound to " + initialAddress);
     super.serviceStart();
   }
 

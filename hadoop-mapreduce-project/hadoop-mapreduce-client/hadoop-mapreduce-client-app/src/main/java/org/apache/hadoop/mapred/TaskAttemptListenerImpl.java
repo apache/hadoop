@@ -135,7 +135,9 @@ public class TaskAttemptListenerImpl extends CompositeService
       }
 
       server.start();
-      this.address = NetUtils.getConnectAddress(server);
+      this.address = NetUtils.createSocketAddrForHost(
+          context.getNMHostname(),
+          server.getListenerAddress().getPort());
     } catch (IOException e) {
       throw new YarnRuntimeException(e);
     }

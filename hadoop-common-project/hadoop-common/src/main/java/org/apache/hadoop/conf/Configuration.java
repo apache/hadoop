@@ -1838,6 +1838,38 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /**
+   * Get the socket address for <code>hostProperty</code> as a
+   * <code>InetSocketAddress</code>. If <code>hostProperty</code> is
+   * <code>null</code>, <code>addressProperty</code> will be used. This
+   * is useful for cases where we want to differentiate between host
+   * bind address and address clients should use to establish connection.
+   *
+   * @param hostProperty bind host property name.
+   * @param addressProperty address property name.
+   * @param defaultAddressValue the default value
+   * @param defaultPort the default port
+   * @return InetSocketAddress
+   */
+  public InetSocketAddress getSocketAddr(
+      String hostProperty,
+      String addressProperty,
+      String defaultAddressValue,
+      int defaultPort) {
+
+    InetSocketAddress bindAddr = getSocketAddr(
+      addressProperty, defaultAddressValue, defaultPort);
+
+    final String host = get(hostProperty);
+
+    if (host == null || host.isEmpty()) {
+      return bindAddr;
+    }
+
+    return NetUtils.createSocketAddr(
+        host, bindAddr.getPort(), hostProperty);
+  }
+
+  /**
    * Get the socket address for <code>name</code> property as a
    * <code>InetSocketAddress</code>.
    * @param name property name.
@@ -1857,6 +1889,40 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public void setSocketAddr(String name, InetSocketAddress addr) {
     set(name, NetUtils.getHostPortString(addr));
+  }
+
+  /**
+   * Set the socket address a client can use to connect for the
+   * <code>name</code> property as a <code>host:port</code>.  The wildcard
+   * address is replaced with the local host's address. If the host and address
+   * properties are configured the host component of the address will be combined
+   * with the port component of the addr to generate the address.  This is to allow
+   * optional control over which host name is used in multi-home bind-host
+   * cases where a host can have multiple names
+   * @param hostProperty the bind-host configuration name
+   * @param addressProperty the service address configuration name
+   * @param defaultAddressValue the service default address configuration value
+   * @param addr InetSocketAddress of the service listener
+   * @return InetSocketAddress for clients to connect
+   */
+  public InetSocketAddress updateConnectAddr(
+      String hostProperty,
+      String addressProperty,
+      String defaultAddressValue,
+      InetSocketAddress addr) {
+
+    final String host = get(hostProperty);
+    final String connectHostPort = getTrimmed(addressProperty, defaultAddressValue);
+
+    if (host == null || host.isEmpty() || connectHostPort == null || connectHostPort.isEmpty()) {
+      //not our case, fall back to original logic
+      return updateConnectAddr(addressProperty, addr);
+    }
+
+    final String connectHost = connectHostPort.split(":")[0];
+    // Create connect address using client address hostname and server port.
+    return updateConnectAddr(addressProperty, NetUtils.createSocketAddrForHost(
+        connectHost, addr.getPort()));
   }
   
   /**

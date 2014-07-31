@@ -59,6 +59,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2347. Consolidated RMStateVersion and NMDBSchemaVersion into Version in
     yarn-server-common. (Junping Du via zjshen)
 
+    YARN-1994. Expose YARN/MR endpoints on multiple interfaces. (Craig Welch,
+    Milan Potocnik, Arpit Agarwal via xgong)
+
   OPTIMIZATIONS
 
   BUG FIXES

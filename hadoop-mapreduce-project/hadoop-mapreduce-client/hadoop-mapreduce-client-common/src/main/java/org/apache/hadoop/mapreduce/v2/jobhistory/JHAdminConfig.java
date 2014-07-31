@@ -38,7 +38,9 @@ public class JHAdminConfig {
   public static final int DEFAULT_MR_HISTORY_PORT = 10020;
   public static final String DEFAULT_MR_HISTORY_ADDRESS = "0.0.0.0:" +
       DEFAULT_MR_HISTORY_PORT;
-  
+  public static final String MR_HISTORY_BIND_HOST = MR_HISTORY_PREFIX
+      + "bind-host";
+
   /** The address of the History server admin interface. */
   public static final String JHS_ADMIN_ADDRESS = MR_HISTORY_PREFIX
       + "admin.address";

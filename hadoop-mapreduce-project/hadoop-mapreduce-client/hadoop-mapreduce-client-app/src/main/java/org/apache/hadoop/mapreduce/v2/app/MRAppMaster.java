@@ -999,6 +999,11 @@ public class MRAppMaster extends CompositeService {
     public void resetIsLastAMRetry() {
       isLastAMRetry = false;
     }
+
+    @Override
+    public String getNMHostname() {
+      return nmHost;
+    }
   }
 
   @SuppressWarnings("unchecked")
