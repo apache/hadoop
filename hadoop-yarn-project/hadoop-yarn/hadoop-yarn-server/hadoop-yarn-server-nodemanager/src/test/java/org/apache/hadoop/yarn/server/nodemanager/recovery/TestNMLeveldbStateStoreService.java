@@ -49,7 +49,7 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.Re
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredLocalizationState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredNMTokensState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredUserResources;
-import org.apache.hadoop.yarn.server.nodemanager.recovery.records.NMDBSchemaVersion;
+import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.security.BaseContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.BaseNMTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -114,12 +114,12 @@ public class TestNMLeveldbStateStoreService {
   @Test
   public void testCheckVersion() throws IOException {
     // default version
-    NMDBSchemaVersion defaultVersion = stateStore.getCurrentVersion();
+    Version defaultVersion = stateStore.getCurrentVersion();
     Assert.assertEquals(defaultVersion, stateStore.loadVersion());
 
     // compatible version
-    NMDBSchemaVersion compatibleVersion =
-        NMDBSchemaVersion.newInstance(defaultVersion.getMajorVersion(),
+    Version compatibleVersion =
+        Version.newInstance(defaultVersion.getMajorVersion(),
           defaultVersion.getMinorVersion() + 2);
     stateStore.storeVersion(compatibleVersion);
     Assert.assertEquals(compatibleVersion, stateStore.loadVersion());
@@ -128,8 +128,8 @@ public class TestNMLeveldbStateStoreService {
     Assert.assertEquals(defaultVersion, stateStore.loadVersion());
 
     // incompatible version
-    NMDBSchemaVersion incompatibleVersion =
-      NMDBSchemaVersion.newInstance(defaultVersion.getMajorVersion() + 1,
+    Version incompatibleVersion =
+      Version.newInstance(defaultVersion.getMajorVersion() + 1,
           defaultVersion.getMinorVersion());
     stateStore.storeVersion(incompatibleVersion);
     try {

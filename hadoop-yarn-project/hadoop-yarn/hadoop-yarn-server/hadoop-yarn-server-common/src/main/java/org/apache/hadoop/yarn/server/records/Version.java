@@ -15,21 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.nodemanager.recovery.records;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
+package org.apache.hadoop.yarn.server.records;
+
+import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * The version information of DB Schema for NM.
+ * The version information for state get stored in YARN components,
+ * i.e. RMState, NMState, etc., which include: majorVersion and 
+ * minorVersion.
+ * The major version update means incompatible changes happen while
+ * minor version update indicates compatible changes.
  */
-@Private
+@LimitedPrivate({"YARN", "MapReduce"})
 @Unstable
-public abstract class NMDBSchemaVersion {
+public abstract class Version {
 
-  public static NMDBSchemaVersion newInstance(int majorVersion, int minorVersion) {
-    NMDBSchemaVersion version = Records.newRecord(NMDBSchemaVersion.class);
+  public static Version newInstance(int majorVersion, int minorVersion) {
+    Version version = Records.newRecord(Version.class);
     version.setMajorVersion(majorVersion);
     version.setMinorVersion(minorVersion);
     return version;
@@ -47,7 +52,7 @@ public abstract class NMDBSchemaVersion {
     return getMajorVersion() + "." + getMinorVersion();
   }
 
-  public boolean isCompatibleTo(NMDBSchemaVersion version) {
+  public boolean isCompatibleTo(Version version) {
     return getMajorVersion() == version.getMajorVersion();
   }
 
@@ -68,7 +73,7 @@ public abstract class NMDBSchemaVersion {
       return false;
     if (getClass() != obj.getClass())
       return false;
-    NMDBSchemaVersion other = (NMDBSchemaVersion) obj;
+    Version other = (Version) obj;
     if (this.getMajorVersion() == other.getMajorVersion()
         && this.getMinorVersion() == other.getMinorVersion()) {
       return true;
@@ -76,5 +81,4 @@ public abstract class NMDBSchemaVersion {
       return false;
     }
   }
-
 }

@@ -74,6 +74,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2328. FairScheduler: Verify update and continuous scheduling threads are
     stopped when the scheduler is stopped. (kasha)
 
+    YARN-2347. Consolidated RMStateVersion and NMDBSchemaVersion into Version in
+    yarn-server-common. (Junping Du via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES

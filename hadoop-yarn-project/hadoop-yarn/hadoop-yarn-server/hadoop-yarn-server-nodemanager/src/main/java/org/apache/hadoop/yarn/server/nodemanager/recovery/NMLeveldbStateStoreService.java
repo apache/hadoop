@@ -41,13 +41,13 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
-import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.NMDBSchemaVersionProto;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
-import org.apache.hadoop.yarn.server.nodemanager.recovery.records.NMDBSchemaVersion;
-import org.apache.hadoop.yarn.server.nodemanager.recovery.records.impl.pb.NMDBSchemaVersionPBImpl;
+import org.apache.hadoop.yarn.server.records.Version;
+import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.fusesource.leveldbjni.JniDBFactory;
@@ -68,7 +68,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private static final String DB_NAME = "yarn-nm-state";
   private static final String DB_SCHEMA_VERSION_KEY = "nm-schema-version";
   
-  private static final NMDBSchemaVersion CURRENT_VERSION_INFO = NMDBSchemaVersion
+  private static final Version CURRENT_VERSION_INFO = Version
       .newInstance(1, 0);
 
   private static final String DELETION_TASK_KEY_PREFIX =
@@ -617,14 +617,14 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   }
 
 
-  NMDBSchemaVersion loadVersion() throws IOException {
+  Version loadVersion() throws IOException {
     byte[] data = db.get(bytes(DB_SCHEMA_VERSION_KEY));
     // if version is not stored previously, treat it as 1.0.
     if (data == null || data.length == 0) {
-      return NMDBSchemaVersion.newInstance(1, 0);
+      return Version.newInstance(1, 0);
     }
-    NMDBSchemaVersion version =
-        new NMDBSchemaVersionPBImpl(NMDBSchemaVersionProto.parseFrom(data));
+    Version version =
+        new VersionPBImpl(VersionProto.parseFrom(data));
     return version;
   }
 
@@ -634,14 +634,14 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   
   // Only used for test
   @VisibleForTesting
-  void storeVersion(NMDBSchemaVersion state) throws IOException {
+  void storeVersion(Version state) throws IOException {
     dbStoreVersion(state);
   }
   
-  private void dbStoreVersion(NMDBSchemaVersion state) throws IOException {
+  private void dbStoreVersion(Version state) throws IOException {
     String key = DB_SCHEMA_VERSION_KEY;
     byte[] data = 
-        ((NMDBSchemaVersionPBImpl) state).getProto().toByteArray();
+        ((VersionPBImpl) state).getProto().toByteArray();
     try {
       db.put(bytes(key), data);
     } catch (DBException e) {
@@ -649,7 +649,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     }
   }
 
-  NMDBSchemaVersion getCurrentVersion() {
+  Version getCurrentVersion() {
     return CURRENT_VERSION_INFO;
   }
   
@@ -664,9 +664,9 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
    *    upgrade NM state or remove incompatible old state.
    */
   private void checkVersion() throws IOException {
-    NMDBSchemaVersion loadedVersion = loadVersion();
+    Version loadedVersion = loadVersion();
     LOG.info("Loaded NM state version info " + loadedVersion);
-    if (loadedVersion != null && loadedVersion.equals(getCurrentVersion())) {
+    if (loadedVersion.equals(getCurrentVersion())) {
       return;
     }
     if (loadedVersion.isCompatibleTo(getCurrentVersion())) {
