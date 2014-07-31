@@ -75,7 +75,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
-import org.apache.hadoop.yarn.server.nodemanager.recovery.records.NMDBSchemaVersion;
+import org.apache.hadoop.yarn.server.records.Version;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -764,11 +764,11 @@ public class TestShuffleHandler {
       // verify we are still authorized to shuffle to the old application
       rc = getShuffleResponseCode(shuffle, jt);
       Assert.assertEquals(HttpURLConnection.HTTP_OK, rc);
-      NMDBSchemaVersion version = NMDBSchemaVersion.newInstance(1, 0);
+      Version version = Version.newInstance(1, 0);
       Assert.assertEquals(version, shuffle.getCurrentVersion());
     
       // emulate shuffle handler restart with compatible version
-      NMDBSchemaVersion version11 = NMDBSchemaVersion.newInstance(1, 1);
+      Version version11 = Version.newInstance(1, 1);
       // update version info before close shuffle
       shuffle.storeVersion(version11);
       Assert.assertEquals(version11, shuffle.loadVersion());
@@ -785,7 +785,7 @@ public class TestShuffleHandler {
       Assert.assertEquals(HttpURLConnection.HTTP_OK, rc);
     
       // emulate shuffle handler restart with incompatible version
-      NMDBSchemaVersion version21 = NMDBSchemaVersion.newInstance(2, 1);
+      Version version21 = Version.newInstance(2, 1);
       shuffle.storeVersion(version21);
       Assert.assertEquals(version21, shuffle.loadVersion());
       shuffle.close();

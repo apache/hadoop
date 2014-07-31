@@ -32,9 +32,9 @@ import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.records.Version;
+import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.RMStateVersionPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
@@ -69,7 +69,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
         return znodeWorkingPath + "/" + ROOT_ZNODE_NAME + "/" + VERSION_NODE;
       }
 
-      public RMStateVersion getCurrentVersion() {
+      public Version getCurrentVersion() {
         return CURRENT_VERSION_INFO;
       }
 
@@ -96,13 +96,13 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     }
 
     @Override
-    public void writeVersion(RMStateVersion version) throws Exception {
-      client.setData(store.getVersionNode(), ((RMStateVersionPBImpl) version)
+    public void writeVersion(Version version) throws Exception {
+      client.setData(store.getVersionNode(), ((VersionPBImpl) version)
         .getProto().toByteArray(), -1);
     }
 
     @Override
-    public RMStateVersion getCurrentVersion() throws Exception {
+    public Version getCurrentVersion() throws Exception {
       return store.getCurrentVersion();
     }
 

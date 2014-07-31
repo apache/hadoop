@@ -39,8 +39,3 @@ message LocalizedResourceProto {
   optional int64 size = 3;
 }
 
-message NMDBSchemaVersionProto {
-  optional int32 majorVersion = 1;
-  optional int32 minorVersion = 2;
-}
-
