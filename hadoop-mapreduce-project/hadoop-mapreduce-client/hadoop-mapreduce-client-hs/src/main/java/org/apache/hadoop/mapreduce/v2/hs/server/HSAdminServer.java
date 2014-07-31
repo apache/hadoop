@@ -34,6 +34,7 @@ import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogDeletionService;
 import org.apache.hadoop.security.proto.RefreshUserMappingsProtocolProtos.RefreshUserMappingsProtocolService;
 import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolPB;
@@ -94,7 +95,9 @@ public class HSAdminServer extends AbstractService implements HSAdminProtocol {
 
     WritableRpcEngine.ensureInitialized();
 
-    clientRpcAddress = conf.getSocketAddr(JHAdminConfig.JHS_ADMIN_ADDRESS,
+    clientRpcAddress = conf.getSocketAddr(
+        JHAdminConfig.MR_HISTORY_BIND_HOST,
+        JHAdminConfig.JHS_ADMIN_ADDRESS,
         JHAdminConfig.DEFAULT_JHS_ADMIN_ADDRESS,
         JHAdminConfig.DEFAULT_JHS_ADMIN_PORT);
     clientRpcServer = new RPC.Builder(conf)

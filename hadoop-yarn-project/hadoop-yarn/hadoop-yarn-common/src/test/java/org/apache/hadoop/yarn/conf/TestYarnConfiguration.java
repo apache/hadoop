@@ -28,6 +28,7 @@ import java.net.SocketAddress;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 public class TestYarnConfiguration {
 
@@ -74,5 +75,132 @@ public class TestYarnConfiguration {
         YarnConfiguration.DEFAULT_NM_ADDRESS,
         YarnConfiguration.DEFAULT_NM_PORT);
     assertEquals(1234, addr.getPort());
+  }
+
+  @Test
+  public void testGetSocketAddr() throws Exception {
+
+    YarnConfiguration conf;
+    InetSocketAddress resourceTrackerAddress;
+
+    //all default
+    conf = new YarnConfiguration();
+    resourceTrackerAddress = conf.getSocketAddr(
+        YarnConfiguration.RM_BIND_HOST,
+        YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT);
+    assertEquals(
+      new InetSocketAddress(
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS.split(":")[0],
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT),
+        resourceTrackerAddress);
+
+    //with address
+    conf.set(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS, "10.0.0.1");
+    resourceTrackerAddress = conf.getSocketAddr(
+        YarnConfiguration.RM_BIND_HOST,
+        YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT);
+    assertEquals(
+      new InetSocketAddress(
+        "10.0.0.1",
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT),
+        resourceTrackerAddress);
+
+    //address and socket
+    conf.set(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS, "10.0.0.2:5001");
+    resourceTrackerAddress = conf.getSocketAddr(
+        YarnConfiguration.RM_BIND_HOST,
+        YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT);
+    assertEquals(
+      new InetSocketAddress(
+        "10.0.0.2",
+        5001),
+        resourceTrackerAddress);
+
+    //bind host only
+    conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.RM_BIND_HOST, "10.0.0.3");
+    resourceTrackerAddress = conf.getSocketAddr(
+        YarnConfiguration.RM_BIND_HOST,
+        YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT);
+    assertEquals(
+      new InetSocketAddress(
+        "10.0.0.3",
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT),
+        resourceTrackerAddress);
+
+    //bind host and address no port
+    conf.set(YarnConfiguration.RM_BIND_HOST, "0.0.0.0");
+    conf.set(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS, "10.0.0.2");
+    resourceTrackerAddress = conf.getSocketAddr(
+        YarnConfiguration.RM_BIND_HOST,
+        YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT);
+    assertEquals(
+      new InetSocketAddress(
+        "0.0.0.0",
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT),
+        resourceTrackerAddress);
+
+    //bind host and address with port
+    conf.set(YarnConfiguration.RM_BIND_HOST, "0.0.0.0");
+    conf.set(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS, "10.0.0.2:5003");
+    resourceTrackerAddress = conf.getSocketAddr(
+        YarnConfiguration.RM_BIND_HOST,
+        YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT);
+    assertEquals(
+      new InetSocketAddress(
+        "0.0.0.0",
+        5003),
+        resourceTrackerAddress);
+
+  }
+
+  @Test
+  public void testUpdateConnectAddr() throws Exception {
+    YarnConfiguration conf;
+    InetSocketAddress resourceTrackerConnectAddress;
+    InetSocketAddress serverAddress;
+
+    //no override, old behavior.  Won't work on a host named "yo.yo.yo"
+    conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS, "yo.yo.yo");
+    serverAddress = new InetSocketAddress(
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS.split(":")[0],
+        Integer.valueOf(YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS.split(":")[1]));
+
+    resourceTrackerConnectAddress = conf.updateConnectAddr(
+        YarnConfiguration.RM_BIND_HOST,
+        YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
+        serverAddress);
+
+    assertFalse(resourceTrackerConnectAddress.toString().startsWith("yo.yo.yo"));
+
+    //cause override with address
+    conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS, "yo.yo.yo");
+    conf.set(YarnConfiguration.RM_BIND_HOST, "0.0.0.0");
+    serverAddress = new InetSocketAddress(
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS.split(":")[0],
+        Integer.valueOf(YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS.split(":")[1]));
+
+    resourceTrackerConnectAddress = conf.updateConnectAddr(
+        YarnConfiguration.RM_BIND_HOST,
+        YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
+        serverAddress);
+
+    assertTrue(resourceTrackerConnectAddress.toString().startsWith("yo.yo.yo"));
   }
 }

@@ -71,6 +71,17 @@
   </property>
 
   <property>
+    <description>
+      The actual address the server will bind to. If this optional address is
+      set, the RPC and webapp servers will bind to this address and the port specified in
+      yarn.resourcemanager.address and yarn.resourcemanager.webapp.address, respectively. This
+      is most useful for making RM listen to all interfaces by setting to 0.0.0.0.
+    </description>
+    <name>yarn.resourcemanager.bind-host</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>The number of threads used to handle applications manager requests.</description>
     <name>yarn.resourcemanager.client.thread-count</name>
     <value>50</value>
@@ -636,6 +647,17 @@
   </property>
 
   <property>
+    <description>
+      The actual address the server will bind to. If this optional address is
+      set, the RPC and webapp servers will bind to this address and the port specified in
+      yarn.nodemanager.address and yarn.nodemanager.webapp.address, respectively. This is
+      most useful for making NM listen to all interfaces by setting to 0.0.0.0.
+    </description>
+    <name>yarn.nodemanager.bind-host</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>Environment variables that should be forwarded from the NodeManager's environment to the container's.</description>
     <name>yarn.nodemanager.admin-env</name>
     <value>MALLOC_ARENA_MAX=$MALLOC_ARENA_MAX</value>
@@ -1170,6 +1192,18 @@
     <description>The https address of the timeline service web application.</description>
     <name>yarn.timeline-service.webapp.https.address</name>
     <value>${yarn.timeline-service.hostname}:8190</value>
+  </property>
+
+  <property>
+    <description>
+      The actual address the server will bind to. If this optional address is
+      set, the RPC and webapp servers will bind to this address and the port specified in
+      yarn.timeline-service.address and yarn.timeline-service.webapp.address, respectively.
+      This is most useful for making the service listen to all interfaces by setting to
+      0.0.0.0.
+    </description>
+    <name>yarn.timeline-service.bind-host</name>
+    <value></value>
   </property>
 
   <property>

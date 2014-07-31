@@ -131,7 +131,8 @@ public class MRClientService extends AbstractService implements ClientService {
     }
 
     server.start();
-    this.bindAddress = NetUtils.getConnectAddress(server);
+    this.bindAddress = NetUtils.createSocketAddrForHost(appContext.getNMHostname(),
+        server.getListenerAddress().getPort());
     LOG.info("Instantiated MRClientService at " + this.bindAddress);
     try {
       // Explicitly disabling SSL for map reduce task as we can't allow MR users
