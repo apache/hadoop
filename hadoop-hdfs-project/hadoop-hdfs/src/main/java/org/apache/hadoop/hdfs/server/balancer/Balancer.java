@@ -45,6 +45,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -83,6 +84,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
@@ -204,12 +206,20 @@ public class Balancer {
       + "\n\t[-policy <policy>]\tthe balancing policy: "
       + BalancingPolicy.Node.INSTANCE.getName() + " or "
       + BalancingPolicy.Pool.INSTANCE.getName()
-      + "\n\t[-threshold <threshold>]\tPercentage of disk capacity";
+      + "\n\t[-threshold <threshold>]\tPercentage of disk capacity"
+      + "\n\t[-exclude [-f <hosts-file> | comma-sperated list of hosts]]"
+      + "\tExcludes the specified datanodes."
+      + "\n\t[-include [-f <hosts-file> | comma-sperated list of hosts]]"
+      + "\tIncludes only the specified datanodes.";
   
   private final NameNodeConnector nnc;
   private final BalancingPolicy policy;
   private final SaslDataTransferClient saslClient;
   private final double threshold;
+  // set of data nodes to be excluded from balancing operations.
+  Set<String> nodesToBeExcluded;
+  //Restrict balancing to the following nodes.
+  Set<String> nodesToBeIncluded;
   
   // all data node lists
   private final Collection<Source> overUtilizedDatanodes
@@ -870,6 +880,8 @@ public class Balancer {
   Balancer(NameNodeConnector theblockpool, Parameters p, Configuration conf) {
     this.threshold = p.threshold;
     this.policy = p.policy;
+    this.nodesToBeExcluded = p.nodesToBeExcluded;
+    this.nodesToBeIncluded = p.nodesToBeIncluded;
     this.nnc = theblockpool;
     cluster = NetworkTopology.getInstance(conf);
 
@@ -906,8 +918,13 @@ public class Balancer {
   private long initNodes(DatanodeInfo[] datanodes) {
     // compute average utilization
     for (DatanodeInfo datanode : datanodes) {
-      if (datanode.isDecommissioned() || datanode.isDecommissionInProgress()) {
-        continue; // ignore decommissioning or decommissioned nodes
+     // ignore decommissioning or decommissioned nodes or
+      // ignore nodes in exclude list
+      // or nodes not in the include list (if include list is not empty)
+      if (datanode.isDecommissioned() || datanode.isDecommissionInProgress() ||
+          Util.shouldBeExcluded(nodesToBeExcluded, datanode) ||
+          !Util.shouldBeIncluded(nodesToBeIncluded, datanode)) {
+        continue;
       }
       policy.accumulateSpaces(datanode);
     }
@@ -920,8 +937,16 @@ public class Balancer {
      */  
     long overLoadedBytes = 0L, underLoadedBytes = 0L;
     for (DatanodeInfo datanode : DFSUtil.shuffle(datanodes)) {
-      if (datanode.isDecommissioned() || datanode.isDecommissionInProgress()) {
-        continue; // ignore decommissioning or decommissioned nodes
+      // ignore decommissioning or decommissioned nodes or
+      // ignore nodes in exclude list
+      // or nodes not in the include list (if include list is not empty)
+      if (datanode.isDecommissioned() || datanode.isDecommissionInProgress() ||
+          Util.shouldBeExcluded(nodesToBeExcluded, datanode) ||
+          !Util.shouldBeIncluded(nodesToBeIncluded, datanode)) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Excluding datanode " + datanode);
+        }
+        continue;
       }
       cluster.add(datanode);
       BalancerDatanode datanodeS;
@@ -1527,21 +1552,101 @@ public class Balancer {
   }
 
   static class Parameters {
-    static final Parameters DEFALUT = new Parameters(
-        BalancingPolicy.Node.INSTANCE, 10.0);
+    static final Parameters DEFAULT = new Parameters(
+        BalancingPolicy.Node.INSTANCE, 10.0,
+        Collections.<String> emptySet(), Collections.<String> emptySet());
 
     final BalancingPolicy policy;
     final double threshold;
+    // exclude the nodes in this set from balancing operations
+    Set<String> nodesToBeExcluded;
+    //include only these nodes in balancing operations
+    Set<String> nodesToBeIncluded;
 
-    Parameters(BalancingPolicy policy, double threshold) {
+    Parameters(BalancingPolicy policy, double threshold,
+        Set<String> nodesToBeExcluded, Set<String> nodesToBeIncluded) {
       this.policy = policy;
       this.threshold = threshold;
+      this.nodesToBeExcluded = nodesToBeExcluded;
+      this.nodesToBeIncluded = nodesToBeIncluded;
     }
 
     @Override
     public String toString() {
       return Balancer.class.getSimpleName() + "." + getClass().getSimpleName()
-          + "[" + policy + ", threshold=" + threshold + "]";
+          + "[" + policy + ", threshold=" + threshold +
+          ", number of nodes to be excluded = "+ nodesToBeExcluded.size() +
+          ", number of nodes to be included = "+ nodesToBeIncluded.size() +"]";
+    }
+  }
+
+  static class Util {
+
+    /**
+     * @param datanode
+     * @return returns true if data node is part of the excludedNodes.
+     */
+    static boolean shouldBeExcluded(Set<String> excludedNodes, DatanodeInfo datanode) {
+      return isIn(excludedNodes, datanode);
+    }
+
+    /**
+     * @param datanode
+     * @return returns true if includedNodes is empty or data node is part of the includedNodes.
+     */
+    static boolean shouldBeIncluded(Set<String> includedNodes, DatanodeInfo datanode) {
+      return (includedNodes.isEmpty() ||
+          isIn(includedNodes, datanode));
+    }
+    /**
+     * Match is checked using host name , ip address with and without port number.
+     * @param datanodeSet
+     * @param datanode
+     * @return true if the datanode's transfer address matches the set of nodes.
+     */
+    private static boolean isIn(Set<String> datanodeSet, DatanodeInfo datanode) {
+      return isIn(datanodeSet, datanode.getPeerHostName(), datanode.getXferPort()) ||
+          isIn(datanodeSet, datanode.getIpAddr(), datanode.getXferPort()) ||
+          isIn(datanodeSet, datanode.getHostName(), datanode.getXferPort());
+    }
+
+    /**
+     * returns true if nodes contains host or host:port
+     * @param nodes
+     * @param host
+     * @param port
+     * @return
+     */
+    private static boolean isIn(Set<String> nodes, String host, int port) {
+      if (host == null) {
+        return false;
+      }
+      return (nodes.contains(host) || nodes.contains(host +":"+ port));
+    }
+
+    /**
+     * parse a comma separated string to obtain set of host names
+     * @param string
+     * @return
+     */
+    static Set<String> parseHostList(String string) {
+      String[] addrs = StringUtils.getTrimmedStrings(string);
+      return new HashSet<String>(Arrays.asList(addrs));
+    }
+
+    /**
+     * read set of host names from a file
+     * @param fileName
+     * @return
+     */
+    static Set<String> getHostListFromFile(String fileName) {
+      Set<String> nodes = new HashSet <String> ();
+      try {
+        HostsFileReader.readFileToSet("nodes", fileName, nodes);
+        return StringUtils.getTrimmedStrings(nodes);
+      } catch (IOException e) {
+        throw new IllegalArgumentException("Unable to open file: " + fileName);
+      }
     }
   }
 
@@ -1579,8 +1684,10 @@ public class Balancer {
 
     /** parse command line arguments */
     static Parameters parse(String[] args) {
-      BalancingPolicy policy = Parameters.DEFALUT.policy;
-      double threshold = Parameters.DEFALUT.threshold;
+      BalancingPolicy policy = Parameters.DEFAULT.policy;
+      double threshold = Parameters.DEFAULT.threshold;
+      Set<String> nodesTobeExcluded = Parameters.DEFAULT.nodesToBeExcluded;
+      Set<String> nodesTobeIncluded = Parameters.DEFAULT.nodesToBeIncluded;
 
       if (args != null) {
         try {
@@ -1609,10 +1716,30 @@ public class Balancer {
                 System.err.println("Illegal policy name: " + args[i]);
                 throw e;
               }
+            } else if ("-exclude".equalsIgnoreCase(args[i])) {
+              i++;
+              if ("-f".equalsIgnoreCase(args[i])) {
+                nodesTobeExcluded = Util.getHostListFromFile(args[++i]);
+              } else {
+                nodesTobeExcluded = Util.parseHostList(args[i]);
+              }
+            } else if ("-include".equalsIgnoreCase(args[i])) {
+              i++;
+              if ("-f".equalsIgnoreCase(args[i])) {
+                nodesTobeIncluded = Util.getHostListFromFile(args[++i]);
+               } else {
+                nodesTobeIncluded = Util.parseHostList(args[i]);
+              }
             } else {
               throw new IllegalArgumentException("args = "
                   + Arrays.toString(args));
             }
+          }
+          if (!nodesTobeExcluded.isEmpty() && !nodesTobeIncluded.isEmpty()) {
+            System.err.println(
+                "-exclude and -include options cannot be specified together.");
+            throw new IllegalArgumentException(
+                "-exclude and -include options cannot be specified together.");
           }
         } catch(RuntimeException e) {
           printUsage(System.err);
@@ -1620,7 +1747,7 @@ public class Balancer {
         }
       }
       
-      return new Parameters(policy, threshold);
+      return new Parameters(policy, threshold, nodesTobeExcluded, nodesTobeIncluded);
     }
 
     private static void printUsage(PrintStream out) {
