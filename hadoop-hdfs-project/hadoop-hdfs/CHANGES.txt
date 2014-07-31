@@ -335,6 +335,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6570. add api that enables checking if a user has certain permissions on
     a file. (Jitendra Pandey via cnauroth)
 
+    HDFS-6441. Add ability to exclude/include specific datanodes while
+    balancing. (Benoy Antony and Yu Li via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
