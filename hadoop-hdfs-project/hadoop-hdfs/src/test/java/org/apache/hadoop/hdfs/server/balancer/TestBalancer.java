@@ -539,6 +539,39 @@ public class TestBalancer {
   }
   
   /**
+   * Test parse method in Balancer#Cli class with wrong number of params
+   */
+
+  @Test
+  public void testBalancerCliParseWithWrongParams() {
+    String parameters[] = new String[] { "-threshold" };
+    String reason =
+        "IllegalArgumentException is expected when value is not specified";
+    try {
+      Balancer.Cli.parse(parameters);
+      fail(reason);
+    } catch (IllegalArgumentException e) {
+
+    }
+    parameters = new String[] { "-policy" };
+    try {
+      Balancer.Cli.parse(parameters);
+      fail(reason);
+    } catch (IllegalArgumentException e) {
+
+    }
+    parameters = new String[] { "-threshold 1 -policy" };
+    try {
+      Balancer.Cli.parse(parameters);
+      fail(reason);
+    } catch (IllegalArgumentException e) {
+
+    }
+
+  }
+
+
+  /**
    * @param args
    */
   public static void main(String[] args) throws Exception {

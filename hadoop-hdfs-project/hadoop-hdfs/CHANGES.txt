@@ -146,6 +146,9 @@ Release 2.6.0 - UNRELEASED
     XmlEditsVisitor.java is JVM vendor specific. Breaks IBM JAVA.
     (Amir Sanjar via stevel)
 
+    HDFS-3482. hdfs balancer throws ArrayIndexOutOfBoundsException 
+    if option is specified without values. ( Madhukara Phatak via umamahesh) 
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
