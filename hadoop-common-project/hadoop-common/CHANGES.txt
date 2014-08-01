@@ -410,6 +410,9 @@ Trunk (Unreleased)
     HADOOP-10881. Clarify usage of encryption and encrypted encryption
     key in KeyProviderCryptoExtension. (wang)
 
+    HADOOP-10920. site plugin couldn't parse hadoop-kms index.apt.vm.
+    (Akira Ajisaka via wang)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
