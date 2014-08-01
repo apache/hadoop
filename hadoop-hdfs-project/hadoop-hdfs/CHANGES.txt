@@ -83,6 +83,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-6441. Add ability to exclude/include specific datanodes while
     balancing. (Benoy Antony and Yu Li via Arpit Agarwal)
 
+    HDFS-6685. Balancer should preserve storage type of replicas.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
