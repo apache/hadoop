@@ -563,6 +563,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6717. JIRA HDFS-5804 breaks default nfs-gateway behavior for unsecured config
     (brandonli)
 
+    HDFS-6793. Missing changes in HftpFileSystem when Reintroduce
+    dfs.http.port / dfs.https.port in branch-2. (Juan Yu via wang).
+
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
     HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
