@@ -54,10 +54,10 @@ abstract public class ReplicaInfo extends Block implements Replica {
   private File baseDir;
   
   /**
-   * Ints representing the sub directory path from base dir to the directory
-   * containing this replica.
+   * Whether or not this replica's parent directory includes subdirs, in which
+   * case we can generate them based on the replica's block ID
    */
-  private int[] subDirs;
+  private boolean hasSubdirs;
   
   private static final Map<String, File> internedBaseDirs = new HashMap<String, File>();
 
@@ -151,18 +151,8 @@ abstract public class ReplicaInfo extends Block implements Replica {
    * @return the parent directory path where this replica is located
    */
   File getDir() {
-    if (subDirs == null) {
-      return null;
-    }
-
-    StringBuilder sb = new StringBuilder();
-    for (int i : subDirs) {
-      sb.append(DataStorage.BLOCK_SUBDIR_PREFIX);
-      sb.append(i);
-      sb.append("/");
-    }
-    File ret = new File(baseDir, sb.toString());
-    return ret;
+    return hasSubdirs ? DatanodeUtil.idToBlockDir(baseDir,
+        getBlockId()) : baseDir;
   }
 
   /**
@@ -175,54 +165,46 @@ abstract public class ReplicaInfo extends Block implements Replica {
 
   private void setDirInternal(File dir) {
     if (dir == null) {
-      subDirs = null;
       baseDir = null;
       return;
     }
 
-    ReplicaDirInfo replicaDirInfo = parseSubDirs(dir);
-    this.subDirs = replicaDirInfo.subDirs;
+    ReplicaDirInfo dirInfo = parseBaseDir(dir);
+    this.hasSubdirs = dirInfo.hasSubidrs;
     
     synchronized (internedBaseDirs) {
-      if (!internedBaseDirs.containsKey(replicaDirInfo.baseDirPath)) {
+      if (!internedBaseDirs.containsKey(dirInfo.baseDirPath)) {
         // Create a new String path of this file and make a brand new File object
         // to guarantee we drop the reference to the underlying char[] storage.
-        File baseDir = new File(replicaDirInfo.baseDirPath);
-        internedBaseDirs.put(replicaDirInfo.baseDirPath, baseDir);
+        File baseDir = new File(dirInfo.baseDirPath);
+        internedBaseDirs.put(dirInfo.baseDirPath, baseDir);
       }
-      this.baseDir = internedBaseDirs.get(replicaDirInfo.baseDirPath);
+      this.baseDir = internedBaseDirs.get(dirInfo.baseDirPath);
     }
   }
-  
+
   @VisibleForTesting
   public static class ReplicaDirInfo {
-    @VisibleForTesting
     public String baseDirPath;
-    
-    @VisibleForTesting
-    public int[] subDirs;
+    public boolean hasSubidrs;
+
+    public ReplicaDirInfo (String baseDirPath, boolean hasSubidrs) {
+      this.baseDirPath = baseDirPath;
+      this.hasSubidrs = hasSubidrs;
+    }
   }
   
   @VisibleForTesting
-  public static ReplicaDirInfo parseSubDirs(File dir) {
-    ReplicaDirInfo ret = new ReplicaDirInfo();
+  public static ReplicaDirInfo parseBaseDir(File dir) {
     
     File currentDir = dir;
-    List<Integer> subDirList = new ArrayList<Integer>();
+    boolean hasSubdirs = false;
     while (currentDir.getName().startsWith(DataStorage.BLOCK_SUBDIR_PREFIX)) {
-      // Prepend the integer into the list.
-      subDirList.add(0, Integer.parseInt(currentDir.getName().replaceFirst(
-          DataStorage.BLOCK_SUBDIR_PREFIX, "")));
+      hasSubdirs = true;
       currentDir = currentDir.getParentFile();
     }
-    ret.subDirs = new int[subDirList.size()];
-    for (int i = 0; i < subDirList.size(); i++) {
-      ret.subDirs[i] = subDirList.get(i);
-    }
     
-    ret.baseDirPath = currentDir.getAbsolutePath();
-    
-    return ret;
+    return new ReplicaDirInfo(currentDir.getAbsolutePath(), hasSubdirs);
   }
 
   /**

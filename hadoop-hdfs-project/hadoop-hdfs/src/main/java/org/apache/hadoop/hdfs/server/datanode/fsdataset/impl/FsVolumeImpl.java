@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
+import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -316,10 +317,6 @@ public class FsVolumeImpl implements FsVolumeSpi {
     // dfsUsage.incDfsUsed(b.getNumBytes()+metaFile.length());
     bp.addToReplicasMap(volumeMap, dir, isFinalized);
   }
-  
-  void clearPath(String bpid, File f) throws IOException {
-    getBlockPoolSlice(bpid).clearPath(f);
-  }
 
   @Override
   public String toString() {
@@ -355,7 +352,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
     File finalizedDir = new File(bpCurrentDir,
         DataStorage.STORAGE_DIR_FINALIZED);
     File rbwDir = new File(bpCurrentDir, DataStorage.STORAGE_DIR_RBW);
-    if (finalizedDir.exists() && FileUtil.list(finalizedDir).length != 0) {
+    if (finalizedDir.exists() && !DatanodeUtil.dirNoFilesRecursive(
+        finalizedDir)) {
       return false;
     }
     if (rbwDir.exists() && FileUtil.list(rbwDir).length != 0) {
@@ -382,7 +380,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
       if (!rbwDir.delete()) {
         throw new IOException("Failed to delete " + rbwDir);
       }
-      if (!finalizedDir.delete()) {
+      if (!DatanodeUtil.dirNoFilesRecursive(finalizedDir) ||
+          !FileUtil.fullyDelete(finalizedDir)) {
         throw new IOException("Failed to delete " + finalizedDir);
       }
       FileUtil.fullyDelete(tmpDir);

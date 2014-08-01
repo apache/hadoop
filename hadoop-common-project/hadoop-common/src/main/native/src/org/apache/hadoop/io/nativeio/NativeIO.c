@@ -1087,6 +1087,43 @@ done:
 #endif
 }
 
+JNIEXPORT void JNICALL
+Java_org_apache_hadoop_io_nativeio_NativeIO_link0(JNIEnv *env,
+jclass clazz, jstring jsrc, jstring jdst)
+{
+#ifdef UNIX
+  const char *src = NULL, *dst = NULL;
+
+  src = (*env)->GetStringUTFChars(env, jsrc, NULL);
+  if (!src) goto done; // exception was thrown
+  dst = (*env)->GetStringUTFChars(env, jdst, NULL);
+  if (!dst) goto done; // exception was thrown
+  if (link(src, dst)) {
+    throw_ioe(env, errno);
+  }
+
+done:
+  if (src) (*env)->ReleaseStringUTFChars(env, jsrc, src);
+  if (dst) (*env)->ReleaseStringUTFChars(env, jdst, dst);
+#endif
+
+#ifdef WINDOWS
+  LPCTSTR src = NULL, dst = NULL;
+
+  src = (LPCTSTR) (*env)->GetStringChars(env, jsrc, NULL);
+  if (!src) goto done; // exception was thrown
+  dst = (LPCTSTR) (*env)->GetStringChars(env, jdst, NULL);
+  if (!dst) goto done; // exception was thrown
+  if (!CreateHardLink(dst, src)) {
+    throw_ioe(env, GetLastError());
+  }
+
+done:
+  if (src) (*env)->ReleaseStringChars(env, jsrc, src);
+  if (dst) (*env)->ReleaseStringChars(env, jdst, dst);
+#endif
+}
+
 JNIEXPORT jlong JNICALL
 Java_org_apache_hadoop_io_nativeio_NativeIO_getMemlockLimit0(
 JNIEnv *env, jclass clazz)

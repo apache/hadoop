@@ -33,6 +33,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.HardLink;
 import org.apache.hadoop.io.SecureIOUtils.AlreadyExistsException;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.Shell;
@@ -824,6 +825,14 @@ public class NativeIO {
     }
   }
 
+  public static void link(File src, File dst) throws IOException {
+    if (!nativeLoaded) {
+      HardLink.createHardLink(src, dst);
+    } else {
+      link0(src.getAbsolutePath(), dst.getAbsolutePath());
+    }
+  }
+
   /**
    * A version of renameTo that throws a descriptive exception when it fails.
    *
@@ -833,5 +842,8 @@ public class NativeIO {
    * @throws NativeIOException   On failure.
    */
   private static native void renameTo0(String src, String dst)
+      throws NativeIOException;
+
+  private static native void link0(String src, String dst)
       throws NativeIOException;
 }

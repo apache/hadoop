@@ -41,6 +41,7 @@ import java.net.InetSocketAddress;
 import java.nio.channels.FileChannel;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -63,6 +64,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -750,15 +752,14 @@ public class TestFsck {
         for (int j=0; j<=1; j++) {
           File storageDir = cluster.getInstanceStorageDir(i, j);
           File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
-          File[] blocks = data_dir.listFiles();
-          if (blocks == null)
+          List<File> metadataFiles = MiniDFSCluster.getAllBlockMetadataFiles(
+              data_dir);
+          if (metadataFiles == null)
             continue;
-  
-          for (int idx = 0; idx < blocks.length; idx++) {
-            if (!blocks[idx].getName().startsWith("blk_")) {
-              continue;
-            }
-            assertTrue("Cannot remove file.", blocks[idx].delete());
+          for (File metadataFile : metadataFiles) {
+            File blockFile = Block.metaToBlockFile(metadataFile);
+            assertTrue("Cannot remove file.", blockFile.delete());
+            assertTrue("Cannot remove file.", metadataFile.delete());
           }
         }
       }

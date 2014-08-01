@@ -59,7 +59,8 @@ class BlockPoolSlice {
   private final String bpid;
   private final FsVolumeImpl volume; // volume to which this BlockPool belongs to
   private final File currentDir; // StorageDirectory/current/bpid/current
-  private final LDir finalizedDir; // directory store Finalized replica
+  // directory where finalized replicas are stored
+  private final File finalizedDir;
   private final File rbwDir; // directory store RBW replica
   private final File tmpDir; // directory store Temporary replica
   private static final String DU_CACHE_FILE = "dfsUsed";
@@ -82,8 +83,13 @@ class BlockPoolSlice {
     this.bpid = bpid;
     this.volume = volume;
     this.currentDir = new File(bpDir, DataStorage.STORAGE_DIR_CURRENT); 
-    final File finalizedDir = new File(
+    this.finalizedDir = new File(
         currentDir, DataStorage.STORAGE_DIR_FINALIZED);
+    if (!this.finalizedDir.exists()) {
+      if (!this.finalizedDir.mkdirs()) {
+        throw new IOException("Failed to mkdirs " + this.finalizedDir);
+      }
+    }
 
     // Files that were being written when the datanode was last shutdown
     // are now moved back to the data directory. It is possible that
@@ -101,10 +107,6 @@ class BlockPoolSlice {
     if (rbwDir.exists() && !supportAppends) {
       FileUtil.fullyDelete(rbwDir);
     }
-    final int maxBlocksPerDir = conf.getInt(
-        DFSConfigKeys.DFS_DATANODE_NUMBLOCKS_KEY,
-        DFSConfigKeys.DFS_DATANODE_NUMBLOCKS_DEFAULT);
-    this.finalizedDir = new LDir(finalizedDir, maxBlocksPerDir);
     if (!rbwDir.mkdirs()) {  // create rbw directory if not exist
       if (!rbwDir.isDirectory()) {
         throw new IOException("Mkdirs failed to create " + rbwDir.toString());
@@ -137,7 +139,7 @@ class BlockPoolSlice {
   }
 
   File getFinalizedDir() {
-    return finalizedDir.dir;
+    return finalizedDir;
   }
   
   File getRbwDir() {
@@ -245,24 +247,55 @@ class BlockPoolSlice {
   }
 
   File addBlock(Block b, File f) throws IOException {
-    File blockFile = finalizedDir.addBlock(b, f);
+    File blockDir = DatanodeUtil.idToBlockDir(finalizedDir, b.getBlockId());
+    if (!blockDir.exists()) {
+      if (!blockDir.mkdirs()) {
+        throw new IOException("Failed to mkdirs " + blockDir);
+      }
+    }
+    File blockFile = FsDatasetImpl.moveBlockFiles(b, f, blockDir);
     File metaFile = FsDatasetUtil.getMetaFile(blockFile, b.getGenerationStamp());
     dfsUsage.incDfsUsed(b.getNumBytes()+metaFile.length());
     return blockFile;
   }
     
   void checkDirs() throws DiskErrorException {
-    finalizedDir.checkDirTree();
+    DiskChecker.checkDirs(finalizedDir);
     DiskChecker.checkDir(tmpDir);
     DiskChecker.checkDir(rbwDir);
   }
     
   void getVolumeMap(ReplicaMap volumeMap) throws IOException {
     // add finalized replicas
-    finalizedDir.getVolumeMap(bpid, volumeMap, volume);
+    addToReplicasMap(volumeMap, finalizedDir, true);
     // add rbw replicas
     addToReplicasMap(volumeMap, rbwDir, false);
   }
+
+  /**
+   * Recover an unlinked tmp file on datanode restart. If the original block
+   * does not exist, then the tmp file is renamed to be the
+   * original file name and the original name is returned; otherwise the tmp
+   * file is deleted and null is returned.
+   */
+  File recoverTempUnlinkedBlock(File unlinkedTmp) throws IOException {
+    File blockFile = FsDatasetUtil.getOrigFile(unlinkedTmp);
+    if (blockFile.exists()) {
+      // If the original block file still exists, then no recovery is needed.
+      if (!unlinkedTmp.delete()) {
+        throw new IOException("Unable to cleanup unlinked tmp file " +
+            unlinkedTmp);
+      }
+      return null;
+    } else {
+      if (!unlinkedTmp.renameTo(blockFile)) {
+        throw new IOException("Unable to rename unlinked tmp file " +
+            unlinkedTmp);
+      }
+      return blockFile;
+    }
+  }
+
 
   /**
    * Add replicas under the given directory to the volume map
@@ -273,23 +306,34 @@ class BlockPoolSlice {
    */
   void addToReplicasMap(ReplicaMap volumeMap, File dir, boolean isFinalized
       ) throws IOException {
-    File blockFiles[] = FileUtil.listFiles(dir);
-    for (File blockFile : blockFiles) {
-      if (!Block.isBlockFilename(blockFile))
+    File files[] = FileUtil.listFiles(dir);
+    for (File file : files) {
+      if (file.isDirectory()) {
+        addToReplicasMap(volumeMap, file, isFinalized);
+      }
+
+      if (isFinalized && FsDatasetUtil.isUnlinkTmpFile(file)) {
+        file = recoverTempUnlinkedBlock(file);
+        if (file == null) { // the original block still exists, so we cover it
+          // in another iteration and can continue here
+          continue;
+        }
+      }
+      if (!Block.isBlockFilename(file))
         continue;
       
       long genStamp = FsDatasetUtil.getGenerationStampFromFile(
-          blockFiles, blockFile);
-      long blockId = Block.filename2id(blockFile.getName());
+          files, file);
+      long blockId = Block.filename2id(file.getName());
       ReplicaInfo newReplica = null;
       if (isFinalized) {
         newReplica = new FinalizedReplica(blockId, 
-            blockFile.length(), genStamp, volume, blockFile.getParentFile());
+            file.length(), genStamp, volume, file.getParentFile());
       } else {
 
         boolean loadRwr = true;
-        File restartMeta = new File(blockFile.getParent()  +
-            File.pathSeparator + "." + blockFile.getName() + ".restart");
+        File restartMeta = new File(file.getParent()  +
+            File.pathSeparator + "." + file.getName() + ".restart");
         Scanner sc = null;
         try {
           sc = new Scanner(restartMeta);
@@ -299,8 +343,8 @@ class BlockPoolSlice {
             // We don't know the expected block length, so just use 0
             // and don't reserve any more space for writes.
             newReplica = new ReplicaBeingWritten(blockId,
-                validateIntegrityAndSetLength(blockFile, genStamp), 
-                genStamp, volume, blockFile.getParentFile(), null, 0);
+                validateIntegrityAndSetLength(file, genStamp), 
+                genStamp, volume, file.getParentFile(), null, 0);
             loadRwr = false;
           }
           sc.close();
@@ -309,7 +353,7 @@ class BlockPoolSlice {
               restartMeta.getPath());
           }
         } catch (FileNotFoundException fnfe) {
-          // nothing to do here
+          // nothing to do hereFile dir =
         } finally {
           if (sc != null) {
             sc.close();
@@ -318,15 +362,15 @@ class BlockPoolSlice {
         // Restart meta doesn't exist or expired.
         if (loadRwr) {
           newReplica = new ReplicaWaitingToBeRecovered(blockId,
-              validateIntegrityAndSetLength(blockFile, genStamp), 
-              genStamp, volume, blockFile.getParentFile());
+              validateIntegrityAndSetLength(file, genStamp),
+              genStamp, volume, file.getParentFile());
         }
       }
 
       ReplicaInfo oldReplica = volumeMap.add(bpid, newReplica);
       if (oldReplica != null) {
         FsDatasetImpl.LOG.warn("Two block files with the same block id exist " +
-            "on disk: " + oldReplica.getBlockFile() + " and " + blockFile );
+            "on disk: " + oldReplica.getBlockFile() + " and " + file );
       }
     }
   }
@@ -411,10 +455,6 @@ class BlockPoolSlice {
       IOUtils.closeStream(checksumIn);
       IOUtils.closeStream(blockIn);
     }
-  }
-    
-  void clearPath(File f) {
-    finalizedDir.clearPath(f);
   }
     
   @Override

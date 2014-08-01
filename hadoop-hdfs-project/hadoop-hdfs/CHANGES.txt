@@ -196,6 +196,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6036. Forcibly timeout misbehaving DFSClients that try to do
     no-checksum reads that extend too long (cmccabe)
 
+    HDFS-6482. Use block ID-based block layout on datanodes (James Thomas via
+    Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
