@@ -37,7 +37,7 @@ import com.google.common.base.Preconditions;
 public class EnumCounters<E extends Enum<E>> {
   /** The class of the enum. */
   private final Class<E> enumClass;
-  /** The counter array, counters[i] corresponds to the enumConstants[i]. */
+  /** An array of longs corresponding to the enum type. */
   private final long[] counters;
 
   /**
@@ -72,6 +72,13 @@ public class EnumCounters<E extends Enum<E>> {
   public final void set(final EnumCounters<E> that) {
     for(int i = 0; i < counters.length; i++) {
       this.counters[i] = that.counters[i];
+    }
+  }
+
+  /** Reset all counters to zero. */
+  public final void reset() {
+    for(int i = 0; i < counters.length; i++) {
+      this.counters[i] = 0L;
     }
   }
 
