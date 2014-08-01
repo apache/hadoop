@@ -867,13 +867,42 @@ public class TestBalancer {
     } catch (IllegalArgumentException e) {
 
     }
-    parameters = new String[] { "-threshold 1 -policy" };
+    parameters = new String[] {"-threshold", "1", "-policy"};
     try {
       Balancer.Cli.parse(parameters);
       fail(reason);
     } catch (IllegalArgumentException e) {
 
     }
+    parameters = new String[] {"-threshold", "1", "-include"};
+    try {
+      Balancer.Cli.parse(parameters);
+      fail(reason);
+    } catch (IllegalArgumentException e) {
+
+    }
+    parameters = new String[] {"-threshold", "1", "-exclude"};
+    try {
+      Balancer.Cli.parse(parameters);
+      fail(reason);
+    } catch (IllegalArgumentException e) {
+
+    }
+    parameters = new String[] {"-include",  "-f"};
+    try {
+      Balancer.Cli.parse(parameters);
+      fail(reason);
+    } catch (IllegalArgumentException e) {
+
+    }
+    parameters = new String[] {"-exclude",  "-f"};
+    try {
+      Balancer.Cli.parse(parameters);
+      fail(reason);
+    } catch (IllegalArgumentException e) {
+
+    }
+
     parameters = new String[] {"-include",  "testnode1", "-exclude", "testnode2"};
     try {
       Balancer.Cli.parse(parameters);

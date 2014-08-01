@@ -1762,9 +1762,9 @@ public class Balancer {
       if (args != null) {
         try {
           for(int i = 0; i < args.length; i++) {
-            checkArgument(args.length >= 2, "args = " + Arrays.toString(args));           
             if ("-threshold".equalsIgnoreCase(args[i])) {
-              i++;
+              checkArgument(++i < args.length,
+                "Threshold value is missing: args = " + Arrays.toString(args));
               try {
                 threshold = Double.parseDouble(args[i]);
                 if (threshold < 1 || threshold > 100) {
@@ -1779,7 +1779,8 @@ public class Balancer {
                 throw e;
               }
             } else if ("-policy".equalsIgnoreCase(args[i])) {
-              i++;
+              checkArgument(++i < args.length,
+                "Policy value is missing: args = " + Arrays.toString(args));
               try {
                 policy = BalancingPolicy.parse(args[i]);
               } catch(IllegalArgumentException e) {
@@ -1787,16 +1788,26 @@ public class Balancer {
                 throw e;
               }
             } else if ("-exclude".equalsIgnoreCase(args[i])) {
-              i++;
+              checkArgument(++i < args.length,
+                  "List of nodes to exclude | -f <filename> is missing: args = "
+                  + Arrays.toString(args));
               if ("-f".equalsIgnoreCase(args[i])) {
-                nodesTobeExcluded = Util.getHostListFromFile(args[++i]);
+                checkArgument(++i < args.length,
+                    "File containing nodes to exclude is not specified: args = "
+                    + Arrays.toString(args));
+                nodesTobeExcluded = Util.getHostListFromFile(args[i]);
               } else {
                 nodesTobeExcluded = Util.parseHostList(args[i]);
               }
             } else if ("-include".equalsIgnoreCase(args[i])) {
-              i++;
+              checkArgument(++i < args.length,
+                "List of nodes to include | -f <filename> is missing: args = "
+                + Arrays.toString(args));
               if ("-f".equalsIgnoreCase(args[i])) {
-                nodesTobeIncluded = Util.getHostListFromFile(args[++i]);
+                checkArgument(++i < args.length,
+                    "File containing nodes to include is not specified: args = "
+                    + Arrays.toString(args));
+                nodesTobeIncluded = Util.getHostListFromFile(args[i]);
                } else {
                 nodesTobeIncluded = Util.parseHostList(args[i]);
               }
@@ -1805,12 +1816,8 @@ public class Balancer {
                   + Arrays.toString(args));
             }
           }
-          if (!nodesTobeExcluded.isEmpty() && !nodesTobeIncluded.isEmpty()) {
-            System.err.println(
-                "-exclude and -include options cannot be specified together.");
-            throw new IllegalArgumentException(
-                "-exclude and -include options cannot be specified together.");
-          }
+          checkArgument(nodesTobeExcluded.isEmpty() || nodesTobeIncluded.isEmpty(),
+              "-exclude and -include options cannot be specified together.");
         } catch(RuntimeException e) {
           printUsage(System.err);
           throw e;

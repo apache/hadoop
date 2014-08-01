@@ -88,6 +88,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6798. Add test case for incorrect data node condition during
     balancing. (Benoy Antony via Arpit Agarwal)
 
+    HDFS-6796. Improve the argument check during balancer command line parsing.
+    (Benoy Antony via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
