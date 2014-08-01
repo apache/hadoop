@@ -514,6 +514,8 @@ public class ContainerManagerImpl extends CompositeService implements
       messageBuilder.append("\nThis token is expired. current time is ")
         .append(System.currentTimeMillis()).append(" found ")
         .append(containerTokenIdentifier.getExpiryTimeStamp());
+      messageBuilder.append("\nNote: System times on machines may be out of sync.")
+        .append(" Check system time and time zones.");
     }
     if (unauthorized) {
       String msg = messageBuilder.toString();

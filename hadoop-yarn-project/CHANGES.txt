@@ -80,6 +80,8 @@ Release 2.6.0 - UNRELEASED
     YARN-1994. Expose YARN/MR endpoints on multiple interfaces. (Craig Welch,
     Milan Potocnik, Arpit Agarwal via xgong)
 
+    YARN-2343. Improve NMToken expire exception message. (Li Lu via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
