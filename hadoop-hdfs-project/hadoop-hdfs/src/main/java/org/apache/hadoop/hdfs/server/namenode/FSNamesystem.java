@@ -183,6 +183,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
+import org.apache.hadoop.hdfs.protocol.EncryptionZoneWithId;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -8559,7 +8560,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     logAuditEvent(true, "createEncryptionZone", srcArg, null, resultingStat);
   }
 
-  List<EncryptionZone> listEncryptionZones() throws IOException {
+  BatchedListEntries<EncryptionZoneWithId> listEncryptionZones(long prevId)
+      throws IOException {
     boolean success = false;
     checkSuperuserPrivilege();
     checkOperation(OperationCategory.READ);
@@ -8567,7 +8569,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     try {
       checkSuperuserPrivilege();
       checkOperation(OperationCategory.READ);
-      final List<EncryptionZone> ret = dir.listEncryptionZones();
+      final BatchedListEntries<EncryptionZoneWithId> ret =
+          dir.listEncryptionZones(prevId);
       success = true;
       return ret;
     } finally {

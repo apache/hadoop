@@ -2052,4 +2052,13 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.namenode.list.encryption.zones.num.responses</name>
+  <value>false</value>
+  <description>When listing encryption zones, the maximum number of zones
+    that will be returned in a batch. Fetching the list incrementally in
+    batches improves namenode performance.
+  </description>
+</property>
+
 </configuration>

@@ -1275,16 +1275,15 @@ public interface ClientProtocol {
     throws IOException;
 
   /**
-   * Return a list of all {@EncryptionZone}s in the HDFS hierarchy which are
-   * visible to the caller. If the caller is the HDFS admin, then the returned
-   * EncryptionZone instances will have the key id field filled in. If the
-   * caller is not the HDFS admin, then the EncryptionZone instances will only
-   * have the path field filled in and only those zones that are visible to the
-   * user are returned.
+   * Used to implement cursor-based batched listing of {@EncryptionZone}s.
+   *
+   * @param prevId ID of the last item in the previous batch. If there is no
+   *               previous batch, a negative value can be used.
+   * @return Batch of encryption zones.
    */
   @Idempotent
-  public List<EncryptionZone> listEncryptionZones()
-    throws IOException;
+  public BatchedEntries<EncryptionZoneWithId> listEncryptionZones(
+      long prevId) throws IOException;
 
   /**
    * Set xattr of a file or directory.

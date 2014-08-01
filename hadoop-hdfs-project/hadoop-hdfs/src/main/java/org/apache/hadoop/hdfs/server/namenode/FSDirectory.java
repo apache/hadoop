@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_FILE_ENCRYPTION_INFO;
 import static org.apache.hadoop.util.Time.now;
@@ -58,7 +59,7 @@ import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.EncryptionZone;
+import org.apache.hadoop.hdfs.protocol.EncryptionZoneWithId;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
 import org.apache.hadoop.hdfs.protocol.FsAclPermission;
@@ -227,7 +228,7 @@ public class FSDirectory implements Closeable {
     nameCache = new NameCache<ByteArray>(threshold);
     namesystem = ns;
 
-    ezManager = new EncryptionZoneManager(this);
+    ezManager = new EncryptionZoneManager(this, conf);
   }
     
   private FSNamesystem getFSNamesystem() {
@@ -2646,10 +2647,11 @@ public class FSDirectory implements Closeable {
     }
   }
 
-  List<EncryptionZone> listEncryptionZones() throws IOException {
+  BatchedListEntries<EncryptionZoneWithId> listEncryptionZones(long prevId)
+      throws IOException {
     readLock();
     try {
-      return ezManager.listEncryptionZones();
+      return ezManager.listEncryptionZones(prevId);
     } finally {
       readUnlock();
     }

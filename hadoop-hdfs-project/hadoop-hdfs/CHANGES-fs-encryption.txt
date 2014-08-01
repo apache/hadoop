@@ -72,6 +72,8 @@ fs-encryption (Unreleased)
 
     HDFS-6692. Add more HDFS encryption tests. (wang)
 
+    HDFS-6780. Batch the encryption zones listing API. (wang)
+
   OPTIMIZATIONS
 
   BUG FIXES

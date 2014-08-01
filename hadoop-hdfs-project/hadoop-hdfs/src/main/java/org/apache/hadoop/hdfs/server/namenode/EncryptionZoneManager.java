@@ -2,22 +2,25 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.XAttrHelper;
-import org.apache.hadoop.hdfs.protocol.EncryptionZone;
+import org.apache.hadoop.hdfs.protocol.EncryptionZoneWithId;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
+import static org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants
     .CRYPTO_XATTR_ENCRYPTION_ZONE;
 
@@ -57,17 +60,26 @@ public class EncryptionZoneManager {
 
   }
 
-  private final Map<Long, EncryptionZoneInt> encryptionZones;
+  private final TreeMap<Long, EncryptionZoneInt> encryptionZones;
   private final FSDirectory dir;
+  private final int maxListEncryptionZonesResponses;
 
   /**
    * Construct a new EncryptionZoneManager.
    *
    * @param dir Enclosing FSDirectory
    */
-  public EncryptionZoneManager(FSDirectory dir) {
+  public EncryptionZoneManager(FSDirectory dir, Configuration conf) {
     this.dir = dir;
-    encryptionZones = new HashMap<Long, EncryptionZoneInt>();
+    encryptionZones = new TreeMap<Long, EncryptionZoneInt>();
+    maxListEncryptionZonesResponses = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_LIST_ENCRYPTION_ZONES_NUM_RESPONSES,
+        DFSConfigKeys.DFS_NAMENODE_LIST_ENCRYPTION_ZONES_NUM_RESPONSES_DEFAULT
+    );
+    Preconditions.checkArgument(maxListEncryptionZonesResponses >= 0,
+        DFSConfigKeys.DFS_NAMENODE_LIST_ENCRYPTION_ZONES_NUM_RESPONSES + " " +
+            "must be a positive integer."
+    );
   }
 
   /**
@@ -236,17 +248,30 @@ public class EncryptionZoneManager {
   }
 
   /**
-   * Return the current list of encryption zones.
+   * Cursor-based listing of encryption zones.
    * <p/>
    * Called while holding the FSDirectory lock.
    */
-  List<EncryptionZone> listEncryptionZones() throws IOException {
+  BatchedListEntries<EncryptionZoneWithId> listEncryptionZones(long prevId)
+      throws IOException {
     assert dir.hasReadLock();
-    final List<EncryptionZone> ret =
-        Lists.newArrayListWithExpectedSize(encryptionZones.size());
-    for (EncryptionZoneInt ezi : encryptionZones.values()) {
-      ret.add(new EncryptionZone(getFullPathName(ezi), ezi.getKeyName()));
+    NavigableMap<Long, EncryptionZoneInt> tailMap = encryptionZones.tailMap
+        (prevId, false);
+    final int numResponses = Math.min(maxListEncryptionZonesResponses,
+        tailMap.size());
+    final List<EncryptionZoneWithId> zones =
+        Lists.newArrayListWithExpectedSize(numResponses);
+
+    int count = 0;
+    for (EncryptionZoneInt ezi : tailMap.values()) {
+      zones.add(new EncryptionZoneWithId(getFullPathName(ezi),
+          ezi.getKeyName(), ezi.getINodeId()));
+      count++;
+      if (count >= numResponses) {
+        break;
+      }
     }
-    return ret;
+    final boolean hasMore = (numResponses < tailMap.size());
+    return new BatchedListEntries<EncryptionZoneWithId>(zones, hasMore);
   }
 }

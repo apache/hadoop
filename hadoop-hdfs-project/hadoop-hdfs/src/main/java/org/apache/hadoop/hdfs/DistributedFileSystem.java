@@ -1805,7 +1805,8 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /* HDFS only */
-  public List<EncryptionZone> listEncryptionZones() throws IOException {
+  public RemoteIterator<EncryptionZone> listEncryptionZones()
+      throws IOException {
     return dfs.listEncryptionZones();
   }
 

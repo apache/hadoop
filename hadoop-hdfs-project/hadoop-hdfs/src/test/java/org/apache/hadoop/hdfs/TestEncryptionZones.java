@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FileSystemTestWrapper;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
@@ -90,6 +91,9 @@ public class TestEncryptionZones {
     conf.set(KeyProviderFactory.KEY_PROVIDER_PATH,
         JavaKeyStoreProvider.SCHEME_NAME + "://file" + testRootDir + "/test.jks"
     );
+    // Lower the batch size for testing
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_ENCRYPTION_ZONES_NUM_RESPONSES,
+        2);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     Logger.getLogger(EncryptionZoneManager.class).setLevel(Level.TRACE);
     fs = cluster.getFileSystem();
@@ -114,9 +118,13 @@ public class TestEncryptionZones {
   }
 
   public void assertNumZones(final int numZones) throws IOException {
-    final List<EncryptionZone> zones = dfsAdmin.listEncryptionZones();
-    assertEquals("Unexpected number of encryption zones!", numZones,
-        zones.size());
+    RemoteIterator<EncryptionZone> it = dfsAdmin.listEncryptionZones();
+    int count = 0;
+    while (it.hasNext()) {
+      count++;
+      it.next();
+    }
+    assertEquals("Unexpected number of encryption zones!", numZones, count);
   }
 
   /**
@@ -126,9 +134,10 @@ public class TestEncryptionZones {
    * @throws IOException if a matching zone could not be found
    */
   public void assertZonePresent(String keyName, String path) throws IOException {
-    final List<EncryptionZone> zones = dfsAdmin.listEncryptionZones();
+    final RemoteIterator<EncryptionZone> it = dfsAdmin.listEncryptionZones();
     boolean match = false;
-    for (EncryptionZone zone : zones) {
+    while (it.hasNext()) {
+      EncryptionZone zone = it.next();
       boolean matchKey = (keyName == null);
       boolean matchPath = (path == null);
       if (keyName != null && zone.getKeyName().equals(keyName)) {
@@ -282,6 +291,16 @@ public class TestEncryptionZones {
     dfsAdmin.createEncryptionZone(deepZone, TEST_KEY);
     assertNumZones(++numZones);
     assertZonePresent(null, deepZone.toString());
+
+    // Create and list some zones to test batching of listEZ
+    for (int i=1; i<6; i++) {
+      final Path zonePath = new Path("/listZone" + i);
+      fsWrapper.mkdir(zonePath, FsPermission.getDirDefault(), false);
+      dfsAdmin.createEncryptionZone(zonePath, TEST_KEY);
+      numZones++;
+      assertNumZones(numZones);
+      assertZonePresent(null, zonePath.toString());
+    }
   }
 
   /**
@@ -369,9 +388,8 @@ public class TestEncryptionZones {
     // Read them back in and compare byte-by-byte
     verifyFilesEqual(fs, baseFile, encFile1, len);
     // Roll the key of the encryption zone
-    List<EncryptionZone> zones = dfsAdmin.listEncryptionZones();
-    assertEquals("Expected 1 EZ", 1, zones.size());
-    String keyName = zones.get(0).getKeyName();
+    assertNumZones(1);
+    String keyName = dfsAdmin.listEncryptionZones().next().getKeyName();
     cluster.getNamesystem().getProvider().rollNewVersion(keyName);
     // Read them back in and compare byte-by-byte
     verifyFilesEqual(fs, baseFile, encFile1, len);
@@ -457,14 +475,12 @@ public class TestEncryptionZones {
 
   @Test(timeout = 120000)
   public void testCreateEZWithNoProvider() throws Exception {
-
+    // Unset the key provider and make sure EZ ops don't work
     final Configuration clusterConf = cluster.getConfiguration(0);
     clusterConf.set(KeyProviderFactory.KEY_PROVIDER_PATH, "");
     cluster.restartNameNode(true);
     cluster.waitActive();
-    /* Test failure of create EZ on a directory that doesn't exist. */
     final Path zone1 = new Path("/zone1");
-    /* Normal creation of an EZ */
     fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
     try {
       dfsAdmin.createEncryptionZone(zone1, TEST_KEY);
@@ -476,8 +492,7 @@ public class TestEncryptionZones {
         JavaKeyStoreProvider.SCHEME_NAME + "://file" + testRootDir + "/test.jks"
     );
     // Try listing EZs as well
-    List<EncryptionZone> zones = dfsAdmin.listEncryptionZones();
-    assertEquals("Expected no zones", 0, zones.size());
+    assertNumZones(0);
   }
 
   private class MyInjector extends EncryptionFaultInjector {

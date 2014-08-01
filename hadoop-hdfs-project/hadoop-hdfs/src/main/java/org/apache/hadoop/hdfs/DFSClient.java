@@ -150,6 +150,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
+import org.apache.hadoop.hdfs.protocol.EncryptionZoneIterator;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -2857,13 +2858,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  public List<EncryptionZone> listEncryptionZones() throws IOException {
+  public RemoteIterator<EncryptionZone> listEncryptionZones()
+      throws IOException {
     checkOpen();
-    try {
-      return namenode.listEncryptionZones();
-    } catch (RemoteException re) {
-      throw re.unwrapRemoteException(AccessControlException.class);
-    }
+    return new EncryptionZoneIterator(namenode);
   }
 
   public void setXAttr(String src, String name, byte[] value, 

@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 
+import com.google.common.collect.Lists;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.crypto.CipherSuite;
@@ -52,7 +53,7 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.EncryptionZone;
+import org.apache.hadoop.hdfs.protocol.EncryptionZoneWithId;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
@@ -146,6 +147,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SetSaf
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SetTimesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpdateBlockForPipelineRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpdatePipelineRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.CreateEncryptionZoneRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ListEncryptionZonesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.GetXAttrsRequestProto;
@@ -173,6 +175,11 @@ import org.apache.hadoop.security.token.Token;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.ServiceException;
+
+
+import static org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
+import static org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos
+    .EncryptionZoneWithIdProto;
 
 /**
  * This class forwards NN's ClientProtocol calls as RPC calls to the NN server
@@ -1317,11 +1324,22 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public List<EncryptionZone> listEncryptionZones() throws IOException {
+  public BatchedEntries<EncryptionZoneWithId> listEncryptionZones(long id)
+      throws IOException {
     final ListEncryptionZonesRequestProto req =
-      ListEncryptionZonesRequestProto.newBuilder().build();
+      ListEncryptionZonesRequestProto.newBuilder()
+          .setId(id)
+          .build();
     try {
-      return PBHelper.convert(rpcProxy.listEncryptionZones(null, req));
+      EncryptionZonesProtos.ListEncryptionZonesResponseProto response =
+          rpcProxy.listEncryptionZones(null, req);
+      List<EncryptionZoneWithId> elements =
+          Lists.newArrayListWithCapacity(response.getZonesCount());
+      for (EncryptionZoneWithIdProto p : response.getZonesList()) {
+        elements.add(PBHelper.convert(p));
+      }
+      return new BatchedListEntries<EncryptionZoneWithId>(elements,
+          response.getHasMore());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

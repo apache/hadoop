@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.tools.TableListing;
@@ -201,8 +202,9 @@ public class CryptoAdmin extends Configured implements Tool {
         final TableListing listing = new TableListing.Builder()
           .addField("").addField("", true)
           .wrapWidth(MAX_LINE_WIDTH).hideHeaders().build();
-        final List<EncryptionZone> ezs = dfs.listEncryptionZones();
-        for (EncryptionZone ez : ezs) {
+        final RemoteIterator<EncryptionZone> it = dfs.listEncryptionZones();
+        while (it.hasNext()) {
+          EncryptionZone ez = it.next();
           listing.addRow(ez.getPath(), ez.getKeyName());
         }
         System.out.println(listing.toString());

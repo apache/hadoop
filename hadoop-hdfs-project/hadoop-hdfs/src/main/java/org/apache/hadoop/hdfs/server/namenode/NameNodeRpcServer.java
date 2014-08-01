@@ -77,7 +77,7 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.EncryptionZone;
+import org.apache.hadoop.hdfs.protocol.EncryptionZoneWithId;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSLimitException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -1432,8 +1432,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override
-  public List<EncryptionZone> listEncryptionZones() throws IOException {
-    return namesystem.listEncryptionZones();
+  public BatchedEntries<EncryptionZoneWithId> listEncryptionZones(
+      long prevId) throws IOException {
+    return namesystem.listEncryptionZones(prevId);
   }
 
   @Override
