@@ -469,6 +469,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10902. Deletion of directories with snapshots will not output
     reason for trash move failure. (Stephen Chu via wang)
 
+    HADOOP-10900. CredentialShell args should use single-dash style. (wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
