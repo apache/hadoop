@@ -76,7 +76,7 @@ public class TestReplicationPolicy {
   private static NameNode namenode;
   private static BlockPlacementPolicy replicator;
   private static final String filename = "/dummyfile.txt";
-  private static DatanodeDescriptor dataNodes[];
+  private static DatanodeDescriptor[] dataNodes;
   private static DatanodeStorageInfo[] storages;
   // The interval for marking a datanode as stale,
   private static final long staleInterval =
