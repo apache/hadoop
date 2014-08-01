@@ -15,33 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.nodemanager.recovery.records.impl.pb;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability.Evolving;
-import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.NMDBSchemaVersionProto;
-import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.NMDBSchemaVersionProtoOrBuilder;
+package org.apache.hadoop.yarn.server.records.impl.pb;
 
-import org.apache.hadoop.yarn.server.nodemanager.recovery.records.NMDBSchemaVersion;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProtoOrBuilder;
 
-@Private
-@Evolving
-public class NMDBSchemaVersionPBImpl extends NMDBSchemaVersion {
+import org.apache.hadoop.yarn.server.records.Version;
 
-  NMDBSchemaVersionProto proto = NMDBSchemaVersionProto.getDefaultInstance();
-  NMDBSchemaVersionProto.Builder builder = null;
+public class VersionPBImpl extends Version {
+
+  VersionProto proto = VersionProto.getDefaultInstance();
+  VersionProto.Builder builder = null;
   boolean viaProto = false;
 
-  public NMDBSchemaVersionPBImpl() {
-    builder = NMDBSchemaVersionProto.newBuilder();
+  public VersionPBImpl() {
+    builder = VersionProto.newBuilder();
   }
 
-  public NMDBSchemaVersionPBImpl(NMDBSchemaVersionProto proto) {
+  public VersionPBImpl(VersionProto proto) {
     this.proto = proto;
     viaProto = true;
   }
 
-  public NMDBSchemaVersionProto getProto() {
+  public VersionProto getProto() {
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
@@ -49,33 +46,32 @@ public class NMDBSchemaVersionPBImpl extends NMDBSchemaVersion {
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = NMDBSchemaVersionProto.newBuilder(proto);
+      builder = VersionProto.newBuilder(proto);
     }
     viaProto = false;
   }
-  
+
   @Override
   public int getMajorVersion() {
-    NMDBSchemaVersionProtoOrBuilder p = viaProto ? proto : builder;
+    VersionProtoOrBuilder p = viaProto ? proto : builder;
     return p.getMajorVersion();
   }
 
   @Override
-  public void setMajorVersion(int majorVersion) {
+  public void setMajorVersion(int major) {
     maybeInitBuilder();
-    builder.setMajorVersion(majorVersion);
+    builder.setMajorVersion(major);
   }
 
   @Override
   public int getMinorVersion() {
-    NMDBSchemaVersionProtoOrBuilder p = viaProto ? proto : builder;
+    VersionProtoOrBuilder p = viaProto ? proto : builder;
     return p.getMinorVersion();
   }
 
   @Override
-  public void setMinorVersion(int minorVersion) {
+  public void setMinorVersion(int minor) {
     maybeInitBuilder();
-    builder.setMinorVersion(minorVersion);
+    builder.setMinorVersion(minor);
   }
-
 }

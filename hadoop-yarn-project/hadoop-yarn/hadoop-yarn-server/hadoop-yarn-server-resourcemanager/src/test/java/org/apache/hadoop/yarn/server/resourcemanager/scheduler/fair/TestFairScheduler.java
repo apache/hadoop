@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
@@ -3340,5 +3341,29 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSQueue ancestorQueue =
         scheduler.findLowestCommonAncestorQueue(a1Queue, b1Queue);
     assertEquals(ancestorQueue, queue1);
+  }
+
+  @Test
+  public void testThreadLifeCycle() throws InterruptedException {
+    conf.setBoolean(
+        FairSchedulerConfiguration.CONTINUOUS_SCHEDULING_ENABLED, true);
+    scheduler.init(conf);
+    scheduler.start();
+
+    Thread updateThread = scheduler.updateThread;
+    Thread schedulingThread = scheduler.schedulingThread;
+
+    assertTrue(updateThread.isAlive());
+    assertTrue(schedulingThread.isAlive());
+
+    scheduler.stop();
+
+    int numRetries = 100;
+    while (numRetries-- > 0 &&
+        (updateThread.isAlive() || schedulingThread.isAlive())) {
+      Thread.sleep(50);
+    }
+
+    assertNotEquals("One of the threads is still alive", 0, numRetries);
   }
 }

@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
-import java.util.Arrays;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 
 /**
@@ -39,12 +38,15 @@ public class BlocksWithLocations {
     final Block block;
     final String[] datanodeUuids;
     final String[] storageIDs;
+    final StorageType[] storageTypes;
     
     /** constructor */
-    public BlockWithLocations(Block block, String[] datanodeUuids, String[] storageIDs) {
+    public BlockWithLocations(Block block, String[] datanodeUuids,
+        String[] storageIDs, StorageType[] storageTypes) {
       this.block = block;
       this.datanodeUuids = datanodeUuids;
       this.storageIDs = storageIDs;
+      this.storageTypes = storageTypes;
     }
     
     /** get the block */
@@ -61,7 +63,12 @@ public class BlocksWithLocations {
     public String[] getStorageIDs() {
       return storageIDs;
     }
-    
+
+    /** @return the storage types */
+    public StorageType[] getStorageTypes() {
+      return storageTypes;
+    }
+
     @Override
     public String toString() {
       final StringBuilder b = new StringBuilder();
@@ -70,11 +77,17 @@ public class BlocksWithLocations {
         return b.append("[]").toString();
       }
       
-      b.append(storageIDs[0]).append('@').append(datanodeUuids[0]);
+      appendString(0, b.append("["));
       for(int i = 1; i < datanodeUuids.length; i++) {
-        b.append(", ").append(storageIDs[i]).append("@").append(datanodeUuids[i]);
+        appendString(i, b.append(","));
       }
       return b.append("]").toString();
+    }
+    
+    private StringBuilder appendString(int i, StringBuilder b) {
+      return b.append("[").append(storageTypes[i]).append("]")
+              .append(storageIDs[i])
+              .append("@").append(datanodeUuids[i]);
     }
   }
 

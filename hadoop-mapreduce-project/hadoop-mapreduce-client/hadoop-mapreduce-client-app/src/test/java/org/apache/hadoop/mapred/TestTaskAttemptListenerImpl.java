@@ -63,6 +63,13 @@ public class TestTaskAttemptListenerImpl {
 
     public MockTaskAttemptListenerImpl(AppContext context,
         JobTokenSecretManager jobTokenSecretManager,
+        RMHeartbeatHandler rmHeartbeatHandler, AMPreemptionPolicy policy) {
+
+      super(context, jobTokenSecretManager, rmHeartbeatHandler, policy);
+    }
+
+    public MockTaskAttemptListenerImpl(AppContext context,
+        JobTokenSecretManager jobTokenSecretManager,
         RMHeartbeatHandler rmHeartbeatHandler,
         TaskHeartbeatHandler hbHandler,
         AMPreemptionPolicy policy) {
@@ -210,7 +217,7 @@ public class TestTaskAttemptListenerImpl {
     when(appCtx.getEventHandler()).thenReturn(ea);
     CheckpointAMPreemptionPolicy policy = new CheckpointAMPreemptionPolicy();
     policy.init(appCtx);
-    TaskAttemptListenerImpl listener = new TaskAttemptListenerImpl(
+    TaskAttemptListenerImpl listener = new MockTaskAttemptListenerImpl(
         appCtx, secret, rmHeartbeatHandler, policy) {
       @Override
       protected void registerHeartbeatHandler(Configuration conf) {
@@ -271,7 +278,7 @@ public class TestTaskAttemptListenerImpl {
     when(appCtx.getEventHandler()).thenReturn(ea);
     CheckpointAMPreemptionPolicy policy = new CheckpointAMPreemptionPolicy();
     policy.init(appCtx);
-    TaskAttemptListenerImpl listener = new TaskAttemptListenerImpl(
+    TaskAttemptListenerImpl listener = new MockTaskAttemptListenerImpl(
         appCtx, secret, rmHeartbeatHandler, policy) {
       @Override
       protected void registerHeartbeatHandler(Configuration conf) {
@@ -326,7 +333,7 @@ public class TestTaskAttemptListenerImpl {
     when(appCtx.getEventHandler()).thenReturn(ea);
     CheckpointAMPreemptionPolicy policy = new CheckpointAMPreemptionPolicy();
     policy.init(appCtx);
-    TaskAttemptListenerImpl listener = new TaskAttemptListenerImpl(
+    TaskAttemptListenerImpl listener = new MockTaskAttemptListenerImpl(
         appCtx, secret, rmHeartbeatHandler, policy) {
       @Override
       protected void registerHeartbeatHandler(Configuration conf) {

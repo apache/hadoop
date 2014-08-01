@@ -55,13 +55,13 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMDTSecretManagerState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.AMRMTokenSecretManagerState;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -111,8 +111,8 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
   interface RMStateStoreHelper {
     RMStateStore getRMStateStore() throws Exception;
     boolean isFinalStateValid() throws Exception;
-    void writeVersion(RMStateVersion version) throws Exception;
-    RMStateVersion getCurrentVersion() throws Exception;
+    void writeVersion(Version version) throws Exception;
+    Version getCurrentVersion() throws Exception;
     boolean appExists(RMApp app) throws Exception;
   }
 
@@ -477,13 +477,13 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     store.setRMDispatcher(new TestDispatcher());
 
     // default version
-    RMStateVersion defaultVersion = stateStoreHelper.getCurrentVersion();
+    Version defaultVersion = stateStoreHelper.getCurrentVersion();
     store.checkVersion();
     Assert.assertEquals(defaultVersion, store.loadVersion());
 
     // compatible version
-    RMStateVersion compatibleVersion =
-        RMStateVersion.newInstance(defaultVersion.getMajorVersion(),
+    Version compatibleVersion =
+        Version.newInstance(defaultVersion.getMajorVersion(),
           defaultVersion.getMinorVersion() + 2);
     stateStoreHelper.writeVersion(compatibleVersion);
     Assert.assertEquals(compatibleVersion, store.loadVersion());
@@ -492,8 +492,8 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     Assert.assertEquals(defaultVersion, store.loadVersion());
 
     // incompatible version
-    RMStateVersion incompatibleVersion =
-        RMStateVersion.newInstance(defaultVersion.getMajorVersion() + 2,
+    Version incompatibleVersion =
+        Version.newInstance(defaultVersion.getMajorVersion() + 2,
           defaultVersion.getMinorVersion());
     stateStoreHelper.writeVersion(incompatibleVersion);
     try {

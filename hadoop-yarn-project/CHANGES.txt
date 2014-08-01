@@ -71,6 +71,15 @@ Release 2.6.0 - UNRELEASED
     YARN-2211. Persist AMRMToken master key in RMStateStore for RM recovery.
     (Xuan Gong via jianhe)
 
+    YARN-2328. FairScheduler: Verify update and continuous scheduling threads are
+    stopped when the scheduler is stopped. (kasha)
+
+    YARN-2347. Consolidated RMStateVersion and NMDBSchemaVersion into Version in
+    yarn-server-common. (Junping Du via zjshen)
+
+    YARN-1994. Expose YARN/MR endpoints on multiple interfaces. (Craig Welch,
+    Milan Potocnik, Arpit Agarwal via xgong)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -107,6 +116,9 @@ Release 2.6.0 - UNRELEASED
     application submit fails (Chen He via jlowe)
 
     YARN-1796. container-executor shouldn't require o-r permissions (atm)
+
+    YARN-2354. DistributedShell may allocate more containers than client
+    specified after AM restarts. (Li Lu via jianhe)
 
 Release 2.5.0 - UNRELEASED
 

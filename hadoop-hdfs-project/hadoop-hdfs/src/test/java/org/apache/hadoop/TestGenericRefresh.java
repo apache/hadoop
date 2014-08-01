@@ -47,7 +47,6 @@ import org.mockito.Mockito;
 public class TestGenericRefresh {
   private static MiniDFSCluster cluster;
   private static Configuration config;
-  private static final int NNPort = 54222;
 
   private static RefreshHandler firstHandler;
   private static RefreshHandler secondHandler;
@@ -57,8 +56,8 @@ public class TestGenericRefresh {
     config = new Configuration();
     config.set("hadoop.security.authorization", "true");
 
-    FileSystem.setDefaultUri(config, "hdfs://localhost:" + NNPort);
-    cluster = new MiniDFSCluster.Builder(config).nameNodePort(NNPort).build();
+    FileSystem.setDefaultUri(config, "hdfs://localhost:0");
+    cluster = new MiniDFSCluster.Builder(config).build();
     cluster.waitActive();
   }
 
@@ -103,7 +102,8 @@ public class TestGenericRefresh {
   @Test
   public void testInvalidIdentifier() throws Exception {
     DFSAdmin admin = new DFSAdmin(config);
-    String [] args = new String[]{"-refresh", "localhost:" + NNPort, "unregisteredIdentity"};
+    String [] args = new String[]{"-refresh", "localhost:" + 
+        cluster.getNameNodePort(), "unregisteredIdentity"};
     int exitCode = admin.run(args);
     assertEquals("DFSAdmin should fail due to no handler registered", -1, exitCode);
   }
@@ -111,7 +111,8 @@ public class TestGenericRefresh {
   @Test
   public void testValidIdentifier() throws Exception {
     DFSAdmin admin = new DFSAdmin(config);
-    String[] args = new String[]{"-refresh", "localhost:" + NNPort, "firstHandler"};
+    String[] args = new String[]{"-refresh",
+        "localhost:" + cluster.getNameNodePort(), "firstHandler"};
     int exitCode = admin.run(args);
     assertEquals("DFSAdmin should succeed", 0, exitCode);
 
@@ -124,11 +125,13 @@ public class TestGenericRefresh {
   @Test
   public void testVariableArgs() throws Exception {
     DFSAdmin admin = new DFSAdmin(config);
-    String[] args = new String[]{"-refresh", "localhost:" + NNPort, "secondHandler", "one"};
+    String[] args = new String[]{"-refresh", "localhost:" +
+        cluster.getNameNodePort(), "secondHandler", "one"};
     int exitCode = admin.run(args);
     assertEquals("DFSAdmin should return 2", 2, exitCode);
 
-    exitCode = admin.run(new String[]{"-refresh", "localhost:" + NNPort, "secondHandler", "one", "two"});
+    exitCode = admin.run(new String[]{"-refresh", "localhost:" +
+        cluster.getNameNodePort(), "secondHandler", "one", "two"});
     assertEquals("DFSAdmin should now return 3", 3, exitCode);
 
     Mockito.verify(secondHandler).handleRefresh("secondHandler", new String[]{"one"});
@@ -141,7 +144,8 @@ public class TestGenericRefresh {
 
     // And now this should fail
     DFSAdmin admin = new DFSAdmin(config);
-    String[] args = new String[]{"-refresh", "localhost:" + NNPort, "firstHandler"};
+    String[] args = new String[]{"-refresh", "localhost:" +
+        cluster.getNameNodePort(), "firstHandler"};
     int exitCode = admin.run(args);
     assertEquals("DFSAdmin should return -1", -1, exitCode);
   }
@@ -161,7 +165,8 @@ public class TestGenericRefresh {
 
     // this should trigger both
     DFSAdmin admin = new DFSAdmin(config);
-    String[] args = new String[]{"-refresh", "localhost:" + NNPort, "sharedId", "one"};
+    String[] args = new String[]{"-refresh", "localhost:" +
+        cluster.getNameNodePort(), "sharedId", "one"};
     int exitCode = admin.run(args);
     assertEquals(-1, exitCode); // -1 because one of the responses is unregistered
 
@@ -189,7 +194,8 @@ public class TestGenericRefresh {
 
     // We refresh both
     DFSAdmin admin = new DFSAdmin(config);
-    String[] args = new String[]{"-refresh", "localhost:" + NNPort, "shared"};
+    String[] args = new String[]{"-refresh", "localhost:" +
+        cluster.getNameNodePort(), "shared"};
     int exitCode = admin.run(args);
     assertEquals(-1, exitCode); // We get -1 because of our logic for melding non-zero return codes
 
@@ -215,7 +221,8 @@ public class TestGenericRefresh {
     RefreshRegistry.defaultRegistry().register("exceptional", otherExceptionalHandler);
 
     DFSAdmin admin = new DFSAdmin(config);
-    String[] args = new String[]{"-refresh", "localhost:" + NNPort, "exceptional"};
+    String[] args = new String[]{"-refresh", "localhost:" +
+        cluster.getNameNodePort(), "exceptional"};
     int exitCode = admin.run(args);
     assertEquals(-1, exitCode); // Exceptions result in a -1
 

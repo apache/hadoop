@@ -139,8 +139,11 @@ public class FairScheduler extends
   private final int UPDATE_DEBUG_FREQUENCY = 5;
   private int updatesToSkipForDebug = UPDATE_DEBUG_FREQUENCY;
 
-  private Thread updateThread;
-  private Thread schedulingThread;
+  @VisibleForTesting
+  Thread updateThread;
+
+  @VisibleForTesting
+  Thread schedulingThread;
   // timeout to join when we stop this service
   protected final long THREAD_JOIN_TIMEOUT_MS = 1000;
 
@@ -243,18 +246,43 @@ public class FairScheduler extends
   }
 
   /**
-   * A runnable which calls {@link FairScheduler#update()} every
+   * Thread which calls {@link FairScheduler#update()} every
    * <code>updateInterval</code> milliseconds.
    */
-  private class UpdateThread implements Runnable {
+  private class UpdateThread extends Thread {
+
+    @Override
     public void run() {
-      while (true) {
+      while (!Thread.currentThread().isInterrupted()) {
         try {
           Thread.sleep(updateInterval);
           update();
           preemptTasksIfNecessary();
+        } catch (InterruptedException ie) {
+          LOG.warn("Update thread interrupted. Exiting.");
+          return;
         } catch (Exception e) {
           LOG.error("Exception in fair scheduler UpdateThread", e);
+        }
+      }
+    }
+  }
+
+  /**
+   * Thread which attempts scheduling resources continuously,
+   * asynchronous to the node heartbeats.
+   */
+  private class ContinuousSchedulingThread extends Thread {
+
+    @Override
+    public void run() {
+      while (!Thread.currentThread().isInterrupted()) {
+        try {
+          continuousSchedulingAttempt();
+          Thread.sleep(getContinuousSchedulingSleepMs());
+        } catch (InterruptedException e) {
+          LOG.warn("Continuous scheduling thread interrupted. Exiting.", e);
+          return;
         }
       }
     }
@@ -970,7 +998,7 @@ public class FairScheduler extends
     }
   }
 
-  void continuousSchedulingAttempt() {
+  void continuousSchedulingAttempt() throws InterruptedException {
     List<NodeId> nodeIdList = new ArrayList<NodeId>(nodes.keySet());
     // Sort the nodes by space available on them, so that we offer
     // containers on emptier nodes first, facilitating an even spread. This
@@ -1229,30 +1257,14 @@ public class FairScheduler extends
       throw new IOException("Failed to start FairScheduler", e);
     }
 
-    updateThread = new Thread(new UpdateThread());
+    updateThread = new UpdateThread();
     updateThread.setName("FairSchedulerUpdateThread");
     updateThread.setDaemon(true);
 
     if (continuousSchedulingEnabled) {
       // start continuous scheduling thread
-      schedulingThread = new Thread(
-          new Runnable() {
-            @Override
-            public void run() {
-              while (!Thread.currentThread().isInterrupted()) {
-                try {
-                  continuousSchedulingAttempt();
-                  Thread.sleep(getContinuousSchedulingSleepMs());
-                } catch (InterruptedException e) {
-                  LOG.error("Continuous scheduling thread interrupted. Exiting. ",
-                      e);
-                  return;
-                }
-              }
-            }
-          }
-      );
-      schedulingThread.setName("ContinuousScheduling");
+      schedulingThread = new ContinuousSchedulingThread();
+      schedulingThread.setName("FairSchedulerContinuousScheduling");
       schedulingThread.setDaemon(true);
     }
 

@@ -192,7 +192,9 @@ public class ApplicationHistoryServer extends CompositeService {
           TimelineAuthenticationFilterInitializer.class.getName()
               + initializers);
     }
-    String bindAddress = WebAppUtils.getAHSWebAppURLWithoutScheme(conf);
+    String bindAddress = WebAppUtils.getWebAppBindURL(conf,
+                          YarnConfiguration.TIMELINE_SERVICE_BIND_HOST,
+                          WebAppUtils.getAHSWebAppURLWithoutScheme(conf));
     LOG.info("Instantiating AHSWebApp at " + bindAddress);
     try {
       AHSWebApp ahsWebApp = AHSWebApp.getInstance();

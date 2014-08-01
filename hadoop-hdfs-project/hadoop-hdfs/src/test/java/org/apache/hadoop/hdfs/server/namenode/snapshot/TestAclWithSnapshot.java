@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -674,6 +675,13 @@ public class TestAclWithSnapshot {
     } catch (AccessControlException e) {
       // expected
     }
+
+    try {
+      fs.access(pathToCheck, FsAction.READ);
+      fail("The access call should have failed for "+pathToCheck);
+    } catch (AccessControlException e) {
+      // expected
+    }
   }
 
   /**
@@ -689,6 +697,7 @@ public class TestAclWithSnapshot {
       UserGroupInformation user, Path pathToCheck) throws Exception {
     try {
       fs.listStatus(pathToCheck);
+      fs.access(pathToCheck, FsAction.READ);
     } catch (AccessControlException e) {
       fail("expected permission granted for user " + user + ", path = " +
         pathToCheck);

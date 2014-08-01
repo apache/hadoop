@@ -130,11 +130,6 @@ message ApplicationAttemptStateDataProto {
   optional int32 am_container_exit_status = 9 [default = -1000];
 }
 
-message RMStateVersionProto {
-  optional int32 major_version = 1;
-  optional int32 minor_version = 2;
-}
-
 message EpochProto {
   optional int64 epoch = 1;
 }
