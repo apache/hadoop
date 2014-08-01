@@ -343,6 +343,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6796. Improve the argument check during balancer command line parsing.
     (Benoy Antony via szetszwo)
 
+    HDFS-6794. Update BlockManager methods to use DatanodeStorageInfo
+    where possible (Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
