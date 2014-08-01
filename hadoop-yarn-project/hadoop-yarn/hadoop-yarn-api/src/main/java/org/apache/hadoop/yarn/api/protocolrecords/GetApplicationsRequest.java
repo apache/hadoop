@@ -308,6 +308,15 @@ public abstract class GetApplicationsRequest {
   /**
    * Set the range of start times to filter applications on
    *
+   * @param range
+   */
+  @Private
+  @Unstable
+  public abstract void setStartRange(LongRange range);
+
+  /**
+   * Set the range of start times to filter applications on
+   *
    * @param begin beginning of the range
    * @param end end of the range
    * @throws IllegalArgumentException
@@ -325,6 +334,15 @@ public abstract class GetApplicationsRequest {
   @Private
   @Unstable
   public abstract LongRange getFinishRange();
+
+  /**
+   * Set the range of finish times to filter applications on
+   *
+   * @param range
+   */
+  @Private
+  @Unstable
+  public abstract void setFinishRange(LongRange range);
 
   /**
    * Set the range of finish times to filter applications on

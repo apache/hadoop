@@ -120,6 +120,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2354. DistributedShell may allocate more containers than client
     specified after AM restarts. (Li Lu via jianhe)
 
+    YARN-2051. Fix bug in PBimpls and add more unit tests with reflection. 
+    (Binglin Chang via junping_du)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
