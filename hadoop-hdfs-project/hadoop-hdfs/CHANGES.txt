@@ -184,9 +184,6 @@ Trunk (Unreleased)
 
     HDFS-3549. Fix dist tar build fails in hadoop-hdfs-raid project. (Jason Lowe via daryn)
 
-    HDFS-3482. hdfs balancer throws ArrayIndexOutOfBoundsException 
-    if option is specified without values. ( Madhukara Phatak via umamahesh) 
-
     HDFS-3614. Revert unused MiniDFSCluster constructor from HDFS-3049.
     (acmurthy via eli)
 
@@ -405,6 +402,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-4629. Using com.sun.org.apache.xml.internal.serialize.* in
     XmlEditsVisitor.java is JVM vendor specific. Breaks IBM JAVA.
     (Amir Sanjar via stevel)
+
+    HDFS-3482. hdfs balancer throws ArrayIndexOutOfBoundsException 
+    if option is specified without values. ( Madhukara Phatak via umamahesh) 
 
     HDFS-6797. DataNode logs wrong layoutversion during upgrade. (Benoy Antony
     via Arpit Agarwal)
