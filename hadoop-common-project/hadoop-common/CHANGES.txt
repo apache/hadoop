@@ -195,6 +195,8 @@ Trunk (Unreleased)
     HADOOP-10756. KMS audit log should consolidate successful similar requests. 
     (asuresh via tucu)
 
+    HADOOP-10793. KeyShell args should use single-dash style. (wang)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.

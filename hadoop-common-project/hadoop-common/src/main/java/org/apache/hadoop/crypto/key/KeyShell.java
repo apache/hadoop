@@ -38,9 +38,9 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class KeyShell extends Configured implements Tool {
   final static private String USAGE_PREFIX = "Usage: hadoop key " +
-  		"[generic options]\n";
+      "[generic options]\n";
   final static private String COMMANDS =
-      "   [--help]\n" +
+      "   [-help]\n" +
       "   [" + CreateCommand.USAGE + "]\n" +
       "   [" + RollCommand.USAGE + "]\n" +
       "   [" + DeleteCommand.USAGE + "]\n" +
@@ -90,11 +90,11 @@ public class KeyShell extends Configured implements Tool {
   /**
    * Parse the command line arguments and initialize the data
    * <pre>
-   * % hadoop key create keyName [--size size] [--cipher algorithm]
-   *    [--provider providerPath]
-   * % hadoop key roll keyName [--provider providerPath]
+   * % hadoop key create keyName [-size size] [-cipher algorithm]
+   *    [-provider providerPath]
+   * % hadoop key roll keyName [-provider providerPath]
    * % hadoop key list [-provider providerPath]
-   * % hadoop key delete keyName [--provider providerPath] [-i]
+   * % hadoop key delete keyName [-provider providerPath] [-i]
    * </pre>
    * @param args Command line arguments.
    * @return 0 on success, 1 on failure.
@@ -107,47 +107,47 @@ public class KeyShell extends Configured implements Tool {
     for (int i = 0; i < args.length; i++) { // parse command line
       boolean moreTokens = (i < args.length - 1);
       if (args[i].equals("create")) {
-        String keyName = "--help";
+        String keyName = "-help";
         if (moreTokens) {
           keyName = args[++i];
         }
 
         command = new CreateCommand(keyName, options);
-        if ("--help".equals(keyName)) {
+        if ("-help".equals(keyName)) {
           printKeyShellUsage();
           return 1;
         }
       } else if (args[i].equals("delete")) {
-        String keyName = "--help";
+        String keyName = "-help";
         if (moreTokens) {
           keyName = args[++i];
         }
 
         command = new DeleteCommand(keyName);
-        if ("--help".equals(keyName)) {
+        if ("-help".equals(keyName)) {
           printKeyShellUsage();
           return 1;
         }
       } else if (args[i].equals("roll")) {
-        String keyName = "--help";
+        String keyName = "-help";
         if (moreTokens) {
           keyName = args[++i];
         }
 
         command = new RollCommand(keyName);
-        if ("--help".equals(keyName)) {
+        if ("-help".equals(keyName)) {
           printKeyShellUsage();
           return 1;
         }
       } else if ("list".equals(args[i])) {
         command = new ListCommand();
-      } else if ("--size".equals(args[i]) && moreTokens) {
+      } else if ("-size".equals(args[i]) && moreTokens) {
         options.setBitLength(Integer.parseInt(args[++i]));
-      } else if ("--cipher".equals(args[i]) && moreTokens) {
+      } else if ("-cipher".equals(args[i]) && moreTokens) {
         options.setCipher(args[++i]);
-      } else if ("--description".equals(args[i]) && moreTokens) {
+      } else if ("-description".equals(args[i]) && moreTokens) {
         options.setDescription(args[++i]);
-      } else if ("--attr".equals(args[i]) && moreTokens) {
+      } else if ("-attr".equals(args[i]) && moreTokens) {
         final String attrval[] = args[++i].split("=", 2);
         final String attr = attrval[0].trim();
         final String val = attrval[1].trim();
@@ -164,14 +164,14 @@ public class KeyShell extends Configured implements Tool {
           return 1;
         }
         attributes.put(attr, val);
-      } else if ("--provider".equals(args[i]) && moreTokens) {
+      } else if ("-provider".equals(args[i]) && moreTokens) {
         userSuppliedProvider = true;
         getConf().set(KeyProviderFactory.KEY_PROVIDER_PATH, args[++i]);
-      } else if ("--metadata".equals(args[i])) {
+      } else if ("-metadata".equals(args[i])) {
         getConf().setBoolean(LIST_METADATA, true);
-      } else if ("-i".equals(args[i]) || ("--interactive".equals(args[i]))) {
+      } else if ("-i".equals(args[i]) || ("-interactive".equals(args[i]))) {
         interactive = true;
-      } else if ("--help".equals(args[i])) {
+      } else if ("-help".equals(args[i])) {
         printKeyShellUsage();
         return 1;
       } else {
@@ -258,11 +258,11 @@ public class KeyShell extends Configured implements Tool {
 
   private class ListCommand extends Command {
     public static final String USAGE =
-        "list [--provider <provider>] [--metadata] [--help]";
+        "list [-provider <provider>] [-metadata] [-help]";
     public static final String DESC =
         "The list subcommand displays the keynames contained within\n" +
         "a particular provider as configured in core-site.xml or\n" +
-        "specified with the --provider argument. --metadata displays\n" +
+        "specified with the -provider argument. -metadata displays\n" +
         "the metadata.";
 
     private boolean metadata = false;
@@ -272,9 +272,9 @@ public class KeyShell extends Configured implements Tool {
       provider = getKeyProvider();
       if (provider == null) {
         out.println("There are no non-transient KeyProviders configured.\n"
-          + "Use the --provider option to specify a provider. If you\n"
+          + "Use the -provider option to specify a provider. If you\n"
           + "want to list a transient provider then you must use the\n"
-          + "--provider argument.");
+          + "-provider argument.");
         rc = false;
       }
       metadata = getConf().getBoolean(LIST_METADATA, false);
@@ -310,10 +310,10 @@ public class KeyShell extends Configured implements Tool {
   }
 
   private class RollCommand extends Command {
-    public static final String USAGE = "roll <keyname> [--provider <provider>] [--help]";
+    public static final String USAGE = "roll <keyname> [-provider <provider>] [-help]";
     public static final String DESC =
       "The roll subcommand creates a new version for the specified key\n" +
-      "within the provider indicated using the --provider argument\n";
+      "within the provider indicated using the -provider argument\n";
 
     String keyName = null;
 
@@ -326,13 +326,13 @@ public class KeyShell extends Configured implements Tool {
       provider = getKeyProvider();
       if (provider == null) {
         out.println("There are no valid KeyProviders configured. The key\n" +
-          "has not been rolled. Use the --provider option to specify\n" +
+          "has not been rolled. Use the -provider option to specify\n" +
           "a provider.");
         rc = false;
       }
       if (keyName == null) {
         out.println("Please provide a <keyname>.\n" +
-          "See the usage description by using --help.");
+          "See the usage description by using -help.");
         rc = false;
       }
       return rc;
@@ -367,11 +367,11 @@ public class KeyShell extends Configured implements Tool {
   }
 
   private class DeleteCommand extends Command {
-    public static final String USAGE = "delete <keyname> [--provider <provider>] [--help]";
+    public static final String USAGE = "delete <keyname> [-provider <provider>] [-help]";
     public static final String DESC =
         "The delete subcommand deletes all versions of the key\n" +
         "specified by the <keyname> argument from within the\n" +
-        "provider specified --provider.";
+        "provider specified -provider.";
 
     String keyName = null;
     boolean cont = true;
@@ -385,12 +385,12 @@ public class KeyShell extends Configured implements Tool {
       provider = getKeyProvider();
       if (provider == null) {
         out.println("There are no valid KeyProviders configured. Nothing\n"
-          + "was deleted. Use the --provider option to specify a provider.");
+          + "was deleted. Use the -provider option to specify a provider.");
         return false;
       }
       if (keyName == null) {
         out.println("There is no keyName specified. Please specify a " +
-            "<keyname>. See the usage description with --help.");
+            "<keyname>. See the usage description with -help.");
         return false;
       }
       if (interactive) {
@@ -436,19 +436,19 @@ public class KeyShell extends Configured implements Tool {
 
   private class CreateCommand extends Command {
     public static final String USAGE =
-      "create <keyname> [--cipher <cipher>] [--size <size>]\n" +
-      "                     [--description <description>]\n" +
-      "                     [--attr <attribute=value>]\n" +
-      "                     [--provider <provider>] [--help]";
+      "create <keyname> [-cipher <cipher>] [-size <size>]\n" +
+      "                     [-description <description>]\n" +
+      "                     [-attr <attribute=value>]\n" +
+      "                     [-provider <provider>] [-help]";
     public static final String DESC =
       "The create subcommand creates a new key for the name specified\n" +
       "by the <keyname> argument within the provider specified by the\n" +
-      "--provider argument. You may specify a cipher with the --cipher\n" +
+      "-provider argument. You may specify a cipher with the -cipher\n" +
       "argument. The default cipher is currently \"AES/CTR/NoPadding\".\n" +
       "The default keysize is 256. You may specify the requested key\n" +
-      "length using the --size argument. Arbitrary attribute=value\n" +
-      "style attributes may be specified using the --attr argument.\n" +
-      "--attr may be specified multiple times, once per attribute.\n";
+      "length using the -size argument. Arbitrary attribute=value\n" +
+      "style attributes may be specified using the -attr argument.\n" +
+      "-attr may be specified multiple times, once per attribute.\n";
 
     final String keyName;
     final Options options;
@@ -463,13 +463,13 @@ public class KeyShell extends Configured implements Tool {
       provider = getKeyProvider();
       if (provider == null) {
         out.println("There are no valid KeyProviders configured. No key\n" +
-          " was created. You can use the --provider option to specify\n" +
+          " was created. You can use the -provider option to specify\n" +
           " a provider to use.");
         rc = false;
       }
       if (keyName == null) {
         out.println("Please provide a <keyname>. See the usage description" +
-          " with --help.");
+          " with -help.");
         rc = false;
       }
       return rc;
