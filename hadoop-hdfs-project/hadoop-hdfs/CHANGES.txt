@@ -406,6 +406,9 @@ Release 2.6.0 - UNRELEASED
     XmlEditsVisitor.java is JVM vendor specific. Breaks IBM JAVA.
     (Amir Sanjar via stevel)
 
+    HDFS-6797. DataNode logs wrong layoutversion during upgrade. (Benoy Antony
+    via Arpit Agarwal)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
