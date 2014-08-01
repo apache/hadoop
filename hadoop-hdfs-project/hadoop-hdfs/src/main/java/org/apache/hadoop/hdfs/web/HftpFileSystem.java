@@ -123,7 +123,8 @@ public class HftpFileSystem extends FileSystem
 
   @Override
   protected int getDefaultPort() {
-    return DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT;
+    return getConf().getInt(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY,
+        DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT);
   }
 
   /**
