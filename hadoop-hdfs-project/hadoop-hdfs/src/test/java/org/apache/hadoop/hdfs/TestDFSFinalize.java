@@ -79,8 +79,8 @@ public class TestDFSFinalize {
     File dnCurDirs[] = new File[dataNodeDirs.length];
     for (int i = 0; i < dataNodeDirs.length; i++) {
       dnCurDirs[i] = new File(dataNodeDirs[i],"current");
-      assertEquals(UpgradeUtilities.checksumContents(DATA_NODE, dnCurDirs[i]),
-                   UpgradeUtilities.checksumMasterDataNodeContents());
+      assertEquals(UpgradeUtilities.checksumContents(DATA_NODE, dnCurDirs[i],
+              false), UpgradeUtilities.checksumMasterDataNodeContents());
     }
     for (int i = 0; i < nameNodeDirs.length; i++) {
       assertFalse(new File(nameNodeDirs[i],"previous").isDirectory());
@@ -96,8 +96,9 @@ public class TestDFSFinalize {
         assertFalse(new File(bpRoot,"previous").isDirectory());
         
         File bpCurFinalizeDir = new File(bpRoot,"current/"+DataStorage.STORAGE_DIR_FINALIZED);
-        assertEquals(UpgradeUtilities.checksumContents(DATA_NODE, bpCurFinalizeDir),
-                     UpgradeUtilities.checksumMasterBlockPoolFinalizedContents());
+        assertEquals(UpgradeUtilities.checksumContents(DATA_NODE,
+                bpCurFinalizeDir, true),
+                UpgradeUtilities.checksumMasterBlockPoolFinalizedContents());
       }
     }
   }

@@ -27,6 +27,7 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
@@ -137,13 +139,15 @@ public class TestFileCorruption {
       final String bpid = cluster.getNamesystem().getBlockPoolId();
       File storageDir = cluster.getInstanceStorageDir(0, 0);
       File dataDir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
+      assertTrue("Data directory does not exist", dataDir.exists());
       ExtendedBlock blk = getBlock(bpid, dataDir);
       if (blk == null) {
         storageDir = cluster.getInstanceStorageDir(0, 1);
         dataDir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
         blk = getBlock(bpid, dataDir);
       }
-      assertFalse(blk==null);
+      assertFalse("Data directory does not contain any blocks or there was an "
+          + "IO error", blk==null);
 
       // start a third datanode
       cluster.startDataNodes(conf, 1, true, null, null);
@@ -174,33 +178,15 @@ public class TestFileCorruption {
     
   }
   
-  private ExtendedBlock getBlock(String bpid, File dataDir) {
-    assertTrue("data directory does not exist", dataDir.exists());
-    File[] blocks = dataDir.listFiles();
-    assertTrue("Blocks do not exist in dataDir", (blocks != null) && (blocks.length > 0));
-
-    int idx = 0;
-    String blockFileName = null;
-    for (; idx < blocks.length; idx++) {
-      blockFileName = blocks[idx].getName();
-      if (blockFileName.startsWith("blk_") && !blockFileName.endsWith(".meta")) {
-        break;
-      }
-    }
-    if (blockFileName == null) {
+  public static ExtendedBlock getBlock(String bpid, File dataDir) {
+    List<File> metadataFiles = MiniDFSCluster.getAllBlockMetadataFiles(dataDir);
+    if (metadataFiles == null || metadataFiles.isEmpty()) {
       return null;
     }
-    long blockId = Long.parseLong(blockFileName.substring("blk_".length()));
-    long blockTimeStamp = GenerationStamp.GRANDFATHER_GENERATION_STAMP;
-    for (idx=0; idx < blocks.length; idx++) {
-      String fileName = blocks[idx].getName();
-      if (fileName.startsWith(blockFileName) && fileName.endsWith(".meta")) {
-        int startIndex = blockFileName.length()+1;
-        int endIndex = fileName.length() - ".meta".length();
-        blockTimeStamp = Long.parseLong(fileName.substring(startIndex, endIndex));
-        break;
-      }
-    }
-    return new ExtendedBlock(bpid, blockId, blocks[idx].length(), blockTimeStamp);
+    File metadataFile = metadataFiles.get(0);
+    File blockFile = Block.metaToBlockFile(metadataFile);
+    return new ExtendedBlock(bpid, Block.getBlockId(blockFile.getName()),
+        blockFile.length(), Block.getGenerationStamp(metadataFile.getName()));
   }
+
 }

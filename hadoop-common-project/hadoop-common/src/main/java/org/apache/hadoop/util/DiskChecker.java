@@ -78,6 +78,20 @@ public class DiskChecker {
            (mkdirsWithExistsCheck(new File(parent)) &&
                                       (canonDir.mkdir() || canonDir.exists()));
   }
+
+  /**
+   * Recurse down a directory tree, checking all child directories.
+   * @param dir
+   * @throws DiskErrorException
+   */
+  public static void checkDirs(File dir) throws DiskErrorException {
+    checkDir(dir);
+    for (File child : dir.listFiles()) {
+      if (child.isDirectory()) {
+        checkDirs(child);
+      }
+    }
+  }
   
   /**
    * Create the directory if it doesn't exist and check that dir is readable,

@@ -103,9 +103,10 @@ public class TestDeleteBlockPool {
       fs1.delete(new Path("/alpha"), true);
       
       // Wait till all blocks are deleted from the dn2 for bpid1.
-      while ((MiniDFSCluster.getFinalizedDir(dn2StorageDir1, 
-          bpid1).list().length != 0) || (MiniDFSCluster.getFinalizedDir(
-              dn2StorageDir2, bpid1).list().length != 0)) {
+      File finalDir1 = MiniDFSCluster.getFinalizedDir(dn2StorageDir1, bpid1);
+      File finalDir2 = MiniDFSCluster.getFinalizedDir(dn2StorageDir1, bpid2);
+      while ((!DatanodeUtil.dirNoFilesRecursive(finalDir1)) ||
+          (!DatanodeUtil.dirNoFilesRecursive(finalDir2))) {
         try {
           Thread.sleep(3000);
         } catch (Exception ignored) {

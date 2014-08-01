@@ -50,6 +50,9 @@ public class Block implements Writable, Comparable<Block> {
   public static final Pattern metaFilePattern = Pattern
       .compile(BLOCK_FILE_PREFIX + "(-??\\d++)_(\\d++)\\" + METADATA_EXTENSION
           + "$");
+  public static final Pattern metaOrBlockFilePattern = Pattern
+      .compile(BLOCK_FILE_PREFIX + "(-??\\d++)(_(\\d++)\\" + METADATA_EXTENSION
+          + ")?$");
 
   public static boolean isBlockFilename(File f) {
     String name = f.getName();
@@ -65,6 +68,11 @@ public class Block implements Writable, Comparable<Block> {
     return metaFilePattern.matcher(name).matches();
   }
 
+  public static File metaToBlockFile(File metaFile) {
+    return new File(metaFile.getParent(), metaFile.getName().substring(
+        0, metaFile.getName().lastIndexOf('_')));
+  }
+
   /**
    * Get generation stamp from the name of the metafile name
    */
@@ -75,10 +83,10 @@ public class Block implements Writable, Comparable<Block> {
   }
 
   /**
-   * Get the blockId from the name of the metafile name
+   * Get the blockId from the name of the meta or block file
    */
-  public static long getBlockId(String metaFile) {
-    Matcher m = metaFilePattern.matcher(metaFile);
+  public static long getBlockId(String metaOrBlockFile) {
+    Matcher m = metaOrBlockFilePattern.matcher(metaOrBlockFile);
     return m.matches() ? Long.parseLong(m.group(1)) : 0;
   }
 
