@@ -81,3 +81,5 @@ fs-encryption (Unreleased)
 
     HDFS-6785. Should not be able to create encryption zone using path
     to a non-directory file. (clamb)
+
+    HDFS-6807. Fix TestReservedRawPaths. (clamb)

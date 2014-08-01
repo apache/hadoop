@@ -27,6 +27,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystem.Statistics;
@@ -75,6 +76,7 @@ import org.junit.Assume;
 import java.io.*;
 import java.net.*;
 import java.nio.ByteBuffer;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
 import java.util.*;
 import java.util.concurrent.TimeoutException;
@@ -1347,5 +1349,23 @@ public class DFSTestUtil {
       in1.close();
       in2.close();
     }
+  }
+
+  /**
+   * Helper function to create a key in the Key Provider.
+   *
+   * @param keyName The name of the key to create
+   * @param cluster The cluster to create it in
+   * @param conf Configuration to use
+   */
+  public static void createKey(String keyName, MiniDFSCluster cluster,
+                                Configuration conf)
+          throws NoSuchAlgorithmException, IOException {
+    KeyProvider provider = cluster.getNameNode().getNamesystem().getProvider();
+    final KeyProvider.Options options = KeyProvider.options(conf);
+    options.setDescription(keyName);
+    options.setBitLength(128);
+    provider.createKey(keyName, options);
+    provider.flush();
   }
 }

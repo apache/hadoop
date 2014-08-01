@@ -102,7 +102,7 @@ public class TestEncryptionZones {
     fs.getClient().provider = cluster.getNameNode().getNamesystem()
         .getProvider();
     // Create a test key
-    createKey(TEST_KEY);
+    DFSTestUtil.createKey(TEST_KEY, cluster, conf);
   }
 
   @After
@@ -145,19 +145,6 @@ public class TestEncryptionZones {
     assertTrue("Did not find expected encryption zone with keyName " + keyName +
             " path " + path, match
     );
-  }
-
-  /**
-   * Helper function to create a key in the Key Provider.
-   */
-  private void createKey(String keyName)
-      throws NoSuchAlgorithmException, IOException {
-    KeyProvider provider = cluster.getNameNode().getNamesystem().getProvider();
-    final KeyProvider.Options options = KeyProvider.options(conf);
-    options.setDescription(keyName);
-    options.setBitLength(128);
-    provider.createKey(keyName, options);
-    provider.flush();
   }
 
   @Test(timeout = 60000)
@@ -263,7 +250,7 @@ public class TestEncryptionZones {
     assertNumZones(1);
 
     /* Test success of creating an EZ when they key exists. */
-    createKey(myKeyName);
+    DFSTestUtil.createKey(myKeyName, cluster, conf);
     dfsAdmin.createEncryptionZone(zone2, myKeyName);
     assertNumZones(++numZones);
     assertZonePresent(myKeyName, zone2.toString());
@@ -601,7 +588,7 @@ public class TestEncryptionZones {
     // Test when the parent directory becomes a different EZ
     fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
     final String otherKey = "otherKey";
-    createKey(otherKey);
+    DFSTestUtil.createKey(otherKey, cluster, conf);
     dfsAdmin.createEncryptionZone(zone1, TEST_KEY);
 
     executor.submit(new InjectFaultTask() {
@@ -621,7 +608,7 @@ public class TestEncryptionZones {
     // Test that the retry limit leads to an error
     fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
     final String anotherKey = "anotherKey";
-    createKey(anotherKey);
+    DFSTestUtil.createKey(anotherKey, cluster, conf);
     dfsAdmin.createEncryptionZone(zone1, anotherKey);
     String keyToUse = otherKey;
 
