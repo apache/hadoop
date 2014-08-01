@@ -97,9 +97,6 @@ Release 2.6.0 - UNRELEASED
     HDFS-6802. Some tests in TestDFSClientFailover are missing @Test
     annotation. (Akira Ajisaka via wang)
 
-    HDFS-6788. Improve synchronization in BPOfferService with read write lock.
-    (Yongjun Zhang via wang)
-
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
