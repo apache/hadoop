@@ -346,6 +346,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6794. Update BlockManager methods to use DatanodeStorageInfo
     where possible (Arpit Agarwal)
 
+    HDFS-6802. Some tests in TestDFSClientFailover are missing @Test
+    annotation. (Akira Ajisaka via wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
