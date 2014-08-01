@@ -85,6 +85,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6685. Balancer should preserve storage type of replicas.  (szetszwo)
 
+    HDFS-6798. Add test case for incorrect data node condition during
+    balancing. (Benoy Antony via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

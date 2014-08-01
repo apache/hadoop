@@ -658,6 +658,71 @@ public class TestBalancer {
     oneNodeTest(conf, false);
   }
   
+  /* we first start a cluster and fill the cluster up to a certain size.
+   * then redistribute blocks according the required distribution.
+   * Then we start an empty datanode.
+   * Afterwards a balancer is run to balance the cluster.
+   * A partially filled datanode is excluded during balancing.
+   * This triggers a situation where one of the block's location is unknown.
+   */
+  @Test(timeout=100000)
+  public void testUnknownDatanode() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    initConf(conf);
+    long distribution[] = new long[] {50*CAPACITY/100, 70*CAPACITY/100, 0*CAPACITY/100};
+    long capacities[] = new long[]{CAPACITY, CAPACITY, CAPACITY};
+    String racks[] = new String[] {RACK0, RACK1, RACK1};
+
+    int numDatanodes = distribution.length;
+    if (capacities.length != numDatanodes || racks.length != numDatanodes) {
+      throw new IllegalArgumentException("Array length is not the same");
+    }
+
+    // calculate total space that need to be filled
+    final long totalUsedSpace = sum(distribution);
+
+    // fill the cluster
+    ExtendedBlock[] blocks = generateBlocks(conf, totalUsedSpace,
+        (short) numDatanodes);
+
+    // redistribute blocks
+    Block[][] blocksDN = distributeBlocks(
+        blocks, (short)(numDatanodes-1), distribution);
+
+    // restart the cluster: do NOT format the cluster
+    conf.set(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, "0.0f");
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
+        .format(false)
+        .racks(racks)
+        .simulatedCapacities(capacities)
+        .build();
+    try {
+      cluster.waitActive();
+      client = NameNodeProxies.createProxy(conf, cluster.getFileSystem(0).getUri(),
+          ClientProtocol.class).getProxy();
+
+      for(int i = 0; i < 3; i++) {
+        cluster.injectBlocks(i, Arrays.asList(blocksDN[i]), null);
+      }
+
+      cluster.startDataNodes(conf, 1, true, null,
+          new String[]{RACK0}, null,new long[]{CAPACITY});
+      cluster.triggerHeartbeats();
+
+      Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
+      Set<String>  datanodes = new HashSet<String>();
+      datanodes.add(cluster.getDataNodes().get(0).getDatanodeId().getHostName());
+      Balancer.Parameters p = new Balancer.Parameters(
+          Balancer.Parameters.DEFAULT.policy,
+          Balancer.Parameters.DEFAULT.threshold,
+          datanodes, Balancer.Parameters.DEFAULT.nodesToBeIncluded);
+      final int r = Balancer.run(namenodes, p, conf);
+      assertEquals(Balancer.ReturnStatus.SUCCESS.code, r);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   /**
    * Test parse method in Balancer#Cli class with threshold value out of
    * boundaries.
