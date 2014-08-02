@@ -413,6 +413,9 @@ Trunk (Unreleased)
     HADOOP-10920. site plugin couldn't parse hadoop-kms index.apt.vm.
     (Akira Ajisaka via wang)
 
+    HADOOP-10925. Compilation fails in native link0 function on Windows.
+    (cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
