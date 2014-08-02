@@ -1114,7 +1114,7 @@ done:
   if (!src) goto done; // exception was thrown
   dst = (LPCTSTR) (*env)->GetStringChars(env, jdst, NULL);
   if (!dst) goto done; // exception was thrown
-  if (!CreateHardLink(dst, src)) {
+  if (!CreateHardLink(dst, src, NULL)) {
     throw_ioe(env, GetLastError());
   }
 

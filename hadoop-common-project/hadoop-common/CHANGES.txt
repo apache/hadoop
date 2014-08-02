@@ -337,6 +337,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10937. Need to set version name correctly before decrypting EEK.
     (Arun Suresh via wang)
 
+    HADOOP-10925. Compilation fails in native link0 function on Windows.
+    (cnauroth)
+
     HADOOP-10918. JMXJsonServlet fails when used within Tomcat. (tucu)
 
     HADOOP-10939. Fix TestKeyProviderFactory testcases to use default 128 bit
