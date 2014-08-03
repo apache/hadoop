@@ -479,6 +479,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10900. CredentialShell args should use single-dash style. (wang)
 
+    HADOOP-10903. Enhance hadoop classpath command to expand wildcards or write
+    classpath into jar manifest. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
