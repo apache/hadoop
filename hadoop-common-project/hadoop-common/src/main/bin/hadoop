@@ -90,11 +90,6 @@ case $COMMAND in
     fi
     ;;
 
-  classpath)
-    echo $CLASSPATH
-    exit
-    ;;
-
   #core commands  
   *)
     # the core commands
@@ -116,6 +111,14 @@ case $COMMAND in
       CLASSPATH=${CLASSPATH}:${TOOL_PATH}
     elif [ "$COMMAND" = "credential" ] ; then
       CLASS=org.apache.hadoop.security.alias.CredentialShell
+    elif [ "$COMMAND" = "classpath" ] ; then
+      if [ "$#" -eq 1 ]; then
+        # No need to bother starting up a JVM for this simple case.
+        echo $CLASSPATH
+        exit
+      else
+        CLASS=org.apache.hadoop.util.Classpath
+      fi
     elif [[ "$COMMAND" = -*  ]] ; then
         # class and package names cannot begin with a -
         echo "Error: No command named \`$COMMAND' was found. Perhaps you meant \`hadoop ${COMMAND#-}'"
