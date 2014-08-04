@@ -100,6 +100,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-6788. Improve synchronization in BPOfferService with read write lock.
     (Yongjun Zhang via wang)
 
+    HDFS-6787. Remove duplicate code in FSDirectory#unprotectedConcat. (Yi Liu via umamahesh)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
