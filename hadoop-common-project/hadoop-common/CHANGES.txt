@@ -199,6 +199,8 @@ Trunk (Unreleased)
 
   BUG FIXES
 
+    HADOOP-10759. Remove hardcoded JAVA_HEAP_MAX. (Eric Yang)
+
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
     (Junping Du via llu)
 
