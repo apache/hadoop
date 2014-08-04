@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
+import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
@@ -73,6 +74,11 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   private static final String DELETION_TASK_KEY_PREFIX =
       "DeletionService/deltask_";
+
+  private static final String APPLICATIONS_KEY_PREFIX =
+      "ContainerManager/applications/";
+  private static final String FINISHED_APPS_KEY_PREFIX =
+      "ContainerManager/finishedApps/";
 
   private static final String LOCALIZATION_KEY_PREFIX = "Localization/";
   private static final String LOCALIZATION_PUBLIC_KEY_PREFIX =
@@ -112,6 +118,92 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   protected void closeStorage() throws IOException {
     if (db != null) {
       db.close();
+    }
+  }
+
+
+  @Override
+  public RecoveredApplicationsState loadApplicationsState()
+      throws IOException {
+    RecoveredApplicationsState state = new RecoveredApplicationsState();
+    state.applications = new ArrayList<ContainerManagerApplicationProto>();
+    String keyPrefix = APPLICATIONS_KEY_PREFIX;
+    LeveldbIterator iter = null;
+    try {
+      iter = new LeveldbIterator(db);
+      iter.seek(bytes(keyPrefix));
+      while (iter.hasNext()) {
+        Entry<byte[], byte[]> entry = iter.next();
+        String key = asString(entry.getKey());
+        if (!key.startsWith(keyPrefix)) {
+          break;
+        }
+        state.applications.add(
+            ContainerManagerApplicationProto.parseFrom(entry.getValue()));
+      }
+
+      state.finishedApplications = new ArrayList<ApplicationId>();
+      keyPrefix = FINISHED_APPS_KEY_PREFIX;
+      iter.seek(bytes(keyPrefix));
+      while (iter.hasNext()) {
+        Entry<byte[], byte[]> entry = iter.next();
+        String key = asString(entry.getKey());
+        if (!key.startsWith(keyPrefix)) {
+          break;
+        }
+        ApplicationId appId =
+            ConverterUtils.toApplicationId(key.substring(keyPrefix.length()));
+        state.finishedApplications.add(appId);
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    } finally {
+      if (iter != null) {
+        iter.close();
+      }
+    }
+
+    return state;
+  }
+
+  @Override
+  public void storeApplication(ApplicationId appId,
+      ContainerManagerApplicationProto p) throws IOException {
+    String key = APPLICATIONS_KEY_PREFIX + appId;
+    try {
+      db.put(bytes(key), p.toByteArray());
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void storeFinishedApplication(ApplicationId appId)
+      throws IOException {
+    String key = FINISHED_APPS_KEY_PREFIX + appId;
+    try {
+      db.put(bytes(key), new byte[0]);
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void removeApplication(ApplicationId appId)
+      throws IOException {
+    try {
+      WriteBatch batch = db.createWriteBatch();
+      try {
+        String key = APPLICATIONS_KEY_PREFIX + appId;
+        batch.delete(bytes(key));
+        key = FINISHED_APPS_KEY_PREFIX + appId;
+        batch.delete(bytes(key));
+        db.write(batch);
+      } finally {
+        batch.close();
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
     }
   }
 
