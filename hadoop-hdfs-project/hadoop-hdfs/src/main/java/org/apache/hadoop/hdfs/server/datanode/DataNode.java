@@ -1082,6 +1082,11 @@ public class DataNode extends Configured
     // In the case that this is the first block pool to connect, initialize
     // the dataset, block scanners, etc.
     initStorage(nsInfo);
+
+    // Exclude failed disks before initializing the block pools to avoid startup
+    // failures.
+    checkDiskError();
+
     initPeriodicScanners(conf);
     
     data.addBlockPool(nsInfo.getBlockPoolID(), conf);
@@ -1517,9 +1522,9 @@ public class DataNode extends Configured
   
   
   /**
-   *  Check if there is a disk failure and if so, handle the error
+   * Check if there is a disk failure asynchronously and if so, handle the error
    */
-  public void checkDiskError() {
+  public void checkDiskErrorAsync() {
     synchronized(checkDiskErrorMutex) {
       checkDiskErrorFlag = true;
       if(checkDiskErrorThread == null) {
@@ -1828,7 +1833,7 @@ public class DataNode extends Configured
         LOG.warn(bpReg + ":Failed to transfer " + b + " to " +
             targets[0] + " got ", ie);
         // check if there are any disk problem
-        checkDiskError();
+        checkDiskErrorAsync();
       } finally {
         xmitsInProgress.getAndDecrement();
         IOUtils.closeStream(blockSender);
@@ -2768,6 +2773,17 @@ public class DataNode extends Configured
   }
   
   /**
+   * Check the disk error
+   */
+  private void checkDiskError() {
+    try {
+      data.checkDataDir();
+    } catch (DiskErrorException de) {
+      handleDiskError(de.getMessage());
+    }
+  }
+
+  /**
    * Starts a new thread which will check for disk error check request 
    * every 5 sec
    */
@@ -2783,9 +2799,7 @@ public class DataNode extends Configured
               }
               if(tempFlag) {
                 try {
-                  data.checkDataDir();
-                } catch (DiskErrorException de) {
-                  handleDiskError(de.getMessage());
+                  checkDiskError();
                 } catch (Exception e) {
                   LOG.warn("Unexpected exception occurred while checking disk error  " + e);
                   checkDiskErrorThread = null;

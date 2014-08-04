@@ -178,6 +178,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-5723. Append failed FINALIZED replica should not be accepted as valid
     when that block is underconstruction (vinayakumarb)
 
+    HDFS-5185. DN fails to startup if one of the data dir is full. (vinayakumarb)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
