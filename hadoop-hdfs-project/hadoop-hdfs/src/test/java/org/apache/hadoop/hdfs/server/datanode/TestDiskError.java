@@ -201,7 +201,7 @@ public class TestDiskError {
   }
   
   /**
-   * Checks whether {@link DataNode#checkDiskError()} is being called or not.
+   * Checks whether {@link DataNode#checkDiskErrorAsync()} is being called or not.
    * Before refactoring the code the above function was not getting called 
    * @throws IOException, InterruptedException
    */
@@ -214,7 +214,7 @@ public class TestDiskError {
     DataNode dataNode = cluster.getDataNodes().get(0);
     long slackTime = dataNode.checkDiskErrorInterval/2;
     //checking for disk error
-    dataNode.checkDiskError();
+    dataNode.checkDiskErrorAsync();
     Thread.sleep(dataNode.checkDiskErrorInterval);
     long lastDiskErrorCheck = dataNode.getLastDiskErrorCheck();
     assertTrue("Disk Error check is not performed within  " + dataNode.checkDiskErrorInterval +  "  ms", ((Time.monotonicNow()-lastDiskErrorCheck) < (dataNode.checkDiskErrorInterval + slackTime)));
