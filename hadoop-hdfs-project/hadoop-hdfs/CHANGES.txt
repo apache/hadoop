@@ -182,6 +182,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-5185. DN fails to startup if one of the data dir is full. (vinayakumarb)
 
+    HDFS-6451. NFS should not return NFS3ERR_IO for AccessControlException 
+    (Abhiraj Butala via brandonli)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
