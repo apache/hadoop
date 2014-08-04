@@ -188,7 +188,7 @@ public class CredentialShell extends Configured implements Tool {
   }
 
   private class ListCommand extends Command {
-    public static final String USAGE = "list <alias> [-provider] [-help]";
+    public static final String USAGE = "list [-provider] [-help]";
     public static final String DESC =
         "The list subcommand displays the aliases contained within \n" +
         "a particular provider - as configured in core-site.xml or " +
