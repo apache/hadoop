@@ -61,22 +61,17 @@ string StringUtil::ToString(bool v) {
 }
 
 string StringUtil::ToString(float v) {
-  char tmp[32];
-  snprintf(tmp, 32, "%f", v);
-  return tmp;
+  return Format("%f", v);
 }
 
 string StringUtil::ToString(double v) {
-  char tmp[32];
-  snprintf(tmp, 32, "%lf", v);
-  return tmp;
+  return Format("%lf", v);
 }
 
-string StringUtil::ToString(const void * v, uint32_t len) {
+string StringUtil::ToHexString(const void * v, uint32_t len) {
   string ret = string(len * 2, '0');
   for (uint32_t i = 0; i < len; i++) {
-    ret[i] = (((uint8_t*)v)[i] >> 4) + '0';
-    ret[i] = (((uint8_t*)v)[i] & 0xff) + '0';
+    snprintf(&(ret[i*2]), 3, "%02x", ((char*)v)[i]);
   }
   return ret;
 }
@@ -110,7 +105,7 @@ string StringUtil::Format(const char * fmt, ...) {
     len = vsnprintf(destbuff, len + 1, fmt, al);
     va_end(al);
     dest.append(destbuff, len);
-    delete destbuff;
+    delete [] destbuff;
   } else {
     dest.append(tmp, len);
   }

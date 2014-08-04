@@ -42,5 +42,6 @@ TEST(ByteBuffer, read) {
   ASSERT_EQ(20, byteBuffer.limit());
 
   ASSERT_EQ(10, byteBuffer.position());
+  delete [] buff;
 }
 } /* namespace NativeTask */

@@ -83,17 +83,28 @@ TEST(PartitionBucket, multipleMemoryBlock) {
 
   const uint32_t KV_SIZE = 700;
   const uint32_t SMALL_KV_SIZE = 100;
+  // To suppress valgrind error
+  // the allocated buffer needs to be initialized before
+  // create iterator on the PartitionBucker, because
+  // those memory will be compared when create minheap
   KVBuffer * kv1 = bucket->allocateKVBuffer(KV_SIZE);
+  memset(kv1, 0, KV_SIZE);
   KVBuffer * kv2 = bucket->allocateKVBuffer(SMALL_KV_SIZE);
+  memset(kv2, 0, SMALL_KV_SIZE);
   KVBuffer * kv3 = bucket->allocateKVBuffer(KV_SIZE);
+  memset(kv3, 0, KV_SIZE);
 
   ASSERT_EQ(3, bucket->getKVCount());
   KVIterator * NULLPOINTER = 0;
-  ASSERT_NE(NULLPOINTER, bucket->getIterator());
+  KVIterator * iter = bucket->getIterator();
+  ASSERT_NE(NULLPOINTER, iter);
+  delete iter;
   ASSERT_EQ(2, bucket->getMemoryBlockCount());
 
   bucket->reset();
-  ASSERT_EQ(NULLPOINTER, bucket->getIterator());
+  iter = bucket->getIterator();
+  ASSERT_EQ(NULLPOINTER, iter);
+  delete iter;
   ASSERT_EQ(0, bucket->getMemoryBlockCount());
 
   delete bucket;
@@ -206,6 +217,7 @@ TEST(PartitionBucket, spill) {
   ASSERT_EQ(KV_SIZE - KVBuffer::headerLength() - 4, third->valueLength);
   ASSERT_EQ(bswap(BIG), (*(uint32_t * )(third->getKey())));
 
+  delete [] buff;
   delete bucket;
   delete pool;
 }

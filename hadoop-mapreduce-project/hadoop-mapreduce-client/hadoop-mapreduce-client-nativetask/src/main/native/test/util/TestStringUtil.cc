@@ -27,6 +27,11 @@ TEST(StringUtil, Convertion) {
   ASSERT_EQ(StringUtil::ToString(111, ' ', 40), "                                     111");
 }
 
+TEST(StringUtil, ToHexString) {
+  uint8_t buff[4] = {'i', 'j', 'k', 'l'};
+  ASSERT_EQ(StringUtil::ToHexString(buff, 4), string("696a6b6c"));
+}
+
 TEST(StringUtil, Format) {
   string t = StringUtil::Format("%d %d %d %.3lf %s", 1, 2, 3, 1.333, "aaaaaaaaaaa");
   ASSERT_EQ(t, "1 2 3 1.333 aaaaaaaaaaa");

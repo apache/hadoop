@@ -83,6 +83,7 @@ TEST(ComparatorForStdSort, compare) {
   compareResult = -1;
 
   ASSERT_EQ(true, comparator((char * )kv1 - buff, (char * )kv2 - buff));
+  delete [] buff;
 }
 
 } /* namespace NativeTask */

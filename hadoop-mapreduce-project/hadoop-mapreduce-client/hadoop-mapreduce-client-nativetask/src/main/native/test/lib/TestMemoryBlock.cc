@@ -47,6 +47,7 @@ TEST(MemoryBlock, test) {
 
   ASSERT_EQ(BUFFER_LENGTH - 2 * KV_SIZE, block.remainSpace());
   ASSERT_EQ(false, block.sorted());
+  delete [] bytes;
 }
 
 TEST(MemoryBlock, overflow) {
@@ -64,6 +65,7 @@ TEST(MemoryBlock, overflow) {
   ASSERT_EQ(1, block.getKVCount());
 
   ASSERT_EQ(BUFFER_LENGTH - KV_SIZE, block.remainSpace());
+  delete [] bytes;
 }
 
 TEST(MemoryBlock, sort) {
@@ -101,6 +103,7 @@ TEST(MemoryBlock, sort) {
   ASSERT_EQ(small, block.getKVBuffer(0));
   ASSERT_EQ(medium, block.getKVBuffer(1));
   ASSERT_EQ(big, block.getKVBuffer(2));
+  delete [] bytes;
 }
 
 }

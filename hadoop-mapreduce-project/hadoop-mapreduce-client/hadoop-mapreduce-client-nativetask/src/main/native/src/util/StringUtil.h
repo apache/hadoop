@@ -38,7 +38,7 @@ public:
   static string ToString(bool v);
   static string ToString(float v);
   static string ToString(double v);
-  static string ToString(const void * v, uint32_t len);
+  static string ToHexString(const void * v, uint32_t len);
 
   static int64_t toInt(const string & str);
   static bool toBool(const string & str);

@@ -157,7 +157,7 @@ char * ReadBuffer::fillGet(uint32_t count) {
     _capacity = newcap;
   } else {
     if (_remain > 0) {
-      memcpy(_buff, current(), _remain);
+      memmove(_buff, current(), _remain);
     }
   }
   _size = _remain;

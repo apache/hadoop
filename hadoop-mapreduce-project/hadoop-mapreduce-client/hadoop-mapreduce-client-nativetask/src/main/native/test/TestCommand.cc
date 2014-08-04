@@ -25,14 +25,14 @@
 using namespace NativeTask;
 
 TEST(Command, equals) {
-  Command * cmd1 = new Command(100, "hello command");
-  Command * cmd2 = new Command(100, "hello command 2");
+  Command cmd1(100, "hello command");
+  Command cmd2(100, "hello command 2");
 
-  ASSERT_TRUE(cmd1->equals(*cmd2));
-  ASSERT_TRUE(cmd2->equals(*cmd1));
-  ASSERT_EQ(100, cmd1->id());
+  ASSERT_TRUE(cmd1.equals(cmd2));
+  ASSERT_TRUE(cmd2.equals(cmd1));
+  ASSERT_EQ(100, cmd1.id());
 
   std::string helloCommand = "hello command";
-  ASSERT_EQ(0, helloCommand.compare(cmd1->description()));
+  ASSERT_EQ(helloCommand, cmd1.description());
 }
 

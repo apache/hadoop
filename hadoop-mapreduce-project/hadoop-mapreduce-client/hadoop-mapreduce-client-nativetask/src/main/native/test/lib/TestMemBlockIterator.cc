@@ -43,6 +43,7 @@ TEST(MemoryBlockIterator, test) {
     ASSERT_EQ(block.getKVBuffer(keyCount), kv);
     keyCount++;
   }
+  delete [] bytes;
 }
 
 class MemoryBlockFactory {
@@ -102,6 +103,13 @@ TEST(MemoryBlockIterator, compare) {
 
   iter2->next();
   ASSERT_EQ(false, comparator(iter1, iter2));
+
+  delete iter2;
+  delete iter1;
+  delete [] block2->base();
+  delete [] block1->base();
+  delete block2;
+  delete block1;
 }
 }
 

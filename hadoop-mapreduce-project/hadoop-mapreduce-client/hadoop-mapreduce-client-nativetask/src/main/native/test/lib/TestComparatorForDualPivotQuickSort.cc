@@ -83,6 +83,7 @@ TEST(ComparatorForDualPivotQuickSort, compare) {
   compareResult = -1;
 
   ASSERT_EQ(-1, comparator((char * )kv1 - buff, (char * )kv2 - buff));
+  delete [] buff;
 }
 
 } /* namespace NativeTask */

@@ -69,6 +69,10 @@ private:
 public:
   MemoryBlock(char * pos, uint32_t size);
 
+  char * base() {
+    return _base;
+  }
+
   bool sorted() {
     return _sorted;
   }

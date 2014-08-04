@@ -78,7 +78,7 @@ Config * NativeObjectFactory::GlobalConfig = &G_CONFIG;
 float NativeObjectFactory::LastProgress = 0;
 Progress * NativeObjectFactory::TaskProgress = NULL;
 string NativeObjectFactory::LastStatus;
-set<Counter *> NativeObjectFactory::CounterSet;
+set<Counter *, CounterPtrCompare> NativeObjectFactory::CounterSet;
 vector<Counter *> NativeObjectFactory::Counters;
 vector<uint64_t> NativeObjectFactory::CounterLastUpdateValues;
 bool NativeObjectFactory::Inited = false;

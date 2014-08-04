@@ -67,6 +67,7 @@ void TestIFileReadWrite(KeyValueType kvtype, int partition, int size,
   vector<pair<string, string> > readkvs;
   readIFile(readkvs, outputpath, kvtype, info, codec);
   LOG("read finished");
+  delete info;
   ASSERT_EQ(kvs.size() * partition, readkvs.size());
   for (int i = 0; i < partition; i++) {
     vector<pair<string, string> > cur_part(readkvs.begin() + i * kvs.size(),
@@ -169,13 +170,13 @@ TEST(IFile, TestGlibCBug) {
   int32_t expect[5] = {-1538241715, -1288088794, -192294464, 563552421, 1661521654};
 
   LOG("TestGlibCBug %s", path.c_str());
-  IFileSegment * segments = new IFileSegment [1];
+  IFileSegment * segments = new IFileSegment[1];
   segments[0].realEndOffset = 10000000;
-  SingleSpillInfo * info = new SingleSpillInfo(segments, 1, path, CHECKSUM_NONE,
+  SingleSpillInfo info(segments, 1, path, CHECKSUM_NONE,
       IntType, TextType, "");
 
   InputStream * fileOut = FileSystem::getLocal().open(path);
-  IFileReader * reader = new IFileReader(fileOut, info, true);
+  IFileReader * reader = new IFileReader(fileOut, &info, true);
 
   const char * key = NULL;
   uint32_t length = 0;
@@ -187,4 +188,6 @@ TEST(IFile, TestGlibCBug) {
     ASSERT_EQ(expect[index], realKey);
     index++;
   }
+  delete reader;
+
 }

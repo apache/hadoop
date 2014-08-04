@@ -26,6 +26,7 @@
 #include "commons.h"
 #include "Buffers.h"
 #include "FileSystem.h"
+#include "NativeObjectFactory.h"
 #include "test_commons.h"
 
 extern "C" {
@@ -75,6 +76,7 @@ int main(int argc, char ** argv) {
     int skip = gen ? 2 : 1;
     TestConfig.parse(argc - skip, (const char **)(newArgv + skip));
   }
+  delete [] newArgv;
   try {
     if (gen == true) {
       string type = TestConfig.get("generate.type", "word");
@@ -92,12 +94,16 @@ int main(int argc, char ** argv) {
         fout->close();
         delete fout;
       }
+      NativeObjectFactory::Release();
       return 0;
     } else {
-      return RUN_ALL_TESTS();
+      int ret = RUN_ALL_TESTS();
+      NativeObjectFactory::Release();
+      return ret;
     }
   } catch (std::exception & e) {
     fprintf(stderr, "Exception: %s", e.what());
+    NativeObjectFactory::Release();
     return 1;
   }
 }

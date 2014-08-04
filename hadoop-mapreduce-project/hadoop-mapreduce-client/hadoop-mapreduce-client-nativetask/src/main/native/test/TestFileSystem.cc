@@ -48,34 +48,3 @@ TEST(FileSystem, RawFileSystem) {
   ASSERT_FALSE(fs.exists(temppath));
 }
 
-// This test needs java CLASSPATH env to run
-// Enable it manually only if some changes are made to FileSystem.h/cc
-//TEST(FileSystem, JavaFileSystem) {
-//  FileSystem & fs = FileSystem::getJava(TestConfig);
-//  fs.mkdirs("temp");
-//  string temppath = "temp/data";
-//  string content;
-//  GenerateKVTextLength(content, 4111111, "word");
-//  FileOutputStream * output = (FileOutputStream*)fs.create(temppath, true);
-//  output->write(content.data(), content.length());
-//  output->close();
-//  delete output;
-//  FileInputStream * input = (FileInputStream*)fs.open(temppath);
-//  char buff[102400];
-//  int64_t total = 0;
-//  while(true) {
-//    int rd = input->read(buff, 102400);
-//    if (rd<=0) {
-//      break;
-//    }
-//    ASSERT_EQ(content.substr(total, rd), string(buff,rd));
-//    total+=rd;
-//  }
-//  ASSERT_EQ(content.length(), total);
-//  delete input;
-//  ASSERT_EQ(fs.getLength(temppath), content.length());
-//  ASSERT_TRUE(fs.exists(temppath));
-//  fs.remove("temp");
-//  ASSERT_FALSE(fs.exists(temppath));
-//}
-

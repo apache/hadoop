@@ -48,6 +48,7 @@ TEST(KVBuffer, test) {
 
   ASSERT_EQ(8, kv1->headerLength());
   ASSERT_EQ(strlen(KEY) + strlen(VALUE) + 8, kv1->lengthConvertEndium());
+  delete [] buff;
 }
 
 } /* namespace NativeTask */

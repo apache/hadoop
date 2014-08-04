@@ -34,7 +34,6 @@ class FileSystem;
 class FileInputStream : public InputStream {
 private:
   string _path;
-  FILE * _handle;
   int _fd;
   Counter * _bytesRead;
 public:
@@ -57,7 +56,6 @@ public:
 class FileOutputStream : public OutputStream {
 private:
   string _path;
-  FILE * _handle;
   int _fd;
   Counter * _bytesWrite;
 public:
@@ -117,10 +115,7 @@ public:
   virtual void mkdirs(const string & path) {
   }
 
-  static string getDefaultFsUri(Config * config);
   static FileSystem & getLocal();
-  static FileSystem & getJava(Config * config);
-  static FileSystem & get(Config * config);
 };
 
 } // namespace NativeTask

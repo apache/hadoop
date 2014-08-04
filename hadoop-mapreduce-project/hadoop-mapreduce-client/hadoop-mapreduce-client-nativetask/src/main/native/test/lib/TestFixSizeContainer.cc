@@ -47,6 +47,9 @@ TEST(FixSizeContainer, test) {
     char * c = container->base() + i;
     ASSERT_EQ(toBeFilled[i], *c);
   }
+
+  delete [] bytes;
+  delete container;
 }
 
 } /* namespace NativeTask */

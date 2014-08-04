@@ -17,11 +17,12 @@
  */
 
 #include "commons.h"
+#include "NativeObjectFactory.h"
 #include "BufferStream.h"
 #include "Buffers.h"
 #include "test_commons.h"
 
-TEST(Counter, test) {
+TEST(Counter, Counter) {
   Counter counter1("group", "key");
   const string & group = counter1.group();
   const string & name = counter1.name();
@@ -32,4 +33,16 @@ TEST(Counter, test) {
 
   counter1.increase(100);
   ASSERT_EQ(100, counter1.get());
+}
+
+TEST(Counter, CounterSet) {
+  Counter * counter1 = NativeObjectFactory::GetCounter("group0", "name0");
+  ASSERT_EQ(string("group0"), counter1->group());
+  ASSERT_EQ(string("name0"), counter1->name());
+  counter1->increase(100);
+  ASSERT_EQ(100, counter1->get());
+  Counter * counter2 = NativeObjectFactory::GetCounter("group0", "name0");
+  Counter * counter3 = NativeObjectFactory::GetCounter("group0", "name1");
+  ASSERT_EQ(counter1, counter2);
+  ASSERT_NE(counter1, counter3);
 }

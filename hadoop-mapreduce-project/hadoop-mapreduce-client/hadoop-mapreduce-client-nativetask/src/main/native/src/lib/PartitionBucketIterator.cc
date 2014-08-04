@@ -43,9 +43,11 @@ PartitionBucketIterator::PartitionBucketIterator(PartitionBucket * pb, Comparato
     MemBlockIteratorPtr blockIterator = new MemBlockIterator(block);
     if (blockIterator->next()) {
       _heap.push_back(blockIterator);
+    } else {
+      delete blockIterator;
     }
   }
-  if (_heap.size() > 0) {
+  if (_heap.size() > 1) {
     makeHeap(&(_heap[0]), &(_heap[0]) + _heap.size(), _comparator);
   }
 }
@@ -78,6 +80,9 @@ bool PartitionBucketIterator::next() {
           heapify(base, 1, cur_heap_size, _comparator);
         }
       } else { // no more, pop heap
+        // after popHeap, the first element of heap will be removed
+        // and replaced by other element, so it needs to be deleted
+        delete _heap[0];
         MemBlockIteratorPtr * base = &(_heap[0]);
         popHeap(base, base + cur_heap_size, _comparator);
         _heap.pop_back();

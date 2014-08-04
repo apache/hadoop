@@ -36,6 +36,19 @@ using std::pair;
 
 class NativeLibrary;
 
+class CounterPtrCompare {
+public:
+  bool operator()(const Counter * lhs, const Counter * rhs) const {
+    if (lhs->group() < rhs->group()) {
+      return true;
+    } else if (lhs->group() == rhs->group()) {
+      return lhs->name() < rhs->name();
+    } else {
+      return false;
+    }
+  }
+};
+
 /**
  * Native object factory
  */
@@ -47,7 +60,7 @@ private:
   static float LastProgress;
   static Progress * TaskProgress;
   static string LastStatus;
-  static set<Counter *> CounterSet;
+  static set<Counter *, CounterPtrCompare> CounterSet;
   static vector<Counter *> Counters;
   static vector<uint64_t> CounterLastUpdateValues;
   static bool Inited;

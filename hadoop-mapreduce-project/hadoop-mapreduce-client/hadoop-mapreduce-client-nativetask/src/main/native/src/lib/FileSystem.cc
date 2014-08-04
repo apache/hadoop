@@ -17,9 +17,9 @@
  */
 
 #include <errno.h>
+#include <fcntl.h>
 #include <dirent.h>
 #include <sys/stat.h>
-#include <jni.h>
 #include "commons.h"
 #include "util/StringUtil.h"
 #include "jniutils.h"
@@ -34,13 +34,12 @@ namespace NativeTask {
 /////////////////////////////////////////////////////////////
 
 FileInputStream::FileInputStream(const string & path) {
-  _handle = fopen(path.c_str(), "rb");
-  if (_handle != NULL) {
-    _fd = fileno(_handle);
+  _fd = ::open(path.c_str(), O_RDONLY);
+  if (_fd >= 0) {
     _path = path;
   } else {
     _fd = -1;
-    THROW_EXCEPTION_EX(IOException, "Can't open raw file: [%s]", path.c_str());
+    THROW_EXCEPTION_EX(IOException, "Can't open file for read: [%s]", path.c_str());
   }
   _bytesRead = NativeObjectFactory::GetCounter(TaskCounters::FILESYSTEM_COUNTER_GROUP,
       TaskCounters::FILE_BYTES_READ);
@@ -67,9 +66,8 @@ int32_t FileInputStream::read(void * buff, uint32_t length) {
 }
 
 void FileInputStream::close() {
-  if (_handle != NULL) {
-    fclose(_handle);
-    _handle = NULL;
+  if (_fd >= 0) {
+    ::close(_fd);
     _fd = -1;
   }
 }
@@ -77,13 +75,20 @@ void FileInputStream::close() {
 /////////////////////////////////////////////////////////////
 
 FileOutputStream::FileOutputStream(const string & path, bool overwite) {
-  _handle = fopen(path.c_str(), "wb");
-  if (_handle != NULL) {
-    _fd = fileno(_handle);
+  int flags = 0;
+  if (overwite) {
+    flags = O_WRONLY | O_CREAT | O_TRUNC;
+  } else {
+    flags = O_WRONLY | O_CREAT | O_EXCL;
+  }
+  mode_t mask = umask(0);
+  umask(mask);
+  _fd = ::open(path.c_str(), flags, (0666 & ~mask));
+  if (_fd >= 0) {
     _path = path;
   } else {
     _fd = -1;
-    THROW_EXCEPTION_EX(IOException, "Open raw file failed: [%s]", path.c_str());
+    THROW_EXCEPTION_EX(IOException, "Can't open file for write: [%s]", path.c_str());
   }
   _bytesWrite = NativeObjectFactory::GetCounter(TaskCounters::FILESYSTEM_COUNTER_GROUP,
       TaskCounters::FILE_BYTES_WRITTEN);
@@ -108,9 +113,8 @@ void FileOutputStream::flush() {
 }
 
 void FileOutputStream::close() {
-  if (_handle != NULL) {
-    fclose(_handle);
-    _handle = NULL;
+  if (_fd >= 0) {
+    ::close(_fd);
     _fd = -1;
   }
 }
@@ -251,28 +255,8 @@ extern RawFileSystem RawFileSystemInstance;
 
 RawFileSystem RawFileSystemInstance = RawFileSystem();
 
-string FileSystem::getDefaultFsUri(Config * config) {
-  const char * nm = config->get(FS_DEFAULT_NAME);
-  if (nm == NULL) {
-    nm = config->get("fs.defaultFS");
-  }
-  if (nm == NULL) {
-    return string("file:///");
-  } else {
-    return string(nm);
-  }
-}
-
 FileSystem & FileSystem::getLocal() {
   return RawFileSystemInstance;
-}
-
-
-FileSystem & FileSystem::get(Config * config) {
-  string uri = getDefaultFsUri(config);
-  if (uri == "file:///") {
-    return RawFileSystemInstance;
-  }
 }
 
 } // namespace Hadoap

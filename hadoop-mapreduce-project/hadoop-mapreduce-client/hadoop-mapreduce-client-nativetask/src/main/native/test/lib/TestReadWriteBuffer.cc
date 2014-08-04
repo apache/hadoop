@@ -42,21 +42,19 @@ TEST(ReadWriteBuffer, readAndWrite) {
   }
 
   uint32_t writePoint = buff.getWritePoint();
-  LOG("Current Write Point: %d", writePoint);
 
   for (int i = 0; i < REPEAT; i++) {
     ASSERT_EQ(INT, buff.readInt());
     ASSERT_EQ(LONG, buff.readLong());
     string * read = buff.readString();
-    LOG("READ STRING: %s", read->c_str());
     ASSERT_EQ(0, STR.compare(read->c_str()));
     delete read;
 
     ASSERT_EQ(POINTER, buff.readPointer());
 
     read = buff.readString();
-    LOG("READ STRING: %s", read->c_str());
     ASSERT_EQ(0, STR.compare(read->c_str()));
+    delete read;
   }
 
   uint32_t readPoint = buff.getReadPoint();

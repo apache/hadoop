@@ -24,28 +24,26 @@
 namespace NativeTask {
 
 class MockIterator : public KVIterator {
-  std::vector<std::pair<int, int> > * kvs;
+  std::vector<std::pair<int, int> > kvs;
   uint32_t index;
   uint32_t expectedKeyGroupNum;
   std::map<int, int> expectkeyCountMap;
-  char * buffer;
+  char buffer[8];
 
 public:
   MockIterator()
-      : index(0), buffer(NULL) {
-    buffer = new char[8];
-    kvs = new std::vector<std::pair<int, int> >();
-    kvs->push_back(std::pair<int, int>(10, 100));
+      : index(0) {
+    kvs.push_back(std::pair<int, int>(10, 100));
 
-    kvs->push_back(std::pair<int, int>(10, 100));
-    kvs->push_back(std::pair<int, int>(10, 101));
-    kvs->push_back(std::pair<int, int>(10, 102));
+    kvs.push_back(std::pair<int, int>(10, 100));
+    kvs.push_back(std::pair<int, int>(10, 101));
+    kvs.push_back(std::pair<int, int>(10, 102));
 
-    kvs->push_back(std::pair<int, int>(20, 200));
-    kvs->push_back(std::pair<int, int>(20, 201));
-    kvs->push_back(std::pair<int, int>(20, 202));
-    kvs->push_back(std::pair<int, int>(30, 302));
-    kvs->push_back(std::pair<int, int>(40, 302));
+    kvs.push_back(std::pair<int, int>(20, 200));
+    kvs.push_back(std::pair<int, int>(20, 201));
+    kvs.push_back(std::pair<int, int>(20, 202));
+    kvs.push_back(std::pair<int, int>(30, 302));
+    kvs.push_back(std::pair<int, int>(40, 302));
     this->expectedKeyGroupNum = 4;
 
     expectkeyCountMap[10] = 4;
@@ -55,8 +53,8 @@ public:
   }
 
   bool next(Buffer & key, Buffer & outValue) {
-    if (index < kvs->size()) {
-      std::pair<int, int> value = kvs->at(index);
+    if (index < kvs.size()) {
+      std::pair<int, int> value = kvs.at(index);
       *((int *)buffer) = value.first;
       *(((int *)buffer) + 1) = value.second;
       key.reset(buffer, 4);
@@ -88,11 +86,9 @@ void TestKeyGroupIterator() {
     uint32_t length = 0;
     key = groupIterator->getKey(length);
     int * keyPtr = (int *)key;
-    std::cout << "new key group(key group hold kvs of same key): " << *keyPtr << std::endl;
     const char * value = NULL;
     while (NULL != (value = groupIterator->nextValue(length))) {
       int * valuePtr = (int *)value;
-      std::cout << "==== key: " << *keyPtr << "value: " << *valuePtr << std::endl;
 
       if (actualKeyCount.find(*keyPtr) == actualKeyCount.end()) {
         actualKeyCount[*keyPtr] = 0;
@@ -108,8 +104,8 @@ void TestKeyGroupIterator() {
     uint32_t expectedCount = expectedKeyCountMap[key];
     ASSERT_EQ(expectedCount, keyCountIter->second);
   }
-
-  std::cout << "Done!!!!!!! " << std::endl;
+  delete groupIterator;
+  delete iter;
 }
 
 TEST(Iterator, keyGroupIterator) {

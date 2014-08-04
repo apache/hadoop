@@ -24,7 +24,7 @@
 TEST(Buffers, AppendRead) {
   string codec = "";
   vector<string> data;
-  Generate(data, 1000000, "word");
+  Generate(data, 100000, "word");
   string dest;
   dest.reserve(64 * 1024 * 1024);
   OutputStringStream outputStream = OutputStringStream(dest);
@@ -46,7 +46,7 @@ TEST(Buffers, AppendRead) {
 TEST(Buffers, AppendReadSnappy) {
   string codec = "org.apache.hadoop.io.compress.SnappyCodec";
   vector<string> data;
-  Generate(data, 1000000, "word");
+  Generate(data, 100000, "word");
   string dest;
   dest.reserve(64 * 1024 * 1024);
   OutputStringStream outputStream = OutputStringStream(dest);

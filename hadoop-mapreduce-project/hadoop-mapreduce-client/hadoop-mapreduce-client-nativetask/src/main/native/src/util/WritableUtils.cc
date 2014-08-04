@@ -297,7 +297,7 @@ void WritableUtils::toString(string & dest, KeyValueType type, const void * data
     dest.append(StringUtil::ToString(*(double*)data));
     break;
   case MD5HashType:
-    dest.append(StringUtil::ToString(data, length));
+    dest.append(StringUtil::ToHexString(data, length));
     break;
   default:
     dest.append((const char*)data, length);
