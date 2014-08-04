@@ -51,3 +51,6 @@ fs-encryption (Unreleased)
   BUG FIXES
 
     HADOOP-10871. incorrect prototype in OpensslSecureRandom.c (cmccabe)
+
+    HADOOP-10886. CryptoCodec#getCodecclasses throws NPE when configurations not 
+    loaded. (umamahesh)

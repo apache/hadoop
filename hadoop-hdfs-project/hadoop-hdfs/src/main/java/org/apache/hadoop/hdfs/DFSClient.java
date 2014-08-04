@@ -598,7 +598,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         DFSUtil.getRandom().nextInt()  + "_" + Thread.currentThread().getId();
     this.codec = CryptoCodec.getInstance(conf);
     this.cipherSuites = Lists.newArrayListWithCapacity(1);
-    cipherSuites.add(codec.getCipherSuite());
+    if (codec != null) {
+      cipherSuites.add(codec.getCipherSuite());
+    }
     provider = DFSUtil.createKeyProviderCryptoExtension(conf);
     if (provider == null) {
       LOG.info("No KeyProvider found.");
@@ -1333,9 +1335,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     if (feInfo != null) {
       // File is encrypted, wrap the stream in a crypto stream.
       KeyVersion decrypted = decryptEncryptedDataEncryptionKey(feInfo);
+      CryptoCodec codec = CryptoCodec
+          .getInstance(conf, feInfo.getCipherSuite());
+      Preconditions.checkNotNull(codec == null,
+          "No crypto codec classes with cipher suite configured.");
       final CryptoInputStream cryptoIn =
-          new CryptoInputStream(dfsis, CryptoCodec.getInstance(conf, 
-              feInfo.getCipherSuite()), decrypted.getMaterial(),
+          new CryptoInputStream(dfsis, codec, decrypted.getMaterial(),
               feInfo.getIV());
       return new HdfsDataInputStream(cryptoIn);
     } else {
@@ -1361,6 +1366,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       FileSystem.Statistics statistics, long startPos) throws IOException {
     final FileEncryptionInfo feInfo = dfsos.getFileEncryptionInfo();
     if (feInfo != null) {
+      Preconditions.checkNotNull(codec == null,
+          "No crypto codec classes with cipher suite configured.");
       // File is encrypted, wrap the stream in a crypto stream.
       KeyVersion decrypted = decryptEncryptedDataEncryptionKey(feInfo);
       final CryptoOutputStream cryptoOut =

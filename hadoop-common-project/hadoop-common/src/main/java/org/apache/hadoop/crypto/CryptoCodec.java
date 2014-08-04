@@ -45,14 +45,21 @@ public abstract class CryptoCodec implements Configurable {
   
   /**
    * Get crypto codec for specified algorithm/mode/padding.
-   * @param conf the configuration
-   * @param CipherSuite algorithm/mode/padding
-   * @return CryptoCodec the codec object
+   * 
+   * @param conf
+   *          the configuration
+   * @param CipherSuite
+   *          algorithm/mode/padding
+   * @return CryptoCodec the codec object. Null value will be returned if no
+   *         crypto codec classes with cipher suite configured.
    */
   public static CryptoCodec getInstance(Configuration conf, 
       CipherSuite cipherSuite) {
     List<Class<? extends CryptoCodec>> klasses = getCodecClasses(
         conf, cipherSuite);
+    if (klasses == null) {
+      return null;
+    }
     CryptoCodec codec = null;
     for (Class<? extends CryptoCodec> klass : klasses) {
       try {
@@ -80,10 +87,13 @@ public abstract class CryptoCodec implements Configurable {
   }
   
   /**
-   * Get crypto codec for algorithm/mode/padding in config value 
+   * Get crypto codec for algorithm/mode/padding in config value
    * hadoop.security.crypto.cipher.suite
-   * @param conf the configuration
-   * @return CryptoCodec the codec object
+   * 
+   * @param conf
+   *          the configuration
+   * @return CryptoCodec the codec object Null value will be returned if no
+   *         crypto codec classes with cipher suite configured.
    */
   public static CryptoCodec getInstance(Configuration conf) {
     String name = conf.get(HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_KEY, 
@@ -97,6 +107,10 @@ public abstract class CryptoCodec implements Configurable {
     String configName = HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX + 
         cipherSuite.getConfigSuffix();
     String codecString = conf.get(configName);
+    if (codecString == null) {
+      LOG.warn("No crypto codec classes with cipher suite configured.");
+      return null;
+    }
     for (String c : Splitter.on(',').trimResults().omitEmptyStrings().
         split(codecString)) {
       try {
