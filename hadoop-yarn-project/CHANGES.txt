@@ -64,6 +64,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2343. Improve NMToken expire exception message. (Li Lu via jianhe)
 
+    YARN-2370. Fix comment in o.a.h.y.server.resourcemanager.schedulerAppSchedulingInfo 
+    (Wenwu Peng via junping_du)
+
   OPTIMIZATIONS
 
   BUG FIXES
