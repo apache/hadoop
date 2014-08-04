@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ExitCodeProvider;
@@ -72,7 +71,8 @@ import java.util.List;
  */
 @SuppressWarnings("UseOfSystemOutOrSystemErr")
 public class ServiceLauncher<S extends Service>
-    implements LauncherExitCodes, LauncherArguments {
+    implements LauncherExitCodes, LauncherArguments,
+    Thread.UncaughtExceptionHandler {
 
   /**
    * Logger.
@@ -467,6 +467,7 @@ public class ServiceLauncher<S extends Service>
    *
    * @param conf configuration to use
    */
+  @SuppressWarnings("unchecked")
   public Service instantiateService(Configuration conf) {
     Preconditions.checkArgument(conf != null, "null conf");
     configuration = conf;
@@ -519,7 +520,7 @@ public class ServiceLauncher<S extends Service>
    * @param thrown the exception thrown
    * @return an <code>ExitException</code> with a status code
    */
-  protected ExitUtil.ExitException convertToExitException(Throwable thrown) {
+  protected static ExitUtil.ExitException convertToExitException(Throwable thrown) {
     ExitUtil.ExitException
         exitException;// other exceptions are converted to ExitExceptions
     // get the exception message
@@ -569,6 +570,19 @@ public class ServiceLauncher<S extends Service>
       // downgrade interrupt registration to warnings
       LOG.warn("{}", e, e);
     }
+    Thread.setDefaultUncaughtExceptionHandler(
+      new HadoopUncaughtExceptionHandler(this));
+  }
+
+
+  /**
+   * Handler for uncaught exceptions: terminate the service
+   * @param thread thread
+   * @param exception exception
+   */
+  @Override
+  public void uncaughtException(Thread thread, Throwable exception) {
+    exit(convertToExitException(exception));
   }
 
   /**
@@ -689,7 +703,7 @@ public class ServiceLauncher<S extends Service>
     return parseCommandArgs(conf, createOptions(), coreArgs);
   }
     
-    public List<String> extractConfigurationArgs1(Configuration conf,
+  public List<String> extractConfigurationArgs1(Configuration conf,
       List<String> args) {
 
     int size = args.size();

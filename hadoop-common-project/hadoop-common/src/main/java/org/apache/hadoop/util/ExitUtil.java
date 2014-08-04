@@ -221,10 +221,14 @@ public final class ExitUtil {
   public static synchronized void halt(HaltException ee) throws HaltException {
     int status = ee.getExitCode();
     String msg = ee.getMessage();
-    if (status != 0) {
-      //exit indicates a problem, log it
-      LOG.debug("Halt with status {}: {}", status, msg, ee);
-      LOG.info("Halt with status {}: {}", status, msg, msg);
+    try {
+      if (status != 0) {
+        //exit indicates a problem, log it
+        LOG.debug("Halt with status {}: {}", status, msg, ee);
+        LOG.info("Halt with status {}: {}", status, msg, msg);
+      }
+    } catch (Exception ignored) {
+      // ignore exceptions here, as it may be due to an out of memory situation
     }
     if (systemHaltDisabled) {
       LOG.error("Halt called", ee);
@@ -309,5 +313,22 @@ public final class ExitUtil {
    */
   public static void halt(int status, String message) throws HaltException {
     halt(new HaltException(status, message));
+  }
+
+  /**
+   * Handler for out of memory events -no attempt is made here
+   * to cleanly shutdown or support halt blocking; a robust
+   * printing of the event to stderr is all that can be done
+   * @param oome out of memory event
+   */
+  public static void haltOnOutOfMemory(OutOfMemoryError oome) {
+    //After catching an OOM java says it is undefined behavior, so don't
+    //even try to clean up or we can get stuck on shutdown.
+    try {
+      System.err.println("Halting due to Out Of Memory Error...");
+    } catch (Throwable err) {
+      //Again we done want to exit because of logging issues.
+    }
+    Runtime.getRuntime().halt(-1);
   }
 }
