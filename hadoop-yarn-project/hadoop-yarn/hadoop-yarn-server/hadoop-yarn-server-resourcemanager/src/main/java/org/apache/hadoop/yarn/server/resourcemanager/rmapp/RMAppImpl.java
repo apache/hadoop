@@ -1191,6 +1191,9 @@ public class RMAppImpl implements RMApp, Recoverable {
   
   public static boolean isAppInFinalState(RMApp rmApp) {
     RMAppState appState = ((RMAppImpl) rmApp).getRecoveredFinalState();
+    if (appState == null) {
+      appState = rmApp.getState();
+    }
     return appState == RMAppState.FAILED || appState == RMAppState.FINISHED
         || appState == RMAppState.KILLED;
   }

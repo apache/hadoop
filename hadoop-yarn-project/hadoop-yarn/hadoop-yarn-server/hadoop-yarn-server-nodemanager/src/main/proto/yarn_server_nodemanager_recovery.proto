@@ -24,6 +24,13 @@ package hadoop.yarn;
 
 import "yarn_protos.proto";
 
+message ContainerManagerApplicationProto {
+  optional ApplicationIdProto id = 1;
+  optional string user = 2;
+  optional bytes credentials = 3;
+  repeated ApplicationACLMapProto acls = 4;
+}
+
 message DeletionServiceDeleteTaskProto {
   optional int32 id = 1;
   optional string user = 2;
