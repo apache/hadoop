@@ -236,6 +236,8 @@ Release 2.5.0 - UNRELEASED
 
   BUG FIXES 
 
+    HADOOP-10759. Remove hardcoded JAVA_HEAP_MAX. (Sam Liu via Eric Yang)
+
     HADOOP-10378. Typo in help printed by hdfs dfs -help.
     (Mit Desai via suresh)
 
