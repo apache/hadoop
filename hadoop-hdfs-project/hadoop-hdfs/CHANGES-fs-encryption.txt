@@ -85,3 +85,6 @@ fs-encryption (Unreleased)
     to a non-directory file. (clamb)
 
     HDFS-6807. Fix TestReservedRawPaths. (clamb)
+
+    HDFS-6814. Mistakenly dfs.namenode.list.encryption.zones.num.responses configured
+    as boolean. (umamahesh)
