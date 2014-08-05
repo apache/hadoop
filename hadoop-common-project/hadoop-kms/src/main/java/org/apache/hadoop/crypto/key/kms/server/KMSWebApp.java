@@ -181,12 +181,19 @@ public class KMSWebApp implements ServletContextListener {
         keyProvider = new CachingKeyProvider(keyProvider, keyTimeOutMillis,
             currKeyTimeOutMillis);
       }
+      LOG.info("Initialized KeyProvider " + keyProvider);
+
       keyProviderCryptoExtension = KeyProviderCryptoExtension.
           createKeyProviderCryptoExtension(keyProvider);
       keyProviderCryptoExtension = 
           new EagerKeyGeneratorKeyProviderCryptoExtension(kmsConf, 
               keyProviderCryptoExtension);
-
+      LOG.info("Initialized KeyProviderCryptoExtension "
+          + keyProviderCryptoExtension);
+      final int defaultBitlength = kmsConf
+          .getInt(KeyProvider.DEFAULT_BITLENGTH_NAME,
+              KeyProvider.DEFAULT_BITLENGTH);
+      LOG.info("Default key bitlength is {}", defaultBitlength);
       LOG.info("KMS Started");
     } catch (Throwable ex) {
       System.out.println();
