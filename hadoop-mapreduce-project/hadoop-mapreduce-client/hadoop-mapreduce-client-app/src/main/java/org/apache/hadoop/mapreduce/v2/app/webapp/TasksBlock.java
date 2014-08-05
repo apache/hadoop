@@ -25,6 +25,7 @@ import static org.apache.hadoop.yarn.util.StringHelper.percent;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR_VALUE;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskInfo;
@@ -102,7 +103,8 @@ public class TasksBlock extends HtmlBlock {
       .append(join(pct, '%')).append("'> ").append("<div class='")
       .append(C_PROGRESSBAR_VALUE).append("' style='")
       .append(join("width:", pct, '%')).append("'> </div> </div>\",\"")
-      .append(info.getStatus()).append("\",\"")
+      .append(StringEscapeUtils.escapeJavaScript(
+              StringEscapeUtils.escapeHtml(info.getStatus()))).append("\",\"")
 
       .append(info.getState()).append("\",\"")
       .append(info.getStartTime()).append("\",\"")
