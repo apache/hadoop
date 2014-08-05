@@ -532,6 +532,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10918. JMXJsonServlet fails when used within Tomcat. (tucu)
 
+    HADOOP-10933. FileBasedKeyStoresFactory Should use Configuration.getPassword 
+    for SSL Passwords. (lmccay via tucu)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
