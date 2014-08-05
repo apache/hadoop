@@ -233,6 +233,9 @@ Release 1.3.0 - unreleased
     MAPREDUCE-5966. MR1 FairScheduler use of custom weight adjuster is not 
     thread safe for comparisons. (Anubhav Dhoot via kasha)
 
+    MAPREDUCE-5968. Work directory is not deleted when downloadCacheObject 
+    throws IOException. (Zhihai Xu va kasha)
+
 Release 1.2.2 - unreleased
 
   INCOMPATIBLE CHANGES

@@ -50,6 +50,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -57,6 +58,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.filecache.TaskDistributedCacheManager;
 import org.apache.hadoop.filecache.TrackerDistributedCacheManager;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 
 public class TestTrackerDistributedCacheManager extends TestCase {
@@ -1239,4 +1241,48 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     assertNull(taskDistributedCacheManager);
   }
 
+  public void testRemoveWorkDirInDownloadCacheObject() throws Exception {
+    if (!canRun()) {
+      return;
+    }
+    // This is to test the workDir is removed, when IOException happened
+    // use TestFileSystem to generate an IOException,
+    // then verify whether the workDir is deleted.
+    FsPermission filePerm = FsPermission.createImmutable((short)0755);
+    Configuration myConf = new Configuration(conf);
+    myConf.setClass("fs.test.impl", TestFileSystem.class, FileSystem.class);
+    Path testDir = new Path(TEST_ROOT_DIR, "testDir");
+    Path destination = new Path(testDir.toString(),
+        "downloadCacheObjectTestDir");
+    Path fileToCache = new Path("test:///" + destination.toUri().getPath());
+    try {
+      TrackerDistributedCacheManager.downloadCacheObject(myConf,
+          fileToCache.toUri(), destination, 0L, false, filePerm);
+      fail("did not throw an exception");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Force an IOException for test", e);
+    }
+    File TEST_ROOT = new File(TEST_ROOT_DIR);
+    String workDir = destination.getParent().toString() +
+        TrackerDistributedCacheManager.WORK_DIR_FIX;
+    for (File f : TEST_ROOT.listFiles()) {
+      assertFalse(f.toString().contains(workDir));
+    }
+  }
+
+  static class TestFileSystem extends LocalFileSystem {
+    public TestFileSystem() {
+      super();
+    }
+    @Override
+    public void copyToLocalFile(boolean delSrc, Path src, Path dst)
+        throws IOException {
+      throw new IOException("Force an IOException for test");
+    }
+    @Override
+    public FileStatus getFileStatus(Path f) throws IOException {
+        return new FileStatus();
+    }
+  }
 }
