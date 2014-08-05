@@ -41,7 +41,9 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 
@@ -198,6 +200,11 @@ class ChRootedFs extends AbstractFileSystem {
   public FileStatus getFileStatus(final Path f) 
       throws IOException, UnresolvedLinkException {
     return myFs.getFileStatus(fullPath(f));
+  }
+
+  public void access(Path path, FsAction mode) throws AccessControlException,
+      FileNotFoundException, UnresolvedLinkException, IOException {
+    myFs.access(fullPath(path), mode);
   }
 
   @Override

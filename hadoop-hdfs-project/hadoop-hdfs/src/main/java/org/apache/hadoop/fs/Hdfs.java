@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoCodec;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.hdfs.CorruptFileBlockIterator;
@@ -454,6 +455,11 @@ public class Hdfs extends AbstractFileSystem {
   @Override
   public void removeXAttr(Path path, String name) throws IOException {
     dfs.removeXAttr(getUriPath(path), name);
+  }
+
+  @Override
+  public void access(Path path, final FsAction mode) throws IOException {
+    dfs.checkAccess(getUriPath(path), mode);
   }
 
   /**

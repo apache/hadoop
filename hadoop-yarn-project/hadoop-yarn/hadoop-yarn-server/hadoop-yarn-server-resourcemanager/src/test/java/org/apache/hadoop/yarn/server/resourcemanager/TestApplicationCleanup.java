@@ -449,6 +449,35 @@ public class TestApplicationCleanup {
     rm2.stop();
   }
 
+  @Test (timeout = 60000)
+  public void testAppCleanupWhenNMReconnects() throws Exception {
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+
+    // start RM
+    MockRM rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    // create app and launch the AM
+    RMApp app0 = rm1.submitApp(200);
+    MockAM am0 = launchAM(app0, rm1, nm1);
+    nm1.nodeHeartbeat(am0.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
+    rm1.waitForState(app0.getApplicationId(), RMAppState.FAILED);
+
+    // wait for application cleanup message received
+    waitForAppCleanupMessageRecved(nm1, app0.getApplicationId());
+
+    // reconnect NM with application still active
+    nm1.registerNode(Arrays.asList(app0.getApplicationId()));
+    waitForAppCleanupMessageRecved(nm1, app0.getApplicationId());
+
+    rm1.stop();
+  }
+
   public static void main(String[] args) throws Exception {
     TestApplicationCleanup t = new TestApplicationCleanup();
     t.testAppCleanup();

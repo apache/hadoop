@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
 import static org.apache.hadoop.service.Service.STATE.STARTED;
 
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
@@ -42,6 +43,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataInputByteBuffer;
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
@@ -63,6 +65,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -71,6 +74,8 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.SerializedException;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -81,6 +86,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationACLMapProto;
+import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedAppsEvent;
@@ -119,11 +126,13 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.Contai
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredApplicationsState;
 import org.apache.hadoop.yarn.server.nodemanager.security.authorize.NMPolicyProvider;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.ByteString;
 
 public class ContainerManagerImpl extends CompositeService implements
     ServiceStateChangeListener, ContainerManagementProtocol,
@@ -224,12 +233,47 @@ public class ContainerManagerImpl extends CompositeService implements
     recover();
   }
 
+  @SuppressWarnings("unchecked")
   private void recover() throws IOException, URISyntaxException {
     NMStateStoreService stateStore = context.getNMStateStore();
     if (stateStore.canRecover()) {
       rsrcLocalizationSrvc.recoverLocalizedResources(
           stateStore.loadLocalizationState());
+
+      RecoveredApplicationsState appsState = stateStore.loadApplicationsState();
+      for (ContainerManagerApplicationProto proto :
+           appsState.getApplications()) {
+        recoverApplication(proto);
+      }
+
+      String diagnostic = "Application marked finished during recovery";
+      for (ApplicationId appId : appsState.getFinishedApplications()) {
+        dispatcher.getEventHandler().handle(
+            new ApplicationFinishEvent(appId, diagnostic));
+      }
     }
+  }
+
+  private void recoverApplication(ContainerManagerApplicationProto p)
+      throws IOException {
+    ApplicationId appId = new ApplicationIdPBImpl(p.getId());
+    Credentials creds = new Credentials();
+    creds.readTokenStorageStream(
+        new DataInputStream(p.getCredentials().newInput()));
+
+    List<ApplicationACLMapProto> aclProtoList = p.getAclsList();
+    Map<ApplicationAccessType, String> acls =
+        new HashMap<ApplicationAccessType, String>(aclProtoList.size());
+    for (ApplicationACLMapProto aclProto : aclProtoList) {
+      acls.put(ProtoUtils.convertFromProtoFormat(aclProto.getAccessType()),
+          aclProto.getAcl());
+    }
+
+    LOG.info("Recovering application " + appId);
+    ApplicationImpl app = new ApplicationImpl(dispatcher, p.getUser(), appId,
+        creds, context);
+    context.getApplications().put(appId, app);
+    app.handle(new ApplicationInitEvent(appId, acls));
   }
 
   protected LogHandler createLogHandler(Configuration conf, Context context,
@@ -275,6 +319,7 @@ public class ContainerManagerImpl extends CompositeService implements
     YarnRPC rpc = YarnRPC.create(conf);
 
     InetSocketAddress initialAddress = conf.getSocketAddr(
+        YarnConfiguration.NM_BIND_HOST,
         YarnConfiguration.NM_ADDRESS,
         YarnConfiguration.DEFAULT_NM_ADDRESS,
         YarnConfiguration.DEFAULT_NM_PORT);
@@ -296,7 +341,22 @@ public class ContainerManagerImpl extends CompositeService implements
     		" server is still starting.");
     this.setBlockNewContainerRequests(true);
     server.start();
-    InetSocketAddress connectAddress = NetUtils.getConnectAddress(server);
+    
+    InetSocketAddress connectAddress;
+    String bindHost = conf.get(YarnConfiguration.NM_BIND_HOST);
+    String nmAddress = conf.getTrimmed(YarnConfiguration.NM_ADDRESS);
+    if (bindHost == null || bindHost.isEmpty() ||
+	nmAddress == null || nmAddress.isEmpty()) {
+      connectAddress = NetUtils.getConnectAddress(server);
+    } else {
+      //a bind-host case with an address, to support overriding the first hostname
+      //found when querying for our hostname with the specified address, combine
+      //the specified address with the actual port listened on by the server
+      connectAddress = NetUtils.getConnectAddress(
+	new InetSocketAddress(nmAddress.split(":")[0],
+			      server.getListenerAddress().getPort()));
+    }
+
     NodeId nodeId = NodeId.newInstance(
         connectAddress.getAddress().getCanonicalHostName(),
         connectAddress.getPort());
@@ -304,6 +364,7 @@ public class ContainerManagerImpl extends CompositeService implements
     this.context.getNMTokenSecretManager().setNodeId(nodeId);
     this.context.getContainerTokenSecretManager().setNodeId(nodeId);
     LOG.info("ContainerManager started at " + connectAddress);
+    LOG.info("ContainerManager bound to " + initialAddress);
     super.serviceStart();
   }
 
@@ -340,6 +401,12 @@ public class ContainerManagerImpl extends CompositeService implements
       return;
     }
     LOG.info("Applications still running : " + applications.keySet());
+
+    if (this.context.getNMStateStore().canRecover()
+        && !this.context.getDecommissioned()) {
+      // do not cleanup apps as they can be recovered on restart
+      return;
+    }
 
     List<ApplicationId> appIds =
         new ArrayList<ApplicationId>(applications.keySet());
@@ -497,6 +564,8 @@ public class ContainerManagerImpl extends CompositeService implements
       messageBuilder.append("\nThis token is expired. current time is ")
         .append(System.currentTimeMillis()).append(" found ")
         .append(containerTokenIdentifier.getExpiryTimeStamp());
+      messageBuilder.append("\nNote: System times on machines may be out of sync.")
+        .append(" Check system time and time zones.");
     }
     if (unauthorized) {
       String msg = messageBuilder.toString();
@@ -546,6 +615,41 @@ public class ContainerManagerImpl extends CompositeService implements
 
     return StartContainersResponse.newInstance(getAuxServiceMetaData(),
       succeededContainers, failedContainers);
+  }
+
+  private ContainerManagerApplicationProto buildAppProto(ApplicationId appId,
+      String user, Credentials credentials,
+      Map<ApplicationAccessType, String> appAcls) {
+
+    ContainerManagerApplicationProto.Builder builder =
+        ContainerManagerApplicationProto.newBuilder();
+    builder.setId(((ApplicationIdPBImpl) appId).getProto());
+    builder.setUser(user);
+
+    builder.clearCredentials();
+    if (credentials != null) {
+      DataOutputBuffer dob = new DataOutputBuffer();
+      try {
+        credentials.writeTokenStorageToStream(dob);
+        builder.setCredentials(ByteString.copyFrom(dob.getData()));
+      } catch (IOException e) {
+        // should not occur
+        LOG.error("Cannot serialize credentials", e);
+      }
+    }
+
+    builder.clearAcls();
+    if (appAcls != null) {
+      for (Map.Entry<ApplicationAccessType, String> acl : appAcls.entrySet()) {
+        ApplicationACLMapProto p = ApplicationACLMapProto.newBuilder()
+            .setAccessType(ProtoUtils.convertToProtoFormat(acl.getKey()))
+            .setAcl(acl.getValue())
+            .build();
+        builder.addAcls(p);
+      }
+    }
+
+    return builder.build();
   }
 
   @SuppressWarnings("unchecked")
@@ -621,10 +725,12 @@ public class ContainerManagerImpl extends CompositeService implements
         if (null == context.getApplications().putIfAbsent(applicationID,
           application)) {
           LOG.info("Creating a new application reference for app " + applicationID);
-
+          Map<ApplicationAccessType, String> appAcls =
+              container.getLaunchContext().getApplicationACLs();
+          context.getNMStateStore().storeApplication(applicationID,
+              buildAppProto(applicationID, user, credentials, appAcls));
           dispatcher.getEventHandler().handle(
-            new ApplicationInitEvent(applicationID, container.getLaunchContext()
-              .getApplicationACLs()));
+            new ApplicationInitEvent(applicationID, appAcls));
         }
 
         dispatcher.getEventHandler().handle(
@@ -874,6 +980,11 @@ public class ContainerManagerImpl extends CompositeService implements
           diagnostic = "Application killed on shutdown";
         } else if (appsFinishedEvent.getReason() == CMgrCompletedAppsEvent.Reason.BY_RESOURCEMANAGER) {
           diagnostic = "Application killed by ResourceManager";
+        }
+        try {
+          this.context.getNMStateStore().storeFinishedApplication(appID);
+        } catch (IOException e) {
+          LOG.error("Unable to update application state in store", e);
         }
         this.dispatcher.getEventHandler().handle(
             new ApplicationFinishEvent(appID,

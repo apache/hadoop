@@ -57,6 +57,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -112,6 +113,7 @@ import org.apache.hadoop.hdfs.web.resources.XAttrEncodingParam;
 import org.apache.hadoop.hdfs.web.resources.XAttrNameParam;
 import org.apache.hadoop.hdfs.web.resources.XAttrSetFlagParam;
 import org.apache.hadoop.hdfs.web.resources.XAttrValueParam;
+import org.apache.hadoop.hdfs.web.resources.FsActionParam;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.Server;
@@ -755,10 +757,12 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(XAttrEncodingParam.NAME) @DefaultValue(XAttrEncodingParam.DEFAULT) 
           final XAttrEncodingParam xattrEncoding,
       @QueryParam(ExcludeDatanodesParam.NAME) @DefaultValue(ExcludeDatanodesParam.DEFAULT)
-          final ExcludeDatanodesParam excludeDatanodes          
+          final ExcludeDatanodesParam excludeDatanodes,
+      @QueryParam(FsActionParam.NAME) @DefaultValue(FsActionParam.DEFAULT)
+          final FsActionParam fsAction
       ) throws IOException, InterruptedException {
     return get(ugi, delegation, username, doAsUser, ROOT, op, offset, length,
-        renewer, bufferSize, xattrNames, xattrEncoding, excludeDatanodes);
+        renewer, bufferSize, xattrNames, xattrEncoding, excludeDatanodes, fsAction);
   }
 
   /** Handle HTTP GET request. */
@@ -789,11 +793,13 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(XAttrEncodingParam.NAME) @DefaultValue(XAttrEncodingParam.DEFAULT) 
           final XAttrEncodingParam xattrEncoding,
       @QueryParam(ExcludeDatanodesParam.NAME) @DefaultValue(ExcludeDatanodesParam.DEFAULT)
-          final ExcludeDatanodesParam excludeDatanodes
+          final ExcludeDatanodesParam excludeDatanodes,
+      @QueryParam(FsActionParam.NAME) @DefaultValue(FsActionParam.DEFAULT)
+          final FsActionParam fsAction
       ) throws IOException, InterruptedException {
 
     init(ugi, delegation, username, doAsUser, path, op, offset, length,
-        renewer, bufferSize, xattrEncoding, excludeDatanodes);
+        renewer, bufferSize, xattrEncoding, excludeDatanodes, fsAction);
 
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
@@ -801,7 +807,7 @@ public class NamenodeWebHdfsMethods {
         try {
           return get(ugi, delegation, username, doAsUser,
               path.getAbsolutePath(), op, offset, length, renewer, bufferSize,
-              xattrNames, xattrEncoding, excludeDatanodes);
+              xattrNames, xattrEncoding, excludeDatanodes, fsAction);
         } finally {
           reset();
         }
@@ -822,7 +828,8 @@ public class NamenodeWebHdfsMethods {
       final BufferSizeParam bufferSize,
       final List<XAttrNameParam> xattrNames,
       final XAttrEncodingParam xattrEncoding,
-      final ExcludeDatanodesParam excludeDatanodes
+      final ExcludeDatanodesParam excludeDatanodes,
+      final FsActionParam fsAction
       ) throws IOException, URISyntaxException {
     final NameNode namenode = (NameNode)context.getAttribute("name.node");
     final NamenodeProtocols np = getRPCServer(namenode);
@@ -918,6 +925,10 @@ public class NamenodeWebHdfsMethods {
       final List<XAttr> xAttrs = np.listXAttrs(fullpath);
       final String js = JsonUtil.toJsonString(xAttrs);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case CHECKACCESS: {
+      np.checkAccess(fullpath, FsAction.getFsAction(fsAction.getValue()));
+      return Response.ok().build();
     }
     default:
       throw new UnsupportedOperationException(op + " is not supported");

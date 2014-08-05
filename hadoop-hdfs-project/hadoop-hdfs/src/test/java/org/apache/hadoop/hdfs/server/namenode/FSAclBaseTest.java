@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -1254,6 +1255,33 @@ public abstract class FSAclBaseTest {
     fsAsSupergroupMember.getAclStatus(bruceFile);
     exception.expect(AccessControlException.class);
     fsAsDiana.getAclStatus(bruceFile);
+  }
+
+  @Test
+  public void testAccess() throws IOException, InterruptedException {
+    Path p1 = new Path("/p1");
+    fs.mkdirs(p1);
+    fs.setOwner(p1, BRUCE.getShortUserName(), "groupX");
+    fsAsBruce.setAcl(p1, Lists.newArrayList(
+        aclEntry(ACCESS, USER, READ),
+        aclEntry(ACCESS, USER, "bruce", READ),
+        aclEntry(ACCESS, GROUP, NONE),
+        aclEntry(ACCESS, OTHER, NONE)));
+    fsAsBruce.access(p1, FsAction.READ);
+    try {
+      fsAsBruce.access(p1, FsAction.WRITE);
+      fail("The access call should have failed.");
+    } catch (AccessControlException e) {
+      // expected
+    }
+
+    Path badPath = new Path("/bad/bad");
+    try {
+      fsAsBruce.access(badPath, FsAction.READ);
+      fail("The access call should have failed");
+    } catch (FileNotFoundException e) {
+      // expected
+    }
   }
 
   /**

@@ -82,6 +82,9 @@ WebHDFS REST API
     * {{{List all XAttrs}<<<LISTXATTRS>>>}}
         (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.listXAttrs)
 
+    * {{{Check access}<<<CHECKACCESS>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.access)
+
   * HTTP PUT
 
     * {{{Create and Write to a File}<<<CREATE>>>}}
@@ -926,6 +929,28 @@ Transfer-Encoding: chunked
   See also:
   {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getAclStatus
 
+
+** {Check access}
+
+  * Submit a HTTP GET request.
+  
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=CHECKACCESS
+                              &fsaction=<FSACTION>
++---------------------------------
+
+  The client receives a response with zero content length:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Length: 0
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.access
+    
 
 * {Extended Attributes(XAttrs) Operations}
 
@@ -2165,6 +2190,25 @@ var tokenProperties =
   See also:
   {{Proxy Users}}
 
+
+** {Fs Action}
+
+*----------------+-------------------------------------------------------------------+
+|| Name          | <<<fsaction>>> |
+*----------------+-------------------------------------------------------------------+
+|| Description   | File system operation read/write/execute |
+*----------------+-------------------------------------------------------------------+
+|| Type          | String |
+*----------------+-------------------------------------------------------------------+
+|| Default Value | null (an invalid value) |
+*----------------+-------------------------------------------------------------------+
+|| Valid Values  | Strings matching regex pattern \"[rwx-]\{3\}\" |
+*----------------+-------------------------------------------------------------------+
+|| Syntax        | \"[rwx-]\{3\}\" |
+*----------------+-------------------------------------------------------------------+
+
+  See also:
+  {{{Check access}<<<CHECKACCESS>>>}},
 
 ** {Group}
 

@@ -52,6 +52,7 @@ import org.apache.hadoop.io.retry.DefaultFailoverProxyProvider;
 import org.apache.hadoop.io.retry.FailoverProxyProvider;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.net.StandardSocketFactory;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -87,6 +88,11 @@ public class TestDFSClientFailover {
   @After
   public void tearDownCluster() throws IOException {
     cluster.shutdown();
+  }
+
+  @After
+  public void clearConfig() {
+    SecurityUtil.setTokenServiceUseIp(true);
   }
 
   /**
@@ -323,6 +329,7 @@ public class TestDFSClientFailover {
   /**
    * Test to verify legacy proxy providers are correctly wrapped.
    */
+  @Test
   public void testWrappedFailoverProxyProvider() throws Exception {
     // setup the config with the dummy provider class
     Configuration config = new HdfsConfiguration(conf);
@@ -332,6 +339,9 @@ public class TestDFSClientFailover {
         DummyLegacyFailoverProxyProvider.class.getName());
     Path p = new Path("hdfs://" + logicalName + "/");
 
+    // not to use IP address for token service
+    SecurityUtil.setTokenServiceUseIp(false);
+
     // Logical URI should be used.
     assertTrue("Legacy proxy providers should use logical URI.",
         HAUtil.useLogicalUri(config, p.toUri()));
@@ -340,6 +350,7 @@ public class TestDFSClientFailover {
   /**
    * Test to verify IPFailoverProxyProvider is not requiring logical URI.
    */
+  @Test
   public void testIPFailoverProxyProviderLogicalUri() throws Exception {
     // setup the config with the IP failover proxy provider class
     Configuration config = new HdfsConfiguration(conf);

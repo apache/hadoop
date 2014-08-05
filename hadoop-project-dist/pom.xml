@@ -102,6 +102,8 @@
         <artifactId>findbugs-maven-plugin</artifactId>
         <configuration>
           <excludeFilterFile>${basedir}/dev-support/findbugsExcludeFile.xml</excludeFilterFile>
+          <fork>true</fork>
+          <maxHeap>2048</maxHeap>
         </configuration>
       </plugin>
       <plugin>

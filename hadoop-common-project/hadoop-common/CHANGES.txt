@@ -192,6 +192,11 @@ Trunk (Unreleased)
     HADOOP-10891. Add EncryptedKeyVersion factory method to
     KeyProviderCryptoExtension. (wang)
 
+    HADOOP-10756. KMS audit log should consolidate successful similar requests. 
+    (asuresh via tucu)
+
+    HADOOP-10793. KeyShell args should use single-dash style. (wang)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -405,6 +410,12 @@ Trunk (Unreleased)
     HADOOP-10881. Clarify usage of encryption and encrypted encryption
     key in KeyProviderCryptoExtension. (wang)
 
+    HADOOP-10920. site plugin couldn't parse hadoop-kms index.apt.vm.
+    (Akira Ajisaka via wang)
+
+    HADOOP-10925. Compilation fails in native link0 function on Windows.
+    (cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -463,6 +474,14 @@ Release 2.6.0 - UNRELEASED
     HADOOP-8069. Enable TCP_NODELAY by default for IPC. (Todd Lipcon via
     Arpit Agarwal)
 
+    HADOOP-10902. Deletion of directories with snapshots will not output
+    reason for trash move failure. (Stephen Chu via wang)
+
+    HADOOP-10900. CredentialShell args should use single-dash style. (wang)
+
+    HADOOP-10903. Enhance hadoop classpath command to expand wildcards or write
+    classpath into jar manifest. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -496,6 +515,15 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10876. The constructor of Path should not take an empty URL as a
     parameter. (Zhihai Xu via wang)
+
+    HADOOP-10928. Incorrect usage on `hadoop credential list`.
+    (Josh Elser via wang)
+
+    HADOOP-10927. Fix CredentialShell help behavior and error codes.
+    (Josh Elser via wang)
+
+    HADOOP-10937. Need to set version name correctly before decrypting EEK.
+    (Arun Suresh via wang)
 
 Release 2.5.0 - UNRELEASED
 
@@ -636,6 +664,8 @@ Release 2.5.0 - UNRELEASED
     for Java 7 and above. (szetszwo)
 
   BUG FIXES 
+
+    HADOOP-10759. Remove hardcoded JAVA_HEAP_MAX. (Sam Liu via Eric Yang)
 
     HADOOP-10378. Typo in help printed by hdfs dfs -help.
     (Mit Desai via suresh)
@@ -812,6 +842,8 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10894. Fix dead link in ToolRunner documentation. (Akira Ajisaka
     via Arpit Agarwal)
+
+    HADOOP-10910. Increase findbugs maxHeap size. (wang)
 
   BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
 

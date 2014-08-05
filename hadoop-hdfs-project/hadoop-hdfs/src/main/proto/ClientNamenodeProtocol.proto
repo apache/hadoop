@@ -656,6 +656,14 @@ message DeleteSnapshotRequestProto {
 message DeleteSnapshotResponseProto { // void response
 }
 
+message CheckAccessRequestProto {
+  required string path = 1;
+  required AclEntryProto.FsActionProto mode = 2;
+}
+
+message CheckAccessResponseProto { // void response
+}
+
 service ClientNamenodeProtocol {
   rpc getBlockLocations(GetBlockLocationsRequestProto)
       returns(GetBlockLocationsResponseProto);
@@ -785,6 +793,8 @@ service ClientNamenodeProtocol {
       returns(ListXAttrsResponseProto);
   rpc removeXAttr(RemoveXAttrRequestProto)
       returns(RemoveXAttrResponseProto);
+  rpc checkAccess(CheckAccessRequestProto)
+      returns(CheckAccessResponseProto);
   rpc createEncryptionZone(CreateEncryptionZoneRequestProto)
       returns(CreateEncryptionZoneResponseProto);
   rpc listEncryptionZones(ListEncryptionZonesRequestProto)

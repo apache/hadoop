@@ -55,6 +55,7 @@ import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.HealthCheckFailedException;
@@ -1067,7 +1068,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
       // for the same node and storage, so the value returned by the last
       // call of this loop is the final updated value for noStaleStorage.
       //
-      noStaleStorages = bm.processReport(nodeReg, r.getStorage(), poolId, blocks);
+      noStaleStorages = bm.processReport(nodeReg, r.getStorage(), blocks);
       metrics.incrStorageBlockReportOps();
     }
 
@@ -1103,7 +1104,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
           +" blocks.");
     }
     for(StorageReceivedDeletedBlocks r : receivedAndDeletedBlocks) {
-      namesystem.processIncrementalBlockReport(nodeReg, poolId, r);
+      namesystem.processIncrementalBlockReport(nodeReg, r);
     }
   }
 
@@ -1457,6 +1458,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override
   public void removeXAttr(String src, XAttr xAttr) throws IOException {
     namesystem.removeXAttr(src, xAttr);
+  }
+
+  @Override
+  public void checkAccess(String path, FsAction mode) throws IOException {
+    namesystem.checkAccess(path, mode);
   }
 }
 

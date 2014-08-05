@@ -83,6 +83,9 @@ Trunk (Unreleased)
     MAPREDUCE-5912. Task.calculateOutputSize does not handle Windows files after
     MAPREDUCE-5196. (Remus Rusanu via cnauroth)
 
+    MAPREDUCE-6019. MapReduce changes for exposing YARN/MR endpoints on multiple
+    interfaces. (Craig Welch, Milan Potocnik, Arpit Agarwal via xgong)
+
   BUG FIXES
 
     MAPREDUCE-5714. Removed forceful JVM exit in shutDownJob.  

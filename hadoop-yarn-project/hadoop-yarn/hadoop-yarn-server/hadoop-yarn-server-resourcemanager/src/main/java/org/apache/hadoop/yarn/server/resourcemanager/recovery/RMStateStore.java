@@ -47,12 +47,12 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMFatalEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMFatalEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.AMRMTokenSecretManagerState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppNewSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -493,14 +493,14 @@ public abstract class RMStateStore extends AbstractService {
    *    upgrade RM state.
    */
   public void checkVersion() throws Exception {
-    RMStateVersion loadedVersion = loadVersion();
+    Version loadedVersion = loadVersion();
     LOG.info("Loaded RM state version info " + loadedVersion);
     if (loadedVersion != null && loadedVersion.equals(getCurrentVersion())) {
       return;
     }
     // if there is no version info, treat it as 1.0;
     if (loadedVersion == null) {
-      loadedVersion = RMStateVersion.newInstance(1, 0);
+      loadedVersion = Version.newInstance(1, 0);
     }
     if (loadedVersion.isCompatibleTo(getCurrentVersion())) {
       LOG.info("Storing RM state version info " + getCurrentVersion());
@@ -516,7 +516,7 @@ public abstract class RMStateStore extends AbstractService {
    * Derived class use this method to load the version information from state
    * store.
    */
-  protected abstract RMStateVersion loadVersion() throws Exception;
+  protected abstract Version loadVersion() throws Exception;
 
   /**
    * Derived class use this method to store the version information.
@@ -526,7 +526,7 @@ public abstract class RMStateStore extends AbstractService {
   /**
    * Get the current version of the underlying state store.
    */
-  protected abstract RMStateVersion getCurrentVersion();
+  protected abstract Version getCurrentVersion();
 
 
   /**

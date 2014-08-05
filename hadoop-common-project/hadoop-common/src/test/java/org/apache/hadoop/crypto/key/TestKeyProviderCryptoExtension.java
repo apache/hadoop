@@ -26,9 +26,9 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
 
 import static org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
 import static org.junit.Assert.assertArrayEquals;
@@ -118,8 +118,15 @@ public class TestKeyProviderCryptoExtension {
         new IvParameterSpec(KeyProviderCryptoExtension.EncryptedKeyVersion
             .deriveIV(encryptedKeyIv)));
     final byte[] manualMaterial = cipher.doFinal(encryptedKeyMaterial);
+
+    // Test the createForDecryption factory method
+    EncryptedKeyVersion eek2 =
+        EncryptedKeyVersion.createForDecryption(
+            eek.getEncryptionKeyVersionName(), eek.getEncryptedKeyIv(),
+            eek.getEncryptedKeyVersion().getMaterial());
+
     // Decrypt it with the API
-    KeyVersion decryptedKey = kpExt.decryptEncryptedKey(eek);
+    KeyVersion decryptedKey = kpExt.decryptEncryptedKey(eek2);
     final byte[] apiMaterial = decryptedKey.getMaterial();
 
     assertArrayEquals("Wrong key material from decryptEncryptedKey",

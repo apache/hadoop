@@ -21,11 +21,13 @@ package org.apache.hadoop.crypto.key;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
+
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import com.google.common.base.Preconditions;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
@@ -97,7 +99,7 @@ public class KeyProviderCryptoExtension extends
     public static EncryptedKeyVersion createForDecryption(String
         encryptionKeyVersionName, byte[] encryptedKeyIv,
         byte[] encryptedKeyMaterial) {
-      KeyVersion encryptedKeyVersion = new KeyVersion(null, null,
+      KeyVersion encryptedKeyVersion = new KeyVersion(null, EEK,
           encryptedKeyMaterial);
       return new EncryptedKeyVersion(null, encryptionKeyVersionName,
           encryptedKeyIv, encryptedKeyVersion);
@@ -258,6 +260,13 @@ public class KeyProviderCryptoExtension extends
           keyProvider.getKeyVersion(encryptionKeyVersionName);
       Preconditions.checkNotNull(encryptionKey,
           "KeyVersion name '%s' does not exist", encryptionKeyVersionName);
+      Preconditions.checkArgument(
+              encryptedKeyVersion.getEncryptedKeyVersion().getVersionName()
+                    .equals(KeyProviderCryptoExtension.EEK),
+                "encryptedKey version name must be '%s', is '%s'",
+                KeyProviderCryptoExtension.EEK,
+                encryptedKeyVersion.getEncryptedKeyVersion().getVersionName()
+            );
       final byte[] encryptionKeyMaterial = encryptionKey.getMaterial();
       // Encryption key IV is determined from encrypted key's IV
       final byte[] encryptionIV =

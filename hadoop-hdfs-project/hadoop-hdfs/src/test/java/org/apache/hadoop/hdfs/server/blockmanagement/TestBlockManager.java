@@ -368,7 +368,7 @@ public class TestBlockManager {
       DatanodeStorageInfo[] pipeline) throws IOException {
     for (int i = 1; i < pipeline.length; i++) {
       DatanodeStorageInfo storage = pipeline[i];
-      bm.addBlock(storage.getDatanodeDescriptor(), storage.getStorageID(), blockInfo, null);
+      bm.addBlock(storage, blockInfo, null);
       blockInfo.addStorage(storage);
     }
   }
@@ -549,12 +549,12 @@ public class TestBlockManager {
     // send block report, should be processed
     reset(node);
     
-    bm.processReport(node, new DatanodeStorage(ds.getStorageID()), "pool", 
+    bm.processReport(node, new DatanodeStorage(ds.getStorageID()),
         new BlockListAsLongs(null, null));
     assertEquals(1, ds.getBlockReportCount());
     // send block report again, should NOT be processed
     reset(node);
-    bm.processReport(node, new DatanodeStorage(ds.getStorageID()), "pool",
+    bm.processReport(node, new DatanodeStorage(ds.getStorageID()),
         new BlockListAsLongs(null, null));
     assertEquals(1, ds.getBlockReportCount());
 
@@ -566,7 +566,7 @@ public class TestBlockManager {
     assertEquals(0, ds.getBlockReportCount()); // ready for report again
     // send block report, should be processed after restart
     reset(node);
-    bm.processReport(node, new DatanodeStorage(ds.getStorageID()), "pool",
+    bm.processReport(node, new DatanodeStorage(ds.getStorageID()),
         new BlockListAsLongs(null, null));
     assertEquals(1, ds.getBlockReportCount());
   }
@@ -595,7 +595,7 @@ public class TestBlockManager {
     // send block report while pretending to already have blocks
     reset(node);
     doReturn(1).when(node).numBlocks();
-    bm.processReport(node, new DatanodeStorage(ds.getStorageID()), "pool",
+    bm.processReport(node, new DatanodeStorage(ds.getStorageID()),
         new BlockListAsLongs(null, null));
     assertEquals(1, ds.getBlockReportCount());
   }

@@ -357,15 +357,19 @@ public class PBHelper {
     return BlockWithLocationsProto.newBuilder()
         .setBlock(convert(blk.getBlock()))
         .addAllDatanodeUuids(Arrays.asList(blk.getDatanodeUuids()))
-        .addAllStorageUuids(Arrays.asList(blk.getStorageIDs())).build();
+        .addAllStorageUuids(Arrays.asList(blk.getStorageIDs()))
+        .addAllStorageTypes(convertStorageTypes(blk.getStorageTypes()))
+        .build();
   }
 
   public static BlockWithLocations convert(BlockWithLocationsProto b) {
     final List<String> datanodeUuids = b.getDatanodeUuidsList();
     final List<String> storageUuids = b.getStorageUuidsList();
+    final List<StorageTypeProto> storageTypes = b.getStorageTypesList();
     return new BlockWithLocations(convert(b.getBlock()),
         datanodeUuids.toArray(new String[datanodeUuids.size()]),
-        storageUuids.toArray(new String[storageUuids.size()]));
+        storageUuids.toArray(new String[storageUuids.size()]),
+        convertStorageTypes(storageTypes, storageUuids.size()));
   }
 
   public static BlocksWithLocationsProto convert(BlocksWithLocations blks) {
@@ -2122,11 +2126,11 @@ public class PBHelper {
     return castEnum(v, XATTR_NAMESPACE_VALUES);
   }
 
-  private static FsActionProto convert(FsAction v) {
+  public static FsActionProto convert(FsAction v) {
     return FsActionProto.valueOf(v != null ? v.ordinal() : 0);
   }
 
-  private static FsAction convert(FsActionProto v) {
+  public static FsAction convert(FsActionProto v) {
     return castEnum(v, FSACTION_VALUES);
   }
 

@@ -360,7 +360,7 @@ public class AppSchedulingInfo {
       List<ResourceRequest> resourceRequests) {
     // Update future requirements
     decrementOutstanding(offSwitchRequest);
-    // Update cloned RackLocal and OffRack requests for recovery
+    // Update cloned OffRack requests for recovery
     resourceRequests.add(cloneResourceRequest(offSwitchRequest));
   }
 

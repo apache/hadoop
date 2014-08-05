@@ -2053,6 +2053,14 @@
 </property>
 
 <property>
+  <name>dfs.datanode.block.id.layout.upgrade.threads</name>
+  <value>12</value>
+  <description>The number of threads to use when creating hard links from
+    current to previous blocks during upgrade of a DataNode to block ID-based
+    block layout (see HDFS-6482 for details on the layout).</description>
+</property>
+
+<property>
   <name>dfs.namenode.list.encryption.zones.num.responses</name>
   <value>100</value>
   <description>When listing encryption zones, the maximum number of zones

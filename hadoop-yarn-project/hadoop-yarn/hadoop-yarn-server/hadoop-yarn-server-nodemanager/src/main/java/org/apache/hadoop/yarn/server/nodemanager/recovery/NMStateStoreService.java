@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
+import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
@@ -43,6 +44,19 @@ public abstract class NMStateStoreService extends AbstractService {
 
   public NMStateStoreService(String name) {
     super(name);
+  }
+
+  public static class RecoveredApplicationsState {
+    List<ContainerManagerApplicationProto> applications;
+    List<ApplicationId> finishedApplications;
+
+    public List<ContainerManagerApplicationProto> getApplications() {
+      return applications;
+    }
+
+    public List<ApplicationId> getFinishedApplications() {
+      return finishedApplications;
+    }
   }
 
   public static class LocalResourceTrackerState {
@@ -160,6 +174,19 @@ public abstract class NMStateStoreService extends AbstractService {
   public boolean canRecover() {
     return true;
   }
+
+
+  public abstract RecoveredApplicationsState loadApplicationsState()
+      throws IOException;
+
+  public abstract void storeApplication(ApplicationId appId,
+      ContainerManagerApplicationProto p) throws IOException;
+
+  public abstract void storeFinishedApplication(ApplicationId appId)
+      throws IOException;
+
+  public abstract void removeApplication(ApplicationId appId)
+      throws IOException;
 
 
   /**

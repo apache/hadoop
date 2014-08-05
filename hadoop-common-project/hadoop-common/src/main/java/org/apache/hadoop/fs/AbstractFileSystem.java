@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.security.AccessControlException;
@@ -802,6 +803,18 @@ public abstract class AbstractFileSystem {
   public abstract FileStatus getFileStatus(final Path f)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException;
+
+  /**
+   * The specification of this method matches that of
+   * {@link FileContext#access(Path, FsAction)}
+   * except that an UnresolvedLinkException may be thrown if a symlink is
+   * encountered in the path.
+   */
+  @InterfaceAudience.LimitedPrivate({"HDFS", "Hive"})
+  public void access(Path path, FsAction mode) throws AccessControlException,
+      FileNotFoundException, UnresolvedLinkException, IOException {
+    FileSystem.checkAccessPermissions(this.getFileStatus(path), mode);
+  }
 
   /**
    * The specification of this method matches that of

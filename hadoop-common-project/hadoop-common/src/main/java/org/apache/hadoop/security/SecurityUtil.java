@@ -77,7 +77,8 @@ public class SecurityUtil {
    * For use only by tests and initialization
    */
   @InterfaceAudience.Private
-  static void setTokenServiceUseIp(boolean flag) {
+  @VisibleForTesting
+  public static void setTokenServiceUseIp(boolean flag) {
     useIpForTokenService = flag;
     hostResolver = !useIpForTokenService
         ? new QualifiedHostResolver()

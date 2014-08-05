@@ -159,7 +159,7 @@ public class TestBalancerWithMultipleNameNodes {
 
     // start rebalancing
     final Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(s.conf);
-    final int r = Balancer.run(namenodes, Balancer.Parameters.DEFALUT, s.conf);
+    final int r = Balancer.run(namenodes, Balancer.Parameters.DEFAULT, s.conf);
     Assert.assertEquals(Balancer.ReturnStatus.SUCCESS.code, r);
 
     LOG.info("BALANCER 2");
@@ -195,7 +195,7 @@ public class TestBalancerWithMultipleNameNodes {
       balanced = true;
       for(int d = 0; d < used.length; d++) {
         final double p = used[d]*100.0/cap[d];
-        balanced = p <= avg + Balancer.Parameters.DEFALUT.threshold;
+        balanced = p <= avg + Balancer.Parameters.DEFAULT.threshold;
         if (!balanced) {
           if (i % 100 == 0) {
             LOG.warn("datanodes " + d + " is not yet balanced: "

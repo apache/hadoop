@@ -130,6 +130,9 @@ Trunk (Unreleased)
     HDFS-6609. Use DirectorySnapshottableFeature to represent a snapshottable
     directory. (Jing Zhao via wheat9)
 
+    HDFS-6482. Use block ID-based block layout on datanodes (James Thomas via
+    Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -183,9 +186,6 @@ Trunk (Unreleased)
     HDFS-3550. Fix raid javadoc warnings. (Jason Lowe via daryn)
 
     HDFS-3549. Fix dist tar build fails in hadoop-hdfs-raid project. (Jason Lowe via daryn)
-
-    HDFS-3482. hdfs balancer throws ArrayIndexOutOfBoundsException 
-    if option is specified without values. ( Madhukara Phatak via umamahesh) 
 
     HDFS-3614. Revert unused MiniDFSCluster constructor from HDFS-3049.
     (acmurthy via eli)
@@ -332,6 +332,31 @@ Release 2.6.0 - UNRELEASED
     HDFS-6778. The extended attributes javadoc should simply refer to the
     user docs. (clamb via wang)
 
+    HDFS-6570. add api that enables checking if a user has certain permissions on
+    a file. (Jitendra Pandey via cnauroth)
+
+    HDFS-6441. Add ability to exclude/include specific datanodes while
+    balancing. (Benoy Antony and Yu Li via Arpit Agarwal)
+
+    HDFS-6685. Balancer should preserve storage type of replicas.  (szetszwo)
+
+    HDFS-6798. Add test case for incorrect data node condition during
+    balancing. (Benoy Antony via Arpit Agarwal)
+
+    HDFS-6796. Improve the argument check during balancer command line parsing.
+    (Benoy Antony via szetszwo)
+
+    HDFS-6794. Update BlockManager methods to use DatanodeStorageInfo
+    where possible (Arpit Agarwal)
+
+    HDFS-6802. Some tests in TestDFSClientFailover are missing @Test
+    annotation. (Akira Ajisaka via wang)
+
+    HDFS-6788. Improve synchronization in BPOfferService with read write lock.
+    (Yongjun Zhang via wang)
+
+    HDFS-6787. Remove duplicate code in FSDirectory#unprotectedConcat. (Yi Liu via umamahesh)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -393,6 +418,27 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6749. FSNamesystem methods should call resolvePath.
     (Charles Lamb via cnauroth)
+
+    HDFS-4629. Using com.sun.org.apache.xml.internal.serialize.* in
+    XmlEditsVisitor.java is JVM vendor specific. Breaks IBM JAVA.
+    (Amir Sanjar via stevel)
+
+    HDFS-3482. hdfs balancer throws ArrayIndexOutOfBoundsException 
+    if option is specified without values. ( Madhukara Phatak via umamahesh) 
+
+    HDFS-6797. DataNode logs wrong layoutversion during upgrade. (Benoy Antony
+    via Arpit Agarwal)
+
+    HDFS-6810. StorageReport array is initialized with wrong size in
+    DatanodeDescriptor#getStorageReports. (szetszwo via Arpit Agarwal)
+
+    HDFS-5723. Append failed FINALIZED replica should not be accepted as valid
+    when that block is underconstruction (vinayakumarb)
+
+    HDFS-5185. DN fails to startup if one of the data dir is full. (vinayakumarb)
+
+    HDFS-6451. NFS should not return NFS3ERR_IO for AccessControlException 
+    (Abhiraj Butala via brandonli)
 
 Release 2.5.0 - UNRELEASED
 
@@ -948,6 +994,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6717. JIRA HDFS-5804 breaks default nfs-gateway behavior for unsecured config
     (brandonli)
+
+    HDFS-6768. Fix a few unit tests that use hard-coded port numbers. (Arpit
+    Agarwal)
 
   BREAKDOWN OF HDFS-2006 SUBTASKS AND RELATED JIRAS
 
