@@ -47,21 +47,18 @@ HDFS NFS Gateway
    The NFS-gateway uses proxy user to proxy all the users accessing the NFS mounts. 
    In non-secure mode, the user running the gateway is the proxy user, while in secure mode the
    user in Kerberos keytab is the proxy user. Suppose the proxy user is 'nfsserver'
-   and users belonging to the groups 'users-group1'
-   and 'users-group2' use the NFS mounts, then in core-site.xml of the NameNode, the following
+   and users belonging to the groups 'nfs-users1'
+   and 'nfs-users2' use the NFS mounts, then in core-site.xml of the NameNode, the following
    two properities must be set and only NameNode needs restart after the configuration change
    (NOTE: replace the string 'nfsserver' with the proxy user name in your cluster):
 
 ----
 <property>
   <name>hadoop.proxyuser.nfsserver.groups</name>
-  <value>root,users-group1,users-group2</value>
+  <value>nfs-users1,nfs-users2</value>
   <description>
-         The 'nfsserver' user is allowed to proxy all members of the 'users-group1' and 
-         'users-group2' groups. Note that in most cases you will need to include the
-         group "root" because the user "root" (which usually belonges to "root" group) will
-         generally be the user that initially executes the mount on the NFS client system. 
-         Set this to '*' to allow nfsserver user to proxy any group.
+         The 'nfsserver' user is allowed to proxy all members of the 'nfs-users1' and 
+         'nfs-users2' groups. Set this to '*' to allow nfsserver user to proxy any group.
   </description>
 </property>
 ----
