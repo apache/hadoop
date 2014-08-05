@@ -19,6 +19,9 @@ import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.util.Signer;
 import org.apache.hadoop.security.authentication.util.SignerException;
+import org.apache.hadoop.security.authentication.util.RandomSignerSecretProvider;
+import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
+import org.apache.hadoop.security.authentication.util.StringSignerSecretProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -107,11 +110,28 @@ public class AuthenticationFilter implements Filter {
    */
   public static final String COOKIE_PATH = "cookie.path";
 
-  private static final Random RAN = new Random();
+  /**
+   * Constant for the configuration property that indicates the name of the
+   * SignerSecretProvider class to use.  If not specified, SIGNATURE_SECRET
+   * will be used or a random secret.
+   */
+  public static final String SIGNER_SECRET_PROVIDER_CLASS =
+          "signer.secret.provider";
+
+  /**
+   * Constant for the attribute that can be used for providing a custom
+   * object that subclasses the SignerSecretProvider.  Note that this should be
+   * set in the ServletContext and the class should already be initialized.  
+   * If not specified, SIGNER_SECRET_PROVIDER_CLASS will be used.
+   */
+  public static final String SIGNATURE_PROVIDER_ATTRIBUTE =
+      "org.apache.hadoop.security.authentication.util.SignerSecretProvider";
 
   private Signer signer;
+  private SignerSecretProvider secretProvider;
   private AuthenticationHandler authHandler;
   private boolean randomSecret;
+  private boolean customSecretProvider;
   private long validity;
   private String cookieDomain;
   private String cookiePath;
@@ -159,14 +179,46 @@ public class AuthenticationFilter implements Filter {
     } catch (IllegalAccessException ex) {
       throw new ServletException(ex);
     }
-    String signatureSecret = config.getProperty(configPrefix + SIGNATURE_SECRET);
-    if (signatureSecret == null) {
-      signatureSecret = Long.toString(RAN.nextLong());
-      randomSecret = true;
-      LOG.warn("'signature.secret' configuration not set, using a random value as secret");
+
+    validity = Long.parseLong(config.getProperty(AUTH_TOKEN_VALIDITY, "36000"))
+        * 1000; //10 hours
+    secretProvider = (SignerSecretProvider) filterConfig.getServletContext().
+        getAttribute(SIGNATURE_PROVIDER_ATTRIBUTE);
+    if (secretProvider == null) {
+      String signerSecretProviderClassName =
+          config.getProperty(configPrefix + SIGNER_SECRET_PROVIDER_CLASS, null);
+      if (signerSecretProviderClassName == null) {
+        String signatureSecret =
+            config.getProperty(configPrefix + SIGNATURE_SECRET, null);
+        if (signatureSecret != null) {
+          secretProvider = new StringSignerSecretProvider(signatureSecret);
+        } else {
+          secretProvider = new RandomSignerSecretProvider();
+          randomSecret = true;
+        }
+      } else {
+        try {
+          Class<?> klass = Thread.currentThread().getContextClassLoader().
+              loadClass(signerSecretProviderClassName);
+          secretProvider = (SignerSecretProvider) klass.newInstance();
+          customSecretProvider = true;
+        } catch (ClassNotFoundException ex) {
+          throw new ServletException(ex);
+        } catch (InstantiationException ex) {
+          throw new ServletException(ex);
+        } catch (IllegalAccessException ex) {
+          throw new ServletException(ex);
+        }
+      }
+      try {
+        secretProvider.init(config, validity);
+      } catch (Exception ex) {
+        throw new ServletException(ex);
+      }
+    } else {
+      customSecretProvider = true;
     }
-    signer = new Signer(signatureSecret.getBytes());
-    validity = Long.parseLong(config.getProperty(AUTH_TOKEN_VALIDITY, "36000")) * 1000; //10 hours
+    signer = new Signer(secretProvider);
 
     cookieDomain = config.getProperty(COOKIE_DOMAIN, null);
     cookiePath = config.getProperty(COOKIE_PATH, null);
@@ -188,6 +240,15 @@ public class AuthenticationFilter implements Filter {
    */
   protected boolean isRandomSecret() {
     return randomSecret;
+  }
+
+  /**
+   * Returns if a custom implementation of a SignerSecretProvider is being used.
+   *
+   * @return if a custom implementation of a SignerSecretProvider is being used.
+   */
+  protected boolean isCustomSignerSecretProvider() {
+    return customSecretProvider;
   }
 
   /**
@@ -227,6 +288,9 @@ public class AuthenticationFilter implements Filter {
     if (authHandler != null) {
       authHandler.destroy();
       authHandler = null;
+    }
+    if (secretProvider != null) {
+      secretProvider.destroy();
     }
   }
 
