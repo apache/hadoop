@@ -125,7 +125,7 @@ public class CryptoAdmin extends Configured implements Tool {
 
     @Override
     public String getShortUsage() {
-      return "[" + getName() + " -keyName <keyName> -path <path> " + "]\n";
+      return "[" + getName() + " -keyName <keyName> -path <path>]\n";
     }
 
     @Override
@@ -187,7 +187,7 @@ public class CryptoAdmin extends Configured implements Tool {
     @Override
     public String getLongUsage() {
       return getShortUsage() + "\n" +
-        "List all encryption zones.\n\n";
+        "List all encryption zones. Requires superuser permissions.\n\n";
     }
 
     @Override

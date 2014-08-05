@@ -74,6 +74,8 @@ fs-encryption (Unreleased)
 
     HDFS-6780. Batch the encryption zones listing API. (wang)
 
+    HDFS-6394. HDFS encryption documentation. (wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
