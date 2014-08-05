@@ -522,6 +522,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10927. Fix CredentialShell help behavior and error codes.
     (Josh Elser via wang)
 
+    HADOOP-10937. Need to set version name correctly before decrypting EEK.
+    (Arun Suresh via wang)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
