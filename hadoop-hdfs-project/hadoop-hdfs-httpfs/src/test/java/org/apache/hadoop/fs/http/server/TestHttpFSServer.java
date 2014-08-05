@@ -65,6 +65,7 @@ import org.mortbay.jetty.Server;
 import org.mortbay.jetty.webapp.WebAppContext;
 
 import com.google.common.collect.Maps;
+import org.apache.hadoop.security.authentication.util.StringSignerSecretProvider;
 
 public class TestHttpFSServer extends HFSTestCase {
 
@@ -683,7 +684,7 @@ public class TestHttpFSServer extends HFSTestCase {
       new AuthenticationToken("u", "p",
         HttpFSKerberosAuthenticationHandlerForTesting.TYPE);
     token.setExpires(System.currentTimeMillis() + 100000000);
-    Signer signer = new Signer("secret".getBytes());
+    Signer signer = new Signer(new StringSignerSecretProvider("secret"));
     String tokenSigned = signer.sign(token.toString());
 
     url = new URL(TestJettyHelper.getJettyURL(),
