@@ -97,6 +97,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10928. Incorrect usage on `hadoop credential list`.
     (Josh Elser via wang)
 
+    HADOOP-10927. Fix CredentialShell help behavior and error codes.
+    (Josh Elser via wang)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

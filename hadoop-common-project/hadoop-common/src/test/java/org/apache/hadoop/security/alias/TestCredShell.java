@@ -17,16 +17,18 @@
  */
 package org.apache.hadoop.security.alias;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.alias.CredentialShell.PasswordReader;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -87,7 +89,7 @@ public class TestCredShell {
     CredentialShell cs = new CredentialShell();
     cs.setConf(new Configuration());
     rc = cs.run(args1);
-    assertEquals(-1, rc);
+    assertEquals(1, rc);
     assertTrue(outContent.toString().contains("There are no valid " +
     		"CredentialProviders configured."));
   }
@@ -122,7 +124,7 @@ public class TestCredShell {
     config.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, "user:///");
     cs.setConf(config);
     rc = cs.run(args1);
-    assertEquals(-1, rc);
+    assertEquals(1, rc);
     assertTrue(outContent.toString().contains("There are no valid " +
     		"CredentialProviders configured."));
   }
@@ -139,7 +141,7 @@ public class TestCredShell {
     shell.setConf(new Configuration());
     shell.setPasswordReader(new MockPasswordReader(passwords));
     rc = shell.run(args1);
-    assertEquals(outContent.toString(), -1, rc);
+    assertEquals(outContent.toString(), 1, rc);
     assertTrue(outContent.toString().contains("Passwords don't match"));
   }
 
@@ -184,6 +186,23 @@ public class TestCredShell {
     @Override
     public void format(String message) {
       System.out.println(message);
+    }
+  }
+
+  @Test
+  public void testEmptyArgList() throws Exception {
+    CredentialShell shell = new CredentialShell();
+    shell.setConf(new Configuration());
+    assertEquals(1, shell.init(new String[0]));
+  }
+
+  @Test
+  public void testCommandHelpExitsNormally() throws Exception {
+    for (String cmd : Arrays.asList("create", "list", "delete")) {
+      CredentialShell shell = new CredentialShell();
+      shell.setConf(new Configuration());
+      assertEquals("Expected help argument on " + cmd + " to return 0",
+              0, shell.init(new String[] {cmd, "-help"}));
     }
   }
 }
