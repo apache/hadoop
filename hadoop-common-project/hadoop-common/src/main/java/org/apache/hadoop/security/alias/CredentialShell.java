@@ -67,11 +67,11 @@ public class CredentialShell extends Configured implements Tool {
       if (command.validate()) {
           command.execute();
       } else {
-        exitCode = -1;
+        exitCode = 1;
       }
     } catch (Exception e) {
       e.printStackTrace(err);
-      return -1;
+      return 1;
     }
     return exitCode;
   }
@@ -79,29 +79,36 @@ public class CredentialShell extends Configured implements Tool {
   /**
    * Parse the command line arguments and initialize the data
    * <pre>
-   * % hadoop alias create alias [-provider providerPath]
-   * % hadoop alias list [-provider providerPath]
-   * % hadoop alias delete alias [-provider providerPath] [-i]
+   * % hadoop credential create alias [-provider providerPath]
+   * % hadoop credential list [-provider providerPath]
+   * % hadoop credential delete alias [-provider providerPath] [-i]
    * </pre>
    * @param args
-   * @return
+   * @return 0 if the argument(s) were recognized, 1 otherwise
    * @throws IOException
    */
-  private int init(String[] args) throws IOException {
+  protected int init(String[] args) throws IOException {
+    // no args should print the help message
+    if (0 == args.length) {
+      printCredShellUsage();
+      ToolRunner.printGenericCommandUsage(System.err);
+      return 1;
+    }
+
     for (int i = 0; i < args.length; i++) { // parse command line
       if (args[i].equals("create")) {
         String alias = args[++i];
         command = new CreateCommand(alias);
         if (alias.equals("-help")) {
           printCredShellUsage();
-          return -1;
+          return 0;
         }
       } else if (args[i].equals("delete")) {
         String alias = args[++i];
         command = new DeleteCommand(alias);
         if (alias.equals("-help")) {
           printCredShellUsage();
-          return -1;
+          return 0;
         }
       } else if (args[i].equals("list")) {
         command = new ListCommand();
@@ -115,11 +122,11 @@ public class CredentialShell extends Configured implements Tool {
         value = args[++i];
       } else if (args[i].equals("-help")) {
         printCredShellUsage();
-        return -1;
+        return 0;
       } else {
         printCredShellUsage();
         ToolRunner.printGenericCommandUsage(System.err);
-        return -1;
+        return 1;
       }
     }
     return 0;
