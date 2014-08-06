@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include "commons.h"
+#include "config.h"
 #include "BufferStream.h"
 #include "FileSystem.h"
 #include "IFile.h"
@@ -90,7 +91,9 @@ TEST(IFile, WriteRead) {
   TestIFileReadWrite(TextType, partition, size, kvs);
   TestIFileReadWrite(BytesType, partition, size, kvs);
   TestIFileReadWrite(UnknownType, partition, size, kvs);
+#if defined HADOOP_SNAPPY_LIBRARY
   TestIFileReadWrite(TextType, partition, size, kvs, "org.apache.hadoop.io.compress.SnappyCodec");
+#endif
 }
 
 void TestIFileWriteRead2(vector<pair<string, string> > & kvs, char * buff, size_t buffsize,

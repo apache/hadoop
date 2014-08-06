@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred.nativetask;
 import java.io.File;
 import java.io.IOException;
 
+import com.google.common.base.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
@@ -80,29 +81,22 @@ public class NativeMapOutputCollectorDelegator<K, V> implements MapOutputCollect
 
     Class comparatorClass = job.getClass(MRJobConfig.KEY_COMPARATOR, null, RawComparator.class);
     if (comparatorClass != null && !Platforms.define(comparatorClass)) {
-      String message = "Native output collector don't support customized java comparator "
+      String message = "Native output collector doesn't support customized java comparator "
         + job.get(MRJobConfig.KEY_COMPARATOR);
       LOG.error(message);
       throw new InvalidJobConfException(message);
     }
 
-    if (job.getBoolean(MRJobConfig.MAP_OUTPUT_COMPRESS, false) == true) {
-      if (!isCodecSupported(job.get(MRJobConfig.MAP_OUTPUT_COMPRESS_CODEC))) {
-        String message = "Native output collector don't support compression codec "
-          + job.get(MRJobConfig.MAP_OUTPUT_COMPRESS_CODEC) + ", We support Gzip, Lz4, snappy";
-        LOG.error(message);
-        throw new InvalidJobConfException(message);
-      }
-    }
+
 
     if (!QuickSort.class.getName().equals(job.get(Constants.MAP_SORT_CLASS))) {
-      String message = "Native-Task don't support sort class " + job.get(Constants.MAP_SORT_CLASS);
+      String message = "Native-Task doesn't support sort class " + job.get(Constants.MAP_SORT_CLASS);
       LOG.error(message);
       throw new InvalidJobConfException(message);
     }
 
     if (job.getBoolean(MRConfig.SHUFFLE_SSL_ENABLED_KEY, false) == true) {
-      String message = "Native-Task don't support secure shuffle";
+      String message = "Native-Task doesn't support secure shuffle";
       LOG.error(message);
       throw new InvalidJobConfException(message);
     }
@@ -116,7 +110,7 @@ public class NativeMapOutputCollectorDelegator<K, V> implements MapOutputCollect
         LOG.error(message);
         throw new InvalidJobConfException(message);
       } else if (!Platforms.support(keyCls.getName(), serializer, job)) {
-        String message = "Native output collector don't support this key, this key is not comparable in native "
+        String message = "Native output collector doesn't support this key, this key is not comparable in native "
           + keyCls.getName();
         LOG.error(message);
         throw new InvalidJobConfException(message);
@@ -129,6 +123,14 @@ public class NativeMapOutputCollectorDelegator<K, V> implements MapOutputCollect
 
     final boolean ret = NativeRuntime.isNativeLibraryLoaded();
     if (ret) {
+      if (job.getBoolean(MRJobConfig.MAP_OUTPUT_COMPRESS, false)) {
+        String codec = job.get(MRJobConfig.MAP_OUTPUT_COMPRESS_CODEC);
+        if (!NativeRuntime.supportsCompressionCodec(codec.getBytes(Charsets.UTF_8))) {
+          String message = "Native output collector doesn't support compression codec " + codec;
+          LOG.error(message);
+          throw new InvalidJobConfException(message);
+        }
+      }
       NativeRuntime.configure(job);
 
       final long updateInterval = job.getLong(Constants.NATIVE_STATUS_UPDATE_INTERVAL,
@@ -159,12 +161,4 @@ public class NativeMapOutputCollectorDelegator<K, V> implements MapOutputCollect
     LOG.info("Native output collector can be successfully enabled!");
   }
 
-  private boolean isCodecSupported(String string) {
-    if ("org.apache.hadoop.io.compress.SnappyCodec".equals(string)
-        || "org.apache.hadoop.io.compress.GzipCodec".equals(string)
-        || "org.apache.hadoop.io.compress.Lz4Codec".equals(string)) {
-      return true;
-    }
-    return false;
-  }
 }

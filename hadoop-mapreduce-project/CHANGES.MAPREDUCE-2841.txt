@@ -10,3 +10,4 @@ MAPREDUCE-5991. native-task should not run unit tests if native profile is not e
 MAPREDUCE-5995. native-task: Revert changes to Text internals (todd)
 MAPREDUCE-6005. native-task: Fix some valgrind errors (Binglin Chang)
 MAPREDUCE-5984. native-task: Reuse lz4 sources in hadoop-common (Binglin Chang)
+MAPREDUCE-5976. native-task: should not fail to build if snappy is missing (Manu Zhang)

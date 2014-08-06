@@ -31,7 +31,6 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.Task.TaskReporter;
 import org.apache.hadoop.mapred.nativetask.util.ConfigUtil;
-import org.apache.hadoop.mapred.nativetask.util.SnappyUtil;
 import org.apache.hadoop.util.VersionInfo;
 
 /**
@@ -48,11 +47,6 @@ public class NativeRuntime {
 
   static {
     try {
-      if (false == SnappyUtil.isNativeSnappyLoaded(conf)) {
-        throw new IOException("Snappy library cannot be loaded");
-      } else {
-        LOG.info("Snappy native library is available");
-      }
       System.loadLibrary("nativetask");
       LOG.info("Nativetask JNI library loaded.");
       nativeLibraryLoaded = true;
@@ -160,6 +154,11 @@ public class NativeRuntime {
   /*******************************************************
    *** The following are JNI Apis
    ********************************************************/
+
+  /**
+   * Check whether the native side has compression codec support built in
+   */
+  public native static boolean supportsCompressionCodec(byte[] codec);
 
   /**
    * Config the native runtime with mapreduce job configurations.

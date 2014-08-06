@@ -17,7 +17,7 @@
  */
 
 #include "lz4.h"
-#include "snappy.h"
+#include "config.h"
 #include "commons.h"
 #include "Path.h"
 #include "BufferStream.h"
@@ -25,9 +25,29 @@
 #include "Compressions.h"
 #include "test_commons.h"
 
-void TestCodec(const string & codec, const string & data, char * buff, char * buff2, size_t buffLen,
-    uint32_t buffhint) {
+#if defined HADOOP_SNAPPY_LIBRARY
+#include <snappy.h>
+#endif
+
+void TestCodec(const string & codec) {
+  string data;
+  size_t length = TestConfig.getInt("compression.input.length", 100 * 1024 * 1024);
+  uint32_t buffhint = TestConfig.getInt("compression.buffer.hint", 128 * 1024);
+  string type = TestConfig.get("compression.input.type", "bytes");
   Timer timer;
+  GenerateKVTextLength(data, length, type);
+  LOG("%s", timer.getInterval("Generate data").c_str());
+
+  InputBuffer inputBuffer = InputBuffer(data);
+  size_t buffLen = data.length() / 2 * 3;
+
+  timer.reset();
+  char * buff = new char[buffLen];
+  char * buff2 = new char[buffLen];
+  memset(buff, 0, buffLen);
+  memset(buff2, 0, buffLen);
+  LOG("%s", timer.getInterval("memset buffer to prevent missing page").c_str());
+
   OutputBuffer outputBuffer = OutputBuffer(buff, buffLen);
   CompressStream * compressor = Compressions::getCompressionStream(codec, &outputBuffer, buffhint);
 
@@ -57,35 +77,10 @@ void TestCodec(const string & codec, const string & data, char * buff, char * bu
   ASSERT_EQ(data.length(), total);
   ASSERT_EQ(0, memcmp(data.c_str(), buff2, total));
 
-  delete compressor;
-  delete decompressor;
-}
-
-TEST(Perf, Compressions) {
-  string data;
-  size_t length = TestConfig.getInt("compression.input.length", 100 * 1024 * 1024);
-  uint32_t buffhint = TestConfig.getInt("compression.buffer.hint", 128 * 1024);
-  string type = TestConfig.get("compression.input.type", "bytes");
-  Timer timer;
-  GenerateKVTextLength(data, length, type);
-  LOG("%s", timer.getInterval("Generate data").c_str());
-
-  InputBuffer inputBuffer = InputBuffer(data);
-  size_t buffLen = data.length() / 2 * 3;
-
-  timer.reset();
-  char * buff = new char[buffLen];
-  char * buff2 = new char[buffLen];
-  memset(buff, 0, buffLen);
-  memset(buff2, 0, buffLen);
-  LOG("%s", timer.getInterval("memset buffer to prevent missing page").c_str());
-
-  TestCodec("org.apache.hadoop.io.compress.SnappyCodec", data, buff, buff2, buffLen, buffhint);
-  TestCodec("org.apache.hadoop.io.compress.Lz4Codec", data, buff, buff2, buffLen, buffhint);
-  TestCodec("org.apache.hadoop.io.compress.GzipCodec", data, buff, buff2, buffLen, buffhint);
-
   delete[] buff;
   delete[] buff2;
+  delete compressor;
+  delete decompressor;
 }
 
 TEST(Perf, CompressionUtil) {
@@ -173,6 +168,9 @@ public:
   }
 };
 
+TEST(Perf, GzipCodec) {
+  TestCodec("org.apache.hadoop.io.compress.GzipCodec");
+}
 
 void MeasureSingleFileLz4(const string & path, CompressResult & total, size_t blockSize,
     int times) {
@@ -226,6 +224,12 @@ TEST(Perf, RawCompressionLz4) {
   printf("%s - Total\n", total.toString().c_str());
 }
 
+TEST(Perf, Lz4Codec) {
+  TestCodec("org.apache.hadoop.io.compress.Lz4Codec");
+}
+
+#if defined HADOOP_SNAPPY_LIBRARY
+
 void MeasureSingleFileSnappy(const string & path, CompressResult & total, size_t blockSize,
     int times) {
   string data;
@@ -278,3 +282,8 @@ TEST(Perf, RawCompressionSnappy) {
   printf("%s - Total\n", total.toString().c_str());
 }
 
+TEST(Perf, SnappyCodec) {
+  TestCodec("org.apache.hadoop.io.compress.SnappyCodec");
+}
+
+#endif // define HADOOP_SNAPPY_LIBRARY

@@ -19,6 +19,7 @@
 #ifndef QUICK_BUILD
 #include "org_apache_hadoop_mapred_nativetask_NativeRuntime.h"
 #endif
+#include "config.h"
 #include "commons.h"
 #include "jniutils.h"
 #include "NativeObjectFactory.h"
@@ -28,6 +29,30 @@ using namespace NativeTask;
 ///////////////////////////////////////////////////////////////
 // NativeRuntime JNI methods
 ///////////////////////////////////////////////////////////////
+
+/*
+ * Class:     org_apache_hadoop_mapred_nativetask_NativeRuntime
+ * Method:    supportCompressionCodec
+ * Signature: ([B)Z
+ */
+JNIEXPORT jboolean JNICALL Java_org_apache_hadoop_mapred_nativetask_NativeRuntime_supportsCompressionCodec
+  (JNIEnv *jenv, jclass clazz, jbyteArray codec)
+{
+  const std::string codecString = JNU_ByteArrayToString(jenv, codec);
+  if ("org.apache.hadoop.io.compress.GzipCodec" == codecString) {
+    return JNI_TRUE;
+  } else if ("org.apache.hadoop.io.compress.Lz4Codec" == codecString) {
+    return JNI_TRUE;
+  } else if ("org.apache.hadoop.io.compress.SnappyCodec" == codecString) {
+#if defined HADOOP_SNAPPY_LIBRARY
+    return JNI_TRUE;
+#else
+    return JNI_FALSE;
+#endif
+  } else {
+    return JNI_FALSE;
+  }
+}
 
 /*
  * Class:     org_apache_hadoop_mapred_nativetask_NativeRuntime

@@ -9,6 +9,14 @@ extern "C" {
 #endif
 /*
  * Class:     org_apache_hadoop_mapred_nativetask_NativeRuntime
+ * Method:    supportCompressionCodec
+ * Signature: ([B)Z
+ */
+JNIEXPORT jboolean JNICALL Java_org_apache_hadoop_mapred_nativetask_NativeRuntime_supportsCompressionCodec
+  (JNIEnv *, jclass, jbyteArray);
+
+/*
+ * Class:     org_apache_hadoop_mapred_nativetask_NativeRuntime
  * Method:    JNIRelease
  * Signature: ()V
  */JNIEXPORT void JNICALL Java_org_apache_hadoop_mapred_nativetask_NativeRuntime_JNIRelease(JNIEnv *,
