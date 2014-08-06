@@ -17,16 +17,18 @@
  */
 package org.apache.hadoop.security;
 
-import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.http.FilterContainer;
-import org.apache.hadoop.http.FilterInitializer;
-
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.FilterContainer;
+import org.apache.hadoop.http.FilterInitializer;
+import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
+import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 
 /**
  * Initializes Alfredo AuthenticationFilter which provides support for
@@ -89,6 +91,20 @@ public class AuthenticationFilterInitializer extends FilterInitializer {
       filterConfig.put(AuthenticationFilter.SIGNATURE_SECRET, secret.toString());
     } catch (IOException ex) {
       throw new RuntimeException("Could not read HTTP signature secret file: " + signatureSecretFile);
+    }
+
+    // Resolve _HOST into bind address
+    String bindAddress = conf.get(HttpServer.BIND_ADDRESS);
+    String principal = filterConfig
+        .get(KerberosAuthenticationHandler.PRINCIPAL);
+    if (principal != null) {
+      try {
+        principal = SecurityUtil.getServerPrincipal(principal, bindAddress);
+      } catch (IOException ex) {
+        throw new RuntimeException(
+            "Could not resolve Kerberos principal name: " + ex.toString(), ex);
+      }
+      filterConfig.put(KerberosAuthenticationHandler.PRINCIPAL, principal);
     }
 
     container.addFilter("authentication",

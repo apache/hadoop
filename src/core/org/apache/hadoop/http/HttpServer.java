@@ -93,6 +93,7 @@ public class HttpServer implements FilterContainer {
   static final String ADMINS_ACL = "admins.acl";
   public static final String SPNEGO_FILTER = "SpnegoFilter";
   public static final String KRB5_FILTER = "krb5Filter";
+  public static final String BIND_ADDRESS = "bind.address";
 
   private AccessControlList adminsAcl;
 
@@ -159,6 +160,7 @@ public class HttpServer implements FilterContainer {
     }
     
     webServer.addConnector(listener);
+    final String hostName = listener.getHost();
 
     QueuedThreadPool threadPool = new QueuedThreadPool();
     threadPool.setName("httpServerThreadPool");
@@ -186,6 +188,7 @@ public class HttpServer implements FilterContainer {
     final FilterInitializer[] initializers = getFilterInitializers(conf); 
     if (initializers != null) {
       for(FilterInitializer c : initializers) {
+        conf.set(BIND_ADDRESS, hostName);
         c.initFilter(this, conf);
       }
     }

@@ -236,6 +236,9 @@ Release 1.3.0 - unreleased
     MAPREDUCE-5968. Work directory is not deleted when downloadCacheObject 
     throws IOException. (Zhihai Xu va kasha)
 
+    HDFS-6822. Namenode and datanode fails to replace "_HOST" to hostname for
+    hadoop.http.authentication.kerberos.principal. (jing9)
+
 Release 1.2.2 - unreleased
 
   INCOMPATIBLE CHANGES
