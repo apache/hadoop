@@ -70,6 +70,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2370. Fix comment in o.a.h.y.server.resourcemanager.schedulerAppSchedulingInfo 
     (Wenwu Peng via junping_du)
 
+    YARN-2298. Move TimelineClient to yarn-common project (Zhijie Shen via 
+    junping_du)
+
   OPTIMIZATIONS
 
   BUG FIXES
