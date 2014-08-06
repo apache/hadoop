@@ -136,6 +136,9 @@ Trunk (Unreleased)
   OPTIMIZATIONS
 
   BUG FIXES
+ 
+    HDFS-6517. Remove hadoop-metrics2.properties from hdfs project (Akira 
+               AJISAKA via aw)
 
     HADOOP-9635 Fix potential Stack Overflow in DomainSocket.c (V. Karthik Kumar
                 via cmccabe)
