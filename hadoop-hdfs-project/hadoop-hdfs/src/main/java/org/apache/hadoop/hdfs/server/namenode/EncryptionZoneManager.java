@@ -41,7 +41,7 @@ public class EncryptionZoneManager {
    * external representation of an EZ is embodied in an EncryptionZone and
    * contains the EZ's pathname.
    */
-  private class EncryptionZoneInt {
+  private static class EncryptionZoneInt {
     private final String keyName;
     private final long inodeId;
 

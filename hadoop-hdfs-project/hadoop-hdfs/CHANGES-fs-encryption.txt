@@ -90,3 +90,5 @@ fs-encryption (Unreleased)
 
     HDFS-6814. Mistakenly dfs.namenode.list.encryption.zones.num.responses configured
     as boolean. (umamahesh)
+
+    HDFS-6817. Fix findbugs and other warnings. (yliu)

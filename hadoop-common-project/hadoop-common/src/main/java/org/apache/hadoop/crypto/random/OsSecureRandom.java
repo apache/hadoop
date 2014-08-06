@@ -37,14 +37,15 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY
  */
 @InterfaceAudience.Private
 public class OsSecureRandom extends Random implements Closeable, Configurable {
+  private static final long serialVersionUID = 6391500337172057900L;
 
-  private Configuration conf;
+  private transient Configuration conf;
 
   private final int RESERVOIR_LENGTH = 8192;
 
   private String randomDevPath;
 
-  private FileInputStream stream;
+  private transient FileInputStream stream;
 
   private final byte[] reservoir = new byte[RESERVOIR_LENGTH];
 
@@ -65,7 +66,7 @@ public class OsSecureRandom extends Random implements Closeable, Configurable {
   }
   
   @Override
-  public void setConf(Configuration conf) {
+  synchronized public void setConf(Configuration conf) {
     this.conf = conf;
     this.randomDevPath = conf.get(
         HADOOP_SECURITY_SECURE_RANDOM_DEVICE_FILE_PATH_KEY,
@@ -80,7 +81,7 @@ public class OsSecureRandom extends Random implements Closeable, Configurable {
   }
 
   @Override
-  public Configuration getConf() {
+  synchronized public Configuration getConf() {
     return conf;
   }
 
@@ -100,16 +101,15 @@ public class OsSecureRandom extends Random implements Closeable, Configurable {
   @Override
   synchronized protected int next(int nbits) {
     fillReservoir(4);
-    int n = reservoir[pos] |
-        (reservoir[pos + 1] << 8) |
-        (reservoir[pos + 2] << 16) |
-        (reservoir[pos + 3] << 24);
-    pos += 4;
+    int n = 0;
+    for (int i = 0; i < 4; i++) {
+      n = ((n << 8) | (reservoir[pos++] & 0xff));
+    }
     return n & (0xffffffff >> (32 - nbits));
   }
 
   @Override
-  public void close() throws IOException {
+  synchronized public void close() throws IOException {
     stream.close();
   }
 }

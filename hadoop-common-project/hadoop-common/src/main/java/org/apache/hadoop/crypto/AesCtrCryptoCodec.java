@@ -50,14 +50,10 @@ public abstract class AesCtrCryptoCodec extends CryptoCodec {
     Preconditions.checkArgument(IV.length == AES_BLOCK_SIZE);
     
     System.arraycopy(initIV, 0, IV, 0, CTR_OFFSET);
-    long l = (initIV[CTR_OFFSET + 0] << 56)
-        + ((initIV[CTR_OFFSET + 1] & 0xFF) << 48)
-        + ((initIV[CTR_OFFSET + 2] & 0xFF) << 40)
-        + ((initIV[CTR_OFFSET + 3] & 0xFF) << 32)
-        + ((initIV[CTR_OFFSET + 4] & 0xFF) << 24)
-        + ((initIV[CTR_OFFSET + 5] & 0xFF) << 16)
-        + ((initIV[CTR_OFFSET + 6] & 0xFF) << 8)
-        + (initIV[CTR_OFFSET + 7] & 0xFF);
+    long l = 0;
+    for (int i = 0; i < 8; i++) {
+      l = ((l << 8) | (initIV[CTR_OFFSET + i] & 0xff));
+    }
     l += counter;
     IV[CTR_OFFSET + 0] = (byte) (l >>> 56);
     IV[CTR_OFFSET + 1] = (byte) (l >>> 48);
