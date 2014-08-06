@@ -68,23 +68,6 @@ public class CompressTest {
   }
 
   @Test
-  public void testBzip2Compress() throws Exception {
-    final Configuration nativeconf = ScenarioConfiguration.getNativeConfiguration();
-    nativeconf.addResource(TestConstants.BZIP2_COMPRESS_CONF_PATH);
-    final Job nativejob = CompressMapper.getCompressJob("nativebzip2", nativeconf);
-    nativejob.waitForCompletion(true);
-
-    final Configuration hadoopconf = ScenarioConfiguration.getNormalConfiguration();
-    hadoopconf.addResource(TestConstants.BZIP2_COMPRESS_CONF_PATH);
-    final Job hadoopjob = CompressMapper.getCompressJob("hadoopbzip2", hadoopconf);
-    hadoopjob.waitForCompletion(true);
-
-    final boolean compareRet = ResultVerifier.verify(CompressMapper.outputFileDir + "nativebzip2",
-        CompressMapper.outputFileDir + "hadoopbzip2");
-    assertEquals("file compare result: if they are the same ,then return true", true, compareRet);
-  }
-
-  @Test
   public void testLz4Compress() throws Exception {
     final Configuration nativeConf = ScenarioConfiguration.getNativeConfiguration();
     nativeConf.addResource(TestConstants.LZ4_COMPRESS_CONF_PATH);
@@ -97,22 +80,6 @@ public class CompressTest {
     hadoopJob.waitForCompletion(true);
     final boolean compareRet = ResultVerifier.verify(CompressMapper.outputFileDir + "nativelz4",
         CompressMapper.outputFileDir + "hadooplz4");
-    assertEquals("file compare result: if they are the same ,then return true", true, compareRet);
-  }
-
-  @Test
-  public void testDefaultCompress() throws Exception {
-    final Configuration nativeConf = ScenarioConfiguration.getNativeConfiguration();
-    nativeConf.addResource(TestConstants.DEFAULT_COMPRESS_CONF_PATH);
-    final Job nativeJob = CompressMapper.getCompressJob("nativedefault", nativeConf);
-    nativeJob.waitForCompletion(true);
-
-    final Configuration hadoopConf = ScenarioConfiguration.getNormalConfiguration();
-    hadoopConf.addResource(TestConstants.DEFAULT_COMPRESS_CONF_PATH);
-    final Job hadoopJob = CompressMapper.getCompressJob("hadoopdefault", hadoopConf);
-    hadoopJob.waitForCompletion(true);
-    final boolean compareRet = ResultVerifier.verify(CompressMapper.outputFileDir + "nativedefault",
-        CompressMapper.outputFileDir + "hadoopdefault");
     assertEquals("file compare result: if they are the same ,then return true", true, compareRet);
   }
 
