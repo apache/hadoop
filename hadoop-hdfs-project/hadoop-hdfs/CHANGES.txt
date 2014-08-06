@@ -108,6 +108,9 @@ Release 2.6.0 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-6517. Remove hadoop-metrics2.properties from hdfs project (Akira 
+                AJISAKA via aw)
+
     HDFS-6617. Flake TestDFSZKFailoverController.testManualFailoverWithDFSHAAdmin
     due to a long edit log sync op. (Liang Xie via cnauroth)
 
