@@ -1,9 +1,6 @@
 Hadoop HDFS Change Log
 
-    HDFS-6752. Avoid Address bind errors in TestDatanodeConfig#testMemlockLimit
-    (vinayakumarb)
-
-Release 2.5.0 - UNRELEASED
+Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES
 
@@ -562,6 +559,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6717. JIRA HDFS-5804 breaks default nfs-gateway behavior for unsecured config
     (brandonli)
+
+    HDFS-6752. Avoid Address bind errors in TestDatanodeConfig#testMemlockLimit
+    (vinayakumarb)
 
     HDFS-6793. Missing changes in HftpFileSystem when Reintroduce
     dfs.http.port / dfs.https.port in branch-2. (Juan Yu via wang).
