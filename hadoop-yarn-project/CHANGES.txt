@@ -116,6 +116,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2051. Fix bug in PBimpls and add more unit tests with reflection. 
     (Binglin Chang via junping_du)
 
+    YARN-2374. Fixed TestDistributedShell#testDSShell failure due to hostname
+    dismatch. (Varun Vasudev via jianhe)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
