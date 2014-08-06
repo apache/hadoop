@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+#include "lz4.h"
 #include "snappy.h"
 #include "commons.h"
 #include "Path.h"
@@ -172,11 +173,6 @@ public:
   }
 };
 
-extern "C" {
-extern int LZ4_compress(char* source, char* dest, int isize);
-extern int LZ4_uncompress(char* source, char* dest, int osize);
-}
-;
 
 void MeasureSingleFileLz4(const string & path, CompressResult & total, size_t blockSize,
     int times) {

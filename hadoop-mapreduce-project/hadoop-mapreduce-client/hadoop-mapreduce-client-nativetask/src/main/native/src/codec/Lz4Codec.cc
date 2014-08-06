@@ -17,33 +17,15 @@
  */
 
 #include "commons.h"
+#include "lz4.h"
 #include "NativeTask.h"
 #include "Lz4Codec.h"
 
-extern "C" {
-extern int LZ4_compress(char* source, char* dest, int isize);
-extern int LZ4_uncompress(char* source, char* dest, int osize);
-
-/*
- LZ4_compress() :
- return : the number of bytes in compressed buffer dest
- note : destination buffer must be already allocated.
- To avoid any problem, size it to handle worst cases situations (input data not compressible)
- Worst case size is : "inputsize + 0.4%", with "0.4%" being at least 8 bytes.
-
- LZ4_uncompress() :
- osize  : is the output size, therefore the original size
- return : the number of bytes read in the source buffer
- If the source stream is malformed, the function will stop decoding and return a negative result, indicating the byte position of the faulty instruction
- This version never writes beyond dest + osize, and is therefore protected against malicious data packets
- note 2 : destination buffer must be already allocated
- */
-}
 
 namespace NativeTask {
 
 static int32_t LZ4_MaxCompressedSize(int32_t orig) {
-  return std::max((int32_t)(orig * 1.005), orig + 8);
+  return LZ4_compressBound(orig);
 }
 
 Lz4CompressStream::Lz4CompressStream(OutputStream * stream, uint32_t bufferSizeHint)

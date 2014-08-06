@@ -155,7 +155,7 @@ include_directories(
     ${D}/test
     ${CMAKE_CURRENT_SOURCE_DIR}
     #${CMAKE_CURRENT_SOURCE_DIR}/src
-    #${CMAKE_BINARY_DIR}
+    ${CMAKE_BINARY_DIR}
     ${JNI_INCLUDE_DIRS}
     ${SNAPPY_INCLUDE_DIR}
 )
@@ -174,7 +174,7 @@ else (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 endif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
 add_dual_library(nativetask
-    ${D}/lz4/lz4.c
+    ${CMAKE_BINARY_DIR}/lz4.c
     ${D}/cityhash/city.cc
     ${D}/src/codec/BlockCodec.cc
     ${D}/src/codec/GzipCodec.cc

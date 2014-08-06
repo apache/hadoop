@@ -162,7 +162,7 @@ TEST(Perf, IFile) {
 // The Glibc has a bug in the file tell api, it will overwrite the file data 
 // unexpected. 
 // Please check https://rhn.redhat.com/errata/RHBA-2013-0279.html
-// This case is to check wether the bug exists.
+// This case is to check whether the bug exists.
 // If it exists, it means you need to upgrade the glibc.
 TEST(IFile, TestGlibCBug) {
   std::string path("./testData/testGlibCBugSpill.out");
