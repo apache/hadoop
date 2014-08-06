@@ -557,9 +557,6 @@ Release 2.5.0 - 2014-08-11
     HDFS-6723. New NN webUI no longer displays decommissioned state for dead node.
     (Ming Ma via wheat9)
 
-    HDFS-6717. JIRA HDFS-5804 breaks default nfs-gateway behavior for unsecured config
-    (brandonli)
-
     HDFS-6752. Avoid Address bind errors in TestDatanodeConfig#testMemlockLimit
     (vinayakumarb)
 
