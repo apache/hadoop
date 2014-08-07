@@ -976,13 +976,18 @@ public class LeafQueue implements CSQueue {
 
     Resource userLimit =                          // User limit
         computeUserLimit(application, clusterResource, required);
-    
+
+    //Max avail capacity needs to take into account usage by ancestor-siblings
+    //which are greater than their base capacity, so we are interested in "max avail"
+    //capacity
+    float absoluteMaxAvailCapacity = CSQueueUtils.getAbsoluteMaxAvailCapacity(
+      resourceCalculator, clusterResource, this);
 
     Resource queueMaxCap =                        // Queue Max-Capacity
         Resources.multiplyAndNormalizeDown(
             resourceCalculator, 
             clusterResource, 
-            absoluteMaxCapacity, 
+            absoluteMaxAvailCapacity,
             minimumAllocation);
     
     Resource userConsumed = getUser(user).getConsumedResources(); 

@@ -17,6 +17,9 @@
 */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.utils.Lock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -24,6 +27,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 class CSQueueUtils {
   
+  private static final Log LOG = LogFactory.getLog(CSQueueUtils.class);
+
   final static float EPSILON = 0.0001f;
   
   public static void checkMaxCapacity(String queueName, 
@@ -112,5 +117,53 @@ class CSQueueUtils {
             Resources.none()
             )
         );
+   }
+
+   public static float getAbsoluteMaxAvailCapacity(
+      ResourceCalculator resourceCalculator, Resource clusterResource, CSQueue queue) {
+      CSQueue parent = queue.getParent();
+      if (parent == null) {
+        return queue.getAbsoluteMaximumCapacity();
+      }
+
+      //Get my parent's max avail, needed to determine my own
+      float parentMaxAvail = getAbsoluteMaxAvailCapacity(
+        resourceCalculator, clusterResource, parent);
+      //...and as a resource
+      Resource parentResource = Resources.multiply(clusterResource, parentMaxAvail);
+
+      //check for no resources parent before dividing, if so, max avail is none
+      if (Resources.isInvalidDivisor(resourceCalculator, parentResource)) {
+        return 0.0f;
+      }
+      //sibling used is parent used - my used...
+      float siblingUsedCapacity = Resources.ratio(
+                 resourceCalculator,
+                 Resources.subtract(parent.getUsedResources(), queue.getUsedResources()),
+                 parentResource);
+      //my max avail is the lesser of my max capacity and what is unused from my parent
+      //by my siblings (if they are beyond their base capacity)
+      float maxAvail = Math.min(
+        queue.getMaximumCapacity(),
+        1.0f - siblingUsedCapacity);
+      //and, mutiply by parent to get absolute (cluster relative) value
+      float absoluteMaxAvail = maxAvail * parentMaxAvail;
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("qpath " + queue.getQueuePath());
+        LOG.debug("parentMaxAvail " + parentMaxAvail);
+        LOG.debug("siblingUsedCapacity " + siblingUsedCapacity);
+        LOG.debug("getAbsoluteMaximumCapacity " + queue.getAbsoluteMaximumCapacity());
+        LOG.debug("maxAvail " + maxAvail);
+        LOG.debug("absoluteMaxAvail " + absoluteMaxAvail);
+      }
+
+      if (absoluteMaxAvail < 0.0f) {
+        absoluteMaxAvail = 0.0f;
+      } else if (absoluteMaxAvail > 1.0f) {
+        absoluteMaxAvail = 1.0f;
+      }
+
+      return absoluteMaxAvail;
    }
 }
