@@ -149,8 +149,6 @@ if [[ -z $JAVA_HOME ]]; then
 fi
 
 JAVA=$JAVA_HOME/bin/java
-# some Java parameters
-JAVA_HEAP_MAX=-Xmx1000m 
 
 # check envvars which might override default args
 if [ "$HADOOP_HEAPSIZE" != "" ]; then

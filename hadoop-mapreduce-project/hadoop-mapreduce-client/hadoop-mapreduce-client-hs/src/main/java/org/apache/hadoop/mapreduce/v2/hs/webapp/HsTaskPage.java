@@ -149,7 +149,8 @@ public class HsTaskPage extends HsView {
         attemptsTableData.append("[\"")
         .append(sortId + " ").append(taid).append("\",\"")
         .append(ta.getState()).append("\",\"")
-        .append(ta.getStatus()).append("\",\"")
+        .append(StringEscapeUtils.escapeJavaScript(
+              StringEscapeUtils.escapeHtml(ta.getStatus()))).append("\",\"")
 
         .append("<a class='nodelink' href='" + MRWebAppUtil.getYARNWebappScheme() + nodeHttpAddr + "'>")
         .append(nodeRackName + "/" + nodeHttpAddr + "</a>\",\"")

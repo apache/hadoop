@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.servlet.FilterConfig;
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.ws.rs.core.MediaType;
 
@@ -105,6 +106,8 @@ public class TestTimelineWebServices extends JerseyTest {
           .thenReturn("simple");
       when(filterConfig.getInitParameter(
           PseudoAuthenticationHandler.ANONYMOUS_ALLOWED)).thenReturn("true");
+      ServletContext context = mock(ServletContext.class);
+      when(filterConfig.getServletContext()).thenReturn(context);
       Enumeration<Object> names = mock(Enumeration.class);
       when(names.hasMoreElements()).thenReturn(true, true, false);
       when(names.nextElement()).thenReturn(

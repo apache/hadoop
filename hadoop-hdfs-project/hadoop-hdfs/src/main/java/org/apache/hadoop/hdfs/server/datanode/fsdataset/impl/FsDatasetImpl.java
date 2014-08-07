@@ -1151,7 +1151,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         return f;
    
       // if file is not null, but doesn't exist - possibly disk failed
-      datanode.checkDiskError();
+      datanode.checkDiskErrorAsync();
     }
     
     if (LOG.isDebugEnabled()) {
@@ -1223,13 +1223,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           errors.add("Failed to delete replica " + invalidBlks[i]
               +  ". Parent not found for file " + f);
           continue;
-        }
-        ReplicaState replicaState = info.getState();
-        if (replicaState == ReplicaState.FINALIZED || 
-            (replicaState == ReplicaState.RUR && 
-                ((ReplicaUnderRecovery)info).getOriginalReplica().getState() == 
-                  ReplicaState.FINALIZED)) {
-          v.clearPath(bpid, parent);
         }
         volumeMap.remove(bpid, invalidBlks[i]);
       }

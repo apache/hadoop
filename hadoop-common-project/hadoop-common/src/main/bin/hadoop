@@ -35,6 +35,7 @@ function print_usage(){
   echo "  distcp <srcurl> <desturl> copy file or directories recursively"
   echo "  archive -archiveName NAME -p <parent path> <src>* <dest> create a hadoop archive"
   echo "  classpath            prints the class path needed to get the"
+  echo "  credential           interact with credential providers"
   echo "                       Hadoop jar and the required libraries"
   echo "  daemonlog            get/set the log level for each daemon"
   echo " or"
@@ -90,11 +91,6 @@ case $COMMAND in
     fi
     ;;
 
-  classpath)
-    echo $CLASSPATH
-    exit
-    ;;
-
   #core commands  
   *)
     # the core commands
@@ -118,6 +114,14 @@ case $COMMAND in
       CLASSPATH=${CLASSPATH}:${TOOL_PATH}
     elif [ "$COMMAND" = "credential" ] ; then
       CLASS=org.apache.hadoop.security.alias.CredentialShell
+    elif [ "$COMMAND" = "classpath" ] ; then
+      if [ "$#" -eq 1 ]; then
+        # No need to bother starting up a JVM for this simple case.
+        echo $CLASSPATH
+        exit
+      else
+        CLASS=org.apache.hadoop.util.Classpath
+      fi
     elif [[ "$COMMAND" = -*  ]] ; then
         # class and package names cannot begin with a -
         echo "Error: No command named \`$COMMAND' was found. Perhaps you meant \`hadoop ${COMMAND#-}'"

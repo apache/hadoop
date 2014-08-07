@@ -150,9 +150,15 @@ Trunk (Unreleased)
     HDFS-6609. Use DirectorySnapshottableFeature to represent a snapshottable
     directory. (Jing Zhao via wheat9)
 
+    HDFS-6482. Use block ID-based block layout on datanodes (James Thomas via
+    Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
+ 
+    HDFS-6517. Remove hadoop-metrics2.properties from hdfs project (Akira 
+               AJISAKA via aw)
 
     HADOOP-9635 Fix potential Stack Overflow in DomainSocket.c (V. Karthik Kumar
                 via cmccabe)
@@ -357,6 +363,30 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6685. Balancer should preserve storage type of replicas.  (szetszwo)
 
+    HDFS-6798. Add test case for incorrect data node condition during
+    balancing. (Benoy Antony via Arpit Agarwal)
+
+    HDFS-6796. Improve the argument check during balancer command line parsing.
+    (Benoy Antony via szetszwo)
+
+    HDFS-6794. Update BlockManager methods to use DatanodeStorageInfo
+    where possible (Arpit Agarwal)
+
+    HDFS-6802. Some tests in TestDFSClientFailover are missing @Test
+    annotation. (Akira Ajisaka via wang)
+
+    HDFS-6788. Improve synchronization in BPOfferService with read write lock.
+    (Yongjun Zhang via wang)
+
+    HDFS-6787. Remove duplicate code in FSDirectory#unprotectedConcat. (Yi Liu via umamahesh)
+
+    HDFS-6809. Move Balancer's inner classes MovedBlocks and Matcher as to
+    standalone classes and separates KeyManager from NameNodeConnector.
+    (szetszwo)
+
+    HDFS-6812. Remove addBlock and replaceBlock from DatanodeDescriptor.
+    (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -428,6 +458,26 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6797. DataNode logs wrong layoutversion during upgrade. (Benoy Antony
     via Arpit Agarwal)
+
+    HDFS-6810. StorageReport array is initialized with wrong size in
+    DatanodeDescriptor#getStorageReports. (szetszwo via Arpit Agarwal)
+
+    HDFS-5723. Append failed FINALIZED replica should not be accepted as valid
+    when that block is underconstruction (vinayakumarb)
+
+    HDFS-5185. DN fails to startup if one of the data dir is full. (vinayakumarb)
+
+    HDFS-6451. NFS should not return NFS3ERR_IO for AccessControlException 
+    (Abhiraj Butala via brandonli)
+
+    HDFS-6717. JIRA HDFS-5804 breaks default nfs-gateway behavior for unsecured config
+    (brandonli)
+
+    HDFS-6790. DFSUtil Should Use configuration.getPassword for SSL passwords
+    (Larry McCay via brandonli)
+
+    HDFS-6791. A block could remain under replicated if all of its replicas are on
+    decommissioned nodes. (Ming Ma via jing9)
 
 Release 2.5.0 - UNRELEASED
 
@@ -980,9 +1030,6 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6723. New NN webUI no longer displays decommissioned state for dead node.
     (Ming Ma via wheat9)
-
-    HDFS-6717. JIRA HDFS-5804 breaks default nfs-gateway behavior for unsecured config
-    (brandonli)
 
     HDFS-6768. Fix a few unit tests that use hard-coded port numbers. (Arpit
     Agarwal)

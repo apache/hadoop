@@ -1085,9 +1085,6 @@ public class FSDirectory implements Closeable {
       count++;
     }
     
-    // update inodeMap
-    removeFromInodeMap(Arrays.asList(allSrcInodes));
-    
     trgInode.setModificationTime(timestamp, trgLatestSnapshot);
     trgParent.updateModificationTime(timestamp, trgLatestSnapshot);
     // update quota on the parent directory ('count' files removed, 0 space)

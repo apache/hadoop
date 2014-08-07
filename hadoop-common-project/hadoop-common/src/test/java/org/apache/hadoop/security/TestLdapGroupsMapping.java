@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.security;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 
 import java.io.File;
@@ -38,6 +40,9 @@ import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.alias.CredentialProvider;
+import org.apache.hadoop.security.alias.CredentialProviderFactory;
+import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -153,5 +158,58 @@ public class TestLdapGroupsMapping {
     LdapGroupsMapping mapping = new LdapGroupsMapping();
     Assert.assertEquals("hadoop",
         mapping.extractPassword(secretFile.getPath()));
+  }
+
+  @Test
+  public void testConfGetPassword() throws Exception {
+    File testDir = new File(System.getProperty("test.build.data",
+                                               "target/test-dir"));
+    Configuration conf = new Configuration();
+    final String ourUrl =
+        JavaKeyStoreProvider.SCHEME_NAME + "://file/" + testDir + "/test.jks";
+
+    File file = new File(testDir, "test.jks");
+    file.delete();
+    conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, ourUrl);
+
+    CredentialProvider provider =
+        CredentialProviderFactory.getProviders(conf).get(0);
+    char[] bindpass = {'b', 'i', 'n', 'd', 'p', 'a', 's', 's'};
+    char[] storepass = {'s', 't', 'o', 'r', 'e', 'p', 'a', 's', 's'};
+
+    // ensure that we get nulls when the key isn't there
+    assertEquals(null, provider.getCredentialEntry(
+        LdapGroupsMapping.BIND_PASSWORD_KEY));
+    assertEquals(null, provider.getCredentialEntry
+        (LdapGroupsMapping.LDAP_KEYSTORE_PASSWORD_KEY));
+
+    // create new aliases
+    try {
+      provider.createCredentialEntry(
+          LdapGroupsMapping.BIND_PASSWORD_KEY, bindpass);
+
+      provider.createCredentialEntry(
+          LdapGroupsMapping.LDAP_KEYSTORE_PASSWORD_KEY, storepass);
+      provider.flush();
+    } catch (Exception e) {
+      e.printStackTrace();
+      throw e;
+    }
+    // make sure we get back the right key
+    assertArrayEquals(bindpass, provider.getCredentialEntry(
+        LdapGroupsMapping.BIND_PASSWORD_KEY).getCredential());
+    assertArrayEquals(storepass, provider.getCredentialEntry(
+        LdapGroupsMapping.LDAP_KEYSTORE_PASSWORD_KEY).getCredential());
+
+    LdapGroupsMapping mapping = new LdapGroupsMapping();
+    Assert.assertEquals("bindpass",
+        mapping.getPassword(conf, LdapGroupsMapping.BIND_PASSWORD_KEY, ""));
+    Assert.assertEquals("storepass",
+        mapping.getPassword(conf, LdapGroupsMapping.LDAP_KEYSTORE_PASSWORD_KEY,
+           ""));
+    // let's make sure that a password that doesn't exist returns an
+    // empty string as currently expected and used to trigger a call to
+    // extract password
+    Assert.assertEquals("", mapping.getPassword(conf,"invalid-alias", ""));
   }
 }

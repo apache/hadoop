@@ -21,7 +21,6 @@ import java.util.LinkedList;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.util.LightWeightGSet;
 
@@ -254,18 +253,18 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
   }
   /**
    * Find specified DatanodeStorageInfo.
-   * @return index or -1 if not found.
+   * @return DatanodeStorageInfo or null if not found.
    */
-  int findStorageInfo(DatanodeInfo dn) {
+  DatanodeStorageInfo findStorageInfo(DatanodeDescriptor dn) {
     int len = getCapacity();
     for(int idx = 0; idx < len; idx++) {
       DatanodeStorageInfo cur = getStorageInfo(idx);
       if(cur == null)
         break;
       if(cur.getDatanodeDescriptor() == dn)
-        return idx;
+        return cur;
     }
-    return -1;
+    return null;
   }
   
   /**

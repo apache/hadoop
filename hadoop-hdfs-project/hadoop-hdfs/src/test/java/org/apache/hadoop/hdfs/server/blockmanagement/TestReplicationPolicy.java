@@ -83,7 +83,7 @@ public class TestReplicationPolicy {
   private static NameNode namenode;
   private static BlockPlacementPolicy replicator;
   private static final String filename = "/dummyfile.txt";
-  private static DatanodeDescriptor dataNodes[];
+  private static DatanodeDescriptor[] dataNodes;
   private static DatanodeStorageInfo[] storages;
   // The interval for marking a datanode as stale,
   private static final long staleInterval =
@@ -1122,8 +1122,7 @@ public class TestReplicationPolicy {
     // Adding this block will increase its current replication, and that will
     // remove it from the queue.
     bm.addStoredBlockUnderConstruction(new StatefulBlockInfo(info, info,
-              ReplicaState.FINALIZED), TestReplicationPolicy.dataNodes[0],
-            "STORAGE");
+              ReplicaState.FINALIZED), TestReplicationPolicy.storages[0]);
 
     // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
     // from QUEUE_VERY_UNDER_REPLICATED.

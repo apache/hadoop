@@ -456,6 +456,24 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     }
   }
 
+  private static void handleRunningAppOnNode(RMNodeImpl rmNode,
+      RMContext context, ApplicationId appId, NodeId nodeId) {
+    RMApp app = context.getRMApps().get(appId);
+
+    // if we failed getting app by appId, maybe something wrong happened, just
+    // add the app to the finishedApplications list so that the app can be
+    // cleaned up on the NM
+    if (null == app) {
+      LOG.warn("Cannot get RMApp by appId=" + appId
+          + ", just added it to finishedApplications list for cleanup");
+      rmNode.finishedApplications.add(appId);
+      return;
+    }
+
+    context.getDispatcher().getEventHandler()
+        .handle(new RMAppRunningOnNodeEvent(appId, nodeId));
+  }
+
   public static class AddNodeTransition implements
       SingleArcTransition<RMNodeImpl, RMNodeEvent> {
 
@@ -496,24 +514,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         new NodesListManagerEvent(
             NodesListManagerEventType.NODE_USABLE, rmNode));
     }
-
-    void handleRunningAppOnNode(RMNodeImpl rmNode, RMContext context,
-        ApplicationId appId, NodeId nodeId) {
-      RMApp app = context.getRMApps().get(appId);
-      
-      // if we failed getting app by appId, maybe something wrong happened, just
-      // add the app to the finishedApplications list so that the app can be
-      // cleaned up on the NM
-      if (null == app) {
-        LOG.warn("Cannot get RMApp by appId=" + appId
-            + ", just added it to finishedApplications list for cleanup");
-        rmNode.finishedApplications.add(appId);
-        return;
-      }
-
-      context.getDispatcher().getEventHandler()
-          .handle(new RMAppRunningOnNodeEvent(appId, nodeId));
-    }
   }
 
   public static class ReconnectNodeTransition implements
@@ -526,7 +526,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       rmNode.context.getDispatcher().getEventHandler().handle(
           new NodeRemovedSchedulerEvent(rmNode));
 
-      RMNode newNode = ((RMNodeReconnectEvent)event).getReconnectedNode();
+      RMNodeReconnectEvent reconnectEvent = (RMNodeReconnectEvent) event;
+      RMNode newNode = reconnectEvent.getReconnectedNode();
       rmNode.nodeManagerVersion = newNode.getNodeManagerVersion();
       if (rmNode.getTotalCapability().equals(newNode.getTotalCapability())
           && rmNode.getHttpPort() == newNode.getHttpPort()) {
@@ -551,6 +552,13 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         rmNode.context.getDispatcher().getEventHandler().handle(
             new RMNodeStartedEvent(newNode.getNodeID(), null, null));
       }
+
+      if (null != reconnectEvent.getRunningApplications()) {
+        for (ApplicationId appId : reconnectEvent.getRunningApplications()) {
+          handleRunningAppOnNode(rmNode, rmNode.context, appId, rmNode.nodeId);
+        }
+      }
+
       rmNode.context.getDispatcher().getEventHandler().handle(
           new NodesListManagerEvent(
               NodesListManagerEventType.NODE_USABLE, rmNode));

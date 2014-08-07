@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
+import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
@@ -40,6 +41,25 @@ public class NMNullStateStoreService extends NMStateStoreService {
   @Override
   public boolean canRecover() {
     return false;
+  }
+
+  @Override
+  public RecoveredApplicationsState loadApplicationsState() throws IOException {
+    throw new UnsupportedOperationException(
+        "Recovery not supported by this state store");
+  }
+
+  @Override
+  public void storeApplication(ApplicationId appId,
+      ContainerManagerApplicationProto p) throws IOException {
+  }
+
+  @Override
+  public void storeFinishedApplication(ApplicationId appId) {
+  }
+
+  @Override
+  public void removeApplication(ApplicationId appId) throws IOException {
   }
 
   @Override

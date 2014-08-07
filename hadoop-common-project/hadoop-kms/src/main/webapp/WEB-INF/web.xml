@@ -42,7 +42,7 @@
 
   <servlet>
     <servlet-name>jmx-servlet</servlet-name>
-    <servlet-class>org.apache.hadoop.jmx.JMXJsonServlet</servlet-class>
+    <servlet-class>org.apache.hadoop.crypto.key.kms.server.KMSJMXServlet</servlet-class>
   </servlet>
 
   <servlet-mapping>

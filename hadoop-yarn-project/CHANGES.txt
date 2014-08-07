@@ -35,6 +35,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2181. Added preemption info to logs and RM web UI. (Wangda Tan via
     jianhe)
 
+    YARN-1354. Recover applications upon nodemanager restart. (Jason Lowe via 
+    junping_du)
+
   IMPROVEMENTS
 
     YARN-2242. Improve exception information on AM launch crashes. (Li Lu 
@@ -80,6 +83,14 @@ Release 2.6.0 - UNRELEASED
     YARN-1994. Expose YARN/MR endpoints on multiple interfaces. (Craig Welch,
     Milan Potocnik, Arpit Agarwal via xgong)
 
+    YARN-2343. Improve NMToken expire exception message. (Li Lu via jianhe)
+
+    YARN-2370. Fix comment in o.a.h.y.server.resourcemanager.schedulerAppSchedulingInfo 
+    (Wenwu Peng via junping_du)
+
+    YARN-2298. Move TimelineClient to yarn-common project (Zhijie Shen via 
+    junping_du)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -119,6 +130,17 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2354. DistributedShell may allocate more containers than client
     specified after AM restarts. (Li Lu via jianhe)
+
+    YARN-2051. Fix bug in PBimpls and add more unit tests with reflection. 
+    (Binglin Chang via junping_du)
+
+    YARN-2374. Fixed TestDistributedShell#testDSShell failure due to hostname
+    dismatch. (Varun Vasudev via jianhe)
+
+    YARN-2359. Application hangs when it fails to launch AM container. 
+    (Zhihai Xu via kasha)
+
+    YARN-2388. Fixed TestTimelineWebServices failure due to HADOOP-10791. (zjshen)
 
 Release 2.5.0 - UNRELEASED
 

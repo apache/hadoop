@@ -143,6 +143,12 @@ public class JMXJsonServlet extends HttpServlet {
     jsonFactory = new JsonFactory();
   }
 
+  protected boolean isInstrumentationAccessAllowed(HttpServletRequest request, 
+      HttpServletResponse response) throws IOException {
+    return HttpServer2.isInstrumentationAccessAllowed(getServletContext(),
+        request, response);
+  }
+  
   /**
    * Process a GET request for the specified resource.
    * 
@@ -154,8 +160,7 @@ public class JMXJsonServlet extends HttpServlet {
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response) {
     try {
-      if (!HttpServer2.isInstrumentationAccessAllowed(getServletContext(),
-                                                     request, response)) {
+      if (!isInstrumentationAccessAllowed(request, response)) {
         return;
       }
       JsonGenerator jg = null;

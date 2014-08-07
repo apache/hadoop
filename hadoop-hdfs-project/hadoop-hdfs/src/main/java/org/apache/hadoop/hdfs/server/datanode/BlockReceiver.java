@@ -253,7 +253,7 @@ class BlockReceiver implements Closeable {
       
       if (cause != null) { // possible disk error
         ioe = cause;
-        datanode.checkDiskError();
+        datanode.checkDiskErrorAsync();
       }
       
       throw ioe;
@@ -329,7 +329,7 @@ class BlockReceiver implements Closeable {
     }
     // disk check
     if(ioe != null) {
-      datanode.checkDiskError();
+      datanode.checkDiskErrorAsync();
       throw ioe;
     }
   }
@@ -639,7 +639,7 @@ class BlockReceiver implements Closeable {
           manageWriterOsCache(offsetInBlock);
         }
       } catch (IOException iex) {
-        datanode.checkDiskError();
+        datanode.checkDiskErrorAsync();
         throw iex;
       }
     }
@@ -1208,7 +1208,7 @@ class BlockReceiver implements Closeable {
         } catch (IOException e) {
           LOG.warn("IOException in BlockReceiver.run(): ", e);
           if (running) {
-            datanode.checkDiskError();
+            datanode.checkDiskErrorAsync();
             LOG.info(myString, e);
             running = false;
             if (!Thread.interrupted()) { // failure not caused by interruption

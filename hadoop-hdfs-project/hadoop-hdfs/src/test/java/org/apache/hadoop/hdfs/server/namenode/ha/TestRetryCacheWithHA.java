@@ -50,6 +50,7 @@ import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -725,7 +726,12 @@ public class TestRetryCacheWithHA {
       
       client.getNamenode().updatePipeline(client.getClientName(), oldBlock,
           newBlock, newNodes, storageIDs);
-      out.close();
+      // close can fail if the out.close() commit the block after block received
+      // notifications from Datanode.
+      // Since datanodes and output stream have still old genstamps, these
+      // blocks will be marked as corrupt after HDFS-5723 if RECEIVED
+      // notifications reaches namenode first and close() will fail.
+      DFSTestUtil.abortStream((DFSOutputStream) out.getWrappedStream());
     }
 
     @Override
