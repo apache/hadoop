@@ -48,18 +48,6 @@ public class CorruptReplicasMap{
 
   private final SortedMap<Block, Map<DatanodeDescriptor, Reason>> corruptReplicasMap =
     new TreeMap<Block, Map<DatanodeDescriptor, Reason>>();
-  
-  /**
-   * Mark the block belonging to datanode as corrupt.
-   *
-   * @param blk Block to be added to CorruptReplicasMap
-   * @param dn DatanodeDescriptor which holds the corrupt replica
-   * @param reason a textual reason (for logging purposes)
-   */
-  public void addToCorruptReplicasMap(Block blk, DatanodeDescriptor dn,
-      String reason) {
-    addToCorruptReplicasMap(blk, dn, reason, Reason.NONE);
-  }
 
   /**
    * Mark the block belonging to datanode as corrupt.
@@ -69,7 +57,7 @@ public class CorruptReplicasMap{
    * @param reason a textual reason (for logging purposes)
    * @param reasonCode the enum representation of the reason
    */
-  public void addToCorruptReplicasMap(Block blk, DatanodeDescriptor dn,
+  void addToCorruptReplicasMap(Block blk, DatanodeDescriptor dn,
       String reason, Reason reasonCode) {
     Map <DatanodeDescriptor, Reason> nodes = corruptReplicasMap.get(blk);
     if (nodes == null) {
@@ -127,7 +115,6 @@ public class CorruptReplicasMap{
   boolean removeFromCorruptReplicasMap(Block blk, DatanodeDescriptor datanode,
       Reason reason) {
     Map <DatanodeDescriptor, Reason> datanodes = corruptReplicasMap.get(blk);
-    boolean removed = false;
     if (datanodes==null)
       return false;
 
@@ -174,12 +161,12 @@ public class CorruptReplicasMap{
     return ((nodes != null) && (nodes.contains(node)));
   }
 
-  public int numCorruptReplicas(Block blk) {
+  int numCorruptReplicas(Block blk) {
     Collection<DatanodeDescriptor> nodes = getNodes(blk);
     return (nodes == null) ? 0 : nodes.size();
   }
   
-  public int size() {
+  int size() {
     return corruptReplicasMap.size();
   }
 

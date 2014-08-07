@@ -88,6 +88,12 @@ Release 2.6.0 - UNRELEASED
     YARN-2370. Fix comment in o.a.h.y.server.resourcemanager.schedulerAppSchedulingInfo 
     (Wenwu Peng via junping_du)
 
+    YARN-2298. Move TimelineClient to yarn-common project (Zhijie Shen via 
+    junping_du)
+
+    YARN-2288. Made persisted data in LevelDB timeline store be versioned. (Junping Du
+    via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -130,6 +136,17 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2051. Fix bug in PBimpls and add more unit tests with reflection. 
     (Binglin Chang via junping_du)
+
+    YARN-2374. Fixed TestDistributedShell#testDSShell failure due to hostname
+    dismatch. (Varun Vasudev via jianhe)
+
+    YARN-2359. Application hangs when it fails to launch AM container. 
+    (Zhihai Xu via kasha)
+
+    YARN-2388. Fixed TestTimelineWebServices failure due to HADOOP-10791. (zjshen)
+
+    YARN-2008. Fixed CapacityScheduler to calculate headroom based on max available
+    capacity instead of configured max capacity. (Craig Welch via jianhe)
 
 Release 2.5.0 - UNRELEASED
 

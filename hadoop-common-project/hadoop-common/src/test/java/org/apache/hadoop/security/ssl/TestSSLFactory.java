@@ -17,8 +17,14 @@
  */
 package org.apache.hadoop.security.ssl;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.security.alias.CredentialProvider;
+import org.apache.hadoop.security.alias.CredentialProviderFactory;
+import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -211,6 +217,13 @@ public class TestSSLFactory {
       "password", "password", null);
   }
 
+  @Test
+  public void testServerCredProviderPasswords() throws Exception {
+    KeyStoreTestUtil.provisionPasswordsToCredentialProvider();
+    checkSSLFactoryInitWithPasswords(SSLFactory.Mode.SERVER,
+        "storepass", "keypass", null, null, true);
+  }
+
   /**
    * Checks that SSLFactory initialization is successful with the given
    * arguments.  This is a helper method for writing test cases that cover
@@ -218,7 +231,7 @@ public class TestSSLFactory {
    * It takes care of bootstrapping a keystore, a truststore, and SSL client or
    * server configuration.  Then, it initializes an SSLFactory.  If no exception
    * is thrown, then initialization was successful.
-   * 
+   *
    * @param mode SSLFactory.Mode mode to test
    * @param password String store password to set on keystore
    * @param keyPassword String key password to set on keystore
@@ -231,6 +244,34 @@ public class TestSSLFactory {
   private void checkSSLFactoryInitWithPasswords(SSLFactory.Mode mode,
       String password, String keyPassword, String confPassword,
       String confKeyPassword) throws Exception {
+    checkSSLFactoryInitWithPasswords(mode, password, keyPassword,
+        confPassword, confKeyPassword, false);
+  }
+
+ /**
+   * Checks that SSLFactory initialization is successful with the given
+   * arguments.  This is a helper method for writing test cases that cover
+   * different combinations of settings for the store password and key password.
+   * It takes care of bootstrapping a keystore, a truststore, and SSL client or
+   * server configuration.  Then, it initializes an SSLFactory.  If no exception
+   * is thrown, then initialization was successful.
+   *
+   * @param mode SSLFactory.Mode mode to test
+   * @param password String store password to set on keystore
+   * @param keyPassword String key password to set on keystore
+   * @param confPassword String store password to set in SSL config file, or null
+   *   to avoid setting in SSL config file
+   * @param confKeyPassword String key password to set in SSL config file, or
+   *   null to avoid setting in SSL config file
+   * @param useCredProvider boolean to indicate whether passwords should be set
+   * into the config or not. When set to true nulls are set and aliases are
+   * expected to be resolved through credential provider API through the
+   * Configuration.getPassword method
+   * @throws Exception for any error
+   */
+  private void checkSSLFactoryInitWithPasswords(SSLFactory.Mode mode,
+      String password, String keyPassword, String confPassword,
+      String confKeyPassword, boolean useCredProvider) throws Exception {
     String keystore = new File(KEYSTORES_DIR, "keystore.jks").getAbsolutePath();
     String truststore = new File(KEYSTORES_DIR, "truststore.jks")
       .getAbsolutePath();
@@ -249,10 +290,25 @@ public class TestSSLFactory {
     // Create SSL configuration file, for either server or client.
     final String sslConfFileName;
     final Configuration sslConf;
+
+    // if the passwords are provisioned in a cred provider then don't set them
+    // in the configuration properly - expect them to be resolved through the
+    // provider
+    if (useCredProvider) {
+      confPassword = null;
+      confKeyPassword = null;
+    }
     if (mode == SSLFactory.Mode.SERVER) {
       sslConfFileName = "ssl-server.xml";
       sslConf = KeyStoreTestUtil.createServerSSLConfig(keystore, confPassword,
         confKeyPassword, truststore);
+      if (useCredProvider) {
+        File testDir = new File(System.getProperty("test.build.data",
+            "target/test-dir"));
+        final String ourUrl =
+            JavaKeyStoreProvider.SCHEME_NAME + "://file/" + testDir + "/test.jks";
+        sslConf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, ourUrl);
+      }
     } else {
       sslConfFileName = "ssl-client.xml";
       sslConf = KeyStoreTestUtil.createClientSSLConfig(keystore, confPassword,

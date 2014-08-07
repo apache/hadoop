@@ -418,6 +418,9 @@ Trunk (Unreleased)
     HADOOP-10925. Compilation fails in native link0 function on Windows.
     (cnauroth)
 
+    HADOOP-10939. Fix TestKeyProviderFactory testcases to use default 128 bit
+    length keys. (Arun Suresh via wang)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -484,6 +487,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10903. Enhance hadoop classpath command to expand wildcards or write
     classpath into jar manifest. (cnauroth)
 
+    HADOOP-10791. AuthenticationFilter should support externalizing the 
+    secret for signing and provide rotation support. (rkanter via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -526,6 +532,18 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10937. Need to set version name correctly before decrypting EEK.
     (Arun Suresh via wang)
+
+    HADOOP-10918. JMXJsonServlet fails when used within Tomcat. (tucu)
+
+    HADOOP-10933. FileBasedKeyStoresFactory Should use Configuration.getPassword 
+    for SSL Passwords. (lmccay via tucu)
+
+    HADOOP-10759. Remove hardcoded JAVA_HEAP_MAX. (Sam Liu via Eric Yang)
+
+    HADOOP-10905. LdapGroupsMapping Should use configuration.getPassword for SSL
+    and LDAP Passwords. (lmccay via brandonli)
+
+    HADOOP-10931 compile error on tools/hadoop-openstack (xukun via stevel)
 
 Release 2.5.0 - UNRELEASED
 
@@ -666,8 +684,6 @@ Release 2.5.0 - UNRELEASED
     for Java 7 and above. (szetszwo)
 
   BUG FIXES 
-
-    HADOOP-10759. Remove hardcoded JAVA_HEAP_MAX. (Sam Liu via Eric Yang)
 
     HADOOP-10378. Typo in help printed by hdfs dfs -help.
     (Mit Desai via suresh)

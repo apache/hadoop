@@ -42,6 +42,13 @@ public class DefaultResourceCalculator extends ResourceCalculator {
       Resource numerator, Resource denominator) {
     return ratio(numerator, denominator);
   }
+  
+  public boolean isInvalidDivisor(Resource r) {
+    if (r.getMemory() == 0.0f) {
+      return true;
+    }
+    return false;
+  }
 
   @Override
   public float ratio(Resource a, Resource b) {

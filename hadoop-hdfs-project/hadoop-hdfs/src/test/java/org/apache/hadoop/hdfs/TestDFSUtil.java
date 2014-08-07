@@ -30,8 +30,12 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_A
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYPASSWORD_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_PASSWORD_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_TRUSTSTORE_PASSWORD_KEY;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.hamcrest.CoreMatchers.not;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -39,6 +43,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -61,8 +66,12 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.alias.CredentialProvider;
+import org.apache.hadoop.security.alias.CredentialProviderFactory;
+import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
+import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
@@ -791,5 +800,69 @@ public class TestDFSUtil {
         GenericTestUtils.assertExceptionContains("Not all elements match", ae);
       }
     }
+  }
+
+  @Test
+  public void testGetPassword() throws Exception {
+    File testDir = new File(System.getProperty("test.build.data",
+        "target/test-dir"));
+
+    Configuration conf = new Configuration();
+    final String ourUrl =
+    JavaKeyStoreProvider.SCHEME_NAME + "://file/" + testDir + "/test.jks";
+
+    File file = new File(testDir, "test.jks");
+    file.delete();
+    conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, ourUrl);
+
+    CredentialProvider provider =
+        CredentialProviderFactory.getProviders(conf).get(0);
+    char[] keypass = {'k', 'e', 'y', 'p', 'a', 's', 's'};
+    char[] storepass = {'s', 't', 'o', 'r', 'e', 'p', 'a', 's', 's'};
+    char[] trustpass = {'t', 'r', 'u', 's', 't', 'p', 'a', 's', 's'};
+
+    // ensure that we get nulls when the key isn't there
+    assertEquals(null, provider.getCredentialEntry(
+        DFS_SERVER_HTTPS_KEYPASSWORD_KEY));
+    assertEquals(null, provider.getCredentialEntry(
+        DFS_SERVER_HTTPS_KEYSTORE_PASSWORD_KEY));
+    assertEquals(null, provider.getCredentialEntry(
+        DFS_SERVER_HTTPS_TRUSTSTORE_PASSWORD_KEY));
+
+    // create new aliases
+    try {
+      provider.createCredentialEntry(
+          DFS_SERVER_HTTPS_KEYPASSWORD_KEY, keypass);
+
+      provider.createCredentialEntry(
+          DFS_SERVER_HTTPS_KEYSTORE_PASSWORD_KEY, storepass);
+
+      provider.createCredentialEntry(
+          DFS_SERVER_HTTPS_TRUSTSTORE_PASSWORD_KEY, trustpass);
+
+      // write out so that it can be found in checks
+      provider.flush();
+    } catch (Exception e) {
+      e.printStackTrace();
+      throw e;
+    }
+    // make sure we get back the right key directly from api
+    assertArrayEquals(keypass, provider.getCredentialEntry(
+        DFS_SERVER_HTTPS_KEYPASSWORD_KEY).getCredential());
+    assertArrayEquals(storepass, provider.getCredentialEntry(
+        DFS_SERVER_HTTPS_KEYSTORE_PASSWORD_KEY).getCredential());
+    assertArrayEquals(trustpass, provider.getCredentialEntry(
+        DFS_SERVER_HTTPS_TRUSTSTORE_PASSWORD_KEY).getCredential());
+
+    // use WebAppUtils as would be used by loadSslConfiguration
+    Assert.assertEquals("keypass",
+        DFSUtil.getPassword(conf, DFS_SERVER_HTTPS_KEYPASSWORD_KEY));
+    Assert.assertEquals("storepass",
+        DFSUtil.getPassword(conf, DFS_SERVER_HTTPS_KEYSTORE_PASSWORD_KEY));
+    Assert.assertEquals("trustpass",
+        DFSUtil.getPassword(conf, DFS_SERVER_HTTPS_TRUSTSTORE_PASSWORD_KEY));
+
+    // let's make sure that a password that doesn't exist returns null
+    Assert.assertEquals(null, DFSUtil.getPassword(conf,"invalid-alias"));
   }
 }

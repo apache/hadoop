@@ -181,6 +181,12 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5756. CombineFileInputFormat.getSplits() including directories
     in its results (Jason Dere via jlowe)
 
+    MAPREDUCE-6014. New task status field in task attempts table can lead to
+    an empty web page (Mit Desai via jlowe)
+
+    MAPREDUCE-6021. MR AM should have working directory in LD_LIBRARY_PATH
+    (jlowe)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
