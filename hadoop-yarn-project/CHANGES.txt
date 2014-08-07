@@ -137,6 +137,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2374. Fixed TestDistributedShell#testDSShell failure due to hostname
     dismatch. (Varun Vasudev via jianhe)
 
+    YARN-2359. Application hangs when it fails to launch AM container. 
+    (Zhihai Xu via kasha)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
