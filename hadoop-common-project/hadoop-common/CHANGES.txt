@@ -113,6 +113,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10931 compile error on tools/hadoop-openstack (xukun via stevel)
 
+    HADOOP-10929. Typo in Configuration.getPasswordFromCredentialProviders
+    (lmccay via brandonli)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
