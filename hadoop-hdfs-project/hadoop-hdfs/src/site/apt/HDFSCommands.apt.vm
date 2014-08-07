@@ -1,0 +1,404 @@
+~~ Licensed under the Apache License, Version 2.0 (the "License");
+~~ you may not use this file except in compliance with the License.
+~~ You may obtain a copy of the License at
+~~
+~~   http://www.apache.org/licenses/LICENSE-2.0
+~~
+~~ Unless required by applicable law or agreed to in writing, software
+~~ distributed under the License is distributed on an "AS IS" BASIS,
+~~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~~ See the License for the specific language governing permissions and
+~~ limitations under the License. See accompanying LICENSE file.
+
+  ---
+  HDFS Commands Guide
+  ---
+  ---
+  ${maven.build.timestamp}
+
+HDFS Commands Guide
+
+%{toc|section=1|fromDepth=2|toDepth=4}
+
+* Overview
+
+   All HDFS commands are invoked by the <<<bin/hdfs>>> script. Running the
+   hdfs script without any arguments prints the description for all
+   commands.
+
+   Usage: <<<hdfs [--config confdir] [COMMAND] [GENERIC_OPTIONS]
+          [COMMAND_OPTIONS]>>>
+
+   Hadoop has an option parsing framework that employs parsing generic options
+   as well as running classes.
+
+*-----------------------+---------------+
+|| COMMAND_OPTION       || Description
+*-----------------------+---------------+
+| <<<--config confdir>>>| Overwrites the default Configuration directory.
+|                       | Default is <<<${HADOOP_HOME}/conf>>>.
+*-----------------------+---------------+
+| GENERIC_OPTIONS       | The common set of options supported by multiple
+|                       | commands. Full list is
+|                       | {{{../hadoop-common/CommandsManual.html#Generic_Options}here}}.
+*-----------------------+---------------+
+| COMMAND_OPTIONS       | Various commands with their options are described in
+|                       | the following sections. The commands have been
+|                       | grouped into {{{User Commands}}} and
+|                       | {{{Administration Commands}}}.
+*-----------------------+---------------+
+
+* User Commands
+
+   Commands useful for users of a hadoop cluster.
+
+** <<<dfs>>>
+
+   Usage: <<<hdfs dfs [GENERIC_OPTIONS] [COMMAND_OPTIONS]>>>
+
+   Run a filesystem command on the file system supported in Hadoop.
+   The various COMMAND_OPTIONS can be found at
+   {{{../hadoop-common/FileSystemShell.html}File System Shell Guide}}.
+
+** <<<fetchdt>>>
+
+   Gets Delegation Token from a NameNode.
+   See {{{./HdfsUserGuide.html#fetchdt}fetchdt}} for more info.
+
+   Usage: <<<hdfs fetchdt [GENERIC_OPTIONS]
+          [--webservice <namenode_http_addr>] <path> >>>
+
+*------------------------------+---------------------------------------------+
+|| COMMAND_OPTION              || Description
+*------------------------------+---------------------------------------------+
+| <fileName>                   | File name to store the token into.
+*------------------------------+---------------------------------------------+
+| --webservice <https_address> | use http protocol instead of RPC
+*------------------------------+---------------------------------------------+
+
+** <<<fsck>>>
+
+   Runs a HDFS filesystem checking utility.
+   See {{{./HdfsUserGuide.html#fsck}fsck}} for more info.
+
+   Usage: <<<hdfs fsck [GENERIC_OPTIONS] <path>
+          [-move | -delete | -openforwrite]
+          [-files [-blocks [-locations | -racks]]]>>>
+
+*------------------+---------------------------------------------+
+||  COMMAND_OPTION || Description
+*------------------+---------------------------------------------+
+|   <path>         | Start checking from this path.
+*------------------+---------------------------------------------+
+|   -move          | Move corrupted files to /lost+found
+*------------------+---------------------------------------------+
+|   -delete        | Delete corrupted files.
+*------------------+---------------------------------------------+
+|   -openforwrite  | Print out files opened for write.
+*------------------+---------------------------------------------+
+|   -files         | Print out files being checked.
+*------------------+---------------------------------------------+
+|   -blocks        | Print out block report.
+*------------------+---------------------------------------------+
+|   -locations     | Print out locations for every block.
+*------------------+---------------------------------------------+
+|   -racks         | Print out network topology for data-node locations.
+*------------------+---------------------------------------------+
+
+* Administration Commands
+
+   Commands useful for administrators of a hadoop cluster.
+
+** <<<balancer>>>
+
+   Runs a cluster balancing utility. An administrator can simply press Ctrl-C
+   to stop the rebalancing process. See
+   {{{./HdfsUserGuide.html#Balancer}Balancer}} for more details.
+
+   Usage: <<<hdfs balancer [-threshold <threshold>] [-policy <policy>]>>>
+
+*------------------------+----------------------------------------------------+
+|| COMMAND_OPTION        | Description
+*------------------------+----------------------------------------------------+
+| -threshold <threshold> | Percentage of disk capacity. This overwrites the
+|                        | default threshold.
+*------------------------+----------------------------------------------------+
+| -policy <policy>       | <<<datanode>>> (default): Cluster is balanced if
+|                        | each datanode is balanced. \
+|                        | <<<blockpool>>>: Cluster is balanced if each block
+|                        | pool in each datanode is balanced.
+*------------------------+----------------------------------------------------+
+
+   Note that the <<<blockpool>>> policy is more strict than the <<<datanode>>>
+   policy.
+
+** <<<datanode>>>
+
+   Runs a HDFS datanode.
+
+   Usage: <<<hdfs datanode [-regular | -rollback | -rollingupgrace rollback]>>>
+
+*-----------------+-----------------------------------------------------------+
+|| COMMAND_OPTION || Description
+*-----------------+-----------------------------------------------------------+
+| -regular        | Normal datanode startup (default).
+*-----------------+-----------------------------------------------------------+
+| -rollback       | Rollsback the datanode to the previous version. This should
+|                 | be used after stopping the datanode and distributing the
+|                 | old hadoop version.
+*-----------------+-----------------------------------------------------------+
+| -rollingupgrade rollback | Rollsback a rolling upgrade operation.
+*-----------------+-----------------------------------------------------------+
+
+** <<<dfsadmin>>>
+
+   Runs a HDFS dfsadmin client.
+
+   Usage: <<<hdfs dfsadmin [GENERIC_OPTIONS]
+          [-report [-live] [-dead] [-decommissioning]]
+          [-safemode enter | leave | get | wait]
+          [-saveNamespace]
+          [-rollEdits]
+          [-restoreFailedStorage true|false|check]
+          [-refreshNodes]
+          [-setQuota <quota> <dirname>...<dirname>]
+          [-clrQuota <dirname>...<dirname>]
+          [-setSpaceQuota <quota> <dirname>...<dirname>]
+          [-clrSpaceQuota <dirname>...<dirname>]
+          [-finalizeUpgrade]
+          [-rollingUpgrade [<query>|<prepare>|<finalize>]]
+          [-metasave filename]
+          [-refreshServiceAcl]
+          [-refreshUserToGroupsMappings]
+          [-refreshSuperUserGroupsConfiguration]
+          [-refreshCallQueue]
+          [-refresh <host:ipc_port> <key> [arg1..argn]]
+          [-printTopology]
+          [-refreshNamenodes datanodehost:port]
+          [-deleteBlockPool datanode-host:port blockpoolId [force]]
+          [-setBalancerBandwidth <bandwidth in bytes per second>]
+          [-allowSnapshot <snapshotDir>]
+          [-disallowSnapshot <snapshotDir>]
+          [-fetchImage <local directory>]
+          [-shutdownDatanode <datanode_host:ipc_port> [upgrade]]
+          [-getDatanodeInfo <datanode_host:ipc_port>]
+          [-help [cmd]]>>>
+
+*-----------------+-----------------------------------------------------------+
+|| COMMAND_OPTION || Description
+*-----------------+-----------------------------------------------------------+
+| -report [-live] [-dead] [-decommissioning] | Reports basic filesystem
+                  | information and statistics. Optional flags may be used to
+                  | filter the list of displayed DataNodes.
+*-----------------+-----------------------------------------------------------+
+| -safemode enter\|leave\|get\|wait | Safe mode maintenance command. Safe
+                  | mode is a Namenode state in which it \
+                  | 1. does not accept changes to the name space (read-only) \
+                  | 2. does not replicate or delete blocks. \
+                  | Safe mode is entered automatically at Namenode startup, and
+                  | leaves safe mode automatically when the configured minimum
+                  | percentage of blocks satisfies the minimum replication
+                  | condition. Safe mode can also be entered manually, but then
+                  | it can only be turned off manually as well.
+*-----------------+-----------------------------------------------------------+
+| -saveNamespace  | Save current namespace into storage directories and reset
+                  | edits log. Requires safe mode.
+*-----------------+-----------------------------------------------------------+
+| -rollEdits      | Rolls the edit log on the active NameNode.
+*-----------------+-----------------------------------------------------------+
+| -restoreFailedStorage true\|false\|check | This option will turn on/off
+                  | automatic attempt to restore failed storage replicas.
+                  | If a failed storage becomes available again the system will
+                  | attempt to restore edits and/or fsimage during checkpoint.
+                  | 'check' option will return current setting.
+*-----------------+-----------------------------------------------------------+
+| -refreshNodes   | Re-read the hosts and exclude files to update the set of
+                  | Datanodes that are allowed to connect to the Namenode and
+                  | those that should be decommissioned or recommissioned.
+*-----------------+-----------------------------------------------------------+
+| -setQuota \<quota\> \<dirname\>...\<dirname\> | See
+                  | {{{../hadoop-hdfs/HdfsQuotaAdminGuide.html#Administrative_Commands}HDFS Quotas Guide}}
+                  | for the detail.
+*-----------------+-----------------------------------------------------------+
+| -clrQuota \<dirname\>...\<dirname\> | See
+                  | {{{../hadoop-hdfs/HdfsQuotaAdminGuide.html#Administrative_Commands}HDFS Quotas Guide}}
+                  | for the detail.
+*-----------------+-----------------------------------------------------------+
+| -setSpaceQuota \<quota\> \<dirname\>...\<dirname\> | See
+                  | {{{../hadoop-hdfs/HdfsQuotaAdminGuide.html#Administrative_Commands}HDFS Quotas Guide}}
+                  | for the detail.
+*-----------------+-----------------------------------------------------------+
+| -clrSpaceQuota \<dirname\>...\<dirname\> | See
+                  | {{{../hadoop-hdfs/HdfsQuotaAdminGuide.html#Administrative_Commands}HDFS Quotas Guide}}
+                  | for the detail.
+*-----------------+-----------------------------------------------------------+
+| -finalizeUpgrade| Finalize upgrade of HDFS. Datanodes delete their previous
+                  | version working directories, followed by Namenode doing the
+                  | same. This completes the upgrade process.
+*-----------------+-----------------------------------------------------------+
+| -rollingUpgrade [\<query\>\|\<prepare\>\|\<finalize\>] | See
+                  | {{{../hadoop-hdfs/HdfsRollingUpgrade.html#dfsadmin_-rollingUpgrade}Rolling Upgrade document}}
+                  | for the detail.
+*-----------------+-----------------------------------------------------------+
+| -metasave filename | Save Namenode's primary data structures to <filename> in
+                  | the directory specified by hadoop.log.dir property.
+                  | <filename> is overwritten if it exists.
+                  | <filename> will contain one line for each of the following\
+                  | 1. Datanodes heart beating with Namenode\
+                  | 2. Blocks waiting to be replicated\
+                  | 3. Blocks currrently being replicated\
+                  | 4. Blocks waiting to be deleted
+*-----------------+-----------------------------------------------------------+
+| -refreshServiceAcl | Reload the service-level authorization policy file.
+*-----------------+-----------------------------------------------------------+
+| -refreshUserToGroupsMappings | Refresh user-to-groups mappings.
+*-----------------+-----------------------------------------------------------+
+| -refreshSuperUserGroupsConfiguration |Refresh superuser proxy groups mappings
+*-----------------+-----------------------------------------------------------+
+| -refreshCallQueue | Reload the call queue from config.
+*-----------------+-----------------------------------------------------------+
+| -refresh \<host:ipc_port\> \<key\> [arg1..argn] | Triggers a runtime-refresh
+                  | of the resource specified by \<key\> on \<host:ipc_port\>.
+                  | All other args after are sent to the host.
+*-----------------+-----------------------------------------------------------+
+| -printTopology  | Print a tree of the racks and their nodes as reported by
+                  | the Namenode
+*-----------------+-----------------------------------------------------------+
+| -refreshNamenodes datanodehost:port | For the given datanode, reloads the
+                  | configuration files, stops serving the removed block-pools
+                  | and starts serving new block-pools.
+*-----------------+-----------------------------------------------------------+
+| -deleteBlockPool datanode-host:port blockpoolId [force] | If force is passed,
+                  | block pool directory for the given blockpool id on the
+                  | given datanode is deleted along with its contents,
+                  | otherwise the directory is deleted only if it is empty.
+                  | The command will fail if datanode is still serving the
+                  | block pool. Refer to refreshNamenodes to shutdown a block
+                  | pool service on a datanode.
+*-----------------+-----------------------------------------------------------+
+| -setBalancerBandwidth \<bandwidth in bytes per second\> | Changes the network
+                  | bandwidth used by each datanode during HDFS block
+                  | balancing. \<bandwidth\> is the maximum number of bytes per
+                  | second that will be used by each datanode. This value
+                  | overrides the dfs.balance.bandwidthPerSec parameter.\
+                  | NOTE: The new value is not persistent on the DataNode.
+*-----------------+-----------------------------------------------------------+
+| -allowSnapshot \<snapshotDir\> | Allowing snapshots of a directory to be
+                  | created. If the operation completes successfully, the
+                  | directory becomes snapshottable.
+*-----------------+-----------------------------------------------------------+
+| -disallowSnapshot \<snapshotDir\> | Disallowing snapshots of a directory to
+                  | be created. All snapshots of the directory must be deleted
+                  | before disallowing snapshots.
+*-----------------+-----------------------------------------------------------+
+| -fetchImage \<local directory\> | Downloads the most recent fsimage from the
+                  | NameNode and saves it in the specified local directory.
+*-----------------+-----------------------------------------------------------+
+| -shutdownDatanode \<datanode_host:ipc_port\> [upgrade] | Submit a shutdown
+                  | request for the given datanode. See
+                  | {{{./HdfsRollingUpgrade.html#dfsadmin_-shutdownDatanode}Rolling Upgrade document}}
+                  | for the detail.
+*-----------------+-----------------------------------------------------------+
+| -getDatanodeInfo \<datanode_host:ipc_port\> | Get the information about the
+                  | given datanode. See
+                  | {{{./HdfsRollingUpgrade.html#dfsadmin_-getDatanodeInfo}Rolling Upgrade document}}
+                  | for the detail.
+*-----------------+-----------------------------------------------------------+
+| -help [cmd]     | Displays help for the given command or all commands if none
+                  | is specified.
+*-----------------+-----------------------------------------------------------+
+
+** <<<namenode>>>
+
+   Runs the namenode. More info about the upgrade, rollback and finalize is at
+   {{{./HdfsUserGuide.html#Upgrade_and_Rollback}Upgrade Rollback}}.
+
+   Usage: <<<hdfs namenode [-backup] |
+          [-checkpoint] |
+          [-format [-clusterid cid ] [-force] [-nonInteractive] ] |
+          [-upgrade [-clusterid cid] [-renameReserved<k-v pairs>] ] |
+          [-upgradeOnly [-clusterid cid] [-renameReserved<k-v pairs>] ] |
+          [-rollback] |
+          [-rollingUpgrade <downgrade|rollback> ] |
+          [-finalize] |
+          [-importCheckpoint] |
+          [-initializeSharedEdits] |
+          [-bootstrapStandby] |
+          [-recover [-force] ] |
+          [-metadataVersion ]>>>
+
+*--------------------+--------------------------------------------------------+
+|| COMMAND_OPTION    || Description
+*--------------------+--------------------------------------------------------+
+| -backup            | Start backup node.
+*--------------------+--------------------------------------------------------+
+| -checkpoint        | Start checkpoint node.
+*--------------------+--------------------------------------------------------+
+| -format [-clusterid cid] [-force] [-nonInteractive] | Formats the specified
+                     | NameNode. It starts the NameNode, formats it and then
+                     | shut it down. -force option formats if the name
+                     | directory exists. -nonInteractive option aborts if the
+                     | name directory exists, unless -force option is specified.
+*--------------------+--------------------------------------------------------+
+| -upgrade [-clusterid cid] [-renameReserved\<k-v pairs\>] | Namenode should be
+                     | started with upgrade option after
+                     | the distribution of new Hadoop version.
+*--------------------+--------------------------------------------------------+
+| -upgradeOnly [-clusterid cid] [-renameReserved\<k-v pairs\>] | Upgrade the
+                     | specified NameNode and then shutdown it.
+*--------------------+--------------------------------------------------------+
+| -rollback          | Rollsback the NameNode to the previous version. This
+                     | should be used after stopping the cluster and
+                     | distributing the old Hadoop version.
+*--------------------+--------------------------------------------------------+
+| -rollingUpgrade \<downgrade\|rollback\|started\> | See
+                     | {{{./HdfsRollingUpgrade.html#NameNode_Startup_Options}Rolling Upgrade document}}
+                     | for the detail.
+*--------------------+--------------------------------------------------------+
+| -finalize          | Finalize will remove the previous state of the files
+                     | system. Recent upgrade will become permanent.  Rollback
+                     | option will not be available anymore. After finalization
+                     | it shuts the NameNode down.
+*--------------------+--------------------------------------------------------+
+| -importCheckpoint  | Loads image from a checkpoint directory and save it
+                     | into the current one. Checkpoint dir is read from
+                     | property fs.checkpoint.dir
+*--------------------+--------------------------------------------------------+
+| -initializeSharedEdits | Format a new shared edits dir and copy in enough
+                     | edit log segments so that the standby NameNode can start
+                     | up.
+*--------------------+--------------------------------------------------------+
+| -bootstrapStandby  | Allows the standby NameNode's storage directories to be
+                     | bootstrapped by copying the latest namespace snapshot
+                     | from the active NameNode. This is used when first
+                     | configuring an HA cluster.
+*--------------------+--------------------------------------------------------+
+| -recover [-force]  | Recover lost metadata on a corrupt filesystem. See
+                     | {{{./HdfsUserGuide.html#Recovery_Mode}HDFS User Guide}}
+                     | for the detail.
+*--------------------+--------------------------------------------------------+
+| -metadataVersion   | Verify that configured directories exist, then print the
+                     | metadata versions of the software and the image.
+*--------------------+--------------------------------------------------------+
+
+** <<<secondarynamenode>>>
+
+   Runs the HDFS secondary namenode.
+   See {{{./HdfsUserGuide.html#Secondary_NameNode}Secondary Namenode}}
+   for more info.
+
+   Usage: <<<hdfs secondarynamenode [-checkpoint [force]] | [-format] |
+          [-geteditsize]>>>
+
+*----------------------+------------------------------------------------------+
+|| COMMAND_OPTION      || Description
+*----------------------+------------------------------------------------------+
+| -checkpoint [force]  | Checkpoints the SecondaryNameNode if EditLog size
+                       | >= fs.checkpoint.size. If <<<force>>> is used,
+                       | checkpoint irrespective of EditLog size.
+*----------------------+------------------------------------------------------+
+| -format              | Format the local storage during startup.
+*----------------------+------------------------------------------------------+
+| -geteditsize         | Prints the number of uncheckpointed transactions on
+                       | the NameNode.
+*----------------------+------------------------------------------------------+
