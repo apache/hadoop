@@ -184,6 +184,11 @@ public class Resources {
     return calculator.roundDown(lhs, factor);
   }
   
+  public static boolean isInvalidDivisor(
+      ResourceCalculator resourceCalculator, Resource divisor) {
+    return resourceCalculator.isInvalidDivisor(divisor);
+  }
+
   public static float ratio(
       ResourceCalculator resourceCalculator, Resource lhs, Resource rhs) {
     return resourceCalculator.ratio(lhs, rhs);
