@@ -115,6 +115,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6728. Dynamically add new volumes to DataStorage, formatted if
     necessary. (Lei Xu vi atm)
 
+    HDFS-6740. Make FSDataset support adding data volumes dynamically. (Lei
+    Xu via atm)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
