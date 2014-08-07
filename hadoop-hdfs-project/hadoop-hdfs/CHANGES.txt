@@ -109,6 +109,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6812. Remove addBlock and replaceBlock from DatanodeDescriptor.
     (szetszwo)
 
+    HDFS-6781. Separate HDFS commands from CommandsManual.apt.vm. (Akira
+    Ajisaka via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

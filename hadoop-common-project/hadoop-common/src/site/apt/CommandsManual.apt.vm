@@ -114,55 +114,18 @@ User Commands
 
 * <<<fs>>>
 
-   Usage: <<<hadoop fs [GENERIC_OPTIONS] [COMMAND_OPTIONS]>>>
-
-   Deprecated, use <<<hdfs dfs>>> instead.
-
-   Runs a generic filesystem user client.
-
-   The various COMMAND_OPTIONS can be found at File System Shell Guide.
+   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#dfs}<<<hdfs dfs>>>}}
+   instead.
 
 * <<<fsck>>>
 
-   Runs a HDFS filesystem checking utility.
-   See {{{../hadoop-hdfs/HdfsUserGuide.html#fsck}fsck}} for more info.
-
-   Usage: <<<hadoop fsck [GENERIC_OPTIONS] <path> [-move | -delete | -openforwrite] [-files [-blocks [-locations | -racks]]]>>>
-
-*------------------+---------------------------------------------+
-||  COMMAND_OPTION || Description
-*------------------+---------------------------------------------+
-|   <path>         | Start checking from this path.
-*------------------+---------------------------------------------+
-|   -move          | Move corrupted files to /lost+found
-*------------------+---------------------------------------------+
-|   -delete        | Delete corrupted files.
-*------------------+---------------------------------------------+
-|   -openforwrite  | Print out files opened for write.
-*------------------+---------------------------------------------+
-|   -files         | Print out files being checked.
-*------------------+---------------------------------------------+
-|   -blocks        | Print out block report.
-*------------------+---------------------------------------------+
-|   -locations     | Print out locations for every block.
-*------------------+---------------------------------------------+
-|   -racks         | Print out network topology for data-node locations.
-*------------------+---------------------------------------------+
+   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#fsck}<<<hdfs fsck>>>}}
+   instead.
 
 * <<<fetchdt>>>
 
-   Gets Delegation Token from a NameNode.
-   See {{{../hadoop-hdfs/HdfsUserGuide.html#fetchdt}fetchdt}} for more info.
-
-   Usage: <<<hadoop fetchdt [GENERIC_OPTIONS] [--webservice <namenode_http_addr>] <path> >>>
-
-*------------------------------+---------------------------------------------+
-|| COMMAND_OPTION              || Description
-*------------------------------+---------------------------------------------+
-| <fileName>                   | File name to store the token into.
-*------------------------------+---------------------------------------------+
-| --webservice <https_address> | use http protocol instead of RPC
-*------------------------------+---------------------------------------------+
+   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#fetchdt}
+   <<<hdfs fetchdt>>>}} instead.
 
 * <<<jar>>>
 
@@ -319,23 +282,8 @@ Administration Commands
 
 * <<<balancer>>>
 
-   Runs a cluster balancing utility. An administrator can simply press Ctrl-C
-   to stop the rebalancing process. See
-   {{{../hadoop-hdfs/HdfsUserGuide.html#Balancer}Balancer}} for more details.
-
-   Usage: <<<hadoop balancer [-threshold <threshold>] [-policy <policy>]>>>
-
-*------------------------+-----------------------------------------------------------+
-|| COMMAND_OPTION        | Description
-*------------------------+-----------------------------------------------------------+
-| -threshold <threshold> | Percentage of disk capacity. This overwrites the
-                         | default threshold.
-*------------------------+-----------------------------------------------------------+
-| -policy <policy>       | <<<datanode>>> (default): Cluster is balanced if each datanode is balanced. \
-                         | <<<blockpool>>>: Cluster is balanced if each block pool in each datanode is balanced.
-*------------------------+-----------------------------------------------------------+
-
-   Note that the <<<blockpool>>> policy is more strict than the <<<datanode>>> policy.
+   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#balancer}
+   <<<hdfs balancer>>>}} instead.
 
 * <<<daemonlog>>>
 
@@ -358,84 +306,13 @@ Administration Commands
 
 * <<<datanode>>>
 
-   Runs a HDFS datanode.
-
-   Usage: <<<hadoop datanode [-rollback]>>>
-
-*-----------------+-----------------------------------------------------------+
-|| COMMAND_OPTION || Description
-*-----------------+-----------------------------------------------------------+
-| -rollback       | Rollsback the datanode to the previous version. This should
-                  | be used after stopping the datanode and distributing the old
-                  | hadoop version.
-*-----------------+-----------------------------------------------------------+
+   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#datanode}
+   <<<hdfs datanode>>>}} instead.
 
 * <<<dfsadmin>>>
 
-   Runs a HDFS dfsadmin client.
-
-   Usage: <<<hadoop dfsadmin [GENERIC_OPTIONS] [-report] [-safemode enter | leave | get | wait] [-refreshNodes] [-finalizeUpgrade] [-upgradeProgress status | details | force] [-metasave filename] [-setQuota <quota> <dirname>...<dirname>] [-clrQuota <dirname>...<dirname>] [-restoreFailedStorage true|false|check] [-help [cmd]]>>>
-
-*-----------------+-----------------------------------------------------------+
-|| COMMAND_OPTION || Description
-*-----------------+-----------------------------------------------------------+
-| -report         | Reports basic filesystem information and statistics.
-*-----------------+-----------------------------------------------------------+
-| -safemode enter / leave / get / wait | Safe mode maintenance command. Safe
-                  | mode is a Namenode state in which it \
-                  | 1. does not accept changes to the name space (read-only) \
-                  | 2. does not replicate or delete blocks. \
-                  | Safe mode is entered automatically at Namenode startup, and
-                  | leaves safe mode automatically when the configured minimum
-                  | percentage of blocks satisfies the minimum replication
-                  | condition. Safe mode can also be entered manually, but then
-                  | it can only be turned off manually as well.
-*-----------------+-----------------------------------------------------------+
-| -refreshNodes   | Re-read the hosts and exclude files to update the set of
-                  | Datanodes that are allowed to connect to the Namenode and
-                  | those that should be decommissioned or recommissioned.
-*-----------------+-----------------------------------------------------------+
-| -finalizeUpgrade| Finalize upgrade of HDFS. Datanodes delete their previous
-                  | version working directories, followed by Namenode doing the
-                  | same. This completes the upgrade process.
-*-----------------+-----------------------------------------------------------+
-| -upgradeProgress status / details / force | Request current distributed
-                  | upgrade status, a detailed status or force the upgrade to
-                  | proceed.
-*-----------------+-----------------------------------------------------------+
-| -metasave filename | Save Namenode's primary data structures to <filename> in
-                  | the directory specified by hadoop.log.dir property.
-                  | <filename> is overwritten if it exists.
-                  | <filename> will contain one line for each of the following\
-                  | 1. Datanodes heart beating with Namenode\
-                  | 2. Blocks waiting to be replicated\
-                  | 3. Blocks currrently being replicated\
-                  | 4. Blocks waiting to be deleted\
-*-----------------+-----------------------------------------------------------+
-| -setQuota <quota> <dirname>...<dirname> | Set the quota <quota> for each
-                  | directory <dirname>. The directory quota is a long integer
-                  | that puts a hard limit on the number of names in the
-                  | directory tree.  Best effort for the directory, with faults
-                  | reported if \
-                  | 1. N is not a positive integer, or \
-                  | 2. user is not an administrator, or \
-                  | 3. the directory does not exist or is a file, or \
-                  | 4. the directory would immediately exceed the new quota. \
-*-----------------+-----------------------------------------------------------+
-| -clrQuota <dirname>...<dirname> | Clear the quota for each directory
-                  | <dirname>.  Best effort for the directory. with fault
-                  | reported if \
-                  | 1. the directory does not exist or is a file, or \
-                  | 2. user is not an administrator.  It does not fault if the
-                  | directory has no quota.
-*-----------------+-----------------------------------------------------------+
-| -restoreFailedStorage true / false / check | This option will turn on/off automatic attempt to restore failed storage replicas.
-                  | If a failed storage becomes available again the system will attempt to restore
-                  | edits and/or fsimage during checkpoint. 'check' option will return current setting.
-*-----------------+-----------------------------------------------------------+
-| -help [cmd]     | Displays help for the given command or all commands if none
-                  | is specified.
-*-----------------+-----------------------------------------------------------+
+   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#dfsadmin}
+   <<<hdfs dfsadmin>>>}} instead.
 
 * <<<mradmin>>>
 
@@ -468,51 +345,13 @@ Administration Commands
 
 * <<<namenode>>>
 
-   Runs the namenode. More info about the upgrade, rollback and finalize is
-   at {{{../hadoop-hdfs/HdfsUserGuide.html#Upgrade_and_Rollback}Upgrade Rollback}}.
-
-   Usage: <<<hadoop namenode [-format] | [-upgrade] | [-rollback] | [-finalize] | [-importCheckpoint]>>>
-
-*--------------------+-----------------------------------------------------------+
-|| COMMAND_OPTION    || Description
-*--------------------+-----------------------------------------------------------+
-| -format            | Formats the namenode. It starts the namenode, formats
-                     | it and then shut it down.
-*--------------------+-----------------------------------------------------------+
-| -upgrade           | Namenode should be started with upgrade option after
-                     | the distribution of new hadoop version.
-*--------------------+-----------------------------------------------------------+
-| -rollback          | Rollsback the namenode to the previous version. This
-                     | should be used after stopping the cluster and
-                     | distributing the old hadoop version.
-*--------------------+-----------------------------------------------------------+
-| -finalize          | Finalize will remove the previous state of the files
-                     | system. Recent upgrade will become permanent.  Rollback
-                     | option will not be available anymore. After finalization
-                     | it shuts the namenode down.
-*--------------------+-----------------------------------------------------------+
-| -importCheckpoint  | Loads image from a checkpoint directory and save it
-                     | into the current one. Checkpoint dir is read from
-                     | property fs.checkpoint.dir
-*--------------------+-----------------------------------------------------------+
+   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#namenode}
+   <<<hdfs namenode>>>}} instead.
 
 * <<<secondarynamenode>>>
 
-   Runs the HDFS secondary namenode.
-   See {{{../hadoop-hdfs/HdfsUserGuide.html#Secondary_NameNode}Secondary Namenode}}
-   for more info.
-
-   Usage: <<<hadoop secondarynamenode [-checkpoint [force]] | [-geteditsize]>>>
-
-*----------------------+-----------------------------------------------------------+
-|| COMMAND_OPTION      || Description
-*----------------------+-----------------------------------------------------------+
-| -checkpoint [-force] | Checkpoints the Secondary namenode if EditLog size
-                       | >= fs.checkpoint.size. If <<<-force>>> is used,
-                       | checkpoint irrespective of EditLog size.
-*----------------------+-----------------------------------------------------------+
-| -geteditsize         | Prints the EditLog size.
-*----------------------+-----------------------------------------------------------+
+   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#secondarynamenode}
+   <<<hdfs secondarynamenode>>>}} instead.
 
 * <<<tasktracker>>>
 
