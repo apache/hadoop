@@ -106,6 +106,9 @@ Release 2.6.0 - UNRELEASED
     standalone classes and separates KeyManager from NameNodeConnector.
     (szetszwo)
 
+    HDFS-6812. Remove addBlock and replaceBlock from DatanodeDescriptor.
+    (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
