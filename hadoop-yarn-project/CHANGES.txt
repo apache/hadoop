@@ -91,6 +91,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2298. Move TimelineClient to yarn-common project (Zhijie Shen via 
     junping_du)
 
+    YARN-2288. Made persisted data in LevelDB timeline store be versioned. (Junping Du
+    via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
