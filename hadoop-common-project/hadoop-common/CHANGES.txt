@@ -111,6 +111,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10905. LdapGroupsMapping Should use configuration.getPassword for SSL
     and LDAP Passwords. (lmccay via brandonli)
 
+    HADOOP-10931 compile error on tools/hadoop-openstack (xukun via stevel)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
