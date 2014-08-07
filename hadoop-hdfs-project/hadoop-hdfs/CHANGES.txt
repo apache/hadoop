@@ -112,6 +112,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6781. Separate HDFS commands from CommandsManual.apt.vm. (Akira
     Ajisaka via Arpit Agarwal)
 
+    HDFS-6728. Dynamically add new volumes to DataStorage, formatted if
+    necessary. (Lei Xu vi atm)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
