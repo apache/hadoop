@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -1079,6 +1080,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
   @Override
   public List<FsVolumeSpi> getVolumes() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void addVolumes(Collection<StorageLocation> volumes) {
     throw new UnsupportedOperationException();
   }
 
