@@ -360,6 +360,10 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6787. Remove duplicate code in FSDirectory#unprotectedConcat. (Yi Liu via umamahesh)
 
+    HDFS-6809. Move Balancer's inner classes MovedBlocks and Matcher as to
+    standalone classes and separates KeyManager from NameNodeConnector.
+    (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
