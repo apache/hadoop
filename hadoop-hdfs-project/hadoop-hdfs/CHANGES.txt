@@ -384,6 +384,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-573. Porting libhdfs to Windows. (cnauroth)
 
+    HDFS-6828. Separate block replica dispatching from Balancer. (szetszwo via
+    jing9)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

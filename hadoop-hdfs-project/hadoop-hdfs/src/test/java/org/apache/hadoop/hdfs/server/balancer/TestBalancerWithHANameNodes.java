@@ -44,7 +44,7 @@ public class TestBalancerWithHANameNodes {
   ClientProtocol client;
 
   static {
-    Balancer.setBlockMoveWaitTime(1000L);
+    Dispatcher.setBlockMoveWaitTime(1000L);
   }
 
   /**
