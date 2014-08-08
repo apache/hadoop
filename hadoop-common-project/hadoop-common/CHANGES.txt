@@ -421,6 +421,9 @@ Trunk (Unreleased)
     HADOOP-10939. Fix TestKeyProviderFactory testcases to use default 128 bit
     length keys. (Arun Suresh via wang)
 
+    HADOOP-10862. Miscellaneous trivial corrections to KMS classes. 
+    (asuresh via tucu)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
