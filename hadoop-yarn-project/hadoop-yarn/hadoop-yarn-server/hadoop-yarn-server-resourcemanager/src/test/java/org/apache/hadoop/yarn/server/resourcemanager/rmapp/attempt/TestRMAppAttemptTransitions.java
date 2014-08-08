@@ -349,7 +349,6 @@ public class TestRMAppAttemptTransitions {
       assertNull(applicationAttempt.createClientToken("some client"));
     }
     assertNull(applicationAttempt.createClientToken(null));
-    assertNotNull(applicationAttempt.getAMRMToken());
     // Check events
     verify(masterService).
         registerAppAttempt(applicationAttempt.getAppAttemptId());
@@ -445,7 +444,6 @@ public class TestRMAppAttemptTransitions {
     assertEquals(RMAppAttemptState.ALLOCATED, 
         applicationAttempt.getAppAttemptState());
     assertEquals(amContainer, applicationAttempt.getMasterContainer());
-    
     // Check events
     verify(applicationMasterLauncher).handle(any(AMLauncherEvent.class));
     verify(scheduler, times(2)).
