@@ -132,6 +132,9 @@ Release 2.6.0 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-6823. dfs.web.authentication.kerberos.principal shows up in logs for 
+    insecure HDFS (Allen Wittenauer via raviprak)
+
     HDFS-6517. Remove hadoop-metrics2.properties from hdfs project (Akira 
                 AJISAKA via aw)
 
