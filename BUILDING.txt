@@ -189,6 +189,7 @@ Requirements:
 * Maven 3.0 or later
 * Findbugs 1.3.9 (if running findbugs)
 * ProtocolBuffer 2.5.0
+* CMake 2.6 or newer
 * Windows SDK or Visual Studio 2010 Professional
 * Unix command-line tools from GnuWin32 or Cygwin: sh, mkdir, rm, cp, tar, gzip
 * zlib headers (if building native code bindings for zlib)

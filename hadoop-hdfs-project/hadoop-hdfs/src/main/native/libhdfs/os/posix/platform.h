@@ -16,26 +16,19 @@
  * limitations under the License.
  */
 
-#include "expect.h"
-#include "native_mini_dfs.h"
+#ifndef LIBHDFS_PLATFORM_H
+#define LIBHDFS_PLATFORM_H
 
-#include <errno.h>
+#include <pthread.h>
 
-static struct NativeMiniDfsConf conf = {
-    1, /* doFormat */
-};
+/* Use gcc type-checked format arguments. */
+#define TYPE_CHECKED_PRINTF_FORMAT(formatArg, varArgs) \
+  __attribute__((format(printf, formatArg, varArgs)))
 
-/**
- * Test that we can create a MiniDFSCluster and shut it down.
+/*
+ * Mutex and thread data types defined by pthreads.
  */
-int main(void) {
-    struct NativeMiniDfsCluster* cl;
-    
-    cl = nmdCreate(&conf);
-    EXPECT_NONNULL(cl);
-    EXPECT_ZERO(nmdWaitClusterUp(cl));
-    EXPECT_ZERO(nmdShutdown(cl));
-    nmdFree(cl);
+typedef pthread_mutex_t mutex;
+typedef pthread_t threadId;
 
-    return 0;
-}
+#endif

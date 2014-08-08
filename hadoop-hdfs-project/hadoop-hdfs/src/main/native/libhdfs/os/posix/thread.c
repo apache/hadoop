@@ -16,26 +16,37 @@
  * limitations under the License.
  */
 
-#include "expect.h"
-#include "native_mini_dfs.h"
+#include "os/thread.h"
 
-#include <errno.h>
-
-static struct NativeMiniDfsConf conf = {
-    1, /* doFormat */
-};
+#include <pthread.h>
+#include <stdio.h>
 
 /**
- * Test that we can create a MiniDFSCluster and shut it down.
+ * Defines a helper function that adapts function pointer provided by caller to
+ * the type required by pthread_create.
+ *
+ * @param toRun thread to run
+ * @return void* result of running thread (always NULL)
  */
-int main(void) {
-    struct NativeMiniDfsCluster* cl;
-    
-    cl = nmdCreate(&conf);
-    EXPECT_NONNULL(cl);
-    EXPECT_ZERO(nmdWaitClusterUp(cl));
-    EXPECT_ZERO(nmdShutdown(cl));
-    nmdFree(cl);
+static void* runThread(void *toRun) {
+  const thread *t = toRun;
+  t->start(t->arg);
+  return NULL;
+}
 
-    return 0;
+int threadCreate(thread *t) {
+  int ret;
+  ret = pthread_create(&t->id, NULL, runThread, t);
+  if (ret) {
+    fprintf(stderr, "threadCreate: pthread_create failed with error %d\n", ret);
+  }
+  return ret;
+}
+
+int threadJoin(const thread *t) {
+  int ret = pthread_join(t->id, NULL);
+  if (ret) {
+    fprintf(stderr, "threadJoin: pthread_join failed with error %d\n", ret);
+  }
+  return ret;
 }

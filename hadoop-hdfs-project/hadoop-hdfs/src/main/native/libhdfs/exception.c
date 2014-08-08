@@ -19,8 +19,8 @@
 #include "exception.h"
 #include "hdfs.h"
 #include "jni_helper.h"
+#include "platform.h"
 
-#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,54 +35,54 @@ struct ExceptionInfo {
 
 static const struct ExceptionInfo gExceptionInfo[] = {
     {
-        .name = "java.io.FileNotFoundException",
-        .noPrintFlag = NOPRINT_EXC_FILE_NOT_FOUND,
-        .excErrno = ENOENT,
+        "java.io.FileNotFoundException",
+        NOPRINT_EXC_FILE_NOT_FOUND,
+        ENOENT,
     },
     {
-        .name = "org.apache.hadoop.security.AccessControlException",
-        .noPrintFlag = NOPRINT_EXC_ACCESS_CONTROL,
-        .excErrno = EACCES,
+        "org.apache.hadoop.security.AccessControlException",
+        NOPRINT_EXC_ACCESS_CONTROL,
+        EACCES,
     },
     {
-        .name = "org.apache.hadoop.fs.UnresolvedLinkException",
-        .noPrintFlag = NOPRINT_EXC_UNRESOLVED_LINK,
-        .excErrno = ENOLINK,
+        "org.apache.hadoop.fs.UnresolvedLinkException",
+        NOPRINT_EXC_UNRESOLVED_LINK,
+        ENOLINK,
     },
     {
-        .name = "org.apache.hadoop.fs.ParentNotDirectoryException",
-        .noPrintFlag = NOPRINT_EXC_PARENT_NOT_DIRECTORY,
-        .excErrno = ENOTDIR,
+        "org.apache.hadoop.fs.ParentNotDirectoryException",
+        NOPRINT_EXC_PARENT_NOT_DIRECTORY,
+        ENOTDIR,
     },
     {
-        .name = "java.lang.IllegalArgumentException",
-        .noPrintFlag = NOPRINT_EXC_ILLEGAL_ARGUMENT,
-        .excErrno = EINVAL,
+        "java.lang.IllegalArgumentException",
+        NOPRINT_EXC_ILLEGAL_ARGUMENT,
+        EINVAL,
     },
     {
-        .name = "java.lang.OutOfMemoryError",
-        .noPrintFlag = 0,
-        .excErrno = ENOMEM,
+        "java.lang.OutOfMemoryError",
+        0,
+        ENOMEM,
     },
     {
-        .name = "org.apache.hadoop.hdfs.server.namenode.SafeModeException",
-        .noPrintFlag = 0,
-        .excErrno = EROFS,
+        "org.apache.hadoop.hdfs.server.namenode.SafeModeException",
+        0,
+        EROFS,
     },
     {
-        .name = "org.apache.hadoop.fs.FileAlreadyExistsException",
-        .noPrintFlag = 0,
-        .excErrno = EEXIST,
+        "org.apache.hadoop.fs.FileAlreadyExistsException",
+        0,
+        EEXIST,
     },
     {
-        .name = "org.apache.hadoop.hdfs.protocol.QuotaExceededException",
-        .noPrintFlag = 0,
-        .excErrno = EDQUOT,
+        "org.apache.hadoop.hdfs.protocol.QuotaExceededException",
+        0,
+        EDQUOT,
     },
     {
-        .name = "org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException",
-        .noPrintFlag = 0,
-        .excErrno = ESTALE,
+        "org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException",
+        0,
+        ESTALE,
     },
 };
 
@@ -113,6 +113,7 @@ int printExceptionAndFreeV(JNIEnv *env, jthrowable exc, int noPrintFlags,
     jstring jStr = NULL;
     jvalue jVal;
     jthrowable jthr;
+    const char *stackTrace;
 
     jthr = classNameOfObject(exc, env, &className);
     if (jthr) {
@@ -148,7 +149,7 @@ int printExceptionAndFreeV(JNIEnv *env, jthrowable exc, int noPrintFlags,
             destroyLocalReference(env, jthr);
         } else {
             jStr = jVal.l;
-            const char *stackTrace = (*env)->GetStringUTFChars(env, jStr, NULL);
+            stackTrace = (*env)->GetStringUTFChars(env, jStr, NULL);
             if (!stackTrace) {
                 fprintf(stderr, "(unable to get stack trace for %s exception: "
                         "GetStringUTFChars error.)\n", className);

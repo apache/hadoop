@@ -382,6 +382,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-6772. Get DN storages out of blockContentsStale state faster after
     NN restarts. (Ming Ma via Arpit Agarwal)
 
+    HDFS-573. Porting libhdfs to Windows. (cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

@@ -16,26 +16,13 @@
  * limitations under the License.
  */
 
-#include "expect.h"
-#include "native_mini_dfs.h"
+#ifndef LIBHDFS_INTTYPES_H
+#define LIBHDFS_INTTYPES_H
 
-#include <errno.h>
+/* On Windows, inttypes.h does not exist, so manually define what we need. */
 
-static struct NativeMiniDfsConf conf = {
-    1, /* doFormat */
-};
+#define PRId64 "I64d"
+#define PRIu64 "I64u"
+typedef unsigned __int64 uint64_t;
 
-/**
- * Test that we can create a MiniDFSCluster and shut it down.
- */
-int main(void) {
-    struct NativeMiniDfsCluster* cl;
-    
-    cl = nmdCreate(&conf);
-    EXPECT_NONNULL(cl);
-    EXPECT_ZERO(nmdWaitClusterUp(cl));
-    EXPECT_ZERO(nmdShutdown(cl));
-    nmdFree(cl);
-
-    return 0;
-}
+#endif

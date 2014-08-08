@@ -126,6 +126,18 @@ struct hdfsFile_internal;
         } \
     } while (0);
 
+#define EXPECT_UINT64_EQ(x, y) \
+    do { \
+        uint64_t __my_ret__ = y; \
+        int __my_errno__ = errno; \
+        if (__my_ret__ != (x)) { \
+            fprintf(stderr, "TEST_ERROR: failed on %s:%d with return " \
+              "value %"PRIu64" (errno: %d): expected %"PRIu64"\n", \
+               __FILE__, __LINE__, __my_ret__, __my_errno__, (x)); \
+            return -1; \
+        } \
+    } while (0);
+
 #define RETRY_ON_EINTR_GET_ERRNO(ret, expr) do { \
     ret = expr; \
     if (!ret) \
