@@ -16,26 +16,28 @@
  * limitations under the License.
  */
 
-#include "expect.h"
-#include "native_mini_dfs.h"
+#include "os/mutexes.h"
 
-#include <errno.h>
+#include <pthread.h>
+#include <stdio.h>
 
-static struct NativeMiniDfsConf conf = {
-    1, /* doFormat */
-};
+mutex hdfsHashMutex = PTHREAD_MUTEX_INITIALIZER;
+mutex jvmMutex = PTHREAD_MUTEX_INITIALIZER;
 
-/**
- * Test that we can create a MiniDFSCluster and shut it down.
- */
-int main(void) {
-    struct NativeMiniDfsCluster* cl;
-    
-    cl = nmdCreate(&conf);
-    EXPECT_NONNULL(cl);
-    EXPECT_ZERO(nmdWaitClusterUp(cl));
-    EXPECT_ZERO(nmdShutdown(cl));
-    nmdFree(cl);
+int mutexLock(mutex *m) {
+  int ret = pthread_mutex_lock(m);
+  if (ret) {
+    fprintf(stderr, "mutexLock: pthread_mutex_lock failed with error %d\n",
+      ret);
+  }
+  return ret;
+}
 
-    return 0;
+int mutexUnlock(mutex *m) {
+  int ret = pthread_mutex_unlock(m);
+  if (ret) {
+    fprintf(stderr, "mutexUnlock: pthread_mutex_unlock failed with error %d\n",
+      ret);
+  }
+  return ret;
 }

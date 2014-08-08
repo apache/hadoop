@@ -16,26 +16,39 @@
  * limitations under the License.
  */
 
-#include "expect.h"
-#include "native_mini_dfs.h"
+#ifndef LIBHDFS_THREAD_H
+#define LIBHDFS_THREAD_H
 
-#include <errno.h>
+/*
+ * Defines abstraction over platform-specific threads.
+ */
 
-static struct NativeMiniDfsConf conf = {
-    1, /* doFormat */
-};
+#include "platform.h"
+
+/** Pointer to function to run in thread. */
+typedef void (*threadProcedure)(void *);
+
+/** Structure containing a thread's ID, starting address and argument. */
+typedef struct {
+  threadId id;
+  threadProcedure start;
+  void *arg;
+} thread;
 
 /**
- * Test that we can create a MiniDFSCluster and shut it down.
+ * Creates and immediately starts a new thread.
+ *
+ * @param t thread to create
+ * @return 0 if successful, non-zero otherwise
  */
-int main(void) {
-    struct NativeMiniDfsCluster* cl;
-    
-    cl = nmdCreate(&conf);
-    EXPECT_NONNULL(cl);
-    EXPECT_ZERO(nmdWaitClusterUp(cl));
-    EXPECT_ZERO(nmdShutdown(cl));
-    nmdFree(cl);
+int threadCreate(thread *t);
 
-    return 0;
-}
+/**
+ * Joins to the given thread, blocking if necessary.
+ *
+ * @param t thread to join
+ * @return 0 if successful, non-zero otherwise
+ */
+int threadJoin(const thread *t);
+
+#endif

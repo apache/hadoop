@@ -21,6 +21,7 @@
 #include "hdfs_test.h"
 #include "jni_helper.h"
 #include "native_mini_dfs.h"
+#include "platform.h"
 
 #include <errno.h>
 #include <jni.h>
@@ -347,10 +348,11 @@ error_dlr_nn:
 int nmdConfigureHdfsBuilder(struct NativeMiniDfsCluster *cl,
                             struct hdfsBuilder *bld)
 {
-    int port, ret;
+    int ret;
+    tPort port;
 
     hdfsBuilderSetNameNode(bld, "localhost");
-    port = nmdGetNameNodePort(cl);
+    port = (tPort)nmdGetNameNodePort(cl);
     if (port < 0) {
       fprintf(stderr, "nmdGetNameNodePort failed with error %d\n", -port);
       return EIO;
