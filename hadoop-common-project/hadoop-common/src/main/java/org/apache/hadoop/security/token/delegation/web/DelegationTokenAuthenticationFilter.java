@@ -15,79 +15,88 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs.http.server;
+package org.apache.hadoop.security.token.delegation.web;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
+import org.apache.hadoop.security.authentication.server.AuthenticationHandler;
+import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
+import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
+
 import javax.servlet.FilterConfig;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.Reader;
-import java.util.Map;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
 import java.util.Properties;
 
 /**
- * Subclass of hadoop-auth <code>AuthenticationFilter</code> that obtains its configuration
- * from HttpFSServer's server configuration.
+ *  The <code>DelegationTokenAuthenticationFilter</code> filter is a
+ *  {@link AuthenticationFilter} with Hadoop Delegation Token support.
+ *  <p/>
+ *  By default it uses it own instance of the {@link
+ *  AbstractDelegationTokenSecretManager}. For situations where an external
+ *  <code>AbstractDelegationTokenSecretManager</code> is required (i.e. one that
+ *  shares the secret with <code>AbstractDelegationTokenSecretManager</code>
+ *  instance running in other services), the external
+ *  <code>AbstractDelegationTokenSecretManager</code> must be set as an
+ *  attribute in the {@link ServletContext} of the web application using the
+ *  {@link #DELEGATION_TOKEN_SECRET_MANAGER_ATTR} attribute name (
+ *  'hadoop.http.delegation-token-secret-manager').
  */
 @InterfaceAudience.Private
-public class HttpFSAuthenticationFilter extends AuthenticationFilter {
-  private static final String CONF_PREFIX = "httpfs.authentication.";
-
-  private static final String SIGNATURE_SECRET_FILE = SIGNATURE_SECRET + ".file";
+@InterfaceStability.Evolving
+public class DelegationTokenAuthenticationFilter
+    extends AuthenticationFilter {
 
   /**
-   * Returns the hadoop-auth configuration from HttpFSServer's configuration.
+   * Sets an external <code>DelegationTokenSecretManager</code> instance to
+   * manage creation and verification of Delegation Tokens.
    * <p/>
-   * It returns all HttpFSServer's configuration properties prefixed with
-   * <code>httpfs.authentication</code>. The <code>httpfs.authentication</code>
-   * prefix is removed from the returned property names.
+   * This is useful for use cases where secrets must be shared across multiple
+   * services.
+   */
+
+  public static final String DELEGATION_TOKEN_SECRET_MANAGER_ATTR =
+      "hadoop.http.delegation-token-secret-manager";
+
+  /**
+   * It delegates to
+   * {@link AuthenticationFilter#getConfiguration(String, FilterConfig)} and
+   * then overrides the {@link AuthenticationHandler} to use if authentication
+   * type is set to <code>simple</code> or <code>kerberos</code> in order to use
+   * the corresponding implementation with delegation token support.
    *
    * @param configPrefix parameter not used.
    * @param filterConfig parameter not used.
-   *
-   * @return hadoop-auth configuration read from HttpFSServer's configuration.
+   * @return hadoop-auth de-prefixed configuration for the filter and handler.
    */
   @Override
-  protected Properties getConfiguration(String configPrefix, FilterConfig filterConfig) {
-    Properties props = new Properties();
-    Configuration conf = HttpFSServerWebApp.get().getConfig();
-
-    props.setProperty(AuthenticationFilter.COOKIE_PATH, "/");
-    for (Map.Entry<String, String> entry : conf) {
-      String name = entry.getKey();
-      if (name.startsWith(CONF_PREFIX)) {
-        String value = conf.get(name);
-        name = name.substring(CONF_PREFIX.length());
-        props.setProperty(name, value);
-      }
-    }
-
-    if (props.getProperty(AUTH_TYPE).equals("kerberos")) {
+  protected Properties getConfiguration(String configPrefix,
+      FilterConfig filterConfig) throws ServletException {
+    Properties props = super.getConfiguration(configPrefix, filterConfig);
+    String authType = props.getProperty(AUTH_TYPE);
+    if (authType.equals(PseudoAuthenticationHandler.TYPE)) {
       props.setProperty(AUTH_TYPE,
-                        HttpFSKerberosAuthenticationHandler.class.getName());
-    }
-
-    String signatureSecretFile = props.getProperty(SIGNATURE_SECRET_FILE, null);
-    if (signatureSecretFile == null) {
-      throw new RuntimeException("Undefined property: " + SIGNATURE_SECRET_FILE);
-    }
-
-    try {
-      StringBuilder secret = new StringBuilder();
-      Reader reader = new FileReader(signatureSecretFile);
-      int c = reader.read();
-      while (c > -1) {
-        secret.append((char)c);
-        c = reader.read();
-      }
-      reader.close();
-      props.setProperty(AuthenticationFilter.SIGNATURE_SECRET, secret.toString());
-    } catch (IOException ex) {
-      throw new RuntimeException("Could not read HttpFS signature secret file: " + signatureSecretFile);
+          PseudoDelegationTokenAuthenticationHandler.class.getName());
+    } else if (authType.equals(KerberosAuthenticationHandler.TYPE)) {
+      props.setProperty(AUTH_TYPE,
+          KerberosDelegationTokenAuthenticationHandler.class.getName());
     }
     return props;
   }
 
+  @Override
+  public void init(FilterConfig filterConfig) throws ServletException {
+    super.init(filterConfig);
+    AbstractDelegationTokenSecretManager dtSecretManager =
+        (AbstractDelegationTokenSecretManager) filterConfig.getServletContext().
+            getAttribute(DELEGATION_TOKEN_SECRET_MANAGER_ATTR);
+    if (dtSecretManager != null && getAuthenticationHandler()
+        instanceof DelegationTokenAuthenticationHandler) {
+      DelegationTokenAuthenticationHandler handler =
+          (DelegationTokenAuthenticationHandler) getAuthenticationHandler();
+      handler.setExternalDelegationTokenSecretManager(dtSecretManager);
+    }
+  }
 }

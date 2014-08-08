@@ -15,22 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs.http.server;
+package org.apache.hadoop.security.token.delegation.web;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
-import org.apache.hadoop.fs.http.client.HttpFSKerberosAuthenticator;
-import org.apache.hadoop.fs.http.client.HttpFSKerberosAuthenticator.DelegationTokenOperation;
-import org.apache.hadoop.lib.service.DelegationTokenIdentifier;
-import org.apache.hadoop.lib.service.DelegationTokenManager;
-import org.apache.hadoop.lib.service.DelegationTokenManagerException;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.authentication.server.AuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.AuthenticationToken;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.token.Token;
-import org.json.simple.JSONObject;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
+import org.codehaus.jackson.map.ObjectMapper;
 
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
@@ -41,41 +42,136 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 /**
- * Server side <code>AuthenticationHandler</code> that authenticates requests
- * using the incoming delegation token as a 'delegation' query string parameter.
+ * An {@link AuthenticationHandler} that implements Kerberos SPNEGO mechanism
+ * for HTTP and supports Delegation Token functionality.
  * <p/>
- * If not delegation token is present in the request it delegates to the
- * {@link KerberosAuthenticationHandler}
+ * In addition to the wrapped {@link AuthenticationHandler} configuration
+ * properties, this handler supports the following properties prefixed
+ * with the type of the wrapped <code>AuthenticationHandler</code>:
+ * <ul>
+ * <li>delegation-token.token-kind: the token kind for generated tokens
+ * (no default, required property).</li>
+ * <li>delegation-token.update-interval.sec: secret manager master key
+ * update interval in seconds (default 1 day).</li>
+ * <li>delegation-token.max-lifetime.sec: maximum life of a delegation
+ * token in seconds (default 7 days).</li>
+ * <li>delegation-token.renewal-interval.sec: renewal interval for
+ * delegation tokens in seconds (default 1 day).</li>
+ * <li>delegation-token.removal-scan-interval.sec: delegation tokens
+ * removal scan interval in seconds (default 1 hour).</li>
+ * </ul>
+ *
  */
 @InterfaceAudience.Private
-public class HttpFSKerberosAuthenticationHandler
-  extends KerberosAuthenticationHandler {
+@InterfaceStability.Evolving
+public abstract class DelegationTokenAuthenticationHandler
+    implements AuthenticationHandler {
 
-  static final Set<String> DELEGATION_TOKEN_OPS =
-    new HashSet<String>();
+  protected static final String TYPE_POSTFIX = "-dt";
+
+  public static final String PREFIX = "delegation-token.";
+
+  public static final String TOKEN_KIND = PREFIX + "token-kind.sec";
+
+  public static final String UPDATE_INTERVAL = PREFIX + "update-interval.sec";
+  public static final long UPDATE_INTERVAL_DEFAULT = 24 * 60 * 60;
+
+  public static final String MAX_LIFETIME = PREFIX + "max-lifetime.sec";
+  public static final long MAX_LIFETIME_DEFAULT = 7 * 24 * 60 * 60;
+
+  public static final String RENEW_INTERVAL = PREFIX + "renew-interval.sec";
+  public static final long RENEW_INTERVAL_DEFAULT = 24 * 60 * 60;
+
+  public static final String REMOVAL_SCAN_INTERVAL = PREFIX +
+      "removal-scan-interval.sec";
+  public static final long REMOVAL_SCAN_INTERVAL_DEFAULT = 60 * 60;
+
+  private static final Set<String> DELEGATION_TOKEN_OPS = new HashSet<String>();
 
   static {
-    DELEGATION_TOKEN_OPS.add(
-      DelegationTokenOperation.GETDELEGATIONTOKEN.toString());
-    DELEGATION_TOKEN_OPS.add(
-      DelegationTokenOperation.RENEWDELEGATIONTOKEN.toString());
-    DELEGATION_TOKEN_OPS.add(
-      DelegationTokenOperation.CANCELDELEGATIONTOKEN.toString());
+    DELEGATION_TOKEN_OPS.add(KerberosDelegationTokenAuthenticator.
+        DelegationTokenOperation.GETDELEGATIONTOKEN.toString());
+    DELEGATION_TOKEN_OPS.add(KerberosDelegationTokenAuthenticator.
+        DelegationTokenOperation.RENEWDELEGATIONTOKEN.toString());
+    DELEGATION_TOKEN_OPS.add(KerberosDelegationTokenAuthenticator.
+        DelegationTokenOperation.CANCELDELEGATIONTOKEN.toString());
   }
 
-  public static final String TYPE = "kerberos-dt";
+  private AuthenticationHandler authHandler;
+  private DelegationTokenManager tokenManager;
+  private String authType;
+
+  public DelegationTokenAuthenticationHandler(AuthenticationHandler handler) {
+    authHandler = handler;
+    authType = handler.getType();
+  }
+
+  @VisibleForTesting
+  DelegationTokenManager getTokenManager() {
+    return tokenManager;
+  }
+
+  @Override
+  public void init(Properties config) throws ServletException {
+    authHandler.init(config);
+    initTokenManager(config);
+  }
 
   /**
-   * Returns authentication type of the handler.
+   * Sets an external <code>DelegationTokenSecretManager</code> instance to
+   * manage creation and verification of Delegation Tokens.
+   * <p/>
+   * This is useful for use cases where secrets must be shared across multiple
+   * services.
    *
-   * @return <code>delegationtoken-kerberos</code>
+   * @param secretManager a <code>DelegationTokenSecretManager</code> instance
    */
+  public void setExternalDelegationTokenSecretManager(
+      AbstractDelegationTokenSecretManager secretManager) {
+    tokenManager.setExternalDelegationTokenSecretManager(secretManager);
+  }
+
+  @VisibleForTesting
+  @SuppressWarnings("unchecked")
+  public void initTokenManager(Properties config) {
+    String configPrefix = authHandler.getType() + ".";
+    Configuration conf = new Configuration(false);
+    for (Map.Entry entry : config.entrySet()) {
+      conf.set((String) entry.getKey(), (String) entry.getValue());
+    }
+    String tokenKind = conf.get(TOKEN_KIND);
+    if (tokenKind == null) {
+      throw new IllegalArgumentException(
+          "The configuration does not define the token kind");
+    }
+    tokenKind = tokenKind.trim();
+    long updateInterval = conf.getLong(configPrefix + UPDATE_INTERVAL,
+        UPDATE_INTERVAL_DEFAULT);
+    long maxLifeTime = conf.getLong(configPrefix + MAX_LIFETIME,
+        MAX_LIFETIME_DEFAULT);
+    long renewInterval = conf.getLong(configPrefix + RENEW_INTERVAL,
+        RENEW_INTERVAL_DEFAULT);
+    long removalScanInterval = conf.getLong(
+        configPrefix + REMOVAL_SCAN_INTERVAL, REMOVAL_SCAN_INTERVAL_DEFAULT);
+    tokenManager = new DelegationTokenManager(new Text(tokenKind),
+        updateInterval * 1000, maxLifeTime * 1000, renewInterval * 1000,
+        removalScanInterval * 1000);
+    tokenManager.init();
+  }
+
+  @Override
+  public void destroy() {
+    tokenManager.destroy();
+    authHandler.destroy();
+  }
+
   @Override
   public String getType() {
-    return TYPE;
+    return authType;
   }
 
   private static final String ENTER = System.getProperty("line.separator");
@@ -84,87 +180,118 @@ public class HttpFSKerberosAuthenticationHandler
   @SuppressWarnings("unchecked")
   public boolean managementOperation(AuthenticationToken token,
       HttpServletRequest request, HttpServletResponse response)
-    throws IOException, AuthenticationException {
+      throws IOException, AuthenticationException {
     boolean requestContinues = true;
-    String op = request.getParameter(HttpFSFileSystem.OP_PARAM);
+    String op = ServletUtils.getParameter(request,
+        KerberosDelegationTokenAuthenticator.OP_PARAM);
     op = (op != null) ? op.toUpperCase() : null;
     if (DELEGATION_TOKEN_OPS.contains(op) &&
         !request.getMethod().equals("OPTIONS")) {
-      DelegationTokenOperation dtOp =
-        DelegationTokenOperation.valueOf(op);
+      KerberosDelegationTokenAuthenticator.DelegationTokenOperation dtOp =
+          KerberosDelegationTokenAuthenticator.
+              DelegationTokenOperation.valueOf(op);
       if (dtOp.getHttpMethod().equals(request.getMethod())) {
+        boolean doManagement;
         if (dtOp.requiresKerberosCredentials() && token == null) {
-          response.sendError(HttpServletResponse.SC_UNAUTHORIZED,
-            MessageFormat.format(
-              "Operation [{0}] requires SPNEGO authentication established",
-              dtOp));
-          requestContinues = false;
+          token = authenticate(request, response);
+          if (token == null) {
+            requestContinues = false;
+            doManagement = false;
+          } else {
+            doManagement = true;
+          }
         } else {
-          DelegationTokenManager tokenManager =
-            HttpFSServerWebApp.get().get(DelegationTokenManager.class);
-          try {
-            Map map = null;
-            switch (dtOp) {
-              case GETDELEGATIONTOKEN:
-                String renewerParam =
-                  request.getParameter(HttpFSKerberosAuthenticator.RENEWER_PARAM);
-                if (renewerParam == null) {
-                  renewerParam = token.getUserName();
-                }
-                Token<?> dToken = tokenManager.createToken(
-                  UserGroupInformation.getCurrentUser(), renewerParam);
-                map = delegationTokenToJSON(dToken);
-                break;
-              case RENEWDELEGATIONTOKEN:
-              case CANCELDELEGATIONTOKEN:
-                String tokenParam =
-                  request.getParameter(HttpFSKerberosAuthenticator.TOKEN_PARAM);
-                if (tokenParam == null) {
-                  response.sendError(HttpServletResponse.SC_BAD_REQUEST,
-                    MessageFormat.format(
-                      "Operation [{0}] requires the parameter [{1}]",
-                      dtOp, HttpFSKerberosAuthenticator.TOKEN_PARAM));
-                  requestContinues = false;
-                } else {
-                  if (dtOp == DelegationTokenOperation.CANCELDELEGATIONTOKEN) {
-                    Token<DelegationTokenIdentifier> dt =
-                      new Token<DelegationTokenIdentifier>();
-                    dt.decodeFromUrlString(tokenParam);
-                    tokenManager.cancelToken(dt,
-                      UserGroupInformation.getCurrentUser().getUserName());
-                  } else {
-                    Token<DelegationTokenIdentifier> dt =
-                      new Token<DelegationTokenIdentifier>();
-                    dt.decodeFromUrlString(tokenParam);
-                    long expirationTime =
-                      tokenManager.renewToken(dt, token.getUserName());
-                    map = new HashMap();
-                    map.put("long", expirationTime);
-                  }
-                }
-                break;
-            }
-            if (requestContinues) {
-              response.setStatus(HttpServletResponse.SC_OK);
-              if (map != null) {
-                response.setContentType(MediaType.APPLICATION_JSON);
-                Writer writer = response.getWriter();
-                JSONObject.writeJSONString(map, writer);
-                writer.write(ENTER);
-                writer.flush();
-
+          doManagement = true;
+        }
+        if (doManagement) {
+          UserGroupInformation requestUgi = (token != null)
+              ? UserGroupInformation.createRemoteUser(token.getUserName())
+              : null;
+          Map map = null;
+          switch (dtOp) {
+            case GETDELEGATIONTOKEN:
+              if (requestUgi == null) {
+                throw new IllegalStateException("request UGI cannot be NULL");
               }
-              requestContinues = false;
+              String renewer = ServletUtils.getParameter(request,
+                  KerberosDelegationTokenAuthenticator.RENEWER_PARAM);
+              try {
+                Token<?> dToken = tokenManager.createToken(requestUgi, renewer);
+                map = delegationTokenToJSON(dToken);
+              } catch (IOException ex) {
+                throw new AuthenticationException(ex.toString(), ex);
+              }
+              break;
+            case RENEWDELEGATIONTOKEN:
+              if (requestUgi == null) {
+                throw new IllegalStateException("request UGI cannot be NULL");
+              }
+              String tokenToRenew = ServletUtils.getParameter(request,
+                  KerberosDelegationTokenAuthenticator.TOKEN_PARAM);
+              if (tokenToRenew == null) {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST,
+                    MessageFormat.format(
+                        "Operation [{0}] requires the parameter [{1}]", dtOp,
+                        KerberosDelegationTokenAuthenticator.TOKEN_PARAM)
+                );
+                requestContinues = false;
+              } else {
+                Token<DelegationTokenIdentifier> dt =
+                    new Token<DelegationTokenIdentifier>();
+                try {
+                  dt.decodeFromUrlString(tokenToRenew);
+                  long expirationTime = tokenManager.renewToken(dt,
+                      requestUgi.getShortUserName());
+                  map = new HashMap();
+                  map.put("long", expirationTime);
+                } catch (IOException ex) {
+                  throw new AuthenticationException(ex.toString(), ex);
+                }
+              }
+              break;
+            case CANCELDELEGATIONTOKEN:
+              String tokenToCancel = ServletUtils.getParameter(request,
+                  KerberosDelegationTokenAuthenticator.TOKEN_PARAM);
+              if (tokenToCancel == null) {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST,
+                    MessageFormat.format(
+                        "Operation [{0}] requires the parameter [{1}]", dtOp,
+                        KerberosDelegationTokenAuthenticator.TOKEN_PARAM)
+                );
+                requestContinues = false;
+              } else {
+                Token<DelegationTokenIdentifier> dt =
+                    new Token<DelegationTokenIdentifier>();
+                try {
+                  dt.decodeFromUrlString(tokenToCancel);
+                  tokenManager.cancelToken(dt, (requestUgi != null)
+                      ? requestUgi.getShortUserName() : null);
+                } catch (IOException ex) {
+                  response.sendError(HttpServletResponse.SC_NOT_FOUND,
+                      "Invalid delegation token, cannot cancel");
+                  requestContinues = false;
+                }
+              }
+              break;
+          }
+          if (requestContinues) {
+            response.setStatus(HttpServletResponse.SC_OK);
+            if (map != null) {
+              response.setContentType(MediaType.APPLICATION_JSON);
+              Writer writer = response.getWriter();
+              ObjectMapper jsonMapper = new ObjectMapper();
+              jsonMapper.writeValue(writer, map);
+              writer.write(ENTER);
+              writer.flush();
             }
-          } catch (DelegationTokenManagerException ex) {
-            throw new AuthenticationException(ex.toString(), ex);
+            requestContinues = false;
           }
         }
       } else {
         response.sendError(HttpServletResponse.SC_BAD_REQUEST,
-          MessageFormat.format(
-            "Wrong HTTP method [{0}] for operation [{1}], it should be [{2}]",
-            request.getMethod(), dtOp, dtOp.getHttpMethod()));
+            MessageFormat.format(
+                "Wrong HTTP method [{0}] for operation [{1}], it should be " +
+                    "[{2}]", request.getMethod(), dtOp, dtOp.getHttpMethod()));
         requestContinues = false;
       }
     }
@@ -174,13 +301,15 @@ public class HttpFSKerberosAuthenticationHandler
   @SuppressWarnings("unchecked")
   private static Map delegationTokenToJSON(Token token) throws IOException {
     Map json = new LinkedHashMap();
-    json.put(HttpFSKerberosAuthenticator.DELEGATION_TOKEN_URL_STRING_JSON,
-             token.encodeToUrlString());
+    json.put(
+        KerberosDelegationTokenAuthenticator.DELEGATION_TOKEN_URL_STRING_JSON,
+        token.encodeToUrlString());
     Map response = new LinkedHashMap();
-    response.put(HttpFSKerberosAuthenticator.DELEGATION_TOKEN_JSON, json);
+    response.put(KerberosDelegationTokenAuthenticator.DELEGATION_TOKEN_JSON,
+        json);
     return response;
   }
-  
+
   /**
    * Authenticates a request looking for the <code>delegation</code>
    * query-string parameter and verifying it is a valid token. If there is not
@@ -190,41 +319,37 @@ public class HttpFSKerberosAuthenticationHandler
    *
    * @param request the HTTP client request.
    * @param response the HTTP client response.
-   *
    * @return the authentication token for the authenticated request.
    * @throws IOException thrown if an IO error occurred.
    * @throws AuthenticationException thrown if the authentication failed.
    */
   @Override
   public AuthenticationToken authenticate(HttpServletRequest request,
-                                          HttpServletResponse response)
-    throws IOException, AuthenticationException {
+      HttpServletResponse response)
+      throws IOException, AuthenticationException {
     AuthenticationToken token;
-    String delegationParam =
-      request.getParameter(HttpFSKerberosAuthenticator.DELEGATION_PARAM);
+    String delegationParam = ServletUtils.getParameter(request,
+        KerberosDelegationTokenAuthenticator.DELEGATION_PARAM);
     if (delegationParam != null) {
       try {
         Token<DelegationTokenIdentifier> dt =
-          new Token<DelegationTokenIdentifier>();
+            new Token<DelegationTokenIdentifier>();
         dt.decodeFromUrlString(delegationParam);
-        DelegationTokenManager tokenManager =
-          HttpFSServerWebApp.get().get(DelegationTokenManager.class);
         UserGroupInformation ugi = tokenManager.verifyToken(dt);
         final String shortName = ugi.getShortUserName();
 
         // creating a ephemeral token
         token = new AuthenticationToken(shortName, ugi.getUserName(),
-                                        getType());
+            getType());
         token.setExpires(0);
       } catch (Throwable ex) {
         throw new AuthenticationException("Could not verify DelegationToken, " +
-                                          ex.toString(), ex);
+            ex.toString(), ex);
       }
     } else {
-      token = super.authenticate(request, response);
+      token = authHandler.authenticate(request, response);
     }
     return token;
   }
-
 
 }

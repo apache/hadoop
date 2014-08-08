@@ -15,62 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.lib.service.security;
+package org.apache.hadoop.security.token.delegation.web;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.http.server.HttpFSServerWebApp;
-import org.apache.hadoop.lib.server.Server;
-import org.apache.hadoop.lib.service.DelegationTokenManager;
-import org.apache.hadoop.lib.service.DelegationTokenManagerException;
-import org.apache.hadoop.lib.service.hadoop.FileSystemAccessService;
-import org.apache.hadoop.lib.service.instrumentation.InstrumentationService;
-import org.apache.hadoop.lib.service.scheduler.SchedulerService;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.test.HTestCase;
-import org.apache.hadoop.test.TestDir;
-import org.apache.hadoop.test.TestDirHelper;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 
-public class TestDelegationTokenManagerService extends HTestCase {
+public class TestDelegationTokenManager {
+
+  private static final long DAY_IN_SECS = 86400;
 
   @Test
-  @TestDir
-  public void service() throws Exception {
-    String dir = TestDirHelper.getTestDir().getAbsolutePath();
-    Configuration conf = new Configuration(false);
-    conf.set("httpfs.services", StringUtils.join(",",
-      Arrays.asList(InstrumentationService.class.getName(),
-          SchedulerService.class.getName(),
-          FileSystemAccessService.class.getName(),
-          DelegationTokenManagerService.class.getName())));
-    Server server = new HttpFSServerWebApp(dir, dir, dir, dir, conf);
-    server.init();
-    DelegationTokenManager tm = server.get(DelegationTokenManager.class);
-    Assert.assertNotNull(tm);
-    server.destroy();
-  }
-
-  @Test
-  @TestDir
-  @SuppressWarnings("unchecked")
-  public void tokens() throws Exception {
-    String dir = TestDirHelper.getTestDir().getAbsolutePath();
-    Configuration conf = new Configuration(false);
-    conf.set("server.services", StringUtils.join(",",
-      Arrays.asList(DelegationTokenManagerService.class.getName())));
-    HttpFSServerWebApp server = new HttpFSServerWebApp(dir, dir, dir, dir, conf);
-    server.setAuthority(new InetSocketAddress(InetAddress.getLocalHost(), 14000));
-    server.init();
-    DelegationTokenManager tm = server.get(DelegationTokenManager.class);
-    Token token = tm.createToken(UserGroupInformation.getCurrentUser(), "foo");
+  public void testDTManager() throws Exception {
+    DelegationTokenManager tm = new DelegationTokenManager(new Text("foo"),
+        DAY_IN_SECS, DAY_IN_SECS, DAY_IN_SECS, DAY_IN_SECS);
+    tm.init();
+    Token<DelegationTokenIdentifier> token =
+        tm.createToken(UserGroupInformation.getCurrentUser(), "foo");
     Assert.assertNotNull(token);
     tm.verifyToken(token);
     Assert.assertTrue(tm.renewToken(token, "foo") > System.currentTimeMillis());
@@ -78,12 +48,12 @@ public class TestDelegationTokenManagerService extends HTestCase {
     try {
       tm.verifyToken(token);
       Assert.fail();
-    } catch (DelegationTokenManagerException ex) {
+    } catch (IOException ex) {
       //NOP
     } catch (Exception ex) {
       Assert.fail();
     }
-    server.destroy();
+    tm.destroy();
   }
 
 }

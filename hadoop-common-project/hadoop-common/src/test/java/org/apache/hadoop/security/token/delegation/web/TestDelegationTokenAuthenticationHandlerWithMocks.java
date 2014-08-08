@@ -15,141 +15,162 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.security.token.delegation.web;
 
-package org.apache.hadoop.fs.http.server;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
-import org.apache.hadoop.fs.http.client.HttpFSKerberosAuthenticator;
-import org.apache.hadoop.fs.http.client.HttpFSKerberosAuthenticator.DelegationTokenOperation;
-import org.apache.hadoop.hdfs.web.SWebHdfsFileSystem;
-import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.lib.service.DelegationTokenIdentifier;
-import org.apache.hadoop.lib.service.DelegationTokenManager;
-import org.apache.hadoop.lib.service.DelegationTokenManagerException;
-import org.apache.hadoop.lib.servlet.ServerWebApp;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.authentication.server.AuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.AuthenticationToken;
+import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.test.HFSTestCase;
-import org.apache.hadoop.test.TestDir;
-import org.apache.hadoop.test.TestDirHelper;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
+import java.util.Map;
+import java.util.Properties;
 
-public class TestHttpFSKerberosAuthenticationHandler extends HFSTestCase {
+public class TestDelegationTokenAuthenticationHandlerWithMocks {
+
+  public static class MockDelegationTokenAuthenticationHandler
+      extends DelegationTokenAuthenticationHandler {
+
+    public MockDelegationTokenAuthenticationHandler() {
+      super(new AuthenticationHandler() {
+        @Override
+        public String getType() {
+          return "T";
+        }
+
+        @Override
+        public void init(Properties config) throws ServletException {
+
+        }
+
+        @Override
+        public void destroy() {
+
+        }
+
+        @Override
+        public boolean managementOperation(AuthenticationToken token,
+            HttpServletRequest request, HttpServletResponse response)
+            throws IOException, AuthenticationException {
+          return false;
+        }
+
+        @Override
+        public AuthenticationToken authenticate(HttpServletRequest request,
+            HttpServletResponse response)
+            throws IOException, AuthenticationException {
+          response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+          response.setHeader(KerberosAuthenticator.WWW_AUTHENTICATE, "mock");
+          return null;
+        }
+      });
+    }
+
+  }
+
+  private DelegationTokenAuthenticationHandler handler;
+
+  @Before
+  public void setUp() throws Exception {
+    Properties conf = new Properties();
+
+    conf.put(KerberosDelegationTokenAuthenticationHandler.TOKEN_KIND, "foo");
+    handler = new MockDelegationTokenAuthenticationHandler();
+    handler.initTokenManager(conf);
+  }
+
+  @After
+  public void cleanUp() {
+      handler.destroy();
+  }
 
   @Test
-  @TestDir
-  public void testManagementOperationsWebHdfsFileSystem() throws Exception {
-    testManagementOperations(WebHdfsFileSystem.TOKEN_KIND);
+  public void testManagementOperations() throws Exception {
+      testNonManagementOperation();
+      testManagementOperationErrors();
+      testGetToken(null, new Text("foo"));
+      testGetToken("bar", new Text("foo"));
+      testCancelToken();
+      testRenewToken();
   }
 
-  @Test
-  @TestDir
-  public void testManagementOperationsSWebHdfsFileSystem() throws Exception {
-    try {
-      System.setProperty(HttpFSServerWebApp.NAME +
-          ServerWebApp.SSL_ENABLED, "true");
-      testManagementOperations(SWebHdfsFileSystem.TOKEN_KIND);
-    } finally {
-      System.getProperties().remove(HttpFSServerWebApp.NAME +
-          ServerWebApp.SSL_ENABLED);
-    }
-  }
-
-  private void testManagementOperations(Text expectedTokenKind) throws Exception {
-    String dir = TestDirHelper.getTestDir().getAbsolutePath();
-
-    Configuration httpfsConf = new Configuration(false);
-    HttpFSServerWebApp server =
-      new HttpFSServerWebApp(dir, dir, dir, dir, httpfsConf);
-    server.setAuthority(new InetSocketAddress(InetAddress.getLocalHost(), 
-                                              14000));
-    AuthenticationHandler handler =
-      new HttpFSKerberosAuthenticationHandlerForTesting();
-    try {
-      server.init();
-      handler.init(null);
-
-      testNonManagementOperation(handler);
-      testManagementOperationErrors(handler);
-      testGetToken(handler, null, expectedTokenKind);
-      testGetToken(handler, "foo", expectedTokenKind);
-      testCancelToken(handler);
-      testRenewToken(handler);
-
-    } finally {
-      if (handler != null) {
-        handler.destroy();
-      }
-    server.destroy();
-    }
-  }
-
-  private void testNonManagementOperation(AuthenticationHandler handler)
-    throws Exception {
+  private void testNonManagementOperation() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-    Mockito.when(request.getParameter(HttpFSFileSystem.OP_PARAM)).
-      thenReturn(null);
+    Mockito.when(request.getParameter(
+        DelegationTokenAuthenticator.OP_PARAM)).thenReturn(null);
     Assert.assertTrue(handler.managementOperation(null, request, null));
-    Mockito.when(request.getParameter(HttpFSFileSystem.OP_PARAM)).
-      thenReturn(HttpFSFileSystem.Operation.CREATE.toString());
+    Mockito.when(request.getParameter(
+        DelegationTokenAuthenticator.OP_PARAM)).thenReturn("CREATE");
     Assert.assertTrue(handler.managementOperation(null, request, null));
   }
 
-  private void testManagementOperationErrors(AuthenticationHandler handler)
-    throws Exception {
+  private void testManagementOperationErrors() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-    Mockito.when(request.getParameter(HttpFSFileSystem.OP_PARAM)).
-      thenReturn(DelegationTokenOperation.GETDELEGATIONTOKEN.toString());
+    Mockito.when(request.getQueryString()).thenReturn(
+        DelegationTokenAuthenticator.OP_PARAM + "=" +
+            DelegationTokenAuthenticator.DelegationTokenOperation.
+                GETDELEGATIONTOKEN.toString()
+    );
     Mockito.when(request.getMethod()).thenReturn("FOO");
     Assert.assertFalse(handler.managementOperation(null, request, response));
     Mockito.verify(response).sendError(
-      Mockito.eq(HttpServletResponse.SC_BAD_REQUEST),
-      Mockito.startsWith("Wrong HTTP method"));
+        Mockito.eq(HttpServletResponse.SC_BAD_REQUEST),
+        Mockito.startsWith("Wrong HTTP method"));
 
     Mockito.reset(response);
-    Mockito.when(request.getMethod()).
-      thenReturn(DelegationTokenOperation.GETDELEGATIONTOKEN.getHttpMethod());
+    Mockito.when(request.getMethod()).thenReturn(
+        DelegationTokenAuthenticator.DelegationTokenOperation.
+            GETDELEGATIONTOKEN.getHttpMethod()
+    );
     Assert.assertFalse(handler.managementOperation(null, request, response));
-    Mockito.verify(response).sendError(
-      Mockito.eq(HttpServletResponse.SC_UNAUTHORIZED),
-      Mockito.contains("requires SPNEGO"));
+    Mockito.verify(response).setStatus(
+        Mockito.eq(HttpServletResponse.SC_UNAUTHORIZED));
+    Mockito.verify(response).setHeader(
+        Mockito.eq(KerberosAuthenticator.WWW_AUTHENTICATE),
+        Mockito.eq("mock"));
   }
 
-  private void testGetToken(AuthenticationHandler handler, String renewer,
-      Text expectedTokenKind) throws Exception {
-    DelegationTokenOperation op = DelegationTokenOperation.GETDELEGATIONTOKEN;
+  private void testGetToken(String renewer, Text expectedTokenKind)
+      throws Exception {
+    DelegationTokenAuthenticator.DelegationTokenOperation op =
+        DelegationTokenAuthenticator.DelegationTokenOperation.
+            GETDELEGATIONTOKEN;
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-    Mockito.when(request.getParameter(HttpFSFileSystem.OP_PARAM)).
-      thenReturn(op.toString());
-    Mockito.when(request.getMethod()).
-      thenReturn(op.getHttpMethod());
+    Mockito.when(request.getQueryString()).
+        thenReturn(DelegationTokenAuthenticator.OP_PARAM + "=" + op.toString());
+    Mockito.when(request.getMethod()).thenReturn(op.getHttpMethod());
 
     AuthenticationToken token = Mockito.mock(AuthenticationToken.class);
     Mockito.when(token.getUserName()).thenReturn("user");
-    Assert.assertFalse(handler.managementOperation(null, request, response));
-    Mockito.when(request.getParameter(HttpFSKerberosAuthenticator.RENEWER_PARAM)).
-      thenReturn(renewer);
+    Mockito.when(response.getWriter()).thenReturn(new PrintWriter(
+        new StringWriter()));
+    Assert.assertFalse(handler.managementOperation(token, request, response));
+
+    Mockito.when(request.getQueryString()).
+        thenReturn(DelegationTokenAuthenticator.OP_PARAM + "=" + op.toString() +
+        "&" + DelegationTokenAuthenticator.RENEWER_PARAM + "=" + renewer);
 
     Mockito.reset(response);
+    Mockito.reset(token);
+    Mockito.when(token.getUserName()).thenReturn("user");
     StringWriter writer = new StringWriter();
     PrintWriter pwriter = new PrintWriter(writer);
     Mockito.when(response.getWriter()).thenReturn(pwriter);
@@ -157,151 +178,140 @@ public class TestHttpFSKerberosAuthenticationHandler extends HFSTestCase {
     if (renewer == null) {
       Mockito.verify(token).getUserName();
     } else {
-      Mockito.verify(token, Mockito.never()).getUserName();
+      Mockito.verify(token).getUserName();
     }
     Mockito.verify(response).setStatus(HttpServletResponse.SC_OK);
     Mockito.verify(response).setContentType(MediaType.APPLICATION_JSON);
     pwriter.close();
     String responseOutput = writer.toString();
-    String tokenLabel = HttpFSKerberosAuthenticator.DELEGATION_TOKEN_JSON;
+    String tokenLabel = DelegationTokenAuthenticator.
+        DELEGATION_TOKEN_JSON;
     Assert.assertTrue(responseOutput.contains(tokenLabel));
     Assert.assertTrue(responseOutput.contains(
-      HttpFSKerberosAuthenticator.DELEGATION_TOKEN_URL_STRING_JSON));
-    JSONObject json = (JSONObject) new JSONParser().parse(responseOutput);
-    json = (JSONObject) json.get(tokenLabel);
+        DelegationTokenAuthenticator.DELEGATION_TOKEN_URL_STRING_JSON));
+    ObjectMapper jsonMapper = new ObjectMapper();
+    Map json = jsonMapper.readValue(responseOutput, Map.class);
+    json = (Map) json.get(tokenLabel);
     String tokenStr;
-    tokenStr = (String)
-      json.get(HttpFSKerberosAuthenticator.DELEGATION_TOKEN_URL_STRING_JSON);
+    tokenStr = (String) json.get(DelegationTokenAuthenticator.
+        DELEGATION_TOKEN_URL_STRING_JSON);
     Token<DelegationTokenIdentifier> dt = new Token<DelegationTokenIdentifier>();
     dt.decodeFromUrlString(tokenStr);
-    HttpFSServerWebApp.get().get(DelegationTokenManager.class).verifyToken(dt);
+    handler.getTokenManager().verifyToken(dt);
     Assert.assertEquals(expectedTokenKind, dt.getKind());
   }
 
-  private void testCancelToken(AuthenticationHandler handler)
-    throws Exception {
-    DelegationTokenOperation op =
-      DelegationTokenOperation.CANCELDELEGATIONTOKEN;
+  private void testCancelToken() throws Exception {
+    DelegationTokenAuthenticator.DelegationTokenOperation op =
+        DelegationTokenAuthenticator.DelegationTokenOperation.
+            CANCELDELEGATIONTOKEN;
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-    Mockito.when(request.getParameter(HttpFSFileSystem.OP_PARAM)).
-      thenReturn(op.toString());
+    Mockito.when(request.getQueryString()).thenReturn(
+        DelegationTokenAuthenticator.OP_PARAM + "=" + op.toString());
     Mockito.when(request.getMethod()).
-      thenReturn(op.getHttpMethod());
+        thenReturn(op.getHttpMethod());
 
     Assert.assertFalse(handler.managementOperation(null, request, response));
     Mockito.verify(response).sendError(
-      Mockito.eq(HttpServletResponse.SC_BAD_REQUEST),
-      Mockito.contains("requires the parameter [token]"));
+        Mockito.eq(HttpServletResponse.SC_BAD_REQUEST),
+        Mockito.contains("requires the parameter [token]"));
 
     Mockito.reset(response);
     Token<DelegationTokenIdentifier> token =
-      HttpFSServerWebApp.get().get(DelegationTokenManager.class).createToken(
-        UserGroupInformation.getCurrentUser(), "foo");
-    Mockito.when(request.getParameter(HttpFSKerberosAuthenticator.TOKEN_PARAM)).
-      thenReturn(token.encodeToUrlString());
+        handler.getTokenManager().createToken(
+            UserGroupInformation.getCurrentUser(), "foo");
+    Mockito.when(request.getQueryString()).thenReturn(
+        DelegationTokenAuthenticator.OP_PARAM + "=" + op.toString() + "&" +
+            DelegationTokenAuthenticator.TOKEN_PARAM + "=" +
+            token.encodeToUrlString());
     Assert.assertFalse(handler.managementOperation(null, request, response));
     Mockito.verify(response).setStatus(HttpServletResponse.SC_OK);
     try {
-      HttpFSServerWebApp.get().get(DelegationTokenManager.class).verifyToken(token);
+      handler.getTokenManager().verifyToken(token);
       Assert.fail();
-    }
-    catch (DelegationTokenManagerException ex) {
-      Assert.assertTrue(ex.toString().contains("DT01"));
+    } catch (SecretManager.InvalidToken ex) {
+      //NOP
+    } catch (Throwable ex) {
+      Assert.fail();
     }
   }
 
-  private void testRenewToken(AuthenticationHandler handler)
-    throws Exception {
-    DelegationTokenOperation op =
-      DelegationTokenOperation.RENEWDELEGATIONTOKEN;
+  private void testRenewToken() throws Exception {
+    DelegationTokenAuthenticator.DelegationTokenOperation op =
+        DelegationTokenAuthenticator.DelegationTokenOperation.
+            RENEWDELEGATIONTOKEN;
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-    Mockito.when(request.getParameter(HttpFSFileSystem.OP_PARAM)).
-      thenReturn(op.toString());
+    Mockito.when(request.getQueryString()).
+        thenReturn(DelegationTokenAuthenticator.OP_PARAM + "=" + op.toString());
     Mockito.when(request.getMethod()).
-      thenReturn(op.getHttpMethod());
+        thenReturn(op.getHttpMethod());
 
     Assert.assertFalse(handler.managementOperation(null, request, response));
-    Mockito.verify(response).sendError(
-      Mockito.eq(HttpServletResponse.SC_UNAUTHORIZED),
-      Mockito.contains("equires SPNEGO authentication established"));
+    Mockito.verify(response).setStatus(
+        Mockito.eq(HttpServletResponse.SC_UNAUTHORIZED));
+    Mockito.verify(response).setHeader(Mockito.eq(
+            KerberosAuthenticator.WWW_AUTHENTICATE),
+        Mockito.eq("mock")
+    );
 
     Mockito.reset(response);
     AuthenticationToken token = Mockito.mock(AuthenticationToken.class);
     Mockito.when(token.getUserName()).thenReturn("user");
     Assert.assertFalse(handler.managementOperation(token, request, response));
     Mockito.verify(response).sendError(
-      Mockito.eq(HttpServletResponse.SC_BAD_REQUEST),
-      Mockito.contains("requires the parameter [token]"));
+        Mockito.eq(HttpServletResponse.SC_BAD_REQUEST),
+        Mockito.contains("requires the parameter [token]"));
 
     Mockito.reset(response);
     StringWriter writer = new StringWriter();
     PrintWriter pwriter = new PrintWriter(writer);
     Mockito.when(response.getWriter()).thenReturn(pwriter);
     Token<DelegationTokenIdentifier> dToken =
-      HttpFSServerWebApp.get().get(DelegationTokenManager.class).createToken(
-        UserGroupInformation.getCurrentUser(), "user");
-    Mockito.when(request.getParameter(HttpFSKerberosAuthenticator.TOKEN_PARAM)).
-      thenReturn(dToken.encodeToUrlString());
+        handler.getTokenManager().createToken(
+            UserGroupInformation.getCurrentUser(), "user");
+    Mockito.when(request.getQueryString()).
+        thenReturn(DelegationTokenAuthenticator.OP_PARAM + "=" + op.toString() +
+        "&" + DelegationTokenAuthenticator.TOKEN_PARAM + "=" +
+        dToken.encodeToUrlString());
     Assert.assertFalse(handler.managementOperation(token, request, response));
     Mockito.verify(response).setStatus(HttpServletResponse.SC_OK);
     pwriter.close();
     Assert.assertTrue(writer.toString().contains("long"));
-    HttpFSServerWebApp.get().get(DelegationTokenManager.class).verifyToken(dToken);
+    handler.getTokenManager().verifyToken(dToken);
   }
 
   @Test
-  @TestDir
   public void testAuthenticate() throws Exception {
-    String dir = TestDirHelper.getTestDir().getAbsolutePath();
-
-    Configuration httpfsConf = new Configuration(false);
-    HttpFSServerWebApp server =
-      new HttpFSServerWebApp(dir, dir, dir, dir, httpfsConf);
-    server.setAuthority(new InetSocketAddress(InetAddress.getLocalHost(),
-                                              14000));
-    AuthenticationHandler handler =
-      new HttpFSKerberosAuthenticationHandlerForTesting();
-    try {
-      server.init();
-      handler.init(null);
-
-      testValidDelegationToken(handler);
-      testInvalidDelegationToken(handler);
-    } finally {
-      if (handler != null) {
-        handler.destroy();
-      }
-    server.destroy();
-    }
+    testValidDelegationToken();
+    testInvalidDelegationToken();
   }
 
-  private void testValidDelegationToken(AuthenticationHandler handler)
-    throws Exception {
+  private void testValidDelegationToken() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
     Token<DelegationTokenIdentifier> dToken =
-      HttpFSServerWebApp.get().get(DelegationTokenManager.class).createToken(
-        UserGroupInformation.getCurrentUser(), "user");
-    Mockito.when(request.getParameter(HttpFSKerberosAuthenticator.DELEGATION_PARAM)).
-      thenReturn(dToken.encodeToUrlString());
+        handler.getTokenManager().createToken(
+            UserGroupInformation.getCurrentUser(), "user");
+    Mockito.when(request.getQueryString()).thenReturn(
+        DelegationTokenAuthenticator.DELEGATION_PARAM + "=" +
+        dToken.encodeToUrlString());
 
     AuthenticationToken token = handler.authenticate(request, response);
-    Assert.assertEquals(UserGroupInformation.getCurrentUser().getShortUserName(),
-                        token.getUserName());
+    Assert.assertEquals(UserGroupInformation.getCurrentUser().
+            getShortUserName(), token.getUserName());
     Assert.assertEquals(0, token.getExpires());
-    Assert.assertEquals(HttpFSKerberosAuthenticationHandler.TYPE,
-                        token.getType());
+    Assert.assertEquals(handler.getType(),
+        token.getType());
     Assert.assertTrue(token.isExpired());
   }
 
-  private void testInvalidDelegationToken(AuthenticationHandler handler)
-    throws Exception {
+  private void testInvalidDelegationToken() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-    Mockito.when(request.getParameter(HttpFSKerberosAuthenticator.DELEGATION_PARAM)).
-      thenReturn("invalid");
+    Mockito.when(request.getQueryString()).thenReturn(
+        DelegationTokenAuthenticator.DELEGATION_PARAM + "=invalid");
 
     try {
       handler.authenticate(request, response);
