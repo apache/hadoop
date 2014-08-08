@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -3365,5 +3366,15 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     }
 
     assertNotEquals("One of the threads is still alive", 0, numRetries);
+  }
+
+  @Test
+  public void testPerfMetricsInited() {
+    scheduler.init(conf);
+    scheduler.start();
+    MetricsCollectorImpl collector = new MetricsCollectorImpl();
+    scheduler.fsOpDurations.getMetrics(collector, true);
+    assertEquals("Incorrect number of perf metrics", 1,
+        collector.getRecords().size());
   }
 }

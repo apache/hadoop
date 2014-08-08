@@ -15,21 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.lib.service;
+package org.apache.hadoop.security.token.delegation.web;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 
 /**
- * HttpFS <code>DelegationTokenIdentifier</code> implementation.
+ * Concrete delegation token identifier used by {@link DelegationTokenManager},
+ * {@link KerberosDelegationTokenAuthenticationHandler} and
+ * {@link DelegationTokenAuthenticationFilter}.
  */
 @InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class DelegationTokenIdentifier
-  extends AbstractDelegationTokenIdentifier {
+    extends AbstractDelegationTokenIdentifier {
 
-  private Text kind = WebHdfsFileSystem.TOKEN_KIND;
+  private Text kind;
 
   public DelegationTokenIdentifier(Text kind) {
     this.kind = kind;
@@ -50,8 +53,8 @@ public class DelegationTokenIdentifier
   }
 
   /**
-   * Returns the kind, <code>TOKEN_KIND</code>.
-   * @return returns <code>TOKEN_KIND</code>.
+   * Return the delegation token kind
+   * @return returns the delegation token kind
    */
   @Override
   public Text getKind() {

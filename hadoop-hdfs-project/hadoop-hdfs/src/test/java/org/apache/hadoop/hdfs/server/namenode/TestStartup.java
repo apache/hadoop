@@ -26,6 +26,7 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.URI;
 import java.util.ArrayList;
@@ -49,6 +50,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
@@ -63,6 +65,9 @@ import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 
 /**
  * Startup and checkpoint tests
@@ -684,4 +689,40 @@ public class TestStartup {
       }
     }
   }
+
+
+  /**
+   * Verify the following scenario.
+   * 1. NN restarts.
+   * 2. Heartbeat RPC will retry and succeed. NN asks DN to reregister.
+   * 3. After reregistration completes, DN will send Heartbeat, followed by
+   *    Blockreport.
+   * 4. NN will mark DatanodeStorageInfo#blockContentsStale to false.
+   * @throws Exception
+   */
+  @Test(timeout = 60000)
+  public void testStorageBlockContentsStaleAfterNNRestart() throws Exception {
+    MiniDFSCluster dfsCluster = null;
+    try {
+      Configuration config = new Configuration();
+      dfsCluster = new MiniDFSCluster.Builder(config).numDataNodes(1).build();
+      dfsCluster.waitActive();
+      dfsCluster.restartNameNode(true);
+      BlockManagerTestUtil.checkHeartbeat(
+          dfsCluster.getNamesystem().getBlockManager());
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxbeanNameFsns = new ObjectName(
+          "Hadoop:service=NameNode,name=FSNamesystemState");
+      Integer numStaleStorages = (Integer) (mbs.getAttribute(
+          mxbeanNameFsns, "NumStaleStorages"));
+      assertEquals(0, numStaleStorages.intValue());
+    } finally {
+      if (dfsCluster != null) {
+        dfsCluster.shutdown();
+      }
+    }
+
+    return;
+  }
+
 }

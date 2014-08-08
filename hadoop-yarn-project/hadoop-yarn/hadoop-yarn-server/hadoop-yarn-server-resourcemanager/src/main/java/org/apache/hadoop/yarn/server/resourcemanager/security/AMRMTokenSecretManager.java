@@ -167,6 +167,11 @@ public class AMRMTokenSecretManager extends
           + this.nextMasterKey.getMasterKey().getKeyId());
       this.currentMasterKey = this.nextMasterKey;
       this.nextMasterKey = null;
+      AMRMTokenSecretManagerState state =
+          AMRMTokenSecretManagerState.newInstance(
+            this.currentMasterKey.getMasterKey(), null);
+      rmContext.getStateStore().storeOrUpdateAMRMTokenSecretManagerState(state,
+        true);
     } finally {
       this.writeLock.unlock();
     }

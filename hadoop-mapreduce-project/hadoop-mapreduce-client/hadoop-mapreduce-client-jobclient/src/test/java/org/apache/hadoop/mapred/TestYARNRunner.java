@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -36,6 +37,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
+import java.util.Map;
 
 import junit.framework.TestCase;
 
@@ -44,22 +46,27 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobPriority;
 import org.apache.hadoop.mapreduce.JobStatus.State;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.MRDelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenResponse;
+import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -94,6 +101,7 @@ import org.apache.log4j.Layout;
 import org.apache.log4j.Logger;
 import org.apache.log4j.SimpleLayout;
 import org.apache.log4j.WriterAppender;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -146,8 +154,12 @@ public class TestYARNRunner extends TestCase {
       FileContext.getLocalFSFileContext().delete(new Path(testWorkDir.toString()), true);
     }
     testWorkDir.mkdirs();
-   }
+  }
 
+  @After
+  public void cleanup() {
+    FileUtil.fullyDelete(testWorkDir);
+  }
 
   @Test(timeout=20000)
   public void testJobKill() throws Exception {
@@ -397,21 +409,8 @@ public class TestYARNRunner extends TestCase {
     
     YARNRunner yarnRunner = new YARNRunner(jobConf);
     
-    File jobxml = new File(testWorkDir, MRJobConfig.JOB_CONF_FILE);
-    OutputStream out = new FileOutputStream(jobxml);
-    conf.writeXml(out);
-    out.close();
-    
-    File jobsplit = new File(testWorkDir, MRJobConfig.JOB_SPLIT);
-    out = new FileOutputStream(jobsplit);
-    out.close();
-    
-    File jobsplitmetainfo = new File(testWorkDir, MRJobConfig.JOB_SPLIT_METAINFO);
-    out = new FileOutputStream(jobsplitmetainfo);
-    out.close();
-    
-    ApplicationSubmissionContext submissionContext = 
-        yarnRunner.createApplicationSubmissionContext(jobConf, testWorkDir.toString(), new Credentials());
+    ApplicationSubmissionContext submissionContext =
+        buildSubmitContext(yarnRunner, jobConf);
     
     ContainerLaunchContext containerSpec = submissionContext.getAMContainerSpec();
     List<String> commands = containerSpec.getCommands();
@@ -463,22 +462,9 @@ public class TestYARNRunner extends TestCase {
     
     YARNRunner yarnRunner = new YARNRunner(jobConf);
     
-    File jobxml = new File(testWorkDir, MRJobConfig.JOB_CONF_FILE);
-    OutputStream out = new FileOutputStream(jobxml);
-    conf.writeXml(out);
-    out.close();
-    
-    File jobsplit = new File(testWorkDir, MRJobConfig.JOB_SPLIT);
-    out = new FileOutputStream(jobsplit);
-    out.close();
-    
-    File jobsplitmetainfo = new File(testWorkDir, MRJobConfig.JOB_SPLIT_METAINFO);
-    out = new FileOutputStream(jobsplitmetainfo);
-    out.close();
-    
     @SuppressWarnings("unused")
-    ApplicationSubmissionContext submissionContext = 
-        yarnRunner.createApplicationSubmissionContext(jobConf, testWorkDir.toString(), new Credentials());
+    ApplicationSubmissionContext submissionContext =
+        buildSubmitContext(yarnRunner, jobConf);
    
     String logMsg = bout.toString();
     assertTrue(logMsg.contains("WARN - Usage of -Djava.library.path in " + 
@@ -491,5 +477,61 @@ public class TestYARNRunner extends TestCase {
         "function if hadoop native libraries are used. These values should " +
         "be set as part of the LD_LIBRARY_PATH in the app master JVM env " +
         "using yarn.app.mapreduce.am.env config settings."));
+  }
+
+  @Test
+  public void testAMStandardEnv() throws Exception {
+    final String ADMIN_LIB_PATH = "foo";
+    final String USER_LIB_PATH = "bar";
+    final String USER_SHELL = "shell";
+    JobConf jobConf = new JobConf();
+
+    jobConf.set(MRJobConfig.MR_AM_ADMIN_USER_ENV, "LD_LIBRARY_PATH=" +
+        ADMIN_LIB_PATH);
+    jobConf.set(MRJobConfig.MR_AM_ENV, "LD_LIBRARY_PATH="
+        + USER_LIB_PATH);
+    jobConf.set(MRJobConfig.MAPRED_ADMIN_USER_SHELL, USER_SHELL);
+
+    YARNRunner yarnRunner = new YARNRunner(jobConf);
+    ApplicationSubmissionContext appSubCtx =
+        buildSubmitContext(yarnRunner, jobConf);
+
+    // make sure PWD is first in the lib path
+    ContainerLaunchContext clc = appSubCtx.getAMContainerSpec();
+    Map<String, String> env = clc.getEnvironment();
+    String libPath = env.get(Environment.LD_LIBRARY_PATH.name());
+    assertNotNull("LD_LIBRARY_PATH not set", libPath);
+    String cps = jobConf.getBoolean(
+        MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM,
+        MRConfig.DEFAULT_MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM)
+        ? ApplicationConstants.CLASS_PATH_SEPARATOR : File.pathSeparator;
+    assertEquals("Bad AM LD_LIBRARY_PATH setting",
+        MRApps.crossPlatformifyMREnv(conf, Environment.PWD)
+        + cps + ADMIN_LIB_PATH + cps + USER_LIB_PATH, libPath);
+
+    // make sure SHELL is set
+    String shell = env.get(Environment.SHELL.name());
+    assertNotNull("SHELL not set", shell);
+    assertEquals("Bad SHELL setting", USER_SHELL, shell);
+  }
+
+  private ApplicationSubmissionContext buildSubmitContext(
+      YARNRunner yarnRunner, JobConf jobConf) throws IOException {
+    File jobxml = new File(testWorkDir, MRJobConfig.JOB_CONF_FILE);
+    OutputStream out = new FileOutputStream(jobxml);
+    conf.writeXml(out);
+    out.close();
+
+    File jobsplit = new File(testWorkDir, MRJobConfig.JOB_SPLIT);
+    out = new FileOutputStream(jobsplit);
+    out.close();
+
+    File jobsplitmetainfo = new File(testWorkDir,
+        MRJobConfig.JOB_SPLIT_METAINFO);
+    out = new FileOutputStream(jobsplitmetainfo);
+    out.close();
+
+    return yarnRunner.createApplicationSubmissionContext(jobConf,
+        testWorkDir.toString(), new Credentials());
   }
 }

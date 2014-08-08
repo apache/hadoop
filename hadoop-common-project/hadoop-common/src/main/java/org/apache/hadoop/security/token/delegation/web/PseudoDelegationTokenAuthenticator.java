@@ -15,33 +15,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.fs.http.client;
+package org.apache.hadoop.security.token.delegation.web;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.PseudoAuthenticator;
 
 import java.io.IOException;
 
 /**
- * A <code>PseudoAuthenticator</code> subclass that uses FileSystemAccess's
- * <code>UserGroupInformation</code> to obtain the client user name (the UGI's login user).
+ * The <code>PseudoDelegationTokenAuthenticator</code> provides support for
+ * Hadoop's pseudo authentication mechanism that accepts
+ * the user name specified as a query string parameter and support for Hadoop
+ * Delegation Token operations.
+ * <p/>
+ * This mimics the model of Hadoop Simple authentication trusting the
+ * {@link UserGroupInformation#getCurrentUser()} value.
  */
-@InterfaceAudience.Private
-public class HttpFSPseudoAuthenticator extends PseudoAuthenticator {
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public class PseudoDelegationTokenAuthenticator
+    extends DelegationTokenAuthenticator {
 
-  /**
-   * Return the client user name.
-   *
-   * @return the client user name.
-   */
-  @Override
-  protected String getUserName() {
-    try {
-      return UserGroupInformation.getLoginUser().getUserName();
-    } catch (IOException ex) {
-      throw new SecurityException("Could not obtain current user, " + ex.getMessage(), ex);
-    }
+  public PseudoDelegationTokenAuthenticator() {
+    super(new PseudoAuthenticator() {
+      @Override
+      protected String getUserName() {
+        try {
+          return UserGroupInformation.getCurrentUser().getShortUserName();
+        } catch (IOException ex) {
+          throw new RuntimeException(ex);
+        }
+      }
+    });
   }
+
 }

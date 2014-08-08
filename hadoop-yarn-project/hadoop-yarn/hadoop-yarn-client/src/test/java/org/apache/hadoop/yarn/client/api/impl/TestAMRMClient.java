@@ -27,19 +27,23 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
 import org.junit.Assert;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -71,9 +75,12 @@ import org.apache.hadoop.yarn.client.api.NMTokenCache;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
@@ -93,6 +100,9 @@ public class TestAMRMClient {
   static ApplicationAttemptId attemptId = null;
   static int nodeCount = 3;
   
+  static final int rolling_interval_sec = 13;
+  static final long am_expire_ms = 4000;
+
   static Resource capability;
   static Priority priority;
   static Priority priority2;
@@ -106,6 +116,10 @@ public class TestAMRMClient {
   public static void setup() throws Exception {
     // start minicluster
     conf = new YarnConfiguration();
+    conf.setLong(
+      YarnConfiguration.RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS,
+      rolling_interval_sec);
+    conf.setLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, am_expire_ms);
     conf.setInt(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS, 100);
     conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 1);
     yarnCluster = new MiniYARNCluster(TestAMRMClient.class.getName(), nodeCount, 1, 1);
@@ -809,4 +823,123 @@ public class TestAMRMClient {
     }
   }
 
+  @Test(timeout = 60000)
+  public void testAMRMClientOnAMRMTokenRollOver() throws YarnException,
+      IOException {
+    AMRMClient<ContainerRequest> amClient = null;
+    try {
+      AMRMTokenSecretManager amrmTokenSecretManager =
+          yarnCluster.getResourceManager().getRMContext()
+            .getAMRMTokenSecretManager();
+
+      // start am rm client
+      amClient = AMRMClient.<ContainerRequest> createAMRMClient();
+
+      amClient.init(conf);
+      amClient.start();
+
+      Long startTime = System.currentTimeMillis();
+      amClient.registerApplicationMaster("Host", 10000, "");
+
+      org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> amrmToken_1 =
+          getAMRMToken();
+      Assert.assertNotNull(amrmToken_1);
+      Assert.assertEquals(amrmToken_1.decodeIdentifier().getKeyId(),
+        amrmTokenSecretManager.getMasterKey().getMasterKey().getKeyId());
+
+      // Wait for enough time and make sure the roll_over happens
+      // At mean time, the old AMRMToken should continue to work
+      while (System.currentTimeMillis() - startTime <
+          rolling_interval_sec * 1000) {
+        amClient.allocate(0.1f);
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        }
+      }
+      amClient.allocate(0.1f);
+
+      org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> amrmToken_2 =
+          getAMRMToken();
+      Assert.assertNotNull(amrmToken_2);
+      Assert.assertEquals(amrmToken_2.decodeIdentifier().getKeyId(),
+        amrmTokenSecretManager.getMasterKey().getMasterKey().getKeyId());
+
+      Assert.assertNotEquals(amrmToken_1, amrmToken_2);
+
+      // can do the allocate call with latest AMRMToken
+      amClient.allocate(0.1f);
+
+      // Make sure previous token has been rolled-over
+      // and can not use this rolled-over token to make a allocate all.
+      while (true) {
+        if (amrmToken_2.decodeIdentifier().getKeyId() != amrmTokenSecretManager
+          .getCurrnetMasterKeyData().getMasterKey().getKeyId()) {
+          if (amrmTokenSecretManager.getNextMasterKeyData() == null) {
+            break;
+          } else if (amrmToken_2.decodeIdentifier().getKeyId() !=
+              amrmTokenSecretManager.getNextMasterKeyData().getMasterKey()
+              .getKeyId()) {
+            break;
+          }
+        }
+        amClient.allocate(0.1f);
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          // DO NOTHING
+        }
+      }
+
+      try {
+        UserGroupInformation testUser =
+            UserGroupInformation.createRemoteUser("testUser");
+        SecurityUtil.setTokenService(amrmToken_2, yarnCluster
+          .getResourceManager().getApplicationMasterService().getBindAddress());
+        testUser.addToken(amrmToken_2);
+        testUser.doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
+          @Override
+          public ApplicationMasterProtocol run() {
+            return (ApplicationMasterProtocol) YarnRPC.create(conf).getProxy(
+              ApplicationMasterProtocol.class,
+              yarnCluster.getResourceManager().getApplicationMasterService()
+                .getBindAddress(), conf);
+          }
+        }).allocate(Records.newRecord(AllocateRequest.class));
+        Assert.fail("The old Token should not work");
+      } catch (Exception ex) {
+        Assert.assertTrue(ex instanceof InvalidToken);
+        Assert.assertTrue(ex.getMessage().contains(
+          "Invalid AMRMToken from "
+              + amrmToken_2.decodeIdentifier().getApplicationAttemptId()));
+      }
+
+      amClient.unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED,
+        null, null);
+
+    } finally {
+      if (amClient != null && amClient.getServiceState() == STATE.STARTED) {
+        amClient.stop();
+      }
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private org.apache.hadoop.security.token.Token<AMRMTokenIdentifier>
+      getAMRMToken() throws IOException {
+    Credentials credentials =
+        UserGroupInformation.getCurrentUser().getCredentials();
+    Iterator<org.apache.hadoop.security.token.Token<?>> iter =
+        credentials.getAllTokens().iterator();
+    while (iter.hasNext()) {
+      org.apache.hadoop.security.token.Token<?> token = iter.next();
+      if (token.getKind().equals(AMRMTokenIdentifier.KIND_NAME)) {
+        return (org.apache.hadoop.security.token.Token<AMRMTokenIdentifier>)
+            token;
+      }
+    }
+    return null;
+  }
 }

@@ -490,6 +490,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10791. AuthenticationFilter should support externalizing the 
     secret for signing and provide rotation support. (rkanter via tucu)
 
+    HADOOP-10771. Refactor HTTP delegation support out of httpfs to common, PART 1. (tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -521,9 +523,6 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10830. Missing lock in JavaKeyStoreProvider.createCredentialEntry.
     (Benoy Antony via umamahesh)
 
-    HADOOP-10876. The constructor of Path should not take an empty URL as a
-    parameter. (Zhihai Xu via wang)
-
     HADOOP-10928. Incorrect usage on `hadoop credential list`.
     (Josh Elser via wang)
 
@@ -542,6 +541,11 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10905. LdapGroupsMapping Should use configuration.getPassword for SSL
     and LDAP Passwords. (lmccay via brandonli)
+
+    HADOOP-10931 compile error on tools/hadoop-openstack (xukun via stevel)
+
+    HADOOP-10929. Typo in Configuration.getPasswordFromCredentialProviders
+    (lmccay via brandonli)
 
 Release 2.5.0 - UNRELEASED
 

@@ -198,8 +198,6 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     // create application token and client token key for attempt1
     Token<AMRMTokenIdentifier> appAttemptToken1 =
         generateAMRMToken(attemptId1, appTokenMgr);
-    HashSet<Token<?>> attemptTokenSet1 = new HashSet<Token<?>>();
-    attemptTokenSet1.add(appAttemptToken1);
     SecretKey clientTokenKey1 =
         clientToAMTokenMgr.createMasterKey(attemptId1);
 
@@ -214,8 +212,6 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     // create application token and client token key for attempt2
     Token<AMRMTokenIdentifier> appAttemptToken2 =
         generateAMRMToken(attemptId2, appTokenMgr);
-    HashSet<Token<?>> attemptTokenSet2 = new HashSet<Token<?>>();
-    attemptTokenSet2.add(appAttemptToken2);
     SecretKey clientTokenKey2 =
         clientToAMTokenMgr.createMasterKey(attemptId2);
 
@@ -280,10 +276,6 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     assertEquals(-1000, attemptState.getAMContainerExitStatus());
     // attempt1 container is loaded correctly
     assertEquals(containerId1, attemptState.getMasterContainer().getId());
-    // attempt1 applicationToken is loaded correctly
-    HashSet<Token<?>> savedTokens = new HashSet<Token<?>>();
-    savedTokens.addAll(attemptState.getAppAttemptCredentials().getAllTokens());
-    assertEquals(attemptTokenSet1, savedTokens);
     // attempt1 client token master key is loaded correctly
     assertArrayEquals(clientTokenKey1.getEncoded(),
         attemptState.getAppAttemptCredentials()
@@ -295,10 +287,6 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     assertEquals(attemptId2, attemptState.getAttemptId());
     // attempt2 container is loaded correctly
     assertEquals(containerId2, attemptState.getMasterContainer().getId());
-    // attempt2 applicationToken is loaded correctly
-    savedTokens.clear();
-    savedTokens.addAll(attemptState.getAppAttemptCredentials().getAllTokens());
-    assertEquals(attemptTokenSet2, savedTokens);
     // attempt2 client token master key is loaded correctly
     assertArrayEquals(clientTokenKey2.getEncoded(),
         attemptState.getAppAttemptCredentials()

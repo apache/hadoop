@@ -69,6 +69,7 @@
     
     <menu name="HDFS" inherit="top">
       <item name="HDFS User Guide" href="hadoop-project-dist/hadoop-hdfs/HdfsUserGuide.html"/>
+      <item name="HDFS Commands Reference" href="hadoop-project-dist/hadoop-hdfs/HDFSCommands.html"/>
       <item name="High Availability With QJM" href="hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithQJM.html"/>
       <item name="High Availability With NFS" href="hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithNFS.html"/>
       <item name="Federation" href="hadoop-project-dist/hadoop-hdfs/Federation.html"/>

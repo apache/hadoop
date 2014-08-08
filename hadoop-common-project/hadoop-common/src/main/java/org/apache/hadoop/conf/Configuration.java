@@ -1781,7 +1781,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   public char[] getPassword(String name) throws IOException {
     char[] pass = null;
 
-    pass = getPasswordFromCredenitalProviders(name);
+    pass = getPasswordFromCredentialProviders(name);
 
     if (pass == null) {
       pass = getPasswordFromConfig(name);
@@ -1797,7 +1797,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @return password or null if not found
    * @throws IOException
    */
-  protected char[] getPasswordFromCredenitalProviders(String name)
+  protected char[] getPasswordFromCredentialProviders(String name)
       throws IOException {
     char[] pass = null;
     try {

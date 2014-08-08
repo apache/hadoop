@@ -37,6 +37,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -559,7 +560,22 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
   @Override
   public Token<AMRMTokenIdentifier> getAMRMToken() {
-    return this.amrmToken;
+    this.readLock.lock();
+    try {
+      return this.amrmToken;
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  @Private
+  public void setAMRMToken(Token<AMRMTokenIdentifier> lastToken) {
+    this.writeLock.lock();
+    try {
+      this.amrmToken = lastToken;
+    } finally {
+      this.writeLock.unlock();
+    }
   }
 
   @Override
@@ -713,7 +729,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       this.attemptMetrics.setIsPreempted();
     }
     setMasterContainer(attemptState.getMasterContainer());
-    recoverAppAttemptCredentials(attemptState.getAppAttemptCredentials());
+    recoverAppAttemptCredentials(attemptState.getAppAttemptCredentials(),
+      attemptState.getState());
     this.recoveredFinalState = attemptState.getState();
     this.originalTrackingUrl = attemptState.getFinalTrackingUrl();
     this.proxiedTrackingUrl = generateProxyUriWithScheme(originalTrackingUrl);
@@ -725,9 +742,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     this.justFinishedContainers = attempt.getJustFinishedContainers();
   }
 
-  private void recoverAppAttemptCredentials(Credentials appAttemptTokens)
-      throws IOException {
-    if (appAttemptTokens == null) {
+  private void recoverAppAttemptCredentials(Credentials appAttemptTokens,
+      RMAppAttemptState state) throws IOException {
+    if (appAttemptTokens == null || state == RMAppAttemptState.FAILED
+        || state == RMAppAttemptState.FINISHED
+        || state == RMAppAttemptState.KILLED) {
       return;
     }
 
@@ -738,12 +757,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           .registerMasterKey(applicationAttemptId, clientTokenMasterKeyBytes);
     }
 
-    // Only one AMRMToken is stored per-attempt, so this should be fine. Can't
-    // use TokenSelector as service may change - think fail-over.
     this.amrmToken =
-        (Token<AMRMTokenIdentifier>) appAttemptTokens
-          .getToken(RMStateStore.AM_RM_TOKEN_SERVICE);
-    rmContext.getAMRMTokenSecretManager().addPersistedPassword(this.amrmToken);
+        rmContext.getAMRMTokenSecretManager().createAndGetAMRMToken(
+          applicationAttemptId);
   }
 
   private static class BaseTransition implements
@@ -778,11 +794,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
             appAttempt.rmContext.getClientToAMTokenSecretManager()
               .createMasterKey(appAttempt.applicationAttemptId);
       }
-
-      // create AMRMToken
-      appAttempt.amrmToken =
-          appAttempt.rmContext.getAMRMTokenSecretManager().createAndGetAMRMToken(
-            appAttempt.applicationAttemptId);
 
       // Add the applicationAttempt to the scheduler and inform the scheduler
       // whether to transfer the state from previous attempt.
@@ -896,6 +907,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     public void transition(RMAppAttemptImpl appAttempt,
                                                     RMAppAttemptEvent event) {
       appAttempt.checkAttemptStoreError(event);
+
       appAttempt.launchAttempt();
     }
   }
@@ -1185,11 +1197,12 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     public void transition(RMAppAttemptImpl appAttempt,
                             RMAppAttemptEvent event) {
       appAttempt.checkAttemptStoreError(event);
-      // TODO Today unmanaged AM client is waiting for app state to be Accepted to
-      // launch the AM. This is broken since we changed to start the attempt
-      // after the application is Accepted. We may need to introduce an attempt
-      // report that client can rely on to query the attempt state and choose to
-      // launch the unmanaged AM.
+
+      // create AMRMToken
+      appAttempt.amrmToken =
+          appAttempt.rmContext.getAMRMTokenSecretManager().createAndGetAMRMToken(
+            appAttempt.applicationAttemptId);
+
       super.transition(appAttempt, event);
     }    
   }

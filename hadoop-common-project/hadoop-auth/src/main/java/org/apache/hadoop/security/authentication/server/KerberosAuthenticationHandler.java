@@ -142,10 +142,29 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
    */
   public static final String NAME_RULES = TYPE + ".name.rules";
 
+  private String type;
   private String keytab;
   private GSSManager gssManager;
   private Subject serverSubject = new Subject();
   private List<LoginContext> loginContexts = new ArrayList<LoginContext>();
+
+  /**
+   * Creates a Kerberos SPNEGO authentication handler with the default
+   * auth-token type, <code>kerberos</code>.
+   */
+  public KerberosAuthenticationHandler() {
+    this(TYPE);
+  }
+
+  /**
+   * Creates a Kerberos SPNEGO authentication handler with a custom auth-token
+   * type.
+   *
+   * @param type auth-token type.
+   */
+  public KerberosAuthenticationHandler(String type) {
+    this.type = type;
+  }
 
   /**
    * Initializes the authentication handler instance.
@@ -249,7 +268,7 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
    */
   @Override
   public String getType() {
-    return TYPE;
+    return type;
   }
 
   /**

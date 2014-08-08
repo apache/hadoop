@@ -150,6 +150,15 @@ public abstract class ResourceCalculator {
       Resource clusterResource, Resource numerator, Resource denominator);
   
   /**
+   * Determine if a resource is not suitable for use as a divisor
+   * (will result in divide by 0, etc)
+   *
+   * @param r resource
+   * @return true if divisor is invalid (should not be used), false else
+   */
+  public abstract boolean isInvalidDivisor(Resource r);
+
+  /**
    * Ratio of resource <code>a</code> to resource <code>b</code>.
    * 
    * @param a resource 

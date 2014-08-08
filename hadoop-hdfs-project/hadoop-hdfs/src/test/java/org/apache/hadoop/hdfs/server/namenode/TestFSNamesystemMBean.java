@@ -94,6 +94,8 @@ public class TestFSNamesystemMBean {
             "SnapshotStats"));
         Long MaxObjects = (Long) (mbs.getAttribute(mxbeanNameFsns,
             "MaxObjects"));
+        Integer numStaleStorages = (Integer) (mbs.getAttribute(
+            mxbeanNameFsns, "NumStaleStorages"));
 
         // Metrics that belong to "NameNodeInfo".
         // These are metrics that FSNamesystem registers directly with MBeanServer.
