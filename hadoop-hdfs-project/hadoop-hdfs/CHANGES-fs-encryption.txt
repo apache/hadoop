@@ -76,6 +76,9 @@ fs-encryption (Unreleased)
 
     HDFS-6394. HDFS encryption documentation. (wang)
 
+    HDFS-6834. Improve the configuration guidance in DFSClient when there 
+    are no Codec classes found in configs. (umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES
