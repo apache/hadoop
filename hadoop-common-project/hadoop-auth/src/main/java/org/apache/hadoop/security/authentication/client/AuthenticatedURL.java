@@ -120,32 +120,6 @@ public class AuthenticatedURL {
       return token;
     }
 
-    /**
-     * Return the hashcode for the token.
-     *
-     * @return the hashcode for the token.
-     */
-    @Override
-    public int hashCode() {
-      return (token != null) ? token.hashCode() : 0;
-    }
-
-    /**
-     * Return if two token instances are equal.
-     *
-     * @param o the other token instance.
-     *
-     * @return if this instance and the other instance are equal.
-     */
-    @Override
-    public boolean equals(Object o) {
-      boolean eq = false;
-      if (o instanceof Token) {
-        Token other = (Token) o;
-        eq = (token == null && other.token == null) || (token != null && this.token.equals(other.token));
-      }
-      return eq;
-    }
   }
 
   private static Class<? extends Authenticator> DEFAULT_AUTHENTICATOR = KerberosAuthenticator.class;
@@ -206,6 +180,16 @@ public class AuthenticatedURL {
     }
     this.connConfigurator = connConfigurator;
     this.authenticator.setConnectionConfigurator(connConfigurator);
+  }
+
+  /**
+   * Returns the {@link Authenticator} instance used by the
+   * <code>AuthenticatedURL</code>.
+   *
+   * @return the {@link Authenticator} instance
+   */
+  protected Authenticator getAuthenticator() {
+    return authenticator;
   }
 
   /**

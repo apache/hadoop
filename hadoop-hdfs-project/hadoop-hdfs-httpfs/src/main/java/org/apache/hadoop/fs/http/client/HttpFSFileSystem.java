@@ -39,12 +39,14 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.lib.wsrs.EnumSetParam;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
-import org.apache.hadoop.security.authentication.client.Authenticator;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticator;
+import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticator;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -67,7 +69,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
-import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -75,7 +76,6 @@ import java.security.PrivilegedExceptionAction;
 import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Callable;
 
 /**
  * HttpFSServer implementation of the FileSystemAccess FileSystem.
@@ -217,34 +217,15 @@ public class HttpFSFileSystem extends FileSystem
 
   }
 
-
-  private AuthenticatedURL.Token authToken = new AuthenticatedURL.Token();
+  private DelegationTokenAuthenticatedURL authURL;
+  private DelegationTokenAuthenticatedURL.Token authToken =
+      new DelegationTokenAuthenticatedURL.Token();
   private URI uri;
-  private InetSocketAddress httpFSAddr;
   private Path workingDir;
   private UserGroupInformation realUser;
   private String doAs;
-  private Token<?> delegationToken;
 
-  //This method enables handling UGI doAs with SPNEGO, we have to
-  //fallback to the realuser who logged in with Kerberos credentials
-  private <T> T doAsRealUserIfNecessary(final Callable<T> callable)
-    throws IOException {
-    try {
-      if (realUser.getShortUserName().equals(doAs)) {
-        return callable.call();
-      } else {
-        return realUser.doAs(new PrivilegedExceptionAction<T>() {
-          @Override
-          public T run() throws Exception {
-            return callable.call();
-          }
-        });
-      }
-    } catch (Exception ex) {
-      throw new IOException(ex.toString(), ex);
-    }
-  }
+
 
   /**
    * Convenience method that creates a <code>HttpURLConnection</code> for the
@@ -291,20 +272,26 @@ public class HttpFSFileSystem extends FileSystem
   private HttpURLConnection getConnection(final String method,
       Map<String, String> params, Map<String, List<String>> multiValuedParams,
       Path path, boolean makeQualified) throws IOException {
-    if (!realUser.getShortUserName().equals(doAs)) {
-      params.put(DO_AS_PARAM, doAs);
-    }
-    HttpFSKerberosAuthenticator.injectDelegationToken(params, delegationToken);
     if (makeQualified) {
       path = makeQualified(path);
     }
     final URL url = HttpFSUtils.createURL(path, params, multiValuedParams);
-    return doAsRealUserIfNecessary(new Callable<HttpURLConnection>() {
-      @Override
-      public HttpURLConnection call() throws Exception {
-        return getConnection(url, method);
+    try {
+      return UserGroupInformation.getCurrentUser().doAs(
+          new PrivilegedExceptionAction<HttpURLConnection>() {
+            @Override
+            public HttpURLConnection run() throws Exception {
+              return getConnection(url, method);
+            }
+          }
+      );
+    } catch (Exception ex) {
+      if (ex instanceof IOException) {
+        throw (IOException) ex;
+      } else {
+        throw new IOException(ex);
       }
-    });
+    }
   }
 
   /**
@@ -321,12 +308,8 @@ public class HttpFSFileSystem extends FileSystem
    * @throws IOException thrown if an IO error occurrs.
    */
   private HttpURLConnection getConnection(URL url, String method) throws IOException {
-    Class<? extends Authenticator> klass =
-      getConf().getClass("httpfs.authenticator.class",
-                         HttpFSKerberosAuthenticator.class, Authenticator.class);
-    Authenticator authenticator = ReflectionUtils.newInstance(klass, getConf());
     try {
-      HttpURLConnection conn = new AuthenticatedURL(authenticator).openConnection(url, authToken);
+      HttpURLConnection conn = authURL.openConnection(url, authToken);
       conn.setRequestMethod(method);
       if (method.equals(HTTP_POST) || method.equals(HTTP_PUT)) {
         conn.setDoOutput(true);
@@ -357,10 +340,17 @@ public class HttpFSFileSystem extends FileSystem
     super.initialize(name, conf);
     try {
       uri = new URI(name.getScheme() + "://" + name.getAuthority());
-      httpFSAddr = NetUtils.createSocketAddr(getCanonicalUri().toString());
     } catch (URISyntaxException ex) {
       throw new IOException(ex);
     }
+
+    Class<? extends DelegationTokenAuthenticator> klass =
+        getConf().getClass("httpfs.authenticator.class",
+            KerberosDelegationTokenAuthenticator.class,
+            DelegationTokenAuthenticator.class);
+    DelegationTokenAuthenticator authenticator =
+        ReflectionUtils.newInstance(klass, getConf());
+    authURL = new DelegationTokenAuthenticatedURL(authenticator);
   }
 
   @Override
@@ -1060,38 +1050,57 @@ public class HttpFSFileSystem extends FileSystem
   @Override
   public Token<?> getDelegationToken(final String renewer)
     throws IOException {
-    return doAsRealUserIfNecessary(new Callable<Token<?>>() {
-      @Override
-      public Token<?> call() throws Exception {
-        return HttpFSKerberosAuthenticator.
-          getDelegationToken(uri, httpFSAddr, authToken, renewer);
+    try {
+      return UserGroupInformation.getCurrentUser().doAs(
+          new PrivilegedExceptionAction<Token<?>>() {
+            @Override
+            public Token<?> run() throws Exception {
+              return authURL.getDelegationToken(uri.toURL(), authToken,
+                  renewer);
+            }
+          }
+      );
+    } catch (Exception ex) {
+      if (ex instanceof IOException) {
+        throw (IOException) ex;
+      } else {
+        throw new IOException(ex);
       }
-    });
+    }
   }
 
   public long renewDelegationToken(final Token<?> token) throws IOException {
-    return doAsRealUserIfNecessary(new Callable<Long>() {
-      @Override
-      public Long call() throws Exception {
-        return HttpFSKerberosAuthenticator.
-          renewDelegationToken(uri,  authToken, token);
+    try {
+      return UserGroupInformation.getCurrentUser().doAs(
+          new PrivilegedExceptionAction<Long>() {
+            @Override
+            public Long run() throws Exception {
+              return authURL.renewDelegationToken(uri.toURL(), authToken);
+            }
+          }
+      );
+    } catch (Exception ex) {
+      if (ex instanceof IOException) {
+        throw (IOException) ex;
+      } else {
+        throw new IOException(ex);
       }
-    });
+    }
   }
 
   public void cancelDelegationToken(final Token<?> token) throws IOException {
-    HttpFSKerberosAuthenticator.
-      cancelDelegationToken(uri, authToken, token);
+    authURL.cancelDelegationToken(uri.toURL(), authToken);
   }
 
   @Override
   public Token<?> getRenewToken() {
-    return delegationToken;
+    return null; //TODO : for renewer
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public <T extends TokenIdentifier> void setDelegationToken(Token<T> token) {
-    delegationToken = token;
+    //TODO : for renewer
   }
 
   @Override
