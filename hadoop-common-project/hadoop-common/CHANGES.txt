@@ -490,6 +490,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10791. AuthenticationFilter should support externalizing the 
     secret for signing and provide rotation support. (rkanter via tucu)
 
+    HADOOP-10771. Refactor HTTP delegation support out of httpfs to common, PART 1. (tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
