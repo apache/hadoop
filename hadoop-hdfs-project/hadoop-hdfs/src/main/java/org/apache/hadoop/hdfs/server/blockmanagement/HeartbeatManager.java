@@ -256,6 +256,7 @@ class HeartbeatManager implements DatanodeStatistics {
       DatanodeID dead = null;
       // check the number of stale nodes
       int numOfStaleNodes = 0;
+      int numOfStaleStorages = 0;
       synchronized(this) {
         for (DatanodeDescriptor d : datanodes) {
           if (dead == null && dm.isDatanodeDead(d)) {
@@ -265,10 +266,17 @@ class HeartbeatManager implements DatanodeStatistics {
           if (d.isStale(dm.getStaleInterval())) {
             numOfStaleNodes++;
           }
+          DatanodeStorageInfo[] storageInfos = d.getStorageInfos();
+          for(DatanodeStorageInfo storageInfo : storageInfos) {
+            if (storageInfo.areBlockContentsStale()) {
+              numOfStaleStorages++;
+            }
+          }
         }
         
         // Set the number of stale nodes in the DatanodeManager
         dm.setNumStaleNodes(numOfStaleNodes);
+        dm.setNumStaleStorages(numOfStaleStorages);
       }
 
       allAlive = dead == null;

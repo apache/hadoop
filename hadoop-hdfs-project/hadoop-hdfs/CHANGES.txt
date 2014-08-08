@@ -379,6 +379,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6722. Display readable last contact time for dead nodes on NN webUI.
     (Ming Ma via wheat9)
 
+    HDFS-6772. Get DN storages out of blockContentsStale state faster after
+    NN restarts. (Ming Ma via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
