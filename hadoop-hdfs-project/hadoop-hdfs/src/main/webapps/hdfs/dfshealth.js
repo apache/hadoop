@@ -139,6 +139,14 @@
   }
 
   function load_datanode_info() {
+
+    var HELPERS = {
+      'helper_lastcontact_tostring' : function (chunk, ctx, bodies, params) {
+        var value = dust.helpers.tap(params.value, chunk, ctx);
+        return chunk.write('' + new Date(Date.now()-1000*Number(value)));
+      }
+    };
+
     function workaround(r) {
       function node_map_to_array(nodes) {
         var res = [];
@@ -160,7 +168,8 @@
       '/jmx?qry=Hadoop:service=NameNode,name=NameNodeInfo',
       guard_with_startup_progress(function (resp) {
         var data = workaround(resp.beans[0]);
-        dust.render('datanode-info', data, function(err, out) {
+        var base = dust.makeBase(HELPERS);
+        dust.render('datanode-info', base.push(data), function(err, out) {
           $('#tab-datanode').html(out);
           $('#ui-tabs a[href="#tab-datanode"]').tab('show');
         });
