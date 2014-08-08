@@ -94,6 +94,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2288. Made persisted data in LevelDB timeline store be versioned. (Junping Du
     via zjshen)
 
+    YARN-2352. FairScheduler: Collect metrics on duration of critical methods that 
+    affect performance. (kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES

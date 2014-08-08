@@ -90,6 +90,14 @@ public class MutableStat extends MutableMetric {
   }
 
   /**
+   * Set whether to display the extended stats (stdev, min/max etc.) or not
+   * @param extended enable/disable displaying extended stats
+   */
+  public synchronized void setExtended(boolean extended) {
+    this.extended = extended;
+  }
+
+  /**
    * Add a number of samples and their sum to the running stat
    * @param numSamples  number of samples
    * @param sum of the samples
