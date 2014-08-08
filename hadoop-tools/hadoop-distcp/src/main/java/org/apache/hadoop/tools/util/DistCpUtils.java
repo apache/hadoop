@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.tools.util;
 
+import com.google.common.collect.Maps;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -25,6 +26,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileChecksum;
+import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclUtil;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -151,7 +153,7 @@ public class DistCpUtils {
    * @return - String containing first letters of each attribute to preserve
    */
   public static String packAttributes(EnumSet<FileAttribute> attributes) {
-    StringBuffer buffer = new StringBuffer(5);
+    StringBuffer buffer = new StringBuffer(FileAttribute.values().length);
     int len = 0;
     for (FileAttribute attribute : attributes) {
       buffer.append(attribute.name().charAt(0));
@@ -186,13 +188,15 @@ public class DistCpUtils {
    * @param targetFS - File system
    * @param path - Path that needs to preserve original file status
    * @param srcFileStatus - Original file status
-   * @param attributes - Attribute set that need to be preserved
+   * @param attributes - Attribute set that needs to be preserved
+   * @param preserveRawXattrs if true, raw.* xattrs should be preserved
    * @throws IOException - Exception if any (particularly relating to group/owner
    *                       change or any transient error)
    */
   public static void preserve(FileSystem targetFS, Path path,
                               CopyListingFileStatus srcFileStatus,
-                              EnumSet<FileAttribute> attributes) throws IOException {
+                              EnumSet<FileAttribute> attributes,
+                              boolean preserveRawXattrs) throws IOException {
 
     FileStatus targetFileStatus = targetFS.getFileStatus(path);
     String group = targetFileStatus.getGroup();
@@ -214,15 +218,20 @@ public class DistCpUtils {
       !srcFileStatus.getPermission().equals(targetFileStatus.getPermission())) {
       targetFS.setPermission(path, srcFileStatus.getPermission());
     }
-    
-    if (attributes.contains(FileAttribute.XATTR)) {
+
+    final boolean preserveXAttrs = attributes.contains(FileAttribute.XATTR);
+    if (preserveXAttrs || preserveRawXattrs) {
+      final String rawNS = XAttr.NameSpace.RAW.name().toLowerCase();
       Map<String, byte[]> srcXAttrs = srcFileStatus.getXAttrs();
       Map<String, byte[]> targetXAttrs = getXAttrs(targetFS, path);
-      if (!srcXAttrs.equals(targetXAttrs)) {
+      if (srcXAttrs != null && !srcXAttrs.equals(targetXAttrs)) {
         Iterator<Entry<String, byte[]>> iter = srcXAttrs.entrySet().iterator();
         while (iter.hasNext()) {
           Entry<String, byte[]> entry = iter.next();
-          targetFS.setXAttr(path, entry.getKey(), entry.getValue());
+          final String xattrName = entry.getKey();
+          if (xattrName.startsWith(rawNS) || preserveXAttrs) {
+            targetFS.setXAttr(path, entry.getKey(), entry.getValue());
+          }
         }
       }
     }
@@ -286,11 +295,12 @@ public class DistCpUtils {
    * @param fileStatus FileStatus of file
    * @param preserveAcls boolean true if preserving ACLs
    * @param preserveXAttrs boolean true if preserving XAttrs
+   * @param preserveRawXAttrs boolean true if preserving raw.* XAttrs
    * @throws IOException if there is an I/O error
    */
   public static CopyListingFileStatus toCopyListingFileStatus(
       FileSystem fileSystem, FileStatus fileStatus, boolean preserveAcls, 
-      boolean preserveXAttrs) throws IOException {
+      boolean preserveXAttrs, boolean preserveRawXAttrs) throws IOException {
     CopyListingFileStatus copyListingFileStatus =
       new CopyListingFileStatus(fileStatus);
     if (preserveAcls) {
@@ -301,9 +311,25 @@ public class DistCpUtils {
         copyListingFileStatus.setAclEntries(aclEntries);
       }
     }
-    if (preserveXAttrs) {
-      Map<String, byte[]> xAttrs = fileSystem.getXAttrs(fileStatus.getPath());
-      copyListingFileStatus.setXAttrs(xAttrs);
+    if (preserveXAttrs || preserveRawXAttrs) {
+      Map<String, byte[]> srcXAttrs = fileSystem.getXAttrs(fileStatus.getPath());
+      if (preserveXAttrs && preserveRawXAttrs) {
+         copyListingFileStatus.setXAttrs(srcXAttrs);
+      } else {
+        Map<String, byte[]> trgXAttrs = Maps.newHashMap();
+        final String rawNS = XAttr.NameSpace.RAW.name().toLowerCase();
+        for (Map.Entry<String, byte[]> ent : srcXAttrs.entrySet()) {
+          final String xattrName = ent.getKey();
+          if (xattrName.startsWith(rawNS)) {
+            if (preserveRawXAttrs) {
+              trgXAttrs.put(xattrName, ent.getValue());
+            }
+          } else if (preserveXAttrs) {
+            trgXAttrs.put(xattrName, ent.getValue());
+          }
+        }
+        copyListingFileStatus.setXAttrs(trgXAttrs);
+      }
     }
     return copyListingFileStatus;
   }
