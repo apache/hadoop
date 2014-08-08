@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -60,24 +59,17 @@ public class TestBlockInfo {
 
 
   @Test
-  public void testReplaceStorage() throws Exception {
+  public void testReplaceStorageIfDifferetnOneAlreadyExistedFromSameDataNode() throws Exception {
+    BlockInfo blockInfo = new BlockInfo(3);
 
-    // Create two dummy storages.
     final DatanodeStorageInfo storage1 = DFSTestUtil.createDatanodeStorageInfo("storageID1", "127.0.0.1");
     final DatanodeStorageInfo storage2 = new DatanodeStorageInfo(storage1.getDatanodeDescriptor(), new DatanodeStorage("storageID2"));
-    final int NUM_BLOCKS = 10;
-    BlockInfo[] blockInfos = new BlockInfo[NUM_BLOCKS];
 
-    // Create a few dummy blocks and add them to the first storage.
-    for (int i = 0; i < NUM_BLOCKS; ++i) {
-      blockInfos[i] = new BlockInfo(3);
-      storage1.addBlock(blockInfos[i]);
-    }
+    blockInfo.addStorage(storage1);
+    boolean added = blockInfo.addStorage(storage2);
 
-    // Try to move one of the blocks to a different storage.
-    boolean added = storage2.addBlock(blockInfos[NUM_BLOCKS/2]);
-    Assert.assertThat(added, is(false));
-    Assert.assertThat(blockInfos[NUM_BLOCKS/2].getStorageInfo(0), is(storage2));
+    Assert.assertFalse(added);
+    Assert.assertEquals(storage2, blockInfo.getStorageInfo(0));
   }
 
   @Test
