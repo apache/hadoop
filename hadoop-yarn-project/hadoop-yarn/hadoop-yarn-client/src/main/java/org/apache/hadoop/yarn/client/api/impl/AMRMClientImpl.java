@@ -39,7 +39,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -56,6 +58,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
@@ -64,6 +67,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.util.RackResolver;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -299,6 +303,9 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         clusterAvailableResources = allocateResponse.getAvailableResources();
         if (!allocateResponse.getNMTokens().isEmpty()) {
           populateNMTokens(allocateResponse.getNMTokens());
+        }
+        if (allocateResponse.getAMRMToken() != null) {
+          updateAMRMToken(allocateResponse.getAMRMToken());
         }
         if (!pendingRelease.isEmpty()
             && !allocateResponse.getCompletedContainersStatuses().isEmpty()) {
@@ -742,5 +749,17 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
       LOG.warn("The same resources appear in both blacklistAdditions and " +
           "blacklistRemovals in updateBlacklist.");
     }
+  }
+
+  private void updateAMRMToken(Token token) throws IOException {
+    org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> amrmToken =
+        new org.apache.hadoop.security.token.Token<AMRMTokenIdentifier>(token
+          .getIdentifier().array(), token.getPassword().array(), new Text(
+          token.getKind()), new Text(token.getService()));
+    UserGroupInformation currentUGI = UserGroupInformation.getCurrentUser();
+    if (UserGroupInformation.isSecurityEnabled()) {
+      currentUGI = UserGroupInformation.getLoginUser();
+    }
+    currentUGI.addToken(amrmToken);
   }
 }

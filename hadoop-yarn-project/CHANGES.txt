@@ -97,6 +97,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2352. FairScheduler: Collect metrics on duration of critical methods that 
     affect performance. (kasha)
 
+    YARN-2212. ApplicationMaster needs to find a way to update the AMRMToken
+    periodically. (xgong)
+
   OPTIMIZATIONS
 
   BUG FIXES

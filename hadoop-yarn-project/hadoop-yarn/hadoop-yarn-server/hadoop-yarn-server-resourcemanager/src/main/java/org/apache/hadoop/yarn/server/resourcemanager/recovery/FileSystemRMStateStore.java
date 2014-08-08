@@ -71,6 +71,10 @@ import com.google.common.annotations.VisibleForTesting;
  * FileSystem interface. Does not use directories so that simple key-value
  * stores can be used. The retry policy for the real filesystem client must be
  * configured separately to enable retry of filesystem operations when needed.
+ *
+ * Changes from 1.1 to 1.2, AMRMTokenSecretManager state has been saved
+ * separately. The currentMasterkey and nextMasterkey have been stored.
+ * Also, AMRMToken has been removed from ApplicationAttemptState.
  */
 public class FileSystemRMStateStore extends RMStateStore {
 
@@ -78,7 +82,7 @@ public class FileSystemRMStateStore extends RMStateStore {
 
   protected static final String ROOT_DIR_NAME = "FSRMStateRoot";
   protected static final Version CURRENT_VERSION_INFO = Version
-    .newInstance(1, 1);
+    .newInstance(1, 2);
   protected static final String AMRMTOKEN_SECRET_MANAGER_NODE =
       "AMRMTokenSecretManagerNode";
 
