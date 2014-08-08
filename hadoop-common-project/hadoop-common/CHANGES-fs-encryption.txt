@@ -46,6 +46,9 @@ fs-encryption (Unreleased)
     HADOOP-10853. Refactor get instance of CryptoCodec and support create via
     algorithm/mode/padding. (Yi Liu)
 
+    HADOOP-10919. Copy command should preserve raw.* namespace
+    extended attributes. (clamb)
+
   OPTIMIZATIONS
 
   BUG FIXES

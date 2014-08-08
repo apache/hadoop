@@ -58,6 +58,17 @@ abstract class CommandWithDestination extends FsCommand {
   private boolean writeChecksum = true;
   
   /**
+   * The name of the raw xattr namespace. It would be nice to use
+   * XAttr.RAW.name() but we can't reference the hadoop-hdfs project.
+   */
+  private final String RAW = "raw.";
+
+  /**
+   * The name of the reserved raw directory.
+   */
+  private final String RESERVED_RAW = "/.reserved/raw";
+
+  /**
    * 
    * This method is used to enable the force(-f)  option while copying the files.
    * 
@@ -231,7 +242,7 @@ abstract class CommandWithDestination extends FsCommand {
   /**
    * Called with a source and target destination pair
    * @param src for the operation
-   * @param target for the operation
+   * @param dst for the operation
    * @throws IOException if anything goes wrong
    */
   protected void processPath(PathData src, PathData dst) throws IOException {
@@ -253,6 +264,8 @@ abstract class CommandWithDestination extends FsCommand {
       // modify dst as we descend to append the basename of the
       // current directory being processed
       dst = getTargetPath(src);
+      final boolean preserveRawXattrs =
+          checkPathsForReservedRaw(src.path, dst.path);
       if (dst.exists) {
         if (!dst.stat.isDirectory()) {
           throw new PathIsNotDirectoryException(dst.toString());
@@ -268,7 +281,7 @@ abstract class CommandWithDestination extends FsCommand {
       }      
       super.recursePath(src);
       if (dst.stat.isDirectory()) {
-        preserveAttributes(src, dst);
+        preserveAttributes(src, dst, preserveRawXattrs);
       }
     } finally {
       dst = savedDst;
@@ -295,18 +308,60 @@ abstract class CommandWithDestination extends FsCommand {
    * @param target where to copy the item
    * @throws IOException if copy fails
    */ 
-  protected void copyFileToTarget(PathData src, PathData target) throws IOException {
+  protected void copyFileToTarget(PathData src, PathData target)
+      throws IOException {
+    final boolean preserveRawXattrs =
+        checkPathsForReservedRaw(src.path, target.path);
     src.fs.setVerifyChecksum(verifyChecksum);
     InputStream in = null;
     try {
       in = src.fs.open(src.path);
       copyStreamToTarget(in, target);
-      preserveAttributes(src, target);
+      preserveAttributes(src, target, preserveRawXattrs);
     } finally {
       IOUtils.closeStream(in);
     }
   }
   
+  /**
+   * Check the source and target paths to ensure that they are either both in
+   * /.reserved/raw or neither in /.reserved/raw. If neither src nor target are
+   * in /.reserved/raw, then return false, indicating not to preserve raw.*
+   * xattrs. If both src/target are in /.reserved/raw, then return true,
+   * indicating raw.* xattrs should be preserved. If only one of src/target is
+   * in /.reserved/raw then throw an exception.
+   *
+   * @param src The source path to check. This should be a fully-qualified
+   *            path, not relative.
+   * @param target The target path to check. This should be a fully-qualified
+   *               path, not relative.
+   * @return true if raw.* xattrs should be preserved.
+   * @throws PathOperationException is only one of src/target are in
+   * /.reserved/raw.
+   */
+  private boolean checkPathsForReservedRaw(Path src, Path target)
+      throws PathOperationException {
+    final boolean srcIsRR = Path.getPathWithoutSchemeAndAuthority(src).
+        toString().startsWith(RESERVED_RAW);
+    final boolean dstIsRR = Path.getPathWithoutSchemeAndAuthority(target).
+        toString().startsWith(RESERVED_RAW);
+    boolean preserveRawXattrs = false;
+    if (srcIsRR && !dstIsRR) {
+      final String s = "' copy from '" + RESERVED_RAW + "' to non '" +
+          RESERVED_RAW + "'. Either both source and target must be in '" +
+          RESERVED_RAW + "' or neither.";
+      throw new PathOperationException("'" + src.toString() + s);
+    } else if (!srcIsRR && dstIsRR) {
+      final String s = "' copy from non '" + RESERVED_RAW +"' to '" +
+          RESERVED_RAW + "'. Either both source and target must be in '" +
+          RESERVED_RAW + "' or neither.";
+      throw new PathOperationException("'" + dst.toString() + s);
+    } else if (srcIsRR && dstIsRR) {
+      preserveRawXattrs = true;
+    }
+    return preserveRawXattrs;
+  }
+
   /**
    * Copies the stream contents to a temporary file.  If the copy is
    * successful, the temporary file will be renamed to the real path,
@@ -337,9 +392,11 @@ abstract class CommandWithDestination extends FsCommand {
    * attribute to preserve.
    * @param src source to preserve
    * @param target where to preserve attributes
+   * @param preserveRawXAttrs true if raw.* xattrs should be preserved
    * @throws IOException if fails to preserve attributes
    */
-  protected void preserveAttributes(PathData src, PathData target)
+  protected void preserveAttributes(PathData src, PathData target,
+      boolean preserveRawXAttrs)
       throws IOException {
     if (shouldPreserve(FileAttribute.TIMESTAMPS)) {
       target.fs.setTimes(
@@ -369,13 +426,17 @@ abstract class CommandWithDestination extends FsCommand {
         target.fs.setAcl(target.path, srcFullEntries);
       }
     }
-    if (shouldPreserve(FileAttribute.XATTR)) {
+    final boolean preserveXAttrs = shouldPreserve(FileAttribute.XATTR);
+    if (preserveXAttrs || preserveRawXAttrs) {
       Map<String, byte[]> srcXAttrs = src.fs.getXAttrs(src.path);
       if (srcXAttrs != null) {
         Iterator<Entry<String, byte[]>> iter = srcXAttrs.entrySet().iterator();
         while (iter.hasNext()) {
           Entry<String, byte[]> entry = iter.next();
-          target.fs.setXAttr(target.path, entry.getKey(), entry.getValue());
+          final String xattrName = entry.getKey();
+          if (xattrName.startsWith(RAW) || preserveXAttrs) {
+            target.fs.setXAttr(target.path, entry.getKey(), entry.getValue());
+          }
         }
       }
     }
