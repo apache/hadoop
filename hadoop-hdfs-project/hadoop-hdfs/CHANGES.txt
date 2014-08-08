@@ -118,6 +118,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6740. Make FSDataset support adding data volumes dynamically. (Lei
     Xu via atm)
 
+    HDFS-6722. Display readable last contact time for dead nodes on NN webUI.
+    (Ming Ma via wheat9)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
