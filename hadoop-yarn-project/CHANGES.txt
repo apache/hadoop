@@ -159,6 +159,8 @@ Release 2.6.0 - UNRELEASED
     YARN-2008. Fixed CapacityScheduler to calculate headroom based on max available
     capacity instead of configured max capacity. (Craig Welch via jianhe)
 
+    YARN-2400. Fixed TestAMRestart fails intermittently. (Jian He via xgong)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
