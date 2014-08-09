@@ -386,7 +386,8 @@ public class TestAMRestart {
     ApplicationState appState =
         memStore.getState().getApplicationState().get(app1.getApplicationId());
     // AM should be restarted even though max-am-attempt is 1.
-    MockAM am2 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+    MockAM am2 =
+        rm1.waitForNewAMToLaunchAndRegister(app1.getApplicationId(), 2, nm1);
     RMAppAttempt attempt2 = app1.getCurrentAppAttempt();
     Assert.assertTrue(((RMAppAttemptImpl) attempt2).mayBeLastAttempt());
 
