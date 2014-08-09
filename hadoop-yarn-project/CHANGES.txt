@@ -103,6 +103,8 @@ Release 2.6.0 - UNRELEASED
     YARN-2026. Fair scheduler: Consider only active queues for computing fairshare. 
     (Ashwin Shankar via kasha)
 
+    YARN-1954. Added waitFor to AMRMClient(Async). (Tsuyoshi Ozawa via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
