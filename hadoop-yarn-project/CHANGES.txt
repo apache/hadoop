@@ -100,6 +100,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2212. ApplicationMaster needs to find a way to update the AMRMToken
     periodically. (xgong)
 
+    YARN-2026. Fair scheduler: Consider only active queues for computing fairshare. 
+    (Ashwin Shankar via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -116,6 +116,18 @@ public abstract class Schedulable {
     return fairShare;
   }
 
+  /**
+   * Returns true if queue has atleast one app running. Always returns true for
+   * AppSchedulables.
+   */
+  public boolean isActive() {
+    if (this instanceof FSQueue) {
+      FSQueue queue = (FSQueue) this;
+      return queue.getNumRunnableApps() > 0;
+    }
+    return true;
+  }
+
   /** Convenient toString implementation for debugging. */
   @Override
   public String toString() {
