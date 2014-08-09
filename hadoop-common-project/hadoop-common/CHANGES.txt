@@ -199,6 +199,9 @@ Trunk (Unreleased)
 
     HADOOP-10936. Change default KeyProvider bitlength to 128. (wang)
 
+    HADOOP-10224. JavaKeyStoreProvider has to protect against corrupting 
+    underlying store. (asuresh via tucu)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
