@@ -115,6 +115,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10929. Typo in Configuration.getPasswordFromCredentialProviders
     (lmccay via brandonli)
 
+    HADOOP-10402. Configuration.getValByRegex does not substitute for
+    variables. (Robert Kanter via kasha)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

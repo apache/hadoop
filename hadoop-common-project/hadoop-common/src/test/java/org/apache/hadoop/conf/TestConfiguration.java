@@ -178,6 +178,14 @@ public class TestConfiguration extends TestCase {
     // check that expansion also occurs for getInt()
     assertTrue(conf.getInt("intvar", -1) == 42);
     assertTrue(conf.getInt("my.int", -1) == 42);
+
+    Map<String, String> results = conf.getValByRegex("^my.*file$");
+    assertTrue(results.keySet().contains("my.relfile"));
+    assertTrue(results.keySet().contains("my.fullfile"));
+    assertTrue(results.keySet().contains("my.file"));
+    assertEquals(-1, results.get("my.relfile").indexOf("${"));
+    assertEquals(-1, results.get("my.fullfile").indexOf("${"));
+    assertEquals(-1, results.get("my.file").indexOf("${"));
   }
 
   public void testFinalParam() throws IOException {
