@@ -87,6 +87,8 @@ Release 2.6.0 - UNRELEASED
 
     YARN-1954. Added waitFor to AMRMClient(Async). (Tsuyoshi Ozawa via zjshen)
 
+    YARN-2302. Refactor TimelineWebServices. (Zhijie Shen via junping_du)
+
   OPTIMIZATIONS
 
   BUG FIXES
