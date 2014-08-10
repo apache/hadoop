@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.AHSWebApp;
 import org.apache.hadoop.yarn.server.timeline.LeveldbTimelineStore;
+import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFilterInitializer;
@@ -59,12 +60,12 @@ public class ApplicationHistoryServer extends CompositeService {
   private static final Log LOG = LogFactory
     .getLog(ApplicationHistoryServer.class);
 
-  protected ApplicationHistoryClientService ahsClientService;
-  protected ApplicationHistoryManager historyManager;
-  protected TimelineStore timelineStore;
-  protected TimelineDelegationTokenSecretManagerService secretManagerService;
-  protected TimelineACLsManager timelineACLsManager;
-  protected WebApp webApp;
+  private ApplicationHistoryClientService ahsClientService;
+  private ApplicationHistoryManager historyManager;
+  private TimelineStore timelineStore;
+  private TimelineDelegationTokenSecretManagerService secretManagerService;
+  private TimelineDataManager timelineDataManager;
+  private WebApp webApp;
 
   public ApplicationHistoryServer() {
     super(ApplicationHistoryServer.class.getName());
@@ -72,15 +73,18 @@ public class ApplicationHistoryServer extends CompositeService {
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    historyManager = createApplicationHistory();
-    ahsClientService = createApplicationHistoryClientService(historyManager);
-    addService(ahsClientService);
-    addService((Service) historyManager);
+    // init timeline services first
     timelineStore = createTimelineStore(conf);
     addIfService(timelineStore);
     secretManagerService = createTimelineDelegationTokenSecretManagerService(conf);
     addService(secretManagerService);
-    timelineACLsManager = createTimelineACLsManager(conf);
+    timelineDataManager = createTimelineDataManager(conf);
+
+    // init generic history service afterwards
+    historyManager = createApplicationHistoryManager(conf);
+    ahsClientService = createApplicationHistoryClientService(historyManager);
+    addService(ahsClientService);
+    addService((Service) historyManager);
 
     DefaultMetricsSystem.initialize("ApplicationHistoryServer");
     JvmMetrics.initSingleton("ApplicationHistoryServer", null);
@@ -111,21 +115,22 @@ public class ApplicationHistoryServer extends CompositeService {
 
   @Private
   @VisibleForTesting
-  public ApplicationHistoryClientService getClientService() {
+  ApplicationHistoryClientService getClientService() {
     return this.ahsClientService;
   }
 
-  protected ApplicationHistoryClientService
-      createApplicationHistoryClientService(
-          ApplicationHistoryManager historyManager) {
-    return new ApplicationHistoryClientService(historyManager);
+  /**
+   * @return ApplicationTimelineStore
+   */
+  @Private
+  @VisibleForTesting
+  public TimelineStore getTimelineStore() {
+    return timelineStore;
   }
 
-  protected ApplicationHistoryManager createApplicationHistory() {
-    return new ApplicationHistoryManagerImpl();
-  }
-
-  protected ApplicationHistoryManager getApplicationHistory() {
+  @Private
+  @VisibleForTesting
+  ApplicationHistoryManager getApplicationHistoryManager() {
     return this.historyManager;
   }
 
@@ -154,28 +159,35 @@ public class ApplicationHistoryServer extends CompositeService {
     launchAppHistoryServer(args);
   }
 
-  protected ApplicationHistoryManager createApplicationHistoryManager(
+  private ApplicationHistoryClientService
+      createApplicationHistoryClientService(
+          ApplicationHistoryManager historyManager) {
+    return new ApplicationHistoryClientService(historyManager);
+  }
+
+  private ApplicationHistoryManager createApplicationHistoryManager(
       Configuration conf) {
     return new ApplicationHistoryManagerImpl();
   }
 
-  protected TimelineStore createTimelineStore(
+  private TimelineStore createTimelineStore(
       Configuration conf) {
     return ReflectionUtils.newInstance(conf.getClass(
         YarnConfiguration.TIMELINE_SERVICE_STORE, LeveldbTimelineStore.class,
         TimelineStore.class), conf);
   }
 
-  protected TimelineDelegationTokenSecretManagerService
+  private TimelineDelegationTokenSecretManagerService
       createTimelineDelegationTokenSecretManagerService(Configuration conf) {
     return new TimelineDelegationTokenSecretManagerService();
   }
 
-  protected TimelineACLsManager createTimelineACLsManager(Configuration conf) {
-    return new TimelineACLsManager(conf);
+  private TimelineDataManager createTimelineDataManager(Configuration conf) {
+    return new TimelineDataManager(
+        timelineStore, new TimelineACLsManager(conf));
   }
 
-  protected void startWebApp() {
+  private void startWebApp() {
     Configuration conf = getConfig();
     // Always load pseudo authentication filter to parse "user.name" in an URL
     // to identify a HTTP request's user in insecure mode.
@@ -199,9 +211,8 @@ public class ApplicationHistoryServer extends CompositeService {
     try {
       AHSWebApp ahsWebApp = AHSWebApp.getInstance();
       ahsWebApp.setApplicationHistoryManager(historyManager);
-      ahsWebApp.setTimelineStore(timelineStore);
       ahsWebApp.setTimelineDelegationTokenSecretManagerService(secretManagerService);
-      ahsWebApp.setTimelineACLsManager(timelineACLsManager);
+      ahsWebApp.setTimelineDataManager(timelineDataManager);
       webApp =
           WebApps
             .$for("applicationhistory", ApplicationHistoryClientService.class,
@@ -212,14 +223,6 @@ public class ApplicationHistoryServer extends CompositeService {
       LOG.error(msg, e);
       throw new YarnRuntimeException(msg, e);
     }
-  }
-  /**
-   * @return ApplicationTimelineStore
-   */
-  @Private
-  @VisibleForTesting
-  public TimelineStore getTimelineStore() {
-    return timelineStore;
   }
 
   private void doSecureLogin(Configuration conf) throws IOException {
