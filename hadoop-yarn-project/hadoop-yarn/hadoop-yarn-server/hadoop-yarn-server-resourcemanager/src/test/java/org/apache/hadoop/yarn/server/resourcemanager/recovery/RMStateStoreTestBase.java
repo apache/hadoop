@@ -65,8 +65,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.AMRMTokenS
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptNewSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
@@ -77,10 +77,9 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
   public static final Log LOG = LogFactory.getLog(RMStateStoreTestBase.class);
 
   static class TestDispatcher implements
-      Dispatcher, EventHandler<RMAppAttemptNewSavedEvent> {
+      Dispatcher, EventHandler<RMAppAttemptEvent> {
 
     ApplicationAttemptId attemptId;
-    Exception storedException;
 
     boolean notified = false;
 
@@ -91,9 +90,8 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     }
 
     @Override
-    public void handle(RMAppAttemptNewSavedEvent event) {
+    public void handle(RMAppAttemptEvent event) {
       assertEquals(attemptId, event.getApplicationAttemptId());
-      assertEquals(storedException, event.getStoredException());
       notified = true;
       synchronized (this) {
         notifyAll();
@@ -163,7 +161,6 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     when(mockAttempt.getClientTokenMasterKey())
         .thenReturn(clientTokenMasterKey);
     dispatcher.attemptId = attemptId;
-    dispatcher.storedException = null;
     store.storeNewApplicationAttempt(mockAttempt);
     waitNotify(dispatcher);
     return container.getId();

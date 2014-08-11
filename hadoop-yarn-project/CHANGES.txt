@@ -110,6 +110,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2337. ResourceManager sets ClientRMService in RMContext multiple times.
     (Zhihai Xu via kasha)
 
+    YARN-2138. Cleaned up notifyDone* APIs in RMStateStore. (Varun Saxena via
+    jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
