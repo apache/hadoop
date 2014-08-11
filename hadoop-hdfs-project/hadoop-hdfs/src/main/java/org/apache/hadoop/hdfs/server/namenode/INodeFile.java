@@ -284,7 +284,7 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   @Override
-  public INodeFile recordModification(final int latestSnapshotId) 
+  public void recordModification(final int latestSnapshotId)
       throws QuotaExceededException {
     if (isInLatestSnapshot(latestSnapshotId)
         && !shouldRecordInSrcSnapshot(latestSnapshotId)) {
@@ -296,7 +296,6 @@ public class INodeFile extends INodeWithAdditionalFields
       // record self in the diff list if necessary
       sf.getDiffs().saveSelf2Snapshot(latestSnapshotId, this, null);
     }
-    return this;
   }
   
   public FileDiffList getDiffs() {
@@ -344,11 +343,10 @@ public class INodeFile extends INodeWithAdditionalFields
 
   /** Set the replication factor of this file. */
   public final INodeFile setFileReplication(short replication,
-      int latestSnapshotId, final INodeMap inodeMap)
-      throws QuotaExceededException {
-    final INodeFile nodeToUpdate = recordModification(latestSnapshotId);
-    nodeToUpdate.setFileReplication(replication);
-    return nodeToUpdate;
+      int latestSnapshotId) throws QuotaExceededException {
+    recordModification(latestSnapshotId);
+    setFileReplication(replication);
+    return this;
   }
 
   /** @return preferred block size (in bytes) of the file. */

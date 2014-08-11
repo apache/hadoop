@@ -318,7 +318,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
   }
 
   @Override
-  public INodeDirectory recordModification(int latestSnapshotId) 
+  public void recordModification(int latestSnapshotId)
       throws QuotaExceededException {
     if (isInLatestSnapshot(latestSnapshotId)
         && !shouldRecordInSrcSnapshot(latestSnapshotId)) {
@@ -330,7 +330,6 @@ public class INodeDirectory extends INodeWithAdditionalFields
       // record self in the diff list if necessary
       sf.getDiffs().saveSelf2Snapshot(latestSnapshotId, this, null);
     }
-    return this;
   }
 
   /**
