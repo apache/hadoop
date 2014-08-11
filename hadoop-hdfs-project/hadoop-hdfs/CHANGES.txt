@@ -129,6 +129,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6828. Separate block replica dispatching from Balancer. (szetszwo via
     jing9)
 
+    HDFS-6837. Code cleanup for Balancer and Dispatcher. (szetszwo via
+    jing9)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
