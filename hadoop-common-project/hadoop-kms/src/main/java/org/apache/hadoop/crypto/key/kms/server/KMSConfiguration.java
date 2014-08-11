@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.File;
@@ -26,6 +27,7 @@ import java.net.URL;
 /**
  * Utility class to load KMS configuration files.
  */
+@InterfaceAudience.Private
 public class KMSConfiguration {
 
   public static final String KMS_CONFIG_DIR = "kms.config.dir";

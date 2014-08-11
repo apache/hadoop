@@ -27,8 +27,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.ProviderUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.crypto.spec.SecretKeySpec;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -80,6 +83,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 @InterfaceAudience.Private
 public class JavaKeyStoreProvider extends KeyProvider {
   private static final String KEY_METADATA = "KeyMetadata";
+  private static Logger LOG =
+      LoggerFactory.getLogger(JavaKeyStoreProvider.class);
+
   public static final String SCHEME_NAME = "jceks";
 
   public static final String KEYSTORE_PASSWORD_FILE_KEY =
@@ -115,6 +121,10 @@ public class JavaKeyStoreProvider extends KeyProvider {
       if (pwFile != null) {
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
         URL pwdFile = cl.getResource(pwFile);
+        if (pwdFile == null) {
+          // Provided Password file does not exist
+          throw new IOException("Password file does not exists");
+        }
         if (pwdFile != null) {
           InputStream is = pwdFile.openStream();
           try {
@@ -129,19 +139,25 @@ public class JavaKeyStoreProvider extends KeyProvider {
       password = KEYSTORE_PASSWORD_DEFAULT;
     }
     try {
+      Path oldPath = constructOldPath(path);
+      Path newPath = constructNewPath(path);
       keyStore = KeyStore.getInstance(SCHEME_NAME);
+      FsPermission perm = null;
       if (fs.exists(path)) {
-        // save off permissions in case we need to
-        // rewrite the keystore in flush()
-        FileStatus s = fs.getFileStatus(path);
-        permissions = s.getPermission();
-
-        keyStore.load(fs.open(path), password);
+        // flush did not proceed to completion
+        // _NEW should not exist
+        if (fs.exists(newPath)) {
+          throw new IOException(
+              String.format("Keystore not loaded due to some inconsistency "
+              + "('%s' and '%s' should not exist together)!!", path, newPath));
+        }
+        perm = tryLoadFromPath(path, oldPath);
       } else {
-        permissions = new FsPermission("700");
-        // required to create an empty keystore. *sigh*
-        keyStore.load(null, password);
+        perm = tryLoadIncompleteFlush(oldPath, newPath);
       }
+      // Need to save off permissions in case we need to
+      // rewrite the keystore in flush()
+      permissions = perm;
     } catch (KeyStoreException e) {
       throw new IOException("Can't create keystore", e);
     } catch (NoSuchAlgorithmException e) {
@@ -152,6 +168,136 @@ public class JavaKeyStoreProvider extends KeyProvider {
     ReadWriteLock lock = new ReentrantReadWriteLock(true);
     readLock = lock.readLock();
     writeLock = lock.writeLock();
+  }
+
+  /**
+   * Try loading from the user specified path, else load from the backup
+   * path in case Exception is not due to bad/wrong password
+   * @param path Actual path to load from
+   * @param backupPath Backup path (_OLD)
+   * @return The permissions of the loaded file
+   * @throws NoSuchAlgorithmException
+   * @throws CertificateException
+   * @throws IOException
+   */
+  private FsPermission tryLoadFromPath(Path path, Path backupPath)
+      throws NoSuchAlgorithmException, CertificateException,
+      IOException {
+    FsPermission perm = null;
+    try {
+      perm = loadFromPath(path, password);
+      // Remove _OLD if exists
+      if (fs.exists(backupPath)) {
+        fs.delete(backupPath, true);
+      }
+      LOG.debug("KeyStore loaded successfully !!");
+    } catch (IOException ioe) {
+      // If file is corrupted for some reason other than
+      // wrong password try the _OLD file if exits
+      if (!isBadorWrongPassword(ioe)) {
+        perm = loadFromPath(backupPath, password);
+        // Rename CURRENT to CORRUPTED
+        renameOrFail(path, new Path(path.toString() + "_CORRUPTED_"
+            + System.currentTimeMillis()));
+        renameOrFail(backupPath, path);
+        LOG.debug(String.format(
+            "KeyStore loaded successfully from '%s' since '%s'"
+                + "was corrupted !!", backupPath, path));
+      } else {
+        throw ioe;
+      }
+    }
+    return perm;
+  }
+
+  /**
+   * The KeyStore might have gone down during a flush, In which case either the
+   * _NEW or _OLD files might exists. This method tries to load the KeyStore
+   * from one of these intermediate files.
+   * @param oldPath the _OLD file created during flush
+   * @param newPath the _NEW file created during flush
+   * @return The permissions of the loaded file
+   * @throws IOException
+   * @throws NoSuchAlgorithmException
+   * @throws CertificateException
+   */
+  private FsPermission tryLoadIncompleteFlush(Path oldPath, Path newPath)
+      throws IOException, NoSuchAlgorithmException, CertificateException {
+    FsPermission perm = null;
+    // Check if _NEW exists (in case flush had finished writing but not
+    // completed the re-naming)
+    if (fs.exists(newPath)) {
+      perm = loadAndReturnPerm(newPath, oldPath);
+    }
+    // try loading from _OLD (An earlier Flushing MIGHT not have completed
+    // writing completely)
+    if ((perm == null) && fs.exists(oldPath)) {
+      perm = loadAndReturnPerm(oldPath, newPath);
+    }
+    // If not loaded yet,
+    // required to create an empty keystore. *sigh*
+    if (perm == null) {
+      keyStore.load(null, password);
+      LOG.debug("KeyStore initialized anew successfully !!");
+      perm = new FsPermission("700");
+    }
+    return perm;
+  }
+
+  private FsPermission loadAndReturnPerm(Path pathToLoad, Path pathToDelete)
+      throws NoSuchAlgorithmException, CertificateException,
+      IOException {
+    FsPermission perm = null;
+    try {
+      perm = loadFromPath(pathToLoad, password);
+      renameOrFail(pathToLoad, path);
+      LOG.debug(String.format("KeyStore loaded successfully from '%s'!!",
+          pathToLoad));
+      if (fs.exists(pathToDelete)) {
+        fs.delete(pathToDelete, true);
+      }
+    } catch (IOException e) {
+      // Check for password issue : don't want to trash file due
+      // to wrong password
+      if (isBadorWrongPassword(e)) {
+        throw e;
+      }
+    }
+    return perm;
+  }
+
+  private boolean isBadorWrongPassword(IOException ioe) {
+    // As per documentation this is supposed to be the way to figure
+    // if password was correct
+    if (ioe.getCause() instanceof UnrecoverableKeyException) {
+      return true;
+    }
+    // Unfortunately that doesn't seem to work..
+    // Workaround :
+    if ((ioe.getCause() == null)
+        && (ioe.getMessage() != null)
+        && ((ioe.getMessage().contains("Keystore was tampered")) || (ioe
+            .getMessage().contains("password was incorrect")))) {
+      return true;
+    }
+    return false;
+  }
+
+  private FsPermission loadFromPath(Path p, char[] password)
+      throws IOException, NoSuchAlgorithmException, CertificateException {
+    FileStatus s = fs.getFileStatus(p);
+    keyStore.load(fs.open(p), password);
+    return s.getPermission();
+  }
+
+  private Path constructNewPath(Path path) {
+    Path newPath = new Path(path.toString() + "_NEW");
+    return newPath;
+  }
+
+  private Path constructOldPath(Path path) {
+    Path oldPath = new Path(path.toString() + "_OLD");
+    return oldPath;
   }
 
   @Override
@@ -352,10 +498,21 @@ public class JavaKeyStoreProvider extends KeyProvider {
 
   @Override
   public void flush() throws IOException {
+    Path newPath = constructNewPath(path);
+    Path oldPath = constructOldPath(path);
     writeLock.lock();
     try {
       if (!changed) {
         return;
+      }
+      // Might exist if a backup has been restored etc.
+      if (fs.exists(newPath)) {
+        renameOrFail(newPath, new Path(newPath.toString()
+            + "_ORPHANED_" + System.currentTimeMillis()));
+      }
+      if (fs.exists(oldPath)) {
+        renameOrFail(oldPath, new Path(oldPath.toString()
+            + "_ORPHANED_" + System.currentTimeMillis()));
       }
       // put all of the updates into the keystore
       for(Map.Entry<String, Metadata> entry: cache.entrySet()) {
@@ -366,22 +523,74 @@ public class JavaKeyStoreProvider extends KeyProvider {
           throw new IOException("Can't set metadata key " + entry.getKey(),e );
         }
       }
+
+      // Save old File first
+      boolean fileExisted = backupToOld(oldPath);
       // write out the keystore
-      FSDataOutputStream out = FileSystem.create(fs, path, permissions);
+      // Write to _NEW path first :
       try {
-        keyStore.store(out, password);
-      } catch (KeyStoreException e) {
-        throw new IOException("Can't store keystore " + this, e);
-      } catch (NoSuchAlgorithmException e) {
-        throw new IOException("No such algorithm storing keystore " + this, e);
-      } catch (CertificateException e) {
-        throw new IOException("Certificate exception storing keystore " + this,
-            e);
+        writeToNew(newPath);
+      } catch (IOException ioe) {
+        // rename _OLD back to curent and throw Exception
+        revertFromOld(oldPath, fileExisted);
+        throw ioe;
       }
-      out.close();
+      // Rename _NEW to CURRENT and delete _OLD
+      cleanupNewAndOld(newPath, oldPath);
       changed = false;
     } finally {
       writeLock.unlock();
+    }
+  }
+
+  private void cleanupNewAndOld(Path newPath, Path oldPath) throws IOException {
+    // Rename _NEW to CURRENT
+    renameOrFail(newPath, path);
+    // Delete _OLD
+    if (fs.exists(oldPath)) {
+      fs.delete(oldPath, true);
+    }
+  }
+
+  private void writeToNew(Path newPath) throws IOException {
+    FSDataOutputStream out =
+        FileSystem.create(fs, newPath, permissions);
+    try {
+      keyStore.store(out, password);
+    } catch (KeyStoreException e) {
+      throw new IOException("Can't store keystore " + this, e);
+    } catch (NoSuchAlgorithmException e) {
+      throw new IOException(
+          "No such algorithm storing keystore " + this, e);
+    } catch (CertificateException e) {
+      throw new IOException(
+          "Certificate exception storing keystore " + this, e);
+    }
+    out.close();
+  }
+
+  private void revertFromOld(Path oldPath, boolean fileExisted)
+      throws IOException {
+    if (fileExisted) {
+      renameOrFail(oldPath, path);
+    }
+  }
+
+  private boolean backupToOld(Path oldPath)
+      throws IOException {
+    boolean fileExisted = false;
+    if (fs.exists(path)) {
+      renameOrFail(path, oldPath);
+      fileExisted = true;
+    }
+    return fileExisted;
+  }
+
+  private void renameOrFail(Path src, Path dest)
+      throws IOException {
+    if (!fs.rename(src, dest)) {
+      throw new IOException("Rename unsuccessful : "
+          + String.format("'%s' to '%s'", src, dest));
     }
   }
 

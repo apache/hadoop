@@ -69,7 +69,7 @@ public class TestApplicationHistoryClientService extends
     historyServer.init(config);
     historyServer.start();
     store =
-        ((ApplicationHistoryManagerImpl) historyServer.getApplicationHistory())
+        ((ApplicationHistoryManagerImpl) historyServer.getApplicationHistoryManager())
           .getHistoryStore();
   }
 

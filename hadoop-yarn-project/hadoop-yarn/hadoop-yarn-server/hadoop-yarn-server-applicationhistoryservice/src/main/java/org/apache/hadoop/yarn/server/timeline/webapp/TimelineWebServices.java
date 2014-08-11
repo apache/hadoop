@@ -18,14 +18,10 @@
 
 package org.apache.hadoop.yarn.server.timeline.webapp;
 
-import static org.apache.hadoop.yarn.util.StringHelper.CSV_JOINER;
-
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
@@ -58,14 +54,11 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.timeline.EntityIdentifier;
 import org.apache.hadoop.yarn.server.timeline.GenericObjectMapper;
 import org.apache.hadoop.yarn.server.timeline.NameValuePair;
+import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineReader.Field;
-import org.apache.hadoop.yarn.server.timeline.TimelineStore;
-import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
-import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
@@ -80,14 +73,11 @@ public class TimelineWebServices {
 
   private static final Log LOG = LogFactory.getLog(TimelineWebServices.class);
 
-  private TimelineStore store;
-  private TimelineACLsManager timelineACLsManager;
+  private TimelineDataManager timelineDataManager;
 
   @Inject
-  public TimelineWebServices(TimelineStore store,
-      TimelineACLsManager timelineACLsManager) {
-    this.store = store;
-    this.timelineACLsManager = timelineACLsManager;
+  public TimelineWebServices(TimelineDataManager timelineDataManager) {
+    this.timelineDataManager = timelineDataManager;
   }
 
   @XmlRootElement(name = "about")
@@ -148,61 +138,28 @@ public class TimelineWebServices {
       @QueryParam("limit") String limit,
       @QueryParam("fields") String fields) {
     init(res);
-    TimelineEntities entities = null;
     try {
-      EnumSet<Field> fieldEnums = parseFieldsStr(fields, ",");
-      boolean modified = extendFields(fieldEnums);
-      UserGroupInformation callerUGI = getUser(req);
-      entities = store.getEntities(
+      return timelineDataManager.getEntities(
           parseStr(entityType),
-          parseLongStr(limit),
+          parsePairStr(primaryFilter, ":"),
+          parsePairsStr(secondaryFilter, ",", ":"),
           parseLongStr(windowStart),
           parseLongStr(windowEnd),
           parseStr(fromId),
           parseLongStr(fromTs),
-          parsePairStr(primaryFilter, ":"),
-          parsePairsStr(secondaryFilter, ",", ":"),
-          fieldEnums);
-      if (entities != null) {
-        Iterator<TimelineEntity> entitiesItr =
-            entities.getEntities().iterator();
-        while (entitiesItr.hasNext()) {
-          TimelineEntity entity = entitiesItr.next();
-          try {
-            // check ACLs
-            if (!timelineACLsManager.checkAccess(callerUGI, entity)) {
-              entitiesItr.remove();
-            } else {
-              // clean up system data
-              if (modified) {
-                entity.setPrimaryFilters(null);
-              } else {
-                cleanupOwnerInfo(entity);
-              }
-            }
-          } catch (YarnException e) {
-            LOG.error("Error when verifying access for user " + callerUGI
-                + " on the events of the timeline entity "
-                + new EntityIdentifier(entity.getEntityId(),
-                    entity.getEntityType()), e);
-            entitiesItr.remove();
-          }
-        }
-      }
+          parseLongStr(limit),
+          parseFieldsStr(fields, ","),
+          getUser(req));
     } catch (NumberFormatException e) {
       throw new BadRequestException(
           "windowStart, windowEnd or limit is not a numeric value.");
     } catch (IllegalArgumentException e) {
       throw new BadRequestException("requested invalid field.");
-    } catch (IOException e) {
+    } catch (Exception e) {
       LOG.error("Error getting entities", e);
       throw new WebApplicationException(e,
           Response.Status.INTERNAL_SERVER_ERROR);
     }
-    if (entities == null) {
-      return new TimelineEntities();
-    }
-    return entities;
   }
 
   /**
@@ -220,33 +177,15 @@ public class TimelineWebServices {
     init(res);
     TimelineEntity entity = null;
     try {
-      EnumSet<Field> fieldEnums = parseFieldsStr(fields, ",");
-      boolean modified = extendFields(fieldEnums);
-      entity =
-          store.getEntity(parseStr(entityId), parseStr(entityType),
-              fieldEnums);
-      if (entity != null) {
-        // check ACLs
-        UserGroupInformation callerUGI = getUser(req);
-        if (!timelineACLsManager.checkAccess(callerUGI, entity)) {
-          entity = null;
-        } else {
-          // clean up the system data
-          if (modified) {
-            entity.setPrimaryFilters(null);
-          } else {
-            cleanupOwnerInfo(entity);
-          }
-        }
-      }
+      entity = timelineDataManager.getEntity(
+          parseStr(entityType),
+          parseStr(entityId),
+          parseFieldsStr(fields, ","),
+          getUser(req));
     } catch (IllegalArgumentException e) {
       throw new BadRequestException(
           "requested invalid field.");
-    } catch (IOException e) {
-      LOG.error("Error getting entity", e);
-      throw new WebApplicationException(e,
-          Response.Status.INTERNAL_SERVER_ERROR);
-    } catch (YarnException e) {
+    } catch (Exception e) {
       LOG.error("Error getting entity", e);
       throw new WebApplicationException(e,
           Response.Status.INTERNAL_SERVER_ERROR);
@@ -275,51 +214,23 @@ public class TimelineWebServices {
       @QueryParam("windowEnd") String windowEnd,
       @QueryParam("limit") String limit) {
     init(res);
-    TimelineEvents events = null;
     try {
-      UserGroupInformation callerUGI = getUser(req);
-      events = store.getEntityTimelines(
+      return timelineDataManager.getEvents(
           parseStr(entityType),
           parseArrayStr(entityId, ","),
-          parseLongStr(limit),
+          parseArrayStr(eventType, ","),
           parseLongStr(windowStart),
           parseLongStr(windowEnd),
-          parseArrayStr(eventType, ","));
-      if (events != null) {
-        Iterator<TimelineEvents.EventsOfOneEntity> eventsItr =
-            events.getAllEvents().iterator();
-        while (eventsItr.hasNext()) {
-          TimelineEvents.EventsOfOneEntity eventsOfOneEntity = eventsItr.next();
-          try {
-            TimelineEntity entity = store.getEntity(
-                eventsOfOneEntity.getEntityId(),
-                eventsOfOneEntity.getEntityType(),
-                EnumSet.of(Field.PRIMARY_FILTERS));
-            // check ACLs
-            if (!timelineACLsManager.checkAccess(callerUGI, entity)) {
-              eventsItr.remove();
-            }
-          } catch (Exception e) {
-            LOG.error("Error when verifying access for user " + callerUGI
-                + " on the events of the timeline entity "
-                + new EntityIdentifier(eventsOfOneEntity.getEntityId(),
-                    eventsOfOneEntity.getEntityType()), e);
-            eventsItr.remove();
-          }
-        }
-      }
+          parseLongStr(limit),
+          getUser(req));
     } catch (NumberFormatException e) {
       throw new BadRequestException(
           "windowStart, windowEnd or limit is not a numeric value.");
-    } catch (IOException e) {
+    } catch (Exception e) {
       LOG.error("Error getting entity timelines", e);
       throw new WebApplicationException(e,
           Response.Status.INTERNAL_SERVER_ERROR);
     }
-    if (events == null) {
-      return new TimelineEvents();
-    }
-    return events;
   }
 
   /**
@@ -333,9 +244,6 @@ public class TimelineWebServices {
       @Context HttpServletResponse res,
       TimelineEntities entities) {
     init(res);
-    if (entities == null) {
-      return new TimelinePutResponse();
-    }
     UserGroupInformation callerUGI = getUser(req);
     if (callerUGI == null) {
       String msg = "The owner of the posted timeline entities is not set";
@@ -343,76 +251,8 @@ public class TimelineWebServices {
       throw new ForbiddenException(msg);
     }
     try {
-      List<EntityIdentifier> entityIDs = new ArrayList<EntityIdentifier>();
-      TimelineEntities entitiesToPut = new TimelineEntities();
-      List<TimelinePutResponse.TimelinePutError> errors =
-          new ArrayList<TimelinePutResponse.TimelinePutError>();
-      for (TimelineEntity entity : entities.getEntities()) {
-        EntityIdentifier entityID =
-            new EntityIdentifier(entity.getEntityId(), entity.getEntityType());
-
-        // check if there is existing entity
-        TimelineEntity existingEntity = null;
-        try {
-          existingEntity =
-              store.getEntity(entityID.getId(), entityID.getType(),
-                  EnumSet.of(Field.PRIMARY_FILTERS));
-          if (existingEntity != null
-              && !timelineACLsManager.checkAccess(callerUGI, existingEntity)) {
-            throw new YarnException("The timeline entity " + entityID
-                + " was not put by " + callerUGI + " before");
-          }
-        } catch (Exception e) {
-          // Skip the entity which already exists and was put by others
-          LOG.warn("Skip the timeline entity: " + entityID + ", because "
-              + e.getMessage());
-          TimelinePutResponse.TimelinePutError error =
-              new TimelinePutResponse.TimelinePutError();
-          error.setEntityId(entityID.getId());
-          error.setEntityType(entityID.getType());
-          error.setErrorCode(
-              TimelinePutResponse.TimelinePutError.ACCESS_DENIED);
-          errors.add(error);
-          continue;
-        }
-
-        // inject owner information for the access check if this is the first
-        // time to post the entity, in case it's the admin who is updating
-        // the timeline data.
-        try {
-          if (existingEntity == null) {
-            injectOwnerInfo(entity, callerUGI.getShortUserName());
-          }
-        } catch (YarnException e) {
-          // Skip the entity which messes up the primary filter and record the
-          // error
-          LOG.warn("Skip the timeline entity: " + entityID + ", because "
-              + e.getMessage());
-          TimelinePutResponse.TimelinePutError error =
-              new TimelinePutResponse.TimelinePutError();
-          error.setEntityId(entityID.getId());
-          error.setEntityType(entityID.getType());
-          error.setErrorCode(
-              TimelinePutResponse.TimelinePutError.SYSTEM_FILTER_CONFLICT);
-          errors.add(error);
-          continue;
-        }
-
-        entityIDs.add(entityID);
-        entitiesToPut.addEntity(entity);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Storing the entity " + entityID + ", JSON-style content: "
-              + TimelineUtils.dumpTimelineRecordtoJSON(entity));
-        }
-      }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Storing entities: " + CSV_JOINER.join(entityIDs));
-      }
-      TimelinePutResponse response =  store.put(entitiesToPut);
-      // add the errors of timeline system filter key conflict
-      response.addErrors(errors);
-      return response;
-    } catch (IOException e) {
+      return timelineDataManager.postEntities(entities, callerUGI);
+    } catch (Exception e) {
       LOG.error("Error putting entities", e);
       throw new WebApplicationException(e,
           Response.Status.INTERNAL_SERVER_ERROR);
@@ -421,6 +261,15 @@ public class TimelineWebServices {
 
   private void init(HttpServletResponse response) {
     response.setContentType(null);
+  }
+
+  private static UserGroupInformation getUser(HttpServletRequest req) {
+    String remoteUser = req.getRemoteUser();
+    UserGroupInformation callerUGI = null;
+    if (remoteUser != null) {
+      callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
+    }
+    return callerUGI;
   }
 
   private static SortedSet<String> parseArrayStr(String str, String delimiter) {
@@ -495,50 +344,12 @@ public class TimelineWebServices {
     }
   }
 
-  private static boolean extendFields(EnumSet<Field> fieldEnums) {
-    boolean modified = false;
-    if (fieldEnums != null && !fieldEnums.contains(Field.PRIMARY_FILTERS)) {
-      fieldEnums.add(Field.PRIMARY_FILTERS);
-      modified = true;
-    }
-    return modified;
-  }
   private static Long parseLongStr(String str) {
     return str == null ? null : Long.parseLong(str.trim());
   }
 
   private static String parseStr(String str) {
     return str == null ? null : str.trim();
-  }
-
-  private static UserGroupInformation getUser(HttpServletRequest req) {
-    String remoteUser = req.getRemoteUser();
-    UserGroupInformation callerUGI = null;
-    if (remoteUser != null) {
-      callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
-    }
-    return callerUGI;
-  }
-
-  private static void injectOwnerInfo(TimelineEntity timelineEntity,
-      String owner) throws YarnException {
-    if (timelineEntity.getPrimaryFilters() != null &&
-        timelineEntity.getPrimaryFilters().containsKey(
-            TimelineStore.SystemFilter.ENTITY_OWNER.toString())) {
-      throw new YarnException(
-          "User should not use the timeline system filter key: "
-              + TimelineStore.SystemFilter.ENTITY_OWNER);
-    }
-    timelineEntity.addPrimaryFilter(
-        TimelineStore.SystemFilter.ENTITY_OWNER
-            .toString(), owner);
-  }
-
-  private static void cleanupOwnerInfo(TimelineEntity timelineEntity) {
-    if (timelineEntity.getPrimaryFilters() != null) {
-      timelineEntity.getPrimaryFilters().remove(
-          TimelineStore.SystemFilter.ENTITY_OWNER.toString());
-    }
   }
 
 }

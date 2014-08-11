@@ -47,12 +47,11 @@ public class INodeSymlink extends INodeWithAdditionalFields {
   }
 
   @Override
-  INode recordModification(int latestSnapshotId) throws QuotaExceededException {
+  void recordModification(int latestSnapshotId) throws QuotaExceededException {
     if (isInLatestSnapshot(latestSnapshotId)) {
       INodeDirectory parent = getParent();
       parent.saveChild2Snapshot(this, latestSnapshotId, new INodeSymlink(this));
     }
-    return this;
   }
 
   /** @return true unconditionally. */

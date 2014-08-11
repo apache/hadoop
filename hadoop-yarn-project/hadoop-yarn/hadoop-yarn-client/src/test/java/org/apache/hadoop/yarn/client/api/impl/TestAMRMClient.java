@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
+import com.google.common.base.Supplier;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -813,6 +814,40 @@ public class TestAMRMClient {
     }
     assertEquals(0, amClient.ask.size());
     assertEquals(0, amClient.release.size());
+  }
+
+  class CountDownSupplier implements Supplier<Boolean> {
+    int counter = 0;
+    @Override
+    public Boolean get() {
+      counter++;
+      if (counter >= 3) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+  };
+
+  @Test
+  public void testWaitFor() throws InterruptedException {
+    AMRMClientImpl<ContainerRequest> amClient = null;
+    CountDownSupplier countDownChecker = new CountDownSupplier();
+
+    try {
+      // start am rm client
+      amClient =
+          (AMRMClientImpl<ContainerRequest>) AMRMClient
+              .<ContainerRequest> createAMRMClient();
+      amClient.init(new YarnConfiguration());
+      amClient.start();
+      amClient.waitFor(countDownChecker, 1000);
+      assertEquals(3, countDownChecker.counter);
+    } finally {
+      if (amClient != null) {
+        amClient.stop();
+      }
+    }
   }
   
   private void sleep(int sleepTime) {

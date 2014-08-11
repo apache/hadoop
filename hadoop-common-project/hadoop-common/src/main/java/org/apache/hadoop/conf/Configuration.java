@@ -2755,7 +2755,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           item.getValue() instanceof String) {
         m = p.matcher((String)item.getKey());
         if(m.find()) { // match
-          result.put((String) item.getKey(), (String) item.getValue());
+          result.put((String) item.getKey(),
+              substituteVars(getProps().getProperty((String) item.getKey())));
         }
       }
     }

@@ -23,6 +23,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.security.Principal;
 
+import org.apache.hadoop.crypto.key.kms.server.KMS.KMSOp;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.PropertyConfigurator;
 import org.junit.After;
@@ -82,16 +83,16 @@ public class TestKMSAudit {
   public void testAggregation() throws Exception {
     Principal luser = Mockito.mock(Principal.class);
     Mockito.when(luser.getName()).thenReturn("luser");
-    kmsAudit.ok(luser, KMS.DECRYPT_EEK, "k1", "testmsg");
-    kmsAudit.ok(luser, KMS.DECRYPT_EEK, "k1", "testmsg");
-    kmsAudit.ok(luser, KMS.DECRYPT_EEK, "k1", "testmsg");
-    kmsAudit.ok(luser, KMS.DELETE_KEY, "k1", "testmsg");
-    kmsAudit.ok(luser, KMS.ROLL_NEW_VERSION, "k1", "testmsg");
-    kmsAudit.ok(luser, KMS.DECRYPT_EEK, "k1", "testmsg");
-    kmsAudit.ok(luser, KMS.DECRYPT_EEK, "k1", "testmsg");
-    kmsAudit.ok(luser, KMS.DECRYPT_EEK, "k1", "testmsg");
+    kmsAudit.ok(luser, KMSOp.DECRYPT_EEK, "k1", "testmsg");
+    kmsAudit.ok(luser, KMSOp.DECRYPT_EEK, "k1", "testmsg");
+    kmsAudit.ok(luser, KMSOp.DECRYPT_EEK, "k1", "testmsg");
+    kmsAudit.ok(luser, KMSOp.DELETE_KEY, "k1", "testmsg");
+    kmsAudit.ok(luser, KMSOp.ROLL_NEW_VERSION, "k1", "testmsg");
+    kmsAudit.ok(luser, KMSOp.DECRYPT_EEK, "k1", "testmsg");
+    kmsAudit.ok(luser, KMSOp.DECRYPT_EEK, "k1", "testmsg");
+    kmsAudit.ok(luser, KMSOp.DECRYPT_EEK, "k1", "testmsg");
     Thread.sleep(1500);
-    kmsAudit.ok(luser, KMS.DECRYPT_EEK, "k1", "testmsg");
+    kmsAudit.ok(luser, KMSOp.DECRYPT_EEK, "k1", "testmsg");
     Thread.sleep(1500);
     String out = getAndResetLogOutput();
     System.out.println(out);
@@ -110,15 +111,15 @@ public class TestKMSAudit {
   public void testAggregationUnauth() throws Exception {
     Principal luser = Mockito.mock(Principal.class);
     Mockito.when(luser.getName()).thenReturn("luser");
-    kmsAudit.unauthorized(luser, KMS.GENERATE_EEK, "k2");
+    kmsAudit.unauthorized(luser, KMSOp.GENERATE_EEK, "k2");
     Thread.sleep(1000);
-    kmsAudit.ok(luser, KMS.GENERATE_EEK, "k3", "testmsg");
-    kmsAudit.ok(luser, KMS.GENERATE_EEK, "k3", "testmsg");
-    kmsAudit.ok(luser, KMS.GENERATE_EEK, "k3", "testmsg");
-    kmsAudit.ok(luser, KMS.GENERATE_EEK, "k3", "testmsg");
-    kmsAudit.ok(luser, KMS.GENERATE_EEK, "k3", "testmsg");
-    kmsAudit.unauthorized(luser, KMS.GENERATE_EEK, "k3");
-    kmsAudit.ok(luser, KMS.GENERATE_EEK, "k3", "testmsg");
+    kmsAudit.ok(luser, KMSOp.GENERATE_EEK, "k3", "testmsg");
+    kmsAudit.ok(luser, KMSOp.GENERATE_EEK, "k3", "testmsg");
+    kmsAudit.ok(luser, KMSOp.GENERATE_EEK, "k3", "testmsg");
+    kmsAudit.ok(luser, KMSOp.GENERATE_EEK, "k3", "testmsg");
+    kmsAudit.ok(luser, KMSOp.GENERATE_EEK, "k3", "testmsg");
+    kmsAudit.unauthorized(luser, KMSOp.GENERATE_EEK, "k3");
+    kmsAudit.ok(luser, KMSOp.GENERATE_EEK, "k3", "testmsg");
     Thread.sleep(2000);
     String out = getAndResetLogOutput();
     System.out.println(out);

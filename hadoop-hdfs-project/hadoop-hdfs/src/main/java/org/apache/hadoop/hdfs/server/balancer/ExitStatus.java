@@ -15,24 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hdfs.server.balancer;
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event;
+/**
+ * Exit status - The values associated with each exit status is directly mapped
+ * to the process's exit code in command line.
+ */
+public enum ExitStatus {
+  SUCCESS(0),
+  IN_PROGRESS(1),
+  ALREADY_RUNNING(-1),
+  NO_MOVE_BLOCK(-2),
+  NO_MOVE_PROGRESS(-3),
+  IO_EXCEPTION(-4),
+  ILLEGAL_ARGUMENTS(-5),
+  INTERRUPTED(-6);
 
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
+  private final int code;
 
-public class RMAppAttemptUpdateSavedEvent extends RMAppAttemptEvent {
-
-  final Exception updatedException;
-
-  public RMAppAttemptUpdateSavedEvent(ApplicationAttemptId appAttemptId,
-      Exception updatedException) {
-    super(appAttemptId, RMAppAttemptEventType.ATTEMPT_UPDATE_SAVED);
-    this.updatedException = updatedException;
+  private ExitStatus(int code) {
+    this.code = code;
   }
-
-  public Exception getUpdatedException() {
-    return updatedException;
+  
+  /** @return the command line exit code. */
+  public int getExitCode() {
+    return code;
   }
 }

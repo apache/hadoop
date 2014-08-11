@@ -407,6 +407,12 @@ Release 2.6.0 - UNRELEASED
     HDFS-6828. Separate block replica dispatching from Balancer. (szetszwo via
     jing9)
 
+    HDFS-6837. Code cleanup for Balancer and Dispatcher. (szetszwo via
+    jing9)
+
+    HDFS-6838. Code cleanup for unnecessary INode replacement.
+    (Jing Zhao via wheat9)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -501,6 +507,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6791. A block could remain under replicated if all of its replicas are on
     decommissioned nodes. (Ming Ma via jing9)
+
+    HDFS-6582. Missing null check in RpcProgramNfs3#read(XDR, SecurityHandler)
+    (Abhiraj Butala via brandonli)
 
 Release 2.5.0 - UNRELEASED
 

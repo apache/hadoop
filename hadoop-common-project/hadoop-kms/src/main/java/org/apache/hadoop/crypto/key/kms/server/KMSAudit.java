@@ -50,11 +50,11 @@ public class KMSAudit {
     private final AtomicLong accessCount = new AtomicLong(-1);
     private final String keyName;
     private final String user;
-    private final String op;
+    private final KMS.KMSOp op;
     private final String extraMsg;
     private final long startTime = System.currentTimeMillis();
 
-    private AuditEvent(String keyName, String user, String op, String msg) {
+    private AuditEvent(String keyName, String user, KMS.KMSOp op, String msg) {
       this.keyName = keyName;
       this.user = user;
       this.op = op;
@@ -77,7 +77,7 @@ public class KMSAudit {
       return user;
     }
 
-    public String getOp() {
+    public KMS.KMSOp getOp() {
       return op;
     }
 
@@ -90,8 +90,9 @@ public class KMSAudit {
     OK, UNAUTHORIZED, UNAUTHENTICATED, ERROR;
   }
 
-  private static Set<String> AGGREGATE_OPS_WHITELIST = Sets.newHashSet(
-    KMS.GET_KEY_VERSION, KMS.GET_CURRENT_KEY, KMS.DECRYPT_EEK, KMS.GENERATE_EEK
+  private static Set<KMS.KMSOp> AGGREGATE_OPS_WHITELIST = Sets.newHashSet(
+    KMS.KMSOp.GET_KEY_VERSION, KMS.KMSOp.GET_CURRENT_KEY,
+    KMS.KMSOp.DECRYPT_EEK, KMS.KMSOp.GENERATE_EEK
   );
 
   private Cache<String, AuditEvent> cache;
@@ -137,10 +138,10 @@ public class KMSAudit {
         event.getExtraMsg());
   }
 
-  private void op(OpStatus opStatus, final String op, final String user,
+  private void op(OpStatus opStatus, final KMS.KMSOp op, final String user,
       final String key, final String extraMsg) {
     if (!Strings.isNullOrEmpty(user) && !Strings.isNullOrEmpty(key)
-        && !Strings.isNullOrEmpty(op)
+        && (op != null)
         && AGGREGATE_OPS_WHITELIST.contains(op)) {
       String cacheKey = createCacheKey(user, key, op);
       if (opStatus == OpStatus.UNAUTHORIZED) {
@@ -167,7 +168,7 @@ public class KMSAudit {
       }
     } else {
       List<String> kvs = new LinkedList<String>();
-      if (!Strings.isNullOrEmpty(op)) {
+      if (op != null) {
         kvs.add("op=" + op);
       }
       if (!Strings.isNullOrEmpty(key)) {
@@ -185,16 +186,16 @@ public class KMSAudit {
     }
   }
 
-  public void ok(Principal user, String op, String key,
+  public void ok(Principal user, KMS.KMSOp op, String key,
       String extraMsg) {
     op(OpStatus.OK, op, user.getName(), key, extraMsg);
   }
 
-  public void ok(Principal user, String op, String extraMsg) {
+  public void ok(Principal user, KMS.KMSOp op, String extraMsg) {
     op(OpStatus.OK, op, user.getName(), null, extraMsg);
   }
 
-  public void unauthorized(Principal user, String op, String key) {
+  public void unauthorized(Principal user, KMS.KMSOp op, String key) {
     op(OpStatus.UNAUTHORIZED, op, user.getName(), key, "");
   }
 
@@ -211,7 +212,7 @@ public class KMSAudit {
         + " URL:" + url + " ErrorMsg:'" + extraMsg + "'");
   }
 
-  private static String createCacheKey(String user, String key, String op) {
+  private static String createCacheKey(String user, String key, KMS.KMSOp op) {
     return user + "#" + key + "#" + op;
   }
 

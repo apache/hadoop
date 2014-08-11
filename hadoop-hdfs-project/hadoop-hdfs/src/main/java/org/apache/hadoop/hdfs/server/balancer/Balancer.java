@@ -44,7 +44,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.StorageType;
-import org.apache.hadoop.hdfs.server.balancer.Dispatcher.BalancerDatanode;
+import org.apache.hadoop.hdfs.server.balancer.Dispatcher.DDatanode;
+import org.apache.hadoop.hdfs.server.balancer.Dispatcher.DDatanode.StorageGroup;
 import org.apache.hadoop.hdfs.server.balancer.Dispatcher.Source;
 import org.apache.hadoop.hdfs.server.balancer.Dispatcher.Task;
 import org.apache.hadoop.hdfs.server.balancer.Dispatcher.Util;
@@ -184,10 +185,10 @@ public class Balancer {
   // all data node lists
   private final Collection<Source> overUtilized = new LinkedList<Source>();
   private final Collection<Source> aboveAvgUtilized = new LinkedList<Source>();
-  private final Collection<BalancerDatanode.StorageGroup> belowAvgUtilized
-      = new LinkedList<BalancerDatanode.StorageGroup>();
-  private final Collection<BalancerDatanode.StorageGroup> underUtilized
-      = new LinkedList<BalancerDatanode.StorageGroup>();
+  private final Collection<StorageGroup> belowAvgUtilized
+      = new LinkedList<StorageGroup>();
+  private final Collection<StorageGroup> underUtilized
+      = new LinkedList<StorageGroup>();
 
   /* Check that this Balancer is compatible with the Block Placement Policy
    * used by the Namenode.
@@ -209,8 +210,22 @@ public class Balancer {
    * when connection fails.
    */
   Balancer(NameNodeConnector theblockpool, Parameters p, Configuration conf) {
+    final long movedWinWidth = conf.getLong(
+        DFSConfigKeys.DFS_BALANCER_MOVEDWINWIDTH_KEY,
+        DFSConfigKeys.DFS_BALANCER_MOVEDWINWIDTH_DEFAULT);
+    final int moverThreads = conf.getInt(
+        DFSConfigKeys.DFS_BALANCER_MOVERTHREADS_KEY,
+        DFSConfigKeys.DFS_BALANCER_MOVERTHREADS_DEFAULT);
+    final int dispatcherThreads = conf.getInt(
+        DFSConfigKeys.DFS_BALANCER_DISPATCHERTHREADS_KEY,
+        DFSConfigKeys.DFS_BALANCER_DISPATCHERTHREADS_DEFAULT);
+    final int maxConcurrentMovesPerNode = conf.getInt(
+        DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
+        DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT);
+
     this.dispatcher = new Dispatcher(theblockpool, p.nodesToBeIncluded,
-        p.nodesToBeExcluded, conf);
+        p.nodesToBeExcluded, movedWinWidth, moverThreads, dispatcherThreads,
+        maxConcurrentMovesPerNode, conf);
     this.threshold = p.threshold;
     this.policy = p.policy;
   }
@@ -255,7 +270,7 @@ public class Balancer {
     //   over-utilized, above-average, below-average and under-utilized.
     long overLoadedBytes = 0L, underLoadedBytes = 0L;
     for(DatanodeStorageReport r : reports) {
-      final BalancerDatanode dn = dispatcher.newDatanode(r);
+      final DDatanode dn = dispatcher.newDatanode(r);
       for(StorageType t : StorageType.asList()) {
         final Double utilization = policy.getUtilization(r, t);
         if (utilization == null) { // datanode does not have such storage type 
@@ -268,9 +283,9 @@ public class Balancer {
         final long maxSize2Move = computeMaxSize2Move(capacity,
             getRemaining(r, t), utilizationDiff, threshold);
 
-        final BalancerDatanode.StorageGroup g;
+        final StorageGroup g;
         if (utilizationDiff > 0) {
-          final Source s = dn.addSource(t, utilization, maxSize2Move, dispatcher);
+          final Source s = dn.addSource(t, maxSize2Move, dispatcher);
           if (thresholdDiff <= 0) { // within threshold
             aboveAvgUtilized.add(s);
           } else {
@@ -279,7 +294,7 @@ public class Balancer {
           }
           g = s;
         } else {
-          g = dn.addStorageGroup(t, utilization, maxSize2Move);
+          g = dn.addStorageGroup(t, maxSize2Move);
           if (thresholdDiff <= 0) { // within threshold
             belowAvgUtilized.add(g);
           } else {
@@ -328,7 +343,7 @@ public class Balancer {
     logUtilizationCollection("underutilized", underUtilized);
   }
 
-  private static <T extends BalancerDatanode.StorageGroup>
+  private static <T extends StorageGroup>
       void logUtilizationCollection(String name, Collection<T> items) {
     LOG.info(items.size() + " " + name + ": " + items);
   }
@@ -381,8 +396,7 @@ public class Balancer {
    * datanodes or the candidates are source nodes with (utilization > Avg), and
    * the others are target nodes with (utilization < Avg).
    */
-  private <G extends BalancerDatanode.StorageGroup,
-           C extends BalancerDatanode.StorageGroup>
+  private <G extends StorageGroup, C extends StorageGroup>
       void chooseStorageGroups(Collection<G> groups, Collection<C> candidates,
           Matcher matcher) {
     for(final Iterator<G> i = groups.iterator(); i.hasNext();) {
@@ -398,9 +412,8 @@ public class Balancer {
    * For the given datanode, choose a candidate and then schedule it.
    * @return true if a candidate is chosen; false if no candidates is chosen.
    */
-  private <C extends BalancerDatanode.StorageGroup>
-      boolean choose4One(BalancerDatanode.StorageGroup g,
-          Collection<C> candidates, Matcher matcher) {
+  private <C extends StorageGroup> boolean choose4One(StorageGroup g,
+      Collection<C> candidates, Matcher matcher) {
     final Iterator<C> i = candidates.iterator();
     final C chosen = chooseCandidate(g, i, matcher);
   
@@ -418,8 +431,7 @@ public class Balancer {
     return true;
   }
   
-  private void matchSourceWithTargetToMove(Source source,
-      BalancerDatanode.StorageGroup target) {
+  private void matchSourceWithTargetToMove(Source source, StorageGroup target) {
     long size = Math.min(source.availableSizeToMove(), target.availableSizeToMove());
     final Task task = new Task(target, size);
     source.addTask(task);
@@ -430,8 +442,7 @@ public class Balancer {
   }
   
   /** Choose a candidate for the given datanode. */
-  private <G extends BalancerDatanode.StorageGroup,
-           C extends BalancerDatanode.StorageGroup>
+  private <G extends StorageGroup, C extends StorageGroup>
       C chooseCandidate(G g, Iterator<C> candidates, Matcher matcher) {
     if (g.hasSpaceForScheduling()) {
       for(; candidates.hasNext(); ) {
@@ -439,7 +450,7 @@ public class Balancer {
         if (!c.hasSpaceForScheduling()) {
           candidates.remove();
         } else if (matcher.match(dispatcher.getCluster(),
-            g.getDatanode(), c.getDatanode())) {
+            g.getDatanodeInfo(), c.getDatanodeInfo())) {
           return c;
         }
       }
@@ -457,34 +468,15 @@ public class Balancer {
     dispatcher.reset(conf);;
   }
   
-  // Exit status
-  enum ReturnStatus {
-    // These int values will map directly to the balancer process's exit code.
-    SUCCESS(0),
-    IN_PROGRESS(1),
-    ALREADY_RUNNING(-1),
-    NO_MOVE_BLOCK(-2),
-    NO_MOVE_PROGRESS(-3),
-    IO_EXCEPTION(-4),
-    ILLEGAL_ARGS(-5),
-    INTERRUPTED(-6);
-
-    final int code;
-
-    ReturnStatus(int code) {
-      this.code = code;
-    }
-  }
-
   /** Run an iteration for all datanodes. */
-  private ReturnStatus run(int iteration, Formatter formatter,
+  private ExitStatus run(int iteration, Formatter formatter,
       Configuration conf) {
     try {
       final List<DatanodeStorageReport> reports = dispatcher.init();
       final long bytesLeftToMove = init(reports);
       if (bytesLeftToMove == 0) {
         System.out.println("The cluster is balanced. Exiting...");
-        return ReturnStatus.SUCCESS;
+        return ExitStatus.SUCCESS;
       } else {
         LOG.info( "Need to move "+ StringUtils.byteDesc(bytesLeftToMove)
             + " to make the cluster balanced." );
@@ -498,7 +490,7 @@ public class Balancer {
       final long bytesToMove = chooseStorageGroups();
       if (bytesToMove == 0) {
         System.out.println("No block can be moved. Exiting...");
-        return ReturnStatus.NO_MOVE_BLOCK;
+        return ExitStatus.NO_MOVE_BLOCK;
       } else {
         LOG.info( "Will move " + StringUtils.byteDesc(bytesToMove) +
             " in this iteration");
@@ -519,19 +511,19 @@ public class Balancer {
        * Exit no byte has been moved for 5 consecutive iterations.
        */
       if (!dispatcher.dispatchAndCheckContinue()) {
-        return ReturnStatus.NO_MOVE_PROGRESS;
+        return ExitStatus.NO_MOVE_PROGRESS;
       }
 
-      return ReturnStatus.IN_PROGRESS;
+      return ExitStatus.IN_PROGRESS;
     } catch (IllegalArgumentException e) {
       System.out.println(e + ".  Exiting ...");
-      return ReturnStatus.ILLEGAL_ARGS;
+      return ExitStatus.ILLEGAL_ARGUMENTS;
     } catch (IOException e) {
       System.out.println(e + ".  Exiting ...");
-      return ReturnStatus.IO_EXCEPTION;
+      return ExitStatus.IO_EXCEPTION;
     } catch (InterruptedException e) {
       System.out.println(e + ".  Exiting ...");
-      return ReturnStatus.INTERRUPTED;
+      return ExitStatus.INTERRUPTED;
     } finally {
       dispatcher.shutdownNow();
     }
@@ -570,14 +562,14 @@ public class Balancer {
         Collections.shuffle(connectors);
         for(NameNodeConnector nnc : connectors) {
           final Balancer b = new Balancer(nnc, p, conf);
-          final ReturnStatus r = b.run(iteration, formatter, conf);
+          final ExitStatus r = b.run(iteration, formatter, conf);
           // clean all lists
           b.resetData(conf);
-          if (r == ReturnStatus.IN_PROGRESS) {
+          if (r == ExitStatus.IN_PROGRESS) {
             done = false;
-          } else if (r != ReturnStatus.SUCCESS) {
+          } else if (r != ExitStatus.SUCCESS) {
             //must be an error statue, return.
-            return r.code;
+            return r.getExitCode();
           }
         }
 
@@ -590,7 +582,7 @@ public class Balancer {
         nnc.close();
       }
     }
-    return ReturnStatus.SUCCESS.code;
+    return ExitStatus.SUCCESS.getExitCode();
   }
 
   /* Given elaspedTime in ms, return a printable string */
@@ -661,10 +653,10 @@ public class Balancer {
         return Balancer.run(namenodes, parse(args), conf);
       } catch (IOException e) {
         System.out.println(e + ".  Exiting ...");
-        return ReturnStatus.IO_EXCEPTION.code;
+        return ExitStatus.IO_EXCEPTION.getExitCode();
       } catch (InterruptedException e) {
         System.out.println(e + ".  Exiting ...");
-        return ReturnStatus.INTERRUPTED.code;
+        return ExitStatus.INTERRUPTED.getExitCode();
       } finally {
         System.out.format("%-24s ", DateFormat.getDateTimeInstance().format(new Date()));
         System.out.println("Balancing took " + time2Str(Time.now()-startTime));
