@@ -160,7 +160,7 @@ public class TestBalancerWithMultipleNameNodes {
     // start rebalancing
     final Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(s.conf);
     final int r = Balancer.run(namenodes, Balancer.Parameters.DEFAULT, s.conf);
-    Assert.assertEquals(Balancer.ReturnStatus.SUCCESS.code, r);
+    Assert.assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
 
     LOG.info("BALANCER 2");
     wait(s.clients, totalUsed, totalCapacity);

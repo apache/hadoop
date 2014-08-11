@@ -570,10 +570,10 @@ public class TestBalancer {
     final int r = Balancer.run(namenodes, p, conf);
     if (conf.getInt(DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY, 
         DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT) ==0) {
-      assertEquals(Balancer.ReturnStatus.NO_MOVE_PROGRESS.code, r);
+      assertEquals(ExitStatus.NO_MOVE_PROGRESS.getExitCode(), r);
       return;
     } else {
-      assertEquals(Balancer.ReturnStatus.SUCCESS.code, r);
+      assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
     }
     waitForHeartBeat(totalUsedSpace, totalCapacity, client, cluster);
     LOG.info("Rebalancing with default ctor.");
@@ -717,7 +717,7 @@ public class TestBalancer {
           Balancer.Parameters.DEFAULT.threshold,
           datanodes, Balancer.Parameters.DEFAULT.nodesToBeIncluded);
       final int r = Balancer.run(namenodes, p, conf);
-      assertEquals(Balancer.ReturnStatus.SUCCESS.code, r);
+      assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
     } finally {
       cluster.shutdown();
     }
