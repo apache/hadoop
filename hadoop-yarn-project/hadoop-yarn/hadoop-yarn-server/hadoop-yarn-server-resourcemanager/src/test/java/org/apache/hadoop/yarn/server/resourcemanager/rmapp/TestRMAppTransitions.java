@@ -60,7 +60,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessM
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUpdateSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
@@ -328,15 +327,15 @@ public class TestRMAppTransitions {
 
   private void sendAppUpdateSavedEvent(RMApp application) {
     RMAppEvent event =
-        new RMAppUpdateSavedEvent(application.getApplicationId(), null);
+        new RMAppEvent(application.getApplicationId(), RMAppEventType.APP_UPDATE_SAVED);
     application.handle(event);
     rmDispatcher.await();
   }
 
   private void sendAttemptUpdateSavedEvent(RMApp application) {
     application.getCurrentAppAttempt().handle(
-      new RMAppAttemptUpdateSavedEvent(application.getCurrentAppAttempt()
-        .getAppAttemptId(), null));
+        new RMAppAttemptEvent(application.getCurrentAppAttempt().getAppAttemptId(),
+            RMAppAttemptEventType.ATTEMPT_UPDATE_SAVED));
   }
 
   protected RMApp testCreateAppNewSaving(
@@ -357,7 +356,7 @@ public class TestRMAppTransitions {
   RMApp application = testCreateAppNewSaving(submissionContext);
     // NEW_SAVING => SUBMITTED event RMAppEventType.APP_SAVED
     RMAppEvent event =
-        new RMAppNewSavedEvent(application.getApplicationId(), null);
+        new RMAppEvent(application.getApplicationId(), RMAppEventType.APP_NEW_SAVED);
     application.handle(event);
     assertStartTimeSet(application);
     assertAppState(RMAppState.SUBMITTED, application);
@@ -422,7 +421,7 @@ public class TestRMAppTransitions {
     RMApp application = testCreateAppFinalSaving(submissionContext);
     // FINAL_SAVING => FINISHING event RMAppEventType.APP_UPDATED
     RMAppEvent appUpdated =
-        new RMAppUpdateSavedEvent(application.getApplicationId(), null);
+        new RMAppEvent(application.getApplicationId(), RMAppEventType.APP_UPDATE_SAVED);
     application.handle(appUpdated);
     assertAppState(RMAppState.FINISHING, application);
     assertTimesAtFinish(application);
@@ -763,7 +762,7 @@ public class TestRMAppTransitions {
     application.handle(event);
     assertAppState(RMAppState.FINAL_SAVING, application);
     RMAppEvent appUpdated =
-        new RMAppUpdateSavedEvent(application.getApplicationId(), null);
+        new RMAppEvent(application.getApplicationId(), RMAppEventType.APP_UPDATE_SAVED);
     application.handle(appUpdated);
     assertAppState(RMAppState.FINISHED, application);
 
