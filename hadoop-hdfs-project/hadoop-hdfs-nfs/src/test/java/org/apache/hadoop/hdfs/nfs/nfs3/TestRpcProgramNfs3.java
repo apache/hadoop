@@ -278,13 +278,11 @@ public class TestRpcProgramNfs3 {
     readReq.serialize(xdr_req);
 
     // Attempt by an unpriviledged user should fail.
-    /* Hits HDFS-6582. It needs to be fixed first.
     READ3Response response1 = nfsd.read(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
     assertEquals("Incorrect return code:", Nfs3Status.NFS3ERR_ACCES,
         response1.getStatus());
-    */
 
     // Attempt by a priviledged user should pass.
     READ3Response response2 = nfsd.read(xdr_req.asReadOnlyWrap(),
