@@ -89,6 +89,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2302. Refactor TimelineWebServices. (Zhijie Shen via junping_du)
 
+    YARN-2337. ResourceManager sets ClientRMService in RMContext multiple times.
+    (Zhihai Xu via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
