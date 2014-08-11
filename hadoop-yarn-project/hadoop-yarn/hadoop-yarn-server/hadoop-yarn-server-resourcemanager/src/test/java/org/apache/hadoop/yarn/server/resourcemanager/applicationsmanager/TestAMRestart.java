@@ -399,7 +399,8 @@ public class TestAMRestart {
     am2.waitForState(RMAppAttemptState.FAILED);
     Assert.assertTrue(! attempt2.shouldCountTowardsMaxAttemptRetry());
     rm1.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
-    MockAM am3 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+    MockAM am3 =
+        rm1.waitForNewAMToLaunchAndRegister(app1.getApplicationId(), 3, nm1);
     RMAppAttempt attempt3 = app1.getCurrentAppAttempt();
     Assert.assertTrue(((RMAppAttemptImpl) attempt3).mayBeLastAttempt());
 
@@ -422,7 +423,8 @@ public class TestAMRestart {
         .getAMContainerExitStatus());
 
     rm1.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
-    MockAM am4 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+    MockAM am4 =
+        rm1.waitForNewAMToLaunchAndRegister(app1.getApplicationId(), 4, nm1);
     RMAppAttempt attempt4 = app1.getCurrentAppAttempt();
     Assert.assertTrue(((RMAppAttemptImpl) attempt4).mayBeLastAttempt());
 
