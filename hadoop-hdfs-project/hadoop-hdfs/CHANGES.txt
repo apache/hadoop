@@ -393,6 +393,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6838. Code cleanup for unnecessary INode replacement.
     (Jing Zhao via wheat9)
 
+    HDFS-6836. HDFS INFO logging is verbose & uses file appenders. (Xiaoyu
+    Yao via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
