@@ -364,8 +364,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         // Adding to finished containers cache. Cache will keep it around at
         // least for #durationToTrackStoppedContainers duration. In the
         // subsequent call to stop container it will get removed from cache.
-        updateStoppedContainersInCache(container.getContainerId());
-        addCompletedContainer(container);
+        addCompletedContainer(container.getContainerId());
       }
     }
     if (LOG.isDebugEnabled()) {
@@ -393,8 +392,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         // Adding to finished containers cache. Cache will keep it around at
         // least for #durationToTrackStoppedContainers duration. In the
         // subsequent call to stop container it will get removed from cache.
-        updateStoppedContainersInCache(container.getContainerId());
-        addCompletedContainer(container);
+        addCompletedContainer(container.getContainerId());
       }
     }
     LOG.info("Sending out " + containerStatuses.size()
@@ -402,9 +400,15 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     return containerStatuses;
   }
 
-  private void addCompletedContainer(Container container) {
+  @Override
+  public void addCompletedContainer(ContainerId containerId) {
     synchronized (previousCompletedContainers) {
-      previousCompletedContainers.add(container.getContainerId());
+      previousCompletedContainers.add(containerId);
+    }
+    synchronized (recentlyStoppedContainers) {
+      removeVeryOldStoppedContainersFromCache();
+      recentlyStoppedContainers.put(containerId,
+        System.currentTimeMillis() + durationToTrackStoppedContainers);
     }
   }
 
@@ -451,16 +455,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     }
   }
   
-  @Private
-  @VisibleForTesting
-  public void updateStoppedContainersInCache(ContainerId containerId) {
-    synchronized (recentlyStoppedContainers) {
-      removeVeryOldStoppedContainersFromCache();
-      recentlyStoppedContainers.put(containerId,
-        System.currentTimeMillis() + durationToTrackStoppedContainers);
-    }
-  }
-  
   @Override
   public void clearFinishedContainersFromCache() {
     synchronized (recentlyStoppedContainers) {
@@ -476,8 +470,14 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       Iterator<ContainerId> i =
           recentlyStoppedContainers.keySet().iterator();
       while (i.hasNext()) {
-        if (recentlyStoppedContainers.get(i.next()) < currentTime) {
+        ContainerId cid = i.next();
+        if (recentlyStoppedContainers.get(cid) < currentTime) {
           i.remove();
+          try {
+            context.getNMStateStore().removeContainer(cid);
+          } catch (IOException e) {
+            LOG.error("Unable to remove container " + cid + " in store", e);
+          }
         } else {
           break;
         }

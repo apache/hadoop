@@ -38,6 +38,9 @@ Release 2.6.0 - UNRELEASED
     YARN-1354. Recover applications upon nodemanager restart. (Jason Lowe via 
     junping_du)
 
+    YARN-1337. Recover containers upon nodemanager restart. (Jason Lowe via 
+    junping_du)
+
   IMPROVEMENTS
 
     YARN-2242. Improve exception information on AM launch crashes. (Li Lu 
@@ -112,6 +115,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2138. Cleaned up notifyDone* APIs in RMStateStore. (Varun Saxena via
     jianhe)
+
+    YARN-2373. Changed WebAppUtils to use Configuration#getPassword for
+    accessing SSL passwords. (Larry McCay via jianhe)
 
   OPTIMIZATIONS
 

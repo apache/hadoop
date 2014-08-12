@@ -33,6 +33,7 @@
 #include <limits.h>
 #include <sys/stat.h>
 #include <sys/mount.h>
+#include <sys/wait.h>
 
 static const int DEFAULT_MIN_USERID = 1000;
 
@@ -245,6 +246,85 @@ static int write_pid_to_file_as_nm(const char* pid_file, pid_t pid) {
 }
 
 /**
+ * Write the exit code of the container into the exit code file
+ * exit_code_file: Path to exit code file where exit code needs to be written
+ */
+static int write_exit_code_file(const char* exit_code_file, int exit_code) {
+  char *tmp_ecode_file = concatenate("%s.tmp", "exit_code_path", 1,
+      exit_code_file);
+  if (tmp_ecode_file == NULL) {
+    return -1;
+  }
+
+  // create with 700
+  int ecode_fd = open(tmp_ecode_file, O_WRONLY|O_CREAT|O_EXCL, S_IRWXU);
+  if (ecode_fd == -1) {
+    fprintf(LOGFILE, "Can't open file %s - %s\n", tmp_ecode_file,
+           strerror(errno));
+    free(tmp_ecode_file);
+    return -1;
+  }
+
+  char ecode_buf[21];
+  snprintf(ecode_buf, sizeof(ecode_buf), "%d", exit_code);
+  ssize_t written = write(ecode_fd, ecode_buf, strlen(ecode_buf));
+  close(ecode_fd);
+  if (written == -1) {
+    fprintf(LOGFILE, "Failed to write exit code to file %s - %s\n",
+       tmp_ecode_file, strerror(errno));
+    free(tmp_ecode_file);
+    return -1;
+  }
+
+  // rename temp file to actual exit code file
+  // use rename as atomic
+  if (rename(tmp_ecode_file, exit_code_file)) {
+    fprintf(LOGFILE, "Can't move exit code file from %s to %s - %s\n",
+        tmp_ecode_file, exit_code_file, strerror(errno));
+    unlink(tmp_ecode_file);
+    free(tmp_ecode_file);
+    return -1;
+  }
+
+  free(tmp_ecode_file);
+  return 0;
+}
+
+/**
+ * Wait for the container process to exit and write the exit code to
+ * the exit code file.
+ * Returns the exit code of the container process.
+ */
+static int wait_and_write_exit_code(pid_t pid, const char* exit_code_file) {
+  int child_status = -1;
+  int exit_code = -1;
+  int waitpid_result;
+
+  if (change_effective_user(nm_uid, nm_gid) != 0) {
+    return -1;
+  }
+  do {
+    waitpid_result = waitpid(pid, &child_status, 0);
+  } while (waitpid_result == -1 && errno == EINTR);
+  if (waitpid_result < 0) {
+    fprintf(LOGFILE, "Error waiting for container process %d - %s\n",
+        pid, strerror(errno));
+    return -1;
+  }
+  if (WIFEXITED(child_status)) {
+    exit_code = WEXITSTATUS(child_status);
+  } else if (WIFSIGNALED(child_status)) {
+    exit_code = 0x80 + WTERMSIG(child_status);
+  } else {
+    fprintf(LOGFILE, "Unable to determine exit status for pid %d\n", pid);
+  }
+  if (write_exit_code_file(exit_code_file, exit_code) < 0) {
+    return -1;
+  }
+  return exit_code;
+}
+
+/**
  * Change the real and effective user and group to abandon the super user
  * priviledges.
  */
@@ -335,6 +415,10 @@ char *get_container_work_directory(const char *nm_root, const char *user,
 				 const char *app_id, const char *container_id) {
   return concatenate(CONTAINER_DIR_PATTERN, "container_dir_path", 4,
                      nm_root, user, app_id, container_id);
+}
+
+char *get_exit_code_file(const char* pid_file) {
+  return concatenate("%s.exitcode", "exit_code_file", 1, pid_file);
 }
 
 char *get_container_launcher_file(const char* work_dir) {
@@ -879,6 +963,8 @@ int launch_container_as_user(const char *user, const char *app_id,
   int exit_code = -1;
   char *script_file_dest = NULL;
   char *cred_file_dest = NULL;
+  char *exit_code_file = NULL;
+
   script_file_dest = get_container_launcher_file(work_dir);
   if (script_file_dest == NULL) {
     exit_code = OUT_OF_MEMORY;
@@ -886,6 +972,11 @@ int launch_container_as_user(const char *user, const char *app_id,
   }
   cred_file_dest = get_container_credentials_file(work_dir);
   if (NULL == cred_file_dest) {
+    exit_code = OUT_OF_MEMORY;
+    goto cleanup;
+  }
+  exit_code_file = get_exit_code_file(pid_file);
+  if (NULL == exit_code_file) {
     exit_code = OUT_OF_MEMORY;
     goto cleanup;
   }
@@ -899,6 +990,13 @@ int launch_container_as_user(const char *user, const char *app_id,
   // open credentials
   int cred_file_source = open_file_as_nm(cred_file);
   if (cred_file_source == -1) {
+    goto cleanup;
+  }
+
+  pid_t child_pid = fork();
+  if (child_pid != 0) {
+    // parent
+    exit_code = wait_and_write_exit_code(child_pid, exit_code_file);
     goto cleanup;
   }
 
@@ -986,6 +1084,7 @@ int launch_container_as_user(const char *user, const char *app_id,
   exit_code = 0;
 
  cleanup:
+  free(exit_code_file);
   free(script_file_dest);
   free(cred_file_dest);
   return exit_code;

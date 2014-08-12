@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -59,6 +60,13 @@ import java.util.Map;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
+
+  /**
+   * Constant used in URL's query string to perform a proxy user request, the
+   * value of the <code>DO_AS</code> parameter is the user the request will be
+   * done on behalf of.
+   */
+  static final String DO_AS = "doAs";
 
   /**
    * Client side authentication token that handles Delegation Tokens.
@@ -245,6 +253,11 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
         extraParams.put(KerberosDelegationTokenAuthenticator.DELEGATION_PARAM,
             dt.encodeToUrlString());
       }
+    }
+
+    // proxyuser
+    if (doAs != null) {
+      extraParams.put(DO_AS, URLEncoder.encode(doAs, "UTF-8"));
     }
 
     url = augmentURL(url, extraParams);

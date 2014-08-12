@@ -209,7 +209,7 @@ public class TestNMWebServer {
             BuilderUtils.newResource(1024, 1), currentTime + 10000L, 123,
             "password".getBytes(), currentTime);
       Container container =
-          new ContainerImpl(conf, dispatcher, launchContext,
+          new ContainerImpl(conf, dispatcher, stateStore, launchContext,
             null, metrics,
             BuilderUtils.newContainerTokenIdentifier(containerToken)) {
 

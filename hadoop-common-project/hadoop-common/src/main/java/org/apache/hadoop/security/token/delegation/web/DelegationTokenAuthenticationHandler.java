@@ -92,6 +92,9 @@ public abstract class DelegationTokenAuthenticationHandler
 
   private static final Set<String> DELEGATION_TOKEN_OPS = new HashSet<String>();
 
+  static final String DELEGATION_TOKEN_UGI_ATTRIBUTE =
+      "hadoop.security.delegation-token.ugi";
+
   static {
     DELEGATION_TOKEN_OPS.add(KerberosDelegationTokenAuthenticator.
         DelegationTokenOperation.GETDELEGATIONTOKEN.toString());
@@ -342,6 +345,7 @@ public abstract class DelegationTokenAuthenticationHandler
         token = new AuthenticationToken(shortName, ugi.getUserName(),
             getType());
         token.setExpires(0);
+        request.setAttribute(DELEGATION_TOKEN_UGI_ATTRIBUTE, ugi);
       } catch (Throwable ex) {
         throw new AuthenticationException("Could not verify DelegationToken, " +
             ex.toString(), ex);
