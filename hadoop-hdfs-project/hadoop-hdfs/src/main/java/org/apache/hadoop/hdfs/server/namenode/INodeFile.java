@@ -372,6 +372,17 @@ public class INodeFile extends INodeWithAdditionalFields
     return HeaderFormat.getStoragePolicyID(header);
   }
 
+  /** Set the policy id of the file */
+  public final void setStoragePolicyID(byte policyId) {
+    header = HeaderFormat.STORAGE_POLICY_ID.BITS.combine(policyId, header);
+  }
+
+  public final void setStoragePolicyID(byte policyId, int lastSnapshotId)
+      throws QuotaExceededException {
+    recordModification(lastSnapshotId);
+    setStoragePolicyID(policyId);
+  }
+
   @Override
   public long getHeaderLong() {
     return header;

@@ -154,6 +154,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.ServiceFailedException;
+import org.apache.hadoop.hdfs.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
@@ -2217,6 +2218,52 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       logAuditEvent(true, "setReplication", src);
     }
     return isFile;
+  }
+
+  /**
+   * Set the storage policy for an existing file.
+   *
+   * @param src file name
+   * @param policyName storage policy name
+   */
+  void setStoragePolicy(String src, final String policyName)
+      throws IOException {
+    try {
+      setStoragePolicyInt(src, policyName);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "setStoragePolicy", src);
+      throw e;
+    }
+  }
+
+  private void setStoragePolicyInt(String src, final String policyName)
+      throws IOException {
+    checkSuperuserPrivilege();
+    checkOperation(OperationCategory.WRITE);
+    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+    waitForLoadingFSImage();
+    HdfsFileStatus fileStat;
+    writeLock();
+    try {
+      checkOperation(OperationCategory.WRITE);
+      checkNameNodeSafeMode("Cannot set storage policy for " + src);
+      src = FSDirectory.resolvePath(src, pathComponents, dir);
+
+      // get the corresponding policy and make sure the policy name is valid
+      BlockStoragePolicy policy = blockManager.getStoragePolicy(policyName);
+      if (policy == null) {
+        throw new HadoopIllegalArgumentException(
+            "Cannot find a block policy with the name " + policyName);
+      }
+      dir.setStoragePolicy(src, policy.getId());
+      getEditLog().logSetStoragePolicy(src, policy.getId());
+      fileStat = getAuditFileInfo(src, false);
+    } finally {
+      writeUnlock();
+    }
+
+    getEditLog().logSync();
+    logAuditEvent(true, "setStoragePolicy", src, null, fileStat);
   }
 
   long getPreferredBlockSize(String filename) 

@@ -17,12 +17,19 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.io.FileNotFoundException;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -30,8 +37,10 @@ import org.junit.Test;
 public class TestBlockStoragePolicy {
   public static final BlockStoragePolicy.Suite POLICY_SUITE;
   public static final BlockStoragePolicy DEFAULT_STORAGE_POLICY;
+  public static final Configuration conf;
+
   static {
-    final Configuration conf = new HdfsConfiguration();
+    conf = new HdfsConfiguration();
     POLICY_SUITE = BlockStoragePolicy.readBlockStorageSuite(conf);
     DEFAULT_STORAGE_POLICY = POLICY_SUITE.getDefaultPolicy();
   }
@@ -41,11 +50,15 @@ public class TestBlockStoragePolicy {
   static final EnumSet<StorageType> disk = EnumSet.of(StorageType.DISK);
   static final EnumSet<StorageType> both = EnumSet.of(StorageType.DISK, StorageType.ARCHIVE);
 
+  static final long FILE_LEN = 1024;
+  static final short REPLICATION = 3;
+
+  static final byte COLD = (byte) 4;
+  static final byte WARM = (byte) 8;
+  static final byte HOT  = (byte) 12;
+
   @Test
   public void testDefaultPolicies() throws Exception {
-    final byte COLD = (byte)4; 
-    final byte WARM = (byte)8; 
-    final byte HOT  = (byte)12; 
     final Map<Byte, String> expectedPolicyStrings = new HashMap<Byte, String>();
     expectedPolicyStrings.put(COLD,
         "BlockStoragePolicy{COLD:4, storageTypes=[ARCHIVE], creationFallbacks=[], replicationFallbacks=[]");
@@ -118,5 +131,82 @@ public class TestBlockStoragePolicy {
     Assert.assertEquals(archiveExpected, policy.getReplicationFallback(archive));
     Assert.assertEquals(diskExpected, policy.getReplicationFallback(disk));
     Assert.assertEquals(null, policy.getReplicationFallback(both));
+  }
+
+  @Test
+  public void testSetStoragePolicy() throws Exception {
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(REPLICATION).build();
+    cluster.waitActive();
+    FSDirectory fsdir = cluster.getNamesystem().getFSDirectory();
+    final DistributedFileSystem fs = cluster.getFileSystem();
+    try {
+      final Path dir = new Path("/testSetStoragePolicy");
+      final Path fooFile = new Path(dir, "foo");
+      final Path barDir = new Path(dir, "bar");
+      final Path barFile1= new Path(barDir, "f1");
+      final Path barFile2= new Path(barDir, "f2");
+      DFSTestUtil.createFile(fs, fooFile, FILE_LEN, REPLICATION, 0L);
+      DFSTestUtil.createFile(fs, barFile1, FILE_LEN, REPLICATION, 0L);
+      DFSTestUtil.createFile(fs, barFile2, FILE_LEN, REPLICATION, 0L);
+
+      final String invalidPolicyName = "INVALID-POLICY";
+      try {
+        fs.setStoragePolicy(fooFile, invalidPolicyName);
+        Assert.fail("Should throw a HadoopIllegalArgumentException");
+      } catch (RemoteException e) {
+        GenericTestUtils.assertExceptionContains(invalidPolicyName, e);
+      }
+
+      // check internal status
+      INodeFile fooFileNode = fsdir.getINode4Write(fooFile.toString()).asFile();
+      INodeFile barFile1Node = fsdir.getINode4Write(barFile1.toString()).asFile();
+      INodeFile barFile2Node = fsdir.getINode4Write(barFile2.toString()).asFile();
+
+      final Path invalidPath = new Path("/invalidPath");
+      try {
+        fs.setStoragePolicy(invalidPath, "WARM");
+        Assert.fail("Should throw a FileNotFoundException");
+      } catch (FileNotFoundException e) {
+        GenericTestUtils.assertExceptionContains(invalidPath.toString(), e);
+      }
+
+      fs.setStoragePolicy(fooFile, "COLD");
+      fs.setStoragePolicy(barFile1, "WARM");
+      fs.setStoragePolicy(barFile2, "WARM");
+      // TODO: set storage policy on a directory
+
+      // check internal status
+      Assert.assertEquals(COLD, fooFileNode.getStoragePolicyID());
+      Assert.assertEquals(WARM, barFile1Node.getStoragePolicyID());
+      Assert.assertEquals(WARM, barFile2Node.getStoragePolicyID());
+
+      // restart namenode to make sure the editlog is correct
+      cluster.restartNameNode(true);
+      fsdir = cluster.getNamesystem().getFSDirectory();
+      fooFileNode = fsdir.getINode4Write(fooFile.toString()).asFile();
+      Assert.assertEquals(COLD, fooFileNode.getStoragePolicyID());
+      barFile1Node = fsdir.getINode4Write(barFile1.toString()).asFile();
+      Assert.assertEquals(WARM, barFile1Node.getStoragePolicyID());
+      barFile2Node = fsdir.getINode4Write(barFile2.toString()).asFile();
+      Assert.assertEquals(WARM, barFile2Node.getStoragePolicyID());
+
+      // restart namenode with checkpoint to make sure the fsimage is correct
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fs.saveNamespace();
+      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      cluster.restartNameNode(true);
+      fsdir = cluster.getNamesystem().getFSDirectory();
+      fooFileNode = fsdir.getINode4Write(fooFile.toString()).asFile();
+      Assert.assertEquals(COLD, fooFileNode.getStoragePolicyID());
+      barFile1Node = fsdir.getINode4Write(barFile1.toString()).asFile();
+      Assert.assertEquals(WARM, barFile1Node.getStoragePolicyID());
+      barFile2Node = fsdir.getINode4Write(barFile2.toString()).asFile();
+      Assert.assertEquals(WARM, barFile2Node.getStoragePolicyID());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 }

@@ -946,6 +946,28 @@ public class FSDirectory implements Closeable {
     return file.getBlocks();
   }
 
+  /** Set block storage policy for a file */
+  void setStoragePolicy(String src, byte policyId)
+      throws SnapshotAccessControlException, UnresolvedLinkException,
+      FileNotFoundException, QuotaExceededException {
+    writeLock();
+    try {
+      unprotectedSetStoragePolicy(src, policyId);
+    } finally {
+      writeUnlock();
+    }
+  }
+
+  void unprotectedSetStoragePolicy(String src, byte policyId)
+      throws SnapshotAccessControlException, UnresolvedLinkException,
+      FileNotFoundException, QuotaExceededException {
+    assert hasWriteLock();
+    final INodesInPath iip = getINodesInPath4Write(src, true);
+    // TODO: currently we only support setting storage policy on a file
+    final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
+    inode.setStoragePolicyID(policyId, iip.getLatestSnapshotId());
+  }
+
   /**
    * @param path the file path
    * @return the block size of the file. 

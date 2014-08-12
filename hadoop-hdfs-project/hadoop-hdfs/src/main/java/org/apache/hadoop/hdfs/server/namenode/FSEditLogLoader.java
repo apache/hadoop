@@ -78,6 +78,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetOwnerOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetPermissionsOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetQuotaOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetReplicationOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetStoragePolicyOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetXAttrOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemoveXAttrOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
@@ -825,6 +826,13 @@ public class FSEditLogLoader {
         fsNamesys.addCacheEntry(removeXAttrOp.rpcClientId,
             removeXAttrOp.rpcCallId);
       }
+      break;
+    }
+    case OP_SET_STORAGE_POLICY: {
+      SetStoragePolicyOp setStoragePolicyOp = (SetStoragePolicyOp) op;
+      fsDir.unprotectedSetStoragePolicy(
+          renameReservedPathsOnUpgrade(setStoragePolicyOp.path, logVersion),
+          setStoragePolicyOp.policyId);
       break;
     }
     default:

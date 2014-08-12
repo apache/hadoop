@@ -68,6 +68,17 @@ public class BlockStoragePolicy {
     public BlockStoragePolicy getDefaultPolicy() {
       return getPolicy(defaultPolicyID);
     }
+
+    public BlockStoragePolicy getPolicy(String policyName) {
+      if (policies != null) {
+        for (BlockStoragePolicy policy : policies) {
+          if (policy != null && policy.name.equals(policyName)) {
+            return policy;
+          }
+        }
+      }
+      return null;
+    }
   }
 
   /** A 4-bit policy ID */
@@ -170,6 +181,10 @@ public class BlockStoragePolicy {
         + ", storageTypes=" + Arrays.asList(storageTypes)
         + ", creationFallbacks=" + Arrays.asList(creationFallbacks)
         + ", replicationFallbacks=" + Arrays.asList(replicationFallbacks);
+  }
+
+  public byte getId() {
+    return id;
   }
 
   private static StorageType getFallback(EnumSet<StorageType> unavailables,
