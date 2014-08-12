@@ -119,6 +119,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2373. Changed WebAppUtils to use Configuration#getPassword for
     accessing SSL passwords. (Larry McCay via jianhe)
 
+    YARN-2317. Updated the document about how to write YARN applications. (Li Lu via
+    zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
