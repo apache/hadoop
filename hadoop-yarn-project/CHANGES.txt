@@ -116,6 +116,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2138. Cleaned up notifyDone* APIs in RMStateStore. (Varun Saxena via
     jianhe)
 
+    YARN-2373. Changed WebAppUtils to use Configuration#getPassword for
+    accessing SSL passwords. (Larry McCay via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
