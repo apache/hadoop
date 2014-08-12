@@ -38,6 +38,9 @@ Release 2.6.0 - UNRELEASED
     YARN-1354. Recover applications upon nodemanager restart. (Jason Lowe via 
     junping_du)
 
+    YARN-1337. Recover containers upon nodemanager restart. (Jason Lowe via 
+    junping_du)
+
   IMPROVEMENTS
 
     YARN-2242. Improve exception information on AM launch crashes. (Li Lu 
@@ -94,6 +97,25 @@ Release 2.6.0 - UNRELEASED
     YARN-2288. Made persisted data in LevelDB timeline store be versioned. (Junping Du
     via zjshen)
 
+    YARN-2352. FairScheduler: Collect metrics on duration of critical methods that 
+    affect performance. (kasha)
+
+    YARN-2212. ApplicationMaster needs to find a way to update the AMRMToken
+    periodically. (xgong)
+
+    YARN-2026. Fair scheduler: Consider only active queues for computing fairshare. 
+    (Ashwin Shankar via kasha)
+
+    YARN-1954. Added waitFor to AMRMClient(Async). (Tsuyoshi Ozawa via zjshen)
+
+    YARN-2302. Refactor TimelineWebServices. (Zhijie Shen via junping_du)
+
+    YARN-2337. ResourceManager sets ClientRMService in RMContext multiple times.
+    (Zhihai Xu via kasha)
+
+    YARN-2138. Cleaned up notifyDone* APIs in RMStateStore. (Varun Saxena via
+    jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -147,6 +169,11 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2008. Fixed CapacityScheduler to calculate headroom based on max available
     capacity instead of configured max capacity. (Craig Welch via jianhe)
+
+    YARN-2400. Fixed TestAMRestart fails intermittently. (Jian He via xgong)
+
+    YARN-2361. RMAppAttempt state machine entries for KILLED state has duplicate
+    event entries. (Zhihai Xu via kasha)
 
 Release 2.5.0 - UNRELEASED
 

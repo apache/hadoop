@@ -595,7 +595,7 @@ public class TestResourceTrackerService {
     // reconnect of node with changed capability
     nm1 = rm.registerNode("host2:5678", 10240);
     dispatcher.await();
-    response = nm2.nodeHeartbeat(true);
+    response = nm1.nodeHeartbeat(true);
     dispatcher.await();
     Assert.assertTrue(NodeAction.NORMAL.equals(response.getNodeAction()));
     Assert.assertEquals(5120 + 10240, metrics.getAvailableMB());

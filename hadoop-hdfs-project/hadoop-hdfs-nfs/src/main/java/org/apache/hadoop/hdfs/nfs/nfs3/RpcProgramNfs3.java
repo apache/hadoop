@@ -724,6 +724,10 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         FSDataInputStream fis = clientCache.getDfsInputStream(userName,
             Nfs3Utils.getFileIdPath(handle));
 
+        if (fis == null) {
+            return new READ3Response(Nfs3Status.NFS3ERR_ACCES);
+        }
+
         try {
           readCount = fis.read(offset, readbuffer, 0, count);
         } catch (IOException e) {

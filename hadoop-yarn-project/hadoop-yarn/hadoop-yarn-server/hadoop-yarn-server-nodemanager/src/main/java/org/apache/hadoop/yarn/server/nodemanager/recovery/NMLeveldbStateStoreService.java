@@ -35,6 +35,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainerRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -45,6 +47,7 @@ import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerRequestProto;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 import org.apache.hadoop.yarn.server.records.Version;
@@ -90,6 +93,14 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private static final String LOCALIZATION_FILECACHE_SUFFIX = "filecache/";
   private static final String LOCALIZATION_APPCACHE_SUFFIX = "appcache/";
 
+  private static final String CONTAINERS_KEY_PREFIX =
+      "ContainerManager/containers/";
+  private static final String CONTAINER_REQUEST_KEY_SUFFIX = "/request";
+  private static final String CONTAINER_DIAGS_KEY_SUFFIX = "/diagnostics";
+  private static final String CONTAINER_LAUNCHED_KEY_SUFFIX = "/launched";
+  private static final String CONTAINER_KILLED_KEY_SUFFIX = "/killed";
+  private static final String CONTAINER_EXIT_CODE_KEY_SUFFIX = "/exitcode";
+
   private static final String CURRENT_MASTER_KEY_SUFFIX = "CurrentMasterKey";
   private static final String PREV_MASTER_KEY_SUFFIX = "PreviousMasterKey";
   private static final String NM_TOKENS_KEY_PREFIX = "NMTokens/";
@@ -103,6 +114,8 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       CONTAINER_TOKENS_KEY_PREFIX + CURRENT_MASTER_KEY_SUFFIX;
   private static final String CONTAINER_TOKENS_PREV_MASTER_KEY =
       CONTAINER_TOKENS_KEY_PREFIX + PREV_MASTER_KEY_SUFFIX;
+
+  private static final byte[] EMPTY_VALUE = new byte[0];
 
   private DB db;
 
@@ -118,6 +131,160 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   protected void closeStorage() throws IOException {
     if (db != null) {
       db.close();
+    }
+  }
+
+
+  @Override
+  public List<RecoveredContainerState> loadContainersState()
+      throws IOException {
+    ArrayList<RecoveredContainerState> containers =
+        new ArrayList<RecoveredContainerState>();
+    LeveldbIterator iter = null;
+    try {
+      iter = new LeveldbIterator(db);
+      iter.seek(bytes(CONTAINERS_KEY_PREFIX));
+
+      while (iter.hasNext()) {
+        Entry<byte[],byte[]> entry = iter.peekNext();
+        String key = asString(entry.getKey());
+        if (!key.startsWith(CONTAINERS_KEY_PREFIX)) {
+          break;
+        }
+
+        int idEndPos = key.indexOf('/', CONTAINERS_KEY_PREFIX.length());
+        if (idEndPos < 0) {
+          throw new IOException("Unable to determine container in key: " + key);
+        }
+        ContainerId containerId = ConverterUtils.toContainerId(
+            key.substring(CONTAINERS_KEY_PREFIX.length(), idEndPos));
+        String keyPrefix = key.substring(0, idEndPos+1);
+        containers.add(loadContainerState(containerId, iter, keyPrefix));
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    } finally {
+      if (iter != null) {
+        iter.close();
+      }
+    }
+
+    return containers;
+  }
+
+  private RecoveredContainerState loadContainerState(ContainerId containerId,
+      LeveldbIterator iter, String keyPrefix) throws IOException {
+    RecoveredContainerState rcs = new RecoveredContainerState();
+    rcs.status = RecoveredContainerStatus.REQUESTED;
+    while (iter.hasNext()) {
+      Entry<byte[],byte[]> entry = iter.peekNext();
+      String key = asString(entry.getKey());
+      if (!key.startsWith(keyPrefix)) {
+        break;
+      }
+      iter.next();
+
+      String suffix = key.substring(keyPrefix.length()-1);  // start with '/'
+      if (suffix.equals(CONTAINER_REQUEST_KEY_SUFFIX)) {
+        rcs.startRequest = new StartContainerRequestPBImpl(
+            StartContainerRequestProto.parseFrom(entry.getValue()));
+      } else if (suffix.equals(CONTAINER_DIAGS_KEY_SUFFIX)) {
+        rcs.diagnostics = asString(entry.getValue());
+      } else if (suffix.equals(CONTAINER_LAUNCHED_KEY_SUFFIX)) {
+        if (rcs.status == RecoveredContainerStatus.REQUESTED) {
+          rcs.status = RecoveredContainerStatus.LAUNCHED;
+        }
+      } else if (suffix.equals(CONTAINER_KILLED_KEY_SUFFIX)) {
+        rcs.killed = true;
+      } else if (suffix.equals(CONTAINER_EXIT_CODE_KEY_SUFFIX)) {
+        rcs.status = RecoveredContainerStatus.COMPLETED;
+        rcs.exitCode = Integer.parseInt(asString(entry.getValue()));
+      } else {
+        throw new IOException("Unexpected container state key: " + key);
+      }
+    }
+    return rcs;
+  }
+
+  @Override
+  public void storeContainer(ContainerId containerId,
+      StartContainerRequest startRequest) throws IOException {
+    String key = CONTAINERS_KEY_PREFIX + containerId.toString()
+        + CONTAINER_REQUEST_KEY_SUFFIX;
+    try {
+      db.put(bytes(key),
+        ((StartContainerRequestPBImpl) startRequest).getProto().toByteArray());
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void storeContainerDiagnostics(ContainerId containerId,
+      StringBuilder diagnostics) throws IOException {
+    String key = CONTAINERS_KEY_PREFIX + containerId.toString()
+        + CONTAINER_DIAGS_KEY_SUFFIX;
+    try {
+      db.put(bytes(key), bytes(diagnostics.toString()));
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void storeContainerLaunched(ContainerId containerId)
+      throws IOException {
+    String key = CONTAINERS_KEY_PREFIX + containerId.toString()
+        + CONTAINER_LAUNCHED_KEY_SUFFIX;
+    try {
+      db.put(bytes(key), EMPTY_VALUE);
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void storeContainerKilled(ContainerId containerId)
+      throws IOException {
+    String key = CONTAINERS_KEY_PREFIX + containerId.toString()
+        + CONTAINER_KILLED_KEY_SUFFIX;
+    try {
+      db.put(bytes(key), EMPTY_VALUE);
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void storeContainerCompleted(ContainerId containerId,
+      int exitCode) throws IOException {
+    String key = CONTAINERS_KEY_PREFIX + containerId.toString()
+        + CONTAINER_EXIT_CODE_KEY_SUFFIX;
+    try {
+      db.put(bytes(key), bytes(Integer.toString(exitCode)));
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void removeContainer(ContainerId containerId)
+      throws IOException {
+    String keyPrefix = CONTAINERS_KEY_PREFIX + containerId.toString();
+    try {
+      WriteBatch batch = db.createWriteBatch();
+      try {
+        batch.delete(bytes(keyPrefix + CONTAINER_REQUEST_KEY_SUFFIX));
+        batch.delete(bytes(keyPrefix + CONTAINER_DIAGS_KEY_SUFFIX));
+        batch.delete(bytes(keyPrefix + CONTAINER_LAUNCHED_KEY_SUFFIX));
+        batch.delete(bytes(keyPrefix + CONTAINER_KILLED_KEY_SUFFIX));
+        batch.delete(bytes(keyPrefix + CONTAINER_EXIT_CODE_KEY_SUFFIX));
+        db.write(batch);
+      } finally {
+        batch.close();
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
     }
   }
 

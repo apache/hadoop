@@ -55,6 +55,25 @@ public class PseudoAuthenticationHandler implements AuthenticationHandler {
 
   private static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
   private boolean acceptAnonymous;
+  private String type;
+
+  /**
+   * Creates a Hadoop pseudo authentication handler with the default auth-token
+   * type, <code>simple</code>.
+   */
+  public PseudoAuthenticationHandler() {
+    this(TYPE);
+  }
+
+  /**
+   * Creates a Hadoop pseudo authentication handler with a custom auth-token
+   * type.
+   *
+   * @param type auth-token type.
+   */
+  public PseudoAuthenticationHandler(String type) {
+    this.type = type;
+  }
 
   /**
    * Initializes the authentication handler instance.
@@ -96,7 +115,7 @@ public class PseudoAuthenticationHandler implements AuthenticationHandler {
    */
   @Override
   public String getType() {
-    return TYPE;
+    return type;
   }
 
   /**

@@ -1671,9 +1671,11 @@ public class DFSUtil {
         .setKeytabConfKey(getSpnegoKeytabKey(conf, spnegoKeytabFileKey));
 
     // initialize the webserver for uploading/downloading files.
-    LOG.info("Starting web server as: "
-        + SecurityUtil.getServerPrincipal(conf.get(spnegoUserNameKey),
-            httpAddr.getHostName()));
+    if (UserGroupInformation.isSecurityEnabled()) {
+      LOG.info("Starting web server as: "
+          + SecurityUtil.getServerPrincipal(conf.get(spnegoUserNameKey),
+              httpAddr.getHostName()));
+    }
 
     if (policy.isHttpEnabled()) {
       if (httpAddr.getPort() == 0) {

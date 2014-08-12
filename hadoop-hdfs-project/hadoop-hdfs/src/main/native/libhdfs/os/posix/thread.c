@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,24 +16,37 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event;
+#include "os/thread.h"
 
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
+#include <pthread.h>
+#include <stdio.h>
 
-public class RMAppAttemptNewSavedEvent extends RMAppAttemptEvent {
+/**
+ * Defines a helper function that adapts function pointer provided by caller to
+ * the type required by pthread_create.
+ *
+ * @param toRun thread to run
+ * @return void* result of running thread (always NULL)
+ */
+static void* runThread(void *toRun) {
+  const thread *t = toRun;
+  t->start(t->arg);
+  return NULL;
+}
 
-  final Exception storedException;
-  
-  public RMAppAttemptNewSavedEvent(ApplicationAttemptId appAttemptId,
-                                 Exception storedException) {
-    super(appAttemptId, RMAppAttemptEventType.ATTEMPT_NEW_SAVED);
-    this.storedException = storedException;
+int threadCreate(thread *t) {
+  int ret;
+  ret = pthread_create(&t->id, NULL, runThread, t);
+  if (ret) {
+    fprintf(stderr, "threadCreate: pthread_create failed with error %d\n", ret);
   }
-  
-  public Exception getStoredException() {
-    return storedException;
-  }
+  return ret;
+}
 
+int threadJoin(const thread *t) {
+  int ret = pthread_join(t->id, NULL);
+  if (ret) {
+    fprintf(stderr, "threadJoin: pthread_join failed with error %d\n", ret);
+  }
+  return ret;
 }

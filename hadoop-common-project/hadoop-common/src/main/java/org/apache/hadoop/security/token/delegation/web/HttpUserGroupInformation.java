@@ -15,24 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.security.token.delegation.web;
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.security.UserGroupInformation;
 
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
+import javax.servlet.http.HttpServletRequest;
 
-public class RMAppAttemptUpdateSavedEvent extends RMAppAttemptEvent {
+/**
+ * Util class that returns the remote {@link UserGroupInformation} in scope
+ * for the HTTP request.
+ */
+@InterfaceAudience.Private
+public class HttpUserGroupInformation {
 
-  final Exception updatedException;
-
-  public RMAppAttemptUpdateSavedEvent(ApplicationAttemptId appAttemptId,
-      Exception updatedException) {
-    super(appAttemptId, RMAppAttemptEventType.ATTEMPT_UPDATE_SAVED);
-    this.updatedException = updatedException;
+  /**
+   * Returns the remote {@link UserGroupInformation} in context for the current
+   * HTTP request, taking into account proxy user requests.
+   *
+   * @return the remote {@link UserGroupInformation}, <code>NULL</code> if none.
+   */
+  public static UserGroupInformation get() {
+    return DelegationTokenAuthenticationFilter.
+        getHttpUserGroupInformationInContext();
   }
 
-  public Exception getUpdatedException() {
-    return updatedException;
-  }
 }

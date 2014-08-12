@@ -153,14 +153,17 @@ public class SchedulerUtils {
    * @param rmNode RMNode with new resource view
    * @param clusterResource the cluster's resource that need to update
    * @param log Scheduler's log for resource change
+   * @return true if the resources have changed
    */
-  public static void updateResourceIfChanged(SchedulerNode node, 
+  public static boolean updateResourceIfChanged(SchedulerNode node,
       RMNode rmNode, Resource clusterResource, Log log) {
+    boolean result = false;
     Resource oldAvailableResource = node.getAvailableResource();
     Resource newAvailableResource = Resources.subtract(
         rmNode.getTotalCapability(), node.getUsedResource());
     
     if (!newAvailableResource.equals(oldAvailableResource)) {
+      result = true;
       Resource deltaResource = Resources.subtract(newAvailableResource,
           oldAvailableResource);
       // Reflect resource change to scheduler node.
@@ -176,6 +179,8 @@ public class SchedulerUtils {
           + " with delta: CPU: " + deltaResource.getMemory() + "core, Memory: "
           + deltaResource.getMemory() +"MB");
     }
+
+    return result;
   }
 
   /**

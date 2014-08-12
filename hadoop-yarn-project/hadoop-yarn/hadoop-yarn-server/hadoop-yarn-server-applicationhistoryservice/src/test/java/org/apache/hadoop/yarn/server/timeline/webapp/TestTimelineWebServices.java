@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelineP
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AdminACLsManager;
 import org.apache.hadoop.yarn.server.timeline.TestMemoryTimelineStore;
+import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFilter;
@@ -89,14 +90,15 @@ public class TestTimelineWebServices extends JerseyTest {
       } catch (Exception e) {
         Assert.fail();
       }
-      bind(TimelineStore.class).toInstance(store);
       Configuration conf = new YarnConfiguration();
       conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, false);
       timelineACLsManager = new TimelineACLsManager(conf);
       conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
       conf.set(YarnConfiguration.YARN_ADMIN_ACL, "admin");
       adminACLsManager = new AdminACLsManager(conf);
-      bind(TimelineACLsManager.class).toInstance(timelineACLsManager);
+      TimelineDataManager timelineDataManager =
+          new TimelineDataManager(store, timelineACLsManager);
+      bind(TimelineDataManager.class).toInstance(timelineDataManager);
       serve("/*").with(GuiceContainer.class);
       TimelineAuthenticationFilter taFilter = new TimelineAuthenticationFilter();
       FilterConfig filterConfig = mock(FilterConfig.class);

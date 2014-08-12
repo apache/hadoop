@@ -16,21 +16,39 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
+#ifndef LIBHDFS_THREAD_H
+#define LIBHDFS_THREAD_H
 
-import org.apache.hadoop.yarn.api.records.ApplicationId;
+/*
+ * Defines abstraction over platform-specific threads.
+ */
 
-public class RMAppNewSavedEvent extends RMAppEvent {
+#include "platform.h"
 
-  private final Exception storedException;
+/** Pointer to function to run in thread. */
+typedef void (*threadProcedure)(void *);
 
-  public RMAppNewSavedEvent(ApplicationId appId, Exception storedException) {
-    super(appId, RMAppEventType.APP_NEW_SAVED);
-    this.storedException = storedException;
-  }
+/** Structure containing a thread's ID, starting address and argument. */
+typedef struct {
+  threadId id;
+  threadProcedure start;
+  void *arg;
+} thread;
 
-  public Exception getStoredException() {
-    return storedException;
-  }
+/**
+ * Creates and immediately starts a new thread.
+ *
+ * @param t thread to create
+ * @return 0 if successful, non-zero otherwise
+ */
+int threadCreate(thread *t);
 
-}
+/**
+ * Joins to the given thread, blocking if necessary.
+ *
+ * @param t thread to join
+ * @return 0 if successful, non-zero otherwise
+ */
+int threadJoin(const thread *t);
+
+#endif

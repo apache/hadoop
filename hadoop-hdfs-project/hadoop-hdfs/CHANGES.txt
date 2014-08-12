@@ -370,11 +370,37 @@ Release 2.6.0 - UNRELEASED
     HDFS-6781. Separate HDFS commands from CommandsManual.apt.vm. (Akira
     Ajisaka via Arpit Agarwal)
 
+    HDFS-6728. Dynamically add new volumes to DataStorage, formatted if
+    necessary. (Lei Xu via atm)
+
+    HDFS-6740. Make FSDataset support adding data volumes dynamically. (Lei
+    Xu via atm)
+
+    HDFS-6722. Display readable last contact time for dead nodes on NN webUI.
+    (Ming Ma via wheat9)
+
+    HDFS-6772. Get DN storages out of blockContentsStale state faster after
+    NN restarts. (Ming Ma via Arpit Agarwal)
+
+    HDFS-573. Porting libhdfs to Windows. (cnauroth)
+
+    HDFS-6828. Separate block replica dispatching from Balancer. (szetszwo via
+    jing9)
+
+    HDFS-6837. Code cleanup for Balancer and Dispatcher. (szetszwo via
+    jing9)
+
+    HDFS-6838. Code cleanup for unnecessary INode replacement.
+    (Jing Zhao via wheat9)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
 
   BUG FIXES
+
+    HDFS-6823. dfs.web.authentication.kerberos.principal shows up in logs for 
+    insecure HDFS (Allen Wittenauer via raviprak)
 
     HDFS-6617. Flake TestDFSZKFailoverController.testManualFailoverWithDFSHAAdmin
     due to a long edit log sync op. (Liang Xie via cnauroth)
@@ -461,6 +487,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6791. A block could remain under replicated if all of its replicas are on
     decommissioned nodes. (Ming Ma via jing9)
+
+    HDFS-6582. Missing null check in RpcProgramNfs3#read(XDR, SecurityHandler)
+    (Abhiraj Butala via brandonli)
 
 Release 2.5.0 - UNRELEASED
 

@@ -81,10 +81,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAllocatedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptLaunchFailedEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptNewSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRegistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUpdateSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
@@ -349,7 +347,6 @@ public class TestRMAppAttemptTransitions {
       assertNull(applicationAttempt.createClientToken("some client"));
     }
     assertNull(applicationAttempt.createClientToken(null));
-    assertNotNull(applicationAttempt.getAMRMToken());
     // Check events
     verify(masterService).
         registerAppAttempt(applicationAttempt.getAppAttemptId());
@@ -445,7 +442,6 @@ public class TestRMAppAttemptTransitions {
     assertEquals(RMAppAttemptState.ALLOCATED, 
         applicationAttempt.getAppAttemptState());
     assertEquals(amContainer, applicationAttempt.getMasterContainer());
-    
     // Check events
     verify(applicationMasterLauncher).handle(any(AMLauncherEvent.class));
     verify(scheduler, times(2)).
@@ -572,15 +568,15 @@ public class TestRMAppAttemptTransitions {
     submitApplicationAttempt();
     applicationAttempt.handle(
         new RMAppAttemptEvent(
-            applicationAttempt.getAppAttemptId(), 
+            applicationAttempt.getAppAttemptId(),
             RMAppAttemptEventType.ATTEMPT_ADDED));
     
     if(unmanagedAM){
       assertEquals(RMAppAttemptState.LAUNCHED_UNMANAGED_SAVING, 
           applicationAttempt.getAppAttemptState());
       applicationAttempt.handle(
-          new RMAppAttemptNewSavedEvent(
-              applicationAttempt.getAppAttemptId(), null));
+        new RMAppAttemptEvent(applicationAttempt.getAppAttemptId(),
+            RMAppAttemptEventType.ATTEMPT_NEW_SAVED));
     }
     
     testAppAttemptScheduledState();
@@ -618,8 +614,8 @@ public class TestRMAppAttemptTransitions {
     assertEquals(RMAppAttemptState.ALLOCATED_SAVING, 
         applicationAttempt.getAppAttemptState());
     applicationAttempt.handle(
-        new RMAppAttemptNewSavedEvent(
-            applicationAttempt.getAppAttemptId(), null));
+        new RMAppAttemptEvent(applicationAttempt.getAppAttemptId(),
+            RMAppAttemptEventType.ATTEMPT_NEW_SAVED));
     
     testAppAttemptAllocatedState(container);
     
@@ -698,8 +694,8 @@ public class TestRMAppAttemptTransitions {
     assertEquals(RMAppAttemptState.FINAL_SAVING,
       applicationAttempt.getAppAttemptState());
     applicationAttempt.handle(
-      new RMAppAttemptUpdateSavedEvent(
-          applicationAttempt.getAppAttemptId(), null));
+      new RMAppAttemptEvent(applicationAttempt.getAppAttemptId(), 
+          RMAppAttemptEventType.ATTEMPT_UPDATE_SAVED));
   }
 
   @Test

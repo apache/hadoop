@@ -19,20 +19,18 @@
 #include "config.h"
 #include "exception.h"
 #include "jni_helper.h"
+#include "platform.h"
+#include "common/htable.h"
+#include "os/mutexes.h"
+#include "os/thread_local_storage.h"
 
 #include <stdio.h> 
 #include <string.h> 
 
-static pthread_mutex_t hdfsHashMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t jvmMutex = PTHREAD_MUTEX_INITIALIZER;
-static volatile int hashTableInited = 0;
-
-#define LOCK_HASH_TABLE() pthread_mutex_lock(&hdfsHashMutex)
-#define UNLOCK_HASH_TABLE() pthread_mutex_unlock(&hdfsHashMutex)
-
+static struct htable *gClassRefHTable = NULL;
 
 /** The Native return types that methods could return */
-#define VOID          'V'
+#define JVOID         'V'
 #define JOBJECT       'L'
 #define JARRAYOBJECT  '['
 #define JBOOLEAN      'Z'
@@ -51,40 +49,10 @@ static volatile int hashTableInited = 0;
  */
 #define MAX_HASH_TABLE_ELEM 4096
 
-/** Key that allows us to retrieve thread-local storage */
-static pthread_key_t gTlsKey;
-
-/** nonzero if we succeeded in initializing gTlsKey. Protected by the jvmMutex */
-static int gTlsKeyInitialized = 0;
-
-/** Pthreads thread-local storage for each library thread. */
-struct hdfsTls {
-    JNIEnv *env;
-};
-
 /**
- * The function that is called whenever a thread with libhdfs thread local data
- * is destroyed.
- *
- * @param v         The thread-local data
+ * Length of buffer for retrieving created JVMs.  (We only ever create one.)
  */
-static void hdfsThreadDestructor(void *v)
-{
-    struct hdfsTls *tls = v;
-    JavaVM *vm;
-    JNIEnv *env = tls->env;
-    jint ret;
-
-    ret = (*env)->GetJavaVM(env, &vm);
-    if (ret) {
-        fprintf(stderr, "hdfsThreadDestructor: GetJavaVM failed with "
-                "error %d\n", ret);
-        (*env)->ExceptionDescribe(env);
-    } else {
-        (*vm)->DetachCurrentThread(vm);
-    }
-    free(tls);
-}
+#define VM_BUF_LENGTH 1
 
 void destroyLocalReference(JNIEnv *env, jobject jObject)
 {
@@ -138,67 +106,6 @@ jthrowable newCStr(JNIEnv *env, jstring jstr, char **out)
     return NULL;
 }
 
-static int hashTableInit(void)
-{
-    if (!hashTableInited) {
-        LOCK_HASH_TABLE();
-        if (!hashTableInited) {
-            if (hcreate(MAX_HASH_TABLE_ELEM) == 0) {
-                fprintf(stderr, "error creating hashtable, <%d>: %s\n",
-                        errno, strerror(errno));
-                UNLOCK_HASH_TABLE();
-                return 0;
-            } 
-            hashTableInited = 1;
-        }
-        UNLOCK_HASH_TABLE();
-    }
-    return 1;
-}
-
-
-static int insertEntryIntoTable(const char *key, void *data)
-{
-    ENTRY e, *ep;
-    if (key == NULL || data == NULL) {
-        return 0;
-    }
-    if (! hashTableInit()) {
-      return -1;
-    }
-    e.data = data;
-    e.key = (char*)key;
-    LOCK_HASH_TABLE();
-    ep = hsearch(e, ENTER);
-    UNLOCK_HASH_TABLE();
-    if (ep == NULL) {
-        fprintf(stderr, "warn adding key (%s) to hash table, <%d>: %s\n",
-                key, errno, strerror(errno));
-    }  
-    return 0;
-}
-
-
-
-static void* searchEntryFromTable(const char *key)
-{
-    ENTRY e,*ep;
-    if (key == NULL) {
-        return NULL;
-    }
-    hashTableInit();
-    e.key = (char*)key;
-    LOCK_HASH_TABLE();
-    ep = hsearch(e, FIND);
-    UNLOCK_HASH_TABLE();
-    if (ep != NULL) {
-        return ep->data;
-    }
-    return NULL;
-}
-
-
-
 jthrowable invokeMethod(JNIEnv *env, jvalue *retval, MethType methType,
                  jobject instObj, const char *className,
                  const char *methName, const char *methSignature, ...)
@@ -235,7 +142,7 @@ jthrowable invokeMethod(JNIEnv *env, jvalue *retval, MethType methType,
         }
         retval->l = jobj;
     }
-    else if (returnType == VOID) {
+    else if (returnType == JVOID) {
         if (methType == STATIC) {
             (*env)->CallStaticVoidMethodV(env, cls, mid, args);
         }
@@ -325,11 +232,11 @@ jthrowable methodIdFromClass(const char *className, const char *methName,
 {
     jclass cls;
     jthrowable jthr;
+    jmethodID mid = 0;
 
     jthr = globalClassReference(className, env, &cls);
     if (jthr)
         return jthr;
-    jmethodID mid = 0;
     jthr = validateMethodType(env, methType);
     if (jthr)
         return jthr;
@@ -350,25 +257,50 @@ jthrowable methodIdFromClass(const char *className, const char *methName,
 
 jthrowable globalClassReference(const char *className, JNIEnv *env, jclass *out)
 {
-    jclass clsLocalRef;
-    jclass cls = searchEntryFromTable(className);
-    if (cls) {
-        *out = cls;
-        return NULL;
+    jthrowable jthr = NULL;
+    jclass local_clazz = NULL;
+    jclass clazz = NULL;
+    int ret;
+
+    mutexLock(&hdfsHashMutex);
+    if (!gClassRefHTable) {
+        gClassRefHTable = htable_alloc(MAX_HASH_TABLE_ELEM, ht_hash_string,
+            ht_compare_string);
+        if (!gClassRefHTable) {
+            jthr = newRuntimeError(env, "htable_alloc failed\n");
+            goto done;
+        }
     }
-    clsLocalRef = (*env)->FindClass(env,className);
-    if (clsLocalRef == NULL) {
-        return getPendingExceptionAndClear(env);
+    clazz = htable_get(gClassRefHTable, className);
+    if (clazz) {
+        *out = clazz;
+        goto done;
     }
-    cls = (*env)->NewGlobalRef(env, clsLocalRef);
-    if (cls == NULL) {
-        (*env)->DeleteLocalRef(env, clsLocalRef);
-        return getPendingExceptionAndClear(env);
+    local_clazz = (*env)->FindClass(env,className);
+    if (!local_clazz) {
+        jthr = getPendingExceptionAndClear(env);
+        goto done;
     }
-    (*env)->DeleteLocalRef(env, clsLocalRef);
-    insertEntryIntoTable(className, cls);
-    *out = cls;
-    return NULL;
+    clazz = (*env)->NewGlobalRef(env, local_clazz);
+    if (!clazz) {
+        jthr = getPendingExceptionAndClear(env);
+        goto done;
+    }
+    ret = htable_put(gClassRefHTable, (void*)className, clazz);
+    if (ret) {
+        jthr = newRuntimeError(env, "htable_put failed with error "
+                               "code %d\n", ret);
+        goto done;
+    }
+    *out = clazz;
+    jthr = NULL;
+done:
+    mutexUnlock(&hdfsHashMutex);
+    (*env)->DeleteLocalRef(env, local_clazz);
+    if (jthr && clazz) {
+        (*env)->DeleteGlobalRef(env, clazz);
+    }
+    return jthr;
 }
 
 jthrowable classNameOfObject(jobject jobj, JNIEnv *env, char **name)
@@ -436,14 +368,24 @@ done:
  */
 static JNIEnv* getGlobalJNIEnv(void)
 {
-    const jsize vmBufLength = 1;
-    JavaVM* vmBuf[vmBufLength]; 
+    JavaVM* vmBuf[VM_BUF_LENGTH]; 
     JNIEnv *env;
     jint rv = 0; 
     jint noVMs = 0;
     jthrowable jthr;
+    char *hadoopClassPath;
+    const char *hadoopClassPathVMArg = "-Djava.class.path=";
+    size_t optHadoopClassPathLen;
+    char *optHadoopClassPath;
+    int noArgs = 1;
+    char *hadoopJvmArgs;
+    char jvmArgDelims[] = " ";
+    char *str, *token, *savePtr;
+    JavaVMInitArgs vm_args;
+    JavaVM *vm;
+    JavaVMOption *options;
 
-    rv = JNI_GetCreatedJavaVMs(&(vmBuf[0]), vmBufLength, &noVMs);
+    rv = JNI_GetCreatedJavaVMs(&(vmBuf[0]), VM_BUF_LENGTH, &noVMs);
     if (rv != 0) {
         fprintf(stderr, "JNI_GetCreatedJavaVMs failed with error: %d\n", rv);
         return NULL;
@@ -451,23 +393,19 @@ static JNIEnv* getGlobalJNIEnv(void)
 
     if (noVMs == 0) {
         //Get the environment variables for initializing the JVM
-        char *hadoopClassPath = getenv("CLASSPATH");
+        hadoopClassPath = getenv("CLASSPATH");
         if (hadoopClassPath == NULL) {
             fprintf(stderr, "Environment variable CLASSPATH not set!\n");
             return NULL;
         } 
-        char *hadoopClassPathVMArg = "-Djava.class.path=";
-        size_t optHadoopClassPathLen = strlen(hadoopClassPath) + 
+        optHadoopClassPathLen = strlen(hadoopClassPath) + 
           strlen(hadoopClassPathVMArg) + 1;
-        char *optHadoopClassPath = malloc(sizeof(char)*optHadoopClassPathLen);
+        optHadoopClassPath = malloc(sizeof(char)*optHadoopClassPathLen);
         snprintf(optHadoopClassPath, optHadoopClassPathLen,
                 "%s%s", hadoopClassPathVMArg, hadoopClassPath);
 
         // Determine the # of LIBHDFS_OPTS args
-        int noArgs = 1;
-        char *hadoopJvmArgs = getenv("LIBHDFS_OPTS");
-        char jvmArgDelims[] = " ";
-        char *str, *token, *savePtr;
+        hadoopJvmArgs = getenv("LIBHDFS_OPTS");
         if (hadoopJvmArgs != NULL)  {
           hadoopJvmArgs = strdup(hadoopJvmArgs);
           for (noArgs = 1, str = hadoopJvmArgs; ; noArgs++, str = NULL) {
@@ -480,7 +418,12 @@ static JNIEnv* getGlobalJNIEnv(void)
         }
 
         // Now that we know the # args, populate the options array
-        JavaVMOption options[noArgs];
+        options = calloc(noArgs, sizeof(JavaVMOption));
+        if (!options) {
+          fputs("Call to calloc failed\n", stderr);
+          free(optHadoopClassPath);
+          return NULL;
+        }
         options[0].optionString = optHadoopClassPath;
         hadoopJvmArgs = getenv("LIBHDFS_OPTS");
 	if (hadoopJvmArgs != NULL)  {
@@ -495,8 +438,6 @@ static JNIEnv* getGlobalJNIEnv(void)
         }
 
         //Create the VM
-        JavaVMInitArgs vm_args;
-        JavaVM *vm;
         vm_args.version = JNI_VERSION_1_2;
         vm_args.options = options;
         vm_args.nOptions = noArgs; 
@@ -508,6 +449,7 @@ static JNIEnv* getGlobalJNIEnv(void)
           free(hadoopJvmArgs);
         }
         free(optHadoopClassPath);
+        free(options);
 
         if (rv != 0) {
             fprintf(stderr, "Call to JNI_CreateJavaVM failed "
@@ -523,7 +465,7 @@ static JNIEnv* getGlobalJNIEnv(void)
     }
     else {
         //Attach this thread to the VM
-        JavaVM* vm = vmBuf[0];
+        vm = vmBuf[0];
         rv = (*vm)->AttachCurrentThread(vm, (void*)&env, 0);
         if (rv != 0) {
             fprintf(stderr, "Call to AttachCurrentThread "
@@ -557,54 +499,27 @@ static JNIEnv* getGlobalJNIEnv(void)
 JNIEnv* getJNIEnv(void)
 {
     JNIEnv *env;
-    struct hdfsTls *tls;
-    int ret;
-
-#ifdef HAVE_BETTER_TLS
-    static __thread struct hdfsTls *quickTls = NULL;
-    if (quickTls)
-        return quickTls->env;
-#endif
-    pthread_mutex_lock(&jvmMutex);
-    if (!gTlsKeyInitialized) {
-        ret = pthread_key_create(&gTlsKey, hdfsThreadDestructor);
-        if (ret) {
-            pthread_mutex_unlock(&jvmMutex);
-            fprintf(stderr, "getJNIEnv: pthread_key_create failed with "
-                "error %d\n", ret);
-            return NULL;
-        }
-        gTlsKeyInitialized = 1;
+    THREAD_LOCAL_STORAGE_GET_QUICK();
+    mutexLock(&jvmMutex);
+    if (threadLocalStorageGet(&env)) {
+      mutexUnlock(&jvmMutex);
+      return NULL;
     }
-    tls = pthread_getspecific(gTlsKey);
-    if (tls) {
-        pthread_mutex_unlock(&jvmMutex);
-        return tls->env;
+    if (env) {
+      mutexUnlock(&jvmMutex);
+      return env;
     }
 
     env = getGlobalJNIEnv();
-    pthread_mutex_unlock(&jvmMutex);
+    mutexUnlock(&jvmMutex);
     if (!env) {
-        fprintf(stderr, "getJNIEnv: getGlobalJNIEnv failed\n");
-        return NULL;
+      fprintf(stderr, "getJNIEnv: getGlobalJNIEnv failed\n");
+      return NULL;
     }
-    tls = calloc(1, sizeof(struct hdfsTls));
-    if (!tls) {
-        fprintf(stderr, "getJNIEnv: OOM allocating %zd bytes\n",
-                sizeof(struct hdfsTls));
-        return NULL;
+    if (threadLocalStorageSet(env)) {
+      return NULL;
     }
-    tls->env = env;
-    ret = pthread_setspecific(gTlsKey, tls);
-    if (ret) {
-        fprintf(stderr, "getJNIEnv: pthread_setspecific failed with "
-            "error code %d\n", ret);
-        hdfsThreadDestructor(tls);
-        return NULL;
-    }
-#ifdef HAVE_BETTER_TLS
-    quickTls = tls;
-#endif
+    THREAD_LOCAL_STORAGE_SET_QUICK(env);
     return env;
 }
 

@@ -78,6 +78,11 @@ import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
 
 import com.google.common.annotations.VisibleForTesting;
 
+/**
+ * Changes from 1.1 to 1.2, AMRMTokenSecretManager state has been saved
+ * separately. The currentMasterkey and nextMasterkey have been stored.
+ * Also, AMRMToken has been removed from ApplicationAttemptState.
+ */
 @Private
 @Unstable
 public class ZKRMStateStore extends RMStateStore {
@@ -87,7 +92,7 @@ public class ZKRMStateStore extends RMStateStore {
 
   protected static final String ROOT_ZNODE_NAME = "ZKRMStateRoot";
   protected static final Version CURRENT_VERSION_INFO = Version
-      .newInstance(1, 1);
+      .newInstance(1, 2);
   private static final String RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME =
       "RMDelegationTokensRoot";
   private static final String RM_DT_SEQUENTIAL_NUMBER_ZNODE_NAME =

@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -35,6 +36,7 @@ import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerResourceDecreasePBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerResourceIncreasePBImpl;
@@ -44,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.NodeReportPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.PreemptionMessagePBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.TokenPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerResourceDecreaseProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerResourceIncreaseProto;
@@ -74,7 +77,7 @@ public class AllocateResponsePBImpl extends AllocateResponse {
 
   private List<NodeReport> updatedNodes = null;
   private PreemptionMessage preempt;
-  
+  private Token amrmToken = null;
   
   public AllocateResponsePBImpl() {
     builder = AllocateResponseProto.newBuilder();
@@ -153,6 +156,9 @@ public class AllocateResponsePBImpl extends AllocateResponse {
       Iterable<ContainerResourceDecreaseProto> iterable =
           getChangeProtoIterable(this.decreasedContainers);
       builder.addAllDecreasedContainers(iterable);
+    }
+    if (this.amrmToken != null) {
+      builder.setAmRmToken(convertToProtoFormat(this.amrmToken));
     }
   }
 
@@ -355,6 +361,28 @@ public class AllocateResponsePBImpl extends AllocateResponse {
     }
     initLocalDecreasedContainerList();
     this.decreasedContainers.addAll(decreasedContainers);
+  }
+
+  @Override
+  public synchronized Token getAMRMToken() {
+    AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
+    if (amrmToken != null) {
+      return amrmToken;
+    }
+    if (!p.hasAmRmToken()) {
+      return null;
+    }
+    this.amrmToken = convertFromProtoFormat(p.getAmRmToken());
+    return amrmToken;
+  }
+
+  @Override
+  public synchronized void setAMRMToken(Token amRMToken) {
+    maybeInitBuilder();
+    if (amRMToken == null) {
+      builder.clearAmRmToken();
+    }
+    this.amrmToken = amRMToken;
   }
 
   private synchronized void initLocalIncreasedContainerList() {
@@ -698,5 +726,13 @@ public class AllocateResponsePBImpl extends AllocateResponse {
   
   private synchronized NMToken convertFromProtoFormat(NMTokenProto proto) {
     return new NMTokenPBImpl(proto);
+  }
+
+  private TokenPBImpl convertFromProtoFormat(TokenProto p) {
+    return new TokenPBImpl(p);
+  }
+
+  private TokenProto convertToProtoFormat(Token t) {
+    return ((TokenPBImpl)t).getProto();
   }
 }  

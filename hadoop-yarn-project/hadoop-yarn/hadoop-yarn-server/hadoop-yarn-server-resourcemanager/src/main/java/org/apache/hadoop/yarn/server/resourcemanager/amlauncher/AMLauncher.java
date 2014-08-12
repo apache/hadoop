@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptLaunchFailedEvent;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
@@ -226,7 +227,7 @@ public class AMLauncher implements Runnable {
     }
 
     // Add AMRMToken
-    Token<AMRMTokenIdentifier> amrmToken = getAMRMToken();
+    Token<AMRMTokenIdentifier> amrmToken = createAndSetAMRMToken();
     if (amrmToken != null) {
       credentials.addToken(amrmToken.getService(), amrmToken);
     }
@@ -236,8 +237,12 @@ public class AMLauncher implements Runnable {
   }
 
   @VisibleForTesting
-  protected Token<AMRMTokenIdentifier> getAMRMToken() {
-    return application.getAMRMToken();
+  protected Token<AMRMTokenIdentifier> createAndSetAMRMToken() {
+    Token<AMRMTokenIdentifier> amrmToken =
+        this.rmContext.getAMRMTokenSecretManager().createAndGetAMRMToken(
+          application.getAppAttemptId());
+    ((RMAppAttemptImpl)application).setAMRMToken(amrmToken);
+    return amrmToken;
   }
   
   @SuppressWarnings("unchecked")

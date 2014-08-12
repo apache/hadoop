@@ -34,6 +34,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
@@ -90,14 +94,16 @@ public class NameNodeConnector implements Closeable {
     return blockpoolID;
   }
 
-  /** @return the namenode proxy. */
-  public NamenodeProtocol getNamenode() {
-    return namenode;
+  /** @return blocks with locations. */
+  public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size)
+      throws IOException {
+    return namenode.getBlocks(datanode, size);
   }
 
-  /** @return the client proxy. */
-  public ClientProtocol getClient() {
-    return client;
+  /** @return live datanode storage reports. */
+  public DatanodeStorageReport[] getLiveDatanodeStorageReport()
+      throws IOException {
+    return client.getDatanodeStorageReport(DatanodeReportType.LIVE);
   }
 
   /** @return the key manager */

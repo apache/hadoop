@@ -16,21 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
+#ifndef LIBHDFS_INTTYPES_H
+#define LIBHDFS_INTTYPES_H
 
-import org.apache.hadoop.yarn.api.records.ApplicationId;
+/* On Windows, inttypes.h does not exist, so manually define what we need. */
 
-public class RMAppUpdateSavedEvent extends RMAppEvent {
+#define PRId64 "I64d"
+#define PRIu64 "I64u"
+typedef unsigned __int64 uint64_t;
 
-  private final Exception updatedException;
-
-  public RMAppUpdateSavedEvent(ApplicationId appId, Exception updatedException) {
-    super(appId, RMAppEventType.APP_UPDATE_SAVED);
-    this.updatedException = updatedException;
-  }
-
-  public Exception getUpdatedException() {
-    return updatedException;
-  }
-
-}
+#endif

@@ -44,7 +44,7 @@ public class TestBalancerWithHANameNodes {
   ClientProtocol client;
 
   static {
-    Balancer.setBlockMoveWaitTime(1000L);
+    Dispatcher.setBlockMoveWaitTime(1000L);
   }
 
   /**
@@ -98,7 +98,7 @@ public class TestBalancerWithHANameNodes {
       assertEquals(1, namenodes.size());
       assertTrue(namenodes.contains(HATestUtil.getLogicalUri(cluster)));
       final int r = Balancer.run(namenodes, Balancer.Parameters.DEFAULT, conf);
-      assertEquals(Balancer.ReturnStatus.SUCCESS.code, r);
+      assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
       TestBalancer.waitForBalancer(totalUsedSpace, totalCapacity, client,
           cluster, Balancer.Parameters.DEFAULT);
     } finally {

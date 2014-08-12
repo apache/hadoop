@@ -73,7 +73,7 @@ public class TestBalancerWithMultipleNameNodes {
   private static final Random RANDOM = new Random();
 
   static {
-    Balancer.setBlockMoveWaitTime(1000L) ;
+    Dispatcher.setBlockMoveWaitTime(1000L) ;
   }
 
   /** Common objects used in various methods. */
@@ -160,7 +160,7 @@ public class TestBalancerWithMultipleNameNodes {
     // start rebalancing
     final Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(s.conf);
     final int r = Balancer.run(namenodes, Balancer.Parameters.DEFAULT, s.conf);
-    Assert.assertEquals(Balancer.ReturnStatus.SUCCESS.code, r);
+    Assert.assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
 
     LOG.info("BALANCER 2");
     wait(s.clients, totalUsed, totalCapacity);

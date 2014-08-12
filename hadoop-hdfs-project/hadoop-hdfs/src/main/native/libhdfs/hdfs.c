@@ -19,7 +19,9 @@
 #include "exception.h"
 #include "hdfs.h"
 #include "jni_helper.h"
+#include "platform.h"
 
+#include <fcntl.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
@@ -63,9 +65,9 @@ static void hdfsFreeFileInfoEntry(hdfsFileInfo *hdfsFileInfo);
  */
 enum hdfsStreamType
 {
-    UNINITIALIZED = 0,
-    INPUT = 1,
-    OUTPUT = 2,
+    HDFS_STREAM_UNINITIALIZED = 0,
+    HDFS_STREAM_INPUT = 1,
+    HDFS_STREAM_OUTPUT = 2,
 };
 
 /**
@@ -79,7 +81,7 @@ struct hdfsFile_internal {
 
 int hdfsFileIsOpenForRead(hdfsFile file)
 {
-    return (file->type == INPUT);
+    return (file->type == HDFS_STREAM_INPUT);
 }
 
 int hdfsFileGetReadStatistics(hdfsFile file,
@@ -96,7 +98,7 @@ int hdfsFileGetReadStatistics(hdfsFile file,
         errno = EINTERNAL;
         return -1;
     }
-    if (file->type != INPUT) {
+    if (file->type != HDFS_STREAM_INPUT) {
         ret = EINVAL;
         goto done;
     }
@@ -180,7 +182,7 @@ void hdfsFileFreeReadStatistics(struct hdfsReadStatistics *stats)
 
 int hdfsFileIsOpenForWrite(hdfsFile file)
 {
-    return (file->type == OUTPUT);
+    return (file->type == HDFS_STREAM_OUTPUT);
 }
 
 int hdfsFileUsesDirectRead(hdfsFile file)
@@ -441,7 +443,7 @@ void hdfsBuilderSetKerbTicketCachePath(struct hdfsBuilder *bld,
     bld->kerbTicketCachePath = kerbTicketCachePath;
 }
 
-hdfsFS hdfsConnect(const char* host, tPort port)
+hdfsFS hdfsConnect(const char *host, tPort port)
 {
     struct hdfsBuilder *bld = hdfsNewBuilder();
     if (!bld)
@@ -452,7 +454,7 @@ hdfsFS hdfsConnect(const char* host, tPort port)
 }
 
 /** Always return a new FileSystem handle */
-hdfsFS hdfsConnectNewInstance(const char* host, tPort port)
+hdfsFS hdfsConnectNewInstance(const char *host, tPort port)
 {
     struct hdfsBuilder *bld = hdfsNewBuilder();
     if (!bld)
@@ -463,7 +465,7 @@ hdfsFS hdfsConnectNewInstance(const char* host, tPort port)
     return hdfsBuilderConnect(bld);
 }
 
-hdfsFS hdfsConnectAsUser(const char* host, tPort port, const char *user)
+hdfsFS hdfsConnectAsUser(const char *host, tPort port, const char *user)
 {
     struct hdfsBuilder *bld = hdfsNewBuilder();
     if (!bld)
@@ -475,7 +477,7 @@ hdfsFS hdfsConnectAsUser(const char* host, tPort port, const char *user)
 }
 
 /** Always return a new FileSystem handle */
-hdfsFS hdfsConnectAsUserNewInstance(const char* host, tPort port,
+hdfsFS hdfsConnectAsUserNewInstance(const char *host, tPort port,
         const char *user)
 {
     struct hdfsBuilder *bld = hdfsNewBuilder();
@@ -518,7 +520,7 @@ static int calcEffectiveURI(struct hdfsBuilder *bld, char ** uri)
     if (bld->port == 0) {
         suffix[0] = '\0';
     } else {
-        lastColon = rindex(bld->nn, ':');
+        lastColon = strrchr(bld->nn, ':');
         if (lastColon && (strspn(lastColon + 1, "0123456789") ==
                           strlen(lastColon + 1))) {
             fprintf(stderr, "port %d was given, but URI '%s' already "
@@ -737,6 +739,8 @@ int hdfsDisconnect(hdfsFS fs)
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
     int ret;
+    jobject jFS;
+    jthrowable jthr;
 
     if (env == NULL) {
       errno = EINTERNAL;
@@ -744,7 +748,7 @@ int hdfsDisconnect(hdfsFS fs)
     }
 
     //Parameters
-    jobject jFS = (jobject)fs;
+    jFS = (jobject)fs;
 
     //Sanity check
     if (fs == NULL) {
@@ -752,7 +756,7 @@ int hdfsDisconnect(hdfsFS fs)
         return -1;
     }
 
-    jthrowable jthr = invokeMethod(env, NULL, INSTANCE, jFS, HADOOP_FS,
+    jthr = invokeMethod(env, NULL, INSTANCE, jFS, HADOOP_FS,
                      "close", "()V");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -792,7 +796,7 @@ static jthrowable getDefaultBlockSize(JNIEnv *env, jobject jFS,
     return NULL;
 }
 
-hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags, 
+hdfsFile hdfsOpenFile(hdfsFS fs, const char *path, int flags, 
                       int bufferSize, short replication, tSize blockSize)
 {
     /*
@@ -801,15 +805,7 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
        FSData{Input|Output}Stream f{is|os} = fs.create(f);
        return f{is|os};
     */
-    /* Get the JNIEnv* corresponding to current thread */
-    JNIEnv* env = getJNIEnv();
     int accmode = flags & O_ACCMODE;
-
-    if (env == NULL) {
-      errno = EINTERNAL;
-      return NULL;
-    }
-
     jstring jStrBufferSize = NULL, jStrReplication = NULL;
     jobject jConfiguration = NULL, jPath = NULL, jFile = NULL;
     jobject jFS = (jobject)fs;
@@ -817,6 +813,20 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
     jvalue jVal;
     hdfsFile file = NULL;
     int ret;
+    jint jBufferSize = bufferSize;
+    jshort jReplication = replication;
+
+    /* The hadoop java api/signature */
+    const char *method = NULL;
+    const char *signature = NULL;
+
+    /* Get the JNIEnv* corresponding to current thread */
+    JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return NULL;
+    }
+
 
     if (accmode == O_RDONLY || accmode == O_WRONLY) {
 	/* yay */
@@ -833,10 +843,6 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
     if ((flags & O_CREAT) && (flags & O_EXCL)) {
       fprintf(stderr, "WARN: hdfs does not truly support O_CREATE && O_EXCL\n");
     }
-
-    /* The hadoop java api/signature */
-    const char* method = NULL;
-    const char* signature = NULL;
 
     if (accmode == O_RDONLY) {
 	method = "open";
@@ -867,8 +873,6 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
     }
     jConfiguration = jVal.l;
 
-    jint jBufferSize = bufferSize;
-    jshort jReplication = replication;
     jStrBufferSize = (*env)->NewStringUTF(env, "io.file.buffer.size"); 
     if (!jStrBufferSize) {
         ret = printPendingExceptionAndFree(env, PRINT_EXC_ALL, "OOM");
@@ -905,7 +909,7 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
                     path);
                 goto done;
             }
-            jReplication = jVal.i;
+            jReplication = (jshort)jVal.i;
         }
     }
  
@@ -955,7 +959,8 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
             "hdfsOpenFile(%s): NewGlobalRef", path); 
         goto done;
     }
-    file->type = (((flags & O_WRONLY) == 0) ? INPUT : OUTPUT);
+    file->type = (((flags & O_WRONLY) == 0) ? HDFS_STREAM_INPUT :
+        HDFS_STREAM_OUTPUT);
     file->flags = 0;
 
     if ((flags & O_WRONLY) == 0) {
@@ -998,31 +1003,33 @@ int hdfsCloseFile(hdfsFS fs, hdfsFile file)
     // JAVA EQUIVALENT:
     //  file.close 
 
+    //The interface whose 'close' method to be called
+    const char *interface;
+    const char *interfaceShortName;
+
+    //Caught exception
+    jthrowable jthr;
+
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
-
     if (env == NULL) {
         errno = EINTERNAL;
         return -1;
     }
 
-    //Caught exception
-    jthrowable jthr;
-
     //Sanity check
-    if (!file || file->type == UNINITIALIZED) {
+    if (!file || file->type == HDFS_STREAM_UNINITIALIZED) {
         errno = EBADF;
         return -1;
     }
 
-    //The interface whose 'close' method to be called
-    const char* interface = (file->type == INPUT) ? 
+    interface = (file->type == HDFS_STREAM_INPUT) ?
         HADOOP_ISTRM : HADOOP_OSTRM;
   
     jthr = invokeMethod(env, NULL, INSTANCE, file->file, interface,
                      "close", "()V");
     if (jthr) {
-        const char *interfaceShortName = (file->type == INPUT) ? 
+        interfaceShortName = (file->type == HDFS_STREAM_INPUT) ? 
             "FSDataInputStream" : "FSDataOutputStream";
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                 "%s#close", interfaceShortName);
@@ -1044,15 +1051,15 @@ int hdfsCloseFile(hdfsFS fs, hdfsFile file)
 int hdfsExists(hdfsFS fs, const char *path)
 {
     JNIEnv *env = getJNIEnv();
-    if (env == NULL) {
-        errno = EINTERNAL;
-        return -1;
-    }
-
     jobject jPath;
     jvalue  jVal;
     jobject jFS = (jobject)fs;
     jthrowable jthr;
+
+    if (env == NULL) {
+        errno = EINTERNAL;
+        return -1;
+    }
     
     if (path == NULL) {
         errno = EINVAL;
@@ -1088,13 +1095,13 @@ static int readPrepare(JNIEnv* env, hdfsFS fs, hdfsFile f,
     *jInputStream = (jobject)(f ? f->file : NULL);
 
     //Sanity check
-    if (!f || f->type == UNINITIALIZED) {
+    if (!f || f->type == HDFS_STREAM_UNINITIALIZED) {
       errno = EBADF;
       return -1;
     }
 
     //Error checking... make sure that this file is 'readable'
-    if (f->type != INPUT) {
+    if (f->type != HDFS_STREAM_INPUT) {
       fprintf(stderr, "Cannot read from a non-InputStream object!\n");
       errno = EINVAL;
       return -1;
@@ -1105,6 +1112,13 @@ static int readPrepare(JNIEnv* env, hdfsFS fs, hdfsFile f,
 
 tSize hdfsRead(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
 {
+    jobject jInputStream;
+    jbyteArray jbRarray;
+    jint noReadBytes = length;
+    jvalue jVal;
+    jthrowable jthr;
+    JNIEnv* env;
+
     if (length == 0) {
         return 0;
     } else if (length < 0) {
@@ -1120,22 +1134,16 @@ tSize hdfsRead(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
     //  fis.read(bR);
 
     //Get the JNIEnv* corresponding to current thread
-    JNIEnv* env = getJNIEnv();
+    env = getJNIEnv();
     if (env == NULL) {
       errno = EINTERNAL;
       return -1;
     }
 
     //Parameters
-    jobject jInputStream;
     if (readPrepare(env, fs, f, &jInputStream) == -1) {
       return -1;
     }
-
-    jbyteArray jbRarray;
-    jint noReadBytes = length;
-    jvalue jVal;
-    jthrowable jthr;
 
     //Read the requisite bytes
     jbRarray = (*env)->NewByteArray(env, length);
@@ -1179,6 +1187,11 @@ tSize readDirect(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
     //  ByteBuffer bbuffer = ByteBuffer.allocateDirect(length) // wraps C buffer
     //  fis.read(bbuffer);
 
+    jobject jInputStream;
+    jvalue jVal;
+    jthrowable jthr;
+    jobject bb;
+
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
     if (env == NULL) {
@@ -1186,16 +1199,12 @@ tSize readDirect(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
       return -1;
     }
 
-    jobject jInputStream;
     if (readPrepare(env, fs, f, &jInputStream) == -1) {
       return -1;
     }
 
-    jvalue jVal;
-    jthrowable jthr;
-
     //Read the requisite bytes
-    jobject bb = (*env)->NewDirectByteBuffer(env, buffer, length);
+    bb = (*env)->NewDirectByteBuffer(env, buffer, length);
     if (bb == NULL) {
         errno = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
             "readDirect: NewDirectByteBuffer");
@@ -1227,7 +1236,7 @@ tSize hdfsPread(hdfsFS fs, hdfsFile f, tOffset position,
         errno = EINVAL;
         return -1;
     }
-    if (!f || f->type == UNINITIALIZED) {
+    if (!f || f->type == HDFS_STREAM_UNINITIALIZED) {
         errno = EBADF;
         return -1;
     }
@@ -1239,7 +1248,7 @@ tSize hdfsPread(hdfsFS fs, hdfsFile f, tOffset position,
     }
 
     //Error checking... make sure that this file is 'readable'
-    if (f->type != INPUT) {
+    if (f->type != HDFS_STREAM_INPUT) {
         fprintf(stderr, "Cannot read from a non-InputStream object!\n");
         errno = EINVAL;
         return -1;
@@ -1287,6 +1296,10 @@ tSize hdfsWrite(hdfsFS fs, hdfsFile f, const void* buffer, tSize length)
     // byte b[] = str.getBytes();
     // fso.write(b);
 
+    jobject jOutputStream;
+    jbyteArray jbWarray;
+    jthrowable jthr;
+
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
     if (env == NULL) {
@@ -1295,14 +1308,12 @@ tSize hdfsWrite(hdfsFS fs, hdfsFile f, const void* buffer, tSize length)
     }
 
     //Sanity check
-    if (!f || f->type == UNINITIALIZED) {
+    if (!f || f->type == HDFS_STREAM_UNINITIALIZED) {
         errno = EBADF;
         return -1;
     }
 
-    jobject jOutputStream = f->file;
-    jbyteArray jbWarray;
-    jthrowable jthr;
+    jOutputStream = f->file;
     
     if (length < 0) {
     	errno = EINVAL;
@@ -1310,7 +1321,7 @@ tSize hdfsWrite(hdfsFS fs, hdfsFile f, const void* buffer, tSize length)
     }
 
     //Error checking... make sure that this file is 'writable'
-    if (f->type != OUTPUT) {
+    if (f->type != HDFS_STREAM_OUTPUT) {
         fprintf(stderr, "Cannot write into a non-OutputStream object!\n");
         errno = EINVAL;
         return -1;
@@ -1355,6 +1366,9 @@ int hdfsSeek(hdfsFS fs, hdfsFile f, tOffset desiredPos)
     // JAVA EQUIVALENT
     //  fis.seek(pos);
 
+    jobject jInputStream;
+    jthrowable jthr;
+
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
     if (env == NULL) {
@@ -1363,13 +1377,13 @@ int hdfsSeek(hdfsFS fs, hdfsFile f, tOffset desiredPos)
     }
 
     //Sanity check
-    if (!f || f->type != INPUT) {
+    if (!f || f->type != HDFS_STREAM_INPUT) {
         errno = EBADF;
         return -1;
     }
 
-    jobject jInputStream = f->file;
-    jthrowable jthr = invokeMethod(env, NULL, INSTANCE, jInputStream,
+    jInputStream = f->file;
+    jthr = invokeMethod(env, NULL, INSTANCE, jInputStream,
             HADOOP_ISTRM, "seek", "(J)V", desiredPos);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -1387,6 +1401,11 @@ tOffset hdfsTell(hdfsFS fs, hdfsFile f)
     // JAVA EQUIVALENT
     //  pos = f.getPos();
 
+    jobject jStream;
+    const char *interface;
+    jvalue jVal;
+    jthrowable jthr;
+
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
     if (env == NULL) {
@@ -1395,22 +1414,21 @@ tOffset hdfsTell(hdfsFS fs, hdfsFile f)
     }
 
     //Sanity check
-    if (!f || f->type == UNINITIALIZED) {
+    if (!f || f->type == HDFS_STREAM_UNINITIALIZED) {
         errno = EBADF;
         return -1;
     }
 
     //Parameters
-    jobject jStream = f->file;
-    const char* interface = (f->type == INPUT) ?
+    jStream = f->file;
+    interface = (f->type == HDFS_STREAM_INPUT) ?
         HADOOP_ISTRM : HADOOP_OSTRM;
-    jvalue jVal;
-    jthrowable jthr = invokeMethod(env, &jVal, INSTANCE, jStream,
+    jthr = invokeMethod(env, &jVal, INSTANCE, jStream,
                      interface, "getPos", "()J");
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsTell: %s#getPos",
-            ((f->type == INPUT) ? "FSDataInputStream" :
+            ((f->type == HDFS_STREAM_INPUT) ? "FSDataInputStream" :
                                  "FSDataOutputStream"));
         return -1;
     }
@@ -1422,6 +1440,8 @@ int hdfsFlush(hdfsFS fs, hdfsFile f)
     // JAVA EQUIVALENT
     //  fos.flush();
 
+    jthrowable jthr;
+
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
     if (env == NULL) {
@@ -1430,11 +1450,11 @@ int hdfsFlush(hdfsFS fs, hdfsFile f)
     }
 
     //Sanity check
-    if (!f || f->type != OUTPUT) {
+    if (!f || f->type != HDFS_STREAM_OUTPUT) {
         errno = EBADF;
         return -1;
     }
-    jthrowable jthr = invokeMethod(env, NULL, INSTANCE, f->file, 
+    jthr = invokeMethod(env, NULL, INSTANCE, f->file,
                      HADOOP_OSTRM, "flush", "()V");
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -1446,6 +1466,9 @@ int hdfsFlush(hdfsFS fs, hdfsFile f)
 
 int hdfsHFlush(hdfsFS fs, hdfsFile f)
 {
+    jobject jOutputStream;
+    jthrowable jthr;
+
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
     if (env == NULL) {
@@ -1454,13 +1477,13 @@ int hdfsHFlush(hdfsFS fs, hdfsFile f)
     }
 
     //Sanity check
-    if (!f || f->type != OUTPUT) {
+    if (!f || f->type != HDFS_STREAM_OUTPUT) {
         errno = EBADF;
         return -1;
     }
 
-    jobject jOutputStream = f->file;
-    jthrowable jthr = invokeMethod(env, NULL, INSTANCE, jOutputStream,
+    jOutputStream = f->file;
+    jthr = invokeMethod(env, NULL, INSTANCE, jOutputStream,
                      HADOOP_OSTRM, "hflush", "()V");
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -1472,6 +1495,9 @@ int hdfsHFlush(hdfsFS fs, hdfsFile f)
 
 int hdfsHSync(hdfsFS fs, hdfsFile f)
 {
+    jobject jOutputStream;
+    jthrowable jthr;
+
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
     if (env == NULL) {
@@ -1480,13 +1506,13 @@ int hdfsHSync(hdfsFS fs, hdfsFile f)
     }
 
     //Sanity check
-    if (!f || f->type != OUTPUT) {
+    if (!f || f->type != HDFS_STREAM_OUTPUT) {
         errno = EBADF;
         return -1;
     }
 
-    jobject jOutputStream = f->file;
-    jthrowable jthr = invokeMethod(env, NULL, INSTANCE, jOutputStream,
+    jOutputStream = f->file;
+    jthr = invokeMethod(env, NULL, INSTANCE, jOutputStream,
                      HADOOP_OSTRM, "hsync", "()V");
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -1501,6 +1527,10 @@ int hdfsAvailable(hdfsFS fs, hdfsFile f)
     // JAVA EQUIVALENT
     //  fis.available();
 
+    jobject jInputStream;
+    jvalue jVal;
+    jthrowable jthr;
+
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
     if (env == NULL) {
@@ -1509,15 +1539,14 @@ int hdfsAvailable(hdfsFS fs, hdfsFile f)
     }
 
     //Sanity check
-    if (!f || f->type != INPUT) {
+    if (!f || f->type != HDFS_STREAM_INPUT) {
         errno = EBADF;
         return -1;
     }
 
     //Parameters
-    jobject jInputStream = f->file;
-    jvalue jVal;
-    jthrowable jthr = invokeMethod(env, &jVal, INSTANCE, jInputStream,
+    jInputStream = f->file;
+    jthr = invokeMethod(env, &jVal, INSTANCE, jInputStream,
                      HADOOP_ISTRM, "available", "()I");
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -1527,19 +1556,12 @@ int hdfsAvailable(hdfsFS fs, hdfsFile f)
     return jVal.i;
 }
 
-static int hdfsCopyImpl(hdfsFS srcFS, const char* src, hdfsFS dstFS,
-        const char* dst, jboolean deleteSource)
+static int hdfsCopyImpl(hdfsFS srcFS, const char *src, hdfsFS dstFS,
+        const char *dst, jboolean deleteSource)
 {
     //JAVA EQUIVALENT
     //  FileUtil#copy(srcFS, srcPath, dstFS, dstPath,
     //                 deleteSource = false, conf)
-
-    //Get the JNIEnv* corresponding to current thread
-    JNIEnv* env = getJNIEnv();
-    if (env == NULL) {
-      errno = EINTERNAL;
-      return -1;
-    }
 
     //Parameters
     jobject jSrcFS = (jobject)srcFS;
@@ -1548,6 +1570,13 @@ static int hdfsCopyImpl(hdfsFS srcFS, const char* src, hdfsFS dstFS,
     jthrowable jthr;
     jvalue jVal;
     int ret;
+
+    //Get the JNIEnv* corresponding to current thread
+    JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
 
     jthr = constructNewObjectOfPath(env, src, &jSrcPath);
     if (jthr) {
@@ -1603,21 +1632,27 @@ done:
     return 0;
 }
 
-int hdfsCopy(hdfsFS srcFS, const char* src, hdfsFS dstFS, const char* dst)
+int hdfsCopy(hdfsFS srcFS, const char *src, hdfsFS dstFS, const char *dst)
 {
     return hdfsCopyImpl(srcFS, src, dstFS, dst, 0);
 }
 
-int hdfsMove(hdfsFS srcFS, const char* src, hdfsFS dstFS, const char* dst)
+int hdfsMove(hdfsFS srcFS, const char *src, hdfsFS dstFS, const char *dst)
 {
     return hdfsCopyImpl(srcFS, src, dstFS, dst, 1);
 }
 
-int hdfsDelete(hdfsFS fs, const char* path, int recursive)
+int hdfsDelete(hdfsFS fs, const char *path, int recursive)
 {
     // JAVA EQUIVALENT:
     //  Path p = new Path(path);
     //  bool retval = fs.delete(p, recursive);
+
+    jobject jFS = (jobject)fs;
+    jthrowable jthr;
+    jobject jPath;
+    jvalue jVal;
+    jboolean jRecursive;
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
@@ -1626,18 +1661,13 @@ int hdfsDelete(hdfsFS fs, const char* path, int recursive)
       return -1;
     }
 
-    jobject jFS = (jobject)fs;
-    jthrowable jthr;
-    jobject jPath;
-    jvalue jVal;
-
     jthr = constructNewObjectOfPath(env, path, &jPath);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsDelete(path=%s): constructNewObjectOfPath", path);
         return -1;
     }
-    jboolean jRecursive = recursive ? JNI_TRUE : JNI_FALSE;
+    jRecursive = recursive ? JNI_TRUE : JNI_FALSE;
     jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
                      "delete", "(Lorg/apache/hadoop/fs/Path;Z)Z",
                      jPath, jRecursive);
@@ -1657,12 +1687,18 @@ int hdfsDelete(hdfsFS fs, const char* path, int recursive)
 
 
 
-int hdfsRename(hdfsFS fs, const char* oldPath, const char* newPath)
+int hdfsRename(hdfsFS fs, const char *oldPath, const char *newPath)
 {
     // JAVA EQUIVALENT:
     //  Path old = new Path(oldPath);
     //  Path new = new Path(newPath);
     //  fs.rename(old, new);
+
+    jobject jFS = (jobject)fs;
+    jthrowable jthr;
+    jobject jOldPath = NULL, jNewPath = NULL;
+    int ret = -1;
+    jvalue jVal;
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
@@ -1670,12 +1706,6 @@ int hdfsRename(hdfsFS fs, const char* oldPath, const char* newPath)
       errno = EINTERNAL;
       return -1;
     }
-
-    jobject jFS = (jobject)fs;
-    jthrowable jthr;
-    jobject jOldPath = NULL, jNewPath = NULL;
-    int ret = -1;
-    jvalue jVal;
 
     jthr = constructNewObjectOfPath(env, oldPath, &jOldPath );
     if (jthr) {
@@ -1721,13 +1751,6 @@ char* hdfsGetWorkingDirectory(hdfsFS fs, char* buffer, size_t bufferSize)
     //  Path p = fs.getWorkingDirectory(); 
     //  return p.toString()
 
-    //Get the JNIEnv* corresponding to current thread
-    JNIEnv* env = getJNIEnv();
-    if (env == NULL) {
-      errno = EINTERNAL;
-      return NULL;
-    }
-
     jobject jPath = NULL;
     jstring jPathString = NULL;
     jobject jFS = (jobject)fs;
@@ -1735,6 +1758,13 @@ char* hdfsGetWorkingDirectory(hdfsFS fs, char* buffer, size_t bufferSize)
     jthrowable jthr;
     int ret;
     const char *jPathChars = NULL;
+
+    //Get the JNIEnv* corresponding to current thread
+    JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return NULL;
+    }
 
     //FileSystem#getWorkingDirectory()
     jthr = invokeMethod(env, &jVal, INSTANCE, jFS,
@@ -1794,10 +1824,14 @@ done:
 
 
 
-int hdfsSetWorkingDirectory(hdfsFS fs, const char* path)
+int hdfsSetWorkingDirectory(hdfsFS fs, const char *path)
 {
     // JAVA EQUIVALENT:
     //  fs.setWorkingDirectory(Path(path)); 
+
+    jobject jFS = (jobject)fs;
+    jthrowable jthr;
+    jobject jPath;
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
@@ -1805,10 +1839,6 @@ int hdfsSetWorkingDirectory(hdfsFS fs, const char* path)
       errno = EINTERNAL;
       return -1;
     }
-
-    jobject jFS = (jobject)fs;
-    jthrowable jthr;
-    jobject jPath;
 
     //Create an object of org.apache.hadoop.fs.Path
     jthr = constructNewObjectOfPath(env, path, &jPath);
@@ -1835,10 +1865,15 @@ int hdfsSetWorkingDirectory(hdfsFS fs, const char* path)
 
 
 
-int hdfsCreateDirectory(hdfsFS fs, const char* path)
+int hdfsCreateDirectory(hdfsFS fs, const char *path)
 {
     // JAVA EQUIVALENT:
     //  fs.mkdirs(new Path(path));
+
+    jobject jFS = (jobject)fs;
+    jobject jPath;
+    jthrowable jthr;
+    jvalue jVal;
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
@@ -1846,10 +1881,6 @@ int hdfsCreateDirectory(hdfsFS fs, const char* path)
       errno = EINTERNAL;
       return -1;
     }
-
-    jobject jFS = (jobject)fs;
-    jobject jPath;
-    jthrowable jthr;
 
     //Create an object of org.apache.hadoop.fs.Path
     jthr = constructNewObjectOfPath(env, path, &jPath);
@@ -1860,7 +1891,6 @@ int hdfsCreateDirectory(hdfsFS fs, const char* path)
     }
 
     //Create the directory
-    jvalue jVal;
     jVal.z = 0;
     jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
                      "mkdirs", "(Lorg/apache/hadoop/fs/Path;)Z",
@@ -1886,10 +1916,15 @@ int hdfsCreateDirectory(hdfsFS fs, const char* path)
 }
 
 
-int hdfsSetReplication(hdfsFS fs, const char* path, int16_t replication)
+int hdfsSetReplication(hdfsFS fs, const char *path, int16_t replication)
 {
     // JAVA EQUIVALENT:
     //  fs.setReplication(new Path(path), replication);
+
+    jobject jFS = (jobject)fs;
+    jthrowable jthr;
+    jobject jPath;
+    jvalue jVal;
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
@@ -1898,11 +1933,7 @@ int hdfsSetReplication(hdfsFS fs, const char* path, int16_t replication)
       return -1;
     }
 
-    jobject jFS = (jobject)fs;
-    jthrowable jthr;
-
     //Create an object of org.apache.hadoop.fs.Path
-    jobject jPath;
     jthr = constructNewObjectOfPath(env, path, &jPath);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -1911,7 +1942,6 @@ int hdfsSetReplication(hdfsFS fs, const char* path, int16_t replication)
     }
 
     //Create the directory
-    jvalue jVal;
     jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
                      "setReplication", "(Lorg/apache/hadoop/fs/Path;S)Z",
                      jPath, replication);
@@ -1932,10 +1962,16 @@ int hdfsSetReplication(hdfsFS fs, const char* path, int16_t replication)
     return 0;
 }
 
-int hdfsChown(hdfsFS fs, const char* path, const char *owner, const char *group)
+int hdfsChown(hdfsFS fs, const char *path, const char *owner, const char *group)
 {
     // JAVA EQUIVALENT:
     //  fs.setOwner(path, owner, group)
+
+    jobject jFS = (jobject)fs;
+    jobject jPath = NULL;
+    jstring jOwner = NULL, jGroup = NULL;
+    jthrowable jthr;
+    int ret;
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
@@ -1947,12 +1983,6 @@ int hdfsChown(hdfsFS fs, const char* path, const char *owner, const char *group)
     if (owner == NULL && group == NULL) {
       return 0;
     }
-
-    jobject jFS = (jobject)fs;
-    jobject jPath = NULL;
-    jstring jOwner = NULL, jGroup = NULL;
-    jthrowable jthr;
-    int ret;
 
     jthr = constructNewObjectOfPath(env, path, &jPath);
     if (jthr) {
@@ -2001,11 +2031,16 @@ done:
     return 0;
 }
 
-int hdfsChmod(hdfsFS fs, const char* path, short mode)
+int hdfsChmod(hdfsFS fs, const char *path, short mode)
 {
     int ret;
     // JAVA EQUIVALENT:
     //  fs.setPermission(path, FsPermission)
+
+    jthrowable jthr;
+    jobject jPath = NULL, jPermObj = NULL;
+    jobject jFS = (jobject)fs;
+    jshort jmode = mode;
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
@@ -2014,12 +2049,7 @@ int hdfsChmod(hdfsFS fs, const char* path, short mode)
       return -1;
     }
 
-    jthrowable jthr;
-    jobject jPath = NULL, jPermObj = NULL;
-    jobject jFS = (jobject)fs;
-
     // construct jPerm = FsPermission.createImmutable(short mode);
-    jshort jmode = mode;
     jthr = constructNewObjectOfClass(env, &jPermObj,
                 HADOOP_FSPERM,"(S)V",jmode);
     if (jthr) {
@@ -2061,11 +2091,16 @@ done:
     return 0;
 }
 
-int hdfsUtime(hdfsFS fs, const char* path, tTime mtime, tTime atime)
+int hdfsUtime(hdfsFS fs, const char *path, tTime mtime, tTime atime)
 {
     // JAVA EQUIVALENT:
     //  fs.setTimes(src, mtime, atime)
+
     jthrowable jthr;
+    jobject jFS = (jobject)fs;
+    jobject jPath;
+    static const tTime NO_CHANGE = -1;
+    jlong jmtime, jatime;
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
@@ -2074,10 +2109,7 @@ int hdfsUtime(hdfsFS fs, const char* path, tTime mtime, tTime atime)
       return -1;
     }
 
-    jobject jFS = (jobject)fs;
-
     //Create an object of org.apache.hadoop.fs.Path
-    jobject jPath;
     jthr = constructNewObjectOfPath(env, path, &jPath);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -2085,9 +2117,8 @@ int hdfsUtime(hdfsFS fs, const char* path, tTime mtime, tTime atime)
         return -1;
     }
 
-    const tTime NO_CHANGE = -1;
-    jlong jmtime = (mtime == NO_CHANGE) ? -1 : (mtime * (jlong)1000);
-    jlong jatime = (atime == NO_CHANGE) ? -1 : (atime * (jlong)1000);
+    jmtime = (mtime == NO_CHANGE) ? -1 : (mtime * (jlong)1000);
+    jatime = (atime == NO_CHANGE) ? -1 : (atime * (jlong)1000);
 
     jthr = invokeMethod(env, NULL, INSTANCE, jFS, HADOOP_FS,
             "setTimes", JMETHOD3(JPARAM(HADOOP_PATH), "J", "J", JAVA_VOID),
@@ -2397,7 +2428,7 @@ struct hadoopRzBuffer* hadoopReadZero(hdfsFile file,
         errno = EINTERNAL;
         return NULL;
     }
-    if (file->type != INPUT) {
+    if (file->type != HDFS_STREAM_INPUT) {
         fputs("Cannot read from a non-InputStream object!\n", stderr);
         ret = EINVAL;
         goto done;
@@ -2495,10 +2526,12 @@ void hadoopRzBufferFree(hdfsFile file, struct hadoopRzBuffer *buffer)
 }
 
 char***
-hdfsGetHosts(hdfsFS fs, const char* path, tOffset start, tOffset length)
+hdfsGetHosts(hdfsFS fs, const char *path, tOffset start, tOffset length)
 {
     // JAVA EQUIVALENT:
     //  fs.getFileBlockLoctions(new Path(path), start, length);
+
+    jobject jFS = (jobject)fs;
     jthrowable jthr;
     jobject jPath = NULL;
     jobject jFileStatus = NULL;
@@ -2508,6 +2541,9 @@ hdfsGetHosts(hdfsFS fs, const char* path, tOffset start, tOffset length)
     char*** blockHosts = NULL;
     int i, j, ret;
     jsize jNumFileBlocks = 0;
+    jobject jFileBlock;
+    jsize jNumBlockHosts;
+    const char *hostName;
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
@@ -2515,8 +2551,6 @@ hdfsGetHosts(hdfsFS fs, const char* path, tOffset start, tOffset length)
       errno = EINTERNAL;
       return NULL;
     }
-
-    jobject jFS = (jobject)fs;
 
     //Create an object of org.apache.hadoop.fs.Path
     jthr = constructNewObjectOfPath(env, path, &jPath);
@@ -2567,7 +2601,7 @@ hdfsGetHosts(hdfsFS fs, const char* path, tOffset start, tOffset length)
 
     //Now parse each block to get hostnames
     for (i = 0; i < jNumFileBlocks; ++i) {
-        jobject jFileBlock =
+        jFileBlock =
             (*env)->GetObjectArrayElement(env, jBlockLocations, i);
         if (!jFileBlock) {
             ret = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
@@ -2593,7 +2627,7 @@ hdfsGetHosts(hdfsFS fs, const char* path, tOffset start, tOffset length)
             goto done;
         }
         //Figure out no of hosts in jFileBlockHosts, and allocate the memory
-        jsize jNumBlockHosts = (*env)->GetArrayLength(env, jFileBlockHosts);
+        jNumBlockHosts = (*env)->GetArrayLength(env, jFileBlockHosts);
         blockHosts[i] = calloc(jNumBlockHosts + 1, sizeof(char*));
         if (!blockHosts[i]) {
             ret = ENOMEM;
@@ -2601,7 +2635,6 @@ hdfsGetHosts(hdfsFS fs, const char* path, tOffset start, tOffset length)
         }
 
         //Now parse each hostname
-        const char *hostName;
         for (j = 0; j < jNumBlockHosts; ++j) {
             jHost = (*env)->GetObjectArrayElement(env, jFileBlockHosts, j);
             if (!jHost) {
@@ -2669,6 +2702,10 @@ tOffset hdfsGetDefaultBlockSize(hdfsFS fs)
     // JAVA EQUIVALENT:
     //  fs.getDefaultBlockSize();
 
+    jobject jFS = (jobject)fs;
+    jvalue jVal;
+    jthrowable jthr;
+
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
     if (env == NULL) {
@@ -2676,11 +2713,7 @@ tOffset hdfsGetDefaultBlockSize(hdfsFS fs)
       return -1;
     }
 
-    jobject jFS = (jobject)fs;
-
     //FileSystem#getDefaultBlockSize()
-    jvalue jVal;
-    jthrowable jthr;
     jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
                      "getDefaultBlockSize", "()J");
     if (jthr) {
@@ -2732,6 +2765,11 @@ tOffset hdfsGetCapacity(hdfsFS fs)
     //  FsStatus fss = fs.getStatus();
     //  return Fss.getCapacity();
 
+    jobject jFS = (jobject)fs;
+    jvalue  jVal;
+    jthrowable jthr;
+    jobject fss;
+
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
     if (env == NULL) {
@@ -2739,11 +2777,7 @@ tOffset hdfsGetCapacity(hdfsFS fs)
       return -1;
     }
 
-    jobject jFS = (jobject)fs;
-
     //FileSystem#getStatus
-    jvalue  jVal;
-    jthrowable jthr;
     jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
                      "getStatus", "()Lorg/apache/hadoop/fs/FsStatus;");
     if (jthr) {
@@ -2751,7 +2785,7 @@ tOffset hdfsGetCapacity(hdfsFS fs)
             "hdfsGetCapacity: FileSystem#getStatus");
         return -1;
     }
-    jobject fss = (jobject)jVal.l;
+    fss = (jobject)jVal.l;
     jthr = invokeMethod(env, &jVal, INSTANCE, fss, HADOOP_FSSTATUS,
                      "getCapacity", "()J");
     destroyLocalReference(env, fss);
@@ -2771,6 +2805,11 @@ tOffset hdfsGetUsed(hdfsFS fs)
     //  FsStatus fss = fs.getStatus();
     //  return Fss.getUsed();
 
+    jobject jFS = (jobject)fs;
+    jvalue  jVal;
+    jthrowable jthr;
+    jobject fss;
+
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
     if (env == NULL) {
@@ -2778,11 +2817,7 @@ tOffset hdfsGetUsed(hdfsFS fs)
       return -1;
     }
 
-    jobject jFS = (jobject)fs;
-
     //FileSystem#getStatus
-    jvalue  jVal;
-    jthrowable jthr;
     jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
                      "getStatus", "()Lorg/apache/hadoop/fs/FsStatus;");
     if (jthr) {
@@ -2790,7 +2825,7 @@ tOffset hdfsGetUsed(hdfsFS fs)
             "hdfsGetUsed: FileSystem#getStatus");
         return -1;
     }
-    jobject fss = (jobject)jVal.l;
+    fss = (jobject)jVal.l;
     jthr = invokeMethod(env, &jVal, INSTANCE, fss, HADOOP_FSSTATUS,
                      "getUsed", "()J");
     destroyLocalReference(env, fss);
@@ -2814,6 +2849,9 @@ getFileInfoFromStat(JNIEnv *env, jobject jStat, hdfsFileInfo *fileInfo)
     jstring jUserName = NULL;
     jstring jGroupName = NULL;
     jobject jPermission = NULL;
+    const char *cPathName;
+    const char *cUserName;
+    const char *cGroupName;
 
     jthr = invokeMethod(env, &jVal, INSTANCE, jStat,
                      HADOOP_STAT, "isDir", "()Z");
@@ -2869,7 +2907,7 @@ getFileInfoFromStat(JNIEnv *env, jobject jStat, hdfsFileInfo *fileInfo)
     if (jthr)
         goto done;
     jPathName = jVal.l;
-    const char *cPathName = 
+    cPathName =
         (const char*) ((*env)->GetStringUTFChars(env, jPathName, NULL));
     if (!cPathName) {
         jthr = getPendingExceptionAndClear(env);
@@ -2882,7 +2920,7 @@ getFileInfoFromStat(JNIEnv *env, jobject jStat, hdfsFileInfo *fileInfo)
     if (jthr)
         goto done;
     jUserName = jVal.l;
-    const char* cUserName = 
+    cUserName =
         (const char*) ((*env)->GetStringUTFChars(env, jUserName, NULL));
     if (!cUserName) {
         jthr = getPendingExceptionAndClear(env);
@@ -2891,7 +2929,6 @@ getFileInfoFromStat(JNIEnv *env, jobject jStat, hdfsFileInfo *fileInfo)
     fileInfo->mOwner = strdup(cUserName);
     (*env)->ReleaseStringUTFChars(env, jUserName, cUserName);
 
-    const char* cGroupName;
     jthr = invokeMethod(env, &jVal, INSTANCE, jStat, HADOOP_STAT,
                     "getGroup", "()Ljava/lang/String;");
     if (jthr)
@@ -2978,13 +3015,15 @@ getFileInfo(JNIEnv *env, jobject jFS, jobject jPath, hdfsFileInfo **fileInfo)
 
 
 
-hdfsFileInfo* hdfsListDirectory(hdfsFS fs, const char* path, int *numEntries)
+hdfsFileInfo* hdfsListDirectory(hdfsFS fs, const char *path, int *numEntries)
 {
     // JAVA EQUIVALENT:
     //  Path p(path);
     //  Path []pathList = fs.listPaths(p)
     //  foreach path in pathList 
     //    getFileInfo(path)
+
+    jobject jFS = (jobject)fs;
     jthrowable jthr;
     jobject jPath = NULL;
     hdfsFileInfo *pathList = NULL; 
@@ -2992,6 +3031,8 @@ hdfsFileInfo* hdfsListDirectory(hdfsFS fs, const char* path, int *numEntries)
     jvalue jVal;
     jsize jPathListSize = 0;
     int ret;
+    jsize i;
+    jobject tmpStat;
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
@@ -2999,8 +3040,6 @@ hdfsFileInfo* hdfsListDirectory(hdfsFS fs, const char* path, int *numEntries)
       errno = EINTERNAL;
       return NULL;
     }
-
-    jobject jFS = (jobject)fs;
 
     //Create an object of org.apache.hadoop.fs.Path
     jthr = constructNewObjectOfPath(env, path, &jPath);
@@ -3037,8 +3076,6 @@ hdfsFileInfo* hdfsListDirectory(hdfsFS fs, const char* path, int *numEntries)
     }
 
     //Save path information in pathList
-    jsize i;
-    jobject tmpStat;
     for (i=0; i < jPathListSize; ++i) {
         tmpStat = (*env)->GetObjectArrayElement(env, jPathList, i);
         if (!tmpStat) {
@@ -3073,7 +3110,7 @@ done:
 
 
 
-hdfsFileInfo *hdfsGetPathInfo(hdfsFS fs, const char* path)
+hdfsFileInfo *hdfsGetPathInfo(hdfsFS fs, const char *path)
 {
     // JAVA EQUIVALENT:
     //  File f(path);
@@ -3082,6 +3119,11 @@ hdfsFileInfo *hdfsGetPathInfo(hdfsFS fs, const char* path)
     //  fs.getLength(f)
     //  f.getPath()
 
+    jobject jFS = (jobject)fs;
+    jobject jPath;
+    jthrowable jthr;
+    hdfsFileInfo *fileInfo;
+
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
     if (env == NULL) {
@@ -3089,17 +3131,13 @@ hdfsFileInfo *hdfsGetPathInfo(hdfsFS fs, const char* path)
       return NULL;
     }
 
-    jobject jFS = (jobject)fs;
-
     //Create an object of org.apache.hadoop.fs.Path
-    jobject jPath;
-    jthrowable jthr = constructNewObjectOfPath(env, path, &jPath);
+    jthr = constructNewObjectOfPath(env, path, &jPath);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsGetPathInfo(%s): constructNewObjectOfPath", path);
         return NULL;
     }
-    hdfsFileInfo *fileInfo;
     jthr = getFileInfo(env, jFS, jPath, &fileInfo);
     destroyLocalReference(env, jPath);
     if (jthr) {

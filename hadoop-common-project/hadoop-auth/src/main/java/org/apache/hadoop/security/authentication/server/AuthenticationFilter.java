@@ -127,6 +127,7 @@ public class AuthenticationFilter implements Filter {
   public static final String SIGNATURE_PROVIDER_ATTRIBUTE =
       "org.apache.hadoop.security.authentication.util.SignerSecretProvider";
 
+  private Properties config;
   private Signer signer;
   private SignerSecretProvider secretProvider;
   private AuthenticationHandler authHandler;
@@ -150,7 +151,7 @@ public class AuthenticationFilter implements Filter {
   public void init(FilterConfig filterConfig) throws ServletException {
     String configPrefix = filterConfig.getInitParameter(CONFIG_PREFIX);
     configPrefix = (configPrefix != null) ? configPrefix + "." : "";
-    Properties config = getConfiguration(configPrefix, filterConfig);
+    config = getConfiguration(configPrefix, filterConfig);
     String authHandlerName = config.getProperty(AUTH_TYPE, null);
     String authHandlerClassName;
     if (authHandlerName == null) {
@@ -222,6 +223,17 @@ public class AuthenticationFilter implements Filter {
 
     cookieDomain = config.getProperty(COOKIE_DOMAIN, null);
     cookiePath = config.getProperty(COOKIE_PATH, null);
+  }
+
+  /**
+   * Returns the configuration properties of the {@link AuthenticationFilter}
+   * without the prefix. The returned properties are the same that the
+   * {@link #getConfiguration(String, FilterConfig)} method returned.
+   *
+   * @return the configuration properties.
+   */
+  protected Properties getConfiguration() {
+    return config;
   }
 
   /**
@@ -457,7 +469,7 @@ public class AuthenticationFilter implements Filter {
             createAuthCookie(httpResponse, signedToken, getCookieDomain(),
                     getCookiePath(), token.getExpires(), isHttps);
           }
-          filterChain.doFilter(httpRequest, httpResponse);
+          doFilter(filterChain, httpRequest, httpResponse);
         }
       } else {
         unauthorizedResponse = false;
@@ -479,6 +491,15 @@ public class AuthenticationFilter implements Filter {
         }
       }
     }
+  }
+
+  /**
+   * Delegates call to the servlet filter chain. Sub-classes my override this
+   * method to perform pre and post tasks.
+   */
+  protected void doFilter(FilterChain filterChain, HttpServletRequest request,
+      HttpServletResponse response) throws IOException, ServletException {
+    filterChain.doFilter(request, response);
   }
 
   /**

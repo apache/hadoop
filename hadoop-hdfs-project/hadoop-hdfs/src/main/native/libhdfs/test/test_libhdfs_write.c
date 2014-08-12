@@ -21,23 +21,31 @@
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
 
 int main(int argc, char **argv) {
+    hdfsFS fs;
+    const char *writeFileName = argv[1];
+    off_t fileTotalSize = strtoul(argv[2], NULL, 10);
+    long long tmpBufferSize = strtoul(argv[3], NULL, 10);
+    tSize bufferSize;
+    hdfsFile writeFile;
+    char* buffer;
+    int i;
+    off_t nrRemaining;
+    tSize curSize;
+    tSize written;
 
     if (argc != 4) {
         fprintf(stderr, "Usage: hdfs_write <filename> <filesize> <buffersize>\n");
         exit(-1);
     }
     
-    hdfsFS fs = hdfsConnect("default", 0);
+    fs = hdfsConnect("default", 0);
     if (!fs) {
         fprintf(stderr, "Oops! Failed to connect to hdfs!\n");
         exit(-1);
     } 
- 
-    const char* writeFileName = argv[1];
-    off_t fileTotalSize = strtoul(argv[2], NULL, 10);
-    long long tmpBufferSize = strtoul(argv[3], NULL, 10);
 
     // sanity check
     if(fileTotalSize == ULONG_MAX && errno == ERANGE) {
@@ -51,30 +59,27 @@ int main(int argc, char **argv) {
       exit(-3);
     }
 
-    tSize bufferSize = tmpBufferSize;
+    bufferSize = (tSize)tmpBufferSize;
 
-    hdfsFile writeFile = hdfsOpenFile(fs, writeFileName, O_WRONLY, bufferSize, 0, 0);
+    writeFile = hdfsOpenFile(fs, writeFileName, O_WRONLY, bufferSize, 0, 0);
     if (!writeFile) {
         fprintf(stderr, "Failed to open %s for writing!\n", writeFileName);
         exit(-2);
     }
 
     // data to be written to the file
-    char* buffer = malloc(sizeof(char) * bufferSize);
+    buffer = malloc(sizeof(char) * bufferSize);
     if(buffer == NULL) {
         fprintf(stderr, "Could not allocate buffer of size %d\n", bufferSize);
         return -2;
     }
-    int i = 0;
     for (i=0; i < bufferSize; ++i) {
         buffer[i] = 'a' + (i%26);
     }
 
     // write to the file
-    off_t nrRemaining;
     for (nrRemaining = fileTotalSize; nrRemaining > 0; nrRemaining -= bufferSize ) {
-      tSize curSize = ( bufferSize < nrRemaining ) ? bufferSize : (tSize)nrRemaining; 
-      tSize written;
+      curSize = ( bufferSize < nrRemaining ) ? bufferSize : (tSize)nrRemaining; 
       if ((written = hdfsWrite(fs, writeFile, (void*)buffer, curSize)) != curSize) {
         fprintf(stderr, "ERROR: hdfsWrite returned an error on write: %d\n", written);
         exit(-3);

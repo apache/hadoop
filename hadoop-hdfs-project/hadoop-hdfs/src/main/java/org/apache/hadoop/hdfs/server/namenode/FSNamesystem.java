@@ -2733,7 +2733,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                                    boolean writeToEditLog,
                                    int latestSnapshot, boolean logRetryCache)
       throws IOException {
-    file = file.recordModification(latestSnapshot);
+    file.recordModification(latestSnapshot);
     final INodeFile cons = file.toUnderConstruction(leaseHolder, clientMachine);
 
     leaseManager.addLease(cons.getFileUnderConstructionFeature()
@@ -4441,7 +4441,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     Preconditions.checkArgument(uc != null);
     leaseManager.removeLease(uc.getClientName(), src);
     
-    pendingFile = pendingFile.recordModification(latestSnapshot);
+    pendingFile.recordModification(latestSnapshot);
 
     // The file is no longer pending.
     // Create permanent INode, update blocks. No need to replace the inode here
@@ -6341,7 +6341,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       blockManager.shutdown();
     }
   }
-  
 
   @Override // FSNamesystemMBean
   public int getNumLiveDataNodes() {
@@ -6386,6 +6385,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     "Number of datanodes marked stale due to delayed heartbeat"})
   public int getNumStaleDataNodes() {
     return getBlockManager().getDatanodeManager().getNumStaleNodes();
+  }
+
+  /**
+   * Storages are marked as "content stale" after NN restart or fails over and
+   * before NN receives the first Heartbeat followed by the first Blockreport.
+   */
+  @Override // FSNamesystemMBean
+  public int getNumStaleStorages() {
+    return getBlockManager().getDatanodeManager().getNumStaleStorages();
   }
 
   /**
