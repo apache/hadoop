@@ -566,6 +566,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10851. NetgroupCache does not remove group memberships. (Benoy
     Antony via Arpit Agarwal)
 
+    HADOOP-10962. Flags for posix_fadvise are not valid in some architectures
+    (David Villegas via Colin Patrick McCabe)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
