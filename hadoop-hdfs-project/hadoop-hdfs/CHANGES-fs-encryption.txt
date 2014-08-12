@@ -95,3 +95,5 @@ fs-encryption (Unreleased)
     as boolean. (umamahesh)
 
     HDFS-6817. Fix findbugs and other warnings. (yliu)
+
+    HDFS-6839. Fix TestCLI to expect new output. (clamb)
