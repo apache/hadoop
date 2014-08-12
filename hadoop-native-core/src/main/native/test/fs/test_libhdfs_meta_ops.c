@@ -30,8 +30,16 @@
 
 /** Test performing metadata operations via libhdfs. */
 
+static void print_file_info(const hdfsFileInfo *info)
+{
+    printf("file_info(mName=%s): mOwner=%s, mGroup=%s, "
+           "mPermissions=%04o\n", info->mName, info->mOwner,
+           info->mGroup, info->mPermissions);
+}
+
 int main(void)
 {
+    hdfsFileInfo *infos, *info;
     struct hdfsBuilder *hdfs_bld = NULL;
     hdfsFS fs = NULL;
     struct NativeMiniDfsCluster* dfs_cluster = NULL;
@@ -39,6 +47,7 @@ int main(void)
         .doFormat = 1,
     };
     const char *nn_uri;
+    int i, num_entries;
 
     nn_uri = getenv("NAMENODE_URI");
     if (!nn_uri) {
@@ -65,6 +74,26 @@ int main(void)
     EXPECT_INT_ZERO(hdfsCreateDirectory(fs, "/abc/3"));
     EXPECT_INT_ZERO(hdfsCreateDirectory(fs, "/abc/alpha"));
     EXPECT_INT_ZERO(hdfsDelete(fs, "/abc", 1));
+    hdfsDelete(fs, "/abc", 1);
+    EXPECT_INT_ZERO(hdfsCreateDirectory(fs, "/abc"));
+    EXPECT_INT_ZERO(hdfsCreateDirectory(fs, "/abc/1"));
+    EXPECT_INT_ZERO(hdfsCreateDirectory(fs, "/abc/2"));
+    EXPECT_INT_ZERO(hdfsCreateDirectory(fs, "/abc/3"));
+    EXPECT_INT_ZERO(hdfsCreateDirectory(fs, "/abc/alpha"));
+    infos = hdfsListDirectory(fs, "/abc", &num_entries);
+    EXPECT_NONNULL(infos);
+    EXPECT_INT_EQ(4, num_entries);
+    for (i = 0; i < num_entries; i++) {
+        print_file_info(&infos[i]);
+    }
+    hdfsFreeFileInfo(infos, num_entries);
+    info = hdfsGetPathInfo(fs, "/abc");
+    EXPECT_NONNULL(info);
+    EXPECT_INT_ZERO(info->mReplication);
+    EXPECT_INT_ZERO(info->mBlockSize);
+    EXPECT_INT_EQ(kObjectKindDirectory, info->mKind);
+    print_file_info(info);
+    hdfsFreeFileInfo(info, 1);
     EXPECT_INT_ZERO(hdfsDisconnect(fs));
     if (dfs_cluster) {
         EXPECT_INT_ZERO(nmdShutdown(dfs_cluster));
