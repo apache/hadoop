@@ -502,6 +502,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10835. Implement HTTP proxyuser support in HTTP authentication 
     client/server libraries. (tucu)
 
+    HADOOP-10820. Throw an exception in GenericOptionsParser when passed
+    an empty Path. (Alex Holmes and Zhihai Xu via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
