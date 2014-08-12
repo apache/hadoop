@@ -125,6 +125,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10402. Configuration.getValByRegex does not substitute for
     variables. (Robert Kanter via kasha)
 
+    HADOOP-10851. NetgroupCache does not remove group memberships. (Benoy
+    Antony via Arpit Agarwal)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

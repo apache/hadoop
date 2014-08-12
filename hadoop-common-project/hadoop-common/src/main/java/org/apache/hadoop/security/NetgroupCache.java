@@ -27,12 +27,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 /**
  * Class that caches the netgroups and inverts group-to-user map
- * to user-to-group map, primarily intented for use with
+ * to user-to-group map, primarily intended for use with
  * netgroups (as returned by getent netgrgoup) which only returns
  * group to user mapping.
  */
@@ -69,9 +66,7 @@ public class NetgroupCache {
       }
     }
     if(userToNetgroupsMap.containsKey(user)) {
-      for(String netgroup : userToNetgroupsMap.get(user)) {
-        groups.add(netgroup);
-      }
+      groups.addAll(userToNetgroupsMap.get(user));
     }
   }
 
@@ -99,6 +94,7 @@ public class NetgroupCache {
    */
   public static void clear() {
     netgroupToUsersMap.clear();
+    userToNetgroupsMap.clear();
   }
 
   /**
@@ -108,12 +104,7 @@ public class NetgroupCache {
    * @param users list of users for a given group
    */
   public static void add(String group, List<String> users) {
-    if(!isCached(group)) {
-      netgroupToUsersMap.put(group, new HashSet<String>());
-      for(String user: users) {
-        netgroupToUsersMap.get(group).add(user);
-      }
-    }
+    netgroupToUsersMap.put(group, new HashSet<String>(users));
     netgroupToUsersMapUpdated = true; // at the end to avoid race
   }
 }
