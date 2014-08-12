@@ -172,6 +172,35 @@ static void nioe_deinit(JNIEnv *env) {
 }
 
 /*
+ * Compatibility mapping for fadvise flags. Return the proper value from fnctl.h.
+ * If the value is not known, return the argument unchanged.
+ */
+static int map_fadvise_flag(jint flag) {
+  switch(flag) {
+    case org_apache_hadoop_io_nativeio_NativeIO_POSIX_POSIX_FADV_NORMAL:
+      return POSIX_FADV_NORMAL;
+      break;
+    case org_apache_hadoop_io_nativeio_NativeIO_POSIX_POSIX_FADV_RANDOM:
+      return POSIX_FADV_RANDOM;
+      break;
+    case org_apache_hadoop_io_nativeio_NativeIO_POSIX_POSIX_FADV_SEQUENTIAL:
+      return POSIX_FADV_SEQUENTIAL;
+      break;
+    case org_apache_hadoop_io_nativeio_NativeIO_POSIX_POSIX_FADV_WILLNEED:
+      return POSIX_FADV_WILLNEED;
+      break;
+    case org_apache_hadoop_io_nativeio_NativeIO_POSIX_POSIX_FADV_DONTNEED:
+      return POSIX_FADV_DONTNEED;
+      break;
+    case org_apache_hadoop_io_nativeio_NativeIO_POSIX_POSIX_FADV_NOREUSE:
+      return POSIX_FADV_NOREUSE;
+      break;
+    default:
+      return flag;
+  }
+}
+
+/*
  * private static native void initNative();
  *
  * We rely on this function rather than lazy initialization because
@@ -303,7 +332,7 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_posix_1fadvise(
   PASS_EXCEPTIONS(env);
 
   int err = 0;
-  if ((err = posix_fadvise(fd, (off_t)offset, (off_t)len, flags))) {
+  if ((err = posix_fadvise(fd, (off_t)offset, (off_t)len, map_fadvise_flag(flags)))) {
 #ifdef __FreeBSD__
     throw_ioe(env, errno);
 #else
