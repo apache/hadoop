@@ -233,7 +233,7 @@ public abstract class BaseContainerManagerTest {
   protected DeletionService createDeletionService() {
     return new DeletionService(exec) {
       @Override
-      public void delete(String user, Path subDir, Path[] baseDirs) {
+      public void delete(String user, Path subDir, Path... baseDirs) {
         // Don't do any deletions.
         LOG.info("Psuedo delete: user - " + user + ", subDir - " + subDir
             + ", baseDirs - " + baseDirs); 

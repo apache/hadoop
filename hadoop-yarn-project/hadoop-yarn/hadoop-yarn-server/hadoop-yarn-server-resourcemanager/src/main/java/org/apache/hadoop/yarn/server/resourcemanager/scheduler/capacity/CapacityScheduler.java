@@ -783,7 +783,10 @@ public class CapacityScheduler extends
     FiCaSchedulerNode node = getNode(nm.getNodeID());
     
     // Update resource if any change
-    SchedulerUtils.updateResourceIfChanged(node, nm, clusterResource, LOG);
+    if (SchedulerUtils.updateResourceIfChanged(node, nm, clusterResource,
+        LOG)) {
+      root.updateClusterResource(clusterResource);
+    }
     
     List<UpdatedContainerInfo> containerInfoList = nm.pullContainerUpdates();
     List<ContainerStatus> newlyLaunchedContainers = new ArrayList<ContainerStatus>();

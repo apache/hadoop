@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -29,17 +30,18 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
@@ -126,9 +128,76 @@ public abstract class ContainerExecutor implements Configurable {
   public abstract void deleteAsUser(String user, Path subDir, Path... basedirs)
       throws IOException, InterruptedException;
 
+  public abstract boolean isContainerProcessAlive(String user, String pid)
+      throws IOException;
+
+  /**
+   * Recover an already existing container. This is a blocking call and returns
+   * only when the container exits.  Note that the container must have been
+   * activated prior to this call.
+   * @param user the user of the container
+   * @param containerId The ID of the container to reacquire
+   * @return The exit code of the pre-existing container
+   * @throws IOException
+   */
+  public int reacquireContainer(String user, ContainerId containerId)
+      throws IOException {
+    Path pidPath = getPidFilePath(containerId);
+    if (pidPath == null) {
+      LOG.warn(containerId + " is not active, returning terminated error");
+      return ExitCode.TERMINATED.getExitCode();
+    }
+
+    String pid = null;
+    pid = ProcessIdFileReader.getProcessId(pidPath);
+    if (pid == null) {
+      throw new IOException("Unable to determine pid for " + containerId);
+    }
+
+    LOG.info("Reacquiring " + containerId + " with pid " + pid);
+    try {
+      while(isContainerProcessAlive(user, pid)) {
+        Thread.sleep(1000);
+      }
+    } catch (InterruptedException e) {
+      throw new IOException("Interrupted while waiting for process " + pid
+          + " to exit", e);
+    }
+
+    // wait for exit code file to appear
+    String exitCodeFile = ContainerLaunch.getExitCodeFile(pidPath.toString());
+    File file = new File(exitCodeFile);
+    final int sleepMsec = 100;
+    int msecLeft = 2000;
+    while (!file.exists() && msecLeft >= 0) {
+      if (!isContainerActive(containerId)) {
+        LOG.info(containerId + " was deactivated");
+        return ExitCode.TERMINATED.getExitCode();
+      }
+      try {
+        Thread.sleep(sleepMsec);
+      } catch (InterruptedException e) {
+        throw new IOException(
+            "Interrupted while waiting for exit code from " + containerId, e);
+      }
+      msecLeft -= sleepMsec;
+    }
+    if (msecLeft < 0) {
+      throw new IOException("Timeout while waiting for exit code from "
+          + containerId);
+    }
+
+    try {
+      return Integer.parseInt(FileUtils.readFileToString(file).trim());
+    } catch (NumberFormatException e) {
+      throw new IOException("Error parsing exit code from pid " + pid, e);
+    }
+  }
+
   public enum ExitCode {
     FORCE_KILLED(137),
-    TERMINATED(143);
+    TERMINATED(143),
+    LOST(154);
     private final int code;
 
     private ExitCode(int exitCode) {

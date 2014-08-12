@@ -201,6 +201,7 @@ public class TestNodeStatusUpdater {
       Dispatcher mockDispatcher = mock(Dispatcher.class);
       EventHandler mockEventHandler = mock(EventHandler.class);
       when(mockDispatcher.getEventHandler()).thenReturn(mockEventHandler);
+      NMStateStoreService stateStore = new NMNullStateStoreService();
       nodeStatus.setResponseId(heartBeatID++);
       Map<ApplicationId, List<ContainerStatus>> appToContainers =
           getAppToContainerStatusMap(nodeStatus.getContainersStatuses());
@@ -226,9 +227,8 @@ public class TestNodeStatusUpdater {
                 firstContainerID, InetAddress.getByName("localhost")
                     .getCanonicalHostName(), 1234, user, resource,
                 currentTime + 10000, 123, "password".getBytes(), currentTime));
-        Container container =
-            new ContainerImpl(conf, mockDispatcher, launchContext, null,
-              mockMetrics, containerToken);
+        Container container = new ContainerImpl(conf, mockDispatcher,
+            stateStore, launchContext, null, mockMetrics, containerToken);
         this.context.getContainers().put(firstContainerID, container);
       } else if (heartBeatID == 2) {
         // Checks on the RM end
@@ -257,9 +257,8 @@ public class TestNodeStatusUpdater {
                 secondContainerID, InetAddress.getByName("localhost")
                     .getCanonicalHostName(), 1234, user, resource,
                 currentTime + 10000, 123, "password".getBytes(), currentTime));
-        Container container =
-            new ContainerImpl(conf, mockDispatcher, launchContext, null,
-              mockMetrics, containerToken);
+        Container container = new ContainerImpl(conf, mockDispatcher,
+            stateStore, launchContext, null, mockMetrics, containerToken);
         this.context.getContainers().put(secondContainerID, container);
       } else if (heartBeatID == 3) {
         // Checks on the RM end
@@ -784,7 +783,7 @@ public class TestNodeStatusUpdater {
     ContainerId cId = ContainerId.newInstance(appAttemptId, 0);               
                                                                               
                                                                               
-    nodeStatusUpdater.updateStoppedContainersInCache(cId);
+    nodeStatusUpdater.addCompletedContainer(cId);
     Assert.assertTrue(nodeStatusUpdater.isContainerRecentlyStopped(cId));     
                                                                               
     long time1 = System.currentTimeMillis();                                  

@@ -191,7 +191,8 @@ public class TestAuxServices {
     ContainerTokenIdentifier cti = new ContainerTokenIdentifier(
         ContainerId.newInstance(attemptId, 1), "", "",
         Resource.newInstance(1, 1), 0,0,0, Priority.newInstance(0), 0);
-    Container container = new ContainerImpl(null, null, null, null, null, cti);
+    Container container = new ContainerImpl(null, null, null, null, null,
+        null, cti);
     ContainerId containerId = container.getContainerId();
     Resource resource = container.getResource();
     event = new AuxServicesEvent(AuxServicesEventType.CONTAINER_INIT,container);
