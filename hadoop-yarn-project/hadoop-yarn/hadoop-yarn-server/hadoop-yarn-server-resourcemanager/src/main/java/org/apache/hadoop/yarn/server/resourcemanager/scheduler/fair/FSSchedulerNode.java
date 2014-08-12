@@ -35,7 +35,7 @@ public class FSSchedulerNode extends SchedulerNode {
 
   private static final Log LOG = LogFactory.getLog(FSSchedulerNode.class);
 
-  private AppSchedulable reservedAppSchedulable;
+  private FSAppAttempt reservedAppSchedulable;
 
   public FSSchedulerNode(RMNode node, boolean usePortForNodeName) {
     super(node, usePortForNodeName);
@@ -76,7 +76,7 @@ public class FSSchedulerNode extends SchedulerNode {
           " on node " + this + " for application " + application);
     }
     setReservedContainer(container);
-    this.reservedAppSchedulable = ((FSSchedulerApp) application).getAppSchedulable();
+    this.reservedAppSchedulable = (FSAppAttempt) application;
   }
 
   @Override
@@ -98,7 +98,7 @@ public class FSSchedulerNode extends SchedulerNode {
     this.reservedAppSchedulable = null;
   }
 
-  public synchronized AppSchedulable getReservedAppSchedulable() {
+  public synchronized FSAppAttempt getReservedAppSchedulable() {
     return reservedAppSchedulable;
   }
 }

@@ -46,8 +46,7 @@ public class FairSchedulerInfo extends SchedulerInfo {
   }
   
   public int getAppFairShare(ApplicationAttemptId appAttemptId) {
-    return scheduler.getSchedulerApp(appAttemptId).
-        getAppSchedulable().getFairShare().getMemory();
+    return scheduler.getSchedulerApp(appAttemptId).getFairShare().getMemory();
   }
   
   public FairSchedulerQueueInfo getRootQueueInfo() {
