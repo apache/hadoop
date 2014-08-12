@@ -48,7 +48,7 @@ public class NewAppWeightBooster extends Configured implements WeightAdjuster {
     super.setConf(conf);
   }
 
-  public double adjustWeight(AppSchedulable app, double curWeight) {
+  public double adjustWeight(FSAppAttempt app, double curWeight) {
     long start = app.getStartTime();
     long now = System.currentTimeMillis();
     if (now - start < duration) {

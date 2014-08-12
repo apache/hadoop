@@ -104,6 +104,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2317. Updated the document about how to write YARN applications. (Li Lu via
     zjshen)
 
+    YARN-2399. FairScheduler: Merge AppSchedulable and FSSchedulerApp into 
+    FSAppAttempt. (kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
