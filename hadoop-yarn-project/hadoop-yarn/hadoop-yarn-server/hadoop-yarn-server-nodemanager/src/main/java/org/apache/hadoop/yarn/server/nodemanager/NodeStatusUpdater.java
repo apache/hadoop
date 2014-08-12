@@ -23,11 +23,34 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 
 public interface NodeStatusUpdater extends Service {
 
+  /**
+   * Schedule a heartbeat to the ResourceManager outside of the normal,
+   * periodic heartbeating process. This is typically called when the state
+   * of containers on the node has changed to notify the RM sooner.
+   */
   void sendOutofBandHeartBeat();
 
+  /**
+   * Get the ResourceManager identifier received during registration
+   * @return the ResourceManager ID
+   */
   long getRMIdentifier();
   
+  /**
+   * Query if a container has recently completed
+   * @param containerId the container ID
+   * @return true if the container has recently completed
+   */
   public boolean isContainerRecentlyStopped(ContainerId containerId);
   
+  /**
+   * Add a container to the list of containers that have recently completed
+   * @param containerId the ID of the completed container
+   */
+  public void addCompletedContainer(ContainerId containerId);
+
+  /**
+   * Clear the list of recently completed containers
+   */
   public void clearFinishedContainersFromCache();
 }

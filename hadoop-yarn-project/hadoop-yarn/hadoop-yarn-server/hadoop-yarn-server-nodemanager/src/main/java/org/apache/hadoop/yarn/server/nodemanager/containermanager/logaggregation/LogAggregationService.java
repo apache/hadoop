@@ -142,9 +142,17 @@ public class LogAggregationService extends AbstractService implements
    
   private void stopAggregators() {
     threadPool.shutdown();
+    // if recovery on restart is supported then leave outstanding aggregations
+    // to the next restart
+    boolean shouldAbort = context.getNMStateStore().canRecover()
+        && !context.getDecommissioned();
     // politely ask to finish
     for (AppLogAggregator aggregator : appLogAggregators.values()) {
-      aggregator.finishLogAggregation();
+      if (shouldAbort) {
+        aggregator.abortLogAggregation();
+      } else {
+        aggregator.finishLogAggregation();
+      }
     }
     while (!threadPool.isTerminated()) { // wait for all threads to finish
       for (ApplicationId appId : appLogAggregators.keySet()) {

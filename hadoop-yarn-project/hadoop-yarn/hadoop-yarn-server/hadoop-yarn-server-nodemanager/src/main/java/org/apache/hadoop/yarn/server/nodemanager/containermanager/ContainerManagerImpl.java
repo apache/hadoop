@@ -127,6 +127,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.Contai
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredApplicationsState;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerState;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.security.authorize.NMPolicyProvider;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -246,6 +248,10 @@ public class ContainerManagerImpl extends CompositeService implements
         recoverApplication(proto);
       }
 
+      for (RecoveredContainerState rcs : stateStore.loadContainersState()) {
+        recoverContainer(rcs);
+      }
+
       String diagnostic = "Application marked finished during recovery";
       for (ApplicationId appId : appsState.getFinishedApplications()) {
         dispatcher.getEventHandler().handle(
@@ -274,6 +280,60 @@ public class ContainerManagerImpl extends CompositeService implements
         creds, context);
     context.getApplications().put(appId, app);
     app.handle(new ApplicationInitEvent(appId, acls));
+  }
+
+  @SuppressWarnings("unchecked")
+  private void recoverContainer(RecoveredContainerState rcs)
+      throws IOException {
+    StartContainerRequest req = rcs.getStartRequest();
+    ContainerLaunchContext launchContext = req.getContainerLaunchContext();
+    ContainerTokenIdentifier token =
+        BuilderUtils.newContainerTokenIdentifier(req.getContainerToken());
+    ContainerId containerId = token.getContainerID();
+    ApplicationId appId =
+        containerId.getApplicationAttemptId().getApplicationId();
+
+    LOG.info("Recovering " + containerId + " in state " + rcs.getStatus()
+        + " with exit code " + rcs.getExitCode());
+
+    if (context.getApplications().containsKey(appId)) {
+      Credentials credentials = parseCredentials(launchContext);
+      Container container = new ContainerImpl(getConfig(), dispatcher,
+          context.getNMStateStore(), req.getContainerLaunchContext(),
+          credentials, metrics, token, rcs.getStatus(), rcs.getExitCode(),
+          rcs.getDiagnostics(), rcs.getKilled());
+      context.getContainers().put(containerId, container);
+      dispatcher.getEventHandler().handle(
+          new ApplicationContainerInitEvent(container));
+    } else {
+      if (rcs.getStatus() != RecoveredContainerStatus.COMPLETED) {
+        LOG.warn(containerId + " has no corresponding application!");
+      }
+      LOG.info("Adding " + containerId + " to recently stopped containers");
+      nodeStatusUpdater.addCompletedContainer(containerId);
+    }
+  }
+
+  private void waitForRecoveredContainers() throws InterruptedException {
+    final int sleepMsec = 100;
+    int waitIterations = 100;
+    List<ContainerId> newContainers = new ArrayList<ContainerId>();
+    while (--waitIterations >= 0) {
+      newContainers.clear();
+      for (Container container : context.getContainers().values()) {
+        if (container.getContainerState() == org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState.NEW) {
+          newContainers.add(container.getContainerId());
+        }
+      }
+      if (newContainers.isEmpty()) {
+        break;
+      }
+      LOG.info("Waiting for containers: " + newContainers);
+      Thread.sleep(sleepMsec);
+    }
+    if (waitIterations < 0) {
+      LOG.warn("Timeout waiting for recovered containers");
+    }
   }
 
   protected LogHandler createLogHandler(Configuration conf, Context context,
@@ -309,6 +369,23 @@ public class ContainerManagerImpl extends CompositeService implements
     // Enqueue user dirs in deletion context
 
     Configuration conf = getConfig();
+    final InetSocketAddress initialAddress = conf.getSocketAddr(
+        YarnConfiguration.NM_BIND_HOST,
+        YarnConfiguration.NM_ADDRESS,
+        YarnConfiguration.DEFAULT_NM_ADDRESS,
+        YarnConfiguration.DEFAULT_NM_PORT);
+    boolean usingEphemeralPort = (initialAddress.getPort() == 0);
+    if (context.getNMStateStore().canRecover() && usingEphemeralPort) {
+      throw new IllegalArgumentException("Cannot support recovery with an "
+          + "ephemeral server port. Check the setting of "
+          + YarnConfiguration.NM_ADDRESS);
+    }
+    // If recovering then delay opening the RPC service until the recovery
+    // of resources and containers have completed, otherwise requests from
+    // clients during recovery can interfere with the recovery process.
+    final boolean delayedRpcServerStart =
+        context.getNMStateStore().canRecover();
+
     Configuration serverConf = new Configuration(conf);
 
     // always enforce it to be token-based.
@@ -317,12 +394,6 @@ public class ContainerManagerImpl extends CompositeService implements
       SaslRpcServer.AuthMethod.TOKEN.toString());
     
     YarnRPC rpc = YarnRPC.create(conf);
-
-    InetSocketAddress initialAddress = conf.getSocketAddr(
-        YarnConfiguration.NM_BIND_HOST,
-        YarnConfiguration.NM_ADDRESS,
-        YarnConfiguration.DEFAULT_NM_ADDRESS,
-        YarnConfiguration.DEFAULT_NM_PORT);
 
     server =
         rpc.getServer(ContainerManagementProtocol.class, this, initialAddress, 
@@ -340,32 +411,61 @@ public class ContainerManagerImpl extends CompositeService implements
     LOG.info("Blocking new container-requests as container manager rpc" +
     		" server is still starting.");
     this.setBlockNewContainerRequests(true);
-    server.start();
-    
-    InetSocketAddress connectAddress;
+
     String bindHost = conf.get(YarnConfiguration.NM_BIND_HOST);
     String nmAddress = conf.getTrimmed(YarnConfiguration.NM_ADDRESS);
-    if (bindHost == null || bindHost.isEmpty() ||
-	nmAddress == null || nmAddress.isEmpty()) {
-      connectAddress = NetUtils.getConnectAddress(server);
-    } else {
-      //a bind-host case with an address, to support overriding the first hostname
-      //found when querying for our hostname with the specified address, combine
-      //the specified address with the actual port listened on by the server
-      connectAddress = NetUtils.getConnectAddress(
-	new InetSocketAddress(nmAddress.split(":")[0],
-			      server.getListenerAddress().getPort()));
+    String hostOverride = null;
+    if (bindHost != null && !bindHost.isEmpty()
+        && nmAddress != null && !nmAddress.isEmpty()) {
+      //a bind-host case with an address, to support overriding the first
+      //hostname found when querying for our hostname with the specified
+      //address, combine the specified address with the actual port listened
+      //on by the server
+      hostOverride = nmAddress.split(":")[0];
     }
 
-    NodeId nodeId = NodeId.newInstance(
-        connectAddress.getAddress().getCanonicalHostName(),
-        connectAddress.getPort());
+    // setup node ID
+    InetSocketAddress connectAddress;
+    if (delayedRpcServerStart) {
+      connectAddress = NetUtils.getConnectAddress(initialAddress);
+    } else {
+      server.start();
+      connectAddress = NetUtils.getConnectAddress(server);
+    }
+    NodeId nodeId = buildNodeId(connectAddress, hostOverride);
     ((NodeManager.NMContext)context).setNodeId(nodeId);
     this.context.getNMTokenSecretManager().setNodeId(nodeId);
     this.context.getContainerTokenSecretManager().setNodeId(nodeId);
+
+    // start remaining services
+    super.serviceStart();
+
+    if (delayedRpcServerStart) {
+      waitForRecoveredContainers();
+      server.start();
+
+      // check that the node ID is as previously advertised
+      connectAddress = NetUtils.getConnectAddress(server);
+      NodeId serverNode = buildNodeId(connectAddress, hostOverride);
+      if (!serverNode.equals(nodeId)) {
+        throw new IOException("Node mismatch after server started, expected '"
+            + nodeId + "' but found '" + serverNode + "'");
+      }
+    }
+
     LOG.info("ContainerManager started at " + connectAddress);
     LOG.info("ContainerManager bound to " + initialAddress);
-    super.serviceStart();
+  }
+
+  private NodeId buildNodeId(InetSocketAddress connectAddress,
+      String hostOverride) {
+    if (hostOverride != null) {
+      connectAddress = NetUtils.getConnectAddress(
+          new InetSocketAddress(hostOverride, connectAddress.getPort()));
+    }
+    return NodeId.newInstance(
+        connectAddress.getAddress().getCanonicalHostName(),
+        connectAddress.getPort());
   }
 
   void refreshServiceAcls(Configuration configuration, 
@@ -704,7 +804,8 @@ public class ContainerManagerImpl extends CompositeService implements
     Credentials credentials = parseCredentials(launchContext);
 
     Container container =
-        new ContainerImpl(getConfig(), this.dispatcher, launchContext,
+        new ContainerImpl(getConfig(), this.dispatcher,
+            context.getNMStateStore(), launchContext,
           credentials, metrics, containerTokenIdentifier);
     ApplicationId applicationID =
         containerId.getApplicationAttemptId().getApplicationId();
@@ -733,6 +834,7 @@ public class ContainerManagerImpl extends CompositeService implements
             new ApplicationInitEvent(applicationID, appAcls));
         }
 
+        this.context.getNMStateStore().storeContainer(containerId, request);
         dispatcher.getEventHandler().handle(
           new ApplicationContainerInitEvent(container));
 
@@ -780,7 +882,7 @@ public class ContainerManagerImpl extends CompositeService implements
   }
 
   private Credentials parseCredentials(ContainerLaunchContext launchContext)
-      throws YarnException {
+      throws IOException {
     Credentials credentials = new Credentials();
     // //////////// Parse credentials
     ByteBuffer tokens = launchContext.getTokens();
@@ -789,15 +891,11 @@ public class ContainerManagerImpl extends CompositeService implements
       DataInputByteBuffer buf = new DataInputByteBuffer();
       tokens.rewind();
       buf.reset(tokens);
-      try {
-        credentials.readTokenStorageStream(buf);
-        if (LOG.isDebugEnabled()) {
-          for (Token<? extends TokenIdentifier> tk : credentials.getAllTokens()) {
-            LOG.debug(tk.getService() + " = " + tk.toString());
-          }
+      credentials.readTokenStorageStream(buf);
+      if (LOG.isDebugEnabled()) {
+        for (Token<? extends TokenIdentifier> tk : credentials.getAllTokens()) {
+          LOG.debug(tk.getService() + " = " + tk.toString());
         }
-      } catch (IOException e) {
-        throw RPCUtil.getRemoteException(e);
       }
     }
     // //////////// End of parsing credentials
@@ -830,7 +928,7 @@ public class ContainerManagerImpl extends CompositeService implements
 
   @SuppressWarnings("unchecked")
   private void stopContainerInternal(NMTokenIdentifier nmTokenIdentifier,
-      ContainerId containerID) throws YarnException {
+      ContainerId containerID) throws YarnException, IOException {
     String containerIDStr = containerID.toString();
     Container container = this.context.getContainers().get(containerID);
     LOG.info("Stopping container with container Id: " + containerIDStr);
@@ -843,6 +941,7 @@ public class ContainerManagerImpl extends CompositeService implements
           + " is not handled by this NodeManager");
       }
     } else {
+      context.getNMStateStore().storeContainerKilled(containerID);
       dispatcher.getEventHandler().handle(
         new ContainerKillEvent(containerID,
             ContainerExitStatus.KILLED_BY_APPMASTER,
