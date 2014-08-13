@@ -57,6 +57,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -107,7 +108,7 @@ public class TestWorkPreservingRMRestart {
   @Parameterized.Parameters
   public static Collection<Object[]> getTestParameters() {
     return Arrays.asList(new Object[][] { { CapacityScheduler.class },
-        { FifoScheduler.class } });
+        { FifoScheduler.class }, {FairScheduler.class } });
   }
 
   public TestWorkPreservingRMRestart(Class<?> schedulerClass) {
@@ -224,7 +225,11 @@ public class TestWorkPreservingRMRestart {
     assertTrue(schedulerAttempt.getLiveContainers().contains(
       scheduler.getRMContainer(runningContainer.getContainerId())));
     assertEquals(schedulerAttempt.getCurrentConsumption(), usedResources);
-    assertEquals(availableResources, schedulerAttempt.getHeadroom());
+
+    // Until YARN-1959 is resolved
+    if (scheduler.getClass() != FairScheduler.class) {
+      assertEquals(availableResources, schedulerAttempt.getHeadroom());
+    }
 
     // *********** check appSchedulingInfo state ***********
     assertEquals((1 << 22) + 1, schedulerAttempt.getNewContainerId());

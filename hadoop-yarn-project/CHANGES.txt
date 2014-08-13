@@ -125,6 +125,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2399. FairScheduler: Merge AppSchedulable and FSSchedulerApp into 
     FSAppAttempt. (kasha)
 
+    YARN-1370. Fair scheduler to re-populate container allocation state. 
+    (Anubhav Dhoot via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
