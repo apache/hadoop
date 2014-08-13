@@ -67,7 +67,7 @@ public class HdfsLocatedFileStatus extends HdfsFileStatus {
     return locations;
   }
 
-  final public LocatedFileStatus makeQualifiedLocated(URI defaultUri,
+  public final LocatedFileStatus makeQualifiedLocated(URI defaultUri,
       Path path) {
     return new LocatedFileStatus(getLen(), isDir(), getReplication(),
         getBlockSize(), getModificationTime(),
