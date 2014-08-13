@@ -505,6 +505,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10820. Throw an exception in GenericOptionsParser when passed
     an empty Path. (Alex Holmes and Zhihai Xu via wang)
 
+    HADOOP-10281. Create a scheduler, which assigns schedulables a priority
+    level. (Chris Li via Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
