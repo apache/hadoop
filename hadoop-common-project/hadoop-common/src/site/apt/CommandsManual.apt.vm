@@ -314,35 +314,6 @@ Administration Commands
    Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#dfsadmin}
    <<<hdfs dfsadmin>>>}} instead.
 
-* <<<mradmin>>>
-
-   Runs MR admin client
-
-   Usage: <<<hadoop mradmin [ GENERIC_OPTIONS ] [-refreshQueueAcls]>>>
-
-*-------------------+-----------------------------------------------------------+
-|| COMMAND_OPTION   || Description
-*-------------------+-----------------------------------------------------------+
-| -refreshQueueAcls | Refresh the queue acls used by hadoop, to check access
-                    | during submissions and administration of the job by the
-                    | user. The properties present in mapred-queue-acls.xml is
-                    | reloaded by the queue manager.
-*-------------------+-----------------------------------------------------------+
-
-* <<<jobtracker>>>
-
-   Runs the MapReduce job Tracker node.
-
-   Usage: <<<hadoop jobtracker [-dumpConfiguration]>>>
-
-*--------------------+-----------------------------------------------------------+
-|| COMMAND_OPTION    || Description
-*--------------------+-----------------------------------------------------------+
-| -dumpConfiguration | Dumps the configuration used by the JobTracker alongwith
-                     | queue configuration in JSON format into Standard output
-                     | used by the jobtracker and exits.
-*--------------------+-----------------------------------------------------------+
-
 * <<<namenode>>>
 
    Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#namenode}
@@ -352,9 +323,3 @@ Administration Commands
 
    Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#secondarynamenode}
    <<<hdfs secondarynamenode>>>}} instead.
-
-* <<<tasktracker>>>
-
-   Runs a MapReduce task Tracker node.
-
-   Usage: <<<hadoop tasktracker>>>
