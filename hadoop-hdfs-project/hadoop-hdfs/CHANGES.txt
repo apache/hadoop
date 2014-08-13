@@ -141,6 +141,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6567. Normalize the order of public final in HdfsFileStatus.
     (Tassapol Athiapinya via wheat9)
 
+    HDFS-6849. Replace HttpFS custom proxyuser handling with common 
+    implementation. (tucu)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

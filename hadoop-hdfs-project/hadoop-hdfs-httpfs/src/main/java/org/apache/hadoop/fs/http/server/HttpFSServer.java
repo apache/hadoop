@@ -29,7 +29,6 @@ import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.AclPermissionPa
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.BlockSizeParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DataParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DestinationParam;
-import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DoAsParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.FilterParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.GroupParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.LenParam;
@@ -50,12 +49,11 @@ import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.lib.service.FileSystemAccessException;
 import org.apache.hadoop.lib.service.Groups;
 import org.apache.hadoop.lib.service.Instrumentation;
-import org.apache.hadoop.lib.service.ProxyUser;
 import org.apache.hadoop.lib.servlet.FileSystemReleaseFilter;
-import org.apache.hadoop.lib.servlet.HostnameFilter;
 import org.apache.hadoop.lib.wsrs.InputStreamEntity;
 import org.apache.hadoop.lib.wsrs.Parameters;
-import org.apache.hadoop.security.authentication.server.AuthenticationToken;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.delegation.web.HttpUserGroupInformation;
 import org.json.simple.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,7 +77,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.security.AccessControlException;
-import java.security.Principal;
 import java.text.MessageFormat;
 import java.util.EnumSet;
 import java.util.List;
@@ -97,48 +94,10 @@ public class HttpFSServer {
   private static Logger AUDIT_LOG = LoggerFactory.getLogger("httpfsaudit");
 
   /**
-   * Resolves the effective user that will be used to request a FileSystemAccess filesystem.
-   * <p/>
-   * If the doAs-user is NULL or the same as the user, it returns the user.
-   * <p/>
-   * Otherwise it uses proxyuser rules (see {@link ProxyUser} to determine if the
-   * current user can impersonate the doAs-user.
-   * <p/>
-   * If the current user cannot impersonate the doAs-user an
-   * <code>AccessControlException</code> will be thrown.
-   *
-   * @param user principal for whom the filesystem instance is.
-   * @param doAs do-as user, if any.
-   *
-   * @return the effective user.
-   *
-   * @throws IOException thrown if an IO error occurrs.
-   * @throws AccessControlException thrown if the current user cannot impersonate
-   * the doAs-user.
-   */
-  private String getEffectiveUser(Principal user, String doAs) throws IOException {
-    String effectiveUser = user.getName();
-    if (doAs != null && !doAs.equals(user.getName())) {
-      ProxyUser proxyUser = HttpFSServerWebApp.get().get(ProxyUser.class);
-      String proxyUserName;
-      if (user instanceof AuthenticationToken) {
-        proxyUserName = ((AuthenticationToken)user).getUserName();
-      } else {
-        proxyUserName = user.getName();
-      }
-      proxyUser.validate(proxyUserName, HostnameFilter.get(), doAs);
-      effectiveUser = doAs;
-      AUDIT_LOG.info("Proxy user [{}] DoAs user [{}]", proxyUserName, doAs);
-    }
-    return effectiveUser;
-  }
-
-  /**
    * Executes a {@link FileSystemAccess.FileSystemExecutor} using a filesystem for the effective
    * user.
    *
-   * @param user principal making the request.
-   * @param doAs do-as user, if any.
+   * @param ugi user making the request.
    * @param executor FileSystemExecutor to execute.
    *
    * @return FileSystemExecutor response
@@ -147,12 +106,11 @@ public class HttpFSServer {
    * @throws FileSystemAccessException thrown if a FileSystemAccess releated error occurred. Thrown
    * exceptions are handled by {@link HttpFSExceptionProvider}.
    */
-  private <T> T fsExecute(Principal user, String doAs, FileSystemAccess.FileSystemExecutor<T> executor)
+  private <T> T fsExecute(UserGroupInformation ugi, FileSystemAccess.FileSystemExecutor<T> executor)
     throws IOException, FileSystemAccessException {
-    String hadoopUser = getEffectiveUser(user, doAs);
     FileSystemAccess fsAccess = HttpFSServerWebApp.get().get(FileSystemAccess.class);
     Configuration conf = HttpFSServerWebApp.get().get(FileSystemAccess.class).getFileSystemConfiguration();
-    return fsAccess.execute(hadoopUser, conf, executor);
+    return fsAccess.execute(ugi.getShortUserName(), conf, executor);
   }
 
   /**
@@ -162,8 +120,7 @@ public class HttpFSServer {
    * If a do-as user is specified, the current user must be a valid proxyuser, otherwise an
    * <code>AccessControlException</code> will be thrown.
    *
-   * @param user principal for whom the filesystem instance is.
-   * @param doAs do-as user, if any.
+   * @param ugi principal for whom the filesystem instance is.
    *
    * @return a filesystem for the specified user or do-as user.
    *
@@ -172,8 +129,9 @@ public class HttpFSServer {
    * @throws FileSystemAccessException thrown if a FileSystemAccess releated error occurred. Thrown
    * exceptions are handled by {@link HttpFSExceptionProvider}.
    */
-  private FileSystem createFileSystem(Principal user, String doAs) throws IOException, FileSystemAccessException {
-    String hadoopUser = getEffectiveUser(user, doAs);
+  private FileSystem createFileSystem(UserGroupInformation ugi)
+      throws IOException, FileSystemAccessException {
+    String hadoopUser = ugi.getShortUserName();
     FileSystemAccess fsAccess = HttpFSServerWebApp.get().get(FileSystemAccess.class);
     Configuration conf = HttpFSServerWebApp.get().get(FileSystemAccess.class).getFileSystemConfiguration();
     FileSystem fs = fsAccess.createFileSystem(hadoopUser, conf);
@@ -192,7 +150,6 @@ public class HttpFSServer {
   /**
    * Special binding for '/' as it is not handled by the wildcard binding.
    *
-   * @param user the principal of the user making the request.
    * @param op the HttpFS operation of the request.
    * @param params the HttpFS parameters of the request.
    *
@@ -206,11 +163,10 @@ public class HttpFSServer {
    */
   @GET
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getRoot(@Context Principal user,
-                          @QueryParam(OperationParam.NAME) OperationParam op,
+  public Response getRoot(@QueryParam(OperationParam.NAME) OperationParam op,
                           @Context Parameters params)
     throws IOException, FileSystemAccessException {
-    return get(user, "", op, params);
+    return get("", op, params);
   }
 
   private String makeAbsolute(String path) {
@@ -220,7 +176,6 @@ public class HttpFSServer {
   /**
    * Binding to handle GET requests, supported operations are
    *
-   * @param user the principal of the user making the request.
    * @param path the path for operation.
    * @param op the HttpFS operation of the request.
    * @param params the HttpFS parameters of the request.
@@ -236,21 +191,20 @@ public class HttpFSServer {
   @GET
   @Path("{path:.*}")
   @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
-  public Response get(@Context Principal user,
-                      @PathParam("path") String path,
+  public Response get(@PathParam("path") String path,
                       @QueryParam(OperationParam.NAME) OperationParam op,
                       @Context Parameters params)
     throws IOException, FileSystemAccessException {
+    UserGroupInformation user = HttpUserGroupInformation.get();
     Response response;
     path = makeAbsolute(path);
     MDC.put(HttpFSFileSystem.OP_PARAM, op.value().name());
-    String doAs = params.get(DoAsParam.NAME, DoAsParam.class);
     switch (op.value()) {
       case OPEN: {
         //Invoking the command directly using an unmanaged FileSystem that is
         // released by the FileSystemReleaseFilter
         FSOperations.FSOpen command = new FSOperations.FSOpen(path);
-        FileSystem fs = createFileSystem(user, doAs);
+        FileSystem fs = createFileSystem(user);
         InputStream is = command.execute(fs);
         Long offset = params.get(OffsetParam.NAME, OffsetParam.class);
         Long len = params.get(LenParam.NAME, LenParam.class);
@@ -264,7 +218,7 @@ public class HttpFSServer {
       case GETFILESTATUS: {
         FSOperations.FSFileStatus command =
           new FSOperations.FSFileStatus(path);
-        Map json = fsExecute(user, doAs, command);
+        Map json = fsExecute(user, command);
         AUDIT_LOG.info("[{}]", path);
         response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
@@ -273,7 +227,7 @@ public class HttpFSServer {
         String filter = params.get(FilterParam.NAME, FilterParam.class);
         FSOperations.FSListStatus command = new FSOperations.FSListStatus(
           path, filter);
-        Map json = fsExecute(user, doAs, command);
+        Map json = fsExecute(user, command);
         AUDIT_LOG.info("[{}] filter [{}]", path,
                        (filter != null) ? filter : "-");
         response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
@@ -282,7 +236,7 @@ public class HttpFSServer {
       case GETHOMEDIRECTORY: {
         enforceRootPath(op.value(), path);
         FSOperations.FSHomeDir command = new FSOperations.FSHomeDir();
-        JSONObject json = fsExecute(user, doAs, command);
+        JSONObject json = fsExecute(user, command);
         AUDIT_LOG.info("");
         response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
@@ -290,7 +244,7 @@ public class HttpFSServer {
       case INSTRUMENTATION: {
         enforceRootPath(op.value(), path);
         Groups groups = HttpFSServerWebApp.get().get(Groups.class);
-        List<String> userGroups = groups.getGroups(user.getName());
+        List<String> userGroups = groups.getGroups(user.getShortUserName());
         if (!userGroups.contains(HttpFSServerWebApp.get().getAdminGroup())) {
           throw new AccessControlException(
             "User not in HttpFSServer admin group");
@@ -304,7 +258,7 @@ public class HttpFSServer {
       case GETCONTENTSUMMARY: {
         FSOperations.FSContentSummary command =
           new FSOperations.FSContentSummary(path);
-        Map json = fsExecute(user, doAs, command);
+        Map json = fsExecute(user, command);
         AUDIT_LOG.info("[{}]", path);
         response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
@@ -312,7 +266,7 @@ public class HttpFSServer {
       case GETFILECHECKSUM: {
         FSOperations.FSFileChecksum command =
           new FSOperations.FSFileChecksum(path);
-        Map json = fsExecute(user, doAs, command);
+        Map json = fsExecute(user, command);
         AUDIT_LOG.info("[{}]", path);
         response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
@@ -324,7 +278,7 @@ public class HttpFSServer {
       case GETACLSTATUS: {
         FSOperations.FSAclStatus command =
                 new FSOperations.FSAclStatus(path);
-        Map json = fsExecute(user, doAs, command);
+        Map json = fsExecute(user, command);
         AUDIT_LOG.info("ACL status for [{}]", path);
         response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
@@ -337,7 +291,7 @@ public class HttpFSServer {
         FSOperations.FSGetXAttrs command = new FSOperations.FSGetXAttrs(path, 
             xattrNames, encoding);
         @SuppressWarnings("rawtypes")
-        Map json = fsExecute(user, doAs, command);
+        Map json = fsExecute(user, command);
         AUDIT_LOG.info("XAttrs for [{}]", path);
         response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
@@ -345,7 +299,7 @@ public class HttpFSServer {
       case LISTXATTRS: {
         FSOperations.FSListXAttrs command = new FSOperations.FSListXAttrs(path);
         @SuppressWarnings("rawtypes")
-        Map json = fsExecute(user, doAs, command);
+        Map json = fsExecute(user, command);
         AUDIT_LOG.info("XAttr names for [{}]", path);
         response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
@@ -363,7 +317,6 @@ public class HttpFSServer {
   /**
    * Binding to handle DELETE requests.
    *
-   * @param user the principal of the user making the request.
    * @param path the path for operation.
    * @param op the HttpFS operation of the request.
    * @param params the HttpFS parameters of the request.
@@ -379,15 +332,14 @@ public class HttpFSServer {
   @DELETE
   @Path("{path:.*}")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response delete(@Context Principal user,
-                      @PathParam("path") String path,
-                      @QueryParam(OperationParam.NAME) OperationParam op,
-                      @Context Parameters params)
+  public Response delete(@PathParam("path") String path,
+                         @QueryParam(OperationParam.NAME) OperationParam op,
+                         @Context Parameters params)
     throws IOException, FileSystemAccessException {
+    UserGroupInformation user = HttpUserGroupInformation.get();
     Response response;
     path = makeAbsolute(path);
     MDC.put(HttpFSFileSystem.OP_PARAM, op.value().name());
-    String doAs = params.get(DoAsParam.NAME, DoAsParam.class);
     switch (op.value()) {
       case DELETE: {
         Boolean recursive =
@@ -395,7 +347,7 @@ public class HttpFSServer {
         AUDIT_LOG.info("[{}] recursive [{}]", path, recursive);
         FSOperations.FSDelete command =
           new FSOperations.FSDelete(path, recursive);
-        JSONObject json = fsExecute(user, doAs, command);
+        JSONObject json = fsExecute(user, command);
         response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
       }
@@ -412,7 +364,6 @@ public class HttpFSServer {
    * Binding to handle POST requests.
    *
    * @param is the inputstream for the request payload.
-   * @param user the principal of the user making the request.
    * @param uriInfo the of the request.
    * @param path the path for operation.
    * @param op the HttpFS operation of the request.
@@ -431,18 +382,17 @@ public class HttpFSServer {
   @Consumes({"*/*"})
   @Produces({MediaType.APPLICATION_JSON})
   public Response post(InputStream is,
-                       @Context Principal user,
                        @Context UriInfo uriInfo,
                        @PathParam("path") String path,
                        @QueryParam(OperationParam.NAME) OperationParam op,
                        @Context Parameters params)
     throws IOException, FileSystemAccessException {
+    UserGroupInformation user = HttpUserGroupInformation.get();
     Response response;
     path = makeAbsolute(path);
     MDC.put(HttpFSFileSystem.OP_PARAM, op.value().name());
     switch (op.value()) {
       case APPEND: {
-        String doAs = params.get(DoAsParam.NAME, DoAsParam.class);
         Boolean hasData = params.get(DataParam.NAME, DataParam.class);
         if (!hasData) {
           response = Response.temporaryRedirect(
@@ -451,7 +401,7 @@ public class HttpFSServer {
         } else {
           FSOperations.FSAppend command =
             new FSOperations.FSAppend(is, path);
-          fsExecute(user, doAs, command);
+          fsExecute(user, command);
           AUDIT_LOG.info("[{}]", path);
           response = Response.ok().type(MediaType.APPLICATION_JSON).build();
         }
@@ -463,7 +413,7 @@ public class HttpFSServer {
 
         FSOperations.FSConcat command =
             new FSOperations.FSConcat(path, sources.split(","));
-        fsExecute(user, null, command);
+        fsExecute(user, command);
         AUDIT_LOG.info("[{}]", path);
         System.out.println("SENT RESPONSE");
         response = Response.ok().build();
@@ -498,7 +448,6 @@ public class HttpFSServer {
    * Binding to handle PUT requests.
    *
    * @param is the inputstream for the request payload.
-   * @param user the principal of the user making the request.
    * @param uriInfo the of the request.
    * @param path the path for operation.
    * @param op the HttpFS operation of the request.
@@ -517,16 +466,15 @@ public class HttpFSServer {
   @Consumes({"*/*"})
   @Produces({MediaType.APPLICATION_JSON})
   public Response put(InputStream is,
-                       @Context Principal user,
                        @Context UriInfo uriInfo,
                        @PathParam("path") String path,
                        @QueryParam(OperationParam.NAME) OperationParam op,
                        @Context Parameters params)
     throws IOException, FileSystemAccessException {
+    UserGroupInformation user = HttpUserGroupInformation.get();
     Response response;
     path = makeAbsolute(path);
     MDC.put(HttpFSFileSystem.OP_PARAM, op.value().name());
-    String doAs = params.get(DoAsParam.NAME, DoAsParam.class);
     switch (op.value()) {
       case CREATE: {
         Boolean hasData = params.get(DataParam.NAME, DataParam.class);
@@ -546,7 +494,7 @@ public class HttpFSServer {
           FSOperations.FSCreate command =
             new FSOperations.FSCreate(is, path, permission, override,
                                       replication, blockSize);
-          fsExecute(user, doAs, command);
+          fsExecute(user, command);
           AUDIT_LOG.info(
             "[{}] permission [{}] override [{}] replication [{}] blockSize [{}]",
             new Object[]{path, permission, override, replication, blockSize});
@@ -564,7 +512,7 @@ public class HttpFSServer {
 
         FSOperations.FSSetXAttr command = new FSOperations.FSSetXAttr(
             path, xattrName, xattrValue, flag);
-        fsExecute(user, doAs, command);
+        fsExecute(user, command);
         AUDIT_LOG.info("[{}] to xAttr [{}]", path, xattrName);
         response = Response.ok().build();
         break;
@@ -573,7 +521,7 @@ public class HttpFSServer {
         String xattrName = params.get(XAttrNameParam.NAME, XAttrNameParam.class);
         FSOperations.FSRemoveXAttr command = new FSOperations.FSRemoveXAttr(
             path, xattrName);
-        fsExecute(user, doAs, command);
+        fsExecute(user, command);
         AUDIT_LOG.info("[{}] removed xAttr [{}]", path, xattrName);
         response = Response.ok().build();
         break;
@@ -583,7 +531,7 @@ public class HttpFSServer {
                                        PermissionParam.class);
         FSOperations.FSMkdirs command =
           new FSOperations.FSMkdirs(path, permission);
-        JSONObject json = fsExecute(user, doAs, command);
+        JSONObject json = fsExecute(user, command);
         AUDIT_LOG.info("[{}] permission [{}]", path, permission);
         response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
@@ -592,7 +540,7 @@ public class HttpFSServer {
         String toPath = params.get(DestinationParam.NAME, DestinationParam.class);
         FSOperations.FSRename command =
           new FSOperations.FSRename(path, toPath);
-        JSONObject json = fsExecute(user, doAs, command);
+        JSONObject json = fsExecute(user, command);
         AUDIT_LOG.info("[{}] to [{}]", path, toPath);
         response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
@@ -602,7 +550,7 @@ public class HttpFSServer {
         String group = params.get(GroupParam.NAME, GroupParam.class);
         FSOperations.FSSetOwner command =
           new FSOperations.FSSetOwner(path, owner, group);
-        fsExecute(user, doAs, command);
+        fsExecute(user, command);
         AUDIT_LOG.info("[{}] to (O/G)[{}]", path, owner + ":" + group);
         response = Response.ok().build();
         break;
@@ -612,7 +560,7 @@ public class HttpFSServer {
                                       PermissionParam.class);
         FSOperations.FSSetPermission command =
           new FSOperations.FSSetPermission(path, permission);
-        fsExecute(user, doAs, command);
+        fsExecute(user, command);
         AUDIT_LOG.info("[{}] to [{}]", path, permission);
         response = Response.ok().build();
         break;
@@ -622,7 +570,7 @@ public class HttpFSServer {
                                        ReplicationParam.class);
         FSOperations.FSSetReplication command =
           new FSOperations.FSSetReplication(path, replication);
-        JSONObject json = fsExecute(user, doAs, command);
+        JSONObject json = fsExecute(user, command);
         AUDIT_LOG.info("[{}] to [{}]", path, replication);
         response = Response.ok(json).build();
         break;
@@ -634,7 +582,7 @@ public class HttpFSServer {
                                      AccessTimeParam.class);
         FSOperations.FSSetTimes command =
           new FSOperations.FSSetTimes(path, modifiedTime, accessTime);
-        fsExecute(user, doAs, command);
+        fsExecute(user, command);
         AUDIT_LOG.info("[{}] to (M/A)[{}]", path,
                        modifiedTime + ":" + accessTime);
         response = Response.ok().build();
@@ -645,7 +593,7 @@ public class HttpFSServer {
                 AclPermissionParam.class);
         FSOperations.FSSetAcl command =
                 new FSOperations.FSSetAcl(path, aclSpec);
-        fsExecute(user, doAs, command);
+        fsExecute(user, command);
         AUDIT_LOG.info("[{}] to acl [{}]", path, aclSpec);
         response = Response.ok().build();
         break;
@@ -653,7 +601,7 @@ public class HttpFSServer {
       case REMOVEACL: {
         FSOperations.FSRemoveAcl command =
                 new FSOperations.FSRemoveAcl(path);
-        fsExecute(user, doAs, command);
+        fsExecute(user, command);
         AUDIT_LOG.info("[{}] removed acl", path);
         response = Response.ok().build();
         break;
@@ -663,7 +611,7 @@ public class HttpFSServer {
                 AclPermissionParam.class);
         FSOperations.FSModifyAclEntries command =
                 new FSOperations.FSModifyAclEntries(path, aclSpec);
-        fsExecute(user, doAs, command);
+        fsExecute(user, command);
         AUDIT_LOG.info("[{}] modify acl entry with [{}]", path, aclSpec);
         response = Response.ok().build();
         break;
@@ -673,7 +621,7 @@ public class HttpFSServer {
                 AclPermissionParam.class);
         FSOperations.FSRemoveAclEntries command =
                 new FSOperations.FSRemoveAclEntries(path, aclSpec);
-        fsExecute(user, doAs, command);
+        fsExecute(user, command);
         AUDIT_LOG.info("[{}] remove acl entry [{}]", path, aclSpec);
         response = Response.ok().build();
         break;
@@ -681,7 +629,7 @@ public class HttpFSServer {
       case REMOVEDEFAULTACL: {
         FSOperations.FSRemoveDefaultAcl command =
                 new FSOperations.FSRemoveDefaultAcl(path);
-        fsExecute(user, doAs, command);
+        fsExecute(user, command);
         AUDIT_LOG.info("[{}] remove default acl", path);
         response = Response.ok().build();
         break;

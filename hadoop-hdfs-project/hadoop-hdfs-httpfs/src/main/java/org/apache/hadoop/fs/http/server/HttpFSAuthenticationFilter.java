@@ -91,4 +91,14 @@ public class HttpFSAuthenticationFilter
     return props;
   }
 
+  protected Configuration getProxyuserConfiguration(FilterConfig filterConfig) {
+    Map<String, String> proxyuserConf = HttpFSServerWebApp.get().getConfig().
+        getValByRegex("httpfs\\.proxyuser\\.");
+    Configuration conf = new Configuration(false);
+    for (Map.Entry<String, String> entry : proxyuserConf.entrySet()) {
+      conf.set(entry.getKey().substring("httpfs.".length()), entry.getValue());
+    }
+    return conf;
+  }
+
 }
