@@ -176,6 +176,7 @@ static void nioe_deinit(JNIEnv *env) {
  * If the value is not known, return the argument unchanged.
  */
 static int map_fadvise_flag(jint flag) {
+#ifdef HAVE_POSIX_FADVISE
   switch(flag) {
     case org_apache_hadoop_io_nativeio_NativeIO_POSIX_POSIX_FADV_NORMAL:
       return POSIX_FADV_NORMAL;
@@ -198,6 +199,9 @@ static int map_fadvise_flag(jint flag) {
     default:
       return flag;
   }
+#else
+  return flag;
+#endif
 }
 
 /*
