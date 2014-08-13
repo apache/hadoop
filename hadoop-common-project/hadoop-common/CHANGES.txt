@@ -202,6 +202,9 @@ Trunk (Unreleased)
     HADOOP-10224. JavaKeyStoreProvider has to protect against corrupting 
     underlying store. (asuresh via tucu)
 
+    HADOOP-8944. Shell command fs -count should include human readable option
+      (Jonathan Allen via aw)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
