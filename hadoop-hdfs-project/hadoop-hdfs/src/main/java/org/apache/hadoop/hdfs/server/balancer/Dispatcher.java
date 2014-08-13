@@ -87,8 +87,6 @@ public class Dispatcher {
 
   private static final int MAX_NO_PENDING_MOVE_ITERATIONS = 5;
   private static final long DELAY_AFTER_ERROR = 10 * 1000L; // 10 seconds
-  private static final int BLOCK_MOVE_READ_TIMEOUT = 20 * 60 * 1000; // 20
-                                                                     // minutes
 
   private final NameNodeConnector nnc;
   private final SaslDataTransferClient saslClient;
@@ -278,13 +276,6 @@ public class Dispatcher {
         sock.connect(
             NetUtils.createSocketAddr(target.getDatanodeInfo().getXferAddr()),
             HdfsServerConstants.READ_TIMEOUT);
-        /*
-         * Unfortunately we don't have a good way to know if the Datanode is
-         * taking a really long time to move a block, OR something has gone
-         * wrong and it's never going to finish. To deal with this scenario, we
-         * set a long timeout (20 minutes) to avoid hanging indefinitely.
-         */
-        sock.setSoTimeout(BLOCK_MOVE_READ_TIMEOUT);
 
         sock.setKeepAlive(true);
 
@@ -341,8 +332,12 @@ public class Dispatcher {
 
     /** Receive a block copy response from the input stream */
     private void receiveResponse(DataInputStream in) throws IOException {
-      BlockOpResponseProto response = BlockOpResponseProto
-          .parseFrom(vintPrefixed(in));
+      BlockOpResponseProto response =
+          BlockOpResponseProto.parseFrom(vintPrefixed(in));
+      while (response.getStatus() == Status.IN_PROGRESS) {
+        // read intermediate responses
+        response = BlockOpResponseProto.parseFrom(vintPrefixed(in));
+      }
       if (response.getStatus() != Status.SUCCESS) {
         if (response.getStatus() == Status.ERROR_ACCESS_TOKEN) {
           throw new IOException("block move failed due to access token error");
