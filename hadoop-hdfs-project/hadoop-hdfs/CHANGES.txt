@@ -245,9 +245,6 @@ Release 2.6.0 - UNRELEASED
     HDFS-6830. BlockInfo.addStorage fails when DN changes the storage for a
     block replica (Arpit Agarwal)
 
-    HDFS-6847. Avoid timeouts for replaceBlock() call by sending intermediate
-    responses to Balancer (vinayakumarb)
-
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

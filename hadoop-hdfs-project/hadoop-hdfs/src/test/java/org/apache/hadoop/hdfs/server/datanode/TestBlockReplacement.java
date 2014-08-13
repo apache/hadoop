@@ -272,10 +272,8 @@ public class TestBlockReplacement {
     // receiveResponse
     DataInputStream reply = new DataInputStream(sock.getInputStream());
 
-    BlockOpResponseProto proto = BlockOpResponseProto.parseDelimitedFrom(reply);
-    while (proto.getStatus() == Status.IN_PROGRESS) {
-      proto = BlockOpResponseProto.parseDelimitedFrom(reply);
-    }
+    BlockOpResponseProto proto =
+      BlockOpResponseProto.parseDelimitedFrom(reply);
     return proto.getStatus() == Status.SUCCESS;
   }
 
