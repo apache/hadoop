@@ -138,6 +138,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6836. HDFS INFO logging is verbose & uses file appenders. (Xiaoyu
     Yao via Arpit Agarwal)
 
+    HDFS-6567. Normalize the order of public final in HdfsFileStatus.
+    (Tassapol Athiapinya via wheat9)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
