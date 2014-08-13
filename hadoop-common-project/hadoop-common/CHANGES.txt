@@ -137,6 +137,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10962. Flags for posix_fadvise are not valid in some architectures
     (David Villegas via Colin Patrick McCabe)
 
+    HADOOP-10966. Hadoop Common native compilation broken in windows.
+    (David Villegas via Arpit Agarwal)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
