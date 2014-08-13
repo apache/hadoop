@@ -75,6 +75,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10281. Create a scheduler, which assigns schedulables a priority
     level. (Chris Li via Arpit Agarwal)
 
+    HADOOP-8944. Shell command fs -count should include human readable option
+      (Jonathan Allen via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES

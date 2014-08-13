@@ -138,7 +138,7 @@ copyToLocal
 
 count
 
-   Usage: <<<hdfs dfs -count [-q] <paths> >>>
+   Usage: <<<hdfs dfs -count [-q] [-h] <paths> >>>
 
    Count the number of directories, files and bytes under the paths that match
    the specified file pattern.  The output columns with -count are: DIR_COUNT,
@@ -147,11 +147,15 @@ count
    The output columns with -count -q are: QUOTA, REMAINING_QUATA, SPACE_QUOTA,
    REMAINING_SPACE_QUOTA, DIR_COUNT, FILE_COUNT, CONTENT_SIZE, FILE_NAME
 
+   The -h option shows sizes in human readable format.
+
    Example:
 
      * <<<hdfs dfs -count hdfs://nn1.example.com/file1 hdfs://nn2.example.com/file2>>>
 
      * <<<hdfs dfs -count -q hdfs://nn1.example.com/file1>>>
+
+     * <<<hdfs dfs -count -q -h hdfs://nn1.example.com/file1>>>
 
    Exit Code:
 
