@@ -23,6 +23,9 @@ Release 2.6.0 - UNRELEASED
     YARN-1337. Recover containers upon nodemanager restart. (Jason Lowe via 
     junping_du)
 
+    YARN-2277. Added cross-origin support for the timeline server web services.
+    (Jonathan Eagles via zjshen)
+
   IMPROVEMENTS
 
     YARN-2242. Improve exception information on AM launch crashes. (Li Lu 
