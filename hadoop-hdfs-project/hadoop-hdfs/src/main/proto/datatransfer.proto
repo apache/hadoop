@@ -207,6 +207,7 @@ enum Status {
   OOB_RESERVED1 = 9;          // Reserved
   OOB_RESERVED2 = 10;         // Reserved
   OOB_RESERVED3 = 11;         // Reserved
+  IN_PROGRESS = 12;
 }
 
 message PipelineAckProto {
