@@ -151,6 +151,9 @@ Trunk (Unreleased)
     MAPREDUCE-5867. Fix NPE in KillAMPreemptionPolicy related to 
     ProportionalCapacityPreemptionPolicy (Sunil G via devaraj)
 
+    MAPREDUCE-5944. Remove MRv1 commands from CommandsManual.apt.vm 
+      (Akira AJISAKA via aw)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
