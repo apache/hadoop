@@ -8,6 +8,9 @@ Trunk - Unreleased
 
   IMPROVEMENTS
 
+    YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc
+      (Akira AJISAKA via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
