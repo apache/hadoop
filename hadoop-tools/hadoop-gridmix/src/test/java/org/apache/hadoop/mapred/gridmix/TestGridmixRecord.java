@@ -140,10 +140,10 @@ public class TestGridmixRecord {
       final int chk = WritableComparator.compareBytes(
           out1.getData(), 0, out1.getLength(),
           out2.getData(), 0, out2.getLength());
-      assertEquals(chk, x.compareTo(y));
-      assertEquals(chk, cmp.compare(
+      assertEquals(Integer.signum(chk), Integer.signum(x.compareTo(y)));
+      assertEquals(Integer.signum(chk), Integer.signum(cmp.compare(
             out1.getData(), 0, out1.getLength(),
-            out2.getData(), 0, out2.getLength()));
+            out2.getData(), 0, out2.getLength())));
       // write second copy, compare eq
       final int s1 = out1.getLength();
       x.write(out1);
@@ -153,8 +153,8 @@ public class TestGridmixRecord {
       y.write(out2);
       assertEquals(0, cmp.compare(out2.getData(), 0, s2,
             out2.getData(), s2, out2.getLength() - s2));
-      assertEquals(chk, cmp.compare(out1.getData(), 0, s1,
-            out2.getData(), s2, out2.getLength() - s2));
+      assertEquals(Integer.signum(chk), Integer.signum(cmp.compare(out1.getData(), 0, s1,
+            out2.getData(), s2, out2.getLength() - s2)));
     }
   }
 

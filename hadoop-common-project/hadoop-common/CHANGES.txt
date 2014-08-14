@@ -140,6 +140,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10966. Hadoop Common native compilation broken in windows.
     (David Villegas via Arpit Agarwal)
 
+    HADOOP-10843. TestGridmixRecord unit tests failure on PowerPC (Jinghui Wang
+    via Colin Patrick McCabe)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
