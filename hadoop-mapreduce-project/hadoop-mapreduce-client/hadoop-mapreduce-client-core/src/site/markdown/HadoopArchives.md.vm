@@ -20,6 +20,7 @@ Hadoop Archives Guide
  - [Overview](#Overview)
  - [How to Create an Archive](#How_to_Create_an_Archive)
  - [How to Look Up Files in Archives](#How_to_Look_Up_Files_in_Archives)
+ - [How to Unarchive an Archive](#How_to_Unarchive_an_Archive)
  - [Archives Examples](#Archives_Examples)
      - [Creating an Archive](#Creating_an_Archive)
      - [Looking Up Files](#Looking_Up_Files)
@@ -69,6 +70,20 @@ How to Look Up Files in Archives
   the URI would look like
 
   `har:///archivepath/fileinarchive`
+
+How to Unarchive an Archive
+---------------------------
+
+  Since all the fs shell commands in the archives work transparently,
+  unarchiving is just a matter of copying.
+
+  To unarchive sequentially:
+
+  `hdfs dfs -cp har:///user/zoo/foo.har/dir1 hdfs:/user/zoo/newdir`
+
+  To unarchive in parallel, use DistCp:
+
+  `hadoop distcp har:///user/zoo/foo.har/dir1 hdfs:/user/zoo/newdir`
 
 Archives Examples
 -----------------
