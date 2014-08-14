@@ -338,7 +338,7 @@ public class HadoopArchives implements Tool {
    * directories to
    * @param paths the source paths provided by the user. They
    * are glob free and have full path (not relative paths)
-   * @param parentPath the parent path that you wnat the archives
+   * @param parentPath the parent path that you want the archives
    * to be relative to. example - /home/user/dir1 can be archived with
    * parent as /home or /home/user.
    * @throws IOException

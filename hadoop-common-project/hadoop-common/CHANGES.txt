@@ -430,6 +430,9 @@ Trunk (Unreleased)
     HADOOP-10862. Miscellaneous trivial corrections to KMS classes. 
     (asuresh via tucu)
 
+    HADOOP-10121. Fix javadoc spelling for HadoopArchives#writeTopLevelDirs
+      (Akira AJISAKA via aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
