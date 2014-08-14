@@ -339,6 +339,12 @@ public class DataChecksum implements Checksum {
       byte[] data, int dataOff, int dataLen,
       byte[] checksums, int checksumsOff, String fileName,
       long basePos) throws ChecksumException {
+
+    if (NativeCrc32.isAvailable()) {
+      NativeCrc32.verifyChunkedSumsByteArray(bytesPerChecksum, type.id,
+          checksums, checksumsOff, data, dataOff, dataLen, fileName, basePos);
+      return;
+    }
     
     int remaining = dataLen;
     int dataPos = 0;
