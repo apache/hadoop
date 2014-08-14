@@ -67,6 +67,8 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5950. incorrect description in distcp2 document (Akira AJISAKA 
       via aw)
 
+    MAPREDUCE-5998. CompositeInputFormat javadoc is broken (Akira AJISAKA via
+      aw)
 
 Release 2.5.0 - UNRELEASED
 
