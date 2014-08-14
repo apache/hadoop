@@ -78,6 +78,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-8944. Shell command fs -count should include human readable option
       (Jonathan Allen via aw)
 
+    HADOOP-10231. Add some components in Native Libraries document (Akira 
+      AJISAKA via aw)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
