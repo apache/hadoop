@@ -141,6 +141,7 @@
       <item name="Common CHANGES.txt" href="hadoop-project-dist/hadoop-common/CHANGES.txt"/>
       <item name="HDFS CHANGES.txt" href="hadoop-project-dist/hadoop-hdfs/CHANGES.txt"/>
       <item name="MapReduce CHANGES.txt" href="hadoop-project-dist/hadoop-mapreduce/CHANGES.txt"/>
+      <item name="YARN CHANGES.txt" href="hadoop-project-dist/hadoop-yarn/CHANGES.txt"/>
       <item name="Metrics" href="hadoop-project-dist/hadoop-common/Metrics.html"/>
     </menu>
     

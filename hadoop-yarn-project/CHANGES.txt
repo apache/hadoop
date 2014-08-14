@@ -113,6 +113,9 @@ Release 2.6.0 - UNRELEASED
     YARN-1370. Fair scheduler to re-populate container allocation state. 
     (Anubhav Dhoot via kasha)
 
+    YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc
+      (Akira AJISAKA via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
