@@ -1370,7 +1370,7 @@ public class YarnConfiguration extends Configuration {
   public static String getClusterId(Configuration conf) {
     String clusterId = conf.get(YarnConfiguration.RM_CLUSTER_ID);
     if (clusterId == null) {
-      throw new HadoopIllegalArgumentException("Configuration doesn't specify" +
+      throw new HadoopIllegalArgumentException("Configuration doesn't specify " +
           YarnConfiguration.RM_CLUSTER_ID);
     }
     return clusterId;
