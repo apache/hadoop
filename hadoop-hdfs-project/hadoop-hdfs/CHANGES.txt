@@ -248,6 +248,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-6830. BlockInfo.addStorage fails when DN changes the storage for a
     block replica (Arpit Agarwal)
 
+    HDFS-6783. Fix HDFS CacheReplicationMonitor rescan logic. (Yi Liu via umamahesh)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
