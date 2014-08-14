@@ -177,6 +177,8 @@ Trunk (Unreleased)
     MAPREDUCE-5998. CompositeInputFormat javadoc is broken (Akira AJISAKA via
       aw)
 
+    MAPREDUCE-5999. Fix dead link in InputFormat javadoc (Akira AJISAKA via aw)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
