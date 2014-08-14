@@ -56,6 +56,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5363. Fix doc and spelling for TaskCompletionEvent#getTaskStatus 
       and getStatus (Akira AJISAKA via aw)
 
+    MAPREDUCE-5595. Typo in MergeManagerImpl.java (Akira AJISAKA via aw)
+
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
