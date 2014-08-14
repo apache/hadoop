@@ -111,6 +111,7 @@ set(RPC_DEPS
 
 set(FS_SRCS
     fs/common.c
+    fs/copy.c
     fs/fs.c
     ndfs/ndfs.c
     ${HDFS_PROTOBUF_SRCS}

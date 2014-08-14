@@ -85,6 +85,16 @@ struct hadoop_err *hadoop_uri_to_str(const struct hadoop_uri *uri, char **out);
  */
 void hadoop_uri_free(struct hadoop_uri *uri);
 
+/**
+ * Print a URI to a file.
+ *
+ * @param fp            The FILE*
+ * @param prefix        Prefix string to print out first.
+ * @param uri           The URI to print.
+ */
+void hadoop_uri_print(FILE *fp, const char *prefix,
+                      const struct hadoop_uri *uri);
+
 #endif
 
 // vim: ts=4:sw=4:tw=79:et

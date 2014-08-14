@@ -52,6 +52,8 @@ struct hconf;
  * or types in this file without creating compatibility problems.
  */
 
+#define DEFAULT_SCHEME "hdfs"
+
 /**
  * Hadoop filesystem types.
  */

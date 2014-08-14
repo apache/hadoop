@@ -73,6 +73,7 @@ int main(void)
     EXPECT_INT_ZERO(hdfsCreateDirectory(fs, "/abc/2"));
     EXPECT_INT_ZERO(hdfsCreateDirectory(fs, "/abc/3"));
     EXPECT_INT_ZERO(hdfsCreateDirectory(fs, "/abc/alpha"));
+    EXPECT_INT_ZERO(hdfsCopy(fs, "/abc", fs, "/abc-2"));
     EXPECT_INT_ZERO(hdfsDelete(fs, "/abc", 1));
     hdfsDelete(fs, "/abc", 1);
     EXPECT_INT_ZERO(hdfsCreateDirectory(fs, "/abc"));

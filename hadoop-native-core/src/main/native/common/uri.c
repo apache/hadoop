@@ -285,6 +285,7 @@ static const char *check_null(const char *str)
 
 struct hadoop_err *hadoop_uri_to_str(const struct hadoop_uri *uri, char **out)
 {
+    *out = NULL;
     return dynprintf(out, "[scheme=%s, user_info=%s, auth=%s, "
                      "port=%d, path=%s]",
               check_null(uri->scheme), check_null(uri->user_info),
@@ -302,6 +303,21 @@ void hadoop_uri_free(struct hadoop_uri *uri)
     free(uri->auth);
     free(uri->path);
     free(uri);
+}
+
+void hadoop_uri_print(FILE *fp, const char *prefix,
+                      const struct hadoop_uri *uri)
+{
+    char *out = NULL;
+    struct hadoop_err *err;
+
+    err = hadoop_uri_to_str(uri, &out);
+    if (err) {
+        fprintf(fp, "%s: error: %s\n", prefix, hadoop_err_msg(err));
+        return;
+    }
+    fprintf(fp, "%s: %s\n", prefix, out);
+    free(out);
 }
 
 // vim: ts=4:sw=4:tw=79:et

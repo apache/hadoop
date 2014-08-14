@@ -22,6 +22,7 @@
 #include "common/uri.h"
 #include "common/user.h"
 #include "fs/common.h"
+#include "fs/copy.h"
 #include "fs/fs.h"
 #include "fs/hdfs.h"
 
@@ -32,8 +33,6 @@
 #include <string.h>
 #include <time.h>
 #include <uriparser/Uri.h>
-
-#define DEFAULT_SCHEME "hdfs"
 
 #define DEFAULT_NATIVE_HANDLERS "ndfs,jnifs"
 
@@ -198,7 +197,7 @@ static struct hadoop_err *hdfs_builder_parse_conn_uri(
             // If the connection URI was set via hdfsBuilderSetNameNode, it may
             // not be a real URI, but just a <hostname>:<port> pair.  This won't
             // parse correctly unless we add a hdfs:// scheme in front of it.
-            err = dynprintf(&uri_str, "hdfs://%s", hdfs_bld->nn);
+            err = dynprintf(&uri_str, DEFAULT_SCHEME "://%s", hdfs_bld->nn);
             if (err)
                 goto done;
         } else {
@@ -508,24 +507,52 @@ int hdfsCopy(hdfsFS srcFS, const char* src, hdfsFS dstFS, const char* dst)
 {
     struct hadoop_fs_base *src_base = (struct hadoop_fs_base*)srcFS;
     struct hadoop_fs_base *dst_base = (struct hadoop_fs_base*)dstFS;
+    int (*src_copy)(hdfsFS srcFS, const char *src,
+                    hdfsFS dstFS, const char *dst);
+    int (*dst_copy)(hdfsFS srcFS, const char *src,
+                    hdfsFS dstFS, const char *dst);
+    int ret;
 
-    if (src_base->ty != dst_base->ty) {
-        errno = EINVAL;
+    src_copy = g_ops[src_base->ty]->copy;
+    dst_copy = g_ops[dst_base->ty]->copy;
+    if ((src_copy == dst_copy) && src_copy) {
+        // If the source and dest FileSystems both have a copy method, and
+        // it's the same copy method, use it.
+        return src_copy(srcFS, src, dstFS, dst);
+    }
+    // Use the generic implementation based on reading/writing files.
+    ret = copy_recursive(srcFS, src, dstFS, dst);
+    if (ret) {
+        errno = ret;
         return -1;
     }
-    return g_ops[src_base->ty]->copy(srcFS, src, dstFS, dst);
+    return 0;
 }
 
 int hdfsMove(hdfsFS srcFS, const char* src, hdfsFS dstFS, const char* dst)
 {
     struct hadoop_fs_base *src_base = (struct hadoop_fs_base*)srcFS;
     struct hadoop_fs_base *dst_base = (struct hadoop_fs_base*)dstFS;
+    int (*src_move)(hdfsFS srcFS, const char *src,
+                    hdfsFS dstFS, const char *dst);
+    int (*dst_move)(hdfsFS srcFS, const char *src,
+                    hdfsFS dstFS, const char *dst);
+    int ret;
 
-    if (src_base->ty != dst_base->ty) {
-        errno = EINVAL;
+    src_move = g_ops[src_base->ty]->copy;
+    dst_move = g_ops[dst_base->ty]->copy;
+    if ((src_move == dst_move) && src_move) {
+        // If the source and dest FileSystems both have a move method, and
+        // it's the same move method, use it.
+        return src_move(srcFS, src, dstFS, dst);
+    }
+    // Use the generic implementation based on reading/writing files.
+    ret = copy_recursive(srcFS, src, dstFS, dst);
+    if (ret) {
+        errno = ret;
         return -1;
     }
-    return g_ops[src_base->ty]->move(srcFS, src, dstFS, dst);
+    return g_ops[src_base->ty]->unlink(srcFS, src, 1); // errno will be set
 }
 
 int hdfsDelete(hdfsFS fs, const char* path, int recursive)

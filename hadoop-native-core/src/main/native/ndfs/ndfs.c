@@ -620,24 +620,6 @@ static int ndfs_available(hdfsFS bfs __attribute__((unused)),
     return -1;
 }
 
-static int ndfs_copy(hdfsFS srcFS __attribute__((unused)),
-                     const char* src __attribute__((unused)),
-                     hdfsFS dstFS __attribute__((unused)),
-                     const char* dst __attribute__((unused)))
-{
-    errno = ENOTSUP;
-    return -1;
-}
-
-static int ndfs_move(hdfsFS srcFS __attribute__((unused)),
-                     const char* src __attribute__((unused)),
-                     hdfsFS dstFS __attribute__((unused)),
-                     const char* dst __attribute__((unused)))
-{
-    errno = ENOTSUP;
-    return -1;
-}
-
 static int ndfs_unlink(struct hdfs_internal *bfs,
                 const char *uri, int recursive)
 {
@@ -1287,8 +1269,8 @@ const struct hadoop_fs_ops g_ndfs_ops = {
     .hflush = ndfs_hflush,
     .hsync = ndfs_hsync,
     .available = ndfs_available,
-    .copy = ndfs_copy,
-    .move = ndfs_move,
+    .copy = NULL,
+    .move = NULL,
     .unlink = ndfs_unlink,
     .rename = ndfs_rename,
     .get_working_directory = ndfs_get_working_directory,
