@@ -197,7 +197,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
              "memToMemMergeOutputsThreshold=" + memToMemMergeOutputsThreshold);
 
     if (this.maxSingleShuffleLimit >= this.mergeThreshold) {
-      throw new RuntimeException("Invlaid configuration: "
+      throw new RuntimeException("Invalid configuration: "
           + "maxSingleShuffleLimit should be less than mergeThreshold"
           + "maxSingleShuffleLimit: " + this.maxSingleShuffleLimit
           + "mergeThreshold: " + this.mergeThreshold);
