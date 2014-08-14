@@ -75,6 +75,9 @@ Release 2.6.0 - UNRELEASED
 
     MAPREDUCE-5999. Fix dead link in InputFormat javadoc (Akira AJISAKA via aw)
 
+    MAPREDUCE-5878. some standard JDK APIs are not part of system classes
+    defaults (Sangjin Lee via jlowe)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
