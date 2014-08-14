@@ -506,6 +506,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-6247. Avoid timeouts for replaceBlock() call by sending intermediate
     responses to Balancer (vinayakumarb)
 
+    HDFS-6783. Fix HDFS CacheReplicationMonitor rescan logic. (Yi Liu via umamahesh)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
