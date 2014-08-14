@@ -80,6 +80,8 @@ Release 2.6.0 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
+
   BUG FIXES
 
     HADOOP-10781. Unportable getgrouplist() usage breaks FreeBSD (Dmitry
