@@ -36,7 +36,6 @@ import org.apache.hadoop.mapred.Reporter;
 /**
  * An InputFormat capable of performing joins over a set of data sources sorted
  * and partitioned the same way.
- * @see #setFormat
  *
  * A user may define new join types by setting the property
  * <tt>mapred.join.define.&lt;ident&gt;</tt> to a classname. In the expression
@@ -44,6 +43,7 @@ import org.apache.hadoop.mapred.Reporter;
  * ComposableRecordReader.
  * <tt>mapred.join.keycomparator</tt> can be a classname used to compare keys
  * in the join.
+ * @see #setFormat
  * @see JoinRecordReader
  * @see MultiFilterRecordReader
  */
