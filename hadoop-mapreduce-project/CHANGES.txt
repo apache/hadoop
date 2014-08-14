@@ -64,6 +64,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5597. Missing alternatives in javadocs for deprecated constructors 
       in mapreduce.Job (Akira AJISAKA via aw)
 
+    MAPREDUCE-5950. incorrect description in distcp2 document (Akira AJISAKA 
+      via aw)
+
 
 Release 2.5.0 - UNRELEASED
 
