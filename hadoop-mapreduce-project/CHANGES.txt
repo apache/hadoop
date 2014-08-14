@@ -163,6 +163,9 @@ Trunk (Unreleased)
     MAPREDUCE-5943. Separate mapred commands from CommandManual.apt.vm
       (Akira AJISAKA via aw)
 
+    MAPREDUCE-5363. Fix doc and spelling for TaskCompletionEvent#getTaskStatus 
+      and getStatus (Akira AJISAKA via aw)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

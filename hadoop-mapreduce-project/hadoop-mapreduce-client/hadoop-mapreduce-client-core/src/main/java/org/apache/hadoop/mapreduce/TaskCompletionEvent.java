@@ -95,8 +95,8 @@ public class TaskCompletionEvent implements Writable{
   }
   
   /**
-   * Returns enum Status.SUCESS or Status.FAILURE.
-   * @return task tracker status
+   * Returns {@link Status}
+   * @return task completion status
    */
   public Status getStatus() {
     return status;
