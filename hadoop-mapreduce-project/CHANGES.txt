@@ -92,6 +92,9 @@ Trunk (Unreleased)
     MAPREDUCE-4791. Javadoc for KeyValueTextInputFormat should include default 
       separator and how to change it (Akira AJISAKA via aw)
 
+    MAPREDUCE-5906. Inconsistent configuration in property 
+      "mapreduce.reduce.shuffle.input.buffer.percent" (Akira AJISAKA via aw)
+
   BUG FIXES
 
     MAPREDUCE-5714. Removed forceful JVM exit in shutDownJob.  
