@@ -116,6 +116,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc
       (Akira AJISAKA via aw)
 
+    YARN-1918. Typo in description and error message for 
+      'yarn.resourcemanager.cluster-id' (Anandha L Ranganathan via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
