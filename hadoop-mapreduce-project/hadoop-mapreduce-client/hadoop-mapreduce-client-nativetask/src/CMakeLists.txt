@@ -167,9 +167,13 @@ SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     # macosx does not have -lrt
     set(NT_DEPEND_LIBRARY dl pthread z ${SNAPPY_LIBRARY} ${JAVA_JVM_LIBRARY})
+    set(SYSTEM_MAC TRUE)
 else (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(NT_DEPEND_LIBRARY dl rt pthread z ${SNAPPY_LIBRARY} ${JAVA_JVM_LIBRARY})
+    set(SYSTEM_MAC FALSE)
 endif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+
+configure_file(main/native/test.sh test/test.sh)
 
 add_dual_library(nativetask
     ${CMAKE_BINARY_DIR}/lz4.c

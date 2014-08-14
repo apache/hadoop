@@ -66,7 +66,6 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-mapreduce-client-common</artifactId>
-      <type>test-jar</type>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -173,7 +172,6 @@
                       overwrite="true">
                       <fileset dir="${basedir}/src/main/native/testData" />
                     </copy>
-                    <copy file="${basedir}/src/main/native/test.sh" todir="${project.build.directory}/native/test" />
                     <exec executable="cmake" dir="${project.build.directory}/native"
                       failonerror="true">
                       <arg line="${basedir}/src/ -DGENERATED_JAVAH=${project.build.directory}/native/javah -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model} -DREQUIRE_SNAPPY=${require.snappy} -DCUSTOM_SNAPPY_PREFIX=${snappy.prefix} -DCUSTOM_SNAPPY_LIB=${snappy.lib} -DCUSTOM_SNAPPY_INCLUDE=${snappy.include}" />
@@ -184,6 +182,20 @@
                     <!-- The second make is a workaround for HADOOP-9215. It can be 
                       removed when version 2.6 of cmake is no longer supported . -->
                     <exec executable="make" dir="${project.build.directory}/native" failonerror="true"></exec>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>native_tests</id>
+                <phase>test</phase>
+                <goals><goal>run</goal></goals>
+                <configuration>
+                  <target>
+                    <exec executable="sh" failonerror="true" dir="${project.build.directory}/native/test">
+                      <arg value="-c"/>
+                      <arg value="[ x$SKIPTESTS = xtrue ] || sh test.sh"/>
+                      <env key="SKIPTESTS" value="${skipTests}"/>
+                    </exec>
                   </target>
                 </configuration>
               </execution>
