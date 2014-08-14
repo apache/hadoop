@@ -20,11 +20,12 @@ package org.apache.hadoop.mapred.nativetask;
 import java.io.IOException;
 import java.util.ServiceLoader;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.nativetask.serde.INativeSerializer;
 import org.apache.hadoop.mapred.nativetask.serde.NativeSerialization;
-import org.apache.log4j.Logger;
 
 
 /**
@@ -34,7 +35,7 @@ import org.apache.log4j.Logger;
  */
 public class Platforms {
 
-  private static final Logger LOG = Logger.getLogger(Platforms.class);
+  private static final Log LOG = LogFactory.getLog(Platforms.class);
   private static final ServiceLoader<Platform> platforms = ServiceLoader.load(Platform.class);
   
   public static void init(Configuration conf) throws IOException {

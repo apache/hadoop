@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Random;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -40,7 +42,8 @@ import org.apache.hadoop.mapred.nativetask.testutil.TestConstants;
 
 
 public class TestInputFile {
-	
+	private static Log LOG = LogFactory.getLog(TestInputFile.class);
+
   public static class KVSizeScope {
     private static final int DefaultMinNum = 1;
     private static final int DefaultMaxNum = 64;
@@ -120,8 +123,8 @@ public class TestInputFile {
   }
   
   public void createSequenceTestFile(String filepath, int base,  byte start) throws Exception {
-    System.out.println("create file " + filepath);
-    System.out.println(keyClsName + " " + valueClsName);
+    LOG.info("create file " + filepath);
+    LOG.info(keyClsName + " " + valueClsName);
     Class<?> tmpkeycls, tmpvaluecls;
     try {
       tmpkeycls = Class.forName(keyClsName);

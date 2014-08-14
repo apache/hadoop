@@ -19,9 +19,12 @@ package org.apache.hadoop.mapred.nativetask.testutil;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.nativetask.NativeMapOutputCollectorDelegator;
 
 public class EnforceNativeOutputCollectorDelegator<K, V> extends NativeMapOutputCollectorDelegator<K, V> {
+  private static final Log LOG = LogFactory.getLog(EnforceNativeOutputCollectorDelegator.class);
   private boolean nativetaskloaded = false;
 
   @Override
@@ -32,8 +35,7 @@ public class EnforceNativeOutputCollectorDelegator<K, V> extends NativeMapOutput
       nativetaskloaded = true;
     } catch (final Exception e) {
       nativetaskloaded = false;
-      System.err.println("load nativetask lib failed, Native-Task Delegation is disabled");
-      e.printStackTrace();
+      LOG.error("load nativetask lib failed, Native-Task Delegation is disabled", e);
     }
   }
 

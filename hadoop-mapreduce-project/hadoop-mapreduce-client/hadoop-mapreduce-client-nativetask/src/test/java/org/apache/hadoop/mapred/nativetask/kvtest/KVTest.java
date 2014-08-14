@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -37,6 +39,8 @@ import org.junit.runners.Parameterized.Parameters;
 
 @RunWith(Parameterized.class)
 public class KVTest {
+  private static final Log LOG = LogFactory.getLog(KVTest.class);
+
   private static Class<?>[] keyclasses = null;
   private static Class<?>[] valueclasses = null;
   private static String[] keyclassNames = null;
@@ -53,7 +57,7 @@ public class KVTest {
   public static Iterable<Class<?>[]> data() {
     final String valueclassesStr = nativekvtestconf
         .get(TestConstants.NATIVETASK_KVTEST_VALUECLASSES);
-    System.out.println(valueclassesStr);
+    LOG.info(valueclassesStr);
     valueclassNames = valueclassesStr.replaceAll("\\s", "").split(";");// delete
     // " "
     final ArrayList<Class<?>> tmpvalueclasses = new ArrayList<Class<?>>();
@@ -69,7 +73,7 @@ public class KVTest {
     }
     valueclasses = tmpvalueclasses.toArray(new Class[tmpvalueclasses.size()]);
     final String keyclassesStr = nativekvtestconf.get(TestConstants.NATIVETASK_KVTEST_KEYCLASSES);
-    System.out.println(keyclassesStr);
+    LOG.info(keyclassesStr);
     keyclassNames = keyclassesStr.replaceAll("\\s", "").split(";");// delete
     // " "
     final ArrayList<Class<?>> tmpkeyclasses = new ArrayList<Class<?>>();

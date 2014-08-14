@@ -21,6 +21,8 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -32,6 +34,7 @@ import org.apache.hadoop.mapred.nativetask.testutil.TestConstants;
 import org.junit.Test;
 
 public class LargeKVTest {
+  private static final Log LOG = LogFactory.getLog(LargeKVTest.class);
 
   @Test
   public void testKeySize() {
@@ -69,8 +72,8 @@ public class LargeKVTest {
         normalConf.set(TestConstants.NATIVETASK_KVSIZE_MIN, String.valueOf(min));
         normalConf.set(TestConstants.NATIVETASK_KVSIZE_MAX, String.valueOf(max));
 
-        System.out.println("===KV Size Test: min size: " + min + ", max size: " + max + ", keyClass: "
-            + keyClass.getName() + ", valueClass: " + valueClass.getName());
+        LOG.info("===KV Size Test: min size: " + min + ", max size: " + max + ", keyClass: "
+          + keyClass.getName() + ", valueClass: " + valueClass.getName());
 
         final String nativeOutPut = runNativeLargeKVTest("Test Large Value Size:" + String.valueOf(i), keyClass,
             valueClass, nativeConf);
