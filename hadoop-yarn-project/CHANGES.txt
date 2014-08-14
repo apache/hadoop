@@ -193,6 +193,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2070. Made DistributedShell publish the short user name to the timeline
     server. (Robert Kanter via zjshen)
 
+    YARN-2397. Avoided loading two authentication filters for RM and TS web
+    interfaces. (Varun Vasudev via zjshen)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
