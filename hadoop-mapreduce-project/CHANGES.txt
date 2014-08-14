@@ -22,6 +22,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-883. harchive: Document how to unarchive (Akira AJISAKA and
       Koji Noguchi via aw)
 
+    MAPREDUCE-4791. Javadoc for KeyValueTextInputFormat should include default 
+      separator and how to change it (Akira AJISAKA via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
