@@ -179,6 +179,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CheckA
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CheckAccessResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.CreateEncryptionZoneResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.CreateEncryptionZoneRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.GetEZForPathResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.GetEZForPathRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ListEncryptionZonesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ListEncryptionZonesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto;
@@ -1313,6 +1315,21 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     try {
       server.createEncryptionZone(req.getSrc(), req.getKeyName());
       return CreateEncryptionZoneResponseProto.newBuilder().build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public GetEZForPathResponseProto getEZForPath(
+      RpcController controller, GetEZForPathRequestProto req)
+      throws ServiceException {
+    try {
+      GetEZForPathResponseProto.Builder builder =
+          GetEZForPathResponseProto.newBuilder();
+      final EncryptionZoneWithId ret = server.getEZForPath(req.getSrc());
+      builder.setZone(PBHelper.convert(ret));
+      return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }

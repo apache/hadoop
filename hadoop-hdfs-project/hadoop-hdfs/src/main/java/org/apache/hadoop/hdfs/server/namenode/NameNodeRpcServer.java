@@ -1433,6 +1433,12 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override
+  public EncryptionZoneWithId getEZForPath(String src)
+    throws IOException {
+    return namesystem.getEZForPath(src);
+  }
+
+  @Override
   public BatchedEntries<EncryptionZoneWithId> listEncryptionZones(
       long prevId) throws IOException {
     return namesystem.listEncryptionZones(prevId);

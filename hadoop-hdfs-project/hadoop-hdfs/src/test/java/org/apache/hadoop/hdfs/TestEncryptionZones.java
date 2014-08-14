@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs;
 
 import java.io.File;
 import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.List;
@@ -64,6 +63,7 @@ import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -332,6 +332,104 @@ public class TestEncryptionZones {
         } catch (AccessControlException e) {
           assertExceptionContains("Superuser privilege is required", e);
         }
+        return null;
+      }
+    });
+  }
+
+  /**
+   * Test getEncryptionZoneForPath as a non super user.
+   */
+  @Test(timeout = 60000)
+  public void testGetEZAsNonSuperUser() throws Exception {
+
+    final UserGroupInformation user = UserGroupInformation.
+            createUserForTesting("user", new String[] { "mygroup" });
+
+    final Path testRoot = new Path(fsHelper.getTestRootDir());
+    final Path superPath = new Path(testRoot, "superuseronly");
+    final Path superPathFile = new Path(superPath, "file1");
+    final Path allPath = new Path(testRoot, "accessall");
+    final Path allPathFile = new Path(allPath, "file1");
+    final Path nonEZDir = new Path(testRoot, "nonEZDir");
+    final Path nonEZFile = new Path(nonEZDir, "file1");
+    final int len = 8192;
+
+    fsWrapper.mkdir(testRoot, new FsPermission((short) 0777), true);
+    fsWrapper.mkdir(superPath, new FsPermission((short) 0700), false);
+    fsWrapper.mkdir(allPath, new FsPermission((short) 0777), false);
+    fsWrapper.mkdir(nonEZDir, new FsPermission((short) 0777), false);
+    dfsAdmin.createEncryptionZone(superPath, TEST_KEY);
+    dfsAdmin.createEncryptionZone(allPath, TEST_KEY);
+    dfsAdmin.allowSnapshot(new Path("/"));
+    final Path newSnap = fs.createSnapshot(new Path("/"));
+    DFSTestUtil.createFile(fs, superPathFile, len, (short) 1, 0xFEED);
+    DFSTestUtil.createFile(fs, allPathFile, len, (short) 1, 0xFEED);
+    DFSTestUtil.createFile(fs, nonEZFile, len, (short) 1, 0xFEED);
+
+    user.doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
+      public Object run() throws Exception {
+        final HdfsAdmin userAdmin =
+            new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
+
+        // Check null arg
+        try {
+          userAdmin.getEncryptionZoneForPath(null);
+          fail("should have thrown NPE");
+        } catch (NullPointerException e) {
+          /*
+           * IWBNI we could use assertExceptionContains, but the NPE that is
+           * thrown has no message text.
+           */
+        }
+
+        // Check operation with accessible paths
+        assertEquals("expected ez path", allPath.toString(),
+            userAdmin.getEncryptionZoneForPath(allPath).getPath().
+            toString());
+        assertEquals("expected ez path", allPath.toString(),
+            userAdmin.getEncryptionZoneForPath(allPathFile).getPath().
+            toString());
+
+        // Check operation with inaccessible (lack of permissions) path
+        try {
+          userAdmin.getEncryptionZoneForPath(superPathFile);
+          fail("expected AccessControlException");
+        } catch (AccessControlException e) {
+          assertExceptionContains("Permission denied:", e);
+        }
+
+        // Check operation with non-ez paths
+        assertNull("expected null for non-ez path",
+            userAdmin.getEncryptionZoneForPath(nonEZDir));
+        assertNull("expected null for non-ez path",
+            userAdmin.getEncryptionZoneForPath(nonEZFile));
+
+        // Check operation with snapshots
+        String snapshottedAllPath = newSnap.toString() + allPath.toString();
+        assertEquals("expected ez path", allPath.toString(),
+            userAdmin.getEncryptionZoneForPath(
+                new Path(snapshottedAllPath)).getPath().toString());
+
+        /*
+         * Delete the file from the non-snapshot and test that it is still ok
+         * in the ez.
+         */
+        fs.delete(allPathFile, false);
+        assertEquals("expected ez path", allPath.toString(),
+            userAdmin.getEncryptionZoneForPath(
+                new Path(snapshottedAllPath)).getPath().toString());
+
+        // Delete the ez and make sure ss's ez is still ok.
+        fs.delete(allPath, true);
+        assertEquals("expected ez path", allPath.toString(),
+            userAdmin.getEncryptionZoneForPath(
+                new Path(snapshottedAllPath)).getPath().toString());
+        assertNull("expected null for deleted file path",
+            userAdmin.getEncryptionZoneForPath(allPathFile));
+        assertNull("expected null for deleted directory path",
+            userAdmin.getEncryptionZoneForPath(allPath));
         return null;
       }
     });

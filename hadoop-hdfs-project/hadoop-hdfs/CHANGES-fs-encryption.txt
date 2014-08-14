@@ -79,6 +79,9 @@ fs-encryption (Unreleased)
     HDFS-6834. Improve the configuration guidance in DFSClient when there 
     are no Codec classes found in configs. (umamahesh)
 
+    HDFS-6546. Add non-superuser capability to get the encryption zone
+    for a specific path. (clamb)
+
   OPTIMIZATIONS
 
   BUG FIXES

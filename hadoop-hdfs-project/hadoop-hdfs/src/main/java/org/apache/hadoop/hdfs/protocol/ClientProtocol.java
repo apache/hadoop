@@ -1276,6 +1276,13 @@ public interface ClientProtocol {
     throws IOException;
 
   /**
+   * Get the encryption zone for a path.
+   */
+  @Idempotent
+  public EncryptionZoneWithId getEZForPath(String src)
+    throws IOException;
+
+  /**
    * Used to implement cursor-based batched listing of {@EncryptionZone}s.
    *
    * @param prevId ID of the last item in the previous batch. If there is no

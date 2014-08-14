@@ -36,6 +36,9 @@ public class EncryptionZoneManager {
   public static Logger LOG = LoggerFactory.getLogger(EncryptionZoneManager
       .class);
 
+  private static final EncryptionZoneWithId NULL_EZ =
+      new EncryptionZoneWithId("", "", -1);
+
   /**
    * EncryptionZoneInt is the internal representation of an encryption zone. The
    * external representation of an EZ is embodied in an EncryptionZone and
@@ -57,7 +60,6 @@ public class EncryptionZoneManager {
     long getINodeId() {
       return inodeId;
     }
-
   }
 
   private final TreeMap<Long, EncryptionZoneInt> encryptionZones;
@@ -162,6 +164,23 @@ public class EncryptionZoneManager {
       }
     }
     return null;
+  }
+
+  /**
+   * Returns an EncryptionZoneWithId representing the ez for a given path.
+   * Returns an empty marker EncryptionZoneWithId if path is not in an ez.
+   *
+   * @param iip The INodesInPath of the path to check
+   * @return the EncryptionZoneWithId representing the ez for the path.
+   */
+  EncryptionZoneWithId getEZINodeForPath(INodesInPath iip) {
+    final EncryptionZoneInt ezi = getEncryptionZoneForPath(iip);
+    if (ezi == null) {
+      return NULL_EZ;
+    } else {
+      return new EncryptionZoneWithId(getFullPathName(ezi), ezi.getKeyName(),
+          ezi.getINodeId());
+    }
   }
 
   /**

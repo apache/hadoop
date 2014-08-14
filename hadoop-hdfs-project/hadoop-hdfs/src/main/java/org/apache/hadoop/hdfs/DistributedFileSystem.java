@@ -1806,6 +1806,13 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /* HDFS only */
+  public EncryptionZone getEZForPath(Path path)
+          throws IOException {
+    Preconditions.checkNotNull(path);
+    return dfs.getEZForPath(getPathName(path));
+  }
+
+  /* HDFS only */
   public RemoteIterator<EncryptionZone> listEncryptionZones()
       throws IOException {
     return dfs.listEncryptionZones();

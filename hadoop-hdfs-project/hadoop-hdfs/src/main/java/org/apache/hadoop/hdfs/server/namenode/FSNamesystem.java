@@ -8571,6 +8571,41 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     logAuditEvent(true, "createEncryptionZone", srcArg, null, resultingStat);
   }
 
+  /**
+   * Get the encryption zone for the specified path.
+   *
+   * @param srcArg the path of a file or directory to get the EZ for.
+   * @return the EZ of the of the path or null if none.
+   * @throws AccessControlException  if the caller is not the superuser.
+   * @throws UnresolvedLinkException if the path can't be resolved.
+   */
+  EncryptionZoneWithId getEZForPath(final String srcArg)
+    throws AccessControlException, UnresolvedLinkException, IOException {
+    String src = srcArg;
+    HdfsFileStatus resultingStat = null;
+    final byte[][] pathComponents =
+        FSDirectory.getPathComponentsForReservedPath(src);
+    boolean success = false;
+    final FSPermissionChecker pc = getPermissionChecker();
+    checkOperation(OperationCategory.READ);
+    readLock();
+    try {
+      if (isPermissionEnabled) {
+        checkPathAccess(pc, src, FsAction.READ);
+      }
+      checkOperation(OperationCategory.READ);
+      src = resolvePath(src, pathComponents);
+      final INodesInPath iip = dir.getINodesInPath(src, true);
+      final EncryptionZoneWithId ret = dir.getEZForPath(iip);
+      resultingStat = getAuditFileInfo(src, false);
+      success = true;
+      return ret;
+    } finally {
+      readUnlock();
+      logAuditEvent(success, "getEZForPath", srcArg, null, resultingStat);
+    }
+  }
+
   BatchedListEntries<EncryptionZoneWithId> listEncryptionZones(long prevId)
       throws IOException {
     boolean success = false;

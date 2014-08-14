@@ -799,4 +799,6 @@ service ClientNamenodeProtocol {
       returns(CreateEncryptionZoneResponseProto);
   rpc listEncryptionZones(ListEncryptionZonesRequestProto)
       returns(ListEncryptionZonesResponseProto);
+  rpc getEZForPath(GetEZForPathRequestProto)
+      returns(GetEZForPathResponseProto);
 }

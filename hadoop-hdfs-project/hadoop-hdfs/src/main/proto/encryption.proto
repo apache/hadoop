@@ -55,3 +55,11 @@ message ListEncryptionZonesResponseProto {
   repeated EncryptionZoneWithIdProto zones = 1;
   required bool hasMore = 2;
 }
+
+message GetEZForPathRequestProto {
+    required string src = 1;
+}
+
+message GetEZForPathResponseProto {
+    required EncryptionZoneWithIdProto zone = 1;
+}

@@ -2640,6 +2640,15 @@ public class FSDirectory implements Closeable {
     }
   }
 
+  EncryptionZoneWithId getEZForPath(INodesInPath iip) {
+    readLock();
+    try {
+      return ezManager.getEZINodeForPath(iip);
+    } finally {
+      readUnlock();
+    }
+  }
+
   BatchedListEntries<EncryptionZoneWithId> listEncryptionZones(long prevId)
       throws IOException {
     readLock();
