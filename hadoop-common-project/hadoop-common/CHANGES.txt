@@ -145,6 +145,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10843. TestGridmixRecord unit tests failure on PowerPC (Jinghui Wang
     via Colin Patrick McCabe)
 
+    HADOOP-10121. Fix javadoc spelling for HadoopArchives#writeTopLevelDirs
+      (Akira AJISAKA via aw)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
