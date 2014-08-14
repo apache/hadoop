@@ -14,3 +14,4 @@ MAPREDUCE-5976. native-task: should not fail to build if snappy is missing (Manu
 MAPREDUCE-5978. native-task: remove test case for not supported codec Bzip2Codec and DefaultCodec (Manu Zhang)
 MAPREDUCE-6006. native-task: add native tests to maven and fix bug in pom.xml (Binglin Chang via todd)
 MAPREDUCE-6026. native-task: fix logging (Manu Zhang via todd)
+MAPREDUCE-6035. native-task: sources/test-sources jar distribution (Manu Zhang via todd)
