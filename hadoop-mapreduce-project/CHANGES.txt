@@ -89,6 +89,9 @@ Trunk (Unreleased)
     MAPREDUCE-883. harchive: Document how to unarchive (Akira AJISAKA and
       Koji Noguchi via aw)
 
+    MAPREDUCE-4791. Javadoc for KeyValueTextInputFormat should include default 
+      separator and how to change it (Akira AJISAKA via aw)
+
   BUG FIXES
 
     MAPREDUCE-5714. Removed forceful JVM exit in shutDownJob.  
