@@ -21,12 +21,19 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.argThat;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.isA;
+import static org.mockito.Mockito.spy;
 
 import java.io.File;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.v2.api.MRDelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryServerStateStoreService.HistoryServerState;
@@ -35,6 +42,7 @@ import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentMatcher;
 
 public class TestHistoryServerFileSystemStateStoreService {
 
@@ -74,8 +82,8 @@ public class TestHistoryServerFileSystemStateStoreService {
     return store;
   }
 
-  @Test
-  public void testTokenStore() throws IOException {
+  private void testTokenStore(String stateStoreUri) throws IOException {
+    conf.set(JHAdminConfig.MR_HS_FS_STATE_STORE_URI, stateStoreUri);
     HistoryServerStateStoreService store = createAndStartStore();
 
     HistoryServerState state = store.loadState();
@@ -160,5 +168,78 @@ public class TestHistoryServerFileSystemStateStoreService {
         state.tokenMasterKeyState.contains(key2));
     assertTrue("missing master key 3",
         state.tokenMasterKeyState.contains(key3));
+  }
+
+  @Test
+  public void testTokenStore() throws IOException {
+    testTokenStore(testDir.getAbsoluteFile().toURI().toString());
+  }
+
+  @Test
+  public void testTokenStoreHdfs() throws IOException {
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    conf = cluster.getConfiguration(0);
+    try {
+      testTokenStore("/tmp/historystore");
+    } finally {
+        cluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testUpdatedTokenRecovery() throws IOException {
+    IOException intentionalErr = new IOException("intentional error");
+    FileSystem fs = FileSystem.getLocal(conf);
+    final FileSystem spyfs = spy(fs);
+    // make the update token process fail halfway through where we're left
+    // with just the temporary update file and no token file
+    ArgumentMatcher<Path> updateTmpMatcher = new ArgumentMatcher<Path>() {
+      @Override
+      public boolean matches(Object argument) {
+        if (argument instanceof Path) {
+          return ((Path) argument).getName().startsWith("update");
+        }
+        return false;
+      }
+    };
+    doThrow(intentionalErr)
+        .when(spyfs).rename(argThat(updateTmpMatcher), isA(Path.class));
+
+    conf.set(JHAdminConfig.MR_HS_FS_STATE_STORE_URI,
+        testDir.getAbsoluteFile().toURI().toString());
+    HistoryServerStateStoreService store =
+        new HistoryServerFileSystemStateStoreService() {
+          @Override
+          FileSystem createFileSystem() throws IOException {
+            return spyfs;
+          }
+    };
+    store.init(conf);
+    store.start();
+
+    final MRDelegationTokenIdentifier token1 =
+        new MRDelegationTokenIdentifier(new Text("tokenOwner1"),
+            new Text("tokenRenewer1"), new Text("tokenUser1"));
+    token1.setSequenceNumber(1);
+    final Long tokenDate1 = 1L;
+    store.storeToken(token1, tokenDate1);
+    final Long newTokenDate1 = 975318642L;
+    try {
+      store.updateToken(token1, newTokenDate1);
+      fail("intentional error not thrown");
+    } catch (IOException e) {
+      assertEquals(intentionalErr, e);
+    }
+    store.close();
+
+    // verify the update file is seen and parsed upon recovery when
+    // original token file is missing
+    store = createAndStartStore();
+    HistoryServerState state = store.loadState();
+    assertEquals("incorrect loaded token count", 1, state.tokenState.size());
+    assertTrue("missing token 1", state.tokenState.containsKey(token1));
+    assertEquals("incorrect token 1 date", newTokenDate1,
+        state.tokenState.get(token1));
+    store.close();
   }
 }

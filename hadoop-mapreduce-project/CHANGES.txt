@@ -202,6 +202,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6021. MR AM should have working directory in LD_LIBRARY_PATH
     (jlowe)
 
+    MAPREDUCE-6010. HistoryServerFileSystemStateStore fails to update tokens
+    (jlowe)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
