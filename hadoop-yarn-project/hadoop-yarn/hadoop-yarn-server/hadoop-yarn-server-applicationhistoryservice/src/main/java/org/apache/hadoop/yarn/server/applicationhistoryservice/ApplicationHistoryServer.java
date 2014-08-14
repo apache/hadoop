@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.applicationhistoryservice;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -27,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.service.Service;
@@ -195,14 +197,31 @@ public class ApplicationHistoryServer extends CompositeService {
     // the customized filter will be loaded by the timeline server to do Kerberos
     // + DT authentication.
     String initializers = conf.get("hadoop.http.filter.initializers");
+
     initializers =
-        initializers == null || initializers.length() == 0 ? "" : ","
-            + initializers;
-    if (!initializers.contains(
-        TimelineAuthenticationFilterInitializer.class.getName())) {
-      conf.set("hadoop.http.filter.initializers",
-          TimelineAuthenticationFilterInitializer.class.getName()
-              + initializers);
+        initializers == null || initializers.length() == 0 ? "" : initializers;
+
+    if (!initializers.contains(TimelineAuthenticationFilterInitializer.class
+      .getName())) {
+      initializers =
+          TimelineAuthenticationFilterInitializer.class.getName() + ","
+              + initializers;
+    }
+
+    String[] parts = initializers.split(",");
+    ArrayList<String> target = new ArrayList<String>();
+    for (String filterInitializer : parts) {
+      filterInitializer = filterInitializer.trim();
+      if (filterInitializer.equals(AuthenticationFilterInitializer.class
+        .getName())) {
+        continue;
+      }
+      target.add(filterInitializer);
+    }
+    String actualInitializers =
+        org.apache.commons.lang.StringUtils.join(target, ",");
+    if (!actualInitializers.equals(initializers)) {
+      conf.set("hadoop.http.filter.initializers", actualInitializers);
     }
     String bindAddress = WebAppUtils.getWebAppBindURL(conf,
                           YarnConfiguration.TIMELINE_SERVICE_BIND_HOST,
