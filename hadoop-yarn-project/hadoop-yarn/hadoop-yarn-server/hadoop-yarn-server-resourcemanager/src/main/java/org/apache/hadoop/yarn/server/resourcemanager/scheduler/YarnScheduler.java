@@ -212,4 +212,12 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * @throws YarnException
    */
   void moveAllApps(String sourceQueue, String destQueue) throws YarnException;
+
+  /**
+   * Terminate all applications in the specified queue.
+   *
+   * @param queueName the name of queue to be drained
+   * @throws YarnException
+   */
+  void killAllAppsInQueue(String queueName) throws YarnException;
 }

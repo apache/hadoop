@@ -140,6 +140,9 @@ Release 2.6.0 - UNRELEASED
     YARN-1370. Fair scheduler to re-populate container allocation state. 
     (Anubhav Dhoot via kasha)
 
+    YARN-2389. Added functionality for schedulers to kill all applications in a
+    queue. (Subramaniam Venkatraman Krishnan via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
