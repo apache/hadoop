@@ -151,6 +151,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10121. Fix javadoc spelling for HadoopArchives#writeTopLevelDirs
       (Akira AJISAKA via aw)
 
+    HADOOP-10964. Small fix for NetworkTopologyWithNodeGroup#sortByDistance.
+    (Yi Liu via wang)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
