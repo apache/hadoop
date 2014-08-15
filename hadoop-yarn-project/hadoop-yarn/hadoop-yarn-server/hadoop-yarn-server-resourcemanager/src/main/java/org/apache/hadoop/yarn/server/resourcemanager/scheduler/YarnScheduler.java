@@ -202,4 +202,14 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   @Evolving
   public String moveApplication(ApplicationId appId, String newQueue)
       throws YarnException;
+
+  /**
+   * Completely drain sourceQueue of applications, by moving all of them to
+   * destQueue.
+   *
+   * @param sourceQueue
+   * @param destQueue
+   * @throws YarnException
+   */
+  void moveAllApps(String sourceQueue, String destQueue) throws YarnException;
 }

@@ -166,6 +166,8 @@ public class RMAppImpl implements RMApp, Recoverable {
         RMAppEventType.APP_REJECTED,
           new FinalSavingTransition(new AppRejectedTransition(),
             RMAppState.FAILED))
+    .addTransition(RMAppState.NEW_SAVING, RMAppState.NEW_SAVING,
+        RMAppEventType.MOVE, new RMAppMoveTransition())
 
      // Transitions from SUBMITTED state
     .addTransition(RMAppState.SUBMITTED, RMAppState.SUBMITTED,
@@ -243,7 +245,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     // ignorable transitions
     .addTransition(RMAppState.FINAL_SAVING, RMAppState.FINAL_SAVING,
         EnumSet.of(RMAppEventType.NODE_UPDATE, RMAppEventType.KILL,
-          RMAppEventType.APP_NEW_SAVED))
+          RMAppEventType.APP_NEW_SAVED, RMAppEventType.MOVE))
 
      // Transitions from FINISHING state
     .addTransition(RMAppState.FINISHING, RMAppState.FINISHED,
@@ -254,9 +256,9 @@ public class RMAppImpl implements RMApp, Recoverable {
     // ignorable transitions
     .addTransition(RMAppState.FINISHING, RMAppState.FINISHING,
       EnumSet.of(RMAppEventType.NODE_UPDATE,
-        // ignore Kill as we have already saved the final Finished state in
-        // state store.
-        RMAppEventType.KILL))
+        // ignore Kill/Move as we have already saved the final Finished state
+        // in state store.
+        RMAppEventType.KILL, RMAppEventType.MOVE))
 
      // Transitions from KILLING state
     .addTransition(RMAppState.KILLING, RMAppState.KILLING, 
@@ -274,7 +276,7 @@ public class RMAppImpl implements RMApp, Recoverable {
             RMAppEventType.ATTEMPT_FINISHED,
             RMAppEventType.ATTEMPT_FAILED,
             RMAppEventType.APP_UPDATE_SAVED,
-            RMAppEventType.KILL))
+            RMAppEventType.KILL, RMAppEventType.MOVE))
 
      // Transitions from FINISHED state
      // ignorable transitions
@@ -286,7 +288,7 @@ public class RMAppImpl implements RMApp, Recoverable {
             RMAppEventType.NODE_UPDATE,
             RMAppEventType.ATTEMPT_UNREGISTERED,
             RMAppEventType.ATTEMPT_FINISHED,
-            RMAppEventType.KILL))
+            RMAppEventType.KILL, RMAppEventType.MOVE))
 
      // Transitions from FAILED state
      // ignorable transitions
@@ -294,7 +296,8 @@ public class RMAppImpl implements RMApp, Recoverable {
         RMAppEventType.APP_RUNNING_ON_NODE,
         new AppRunningOnNodeTransition())
     .addTransition(RMAppState.FAILED, RMAppState.FAILED,
-        EnumSet.of(RMAppEventType.KILL, RMAppEventType.NODE_UPDATE))
+        EnumSet.of(RMAppEventType.KILL, RMAppEventType.NODE_UPDATE,
+            RMAppEventType.MOVE))
 
      // Transitions from KILLED state
      // ignorable transitions
@@ -307,7 +310,7 @@ public class RMAppImpl implements RMApp, Recoverable {
         EnumSet.of(RMAppEventType.APP_ACCEPTED,
             RMAppEventType.APP_REJECTED, RMAppEventType.KILL,
             RMAppEventType.ATTEMPT_FINISHED, RMAppEventType.ATTEMPT_FAILED,
-            RMAppEventType.NODE_UPDATE))
+            RMAppEventType.NODE_UPDATE, RMAppEventType.MOVE))
 
      .installTopology();
 
