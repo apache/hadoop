@@ -435,9 +435,6 @@ Trunk (Unreleased)
     HADOOP-10862. Miscellaneous trivial corrections to KMS classes. 
     (asuresh via tucu)
 
-    HADOOP-10121. Fix javadoc spelling for HadoopArchives#writeTopLevelDirs
-      (Akira AJISAKA via aw)
-
     HADOOP-10967. Improve DefaultCryptoExtension#generateEncryptedKey 
     performance. (hitliuyi via tucu)
 
@@ -593,6 +590,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10843. TestGridmixRecord unit tests failure on PowerPC (Jinghui Wang
     via Colin Patrick McCabe)
+
+    HADOOP-10121. Fix javadoc spelling for HadoopArchives#writeTopLevelDirs
+    (Akira AJISAKA via aw)
 
     HADOOP-10964. Small fix for NetworkTopologyWithNodeGroup#sortByDistance.
     (Yi Liu via wang)
