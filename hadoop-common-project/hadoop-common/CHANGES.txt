@@ -438,6 +438,9 @@ Trunk (Unreleased)
     HADOOP-10121. Fix javadoc spelling for HadoopArchives#writeTopLevelDirs
       (Akira AJISAKA via aw)
 
+    HADOOP-10967. Improve DefaultCryptoExtension#generateEncryptedKey 
+    performance. (hitliuyi via tucu)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
