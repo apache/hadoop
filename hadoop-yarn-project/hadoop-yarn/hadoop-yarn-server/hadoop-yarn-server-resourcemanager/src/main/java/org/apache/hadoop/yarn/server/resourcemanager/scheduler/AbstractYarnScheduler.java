@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -40,6 +41,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMoveEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
@@ -47,6 +49,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerReco
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
+
+import com.google.common.util.concurrent.SettableFuture;
 
 @SuppressWarnings("unchecked")
 public abstract class AbstractYarnScheduler
@@ -316,5 +320,32 @@ public abstract class AbstractYarnScheduler
 
   public SchedulerNode getSchedulerNode(NodeId nodeId) {
     return nodes.get(nodeId);
+  }
+
+  @Override
+  public synchronized void moveAllApps(String sourceQueue, String destQueue)
+      throws YarnException {
+    // check if destination queue is a valid leaf queue
+    try {
+      getQueueInfo(destQueue, false, false);
+    } catch (IOException e) {
+      LOG.warn(e);
+      throw new YarnException(e);
+    }
+    // check if source queue is a valid
+    List<ApplicationAttemptId> apps = getAppsInQueue(sourceQueue);
+    if (apps == null) {
+      String errMsg = "The specified Queue: " + sourceQueue + " doesn't exist";
+      LOG.warn(errMsg);
+      throw new YarnException(errMsg);
+    }
+    // generate move events for each pending/running app
+    for (ApplicationAttemptId app : apps) {
+      SettableFuture<Object> future = SettableFuture.create();
+      this.rmContext
+          .getDispatcher()
+          .getEventHandler()
+          .handle(new RMAppMoveEvent(app.getApplicationId(), destQueue, future));
+    }
   }
 }
