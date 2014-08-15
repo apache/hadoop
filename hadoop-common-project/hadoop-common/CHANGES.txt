@@ -594,6 +594,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10843. TestGridmixRecord unit tests failure on PowerPC (Jinghui Wang
     via Colin Patrick McCabe)
 
+    HADOOP-10964. Small fix for NetworkTopologyWithNodeGroup#sortByDistance.
+    (Yi Liu via wang)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
