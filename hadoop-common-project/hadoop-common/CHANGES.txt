@@ -210,6 +210,8 @@ Trunk (Unreleased)
 
     HADOOP-10770. KMS add delegation token support. (tucu)
 
+    HADOOP-10698. KMS, add proxyuser support. (tucu)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
