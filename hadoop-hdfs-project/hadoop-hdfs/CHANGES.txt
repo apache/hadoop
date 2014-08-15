@@ -144,6 +144,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6849. Replace HttpFS custom proxyuser handling with common 
     implementation. (tucu)
 
+    HDFS-6850. Move NFS out of order write unit tests into TestWrites class.
+    (Zhe Zhang via atm)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
