@@ -236,6 +236,34 @@
           </plugin>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>dist</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <echo file="${project.build.directory}/dist-copynativelibs.sh">
+                      LIB_DIR="${mr.basedir}/hadoop-mapreduce-client/hadoop-mapreduce-client-nativetask/target/native/target/usr/local/lib"
+                      if [ -d $${LIB_DIR} ] ; then
+                        TARGET_DIR="${project.build.directory}/${project.artifactId}-${project.version}/lib/native"
+                        mkdir -p $${TARGET_DIR}
+                        cp -R $${LIB_DIR}/lib* $${TARGET_DIR}
+                      fi
+                    </echo>
+                    <exec executable="sh" dir="${project.build.directory}" failonerror="true">
+                      <arg line="./dist-copynativelibs.sh"/>
+                    </exec>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-assembly-plugin</artifactId>
             <dependencies>
               <dependency>
