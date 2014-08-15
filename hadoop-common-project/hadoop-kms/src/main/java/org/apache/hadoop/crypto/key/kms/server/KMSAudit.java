@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
+import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,7 +30,6 @@ import com.google.common.cache.RemovalNotification;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-import java.security.Principal;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -186,22 +186,22 @@ public class KMSAudit {
     }
   }
 
-  public void ok(Principal user, KMS.KMSOp op, String key,
+  public void ok(UserGroupInformation user, KMS.KMSOp op, String key,
       String extraMsg) {
-    op(OpStatus.OK, op, user.getName(), key, extraMsg);
+    op(OpStatus.OK, op, user.getShortUserName(), key, extraMsg);
   }
 
-  public void ok(Principal user, KMS.KMSOp op, String extraMsg) {
-    op(OpStatus.OK, op, user.getName(), null, extraMsg);
+  public void ok(UserGroupInformation user, KMS.KMSOp op, String extraMsg) {
+    op(OpStatus.OK, op, user.getShortUserName(), null, extraMsg);
   }
 
-  public void unauthorized(Principal user, KMS.KMSOp op, String key) {
-    op(OpStatus.UNAUTHORIZED, op, user.getName(), key, "");
+  public void unauthorized(UserGroupInformation user, KMS.KMSOp op, String key) {
+    op(OpStatus.UNAUTHORIZED, op, user.getShortUserName(), key, "");
   }
 
-  public void error(Principal user, String method, String url,
+  public void error(UserGroupInformation user, String method, String url,
       String extraMsg) {
-    op(OpStatus.ERROR, null, user.getName(), null, "Method:'" + method
+    op(OpStatus.ERROR, null, user.getShortUserName(), null, "Method:'" + method
         + "' Exception:'" + extraMsg + "'");
   }
 

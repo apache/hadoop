@@ -22,15 +22,17 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
+import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.ProviderUtils;
-import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
-import org.apache.hadoop.security.authentication.client.PseudoAuthenticator;
 import org.apache.hadoop.security.ssl.SSLFactory;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
 import org.apache.http.client.utils.URIBuilder;
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -69,7 +71,10 @@ import com.google.common.base.Preconditions;
  * KMS client <code>KeyProvider</code> implementation.
  */
 @InterfaceAudience.Private
-public class KMSClientProvider extends KeyProvider implements CryptoExtension {
+public class KMSClientProvider extends KeyProvider implements CryptoExtension,
+    KeyProviderDelegationTokenExtension.DelegationTokenExtension {
+
+  public static final String TOKEN_KIND = "kms-dt";
 
   public static final String SCHEME_NAME = "kms";
 
@@ -229,6 +234,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension {
   private String kmsUrl;
   private SSLFactory sslFactory;
   private ConnectionConfigurator configurator;
+  private DelegationTokenAuthenticatedURL.Token authToken;
 
   @Override
   public String toString() {
@@ -309,6 +315,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension {
                 CommonConfigurationKeysPublic.
                     KMS_CLIENT_ENC_KEY_CACHE_NUM_REFILL_THREADS_DEFAULT),
             new EncryptedQueueRefiller());
+    authToken = new DelegationTokenAuthenticatedURL.Token();
   }
 
   private String createServiceURL(URL url) throws IOException {
@@ -325,12 +332,14 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension {
     try {
       StringBuilder sb = new StringBuilder();
       sb.append(kmsUrl);
-      sb.append(collection);
-      if (resource != null) {
-        sb.append("/").append(URLEncoder.encode(resource, UTF8));
-      }
-      if (subResource != null) {
-        sb.append("/").append(subResource);
+      if (collection != null) {
+        sb.append(collection);
+        if (resource != null) {
+          sb.append("/").append(URLEncoder.encode(resource, UTF8));
+          if (subResource != null) {
+            sb.append("/").append(subResource);
+          }
+        }
       }
       URIBuilder uriBuilder = new URIBuilder(sb.toString());
       if (parameters != null) {
@@ -369,9 +378,9 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension {
       throws IOException {
     HttpURLConnection conn;
     try {
-      AuthenticatedURL authUrl = new AuthenticatedURL(new PseudoAuthenticator(),
-          configurator);
-      conn = authUrl.openConnection(url, new AuthenticatedURL.Token());
+      DelegationTokenAuthenticatedURL authUrl =
+          new DelegationTokenAuthenticatedURL(configurator);
+      conn = authUrl.openConnection(url, authToken);
     } catch (AuthenticationException ex) {
       throw new IOException(ex);
     }
@@ -727,6 +736,27 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension {
     } catch (ExecutionException e) {
       throw new IOException(e);
     }
+  }
+
+  @Override
+  public Token<?>[] addDelegationTokens(String renewer,
+      Credentials credentials) throws IOException {
+    Token<?>[] tokens;
+    URL url = createURL(null, null, null, null);
+    DelegationTokenAuthenticatedURL authUrl =
+        new DelegationTokenAuthenticatedURL(configurator);
+    try {
+      Token<?> token = authUrl.getDelegationToken(url, authToken, renewer);
+      if (token != null) {
+        credentials.addToken(token.getService(), token);
+        tokens = new Token<?>[] { token };
+      } else {
+        throw new IOException("Got NULL as delegation token");
+      }
+    } catch (AuthenticationException ex) {
+      throw new IOException(ex);
+    }
+    return tokens;
   }
 
 }

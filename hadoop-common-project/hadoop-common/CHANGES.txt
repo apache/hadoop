@@ -208,6 +208,8 @@ Trunk (Unreleased)
     HADOOP-10231. Add some components in Native Libraries document (Akira 
       AJISAKA via aw)
 
+    HADOOP-10770. KMS add delegation token support. (tucu)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.

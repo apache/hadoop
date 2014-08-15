@@ -23,6 +23,7 @@ import com.sun.jersey.api.container.ContainerException;
 
 import org.apache.hadoop.crypto.key.kms.KMSRESTConstants;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.slf4j.Logger;
@@ -34,7 +35,6 @@ import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
 import java.io.IOException;
-import java.security.Principal;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -102,7 +102,7 @@ public class KMSExceptionsProvider implements ExceptionMapper<Exception> {
       status = Response.Status.INTERNAL_SERVER_ERROR;
     }
     if (doAudit) {
-      KMSWebApp.getKMSAudit().error(KMSMDCFilter.getPrincipal(),
+      KMSWebApp.getKMSAudit().error(KMSMDCFilter.getUgi(),
           KMSMDCFilter.getMethod(),
           KMSMDCFilter.getURL(), getOneLineMessage(exception));
     }
@@ -110,11 +110,11 @@ public class KMSExceptionsProvider implements ExceptionMapper<Exception> {
   }
 
   protected void log(Response.Status status, Throwable ex) {
-    Principal principal = KMSMDCFilter.getPrincipal();
+    UserGroupInformation ugi = KMSMDCFilter.getUgi();
     String method = KMSMDCFilter.getMethod();
     String url = KMSMDCFilter.getURL();
     String msg = getOneLineMessage(ex);
-    LOG.warn("User:{} Method:{} URL:{} Response:{}-{}", principal, method, url,
+    LOG.warn("User:'{}' Method:{} URL:{} Response:{}-{}", ugi, method, url,
         status, msg, ex);
   }
 
