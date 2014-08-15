@@ -224,6 +224,9 @@ Release 2.6.0 - UNRELEASED
 
     MAPREDUCE-5999. Fix dead link in InputFormat javadoc (Akira AJISAKA via aw)
 
+    MAPREDUCE-6032. Made MR jobs write job history files on the default FS when
+    the current context’s FS is different. (Benjamin Zhitomirsky via zjshen)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
