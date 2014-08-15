@@ -86,15 +86,6 @@ Trunk (Unreleased)
     MAPREDUCE-6019. MapReduce changes for exposing YARN/MR endpoints on multiple
     interfaces. (Craig Welch, Milan Potocnik, Arpit Agarwal via xgong)
 
-    MAPREDUCE-883. harchive: Document how to unarchive (Akira AJISAKA and
-      Koji Noguchi via aw)
-
-    MAPREDUCE-4791. Javadoc for KeyValueTextInputFormat should include default 
-      separator and how to change it (Akira AJISAKA via aw)
-
-    MAPREDUCE-5906. Inconsistent configuration in property 
-      "mapreduce.reduce.shuffle.input.buffer.percent" (Akira AJISAKA via aw)
-
   BUG FIXES
 
     MAPREDUCE-5714. Removed forceful JVM exit in shutDownJob.  
@@ -160,28 +151,6 @@ Trunk (Unreleased)
     MAPREDUCE-5867. Fix NPE in KillAMPreemptionPolicy related to 
     ProportionalCapacityPreemptionPolicy (Sunil G via devaraj)
 
-    MAPREDUCE-5944. Remove MRv1 commands from CommandsManual.apt.vm 
-      (Akira AJISAKA via aw)
-
-    MAPREDUCE-5943. Separate mapred commands from CommandManual.apt.vm
-      (Akira AJISAKA via aw)
-
-    MAPREDUCE-5363. Fix doc and spelling for TaskCompletionEvent#getTaskStatus 
-      and getStatus (Akira AJISAKA via aw)
-
-    MAPREDUCE-5595. Typo in MergeManagerImpl.java (Akira AJISAKA via aw)
-
-    MAPREDUCE-5597. Missing alternatives in javadocs for deprecated constructors 
-      in mapreduce.Job (Akira AJISAKA via aw)
-
-    MAPREDUCE-5950. incorrect description in distcp2 document (Akira AJISAKA 
-      via aw)
-
-    MAPREDUCE-5998. CompositeInputFormat javadoc is broken (Akira AJISAKA via
-      aw)
-
-    MAPREDUCE-5999. Fix dead link in InputFormat javadoc (Akira AJISAKA via aw)
-
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -195,6 +164,15 @@ Release 2.6.0 - UNRELEASED
 
     MAPREDUCE-5963. ShuffleHandler DB schema should be versioned with
     compatible/incompatible changes (Junping Du via jlowe)
+
+    MAPREDUCE-883. harchive: Document how to unarchive (Akira AJISAKA and
+      Koji Noguchi via aw)
+
+    MAPREDUCE-4791. Javadoc for KeyValueTextInputFormat should include default
+      separator and how to change it (Akira AJISAKA via aw)
+
+    MAPREDUCE-5906. Inconsistent configuration in property
+      "mapreduce.reduce.shuffle.input.buffer.percent" (Akira AJISAKA via aw)
 
   OPTIMIZATIONS
 
@@ -223,6 +201,28 @@ Release 2.6.0 - UNRELEASED
 
     MAPREDUCE-5878. some standard JDK APIs are not part of system classes
     defaults (Sangjin Lee via jlowe)
+
+    MAPREDUCE-5944. Remove MRv1 commands from CommandsManual.apt.vm
+      (Akira AJISAKA via aw)
+
+    MAPREDUCE-5943. Separate mapred commands from CommandManual.apt.vm
+      (Akira AJISAKA via aw)
+
+    MAPREDUCE-5363. Fix doc and spelling for TaskCompletionEvent#getTaskStatus
+      and getStatus (Akira AJISAKA via aw)
+
+    MAPREDUCE-5595. Typo in MergeManagerImpl.java (Akira AJISAKA via aw)
+
+    MAPREDUCE-5597. Missing alternatives in javadocs for deprecated constructors
+     in mapreduce.Job (Akira AJISAKA via aw)
+
+    MAPREDUCE-5950. incorrect description in distcp2 document (Akira AJISAKA
+      via aw)
+
+    MAPREDUCE-5998. CompositeInputFormat javadoc is broken (Akira AJISAKA via
+      aw)
+
+    MAPREDUCE-5999. Fix dead link in InputFormat javadoc (Akira AJISAKA via aw)
 
 Release 2.5.0 - UNRELEASED
 
