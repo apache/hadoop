@@ -78,6 +78,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5878. some standard JDK APIs are not part of system classes
     defaults (Sangjin Lee via jlowe)
 
+    MAPREDUCE-6032. Made MR jobs write job history files on the default FS when
+    the current context's FS is different. (Benjamin Zhitomirsky via zjshen)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
