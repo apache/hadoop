@@ -122,6 +122,9 @@ Release 2.6.0 - UNRELEASED
     YARN-1918. Typo in description and error message for 
       'yarn.resourcemanager.cluster-id' (Anandha L Ranganathan via aw)
 
+    YARN-2389. Added functionality for schedulers to kill all applications in a
+    queue. (Subramaniam Venkatraman Krishnan via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES

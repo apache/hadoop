@@ -41,6 +41,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMoveEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -346,6 +348,25 @@ public abstract class AbstractYarnScheduler
           .getDispatcher()
           .getEventHandler()
           .handle(new RMAppMoveEvent(app.getApplicationId(), destQueue, future));
+    }
+  }
+
+  @Override
+  public synchronized void killAllAppsInQueue(String queueName)
+      throws YarnException {
+    // check if queue is a valid
+    List<ApplicationAttemptId> apps = getAppsInQueue(queueName);
+    if (apps == null) {
+      String errMsg = "The specified Queue: " + queueName + " doesn't exist";
+      LOG.warn(errMsg);
+      throw new YarnException(errMsg);
+    }
+    // generate kill events for each pending/running app
+    for (ApplicationAttemptId app : apps) {
+      this.rmContext
+          .getDispatcher()
+          .getEventHandler()
+          .handle(new RMAppEvent(app.getApplicationId(), RMAppEventType.KILL));
     }
   }
 }
