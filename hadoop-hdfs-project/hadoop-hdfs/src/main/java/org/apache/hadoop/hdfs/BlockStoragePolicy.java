@@ -27,6 +27,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.XAttr.NameSpace;
 
 /**
  * A block storage policy describes how to select the storage types
@@ -44,9 +46,13 @@ public class BlockStoragePolicy {
       = "dfs.block.storage.policy.creation-fallback.";
   public static final String DFS_BLOCK_STORAGE_POLICY_REPLICATION_FALLBACK_KEY_PREFIX
       = "dfs.block.storage.policy.replication-fallback.";
+  public static final String STORAGE_POLICY_XATTR_NAME = "bsp";
+  /** set the namespace to TRUSTED so that only privilege users can access */
+  public static final NameSpace XAttrNS = NameSpace.TRUSTED;
 
   public static final int ID_BIT_LENGTH = 4;
   public static final int ID_MAX = (1 << ID_BIT_LENGTH) - 1;
+  public static final byte ID_UNSPECIFIED = 0;
 
   /** A block storage policy suite. */
   public static class Suite {
@@ -297,6 +303,20 @@ public class BlockStoragePolicy {
       throwIllegalArgumentException("Empty list is not allowed", conf);
     }
     return new Suite(firstID, policies);
+  }
+
+  public static String buildXAttrName() {
+    return XAttrNS.toString().toLowerCase() + "." + STORAGE_POLICY_XATTR_NAME;
+  }
+
+  public static XAttr buildXAttr(byte policyId) {
+    final String name = buildXAttrName();
+    return XAttrHelper.buildXAttr(name, new byte[] { policyId });
+  }
+
+  public static boolean isStoragePolicyXAttr(XAttr xattr) {
+    return xattr != null && xattr.getNameSpace() == BlockStoragePolicy.XAttrNS
+        && xattr.getName().equals(BlockStoragePolicy.STORAGE_POLICY_XATTR_NAME);
   }
 
   private static void throwIllegalArgumentException(String message,

@@ -44,9 +44,10 @@ public class HdfsFileStatus {
   private final String owner;
   private final String group;
   private final long fileId;
-  
+
   // Used by dir, not including dot and dotdot. Always zero for a regular file.
   private final int childrenNum;
+  private final byte storagePolicy;
   
   public static final byte[] EMPTY_NAME = new byte[0];
 
@@ -65,9 +66,9 @@ public class HdfsFileStatus {
    * @param fileId the file id
    */
   public HdfsFileStatus(long length, boolean isdir, int block_replication,
-                    long blocksize, long modification_time, long access_time,
-                    FsPermission permission, String owner, String group, 
-                    byte[] symlink, byte[] path, long fileId, int childrenNum) {
+      long blocksize, long modification_time, long access_time,
+      FsPermission permission, String owner, String group, byte[] symlink,
+      byte[] path, long fileId, int childrenNum, byte storagePolicy) {
     this.length = length;
     this.isdir = isdir;
     this.block_replication = (short)block_replication;
@@ -85,6 +86,7 @@ public class HdfsFileStatus {
     this.path = path;
     this.fileId = fileId;
     this.childrenNum = childrenNum;
+    this.storagePolicy = storagePolicy;
   }
 
   /**
@@ -240,6 +242,11 @@ public class HdfsFileStatus {
   
   final public int getChildrenNum() {
     return childrenNum;
+  }
+
+  /** @return the storage policy id */
+  public final byte getStoragePolicy() {
+    return storagePolicy;
   }
 
   final public FileStatus makeQualified(URI defaultUri, Path path) {

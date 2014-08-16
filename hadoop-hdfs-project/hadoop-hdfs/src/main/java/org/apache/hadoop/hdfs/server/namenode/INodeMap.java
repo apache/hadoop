@@ -22,6 +22,7 @@ import java.util.List;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.Quota.Counts;
 import org.apache.hadoop.util.GSet;
@@ -120,6 +121,11 @@ public class INodeMap {
           BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes,
           boolean countDiffChange) throws QuotaExceededException {
         return null;
+      }
+
+      @Override
+      public byte getStoragePolicyID(int snapshotId) {
+        return BlockStoragePolicy.ID_UNSPECIFIED;
       }
     };
       

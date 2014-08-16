@@ -1646,8 +1646,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
-   * Set storage policy for an existing file
-   * @param src file name
+   * Set storage policy for an existing file/directory
+   * @param src file/directory name
    * @param policyName name of the storage policy
    */
   public void setStoragePolicy(String src, String policyName)

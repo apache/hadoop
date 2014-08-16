@@ -255,8 +255,8 @@ public interface ClientProtocol {
       SnapshotAccessControlException, IOException;
 
   /**
-   * Set the storage policy for an existing file
-   * @param src Path of an existing file. 
+   * Set the storage policy for a file/directory
+   * @param src Path of an existing file/directory. 
    * @param policyName The name of the storage policy
    * @throws SnapshotAccessControlException If access is denied
    * @throws UnresolvedLinkException if <code>src</code> contains a symlink

@@ -20,6 +20,9 @@ HDFS-6584: Archival Storage
     HDFS-6686. Change BlockPlacementPolicy to use fallback when some storage
     types are unavailable.  (szetszwo)
 
+    HDFS-6847. Support storage policy on directories and include storage policy 
+    in HdfsFileStatus.  (Jing Zhao via szetszwo)
+
 Trunk (Unreleased)
 
   INCOMPATIBLE CHANGES

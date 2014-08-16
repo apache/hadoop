@@ -684,6 +684,14 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     return this;
   }
 
+  /**
+   * @return the storage policy id of the inode
+   */
+  public abstract byte getStoragePolicyID(int snapshotId);
+
+  public byte getStoragePolicyID() {
+    return getStoragePolicyID(Snapshot.CURRENT_STATE_ID);
+  }
 
   /**
    * Breaks {@code path} into components.

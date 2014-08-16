@@ -368,19 +368,27 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   @Override
+  public byte getStoragePolicyID(int snapshotId) {
+    if (snapshotId != Snapshot.CURRENT_STATE_ID) {
+      return getSnapshotINode(snapshotId).getStoragePolicyID();
+    }
+    return getStoragePolicyID();
+  }
+
+  @Override
   public byte getStoragePolicyID() {
     return HeaderFormat.getStoragePolicyID(header);
   }
 
-  /** Set the policy id of the file */
-  public final void setStoragePolicyID(byte policyId) {
-    header = HeaderFormat.STORAGE_POLICY_ID.BITS.combine(policyId, header);
+  private void setStoragePolicyID(byte storagePolicyId) {
+    header = HeaderFormat.STORAGE_POLICY_ID.BITS.combine(storagePolicyId,
+        header);
   }
 
-  public final void setStoragePolicyID(byte policyId, int lastSnapshotId)
-      throws QuotaExceededException {
-    recordModification(lastSnapshotId);
-    setStoragePolicyID(policyId);
+  public final void setStoragePolicyID(byte storagePolicyId,
+      int latestSnapshotId) throws QuotaExceededException {
+    recordModification(latestSnapshotId);
+    setStoragePolicyID(storagePolicyId);
   }
 
   @Override

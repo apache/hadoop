@@ -32,9 +32,6 @@ public interface INodeFileAttributes extends INodeAttributes {
 
   /** @return preferred block size in bytes */
   public long getPreferredBlockSize();
-  
-  /** @return the storage policy ID. */
-  public byte getStoragePolicyID();
 
   /** @return the header as a long. */
   public long getHeaderLong();

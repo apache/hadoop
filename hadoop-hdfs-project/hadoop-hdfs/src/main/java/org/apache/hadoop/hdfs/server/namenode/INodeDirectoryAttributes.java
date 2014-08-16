@@ -18,10 +18,12 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.PermissionStatus;
-import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
+import org.apache.hadoop.hdfs.BlockStoragePolicy;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 
 /**
  * The attributes of an inode.
@@ -57,6 +59,19 @@ public interface INodeDirectoryAttributes extends INodeAttributes {
           && getPermissionLong() == other.getPermissionLong()
           && getAclFeature() == other.getAclFeature()
           && getXAttrFeature() == other.getXAttrFeature();
+    }
+
+    @Override
+    public byte getStoragePolicyID() {
+      XAttrFeature f = getXAttrFeature();
+      ImmutableList<XAttr> xattrs = f == null ? ImmutableList.<XAttr> of() : f
+          .getXAttrs();
+      for (XAttr xattr : xattrs) {
+        if (BlockStoragePolicy.isStoragePolicyXAttr(xattr)) {
+          return (xattr.getValue())[0];
+        }
+      }
+      return BlockStoragePolicy.ID_UNSPECIFIED;
     }
   }
 

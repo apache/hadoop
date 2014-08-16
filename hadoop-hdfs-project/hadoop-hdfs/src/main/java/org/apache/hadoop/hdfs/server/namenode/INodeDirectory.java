@@ -26,7 +26,9 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
+import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
@@ -40,6 +42,7 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 
 /**
  * Directory INode class.
@@ -101,6 +104,22 @@ public class INodeDirectory extends INodeWithAdditionalFields
   @Override
   public final INodeDirectory asDirectory() {
     return this;
+  }
+
+  @Override
+  public byte getStoragePolicyID(int snapshotId) {
+    if (snapshotId != Snapshot.CURRENT_STATE_ID) {
+      return getSnapshotINode(snapshotId).getStoragePolicyID();
+    }
+    XAttrFeature f = getXAttrFeature();
+    ImmutableList<XAttr> xattrs = f == null ? ImmutableList.<XAttr> of() : f
+        .getXAttrs();
+    for (XAttr xattr : xattrs) {
+      if (BlockStoragePolicy.isStoragePolicyXAttr(xattr)) {
+        return (xattr.getValue())[0];
+      }
+    }
+    return BlockStoragePolicy.ID_UNSPECIFIED;
   }
 
   void setQuota(long nsQuota, long dsQuota) {

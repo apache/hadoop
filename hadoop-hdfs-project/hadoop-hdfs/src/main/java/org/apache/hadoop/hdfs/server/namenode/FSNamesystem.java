@@ -2221,9 +2221,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /**
-   * Set the storage policy for an existing file.
+   * Set the storage policy for a file or a directory.
    *
-   * @param src file name
+   * @param src file/directory path
    * @param policyName storage policy name
    */
   void setStoragePolicy(String src, final String policyName)
@@ -4529,16 +4529,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               "Can't find startAfter " + startAfterString);
         }
       }
-      
+
+      boolean isSuperUser = true;
       if (isPermissionEnabled) {
         if (dir.isDir(src)) {
           checkPathAccess(pc, src, FsAction.READ_EXECUTE);
         } else {
           checkTraverse(pc, src);
         }
+        isSuperUser = pc.isSuperUser();
       }
       logAuditEvent(true, "listStatus", src);
-      dl = dir.getListing(src, startAfter, needLocation);
+      dl = dir.getListing(src, startAfter, needLocation, isSuperUser);
     } finally {
       readUnlock();
     }
