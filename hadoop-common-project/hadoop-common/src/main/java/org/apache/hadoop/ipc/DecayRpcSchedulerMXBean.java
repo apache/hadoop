@@ -16,16 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.lib.service;
+package org.apache.hadoop.ipc;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-
-import java.io.IOException;
-import java.security.AccessControlException;
-
-@InterfaceAudience.Private
-public interface ProxyUser {
-
-  public void validate(String proxyUser, String proxyHost, String doAsUser) throws IOException, AccessControlException;
-
+/**
+ * Provides metrics for Decay scheduler.
+ */
+public interface DecayRpcSchedulerMXBean {
+  // Get an overview of the requests in history.
+  String getSchedulingDecisionSummary();
+  String getCallVolumeSummary();
+  int getUniqueIdentityCount();
+  long getTotalCallVolume();
 }

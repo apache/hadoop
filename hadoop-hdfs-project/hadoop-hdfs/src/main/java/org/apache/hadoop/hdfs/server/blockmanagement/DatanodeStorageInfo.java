@@ -208,12 +208,28 @@ public class DatanodeStorageInfo {
   }
 
   public boolean addBlock(BlockInfo b) {
-    if(!b.addStorage(this))
-      return false;
+    // First check whether the block belongs to a different storage
+    // on the same DN.
+    boolean replaced = false;
+    DatanodeStorageInfo otherStorage =
+        b.findStorageInfo(getDatanodeDescriptor());
+
+    if (otherStorage != null) {
+      if (otherStorage != this) {
+        // The block belongs to a different storage. Remove it first.
+        otherStorage.removeBlock(b);
+        replaced = true;
+      } else {
+        // The block is already associated with this storage.
+        return false;
+      }
+    }
+
     // add to the head of the data-node list
+    b.addStorage(this);
     blockList = b.listInsert(blockList, this);
     numBlocks++;
-    return true;
+    return !replaced;
   }
 
   boolean removeBlock(BlockInfo b) {

@@ -18,6 +18,7 @@
 package org.apache.hadoop.crypto.key.kms.server;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -27,7 +28,8 @@ public class TestKMSACLs {
   public void testDefaults() {
     KMSACLs acls = new KMSACLs(new Configuration(false));
     for (KMSACLs.Type type : KMSACLs.Type.values()) {
-      Assert.assertTrue(acls.hasAccess(type, "foo"));
+      Assert.assertTrue(acls.hasAccess(type,
+          UserGroupInformation.createRemoteUser("foo")));
     }
   }
 
@@ -39,8 +41,10 @@ public class TestKMSACLs {
     }
     KMSACLs acls = new KMSACLs(conf);
     for (KMSACLs.Type type : KMSACLs.Type.values()) {
-      Assert.assertTrue(acls.hasAccess(type, type.toString()));
-      Assert.assertFalse(acls.hasAccess(type, "foo"));
+      Assert.assertTrue(acls.hasAccess(type,
+          UserGroupInformation.createRemoteUser(type.toString())));
+      Assert.assertFalse(acls.hasAccess(type,
+          UserGroupInformation.createRemoteUser("foo")));
     }
   }
 

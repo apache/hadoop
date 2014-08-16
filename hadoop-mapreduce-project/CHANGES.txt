@@ -165,6 +165,15 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5963. ShuffleHandler DB schema should be versioned with
     compatible/incompatible changes (Junping Du via jlowe)
 
+    MAPREDUCE-883. harchive: Document how to unarchive (Akira AJISAKA and
+      Koji Noguchi via aw)
+
+    MAPREDUCE-4791. Javadoc for KeyValueTextInputFormat should include default
+      separator and how to change it (Akira AJISAKA via aw)
+
+    MAPREDUCE-5906. Inconsistent configuration in property
+      "mapreduce.reduce.shuffle.input.buffer.percent" (Akira AJISAKA via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -186,6 +195,37 @@ Release 2.6.0 - UNRELEASED
 
     MAPREDUCE-6021. MR AM should have working directory in LD_LIBRARY_PATH
     (jlowe)
+
+    MAPREDUCE-6010. HistoryServerFileSystemStateStore fails to update tokens
+    (jlowe)
+
+    MAPREDUCE-5878. some standard JDK APIs are not part of system classes
+    defaults (Sangjin Lee via jlowe)
+
+    MAPREDUCE-5944. Remove MRv1 commands from CommandsManual.apt.vm
+      (Akira AJISAKA via aw)
+
+    MAPREDUCE-5943. Separate mapred commands from CommandManual.apt.vm
+      (Akira AJISAKA via aw)
+
+    MAPREDUCE-5363. Fix doc and spelling for TaskCompletionEvent#getTaskStatus
+      and getStatus (Akira AJISAKA via aw)
+
+    MAPREDUCE-5595. Typo in MergeManagerImpl.java (Akira AJISAKA via aw)
+
+    MAPREDUCE-5597. Missing alternatives in javadocs for deprecated constructors
+     in mapreduce.Job (Akira AJISAKA via aw)
+
+    MAPREDUCE-5950. incorrect description in distcp2 document (Akira AJISAKA
+      via aw)
+
+    MAPREDUCE-5998. CompositeInputFormat javadoc is broken (Akira AJISAKA via
+      aw)
+
+    MAPREDUCE-5999. Fix dead link in InputFormat javadoc (Akira AJISAKA via aw)
+
+    MAPREDUCE-6032. Made MR jobs write job history files on the default FS when
+    the current context's FS is different. (Benjamin Zhitomirsky via zjshen)
 
 Release 2.5.0 - UNRELEASED
 

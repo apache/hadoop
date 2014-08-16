@@ -18,6 +18,8 @@
 package org.apache.hadoop.crypto.key.kms.server;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.delegation.web.HttpUserGroupInformation;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -27,7 +29,6 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
-import java.security.Principal;
 
 /**
  * Servlet filter that captures context of the HTTP request to be use in the
@@ -37,12 +38,12 @@ import java.security.Principal;
 public class KMSMDCFilter implements Filter {
 
   private static class Data {
-    private Principal principal;
+    private UserGroupInformation ugi;
     private String method;
     private StringBuffer url;
 
-    private Data(Principal principal, String method, StringBuffer url) {
-      this.principal = principal;
+    private Data(UserGroupInformation ugi, String method, StringBuffer url) {
+      this.ugi = ugi;
       this.method = method;
       this.url = url;
     }
@@ -50,8 +51,8 @@ public class KMSMDCFilter implements Filter {
 
   private static ThreadLocal<Data> DATA_TL = new ThreadLocal<Data>();
 
-  public static Principal getPrincipal() {
-    return DATA_TL.get().principal;
+  public static UserGroupInformation getUgi() {
+    return DATA_TL.get().ugi;
   }
 
   public static String getMethod() {
@@ -72,14 +73,14 @@ public class KMSMDCFilter implements Filter {
       throws IOException, ServletException {
     try {
       DATA_TL.remove();
-      Principal principal = ((HttpServletRequest) request).getUserPrincipal();
+      UserGroupInformation ugi = HttpUserGroupInformation.get();
       String method = ((HttpServletRequest) request).getMethod();
       StringBuffer requestURL = ((HttpServletRequest) request).getRequestURL();
       String queryString = ((HttpServletRequest) request).getQueryString();
       if (queryString != null) {
         requestURL.append("?").append(queryString);
       }
-      DATA_TL.set(new Data(principal, method, requestURL));
+      DATA_TL.set(new Data(ugi, method, requestURL));
       chain.doFilter(request, response);
     } finally {
       DATA_TL.remove();

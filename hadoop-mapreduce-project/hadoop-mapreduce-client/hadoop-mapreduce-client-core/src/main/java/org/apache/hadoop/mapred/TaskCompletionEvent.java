@@ -90,8 +90,8 @@ public class TaskCompletionEvent
   }
   
   /**
-   * Returns enum Status.SUCESS or Status.FAILURE.
-   * @return task tracker status
+   * Returns {@link Status}
+   * @return task completion status
    */
   public Status getTaskStatus() {
     return Status.valueOf(super.getStatus().name());

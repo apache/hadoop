@@ -54,7 +54,7 @@ import org.apache.hadoop.util.StringUtils;
  * <p>Here is an example on how to submit a job:</p>
  * <p><blockquote><pre>
  *     // Create a new Job
- *     Job job = new Job(new Configuration());
+ *     Job job = Job.getInstance();
  *     job.setJarByClass(MyJob.class);
  *     
  *     // Specify various job-specific parameters     
@@ -113,16 +113,25 @@ public class Job extends JobContextImpl implements JobContext {
   private long statustime;
   private Cluster cluster;
 
+  /**
+   * @deprecated Use {@link #getInstance()}
+   */
   @Deprecated
   public Job() throws IOException {
     this(new Configuration());
   }
 
+  /**
+   * @deprecated Use {@link #getInstance(Configuration)}
+   */
   @Deprecated
   public Job(Configuration conf) throws IOException {
     this(new JobConf(conf));
   }
 
+  /**
+   * @deprecated Use {@link #getInstance(Configuration, String)}
+   */
   @Deprecated
   public Job(Configuration conf, String jobName) throws IOException {
     this(conf);

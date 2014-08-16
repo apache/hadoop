@@ -75,7 +75,7 @@ public abstract class DelegationTokenAuthenticationHandler
 
   public static final String PREFIX = "delegation-token.";
 
-  public static final String TOKEN_KIND = PREFIX + "token-kind.sec";
+  public static final String TOKEN_KIND = PREFIX + "token-kind";
 
   public static final String UPDATE_INTERVAL = PREFIX + "update-interval.sec";
   public static final long UPDATE_INTERVAL_DEFAULT = 24 * 60 * 60;

@@ -293,7 +293,7 @@ public class NetworkTopologyWithNodeGroup extends NetworkTopology {
         return;
       }
     }
-    super.sortByDistance(reader, nodes, nodes.length, seed,
+    super.sortByDistance(reader, nodes, activeLen, seed,
         randomizeBlockLocationsPerBlock);
   }
 

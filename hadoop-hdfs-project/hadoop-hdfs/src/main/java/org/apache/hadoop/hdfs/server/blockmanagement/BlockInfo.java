@@ -194,24 +194,12 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
    * Add a {@link DatanodeStorageInfo} location for a block
    */
   boolean addStorage(DatanodeStorageInfo storage) {
-    boolean added = true;
-    int idx = findDatanode(storage.getDatanodeDescriptor());
-    if(idx >= 0) {
-      if (getStorageInfo(idx) == storage) { // the storage is already there
-        return false;
-      } else {
-        // The block is on the DN but belongs to a different storage.
-        // Update our state.
-        removeStorage(getStorageInfo(idx));
-        added = false;      // Just updating storage. Return false.
-      }
-    }
     // find the last null node
     int lastNode = ensureCapacity(1);
     setStorageInfo(lastNode, storage);
     setNext(lastNode, null);
     setPrevious(lastNode, null);
-    return added;
+    return true;
   }
 
   /**
@@ -240,16 +228,18 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
    * Find specified DatanodeDescriptor.
    * @return index or -1 if not found.
    */
-  int findDatanode(DatanodeDescriptor dn) {
+  boolean findDatanode(DatanodeDescriptor dn) {
     int len = getCapacity();
     for(int idx = 0; idx < len; idx++) {
       DatanodeDescriptor cur = getDatanode(idx);
-      if(cur == dn)
-        return idx;
-      if(cur == null)
+      if(cur == dn) {
+        return true;
+      }
+      if(cur == null) {
         break;
+      }
     }
-    return -1;
+    return false;
   }
   /**
    * Find specified DatanodeStorageInfo.

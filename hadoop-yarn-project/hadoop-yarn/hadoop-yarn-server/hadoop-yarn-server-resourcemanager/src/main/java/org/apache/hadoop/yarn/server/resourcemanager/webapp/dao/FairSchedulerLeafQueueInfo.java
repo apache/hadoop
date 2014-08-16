@@ -24,7 +24,8 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.AppSchedulable;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .FSAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
 
@@ -39,9 +40,9 @@ public class FairSchedulerLeafQueueInfo extends FairSchedulerQueueInfo {
   
   public FairSchedulerLeafQueueInfo(FSLeafQueue queue, FairScheduler scheduler) {
     super(queue, scheduler);
-    Collection<AppSchedulable> apps = queue.getRunnableAppSchedulables();
-    for (AppSchedulable app : apps) {
-      if (app.getApp().isPending()) {
+    Collection<FSAppAttempt> apps = queue.getRunnableAppSchedulables();
+    for (FSAppAttempt app : apps) {
+      if (app.isPending()) {
         numPendingApps++;
       } else {
         numActiveApps++;

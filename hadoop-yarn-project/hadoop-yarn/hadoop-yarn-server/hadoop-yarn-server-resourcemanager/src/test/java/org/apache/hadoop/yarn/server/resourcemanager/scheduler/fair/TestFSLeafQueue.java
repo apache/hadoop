@@ -62,7 +62,7 @@ public class TestFSLeafQueue {
 
   @Test
   public void testUpdateDemand() {
-    AppSchedulable app = mock(AppSchedulable.class);
+    FSAppAttempt app = mock(FSAppAttempt.class);
     Mockito.when(app.getDemand()).thenReturn(maxResource);
 
     schedulable.addAppSchedulable(app);

@@ -19,7 +19,13 @@ package org.apache.hadoop.crypto.key.kms.server;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
+import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
+import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
+import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticationFilter;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticationHandler;
+import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticationHandler;
+import org.apache.hadoop.security.token.delegation.web.PseudoDelegationTokenAuthenticationHandler;
 
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -38,7 +44,8 @@ import java.util.Properties;
  * file.
  */
 @InterfaceAudience.Private
-public class KMSAuthenticationFilter extends AuthenticationFilter {
+public class KMSAuthenticationFilter
+    extends DelegationTokenAuthenticationFilter {
   private static final String CONF_PREFIX = KMSConfiguration.CONFIG_PREFIX +
       "authentication.";
 
@@ -55,7 +62,28 @@ public class KMSAuthenticationFilter extends AuthenticationFilter {
         props.setProperty(name, value);
       }
     }
+    String authType = props.getProperty(AUTH_TYPE);
+    if (authType.equals(PseudoAuthenticationHandler.TYPE)) {
+      props.setProperty(AUTH_TYPE,
+          PseudoDelegationTokenAuthenticationHandler.class.getName());
+    } else if (authType.equals(KerberosAuthenticationHandler.TYPE)) {
+      props.setProperty(AUTH_TYPE,
+          KerberosDelegationTokenAuthenticationHandler.class.getName());
+    }
+    props.setProperty(DelegationTokenAuthenticationHandler.TOKEN_KIND,
+        KMSClientProvider.TOKEN_KIND);
     return props;
+  }
+
+  protected Configuration getProxyuserConfiguration(FilterConfig filterConfig) {
+    Map<String, String> proxyuserConf = KMSWebApp.getConfiguration().
+        getValByRegex("hadoop\\.kms\\.proxyuser\\.");
+    Configuration conf = new Configuration(false);
+    for (Map.Entry<String, String> entry : proxyuserConf.entrySet()) {
+      conf.set(entry.getKey().substring("hadoop.kms.".length()),
+          entry.getValue());
+    }
+    return conf;
   }
 
   private static class KMSResponse extends HttpServletResponseWrapper {
