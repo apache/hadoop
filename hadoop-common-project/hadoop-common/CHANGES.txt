@@ -81,6 +81,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10231. Add some components in Native Libraries document (Akira 
       AJISAKA via aw)
 
+    HADOOP-10650. Add ability to specify a reverse ACL (black list) of users
+    and groups. (Benoy Antony via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
