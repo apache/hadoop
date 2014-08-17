@@ -37,7 +37,7 @@ import com.google.common.net.InetAddresses;
 /**
  * Container class which holds a list of ip/host addresses and 
  * answers membership queries.
- *
+ * .
  * Accepts list of ip addresses, ip addreses in CIDR format and/or 
  * host addresses.
  */
@@ -71,15 +71,8 @@ public class MachineList {
    * @param hostEntries comma separated ip/cidr/host addresses
    */
   public MachineList(String hostEntries) {
-    this(StringUtils.getTrimmedStringCollection(hostEntries));
-  }
-
-  /**
-   *
-   * @param hostEntries collection of separated ip/cidr/host addresses
-   */
-  public MachineList(Collection<String> hostEntries) {
-    this(hostEntries, InetAddressFactory.S_INSTANCE);
+    this(StringUtils.getTrimmedStringCollection(hostEntries),
+        InetAddressFactory.S_INSTANCE);
   }
 
   /**
