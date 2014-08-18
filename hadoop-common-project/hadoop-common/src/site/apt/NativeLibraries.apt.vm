@@ -56,10 +56,12 @@ Native Libraries Guide
 
     [[4]] Install the compression codec development packages (>zlib-1.2,
        >gzip-1.2):
-          + If you download the library, install one or more development
+
+          * If you download the library, install one or more development
             packages - whichever compression codecs you want to use with
             your deployment.
-          + If you build the library, it is mandatory to install both
+
+          * If you build the library, it is mandatory to install both
             development packages.
 
     [[5]] Check the runtime log files.
