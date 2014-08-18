@@ -129,7 +129,7 @@ Native Libraries Guide
    library:
 
 ----
-   $ mvn package -Pdist,native -Dskiptests -Dtar
+   $ mvn package -Pdist,native -DskipTests -Dtar
 ----
 
    You should see the newly-built library in:
