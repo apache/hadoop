@@ -87,6 +87,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6036. TestJobEndNotifier fails intermittently in branch-2 (chang
     li via jlowe)
 
+    MAPREDUCE-6012. DBInputSplit creates invalid ranges on Oracle. 
+    (Wei Yan via kasha)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
