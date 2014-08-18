@@ -286,19 +286,19 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
   private void rescan() throws InterruptedException {
     scannedDirectives = 0;
     scannedBlocks = 0;
-    namesystem.writeLock();
     try {
-      lock.lock();
-      if (shutdown) {
-        throw new InterruptedException("CacheReplicationMonitor was " +
-            "shut down.");
+      namesystem.writeLock();
+      try {
+        lock.lock();
+        if (shutdown) {
+          throw new InterruptedException("CacheReplicationMonitor was " +
+              "shut down.");
+        }
+        curScanCount = completedScanCount + 1;
+      } finally {
+        lock.unlock();
       }
-      curScanCount = completedScanCount + 1;
-    }
-    finally {
-      lock.unlock();
-    }
-    try {
+
       resetStatistics();
       rescanCacheDirectives();
       rescanCachedBlockMap();
