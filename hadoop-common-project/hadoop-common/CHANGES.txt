@@ -605,6 +605,10 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10964. Small fix for NetworkTopologyWithNodeGroup#sortByDistance.
     (Yi Liu via wang)
 
+    HADOOP-10059. RPC authentication and authorization metrics overflow to
+    negative values on busy clusters (Tsuyoshi OZAWA and Akira AJISAKA
+    via jlowe)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
