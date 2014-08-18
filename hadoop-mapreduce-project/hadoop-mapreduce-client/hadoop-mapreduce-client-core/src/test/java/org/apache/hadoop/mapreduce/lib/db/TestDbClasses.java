@@ -110,7 +110,7 @@ public class TestDbClasses {
         splitter, NullDBWritable.class, configuration, connect,
         dbConfiguration, "condition", fields, "table");
     assertEquals(
-        "SELECT * FROM (SELECT a.*,ROWNUM dbif_rno FROM ( SELECT f1, f2 FROM table WHERE condition ORDER BY Order ) a WHERE rownum <= 1 + 9 ) WHERE dbif_rno >= 1",
+        "SELECT * FROM (SELECT a.*,ROWNUM dbif_rno FROM ( SELECT f1, f2 FROM table WHERE condition ORDER BY Order ) a WHERE rownum <= 10 ) WHERE dbif_rno > 1",
         recorder.getSelectQuery());
   }
 

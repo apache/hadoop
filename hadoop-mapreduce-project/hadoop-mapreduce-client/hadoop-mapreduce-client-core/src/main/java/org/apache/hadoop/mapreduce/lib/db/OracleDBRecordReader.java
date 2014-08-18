@@ -81,15 +81,14 @@ public class OracleDBRecordReader<T extends DBWritable> extends DBRecordReader<T
         
     try {
       DBInputFormat.DBInputSplit split = getSplit();
-      if (split.getLength() > 0 && split.getStart() > 0){
+      if (split.getLength() > 0){
         String querystring = query.toString();
 
         query = new StringBuilder();
         query.append("SELECT * FROM (SELECT a.*,ROWNUM dbif_rno FROM ( ");
         query.append(querystring);
-        query.append(" ) a WHERE rownum <= ").append(split.getStart());
-        query.append(" + ").append(split.getLength());
-        query.append(" ) WHERE dbif_rno >= ").append(split.getStart());
+        query.append(" ) a WHERE rownum <= ").append(split.getEnd());
+        query.append(" ) WHERE dbif_rno > ").append(split.getStart());
       }
     } catch (IOException ex) {
       // ignore, will not throw.
