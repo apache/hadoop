@@ -612,6 +612,9 @@ Release 2.6.0 - UNRELEASED
     negative values on busy clusters (Tsuyoshi OZAWA and Akira AJISAKA
     via jlowe)
 
+    HADOOP-10973. Native Libraries Guide contains format error. (Peter Klavins
+    via Arpit Agarwal)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
