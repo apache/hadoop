@@ -18,8 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -145,6 +144,44 @@ public class CapacitySchedulerConfiguration extends Configuration {
 
   @Private
   public static final boolean DEFAULT_SCHEDULE_ASYNCHRONOUSLY_ENABLE = false;
+
+  @Private
+  public static final String QUEUE_MAPPING = PREFIX + "queue-mappings";
+
+  @Private
+  public static final String ENABLE_QUEUE_MAPPING_OVERRIDE = QUEUE_MAPPING + "-override.enable";
+
+  @Private
+  public static final boolean DEFAULT_ENABLE_QUEUE_MAPPING_OVERRIDE = false;
+
+  @Private
+  public static class QueueMapping {
+
+    public enum MappingType {
+
+      USER("u"),
+      GROUP("g");
+      private final String type;
+      private MappingType(String type) {
+        this.type = type;
+      }
+
+      public String toString() {
+        return type;
+      }
+
+    };
+
+    MappingType type;
+    String source;
+    String queue;
+
+    public QueueMapping(MappingType type, String source, String queue) {
+      this.type = type;
+      this.source = source;
+      this.queue = queue;
+    }
+  }
   
   public CapacitySchedulerConfiguration() {
     this(new Configuration());
@@ -378,4 +415,82 @@ public class CapacitySchedulerConfiguration extends Configuration {
     setBoolean(SCHEDULE_ASYNCHRONOUSLY_ENABLE, async);
   }
 
+  public boolean getOverrideWithQueueMappings() {
+    return getBoolean(ENABLE_QUEUE_MAPPING_OVERRIDE,
+        DEFAULT_ENABLE_QUEUE_MAPPING_OVERRIDE);
+  }
+
+  /**
+   * Returns a collection of strings, trimming leading and trailing whitespeace
+   * on each value
+   *
+   * @param str
+   *          String to parse
+   * @param delim
+   *          delimiter to separate the values
+   * @return Collection of parsed elements.
+   */
+  private static Collection<String> getTrimmedStringCollection(String str,
+      String delim) {
+    List<String> values = new ArrayList<String>();
+    if (str == null)
+      return values;
+    StringTokenizer tokenizer = new StringTokenizer(str, delim);
+    while (tokenizer.hasMoreTokens()) {
+      String next = tokenizer.nextToken();
+      if (next == null || next.trim().isEmpty()) {
+        continue;
+      }
+      values.add(next.trim());
+    }
+    return values;
+  }
+
+  /**
+   * Get user/group mappings to queues.
+   *
+   * @return user/groups mappings or null on illegal configs
+   */
+  public List<QueueMapping> getQueueMappings() {
+    List<QueueMapping> mappings =
+        new ArrayList<CapacitySchedulerConfiguration.QueueMapping>();
+    Collection<String> mappingsString =
+        getTrimmedStringCollection(QUEUE_MAPPING);
+    for (String mappingValue : mappingsString) {
+      String[] mapping =
+          getTrimmedStringCollection(mappingValue, ":")
+              .toArray(new String[] {});
+      if (mapping.length != 3 || mapping[1].length() == 0
+          || mapping[2].length() == 0) {
+        throw new IllegalArgumentException(
+            "Illegal queue mapping " + mappingValue);
+      }
+
+      QueueMapping m;
+      try {
+        QueueMapping.MappingType mappingType;
+        if (mapping[0].equals("u")) {
+          mappingType = QueueMapping.MappingType.USER;
+        } else if (mapping[0].equals("g")) {
+          mappingType = QueueMapping.MappingType.GROUP;
+        } else {
+          throw new IllegalArgumentException(
+              "unknown mapping prefix " + mapping[0]);
+        }
+        m = new QueueMapping(
+                mappingType,
+                mapping[1],
+                mapping[2]);
+      } catch (Throwable t) {
+        throw new IllegalArgumentException(
+            "Illegal queue mapping " + mappingValue);
+      }
+
+      if (m != null) {
+        mappings.add(m);
+      }
+    }
+
+    return mappings;
+  }
 }

@@ -29,6 +29,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2378. Added support for moving applications across queues in
     CapacityScheduler. (Subramaniam Venkatraman Krishnan via jianhe)
 
+    YARN-2411. Support simple user and group mappings to queues. (Ram Venkatesh
+    via jianhe)
+
   IMPROVEMENTS
 
     YARN-2242. Improve exception information on AM launch crashes. (Li Lu 
