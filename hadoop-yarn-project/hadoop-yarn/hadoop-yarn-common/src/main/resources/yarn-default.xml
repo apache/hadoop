@@ -474,7 +474,7 @@
   <property>
     <description>Name of the cluster. In a HA setting,
       this is used to ensure the RM participates in leader
-      election fo this cluster and ensures it does not affect
+      election for this cluster and ensures it does not affect
       other clusters</description>
     <name>yarn.resourcemanager.cluster-id</name>
     <!--value>yarn-cluster</value-->

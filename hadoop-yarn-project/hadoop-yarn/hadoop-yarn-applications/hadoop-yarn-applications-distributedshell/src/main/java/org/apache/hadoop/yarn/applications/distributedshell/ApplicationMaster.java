@@ -1054,8 +1054,8 @@ public class ApplicationMaster {
     TimelineEntity entity = new TimelineEntity();
     entity.setEntityId(container.getId().toString());
     entity.setEntityType(DSEntity.DS_CONTAINER.toString());
-    entity.addPrimaryFilter("user", UserGroupInformation.getCurrentUser()
-        .toString());
+    entity.addPrimaryFilter("user",
+        UserGroupInformation.getCurrentUser().getShortUserName());
     TimelineEvent event = new TimelineEvent();
     event.setTimestamp(System.currentTimeMillis());
     event.setEventType(DSEvent.DS_CONTAINER_START.toString());
@@ -1071,8 +1071,8 @@ public class ApplicationMaster {
     TimelineEntity entity = new TimelineEntity();
     entity.setEntityId(container.getContainerId().toString());
     entity.setEntityType(DSEntity.DS_CONTAINER.toString());
-    entity.addPrimaryFilter("user", UserGroupInformation.getCurrentUser()
-        .toString());
+    entity.addPrimaryFilter("user",
+        UserGroupInformation.getCurrentUser().getShortUserName());
     TimelineEvent event = new TimelineEvent();
     event.setTimestamp(System.currentTimeMillis());
     event.setEventType(DSEvent.DS_CONTAINER_END.toString());
@@ -1089,8 +1089,8 @@ public class ApplicationMaster {
     TimelineEntity entity = new TimelineEntity();
     entity.setEntityId(appAttemptId);
     entity.setEntityType(DSEntity.DS_APP_ATTEMPT.toString());
-    entity.addPrimaryFilter("user", UserGroupInformation.getCurrentUser()
-        .toString());
+    entity.addPrimaryFilter("user",
+        UserGroupInformation.getCurrentUser().getShortUserName());
     TimelineEvent event = new TimelineEvent();
     event.setEventType(appEvent.toString());
     event.setTimestamp(System.currentTimeMillis());

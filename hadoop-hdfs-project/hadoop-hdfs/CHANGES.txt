@@ -137,9 +137,6 @@ Trunk (Unreleased)
 
   BUG FIXES
  
-    HDFS-6517. Remove hadoop-metrics2.properties from hdfs project (Akira 
-               AJISAKA via aw)
-
     HADOOP-9635 Fix potential Stack Overflow in DomainSocket.c (V. Karthik Kumar
                 via cmccabe)
 
@@ -393,6 +390,18 @@ Release 2.6.0 - UNRELEASED
     HDFS-6838. Code cleanup for unnecessary INode replacement.
     (Jing Zhao via wheat9)
 
+    HDFS-6836. HDFS INFO logging is verbose & uses file appenders. (Xiaoyu
+    Yao via Arpit Agarwal)
+
+    HDFS-6567. Normalize the order of public final in HdfsFileStatus.
+    (Tassapol Athiapinya via wheat9)
+
+    HDFS-6849. Replace HttpFS custom proxyuser handling with common 
+    implementation. (tucu)
+
+    HDFS-6850. Move NFS out of order write unit tests into TestWrites class.
+    (Zhe Zhang via atm)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -401,6 +410,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6823. dfs.web.authentication.kerberos.principal shows up in logs for 
     insecure HDFS (Allen Wittenauer via raviprak)
+
+    HDFS-6517. Remove hadoop-metrics2.properties from hdfs project (Akira 
+    AJISAKA via aw)
 
     HDFS-6617. Flake TestDFSZKFailoverController.testManualFailoverWithDFSHAAdmin
     due to a long edit log sync op. (Liang Xie via cnauroth)
@@ -490,6 +502,17 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6582. Missing null check in RpcProgramNfs3#read(XDR, SecurityHandler)
     (Abhiraj Butala via brandonli)
+
+    HDFS-6830. BlockInfo.addStorage fails when DN changes the storage for a
+    block replica (Arpit Agarwal)
+
+    HDFS-6247. Avoid timeouts for replaceBlock() call by sending intermediate
+    responses to Balancer (vinayakumarb)
+
+    HDFS-6783. Fix HDFS CacheReplicationMonitor rescan logic. (Yi Liu and Colin Patrick McCabe via umamahesh)
+
+    HDFS-6825. Edit log corruption due to delayed block removal.
+    (Yongjun Zhang via wang)
 
 Release 2.5.0 - UNRELEASED
 

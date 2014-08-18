@@ -41,6 +41,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.minikdc.MiniKdc;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.KerberosTestUtils;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
@@ -122,6 +123,8 @@ public class TestRMWebServicesDelegationTokenAuthentication {
       "kerberos");
     rmconf.setBoolean(YarnConfiguration.RM_WEBAPP_DELEGATION_TOKEN_AUTH_FILTER,
       true);
+    rmconf.set("hadoop.http.filter.initializers",
+      AuthenticationFilterInitializer.class.getName());
     rmconf.set(YarnConfiguration.RM_WEBAPP_SPNEGO_USER_NAME_KEY,
       httpSpnegoPrincipal);
     rmconf.set(YarnConfiguration.RM_KEYTAB,

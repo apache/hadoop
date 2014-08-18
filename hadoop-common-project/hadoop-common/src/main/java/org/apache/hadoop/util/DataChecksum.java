@@ -339,6 +339,12 @@ public class DataChecksum implements Checksum {
       byte[] data, int dataOff, int dataLen,
       byte[] checksums, int checksumsOff, String fileName,
       long basePos) throws ChecksumException {
+
+    if (NativeCrc32.isAvailable()) {
+      NativeCrc32.verifyChunkedSumsByteArray(bytesPerChecksum, type.id,
+          checksums, checksumsOff, data, dataOff, dataLen, fileName, basePos);
+      return;
+    }
     
     int remaining = dataLen;
     int dataPos = 0;
@@ -384,6 +390,12 @@ public class DataChecksum implements Checksum {
           checksums.array(), checksums.arrayOffset() + checksums.position());
       return;
     }
+
+    if (NativeCrc32.isAvailable()) {
+      NativeCrc32.calculateChunkedSums(bytesPerChecksum, type.id,
+          checksums, data);
+      return;
+    }
     
     data.mark();
     checksums.mark();
@@ -406,9 +418,15 @@ public class DataChecksum implements Checksum {
    * Implementation of chunked calculation specifically on byte arrays. This
    * is to avoid the copy when dealing with ByteBuffers that have array backing.
    */
-  private void calculateChunkedSums(
+  public void calculateChunkedSums(
       byte[] data, int dataOffset, int dataLength,
       byte[] sums, int sumsOffset) {
+
+    if (NativeCrc32.isAvailable()) {
+      NativeCrc32.calculateChunkedSumsByteArray(bytesPerChecksum, type.id,
+          sums, sumsOffset, data, dataOffset, dataLength);
+      return;
+    }
 
     int remaining = dataLength;
     while (remaining > 0) {

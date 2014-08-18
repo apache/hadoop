@@ -28,10 +28,11 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 /**
  * Dummy implementation of Schedulable for unit testing.
  */
-public class FakeSchedulable extends Schedulable {
+public class FakeSchedulable implements Schedulable {
   private Resource usage;
   private Resource minShare;
   private Resource maxShare;
+  private Resource fairShare;
   private ResourceWeights weights;
   private Priority priority;
   private long startTime;
@@ -87,6 +88,21 @@ public class FakeSchedulable extends Schedulable {
   @Override
   public RMContainer preemptContainer() {
     return null;
+  }
+
+  @Override
+  public Resource getFairShare() {
+    return this.fairShare;
+  }
+
+  @Override
+  public void setFairShare(Resource fairShare) {
+    this.fairShare = fairShare;
+  }
+
+  @Override
+  public boolean isActive() {
+    return true;
   }
 
   @Override

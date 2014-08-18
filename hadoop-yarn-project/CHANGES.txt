@@ -41,7 +41,22 @@ Release 2.6.0 - UNRELEASED
     YARN-1337. Recover containers upon nodemanager restart. (Jason Lowe via 
     junping_du)
 
+    YARN-2277. Added cross-origin support for the timeline server web services.
+    (Jonathan Eagles via zjshen)
+
+    YARN-2378. Added support for moving applications across queues in
+    CapacityScheduler. (Subramaniam Venkatraman Krishnan via jianhe)
+
+    YARN-2411. Support simple user and group mappings to queues. (Ram Venkatesh
+    via jianhe)
+
   IMPROVEMENTS
+
+    YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc
+      (Akira AJISAKA via aw)
+
+    YARN-1918. Typo in description and error message for
+      'yarn.resourcemanager.cluster-id' (Anandha L Ranganathan via aw)
 
     YARN-2242. Improve exception information on AM launch crashes. (Li Lu 
     via junping_du)
@@ -116,6 +131,21 @@ Release 2.6.0 - UNRELEASED
     YARN-2138. Cleaned up notifyDone* APIs in RMStateStore. (Varun Saxena via
     jianhe)
 
+    YARN-2373. Changed WebAppUtils to use Configuration#getPassword for
+    accessing SSL passwords. (Larry McCay via jianhe)
+
+    YARN-2317. Updated the document about how to write YARN applications. (Li Lu via
+    zjshen)
+
+    YARN-2399. FairScheduler: Merge AppSchedulable and FSSchedulerApp into 
+    FSAppAttempt. (kasha)
+
+    YARN-1370. Fair scheduler to re-populate container allocation state. 
+    (Anubhav Dhoot via kasha)
+
+    YARN-2389. Added functionality for schedulers to kill all applications in a
+    queue. (Subramaniam Venkatraman Krishnan via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -174,6 +204,12 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2361. RMAppAttempt state machine entries for KILLED state has duplicate
     event entries. (Zhihai Xu via kasha)
+
+    YARN-2070. Made DistributedShell publish the short user name to the timeline
+    server. (Robert Kanter via zjshen)
+
+    YARN-2397. Avoided loading two authentication filters for RM and TS web
+    interfaces. (Varun Vasudev via zjshen)
 
 Release 2.5.0 - UNRELEASED
 

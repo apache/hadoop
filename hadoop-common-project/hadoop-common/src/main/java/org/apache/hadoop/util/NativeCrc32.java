@@ -54,17 +54,50 @@ class NativeCrc32 {
   public static void verifyChunkedSums(int bytesPerSum, int checksumType,
       ByteBuffer sums, ByteBuffer data, String fileName, long basePos)
       throws ChecksumException {
-    nativeVerifyChunkedSums(bytesPerSum, checksumType,
+    nativeComputeChunkedSums(bytesPerSum, checksumType,
         sums, sums.position(),
         data, data.position(), data.remaining(),
-        fileName, basePos);
+        fileName, basePos, true);
+  }
+
+  public static void verifyChunkedSumsByteArray(int bytesPerSum,
+      int checksumType, byte[] sums, int sumsOffset, byte[] data,
+      int dataOffset, int dataLength, String fileName, long basePos)
+      throws ChecksumException {
+    nativeComputeChunkedSumsByteArray(bytesPerSum, checksumType,
+        sums, sumsOffset,
+        data, dataOffset, dataLength,
+        fileName, basePos, true);
+  }
+
+  public static void calculateChunkedSums(int bytesPerSum, int checksumType,
+      ByteBuffer sums, ByteBuffer data) {
+    nativeComputeChunkedSums(bytesPerSum, checksumType,
+        sums, sums.position(),
+        data, data.position(), data.remaining(),
+        "", 0, false);
+  }
+
+  public static void calculateChunkedSumsByteArray(int bytesPerSum,
+      int checksumType, byte[] sums, int sumsOffset, byte[] data,
+      int dataOffset, int dataLength) {
+    nativeComputeChunkedSumsByteArray(bytesPerSum, checksumType,
+        sums, sumsOffset,
+        data, dataOffset, dataLength,
+        "", 0, false);
   }
   
-    private static native void nativeVerifyChunkedSums(
+    private static native void nativeComputeChunkedSums(
       int bytesPerSum, int checksumType,
       ByteBuffer sums, int sumsOffset,
       ByteBuffer data, int dataOffset, int dataLength,
-      String fileName, long basePos);
+      String fileName, long basePos, boolean verify);
+
+    private static native void nativeComputeChunkedSumsByteArray(
+      int bytesPerSum, int checksumType,
+      byte[] sums, int sumsOffset,
+      byte[] data, int dataOffset, int dataLength,
+      String fileName, long basePos, boolean verify);
 
   // Copy the constants over from DataChecksum so that javah will pick them up
   // and make them available in the native code header.

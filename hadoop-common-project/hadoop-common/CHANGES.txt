@@ -202,6 +202,10 @@ Trunk (Unreleased)
     HADOOP-10224. JavaKeyStoreProvider has to protect against corrupting 
     underlying store. (asuresh via tucu)
 
+    HADOOP-10770. KMS add delegation token support. (tucu)
+
+    HADOOP-10698. KMS, add proxyuser support. (tucu)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -427,6 +431,9 @@ Trunk (Unreleased)
     HADOOP-10862. Miscellaneous trivial corrections to KMS classes. 
     (asuresh via tucu)
 
+    HADOOP-10967. Improve DefaultCryptoExtension#generateEncryptedKey 
+    performance. (hitliuyi via tucu)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -502,7 +509,30 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10835. Implement HTTP proxyuser support in HTTP authentication 
     client/server libraries. (tucu)
 
+    HADOOP-10820. Throw an exception in GenericOptionsParser when passed
+    an empty Path. (Alex Holmes and Zhihai Xu via wang)
+
+    HADOOP-10281. Create a scheduler, which assigns schedulables a priority
+    level. (Chris Li via Arpit Agarwal)
+
+    HADOOP-8944. Shell command fs -count should include human readable option 
+    (Jonathan Allen via aw)
+
+    HADOOP-10231. Add some components in Native Libraries document (Akira 
+    AJISAKA via aw)
+
+    HADOOP-10650. Add ability to specify a reverse ACL (black list) of users
+    and groups. (Benoy Antony via Arpit Agarwal)
+
+    HADOOP-10335. An ip whilelist based implementation to resolve Sasl
+    properties per connection. (Benoy Antony via Arpit Agarwal)
+
+    HADOOP-10975. org.apache.hadoop.util.DataChecksum should support calculating
+    checksums in native code (James Thomas via Colin Patrick McCabe)
+
   OPTIMIZATIONS
+
+    HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
 
   BUG FIXES
 
@@ -559,6 +589,31 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10402. Configuration.getValByRegex does not substitute for
     variables. (Robert Kanter via kasha)
+
+    HADOOP-10851. NetgroupCache does not remove group memberships. (Benoy
+    Antony via Arpit Agarwal)
+
+    HADOOP-10962. Flags for posix_fadvise are not valid in some architectures
+    (David Villegas via Colin Patrick McCabe)
+
+    HADOOP-10966. Hadoop Common native compilation broken in windows.
+    (David Villegas via Arpit Agarwal)
+
+    HADOOP-10843. TestGridmixRecord unit tests failure on PowerPC (Jinghui Wang
+    via Colin Patrick McCabe)
+
+    HADOOP-10121. Fix javadoc spelling for HadoopArchives#writeTopLevelDirs
+    (Akira AJISAKA via aw)
+
+    HADOOP-10964. Small fix for NetworkTopologyWithNodeGroup#sortByDistance.
+    (Yi Liu via wang)
+
+    HADOOP-10059. RPC authentication and authorization metrics overflow to
+    negative values on busy clusters (Tsuyoshi OZAWA and Akira AJISAKA
+    via jlowe)
+
+    HADOOP-10973. Native Libraries Guide contains format error. (Peter Klavins
+    via Arpit Agarwal)
 
 Release 2.5.0 - UNRELEASED
 

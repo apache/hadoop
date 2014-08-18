@@ -238,7 +238,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-count \[-q\] &lt;path&gt; \.\.\. :\s*</expected-output>
+          <expected-output>^-count \[-q\] \[-h\] &lt;path&gt; \.\.\. :( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -259,6 +259,10 @@
         <comparator>
           <type>RegexpComparator</type>
           <expected-output>^( |\t)*DIR_COUNT FILE_COUNT CONTENT_SIZE FILE_NAME( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*The -h option shows file sizes in human readable format.( )*</expected-output>
         </comparator>
       </comparators>
     </test>

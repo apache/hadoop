@@ -30,8 +30,6 @@ import org.apache.hadoop.lib.wsrs.Param;
 import org.apache.hadoop.lib.wsrs.ParametersProvider;
 import org.apache.hadoop.lib.wsrs.ShortParam;
 import org.apache.hadoop.lib.wsrs.StringParam;
-import org.apache.hadoop.lib.wsrs.UserProvider;
-import org.slf4j.MDC;
 
 import javax.ws.rs.ext.Provider;
 import java.util.HashMap;
@@ -53,57 +51,44 @@ public class HttpFSParametersProvider extends ParametersProvider {
 
   static {
     PARAMS_DEF.put(Operation.OPEN,
-      new Class[]{DoAsParam.class, OffsetParam.class, LenParam.class});
-    PARAMS_DEF.put(Operation.GETFILESTATUS, new Class[]{DoAsParam.class});
-    PARAMS_DEF.put(Operation.LISTSTATUS,
-      new Class[]{DoAsParam.class, FilterParam.class});
-    PARAMS_DEF.put(Operation.GETHOMEDIRECTORY, new Class[]{DoAsParam.class});
-    PARAMS_DEF.put(Operation.GETCONTENTSUMMARY, new Class[]{DoAsParam.class});
-    PARAMS_DEF.put(Operation.GETFILECHECKSUM, new Class[]{DoAsParam.class});
-    PARAMS_DEF.put(Operation.GETFILEBLOCKLOCATIONS,
-      new Class[]{DoAsParam.class});
-    PARAMS_DEF.put(Operation.GETACLSTATUS, new Class[]{DoAsParam.class});
-    PARAMS_DEF.put(Operation.INSTRUMENTATION, new Class[]{DoAsParam.class});
-    PARAMS_DEF.put(Operation.APPEND,
-      new Class[]{DoAsParam.class, DataParam.class});
+        new Class[]{OffsetParam.class, LenParam.class});
+    PARAMS_DEF.put(Operation.GETFILESTATUS, new Class[]{});
+    PARAMS_DEF.put(Operation.LISTSTATUS, new Class[]{FilterParam.class});
+    PARAMS_DEF.put(Operation.GETHOMEDIRECTORY, new Class[]{});
+    PARAMS_DEF.put(Operation.GETCONTENTSUMMARY, new Class[]{});
+    PARAMS_DEF.put(Operation.GETFILECHECKSUM, new Class[]{});
+    PARAMS_DEF.put(Operation.GETFILEBLOCKLOCATIONS, new Class[]{});
+    PARAMS_DEF.put(Operation.GETACLSTATUS, new Class[]{});
+    PARAMS_DEF.put(Operation.INSTRUMENTATION, new Class[]{});
+    PARAMS_DEF.put(Operation.APPEND, new Class[]{DataParam.class});
     PARAMS_DEF.put(Operation.CONCAT, new Class[]{SourcesParam.class});
     PARAMS_DEF.put(Operation.CREATE,
-      new Class[]{DoAsParam.class, PermissionParam.class, OverwriteParam.class,
+      new Class[]{PermissionParam.class, OverwriteParam.class,
                   ReplicationParam.class, BlockSizeParam.class, DataParam.class});
-    PARAMS_DEF.put(Operation.MKDIRS,
-      new Class[]{DoAsParam.class, PermissionParam.class});
-    PARAMS_DEF.put(Operation.RENAME,
-      new Class[]{DoAsParam.class, DestinationParam.class});
+    PARAMS_DEF.put(Operation.MKDIRS, new Class[]{PermissionParam.class});
+    PARAMS_DEF.put(Operation.RENAME, new Class[]{DestinationParam.class});
     PARAMS_DEF.put(Operation.SETOWNER,
-      new Class[]{DoAsParam.class, OwnerParam.class, GroupParam.class});
-    PARAMS_DEF.put(Operation.SETPERMISSION,
-      new Class[]{DoAsParam.class, PermissionParam.class});
+        new Class[]{OwnerParam.class, GroupParam.class});
+    PARAMS_DEF.put(Operation.SETPERMISSION, new Class[]{PermissionParam.class});
     PARAMS_DEF.put(Operation.SETREPLICATION,
-      new Class[]{DoAsParam.class, ReplicationParam.class});
+        new Class[]{ReplicationParam.class});
     PARAMS_DEF.put(Operation.SETTIMES,
-      new Class[]{DoAsParam.class, ModifiedTimeParam.class,
-                  AccessTimeParam.class});
-    PARAMS_DEF.put(Operation.DELETE,
-      new Class[]{DoAsParam.class, RecursiveParam.class});
-    PARAMS_DEF.put(Operation.SETACL,
-            new Class[]{DoAsParam.class, AclPermissionParam.class});
-    PARAMS_DEF.put(Operation.REMOVEACL,
-            new Class[]{DoAsParam.class});
+        new Class[]{ModifiedTimeParam.class, AccessTimeParam.class});
+    PARAMS_DEF.put(Operation.DELETE, new Class[]{RecursiveParam.class});
+    PARAMS_DEF.put(Operation.SETACL, new Class[]{AclPermissionParam.class});
+    PARAMS_DEF.put(Operation.REMOVEACL, new Class[]{});
     PARAMS_DEF.put(Operation.MODIFYACLENTRIES,
-            new Class[]{DoAsParam.class, AclPermissionParam.class});
+        new Class[]{AclPermissionParam.class});
     PARAMS_DEF.put(Operation.REMOVEACLENTRIES,
-            new Class[]{DoAsParam.class, AclPermissionParam.class});
-    PARAMS_DEF.put(Operation.REMOVEDEFAULTACL,
-            new Class[]{DoAsParam.class});
+        new Class[]{AclPermissionParam.class});
+    PARAMS_DEF.put(Operation.REMOVEDEFAULTACL, new Class[]{});
     PARAMS_DEF.put(Operation.SETXATTR,
-      new Class[]{DoAsParam.class, XAttrNameParam.class, XAttrValueParam.class, 
+        new Class[]{XAttrNameParam.class, XAttrValueParam.class,
                   XAttrSetFlagParam.class});
-    PARAMS_DEF.put(Operation.REMOVEXATTR, 
-      new Class[]{DoAsParam.class, XAttrNameParam.class});
+    PARAMS_DEF.put(Operation.REMOVEXATTR, new Class[]{XAttrNameParam.class});
     PARAMS_DEF.put(Operation.GETXATTRS, 
-      new Class[]{DoAsParam.class, XAttrNameParam.class, XAttrEncodingParam.class});
-    PARAMS_DEF.put(Operation.LISTXATTRS,
-      new Class[]{DoAsParam.class});
+        new Class[]{XAttrNameParam.class, XAttrEncodingParam.class});
+    PARAMS_DEF.put(Operation.LISTXATTRS, new Class[]{});
   }
 
   public HttpFSParametersProvider() {
@@ -206,41 +191,6 @@ public class HttpFSParametersProvider extends ParametersProvider {
   }
 
   /**
-   * Class for do-as parameter.
-   */
-  @InterfaceAudience.Private
-  public static class DoAsParam extends StringParam {
-
-    /**
-     * Parameter name.
-     */
-    public static final String NAME = HttpFSFileSystem.DO_AS_PARAM;
-
-    /**
-     * Constructor.
-     */
-    public DoAsParam() {
-      super(NAME, null, UserProvider.getUserPattern());
-    }
-
-    /**
-     * Delegates to parent and then adds do-as user to
-     * MDC context for logging purposes.
-     *
-     *
-     * @param str parameter value.
-     *
-     * @return parsed parameter
-     */
-    @Override
-    public String parseParam(String str) {
-      String doAs = super.parseParam(str);
-      MDC.put(getName(), (doAs != null) ? doAs : "-");
-      return doAs;
-    }
-  }
-
-  /**
    * Class for filter parameter.
    */
   @InterfaceAudience.Private
@@ -275,7 +225,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
      * Constructor.
      */
     public GroupParam() {
-      super(NAME, null, UserProvider.getUserPattern());
+      super(NAME, null);
     }
 
   }
@@ -371,7 +321,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
      * Constructor.
      */
     public OwnerParam() {
-      super(NAME, null, UserProvider.getUserPattern());
+      super(NAME, null);
     }
 
   }

@@ -96,7 +96,7 @@ public class HdfsFileStatus {
    * Get the length of this file, in bytes.
    * @return the length of this file, in bytes.
    */
-  final public long getLen() {
+  public final long getLen() {
     return length;
   }
 
@@ -104,7 +104,7 @@ public class HdfsFileStatus {
    * Is this a directory?
    * @return true if this is a directory
    */
-  final public boolean isDir() {
+  public final boolean isDir() {
     return isdir;
   }
 
@@ -120,7 +120,7 @@ public class HdfsFileStatus {
    * Get the block size of the file.
    * @return the number of bytes
    */
-  final public long getBlockSize() {
+  public final long getBlockSize() {
     return blocksize;
   }
 
@@ -128,7 +128,7 @@ public class HdfsFileStatus {
    * Get the replication factor of a file.
    * @return the replication factor of a file.
    */
-  final public short getReplication() {
+  public final short getReplication() {
     return block_replication;
   }
 
@@ -136,7 +136,7 @@ public class HdfsFileStatus {
    * Get the modification time of the file.
    * @return the modification time of file in milliseconds since January 1, 1970 UTC.
    */
-  final public long getModificationTime() {
+  public final long getModificationTime() {
     return modification_time;
   }
 
@@ -144,7 +144,7 @@ public class HdfsFileStatus {
    * Get the access time of the file.
    * @return the access time of file in milliseconds since January 1, 1970 UTC.
    */
-  final public long getAccessTime() {
+  public final long getAccessTime() {
     return access_time;
   }
 
@@ -152,7 +152,7 @@ public class HdfsFileStatus {
    * Get FsPermission associated with the file.
    * @return permssion
    */
-  final public FsPermission getPermission() {
+  public final FsPermission getPermission() {
     return permission;
   }
   
@@ -160,7 +160,7 @@ public class HdfsFileStatus {
    * Get the owner of the file.
    * @return owner of the file
    */
-  final public String getOwner() {
+  public final String getOwner() {
     return owner;
   }
   
@@ -168,7 +168,7 @@ public class HdfsFileStatus {
    * Get the group associated with the file.
    * @return group for the file. 
    */
-  final public String getGroup() {
+  public final String getGroup() {
     return group;
   }
   
@@ -176,7 +176,7 @@ public class HdfsFileStatus {
    * Check if the local name is empty
    * @return true if the name is empty
    */
-  final public boolean isEmptyLocalName() {
+  public final boolean isEmptyLocalName() {
     return path.length == 0;
   }
 
@@ -184,7 +184,7 @@ public class HdfsFileStatus {
    * Get the string representation of the local name
    * @return the local name in string
    */
-  final public String getLocalName() {
+  public final String getLocalName() {
     return DFSUtil.bytes2String(path);
   }
   
@@ -192,7 +192,7 @@ public class HdfsFileStatus {
    * Get the Java UTF8 representation of the local name
    * @return the local name in java UTF8
    */
-  final public byte[] getLocalNameInBytes() {
+  public final byte[] getLocalNameInBytes() {
     return path;
   }
 
@@ -201,7 +201,7 @@ public class HdfsFileStatus {
    * @param parent the parent path
    * @return the full path in string
    */
-  final public String getFullName(final String parent) {
+  public final String getFullName(final String parent) {
     if (isEmptyLocalName()) {
       return parent;
     }
@@ -219,7 +219,7 @@ public class HdfsFileStatus {
    * @param parent the parent path
    * @return the full path
    */
-  final public Path getFullPath(final Path parent) {
+  public final Path getFullPath(final Path parent) {
     if (isEmptyLocalName()) {
       return parent;
     }
@@ -231,27 +231,27 @@ public class HdfsFileStatus {
    * Get the string representation of the symlink.
    * @return the symlink as a string.
    */
-  final public String getSymlink() {
+  public final String getSymlink() {
     return DFSUtil.bytes2String(symlink);
   }
   
-  final public byte[] getSymlinkInBytes() {
+  public final byte[] getSymlinkInBytes() {
     return symlink;
   }
   
-  final public long getFileId() {
+  public final long getFileId() {
     return fileId;
   }
   
-  final public FileEncryptionInfo getFileEncryptionInfo() {
+  public final FileEncryptionInfo getFileEncryptionInfo() {
     return feInfo;
   }
 
-  final public int getChildrenNum() {
+  public final int getChildrenNum() {
     return childrenNum;
   }
 
-  final public FileStatus makeQualified(URI defaultUri, Path path) {
+  public final FileStatus makeQualified(URI defaultUri, Path path) {
     return new FileStatus(getLen(), isDir(), getReplication(),
         getBlockSize(), getModificationTime(),
         getAccessTime(),

@@ -30,6 +30,8 @@ Native Libraries Guide
    compression" could refer to all *.so's you need to compile that are
    specifically related to compression. Currently, however, this document
    only addresses the native hadoop library (<<<libhadoop.so>>>).
+   The document for libhdfs library (<<<libhdfs.so>>>) is
+   {{{../hadoop-hdfs/LibHdfs.html}here}}.
 
 * Native Hadoop Library
 
@@ -54,24 +56,28 @@ Native Libraries Guide
 
     [[4]] Install the compression codec development packages (>zlib-1.2,
        >gzip-1.2):
-          + If you download the library, install one or more development
+
+          * If you download the library, install one or more development
             packages - whichever compression codecs you want to use with
             your deployment.
-          + If you build the library, it is mandatory to install both
+
+          * If you build the library, it is mandatory to install both
             development packages.
 
     [[5]] Check the runtime log files.
 
 * Components
 
-   The native hadoop library includes two components, the zlib and gzip
-   compression codecs:
+   The native hadoop library includes various components:
 
-     * zlib
+   * Compression Codecs (bzip2, lz4, snappy, zlib)
 
-     * gzip
+   * Native IO utilities for {{{../hadoop-hdfs/ShortCircuitLocalReads.html}
+     HDFS Short-Circuit Local Reads}} and
+     {{{../hadoop-hdfs/CentralizedCacheManagement.html}Centralized Cache
+     Management in HDFS}}
 
-   The native hadoop library is imperative for gzip to work.
+   * CRC32 checksum implementation
 
 * Supported Platforms
 

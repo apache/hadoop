@@ -158,7 +158,8 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
     this.rfs = ((LocalFileSystem)localFS).getRaw();
     
     final float maxInMemCopyUse =
-      jobConf.getFloat(MRJobConfig.SHUFFLE_INPUT_BUFFER_PERCENT, 0.90f);
+      jobConf.getFloat(MRJobConfig.SHUFFLE_INPUT_BUFFER_PERCENT,
+          MRJobConfig.DEFAULT_SHUFFLE_INPUT_BUFFER_PERCENT);
     if (maxInMemCopyUse > 1.0 || maxInMemCopyUse < 0.0) {
       throw new IllegalArgumentException("Invalid value for " +
           MRJobConfig.SHUFFLE_INPUT_BUFFER_PERCENT + ": " +
@@ -199,7 +200,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
              "memToMemMergeOutputsThreshold=" + memToMemMergeOutputsThreshold);
 
     if (this.maxSingleShuffleLimit >= this.mergeThreshold) {
-      throw new RuntimeException("Invlaid configuration: "
+      throw new RuntimeException("Invalid configuration: "
           + "maxSingleShuffleLimit should be less than mergeThreshold"
           + "maxSingleShuffleLimit: " + this.maxSingleShuffleLimit
           + "mergeThreshold: " + this.mergeThreshold);

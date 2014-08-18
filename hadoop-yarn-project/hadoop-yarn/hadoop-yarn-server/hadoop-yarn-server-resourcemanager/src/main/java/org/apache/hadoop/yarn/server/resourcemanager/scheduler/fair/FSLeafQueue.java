@@ -44,11 +44,11 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 public class FSLeafQueue extends FSQueue {
   private static final Log LOG = LogFactory.getLog(
       FSLeafQueue.class.getName());
-    
-  private final List<AppSchedulable> runnableAppScheds = // apps that are runnable
-      new ArrayList<AppSchedulable>();
-  private final List<AppSchedulable> nonRunnableAppScheds =
-      new ArrayList<AppSchedulable>();
+
+  private final List<FSAppAttempt> runnableApps = // apps that are runnable
+      new ArrayList<FSAppAttempt>();
+  private final List<FSAppAttempt> nonRunnableApps =
+      new ArrayList<FSAppAttempt>();
   
   private Resource demand = Resources.createResource(0);
   
@@ -70,33 +70,31 @@ public class FSLeafQueue extends FSQueue {
     amResourceUsage = Resource.newInstance(0, 0);
   }
   
-  public void addApp(FSSchedulerApp app, boolean runnable) {
-    AppSchedulable appSchedulable = new AppSchedulable(scheduler, app, this);
-    app.setAppSchedulable(appSchedulable);
+  public void addApp(FSAppAttempt app, boolean runnable) {
     if (runnable) {
-      runnableAppScheds.add(appSchedulable);
+      runnableApps.add(app);
     } else {
-      nonRunnableAppScheds.add(appSchedulable);
+      nonRunnableApps.add(app);
     }
   }
   
   // for testing
-  void addAppSchedulable(AppSchedulable appSched) {
-    runnableAppScheds.add(appSched);
+  void addAppSchedulable(FSAppAttempt appSched) {
+    runnableApps.add(appSched);
   }
   
   /**
    * Removes the given app from this queue.
    * @return whether or not the app was runnable
    */
-  public boolean removeApp(FSSchedulerApp app) {
-    if (runnableAppScheds.remove(app.getAppSchedulable())) {
+  public boolean removeApp(FSAppAttempt app) {
+    if (runnableApps.remove(app)) {
       // Update AM resource usage
       if (app.isAmRunning() && app.getAMResource() != null) {
         Resources.subtractFrom(amResourceUsage, app.getAMResource());
       }
       return true;
-    } else if (nonRunnableAppScheds.remove(app.getAppSchedulable())) {
+    } else if (nonRunnableApps.remove(app)) {
       return false;
     } else {
       throw new IllegalStateException("Given app to remove " + app +
@@ -104,22 +102,22 @@ public class FSLeafQueue extends FSQueue {
     }
   }
   
-  public Collection<AppSchedulable> getRunnableAppSchedulables() {
-    return runnableAppScheds;
+  public Collection<FSAppAttempt> getRunnableAppSchedulables() {
+    return runnableApps;
   }
   
-  public List<AppSchedulable> getNonRunnableAppSchedulables() {
-    return nonRunnableAppScheds;
+  public List<FSAppAttempt> getNonRunnableAppSchedulables() {
+    return nonRunnableApps;
   }
   
   @Override
   public void collectSchedulerApplications(
       Collection<ApplicationAttemptId> apps) {
-    for (AppSchedulable appSched : runnableAppScheds) {
-      apps.add(appSched.getApp().getApplicationAttemptId());
+    for (FSAppAttempt appSched : runnableApps) {
+      apps.add(appSched.getApplicationAttemptId());
     }
-    for (AppSchedulable appSched : nonRunnableAppScheds) {
-      apps.add(appSched.getApp().getApplicationAttemptId());
+    for (FSAppAttempt appSched : nonRunnableApps) {
+      apps.add(appSched.getApplicationAttemptId());
     }
   }
 
@@ -145,10 +143,10 @@ public class FSLeafQueue extends FSQueue {
   @Override
   public Resource getResourceUsage() {
     Resource usage = Resources.createResource(0);
-    for (AppSchedulable app : runnableAppScheds) {
+    for (FSAppAttempt app : runnableApps) {
       Resources.addTo(usage, app.getResourceUsage());
     }
-    for (AppSchedulable app : nonRunnableAppScheds) {
+    for (FSAppAttempt app : nonRunnableApps) {
       Resources.addTo(usage, app.getResourceUsage());
     }
     return usage;
@@ -165,13 +163,13 @@ public class FSLeafQueue extends FSQueue {
     Resource maxRes = scheduler.getAllocationConfiguration()
         .getMaxResources(getName());
     demand = Resources.createResource(0);
-    for (AppSchedulable sched : runnableAppScheds) {
+    for (FSAppAttempt sched : runnableApps) {
       if (Resources.equals(demand, maxRes)) {
         break;
       }
       updateDemandForApp(sched, maxRes);
     }
-    for (AppSchedulable sched : nonRunnableAppScheds) {
+    for (FSAppAttempt sched : nonRunnableApps) {
       if (Resources.equals(demand, maxRes)) {
         break;
       }
@@ -183,7 +181,7 @@ public class FSLeafQueue extends FSQueue {
     }
   }
   
-  private void updateDemandForApp(AppSchedulable sched, Resource maxRes) {
+  private void updateDemandForApp(FSAppAttempt sched, Resource maxRes) {
     sched.updateDemand();
     Resource toAdd = sched.getDemand();
     if (LOG.isDebugEnabled()) {
@@ -207,9 +205,9 @@ public class FSLeafQueue extends FSQueue {
     }
 
     Comparator<Schedulable> comparator = policy.getComparator();
-    Collections.sort(runnableAppScheds, comparator);
-    for (AppSchedulable sched : runnableAppScheds) {
-      if (SchedulerAppUtils.isBlacklisted(sched.getApp(), node, LOG)) {
+    Collections.sort(runnableApps, comparator);
+    for (FSAppAttempt sched : runnableApps) {
+      if (SchedulerAppUtils.isBlacklisted(sched, node, LOG)) {
         continue;
       }
 
@@ -237,8 +235,8 @@ public class FSLeafQueue extends FSQueue {
 
     // Choose the app that is most over fair share
     Comparator<Schedulable> comparator = policy.getComparator();
-    AppSchedulable candidateSched = null;
-    for (AppSchedulable sched : runnableAppScheds) {
+    FSAppAttempt candidateSched = null;
+    for (FSAppAttempt sched : runnableApps) {
       if (candidateSched == null ||
           comparator.compare(sched, candidateSched) > 0) {
         candidateSched = sched;
@@ -291,7 +289,7 @@ public class FSLeafQueue extends FSQueue {
 
   @Override
   public int getNumRunnableApps() {
-    return runnableAppScheds.size();
+    return runnableApps.size();
   }
   
   @Override

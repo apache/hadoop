@@ -114,7 +114,7 @@ public class RMAuthenticationFilterInitializer extends FilterInitializer {
   public void initFilter(FilterContainer container, Configuration conf) {
 
     Map<String, String> filterConfig = createFilterConfig(conf);
-    container.addFilter("YARNAuthenticationFilter",
+    container.addFilter("RMAuthenticationFilter",
       RMAuthenticationFilter.class.getName(), filterConfig);
   }
 

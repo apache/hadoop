@@ -8655,6 +8655,50 @@
       </comparators>
     </test>
 
+    <test> <!-- TESTED -->
+      <description>count: file using -h option</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
+        <command>-fs NAMENODE -put CLITEST_DATA/data15bytes file1</command>
+        <command>-fs NAMENODE -put CLITEST_DATA/data1k file2</command>
+        <command>-fs NAMENODE -count -h file1 file2</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm file1 file2</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>( |\t)*0( |\t)*1( |\t)*15 file1</expected-output>
+        </comparator>
+      </comparators>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>( |\t)*0( |\t)*1( |\t)*1\.0 K file2</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>count: directory using -q and -h options</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /dir1</command>
+        <dfs-admin-command>-fs NAMENODE -setQuota 10 /dir1 </dfs-admin-command>
+        <dfs-admin-command>-fs NAMENODE -setSpaceQuota 1m /dir1 </dfs-admin-command>
+        <command>-fs NAMENODE -count -q -h /dir1</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /dir1</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>( |\t)*10( |\t)*9( |\t)*1 M( |\t)*1 M( |\t)*1( |\t)*0( |\t)*0 /dir1</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
     <!-- Tests for chmod -->
     <test> <!-- TESTED -->
       <description>chmod: change permission(octal mode) of file in absolute path</description>

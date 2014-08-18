@@ -4530,7 +4530,30 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           throw new IOException("Block (=" + lastblock + ") not found");
         }
       }
-      INodeFile iFile = ((INode)storedBlock.getBlockCollection()).asFile();
+      //
+      // The implementation of delete operation (see @deleteInternal method)
+      // first removes the file paths from namespace, and delays the removal
+      // of blocks to later time for better performance. When
+      // commitBlockSynchronization (this method) is called in between, the
+      // blockCollection of storedBlock could have been assigned to null by
+      // the delete operation, throw IOException here instead of NPE; if the
+      // file path is already removed from namespace by the delete operation,
+      // throw FileNotFoundException here, so not to proceed to the end of
+      // this method to add a CloseOp to the edit log for an already deleted
+      // file (See HDFS-6825).
+      //
+      BlockCollection blockCollection = storedBlock.getBlockCollection();
+      if (blockCollection == null) {
+        throw new IOException("The blockCollection of " + storedBlock
+            + " is null, likely because the file owning this block was"
+            + " deleted and the block removal is delayed");
+      }
+      INodeFile iFile = ((INode)blockCollection).asFile();
+      if (isFileDeleted(iFile)) {
+        throw new FileNotFoundException("File not found: "
+            + iFile.getFullPathName() + ", likely due to delayed block"
+            + " removal");
+      }
       if (!iFile.isUnderConstruction() || storedBlock.isComplete()) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Unexpected block (=" + lastblock
@@ -6550,9 +6573,28 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   private boolean isFileDeleted(INodeFile file) {
     // Not in the inodeMap or in the snapshot but marked deleted.
-    if (dir.getInode(file.getId()) == null || 
-        file.getParent() == null || (file.isWithSnapshot() &&
-        file.getFileWithSnapshotFeature().isCurrentFileDeleted())) {
+    if (dir.getInode(file.getId()) == null) {
+      return true;
+    }
+
+    // look at the path hierarchy to see if one parent is deleted by recursive
+    // deletion
+    INode tmpChild = file;
+    INodeDirectory tmpParent = file.getParent();
+    while (true) {
+      if (tmpParent == null ||
+          tmpParent.searchChildren(tmpChild.getLocalNameBytes()) < 0) {
+        return true;
+      }
+      if (tmpParent.isRoot()) {
+        break;
+      }
+      tmpChild = tmpParent;
+      tmpParent = tmpParent.getParent();
+    }
+
+    if (file.isWithSnapshot() &&
+        file.getFileWithSnapshotFeature().isCurrentFileDeleted()) {
       return true;
     }
     return false;

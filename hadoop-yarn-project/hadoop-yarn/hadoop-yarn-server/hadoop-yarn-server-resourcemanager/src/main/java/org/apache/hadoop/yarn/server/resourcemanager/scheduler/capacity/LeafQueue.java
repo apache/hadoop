@@ -643,7 +643,10 @@ public class LeafQueue implements CSQueue {
       addApplicationAttempt(application, user);
     }
 
-    metrics.submitAppAttempt(userName);
+    // We don't want to update metrics for move app
+    if (application.isPending()) {
+      metrics.submitAppAttempt(userName);
+    }
     getParent().submitApplicationAttempt(application, userName);
   }
 
@@ -701,7 +704,6 @@ public class LeafQueue implements CSQueue {
       throw ace;
     }
 
-    metrics.submitApp(userName);
   }
 
   private synchronized void activateApplications() {
@@ -1620,8 +1622,43 @@ public class LeafQueue implements CSQueue {
   @Override
   public void collectSchedulerApplications(
       Collection<ApplicationAttemptId> apps) {
+    for (FiCaSchedulerApp pendingApp : pendingApplications) {
+      apps.add(pendingApp.getApplicationAttemptId());
+    }
     for (FiCaSchedulerApp app : activeApplications) {
       apps.add(app.getApplicationAttemptId());
+    }
+  }
+
+  @Override
+  public void attachContainer(Resource clusterResource,
+      FiCaSchedulerApp application, RMContainer rmContainer) {
+    if (application != null) {
+      allocateResource(clusterResource, application, rmContainer.getContainer()
+          .getResource());
+      LOG.info("movedContainer" + " container=" + rmContainer.getContainer()
+          + " resource=" + rmContainer.getContainer().getResource()
+          + " queueMoveIn=" + this + " usedCapacity=" + getUsedCapacity()
+          + " absoluteUsedCapacity=" + getAbsoluteUsedCapacity() + " used="
+          + usedResources + " cluster=" + clusterResource);
+      // Inform the parent queue
+      getParent().attachContainer(clusterResource, application, rmContainer);
+    }
+  }
+
+  @Override
+  public void detachContainer(Resource clusterResource,
+      FiCaSchedulerApp application, RMContainer rmContainer) {
+    if (application != null) {
+      releaseResource(clusterResource, application, rmContainer.getContainer()
+          .getResource());
+      LOG.info("movedContainer" + " container=" + rmContainer.getContainer()
+          + " resource=" + rmContainer.getContainer().getResource()
+          + " queueMoveOut=" + this + " usedCapacity=" + getUsedCapacity()
+          + " absoluteUsedCapacity=" + getAbsoluteUsedCapacity() + " used="
+          + usedResources + " cluster=" + clusterResource);
+      // Inform the parent queue
+      getParent().detachContainer(clusterResource, application, rmContainer);
     }
   }
 }
