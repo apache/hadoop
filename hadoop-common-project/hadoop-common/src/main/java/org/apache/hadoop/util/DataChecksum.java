@@ -390,6 +390,12 @@ public class DataChecksum implements Checksum {
           checksums.array(), checksums.arrayOffset() + checksums.position());
       return;
     }
+
+    if (NativeCrc32.isAvailable()) {
+      NativeCrc32.calculateChunkedSums(bytesPerChecksum, type.id,
+          checksums, data);
+      return;
+    }
     
     data.mark();
     checksums.mark();
@@ -412,9 +418,15 @@ public class DataChecksum implements Checksum {
    * Implementation of chunked calculation specifically on byte arrays. This
    * is to avoid the copy when dealing with ByteBuffers that have array backing.
    */
-  private void calculateChunkedSums(
+  public void calculateChunkedSums(
       byte[] data, int dataOffset, int dataLength,
       byte[] sums, int sumsOffset) {
+
+    if (NativeCrc32.isAvailable()) {
+      NativeCrc32.calculateChunkedSumsByteArray(bytesPerChecksum, type.id,
+          sums, sumsOffset, data, dataOffset, dataLength);
+      return;
+    }
 
     int remaining = dataLength;
     while (remaining > 0) {
