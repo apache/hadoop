@@ -511,6 +511,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6783. Fix HDFS CacheReplicationMonitor rescan logic. (Yi Liu and Colin Patrick McCabe via umamahesh)
 
+    HDFS-6825. Edit log corruption due to delayed block removal.
+    (Yongjun Zhang via wang)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

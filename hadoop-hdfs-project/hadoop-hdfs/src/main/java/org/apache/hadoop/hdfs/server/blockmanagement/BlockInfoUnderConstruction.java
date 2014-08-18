@@ -373,12 +373,14 @@ public class BlockInfoUnderConstruction extends BlockInfo {
     sb.append("{blockUCState=").append(blockUCState)
       .append(", primaryNodeIndex=").append(primaryNodeIndex)
       .append(", replicas=[");
-    Iterator<ReplicaUnderConstruction> iter = replicas.iterator();
-    if (iter.hasNext()) {
-      iter.next().appendStringTo(sb);
-      while (iter.hasNext()) {
-        sb.append(", ");
+    if (replicas != null) {
+      Iterator<ReplicaUnderConstruction> iter = replicas.iterator();
+      if (iter.hasNext()) {
         iter.next().appendStringTo(sb);
+        while (iter.hasNext()) {
+          sb.append(", ");
+          iter.next().appendStringTo(sb);
+        }
       }
     }
     sb.append("]}");
