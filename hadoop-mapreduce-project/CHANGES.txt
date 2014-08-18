@@ -308,6 +308,9 @@ Release 2.5.0 - UNRELEASED
 
   BUG FIXES 
 
+    MAPREDUCE-6033. Updated access check for displaying job information 
+    (Yu Gao via Eric Yang)
+
     MAPREDUCE-5759. Remove unnecessary conf load in Limits (Sandy Ryza)
 
     MAPREDUCE-5014. Extend Distcp to accept a custom CopyListing.
