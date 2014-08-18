@@ -402,6 +402,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6850. Move NFS out of order write unit tests into TestWrites class.
     (Zhe Zhang via atm)
 
+    HDFS-6188. An ip whitelist based implementation of TrustedChannelResolver.
+    (Benoy Antony via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
