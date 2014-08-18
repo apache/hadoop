@@ -117,12 +117,12 @@ static int convert_java_crc_type(JNIEnv *env, jint crc_type) {
   }
 }
 
-JNIEXPORT void JNICALL Java_org_apache_hadoop_util_NativeCrc32_nativeVerifyChunkedSums
+JNIEXPORT void JNICALL Java_org_apache_hadoop_util_NativeCrc32_nativeComputeChunkedSums
   (JNIEnv *env, jclass clazz,
     jint bytes_per_checksum, jint j_crc_type,
     jobject j_sums, jint sums_offset,
     jobject j_data, jint data_offset, jint data_len,
-    jstring j_filename, jlong base_pos)
+    jstring j_filename, jlong base_pos, jboolean verify)
 {
   uint8_t *sums_addr;
   uint8_t *data_addr;
@@ -166,27 +166,27 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_util_NativeCrc32_nativeVerifyChunk
   if (crc_type == -1) return; // exception already thrown
 
   // Setup complete. Actually verify checksums.
-  ret = bulk_verify_crc(data, data_len, sums, crc_type,
-                            bytes_per_checksum, &error_data);
-  if (likely(ret == CHECKSUMS_VALID)) {
+  ret = bulk_crc(data, data_len, sums, crc_type,
+                            bytes_per_checksum, verify ? &error_data : NULL);
+  if (likely(verify && ret == CHECKSUMS_VALID || !verify && ret == 0)) {
     return;
-  } else if (unlikely(ret == INVALID_CHECKSUM_DETECTED)) {
+  } else if (unlikely(verify && ret == INVALID_CHECKSUM_DETECTED)) {
     long pos = base_pos + (error_data.bad_data - data);
     throw_checksum_exception(
       env, error_data.got_crc, error_data.expected_crc,
       j_filename, pos);
   } else {
     THROW(env, "java/lang/AssertionError",
-      "Bad response code from native bulk_verify_crc");
+      "Bad response code from native bulk_crc");
   }
 }
 
-JNIEXPORT void JNICALL Java_org_apache_hadoop_util_NativeCrc32_nativeVerifyChunkedSumsByteArray
+JNIEXPORT void JNICALL Java_org_apache_hadoop_util_NativeCrc32_nativeComputeChunkedSumsByteArray
   (JNIEnv *env, jclass clazz,
     jint bytes_per_checksum, jint j_crc_type,
     jarray j_sums, jint sums_offset,
     jarray j_data, jint data_offset, jint data_len,
-    jstring j_filename, jlong base_pos)
+    jstring j_filename, jlong base_pos, jboolean verify)
 {
   uint8_t *sums_addr;
   uint8_t *data_addr;
@@ -237,21 +237,21 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_util_NativeCrc32_nativeVerifyChunk
     data = data_addr + data_offset + checksumNum * bytes_per_checksum;
 
     // Setup complete. Actually verify checksums.
-    ret = bulk_verify_crc(data, MIN(numChecksumsPerIter * bytes_per_checksum,
-                                    data_len - checksumNum * bytes_per_checksum),
-                          sums, crc_type, bytes_per_checksum, &error_data);
+    ret = bulk_crc(data, MIN(numChecksumsPerIter * bytes_per_checksum,
+                             data_len - checksumNum * bytes_per_checksum),
+                   sums, crc_type, bytes_per_checksum, verify ? &error_data : NULL);
     (*env)->ReleasePrimitiveArrayCritical(env, j_data, data_addr, 0);
     (*env)->ReleasePrimitiveArrayCritical(env, j_sums, sums_addr, 0);
-    if (unlikely(ret == INVALID_CHECKSUM_DETECTED)) {
+    if (unlikely(verify && ret == INVALID_CHECKSUM_DETECTED)) {
       long pos = base_pos + (error_data.bad_data - data) + checksumNum *
         bytes_per_checksum;
       throw_checksum_exception(
         env, error_data.got_crc, error_data.expected_crc,
         j_filename, pos);
       return;
-    } else if (unlikely(ret != CHECKSUMS_VALID)) {
+    } else if (unlikely(verify && ret != CHECKSUMS_VALID || !verify && ret != 0)) {
       THROW(env, "java/lang/AssertionError",
-        "Bad response code from native bulk_verify_crc");
+        "Bad response code from native bulk_crc");
       return;
     }
     checksumNum += numChecksumsPerIter;
