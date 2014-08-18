@@ -259,6 +259,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6825. Edit log corruption due to delayed block removal.
     (Yongjun Zhang via wang)
 
+    HDFS-6569. OOB message can't be sent to the client when DataNode shuts down for upgrade
+    (brandonli)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

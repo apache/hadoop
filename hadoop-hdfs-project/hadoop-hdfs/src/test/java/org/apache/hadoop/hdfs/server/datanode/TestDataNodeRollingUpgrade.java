@@ -27,11 +27,14 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -67,6 +70,7 @@ public class TestDataNodeRollingUpgrade {
 
   private void startCluster() throws IOException {
     conf = new HdfsConfiguration();
+    conf.setInt("dfs.blocksize", 1024*1024);
     cluster = new Builder(conf).numDataNodes(REPL_FACTOR).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
@@ -239,6 +243,50 @@ public class TestDataNodeRollingUpgrade {
       assert(fs.exists(testFile1));
       String fileContents2 = DFSTestUtil.readFile(fs, testFile1);
       assertThat(fileContents1, is(fileContents2));
+    } finally {
+      shutdownCluster();
+    }
+  }
+  
+  @Test (timeout=600000)
+  // Test DatanodeXceiver has correct peer-dataxceiver pairs for sending OOB message
+  public void testDatanodePeersXceiver() throws Exception {
+    try {
+      startCluster();
+
+      // Create files in DFS.
+      String testFile1 = "/TestDataNodeXceiver1.dat";
+      String testFile2 = "/TestDataNodeXceiver2.dat";
+      String testFile3 = "/TestDataNodeXceiver3.dat";
+
+      DFSClient client1 = new DFSClient(NameNode.getAddress(conf), conf);
+      DFSClient client2 = new DFSClient(NameNode.getAddress(conf), conf);
+      DFSClient client3 = new DFSClient(NameNode.getAddress(conf), conf);
+
+      DFSOutputStream s1 = (DFSOutputStream) client1.create(testFile1, true);
+      DFSOutputStream s2 = (DFSOutputStream) client2.create(testFile2, true);
+      DFSOutputStream s3 = (DFSOutputStream) client3.create(testFile3, true);
+
+      byte[] toWrite = new byte[1024*1024*8];
+      Random rb = new Random(1111);
+      rb.nextBytes(toWrite);
+      s1.write(toWrite, 0, 1024*1024*8);
+      s1.flush();
+      s2.write(toWrite, 0, 1024*1024*8);
+      s2.flush();
+      s3.write(toWrite, 0, 1024*1024*8);
+      s3.flush();       
+
+      assertTrue(dn.getXferServer().getNumPeersXceiver() == dn.getXferServer()
+          .getNumPeersXceiver());
+      s1.close();
+      s2.close();
+      s3.close();
+      assertTrue(dn.getXferServer().getNumPeersXceiver() == dn.getXferServer()
+          .getNumPeersXceiver());
+      client1.close();
+      client2.close();
+      client3.close();      
     } finally {
       shutdownCluster();
     }
