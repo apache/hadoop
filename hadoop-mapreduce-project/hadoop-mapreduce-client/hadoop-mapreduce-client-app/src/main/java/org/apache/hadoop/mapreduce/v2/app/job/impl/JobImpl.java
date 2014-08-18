@@ -730,7 +730,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     if (jobACL == null) {
       return true;
     }
-    return aclsManager.checkAccess(callerUGI, jobOperation, username, jobACL);
+    return aclsManager.checkAccess(callerUGI, jobOperation, userName, jobACL);
   }
 
   @Override
