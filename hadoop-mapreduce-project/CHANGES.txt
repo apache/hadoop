@@ -227,6 +227,15 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6032. Made MR jobs write job history files on the default FS when
     the current context's FS is different. (Benjamin Zhitomirsky via zjshen)
 
+    MAPREDUCE-6024. Shortened the time when Fetcher is stuck in retrying before
+    concluding the failure by configuration. (Yunjiong Zhao via zjshen)
+
+    MAPREDUCE-6036. TestJobEndNotifier fails intermittently in branch-2 (chang
+    li via jlowe)
+
+    MAPREDUCE-6012. DBInputSplit creates invalid ranges on Oracle. 
+    (Wei Yan via kasha)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -307,6 +316,9 @@ Release 2.5.0 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES 
+
+    MAPREDUCE-6033. Updated access check for displaying job information 
+    (Yu Gao via Eric Yang)
 
     MAPREDUCE-5759. Remove unnecessary conf load in Limits (Sandy Ryza)
 
