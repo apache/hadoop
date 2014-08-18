@@ -81,6 +81,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6032. Made MR jobs write job history files on the default FS when
     the current context's FS is different. (Benjamin Zhitomirsky via zjshen)
 
+    MAPREDUCE-6024. Shortened the time when Fetcher is stuck in retrying before
+    concluding the failure by configuration. (Yunjiong Zhao via zjshen)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
