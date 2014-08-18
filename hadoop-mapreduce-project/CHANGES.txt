@@ -84,6 +84,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6024. Shortened the time when Fetcher is stuck in retrying before
     concluding the failure by configuration. (Yunjiong Zhao via zjshen)
 
+    MAPREDUCE-6036. TestJobEndNotifier fails intermittently in branch-2 (chang
+    li via jlowe)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
