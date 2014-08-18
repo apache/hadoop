@@ -527,8 +527,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10335. An ip whilelist based implementation to resolve Sasl
     properties per connection. (Benoy Antony via Arpit Agarwal)
 
-    HDFS-6561. org.apache.hadoop.util.DataChecksum should support native
-    checksumming (James Thomas via Colin Patrick McCabe)
+    HADOOP-10975. org.apache.hadoop.util.DataChecksum should support calculating
+    checksums in native code (James Thomas via Colin Patrick McCabe)
 
   OPTIMIZATIONS
 
