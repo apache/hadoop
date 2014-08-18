@@ -23,6 +23,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,6 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -51,6 +55,20 @@ public class NameNodeConnector implements Closeable {
   private static final Log LOG = LogFactory.getLog(NameNodeConnector.class);
 
   private static final int MAX_NOT_CHANGED_ITERATIONS = 5;
+  
+  /** Create {@link NameNodeConnector} for the given namenodes. */
+  public static List<NameNodeConnector> newNameNodeConnectors(
+      Collection<URI> namenodes, String name, Path idPath, Configuration conf)
+      throws IOException {
+    final List<NameNodeConnector> connectors = new ArrayList<NameNodeConnector>(
+        namenodes.size());
+    for (URI uri : namenodes) {
+      NameNodeConnector nnc = new NameNodeConnector(name, uri, idPath, conf);
+      nnc.getKeyManager().startBlockKeyUpdater();
+      connectors.add(nnc);
+    }
+    return connectors;
+  }
 
   private final URI nameNodeUri;
   private final String blockpoolID;
@@ -59,7 +77,7 @@ public class NameNodeConnector implements Closeable {
   private final ClientProtocol client;
   private final KeyManager keyManager;
 
-  private final FileSystem fs;
+  private final DistributedFileSystem fs;
   private final Path idPath;
   private final OutputStream out;
 
@@ -74,7 +92,7 @@ public class NameNodeConnector implements Closeable {
         NamenodeProtocol.class).getProxy();
     this.client = NameNodeProxies.createProxy(conf, nameNodeUri,
         ClientProtocol.class).getProxy();
-    this.fs = FileSystem.get(nameNodeUri, conf);
+    this.fs = (DistributedFileSystem)FileSystem.get(nameNodeUri, conf);
 
     final NamespaceInfo namespaceinfo = namenode.versionRequest();
     this.blockpoolID = namespaceinfo.getBlockPoolID();
@@ -87,6 +105,10 @@ public class NameNodeConnector implements Closeable {
     if (out == null) {
       throw new IOException("Another " + name + " is running.");
     }
+  }
+
+  public DistributedFileSystem getDistributedFileSystem() {
+    return fs;
   }
 
   /** @return the block pool ID */

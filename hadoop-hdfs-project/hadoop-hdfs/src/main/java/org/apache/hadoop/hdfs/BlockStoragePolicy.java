@@ -180,7 +180,23 @@ public class BlockStoragePolicy {
   public StorageType getReplicationFallback(EnumSet<StorageType> unavailables) {
     return getFallback(unavailables, replicationFallbacks);
   }
-  
+
+  @Override
+  public int hashCode() {
+    return Byte.valueOf(id).hashCode();
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == this) {
+      return true;
+    } else if (obj == null || !(obj instanceof BlockStoragePolicy)) {
+      return false;
+    }
+    final BlockStoragePolicy that = (BlockStoragePolicy)obj;
+    return this.id == that.id;
+  }
+
   @Override
   public String toString() {
     return getClass().getSimpleName() + "{" + name + ":" + id
@@ -191,6 +207,10 @@ public class BlockStoragePolicy {
 
   public byte getId() {
     return id;
+  }
+
+  public String getName() {
+    return name;
   }
 
   private static StorageType getFallback(EnumSet<StorageType> unavailables,
