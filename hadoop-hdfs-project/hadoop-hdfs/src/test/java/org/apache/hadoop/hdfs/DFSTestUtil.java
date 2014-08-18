@@ -44,6 +44,9 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
@@ -1319,5 +1322,34 @@ public class DFSTestUtil {
       DFSInputStream.tcpReadsDisabledForTesting = formerTcpReadsDisabled;
       sockDir.close();
     }
+  }
+
+  /**
+   * @return the node which is expected to run the recovery of the
+   * given block, which is known to be under construction inside the
+   * given NameNOde.
+   */
+  public static DatanodeDescriptor getExpectedPrimaryNode(NameNode nn,
+      ExtendedBlock blk) {
+    BlockManager bm0 = nn.getNamesystem().getBlockManager();
+    BlockInfo storedBlock = bm0.getStoredBlock(blk.getLocalBlock());
+    assertTrue("Block " + blk + " should be under construction, " +
+        "got: " + storedBlock,
+        storedBlock instanceof BlockInfoUnderConstruction);
+    BlockInfoUnderConstruction ucBlock =
+      (BlockInfoUnderConstruction)storedBlock;
+    // We expect that the replica with the most recent heart beat will be
+    // the one to be in charge of the synchronization / recovery protocol.
+    final DatanodeStorageInfo[] storages = ucBlock.getExpectedStorageLocations();
+    DatanodeStorageInfo expectedPrimary = storages[0];
+    long mostRecentLastUpdate = expectedPrimary.getDatanodeDescriptor().getLastUpdate();
+    for (int i = 1; i < storages.length; i++) {
+      final long lastUpdate = storages[i].getDatanodeDescriptor().getLastUpdate();
+      if (lastUpdate > mostRecentLastUpdate) {
+        expectedPrimary = storages[i];
+        mostRecentLastUpdate = lastUpdate;
+      }
+    }
+    return expectedPrimary.getDatanodeDescriptor();
   }
 }
