@@ -615,6 +615,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10973. Native Libraries Guide contains format error. (Peter Klavins
     via Arpit Agarwal)
 
+    HADOOP-10972. Native Libraries Guide contains mis-spelt build line (Peter
+    Klavins via aw)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
