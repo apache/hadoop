@@ -49,7 +49,7 @@ public class MockAM {
 
   private volatile int responseId = 0;
   private final ApplicationAttemptId attemptId;
-  private final RMContext context;
+  private RMContext context;
   private ApplicationMasterProtocol amRMProtocol;
 
   private final List<ResourceRequest> requests = new ArrayList<ResourceRequest>();
@@ -61,8 +61,10 @@ public class MockAM {
     this.amRMProtocol = amRMProtocol;
     this.attemptId = attemptId;
   }
-  
-  void setAMRMProtocol(ApplicationMasterProtocol amRMProtocol) {
+
+  public void setAMRMProtocol(ApplicationMasterProtocol amRMProtocol,
+      RMContext context) {
+    this.context = context;
     this.amRMProtocol = amRMProtocol;
   }
 

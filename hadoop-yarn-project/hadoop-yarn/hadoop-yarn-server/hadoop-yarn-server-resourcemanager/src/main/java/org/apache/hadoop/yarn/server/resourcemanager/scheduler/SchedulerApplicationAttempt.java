@@ -17,13 +17,14 @@
 */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
-import com.google.common.base.Preconditions;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,7 +42,6 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -53,6 +53,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerStat
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
 
@@ -87,6 +88,13 @@ public class SchedulerApplicationAttempt {
   protected List<RMContainer> newlyAllocatedContainers = 
       new ArrayList<RMContainer>();
 
+  // This pendingRelease is used in work-preserving recovery scenario to keep
+  // track of the AM's outstanding release requests. RM on recovery could
+  // receive the release request form AM before it receives the container status
+  // from NM for recovery. In this case, the to-be-recovered containers reported
+  // by NM should not be recovered.
+  private Set<ContainerId> pendingRelease = null;
+
   /**
    * Count how many times the application has been given an opportunity
    * to schedule a task at each priority. Each time the scheduler
@@ -114,7 +122,7 @@ public class SchedulerApplicationAttempt {
         new AppSchedulingInfo(applicationAttemptId, user, queue,  
             activeUsersManager, rmContext.getEpoch());
     this.queue = queue;
-    
+    this.pendingRelease = new HashSet<ContainerId>();
     if (rmContext.getRMApps() != null &&
         rmContext.getRMApps()
             .containsKey(applicationAttemptId.getApplicationId())) {
@@ -161,6 +169,10 @@ public class SchedulerApplicationAttempt {
 
   public Map<String, ResourceRequest> getResourceRequests(Priority priority) {
     return appSchedulingInfo.getResourceRequests(priority);
+  }
+
+  public Set<ContainerId> getPendingRelease() {
+    return this.pendingRelease;
   }
 
   public int getNewContainerId() {
