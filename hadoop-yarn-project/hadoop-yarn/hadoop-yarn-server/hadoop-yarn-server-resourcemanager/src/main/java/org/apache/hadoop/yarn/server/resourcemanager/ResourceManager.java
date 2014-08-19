@@ -1161,6 +1161,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
     ((Service)dispatcher).init(this.conf);
     ((Service)dispatcher).start();
     removeService((Service)rmDispatcher);
+    // Need to stop previous rmDispatcher before assigning new dispatcher
+    // otherwise causes "AsyncDispatcher event handler" thread leak
+    ((Service) rmDispatcher).stop();
     rmDispatcher = dispatcher;
     addIfService(rmDispatcher);
     rmContext.setDispatcher(rmDispatcher);
