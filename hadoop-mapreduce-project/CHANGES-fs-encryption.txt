@@ -14,5 +14,7 @@ fs-encryption (Unreleased)
     MAPREDUCE-6007. Add support to distcp to preserve raw.* namespace
     extended attributes. (clamb)
 
+    HDFS-6872. Fix TestOptionsParser. (clamb)
+
   BUG FIXES
 
