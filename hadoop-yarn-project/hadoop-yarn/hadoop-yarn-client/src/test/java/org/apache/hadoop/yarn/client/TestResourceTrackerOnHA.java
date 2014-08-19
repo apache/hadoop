@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.client;
 
 import java.io.IOException;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -60,7 +60,7 @@ public class TestResourceTrackerOnHA extends ProtocolHATestBase{
     // make sure registerNodeManager works when failover happens
     RegisterNodeManagerRequest request =
         RegisterNodeManagerRequest.newInstance(nodeId, 0, resource,
-            YarnVersionInfo.getVersion(), null);
+            YarnVersionInfo.getVersion(), null, null);
     resourceTracker.registerNodeManager(request);
     Assert.assertTrue(waitForNodeManagerToConnect(10000, nodeId));
 

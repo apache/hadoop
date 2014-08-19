@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
 
 import com.google.common.base.Preconditions;
 
@@ -39,7 +40,7 @@ import com.google.common.base.Preconditions;
  * snapshots and it is renamed/moved to other locations.
  * 
  * For example,
- * (1) Support we have /abc/foo, say the inode of foo is inode(id=1000,name=foo)
+ * (1) Suppose we have /abc/foo, say the inode of foo is inode(id=1000,name=foo)
  * (2) create snapshot s0 for /abc
  * (3) mv /abc/foo /xyz/bar, i.e. inode(id=1000,name=...) is renamed from "foo"
  *     to "bar" and its parent becomes /xyz.
@@ -228,6 +229,21 @@ public abstract class INodeReference extends INode {
   final void removeAclFeature() {
     referred.removeAclFeature();
   }
+  
+  @Override
+  final XAttrFeature getXAttrFeature(int snapshotId) {
+    return referred.getXAttrFeature(snapshotId);
+  }
+  
+  @Override
+  final void addXAttrFeature(XAttrFeature xAttrFeature) {
+    referred.addXAttrFeature(xAttrFeature);
+  }
+  
+  @Override
+  final void removeXAttrFeature() {
+    referred.removeXAttrFeature();
+  }
 
   @Override
   public final short getFsPermissionShort() {
@@ -271,11 +287,9 @@ public abstract class INodeReference extends INode {
   }
 
   @Override
-  final INode recordModification(int latestSnapshotId)
+  final void recordModification(int latestSnapshotId)
       throws QuotaExceededException {
     referred.recordModification(latestSnapshotId);
-    // reference is never replaced 
-    return this;
   }
 
   @Override // used by WithCount
@@ -416,6 +430,30 @@ public abstract class INodeReference extends INode {
         return null;
       } else {
         return withNameList.get(-i - 2);
+      }
+    }
+
+    /**
+     * @return the WithName/DstReference node contained in the given snapshot.
+     */
+    public INodeReference getParentRef(int snapshotId) {
+      int start = 0;
+      int end = withNameList.size() - 1;
+      while (start < end) {
+        int mid = start + (end - start) / 2;
+        int sid = withNameList.get(mid).lastSnapshotId; 
+        if (sid == snapshotId) {
+          return withNameList.get(mid);
+        } else if (sid < snapshotId) {
+          start = mid + 1;
+        } else {
+          end = mid;
+        }
+      }
+      if (withNameList.get(start).lastSnapshotId >= snapshotId) {
+        return withNameList.get(start);
+      } else {
+        return this.getParentReference();
       }
     }
   }

@@ -116,7 +116,8 @@ public class DataNodeTestUtils {
   
   public static void runBlockScannerForBlock(DataNode dn, ExtendedBlock b) {
     BlockPoolSliceScanner bpScanner = getBlockPoolScanner(dn, b);
-    bpScanner.verifyBlock(b);
+    bpScanner.verifyBlock(new ExtendedBlock(b.getBlockPoolId(),
+        new BlockPoolSliceScanner.BlockScanInfo(b.getLocalBlock())));
   }
 
   private static BlockPoolSliceScanner getBlockPoolScanner(DataNode dn,

@@ -36,7 +36,9 @@ import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
@@ -110,19 +112,42 @@ public class AppBlock extends HtmlBlock {
 
     setTitle(join("Application ", aid));
 
-    info("Application Overview").
-      _("User:", app.getUser()).
-      _("Name:", app.getName()).
-      _("Application Type:", app.getApplicationType()).
-      _("Application Tags:", app.getApplicationTags()).
-      _("State:", app.getState()).
-      _("FinalStatus:", app.getFinalStatus()).
-      _("Started:", Times.format(app.getStartTime())).
-      _("Elapsed:", StringUtils.formatTime(
-        Times.elapsed(app.getStartTime(), app.getFinishTime()))).
-      _("Tracking URL:", !app.isTrackingUrlReady() ?
-        "#" : app.getTrackingUrlPretty(), app.getTrackingUI()).
-      _("Diagnostics:", app.getNote());
+    RMAppMetrics appMerics = rmApp.getRMAppMetrics();
+    RMAppAttemptMetrics attemptMetrics =
+        rmApp.getCurrentAppAttempt().getRMAppAttemptMetrics();
+    info("Application Overview")
+        ._("User:", app.getUser())
+        ._("Name:", app.getName())
+        ._("Application Type:", app.getApplicationType())
+        ._("Application Tags:", app.getApplicationTags())
+        ._("State:", app.getState())
+        ._("FinalStatus:", app.getFinalStatus())
+        ._("Started:", Times.format(app.getStartTime()))
+        ._("Elapsed:",
+            StringUtils.formatTime(Times.elapsed(app.getStartTime(),
+                app.getFinishTime())))
+        ._("Tracking URL:",
+            !app.isTrackingUrlReady() ? "#" : app.getTrackingUrlPretty(),
+            app.getTrackingUI())
+        ._("Diagnostics:", app.getNote());
+
+    DIV<Hamlet> pdiv = html.
+        _(InfoBlock.class).
+        div(_INFO_WRAP);
+    info("Application Overview").clear();
+    info("Application Metrics")
+        ._("Total Resource Preempted:",
+          appMerics.getResourcePreempted())
+        ._("Total Number of Non-AM Containers Preempted:",
+          String.valueOf(appMerics.getNumNonAMContainersPreempted()))
+        ._("Total Number of AM Containers Preempted:",
+          String.valueOf(appMerics.getNumAMContainersPreempted()))
+        ._("Resource Preempted from Current Attempt:",
+          attemptMetrics.getResourcePreempted())
+        ._("Number of Non-AM Containers Preempted from Current Attempt:",
+          String.valueOf(attemptMetrics
+            .getNumNonAMContainersPreempted()));
+    pdiv._();
 
     Collection<RMAppAttempt> attempts = rmApp.getAppAttempts().values();
     String amString =

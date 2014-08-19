@@ -23,6 +23,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_STREAMS_CACHE_EXPIRY_MS_KEY;
 import static org.hamcrest.CoreMatchers.equalTo;
 
 import java.io.DataOutputStream;
@@ -30,7 +31,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.commons.lang.mutable.MutableBoolean;
@@ -197,11 +200,12 @@ public class TestShortCircuitCache {
   @Test(timeout=60000)
   public void testExpiry() throws Exception {
     final ShortCircuitCache cache =
-        new ShortCircuitCache(2, 1, 1, 10000000, 1, 10000, 0);
+        new ShortCircuitCache(2, 1, 1, 10000000, 1, 10000000, 0);
     final TestFileDescriptorPair pair = new TestFileDescriptorPair();
     ShortCircuitReplicaInfo replicaInfo1 =
       cache.fetchOrCreate(
-        new ExtendedBlockId(123, "test_bp1"), new SimpleReplicaCreator(123, cache, pair));
+        new ExtendedBlockId(123, "test_bp1"),
+          new SimpleReplicaCreator(123, cache, pair));
     Preconditions.checkNotNull(replicaInfo1.getReplica());
     Preconditions.checkState(replicaInfo1.getInvalidTokenException() == null);
     pair.compareWith(replicaInfo1.getReplica().getDataStream(),
@@ -461,6 +465,7 @@ public class TestShortCircuitCache {
       }
     }, 10, 60000);
     cluster.shutdown();
+    sockDir.close();
   }
 
   @Test(timeout=60000)
@@ -514,5 +519,99 @@ public class TestShortCircuitCache {
       }
     });
     cluster.shutdown();
+  }
+
+  /**
+   * Test unlinking a file whose blocks we are caching in the DFSClient.
+   * The DataNode will notify the DFSClient that the replica is stale via the
+   * ShortCircuitShm.
+   */
+  @Test(timeout=60000)
+  public void testUnlinkingReplicasInFileDescriptorCache() throws Exception {
+    BlockReaderTestUtil.enableShortCircuitShmTracing();
+    TemporarySocketDirectory sockDir = new TemporarySocketDirectory();
+    Configuration conf = createShortCircuitConf(
+        "testUnlinkingReplicasInFileDescriptorCache", sockDir);
+    // We don't want the CacheCleaner to time out short-circuit shared memory
+    // segments during the test, so set the timeout really high.
+    conf.setLong(DFS_CLIENT_READ_SHORTCIRCUIT_STREAMS_CACHE_EXPIRY_MS_KEY,
+        1000000000L);
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    cluster.waitActive();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    final ShortCircuitCache cache =
+        fs.getClient().getClientContext().getShortCircuitCache();
+    cache.getDfsClientShmManager().visit(new Visitor() {
+      @Override
+      public void visit(HashMap<DatanodeInfo, PerDatanodeVisitorInfo> info)
+          throws IOException {
+        // The ClientShmManager starts off empty.
+        Assert.assertEquals(0,  info.size());
+      }
+    });
+    final Path TEST_PATH = new Path("/test_file");
+    final int TEST_FILE_LEN = 8193;
+    final int SEED = 0xFADE0;
+    DFSTestUtil.createFile(fs, TEST_PATH, TEST_FILE_LEN,
+        (short)1, SEED);
+    byte contents[] = DFSTestUtil.readFileBuffer(fs, TEST_PATH);
+    byte expected[] = DFSTestUtil.
+        calculateFileContentsFromSeed(SEED, TEST_FILE_LEN);
+    Assert.assertTrue(Arrays.equals(contents, expected));
+    // Loading this file brought the ShortCircuitReplica into our local
+    // replica cache.
+    final DatanodeInfo datanode =
+        new DatanodeInfo(cluster.getDataNodes().get(0).getDatanodeId());
+    cache.getDfsClientShmManager().visit(new Visitor() {
+      @Override
+      public void visit(HashMap<DatanodeInfo, PerDatanodeVisitorInfo> info)
+          throws IOException {
+        Assert.assertTrue(info.get(datanode).full.isEmpty());
+        Assert.assertFalse(info.get(datanode).disabled);
+        Assert.assertEquals(1, info.get(datanode).notFull.values().size());
+        DfsClientShm shm =
+            info.get(datanode).notFull.values().iterator().next();
+        Assert.assertFalse(shm.isDisconnected());
+      }
+    });
+    // Remove the file whose blocks we just read.
+    fs.delete(TEST_PATH, false);
+
+    // Wait for the replica to be purged from the DFSClient's cache.
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      MutableBoolean done = new MutableBoolean(true);
+      @Override
+      public Boolean get() {
+        try {
+          done.setValue(true);
+          cache.getDfsClientShmManager().visit(new Visitor() {
+            @Override
+            public void visit(HashMap<DatanodeInfo,
+                  PerDatanodeVisitorInfo> info) throws IOException {
+              Assert.assertTrue(info.get(datanode).full.isEmpty());
+              Assert.assertFalse(info.get(datanode).disabled);
+              Assert.assertEquals(1,
+                  info.get(datanode).notFull.values().size());
+              DfsClientShm shm = info.get(datanode).notFull.values().
+                  iterator().next();
+              // Check that all slots have been invalidated.
+              for (Iterator<Slot> iter = shm.slotIterator();
+                   iter.hasNext(); ) {
+                Slot slot = iter.next();
+                if (slot.isValid()) {
+                  done.setValue(false);
+                }
+              }
+            }
+          });
+        } catch (IOException e) {
+          LOG.error("error running visitor", e);
+        }
+        return done.booleanValue();
+      }
+    }, 10, 60000);
+    cluster.shutdown();
+    sockDir.close();
   }
 }

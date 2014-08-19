@@ -21,11 +21,14 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import junit.framework.TestCase;
 
+import org.apache.commons.math3.util.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -34,12 +37,14 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.junit.Assert;
 
 import com.google.common.collect.Maps;
+import static org.junit.Assert.fail;
 
 public class TestGenericOptionsParser extends TestCase {
   File testDir;
@@ -90,6 +95,67 @@ public class TestGenericOptionsParser extends TestCase {
       th instanceof FileNotFoundException);
     files = conf2.get("tmpfiles");
     assertNull("files is not null", files);
+  }
+
+  /**
+   * Test the case where the libjars, files and archives arguments
+   * contains an empty token, which should create an IllegalArgumentException.
+   */
+  public void testEmptyFilenames() throws Exception {
+    List<Pair<String, String>> argsAndConfNames = new ArrayList<Pair<String, String>>();
+    argsAndConfNames.add(new Pair<String, String>("-libjars", "tmpjars"));
+    argsAndConfNames.add(new Pair<String, String>("-files", "tmpfiles"));
+    argsAndConfNames.add(new Pair<String, String>("-archives", "tmparchives"));
+    for (Pair<String, String> argAndConfName : argsAndConfNames) {
+      String arg = argAndConfName.getFirst();
+      String configName = argAndConfName.getSecond();
+
+      File tmpFileOne = new File(testDir, "tmpfile1");
+      Path tmpPathOne = new Path(tmpFileOne.toString());
+      File tmpFileTwo = new File(testDir, "tmpfile2");
+      Path tmpPathTwo = new Path(tmpFileTwo.toString());
+      localFs.create(tmpPathOne);
+      localFs.create(tmpPathTwo);
+      String[] args = new String[2];
+      args[0] = arg;
+      // create an empty path in between two valid files,
+      // which prior to HADOOP-10820 used to result in the
+      // working directory being added to "tmpjars" (or equivalent)
+      args[1] = String.format("%s,,%s",
+          tmpFileOne.toURI().toString(), tmpFileTwo.toURI().toString());
+      try {
+        new GenericOptionsParser(conf, args);
+        fail("Expected exception for empty filename");
+      } catch (IllegalArgumentException e) {
+        // expect to receive an IllegalArgumentException
+        GenericTestUtils.assertExceptionContains("File name can't be"
+            + " empty string", e);
+      }
+
+      // test zero file list length - it should create an exception
+      args[1] = ",,";
+      try {
+        new GenericOptionsParser(conf, args);
+        fail("Expected exception for zero file list length");
+      } catch (IllegalArgumentException e) {
+        // expect to receive an IllegalArgumentException
+        GenericTestUtils.assertExceptionContains("File name can't be"
+            + " empty string", e);
+      }
+
+      // test filename with space character
+      // it should create exception from parser in URI class
+      // due to URI syntax error
+      args[1] = String.format("%s, ,%s",
+          tmpFileOne.toURI().toString(), tmpFileTwo.toURI().toString());
+      try {
+        new GenericOptionsParser(conf, args);
+        fail("Expected exception for filename with space character");
+      } catch (IllegalArgumentException e) {
+        // expect to receive an IllegalArgumentException
+        GenericTestUtils.assertExceptionContains("URISyntaxException", e);
+      }
+    }
   }
 
   /**

@@ -19,8 +19,10 @@ package org.apache.hadoop.net;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.TreeMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -31,6 +33,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.util.ReflectionUtils;
+
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 
 /** The class represents a cluster of computer with a tree hierarchical
  * network topology.
@@ -667,7 +672,23 @@ public class NetworkTopology {
     return node1.getParent()==node2.getParent();
   }
 
-  final protected static Random r = new Random();
+  private static final ThreadLocal<Random> r = new ThreadLocal<Random>();
+
+  /**
+   * Getter for thread-local Random, which provides better performance than
+   * a shared Random (even though Random is thread-safe).
+   *
+   * @return Thread-local Random.
+   */
+  protected Random getRandom() {
+    Random rand = r.get();
+    if (rand == null) {
+      rand = new Random();
+      r.set(rand);
+    }
+    return rand;
+  }
+
   /** randomly choose one node from <i>scope</i>
    * if scope starts with ~, choose one from the all nodes except for the
    * ones in <i>scope</i>; otherwise, choose one from <i>scope</i>
@@ -717,7 +738,7 @@ public class NetworkTopology {
           "Failed to find datanode (scope=\"" + String.valueOf(scope) +
           "\" excludedScope=\"" + String.valueOf(excludedScope) + "\").");
     }
-    int leaveIndex = r.nextInt(numOfDatanodes);
+    int leaveIndex = getRandom().nextInt(numOfDatanodes);
     return innerNode.getLeaf(leaveIndex, node);
   }
 
@@ -824,61 +845,83 @@ public class NetworkTopology {
     return networkLocation.substring(index);
   }
 
-  /** swap two array items */
-  static protected void swap(Node[] nodes, int i, int j) {
-    Node tempNode;
-    tempNode = nodes[j];
-    nodes[j] = nodes[i];
-    nodes[i] = tempNode;
-  }
-  
-  /** Sort nodes array by their distances to <i>reader</i>
-   * It linearly scans the array, if a local node is found, swap it with
-   * the first element of the array.
-   * If a local rack node is found, swap it with the first element following
-   * the local node.
-   * If neither local node or local rack node is found, put a random replica
-   * location at position 0.
-   * It leaves the rest nodes untouched.
-   * @param reader the node that wishes to read a block from one of the nodes
-   * @param nodes the list of nodes containing data for the reader
+  /**
+   * Returns an integer weight which specifies how far away {node} is away from
+   * {reader}. A lower value signifies that a node is closer.
+   * 
+   * @param reader Node where data will be read
+   * @param node Replica of data
+   * @return weight
    */
-  public void pseudoSortByDistance( Node reader, Node[] nodes ) {
-    int tempIndex = 0;
-    int localRackNode = -1;
-    if (reader != null ) {
-      //scan the array to find the local node & local rack node
-      for(int i=0; i<nodes.length; i++) {
-        if(tempIndex == 0 && reader == nodes[i]) { //local node
-          //swap the local node and the node at position 0
-          if( i != 0 ) {
-            swap(nodes, tempIndex, i);
-          }
-          tempIndex=1;
-          if(localRackNode != -1 ) {
-            if(localRackNode == 0) {
-              localRackNode = i;
-            }
-            break;
-          }
-        } else if(localRackNode == -1 && isOnSameRack(reader, nodes[i])) {
-          //local rack
-          localRackNode = i;
-          if(tempIndex != 0 ) break;
+  protected int getWeight(Node reader, Node node) {
+    // 0 is local, 1 is same rack, 2 is off rack
+    // Start off by initializing to off rack
+    int weight = 2;
+    if (reader != null) {
+      if (reader == node) {
+        weight = 0;
+      } else if (isOnSameRack(reader, node)) {
+        weight = 1;
+      }
+    }
+    return weight;
+  }
+
+  /**
+   * Sort nodes array by network distance to <i>reader</i>.
+   * <p/>
+   * In a three-level topology, a node can be either local, on the same rack, or
+   * on a different rack from the reader. Sorting the nodes based on network
+   * distance from the reader reduces network traffic and improves performance.
+   * <p/>
+   * As an additional twist, we also randomize the nodes at each network
+   * distance using the provided random seed. This helps with load balancing
+   * when there is data skew.
+   * 
+   * @param reader Node where data will be read
+   * @param nodes Available replicas with the requested data
+   * @param seed Used to seed the pseudo-random generator that randomizes the
+   *          set of nodes at each network distance.
+   */
+  public void sortByDistance(Node reader, Node[] nodes, int activeLen,
+      long seed, boolean randomizeBlockLocationsPerBlock) {
+    /** Sort weights for the nodes array */
+    int[] weights = new int[activeLen];
+    for (int i=0; i<activeLen; i++) {
+      weights[i] = getWeight(reader, nodes[i]);
+    }
+    // Add weight/node pairs to a TreeMap to sort
+    TreeMap<Integer, List<Node>> tree = new TreeMap<Integer, List<Node>>();
+    for (int i=0; i<activeLen; i++) {
+      int weight = weights[i];
+      Node node = nodes[i];
+      List<Node> list = tree.get(weight);
+      if (list == null) {
+        list = Lists.newArrayListWithExpectedSize(1);
+        tree.put(weight, list);
+      }
+      list.add(node);
+    }
+
+    // Seed is normally the block id
+    // This means we use the same pseudo-random order for each block, for
+    // potentially better page cache usage.
+    // Seed is not used if we want to randomize block location for every block
+    Random rand = getRandom();
+    if (!randomizeBlockLocationsPerBlock) {
+      rand.setSeed(seed);
+    }
+    int idx = 0;
+    for (List<Node> list: tree.values()) {
+      if (list != null) {
+        Collections.shuffle(list, rand);
+        for (Node n: list) {
+          nodes[idx] = n;
+          idx++;
         }
       }
-
-      // swap the local rack node and the node at position tempIndex
-      if(localRackNode != -1 && localRackNode != tempIndex ) {
-        swap(nodes, tempIndex, localRackNode);
-        tempIndex++;
-      }
     }
-    
-    // put a random node at position 0 if it is not a local/local-rack node
-    if(tempIndex == 0 && localRackNode == -1 && nodes.length != 0) {
-      swap(nodes, 0, r.nextInt(nodes.length));
-    }
+    Preconditions.checkState(idx == activeLen,
+        "Sorted the wrong number of nodes!");
   }
-  
 }

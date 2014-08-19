@@ -176,17 +176,36 @@ public abstract class OutputCommitter {
   /**
    * Is task output recovery supported for restarting jobs?
    * 
-   * If task output recovery is supported, job restart can be done more 
+   * If task output recovery is supported, job restart can be done more
    * efficiently.
    * 
    * @return <code>true</code> if task output recovery is supported,
    *         <code>false</code> otherwise
-   * @see #recoverTask(TaskAttemptContext)         
+   * @see #recoverTask(TaskAttemptContext)
+   * @deprecated Use {@link #isRecoverySupported(JobContext)} instead.
    */
+  @Deprecated
   public boolean isRecoverySupported() {
     return false;
   }
-  
+
+  /**
+   * Is task output recovery supported for restarting jobs?
+   * 
+   * If task output recovery is supported, job restart can be done more
+   * efficiently.
+   * 
+   * @param jobContext
+   *          Context of the job whose output is being written.
+   * @return <code>true</code> if task output recovery is supported,
+   *         <code>false</code> otherwise
+   * @throws IOException
+   * @see #recoverTask(TaskAttemptContext)
+   */
+  public boolean isRecoverySupported(JobContext jobContext) throws IOException {
+    return isRecoverySupported();
+  }
+
   /**
    * Recover the task output. 
    * 

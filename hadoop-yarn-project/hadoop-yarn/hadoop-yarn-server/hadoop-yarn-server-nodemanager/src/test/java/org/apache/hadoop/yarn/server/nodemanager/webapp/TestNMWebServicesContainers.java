@@ -107,6 +107,11 @@ public class TestNMWebServicesContainers extends JerseyTest {
         }
 
         @Override
+        public long getVCoresAllocatedForContainers() {
+          return new Long("4000");
+        }
+
+        @Override
         public boolean isVmemCheckEnabled() {
           return true;
         }
@@ -122,7 +127,8 @@ public class TestNMWebServicesContainers extends JerseyTest {
       healthChecker.init(conf);
       dirsHandler = healthChecker.getDiskHandler();
       aclsManager = new ApplicationACLsManager(conf);
-      nmContext = new NodeManager.NMContext(null, null, dirsHandler, aclsManager) {
+      nmContext = new NodeManager.NMContext(null, null, dirsHandler,
+          aclsManager, null) {
         public NodeId getNodeId() {
           return NodeId.newInstance("testhost.foo.com", 8042);
         };
@@ -460,24 +466,27 @@ public class TestNMWebServicesContainers extends JerseyTest {
           WebServicesTestUtils.getXmlString(element, "diagnostics"),
           WebServicesTestUtils.getXmlString(element, "nodeId"),
           WebServicesTestUtils.getXmlInt(element, "totalMemoryNeededMB"),
+          WebServicesTestUtils.getXmlInt(element, "totalVCoresNeeded"),
           WebServicesTestUtils.getXmlString(element, "containerLogsLink"));
     }
   }
 
   public void verifyNodeContainerInfo(JSONObject info, Container cont)
       throws JSONException, Exception {
-    assertEquals("incorrect number of elements", 8, info.length());
+    assertEquals("incorrect number of elements", 9, info.length());
 
     verifyNodeContainerInfoGeneric(cont, info.getString("id"),
         info.getString("state"), info.getString("user"),
         info.getInt("exitCode"), info.getString("diagnostics"),
         info.getString("nodeId"), info.getInt("totalMemoryNeededMB"),
+        info.getInt("totalVCoresNeeded"),
         info.getString("containerLogsLink"));
   }
 
   public void verifyNodeContainerInfoGeneric(Container cont, String id,
       String state, String user, int exitCode, String diagnostics,
-      String nodeId, int totalMemoryNeededMB, String logsLink)
+      String nodeId, int totalMemoryNeededMB, int totalVCoresNeeded,
+      String logsLink)
       throws JSONException, Exception {
     WebServicesTestUtils.checkStringMatch("id", cont.getContainerId()
         .toString(), id);
@@ -494,6 +503,9 @@ public class TestNMWebServicesContainers extends JerseyTest {
     assertEquals("totalMemoryNeededMB wrong",
       YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
       totalMemoryNeededMB);
+    assertEquals("totalVCoresNeeded wrong",
+      YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+      totalVCoresNeeded);
     String shortLink =
         ujoin("containerlogs", cont.getContainerId().toString(),
             cont.getUser());

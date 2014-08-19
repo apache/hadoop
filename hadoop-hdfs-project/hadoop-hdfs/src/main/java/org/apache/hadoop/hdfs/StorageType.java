@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hdfs;
 
+import java.util.Arrays;
+import java.util.List;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -32,4 +35,11 @@ public enum StorageType {
   SSD;
 
   public static final StorageType DEFAULT = DISK;
+  public static final StorageType[] EMPTY_ARRAY = {};
+  
+  private static final StorageType[] VALUES = values();
+  
+  public static List<StorageType> asList() {
+    return Arrays.asList(VALUES);
+  }
 }

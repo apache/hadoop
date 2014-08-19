@@ -84,6 +84,10 @@ class BlockPoolSliceScanner {
   
   private final SortedSet<BlockScanInfo> blockInfoSet
       = new TreeSet<BlockScanInfo>(BlockScanInfo.LAST_SCAN_TIME_COMPARATOR);
+
+  private final SortedSet<BlockScanInfo> newBlockInfoSet =
+      new TreeSet<BlockScanInfo>(BlockScanInfo.LAST_SCAN_TIME_COMPARATOR);
+
   private final GSet<Block, BlockScanInfo> blockMap
       = new LightWeightGSet<Block, BlockScanInfo>(
           LightWeightGSet.computeCapacity(0.5, "BlockMap"));
@@ -97,7 +101,7 @@ class BlockPoolSliceScanner {
   private long totalTransientErrors = 0;
   private final AtomicInteger totalBlocksScannedInLastRun = new AtomicInteger(); // Used for test only
   
-  private long currentPeriodStart = Time.now();
+  private long currentPeriodStart = Time.monotonicNow();
   private long bytesLeft = 0; // Bytes to scan in this period
   private long totalBytesToScan = 0;
   private boolean isNewPeriod = true;
@@ -195,7 +199,7 @@ class BlockPoolSliceScanner {
       BlockScanInfo info = new BlockScanInfo( block );
       info.lastScanTime = scanTime--; 
       //still keep 'info.lastScanType' to NONE.
-      addBlockInfo(info);
+      addBlockInfo(info, false);
     }
 
     RollingLogs rollingLogs = null;
@@ -221,25 +225,42 @@ class BlockPoolSliceScanner {
     // Should we change throttler bandwidth every time bytesLeft changes?
     // not really required.
   }
-  
-  private synchronized void addBlockInfo(BlockScanInfo info) {
-    boolean added = blockInfoSet.add(info);
+
+  /**
+   * Add the BlockScanInfo to sorted set of blockScanInfo
+   * @param info BlockScanInfo to be added
+   * @param isNewBlock true if the block is the new Block, false if
+   *          BlockScanInfo is being updated with new scanTime
+   */
+  private synchronized void addBlockInfo(BlockScanInfo info,
+      boolean isNewBlock) {
+    boolean added = false;
+    if (isNewBlock) {
+      // check whether the block already present
+      boolean exists = blockInfoSet.contains(info);
+      added = !exists && newBlockInfoSet.add(info);
+    } else {
+      added = blockInfoSet.add(info);
+    }
     blockMap.put(info);
     
     if (added) {
       updateBytesToScan(info.getNumBytes(), info.lastScanTime);
     }
   }
-  
+
   private synchronized void delBlockInfo(BlockScanInfo info) {
     boolean exists = blockInfoSet.remove(info);
+    if (!exists){
+      exists = newBlockInfoSet.remove(info);
+    }
     blockMap.remove(info);
 
     if (exists) {
       updateBytesToScan(-info.getNumBytes(), info.lastScanTime);
     }
   }
-  
+
   /** Update blockMap by the given LogEntry */
   private synchronized void updateBlockInfo(LogEntry e) {
     BlockScanInfo info = blockMap.get(new Block(e.blockId, 0, e.genStamp));
@@ -249,7 +270,7 @@ class BlockPoolSliceScanner {
       delBlockInfo(info);
       info.lastScanTime = e.verificationTime;
       info.lastScanType = ScanType.VERIFICATION_SCAN;
-      addBlockInfo(info);
+      addBlockInfo(info, false);
     }
   }
 
@@ -260,7 +281,7 @@ class BlockPoolSliceScanner {
     long period = Math.min(scanPeriod, 
                            Math.max(blockMap.size(),1) * 600 * 1000L);
     int periodInt = Math.abs((int)period);
-    return Time.now() - scanPeriod + 
+    return Time.monotonicNow() - scanPeriod +
         DFSUtil.getRandom().nextInt(periodInt);
   }
 
@@ -275,14 +296,14 @@ class BlockPoolSliceScanner {
     info = new BlockScanInfo(block.getLocalBlock());    
     info.lastScanTime = getNewBlockScanTime();
     
-    addBlockInfo(info);
+    addBlockInfo(info, true);
     adjustThrottler();
   }
   
   /** Deletes the block from internal structures */
   synchronized void deleteBlock(Block block) {
     BlockScanInfo info = blockMap.get(block);
-    if ( info != null ) {
+    if (info != null) {
       delBlockInfo(info);
     }
   }
@@ -310,23 +331,16 @@ class BlockPoolSliceScanner {
     }
   }
   
-  private synchronized void updateScanStatus(Block block, 
+  private synchronized void updateScanStatus(BlockScanInfo info,
                                              ScanType type,
                                              boolean scanOk) {
-    BlockScanInfo info = blockMap.get(block);
-    
-    if ( info != null ) {
-      delBlockInfo(info);
-    } else {
-      // It might already be removed. Thats ok, it will be caught next time.
-      info = new BlockScanInfo(block);
-    }
-    
-    long now = Time.now();
+    delBlockInfo(info);
+
+    long now = Time.monotonicNow();
     info.lastScanType = type;
     info.lastScanTime = now;
     info.lastScanOk = scanOk;
-    addBlockInfo(info);
+    addBlockInfo(info, false);
         
     // Don't update meta data if the verification failed.
     if (!scanOk) {
@@ -334,8 +348,8 @@ class BlockPoolSliceScanner {
     }
     
     if (verificationLog != null) {
-      verificationLog.append(now, block.getGenerationStamp(),
-          block.getBlockId());
+      verificationLog.append(now, info.getGenerationStamp(),
+          info.getBlockId());
     }
   }
   
@@ -399,8 +413,9 @@ class BlockPoolSliceScanner {
   }
   
   private synchronized void adjustThrottler() {
-    long timeLeft = currentPeriodStart+scanPeriod - Time.now();
-    long bw = Math.max(bytesLeft*1000/timeLeft, MIN_SCAN_RATE);
+    long timeLeft = Math.max(1L,
+        currentPeriodStart + scanPeriod - Time.monotonicNow());
+    long bw = Math.max((bytesLeft * 1000) / timeLeft, MIN_SCAN_RATE);
     throttler.setBandwidth(Math.min(bw, MAX_SCAN_RATE));
   }
   
@@ -433,11 +448,13 @@ class BlockPoolSliceScanner {
           totalTransientErrors++;
         }
         
-        updateScanStatus(block.getLocalBlock(), ScanType.VERIFICATION_SCAN, true);
+        updateScanStatus((BlockScanInfo)block.getLocalBlock(),
+            ScanType.VERIFICATION_SCAN, true);
 
         return;
       } catch (IOException e) {
-        updateScanStatus(block.getLocalBlock(), ScanType.VERIFICATION_SCAN, false);
+        updateScanStatus((BlockScanInfo)block.getLocalBlock(),
+            ScanType.VERIFICATION_SCAN, false);
 
         // If the block does not exists anymore, then its not an error
         if (!dataset.contains(block)) {
@@ -496,7 +513,7 @@ class BlockPoolSliceScanner {
   
   // Picks one block and verifies it
   private void verifyFirstBlock() {
-    Block block = null;
+    BlockScanInfo block = null;
     synchronized (this) {
       if (!blockInfoSet.isEmpty()) {
         block = blockInfoSet.first();
@@ -523,7 +540,7 @@ class BlockPoolSliceScanner {
   private boolean assignInitialVerificationTimes() {
     //First updates the last verification times from the log file.
     if (verificationLog != null) {
-      long now = Time.now();
+      long now = Time.monotonicNow();
       RollingLogs.LineIterator logIterator = null;
       try {
         logIterator = verificationLog.logs.iterator(false);
@@ -574,7 +591,7 @@ class BlockPoolSliceScanner {
       // Initially spread the block reads over half of scan period
       // so that we don't keep scanning the blocks too quickly when restarted.
       long verifyInterval = Math.min(scanPeriod/(2L * numBlocks), 10*60*1000L);
-      long lastScanTime = Time.now() - scanPeriod;
+      long lastScanTime = Time.monotonicNow() - scanPeriod;
 
       if (!blockInfoSet.isEmpty()) {
         BlockScanInfo info;
@@ -582,7 +599,7 @@ class BlockPoolSliceScanner {
           delBlockInfo(info);        
           info.lastScanTime = lastScanTime;
           lastScanTime += verifyInterval;
-          addBlockInfo(info);
+          addBlockInfo(info, false);
         }
       }
     }
@@ -601,16 +618,16 @@ class BlockPoolSliceScanner {
 
     // reset the byte counts :
     bytesLeft = totalBytesToScan;
-    currentPeriodStart = Time.now();
+    currentPeriodStart = Time.monotonicNow();
     isNewPeriod = true;
   }
   
   private synchronized boolean workRemainingInCurrentPeriod() {
-    if (bytesLeft <= 0 && Time.now() < currentPeriodStart + scanPeriod) {
+    if (bytesLeft <= 0 && Time.monotonicNow() < currentPeriodStart + scanPeriod) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Skipping scan since bytesLeft=" + bytesLeft + ", Start=" +
                   currentPeriodStart + ", period=" + scanPeriod + ", now=" +
-                  Time.now() + " " + blockPoolId);
+                  Time.monotonicNow() + " " + blockPoolId);
       }
       return false;
     } else {
@@ -633,7 +650,7 @@ class BlockPoolSliceScanner {
       scan();
     } finally {
       totalBlocksScannedInLastRun.set(processedBlocks.size());
-      lastScanTime.set(Time.now());
+      lastScanTime.set(Time.monotonicNow());
     }
   }
 
@@ -656,7 +673,7 @@ class BlockPoolSliceScanner {
       while (datanode.shouldRun
           && !datanode.blockScanner.blockScannerThread.isInterrupted()
           && datanode.isBPServiceAlive(blockPoolId)) {
-        long now = Time.now();
+        long now = Time.monotonicNow();
         synchronized (this) {
           if ( now >= (currentPeriodStart + scanPeriod)) {
             startNewPeriod();
@@ -678,12 +695,21 @@ class BlockPoolSliceScanner {
       throw e;
     } finally {
       rollVerificationLogs();
+      rollNewBlocksInfo();
       if (LOG.isDebugEnabled()) {
         LOG.debug("Done scanning block pool: " + blockPoolId);
       }
     }
   }
-  
+
+  // add new blocks to scan in next iteration
+  private synchronized void rollNewBlocksInfo() {
+    for (BlockScanInfo newBlock : newBlockInfoSet) {
+      blockInfoSet.add(newBlock);
+    }
+    newBlockInfoSet.clear();
+  }
+
   private synchronized void rollVerificationLogs() {
     if (verificationLog != null) {
       try {
@@ -714,7 +740,7 @@ class BlockPoolSliceScanner {
     
     int total = blockInfoSet.size();
     
-    long now = Time.now();
+    long now = Time.monotonicNow();
     
     Date date = new Date();
     

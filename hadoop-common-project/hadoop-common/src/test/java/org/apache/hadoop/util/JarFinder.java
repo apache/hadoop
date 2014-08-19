@@ -39,17 +39,24 @@ import java.util.zip.ZipOutputStream;
  */
 public class JarFinder {
 
-  private static void copyToZipStream(InputStream is, ZipEntry entry,
+  private static void copyToZipStream(File file, ZipEntry entry,
                               ZipOutputStream zos) throws IOException {
-    zos.putNextEntry(entry);
-    byte[] arr = new byte[4096];
-    int read = is.read(arr);
-    while (read > -1) {
-      zos.write(arr, 0, read);
-      read = is.read(arr);
+    InputStream is = new FileInputStream(file);
+    try {
+      zos.putNextEntry(entry);
+      byte[] arr = new byte[4096];
+      int read = is.read(arr);
+      while (read > -1) {
+        zos.write(arr, 0, read);
+        read = is.read(arr);
+      }
+    } finally {
+      try {
+        is.close();
+      } finally {
+        zos.closeEntry();
+      }
     }
-    is.close();
-    zos.closeEntry();
   }
 
   public static void jarDir(File dir, String relativePath, ZipOutputStream zos)
@@ -66,8 +73,7 @@ public class JarFinder {
       new Manifest().write(new BufferedOutputStream(zos));
       zos.closeEntry();
     } else {
-      InputStream is = new FileInputStream(manifestFile);
-      copyToZipStream(is, manifestEntry, zos);
+      copyToZipStream(manifestFile, manifestEntry, zos);
     }
     zos.closeEntry();
     zipDir(dir, relativePath, zos, true);
@@ -94,8 +100,7 @@ public class JarFinder {
           String path = relativePath + f.getName();
           if (!path.equals(JarFile.MANIFEST_NAME)) {
             ZipEntry anEntry = new ZipEntry(path);
-            InputStream is = new FileInputStream(f);
-            copyToZipStream(is, anEntry, zos);
+            copyToZipStream(f, anEntry, zos);
           }
         }
       }

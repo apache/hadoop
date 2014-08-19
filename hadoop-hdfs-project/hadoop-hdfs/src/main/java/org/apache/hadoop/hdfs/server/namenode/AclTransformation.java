@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.ScopedAclEntries;
 import org.apache.hadoop.hdfs.protocol.AclException;
 
 /**

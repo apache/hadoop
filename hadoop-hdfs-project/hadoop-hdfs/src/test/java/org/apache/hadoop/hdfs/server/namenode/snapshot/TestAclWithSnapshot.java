@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -119,14 +120,14 @@ public class TestAclWithSnapshot {
     assertArrayEquals(new AclEntry[] {
       aclEntry(ACCESS, USER, "bruce", READ_EXECUTE),
       aclEntry(ACCESS, GROUP, NONE) }, returned);
-    assertPermission((short)0750, path);
+    assertPermission((short)010750, path);
 
     s = hdfs.getAclStatus(snapshotPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
       aclEntry(ACCESS, USER, "bruce", READ_EXECUTE),
       aclEntry(ACCESS, GROUP, NONE) }, returned);
-    assertPermission((short)0750, snapshotPath);
+    assertPermission((short)010750, snapshotPath);
 
     assertDirPermissionGranted(fsAsBruce, BRUCE, snapshotPath);
     assertDirPermissionDenied(fsAsDiana, DIANA, snapshotPath);
@@ -153,14 +154,14 @@ public class TestAclWithSnapshot {
     assertArrayEquals(new AclEntry[] {
       aclEntry(ACCESS, USER, "diana", READ_EXECUTE),
       aclEntry(ACCESS, GROUP, NONE) }, returned);
-    assertPermission((short)0550, path);
+    assertPermission((short)010550, path);
 
     s = hdfs.getAclStatus(snapshotPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
       aclEntry(ACCESS, USER, "bruce", READ_EXECUTE),
       aclEntry(ACCESS, GROUP, NONE) }, returned);
-    assertPermission((short)0750, snapshotPath);
+    assertPermission((short)010750, snapshotPath);
 
     assertDirPermissionDenied(fsAsBruce, BRUCE, path);
     assertDirPermissionGranted(fsAsDiana, DIANA, path);
@@ -202,24 +203,24 @@ public class TestAclWithSnapshot {
     AclStatus s = hdfs.getAclStatus(filePath);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(expected, returned);
-    assertPermission((short)0550, filePath);
+    assertPermission((short)010550, filePath);
 
     s = hdfs.getAclStatus(subdirPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(expected, returned);
-    assertPermission((short)0550, subdirPath);
+    assertPermission((short)010550, subdirPath);
 
     s = hdfs.getAclStatus(fileSnapshotPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(expected, returned);
-    assertPermission((short)0550, fileSnapshotPath);
+    assertPermission((short)010550, fileSnapshotPath);
     assertFilePermissionGranted(fsAsBruce, BRUCE, fileSnapshotPath);
     assertFilePermissionDenied(fsAsDiana, DIANA, fileSnapshotPath);
 
     s = hdfs.getAclStatus(subdirSnapshotPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(expected, returned);
-    assertPermission((short)0550, subdirSnapshotPath);
+    assertPermission((short)010550, subdirSnapshotPath);
     assertDirPermissionGranted(fsAsBruce, BRUCE, subdirSnapshotPath);
     assertDirPermissionDenied(fsAsDiana, DIANA, subdirSnapshotPath);
 
@@ -251,14 +252,14 @@ public class TestAclWithSnapshot {
     AclStatus s = hdfs.getAclStatus(filePath);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(expected, returned);
-    assertPermission((short)0570, filePath);
+    assertPermission((short)010570, filePath);
     assertFilePermissionDenied(fsAsBruce, BRUCE, filePath);
     assertFilePermissionGranted(fsAsDiana, DIANA, filePath);
 
     s = hdfs.getAclStatus(subdirPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(expected, returned);
-    assertPermission((short)0570, subdirPath);
+    assertPermission((short)010570, subdirPath);
     assertDirPermissionDenied(fsAsBruce, BRUCE, subdirPath);
     assertDirPermissionGranted(fsAsDiana, DIANA, subdirPath);
 
@@ -268,14 +269,14 @@ public class TestAclWithSnapshot {
     s = hdfs.getAclStatus(fileSnapshotPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(expected, returned);
-    assertPermission((short)0550, fileSnapshotPath);
+    assertPermission((short)010550, fileSnapshotPath);
     assertFilePermissionGranted(fsAsBruce, BRUCE, fileSnapshotPath);
     assertFilePermissionDenied(fsAsDiana, DIANA, fileSnapshotPath);
 
     s = hdfs.getAclStatus(subdirSnapshotPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(expected, returned);
-    assertPermission((short)0550, subdirSnapshotPath);
+    assertPermission((short)010550, subdirSnapshotPath);
     assertDirPermissionGranted(fsAsBruce, BRUCE, subdirSnapshotPath);
     assertDirPermissionDenied(fsAsDiana, DIANA, subdirSnapshotPath);
   }
@@ -302,14 +303,14 @@ public class TestAclWithSnapshot {
     assertArrayEquals(new AclEntry[] {
       aclEntry(ACCESS, USER, "bruce", READ_EXECUTE),
       aclEntry(ACCESS, GROUP, NONE) }, returned);
-    assertPermission((short)0750, path);
+    assertPermission((short)010750, path);
 
     s = hdfs.getAclStatus(snapshotPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
       aclEntry(ACCESS, USER, "bruce", READ_EXECUTE),
       aclEntry(ACCESS, GROUP, NONE) }, returned);
-    assertPermission((short)0750, snapshotPath);
+    assertPermission((short)010750, snapshotPath);
 
     assertDirPermissionGranted(fsAsBruce, BRUCE, snapshotPath);
     assertDirPermissionDenied(fsAsDiana, DIANA, snapshotPath);
@@ -336,7 +337,7 @@ public class TestAclWithSnapshot {
     assertArrayEquals(new AclEntry[] {
       aclEntry(ACCESS, USER, "bruce", READ_EXECUTE),
       aclEntry(ACCESS, GROUP, NONE) }, returned);
-    assertPermission((short)0750, snapshotPath);
+    assertPermission((short)010750, snapshotPath);
 
     assertDirPermissionDenied(fsAsBruce, BRUCE, path);
     assertDirPermissionDenied(fsAsDiana, DIANA, path);
@@ -378,24 +379,24 @@ public class TestAclWithSnapshot {
     AclStatus s = hdfs.getAclStatus(filePath);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(expected, returned);
-    assertPermission((short)0550, filePath);
+    assertPermission((short)010550, filePath);
 
     s = hdfs.getAclStatus(subdirPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(expected, returned);
-    assertPermission((short)0550, subdirPath);
+    assertPermission((short)010550, subdirPath);
 
     s = hdfs.getAclStatus(fileSnapshotPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(expected, returned);
-    assertPermission((short)0550, fileSnapshotPath);
+    assertPermission((short)010550, fileSnapshotPath);
     assertFilePermissionGranted(fsAsBruce, BRUCE, fileSnapshotPath);
     assertFilePermissionDenied(fsAsDiana, DIANA, fileSnapshotPath);
 
     s = hdfs.getAclStatus(subdirSnapshotPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(expected, returned);
-    assertPermission((short)0550, subdirSnapshotPath);
+    assertPermission((short)010550, subdirSnapshotPath);
     assertDirPermissionGranted(fsAsBruce, BRUCE, subdirSnapshotPath);
     assertDirPermissionDenied(fsAsDiana, DIANA, subdirSnapshotPath);
 
@@ -437,14 +438,14 @@ public class TestAclWithSnapshot {
     s = hdfs.getAclStatus(fileSnapshotPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(expected, returned);
-    assertPermission((short)0550, fileSnapshotPath);
+    assertPermission((short)010550, fileSnapshotPath);
     assertFilePermissionGranted(fsAsBruce, BRUCE, fileSnapshotPath);
     assertFilePermissionDenied(fsAsDiana, DIANA, fileSnapshotPath);
 
     s = hdfs.getAclStatus(subdirSnapshotPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(expected, returned);
-    assertPermission((short)0550, subdirSnapshotPath);
+    assertPermission((short)010550, subdirSnapshotPath);
     assertDirPermissionGranted(fsAsBruce, BRUCE, subdirSnapshotPath);
     assertDirPermissionDenied(fsAsDiana, DIANA, subdirSnapshotPath);
   }
@@ -470,7 +471,7 @@ public class TestAclWithSnapshot {
     AclStatus s = hdfs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(expected, returned);
-    assertPermission((short)0770, path);
+    assertPermission((short)010770, path);
     assertDirPermissionGranted(fsAsBruce, BRUCE, path);
     assertDirPermissionGranted(fsAsDiana, DIANA, path);
   }
@@ -514,7 +515,7 @@ public class TestAclWithSnapshot {
       aclEntry(DEFAULT, GROUP, NONE),
       aclEntry(DEFAULT, MASK, READ_EXECUTE),
       aclEntry(DEFAULT, OTHER, NONE) }, returned);
-    assertPermission((short)0700, path);
+    assertPermission((short)010700, path);
 
     s = hdfs.getAclStatus(snapshotPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
@@ -524,7 +525,7 @@ public class TestAclWithSnapshot {
       aclEntry(DEFAULT, GROUP, NONE),
       aclEntry(DEFAULT, MASK, READ_EXECUTE),
       aclEntry(DEFAULT, OTHER, NONE) }, returned);
-    assertPermission((short)0700, snapshotPath);
+    assertPermission((short)010700, snapshotPath);
 
     assertDirPermissionDenied(fsAsBruce, BRUCE, snapshotPath);
   }
@@ -596,14 +597,14 @@ public class TestAclWithSnapshot {
     assertArrayEquals(new AclEntry[] {
       aclEntry(ACCESS, USER, "bruce", READ_WRITE),
       aclEntry(ACCESS, GROUP, NONE) }, returned);
-    assertPermission((short)0660, filePath);
+    assertPermission((short)010660, filePath);
 
     s = hdfs.getAclStatus(fileSnapshotPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
       aclEntry(ACCESS, USER, "bruce", READ_WRITE),
       aclEntry(ACCESS, GROUP, NONE) }, returned);
-    assertPermission((short)0660, filePath);
+    assertPermission((short)010660, filePath);
 
     aclSpec = Lists.newArrayList(
       aclEntry(ACCESS, USER, "bruce", READ));
@@ -632,14 +633,14 @@ public class TestAclWithSnapshot {
     assertArrayEquals(new AclEntry[] {
       aclEntry(ACCESS, USER, "bruce", READ_WRITE),
       aclEntry(ACCESS, GROUP, NONE) }, returned);
-    assertPermission((short)0660, filePath);
+    assertPermission((short)010660, filePath);
 
     s = hdfs.getAclStatus(fileSnapshotPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
       aclEntry(ACCESS, USER, "bruce", READ_WRITE),
       aclEntry(ACCESS, GROUP, NONE) }, returned);
-    assertPermission((short)0660, filePath);
+    assertPermission((short)010660, filePath);
 
     aclSpec = Lists.newArrayList(
       aclEntry(ACCESS, USER, "bruce", READ));
@@ -674,6 +675,13 @@ public class TestAclWithSnapshot {
     } catch (AccessControlException e) {
       // expected
     }
+
+    try {
+      fs.access(pathToCheck, FsAction.READ);
+      fail("The access call should have failed for "+pathToCheck);
+    } catch (AccessControlException e) {
+      // expected
+    }
   }
 
   /**
@@ -689,6 +697,7 @@ public class TestAclWithSnapshot {
       UserGroupInformation user, Path pathToCheck) throws Exception {
     try {
       fs.listStatus(pathToCheck);
+      fs.access(pathToCheck, FsAction.READ);
     } catch (AccessControlException e) {
       fail("expected permission granted for user " + user + ", path = " +
         pathToCheck);

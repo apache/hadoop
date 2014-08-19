@@ -40,7 +40,8 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveStats;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolStats;
-import org.apache.hadoop.hdfs.tools.TableListing.Justification;
+import org.apache.hadoop.tools.TableListing;
+import org.apache.hadoop.tools.TableListing.Justification;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 
@@ -503,19 +504,21 @@ public class CacheAdmin extends Configured implements Tool {
 
     @Override
     public String getShortUsage() {
-      return "[" + getName() + " [-stats] [-path <path>] [-pool <pool>]]\n";
+      return "[" + getName()
+          + " [-stats] [-path <path>] [-pool <pool>] [-id <id>]\n";
     }
 
     @Override
     public String getLongUsage() {
       TableListing listing = getOptionDescriptionListing();
+      listing.addRow("-stats", "List path-based cache directive statistics.");
       listing.addRow("<path>", "List only " +
           "cache directives with this path. " +
           "Note that if there is a cache directive for <path> " +
           "in a cache pool that we don't have read access for, it " + 
           "will not be listed.");
       listing.addRow("<pool>", "List only path cache directives in that pool.");
-      listing.addRow("-stats", "List path-based cache directive statistics.");
+      listing.addRow("<id>", "List the cache directive with this id.");
       return getShortUsage() + "\n" +
         "List cache directives.\n\n" +
         listing.toString();
@@ -534,6 +537,10 @@ public class CacheAdmin extends Configured implements Tool {
         builder.setPool(poolFilter);
       }
       boolean printStats = StringUtils.popOption("-stats", args);
+      String idFilter = StringUtils.popOptionWithArgument("-id", args);
+      if (idFilter != null) {
+        builder.setId(Long.parseLong(idFilter));
+      }
       if (!args.isEmpty()) {
         System.err.println("Can't understand argument: " + args.get(0));
         return 1;

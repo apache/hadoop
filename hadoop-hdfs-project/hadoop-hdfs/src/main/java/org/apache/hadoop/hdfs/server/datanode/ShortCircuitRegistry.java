@@ -74,7 +74,7 @@ import com.google.common.collect.HashMultimap;
  * DN also marks the block's slots as "unanchorable" to prevent additional 
  * clients from initiating these operations in the future.
  * 
- * The counterpart fo this class on the client is {@link DfsClientShmManager}.
+ * The counterpart of this class on the client is {@link DfsClientShmManager}.
  */
 public class ShortCircuitRegistry {
   public static final Log LOG = LogFactory.getLog(ShortCircuitRegistry.class);
@@ -217,7 +217,32 @@ public class ShortCircuitRegistry {
     }
     return allowMunlock;
   }
-  
+
+  /**
+   * Invalidate any slot associated with a blockId that we are invalidating
+   * (deleting) from this DataNode.  When a slot is invalid, the DFSClient will
+   * not use the corresponding replica for new read or mmap operations (although
+   * existing, ongoing read or mmap operations will complete.)
+   *
+   * @param blockId        The block ID.
+   */
+  public synchronized void processBlockInvalidation(ExtendedBlockId blockId) {
+    if (!enabled) return;
+    final Set<Slot> affectedSlots = slots.get(blockId);
+    if (!affectedSlots.isEmpty()) {
+      final StringBuilder bld = new StringBuilder();
+      String prefix = "";
+      bld.append("Block ").append(blockId).append(" has been invalidated.  ").
+          append("Marking short-circuit slots as invalid: ");
+      for (Slot slot : affectedSlots) {
+        slot.makeInvalid();
+        bld.append(prefix).append(slot.toString());
+        prefix = ", ";
+      }
+      LOG.info(bld.toString());
+    }
+  }
+
   public static class NewShmInfo implements Closeable {
     public final ShmId shmId;
     public final FileInputStream stream;

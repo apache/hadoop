@@ -23,6 +23,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -32,6 +33,10 @@ import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.Response;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -45,13 +50,17 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.web.JsonUtil;
+import org.apache.hadoop.hdfs.web.resources.ExceptionHandler;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.SecurityUtil;
@@ -64,6 +73,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.internal.util.reflection.Whitebox;
+import org.mortbay.util.ajax.JSON;
 
 import com.google.common.base.Joiner;
 
@@ -290,7 +300,8 @@ public class TestDelegationTokensWithHA {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("test");
     
     URI haUri = new URI("hdfs://my-ha-uri/");
-    token.setService(HAUtil.buildTokenServiceForLogicalUri(haUri));
+    token.setService(HAUtil.buildTokenServiceForLogicalUri(haUri,
+        HdfsConstants.HDFS_URI_SCHEME));
     ugi.addToken(token);
 
     Collection<InetSocketAddress> nnAddrs = new HashSet<InetSocketAddress>();
@@ -346,7 +357,8 @@ public class TestDelegationTokensWithHA {
   @Test
   public void testDFSGetCanonicalServiceName() throws Exception {
     URI hAUri = HATestUtil.getLogicalUri(cluster);
-    String haService = HAUtil.buildTokenServiceForLogicalUri(hAUri).toString();
+    String haService = HAUtil.buildTokenServiceForLogicalUri(hAUri,
+        HdfsConstants.HDFS_URI_SCHEME).toString();
     assertEquals(haService, dfs.getCanonicalServiceName());
     final String renewer = UserGroupInformation.getCurrentUser().getShortUserName();
     final Token<DelegationTokenIdentifier> token =
@@ -362,7 +374,8 @@ public class TestDelegationTokensWithHA {
     Configuration conf = dfs.getConf();
     URI haUri = HATestUtil.getLogicalUri(cluster);
     AbstractFileSystem afs =  AbstractFileSystem.createFileSystem(haUri, conf);    
-    String haService = HAUtil.buildTokenServiceForLogicalUri(haUri).toString();
+    String haService = HAUtil.buildTokenServiceForLogicalUri(haUri,
+        HdfsConstants.HDFS_URI_SCHEME).toString();
     assertEquals(haService, afs.getCanonicalServiceName());
     Token<?> token = afs.getDelegationTokens(
         UserGroupInformation.getCurrentUser().getShortUserName()).get(0);
@@ -372,6 +385,90 @@ public class TestDelegationTokensWithHA {
     token.cancel(conf);
   }
   
+  /**
+   * Test if StandbyException can be thrown from StandbyNN, when it's requested for 
+   * password. (HDFS-6475). With StandbyException, the client can failover to try
+   * activeNN.
+   */
+  @Test
+  public void testDelegationTokenStandbyNNAppearFirst() throws Exception {
+    // make nn0 the standby NN, and nn1 the active NN
+    cluster.transitionToStandby(0);
+    cluster.transitionToActive(1);
+
+    final DelegationTokenSecretManager stSecretManager = 
+        NameNodeAdapter.getDtSecretManager(
+            nn1.getNamesystem());
+
+    // create token
+    final Token<DelegationTokenIdentifier> token =
+        getDelegationToken(fs, "JobTracker");
+    final DelegationTokenIdentifier identifier = new DelegationTokenIdentifier();
+    byte[] tokenId = token.getIdentifier();
+    identifier.readFields(new DataInputStream(
+             new ByteArrayInputStream(tokenId)));
+
+    assertTrue(null != stSecretManager.retrievePassword(identifier));
+
+    final UserGroupInformation ugi = UserGroupInformation
+        .createRemoteUser("JobTracker");
+    ugi.addToken(token);
+    
+    ugi.doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
+      public Object run() {
+        try {
+          try {
+            byte[] tmppw = dtSecretManager.retrievePassword(identifier);
+            fail("InvalidToken with cause StandbyException is expected"
+                + " since nn0 is standby");
+            return tmppw;
+          } catch (IOException e) {
+            // Mimic the UserProvider class logic (server side) by throwing
+            // SecurityException here
+            throw new SecurityException(
+                "Failed to obtain user group information: " + e, e);
+          }
+        } catch (Exception oe) {
+          //
+          // The exception oe caught here is
+          //     java.lang.SecurityException: Failed to obtain user group
+          //     information: org.apache.hadoop.security.token.
+          //     SecretManager$InvalidToken: StandbyException
+          //
+          HttpServletResponse response = mock(HttpServletResponse.class);
+          ExceptionHandler eh = new ExceptionHandler();
+          eh.initResponse(response);
+          
+          // The Response (resp) below is what the server will send to client          
+          //
+          // BEFORE HDFS-6475 fix, the resp.entity is
+          //     {"RemoteException":{"exception":"SecurityException",
+          //      "javaClassName":"java.lang.SecurityException",
+          //      "message":"Failed to obtain user group information: 
+          //      org.apache.hadoop.security.token.SecretManager$InvalidToken:
+          //        StandbyException"}}
+          // AFTER the fix, the resp.entity is
+          //     {"RemoteException":{"exception":"StandbyException",
+          //      "javaClassName":"org.apache.hadoop.ipc.StandbyException",
+          //      "message":"Operation category READ is not supported in
+          //       state standby"}}
+          //
+          Response resp = eh.toResponse(oe);
+          
+          // Mimic the client side logic by parsing the response from server
+          //
+          Map<?, ?> m = (Map<?, ?>)JSON.parse(resp.getEntity().toString());
+          RemoteException re = JsonUtil.toRemoteException(m);
+          Exception unwrapped = ((RemoteException)re).unwrapRemoteException(
+              StandbyException.class);
+          assertTrue (unwrapped instanceof StandbyException);
+          return null;
+        }
+      }
+    });
+  }
+
   @SuppressWarnings("unchecked")
   private Token<DelegationTokenIdentifier> getDelegationToken(FileSystem fs,
       String renewer) throws IOException {

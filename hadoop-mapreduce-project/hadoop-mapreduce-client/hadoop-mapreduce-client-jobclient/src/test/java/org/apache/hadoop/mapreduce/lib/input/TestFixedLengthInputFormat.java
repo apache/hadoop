@@ -46,7 +46,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static junit.framework.Assert.*;
+import static org.junit.Assert.*;
 
 public class TestFixedLengthInputFormat {
 
@@ -417,15 +417,18 @@ public class TestFixedLengthInputFormat {
         new MapContextImpl<LongWritable, BytesWritable, LongWritable,
         BytesWritable>(job.getConfiguration(), context.getTaskAttemptID(),
         reader, null, null, MapReduceTestUtil.createDummyReporter(), split);
-    reader.initialize(split, mcontext);
     LongWritable key;
     BytesWritable value;
-    while (reader.nextKeyValue()) {
-      key = reader.getCurrentKey();
-      value = reader.getCurrentValue();
-      result.add(new String(value.getBytes(), 0, value.getLength()));
+    try {
+      reader.initialize(split, mcontext);
+      while (reader.nextKeyValue()) {
+        key = reader.getCurrentKey();
+        value = reader.getCurrentValue();
+        result.add(new String(value.getBytes(), 0, value.getLength()));
+      }
+    } finally {
+      reader.close();
     }
-    reader.close();
     return result;
   }
 

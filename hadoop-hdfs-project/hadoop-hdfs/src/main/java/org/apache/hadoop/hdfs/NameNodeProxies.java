@@ -50,6 +50,8 @@ import org.apache.hadoop.hdfs.protocolPB.JournalProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.JournalProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
+import org.apache.hadoop.hdfs.server.namenode.ha.AbstractNNFailoverProxyProvider;
+import org.apache.hadoop.hdfs.server.namenode.ha.WrappedFailoverProxyProvider;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
@@ -104,10 +106,13 @@ public class NameNodeProxies {
   public static class ProxyAndInfo<PROXYTYPE> {
     private final PROXYTYPE proxy;
     private final Text dtService;
+    private final InetSocketAddress address;
     
-    public ProxyAndInfo(PROXYTYPE proxy, Text dtService) {
+    public ProxyAndInfo(PROXYTYPE proxy, Text dtService,
+        InetSocketAddress address) {
       this.proxy = proxy;
       this.dtService = dtService;
+      this.address = address;
     }
     
     public PROXYTYPE getProxy() {
@@ -116,6 +121,10 @@ public class NameNodeProxies {
     
     public Text getDelegationTokenService() {
       return dtService;
+    }
+
+    public InetSocketAddress getAddress() {
+      return address;
     }
   }
 
@@ -136,27 +145,32 @@ public class NameNodeProxies {
   @SuppressWarnings("unchecked")
   public static <T> ProxyAndInfo<T> createProxy(Configuration conf,
       URI nameNodeUri, Class<T> xface) throws IOException {
-    Class<FailoverProxyProvider<T>> failoverProxyProviderClass =
-        getFailoverProxyProviderClass(conf, nameNodeUri, xface);
+    AbstractNNFailoverProxyProvider<T> failoverProxyProvider =
+        createFailoverProxyProvider(conf, nameNodeUri, xface, true);
   
-    if (failoverProxyProviderClass == null) {
+    if (failoverProxyProvider == null) {
       // Non-HA case
       return createNonHAProxy(conf, NameNode.getAddress(nameNodeUri), xface,
           UserGroupInformation.getCurrentUser(), true);
     } else {
       // HA case
-      FailoverProxyProvider<T> failoverProxyProvider = NameNodeProxies
-          .createFailoverProxyProvider(conf, failoverProxyProviderClass, xface,
-              nameNodeUri);
       Conf config = new Conf(conf);
       T proxy = (T) RetryProxy.create(xface, failoverProxyProvider,
           RetryPolicies.failoverOnNetworkException(
               RetryPolicies.TRY_ONCE_THEN_FAIL, config.maxFailoverAttempts,
               config.maxRetryAttempts, config.failoverSleepBaseMillis,
               config.failoverSleepMaxMillis));
-      
-      Text dtService = HAUtil.buildTokenServiceForLogicalUri(nameNodeUri);
-      return new ProxyAndInfo<T>(proxy, dtService);
+
+      Text dtService;
+      if (failoverProxyProvider.useLogicalURI()) {
+        dtService = HAUtil.buildTokenServiceForLogicalUri(nameNodeUri,
+            HdfsConstants.HDFS_URI_SCHEME);
+      } else {
+        dtService = SecurityUtil.buildTokenService(
+            NameNode.getAddress(nameNodeUri));
+      }
+      return new ProxyAndInfo<T>(proxy, dtService,
+          NameNode.getAddress(nameNodeUri));
     }
   }
   
@@ -183,12 +197,10 @@ public class NameNodeProxies {
       Configuration config, URI nameNodeUri, Class<T> xface,
       int numResponseToDrop) throws IOException {
     Preconditions.checkArgument(numResponseToDrop > 0);
-    Class<FailoverProxyProvider<T>> failoverProxyProviderClass = 
-        getFailoverProxyProviderClass(config, nameNodeUri, xface);
-    if (failoverProxyProviderClass != null) { // HA case
-      FailoverProxyProvider<T> failoverProxyProvider = 
-          createFailoverProxyProvider(config, failoverProxyProviderClass, 
-              xface, nameNodeUri);
+    AbstractNNFailoverProxyProvider<T> failoverProxyProvider =
+        createFailoverProxyProvider(config, nameNodeUri, xface, true);
+
+    if (failoverProxyProvider != null) { // HA case
       int delay = config.getInt(
           DFS_CLIENT_FAILOVER_SLEEPTIME_BASE_KEY,
           DFS_CLIENT_FAILOVER_SLEEPTIME_BASE_DEFAULT);
@@ -211,8 +223,16 @@ public class NameNodeProxies {
       T proxy = (T) Proxy.newProxyInstance(
           failoverProxyProvider.getInterface().getClassLoader(),
           new Class[] { xface }, dummyHandler);
-      Text dtService = HAUtil.buildTokenServiceForLogicalUri(nameNodeUri);
-      return new ProxyAndInfo<T>(proxy, dtService);
+      Text dtService;
+      if (failoverProxyProvider.useLogicalURI()) {
+        dtService = HAUtil.buildTokenServiceForLogicalUri(nameNodeUri,
+            HdfsConstants.HDFS_URI_SCHEME);
+      } else {
+        dtService = SecurityUtil.buildTokenService(
+            NameNode.getAddress(nameNodeUri));
+      }
+      return new ProxyAndInfo<T>(proxy, dtService,
+          NameNode.getAddress(nameNodeUri));
     } else {
       LOG.warn("Currently creating proxy using " +
       		"LossyRetryInvocationHandler requires NN HA setup");
@@ -265,7 +285,7 @@ public class NameNodeProxies {
       throw new IllegalStateException(message);
     }
 
-    return new ProxyAndInfo<T>(proxy, dtService);
+    return new ProxyAndInfo<T>(proxy, dtService, nnAddr);
   }
   
   private static JournalProtocol createNNProxyWithJournalProtocol(
@@ -315,19 +335,18 @@ public class NameNodeProxies {
         address, conf, ugi, NamenodeProtocolPB.class, 0);
     if (withRetries) { // create the proxy with retries
       RetryPolicy timeoutPolicy = RetryPolicies.exponentialBackoffRetry(5, 200,
-          TimeUnit.MILLISECONDS);
-      Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap 
-                     = new HashMap<Class<? extends Exception>, RetryPolicy>();
-      RetryPolicy methodPolicy = RetryPolicies.retryByException(timeoutPolicy,
-          exceptionToPolicyMap);
-      Map<String, RetryPolicy> methodNameToPolicyMap 
-                     = new HashMap<String, RetryPolicy>();
-      methodNameToPolicyMap.put("getBlocks", methodPolicy);
-      methodNameToPolicyMap.put("getAccessKeys", methodPolicy);
-      proxy = (NamenodeProtocolPB) RetryProxy.create(NamenodeProtocolPB.class,
-          proxy, methodNameToPolicyMap);
+              TimeUnit.MILLISECONDS);
+      Map<String, RetryPolicy> methodNameToPolicyMap
+           = new HashMap<String, RetryPolicy>();
+      methodNameToPolicyMap.put("getBlocks", timeoutPolicy);
+      methodNameToPolicyMap.put("getAccessKeys", timeoutPolicy);
+      NamenodeProtocol translatorProxy =
+          new NamenodeProtocolTranslatorPB(proxy);
+      return (NamenodeProtocol) RetryProxy.create(
+          NamenodeProtocol.class, translatorProxy, methodNameToPolicyMap);
+    } else {
+      return new NamenodeProtocolTranslatorPB(proxy);
     }
-    return new NamenodeProtocolTranslatorPB(proxy);
   }
   
   private static ClientProtocol createNNProxyWithClientProtocol(
@@ -361,29 +380,27 @@ public class NameNodeProxies {
                  = new HashMap<Class<? extends Exception>, RetryPolicy>();
       remoteExceptionToPolicyMap.put(AlreadyBeingCreatedException.class,
           createPolicy);
-    
-      Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap
-                 = new HashMap<Class<? extends Exception>, RetryPolicy>();
-      exceptionToPolicyMap.put(RemoteException.class, RetryPolicies
-          .retryByRemoteException(defaultPolicy,
-              remoteExceptionToPolicyMap));
-      RetryPolicy methodPolicy = RetryPolicies.retryByException(
-          defaultPolicy, exceptionToPolicyMap);
+
+      RetryPolicy methodPolicy = RetryPolicies.retryByRemoteException(
+          defaultPolicy, remoteExceptionToPolicyMap);
       Map<String, RetryPolicy> methodNameToPolicyMap 
                  = new HashMap<String, RetryPolicy>();
     
       methodNameToPolicyMap.put("create", methodPolicy);
-    
-      proxy = (ClientNamenodeProtocolPB) RetryProxy.create(
-          ClientNamenodeProtocolPB.class,
-          new DefaultFailoverProxyProvider<ClientNamenodeProtocolPB>(
-              ClientNamenodeProtocolPB.class, proxy),
+
+      ClientProtocol translatorProxy =
+        new ClientNamenodeProtocolTranslatorPB(proxy);
+      return (ClientProtocol) RetryProxy.create(
+          ClientProtocol.class,
+          new DefaultFailoverProxyProvider<ClientProtocol>(
+              ClientProtocol.class, translatorProxy),
           methodNameToPolicyMap,
           defaultPolicy);
+    } else {
+      return new ClientNamenodeProtocolTranslatorPB(proxy);
     }
-    return new ClientNamenodeProtocolTranslatorPB(proxy);
   }
-  
+
   private static Object createNameNodeProxy(InetSocketAddress address,
       Configuration conf, UserGroupInformation ugi, Class<?> xface,
       int rpcTimeout) throws IOException {
@@ -396,7 +413,7 @@ public class NameNodeProxies {
   /** Gets the configured Failover proxy provider's class */
   @VisibleForTesting
   public static <T> Class<FailoverProxyProvider<T>> getFailoverProxyProviderClass(
-      Configuration conf, URI nameNodeUri, Class<T> xface) throws IOException {
+      Configuration conf, URI nameNodeUri) throws IOException {
     if (nameNodeUri == null) {
       return null;
     }
@@ -408,17 +425,6 @@ public class NameNodeProxies {
       @SuppressWarnings("unchecked")
       Class<FailoverProxyProvider<T>> ret = (Class<FailoverProxyProvider<T>>) conf
           .getClass(configKey, null, FailoverProxyProvider.class);
-      if (ret != null) {
-        // If we found a proxy provider, then this URI should be a logical NN.
-        // Given that, it shouldn't have a non-default port number.
-        int port = nameNodeUri.getPort();
-        if (port > 0 && port != NameNode.DEFAULT_PORT) {
-          throw new IOException("Port " + port + " specified in URI "
-              + nameNodeUri + " but host '" + host
-              + "' is a logical (HA) namenode"
-              + " and does not use port information.");
-        }
-      }
       return ret;
     } catch (RuntimeException e) {
       if (e.getCause() instanceof ClassNotFoundException) {
@@ -433,18 +439,33 @@ public class NameNodeProxies {
 
   /** Creates the Failover proxy provider instance*/
   @VisibleForTesting
-  public static <T> FailoverProxyProvider<T> createFailoverProxyProvider(
-      Configuration conf, Class<FailoverProxyProvider<T>> failoverProxyProviderClass,
-      Class<T> xface, URI nameNodeUri) throws IOException {
+  public static <T> AbstractNNFailoverProxyProvider<T> createFailoverProxyProvider(
+      Configuration conf, URI nameNodeUri, Class<T> xface, boolean checkPort)
+      throws IOException {
+    Class<FailoverProxyProvider<T>> failoverProxyProviderClass = null;
+    AbstractNNFailoverProxyProvider<T> providerNN;
     Preconditions.checkArgument(
         xface.isAssignableFrom(NamenodeProtocols.class),
         "Interface %s is not a NameNode protocol", xface);
     try {
+      // Obtain the class of the proxy provider
+      failoverProxyProviderClass = getFailoverProxyProviderClass(conf,
+          nameNodeUri);
+      if (failoverProxyProviderClass == null) {
+        return null;
+      }
+      // Create a proxy provider instance.
       Constructor<FailoverProxyProvider<T>> ctor = failoverProxyProviderClass
           .getConstructor(Configuration.class, URI.class, Class.class);
       FailoverProxyProvider<T> provider = ctor.newInstance(conf, nameNodeUri,
           xface);
-      return provider;
+
+      // If the proxy provider is of an old implementation, wrap it.
+      if (!(provider instanceof AbstractNNFailoverProxyProvider)) {
+        providerNN = new WrappedFailoverProxyProvider<T>(provider);
+      } else {
+        providerNN = (AbstractNNFailoverProxyProvider<T>)provider;
+      }
     } catch (Exception e) {
       String message = "Couldn't create proxy provider " + failoverProxyProviderClass;
       if (LOG.isDebugEnabled()) {
@@ -456,6 +477,20 @@ public class NameNodeProxies {
         throw new IOException(message, e);
       }
     }
+
+    // Check the port in the URI, if it is logical.
+    if (checkPort && providerNN.useLogicalURI()) {
+      int port = nameNodeUri.getPort();
+      if (port > 0 && port != NameNode.DEFAULT_PORT) {
+        // Throwing here without any cleanup is fine since we have not
+        // actually created the underlying proxies yet.
+        throw new IOException("Port " + port + " specified in URI "
+            + nameNodeUri + " but host '" + nameNodeUri.getHost()
+            + "' is a logical (HA) namenode"
+            + " and does not use port information.");
+      }
+    }
+    return providerNN;
   }
 
 }

@@ -27,6 +27,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS_DEFAULT;
 
 import java.io.DataInput;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -42,8 +43,6 @@ import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
@@ -61,10 +60,10 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo.Expiration;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveStats;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.CacheReplicationMonitor;
@@ -84,6 +83,8 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.GSet;
 import org.apache.hadoop.util.LightWeightGSet;
 import org.apache.hadoop.util.Time;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
@@ -98,7 +99,7 @@ import com.google.common.collect.Lists;
  */
 @InterfaceAudience.LimitedPrivate({"HDFS"})
 public final class CacheManager {
-  public static final Log LOG = LogFactory.getLog(CacheManager.class);
+  public static final Logger LOG = LoggerFactory.getLogger(CacheManager.class);
 
   private static final float MIN_CACHED_BLOCKS_PERCENT = 0.001f;
 
@@ -204,8 +205,8 @@ public final class CacheManager {
           DFS_NAMENODE_PATH_BASED_CACHE_BLOCK_MAP_ALLOCATION_PERCENT,
           DFS_NAMENODE_PATH_BASED_CACHE_BLOCK_MAP_ALLOCATION_PERCENT_DEFAULT);
     if (cachedBlocksPercent < MIN_CACHED_BLOCKS_PERCENT) {
-      LOG.info("Using minimum value " + MIN_CACHED_BLOCKS_PERCENT +
-        " for " + DFS_NAMENODE_PATH_BASED_CACHE_BLOCK_MAP_ALLOCATION_PERCENT);
+      LOG.info("Using minimum value {} for {}", MIN_CACHED_BLOCKS_PERCENT,
+        DFS_NAMENODE_PATH_BASED_CACHE_BLOCK_MAP_ALLOCATION_PERCENT);
       cachedBlocksPercent = MIN_CACHED_BLOCKS_PERCENT;
     }
     this.cachedBlocks = new LightWeightGSet<CachedBlock, CachedBlock>(
@@ -216,7 +217,7 @@ public final class CacheManager {
 
   /**
    * Resets all tracked directives and pools. Called during 2NN checkpointing to
-   * reset FSNamesystem state. See {FSNamesystem{@link #clear()}.
+   * reset FSNamesystem state. See {@link FSNamesystem#clear()}.
    */
   void clear() {
     directivesById.clear();
@@ -345,10 +346,8 @@ public final class CacheManager {
    */
   private static long validateExpiryTime(CacheDirectiveInfo info,
       long maxRelativeExpiryTime) throws InvalidRequestException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Validating directive " + info
-          + " pool maxRelativeExpiryTime " + maxRelativeExpiryTime);
-    }
+    LOG.trace("Validating directive {} pool maxRelativeExpiryTime {}", info,
+        maxRelativeExpiryTime);
     final long now = new Date().getTime();
     final long maxAbsoluteExpiryTime = now + maxRelativeExpiryTime;
     if (info == null || info.getExpiration() == null) {
@@ -538,7 +537,7 @@ public final class CacheManager {
       LOG.warn("addDirective of " + info + " failed: ", e);
       throw e;
     }
-    LOG.info("addDirective of " + info + " successful.");
+    LOG.info("addDirective of {} successful.", info);
     return directive.toInfo();
   }
 
@@ -640,8 +639,7 @@ public final class CacheManager {
       LOG.warn("modifyDirective of " + idString + " failed: ", e);
       throw e;
     }
-    LOG.info("modifyDirective of " + idString + " successfully applied " +
-        info+ ".");
+    LOG.info("modifyDirective of {} successfully applied {}.", idString, info);
   }
 
   private void removeInternal(CacheDirective directive)
@@ -690,15 +688,25 @@ public final class CacheManager {
     assert namesystem.hasReadLock();
     final int NUM_PRE_ALLOCATED_ENTRIES = 16;
     String filterPath = null;
-    if (filter.getId() != null) {
-      throw new IOException("Filtering by ID is unsupported.");
-    }
     if (filter.getPath() != null) {
       filterPath = validatePath(filter);
     }
     if (filter.getReplication() != null) {
-      throw new IOException("Filtering by replication is unsupported.");
+      throw new InvalidRequestException(
+          "Filtering by replication is unsupported.");
     }
+
+    // Querying for a single ID
+    final Long id = filter.getId();
+    if (id != null) {
+      if (!directivesById.containsKey(id)) {
+        throw new InvalidRequestException("Did not find requested id " + id);
+      }
+      // Since we use a tailMap on directivesById, setting prev to id-1 gets
+      // us the directive with the id (if present)
+      prevId = id - 1;
+    }
+
     ArrayList<CacheDirectiveEntry> replies =
         new ArrayList<CacheDirectiveEntry>(NUM_PRE_ALLOCATED_ENTRIES);
     int numReplies = 0;
@@ -710,6 +718,14 @@ public final class CacheManager {
       }
       CacheDirective curDirective = cur.getValue();
       CacheDirectiveInfo info = cur.getValue().toInfo();
+
+      // If the requested ID is present, it should be the first item.
+      // Hitting this case means the ID is not present, or we're on the second
+      // item and should break out.
+      if (id != null &&
+          !(info.getId().equals(id))) {
+        break;
+      }
       if (filter.getPool() != null && 
           !info.getPool().equals(filter.getPool())) {
         continue;
@@ -760,7 +776,7 @@ public final class CacheManager {
       LOG.info("addCachePool of " + info + " failed: ", e);
       throw e;
     }
-    LOG.info("addCachePool of " + info + " successful.");
+    LOG.info("addCachePool of {} successful.", info);
     return pool.getInfo(true);
   }
 
@@ -823,8 +839,8 @@ public final class CacheManager {
       LOG.info("modifyCachePool of " + info + " failed: ", e);
       throw e;
     }
-    LOG.info("modifyCachePool of " + info.getPoolName() + " successful; "
-        + bld.toString());
+    LOG.info("modifyCachePool of {} successful; {}", info.getPoolName(), 
+        bld.toString());
   }
 
   /**
@@ -916,11 +932,9 @@ public final class CacheManager {
     if (metrics != null) {
       metrics.addCacheBlockReport((int) (endTime - startTime));
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Processed cache report from "
-          + datanodeID + ", blocks: " + blockIds.size()
-          + ", processing time: " + (endTime - startTime) + " msecs");
-    }
+    LOG.debug("Processed cache report from {}, blocks: {}, " +
+        "processing time: {} msecs", datanodeID, blockIds.size(), 
+        (endTime - startTime));
   }
 
   private void processCacheReportImpl(final DatanodeDescriptor datanode,
@@ -931,6 +945,8 @@ public final class CacheManager {
     CachedBlocksList pendingCachedList = datanode.getPendingCached();
     for (Iterator<Long> iter = blockIds.iterator(); iter.hasNext(); ) {
       long blockId = iter.next();
+      LOG.trace("Cache report from datanode {} has block {}", datanode,
+          blockId);
       CachedBlock cachedBlock =
           new CachedBlock(blockId, (short)0, false);
       CachedBlock prevCachedBlock = cachedBlocks.get(cachedBlock);
@@ -940,17 +956,32 @@ public final class CacheManager {
         cachedBlock = prevCachedBlock;
       } else {
         cachedBlocks.put(cachedBlock);
+        LOG.trace("Added block {}  to cachedBlocks", cachedBlock);
       }
       // Add the block to the datanode's implicit cached block list
       // if it's not already there.  Similarly, remove it from the pending
       // cached block list if it exists there.
       if (!cachedBlock.isPresent(cachedList)) {
         cachedList.add(cachedBlock);
+        LOG.trace("Added block {} to CACHED list.", cachedBlock);
       }
       if (cachedBlock.isPresent(pendingCachedList)) {
         pendingCachedList.remove(cachedBlock);
+        LOG.trace("Removed block {} from PENDING_CACHED list.", cachedBlock);
       }
     }
+  }
+
+  /**
+   * Saves the current state of the CacheManager to the DataOutput. Used
+   * to persist CacheManager state in the FSImage.
+   * @param out DataOutput to persist state
+   * @param sdPath path of the storage directory
+   * @throws IOException
+   */
+  public void saveStateCompat(DataOutputStream out, String sdPath)
+      throws IOException {
+    serializerCompat.save(out, sdPath);
   }
 
   public PersistState saveState() throws IOException {
@@ -1072,11 +1103,53 @@ public final class CacheManager {
   }
 
   private final class SerializerCompat {
+    private void save(DataOutputStream out, String sdPath) throws IOException {
+      out.writeLong(nextDirectiveId);
+      savePools(out, sdPath);
+      saveDirectives(out, sdPath);
+    }
+
     private void load(DataInput in) throws IOException {
       nextDirectiveId = in.readLong();
       // pools need to be loaded first since directives point to their parent pool
       loadPools(in);
       loadDirectives(in);
+    }
+
+    /**
+     * Save cache pools to fsimage
+     */
+    private void savePools(DataOutputStream out,
+        String sdPath) throws IOException {
+      StartupProgress prog = NameNode.getStartupProgress();
+      Step step = new Step(StepType.CACHE_POOLS, sdPath);
+      prog.beginStep(Phase.SAVING_CHECKPOINT, step);
+      prog.setTotal(Phase.SAVING_CHECKPOINT, step, cachePools.size());
+      Counter counter = prog.getCounter(Phase.SAVING_CHECKPOINT, step);
+      out.writeInt(cachePools.size());
+      for (CachePool pool: cachePools.values()) {
+        FSImageSerialization.writeCachePoolInfo(out, pool.getInfo(true));
+        counter.increment();
+      }
+      prog.endStep(Phase.SAVING_CHECKPOINT, step);
+    }
+
+    /*
+     * Save cache entries to fsimage
+     */
+    private void saveDirectives(DataOutputStream out, String sdPath)
+        throws IOException {
+      StartupProgress prog = NameNode.getStartupProgress();
+      Step step = new Step(StepType.CACHE_ENTRIES, sdPath);
+      prog.beginStep(Phase.SAVING_CHECKPOINT, step);
+      prog.setTotal(Phase.SAVING_CHECKPOINT, step, directivesById.size());
+      Counter counter = prog.getCounter(Phase.SAVING_CHECKPOINT, step);
+      out.writeInt(directivesById.size());
+      for (CacheDirective directive : directivesById.values()) {
+        FSImageSerialization.writeCacheDirectiveInfo(out, directive.toInfo());
+        counter.increment();
+      }
+      prog.endStep(Phase.SAVING_CHECKPOINT, step);
     }
 
     /**

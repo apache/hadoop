@@ -28,7 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.ClientBaseWithFixes;
@@ -267,6 +267,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes{
   protected void startHACluster(int numOfNMs, boolean overrideClientRMService,
       boolean overrideRTS, boolean overrideApplicationMasterService)
       throws Exception {
+    conf.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
     conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     cluster =
         new MiniYARNClusterForHATesting(TestRMFailover.class.getName(), 2,

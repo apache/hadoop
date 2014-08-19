@@ -41,13 +41,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.mapred.FileOutputCommitter;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.LocalContainerLauncher;
 import org.apache.hadoop.mapred.TaskAttemptListenerImpl;
 import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
@@ -67,6 +67,7 @@ import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskAttemptInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
+import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -184,7 +185,6 @@ public class MRAppMaster extends CompositeService {
   private final int nmPort;
   private final int nmHttpPort;
   protected final MRAppMetrics metrics;
-  private final int maxAppAttempts;
   private Map<TaskId, TaskInfo> completedTasksFromPreviousRun;
   private List<AMInfo> amInfos;
   private AppContext context;
@@ -199,6 +199,7 @@ public class MRAppMaster extends CompositeService {
       new JobTokenSecretManager();
   private JobId jobId;
   private boolean newApiCommitter;
+  private ClassLoader jobClassLoader;
   private OutputCommitter committer;
   private JobEventDispatcher jobEventDispatcher;
   private JobHistoryEventHandler jobHistoryEventHandler;
@@ -225,14 +226,14 @@ public class MRAppMaster extends CompositeService {
 
   public MRAppMaster(ApplicationAttemptId applicationAttemptId,
       ContainerId containerId, String nmHost, int nmPort, int nmHttpPort,
-      long appSubmitTime, int maxAppAttempts) {
+      long appSubmitTime) {
     this(applicationAttemptId, containerId, nmHost, nmPort, nmHttpPort,
-        new SystemClock(), appSubmitTime, maxAppAttempts);
+        new SystemClock(), appSubmitTime);
   }
 
   public MRAppMaster(ApplicationAttemptId applicationAttemptId,
       ContainerId containerId, String nmHost, int nmPort, int nmHttpPort,
-      Clock clock, long appSubmitTime, int maxAppAttempts) {
+      Clock clock, long appSubmitTime) {
     super(MRAppMaster.class.getName());
     this.clock = clock;
     this.startTime = clock.getTime();
@@ -243,24 +244,20 @@ public class MRAppMaster extends CompositeService {
     this.nmPort = nmPort;
     this.nmHttpPort = nmHttpPort;
     this.metrics = MRAppMetrics.create();
-    this.maxAppAttempts = maxAppAttempts;
     logSyncer = TaskLog.createLogSyncer();
     LOG.info("Created MRAppMaster for application " + applicationAttemptId);
   }
 
   @Override
   protected void serviceInit(final Configuration conf) throws Exception {
+    // create the job classloader if enabled
+    createJobClassLoader(conf);
+
     conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
 
     initJobCredentialsAndUGI(conf);
 
     context = new RunningAppContext(conf);
-
-    ((RunningAppContext)context).computeIsLastAMRetry();
-    LOG.info("The specific max attempts: " + maxAppAttempts +
-        " for application: " + appAttemptID.getApplicationId().getId() +
-        ". Attempt num: " + appAttemptID.getAttemptId() +
-        " is last retry: " + isLastAMRetry);
 
     // Job name is the same as the app name util we support DAG of jobs
     // for an app later
@@ -393,8 +390,13 @@ public class MRAppMaster extends CompositeService {
       addIfService(committerEventHandler);
 
       //policy handling preemption requests from RM
-      preemptionPolicy = createPreemptionPolicy(conf);
-      preemptionPolicy.init(context);
+      callWithJobClassLoader(conf, new Action<Void>() {
+        public Void call(Configuration conf) {
+          preemptionPolicy = createPreemptionPolicy(conf);
+          preemptionPolicy.init(context);
+          return null;
+        }
+      });
 
       //service to handle requests to TaskUmbilicalProtocol
       taskAttemptListener = createTaskAttemptListener(context, preemptionPolicy);
@@ -459,33 +461,37 @@ public class MRAppMaster extends CompositeService {
   }
 
   private OutputCommitter createOutputCommitter(Configuration conf) {
-    OutputCommitter committer = null;
+    return callWithJobClassLoader(conf, new Action<OutputCommitter>() {
+      public OutputCommitter call(Configuration conf) {
+        OutputCommitter committer = null;
 
-    LOG.info("OutputCommitter set in config "
-        + conf.get("mapred.output.committer.class"));
+        LOG.info("OutputCommitter set in config "
+            + conf.get("mapred.output.committer.class"));
 
-    if (newApiCommitter) {
-      org.apache.hadoop.mapreduce.v2.api.records.TaskId taskID = MRBuilderUtils
-          .newTaskId(jobId, 0, TaskType.MAP);
-      org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID = MRBuilderUtils
-          .newTaskAttemptId(taskID, 0);
-      TaskAttemptContext taskContext = new TaskAttemptContextImpl(conf,
-          TypeConverter.fromYarn(attemptID));
-      OutputFormat outputFormat;
-      try {
-        outputFormat = ReflectionUtils.newInstance(taskContext
-            .getOutputFormatClass(), conf);
-        committer = outputFormat.getOutputCommitter(taskContext);
-      } catch (Exception e) {
-        throw new YarnRuntimeException(e);
+        if (newApiCommitter) {
+          org.apache.hadoop.mapreduce.v2.api.records.TaskId taskID =
+              MRBuilderUtils.newTaskId(jobId, 0, TaskType.MAP);
+          org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
+              MRBuilderUtils.newTaskAttemptId(taskID, 0);
+          TaskAttemptContext taskContext = new TaskAttemptContextImpl(conf,
+              TypeConverter.fromYarn(attemptID));
+          OutputFormat outputFormat;
+          try {
+            outputFormat = ReflectionUtils.newInstance(taskContext
+                .getOutputFormatClass(), conf);
+            committer = outputFormat.getOutputCommitter(taskContext);
+          } catch (Exception e) {
+            throw new YarnRuntimeException(e);
+          }
+        } else {
+          committer = ReflectionUtils.newInstance(conf.getClass(
+              "mapred.output.committer.class", FileOutputCommitter.class,
+              org.apache.hadoop.mapred.OutputCommitter.class), conf);
+        }
+        LOG.info("OutputCommitter is " + committer.getClass().getName());
+        return committer;
       }
-    } else {
-      committer = ReflectionUtils.newInstance(conf.getClass(
-          "mapred.output.committer.class", FileOutputCommitter.class,
-          org.apache.hadoop.mapred.OutputCommitter.class), conf);
-    }
-    LOG.info("OutputCommitter is " + committer.getClass().getName());
-    return committer;
+    });
   }
 
   protected AMPreemptionPolicy createPreemptionPolicy(Configuration conf) {
@@ -600,10 +606,6 @@ public class MRAppMaster extends CompositeService {
       LOG.warn("Graceful stop failed ", t);
     }
 
-    //Bring the process down by force.
-    //Not needed after HADOOP-7140
-    LOG.info("Exiting MR AppMaster..GoodBye!");
-    sysexit();   
   }
  
   private class JobFinishEventHandler implements EventHandler<JobFinishEvent> {
@@ -677,38 +679,42 @@ public class MRAppMaster extends CompositeService {
     return new StagingDirCleaningService();
   }
 
-  protected Speculator createSpeculator(Configuration conf, AppContext context) {
-    Class<? extends Speculator> speculatorClass;
+  protected Speculator createSpeculator(Configuration conf,
+      final AppContext context) {
+    return callWithJobClassLoader(conf, new Action<Speculator>() {
+      public Speculator call(Configuration conf) {
+        Class<? extends Speculator> speculatorClass;
+        try {
+          speculatorClass
+              // "yarn.mapreduce.job.speculator.class"
+              = conf.getClass(MRJobConfig.MR_AM_JOB_SPECULATOR,
+                              DefaultSpeculator.class,
+                              Speculator.class);
+          Constructor<? extends Speculator> speculatorConstructor
+              = speculatorClass.getConstructor
+                   (Configuration.class, AppContext.class);
+          Speculator result = speculatorConstructor.newInstance(conf, context);
 
-    try {
-      speculatorClass
-          // "yarn.mapreduce.job.speculator.class"
-          = conf.getClass(MRJobConfig.MR_AM_JOB_SPECULATOR,
-                          DefaultSpeculator.class,
-                          Speculator.class);
-      Constructor<? extends Speculator> speculatorConstructor
-          = speculatorClass.getConstructor
-               (Configuration.class, AppContext.class);
-      Speculator result = speculatorConstructor.newInstance(conf, context);
-
-      return result;
-    } catch (InstantiationException ex) {
-      LOG.error("Can't make a speculator -- check "
-          + MRJobConfig.MR_AM_JOB_SPECULATOR, ex);
-      throw new YarnRuntimeException(ex);
-    } catch (IllegalAccessException ex) {
-      LOG.error("Can't make a speculator -- check "
-          + MRJobConfig.MR_AM_JOB_SPECULATOR, ex);
-      throw new YarnRuntimeException(ex);
-    } catch (InvocationTargetException ex) {
-      LOG.error("Can't make a speculator -- check "
-          + MRJobConfig.MR_AM_JOB_SPECULATOR, ex);
-      throw new YarnRuntimeException(ex);
-    } catch (NoSuchMethodException ex) {
-      LOG.error("Can't make a speculator -- check "
-          + MRJobConfig.MR_AM_JOB_SPECULATOR, ex);
-      throw new YarnRuntimeException(ex);
-    }
+          return result;
+        } catch (InstantiationException ex) {
+          LOG.error("Can't make a speculator -- check "
+              + MRJobConfig.MR_AM_JOB_SPECULATOR, ex);
+          throw new YarnRuntimeException(ex);
+        } catch (IllegalAccessException ex) {
+          LOG.error("Can't make a speculator -- check "
+              + MRJobConfig.MR_AM_JOB_SPECULATOR, ex);
+          throw new YarnRuntimeException(ex);
+        } catch (InvocationTargetException ex) {
+          LOG.error("Can't make a speculator -- check "
+              + MRJobConfig.MR_AM_JOB_SPECULATOR, ex);
+          throw new YarnRuntimeException(ex);
+        } catch (NoSuchMethodException ex) {
+          LOG.error("Can't make a speculator -- check "
+              + MRJobConfig.MR_AM_JOB_SPECULATOR, ex);
+          throw new YarnRuntimeException(ex);
+        }
+      }
+    });
   }
 
   protected TaskAttemptListener createTaskAttemptListener(AppContext context,
@@ -722,7 +728,7 @@ public class MRAppMaster extends CompositeService {
   protected EventHandler<CommitterEvent> createCommitterEventHandler(
       AppContext context, OutputCommitter committer) {
     return new CommitterEventHandler(context, committer,
-        getRMHeartbeatHandler());
+        getRMHeartbeatHandler(), jobClassLoader);
   }
 
   protected ContainerAllocator createContainerAllocator(
@@ -1009,8 +1015,13 @@ public class MRAppMaster extends CompositeService {
       successfullyUnregistered.set(true);
     }
 
-    public void computeIsLastAMRetry() {
-      isLastAMRetry = appAttemptID.getAttemptId() >= maxAppAttempts;
+    public void resetIsLastAMRetry() {
+      isLastAMRetry = false;
+    }
+
+    @Override
+    public String getNMHostname() {
+      return nmHost;
     }
   }
 
@@ -1054,6 +1065,7 @@ public class MRAppMaster extends CompositeService {
     // It's more test friendly to put it here.
     DefaultMetricsSystem.initialize("MRAppMaster");
 
+    boolean initFailed = false;
     if (!errorHappenedShutDown) {
       // create a job event for job intialization
       JobEvent initJobEvent = new JobEvent(job.getID(), JobEventType.JOB_INIT);
@@ -1062,6 +1074,10 @@ public class MRAppMaster extends CompositeService {
       // job-init to be done completely here.
       jobEventDispatcher.handle(initJobEvent);
 
+      // If job is still not initialized, an error happened during
+      // initialization. Must complete starting all of the services so failure
+      // events can be processed.
+      initFailed = (((JobImpl)job).getInternalState() != JobStateInternal.INITED);
 
       // JobImpl's InitTransition is done (call above is synchronous), so the
       // "uber-decision" (MR-1220) has been made.  Query job and switch to
@@ -1088,10 +1104,16 @@ public class MRAppMaster extends CompositeService {
     //start all the components
     super.serviceStart();
 
-    // set job classloader if configured
-    MRApps.setJobClassLoader(getConfig());
-    // All components have started, start the job.
-    startJobs();
+    // finally set the job classloader
+    MRApps.setClassLoader(jobClassLoader, getConfig());
+
+    if (initFailed) {
+      JobEvent initFailedEvent = new JobEvent(job.getID(), JobEventType.JOB_INIT_FAILED);
+      jobEventDispatcher.handle(initFailedEvent);
+    } else {
+      // All components have started, start the job.
+      startJobs();
+    }
   }
   
   @Override
@@ -1100,7 +1122,29 @@ public class MRAppMaster extends CompositeService {
     TaskLog.syncLogsShutdown(logSyncer);
   }
 
-  private void processRecovery() {
+  private boolean isRecoverySupported() throws IOException {
+    boolean isSupported = false;
+    Configuration conf = getConfig();
+    if (committer != null) {
+      final JobContext _jobContext;
+      if (newApiCommitter) {
+         _jobContext = new JobContextImpl(
+            conf, TypeConverter.fromYarn(getJobId()));
+      } else {
+          _jobContext = new org.apache.hadoop.mapred.JobContextImpl(
+                new JobConf(conf), TypeConverter.fromYarn(getJobId()));
+      }
+      isSupported = callWithJobClassLoader(conf,
+          new ExceptionAction<Boolean>() {
+            public Boolean call(Configuration conf) throws IOException {
+              return committer.isRecoverySupported(_jobContext);
+            }
+      });
+    }
+    return isSupported;
+  }
+
+  private void processRecovery() throws IOException{
     if (appAttemptID.getAttemptId() == 1) {
       return;  // no need to recover on the first attempt
     }
@@ -1108,8 +1152,8 @@ public class MRAppMaster extends CompositeService {
     boolean recoveryEnabled = getConfig().getBoolean(
         MRJobConfig.MR_AM_JOB_RECOVERY_ENABLE,
         MRJobConfig.MR_AM_JOB_RECOVERY_ENABLE_DEFAULT);
-    boolean recoverySupportedByCommitter =
-        committer != null && committer.isRecoverySupported();
+
+    boolean recoverySupportedByCommitter = isRecoverySupported();
 
     // If a shuffle secret was not provided by the job client then this app
     // attempt will generate one.  However that disables recovery if there
@@ -1294,7 +1338,7 @@ public class MRAppMaster extends CompositeService {
       this.conf = config;
     }
     @Override
-    public void handle(SpeculatorEvent event) {
+    public void handle(final SpeculatorEvent event) {
       if (disabled) {
         return;
       }
@@ -1321,7 +1365,12 @@ public class MRAppMaster extends CompositeService {
       if ( (shouldMapSpec && (tType == null || tType == TaskType.MAP))
         || (shouldReduceSpec && (tType == null || tType == TaskType.REDUCE))) {
         // Speculator IS enabled, direct the event to there.
-        speculator.handle(event);
+        callWithJobClassLoader(conf, new Action<Void>() {
+          public Void call(Configuration conf) {
+            speculator.handle(event);
+            return null;
+          }
+        });
       }
     }
 
@@ -1362,8 +1411,6 @@ public class MRAppMaster extends CompositeService {
           System.getenv(Environment.NM_HTTP_PORT.name());
       String appSubmitTimeStr =
           System.getenv(ApplicationConstants.APP_SUBMIT_TIME_ENV);
-      String maxAppAttempts =
-          System.getenv(ApplicationConstants.MAX_APP_ATTEMPTS_ENV);
       
       validateInputParam(containerIdStr,
           Environment.CONTAINER_ID.name());
@@ -1373,8 +1420,6 @@ public class MRAppMaster extends CompositeService {
           Environment.NM_HTTP_PORT.name());
       validateInputParam(appSubmitTimeStr,
           ApplicationConstants.APP_SUBMIT_TIME_ENV);
-      validateInputParam(maxAppAttempts,
-          ApplicationConstants.MAX_APP_ATTEMPTS_ENV);
 
       ContainerId containerId = ConverterUtils.toContainerId(containerIdStr);
       ApplicationAttemptId applicationAttemptId =
@@ -1385,8 +1430,7 @@ public class MRAppMaster extends CompositeService {
       MRAppMaster appMaster =
           new MRAppMaster(applicationAttemptId, containerId, nodeHostString,
               Integer.parseInt(nodePortString),
-              Integer.parseInt(nodeHttpPortString), appSubmitTime,
-              Integer.parseInt(maxAppAttempts));
+              Integer.parseInt(nodeHttpPortString), appSubmitTime);
       ShutdownHookManager.get().addShutdownHook(
         new MRAppMasterShutdownHook(appMaster), SHUTDOWN_HOOK_PRIORITY);
       JobConf conf = new JobConf(new YarnConfiguration());
@@ -1484,6 +1528,102 @@ public class MRAppMaster extends CompositeService {
         return null;
       }
     });
+  }
+
+  /**
+   * Creates a job classloader based on the configuration if the job classloader
+   * is enabled. It is a no-op if the job classloader is not enabled.
+   */
+  private void createJobClassLoader(Configuration conf) throws IOException {
+    jobClassLoader = MRApps.createJobClassLoader(conf);
+  }
+
+  /**
+   * Executes the given action with the job classloader set as the configuration
+   * classloader as well as the thread context class loader if the job
+   * classloader is enabled. After the call, the original classloader is
+   * restored.
+   *
+   * If the job classloader is enabled and the code needs to load user-supplied
+   * classes via configuration or thread context classloader, this method should
+   * be used in order to load them.
+   *
+   * @param conf the configuration on which the classloader will be set
+   * @param action the callable action to be executed
+   */
+  <T> T callWithJobClassLoader(Configuration conf, Action<T> action) {
+    // if the job classloader is enabled, we may need it to load the (custom)
+    // classes; we make the job classloader available and unset it once it is
+    // done
+    ClassLoader currentClassLoader = conf.getClassLoader();
+    boolean setJobClassLoader =
+        jobClassLoader != null && currentClassLoader != jobClassLoader;
+    if (setJobClassLoader) {
+      MRApps.setClassLoader(jobClassLoader, conf);
+    }
+    try {
+      return action.call(conf);
+    } finally {
+      if (setJobClassLoader) {
+        // restore the original classloader
+        MRApps.setClassLoader(currentClassLoader, conf);
+      }
+    }
+  }
+
+  /**
+   * Executes the given action that can throw a checked exception with the job
+   * classloader set as the configuration classloader as well as the thread
+   * context class loader if the job classloader is enabled. After the call, the
+   * original classloader is restored.
+   *
+   * If the job classloader is enabled and the code needs to load user-supplied
+   * classes via configuration or thread context classloader, this method should
+   * be used in order to load them.
+   *
+   * @param conf the configuration on which the classloader will be set
+   * @param action the callable action to be executed
+   * @throws IOException if the underlying action throws an IOException
+   * @throws YarnRuntimeException if the underlying action throws an exception
+   * other than an IOException
+   */
+  <T> T callWithJobClassLoader(Configuration conf, ExceptionAction<T> action)
+      throws IOException {
+    // if the job classloader is enabled, we may need it to load the (custom)
+    // classes; we make the job classloader available and unset it once it is
+    // done
+    ClassLoader currentClassLoader = conf.getClassLoader();
+    boolean setJobClassLoader =
+        jobClassLoader != null && currentClassLoader != jobClassLoader;
+    if (setJobClassLoader) {
+      MRApps.setClassLoader(jobClassLoader, conf);
+    }
+    try {
+      return action.call(conf);
+    } catch (IOException e) {
+      throw e;
+    } catch (YarnRuntimeException e) {
+      throw e;
+    } catch (Exception e) {
+      // wrap it with a YarnRuntimeException
+      throw new YarnRuntimeException(e);
+    } finally {
+      if (setJobClassLoader) {
+        // restore the original classloader
+        MRApps.setClassLoader(currentClassLoader, conf);
+      }
+    }
+  }
+
+  /**
+   * Action to be wrapped with setting and unsetting the job classloader
+   */
+  private static interface Action<T> {
+    T call(Configuration conf);
+  }
+
+  private static interface ExceptionAction<T> {
+    T call(Configuration conf) throws Exception;
   }
 
   @Override

@@ -24,7 +24,8 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import junit.framework.Assert;
+import org.junit.AfterClass;
+import org.junit.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,8 +40,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestMRJobsWithProfiler {
@@ -50,6 +50,8 @@ public class TestMRJobsWithProfiler {
 
   private static final EnumSet<RMAppState> TERMINAL_RM_APP_STATES =
     EnumSet.of(RMAppState.FINISHED, RMAppState.FAILED, RMAppState.KILLED);
+
+  private static final int PROFILED_TASK_ID = 1;
 
   private static MiniMRYarnCluster mrCluster;
 
@@ -69,8 +71,8 @@ public class TestMRJobsWithProfiler {
 
   private static final Path APP_JAR = new Path(TEST_ROOT_DIR, "MRAppJar.jar");
 
-  @Before
-  public void setup() throws InterruptedException, IOException {
+  @BeforeClass
+  public static void setup() throws InterruptedException, IOException {
 
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
       LOG.info("MRAppJar " + MiniMRYarnCluster.APPJAR
@@ -79,7 +81,7 @@ public class TestMRJobsWithProfiler {
     }
 
     if (mrCluster == null) {
-      mrCluster = new MiniMRYarnCluster(getClass().getName());
+      mrCluster = new MiniMRYarnCluster(TestMRJobsWithProfiler.class.getName());
       mrCluster.init(CONF);
       mrCluster.start();
     }
@@ -90,8 +92,8 @@ public class TestMRJobsWithProfiler {
     localFs.setPermission(APP_JAR, new FsPermission("700"));
   }
 
-  @After
-  public void tearDown() {
+  @AfterClass
+  public static void tearDown() {
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
       LOG.info("MRAppJar " + MiniMRYarnCluster.APPJAR
           + " not found. Not running test.");
@@ -103,10 +105,19 @@ public class TestMRJobsWithProfiler {
     }
   }
 
+  @Test (timeout = 150000)
+  public void testDefaultProfiler() throws Exception {
+    LOG.info("Starting testDefaultProfiler");
+    testProfilerInternal(true);
+  }
 
   @Test (timeout = 150000)
-  public void testProfiler() throws IOException, InterruptedException,
-      ClassNotFoundException {
+  public void testDifferentProfilers() throws Exception {
+    LOG.info("Starting testDefaultProfiler");
+    testProfilerInternal(false);
+  }
+
+  private void testProfilerInternal(boolean useDefault) throws Exception {
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
       LOG.info("MRAppJar " + MiniMRYarnCluster.APPJAR
         + " not found. Not running test.");
@@ -117,18 +128,19 @@ public class TestMRJobsWithProfiler {
     final JobConf sleepConf = new JobConf(mrCluster.getConfig());
 
     sleepConf.setProfileEnabled(true);
-    // profile map split 1
-    sleepConf.setProfileTaskRange(true, "1");
-    // profile reduce of map output partitions 1
-    sleepConf.setProfileTaskRange(false, "1");
+    sleepConf.setProfileTaskRange(true, String.valueOf(PROFILED_TASK_ID));
+    sleepConf.setProfileTaskRange(false, String.valueOf(PROFILED_TASK_ID));
 
-    // use hprof for map to profile.out
-    sleepConf.set(MRJobConfig.TASK_MAP_PROFILE_PARAMS,
-        "-agentlib:hprof=cpu=times,heap=sites,force=n,thread=y,verbose=n,"
-      + "file=%s");
+    if (!useDefault) {
+      // use hprof for map to profile.out
+      sleepConf.set(MRJobConfig.TASK_MAP_PROFILE_PARAMS,
+          "-agentlib:hprof=cpu=times,heap=sites,force=n,thread=y,verbose=n,"
+              + "file=%s");
 
-    // use Xprof for reduce to stdout
-    sleepConf.set(MRJobConfig.TASK_REDUCE_PROFILE_PARAMS, "-Xprof");
+      // use Xprof for reduce to stdout
+      sleepConf.set(MRJobConfig.TASK_REDUCE_PROFILE_PARAMS, "-Xprof");
+    }
+
     sleepJob.setConf(sleepConf);
 
     // 2-map-2-reduce SleepJob
@@ -205,8 +217,8 @@ public class TestMRJobsWithProfiler {
         TaskLog.LogName.PROFILE.toString());
       final Path stdoutPath = new Path(dirEntry.getValue(),
         TaskLog.LogName.STDOUT.toString());
-      if (tid.getTaskType() == TaskType.MAP) {
-        if (tid.getTaskID().getId() == 1) {
+      if (useDefault || tid.getTaskType() == TaskType.MAP) {
+        if (tid.getTaskID().getId() == PROFILED_TASK_ID) {
           // verify profile.out
           final BufferedReader br = new BufferedReader(new InputStreamReader(
             localFs.open(profilePath)));
@@ -222,7 +234,8 @@ public class TestMRJobsWithProfiler {
       } else {
         Assert.assertFalse("hprof file should not exist",
           localFs.exists(profilePath));
-        if (tid.getTaskID().getId() == 1) {
+        if (tid.getTaskID().getId() == PROFILED_TASK_ID) {
+          // reducer is profiled with Xprof
           final BufferedReader br = new BufferedReader(new InputStreamReader(
             localFs.open(stdoutPath)));
           boolean flatProfFound = false;

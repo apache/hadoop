@@ -139,4 +139,25 @@ public abstract class SchedulingPolicy {
    */
   public abstract void computeShares(
       Collection<? extends Schedulable> schedulables, Resource totalResources);
+
+  /**
+   * Check if the resource usage is over the fair share under this policy
+   *
+   * @param usage {@link Resource} the resource usage
+   * @param fairShare {@link Resource} the fair share
+   * @return true if check passes (is over) or false otherwise
+   */
+  public abstract boolean checkIfUsageOverFairShare(
+      Resource usage, Resource fairShare);
+
+  /**
+   * Check if a leaf queue's AM resource usage over its limit under this policy
+   *
+   * @param usage {@link Resource} the resource used by application masters
+   * @param maxAMResource {@link Resource} the maximum allowed resource for
+   *                                      application masters
+   * @return true if AM resource usage is over the limit
+   */
+  public abstract boolean checkIfAMResourceUsageOverLimit(
+      Resource usage, Resource maxAMResource);
 }

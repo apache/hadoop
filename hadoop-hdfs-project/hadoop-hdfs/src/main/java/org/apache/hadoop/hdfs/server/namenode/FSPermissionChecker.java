@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
@@ -136,6 +137,7 @@ class FSPermissionChecker {
    * @param subAccess If path is a directory,
    * it is the access required of the path and all the sub-directories.
    * If path is not a directory, there is no effect.
+   * @param ignoreEmptyDir Ignore permission checking for empty directory?
    * @param resolveLink whether to resolve the final path component if it is
    * a symlink
    * @throws AccessControlException
@@ -144,9 +146,9 @@ class FSPermissionChecker {
    * Guarded by {@link FSNamesystem#readLock()}
    * Caller of this method must hold that lock.
    */
-  void checkPermission(String path, INodeDirectory root, boolean doCheckOwner,
+  void checkPermission(String path, FSDirectory dir, boolean doCheckOwner,
       FsAction ancestorAccess, FsAction parentAccess, FsAction access,
-      FsAction subAccess, boolean resolveLink)
+      FsAction subAccess, boolean ignoreEmptyDir, boolean resolveLink)
       throws AccessControlException, UnresolvedLinkException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("ACCESS CHECK: " + this
@@ -155,11 +157,12 @@ class FSPermissionChecker {
           + ", parentAccess=" + parentAccess
           + ", access=" + access
           + ", subAccess=" + subAccess
+          + ", ignoreEmptyDir=" + ignoreEmptyDir
           + ", resolveLink=" + resolveLink);
     }
     // check if (parentAccess != null) && file exists, then check sb
     // If resolveLink, the check is performed on the link target.
-    final INodesInPath inodesInPath = root.getINodesInPath(path, resolveLink);
+    final INodesInPath inodesInPath = dir.getINodesInPath(path, resolveLink);
     final int snapshotId = inodesInPath.getPathSnapshotId();
     final INode[] inodes = inodesInPath.getINodes();
     int ancestorIndex = inodes.length - 2;
@@ -182,7 +185,7 @@ class FSPermissionChecker {
       check(last, snapshotId, access);
     }
     if (subAccess != null) {
-      checkSubAccess(last, snapshotId, subAccess);
+      checkSubAccess(last, snapshotId, subAccess, ignoreEmptyDir);
     }
     if (doCheckOwner) {
       checkOwner(last, snapshotId);
@@ -207,8 +210,8 @@ class FSPermissionChecker {
   }
 
   /** Guarded by {@link FSNamesystem#readLock()} */
-  private void checkSubAccess(INode inode, int snapshotId, FsAction access
-      ) throws AccessControlException {
+  private void checkSubAccess(INode inode, int snapshotId, FsAction access,
+      boolean ignoreEmptyDir) throws AccessControlException {
     if (inode == null || !inode.isDirectory()) {
       return;
     }
@@ -216,9 +219,12 @@ class FSPermissionChecker {
     Stack<INodeDirectory> directories = new Stack<INodeDirectory>();
     for(directories.push(inode.asDirectory()); !directories.isEmpty(); ) {
       INodeDirectory d = directories.pop();
-      check(d, snapshotId, access);
+      ReadOnlyList<INode> cList = d.getChildrenList(snapshotId);
+      if (!(cList.isEmpty() && ignoreEmptyDir)) {
+        check(d, snapshotId, access);
+      }
 
-      for(INode child : d.getChildrenList(snapshotId)) {
+      for(INode child : cList) {
         if (child.isDirectory()) {
           directories.push(child.asDirectory());
         }

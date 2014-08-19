@@ -79,7 +79,8 @@ public abstract class HtmlPage extends TextView {
   @Override
   public void render() {
     puts(DOCTYPE);
-    render(page().html().meta_http("Content-type", MimeType.HTML));
+    render(page().html().meta_http("X-UA-Compatible", "IE=8")
+        .meta_http("Content-type", MimeType.HTML));
     if (page().nestLevel() != 0) {
       throw new WebAppException("Error rendering page: nestLevel="+
                                 page().nestLevel());

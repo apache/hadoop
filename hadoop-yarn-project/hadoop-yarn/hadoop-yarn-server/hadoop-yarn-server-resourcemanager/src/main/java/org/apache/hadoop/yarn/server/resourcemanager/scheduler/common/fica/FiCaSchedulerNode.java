@@ -18,248 +18,85 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.factories.RecordFactory;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
-import org.apache.hadoop.yarn.util.resource.Resources;
 
 public class FiCaSchedulerNode extends SchedulerNode {
 
   private static final Log LOG = LogFactory.getLog(FiCaSchedulerNode.class);
 
-  private static final RecordFactory recordFactory = RecordFactoryProvider
-      .getRecordFactory(null);
-
-  private Resource availableResource = recordFactory.newRecordInstance(Resource.class);
-  private Resource usedResource = recordFactory.newRecordInstance(Resource.class);
-  private Resource totalResourceCapability;
-
-  private volatile int numContainers;
-
-  private RMContainer reservedContainer;
-  
-  /* set of containers that are allocated containers */
-  private final Map<ContainerId, RMContainer> launchedContainers = 
-    new HashMap<ContainerId, RMContainer>();
-  
-  private final RMNode rmNode;
-  private final String nodeName;
-
   public FiCaSchedulerNode(RMNode node, boolean usePortForNodeName) {
-    this.rmNode = node;
-    this.availableResource.setMemory(node.getTotalCapability().getMemory());
-    this.availableResource.setVirtualCores(node.getTotalCapability().getVirtualCores());
-    totalResourceCapability =
-        Resource.newInstance(node.getTotalCapability().getMemory(), node
-            .getTotalCapability().getVirtualCores());
-    if (usePortForNodeName) {
-      nodeName = rmNode.getHostName() + ":" + node.getNodeID().getPort();
-    } else {
-      nodeName = rmNode.getHostName();
-    }
-  }
-
-  public RMNode getRMNode() {
-    return this.rmNode;
-  }
-
-  public NodeId getNodeID() {
-    return this.rmNode.getNodeID();
-  }
-
-  public String getHttpAddress() {
-    return this.rmNode.getHttpAddress();
+    super(node, usePortForNodeName);
   }
 
   @Override
-  public String getNodeName() {
-    return nodeName;
-  }
-
-  @Override
-  public String getRackName() {
-    return this.rmNode.getRackName();
-  }
-
-  /**
-   * The Scheduler has allocated containers on this node to the 
-   * given application.
-   * 
-   * @param applicationId application
-   * @param rmContainer allocated container
-   */
-  public synchronized void allocateContainer(ApplicationId applicationId, 
-      RMContainer rmContainer) {
-    Container container = rmContainer.getContainer();
-    deductAvailableResource(container.getResource());
-    ++numContainers;
-    
-    launchedContainers.put(container.getId(), rmContainer);
-
-    LOG.info("Assigned container " + container.getId() + 
-        " of capacity " + container.getResource() + " on host " + rmNode.getNodeAddress() + 
-        ", which currently has " + numContainers + " containers, " + 
-        getUsedResource() + " used and " + 
-        getAvailableResource() + " available");
-  }
-
-  @Override
-  public synchronized Resource getAvailableResource() {
-    return this.availableResource;
-  }
-
-  @Override
-  public synchronized Resource getUsedResource() {
-    return this.usedResource;
-  }
-
-  @Override
-  public Resource getTotalResource() {
-    return this.totalResourceCapability;
-  }
-
-  private synchronized boolean isValidContainer(Container c) {    
-    if (launchedContainers.containsKey(c.getId()))
-      return true;
-    return false;
-  }
-
-  private synchronized void updateResource(Container container) {
-    addAvailableResource(container.getResource());
-    --numContainers;
-  }
-  
-  /**
-   * Release an allocated container on this node.
-   * @param container container to be released
-   */
-  public synchronized void releaseContainer(Container container) {
-    if (!isValidContainer(container)) {
-      LOG.error("Invalid container released " + container);
-      return;
-    }
-
-    /* remove the containers from the nodemanger */
-    if (null != launchedContainers.remove(container.getId())) {
-      updateResource(container);
-    }
-
-    LOG.info("Released container " + container.getId() + 
-        " of capacity " + container.getResource() + " on host " + rmNode.getNodeAddress() + 
-        ", which currently has " + numContainers + " containers, " + 
-        getUsedResource() + " used and " + getAvailableResource()
-        + " available" + ", release resources=" + true);
-  }
-
-
-  private synchronized void addAvailableResource(Resource resource) {
-    if (resource == null) {
-      LOG.error("Invalid resource addition of null resource for "
-          + rmNode.getNodeAddress());
-      return;
-    }
-    Resources.addTo(availableResource, resource);
-    Resources.subtractFrom(usedResource, resource);
-  }
-
-  private synchronized void deductAvailableResource(Resource resource) {
-    if (resource == null) {
-      LOG.error("Invalid deduction of null resource for "
-          + rmNode.getNodeAddress());
-      return;
-    }
-    Resources.subtractFrom(availableResource, resource);
-    Resources.addTo(usedResource, resource);
-  }
-
-  @Override
-  public String toString() {
-    return "host: " + rmNode.getNodeAddress() + " #containers=" + getNumContainers() +  
-      " available=" + getAvailableResource().getMemory() + 
-      " used=" + getUsedResource().getMemory();
-  }
-
-  @Override
-  public int getNumContainers() {
-    return numContainers;
-  }
-
-  public synchronized List<RMContainer> getRunningContainers() {
-    return new ArrayList<RMContainer>(launchedContainers.values());
-  }
-
   public synchronized void reserveResource(
-      SchedulerApplicationAttempt application, Priority priority, 
-      RMContainer reservedContainer) {
+      SchedulerApplicationAttempt application, Priority priority,
+      RMContainer container) {
     // Check if it's already reserved
-    if (this.reservedContainer != null) {
+    RMContainer reservedContainer = getReservedContainer();
+    if (reservedContainer != null) {
       // Sanity check
-      if (!reservedContainer.getContainer().getNodeId().equals(getNodeID())) {
+      if (!container.getContainer().getNodeId().equals(getNodeID())) {
         throw new IllegalStateException("Trying to reserve" +
-            " container " + reservedContainer +
-            " on node " + reservedContainer.getReservedNode() + 
-            " when currently" + " reserved resource " + this.reservedContainer +
-            " on node " + this.reservedContainer.getReservedNode());
+            " container " + container +
+            " on node " + container.getReservedNode() + 
+            " when currently" + " reserved resource " + reservedContainer +
+            " on node " + reservedContainer.getReservedNode());
       }
       
       // Cannot reserve more than one application attempt on a given node!
       // Reservation is still against attempt.
-      if (!this.reservedContainer.getContainer().getId().getApplicationAttemptId().equals(
-          reservedContainer.getContainer().getId().getApplicationAttemptId())) {
+      if (!reservedContainer.getContainer().getId().getApplicationAttemptId()
+          .equals(container.getContainer().getId().getApplicationAttemptId())) {
         throw new IllegalStateException("Trying to reserve" +
-        		" container " + reservedContainer + 
+            " container " + container + 
             " for application " + application.getApplicationAttemptId() + 
             " when currently" +
-            " reserved container " + this.reservedContainer +
+            " reserved container " + reservedContainer +
             " on node " + this);
       }
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("Updated reserved container "
-            + reservedContainer.getContainer().getId() + " on node " + this
+            + container.getContainer().getId() + " on node " + this
             + " for application attempt "
             + application.getApplicationAttemptId());
       }
     } else {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Reserved container "
-            + reservedContainer.getContainer().getId() + " on node " + this
+            + container.getContainer().getId() + " on node " + this
             + " for application attempt "
             + application.getApplicationAttemptId());
       }
     }
-    this.reservedContainer = reservedContainer;
+    setReservedContainer(container);
   }
 
+  @Override
   public synchronized void unreserveResource(
       SchedulerApplicationAttempt application) {
-    
+
     // adding NP checks as this can now be called for preemption
-    if (reservedContainer != null
-        && reservedContainer.getContainer() != null
-        && reservedContainer.getContainer().getId() != null
-        && reservedContainer.getContainer().getId().getApplicationAttemptId() != null) {
+    if (getReservedContainer() != null
+        && getReservedContainer().getContainer() != null
+        && getReservedContainer().getContainer().getId() != null
+        && getReservedContainer().getContainer().getId()
+          .getApplicationAttemptId() != null) {
 
       // Cannot unreserve for wrong application...
       ApplicationAttemptId reservedApplication =
-          reservedContainer.getContainer().getId().getApplicationAttemptId();
+          getReservedContainer().getContainer().getId()
+            .getApplicationAttemptId();
       if (!reservedApplication.equals(
           application.getApplicationAttemptId())) {
         throw new IllegalStateException("Trying to unreserve " +
@@ -269,17 +106,6 @@ public class FiCaSchedulerNode extends SchedulerNode {
             " on node " + this);
       }
     }
-    reservedContainer = null;
+    setReservedContainer(null);
   }
-
-  public synchronized RMContainer getReservedContainer() {
-    return reservedContainer;
-  }
-
-  @Override
-  public synchronized void applyDeltaOnAvailableResource(Resource deltaResource) {
-    // we can only adjust available resource if total resource is changed.
-    Resources.addTo(this.availableResource, deltaResource);
-  }
-
 }

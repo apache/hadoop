@@ -390,6 +390,10 @@ public class TestRollingUpgrade {
 
       // Once finalized, there should be no more fsimage for rollbacks.
       Assert.assertFalse(fsimage.hasRollbackFSImage());
+
+      // Should have no problem in restart and replaying edits that include
+      // the FINALIZE op.
+      dfsCluster.restartNameNode(0);
     } finally {
       if (cluster != null) {
         cluster.shutdown();

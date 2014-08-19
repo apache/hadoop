@@ -22,6 +22,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -29,7 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ChecksumException;
 
 /**
- * This class provides inteface and utilities for processing checksums for
+ * This class provides interface and utilities for processing checksums for
  * DFS data transfers.
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
@@ -72,6 +73,13 @@ public class DataChecksum implements Checksum {
     }
   }
 
+  /**
+   * Create a Crc32 Checksum object. The implementation of the Crc32 algorithm
+   * is chosen depending on the platform.
+   */
+  public static Checksum newCrc32() {
+    return Shell.isJava7OrAbove()? new CRC32(): new PureJavaCrc32();
+  }
 
   public static DataChecksum newDataChecksum(Type type, int bytesPerChecksum ) {
     if ( bytesPerChecksum <= 0 ) {
@@ -82,7 +90,7 @@ public class DataChecksum implements Checksum {
     case NULL :
       return new DataChecksum(type, new ChecksumNull(), bytesPerChecksum );
     case CRC32 :
-      return new DataChecksum(type, new PureJavaCrc32(), bytesPerChecksum );
+      return new DataChecksum(type, newCrc32(), bytesPerChecksum );
     case CRC32C:
       return new DataChecksum(type, new PureJavaCrc32C(), bytesPerChecksum);
     default:
@@ -331,6 +339,12 @@ public class DataChecksum implements Checksum {
       byte[] data, int dataOff, int dataLen,
       byte[] checksums, int checksumsOff, String fileName,
       long basePos) throws ChecksumException {
+
+    if (NativeCrc32.isAvailable()) {
+      NativeCrc32.verifyChunkedSumsByteArray(bytesPerChecksum, type.id,
+          checksums, checksumsOff, data, dataOff, dataLen, fileName, basePos);
+      return;
+    }
     
     int remaining = dataLen;
     int dataPos = 0;
@@ -376,6 +390,12 @@ public class DataChecksum implements Checksum {
           checksums.array(), checksums.arrayOffset() + checksums.position());
       return;
     }
+
+    if (NativeCrc32.isAvailable()) {
+      NativeCrc32.calculateChunkedSums(bytesPerChecksum, type.id,
+          checksums, data);
+      return;
+    }
     
     data.mark();
     checksums.mark();
@@ -398,9 +418,15 @@ public class DataChecksum implements Checksum {
    * Implementation of chunked calculation specifically on byte arrays. This
    * is to avoid the copy when dealing with ByteBuffers that have array backing.
    */
-  private void calculateChunkedSums(
+  public void calculateChunkedSums(
       byte[] data, int dataOffset, int dataLength,
       byte[] sums, int sumsOffset) {
+
+    if (NativeCrc32.isAvailable()) {
+      NativeCrc32.calculateChunkedSumsByteArray(bytesPerChecksum, type.id,
+          sums, sumsOffset, data, dataOffset, dataLength);
+      return;
+    }
 
     int remaining = dataLength;
     while (remaining > 0) {

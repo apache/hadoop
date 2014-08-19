@@ -28,7 +28,6 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
@@ -235,17 +234,26 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
   public ActiveUsersManager getActiveUsersManager();
   
   /**
-   * Recover the state of the queue
-   * @param clusterResource the resource of the cluster
-   * @param application the application for which the container was allocated
-   * @param container the container that was recovered.
-   */
-  public void recoverContainer(Resource clusterResource, FiCaSchedulerApp application, 
-      Container container);
-  
-  /**
    * Adds all applications in the queue and its subqueues to the given collection.
    * @param apps the collection to add the applications to
    */
   public void collectSchedulerApplications(Collection<ApplicationAttemptId> apps);
+
+  /**
+  * Detach a container from this queue
+  * @param clusterResource the current cluster resource
+  * @param application application to which the container was assigned
+  * @param container the container to detach
+  */
+  public void detachContainer(Resource clusterResource,
+               FiCaSchedulerApp application, RMContainer container);
+
+  /**
+   * Attach a container to this queue
+   * @param clusterResource the current cluster resource
+   * @param application application to which the container was assigned
+   * @param container the container to attach
+   */
+  public void attachContainer(Resource clusterResource,
+               FiCaSchedulerApp application, RMContainer container);
 }

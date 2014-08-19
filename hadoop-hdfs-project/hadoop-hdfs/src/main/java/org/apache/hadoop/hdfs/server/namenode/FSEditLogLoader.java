@@ -25,12 +25,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -76,6 +78,8 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetOwnerOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetPermissionsOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetQuotaOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetReplicationOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetXAttrOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemoveXAttrOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
@@ -351,6 +355,7 @@ public class FSEditLogLoader {
             lastInodeId);
         newFile = fsDir.unprotectedAddFile(inodeId,
             path, addCloseOp.permissions, addCloseOp.aclEntries,
+            addCloseOp.xAttrs,
             replication, addCloseOp.mtime, addCloseOp.atime,
             addCloseOp.blockSize, true, addCloseOp.clientName,
             addCloseOp.clientMachine);
@@ -371,8 +376,7 @@ public class FSEditLogLoader {
                 "for append");
           }
           LocatedBlock lb = fsNamesys.prepareFileForWrite(path,
-              oldFile, addCloseOp.clientName, addCloseOp.clientMachine, null,
-              false, iip.getLatestSnapshotId(), false);
+              oldFile, addCloseOp.clientName, addCloseOp.clientMachine, false, iip.getLatestSnapshotId(), false);
           newFile = INodeFile.valueOf(fsDir.getINode(path),
               path, true);
           
@@ -735,7 +739,13 @@ public class FSEditLogLoader {
     }
     case OP_ROLLING_UPGRADE_FINALIZE: {
       final long finalizeTime = ((RollingUpgradeOp) op).getTime();
-      fsNamesys.finalizeRollingUpgradeInternal(finalizeTime);
+      if (fsNamesys.isRollingUpgrade()) {
+        // Only do it when NN is actually doing rolling upgrade.
+        // We can get FINALIZE without corresponding START, if NN is restarted
+        // before this op is consumed and a new checkpoint is created.
+        fsNamesys.finalizeRollingUpgradeInternal(finalizeTime);
+      }
+      fsNamesys.getFSImage().updateStorageVersion();
       fsNamesys.getFSImage().renameCheckpoint(NameNodeFile.IMAGE_ROLLBACK,
           NameNodeFile.IMAGE);
       break;
@@ -796,6 +806,25 @@ public class FSEditLogLoader {
     case OP_SET_ACL: {
       SetAclOp setAclOp = (SetAclOp) op;
       fsDir.unprotectedSetAcl(setAclOp.src, setAclOp.aclEntries);
+      break;
+    }
+    case OP_SET_XATTR: {
+      SetXAttrOp setXAttrOp = (SetXAttrOp) op;
+      fsDir.unprotectedSetXAttrs(setXAttrOp.src, setXAttrOp.xAttrs,
+          EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(setXAttrOp.rpcClientId, setXAttrOp.rpcCallId);
+      }
+      break;
+    }
+    case OP_REMOVE_XATTR: {
+      RemoveXAttrOp removeXAttrOp = (RemoveXAttrOp) op;
+      fsDir.unprotectedRemoveXAttrs(removeXAttrOp.src,
+          removeXAttrOp.xAttrs);
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(removeXAttrOp.rpcClientId,
+            removeXAttrOp.rpcCallId);
+      }
       break;
     }
     default:
@@ -992,9 +1021,6 @@ public class FSEditLogLoader {
    * If there are invalid or corrupt transactions in the middle of the stream,
    * validateEditLog will skip over them.
    * This reads through the stream but does not close it.
-   *
-   * @throws IOException if the stream cannot be read due to an IO error (eg
-   *                     if the log does not exist)
    */
   static EditLogValidation validateEditLog(EditLogInputStream in) {
     long lastPos = 0;

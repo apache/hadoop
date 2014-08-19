@@ -22,6 +22,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.mapred.SplitLocationInfo;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.RecordReader;
@@ -51,10 +53,25 @@ public abstract class InputSplit {
   /**
    * Get the list of nodes by name where the data for the split would be local.
    * The locations do not need to be serialized.
+   * 
    * @return a new array of the node nodes.
    * @throws IOException
    * @throws InterruptedException
    */
   public abstract 
     String[] getLocations() throws IOException, InterruptedException;
+  
+  /**
+   * Gets info about which nodes the input split is stored on and how it is
+   * stored at each location.
+   * 
+   * @return list of <code>SplitLocationInfo</code>s describing how the split
+   *    data is stored at each location. A null value indicates that all the
+   *    locations have the data stored on disk.
+   * @throws IOException
+   */
+  @Evolving
+  public SplitLocationInfo[] getLocationInfo() throws IOException {
+    return null;
+  }
 }

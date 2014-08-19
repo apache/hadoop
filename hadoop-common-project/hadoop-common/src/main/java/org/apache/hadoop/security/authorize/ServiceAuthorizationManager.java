@@ -43,10 +43,14 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class ServiceAuthorizationManager {
+  static final String BLOCKED = ".blocked";
+
   private static final String HADOOP_POLICY_FILE = "hadoop-policy.xml";
 
-  private Map<Class<?>, AccessControlList> protocolToAcl =
-    new IdentityHashMap<Class<?>, AccessControlList>();
+  // For each class, first ACL in the array specifies the allowed entries
+  // and second ACL specifies blocked entries.
+  private volatile Map<Class<?>, AccessControlList[]> protocolToAcls =
+    new IdentityHashMap<Class<?>, AccessControlList[]>();
   
   /**
    * Configuration key for controlling service-level authorization for Hadoop.
@@ -80,8 +84,8 @@ public class ServiceAuthorizationManager {
                                Configuration conf,
                                InetAddress addr
                                ) throws AuthorizationException {
-    AccessControlList acl = protocolToAcl.get(protocol);
-    if (acl == null) {
+    AccessControlList[] acls = protocolToAcls.get(protocol);
+    if (acls == null) {
       throw new AuthorizationException("Protocol " + protocol + 
                                        " is not known.");
     }
@@ -104,7 +108,7 @@ public class ServiceAuthorizationManager {
       }
     }
     if((clientPrincipal != null && !clientPrincipal.equals(user.getUserName())) || 
-        !acl.isUserAllowed(user)) {
+       acls.length != 2  || !acls[0].isUserAllowed(user) || acls[1].isUserAllowed(user)) {
       AUDITLOG.warn(AUTHZ_FAILED_FOR + user + " for protocol=" + protocol
           + ", expected client Kerberos principal is " + clientPrincipal);
       throw new AuthorizationException("User " + user + 
@@ -114,7 +118,7 @@ public class ServiceAuthorizationManager {
     AUDITLOG.info(AUTHZ_SUCCESSFUL_FOR + user + " for protocol="+protocol);
   }
 
-  public synchronized void refresh(Configuration conf,
+  public void refresh(Configuration conf,
                                           PolicyProvider provider) {
     // Get the system property 'hadoop.policy.file'
     String policyFile = 
@@ -127,10 +131,17 @@ public class ServiceAuthorizationManager {
   }
 
   @Private
-  public synchronized void refreshWithLoadedConfiguration(Configuration conf,
+  public void refreshWithLoadedConfiguration(Configuration conf,
       PolicyProvider provider) {
-    final Map<Class<?>, AccessControlList> newAcls =
-        new IdentityHashMap<Class<?>, AccessControlList>();
+    final Map<Class<?>, AccessControlList[]> newAcls =
+      new IdentityHashMap<Class<?>, AccessControlList[]>();
+    
+    String defaultAcl = conf.get(
+        CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_AUTHORIZATION_DEFAULT_ACL,
+        AccessControlList.WILDCARD_ACL_VALUE);
+
+    String defaultBlockedAcl = conf.get(
+      CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_AUTHORIZATION_DEFAULT_BLOCKED_ACL, "");
 
     // Parse the config file
     Service[] services = provider.getServices();
@@ -139,23 +150,32 @@ public class ServiceAuthorizationManager {
         AccessControlList acl =
             new AccessControlList(
                 conf.get(service.getServiceKey(),
-                    AccessControlList.WILDCARD_ACL_VALUE)
+                    defaultAcl)
             );
-        newAcls.put(service.getProtocol(), acl);
+        AccessControlList blockedAcl =
+           new AccessControlList(
+           conf.get(service.getServiceKey() + BLOCKED,
+           defaultBlockedAcl));
+        newAcls.put(service.getProtocol(), new AccessControlList[] {acl, blockedAcl});
       }
     }
 
     // Flip to the newly parsed permissions
-    protocolToAcl = newAcls;
+    protocolToAcls = newAcls;
   }
 
   @VisibleForTesting
   public Set<Class<?>> getProtocolsWithAcls() {
-    return protocolToAcl.keySet();
+    return protocolToAcls.keySet();
   }
 
   @VisibleForTesting
   public AccessControlList getProtocolsAcls(Class<?> className) {
-    return protocolToAcl.get(className);
+    return protocolToAcls.get(className)[0];
+  }
+
+  @VisibleForTesting
+  public AccessControlList getProtocolsBlockedAcls(Class<?> className) {
+    return protocolToAcls.get(className)[1];
   }
 }

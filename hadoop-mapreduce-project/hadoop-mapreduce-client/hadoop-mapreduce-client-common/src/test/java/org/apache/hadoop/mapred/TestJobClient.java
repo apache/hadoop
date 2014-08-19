@@ -23,16 +23,24 @@ import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.ClusterStatus.BlackListInfo;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class TestJobClient {
-  final static String TEST_DIR = new File(System.getProperty("test.build.data",
-      "/tmp")).getAbsolutePath();
+
+  final static String TEST_DIR = new File("target",
+    TestJobClient.class.getSimpleName()).getAbsolutePath();
+
+  @After
+  public void tearDown() {
+    FileUtil.fullyDelete(new File(TEST_DIR));
+  }
 
   @Test
   public void testGetClusterStatusWithLocalJobRunner() throws Exception {
@@ -51,11 +59,12 @@ public class TestJobClient {
     Assert.assertEquals(0, blackListedTrackersInfo.size());
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testIsJobDirValid() throws IOException {
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getLocal(conf);
     Path testDir = new Path(TEST_DIR);
+    fs.mkdirs(testDir);
     Assert.assertFalse(JobClient.isJobDirValid(testDir, fs));
 
     Path jobconf = new Path(testDir, "job.xml");
@@ -68,7 +77,7 @@ public class TestJobClient {
     fs.delete(jobsplit, true);
   }
   
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testGetStagingAreaDir() throws IOException, InterruptedException {
     Configuration conf = new Configuration();
     JobClient client = new JobClient(conf);

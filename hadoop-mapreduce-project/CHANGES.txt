@@ -17,6 +17,9 @@ Trunk (Unreleased)
     MAPREDUCE-5232. Add a configuration to be able to log classpath and other
     system properties on mapreduce JVMs startup.  (Sangjin Lee via vinodkv)
 
+    MAPREDUCE-5910. Make MR AM resync with RM in case of work-preserving
+    RM-restart. (Rohith via jianhe)
+
   IMPROVEMENTS
 
     MAPREDUCE-3481. [Gridmix] Improve Gridmix STRESS mode. (amarrk)
@@ -77,7 +80,16 @@ Trunk (Unreleased)
     MAPREDUCE-5196. Add bookkeeping for managing checkpoints of task state.
     (Carlo Curino via cdouglas)
 
+    MAPREDUCE-5912. Task.calculateOutputSize does not handle Windows files after
+    MAPREDUCE-5196. (Remus Rusanu via cnauroth)
+
+    MAPREDUCE-6019. MapReduce changes for exposing YARN/MR endpoints on multiple
+    interfaces. (Craig Welch, Milan Potocnik, Arpit Agarwal via xgong)
+
   BUG FIXES
+
+    MAPREDUCE-5714. Removed forceful JVM exit in shutDownJob.  
+                     (Jinghui Wang via Eric Yang)
 
     MAPREDUCE-3194. "mapred mradmin" command is broken in mrv2
                      (Jason Lowe via bobby)
@@ -136,6 +148,94 @@ Trunk (Unreleased)
 
     MAPREDUCE-5717. Task pings are interpreted as task progress (jlowe)
 
+    MAPREDUCE-5867. Fix NPE in KillAMPreemptionPolicy related to 
+    ProportionalCapacityPreemptionPolicy (Sunil G via devaraj)
+
+Release 2.6.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    MAPREDUCE-5971. Move the default options for distcp -p to
+    DistCpOptionSwitch. (clamb via wang)
+
+    MAPREDUCE-5963. ShuffleHandler DB schema should be versioned with
+    compatible/incompatible changes (Junping Du via jlowe)
+
+    MAPREDUCE-883. harchive: Document how to unarchive (Akira AJISAKA and
+      Koji Noguchi via aw)
+
+    MAPREDUCE-4791. Javadoc for KeyValueTextInputFormat should include default
+      separator and how to change it (Akira AJISAKA via aw)
+
+    MAPREDUCE-5906. Inconsistent configuration in property
+      "mapreduce.reduce.shuffle.input.buffer.percent" (Akira AJISAKA via aw)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    MAPREDUCE-5866. TestFixedLengthInputFormat fails in windows.
+    (Varun Vasudev via cnauroth)
+
+    MAPREDUCE-5956. Made MR AM not use maxAttempts to determine if the current
+    attempt is the last retry. (Wangda Tan via zjshen)
+
+    MAPREDUCE-5957. AM throws ClassNotFoundException with job classloader
+    enabled if custom output format/committer is used (Sangjin Lee via jlowe)
+
+    MAPREDUCE-5756. CombineFileInputFormat.getSplits() including directories
+    in its results (Jason Dere via jlowe)
+
+    MAPREDUCE-6014. New task status field in task attempts table can lead to
+    an empty web page (Mit Desai via jlowe)
+
+    MAPREDUCE-6021. MR AM should have working directory in LD_LIBRARY_PATH
+    (jlowe)
+
+    MAPREDUCE-6010. HistoryServerFileSystemStateStore fails to update tokens
+    (jlowe)
+
+    MAPREDUCE-5878. some standard JDK APIs are not part of system classes
+    defaults (Sangjin Lee via jlowe)
+
+    MAPREDUCE-5944. Remove MRv1 commands from CommandsManual.apt.vm
+      (Akira AJISAKA via aw)
+
+    MAPREDUCE-5943. Separate mapred commands from CommandManual.apt.vm
+      (Akira AJISAKA via aw)
+
+    MAPREDUCE-5363. Fix doc and spelling for TaskCompletionEvent#getTaskStatus
+      and getStatus (Akira AJISAKA via aw)
+
+    MAPREDUCE-5595. Typo in MergeManagerImpl.java (Akira AJISAKA via aw)
+
+    MAPREDUCE-5597. Missing alternatives in javadocs for deprecated constructors
+     in mapreduce.Job (Akira AJISAKA via aw)
+
+    MAPREDUCE-5950. incorrect description in distcp2 document (Akira AJISAKA
+      via aw)
+
+    MAPREDUCE-5998. CompositeInputFormat javadoc is broken (Akira AJISAKA via
+      aw)
+
+    MAPREDUCE-5999. Fix dead link in InputFormat javadoc (Akira AJISAKA via aw)
+
+    MAPREDUCE-6032. Made MR jobs write job history files on the default FS when
+    the current context's FS is different. (Benjamin Zhitomirsky via zjshen)
+
+    MAPREDUCE-6024. Shortened the time when Fetcher is stuck in retrying before
+    concluding the failure by configuration. (Yunjiong Zhao via zjshen)
+
+    MAPREDUCE-6036. TestJobEndNotifier fails intermittently in branch-2 (chang
+    li via jlowe)
+
+    MAPREDUCE-6012. DBInputSplit creates invalid ranges on Oracle. 
+    (Wei Yan via kasha)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -165,9 +265,60 @@ Release 2.5.0 - UNRELEASED
 
     MAPREDUCE-5836. Fix typo in RandomTextWriter (Akira AJISAKA via jeagles)
 
+    MAPREDUCE-5852. Prepare MapReduce codebase for JUnit 4.11. (cnauroth)
+
+    MAPREDUCE-5639. Port DistCp2 document to trunk (Akira AJISAKA via jeagles)
+
+    MAPREDUCE-5812. Make job context available to
+    OutputCommitter.isRecoverySupported() (Mohammad Kamrul Islam via jlowe)
+
+    MAPREDUCE-5638. Port Hadoop Archives document to trunk (Akira AJISAKA via
+    jeagles)
+
+    MAPREDUCE-5402. In DynamicInputFormat, change MAX_CHUNKS_TOLERABLE,
+    MAX_CHUNKS_IDEAL, MIN_RECORDS_PER_CHUNK and SPLIT_RATIO to be configurable.
+    (Tsuyoshi OZAWA via szetszwo)
+
+    MAPREDUCE-5637. Convert Hadoop Streaming document to APT (Akira AJISAKA via
+    jeagles)
+
+    MAPREDUCE-5636. Convert MapReduce Tutorial document to APT (Akira AJISAKA
+    via jeagles)
+
+    MAPREDUCE-5774. Job overview in History UI should list reducer phases in
+    chronological order. (Gera Shegalov via kasha)
+
+    MAPREDUCE-5652. NM Recovery. ShuffleHandler should handle NM restarts.
+    (Jason Lowe via kasha)
+
+    MAPREDUCE-5861. finishedSubMaps field in LocalContainerLauncher does not 
+    need to be volatile. (Tsuyoshi OZAWA via junping_du)
+
+    MAPREDUCE-5809. Enhance distcp to support preserving HDFS ACLs. (cnauroth)
+
+    MAPREDUCE-5899. Support incremental data copy in DistCp. (jing9)
+
+    MAPREDUCE-5886. Allow wordcount example job to accept multiple input paths.
+    (cnauroth)
+
+    MAPREDUCE-5834. Increased test-timeouts in TestGridMixClasses to avoid
+    occassional failures. (Mit Desai via vinodkv)
+
+    MAPREDUCE-5896. InputSplits should indicate which locations have the block 
+    cached in memory. (Sandy Ryza via kasha)
+
+    MAPREDUCE-5844. Add a configurable delay to reducer-preemption. 
+    (Maysam Yabandeh via kasha)
+
+    MAPREDUCE-5790. Made it easier to enable hprof profile options by default.
+    (Gera Shegalov via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES 
+
+    MAPREDUCE-6033. Updated access check for displaying job information 
+    (Yu Gao via Eric Yang)
 
     MAPREDUCE-5759. Remove unnecessary conf load in Limits (Sandy Ryza)
 
@@ -177,13 +328,78 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5775. Remove unnecessary job.setNumReduceTasks in SleepJob.createJob 
     (jhanver chand sharma via devaraj)
 
-Release 2.4.1 - UNRELEASED
+    MAPREDUCE-4937. MR AM handles an oversized split metainfo file poorly
+    (Eric Payne via jlowe)
+
+    MAPREDUCE-5642. TestMiniMRChildTask fails on Windows.
+    (Chuan Liu via cnauroth)
+
+    MAPREDUCE-5846. Rumen doesn't understand JobQueueChangedEvent (Nathan Roberts via raviprak)
+
+    MAPREDUCE-5837. MRAppMaster fails when checking on uber mode. (wheat9)
+
+    MAPREDUCE-5749. TestRMContainerAllocator#testReportedAppProgress Failed
+    (jlowe)
+
+    MAPREDUCE-5884. History server uses short user name when canceling tokens
+    (Mohammad Kamrul Islam via jlowe)
+
+    MAPREDUCE-5888. Failed job leaves hung AM after it unregisters (Jason Lowe
+    via jeagles)
+
+    MAPREDUCE-5814. fat jar with *-default.xml may fail when
+    mapreduce.job.classloader=true. (Gera Shegalov via jlowe)
+
+    MAPREDUCE-5309. 2.0.4 JobHistoryParser can't parse certain failed job
+    history files generated by 2.0.3 history server (Rushabh S Shah via jlowe)
+
+    MAPREDUCE-5862. Line records longer than 2x split size aren't handled
+    correctly (bc Wong via jlowe)
+
+    MAPREDUCE-5895. Close streams properly to avoid leakage in TaskLog. 
+    (Kousuke Saruta via devaraj)
+
+    MAPREDUCE-5777. Support utf-8 text with Byte Order Marker.
+    (Zhihai Xu via kasha)
+
+    MAPREDUCE-5898. distcp to support preserving HDFS extended attributes(XAttrs)
+    (Yi Liu via umamahesh)
+
+    MAPREDUCE-5920. Add Xattr option in DistCp docs. (Yi Liu via cnauroth)
+
+    MAPREDUCE-5924. Changed TaskAttemptImpl to ignore TA_COMMIT_PENDING event
+    at COMMIT_PENDING state. (Zhijie Shen via jianhe)
+
+    MAPREDUCE-5939. StartTime showing up as the epoch time in JHS UI after
+    upgrade (Chen He via jlowe)
+
+    MAPREDUCE-5900. Changed to the interpret container preemption exit code as a
+    task attempt killing event. (Mayank Bansal via zjshen)
+
+    MAPREDUCE-5868. Fixed an issue with TestPipeApplication that was causing the
+    nightly builds to fail. (Akira Ajisaka via vinodkv)
+
+    MAPREDUCE-5517. Fixed MapReduce ApplicationMaster to not validate reduce side
+    resource configuration for deciding uber-mode on map-only jobs. (Siqi Li via
+    vinodkv)
+
+    MAPREDUCE-5952. LocalContainerLauncher#renameMapOutputForReduce incorrectly 
+    assumes a single dir for mapOutIndex. (Gera Shegalov via kasha)
+
+    MAPREDUCE-6002. Made MR task avoid reporting error to AM when the task process
+    is shutting down. (Wangda Tan via zjshen)
+
+Release 2.4.1 - 2014-06-23 
 
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
 
   IMPROVEMENTS
+
+    MAPREDUCE-5830. Added back the private API HostUtil.getTaskLogUrl(..) for
+    binary compatibility with older clients like Hive 0.13. (Akira Ajisaka via
+    vinodkv)
 
   OPTIMIZATIONS
 
@@ -203,6 +419,27 @@ Release 2.4.1 - UNRELEASED
 
     MAPREDUCE-5828. Fixed a test issue with TestMapReduceJobControl that was
     causing it to fail on Windows. (vinodkv)
+
+    MAPREDUCE-5827. TestSpeculativeExecutionWithMRApp fails.
+    (Zhijie Shen via cnauroth)
+
+    MAPREDUCE-5833. TestRMContainerAllocator fails ocassionally.
+    (Zhijie Shen via cnauroth)
+
+    MAPREDUCE-5832. Fixed TestJobClient to not fail on JDK7 or on Windows. (Jian
+    He and Vinod Kumar Vavilapalli via vinodkv)
+
+    MAPREDUCE-5841. uber job doesn't terminate on getting mapred job kill
+    (Sangjin Lee via jlowe)
+
+    MAPREDUCE-5843. Fixed TestMRKeyValueTextInputFormat to not leak files and
+    thus avoid failing on Windows. (Varun Vasudev via vinodkv)
+
+    MAPREDUCE-5835. Killing Task might cause the job to go to ERROR state
+    (Ming Ma via jlowe)
+
+    MAPREDUCE-5821. Avoid unintentional reallocation of byte arrays in segments
+    during merge. (Todd Lipcon via cdouglas)
 
 Release 2.4.0 - 2014-04-07 
 

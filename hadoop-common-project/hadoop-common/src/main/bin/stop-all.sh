@@ -18,21 +18,35 @@
 
 # Stop all hadoop daemons.  Run this on master node.
 
-echo "This script is Deprecated. Instead use stop-dfs.sh and stop-yarn.sh"
+echo "This script is deprecated. Use stop-dfs.sh and stop-yarn.sh instead."
+exit 1
 
-bin=`dirname "${BASH_SOURCE-$0}"`
-bin=`cd "$bin"; pwd`
+# let's locate libexec...
+if [[ -n "${HADOOP_PREFIX}" ]]; then
+  DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
+else
+  this="${BASH_SOURCE-$0}"
+  bin=$(cd -P -- "$(dirname -- "${this}")" >dev/null && pwd -P)
+  DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
+fi
 
-DEFAULT_LIBEXEC_DIR="$bin"/../libexec
-HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
-. $HADOOP_LIBEXEC_DIR/hadoop-config.sh
+HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}"
+# shellcheck disable=SC2034
+HADOOP_NEW_CONFIG=true
+if [[ -f "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh" ]]; then
+  . "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh"
+else
+  echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/hadoop-config.sh." 2>&1
+  exit 1
+fi
 
 # stop hdfs daemons if hdfs is present
-if [ -f "${HADOOP_HDFS_HOME}"/sbin/stop-dfs.sh ]; then
-  "${HADOOP_HDFS_HOME}"/sbin/stop-dfs.sh --config $HADOOP_CONF_DIR
+if [[ -f "${HADOOP_HDFS_HOME}/sbin/stop-dfs.sh" ]]; then
+  "${HADOOP_HDFS_HOME}/sbin/stop-dfs.sh" --config "${HADOOP_CONF_DIR}"
 fi
 
 # stop yarn daemons if yarn is present
-if [ -f "${HADOOP_HDFS_HOME}"/sbin/stop-yarn.sh ]; then
-  "${HADOOP_HDFS_HOME}"/sbin/stop-yarn.sh --config $HADOOP_CONF_DIR
+if [[ -f "${HADOOP_HDFS_HOME}/sbin/stop-yarn.sh" ]]; then
+  "${HADOOP_HDFS_HOME}/sbin/stop-yarn.sh" --config "${HADOOP_CONF_DIR}"
 fi
+

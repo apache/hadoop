@@ -48,8 +48,6 @@ public class DatanodeStorage {
 
   /**
    * Create a storage with {@link State#NORMAL} and {@link StorageType#DEFAULT}.
-   *
-   * @param storageID
    */
   public DatanodeStorage(String storageID) {
     this(storageID, State.NORMAL, StorageType.DEFAULT);
@@ -83,6 +81,11 @@ public class DatanodeStorage {
     return "DS-" + UUID.randomUUID();
   }
 
+  @Override
+  public String toString() {
+    return "DatanodeStorage["+ storageID + "," + storageType + "," + state +"]";
+  }
+  
   @Override
   public boolean equals(Object other){
     if (other == this) {

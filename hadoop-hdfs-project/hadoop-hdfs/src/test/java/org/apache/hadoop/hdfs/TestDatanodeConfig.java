@@ -51,6 +51,10 @@ public class TestDatanodeConfig {
   public static void setUp() throws Exception {
     clearBaseDir();
     Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_HTTPS_PORT_KEY, 0);
+    conf.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY, "localhost:0");
+    conf.set(DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY, "localhost:0");
+    conf.set(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY, "localhost:0");
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
     cluster.waitActive();
   }
@@ -100,8 +104,14 @@ public class TestDatanodeConfig {
     String dnDir3 = dataDir.getAbsolutePath() + "3";
     conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
                 dnDir1 + "," + dnDir2 + "," + dnDir3);
-    cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
-    assertTrue("Data-node should startup.", cluster.isDataNodeUp());
+    try {
+      cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
+      assertTrue("Data-node should startup.", cluster.isDataNodeUp());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdownDataNodes();
+      }
+    }
   }
 
   private static String makeURI(String scheme, String host, String path)

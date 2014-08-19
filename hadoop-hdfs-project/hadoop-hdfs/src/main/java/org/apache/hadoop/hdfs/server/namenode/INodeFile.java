@@ -33,13 +33,13 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.util.LongBitFormat;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -72,37 +72,29 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   /** Format: [16 bits for replication][48 bits for PreferredBlockSize] */
-  static class HeaderFormat {
-    /** Number of bits for Block size */
-    static final int BLOCKBITS = 48;
-    /** Header mask 64-bit representation */
-    static final long HEADERMASK = 0xffffL << BLOCKBITS;
-    static final long MAX_BLOCK_SIZE = ~HEADERMASK; 
-    
+  static enum HeaderFormat {
+    PREFERRED_BLOCK_SIZE(null, 48, 1),
+    REPLICATION(PREFERRED_BLOCK_SIZE.BITS, 16, 1);
+
+    private final LongBitFormat BITS;
+
+    private HeaderFormat(LongBitFormat previous, int length, long min) {
+      BITS = new LongBitFormat(name(), previous, length, min);
+    }
+
     static short getReplication(long header) {
-      return (short) ((header & HEADERMASK) >> BLOCKBITS);
+      return (short)REPLICATION.BITS.retrieve(header);
     }
 
-    static long combineReplication(long header, short replication) {
-      if (replication <= 0) {
-         throw new IllegalArgumentException(
-             "Unexpected value for the replication: " + replication);
-      }
-      return ((long)replication << BLOCKBITS) | (header & MAX_BLOCK_SIZE);
-    }
-    
     static long getPreferredBlockSize(long header) {
-      return header & MAX_BLOCK_SIZE;
+      return PREFERRED_BLOCK_SIZE.BITS.retrieve(header);
     }
 
-    static long combinePreferredBlockSize(long header, long blockSize) {
-      if (blockSize < 0) {
-         throw new IllegalArgumentException("Block size < 0: " + blockSize);
-      } else if (blockSize > MAX_BLOCK_SIZE) {
-        throw new IllegalArgumentException("Block size = " + blockSize
-            + " > MAX_BLOCK_SIZE = " + MAX_BLOCK_SIZE);
-     }
-      return (header & HEADERMASK) | (blockSize & MAX_BLOCK_SIZE);
+    static long toLong(long preferredBlockSize, short replication) {
+      long h = 0;
+      h = PREFERRED_BLOCK_SIZE.BITS.combine(preferredBlockSize, h);
+      h = REPLICATION.BITS.combine(replication, h);
+      return h;
     }
   }
 
@@ -114,8 +106,7 @@ public class INodeFile extends INodeWithAdditionalFields
       long atime, BlockInfo[] blklist, short replication,
       long preferredBlockSize) {
     super(id, name, permissions, mtime, atime);
-    header = HeaderFormat.combineReplication(header, replication);
-    header = HeaderFormat.combinePreferredBlockSize(header, preferredBlockSize);
+    header = HeaderFormat.toLong(preferredBlockSize, replication);
     this.blocks = blklist;
   }
   
@@ -144,6 +135,15 @@ public class INodeFile extends INodeWithAdditionalFields
     return this;
   }
 
+  @Override
+  public boolean metadataEquals(INodeFileAttributes other) {
+    return other != null
+        && getHeaderLong()== other.getHeaderLong()
+        && getPermissionLong() == other.getPermissionLong()
+        && getAclFeature() == other.getAclFeature()
+        && getXAttrFeature() == other.getXAttrFeature();
+  }
+
   /* Start of Under-Construction Feature */
 
   /**
@@ -161,12 +161,11 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   /** Convert this file to an {@link INodeFileUnderConstruction}. */
-  INodeFile toUnderConstruction(String clientName, String clientMachine,
-      DatanodeDescriptor clientNode) {
+  INodeFile toUnderConstruction(String clientName, String clientMachine) {
     Preconditions.checkState(!isUnderConstruction(),
         "file is already under construction");
     FileUnderConstructionFeature uc = new FileUnderConstructionFeature(
-        clientName, clientMachine, clientNode);
+        clientName, clientMachine);
     addFeature(uc);
     return this;
   }
@@ -285,7 +284,7 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   @Override
-  public INodeFile recordModification(final int latestSnapshotId) 
+  public void recordModification(final int latestSnapshotId)
       throws QuotaExceededException {
     if (isInLatestSnapshot(latestSnapshotId)
         && !shouldRecordInSrcSnapshot(latestSnapshotId)) {
@@ -297,7 +296,6 @@ public class INodeFile extends INodeWithAdditionalFields
       // record self in the diff list if necessary
       sf.getDiffs().saveSelf2Snapshot(latestSnapshotId, this, null);
     }
-    return this;
   }
   
   public FileDiffList getDiffs() {
@@ -340,16 +338,15 @@ public class INodeFile extends INodeWithAdditionalFields
 
   /** Set the replication factor of this file. */
   public final void setFileReplication(short replication) {
-    header = HeaderFormat.combineReplication(header, replication);
+    header = HeaderFormat.REPLICATION.BITS.combine(replication, header);
   }
 
   /** Set the replication factor of this file. */
   public final INodeFile setFileReplication(short replication,
-      int latestSnapshotId, final INodeMap inodeMap)
-      throws QuotaExceededException {
-    final INodeFile nodeToUpdate = recordModification(latestSnapshotId);
-    nodeToUpdate.setFileReplication(replication);
-    return nodeToUpdate;
+      int latestSnapshotId) throws QuotaExceededException {
+    recordModification(latestSnapshotId);
+    setFileReplication(replication);
+    return this;
   }
 
   /** @return preferred block size (in bytes) of the file. */
@@ -435,17 +432,19 @@ public class INodeFile extends INodeWithAdditionalFields
           removedINodes, countDiffChange);
     }
     Quota.Counts counts = Quota.Counts.newInstance();
-    if (snapshot == CURRENT_STATE_ID && priorSnapshotId == NO_SNAPSHOT_ID) {
-      // this only happens when deleting the current file and the file is not
-      // in any snapshot
-      computeQuotaUsage(counts, false);
-      destroyAndCollectBlocks(collectedBlocks, removedINodes);
-    } else if (snapshot == CURRENT_STATE_ID && priorSnapshotId != NO_SNAPSHOT_ID) {
-      // when deleting the current file and the file is in snapshot, we should
-      // clean the 0-sized block if the file is UC
-      FileUnderConstructionFeature uc = getFileUnderConstructionFeature();
-      if (uc != null) {
-        uc.cleanZeroSizeBlock(this, collectedBlocks);
+    if (snapshot == CURRENT_STATE_ID) {
+      if (priorSnapshotId == NO_SNAPSHOT_ID) {
+        // this only happens when deleting the current file and the file is not
+        // in any snapshot
+        computeQuotaUsage(counts, false);
+        destroyAndCollectBlocks(collectedBlocks, removedINodes);
+      } else {
+        // when deleting the current file and the file is in snapshot, we should
+        // clean the 0-sized block if the file is UC
+        FileUnderConstructionFeature uc = getFileUnderConstructionFeature();
+        if (uc != null) {
+          uc.cleanZeroSizeBlock(this, collectedBlocks);
+        }
       }
     }
     return counts;

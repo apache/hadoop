@@ -26,6 +26,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 
 @Evolving
 @LimitedPrivate("yarn")
@@ -60,4 +62,13 @@ public interface Queue {
   boolean hasAccess(QueueACL acl, UserGroupInformation user);
   
   public ActiveUsersManager getActiveUsersManager();
+
+  /**
+   * Recover the state of the queue for a given container.
+   * @param clusterResource the resource of the cluster
+   * @param schedulerAttempt the application for which the container was allocated
+   * @param rmContainer the container that was recovered.
+   */
+  public void recoverContainer(Resource clusterResource,
+      SchedulerApplicationAttempt schedulerAttempt, RMContainer rmContainer);
 }

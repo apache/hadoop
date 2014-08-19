@@ -59,6 +59,7 @@ import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressorStream;
+import org.apache.hadoop.util.Time;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -160,13 +161,13 @@ public final class FSImageFormatProtobuf {
     }
 
     void load(File file) throws IOException {
-      long start = System.currentTimeMillis();
+      long start = Time.monotonicNow();
       imgDigest = MD5FileUtils.computeMd5ForFile(file);
       RandomAccessFile raFile = new RandomAccessFile(file, "r");
       FileInputStream fin = new FileInputStream(file);
       try {
         loadInternal(raFile, fin);
-        long end = System.currentTimeMillis();
+        long end = Time.monotonicNow();
         LOG.info("Loaded FSImage in " + (end - start) / 1000 + " seconds.");
       } finally {
         fin.close();

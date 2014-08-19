@@ -60,6 +60,7 @@ public class NullOutputFormat<K, V> extends OutputFormat<K, V> {
       public void setupTask(TaskAttemptContext taskContext) { }
 
       @Override
+      @Deprecated
       public boolean isRecoverySupported() {
         return true;
       }

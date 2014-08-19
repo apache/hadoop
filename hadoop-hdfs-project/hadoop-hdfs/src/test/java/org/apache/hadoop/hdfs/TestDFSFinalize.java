@@ -30,6 +30,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
+import org.apache.hadoop.hdfs.server.datanode.BlockPoolSliceStorage;
+import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.junit.After;
 import org.junit.Test;
 
@@ -61,11 +63,9 @@ public class TestDFSFinalize {
    * Verify that the current directory exists and that the previous directory
    * does not exist.  Verify that current hasn't been modified by comparing 
    * the checksum of all it's containing files with their original checksum.
-   * Note that we do not check that previous is removed on the DataNode
-   * because its removal is asynchronous therefore we have no reliable
-   * way to know when it will happen.  
    */
-  static void checkResult(String[] nameNodeDirs, String[] dataNodeDirs) throws Exception {
+  static void checkResult(String[] nameNodeDirs, String[] dataNodeDirs,
+    String bpid) throws Exception {
     List<File> dirs = Lists.newArrayList();
     for (int i = 0; i < nameNodeDirs.length; i++) {
       File curDir = new File(nameNodeDirs[i], "current");
@@ -76,14 +76,30 @@ public class TestDFSFinalize {
     FSImageTestUtil.assertParallelFilesAreIdentical(
         dirs, Collections.<String>emptySet());
     
+    File dnCurDirs[] = new File[dataNodeDirs.length];
     for (int i = 0; i < dataNodeDirs.length; i++) {
-      assertEquals(
-                   UpgradeUtilities.checksumContents(
-                                                     DATA_NODE, new File(dataNodeDirs[i],"current")),
-                   UpgradeUtilities.checksumMasterDataNodeContents());
+      dnCurDirs[i] = new File(dataNodeDirs[i],"current");
+      assertEquals(UpgradeUtilities.checksumContents(DATA_NODE, dnCurDirs[i],
+              false), UpgradeUtilities.checksumMasterDataNodeContents());
     }
     for (int i = 0; i < nameNodeDirs.length; i++) {
       assertFalse(new File(nameNodeDirs[i],"previous").isDirectory());
+    }
+
+    if (bpid == null) {
+      for (int i = 0; i < dataNodeDirs.length; i++) {
+        assertFalse(new File(dataNodeDirs[i],"previous").isDirectory());
+      }
+    } else {
+      for (int i = 0; i < dataNodeDirs.length; i++) {
+        File bpRoot = BlockPoolSliceStorage.getBpRoot(bpid, dnCurDirs[i]);
+        assertFalse(new File(bpRoot,"previous").isDirectory());
+        
+        File bpCurFinalizeDir = new File(bpRoot,"current/"+DataStorage.STORAGE_DIR_FINALIZED);
+        assertEquals(UpgradeUtilities.checksumContents(DATA_NODE,
+                bpCurFinalizeDir, true),
+                UpgradeUtilities.checksumMasterBlockPoolFinalizedContents());
+      }
     }
   }
  
@@ -106,7 +122,7 @@ public class TestDFSFinalize {
       String[] nameNodeDirs = conf.getStrings(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
       String[] dataNodeDirs = conf.getStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
       
-      log("Finalize with existing previous dir", numDirs);
+      log("Finalize NN & DN with existing previous dir", numDirs);
       UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "previous");
       UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "current");
@@ -118,11 +134,47 @@ public class TestDFSFinalize {
                                   .startupOption(StartupOption.REGULAR)
                                   .build();
       cluster.finalizeCluster(conf);
-      checkResult(nameNodeDirs, dataNodeDirs);
+      cluster.triggerBlockReports();
+      // 1 second should be enough for asynchronous DN finalize
+      Thread.sleep(1000);
+      checkResult(nameNodeDirs, dataNodeDirs, null);
 
-      log("Finalize without existing previous dir", numDirs);
+      log("Finalize NN & DN without existing previous dir", numDirs);
       cluster.finalizeCluster(conf);
-      checkResult(nameNodeDirs, dataNodeDirs);
+      cluster.triggerBlockReports();
+      // 1 second should be enough for asynchronous DN finalize
+      Thread.sleep(1000);
+      checkResult(nameNodeDirs, dataNodeDirs, null);
+
+      cluster.shutdown();
+      UpgradeUtilities.createEmptyDirs(nameNodeDirs);
+      UpgradeUtilities.createEmptyDirs(dataNodeDirs);
+
+      log("Finalize NN & BP with existing previous dir", numDirs);
+      String bpid = UpgradeUtilities.getCurrentBlockPoolID(cluster);
+      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
+      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "previous");
+      UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "current");
+      UpgradeUtilities.createBlockPoolStorageDirs(dataNodeDirs, "current", bpid);
+      UpgradeUtilities.createBlockPoolStorageDirs(dataNodeDirs, "previous", bpid);
+      cluster = new MiniDFSCluster.Builder(conf)
+                                  .format(false)
+                                  .manageDataDfsDirs(false)
+                                  .manageNameDfsDirs(false)
+                                  .startupOption(StartupOption.REGULAR)
+                                  .build();
+      cluster.finalizeCluster(conf);
+      cluster.triggerBlockReports();
+      // 1 second should be enough for asynchronous BP finalize
+      Thread.sleep(1000);
+      checkResult(nameNodeDirs, dataNodeDirs, bpid);
+
+      log("Finalize NN & BP without existing previous dir", numDirs);
+      cluster.finalizeCluster(conf);
+      cluster.triggerBlockReports();
+      // 1 second should be enough for asynchronous BP finalize
+      Thread.sleep(1000);
+      checkResult(nameNodeDirs, dataNodeDirs, bpid);
 
       cluster.shutdown();
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);

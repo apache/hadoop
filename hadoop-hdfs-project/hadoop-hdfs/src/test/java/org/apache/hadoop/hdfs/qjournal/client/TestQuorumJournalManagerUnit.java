@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.List;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
@@ -208,7 +208,7 @@ public class TestQuorumJournalManagerUnit {
         anyLong(), eq(1L), eq(1), Mockito.<byte[]>any());
     
     // And the third log not respond
-    SettableFuture<Void> slowLog = SettableFuture.<Void>create();
+    SettableFuture<Void> slowLog = SettableFuture.create();
     Mockito.doReturn(slowLog).when(spyLoggers.get(2)).sendEdits(
         anyLong(), eq(1L), eq(1), Mockito.<byte[]>any());
     stm.flush();

@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.fs;
 
-import java.io.*;
+import java.io.EOFException;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
@@ -31,8 +33,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.util.PureJavaCrc32;
 
 /**
  * Abstract Checksumed Fs.
@@ -139,7 +141,7 @@ public abstract class ChecksumFs extends FilterFs {
           throw new IOException("Not a checksum file: "+sumFile);
         }
         this.bytesPerSum = sums.readInt();
-        set(fs.verifyChecksum, new PureJavaCrc32(), bytesPerSum, 4);
+        set(fs.verifyChecksum, DataChecksum.newCrc32(), bytesPerSum, 4);
       } catch (FileNotFoundException e) {         // quietly ignore
         set(fs.verifyChecksum, null, 1, 0);
       } catch (IOException e) {                   // loudly ignore
@@ -335,7 +337,7 @@ public abstract class ChecksumFs extends FilterFs {
       final short replication, final long blockSize, 
       final Progressable progress, final ChecksumOpt checksumOpt,
       final boolean createParent) throws IOException {
-      super(new PureJavaCrc32(), fs.getBytesPerSum(), 4);
+      super(DataChecksum.newCrc32(), fs.getBytesPerSum(), 4);
 
       // checksumOpt is passed down to the raw fs. Unless it implements
       // checksum impelemts internally, checksumOpt will be ignored.

@@ -31,6 +31,7 @@ package hadoop.hdfs;
 import "Security.proto";
 import "hdfs.proto";
 import "acl.proto";
+import "xattr.proto";
 
 /**
  * The ClientNamenodeProtocol Service defines the interface between a client 
@@ -117,6 +118,7 @@ message AbandonBlockRequestProto {
   required ExtendedBlockProto b = 1;
   required string src = 2;
   required string holder = 3;
+  optional uint64 fileId = 4 [default = 0];  // default to GRANDFATHER_INODE_ID
 }
 
 message AbandonBlockResponseProto { // void response
@@ -143,6 +145,7 @@ message GetAdditionalDatanodeRequestProto {
   required uint32 numAdditionalNodes = 5;
   required string clientName = 6;
   repeated string existingStorageUuids = 7;
+  optional uint64 fileId = 8 [default = 0];  // default to GRANDFATHER_INODE_ID
 }
 
 message GetAdditionalDatanodeResponseProto {
@@ -267,6 +270,7 @@ enum DatanodeReportTypeProto {  // type of the datanode report
   ALL = 1;
   LIVE = 2;
   DEAD = 3;
+  DECOMMISSIONING = 4;
 }
 
 message GetDatanodeReportRequestProto {
@@ -275,6 +279,19 @@ message GetDatanodeReportRequestProto {
 
 message GetDatanodeReportResponseProto {
   repeated DatanodeInfoProto di = 1;
+}
+
+message GetDatanodeStorageReportRequestProto {
+  required DatanodeReportTypeProto type = 1;
+}
+
+message DatanodeStorageReportProto {
+  required DatanodeInfoProto datanodeInfo = 1;
+  repeated StorageReportProto storageReports = 2;
+}
+
+message GetDatanodeStorageReportResponseProto {
+  repeated DatanodeStorageReportProto datanodeStorageReports = 1;
 }
 
 message GetPreferredBlockSizeRequestProto {
@@ -531,6 +548,7 @@ message FsyncRequestProto {
   required string src = 1;
   required string client = 2;
   optional sint64 lastBlockLength = 3 [default = -1];
+  optional uint64 fileId = 4 [default = 0];  // default to GRANDFATHER_INODE_ID
 }
 
 message FsyncResponseProto { // void response
@@ -636,6 +654,14 @@ message DeleteSnapshotRequestProto {
 message DeleteSnapshotResponseProto { // void response
 }
 
+message CheckAccessRequestProto {
+  required string path = 1;
+  required AclEntryProto.FsActionProto mode = 2;
+}
+
+message CheckAccessResponseProto { // void response
+}
+
 service ClientNamenodeProtocol {
   rpc getBlockLocations(GetBlockLocationsRequestProto)
       returns(GetBlockLocationsResponseProto);
@@ -667,6 +693,8 @@ service ClientNamenodeProtocol {
   rpc getFsStats(GetFsStatusRequestProto) returns(GetFsStatsResponseProto);
   rpc getDatanodeReport(GetDatanodeReportRequestProto)
       returns(GetDatanodeReportResponseProto);
+  rpc getDatanodeStorageReport(GetDatanodeStorageReportRequestProto)
+      returns(GetDatanodeStorageReportResponseProto);
   rpc getPreferredBlockSize(GetPreferredBlockSizeRequestProto)
       returns(GetPreferredBlockSizeResponseProto);
   rpc setSafeMode(SetSafeModeRequestProto)
@@ -755,4 +783,14 @@ service ClientNamenodeProtocol {
       returns(SetAclResponseProto);
   rpc getAclStatus(GetAclStatusRequestProto)
       returns(GetAclStatusResponseProto);
+  rpc setXAttr(SetXAttrRequestProto)
+      returns(SetXAttrResponseProto);
+  rpc getXAttrs(GetXAttrsRequestProto)
+      returns(GetXAttrsResponseProto);
+  rpc listXAttrs(ListXAttrsRequestProto)
+      returns(ListXAttrsResponseProto);
+  rpc removeXAttr(RemoveXAttrRequestProto)
+      returns(RemoveXAttrResponseProto);
+  rpc checkAccess(CheckAccessRequestProto)
+      returns(CheckAccessResponseProto);
 }

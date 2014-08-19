@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -264,14 +265,17 @@ public class TestBlockReplacement {
     sock.setKeepAlive(true);
     // sendRequest
     DataOutputStream out = new DataOutputStream(sock.getOutputStream());
-    new Sender(out).replaceBlock(block, BlockTokenSecretManager.DUMMY_TOKEN,
+    new Sender(out).replaceBlock(block, StorageType.DEFAULT,
+        BlockTokenSecretManager.DUMMY_TOKEN,
         source.getDatanodeUuid(), sourceProxy);
     out.flush();
     // receiveResponse
     DataInputStream reply = new DataInputStream(sock.getInputStream());
 
-    BlockOpResponseProto proto =
-      BlockOpResponseProto.parseDelimitedFrom(reply);
+    BlockOpResponseProto proto = BlockOpResponseProto.parseDelimitedFrom(reply);
+    while (proto.getStatus() == Status.IN_PROGRESS) {
+      proto = BlockOpResponseProto.parseDelimitedFrom(reply);
+    }
     return proto.getStatus() == Status.SUCCESS;
   }
 

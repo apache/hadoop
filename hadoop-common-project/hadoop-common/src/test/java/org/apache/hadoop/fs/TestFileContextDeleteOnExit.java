@@ -20,7 +20,7 @@ package org.apache.hadoop.fs;
 import java.io.IOException;
 import java.util.Set;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.junit.After;
 import org.junit.Before;

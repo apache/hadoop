@@ -13,118 +13,115 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+##
+## THIS FILE ACTS AS AN OVERRIDE FOR hadoop-env.sh FOR ALL
+## WORK DONE BY THE yarn AND RELATED COMMANDS.
+##
+## Precedence rules:
+##
+## yarn-env.sh > hadoop-env.sh > hard-coded defaults
+##
+## YARN_xyz > HADOOP_xyz > hard-coded defaults
+##
+
+###
+# Generic settings for YARN
+###
+
 # User for YARN daemons
 export HADOOP_YARN_USER=${HADOOP_YARN_USER:-yarn}
 
-# resolve links - $0 may be a softlink
-export YARN_CONF_DIR="${YARN_CONF_DIR:-$HADOOP_YARN_HOME/conf}"
+#
+# By default, YARN will use HADOOP_CONF_DIR. Specify a custom
+# YARN_CONF_DIR here
+# export YARN_CONF_DIR="${YARN_CONF_DIR:-$HADOOP_YARN_HOME/conf}"
+#
 
-# some Java parameters
-# export JAVA_HOME=/home/y/libexec/jdk1.6.0/
-if [ "$JAVA_HOME" != "" ]; then
-  #echo "run java in $JAVA_HOME"
-  JAVA_HOME=$JAVA_HOME
-fi
-  
-if [ "$JAVA_HOME" = "" ]; then
-  echo "Error: JAVA_HOME is not set."
-  exit 1
-fi
+# Override Hadoop's log directory & file
+# export YARN_LOG_DIR="$HADOOP_YARN_HOME/logs"
+# export YARN_LOGFILE='yarn.log'
 
-JAVA=$JAVA_HOME/bin/java
-JAVA_HEAP_MAX=-Xmx1000m 
+# Need a custom-to-YARN service-level authorization policy file?
+# export YARN_POLICYFILE="yarn-policy.xml"
 
-# For setting YARN specific HEAP sizes please use this
-# Parameter and set appropriately
-# YARN_HEAPSIZE=1000
+#Override the log4j settings for all YARN apps
+# export YARN_ROOT_LOGGER="INFO,console"
 
-# check envvars which might override default args
-if [ "$YARN_HEAPSIZE" != "" ]; then
-  JAVA_HEAP_MAX="-Xmx""$YARN_HEAPSIZE""m"
-fi
-
+###
 # Resource Manager specific parameters
+###
 
-# Specify the max Heapsize for the ResourceManager using a numerical value
+# Specify the max heapsize for the ResourceManager using a numerical value
 # in the scale of MB. For example, to specify an jvm option of -Xmx1000m, set
 # the value to 1000.
-# This value will be overridden by an Xmx setting specified in either YARN_OPTS
-# and/or YARN_RESOURCEMANAGER_OPTS.
+# This value will be overridden by an Xmx setting specified in either YARN_OPTS,
+# HADOOP_OPTS, and/or YARN_RESOURCEMANAGER_OPTS.
 # If not specified, the default value will be picked from either YARN_HEAPMAX
 # or JAVA_HEAP_MAX with YARN_HEAPMAX as the preferred option of the two.
+#
 #export YARN_RESOURCEMANAGER_HEAPSIZE=1000
-
-# Specify the max Heapsize for the HistoryManager using a numerical value
-# in the scale of MB. For example, to specify an jvm option of -Xmx1000m, set
-# the value to 1000.
-# This value will be overridden by an Xmx setting specified in either YARN_OPTS
-# and/or YARN_HISTORYSERVER_OPTS.
-# If not specified, the default value will be picked from either YARN_HEAPMAX
-# or JAVA_HEAP_MAX with YARN_HEAPMAX as the preferred option of the two.
-#export YARN_HISTORYSERVER_HEAPSIZE=1000
 
 # Specify the JVM options to be used when starting the ResourceManager.
 # These options will be appended to the options specified as YARN_OPTS
 # and therefore may override any similar flags set in YARN_OPTS
-#export YARN_RESOURCEMANAGER_OPTS=
+#
+# Examples for a Sun/Oracle JDK:
+# a) override the appsummary log file:
+# export YARN_RESOURCEMANAGER_OPTS="-Dyarn.server.resourcemanager.appsummary.log.file=rm-appsummary.log -Dyarn.server.resourcemanager.appsummary.logger=INFO,RMSUMMARY"
+#
+# b) Set JMX options
+# export YARN_RESOURCEMANAGER_OPTS="-Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.port=1026"
+#
+# c) Set garbage collection logs from hadoop-env.sh
+# export YARN_RESOURCE_MANAGER_OPTS="${HADOOP_GC_SETTINGS} -Xloggc:${HADOOP_LOG_DIR}/gc-rm.log-$(date +'%Y%m%d%H%M')"
+#
+# d) ... or set them directly
+# export YARN_RESOURCEMANAGER_OPTS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -Xloggc:${HADOOP_LOG_DIR}/gc-rm.log-$(date +'%Y%m%d%H%M')"
+#
+#
+# export YARN_RESOURCEMANAGER_OPTS=
 
+###
 # Node Manager specific parameters
+###
 
 # Specify the max Heapsize for the NodeManager using a numerical value
 # in the scale of MB. For example, to specify an jvm option of -Xmx1000m, set
 # the value to 1000.
-# This value will be overridden by an Xmx setting specified in either YARN_OPTS
-# and/or YARN_NODEMANAGER_OPTS.
+# This value will be overridden by an Xmx setting specified in either YARN_OPTS,
+# HADOOP_OPTS, and/or YARN_NODEMANAGER_OPTS.
 # If not specified, the default value will be picked from either YARN_HEAPMAX
 # or JAVA_HEAP_MAX with YARN_HEAPMAX as the preferred option of the two.
+#
 #export YARN_NODEMANAGER_HEAPSIZE=1000
 
 # Specify the JVM options to be used when starting the NodeManager.
 # These options will be appended to the options specified as YARN_OPTS
 # and therefore may override any similar flags set in YARN_OPTS
+#
+# See ResourceManager for some examples
+#
 #export YARN_NODEMANAGER_OPTS=
 
-# so that filenames w/ spaces are handled correctly in loops below
-IFS=
+###
+# TimeLineServer specifc parameters
+###
 
+# Specify the max Heapsize for the timeline server using a numerical value
+# in the scale of MB. For example, to specify an jvm option of -Xmx1000m, set
+# the value to 1000.
+# This value will be overridden by an Xmx setting specified in either YARN_OPTS,
+# HADOOP_OPTS, and/or YARN_TIMELINESERVER_OPTS.
+# If not specified, the default value will be picked from either YARN_HEAPMAX
+# or JAVA_HEAP_MAX with YARN_HEAPMAX as the preferred option of the two.
+#
+#export YARN_TIMELINESERVER_HEAPSIZE=1000
 
-# default log directory & file
-if [ "$YARN_LOG_DIR" = "" ]; then
-  YARN_LOG_DIR="$HADOOP_YARN_HOME/logs"
-fi
-if [ "$YARN_LOGFILE" = "" ]; then
-  YARN_LOGFILE='yarn.log'
-fi
-
-# default policy file for service-level authorization
-if [ "$YARN_POLICYFILE" = "" ]; then
-  YARN_POLICYFILE="hadoop-policy.xml"
-fi
-
-# restore ordinary behaviour
-unset IFS
-
-MAC_OSX=false
-case "`uname`" in
-Darwin*) MAC_OSX=true;;
-esac
-
-if $MAC_OSX; then
-  YARN_OPTS="$YARN_OPTS -Djava.security.krb5.realm= -Djava.security.krb5.kdc="
-fi
-
-
-YARN_OPTS="$YARN_OPTS -Dhadoop.log.dir=$YARN_LOG_DIR"
-YARN_OPTS="$YARN_OPTS -Dyarn.log.dir=$YARN_LOG_DIR"
-YARN_OPTS="$YARN_OPTS -Dhadoop.log.file=$YARN_LOGFILE"
-YARN_OPTS="$YARN_OPTS -Dyarn.log.file=$YARN_LOGFILE"
-YARN_OPTS="$YARN_OPTS -Dyarn.home.dir=$YARN_COMMON_HOME"
-YARN_OPTS="$YARN_OPTS -Dyarn.id.str=$YARN_IDENT_STRING"
-YARN_OPTS="$YARN_OPTS -Dhadoop.root.logger=${YARN_ROOT_LOGGER:-INFO,console}"
-YARN_OPTS="$YARN_OPTS -Dyarn.root.logger=${YARN_ROOT_LOGGER:-INFO,console}"
-if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
-  YARN_OPTS="$YARN_OPTS -Djava.library.path=$JAVA_LIBRARY_PATH"
-fi  
-YARN_OPTS="$YARN_OPTS -Dyarn.policy.file=$YARN_POLICYFILE"
-
+# Specify the JVM options to be used when starting the TimeLineServer.
+# These options will be appended to the options specified as YARN_OPTS
+# and therefore may override any similar flags set in YARN_OPTS
+#
+# See ResourceManager for some examples
+#
+#export YARN_TIMELINESERVER_OPTS=
 

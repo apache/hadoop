@@ -19,7 +19,9 @@ package org.apache.hadoop.ha;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Map;
 
 import org.apache.commons.cli.Options;
@@ -33,6 +35,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
 import org.apache.hadoop.util.Tool;
@@ -66,7 +69,7 @@ public abstract class HAAdmin extends Configured implements Tool {
   protected final static Map<String, UsageInfo> USAGE =
     ImmutableMap.<String, UsageInfo>builder()
     .put("-transitionToActive",
-        new UsageInfo("<serviceId>", "Transitions the service into Active state"))
+        new UsageInfo("<serviceId> [--"+FORCEACTIVE+"]", "Transitions the service into Active state"))
     .put("-transitionToStandby",
         new UsageInfo("<serviceId>", "Transitions the service into Standby state"))
     .put("-failover",
@@ -100,6 +103,11 @@ public abstract class HAAdmin extends Configured implements Tool {
   }
 
   protected abstract HAServiceTarget resolveTarget(String string);
+  
+  protected Collection<String> getTargetIds(String targetNodeToActivate) {
+    return new ArrayList<String>(
+        Arrays.asList(new String[]{targetNodeToActivate}));
+  }
 
   protected String getUsageString() {
     return "Usage: HAAdmin";
@@ -133,6 +141,11 @@ public abstract class HAAdmin extends Configured implements Tool {
       printUsage(errOut, "-transitionToActive");
       return -1;
     }
+    /*  returns true if other target node is active or some exception occurred 
+        and forceActive was not set  */
+    if(isOtherTargetNodeActive(argv[0], cmd.hasOption(FORCEACTIVE))) {
+      return -1;
+    }
     HAServiceTarget target = resolveTarget(argv[0]);
     if (!checkManualStateManagementOK(target)) {
       return -1;
@@ -142,7 +155,48 @@ public abstract class HAAdmin extends Configured implements Tool {
     HAServiceProtocolHelper.transitionToActive(proto, createReqInfo());
     return 0;
   }
-
+  
+  /**
+   * Checks whether other target node is active or not
+   * @param targetNodeToActivate
+   * @return true if other target node is active or some other exception 
+   * occurred and forceActive was set otherwise false
+   * @throws IOException
+   */
+  private boolean isOtherTargetNodeActive(String targetNodeToActivate, boolean forceActive)
+      throws IOException  {
+    Collection<String> targetIds = getTargetIds(targetNodeToActivate);
+    if(targetIds == null) {
+      errOut.println("transitionToActive: No target node in the "
+          + "current configuration");
+      printUsage(errOut, "-transitionToActive");
+      return true;
+    }
+    targetIds.remove(targetNodeToActivate);
+    for(String targetId : targetIds) {
+      HAServiceTarget target = resolveTarget(targetId);
+      if (!checkManualStateManagementOK(target)) {
+        return true;
+      }
+      try {
+        HAServiceProtocol proto = target.getProxy(getConf(), 5000);
+        if(proto.getServiceStatus().getState() == HAServiceState.ACTIVE) {
+          errOut.println("transitionToActive: Node " +  targetId +" is already active");
+          printUsage(errOut, "-transitionToActive");
+          return true;
+        }
+      } catch (Exception e) {
+        //If forceActive switch is false then return true
+        if(!forceActive) {
+          errOut.println("Unexpected error occurred  " + e.getMessage());
+          printUsage(errOut, "-transitionToActive");
+          return true; 
+        }
+      }
+    }
+    return false;
+  }
+  
   private int transitionToStandby(final CommandLine cmd)
       throws IOException, ServiceFailedException {
     String[] argv = cmd.getArgs();
@@ -364,6 +418,9 @@ public abstract class HAAdmin extends Configured implements Tool {
     if ("-failover".equals(cmd)) {
       addFailoverCliOpts(opts);
     }
+    if("-transitionToActive".equals(cmd)) {
+      addTransitionToActiveCliOpts(opts);
+    }
     // Mutative commands take FORCEMANUAL option
     if ("-transitionToActive".equals(cmd) ||
         "-transitionToStandby".equals(cmd) ||
@@ -431,6 +488,14 @@ public abstract class HAAdmin extends Configured implements Tool {
     failoverOpts.addOption(FORCEACTIVE, false, "force failover");
     // Don't add FORCEMANUAL, since that's added separately for all commands
     // that change state.
+  }
+  
+  /**
+   * Add CLI options which are specific to the transitionToActive command and
+   * no others.
+   */
+  private void addTransitionToActiveCliOpts(Options transitionToActiveCliOpts) {
+    transitionToActiveCliOpts.addOption(FORCEACTIVE, false, "force active");
   }
   
   private CommandLine parseOpts(String cmdName, Options opts, String[] argv) {

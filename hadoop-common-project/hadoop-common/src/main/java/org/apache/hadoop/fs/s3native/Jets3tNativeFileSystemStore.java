@@ -22,6 +22,7 @@ import static org.apache.hadoop.fs.s3native.NativeS3FileSystem.PATH_DELIMITER;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -32,17 +33,19 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.s3.S3Credentials;
 import org.apache.hadoop.fs.s3.S3Exception;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.AccessControlException;
 import org.jets3t.service.S3Service;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.StorageObjectsChunk;
+import org.jets3t.service.impl.rest.HttpException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.MultipartPart;
 import org.jets3t.service.model.MultipartUpload;
@@ -51,6 +54,8 @@ import org.jets3t.service.model.S3Object;
 import org.jets3t.service.model.StorageObject;
 import org.jets3t.service.security.AWSCredentials;
 import org.jets3t.service.utils.MultipartUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -63,9 +68,11 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
   private boolean multipartEnabled;
   private long multipartCopyBlockSize;
   static final long MAX_PART_SIZE = (long)5 * 1024 * 1024 * 1024;
+
+  private String serverSideEncryptionAlgorithm;
   
-  public static final Log LOG =
-      LogFactory.getLog(Jets3tNativeFileSystemStore.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(Jets3tNativeFileSystemStore.class);
 
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException {
@@ -77,7 +84,7 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
             s3Credentials.getSecretAccessKey());
       this.s3Service = new RestS3Service(awsCredentials);
     } catch (S3ServiceException e) {
-      handleS3ServiceException(e);
+      handleException(e);
     }
     multipartEnabled =
         conf.getBoolean("fs.s3n.multipart.uploads.enabled", false);
@@ -87,6 +94,7 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
     multipartCopyBlockSize = Math.min(
         conf.getLong("fs.s3n.multipart.copy.block.size", MAX_PART_SIZE),
         MAX_PART_SIZE);
+    serverSideEncryptionAlgorithm = conf.get("fs.s3n.server-side-encryption-algorithm");
 
     bucket = new S3Bucket(uri.getHost());
   }
@@ -107,20 +115,15 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
       object.setDataInputStream(in);
       object.setContentType("binary/octet-stream");
       object.setContentLength(file.length());
+      object.setServerSideEncryptionAlgorithm(serverSideEncryptionAlgorithm);
       if (md5Hash != null) {
         object.setMd5Hash(md5Hash);
       }
       s3Service.putObject(bucket, object);
-    } catch (S3ServiceException e) {
-      handleS3ServiceException(e);
+    } catch (ServiceException e) {
+      handleException(e, key);
     } finally {
-      if (in != null) {
-        try {
-          in.close();
-        } catch (IOException e) {
-          // ignore
-        }
-      }
+      IOUtils.closeStream(in);
     }
   }
 
@@ -130,6 +133,7 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
     object.setDataInputFile(file);
     object.setContentType("binary/octet-stream");
     object.setContentLength(file.length());
+    object.setServerSideEncryptionAlgorithm(serverSideEncryptionAlgorithm);
     if (md5Hash != null) {
       object.setMd5Hash(md5Hash);
     }
@@ -142,10 +146,8 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
     try {
       mpUtils.uploadObjects(bucket.getName(), s3Service,
                             objectsToUploadAsMultipart, null);
-    } catch (ServiceException e) {
-      handleServiceException(e);
     } catch (Exception e) {
-      throw new S3Exception(e);
+      handleException(e, key);
     }
   }
   
@@ -156,9 +158,10 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
       object.setDataInputStream(new ByteArrayInputStream(new byte[0]));
       object.setContentType("binary/octet-stream");
       object.setContentLength(0);
+      object.setServerSideEncryptionAlgorithm(serverSideEncryptionAlgorithm);
       s3Service.putObject(bucket, object);
-    } catch (S3ServiceException e) {
-      handleS3ServiceException(e);
+    } catch (ServiceException e) {
+      handleException(e, key);
     }
   }
 
@@ -166,20 +169,21 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
   public FileMetadata retrieveMetadata(String key) throws IOException {
     StorageObject object = null;
     try {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("Getting metadata for key: " + key + " from bucket:" + bucket.getName());
-      }
+      LOG.debug("Getting metadata for key: {} from bucket: {}",
+          key, bucket.getName());
       object = s3Service.getObjectDetails(bucket.getName(), key);
       return new FileMetadata(key, object.getContentLength(),
           object.getLastModifiedDate().getTime());
 
     } catch (ServiceException e) {
-      // Following is brittle. Is there a better way?
-      if ("NoSuchKey".equals(e.getErrorCode())) {
-        return null; //return null if key not found
+      try {
+        // process
+        handleException(e, key);
+        return null;
+      } catch (FileNotFoundException fnfe) {
+        // and downgrade missing files
+        return null;
       }
-      handleServiceException(e);
-      return null; //never returned - keep compiler happy
     } finally {
       if (object != null) {
         object.closeDataInputStream();
@@ -198,13 +202,12 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
   @Override
   public InputStream retrieve(String key) throws IOException {
     try {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("Getting key: " + key + " from bucket:" + bucket.getName());
-      }
+      LOG.debug("Getting key: {} from bucket: {}",
+          key, bucket.getName());
       S3Object object = s3Service.getObject(bucket.getName(), key);
       return object.getDataInputStream();
     } catch (ServiceException e) {
-      handleServiceException(key, e);
+      handleException(e, key);
       return null; //return null if key not found
     }
   }
@@ -222,15 +225,14 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
   public InputStream retrieve(String key, long byteRangeStart)
           throws IOException {
     try {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("Getting key: " + key + " from bucket:" + bucket.getName() + " with byteRangeStart: " + byteRangeStart);
-      }
+      LOG.debug("Getting key: {} from bucket: {} with byteRangeStart: {}",
+          key, bucket.getName(), byteRangeStart);
       S3Object object = s3Service.getObject(bucket, key, null, null, null,
                                             null, byteRangeStart, null);
       return object.getDataInputStream();
     } catch (ServiceException e) {
-      handleServiceException(key, e);
-      return null; //return null if key not found
+      handleException(e, key);
+      return null;
     }
   }
 
@@ -248,17 +250,19 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
   }
 
   /**
-   *
-   * @return
-   * This method returns null if the list could not be populated
-   * due to S3 giving ServiceException
-   * @throws IOException
+   * list objects
+   * @param prefix prefix
+   * @param delimiter delimiter
+   * @param maxListingLength max no. of entries
+   * @param priorLastKey last key in any previous search
+   * @return a list of matches
+   * @throws IOException on any reported failure
    */
 
   private PartialListing list(String prefix, String delimiter,
       int maxListingLength, String priorLastKey) throws IOException {
     try {
-      if (prefix.length() > 0 && !prefix.endsWith(PATH_DELIMITER)) {
+      if (!prefix.isEmpty() && !prefix.endsWith(PATH_DELIMITER)) {
         prefix += PATH_DELIMITER;
       }
       StorageObjectsChunk chunk = s3Service.listObjectsChunked(bucket.getName(),
@@ -273,24 +277,20 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
       }
       return new PartialListing(chunk.getPriorLastKey(), fileMetadata,
           chunk.getCommonPrefixes());
-    } catch (S3ServiceException e) {
-      handleS3ServiceException(e);
-      return null; //never returned - keep compiler happy
     } catch (ServiceException e) {
-      handleServiceException(e);
-      return null; //return null if list could not be populated
+      handleException(e, prefix);
+      return null; // never returned - keep compiler happy
     }
   }
 
   @Override
   public void delete(String key) throws IOException {
     try {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("Deleting key:" + key + "from bucket" + bucket.getName());
-      }
+      LOG.debug("Deleting key: {} from bucket: {}",
+          key, bucket.getName());
       s3Service.deleteObject(bucket, key);
     } catch (ServiceException e) {
-      handleServiceException(key, e);
+      handleException(e, key);
     }
   }
 
@@ -298,7 +298,7 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
     try {
       s3Service.renameObject(bucket.getName(), srcKey, new S3Object(dstKey));
     } catch (ServiceException e) {
-      handleServiceException(e);
+      handleException(e, srcKey);
     }
   }
   
@@ -317,10 +317,13 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
           return;
         }
       }
+
+      S3Object dstObject = new S3Object(dstKey);
+      dstObject.setServerSideEncryptionAlgorithm(serverSideEncryptionAlgorithm);
       s3Service.copyObject(bucket.getName(), srcKey, bucket.getName(),
-          new S3Object(dstKey), false);
+          dstObject, false);
     } catch (ServiceException e) {
-      handleServiceException(srcKey, e);
+      handleException(e, srcKey);
     }
   }
 
@@ -355,19 +358,22 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
       Collections.reverse(listedParts);
       s3Service.multipartCompleteUpload(multipartUpload, listedParts);
     } catch (ServiceException e) {
-      handleServiceException(e);
+      handleException(e, srcObject.getKey());
     }
   }
 
   @Override
   public void purge(String prefix) throws IOException {
+    String key = "";
     try {
-      S3Object[] objects = s3Service.listObjects(bucket.getName(), prefix, null);
+      S3Object[] objects =
+          s3Service.listObjects(bucket.getName(), prefix, null);
       for (S3Object object : objects) {
-        s3Service.deleteObject(bucket, object.getKey());
+        key = object.getKey();
+        s3Service.deleteObject(bucket, key);
       }
     } catch (S3ServiceException e) {
-      handleS3ServiceException(e);
+      handleException(e, key);
     }
   }
 
@@ -381,39 +387,97 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
         sb.append(object.getKey()).append("\n");
       }
     } catch (S3ServiceException e) {
-      handleS3ServiceException(e);
+      handleException(e);
     }
     System.out.println(sb);
   }
 
-  private void handleServiceException(String key, ServiceException e) throws IOException {
-    if ("NoSuchKey".equals(e.getErrorCode())) {
-      throw new FileNotFoundException("Key '" + key + "' does not exist in S3");
+  /**
+   * Handle any service exception by translating it into an IOException
+   * @param e exception
+   * @throws IOException exception -always
+   */
+  private void handleException(Exception e) throws IOException {
+    throw processException(e, e, "");
+  }
+  /**
+   * Handle any service exception by translating it into an IOException
+   * @param e exception
+   * @param key key sought from object store
+
+   * @throws IOException exception -always
+   */
+  private void handleException(Exception e, String key) throws IOException {
+    throw processException(e, e, key);
+  }
+
+  /**
+   * Handle any service exception by translating it into an IOException
+   * @param thrown exception
+   * @param original original exception -thrown if no other translation could
+   * be made
+   * @param key key sought from object store or "" for undefined
+   * @return an exception to throw. If isProcessingCause==true this may be null.
+   */
+  private IOException processException(Throwable thrown, Throwable original,
+      String key) {
+    IOException result;
+    if (thrown.getCause() != null) {
+      // recurse down
+      result = processException(thrown.getCause(), original, key);
+    } else if (thrown instanceof HttpException) {
+      // nested HttpException - examine error code and react
+      HttpException httpException = (HttpException) thrown;
+      String responseMessage = httpException.getResponseMessage();
+      int responseCode = httpException.getResponseCode();
+      String bucketName = "s3n://" + bucket.getName();
+      String text = String.format("%s : %03d : %s",
+          bucketName,
+          responseCode,
+          responseMessage);
+      String filename = !key.isEmpty() ? (bucketName + "/" + key) : text;
+      IOException ioe;
+      switch (responseCode) {
+        case 404:
+          result = new FileNotFoundException(filename);
+          break;
+        case 416: // invalid range
+          result = new EOFException(FSExceptionMessages.CANNOT_SEEK_PAST_EOF
+                                    +": " + filename);
+          break;
+        case 403: //forbidden
+          result = new AccessControlException("Permission denied"
+                                    +": " + filename);
+          break;
+        default:
+          result = new IOException(text);
+      }
+      result.initCause(thrown);
+    } else if (thrown instanceof S3ServiceException) {
+      S3ServiceException se = (S3ServiceException) thrown;
+      LOG.debug(
+          "S3ServiceException: {}: {} : {}",
+          se.getS3ErrorCode(), se.getS3ErrorMessage(), se, se);
+      if ("InvalidRange".equals(se.getS3ErrorCode())) {
+        result = new EOFException(FSExceptionMessages.CANNOT_SEEK_PAST_EOF);
+      } else {
+        result = new S3Exception(se);
+      }
+    } else if (thrown instanceof ServiceException) {
+      ServiceException se = (ServiceException) thrown;
+      LOG.debug("S3ServiceException: {}: {} : {}",
+          se.getErrorCode(), se.toString(), se, se);
+      result = new S3Exception(se);
+    } else if (thrown instanceof IOException) {
+      result = (IOException) thrown;
     } else {
-      handleServiceException(e);
+      // here there is no exception derived yet.
+      // this means no inner cause, and no translation made yet.
+      // convert the original to an IOException -rather than just the
+      // exception at the base of the tree
+      result = new S3Exception(original);
     }
-  }
 
-  private void handleS3ServiceException(S3ServiceException e) throws IOException {
-    if (e.getCause() instanceof IOException) {
-      throw (IOException) e.getCause();
-    }
-    else {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("S3 Error code: " + e.getS3ErrorCode() + "; S3 Error message: " + e.getS3ErrorMessage());
-      }
-      throw new S3Exception(e);
-    }
-  }
-
-  private void handleServiceException(ServiceException e) throws IOException {
-    if (e.getCause() instanceof IOException) {
-      throw (IOException) e.getCause();
-    }
-    else {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("Got ServiceException with Error code: " + e.getErrorCode() + ";and Error message: " + e.getErrorMessage());
-      }
-    }
+    return result;
   }
 }

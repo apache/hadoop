@@ -13,7 +13,7 @@
  */
 package org.apache.hadoop.http;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.net.NetUtils;
@@ -36,6 +36,8 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.security.GeneralSecurityException;
+import java.net.HttpCookie;
+import java.util.List;
 
 public class TestHttpCookieFlag {
   private static final String BASEDIR = System.getProperty("test.build.dir",
@@ -116,8 +118,12 @@ public class TestHttpCookieFlag {
             .getConnectorAddress(0)));
     HttpURLConnection conn = (HttpURLConnection) new URL(base,
             "/echo").openConnection();
-    Assert.assertEquals(AuthenticatedURL.AUTH_COOKIE + "=token; " +
-            "HttpOnly", conn.getHeaderField("Set-Cookie"));
+
+    String header = conn.getHeaderField("Set-Cookie");
+    List<HttpCookie> cookies = HttpCookie.parse(header);
+    Assert.assertTrue(!cookies.isEmpty());
+    Assert.assertTrue(header.contains("; HttpOnly"));
+    Assert.assertTrue("token".equals(cookies.get(0).getValue()));
   }
 
   @Test
@@ -127,8 +133,13 @@ public class TestHttpCookieFlag {
     HttpsURLConnection conn = (HttpsURLConnection) new URL(base,
             "/echo").openConnection();
     conn.setSSLSocketFactory(clientSslFactory.createSSLSocketFactory());
-    Assert.assertEquals(AuthenticatedURL.AUTH_COOKIE + "=token; " +
-            "Secure; HttpOnly", conn.getHeaderField("Set-Cookie"));
+
+    String header = conn.getHeaderField("Set-Cookie");
+    List<HttpCookie> cookies = HttpCookie.parse(header);
+    Assert.assertTrue(!cookies.isEmpty());
+    Assert.assertTrue(header.contains("; HttpOnly"));
+    Assert.assertTrue(cookies.get(0).getSecure());
+    Assert.assertTrue("token".equals(cookies.get(0).getValue()));
   }
 
   @AfterClass

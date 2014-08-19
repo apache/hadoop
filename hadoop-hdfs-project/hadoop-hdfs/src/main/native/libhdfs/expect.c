@@ -49,18 +49,18 @@ int expectFileStats(hdfsFile file,
             stats->totalShortCircuitBytesRead,
             stats->totalZeroCopyBytesRead);
     if (expectedTotalBytesRead != UINT64_MAX) {
-        EXPECT_INT64_EQ(expectedTotalBytesRead, stats->totalBytesRead);
+        EXPECT_UINT64_EQ(expectedTotalBytesRead, stats->totalBytesRead);
     }
     if (expectedTotalLocalBytesRead != UINT64_MAX) {
-        EXPECT_INT64_EQ(expectedTotalLocalBytesRead,
+        EXPECT_UINT64_EQ(expectedTotalLocalBytesRead,
                       stats->totalLocalBytesRead);
     }
     if (expectedTotalShortCircuitBytesRead != UINT64_MAX) {
-        EXPECT_INT64_EQ(expectedTotalShortCircuitBytesRead,
+        EXPECT_UINT64_EQ(expectedTotalShortCircuitBytesRead,
                       stats->totalShortCircuitBytesRead);
     }
     if (expectedTotalZeroCopyBytesRead != UINT64_MAX) {
-        EXPECT_INT64_EQ(expectedTotalZeroCopyBytesRead,
+        EXPECT_UINT64_EQ(expectedTotalZeroCopyBytesRead,
                       stats->totalZeroCopyBytesRead);
     }
     hdfsFileFreeReadStatistics(stats);

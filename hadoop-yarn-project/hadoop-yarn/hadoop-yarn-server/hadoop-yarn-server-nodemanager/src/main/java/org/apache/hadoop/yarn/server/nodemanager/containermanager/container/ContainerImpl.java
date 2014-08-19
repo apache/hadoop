@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.container;
 
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -47,7 +48,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
-import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
@@ -62,6 +63,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.eve
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainerStartMonitoringEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainerStopMonitoringEvent;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerStatus;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
@@ -75,6 +78,7 @@ public class ContainerImpl implements Container {
   private final Lock readLock;
   private final Lock writeLock;
   private final Dispatcher dispatcher;
+  private final NMStateStoreService stateStore;
   private final Credentials credentials;
   private final NodeManagerMetrics metrics;
   private final ContainerLaunchContext launchContext;
@@ -101,12 +105,19 @@ public class ContainerImpl implements Container {
   private final List<LocalResourceRequest> appRsrcs =
     new ArrayList<LocalResourceRequest>();
 
+  // whether container has been recovered after a restart
+  private RecoveredContainerStatus recoveredStatus =
+      RecoveredContainerStatus.REQUESTED;
+  // whether container was marked as killed after recovery
+  private boolean recoveredAsKilled = false;
+
   public ContainerImpl(Configuration conf, Dispatcher dispatcher,
-      ContainerLaunchContext launchContext, Credentials creds,
-      NodeManagerMetrics metrics,
+      NMStateStoreService stateStore, ContainerLaunchContext launchContext,
+      Credentials creds, NodeManagerMetrics metrics,
       ContainerTokenIdentifier containerTokenIdentifier) {
     this.daemonConf = conf;
     this.dispatcher = dispatcher;
+    this.stateStore = stateStore;
     this.launchContext = launchContext;
     this.containerTokenIdentifier = containerTokenIdentifier;
     this.containerId = containerTokenIdentifier.getContainerID();
@@ -122,6 +133,21 @@ public class ContainerImpl implements Container {
     stateMachine = stateMachineFactory.make(this);
   }
 
+  // constructor for a recovered container
+  public ContainerImpl(Configuration conf, Dispatcher dispatcher,
+      NMStateStoreService stateStore, ContainerLaunchContext launchContext,
+      Credentials creds, NodeManagerMetrics metrics,
+      ContainerTokenIdentifier containerTokenIdentifier,
+      RecoveredContainerStatus recoveredStatus, int exitCode,
+      String diagnostics, boolean wasKilled) {
+    this(conf, dispatcher, stateStore, launchContext, creds, metrics,
+        containerTokenIdentifier);
+    this.recoveredStatus = recoveredStatus;
+    this.exitCode = exitCode;
+    this.recoveredAsKilled = wasKilled;
+    this.diagnostics.append(diagnostics);
+  }
+
   private static final ContainerDoneTransition CONTAINER_DONE_TRANSITION =
     new ContainerDoneTransition();
 
@@ -135,8 +161,10 @@ public class ContainerImpl implements Container {
       new StateMachineFactory<ContainerImpl, ContainerState, ContainerEventType, ContainerEvent>(ContainerState.NEW)
     // From NEW State
     .addTransition(ContainerState.NEW,
-        EnumSet.of(ContainerState.LOCALIZING, ContainerState.LOCALIZED,
-            ContainerState.LOCALIZATION_FAILED),
+        EnumSet.of(ContainerState.LOCALIZING,
+            ContainerState.LOCALIZED,
+            ContainerState.LOCALIZATION_FAILED,
+            ContainerState.DONE),
         ContainerEventType.INIT_CONTAINER, new RequestResourcesTransition())
     .addTransition(ContainerState.NEW, ContainerState.NEW,
         ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
@@ -281,7 +309,9 @@ public class ContainerImpl implements Container {
         UPDATE_DIAGNOSTICS_TRANSITION)
     .addTransition(ContainerState.CONTAINER_CLEANEDUP_AFTER_KILL,
         ContainerState.CONTAINER_CLEANEDUP_AFTER_KILL,
-        ContainerEventType.KILL_CONTAINER)
+        EnumSet.of(ContainerEventType.KILL_CONTAINER,
+            ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS,
+            ContainerEventType.CONTAINER_EXITED_WITH_FAILURE))
 
     // From DONE
     .addTransition(ContainerState.DONE, ContainerState.DONE,
@@ -295,7 +325,9 @@ public class ContainerImpl implements Container {
     // we notify container of failed localization if localizer thread (for
     // that container) fails for some reason
     .addTransition(ContainerState.DONE, ContainerState.DONE,
-        ContainerEventType.RESOURCE_FAILED)
+        EnumSet.of(ContainerEventType.RESOURCE_FAILED,
+            ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS,
+            ContainerEventType.CONTAINER_EXITED_WITH_FAILURE))
 
     // create the topology tables
     .installTopology();
@@ -388,6 +420,19 @@ public class ContainerImpl implements Container {
   }
 
   @Override
+  public NMContainerStatus getNMContainerStatus() {
+    this.readLock.lock();
+    try {
+      return NMContainerStatus.newInstance(this.containerId, getCurrentState(),
+        getResource(), diagnostics.toString(), exitCode,
+        containerTokenIdentifier.getPriority(),
+        containerTokenIdentifier.getCreationTime());
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  @Override
   public ContainerId getContainerId() {
     return this.containerId;
   }
@@ -407,7 +452,7 @@ public class ContainerImpl implements Container {
     }
   }
 
-  @SuppressWarnings({"fallthrough", "unchecked"})
+  @SuppressWarnings("fallthrough")
   private void finished() {
     ApplicationId applicationId =
         containerId.getApplicationAttemptId().getApplicationId();
@@ -445,7 +490,11 @@ public class ContainerImpl implements Container {
     }
 
     metrics.releaseContainer(this.resource);
+    sendFinishedEvents();
+  }
 
+  @SuppressWarnings("unchecked")
+  private void sendFinishedEvents() {
     // Inform the application
     @SuppressWarnings("rawtypes")
     EventHandler eventHandler = dispatcher.getEventHandler();
@@ -455,6 +504,45 @@ public class ContainerImpl implements Container {
     // Tell the logService too
     eventHandler.handle(new LogHandlerContainerFinishedEvent(
       containerId, exitCode));
+  }
+
+  @SuppressWarnings("unchecked") // dispatcher not typed
+  private void sendLaunchEvent() {
+    ContainersLauncherEventType launcherEvent =
+        ContainersLauncherEventType.LAUNCH_CONTAINER;
+    if (recoveredStatus == RecoveredContainerStatus.LAUNCHED) {
+      // try to recover a container that was previously launched
+      launcherEvent = ContainersLauncherEventType.RECOVER_CONTAINER;
+    }
+    dispatcher.getEventHandler().handle(
+        new ContainersLauncherEvent(this, launcherEvent));
+  }
+
+  // Inform the ContainersMonitor to start monitoring the container's
+  // resource usage.
+  @SuppressWarnings("unchecked") // dispatcher not typed
+  private void sendContainerMonitorStartEvent() {
+      long pmemBytes = getResource().getMemory() * 1024 * 1024L;
+      float pmemRatio = daemonConf.getFloat(
+          YarnConfiguration.NM_VMEM_PMEM_RATIO,
+          YarnConfiguration.DEFAULT_NM_VMEM_PMEM_RATIO);
+      long vmemBytes = (long) (pmemRatio * pmemBytes);
+
+      dispatcher.getEventHandler().handle(
+          new ContainerStartMonitoringEvent(containerId,
+              vmemBytes, pmemBytes));
+  }
+
+  private void addDiagnostics(String... diags) {
+    for (String s : diags) {
+      this.diagnostics.append(s);
+    }
+    try {
+      stateStore.storeContainerDiagnostics(containerId, diagnostics);
+    } catch (IOException e) {
+      LOG.warn("Unable to update diagnostics in state store for "
+          + containerId, e);
+    }
   }
 
   @SuppressWarnings("unchecked") // dispatcher not typed
@@ -505,6 +593,16 @@ public class ContainerImpl implements Container {
     @Override
     public ContainerState transition(ContainerImpl container,
         ContainerEvent event) {
+      if (container.recoveredStatus == RecoveredContainerStatus.COMPLETED) {
+        container.sendFinishedEvents();
+        return ContainerState.DONE;
+      } else if (container.recoveredAsKilled &&
+          container.recoveredStatus == RecoveredContainerStatus.REQUESTED) {
+        // container was killed but never launched
+        container.finished();
+        return ContainerState.DONE;
+      }
+
       final ContainerLaunchContext ctxt = container.launchContext;
       container.metrics.initingContainer();
 
@@ -580,9 +678,7 @@ public class ContainerImpl implements Container {
               new ContainerLocalizationRequestEvent(container, req));
         return ContainerState.LOCALIZING;
       } else {
-        container.dispatcher.getEventHandler().handle(
-            new ContainersLauncherEvent(container,
-                ContainersLauncherEventType.LAUNCH_CONTAINER));
+        container.sendLaunchEvent();
         container.metrics.endInitingContainer();
         return ContainerState.LOCALIZED;
       }
@@ -593,7 +689,6 @@ public class ContainerImpl implements Container {
    * Transition when one of the requested resources for this container
    * has been successfully localized.
    */
-  @SuppressWarnings("unchecked") // dispatcher not typed
   static class LocalizedTransition implements
       MultipleArcTransition<ContainerImpl,ContainerEvent,ContainerState> {
     @Override
@@ -613,9 +708,8 @@ public class ContainerImpl implements Container {
       if (!container.pendingResources.isEmpty()) {
         return ContainerState.LOCALIZING;
       }
-      container.dispatcher.getEventHandler().handle(
-          new ContainersLauncherEvent(container,
-              ContainersLauncherEventType.LAUNCH_CONTAINER));
+
+      container.sendLaunchEvent();
       container.metrics.endInitingContainer();
       return ContainerState.LOCALIZED;
     }
@@ -625,24 +719,22 @@ public class ContainerImpl implements Container {
    * Transition from LOCALIZED state to RUNNING state upon receiving
    * a CONTAINER_LAUNCHED event
    */
-  @SuppressWarnings("unchecked") // dispatcher not typed
   static class LaunchTransition extends ContainerTransition {
+    @SuppressWarnings("unchecked")
     @Override
     public void transition(ContainerImpl container, ContainerEvent event) {
-      // Inform the ContainersMonitor to start monitoring the container's
-      // resource usage.
-      long pmemBytes =
-          container.getResource().getMemory() * 1024 * 1024L;
-      float pmemRatio = container.daemonConf.getFloat(
-          YarnConfiguration.NM_VMEM_PMEM_RATIO,
-          YarnConfiguration.DEFAULT_NM_VMEM_PMEM_RATIO);
-      long vmemBytes = (long) (pmemRatio * pmemBytes);
-      
-      container.dispatcher.getEventHandler().handle(
-          new ContainerStartMonitoringEvent(container.containerId,
-              vmemBytes, pmemBytes));
+      container.sendContainerMonitorStartEvent();
       container.metrics.runningContainer();
       container.wasLaunched  = true;
+
+      if (container.recoveredAsKilled) {
+        LOG.info("Killing " + container.containerId
+            + " due to recovered as killed");
+        container.addDiagnostics("Container recovered as killed.\n");
+        container.dispatcher.getEventHandler().handle(
+            new ContainersLauncherEvent(container,
+                ContainersLauncherEventType.CLEANUP_CONTAINER));
+      }
     }
   }
 
@@ -694,8 +786,7 @@ public class ContainerImpl implements Container {
       ContainerExitEvent exitEvent = (ContainerExitEvent) event;
       container.exitCode = exitEvent.getExitCode();
       if (exitEvent.getDiagnosticInfo() != null) {
-        container.diagnostics.append(exitEvent.getDiagnosticInfo())
-          .append('\n');
+        container.addDiagnostics(exitEvent.getDiagnosticInfo(), "\n");
       }
 
       // TODO: Add containerWorkDir to the deletion service.
@@ -722,7 +813,7 @@ public class ContainerImpl implements Container {
     @Override
     public void transition(ContainerImpl container, ContainerEvent event) {
       super.transition(container, event);
-      container.diagnostics.append("Killed by external signal\n");
+      container.addDiagnostics("Killed by external signal\n");
     }
   }
 
@@ -737,9 +828,7 @@ public class ContainerImpl implements Container {
 
       ContainerResourceFailedEvent rsrcFailedEvent =
           (ContainerResourceFailedEvent) event;
-      container.diagnostics.append(rsrcFailedEvent.getDiagnosticMessage()
-          + "\n");
-          
+      container.addDiagnostics(rsrcFailedEvent.getDiagnosticMessage(), "\n");
 
       // Inform the localizer to decrement reference counts and cleanup
       // resources.
@@ -761,9 +850,9 @@ public class ContainerImpl implements Container {
       container.cleanup();
       container.metrics.endInitingContainer();
       ContainerKillEvent killEvent = (ContainerKillEvent) event;
-      container.exitCode = ExitCode.TERMINATED.getExitCode();
-      container.diagnostics.append(killEvent.getDiagnostic()).append("\n");
-      container.diagnostics.append("Container is killed before being launched.\n");
+      container.exitCode = killEvent.getContainerExitStatus();
+      container.addDiagnostics(killEvent.getDiagnostic(), "\n");
+      container.addDiagnostics("Container is killed before being launched.\n");
     }
   }
 
@@ -804,7 +893,8 @@ public class ContainerImpl implements Container {
           new ContainersLauncherEvent(container,
               ContainersLauncherEventType.CLEANUP_CONTAINER));
       ContainerKillEvent killEvent = (ContainerKillEvent) event;
-      container.diagnostics.append(killEvent.getDiagnostic()).append("\n");
+      container.addDiagnostics(killEvent.getDiagnostic(), "\n");
+      container.exitCode = killEvent.getContainerExitStatus();
     }
   }
 
@@ -817,10 +907,12 @@ public class ContainerImpl implements Container {
     @Override
     public void transition(ContainerImpl container, ContainerEvent event) {
       ContainerExitEvent exitEvent = (ContainerExitEvent) event;
-      container.exitCode = exitEvent.getExitCode();
+      if (container.hasDefaultExitCode()) {
+        container.exitCode = exitEvent.getExitCode();
+      }
+
       if (exitEvent.getDiagnosticInfo() != null) {
-        container.diagnostics.append(exitEvent.getDiagnosticInfo())
-          .append('\n');
+        container.addDiagnostics(exitEvent.getDiagnosticInfo(), "\n");
       }
 
       // The process/process-grp is killed. Decrement reference counts and
@@ -859,9 +951,9 @@ public class ContainerImpl implements Container {
     @Override
     public void transition(ContainerImpl container, ContainerEvent event) {
       ContainerKillEvent killEvent = (ContainerKillEvent) event;
-      container.exitCode = ExitCode.TERMINATED.getExitCode();
-      container.diagnostics.append(killEvent.getDiagnostic()).append("\n");
-      container.diagnostics.append("Container is killed before being launched.\n");
+      container.exitCode = killEvent.getContainerExitStatus();
+      container.addDiagnostics(killEvent.getDiagnostic(), "\n");
+      container.addDiagnostics("Container is killed before being launched.\n");
       super.transition(container, event);
     }
   }
@@ -875,8 +967,14 @@ public class ContainerImpl implements Container {
     public void transition(ContainerImpl container, ContainerEvent event) {
       ContainerDiagnosticsUpdateEvent updateEvent =
           (ContainerDiagnosticsUpdateEvent) event;
-      container.diagnostics.append(updateEvent.getDiagnosticsUpdate())
-          .append("\n");
+      container.addDiagnostics(updateEvent.getDiagnosticsUpdate(), "\n");
+      try {
+        container.stateStore.storeContainerDiagnostics(container.containerId,
+            container.diagnostics);
+      } catch (IOException e) {
+        LOG.warn("Unable to update state store diagnostics for "
+            + container.containerId, e);
+      }
     }
   }
 
@@ -915,5 +1013,9 @@ public class ContainerImpl implements Container {
     } finally {
       this.readLock.unlock();
     }
+  }
+
+  private boolean hasDefaultExitCode() {
+    return (this.exitCode == ContainerExitStatus.INVALID);
   }
 }

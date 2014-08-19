@@ -30,7 +30,6 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -90,22 +89,20 @@ public class TestSnapshotPathINodes {
     final INode before = fsdir.getINode(pathStr);
     
     // Before a directory is snapshottable
-    Assert.assertTrue(before instanceof INodeDirectory);
-    Assert.assertFalse(before instanceof INodeDirectorySnapshottable);
+    Assert.assertFalse(before.asDirectory().isSnapshottable());
 
     // After a directory is snapshottable
     final Path path = new Path(pathStr);
     hdfs.allowSnapshot(path);
     {
       final INode after = fsdir.getINode(pathStr);
-      Assert.assertTrue(after instanceof INodeDirectorySnapshottable);
+      Assert.assertTrue(after.asDirectory().isSnapshottable());
     }
     
     hdfs.disallowSnapshot(path);
     {
       final INode after = fsdir.getINode(pathStr);
-      Assert.assertTrue(after instanceof INodeDirectory);
-      Assert.assertFalse(after instanceof INodeDirectorySnapshottable);
+      Assert.assertFalse(after.asDirectory().isSnapshottable());
     }
   }
   
@@ -115,8 +112,7 @@ public class TestSnapshotPathINodes {
     }
     final int i = inodesInPath.getSnapshotRootIndex() - 1;
     final INode inode = inodesInPath.getINodes()[i];
-    return ((INodeDirectorySnapshottable)inode).getSnapshot(
-        DFSUtil.string2Bytes(name)); 
+    return inode.asDirectory().getSnapshot(DFSUtil.string2Bytes(name));
   }
 
   static void assertSnapshot(INodesInPath inodesInPath, boolean isSnapshot,

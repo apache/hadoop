@@ -27,10 +27,7 @@ import static org.junit.Assert.fail;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-
-import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -47,6 +44,8 @@ import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -68,6 +67,8 @@ import org.apache.hadoop.util.Time;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import com.google.common.collect.ImmutableList;
+
 public class TestINodeFile {
   public static final Log LOG = LogFactory.getLog(TestINodeFile.class);
 
@@ -77,7 +78,7 @@ public class TestINodeFile {
   private final PermissionStatus perm = new PermissionStatus(
       "userName", null, FsPermission.getDefault());
   private short replication;
-  private long preferredBlockSize;
+  private long preferredBlockSize = 1024;
 
   INodeFile createINodeFile(short replication, long preferredBlockSize) {
     return new INodeFile(INodeId.GRANDFATHER_INODE_ID, null, perm, 0L, 0L,
@@ -316,7 +317,7 @@ public class TestINodeFile {
     {//cast from INodeFileUnderConstruction
       final INode from = new INodeFile(
           INodeId.GRANDFATHER_INODE_ID, null, perm, 0L, 0L, null, replication, 1024L);
-      from.asFile().toUnderConstruction("client", "machine", null);
+      from.asFile().toUnderConstruction("client", "machine");
     
       //cast to INodeFile, should success
       final INodeFile f = INodeFile.valueOf(from, path);
@@ -466,8 +467,8 @@ public class TestINodeFile {
     }
   }
 
-  @Test
-  public void testWriteToRenamedFile() throws IOException {
+  @Test(timeout=120000)
+  public void testWriteToDeletedFile() throws IOException {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
         .build();
@@ -484,18 +485,16 @@ public class TestINodeFile {
     Path filePath = new Path("/test1/file");
     FSDataOutputStream fos = fs.create(filePath);
 
-    // Rename /test1 to test2, and recreate /test1/file
-    Path renamedPath = new Path("/test2");
-    fs.rename(path, renamedPath);
-    fs.create(filePath, (short) 1);
+    // Delete the file
+    fs.delete(filePath, false);
 
-    // Add new block should fail since /test1/file has a different fileId
+    // Add new block should fail since /test1/file has been deleted.
     try {
       fos.write(data, 0, data.length);
       // make sure addBlock() request gets to NN immediately
       fos.hflush();
 
-      fail("Write should fail after rename");
+      fail("Write should fail after delete");
     } catch (Exception e) {
       /* Ignore */
     } finally {
@@ -523,6 +522,7 @@ public class TestINodeFile {
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
         DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT);
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
@@ -570,6 +570,20 @@ public class TestINodeFile {
       // ClientProtocol#getPreferredBlockSize
       assertEquals(testFileBlockSize,
           nnRpc.getPreferredBlockSize(testFileInodePath.toString()));
+
+      /*
+       * HDFS-6749 added missing calls to FSDirectory.resolvePath in the
+       * following four methods. The calls below ensure that
+       * /.reserved/.inodes paths work properly. No need to check return
+       * values as these methods are tested elsewhere.
+       */
+      {
+        fs.isFileClosed(testFileInodePath);
+        fs.getAclStatus(testFileInodePath);
+        fs.getXAttrs(testFileInodePath);
+        fs.listXAttrs(testFileInodePath);
+        fs.access(testFileInodePath, FsAction.READ_WRITE);
+      }
       
       // symbolic link related tests
       
@@ -789,14 +803,6 @@ public class TestINodeFile {
     return dir; // Last Inode in the chain
   }
   
-  private static void checkEquals(byte[][] expected, byte[][] actual) {
-    assertEquals(expected.length, actual.length);
-    int i = 0;
-    for (byte[] e : expected) {
-      assertTrue(Arrays.equals(e, actual[i++]));
-    }
-  }
-  
   /**
    * Test for {@link FSDirectory#getPathComponents(INode)}
    */
@@ -806,7 +812,7 @@ public class TestINodeFile {
     INode inode = createTreeOfInodes(path);
     byte[][] expected = INode.getPathComponents(path);
     byte[][] actual = FSDirectory.getPathComponents(inode);
-    checkEquals(expected, actual);
+    DFSTestUtil.checkComponentsEquals(expected, actual);
   }
   
   /**
@@ -1078,14 +1084,31 @@ public class TestINodeFile {
 
     final String clientName = "client";
     final String clientMachine = "machine";
-    file.toUnderConstruction(clientName, clientMachine, null);
+    file.toUnderConstruction(clientName, clientMachine);
     assertTrue(file.isUnderConstruction());
     FileUnderConstructionFeature uc = file.getFileUnderConstructionFeature();
     assertEquals(clientName, uc.getClientName());
     assertEquals(clientMachine, uc.getClientMachine());
-    Assert.assertNull(uc.getClientNode());
 
     file.toCompleteFile(Time.now());
     assertFalse(file.isUnderConstruction());
+  }
+
+  @Test
+  public void testXAttrFeature() {
+    replication = 3;
+    preferredBlockSize = 128*1024*1024;
+    INodeFile inf = createINodeFile(replication, preferredBlockSize);
+    ImmutableList.Builder<XAttr> builder = new ImmutableList.Builder<XAttr>();
+    XAttr xAttr = new XAttr.Builder().setNameSpace(XAttr.NameSpace.USER).
+        setName("a1").setValue(new byte[]{0x31, 0x32, 0x33}).build();
+    builder.add(xAttr);
+    XAttrFeature f = new XAttrFeature(builder.build());
+    inf.addXAttrFeature(f);
+    XAttrFeature f1 = inf.getXAttrFeature();
+    assertEquals(xAttr, f1.getXAttrs().get(0));
+    inf.removeXAttrFeature();
+    f1 = inf.getXAttrFeature();
+    assertEquals(f1, null);
   }
 }

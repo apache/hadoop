@@ -519,5 +519,29 @@
         </comparator>
       </comparators>
     </test>
+
+    <test> <!--Tested -->
+      <description>Testing listing a single cache directive</description>
+      <test-commands>
+        <cache-admin-command>-addPool pool1</cache-admin-command>
+        <cache-admin-command>-addDirective -path /foo -pool pool1 -ttl 2d</cache-admin-command>
+        <cache-admin-command>-addDirective -path /bar -pool pool1 -ttl 24h</cache-admin-command>
+        <cache-admin-command>-addDirective -path /baz -replication 2 -pool pool1 -ttl 60m</cache-admin-command>
+        <cache-admin-command>-listDirectives -stats -id 30</cache-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <cache-admin-command>-removePool pool1</cache-admin-command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Found 1 entry</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>30 pool1      1</expected-output>
+        </comparator>
+      </comparators>
+    </test>
   </tests>
 </configuration>

@@ -305,7 +305,8 @@ public class TestRMAdminCLI {
       testError(new String[] { "-help", "-getGroups" },
           "Usage: yarn rmadmin [-getGroups [username]]", dataErr, 0);
       testError(new String[] { "-help", "-transitionToActive" },
-          "Usage: yarn rmadmin [-transitionToActive <serviceId>]", dataErr, 0);
+          "Usage: yarn rmadmin [-transitionToActive <serviceId>" +
+          " [--forceactive]]", dataErr, 0);
       testError(new String[] { "-help", "-transitionToStandby" },
           "Usage: yarn rmadmin [-transitionToStandby <serviceId>]", dataErr, 0);
       testError(new String[] { "-help", "-getServiceState" },
@@ -332,9 +333,9 @@ public class TestRMAdminCLI {
               "yarn rmadmin [-refreshQueues] [-refreshNodes] [-refreshSuper" +
               "UserGroupsConfiguration] [-refreshUserToGroupsMappings] " +
               "[-refreshAdminAcls] [-refreshServiceAcl] [-getGroup" +
-              " [username]] [-help [cmd]] [-transitionToActive <serviceId>]" +
-              " [-transitionToStandby <serviceId>] [-failover [--forcefence]" +
-              " [--forceactive] <serviceId> <serviceId>] " +
+              " [username]] [-help [cmd]] [-transitionToActive <serviceId>" + 
+              " [--forceactive]] [-transitionToStandby <serviceId>] [-failover" +
+              " [--forcefence] [--forceactive] <serviceId> <serviceId>] " +
               "[-getServiceState <serviceId>] [-checkHealth <serviceId>]"));
     } finally {
       System.setOut(oldOutPrintStream);

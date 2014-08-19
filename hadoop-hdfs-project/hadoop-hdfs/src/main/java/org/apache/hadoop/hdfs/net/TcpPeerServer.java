@@ -28,10 +28,14 @@ import java.nio.channels.SocketChannel;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataEncryptionKeyFactory;
+import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferClient;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter.SecureResources;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.security.token.Token;
 
 @InterfaceAudience.Private
 public class TcpPeerServer implements PeerServer {
@@ -74,15 +78,16 @@ public class TcpPeerServer implements PeerServer {
     }
   }
 
-  public static Peer peerFromSocketAndKey(Socket s,
-        DataEncryptionKey key) throws IOException {
+  public static Peer peerFromSocketAndKey(
+        SaslDataTransferClient saslClient, Socket s,
+        DataEncryptionKeyFactory keyFactory,
+        Token<BlockTokenIdentifier> blockToken, DatanodeID datanodeId)
+        throws IOException {
     Peer peer = null;
     boolean success = false;
     try {
-      peer = peerFromSocket(s); 
-      if (key != null) {
-        peer = new EncryptedPeer(peer, key);
-      }
+      peer = peerFromSocket(s);
+      peer = saslClient.peerSend(peer, keyFactory, blockToken, datanodeId);
       success = true;
       return peer;
     } finally {

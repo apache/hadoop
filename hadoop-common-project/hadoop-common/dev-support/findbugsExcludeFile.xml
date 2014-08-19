@@ -287,6 +287,10 @@
       <!-- protobuf generated code -->
       <Class name="~org\.apache\.hadoop\.ipc\.proto\.RefreshCallQueueProtocolProtos.*"/>
     </Match>
+    <Match>
+      <!-- protobuf generated code -->
+      <Class name="~org\.apache\.hadoop\.ipc\.proto\.GenericRefreshProtocolProtos.*"/>
+    </Match>
 
     <!--
        Manually checked, misses child thread manually syncing on parent's intrinsic lock.
@@ -356,5 +360,11 @@
        <Method name="compareTo" />
        <Bug code="NP" />
      </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.crypto.key.kms.KMSClientProvider"/>
+    <Method name="validateResponse"/>
+    <Bug pattern="REC_CATCH_EXCEPTION"/>
+  </Match>
 
 </FindBugsFilter>

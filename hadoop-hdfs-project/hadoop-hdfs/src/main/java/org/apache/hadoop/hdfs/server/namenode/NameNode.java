@@ -175,6 +175,8 @@ public class NameNode implements NameNodeStatusMXBean {
     DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY,
     DFS_NAMENODE_HTTP_ADDRESS_KEY,
     DFS_NAMENODE_HTTPS_ADDRESS_KEY,
+    DFS_NAMENODE_HTTP_BIND_HOST_KEY,
+    DFS_NAMENODE_HTTPS_BIND_HOST_KEY,
     DFS_NAMENODE_KEYTAB_FILE_KEY,
     DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
     DFS_NAMENODE_SECONDARY_HTTPS_ADDRESS_KEY,
@@ -199,25 +201,31 @@ public class NameNode implements NameNodeStatusMXBean {
   };
   
   private static final String USAGE = "Usage: java NameNode ["
-      + StartupOption.BACKUP.getName() + "] | ["
-      + StartupOption.CHECKPOINT.getName() + "] | ["
+      + StartupOption.BACKUP.getName() + "] | \n\t["
+      + StartupOption.CHECKPOINT.getName() + "] | \n\t["
       + StartupOption.FORMAT.getName() + " ["
       + StartupOption.CLUSTERID.getName() + " cid ] ["
       + StartupOption.FORCE.getName() + "] ["
-      + StartupOption.NONINTERACTIVE.getName() + "] ] | ["
+      + StartupOption.NONINTERACTIVE.getName() + "] ] | \n\t["
       + StartupOption.UPGRADE.getName() + 
         " [" + StartupOption.CLUSTERID.getName() + " cid]" +
-        " [" + StartupOption.RENAMERESERVED.getName() + "<k-v pairs>] ] | ["
-      + StartupOption.ROLLBACK.getName() + "] | ["
+        " [" + StartupOption.RENAMERESERVED.getName() + "<k-v pairs>] ] | \n\t["
+      + StartupOption.UPGRADEONLY.getName() + 
+        " [" + StartupOption.CLUSTERID.getName() + " cid]" +
+        " [" + StartupOption.RENAMERESERVED.getName() + "<k-v pairs>] ] | \n\t["
+      + StartupOption.ROLLBACK.getName() + "] | \n\t["
       + StartupOption.ROLLINGUPGRADE.getName() + " <"
       + RollingUpgradeStartupOption.DOWNGRADE.name().toLowerCase() + "|"
-      + RollingUpgradeStartupOption.ROLLBACK.name().toLowerCase() + "> ] | ["
-      + StartupOption.FINALIZE.getName() + "] | ["
-      + StartupOption.IMPORT.getName() + "] | ["
-      + StartupOption.INITIALIZESHAREDEDITS.getName() + "] | ["
-      + StartupOption.BOOTSTRAPSTANDBY.getName() + "] | ["
-      + StartupOption.RECOVER.getName() + " [ " + StartupOption.FORCE.getName()
-      + " ] ]";
+      + RollingUpgradeStartupOption.ROLLBACK.name().toLowerCase() + "> ] | \n\t["
+      + StartupOption.FINALIZE.getName() + "] | \n\t["
+      + StartupOption.IMPORT.getName() + "] | \n\t["
+      + StartupOption.INITIALIZESHAREDEDITS.getName() + "] | \n\t["
+      + StartupOption.BOOTSTRAPSTANDBY.getName() + "] | \n\t["
+      + StartupOption.RECOVER.getName() + " [ "
+      + StartupOption.FORCE.getName() + "] ] | \n\t["
+      + StartupOption.METADATAVERSION.getName() + " ] "
+      + " ]";
+
   
   public long getProtocolVersion(String protocol, 
                                  long clientVersion) throws IOException {
@@ -271,10 +279,11 @@ public class NameNode implements NameNodeStatusMXBean {
   private JvmPauseMonitor pauseMonitor;
   private ObjectName nameNodeStatusBeanName;
   /**
-   * The service name of the delegation token issued by the namenode. It is
-   * the name service id in HA mode, or the rpc address in non-HA mode.
+   * The namenode address that clients will use to access this namenode
+   * or the name service. For HA configurations using logical URI, it
+   * will be the logical address.
    */
-  private String tokenServiceName;
+  private String clientNamenodeAddress;
   
   /** Format a new filesystem.  Destroys any filesystem that may already
    * exist at this location.  **/
@@ -317,7 +326,54 @@ public class NameNode implements NameNodeStatusMXBean {
    *
    * @return The name service id in HA-mode, or the rpc address in non-HA mode
    */
-  public String getTokenServiceName() { return tokenServiceName; }
+  public String getTokenServiceName() {
+    return getClientNamenodeAddress();
+  }
+
+  /**
+   * Set the namenode address that will be used by clients to access this
+   * namenode or name service. This needs to be called before the config
+   * is overriden.
+   */
+  public void setClientNamenodeAddress(Configuration conf) {
+    String nnAddr = conf.get(FS_DEFAULT_NAME_KEY);
+    if (nnAddr == null) {
+      // default fs is not set.
+      clientNamenodeAddress = null;
+      return;
+    }
+
+    LOG.info(FS_DEFAULT_NAME_KEY + " is " + nnAddr);
+    URI nnUri = URI.create(nnAddr);
+
+    String nnHost = nnUri.getHost();
+    if (nnHost == null) {
+      clientNamenodeAddress = null;
+      return;
+    }
+
+    if (DFSUtil.getNameServiceIds(conf).contains(nnHost)) {
+      // host name is logical
+      clientNamenodeAddress = nnHost;
+    } else if (nnUri.getPort() > 0) {
+      // physical address with a valid port
+      clientNamenodeAddress = nnUri.getAuthority();
+    } else {
+      // the port is missing or 0. Figure out real bind address later.
+      clientNamenodeAddress = null;
+      return;
+    }
+    LOG.info("Clients are to use " + clientNamenodeAddress + " to access"
+        + " this namenode/service.");
+  }
+
+  /**
+   * Get the namenode address to be used by clients.
+   * @return nn address
+   */
+  public String getClientNamenodeAddress() {
+    return clientNamenodeAddress;
+  }
 
   public static InetSocketAddress getAddress(String address) {
     return NetUtils.createSocketAddr(address, DEFAULT_PORT);
@@ -356,8 +412,6 @@ public class NameNode implements NameNodeStatusMXBean {
 
 
   /**
-   * TODO:FEDERATION
-   * @param filesystemURI
    * @return address of file system
    */
   public static InetSocketAddress getAddress(URI filesystemURI) {
@@ -446,6 +500,29 @@ public class NameNode implements NameNodeStatusMXBean {
     return getHttpAddress(conf);
   }
 
+  /**
+   * HTTP server address for binding the endpoint. This method is
+   * for use by the NameNode and its derivatives. It may return
+   * a different address than the one that should be used by clients to
+   * connect to the NameNode. See
+   * {@link DFSConfigKeys#DFS_NAMENODE_HTTP_BIND_HOST_KEY}
+   *
+   * @param conf
+   * @return
+   */
+  protected InetSocketAddress getHttpServerBindAddress(Configuration conf) {
+    InetSocketAddress bindAddress = getHttpServerAddress(conf);
+
+    // If DFS_NAMENODE_HTTP_BIND_HOST_KEY exists then it overrides the
+    // host name portion of DFS_NAMENODE_HTTP_ADDRESS_KEY.
+    final String bindHost = conf.getTrimmed(DFS_NAMENODE_HTTP_BIND_HOST_KEY);
+    if (bindHost != null && !bindHost.isEmpty()) {
+      bindAddress = new InetSocketAddress(bindHost, bindAddress.getPort());
+    }
+
+    return bindAddress;
+  }
+
   /** @return the NameNode HTTP address. */
   public static InetSocketAddress getHttpAddress(Configuration conf) {
     return  NetUtils.createSocketAddr(
@@ -512,9 +589,14 @@ public class NameNode implements NameNodeStatusMXBean {
     loadNamesystem(conf);
 
     rpcServer = createRpcServer(conf);
-    final String nsId = getNameServiceId(conf);
-    tokenServiceName = HAUtil.isHAEnabled(conf, nsId) ? nsId : NetUtils
-            .getHostPortString(rpcServer.getRpcAddress());
+    if (clientNamenodeAddress == null) {
+      // This is expected for MiniDFSCluster. Set it now using 
+      // the RPC server's bind address.
+      clientNamenodeAddress = 
+          NetUtils.getHostPortString(rpcServer.getRpcAddress());
+      LOG.info("Clients are to use " + clientNamenodeAddress + " to access"
+          + " this namenode/service.");
+    }
     if (NamenodeRole.NAMENODE == role) {
       httpServer.setNameNodeAddress(getNameNodeAddress());
       httpServer.setFSImage(getFSImage());
@@ -522,7 +604,8 @@ public class NameNode implements NameNodeStatusMXBean {
     
     pauseMonitor = new JvmPauseMonitor(conf);
     pauseMonitor.start();
-
+    metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
+    
     startCommonServices(conf);
   }
   
@@ -610,7 +693,7 @@ public class NameNode implements NameNodeStatusMXBean {
   }
   
   private void startHttpServer(final Configuration conf) throws IOException {
-    httpServer = new NameNodeHttpServer(conf, this, getHttpServerAddress(conf));
+    httpServer = new NameNodeHttpServer(conf, this, getHttpServerBindAddress(conf));
     httpServer.start();
     httpServer.setStartupProgress(startupProgress);
   }
@@ -633,6 +716,7 @@ public class NameNode implements NameNodeStatusMXBean {
    * <li>{@link StartupOption#BACKUP BACKUP} - start backup node</li>
    * <li>{@link StartupOption#CHECKPOINT CHECKPOINT} - start checkpoint node</li>
    * <li>{@link StartupOption#UPGRADE UPGRADE} - start the cluster  
+   * <li>{@link StartupOption#UPGRADEONLY UPGRADEONLY} - upgrade the cluster  
    * upgrade and create a snapshot of the current file system state</li> 
    * <li>{@link StartupOption#RECOVER RECOVERY} - recover name node
    * metadata</li>
@@ -660,6 +744,7 @@ public class NameNode implements NameNodeStatusMXBean {
       throws IOException { 
     this.conf = conf;
     this.role = role;
+    setClientNamenodeAddress(conf);
     String nsId = getNameServiceId(conf);
     String namenodeId = HAUtil.getNameNodeId(conf, nsId);
     this.haEnabled = HAUtil.isHAEnabled(conf, nsId);
@@ -686,7 +771,8 @@ public class NameNode implements NameNodeStatusMXBean {
   }
 
   protected HAState createHAState(StartupOption startOpt) {
-    if (!haEnabled || startOpt == StartupOption.UPGRADE) {
+    if (!haEnabled || startOpt == StartupOption.UPGRADE 
+        || startOpt == StartupOption.UPGRADEONLY) {
       return ACTIVE_STATE;
     } else {
       return STANDBY_STATE;
@@ -753,7 +839,7 @@ public class NameNode implements NameNodeStatusMXBean {
   /** get FSImage */
   @VisibleForTesting
   public FSImage getFSImage() {
-    return namesystem.dir.fsImage;
+    return namesystem.getFSImage();
   }
 
   /**
@@ -800,8 +886,8 @@ public class NameNode implements NameNodeStatusMXBean {
    * Interactively confirm that formatting is desired 
    * for each existing directory and format them.
    * 
-   * @param conf
-   * @param force
+   * @param conf configuration to use
+   * @param force if true, format regardless of whether dirs exist
    * @return true if formatting was aborted, false otherwise
    * @throws IOException
    */
@@ -1063,7 +1149,7 @@ public class NameNode implements NameNodeStatusMXBean {
         return true;
       }
     }
-    nsys.dir.fsImage.doRollback(nsys);
+    nsys.getFSImage().doRollback(nsys);
     return false;
   }
 
@@ -1117,8 +1203,10 @@ public class NameNode implements NameNodeStatusMXBean {
         startOpt = StartupOption.BACKUP;
       } else if (StartupOption.CHECKPOINT.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.CHECKPOINT;
-      } else if (StartupOption.UPGRADE.getName().equalsIgnoreCase(cmd)) {
-        startOpt = StartupOption.UPGRADE;
+      } else if (StartupOption.UPGRADE.getName().equalsIgnoreCase(cmd)
+          || StartupOption.UPGRADEONLY.getName().equalsIgnoreCase(cmd)) {
+        startOpt = StartupOption.UPGRADE.getName().equalsIgnoreCase(cmd) ? 
+            StartupOption.UPGRADE : StartupOption.UPGRADEONLY;
         /* Can be followed by CLUSTERID with a required parameter or
          * RENAMERESERVED with an optional parameter
          */
@@ -1188,6 +1276,8 @@ public class NameNode implements NameNodeStatusMXBean {
               "can't understand option \"" + args[i] + "\"");
           }
         }
+      } else if (StartupOption.METADATAVERSION.getName().equalsIgnoreCase(cmd)) {
+        startOpt = StartupOption.METADATAVERSION;
       } else {
         return null;
       }
@@ -1238,6 +1328,21 @@ public class NameNode implements NameNodeStatusMXBean {
       if (fsn != null)
         fsn.close();
     }
+  }
+
+  /**
+   * Verify that configured directories exist, then print the metadata versions
+   * of the software and the image.
+   *
+   * @param conf configuration to use
+   * @throws IOException
+   */
+  private static boolean printMetadataVersion(Configuration conf)
+    throws IOException {
+    final FSImage fsImage = new FSImage(conf);
+    final FSNamesystem fs = new FSNamesystem(conf, fsImage, false);
+    return fsImage.recoverTransitionRead(
+      StartupOption.METADATAVERSION, fs, null);
   }
 
   public static NameNode createNameNode(String argv[], Configuration conf)
@@ -1302,6 +1407,17 @@ public class NameNode implements NameNodeStatusMXBean {
       }
       case RECOVER: {
         NameNode.doRecovery(startOpt, conf);
+        return null;
+      }
+      case METADATAVERSION: {
+        printMetadataVersion(conf);
+        terminate(0);
+        return null; // avoid javac warning
+      }
+      case UPGRADEONLY: {
+        DefaultMetricsSystem.initialize("NameNode");
+        new NameNode(conf);
+        terminate(0);
         return null;
       }
       default: {
@@ -1600,7 +1716,11 @@ public class NameNode implements NameNodeStatusMXBean {
   public boolean isStandbyState() {
     return (state.equals(STANDBY_STATE));
   }
-
+  
+  public boolean isActiveState() {
+    return (state.equals(ACTIVE_STATE));
+  }
+  
   /**
    * Check that a request to change this node's HA state is valid.
    * In particular, verifies that, if auto failover is enabled, non-forced

@@ -27,6 +27,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -43,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import com.google.common.io.Files;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -87,7 +89,6 @@ import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
@@ -622,11 +623,11 @@ public class TestCheckpoint {
   }
 
   private File filePathContaining(final String substring) {
-    return Mockito.<File>argThat(
+    return Mockito.argThat(
         new ArgumentMatcher<File>() {
           @Override
           public boolean matches(Object argument) {
-            String path = ((File)argument).getAbsolutePath();
+            String path = ((File) argument).getAbsolutePath();
             return path.contains(substring);
           }
         });
@@ -1084,7 +1085,7 @@ public class TestCheckpoint {
       
       FSDirectory secondaryFsDir = secondary.getFSNamesystem().dir;
       INode rootInMap = secondaryFsDir.getInode(secondaryFsDir.rootDir.getId());
-      Assert.assertSame(rootInMap, secondaryFsDir.rootDir);
+      assertSame(rootInMap, secondaryFsDir.rootDir);
       
       fileSys.delete(tmpDir, true);
       fileSys.mkdirs(tmpDir);
@@ -1333,7 +1334,8 @@ public class TestCheckpoint {
     SecondaryNameNode secondary2 = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf)
-          .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
+          .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(
+              conf.get(DFSConfigKeys.DFS_NAMESERVICES)))
           .build();
       Configuration snConf1 = new HdfsConfiguration(cluster.getConfiguration(0));
       Configuration snConf2 = new HdfsConfiguration(cluster.getConfiguration(1));
@@ -2404,6 +2406,46 @@ public class TestCheckpoint {
     }
   }
 
+  @Test
+  public void testLegacyOivImage() throws Exception {
+    MiniDFSCluster cluster = null;
+    SecondaryNameNode secondary = null;
+    File tmpDir = Files.createTempDir();
+    Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_LEGACY_OIV_IMAGE_DIR_KEY,
+        tmpDir.getAbsolutePath());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NUM_CHECKPOINTS_RETAINED_KEY,
+        "2");
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+              .format(true).build();
+
+      secondary = startSecondaryNameNode(conf);
+
+      // Checkpoint once
+      secondary.doCheckpoint();
+      String files1[] = tmpDir.list();
+      assertEquals("Only one file is expected", 1, files1.length);
+
+      // Perform more checkpointngs and check whether retention management
+      // is working.
+      secondary.doCheckpoint();
+      secondary.doCheckpoint();
+      String files2[] = tmpDir.list();
+      assertEquals("Two files are expected", 2, files2.length);
+
+      // Verify that the first file is deleted.
+      for (String fName : files2) {
+        assertFalse(fName.equals(files1[0]));
+      }
+    } finally {
+      cleanup(secondary);
+      cleanup(cluster);
+      tmpDir.delete();
+    }
+  }
+
   private static void cleanup(SecondaryNameNode snn) {
     if (snn != null) {
       try {
@@ -2441,8 +2483,8 @@ public class TestCheckpoint {
   
   private static List<File> getCheckpointCurrentDirs(SecondaryNameNode secondary) {
     List<File> ret = Lists.newArrayList();
-    for (URI u : secondary.getCheckpointDirs()) {
-      File checkpointDir = new File(u.getPath());
+    for (String u : secondary.getCheckpointDirectories()) {
+      File checkpointDir = new File(URI.create(u).getPath());
       ret.add(new File(checkpointDir, "current"));
     }
     return ret;

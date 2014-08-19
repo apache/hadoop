@@ -109,6 +109,14 @@ public class DominantResourceCalculator extends ResourceCalculator {
         getResourceAsValue(clusterResource, numerator, true) / 
         getResourceAsValue(clusterResource, denominator, true);
   }
+  
+  @Override
+  public boolean isInvalidDivisor(Resource r) {
+    if (r.getMemory() == 0.0f || r.getVirtualCores() == 0.0f) {
+      return true;
+    }
+    return false;
+  }
 
   @Override
   public float ratio(Resource a, Resource b) {

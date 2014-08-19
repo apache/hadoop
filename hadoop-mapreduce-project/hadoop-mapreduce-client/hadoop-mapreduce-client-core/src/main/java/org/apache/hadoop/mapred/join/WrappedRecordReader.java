@@ -22,6 +22,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
@@ -38,7 +40,7 @@ import org.apache.hadoop.mapred.RecordReader;
 @InterfaceStability.Stable
 public class WrappedRecordReader<K extends WritableComparable,
                           U extends Writable>
-    implements ComposableRecordReader<K,U> {
+    implements ComposableRecordReader<K,U>, Configurable {
 
   private boolean empty = false;
   private RecordReader<K,U> rr;
@@ -47,6 +49,7 @@ public class WrappedRecordReader<K extends WritableComparable,
   private K khead; // key at the top of this RR
   private U vhead; // value assoc with khead
   private WritableComparator cmp;
+  private Configuration conf;
 
   private ResetableIterator<U> vjoin;
 
@@ -55,13 +58,20 @@ public class WrappedRecordReader<K extends WritableComparable,
    */
   WrappedRecordReader(int id, RecordReader<K,U> rr,
       Class<? extends WritableComparator> cmpcl) throws IOException {
+    this(id, rr, cmpcl, null);
+  }
+
+  WrappedRecordReader(int id, RecordReader<K,U> rr,
+                      Class<? extends WritableComparator> cmpcl,
+                      Configuration conf) throws IOException {
     this.id = id;
     this.rr = rr;
+    this.conf = (conf == null) ? new Configuration() : conf;
     khead = rr.createKey();
     vhead = rr.createValue();
     try {
       cmp = (null == cmpcl)
-        ? WritableComparator.get(khead.getClass())
+        ? WritableComparator.get(khead.getClass(), this.conf)
         : cmpcl.newInstance();
     } catch (InstantiationException e) {
       throw (IOException)new IOException().initCause(e);
@@ -207,4 +217,13 @@ public class WrappedRecordReader<K extends WritableComparable,
     return 42;
   }
 
+  @Override
+  public void setConf(Configuration conf) {
+    this.conf = conf;
+  }
+
+  @Override
+  public Configuration getConf() {
+    return conf;
+  }
 }

@@ -18,44 +18,40 @@
 
 package org.apache.hadoop.security.authorize;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Map.Entry;
-
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.Groups;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.ReflectionUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
-@InterfaceAudience.Private
+@InterfaceStability.Unstable
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce", "HBase", "Hive"})
 public class ProxyUsers {
 
-  private static final String CONF_HOSTS = ".hosts";
-  public static final String CONF_GROUPS = ".groups";
-  public static final String CONF_HADOOP_PROXYUSER = "hadoop.proxyuser.";
-  public static final String CONF_HADOOP_PROXYUSER_RE = "hadoop\\.proxyuser\\.";
-  public static final String CONF_HADOOP_PROXYSERVERS = "hadoop.proxyservers";
-  
-  private static boolean init = false;
-  // list of groups and hosts per proxyuser
-  private static Map<String, Collection<String>> proxyGroups = 
-    new HashMap<String, Collection<String>>();
-  private static Map<String, Collection<String>> proxyHosts = 
-    new HashMap<String, Collection<String>>();
-  private static Collection<String> proxyServers =
-    new HashSet<String>();
+  public static final String CONF_HADOOP_PROXYUSER = "hadoop.proxyuser";
+
+  private static volatile ImpersonationProvider sip ;
 
   /**
-   * reread the conf and get new values for "hadoop.proxyuser.*.groups/hosts"
+   * Returns an instance of ImpersonationProvider.
+   * Looks up the configuration to see if there is custom class specified.
+   * @param conf
+   * @return ImpersonationProvider
+   */
+  private static ImpersonationProvider getInstance(Configuration conf) {
+    Class<? extends ImpersonationProvider> clazz =
+        conf.getClass(
+            CommonConfigurationKeysPublic.HADOOP_SECURITY_IMPERSONATION_PROVIDER_CLASS,
+            DefaultImpersonationProvider.class, ImpersonationProvider.class);
+    return ReflectionUtils.newInstance(clazz, conf);
+  }
+
+  /**
+   * refresh Impersonation rules
    */
   public static void refreshSuperUserGroupsConfiguration() {
     //load server side configuration;
@@ -63,70 +59,30 @@ public class ProxyUsers {
   }
 
   /**
-   * refresh configuration
-   * @param conf
+   * Refreshes configuration using the specified Proxy user prefix for
+   * properties.
+   *
+   * @param conf configuration
+   * @param proxyUserPrefix proxy user configuration prefix
    */
-  public static synchronized void refreshSuperUserGroupsConfiguration(Configuration conf) {
-    
-    // remove all existing stuff
-    proxyGroups.clear();
-    proxyHosts.clear();
-    proxyServers.clear();
-
-    // get all the new keys for groups
-    String regex = CONF_HADOOP_PROXYUSER_RE+"[^.]*\\"+CONF_GROUPS;
-    Map<String,String> allMatchKeys = conf.getValByRegex(regex);
-    for(Entry<String, String> entry : allMatchKeys.entrySet()) {
-      Collection<String> groups = StringUtils.getTrimmedStringCollection(entry.getValue());
-      proxyGroups.put(entry.getKey(), groups );
-      //cache the groups. This is needed for NetGroups
-      Groups.getUserToGroupsMappingService(conf).cacheGroupsAdd(
-          new ArrayList<String>(groups));
-    }
-
-    // now hosts
-    regex = CONF_HADOOP_PROXYUSER_RE+"[^.]*\\"+CONF_HOSTS;
-    allMatchKeys = conf.getValByRegex(regex);
-    for(Entry<String, String> entry : allMatchKeys.entrySet()) {
-      proxyHosts.put(entry.getKey(),
-          StringUtils.getTrimmedStringCollection(entry.getValue()));
-    }
-    
-    // trusted proxy servers such as http proxies
-    for (String host : conf.getTrimmedStrings(CONF_HADOOP_PROXYSERVERS)) {
-      InetSocketAddress addr = new InetSocketAddress(host, 0);
-      if (!addr.isUnresolved()) {
-        proxyServers.add(addr.getAddress().getHostAddress());
-      }
-    }
-    init = true;
-  }
-
-  public static synchronized boolean isProxyServer(String remoteAddr) { 
-    if(!init) {
-      refreshSuperUserGroupsConfiguration(); 
-    }
-    return proxyServers.contains(remoteAddr);
+  public static void refreshSuperUserGroupsConfiguration(Configuration conf,
+      String proxyUserPrefix) {
+    Preconditions.checkArgument(proxyUserPrefix != null && 
+        !proxyUserPrefix.isEmpty(), "prefix cannot be NULL or empty");
+    // sip is volatile. Any assignment to it as well as the object's state
+    // will be visible to all the other threads. 
+    ImpersonationProvider ip = getInstance(conf);
+    ip.init(proxyUserPrefix);
+    sip = ip;
+    ProxyServers.refresh(conf);
   }
 
   /**
-   * Returns configuration key for effective user groups allowed for a superuser
-   * 
-   * @param userName name of the superuser
-   * @return configuration key for superuser groups
+   * Refreshes configuration using the default Proxy user prefix for properties.
+   * @param conf configuration
    */
-  public static String getProxySuperuserGroupConfKey(String userName) {
-    return ProxyUsers.CONF_HADOOP_PROXYUSER+userName+ProxyUsers.CONF_GROUPS;
-  }
-  
-  /**
-   * Return configuration key for superuser ip addresses
-   * 
-   * @param userName name of the superuser
-   * @return configuration key for superuser ip-addresses
-   */
-  public static String getProxySuperuserIpConfKey(String userName) {
-    return ProxyUsers.CONF_HADOOP_PROXYUSER+userName+ProxyUsers.CONF_HOSTS;
+  public static void refreshSuperUserGroupsConfiguration(Configuration conf) {
+    refreshSuperUserGroupsConfiguration(conf, CONF_HADOOP_PROXYUSER);
   }
   
   /**
@@ -136,81 +92,33 @@ public class ProxyUsers {
    * @param remoteAddress the ip address of client
    * @throws AuthorizationException
    */
-  public static synchronized void authorize(UserGroupInformation user, 
+  public static void authorize(UserGroupInformation user, 
       String remoteAddress) throws AuthorizationException {
-
-    if(!init) {
+    if (sip==null) {
+      // In a race situation, It is possible for multiple threads to satisfy this condition.
+      // The last assignment will prevail.
       refreshSuperUserGroupsConfiguration(); 
     }
-
-    if (user.getRealUser() == null) {
-      return;
-    }
-    boolean groupAuthorized = false;
-    boolean ipAuthorized = false;
-    UserGroupInformation superUser = user.getRealUser();
-
-    Collection<String> allowedUserGroups = proxyGroups.get(
-        getProxySuperuserGroupConfKey(superUser.getShortUserName()));
-    
-    if (isWildcardList(allowedUserGroups)) {
-      groupAuthorized = true;
-    } else if (allowedUserGroups != null && !allowedUserGroups.isEmpty()) {
-      for (String group : user.getGroupNames()) {
-        if (allowedUserGroups.contains(group)) {
-          groupAuthorized = true;
-          break;
-        }
-      }
-    }
-
-    if (!groupAuthorized) {
-      throw new AuthorizationException("User: " + superUser.getUserName()
-          + " is not allowed to impersonate " + user.getUserName());
-    }
-    
-    Collection<String> ipList = proxyHosts.get(
-        getProxySuperuserIpConfKey(superUser.getShortUserName()));
-   
-    if (isWildcardList(ipList)) {
-      ipAuthorized = true;
-    } else if (ipList != null && !ipList.isEmpty()) {
-      for (String allowedHost : ipList) {
-        InetAddress hostAddr;
-        try {
-          hostAddr = InetAddress.getByName(allowedHost);
-        } catch (UnknownHostException e) {
-          continue;
-        }
-        if (hostAddr.getHostAddress().equals(remoteAddress)) {
-          // Authorization is successful
-          ipAuthorized = true;
-        }
-      }
-    }
-    if(!ipAuthorized) {
-      throw new AuthorizationException("Unauthorized connection for super-user: "
-          + superUser.getUserName() + " from IP " + remoteAddress);
-    }
+    sip.authorize(user, remoteAddress);
   }
-
+  
   /**
-   * Return true if the configuration specifies the special configuration value
-   * "*", indicating that any group or host list is allowed to use this configuration.
+   * This function is kept to provide backward compatibility.
+   * @param user
+   * @param remoteAddress
+   * @param conf
+   * @throws AuthorizationException
+   * @deprecated use {@link #authorize(UserGroupInformation, String) instead. 
    */
-  private static boolean isWildcardList(Collection<String> list) {
-    return (list != null) &&
-      (list.size() == 1) &&
-      (list.contains("*"));
+  @Deprecated
+  public static void authorize(UserGroupInformation user, 
+      String remoteAddress, Configuration conf) throws AuthorizationException {
+    authorize(user,remoteAddress);
   }
-
-  @VisibleForTesting
-  public static Map<String, Collection<String>> getProxyGroups() {
-    return proxyGroups;
+  
+  @VisibleForTesting 
+  public static DefaultImpersonationProvider getDefaultImpersonationProvider() {
+    return ((DefaultImpersonationProvider)sip);
   }
-
-  @VisibleForTesting
-  public static Map<String, Collection<String>> getProxyHosts() {
-    return proxyHosts;
-  }
+      
 }

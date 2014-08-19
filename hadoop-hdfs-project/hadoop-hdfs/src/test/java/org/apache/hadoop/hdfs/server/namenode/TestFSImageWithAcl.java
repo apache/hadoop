@@ -142,7 +142,7 @@ public class TestFSImageWithAcl {
     AclEntry[] subdirReturned = fs.getAclStatus(subdirPath).getEntries()
       .toArray(new AclEntry[0]);
     Assert.assertArrayEquals(subdirExpected, subdirReturned);
-    assertPermission(fs, subdirPath, (short)0755);
+    assertPermission(fs, subdirPath, (short)010755);
 
     restart(fs, persistNamespace);
 
@@ -152,7 +152,7 @@ public class TestFSImageWithAcl {
     subdirReturned = fs.getAclStatus(subdirPath).getEntries()
       .toArray(new AclEntry[0]);
     Assert.assertArrayEquals(subdirExpected, subdirReturned);
-    assertPermission(fs, subdirPath, (short)0755);
+    assertPermission(fs, subdirPath, (short)010755);
 
     aclSpec = Lists.newArrayList(aclEntry(DEFAULT, USER, "foo", READ_WRITE));
     fs.modifyAclEntries(dirPath, aclSpec);
@@ -163,7 +163,7 @@ public class TestFSImageWithAcl {
     subdirReturned = fs.getAclStatus(subdirPath).getEntries()
       .toArray(new AclEntry[0]);
     Assert.assertArrayEquals(subdirExpected, subdirReturned);
-    assertPermission(fs, subdirPath, (short)0755);
+    assertPermission(fs, subdirPath, (short)010755);
 
     restart(fs, persistNamespace);
 
@@ -173,7 +173,7 @@ public class TestFSImageWithAcl {
     subdirReturned = fs.getAclStatus(subdirPath).getEntries()
       .toArray(new AclEntry[0]);
     Assert.assertArrayEquals(subdirExpected, subdirReturned);
-    assertPermission(fs, subdirPath, (short)0755);
+    assertPermission(fs, subdirPath, (short)010755);
 
     fs.removeAcl(dirPath);
 
@@ -183,7 +183,7 @@ public class TestFSImageWithAcl {
     subdirReturned = fs.getAclStatus(subdirPath).getEntries()
       .toArray(new AclEntry[0]);
     Assert.assertArrayEquals(subdirExpected, subdirReturned);
-    assertPermission(fs, subdirPath, (short)0755);
+    assertPermission(fs, subdirPath, (short)010755);
 
     restart(fs, persistNamespace);
 
@@ -193,7 +193,7 @@ public class TestFSImageWithAcl {
     subdirReturned = fs.getAclStatus(subdirPath).getEntries()
       .toArray(new AclEntry[0]);
     Assert.assertArrayEquals(subdirExpected, subdirReturned);
-    assertPermission(fs, subdirPath, (short)0755);
+    assertPermission(fs, subdirPath, (short)010755);
   }
 
   @Test

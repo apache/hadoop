@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -171,9 +172,6 @@ public abstract class BlockReportTestBase {
    * Utility routine to send block reports to the NN, either in a single call
    * or reporting one storage per call.
    *
-   * @param dnR
-   * @param poolId
-   * @param reports
    * @throws IOException
    */
   protected abstract void sendBlockReports(DatanodeRegistration dnR, String poolId,
@@ -327,7 +325,7 @@ public abstract class BlockReportTestBase {
   public void blockReport_03() throws IOException {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path filePath = new Path("/" + METHOD_NAME + ".dat");
-    ArrayList<Block> blocks = writeFile(METHOD_NAME, FILE_SIZE, filePath);
+    writeFile(METHOD_NAME, FILE_SIZE, filePath);
 
     // all blocks belong to the same file, hence same BP
     DataNode dn = cluster.getDataNodes().get(DN_N0);
@@ -366,7 +364,7 @@ public abstract class BlockReportTestBase {
     // Create a bogus new block which will not be present on the namenode.
     ExtendedBlock b = new ExtendedBlock(
         poolId, rand.nextLong(), 1024L, rand.nextLong());
-    dn.getFSDataset().createRbw(b);
+    dn.getFSDataset().createRbw(StorageType.DEFAULT, b);
 
     DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
     StorageBlockReport[] reports = getBlockReports(dn, poolId, false, false);
@@ -413,6 +411,7 @@ public abstract class BlockReportTestBase {
    * The second datanode is started in the cluster.
    * As soon as the replication process is completed test finds a block from
    * the second DN and sets its GS to be < of original one.
+   * this is the markBlockAsCorrupt case 3 so we expect one pending deletion
    * Block report is forced and the check for # of currupted blocks is performed.
    * Another block is chosen and its length is set to a lesser than original.
    * A check for another corrupted block is performed after yet another
@@ -439,20 +438,20 @@ public abstract class BlockReportTestBase {
     printStats();
 
     assertThat("Wrong number of corrupt blocks",
-               cluster.getNamesystem().getCorruptReplicaBlocks(), is(1L));
+               cluster.getNamesystem().getCorruptReplicaBlocks(), is(0L));
     assertThat("Wrong number of PendingDeletion blocks",
-               cluster.getNamesystem().getPendingDeletionBlocks(), is(0L));
+               cluster.getNamesystem().getPendingDeletionBlocks(), is(1L));
     assertThat("Wrong number of PendingReplication blocks",
                cluster.getNamesystem().getPendingReplicationBlocks(), is(0L));
 
-    reports = getBlockReports(dn, poolId, true, true);
+    reports = getBlockReports(dn, poolId, false, true);
     sendBlockReports(dnR, poolId, reports);
     printStats();
 
     assertThat("Wrong number of corrupt blocks",
-               cluster.getNamesystem().getCorruptReplicaBlocks(), is(2L));
+               cluster.getNamesystem().getCorruptReplicaBlocks(), is(1L));
     assertThat("Wrong number of PendingDeletion blocks",
-               cluster.getNamesystem().getPendingDeletionBlocks(), is(0L));
+               cluster.getNamesystem().getPendingDeletionBlocks(), is(1L));
     assertThat("Wrong number of PendingReplication blocks",
                cluster.getNamesystem().getPendingReplicationBlocks(), is(0L));
 

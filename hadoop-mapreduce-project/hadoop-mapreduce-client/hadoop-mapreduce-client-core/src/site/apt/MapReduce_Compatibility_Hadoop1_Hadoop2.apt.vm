@@ -18,8 +18,6 @@
 
 Apache Hadoop MapReduce - Migrating from Apache Hadoop 1.x to Apache Hadoop 2.x 
 
-  \[ {{{../../hadoop-yarn/hadoop-yarn-site/index.html}Go Back}} \]
-
 * {Introduction}
 
   This document provides information for users to migrate their Apache Hadoop 

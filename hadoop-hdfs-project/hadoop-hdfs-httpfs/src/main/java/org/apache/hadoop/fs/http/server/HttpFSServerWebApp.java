@@ -24,7 +24,6 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.lib.server.ServerException;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.lib.servlet.ServerWebApp;
-import org.apache.hadoop.lib.wsrs.UserProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -103,9 +102,6 @@ public class HttpFSServerWebApp extends ServerWebApp {
     LOG.info("Connects to Namenode [{}]",
              get().get(FileSystemAccess.class).getFileSystemConfiguration().
                get(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY));
-    String userPattern = getConfig().get(UserProvider.USER_PATTERN_KEY, 
-      UserProvider.USER_PATTERN_DEFAULT);
-    UserProvider.setUserPattern(userPattern);
   }
 
   /**

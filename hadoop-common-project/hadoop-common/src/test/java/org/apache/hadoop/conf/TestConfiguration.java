@@ -49,7 +49,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
-import org.codehaus.jackson.map.ObjectMapper; 
+import org.codehaus.jackson.map.ObjectMapper;
 
 public class TestConfiguration extends TestCase {
 
@@ -178,6 +178,14 @@ public class TestConfiguration extends TestCase {
     // check that expansion also occurs for getInt()
     assertTrue(conf.getInt("intvar", -1) == 42);
     assertTrue(conf.getInt("my.int", -1) == 42);
+
+    Map<String, String> results = conf.getValByRegex("^my.*file$");
+    assertTrue(results.keySet().contains("my.relfile"));
+    assertTrue(results.keySet().contains("my.fullfile"));
+    assertTrue(results.keySet().contains("my.file"));
+    assertEquals(-1, results.get("my.relfile").indexOf("${"));
+    assertEquals(-1, results.get("my.fullfile").indexOf("${"));
+    assertEquals(-1, results.get("my.file").indexOf("${"));
   }
 
   public void testFinalParam() throws IOException {
@@ -1003,6 +1011,14 @@ public class TestConfiguration extends TestCase {
     String resource;
   }
   
+  public void testGetSetTrimmedNames() throws IOException {
+    Configuration conf = new Configuration(false);
+    conf.set(" name", "value");
+    assertEquals("value", conf.get("name"));
+    assertEquals("value", conf.get(" name"));
+    assertEquals("value", conf.getRaw("  name  "));
+  }
+
   public void testDumpConfiguration () throws IOException {
     StringWriter outWriter = new StringWriter();
     Configuration.dumpConfiguration(conf, outWriter);

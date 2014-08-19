@@ -19,8 +19,10 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -30,11 +32,14 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
@@ -189,7 +194,7 @@ public class TestDataNodeMultipleRegistrations {
   }
   
   @Test
-  public void testClusterIdMismatch() throws IOException {
+  public void testClusterIdMismatch() throws Exception {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
         .build();
@@ -203,6 +208,7 @@ public class TestDataNodeMultipleRegistrations {
       
       // add another namenode
       cluster.addNameNode(conf, 9938);
+      Thread.sleep(500);// lets wait for the registration to happen
       bposs = dn.getAllBpOs(); 
       LOG.info("dn bpos len (should be 3):" + bposs.length);
       Assert.assertEquals("should've registered with three namenodes", bposs.length,3);
@@ -212,15 +218,89 @@ public class TestDataNodeMultipleRegistrations {
       cluster.addNameNode(conf, 9948);
       NameNode nn4 = cluster.getNameNode(3);
       assertNotNull("cannot create nn4", nn4);
-      
+
+      Thread.sleep(500);// lets wait for the registration to happen
       bposs = dn.getAllBpOs(); 
       LOG.info("dn bpos len (still should be 3):" + bposs.length);
       Assert.assertEquals("should've registered with three namenodes", 3, bposs.length);
+    } finally {
+        cluster.shutdown();
+    }
+  }
+
+  @Test(timeout = 20000)
+  public void testClusterIdMismatchAtStartupWithHA() throws Exception {
+    MiniDFSNNTopology top = new MiniDFSNNTopology()
+      .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
+        .addNN(new MiniDFSNNTopology.NNConf("nn0"))
+        .addNN(new MiniDFSNNTopology.NNConf("nn1")))
+      .addNameservice(new MiniDFSNNTopology.NSConf("ns2")
+        .addNN(new MiniDFSNNTopology.NNConf("nn2").setClusterId("bad-cid"))
+        .addNN(new MiniDFSNNTopology.NNConf("nn3").setClusterId("bad-cid")));
+
+    top.setFederation(true);
+
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).nnTopology(top)
+        .numDataNodes(0).build();
+    
+    try {
+      cluster.startDataNodes(conf, 1, true, null, null);
+      // let the initialization be complete
+      Thread.sleep(10000);
+      DataNode dn = cluster.getDataNodes().get(0);
+      assertTrue("Datanode should be running", dn.isDatanodeUp());
+      assertEquals("Only one BPOfferService should be running", 1,
+          dn.getAllBpOs().length);
     } finally {
       cluster.shutdown();
     }
   }
 
+  @Test
+  public void testDNWithInvalidStorageWithHA() throws Exception {
+    MiniDFSNNTopology top = new MiniDFSNNTopology()
+      .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
+        .addNN(new MiniDFSNNTopology.NNConf("nn0").setClusterId("cluster-1"))
+        .addNN(new MiniDFSNNTopology.NNConf("nn1").setClusterId("cluster-1")));
+
+    top.setFederation(true);
+
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).nnTopology(top)
+        .numDataNodes(0).build();
+    try {
+      cluster.startDataNodes(conf, 1, true, null, null);
+      // let the initialization be complete
+      Thread.sleep(10000);
+      DataNode dn = cluster.getDataNodes().get(0);
+      assertTrue("Datanode should be running", dn.isDatanodeUp());
+      assertEquals("BPOfferService should be running", 1,
+          dn.getAllBpOs().length);
+      DataNodeProperties dnProp = cluster.stopDataNode(0);
+
+      cluster.getNameNode(0).stop();
+      cluster.getNameNode(1).stop();
+      Configuration nn1 = cluster.getConfiguration(0);
+      Configuration nn2 = cluster.getConfiguration(1);
+      // setting up invalid cluster
+      StartupOption.FORMAT.setClusterId("cluster-2");
+      DFSTestUtil.formatNameNode(nn1);
+      MiniDFSCluster.copyNameDirs(FSNamesystem.getNamespaceDirs(nn1),
+          FSNamesystem.getNamespaceDirs(nn2), nn2);
+      cluster.restartNameNode(0, false);
+      cluster.restartNameNode(1, false);
+      cluster.restartDataNode(dnProp);
+      
+      // let the initialization be complete
+      Thread.sleep(10000);
+      dn = cluster.getDataNodes().get(0);
+      assertFalse("Datanode should have shutdown as only service failed",
+          dn.isDatanodeUp());
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  
   @Test
   public void testMiniDFSClusterWithMultipleNN() throws IOException {
     Configuration conf = new HdfsConfiguration();
@@ -231,7 +311,6 @@ public class TestDataNodeMultipleRegistrations {
     
     // add a node
     try {
-      Assert.assertNotNull(cluster);
       cluster.waitActive();
       Assert.assertEquals("(1)Should be 2 namenodes", 2, cluster.getNumNameNodes());
 

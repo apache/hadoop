@@ -43,6 +43,8 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.EditLogValidation;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
+import org.apache.hadoop.io.nativeio.NativeIO;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -69,6 +71,8 @@ public class FileJournalManager implements JournalManager {
     NameNodeFile.EDITS.getName() + "_(\\d+)-(\\d+)");
   private static final Pattern EDITS_INPROGRESS_REGEX = Pattern.compile(
     NameNodeFile.EDITS_INPROGRESS.getName() + "_(\\d+)");
+  private static final Pattern EDITS_INPROGRESS_STALE_REGEX = Pattern.compile(
+      NameNodeFile.EDITS_INPROGRESS.getName() + "_(\\d+).*(\\S+)");
 
   private File currentInProgress = null;
 
@@ -132,10 +136,14 @@ public class FileJournalManager implements JournalManager {
     Preconditions.checkState(!dstFile.exists(),
         "Can't finalize edits file " + inprogressFile + " since finalized file " +
         "already exists");
-    if (!inprogressFile.renameTo(dstFile)) {
+
+    try {
+      NativeIO.renameTo(inprogressFile, dstFile);
+    } catch (IOException e) {
       errorReporter.reportErrorOnFile(dstFile);
-      throw new IllegalStateException("Unable to finalize edits file " + inprogressFile);
+      throw new IllegalStateException("Unable to finalize edits file " + inprogressFile, e);
     }
+
     if (inprogressFile.equals(currentInProgress)) {
       currentInProgress = null;
     }
@@ -156,8 +164,7 @@ public class FileJournalManager implements JournalManager {
       throws IOException {
     LOG.info("Purging logs older than " + minTxIdToKeep);
     File[] files = FileUtil.listFiles(sd.getCurrentDir());
-    List<EditLogFile> editLogs = 
-      FileJournalManager.matchEditLogs(files);
+    List<EditLogFile> editLogs = matchEditLogs(files, true);
     for (EditLogFile log : editLogs) {
       if (log.getFirstTxId() < minTxIdToKeep &&
           log.getLastTxId() < minTxIdToKeep) {
@@ -168,7 +175,7 @@ public class FileJournalManager implements JournalManager {
 
   /**
    * Find all editlog segments starting at or above the given txid.
-   * @param fromTxId the txnid which to start looking
+   * @param firstTxId the txnid which to start looking
    * @param inProgressOk whether or not to include the in-progress edit log 
    *        segment       
    * @return a list of remote edit logs
@@ -238,8 +245,13 @@ public class FileJournalManager implements JournalManager {
   public static List<EditLogFile> matchEditLogs(File logDir) throws IOException {
     return matchEditLogs(FileUtil.listFiles(logDir));
   }
-  
+
   static List<EditLogFile> matchEditLogs(File[] filesInStorage) {
+    return matchEditLogs(filesInStorage, false);
+  }
+
+  private static List<EditLogFile> matchEditLogs(File[] filesInStorage,
+      boolean forPurging) {
     List<EditLogFile> ret = Lists.newArrayList();
     for (File f : filesInStorage) {
       String name = f.getName();
@@ -250,6 +262,7 @@ public class FileJournalManager implements JournalManager {
           long startTxId = Long.parseLong(editsMatch.group(1));
           long endTxId = Long.parseLong(editsMatch.group(2));
           ret.add(new EditLogFile(f, startTxId, endTxId));
+          continue;
         } catch (NumberFormatException nfe) {
           LOG.error("Edits file " + f + " has improperly formatted " +
                     "transaction ID");
@@ -264,10 +277,28 @@ public class FileJournalManager implements JournalManager {
           long startTxId = Long.parseLong(inProgressEditsMatch.group(1));
           ret.add(
               new EditLogFile(f, startTxId, HdfsConstants.INVALID_TXID, true));
+          continue;
         } catch (NumberFormatException nfe) {
           LOG.error("In-progress edits file " + f + " has improperly " +
                     "formatted transaction ID");
           // skip
+        }
+      }
+      if (forPurging) {
+        // Check for in-progress stale edits
+        Matcher staleInprogressEditsMatch = EDITS_INPROGRESS_STALE_REGEX
+            .matcher(name);
+        if (staleInprogressEditsMatch.matches()) {
+          try {
+            long startTxId = Long.valueOf(staleInprogressEditsMatch.group(1));
+            ret.add(new EditLogFile(f, startTxId, HdfsConstants.INVALID_TXID,
+                true));
+            continue;
+          } catch (NumberFormatException nfe) {
+            LOG.error("In-progress stale edits file " + f + " has improperly "
+                + "formatted transaction ID");
+            // skip
+          }
         }
       }
     }
@@ -513,11 +544,16 @@ public class FileJournalManager implements JournalManager {
       File src = file;
       File dst = new File(src.getParent(), src.getName() + newSuffix);
       // renameTo fails on Windows if the destination file already exists.
-      if (!src.renameTo(dst)) {
-        if (!dst.delete() || !src.renameTo(dst)) {
-          throw new IOException(
-            "Couldn't rename log " + src + " to " + dst);
+      try {
+        if (dst.exists()) {
+          if (!dst.delete()) {
+            throw new IOException("Couldn't delete " + dst);
+          }
         }
+        NativeIO.renameTo(src, dst);
+      } catch (IOException e) {
+        throw new IOException(
+            "Couldn't rename log " + src + " to " + dst, e);
       }
       file = dst;
     }

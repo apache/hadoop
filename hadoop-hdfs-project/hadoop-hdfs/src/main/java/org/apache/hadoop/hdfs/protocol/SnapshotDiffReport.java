@@ -23,14 +23,14 @@ import java.util.List;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable.SnapshotDiffInfo;
+
+import com.google.common.base.Objects;
 
 /**
  * This class represents to end users the difference between two snapshots of 
  * the same directory, or the difference between a snapshot of the directory and
- * its current state. Instead of capturing all the details of the diff, which 
- * is stored in {@link SnapshotDiffInfo}, this class only lists where the 
- * changes happened and their types.
+ * its current state. Instead of capturing all the details of the diff, this
+ * class only lists where the changes happened and their types.
  */
 public class SnapshotDiffReport {
   private final static String LINE_SEPARATOR = System.getProperty(
@@ -79,43 +79,64 @@ public class SnapshotDiffReport {
     /** The type of the difference. */
     private final DiffType type;
     /**
-     * The relative path (related to the snapshot root) of the file/directory
-     * where changes have happened
+     * The relative path (related to the snapshot root) of 1) the file/directory
+     * where changes have happened, or 2) the source file/dir of a rename op.
      */
-    private final byte[] relativePath;
+    private final byte[] sourcePath;
+    private final byte[] targetPath;
 
-    public DiffReportEntry(DiffType type, byte[] path) {
+    public DiffReportEntry(DiffType type, byte[] sourcePath) {
+      this(type, sourcePath, null);
+    }
+
+    public DiffReportEntry(DiffType type, byte[][] sourcePathComponents) {
+      this(type, sourcePathComponents, null);
+    }
+
+    public DiffReportEntry(DiffType type, byte[] sourcePath, byte[] targetPath) {
       this.type = type;
-      this.relativePath = path;
+      this.sourcePath = sourcePath;
+      this.targetPath = targetPath;
     }
     
-    public DiffReportEntry(DiffType type, byte[][] pathComponents) {
+    public DiffReportEntry(DiffType type, byte[][] sourcePathComponents,
+        byte[][] targetPathComponents) {
       this.type = type;
-      this.relativePath = DFSUtil.byteArray2bytes(pathComponents);
+      this.sourcePath = DFSUtil.byteArray2bytes(sourcePathComponents);
+      this.targetPath = targetPathComponents == null ? null : DFSUtil
+          .byteArray2bytes(targetPathComponents);
     }
     
     @Override
     public String toString() {
-      return type.getLabel() + "\t" + getRelativePathString();
+      String str = type.getLabel() + "\t" + getPathString(sourcePath);
+      if (type == DiffType.RENAME) {
+        str += " -> " + getPathString(targetPath);
+      }
+      return str;
     }
     
     public DiffType getType() {
       return type;
     }
 
-    public String getRelativePathString() {
-      String path = DFSUtil.bytes2String(relativePath);
-      if (path.isEmpty()) {
+    static String getPathString(byte[] path) {
+      String pathStr = DFSUtil.bytes2String(path);
+      if (pathStr.isEmpty()) {
         return Path.CUR_DIR;
       } else {
-        return Path.CUR_DIR + Path.SEPARATOR + path;
+        return Path.CUR_DIR + Path.SEPARATOR + pathStr;
       }
     }
 
-    public byte[] getRelativePath() {
-      return relativePath;
+    public byte[] getSourcePath() {
+      return sourcePath;
     }
-    
+
+    public byte[] getTargetPath() {
+      return targetPath;
+    }
+
     @Override
     public boolean equals(Object other) {
       if (this == other) {
@@ -124,14 +145,15 @@ public class SnapshotDiffReport {
       if (other != null && other instanceof DiffReportEntry) {
         DiffReportEntry entry = (DiffReportEntry) other;
         return type.equals(entry.getType())
-            && Arrays.equals(relativePath, entry.getRelativePath());
+            && Arrays.equals(sourcePath, entry.getSourcePath())
+            && Arrays.equals(targetPath, entry.getTargetPath());
       }
       return false;
     }
     
     @Override
     public int hashCode() {
-      return Arrays.hashCode(relativePath);
+      return Objects.hashCode(getSourcePath(), getTargetPath());
     }
   }
   

@@ -25,12 +25,14 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.BindException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
 import java.net.URI;
 import java.net.URL;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -66,53 +68,74 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-
+import com.google.common.io.Files;
 
 public class TestStandbyCheckpoints {
   private static final int NUM_DIRS_IN_LOG = 200000;
   protected MiniDFSCluster cluster;
   protected NameNode nn0, nn1;
   protected FileSystem fs;
+  private final Random random = new Random();
+  protected File tmpOivImgDir;
   
   private static final Log LOG = LogFactory.getLog(TestStandbyCheckpoints.class);
 
   @SuppressWarnings("rawtypes")
   @Before
   public void setupCluster() throws Exception {
-    Configuration conf = new Configuration();
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY, 1);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 5);
-    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
-    
+    Configuration conf = setupCommonConfig();
+
     // Dial down the retention of extra edits and checkpoints. This is to
     // help catch regressions of HDFS-4238 (SBN should not purge shared edits)
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_NUM_CHECKPOINTS_RETAINED_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_NUM_EXTRA_EDITS_RETAINED_KEY, 0);
-    
+
+    int retryCount = 0;
+    while (true) {
+      try {
+        int basePort = 10060 + random.nextInt(100) * 2;
+        MiniDFSNNTopology topology = new MiniDFSNNTopology()
+            .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
+                .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(basePort))
+                .addNN(new MiniDFSNNTopology.NNConf("nn2").setHttpPort(basePort + 1)));
+
+        cluster = new MiniDFSCluster.Builder(conf)
+            .nnTopology(topology)
+            .numDataNodes(0)
+            .build();
+        cluster.waitActive();
+
+        nn0 = cluster.getNameNode(0);
+        nn1 = cluster.getNameNode(1);
+        fs = HATestUtil.configureFailoverFs(cluster, conf);
+
+        cluster.transitionToActive(0);
+        ++retryCount;
+        break;
+      } catch (BindException e) {
+        LOG.info("Set up MiniDFSCluster failed due to port conflicts, retry "
+            + retryCount + " times");
+      }
+    }
+  }
+
+  protected Configuration setupCommonConfig() {
+    tmpOivImgDir = Files.createTempDir();
+
+    Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 5);
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_LEGACY_OIV_IMAGE_DIR_KEY,
+        tmpOivImgDir.getAbsolutePath());
     conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, true);
     conf.set(DFSConfigKeys.DFS_IMAGE_COMPRESSION_CODEC_KEY,
         SlowCodec.class.getCanonicalName());
     CompressionCodecFactory.setCodecClasses(conf,
         ImmutableList.<Class>of(SlowCodec.class));
-
-    MiniDFSNNTopology topology = new MiniDFSNNTopology()
-      .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
-        .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(10061))
-        .addNN(new MiniDFSNNTopology.NNConf("nn2").setHttpPort(10062)));
-    
-    cluster = new MiniDFSCluster.Builder(conf)
-      .nnTopology(topology)
-      .numDataNodes(0)
-      .build();
-    cluster.waitActive();
-    
-    nn0 = cluster.getNameNode(0);
-    nn1 = cluster.getNameNode(1);
-    fs = HATestUtil.configureFailoverFs(cluster, conf);
-
-    cluster.transitionToActive(0);
+    return conf;
   }
-  
+
   @After
   public void shutdownCluster() throws IOException {
     if (cluster != null) {
@@ -129,6 +152,21 @@ public class TestStandbyCheckpoints {
     // Once the standby catches up, it should notice that it needs to
     // do a checkpoint and save one to its local directories.
     HATestUtil.waitForCheckpoint(cluster, 1, ImmutableList.of(12));
+
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        if(tmpOivImgDir.list().length > 0) {
+          return true;
+        }
+        else {
+          return false;
+        }
+      }
+    }, 1000, 60000);
+    
+    // It should have saved the oiv image too.
+    assertEquals("One file is expected", 1, tmpOivImgDir.list().length);
     
     // It should also upload it back to the active.
     HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(12));

@@ -74,7 +74,8 @@ public class ShellBasedUnixGroupsMapping
    * Get the current user's group list from Unix by running the command 'groups'
    * NOTE. For non-existing user it will return EMPTY list
    * @param user user name
-   * @return the groups list that the <code>user</code> belongs to
+   * @return the groups list that the <code>user</code> belongs to. The primary
+   *         group is returned first.
    * @throws IOException if encounter any error when running the command
    */
   private static List<String> getUnixGroups(final String user) throws IOException {
@@ -83,7 +84,9 @@ public class ShellBasedUnixGroupsMapping
       result = Shell.execCommand(Shell.getGroupsForUserCommand(user));
     } catch (ExitCodeException e) {
       // if we didn't get the group - just return empty list;
-      LOG.warn("got exception trying to get groups for user " + user, e);
+      LOG.warn("got exception trying to get groups for user " + user + ": "
+          + e.getMessage());
+      return new LinkedList<String>();
     }
     
     StringTokenizer tokenizer =
@@ -92,6 +95,17 @@ public class ShellBasedUnixGroupsMapping
     while (tokenizer.hasMoreTokens()) {
       groups.add(tokenizer.nextToken());
     }
+
+    // remove duplicated primary group
+    if (!Shell.WINDOWS) {
+      for (int i = 1; i < groups.size(); i++) {
+        if (groups.get(i).equals(groups.get(0))) {
+          groups.remove(i);
+          break;
+        }
+      }
+    }
+
     return groups;
   }
 }

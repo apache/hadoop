@@ -26,6 +26,7 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.URI;
 import java.util.ArrayList;
@@ -49,6 +50,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
@@ -63,6 +65,9 @@ import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 
 /**
  * Startup and checkpoint tests
@@ -620,4 +625,104 @@ public class TestStartup {
     fileSys.delete(name, true);
     assertTrue(!fileSys.exists(name));
   }
+
+
+  @Test(timeout = 120000)
+  public void testXattrConfiguration() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+
+    try {
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY, -1);
+      cluster =
+          new MiniDFSCluster.Builder(conf).numDataNodes(0).format(true).build();
+      fail("Expected exception with negative xattr size");
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Cannot set a negative value for the maximum size of an xattr", e);
+    } finally {
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY,
+          DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_DEFAULT);
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+
+    try {
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY, -1);
+      cluster =
+          new MiniDFSCluster.Builder(conf).numDataNodes(0).format(true).build();
+      fail("Expected exception with negative # xattrs per inode");
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Cannot set a negative limit on the number of xattrs per inode", e);
+    } finally {
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY,
+          DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_DEFAULT);
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+
+    try {
+      // Set up a logger to check log message
+      final LogVerificationAppender appender = new LogVerificationAppender();
+      final Logger logger = Logger.getRootLogger();
+      logger.addAppender(appender);
+      int count = appender.countLinesWithMessage(
+          "Maximum size of an xattr: 0 (unlimited)");
+      assertEquals("Expected no messages about unlimited xattr size", 0, count);
+
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY, 0);
+      cluster =
+          new MiniDFSCluster.Builder(conf).numDataNodes(0).format(true).build();
+
+      count = appender.countLinesWithMessage(
+          "Maximum size of an xattr: 0 (unlimited)");
+      // happens twice because we format then run
+      assertEquals("Expected unlimited xattr size", 2, count);
+    } finally {
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY,
+          DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_DEFAULT);
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+
+  /**
+   * Verify the following scenario.
+   * 1. NN restarts.
+   * 2. Heartbeat RPC will retry and succeed. NN asks DN to reregister.
+   * 3. After reregistration completes, DN will send Heartbeat, followed by
+   *    Blockreport.
+   * 4. NN will mark DatanodeStorageInfo#blockContentsStale to false.
+   * @throws Exception
+   */
+  @Test(timeout = 60000)
+  public void testStorageBlockContentsStaleAfterNNRestart() throws Exception {
+    MiniDFSCluster dfsCluster = null;
+    try {
+      Configuration config = new Configuration();
+      dfsCluster = new MiniDFSCluster.Builder(config).numDataNodes(1).build();
+      dfsCluster.waitActive();
+      dfsCluster.restartNameNode(true);
+      BlockManagerTestUtil.checkHeartbeat(
+          dfsCluster.getNamesystem().getBlockManager());
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxbeanNameFsns = new ObjectName(
+          "Hadoop:service=NameNode,name=FSNamesystemState");
+      Integer numStaleStorages = (Integer) (mbs.getAttribute(
+          mxbeanNameFsns, "NumStaleStorages"));
+      assertEquals(0, numStaleStorages.intValue());
+    } finally {
+      if (dfsCluster != null) {
+        dfsCluster.shutdown();
+      }
+    }
+
+    return;
+  }
+
 }

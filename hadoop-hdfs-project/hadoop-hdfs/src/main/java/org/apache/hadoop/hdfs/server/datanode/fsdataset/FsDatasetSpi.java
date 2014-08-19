@@ -19,14 +19,17 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset;
 
 
 import java.io.File;
+import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
@@ -37,6 +40,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.Replica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInPipelineInterface;
+import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetFactory;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
@@ -89,6 +93,10 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   /** @return a list of volumes. */
   public List<V> getVolumes();
 
+  /** Add an array of StorageLocation to FsDataset. */
+  public void addVolumes(Collection<StorageLocation> volumes)
+      throws IOException;
+
   /** @return a storage with the given storage ID */
   public DatanodeStorage getStorage(final String storageUuid);
 
@@ -124,16 +132,14 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
 
   /**
    * Returns the specified block's on-disk length (excluding metadata)
-   * @param b
    * @return   the specified block's on-disk length (excluding metadta)
-   * @throws IOException
+   * @throws IOException on error
    */
   public long getLength(ExtendedBlock b) throws IOException;
 
   /**
    * Get reference to the replica meta info in the replicasMap. 
    * To be called from methods that are synchronized on {@link FSDataset}
-   * @param blockId
    * @return replica from the replicas map
    */
   @Deprecated
@@ -151,8 +157,8 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   
   /**
    * Returns an input stream at specified offset of the specified block
-   * @param b
-   * @param seekOffset
+   * @param b block
+   * @param seekOffset offset with in the block to seek to
    * @return an input stream to read the contents of the specified block,
    *  starting at the offset
    * @throws IOException
@@ -163,9 +169,6 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   /**
    * Returns an input stream at specified offset of the specified block
    * The block is still in the tmp directory and is not finalized
-   * @param b
-   * @param blkoff
-   * @param ckoff
    * @return an input stream to read the contents of the specified block,
    *  starting at the offset
    * @throws IOException
@@ -180,8 +183,8 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * @return the meta info of the replica which is being written to
    * @throws IOException if an error occurs
    */
-  public ReplicaInPipelineInterface createTemporary(ExtendedBlock b
-      ) throws IOException;
+  public ReplicaInPipelineInterface createTemporary(StorageType storageType,
+      ExtendedBlock b) throws IOException;
 
   /**
    * Creates a RBW replica and returns the meta info of the replica
@@ -190,8 +193,8 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * @return the meta info of the replica which is being written to
    * @throws IOException if an error occurs
    */
-  public ReplicaInPipelineInterface createRbw(ExtendedBlock b
-      ) throws IOException;
+  public ReplicaInPipelineInterface createRbw(StorageType storageType,
+      ExtendedBlock b) throws IOException;
 
   /**
    * Recovers a RBW replica and returns the meta info of the replica
@@ -256,7 +259,6 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * Finalizes the block previously opened for writing using writeToBlock.
    * The block size is what is in the parameter b and it must match the amount
    *  of data written
-   * @param b
    * @throws IOException
    */
   public void finalizeBlock(ExtendedBlock b) throws IOException;
@@ -264,7 +266,6 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   /**
    * Unfinalizes the block previously opened for writing using writeToBlock.
    * The temporary file associated with this block is deleted.
-   * @param b
    * @throws IOException
    */
   public void unfinalizeBlock(ExtendedBlock b) throws IOException;
@@ -289,14 +290,12 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
 
   /**
    * Is the block valid?
-   * @param b
    * @return - true if the specified block is valid
    */
   public boolean isValidBlock(ExtendedBlock b);
 
   /**
    * Is the block a valid RBW?
-   * @param b
    * @return - true if the specified block is a valid RBW
    */
   public boolean isValidRbw(ExtendedBlock b);
@@ -327,7 +326,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * Determine if the specified block is cached.
    * @param bpid Block pool id
    * @param blockIds - block id
-   * @returns true if the block is cached
+   * @return true if the block is cached
    */
   public boolean isCached(String bpid, long blockId);
 
@@ -440,5 +439,12 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * @return true when trash is enabled
    */
   public boolean trashEnabled(String bpid);
+
+  /**
+   * submit a sync_file_range request to AsyncDiskService
+   */
+  public void submitBackgroundSyncFileRangeRequest(final ExtendedBlock block,
+      final FileDescriptor fd, final long offset, final long nbytes,
+      final int flags);
 }
 

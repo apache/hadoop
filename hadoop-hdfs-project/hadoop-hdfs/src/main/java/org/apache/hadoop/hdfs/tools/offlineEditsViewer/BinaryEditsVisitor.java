@@ -37,8 +37,7 @@ public class BinaryEditsVisitor implements OfflineEditsVisitor {
 
   /**
    * Create a processor that writes to a given file
-   *
-   * @param filename Name of file to write output to
+   * @param outputName Name of file to write output to
    */
   public BinaryEditsVisitor(String outputName) throws IOException {
     this.elfos = new EditLogFileOutputStream(new Configuration(),

@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.ftp;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.ConnectException;
 import java.net.URI;
 
 import org.apache.commons.logging.Log;
@@ -33,11 +34,14 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Progressable;
 
 /**
@@ -56,6 +60,12 @@ public class FTPFileSystem extends FileSystem {
   public static final int DEFAULT_BUFFER_SIZE = 1024 * 1024;
 
   public static final int DEFAULT_BLOCK_SIZE = 4 * 1024;
+  public static final String FS_FTP_USER_PREFIX = "fs.ftp.user.";
+  public static final String FS_FTP_HOST = "fs.ftp.host";
+  public static final String FS_FTP_HOST_PORT = "fs.ftp.host.port";
+  public static final String FS_FTP_PASSWORD_PREFIX = "fs.ftp.password.";
+  public static final String E_SAME_DIRECTORY_ONLY =
+      "only same directory renames are supported";
 
   private URI uri;
 
@@ -75,11 +85,11 @@ public class FTPFileSystem extends FileSystem {
     super.initialize(uri, conf);
     // get host information from uri (overrides info in conf)
     String host = uri.getHost();
-    host = (host == null) ? conf.get("fs.ftp.host", null) : host;
+    host = (host == null) ? conf.get(FS_FTP_HOST, null) : host;
     if (host == null) {
       throw new IOException("Invalid host specified");
     }
-    conf.set("fs.ftp.host", host);
+    conf.set(FS_FTP_HOST, host);
 
     // get port information from uri, (overrides info in conf)
     int port = uri.getPort();
@@ -96,11 +106,11 @@ public class FTPFileSystem extends FileSystem {
       }
     }
     String[] userPasswdInfo = userAndPassword.split(":");
-    conf.set("fs.ftp.user." + host, userPasswdInfo[0]);
+    conf.set(FS_FTP_USER_PREFIX + host, userPasswdInfo[0]);
     if (userPasswdInfo.length > 1) {
-      conf.set("fs.ftp.password." + host, userPasswdInfo[1]);
+      conf.set(FS_FTP_PASSWORD_PREFIX + host, userPasswdInfo[1]);
     } else {
-      conf.set("fs.ftp.password." + host, null);
+      conf.set(FS_FTP_PASSWORD_PREFIX + host, null);
     }
     setConf(conf);
     this.uri = uri;
@@ -115,23 +125,24 @@ public class FTPFileSystem extends FileSystem {
   private FTPClient connect() throws IOException {
     FTPClient client = null;
     Configuration conf = getConf();
-    String host = conf.get("fs.ftp.host");
-    int port = conf.getInt("fs.ftp.host.port", FTP.DEFAULT_PORT);
-    String user = conf.get("fs.ftp.user." + host);
-    String password = conf.get("fs.ftp.password." + host);
+    String host = conf.get(FS_FTP_HOST);
+    int port = conf.getInt(FS_FTP_HOST_PORT, FTP.DEFAULT_PORT);
+    String user = conf.get(FS_FTP_USER_PREFIX + host);
+    String password = conf.get(FS_FTP_PASSWORD_PREFIX + host);
     client = new FTPClient();
     client.connect(host, port);
     int reply = client.getReplyCode();
     if (!FTPReply.isPositiveCompletion(reply)) {
-      throw new IOException("Server - " + host
-          + " refused connection on port - " + port);
+      throw NetUtils.wrapException(host, port,
+                   NetUtils.UNKNOWN_HOST, 0,
+                   new ConnectException("Server response " + reply));
     } else if (client.login(user, password)) {
       client.setFileTransferMode(FTP.BLOCK_TRANSFER_MODE);
       client.setFileType(FTP.BINARY_FILE_TYPE);
       client.setBufferSize(DEFAULT_BUFFER_SIZE);
     } else {
       throw new IOException("Login failed on server - " + host + ", port - "
-          + port);
+          + port + " as user '" + user + "'");
     }
 
     return client;
@@ -179,7 +190,7 @@ public class FTPFileSystem extends FileSystem {
     FileStatus fileStat = getFileStatus(client, absolute);
     if (fileStat.isDirectory()) {
       disconnect(client);
-      throw new IOException("Path " + file + " is a directory.");
+      throw new FileNotFoundException("Path " + file + " is a directory.");
     }
     client.allocate(bufferSize);
     Path parent = absolute.getParent();
@@ -214,12 +225,18 @@ public class FTPFileSystem extends FileSystem {
     final FTPClient client = connect();
     Path workDir = new Path(client.printWorkingDirectory());
     Path absolute = makeAbsolute(workDir, file);
-    if (exists(client, file)) {
-      if (overwrite) {
-        delete(client, file);
+    FileStatus status;
+    try {
+      status = getFileStatus(client, file);
+    } catch (FileNotFoundException fnfe) {
+      status = null;
+    }
+    if (status != null) {
+      if (overwrite && !status.isDirectory()) {
+        delete(client, file, false);
       } else {
         disconnect(client);
-        throw new IOException("File already exists: " + file);
+        throw new FileAlreadyExistsException("File already exists: " + file);
       }
     }
     
@@ -272,14 +289,13 @@ public class FTPFileSystem extends FileSystem {
    * Convenience method, so that we don't open a new connection when using this
    * method from within another method. Otherwise every API invocation incurs
    * the overhead of opening/closing a TCP connection.
+   * @throws IOException on IO problems other than FileNotFoundException
    */
-  private boolean exists(FTPClient client, Path file) {
+  private boolean exists(FTPClient client, Path file) throws IOException {
     try {
       return getFileStatus(client, file) != null;
     } catch (FileNotFoundException fnfe) {
       return false;
-    } catch (IOException ioe) {
-      throw new FTPException("Failed to get file status", ioe);
     }
   }
 
@@ -294,12 +310,6 @@ public class FTPFileSystem extends FileSystem {
     }
   }
 
-  /** @deprecated Use delete(Path, boolean) instead */
-  @Deprecated
-  private boolean delete(FTPClient client, Path file) throws IOException {
-    return delete(client, file, false);
-  }
-
   /**
    * Convenience method, so that we don't open a new connection when using this
    * method from within another method. Otherwise every API invocation incurs
@@ -310,9 +320,14 @@ public class FTPFileSystem extends FileSystem {
     Path workDir = new Path(client.printWorkingDirectory());
     Path absolute = makeAbsolute(workDir, file);
     String pathName = absolute.toUri().getPath();
-    FileStatus fileStat = getFileStatus(client, absolute);
-    if (fileStat.isFile()) {
-      return client.deleteFile(pathName);
+    try {
+      FileStatus fileStat = getFileStatus(client, absolute);
+      if (fileStat.isFile()) {
+        return client.deleteFile(pathName);
+      }
+    } catch (FileNotFoundException e) {
+      //the file is not there
+      return false;
     }
     FileStatus[] dirEntries = listStatus(client, absolute);
     if (dirEntries != null && dirEntries.length > 0 && !(recursive)) {
@@ -491,7 +506,7 @@ public class FTPFileSystem extends FileSystem {
         created = created && client.makeDirectory(pathName);
       }
     } else if (isFile(client, absolute)) {
-      throw new IOException(String.format(
+      throw new ParentNotDirectoryException(String.format(
           "Can't make directory for path %s since it is a file.", absolute));
     }
     return created;
@@ -528,6 +543,23 @@ public class FTPFileSystem extends FileSystem {
   }
 
   /**
+   * Probe for a path being a parent of another
+   * @param parent parent path
+   * @param child possible child path
+   * @return true if the parent's path matches the start of the child's
+   */
+  private boolean isParentOf(Path parent, Path child) {
+    URI parentURI = parent.toUri();
+    String parentPath = parentURI.getPath();
+    if (!parentPath.endsWith("/")) {
+      parentPath += "/";
+    }
+    URI childURI = child.toUri();
+    String childPath = childURI.getPath();
+    return childPath.startsWith(parentPath);
+  }
+
+  /**
    * Convenience method, so that we don't open a new connection when using this
    * method from within another method. Otherwise every API invocation incurs
    * the overhead of opening/closing a TCP connection.
@@ -544,20 +576,31 @@ public class FTPFileSystem extends FileSystem {
     Path absoluteSrc = makeAbsolute(workDir, src);
     Path absoluteDst = makeAbsolute(workDir, dst);
     if (!exists(client, absoluteSrc)) {
-      throw new IOException("Source path " + src + " does not exist");
+      throw new FileNotFoundException("Source path " + src + " does not exist");
+    }
+    if (isDirectory(absoluteDst)) {
+      // destination is a directory: rename goes underneath it with the
+      // source name
+      absoluteDst = new Path(absoluteDst, absoluteSrc.getName());
     }
     if (exists(client, absoluteDst)) {
-      throw new IOException("Destination path " + dst
-          + " already exist, cannot rename!");
+      throw new FileAlreadyExistsException("Destination path " + dst
+          + " already exists");
     }
     String parentSrc = absoluteSrc.getParent().toUri().toString();
     String parentDst = absoluteDst.getParent().toUri().toString();
-    String from = src.getName();
-    String to = dst.getName();
-    if (!parentSrc.equals(parentDst)) {
-      throw new IOException("Cannot rename parent(source): " + parentSrc
-          + ", parent(destination):  " + parentDst);
+    if (isParentOf(absoluteSrc, absoluteDst)) {
+      throw new IOException("Cannot rename " + absoluteSrc + " under itself"
+      + " : "+ absoluteDst);
     }
+
+    if (!parentSrc.equals(parentDst)) {
+      throw new IOException("Cannot rename source: " + absoluteSrc
+          + " to " + absoluteDst
+          + " -"+ E_SAME_DIRECTORY_ONLY);
+    }
+    String from = absoluteSrc.getName();
+    String to = absoluteDst.getName();
     client.changeWorkingDirectory(parentSrc);
     boolean renamed = client.rename(from, to);
     return renamed;

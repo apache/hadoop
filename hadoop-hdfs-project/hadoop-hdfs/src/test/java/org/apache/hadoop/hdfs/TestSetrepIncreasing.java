@@ -75,11 +75,11 @@ public class TestSetrepIncreasing {
     }
   }
 
-  @Test
+  @Test(timeout=120000)
   public void testSetrepIncreasing() throws IOException {
     setrep(3, 7, false);
   }
-  @Test
+  @Test(timeout=120000)
   public void testSetrepIncreasingSimulatedStorage() throws IOException {
     setrep(3, 7, true);
   }

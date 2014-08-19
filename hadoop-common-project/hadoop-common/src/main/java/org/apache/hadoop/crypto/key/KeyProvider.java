@@ -23,11 +23,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.net.URI;
 import java.security.NoSuchAlgorithmException;
-import java.text.MessageFormat;
+import java.util.Collections;
 import java.util.Date;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -36,7 +35,6 @@ import com.google.gson.stream.JsonWriter;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 
 import javax.crypto.KeyGenerator;
 
@@ -56,19 +54,25 @@ public abstract class KeyProvider {
   public static final String DEFAULT_CIPHER = "AES/CTR/NoPadding";
   public static final String DEFAULT_BITLENGTH_NAME =
       "hadoop.security.key.default.bitlength";
-  public static final int DEFAULT_BITLENGTH = 256;
+  public static final int DEFAULT_BITLENGTH = 128;
 
   /**
    * The combination of both the key version name and the key material.
    */
   public static class KeyVersion {
+    private final String name;
     private final String versionName;
     private final byte[] material;
 
-    protected KeyVersion(String versionName,
+    protected KeyVersion(String name, String versionName,
                          byte[] material) {
+      this.name = name;
       this.versionName = versionName;
       this.material = material;
+    }
+    
+    public String getName() {
+      return name;
     }
 
     public String getVersionName() {
@@ -109,26 +113,47 @@ public abstract class KeyProvider {
     private final static String CREATED_FIELD = "created";
     private final static String DESCRIPTION_FIELD = "description";
     private final static String VERSIONS_FIELD = "versions";
+    private final static String ATTRIBUTES_FIELD = "attributes";
 
     private final String cipher;
     private final int bitLength;
     private final String description;
     private final Date created;
     private int versions;
+    private Map<String, String> attributes;
 
-    protected Metadata(String cipher, int bitLength,
-                       String description, Date created, int versions) {
+    protected Metadata(String cipher, int bitLength, String description,
+        Map<String, String> attributes, Date created, int versions) {
       this.cipher = cipher;
       this.bitLength = bitLength;
       this.description = description;
+      this.attributes = (attributes == null || attributes.isEmpty())
+                        ? null : attributes;
       this.created = created;
       this.versions = versions;
     }
 
     public String toString() {
-      return MessageFormat.format(
-          "cipher: {0}, length: {1} description: {2} created: {3} version: {4}",
-          cipher, bitLength, description, created, versions);
+      final StringBuilder metaSB = new StringBuilder();
+      metaSB.append("cipher: ").append(cipher).append(", ");
+      metaSB.append("length: ").append(bitLength).append(", ");
+      metaSB.append("description: ").append(description).append(", ");
+      metaSB.append("created: ").append(created).append(", ");
+      metaSB.append("version: ").append(versions).append(", ");
+      metaSB.append("attributes: ");
+      if ((attributes != null) && !attributes.isEmpty()) {
+        for (Map.Entry<String, String> attribute : attributes.entrySet()) {
+          metaSB.append("[");
+          metaSB.append(attribute.getKey());
+          metaSB.append("=");
+          metaSB.append(attribute.getValue());
+          metaSB.append("], ");
+        }
+        metaSB.deleteCharAt(metaSB.length() - 2);  // remove last ', '
+      } else {
+        metaSB.append("null");
+      }
+      return metaSB.toString();
     }
 
     public String getDescription() {
@@ -141,6 +166,11 @@ public abstract class KeyProvider {
 
     public String getCipher() {
       return cipher;
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, String> getAttributes() {
+      return (attributes == null) ? Collections.EMPTY_MAP : attributes;
     }
 
     /**
@@ -176,22 +206,33 @@ public abstract class KeyProvider {
     protected byte[] serialize() throws IOException {
       ByteArrayOutputStream buffer = new ByteArrayOutputStream();
       JsonWriter writer = new JsonWriter(new OutputStreamWriter(buffer));
-      writer.beginObject();
-      if (cipher != null) {
-        writer.name(CIPHER_FIELD).value(cipher);
+      try {
+        writer.beginObject();
+        if (cipher != null) {
+          writer.name(CIPHER_FIELD).value(cipher);
+        }
+        if (bitLength != 0) {
+          writer.name(BIT_LENGTH_FIELD).value(bitLength);
+        }
+        if (created != null) {
+          writer.name(CREATED_FIELD).value(created.getTime());
+        }
+        if (description != null) {
+          writer.name(DESCRIPTION_FIELD).value(description);
+        }
+        if (attributes != null && attributes.size() > 0) {
+          writer.name(ATTRIBUTES_FIELD).beginObject();
+          for (Map.Entry<String, String> attribute : attributes.entrySet()) {
+            writer.name(attribute.getKey()).value(attribute.getValue());
+          }
+          writer.endObject();
+        }
+        writer.name(VERSIONS_FIELD).value(versions);
+        writer.endObject();
+        writer.flush();
+      } finally {
+        writer.close();
       }
-      if (bitLength != 0) {
-        writer.name(BIT_LENGTH_FIELD).value(bitLength);
-      }
-      if (created != null) {
-        writer.name(CREATED_FIELD).value(created.getTime());
-      }
-      if (description != null) {
-        writer.name(DESCRIPTION_FIELD).value(description);
-      }
-      writer.name(VERSIONS_FIELD).value(versions);
-      writer.endObject();
-      writer.flush();
       return buffer.toByteArray();
     }
 
@@ -206,28 +247,41 @@ public abstract class KeyProvider {
       Date created = null;
       int versions = 0;
       String description = null;
+      Map<String, String> attributes = null;
       JsonReader reader = new JsonReader(new InputStreamReader
-          (new ByteArrayInputStream(bytes)));
-      reader.beginObject();
-      while (reader.hasNext()) {
-        String field = reader.nextName();
-        if (CIPHER_FIELD.equals(field)) {
-          cipher = reader.nextString();
-        } else if (BIT_LENGTH_FIELD.equals(field)) {
-          bitLength = reader.nextInt();
-        } else if (CREATED_FIELD.equals(field)) {
-          created = new Date(reader.nextLong());
-        } else if (VERSIONS_FIELD.equals(field)) {
-          versions = reader.nextInt();
-        } else if (DESCRIPTION_FIELD.equals(field)) {
-          description = reader.nextString();
+        (new ByteArrayInputStream(bytes)));
+      try {
+        reader.beginObject();
+        while (reader.hasNext()) {
+          String field = reader.nextName();
+          if (CIPHER_FIELD.equals(field)) {
+            cipher = reader.nextString();
+          } else if (BIT_LENGTH_FIELD.equals(field)) {
+            bitLength = reader.nextInt();
+          } else if (CREATED_FIELD.equals(field)) {
+            created = new Date(reader.nextLong());
+          } else if (VERSIONS_FIELD.equals(field)) {
+            versions = reader.nextInt();
+          } else if (DESCRIPTION_FIELD.equals(field)) {
+            description = reader.nextString();
+          } else if (ATTRIBUTES_FIELD.equalsIgnoreCase(field)) {
+            reader.beginObject();
+            attributes = new HashMap<String, String>();
+            while (reader.hasNext()) {
+              attributes.put(reader.nextName(), reader.nextString());
+            }
+            reader.endObject();
+          }
         }
+        reader.endObject();
+      } finally {
+        reader.close();
       }
-      reader.endObject();
       this.cipher = cipher;
       this.bitLength = bitLength;
       this.created = created;
       this.description = description;
+      this.attributes = attributes;
       this.versions = versions;
     }
   }
@@ -239,6 +293,7 @@ public abstract class KeyProvider {
     private String cipher;
     private int bitLength;
     private String description;
+    private Map<String, String> attributes;
 
     public Options(Configuration conf) {
       cipher = conf.get(DEFAULT_CIPHER_NAME, DEFAULT_CIPHER);
@@ -260,6 +315,16 @@ public abstract class KeyProvider {
       return this;
     }
 
+    public Options setAttributes(Map<String, String> attributes) {
+      if (attributes != null) {
+        if (attributes.containsKey(null)) {
+          throw new IllegalArgumentException("attributes cannot have a NULL key");
+        }
+        this.attributes = new HashMap<String, String>(attributes);
+      }
+      return this;
+    }
+
     public String getCipher() {
       return cipher;
     }
@@ -270,6 +335,21 @@ public abstract class KeyProvider {
 
     public String getDescription() {
       return description;
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, String> getAttributes() {
+      return (attributes == null) ? Collections.EMPTY_MAP : attributes;
+    }
+
+    @Override
+    public String toString() {
+      return "Options{" +
+          "cipher='" + cipher + '\'' +
+          ", bitLength=" + bitLength +
+          ", description='" + description + '\'' +
+          ", attributes=" + attributes +
+          '}';
     }
   }
 
@@ -310,22 +390,17 @@ public abstract class KeyProvider {
    */
   public abstract List<String> getKeys() throws IOException;
 
-
   /**
-   * Get the key metadata for all keys.
-   *
-   * @return a Map with all the keys and their metadata
+   * Get key metadata in bulk.
+   * @param names the names of the keys to get
    * @throws IOException
    */
-  public Map<String, Metadata> getKeysMetadata() throws IOException {
-    Map<String, Metadata> keysMetadata = new LinkedHashMap<String, Metadata>();
-    for (String key : getKeys()) {
-      Metadata meta = getMetadata(key);
-      if (meta != null) {
-        keysMetadata.put(key, meta);
-      }
+  public Metadata[] getKeysMetadata(String... names) throws IOException {
+    Metadata[] result = new Metadata[names.length];
+    for (int i=0; i < names.length; ++i) {
+      result[i] = getMetadata(names[i]);
     }
-    return keysMetadata;
+    return result;
   }
 
   /**
@@ -485,33 +560,6 @@ public abstract class KeyProvider {
    */
   protected static String buildVersionName(String name, int version) {
     return name + "@" + version;
-  }
-
-  /**
-   * Convert a nested URI to decode the underlying path. The translation takes
-   * the authority and parses it into the underlying scheme and authority.
-   * For example, "myscheme://hdfs@nn/my/path" is converted to
-   * "hdfs://nn/my/path".
-   * @param nestedUri the URI from the nested URI
-   * @return the unnested path
-   */
-  public static Path unnestUri(URI nestedUri) {
-    String[] parts = nestedUri.getAuthority().split("@", 2);
-    StringBuilder result = new StringBuilder(parts[0]);
-    result.append("://");
-    if (parts.length == 2) {
-      result.append(parts[1]);
-    }
-    result.append(nestedUri.getPath());
-    if (nestedUri.getQuery() != null) {
-      result.append("?");
-      result.append(nestedUri.getQuery());
-    }
-    if (nestedUri.getFragment() != null) {
-      result.append("#");
-      result.append(nestedUri.getFragment());
-    }
-    return new Path(result.toString());
   }
 
   /**

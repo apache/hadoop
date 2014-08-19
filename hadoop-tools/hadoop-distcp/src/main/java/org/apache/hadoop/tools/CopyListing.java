@@ -22,7 +22,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.IOUtils;
@@ -31,11 +30,15 @@ import org.apache.hadoop.security.Credentials;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.net.URI;
+import java.util.Set;
+
+import com.google.common.collect.Sets;
 
 /**
  * The CopyListing abstraction is responsible for how the list of
  * sources and targets is constructed, for DistCp's copy function.
- * The copy-listing should be a SequenceFile<Text, FileStatus>,
+ * The copy-listing should be a SequenceFile<Text, CopyListingFileStatus>,
  * located at the path specified to buildListing(),
  * each entry being a pair of (Source relative path, source file status),
  * all the paths being fully qualified.
@@ -85,7 +88,7 @@ public abstract class CopyListing extends Configured {
     config.setLong(DistCpConstants.CONF_LABEL_TOTAL_BYTES_TO_BE_COPIED, getBytesToCopy());
     config.setLong(DistCpConstants.CONF_LABEL_TOTAL_NUMBER_OF_RECORDS, getNumberOfPaths());
 
-    checkForDuplicates(pathToListFile);
+    validateFinalListing(pathToListFile, options);
   }
 
   /**
@@ -124,13 +127,16 @@ public abstract class CopyListing extends Configured {
   protected abstract long getNumberOfPaths();
 
   /**
-   * Validate the final resulting path listing to see if there are any duplicate entries
+   * Validate the final resulting path listing.  Checks if there are duplicate
+   * entries.  If preserving ACLs, checks that file system can support ACLs.
+   * If preserving XAttrs, checks that file system can support XAttrs.
    *
    * @param pathToListFile - path listing build by doBuildListing
+   * @param options - Input options to distcp
    * @throws IOException - Any issues while checking for duplicates and throws
    * @throws DuplicateFileException - if there are duplicates
    */
-  private void checkForDuplicates(Path pathToListFile)
+  private void validateFinalListing(Path pathToListFile, DistCpOptions options)
       throws DuplicateFileException, IOException {
 
     Configuration config = getConf();
@@ -142,17 +148,35 @@ public abstract class CopyListing extends Configured {
                           config, SequenceFile.Reader.file(sortedList));
     try {
       Text lastKey = new Text("*"); //source relative path can never hold *
-      FileStatus lastFileStatus = new FileStatus();
+      CopyListingFileStatus lastFileStatus = new CopyListingFileStatus();
 
       Text currentKey = new Text();
+      Set<URI> aclSupportCheckFsSet = Sets.newHashSet();
+      Set<URI> xAttrSupportCheckFsSet = Sets.newHashSet();
       while (reader.next(currentKey)) {
         if (currentKey.equals(lastKey)) {
-          FileStatus currentFileStatus = new FileStatus();
+          CopyListingFileStatus currentFileStatus = new CopyListingFileStatus();
           reader.getCurrentValue(currentFileStatus);
           throw new DuplicateFileException("File " + lastFileStatus.getPath() + " and " +
               currentFileStatus.getPath() + " would cause duplicates. Aborting");
         }
         reader.getCurrentValue(lastFileStatus);
+        if (options.shouldPreserve(DistCpOptions.FileAttribute.ACL)) {
+          FileSystem lastFs = lastFileStatus.getPath().getFileSystem(config);
+          URI lastFsUri = lastFs.getUri();
+          if (!aclSupportCheckFsSet.contains(lastFsUri)) {
+            DistCpUtils.checkFileSystemAclSupport(lastFs);
+            aclSupportCheckFsSet.add(lastFsUri);
+          }
+        }
+        if (options.shouldPreserve(DistCpOptions.FileAttribute.XATTR)) {
+          FileSystem lastFs = lastFileStatus.getPath().getFileSystem(config);
+          URI lastFsUri = lastFs.getUri();
+          if (!xAttrSupportCheckFsSet.contains(lastFsUri)) {
+            DistCpUtils.checkFileSystemXAttrSupport(lastFs);
+            xAttrSupportCheckFsSet.add(lastFsUri);
+          }
+        }
         lastKey.set(currentKey);
       }
     } finally {
@@ -233,6 +257,18 @@ public abstract class CopyListing extends Configured {
 
   static class InvalidInputException extends RuntimeException {
     public InvalidInputException(String message) {
+      super(message);
+    }
+  }
+
+  public static class AclsNotSupportedException extends RuntimeException {
+    public AclsNotSupportedException(String message) {
+      super(message);
+    }
+  }
+  
+  public static class XAttrsNotSupportedException extends RuntimeException {
+    public XAttrsNotSupportedException(String message) {
       super(message);
     }
   }

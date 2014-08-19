@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.conf;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.mapreduce.MRConfig;

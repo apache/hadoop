@@ -28,11 +28,15 @@
 #include <unistd.h>
 
 #define INITIAL_GIDS_SIZE 32
+// 1KB buffer should be large enough to store a passwd record in most
+// cases, but it can get bigger if each field is maximally used. The
+// max is defined to avoid buggy libraries making us run out of memory.
+#define MAX_USER_BUFFER_SIZE (32*1024)
 
 struct hadoop_user_info *hadoop_user_info_alloc(void)
 {
   struct hadoop_user_info *uinfo;
-  size_t buf_sz;
+  long buf_sz;
   char *buf;
 
   uinfo = calloc(1, sizeof(struct hadoop_user_info));
@@ -95,30 +99,48 @@ int hadoop_user_info_fetch(struct hadoop_user_info *uinfo,
                            const char *username)
 {
   struct passwd *pwd;
-  int err;
+  int ret;
   size_t buf_sz;
   char *nbuf;
 
   hadoop_user_info_clear(uinfo);
   for (;;) {
-    do {
-      pwd = NULL;
-      err = getpwnam_r(username, &uinfo->pwd, uinfo->buf,
+    // On success, the following call returns 0 and pwd is set to non-NULL.
+    pwd = NULL;
+    ret = getpwnam_r(username, &uinfo->pwd, uinfo->buf,
                          uinfo->buf_sz, &pwd);
-    } while ((!pwd) && (errno == EINTR));
-    if (pwd) {
-      return 0;
+    switch(ret) {
+      case 0:
+        if (!pwd) {
+          // Not found.
+          return ENOENT;
+        }
+        // Found.
+        return 0;
+      case EINTR:
+        // EINTR: a signal was handled and this thread was allowed to continue.
+        break;
+      case ERANGE:
+        // ERANGE: the buffer was not big enough.
+        if (uinfo->buf_sz == MAX_USER_BUFFER_SIZE) {
+          // Already tried with the max size.
+          return ENOMEM;
+        }
+        buf_sz = uinfo->buf_sz * 2;
+        if (buf_sz > MAX_USER_BUFFER_SIZE) {
+          buf_sz = MAX_USER_BUFFER_SIZE;
+        }
+        nbuf = realloc(uinfo->buf, buf_sz);
+        if (!nbuf) {
+          return ENOMEM;
+        }
+        uinfo->buf = nbuf;
+        uinfo->buf_sz = buf_sz;
+        break;
+      default:
+        // Lookup failed.
+        return getpwnam_error_translate(ret);
     }
-    if (err != ERANGE) {
-      return getpwnam_error_translate(errno);
-    }
-    buf_sz = uinfo->buf_sz * 2;
-    nbuf = realloc(uinfo->buf, buf_sz);
-    if (!nbuf) {
-      return ENOMEM;
-    }
-    uinfo->buf = nbuf;
-    uinfo->buf_sz = buf_sz;
   }
 }
 
@@ -171,7 +193,7 @@ int hadoop_user_info_getgroups(struct hadoop_user_info *uinfo)
   ngroups = uinfo->gids_size;
   ret = getgrouplist(uinfo->pwd.pw_name, uinfo->pwd.pw_gid, 
                          uinfo->gids, &ngroups);
-  if (ret > 0) {
+  if (ret >= 0) {
     uinfo->num_gids = ngroups;
     ret = put_primary_gid_first(uinfo);
     if (ret) {

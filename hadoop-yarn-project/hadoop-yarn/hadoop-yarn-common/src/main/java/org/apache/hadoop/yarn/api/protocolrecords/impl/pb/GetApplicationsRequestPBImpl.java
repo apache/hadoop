@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 import java.util.EnumSet;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -35,6 +34,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationsRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationsRequestProtoOrBuilder;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
 import com.google.protobuf.TextFormat;
 
 @Private
@@ -49,7 +50,8 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
   Set<String> users = null;
   Set<String> queues = null;
   long limit = Long.MAX_VALUE;
-  LongRange start = null, finish = null;
+  LongRange start = null;
+  LongRange finish = null;
   private Set<String> applicationTags;
   private ApplicationsRequestScope scope;
 
@@ -78,57 +80,46 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
   }
 
   private void mergeLocalToBuilder() {
-    if (this.applicationTypes != null) {
-      addLocalApplicationTypesToProto();
+    if (applicationTypes != null && !applicationTypes.isEmpty()) {
+      builder.clearApplicationTypes();
+      builder.addAllApplicationTypes(applicationTypes);
     }
-    if (this.applicationStates != null) {
-      maybeInitBuilder();
+    if (applicationStates != null && !applicationStates.isEmpty()) {
       builder.clearApplicationStates();
-      Iterable<YarnApplicationStateProto> iterable =
-          new Iterable<YarnApplicationStateProto>() {
-
+      builder.addAllApplicationStates(Iterables.transform(applicationStates,
+          new Function<YarnApplicationState, YarnApplicationStateProto>() {
             @Override
-            public Iterator<YarnApplicationStateProto> iterator() {
-              return new Iterator<YarnApplicationStateProto>() {
-
-                Iterator<YarnApplicationState> iter = applicationStates
-                    .iterator();
-
-                @Override
-                public boolean hasNext() {
-                  return iter.hasNext();
-                }
-
-                @Override
-                public YarnApplicationStateProto next() {
-                  return ProtoUtils.convertToProtoFormat(iter.next());
-                }
-
-                @Override
-                public void remove() {
-                  throw new UnsupportedOperationException();
-
-                }
-              };
-
+            public YarnApplicationStateProto apply(YarnApplicationState input) {
+              return ProtoUtils.convertToProtoFormat(input);
             }
-          };
-      builder.addAllApplicationStates(iterable);
+          }));
     }
-    if (this.applicationTags != null && !this.applicationTags.isEmpty()) {
+    if (applicationTags != null && !applicationTags.isEmpty()) {
+      builder.clearApplicationTags();
       builder.addAllApplicationTags(this.applicationTags);
     }
-    if (this.scope != null) {
+    if (scope != null) {
       builder.setScope(ProtoUtils.convertToProtoFormat(scope));
     }
-  }
-
-  private void addLocalApplicationTypesToProto() {
-    maybeInitBuilder();
-    builder.clearApplicationTypes();
-    if (this.applicationTypes == null)
-      return;
-    builder.addAllApplicationTypes(applicationTypes);
+    if (start != null) {
+      builder.setStartBegin(start.getMinimumLong());
+      builder.setStartEnd(start.getMaximumLong());
+    }
+    if (finish != null) {
+      builder.setFinishBegin(finish.getMinimumLong());
+      builder.setFinishEnd(finish.getMaximumLong());
+    }
+    if (limit != Long.MAX_VALUE) {
+      builder.setLimit(limit);
+    }
+    if (users != null && !users.isEmpty()) {
+      builder.clearUsers();
+      builder.addAllUsers(users);
+    }
+    if (queues != null && !queues.isEmpty()) {
+      builder.clearQueues();
+      builder.addAllQueues(queues);
+    }
   }
 
   private void maybeInitBuilder() {
@@ -326,13 +317,18 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
   public LongRange getStartRange() {
     if (this.start == null) {
       GetApplicationsRequestProtoOrBuilder p = viaProto ? proto: builder;
-      if (p.hasStartBegin() || p.hasFinishBegin()) {
+      if (p.hasStartBegin() || p.hasStartEnd()) {
         long begin = p.hasStartBegin() ? p.getStartBegin() : 0L;
         long end = p.hasStartEnd() ? p.getStartEnd() : Long.MAX_VALUE;
         this.start = new LongRange(begin, end);
       }
     }
     return this.start;
+  }
+
+  @Override
+  public void setStartRange(LongRange range) {
+    this.start = range;
   }
 
   @Override
@@ -356,6 +352,11 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
       }
     }
     return this.finish;
+  }
+
+  @Override
+  public void setFinishRange(LongRange range) {
+    this.finish = range;
   }
 
   @Override

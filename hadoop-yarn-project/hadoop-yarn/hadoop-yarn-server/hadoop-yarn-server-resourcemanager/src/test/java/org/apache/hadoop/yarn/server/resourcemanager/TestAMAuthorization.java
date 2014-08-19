@@ -32,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataInputByteBuffer;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -272,20 +273,61 @@ public class TestAMAuthorization {
       client.registerApplicationMaster(request);
       Assert.fail("Should fail with authorization error");
     } catch (Exception e) {
-      // Because there are no tokens, the request should be rejected as the
-      // server side will assume we are trying simple auth.
-      String expectedMessage = "";
-      if (UserGroupInformation.isSecurityEnabled()) {
-        expectedMessage = "Client cannot authenticate via:[TOKEN]";
+      if (isCause(AccessControlException.class, e)) {
+        // Because there are no tokens, the request should be rejected as the
+        // server side will assume we are trying simple auth.
+        String expectedMessage = "";
+        if (UserGroupInformation.isSecurityEnabled()) {
+          expectedMessage = "Client cannot authenticate via:[TOKEN]";
+        } else {
+          expectedMessage =
+              "SIMPLE authentication is not enabled.  Available:[TOKEN]";
+        }
+        Assert.assertTrue(e.getCause().getMessage().contains(expectedMessage)); 
       } else {
-        expectedMessage =
-            "SIMPLE authentication is not enabled.  Available:[TOKEN]";
+        throw e;
       }
-      Assert.assertTrue(e.getCause().getMessage().contains(expectedMessage));
     }
 
     // TODO: Add validation of invalid authorization when there's more data in
     // the AMRMToken
+  }
+  
+  /**
+   * Identify if an expected throwable included in an exception stack. We use
+   * this because sometimes, an exception will be wrapped to another exception
+   * before thrown. Like,
+   * 
+   * <pre>
+   * {@code
+   * void methodA() throws IOException {
+   *   try {
+   *     // something
+   *   } catch (AccessControlException e) {
+   *     // do process
+   *     throw new IOException(e)
+   *   }
+   * }
+   * </pre>
+   * 
+   * So we cannot simply catch AccessControlException by using
+   * <pre>
+   * {@code
+   * try {
+   *   methodA()
+   * } catch (AccessControlException e) {
+   *   // do something
+   * }
+   * </pre>
+   * 
+   * This method is useful in such cases.
+   */
+  private static boolean isCause(
+      Class<? extends Throwable> expected,
+      Throwable e
+  ) {
+    return (e != null)
+        && (expected.isInstance(e) || isCause(expected, e.getCause()));
   }
 
   private void waitForLaunchedState(RMAppAttempt attempt)

@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -32,11 +33,14 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.http.lib.StaticUserWebFilter;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
@@ -88,8 +92,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMAuthenticationHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.server.security.http.RMAuthenticationFilter;
+import org.apache.hadoop.yarn.server.security.http.RMAuthenticationFilterInitializer;
 import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxy;
@@ -150,7 +157,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
   private AppReportFetcher fetcher = null;
   protected ResourceTrackerService resourceTracker;
 
-  private String webAppAddress;
+  @VisibleForTesting
+  protected String webAppAddress;
   private ConfigurationProvider configurationProvider = null;
   /** End of Active services */
 
@@ -225,7 +233,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
     createAndInitActiveServices();
 
-    webAppAddress = WebAppUtils.getRMWebAppURLWithoutScheme(this.conf);
+    webAppAddress = WebAppUtils.getWebAppBindURL(this.conf,
+                      YarnConfiguration.RM_BIND_HOST,
+                      WebAppUtils.getRMWebAppURLWithoutScheme(this.conf));
 
     this.rmLoginUGI = UserGroupInformation.getCurrentUser();
 
@@ -327,7 +337,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
    * RMActiveServices handles all the Active services in the RM.
    */
   @Private
-  class RMActiveServices extends CompositeService {
+  public class RMActiveServices extends CompositeService {
 
     private DelegationTokenRenewer delegationTokenRenewer;
     private EventHandler<SchedulerEvent> schedulerDispatcher;
@@ -364,9 +374,15 @@ public class ResourceManager extends CompositeService implements Recoverable {
           YarnConfiguration.DEFAULT_RM_RECOVERY_ENABLED);
 
       RMStateStore rmStore = null;
-      if(isRecoveryEnabled) {
+      if (isRecoveryEnabled) {
         recoveryEnabled = true;
-        rmStore =  RMStateStoreFactory.getStore(conf);
+        rmStore = RMStateStoreFactory.getStore(conf);
+        boolean isWorkPreservingRecoveryEnabled =
+            conf.getBoolean(
+              YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED,
+              YarnConfiguration.DEFAULT_RM_WORK_PRESERVING_RECOVERY_ENABLED);
+        rmContext
+          .setWorkPreservingRecoveryEnabled(isWorkPreservingRecoveryEnabled);
       } else {
         recoveryEnabled = false;
         rmStore = new NullRMStateStore();
@@ -401,6 +417,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
       // Initialize the scheduler
       scheduler = createScheduler();
+      scheduler.setRMContext(rmContext);
+      addIfService(scheduler);
       rmContext.setScheduler(scheduler);
 
       schedulerDispatcher = createSchedulerEventDispatcher();
@@ -429,12 +447,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
       DefaultMetricsSystem.initialize("ResourceManager");
       JvmMetrics.initSingleton("ResourceManager", null);
 
-      try {
-        scheduler.reinitialize(conf, rmContext);
-      } catch (IOException ioe) {
-        throw new RuntimeException("Failed to initialize scheduler", ioe);
-      }
-
       // creating monitors that handle preemption
       createPolicyMonitors();
 
@@ -451,7 +463,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
       rmDispatcher.register(RMAppManagerEventType.class, rmAppManager);
 
       clientRM = createClientRMService();
-      rmContext.setClientRMService(clientRM);
       addService(clientRM);
       rmContext.setClientRMService(clientRM);
 
@@ -480,6 +491,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
       if(recoveryEnabled) {
         try {
           rmStore.checkVersion();
+          if (rmContext.isWorkPreservingRecoveryEnabled()) {
+            rmContext.setEpoch(rmStore.getAndIncrementEpoch());
+          }
           RMState state = rmStore.loadState();
           recover(state);
         } catch (Exception e) {
@@ -524,11 +538,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
                   (PreemptableResourceScheduler) scheduler));
           for (SchedulingEditPolicy policy : policies) {
             LOG.info("LOADING SchedulingEditPolicy:" + policy.getPolicyName());
-            policy.init(conf, rmContext.getDispatcher().getEventHandler(),
-                (PreemptableResourceScheduler) scheduler);
             // periodically check whether we need to take action to guarantee
             // constraints
-            SchedulingMonitor mon = new SchedulingMonitor(policy);
+            SchedulingMonitor mon = new SchedulingMonitor(rmContext, policy);
             addService(mon);
           }
         } else {
@@ -664,6 +676,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
             // Transition to standby and reinit active services
             LOG.info("Transitioning RM to Standby mode");
             rm.transitionToStandby(true);
+            rm.adminService.resetLeaderElection();
             return;
           } catch (Exception e) {
             LOG.fatal("Failed to transition RM to Standby mode.");
@@ -785,6 +798,88 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
   
   protected void startWepApp() {
+
+    // Use the customized yarn filter instead of the standard kerberos filter to
+    // allow users to authenticate using delegation tokens
+    // 4 conditions need to be satisfied -
+    // 1. security is enabled
+    // 2. http auth type is set to kerberos
+    // 3. "yarn.resourcemanager.webapp.use-yarn-filter" override is set to true
+    // 4. hadoop.http.filter.initializers container AuthenticationFilterInitializer
+
+    Configuration conf = getConfig();
+    boolean useYarnAuthenticationFilter =
+        conf.getBoolean(
+          YarnConfiguration.RM_WEBAPP_DELEGATION_TOKEN_AUTH_FILTER,
+          YarnConfiguration.DEFAULT_RM_WEBAPP_DELEGATION_TOKEN_AUTH_FILTER);
+    String authPrefix = "hadoop.http.authentication.";
+    String authTypeKey = authPrefix + "type";
+    String filterInitializerConfKey = "hadoop.http.filter.initializers";
+    String actualInitializers = "";
+    Class<?>[] initializersClasses =
+        conf.getClasses(filterInitializerConfKey);
+
+    boolean hasHadoopAuthFilterInitializer = false;
+    boolean hasRMAuthFilterInitializer = false;
+    if (initializersClasses != null) {
+      for (Class<?> initializer : initializersClasses) {
+        if (initializer.getName().equals(
+          AuthenticationFilterInitializer.class.getName())) {
+          hasHadoopAuthFilterInitializer = true;
+        }
+        if (initializer.getName().equals(
+          RMAuthenticationFilterInitializer.class.getName())) {
+          hasRMAuthFilterInitializer = true;
+        }
+      }
+      if (UserGroupInformation.isSecurityEnabled()
+          && useYarnAuthenticationFilter
+          && hasHadoopAuthFilterInitializer
+          && conf.get(authTypeKey, "").equals(
+            KerberosAuthenticationHandler.TYPE)) {
+        ArrayList<String> target = new ArrayList<String>();
+        for (Class<?> filterInitializer : initializersClasses) {
+          if (filterInitializer.getName().equals(
+            AuthenticationFilterInitializer.class.getName())) {
+            if (hasRMAuthFilterInitializer == false) {
+              target.add(RMAuthenticationFilterInitializer.class.getName());
+            }
+            continue;
+          }
+          target.add(filterInitializer.getName());
+        }
+        actualInitializers = StringUtils.join(",", target);
+
+        LOG.info("Using RM authentication filter(kerberos/delegation-token)"
+            + " for RM webapp authentication");
+        RMAuthenticationHandler
+          .setSecretManager(getClientRMService().rmDTSecretManager);
+        String yarnAuthKey =
+            authPrefix + RMAuthenticationFilter.AUTH_HANDLER_PROPERTY;
+        conf.setStrings(yarnAuthKey, RMAuthenticationHandler.class.getName());
+        conf.set(filterInitializerConfKey, actualInitializers);
+      }
+    }
+
+    // if security is not enabled and the default filter initializer has not 
+    // been set, set the initializer to include the
+    // RMAuthenticationFilterInitializer which in turn will set up the simple
+    // auth filter.
+
+    String initializers = conf.get(filterInitializerConfKey);
+    if (!UserGroupInformation.isSecurityEnabled()) {
+      if (initializersClasses == null || initializersClasses.length == 0) {
+        conf.set(filterInitializerConfKey,
+          RMAuthenticationFilterInitializer.class.getName());
+        conf.set(authTypeKey, "simple");
+      } else if (initializers.equals(StaticUserWebFilter.class.getName())) {
+        conf.set(filterInitializerConfKey,
+          RMAuthenticationFilterInitializer.class.getName() + ","
+              + initializers);
+        conf.set(authTypeKey, "simple");
+      }
+    }
+
     Builder<ApplicationMasterService> builder = 
         WebApps
             .$for("cluster", ApplicationMasterService.class, masterService,
@@ -1022,6 +1117,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
     // recover RMdelegationTokenSecretManager
     rmContext.getRMDelegationTokenSecretManager().recover(state);
 
+    // recover AMRMTokenSecretManager
+    rmContext.getAMRMTokenSecretManager().recover(state);
+
     // recover applications
     rmAppManager.recover(state);
   }
@@ -1031,12 +1129,17 @@ public class ResourceManager extends CompositeService implements Recoverable {
     StringUtils.startupShutdownMessage(ResourceManager.class, argv, LOG);
     try {
       Configuration conf = new YarnConfiguration();
-      ResourceManager resourceManager = new ResourceManager();
-      ShutdownHookManager.get().addShutdownHook(
-        new CompositeServiceShutdownHook(resourceManager),
-        SHUTDOWN_HOOK_PRIORITY);
-      resourceManager.init(conf);
-      resourceManager.start();
+      // If -format-state-store, then delete RMStateStore; else startup normally
+      if (argv.length == 1 && argv[0].equals("-format-state-store")) {
+        deleteRMStateStore(conf);
+      } else {
+        ResourceManager resourceManager = new ResourceManager();
+        ShutdownHookManager.get().addShutdownHook(
+          new CompositeServiceShutdownHook(resourceManager),
+          SHUTDOWN_HOOK_PRIORITY);
+        resourceManager.init(conf);
+        resourceManager.start();
+      }
     } catch (Throwable t) {
       LOG.fatal("Error starting ResourceManager", t);
       System.exit(-1);
@@ -1058,6 +1161,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
     ((Service)dispatcher).init(this.conf);
     ((Service)dispatcher).start();
     removeService((Service)rmDispatcher);
+    // Need to stop previous rmDispatcher before assigning new dispatcher
+    // otherwise causes "AsyncDispatcher event handler" thread leak
+    ((Service) rmDispatcher).stop();
     rmDispatcher = dispatcher;
     addIfService(rmDispatcher);
     rmContext.setDispatcher(rmDispatcher);
@@ -1072,5 +1178,24 @@ public class ResourceManager extends CompositeService implements Recoverable {
   public static InetSocketAddress getBindAddress(Configuration conf) {
     return conf.getSocketAddr(YarnConfiguration.RM_ADDRESS,
       YarnConfiguration.DEFAULT_RM_ADDRESS, YarnConfiguration.DEFAULT_RM_PORT);
+  }
+
+  /**
+   * Deletes the RMStateStore
+   *
+   * @param conf
+   * @throws Exception
+   */
+  private static void deleteRMStateStore(Configuration conf) throws Exception {
+    RMStateStore rmStore = RMStateStoreFactory.getStore(conf);
+    rmStore.init(conf);
+    rmStore.start();
+    try {
+      LOG.info("Deleting ResourceManager state store...");
+      rmStore.deleteStore();
+      LOG.info("State store deleted");
+    } finally {
+      rmStore.stop();
+    }
   }
 }

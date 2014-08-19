@@ -22,4 +22,6 @@
 
 #cmakedefine HAVE_BETTER_TLS
 
+#cmakedefine HAVE_INTEL_SSE_INTRINSICS
+
 #endif

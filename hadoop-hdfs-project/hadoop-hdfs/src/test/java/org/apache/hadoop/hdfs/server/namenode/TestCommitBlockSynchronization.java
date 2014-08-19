@@ -32,7 +32,6 @@ import java.io.IOException;
 
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Mockito.*;
 
 /**
@@ -50,6 +49,18 @@ public class TestCommitBlockSynchronization {
     final DatanodeStorageInfo[] targets = {};
 
     FSNamesystem namesystem = new FSNamesystem(conf, image);
+    namesystem.setImageLoaded(true);
+
+    // set file's parent as root and put the file to inodeMap, so
+    // FSNamesystem's isFileDeleted() method will return false on this file
+    if (file.getParent() == null) {
+      INodeDirectory parent = mock(INodeDirectory.class);
+      parent.setLocalName(new byte[0]);
+      parent.addChild(file);
+      file.setParent(parent);
+    }
+    namesystem.dir.getINodeMap().put(file);
+
     FSNamesystem namesystemSpy = spy(namesystem);
     BlockInfoUnderConstruction blockInfo = new BlockInfoUnderConstruction(
         block, 1, HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION, targets);
@@ -62,8 +73,6 @@ public class TestCommitBlockSynchronization {
     doReturn(blockInfo).when(namesystemSpy).getStoredBlock(any(Block.class));
     doReturn("").when(namesystemSpy).closeFileCommitBlocks(
         any(INodeFile.class), any(BlockInfo.class));
-    doReturn("").when(namesystemSpy).persistBlocks(
-        any(INodeFile.class), anyBoolean());
     doReturn(mock(FSEditLog.class)).when(namesystemSpy).getEditLog();
 
     return namesystemSpy;

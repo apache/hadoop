@@ -82,6 +82,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
@@ -199,6 +201,7 @@ public class TestNodeStatusUpdater {
       Dispatcher mockDispatcher = mock(Dispatcher.class);
       EventHandler mockEventHandler = mock(EventHandler.class);
       when(mockDispatcher.getEventHandler()).thenReturn(mockEventHandler);
+      NMStateStoreService stateStore = new NMNullStateStoreService();
       nodeStatus.setResponseId(heartBeatID++);
       Map<ApplicationId, List<ContainerStatus>> appToContainers =
           getAppToContainerStatusMap(nodeStatus.getContainersStatuses());
@@ -224,9 +227,8 @@ public class TestNodeStatusUpdater {
                 firstContainerID, InetAddress.getByName("localhost")
                     .getCanonicalHostName(), 1234, user, resource,
                 currentTime + 10000, 123, "password".getBytes(), currentTime));
-        Container container =
-            new ContainerImpl(conf, mockDispatcher, launchContext, null,
-              mockMetrics, containerToken);
+        Container container = new ContainerImpl(conf, mockDispatcher,
+            stateStore, launchContext, null, mockMetrics, containerToken);
         this.context.getContainers().put(firstContainerID, container);
       } else if (heartBeatID == 2) {
         // Checks on the RM end
@@ -255,9 +257,8 @@ public class TestNodeStatusUpdater {
                 secondContainerID, InetAddress.getByName("localhost")
                     .getCanonicalHostName(), 1234, user, resource,
                 currentTime + 10000, 123, "password".getBytes(), currentTime));
-        Container container =
-            new ContainerImpl(conf, mockDispatcher, launchContext, null,
-              mockMetrics, containerToken);
+        Container container = new ContainerImpl(conf, mockDispatcher,
+            stateStore, launchContext, null, mockMetrics, containerToken);
         this.context.getContainers().put(secondContainerID, container);
       } else if (heartBeatID == 3) {
         // Checks on the RM end
@@ -782,7 +783,7 @@ public class TestNodeStatusUpdater {
     ContainerId cId = ContainerId.newInstance(appAttemptId, 0);               
                                                                               
                                                                               
-    nodeStatusUpdater.updateStoppedContainersInCache(cId);
+    nodeStatusUpdater.addCompletedContainer(cId);
     Assert.assertTrue(nodeStatusUpdater.isContainerRecentlyStopped(cId));     
                                                                               
     long time1 = System.currentTimeMillis();                                  
@@ -930,6 +931,7 @@ public class TestNodeStatusUpdater {
       Thread.sleep(500);
     }
     Assert.assertFalse(heartBeatID < 1);
+    Assert.assertTrue(nm.getNMContext().getDecommissioned());
 
     // NM takes a while to reach the STOPPED state.
     waitCount = 0;
@@ -1158,7 +1160,8 @@ public class TestNodeStatusUpdater {
       @Override
       protected NMContext createNMContext(
           NMContainerTokenSecretManager containerTokenSecretManager,
-          NMTokenSecretManagerInNM nmTokenSecretManager) {
+          NMTokenSecretManagerInNM nmTokenSecretManager,
+          NMStateStoreService store) {
         return new MyNMContext(containerTokenSecretManager,
           nmTokenSecretManager);
       }
@@ -1267,7 +1270,8 @@ public class TestNodeStatusUpdater {
     public MyNMContext(
         NMContainerTokenSecretManager containerTokenSecretManager,
         NMTokenSecretManagerInNM nmTokenSecretManager) {
-      super(containerTokenSecretManager, nmTokenSecretManager, null, null);
+      super(containerTokenSecretManager, nmTokenSecretManager, null, null,
+          new NMNullStateStoreService());
     }
 
     @Override

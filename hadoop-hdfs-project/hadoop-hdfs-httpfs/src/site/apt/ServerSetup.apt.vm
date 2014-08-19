@@ -18,8 +18,6 @@
 
 Hadoop HDFS over HTTP ${project.version} - Server Setup
 
-  \[ {{{./index.html}Go Back}} \]
-
   This page explains how to quickly setup HttpFS with Pseudo authentication
   against a Hadoop cluster with Pseudo authentication.
 
@@ -159,5 +157,3 @@ $ keytool -genkey -alias tomcat -keyalg RSA
   <<<swebhdfs://>>> scheme. Make sure the JVM is picking up the truststore
   containing the public key of the SSL certificate if using a self-signed
   certificate.
-
-  \[ {{{./index.html}Go Back}} \]

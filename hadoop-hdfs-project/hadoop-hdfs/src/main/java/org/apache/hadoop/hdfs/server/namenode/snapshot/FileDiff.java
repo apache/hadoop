@@ -17,13 +17,17 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.List;
+
+import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileAttributes;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
-
-import java.util.List;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
 
 /**
  * The difference of an {@link INodeFile} between two snapshots.
@@ -64,6 +68,20 @@ public class FileDiff extends
   public String toString() {
     return super.toString() + " fileSize=" + fileSize + ", rep="
         + (snapshotINode == null? "?": snapshotINode.getFileReplication());
+  }
+
+  @Override
+  void write(DataOutput out, ReferenceMap referenceMap) throws IOException {
+    writeSnapshot(out);
+    out.writeLong(fileSize);
+
+    // write snapshotINode
+    if (snapshotINode != null) {
+      out.writeBoolean(true);
+      FSImageSerialization.writeINodeFileAttributes(snapshotINode, out);
+    } else {
+      out.writeBoolean(false);
+    }
   }
 
   @Override

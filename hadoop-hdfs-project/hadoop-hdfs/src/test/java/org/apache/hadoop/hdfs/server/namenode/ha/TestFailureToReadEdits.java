@@ -104,7 +104,7 @@ public class TestFailureToReadEdits {
     HAUtil.setAllowStandbyReads(conf, true);
     
     if (clusterType == TestType.SHARED_DIR_HA) {
-      MiniDFSNNTopology topology = MiniQJMHACluster.createDefaultTopology();
+      MiniDFSNNTopology topology = MiniQJMHACluster.createDefaultTopology(10000);
       cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(topology)
         .numDataNodes(0)

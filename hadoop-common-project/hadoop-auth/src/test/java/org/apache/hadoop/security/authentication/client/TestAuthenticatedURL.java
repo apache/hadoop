@@ -33,36 +33,6 @@ public class TestAuthenticatedURL {
     token = new AuthenticatedURL.Token("foo");
     Assert.assertTrue(token.isSet());
     Assert.assertEquals("foo", token.toString());
-
-    AuthenticatedURL.Token token1 = new AuthenticatedURL.Token();
-    AuthenticatedURL.Token token2 = new AuthenticatedURL.Token();
-    Assert.assertEquals(token1.hashCode(), token2.hashCode());
-    Assert.assertTrue(token1.equals(token2));
-
-    token1 = new AuthenticatedURL.Token();
-    token2 = new AuthenticatedURL.Token("foo");
-    Assert.assertNotSame(token1.hashCode(), token2.hashCode());
-    Assert.assertFalse(token1.equals(token2));
-
-    token1 = new AuthenticatedURL.Token("foo");
-    token2 = new AuthenticatedURL.Token();
-    Assert.assertNotSame(token1.hashCode(), token2.hashCode());
-    Assert.assertFalse(token1.equals(token2));
-
-    token1 = new AuthenticatedURL.Token("foo");
-    token2 = new AuthenticatedURL.Token("foo");
-    Assert.assertEquals(token1.hashCode(), token2.hashCode());
-    Assert.assertTrue(token1.equals(token2));
-
-    token1 = new AuthenticatedURL.Token("bar");
-    token2 = new AuthenticatedURL.Token("foo");
-    Assert.assertNotSame(token1.hashCode(), token2.hashCode());
-    Assert.assertFalse(token1.equals(token2));
-
-    token1 = new AuthenticatedURL.Token("foo");
-    token2 = new AuthenticatedURL.Token("bar");
-    Assert.assertNotSame(token1.hashCode(), token2.hashCode());
-    Assert.assertFalse(token1.equals(token2));
   }
 
   @Test
@@ -135,6 +105,14 @@ public class TestAuthenticatedURL {
     AuthenticatedURL aURL = new AuthenticatedURL(authenticator, connConf);
     aURL.openConnection(new URL("http://foo"), new AuthenticatedURL.Token());
     Mockito.verify(connConf).configure(Mockito.<HttpURLConnection>any());
+  }
+
+  @Test
+  public void testGetAuthenticator() throws Exception {
+    Authenticator authenticator = Mockito.mock(Authenticator.class);
+
+    AuthenticatedURL aURL = new AuthenticatedURL(authenticator);
+    Assert.assertEquals(authenticator, aURL.getAuthenticator());
   }
 
 }

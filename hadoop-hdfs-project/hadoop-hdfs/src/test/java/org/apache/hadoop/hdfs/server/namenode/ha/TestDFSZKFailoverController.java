@@ -35,6 +35,7 @@ import org.apache.hadoop.ha.ZKFailoverController;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.tools.DFSHAAdmin;
 import org.apache.hadoop.hdfs.tools.DFSZKFailoverController;
@@ -53,6 +54,11 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
   private TestContext ctx;
   private ZKFCThread thr1, thr2;
   private FileSystem fs;
+
+  static {
+    // Make tests run faster by avoiding fsync()
+    EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
+  }
   
   @Before
   public void setup() throws Exception {

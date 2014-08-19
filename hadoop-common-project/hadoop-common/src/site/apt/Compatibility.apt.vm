@@ -72,10 +72,13 @@ Apache Hadoop Compatibility
     * Private-Stable APIs can change across major releases,
     but not within a major release.
 
+    * Classes not annotated are implicitly "Private". Class members not
+    annotated inherit the annotations of the enclosing class.
+
     * Note: APIs generated from the proto files need to be compatible for
-rolling-upgrades. See the section on wire-compatibility for more details. The
-compatibility policies for APIs and wire-communication need to go
-hand-in-hand to address this.
+    rolling-upgrades. See the section on wire-compatibility for more details.
+    The compatibility policies for APIs and wire-communication need to go
+    hand-in-hand to address this.
 
 ** Semantic compatibility
 

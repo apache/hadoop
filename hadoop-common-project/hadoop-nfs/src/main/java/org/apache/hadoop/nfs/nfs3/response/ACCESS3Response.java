@@ -46,10 +46,12 @@ public class ACCESS3Response extends NFS3Response {
   @Override
   public XDR writeHeaderAndResponse(XDR out, int xid, Verifier verifier) {
     super.writeHeaderAndResponse(out, xid, verifier);
-    out.writeBoolean(true);
-    postOpAttr.serialize(out);
     if (this.getStatus() == Nfs3Status.NFS3_OK) {
+      out.writeBoolean(true);
+      postOpAttr.serialize(out);
       out.writeInt(access);
+    } else {
+      out.writeBoolean(false);
     }
     return out;
   }

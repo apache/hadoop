@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import com.google.common.base.Optional;
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 
@@ -212,10 +213,21 @@ public class DefaultContainerExecutor extends ContainerExecutor {
           && exitCode != ExitCode.TERMINATED.getExitCode()) {
         LOG.warn("Exception from container-launch with container ID: "
             + containerId + " and exit code: " + exitCode , e);
-        logOutput(shExec.getOutput());
-        String diagnostics = "Exception from container-launch: "
-            + e + "\n"
-            + StringUtils.stringifyException(e) + "\n" + shExec.getOutput();
+
+        StringBuilder builder = new StringBuilder();
+        builder.append("Exception from container-launch.\n");
+        builder.append("Container id: " + containerId + "\n");
+        builder.append("Exit code: " + exitCode + "\n");
+        if (!Optional.fromNullable(e.getMessage()).or("").isEmpty()) {
+          builder.append("Exception message: " + e.getMessage() + "\n");
+        }
+        builder.append("Stack trace: "
+            + StringUtils.stringifyException(e) + "\n");
+        if (!shExec.getOutput().isEmpty()) {
+          builder.append("Shell output: " + shExec.getOutput() + "\n");
+        }
+        String diagnostics = builder.toString();
+        logOutput(diagnostics);
         container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
             diagnostics));
       } else {
@@ -261,25 +273,57 @@ public class DefaultContainerExecutor extends ContainerExecutor {
 
   private final class UnixLocalWrapperScriptBuilder
       extends LocalWrapperScriptBuilder {
+    private final Path sessionScriptPath;
 
     public UnixLocalWrapperScriptBuilder(Path containerWorkDir) {
       super(containerWorkDir);
+      this.sessionScriptPath = new Path(containerWorkDir,
+          Shell.appendScriptExtension("default_container_executor_session"));
+    }
+
+    @Override
+    public void writeLocalWrapperScript(Path launchDst, Path pidFile)
+        throws IOException {
+      writeSessionScript(launchDst, pidFile);
+      super.writeLocalWrapperScript(launchDst, pidFile);
     }
 
     @Override
     public void writeLocalWrapperScript(Path launchDst, Path pidFile,
         PrintStream pout) {
-
-      // We need to do a move as writing to a file is not atomic
-      // Process reading a file being written to may get garbled data
-      // hence write pid to tmp file first followed by a mv
+      String exitCodeFile = ContainerLaunch.getExitCodeFile(
+          pidFile.toString());
+      String tmpFile = exitCodeFile + ".tmp";
       pout.println("#!/bin/bash");
-      pout.println();
-      pout.println("echo $$ > " + pidFile.toString() + ".tmp");
-      pout.println("/bin/mv -f " + pidFile.toString() + ".tmp " + pidFile);
-      String exec = Shell.isSetsidAvailable? "exec setsid" : "exec";
-      pout.println(exec + " /bin/bash \"" +
-        launchDst.toUri().getPath().toString() + "\"");
+      pout.println("/bin/bash \"" + sessionScriptPath.toString() + "\"");
+      pout.println("rc=$?");
+      pout.println("echo $rc > \"" + tmpFile + "\"");
+      pout.println("/bin/mv -f \"" + tmpFile + "\" \"" + exitCodeFile + "\"");
+      pout.println("exit $rc");
+    }
+
+    private void writeSessionScript(Path launchDst, Path pidFile)
+        throws IOException {
+      DataOutputStream out = null;
+      PrintStream pout = null;
+      try {
+        out = lfs.create(sessionScriptPath, EnumSet.of(CREATE, OVERWRITE));
+        pout = new PrintStream(out);
+        // We need to do a move as writing to a file is not atomic
+        // Process reading a file being written to may get garbled data
+        // hence write pid to tmp file first followed by a mv
+        pout.println("#!/bin/bash");
+        pout.println();
+        pout.println("echo $$ > " + pidFile.toString() + ".tmp");
+        pout.println("/bin/mv -f " + pidFile.toString() + ".tmp " + pidFile);
+        String exec = Shell.isSetsidAvailable? "exec setsid" : "exec";
+        pout.println(exec + " /bin/bash \"" +
+            launchDst.toUri().getPath().toString() + "\"");
+      } finally {
+        IOUtils.cleanup(LOG, pout, out);
+      }
+      lfs.setPermission(sessionScriptPath,
+          ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
     }
   }
 
@@ -298,6 +342,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     @Override
     public void writeLocalWrapperScript(Path launchDst, Path pidFile,
         PrintStream pout) {
+      // TODO: exit code script for Windows
 
       // On Windows, the pid is the container ID, so that it can also serve as
       // the name of the job object created by winutils for task management.
@@ -328,6 +373,12 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       throw e;
     }
     return true;
+  }
+
+  @Override
+  public boolean isContainerProcessAlive(String user, String pid)
+      throws IOException {
+    return containerIsAlive(pid);
   }
 
   /**

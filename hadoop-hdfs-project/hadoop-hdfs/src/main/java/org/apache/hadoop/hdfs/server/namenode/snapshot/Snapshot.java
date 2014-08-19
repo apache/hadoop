@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -30,10 +31,13 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.AclFeature;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
+import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
+import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
+import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -142,9 +146,20 @@ public class Snapshot implements Comparable<byte[]> {
   /** The root directory of the snapshot. */
   static public class Root extends INodeDirectory {
     Root(INodeDirectory other) {
-      // Always preserve ACL.
+      // Always preserve ACL, XAttr.
       super(other, false, Lists.newArrayList(
-        Iterables.filter(Arrays.asList(other.getFeatures()), AclFeature.class))
+        Iterables.filter(Arrays.asList(other.getFeatures()), new Predicate<Feature>() {
+
+          @Override
+          public boolean apply(Feature input) {
+            if (AclFeature.class.isInstance(input) 
+                || XAttrFeature.class.isInstance(input)) {
+              return true;
+            }
+            return false;
+          }
+          
+        }))
         .toArray(new Feature[0]));
     }
 
@@ -169,15 +184,14 @@ public class Snapshot implements Comparable<byte[]> {
   /** The root directory of the snapshot. */
   private final Root root;
 
-  Snapshot(int id, String name, INodeDirectorySnapshottable dir) {
+  Snapshot(int id, String name, INodeDirectory dir) {
     this(id, dir, dir);
     this.root.setLocalName(DFSUtil.string2Bytes(name));
   }
 
-  Snapshot(int id, INodeDirectory dir, INodeDirectorySnapshottable parent) {
+  Snapshot(int id, INodeDirectory dir, INodeDirectory parent) {
     this.id = id;
     this.root = new Root(dir);
-
     this.root.setParent(parent);
   }
   
@@ -213,5 +227,12 @@ public class Snapshot implements Comparable<byte[]> {
   @Override
   public String toString() {
     return getClass().getSimpleName() + "." + root.getLocalName() + "(id=" + id + ")";
+  }
+
+  /** Serialize the fields to out */
+  void write(DataOutput out) throws IOException {
+    out.writeInt(id);
+    // write root
+    FSImageSerialization.writeINodeDirectory(root, out);
   }
 }

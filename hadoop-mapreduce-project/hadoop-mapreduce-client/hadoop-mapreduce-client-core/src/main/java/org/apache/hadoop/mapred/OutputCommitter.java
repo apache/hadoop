@@ -176,12 +176,32 @@ public abstract class OutputCommitter
 
   /**
    * This method implements the new interface by calling the old method. Note
-   * that the input types are different between the new and old apis and this
-   * is a bridge between the two.
+   * that the input types are different between the new and old apis and this is
+   * a bridge between the two.
+   * 
+   * @deprecated Use {@link #isRecoverySupported(JobContext)} instead.
    */
+  @Deprecated
   @Override
   public boolean isRecoverySupported() {
     return false;
+  }
+
+  /**
+   * Is task output recovery supported for restarting jobs?
+   * 
+   * If task output recovery is supported, job restart can be done more
+   * efficiently.
+   * 
+   * @param jobContext
+   *          Context of the job whose output is being written.
+   * @return <code>true</code> if task output recovery is supported,
+   *         <code>false</code> otherwise
+   * @throws IOException
+   * @see #recoverTask(TaskAttemptContext)
+   */
+  public boolean isRecoverySupported(JobContext jobContext) throws IOException {
+    return isRecoverySupported();
   }
 
   /**
@@ -313,6 +333,17 @@ public abstract class OutputCommitter
   void recoverTask(org.apache.hadoop.mapreduce.TaskAttemptContext taskContext
       ) throws IOException {
     recoverTask((TaskAttemptContext) taskContext);
+  }
+
+  /**
+   * This method implements the new interface by calling the old method. Note
+   * that the input types are different between the new and old apis and this is
+   * a bridge between the two.
+   */
+  @Override
+  public final boolean isRecoverySupported(
+      org.apache.hadoop.mapreduce.JobContext context) throws IOException {
+    return isRecoverySupported((JobContext) context);
   }
 
 }

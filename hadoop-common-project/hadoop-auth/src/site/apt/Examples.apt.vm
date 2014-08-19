@@ -18,8 +18,6 @@
 
 Hadoop Auth, Java HTTP SPNEGO ${project.version} - Examples
 
-  \[ {{{./index.html}Go Back}} \]
-
 * Accessing a Hadoop Auth protected URL Using a browser
 
   <<IMPORTANT:>> The browser must support HTTP Kerberos SPNEGO. For example,
@@ -133,5 +131,3 @@ You are: user[tucu] principal[tucu@LOCALHOST]
 ....
 
 +---+
-
-  \[ {{{./index.html}Go Back}} \]

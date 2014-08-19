@@ -23,11 +23,11 @@ import org.apache.hadoop.fs.DelegationTokenRenewer;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
-import org.apache.hadoop.fs.http.client.HttpFSKerberosAuthenticator;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticator;
 import org.apache.hadoop.test.HFSTestCase;
 import org.apache.hadoop.test.KerberosTestUtils;
 import org.apache.hadoop.test.TestDir;
@@ -166,9 +166,9 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
           .parse(new InputStreamReader(conn.getInputStream()));
         json =
           (JSONObject) json
-            .get(HttpFSKerberosAuthenticator.DELEGATION_TOKEN_JSON);
+            .get(DelegationTokenAuthenticator.DELEGATION_TOKEN_JSON);
         String tokenStr = (String) json
-          .get(HttpFSKerberosAuthenticator.DELEGATION_TOKEN_URL_STRING_JSON);
+          .get(DelegationTokenAuthenticator.DELEGATION_TOKEN_URL_STRING_JSON);
 
         //access httpfs using the delegation token
         url = new URL(TestJettyHelper.getJettyURL(),

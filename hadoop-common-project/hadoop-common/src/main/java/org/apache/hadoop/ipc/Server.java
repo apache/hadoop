@@ -355,8 +355,8 @@ public abstract class Server {
   private int readThreads;                        // number of read threads
   private int readerPendingConnectionQueue;         // number of connections to queue per read thread
   private Class<? extends Writable> rpcRequestClass;   // class used for deserializing the rpc request
-  protected RpcMetrics rpcMetrics;
-  protected RpcDetailedMetrics rpcDetailedMetrics;
+  final protected RpcMetrics rpcMetrics;
+  final protected RpcDetailedMetrics rpcDetailedMetrics;
   
   private Configuration conf;
   private String portRangeConfig = null;
@@ -1221,7 +1221,7 @@ public abstract class Server {
         ugi.addTokenIdentifier(tokenId);
         return ugi;
       } else {
-        return UserGroupInformation.createRemoteUser(authorizedId);
+        return UserGroupInformation.createRemoteUser(authorizedId, authMethod);
       }
     }
 
@@ -2494,12 +2494,8 @@ public abstract class Server {
     listener.doStop();
     responder.interrupt();
     notifyAll();
-    if (this.rpcMetrics != null) {
-      this.rpcMetrics.shutdown();
-    }
-    if (this.rpcDetailedMetrics != null) {
-      this.rpcDetailedMetrics.shutdown();
-    }
+    this.rpcMetrics.shutdown();
+    this.rpcDetailedMetrics.shutdown();
   }
 
   /** Wait for the server to be stopped.

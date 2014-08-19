@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies;
 
+import java.util.ArrayList;
 import java.util.Collection;
 
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -33,7 +34,31 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Schedulable;
 public class ComputeFairShares {
   
   private static final int COMPUTE_FAIR_SHARES_ITERATIONS = 25;
-  
+
+  /**
+   * Compute fair share of the given schedulables.Fair share is an allocation of
+   * shares considering only active schedulables ie schedulables which have
+   * running apps.
+   * 
+   * @param schedulables
+   * @param totalResources
+   * @param type
+   */
+  public static void computeShares(
+      Collection<? extends Schedulable> schedulables, Resource totalResources,
+      ResourceType type) {
+    Collection<Schedulable> activeSchedulables = new ArrayList<Schedulable>();
+    for (Schedulable sched : schedulables) {
+      if (sched.isActive()) {
+        activeSchedulables.add(sched);
+      } else {
+        setResourceValue(0, sched.getFairShare(), type);
+      }
+    }
+
+    computeSharesInternal(activeSchedulables, totalResources, type);
+  }
+
   /**
    * Given a set of Schedulables and a number of slots, compute their weighted
    * fair shares. The min and max shares and of the Schedulables are assumed to
@@ -75,7 +100,7 @@ public class ComputeFairShares {
    * because resourceUsedWithWeightToResourceRatio is linear-time and the number of
    * iterations of binary search is a constant (dependent on desired precision).
    */
-  public static void computeShares(
+  private static void computeSharesInternal(
       Collection<? extends Schedulable> schedulables, Resource totalResources,
       ResourceType type) {
     if (schedulables.isEmpty()) {

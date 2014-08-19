@@ -58,6 +58,10 @@ public class CredentialsSys extends Credentials {
     return mUID;
   }
 
+  public int[] getAuxGIDs() {
+    return mAuxGIDs;
+  }
+
   public void setGID(int gid) {
     this.mGID = gid;
   }
@@ -65,7 +69,7 @@ public class CredentialsSys extends Credentials {
   public void setUID(int uid) {
     this.mUID = uid;
   }
-  
+
   public void setStamp(int stamp) {
     this.mStamp = stamp;
   }

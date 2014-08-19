@@ -17,11 +17,16 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.net.BindException;
+import java.util.Random;
+
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -43,6 +48,9 @@ public class TestEditLogAutoroll {
   private NameNode nn0;
   private FileSystem fs;
   private FSEditLog editLog;
+  private final Random random = new Random();
+
+  private static final Log LOG = LogFactory.getLog(TestEditLog.class);
 
   @Before
   public void setUp() throws Exception {
@@ -54,24 +62,35 @@ public class TestEditLogAutoroll {
     conf.setFloat(DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD, 0.5f);
     conf.setInt(DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS, 100);
 
-    MiniDFSNNTopology topology = new MiniDFSNNTopology()
-    .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
-      .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(10061))
-      .addNN(new MiniDFSNNTopology.NNConf("nn2").setHttpPort(10062)));
+    int retryCount = 0;
+    while (true) {
+      try {
+        int basePort = 10060 + random.nextInt(100) * 2;
+        MiniDFSNNTopology topology = new MiniDFSNNTopology()
+            .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
+                .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(basePort))
+                .addNN(new MiniDFSNNTopology.NNConf("nn2").setHttpPort(basePort + 1)));
 
-    cluster = new MiniDFSCluster.Builder(conf)
-      .nnTopology(topology)
-      .numDataNodes(0)
-      .build();
-    cluster.waitActive();
+        cluster = new MiniDFSCluster.Builder(conf)
+            .nnTopology(topology)
+            .numDataNodes(0)
+            .build();
+        cluster.waitActive();
 
-    nn0 = cluster.getNameNode(0);
-    fs = HATestUtil.configureFailoverFs(cluster, conf);
+        nn0 = cluster.getNameNode(0);
+        fs = HATestUtil.configureFailoverFs(cluster, conf);
 
-    cluster.transitionToActive(0);
+        cluster.transitionToActive(0);
 
-    fs = cluster.getFileSystem(0);
-    editLog = nn0.getNamesystem().getEditLog();
+        fs = cluster.getFileSystem(0);
+        editLog = nn0.getNamesystem().getEditLog();
+        ++retryCount;
+        break;
+      } catch (BindException e) {
+        LOG.info("Set up MiniDFSCluster failed due to port conflicts, retry "
+            + retryCount + " times");
+      }
+    }
   }
 
   @After

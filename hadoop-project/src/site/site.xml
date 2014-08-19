@@ -51,8 +51,10 @@
       <item name="Single Node Setup" href="hadoop-project-dist/hadoop-common/SingleCluster.html"/>
       <item name="Cluster Setup" href="hadoop-project-dist/hadoop-common/ClusterSetup.html"/>
       <item name="Hadoop Commands Reference" href="hadoop-project-dist/hadoop-common/CommandsManual.html"/>
-      <item name="File System Shell" href="hadoop-project-dist/hadoop-common/FileSystemShell.html"/>
+      <item name="FileSystem Shell" href="hadoop-project-dist/hadoop-common/FileSystemShell.html"/>
       <item name="Hadoop Compatibility" href="hadoop-project-dist/hadoop-common/Compatibility.html"/>
+      <item name="FileSystem Specification"
+        href="hadoop-project-dist/hadoop-common/filesystem/index.html"/>
     </menu>
 
     <menu name="Common" inherit="top">
@@ -62,10 +64,12 @@
       <item name="Secure Mode" href="hadoop-project-dist/hadoop-common/SecureMode.html"/>
       <item name="Service Level Authorization" href="hadoop-project-dist/hadoop-common/ServiceLevelAuth.html"/>
       <item name="HTTP Authentication" href="hadoop-project-dist/hadoop-common/HttpAuthentication.html"/>
+      <item name="Hadoop KMS" href="hadoop-kms/index.html"/>
     </menu>
     
     <menu name="HDFS" inherit="top">
       <item name="HDFS User Guide" href="hadoop-project-dist/hadoop-hdfs/HdfsUserGuide.html"/>
+      <item name="HDFS Commands Reference" href="hadoop-project-dist/hadoop-hdfs/HDFSCommands.html"/>
       <item name="High Availability With QJM" href="hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithQJM.html"/>
       <item name="High Availability With NFS" href="hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithNFS.html"/>
       <item name="Federation" href="hadoop-project-dist/hadoop-hdfs/Federation.html"/>
@@ -85,13 +89,25 @@
       <item name="Centralized Cache Management" href="hadoop-project-dist/hadoop-hdfs/CentralizedCacheManagement.html"/>
       <item name="HDFS NFS Gateway" href="hadoop-project-dist/hadoop-hdfs/HdfsNfsGateway.html"/>
       <item name="HDFS Rolling Upgrade" href="hadoop-project-dist/hadoop-hdfs/HdfsRollingUpgrade.html"/>
+      <item name="Extended Attributes" href="hadoop-project-dist/hadoop-hdfs/ExtendedAttributes.html"/>
+      <item name="HDFS Support for Multihoming" href="hadoop-project-dist/hadoop-hdfs/HdfsMultihoming.html"/>
     </menu>
 
     <menu name="MapReduce" inherit="top">
+      <item name="MapReduce Tutorial" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduceTutorial.html"/>
+      <item name="MapReduce Commands Reference" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapredCommands.html"/>
       <item name="Compatibilty between Hadoop 1.x and Hadoop 2.x" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduce_Compatibility_Hadoop1_Hadoop2.html"/>
       <item name="Encrypted Shuffle" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/EncryptedShuffle.html"/>
       <item name="Pluggable Shuffle/Sort" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/PluggableShuffleAndPluggableSort.html"/>
       <item name="Distributed Cache Deploy" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/DistributedCacheDeploy.html"/>
+      <item name="Hadoop Streaming" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/HadoopStreaming.html"/>
+      <item name="Hadoop Archives" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/HadoopArchives.html"/>
+      <item name="DistCp" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/DistCp.html"/>
+    </menu>
+
+    <menu name="MapReduce REST APIs" inherit="top">
+      <item name="MR Application Master" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapredAppMasterRest.html"/>
+      <item name="MR History Server" href="hadoop-mapreduce-client/hadoop-mapreduce-client-hs/HistoryServerRest.html"/>
     </menu>
 
     <menu name="YARN" inherit="top">
@@ -99,6 +115,7 @@
       <item name="Capacity Scheduler" href="hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html"/>
       <item name="Fair Scheduler" href="hadoop-yarn/hadoop-yarn-site/FairScheduler.html"/>
       <item name="ResourceManager Restart" href="hadoop-yarn/hadoop-yarn-site/ResourceManagerRestart.html"/>
+      <item name="ResourceManager HA" href="hadoop-yarn/hadoop-yarn-site/ResourceManagerHA.html"/>
       <item name="Web Application Proxy" href="hadoop-yarn/hadoop-yarn-site/WebApplicationProxy.html"/>
       <item name="YARN Timeline Server" href="hadoop-yarn/hadoop-yarn-site/TimelineServer.html"/>
       <item name="Writing YARN Applications" href="hadoop-yarn/hadoop-yarn-site/WritingYarnApplications.html"/>
@@ -110,8 +127,6 @@
       <item name="Introduction" href="hadoop-yarn/hadoop-yarn-site/WebServicesIntro.html"/>
       <item name="Resource Manager" href="hadoop-yarn/hadoop-yarn-site/ResourceManagerRest.html"/>
       <item name="Node Manager" href="hadoop-yarn/hadoop-yarn-site/NodeManagerRest.html"/>
-      <item name="MR Application Master" href="hadoop-yarn/hadoop-yarn-site/MapredAppMasterRest.html"/>
-      <item name="History Server" href="hadoop-yarn/hadoop-yarn-site/HistoryServerRest.html"/>
     </menu>
     
     <menu name="Auth" inherit="top">
@@ -127,6 +142,8 @@
       <item name="Common CHANGES.txt" href="hadoop-project-dist/hadoop-common/CHANGES.txt"/>
       <item name="HDFS CHANGES.txt" href="hadoop-project-dist/hadoop-hdfs/CHANGES.txt"/>
       <item name="MapReduce CHANGES.txt" href="hadoop-project-dist/hadoop-mapreduce/CHANGES.txt"/>
+      <item name="YARN CHANGES.txt" href="hadoop-project-dist/hadoop-yarn/CHANGES.txt"/>
+      <item name="Metrics" href="hadoop-project-dist/hadoop-common/Metrics.html"/>
     </menu>
     
     <menu name="Configuration" inherit="top">

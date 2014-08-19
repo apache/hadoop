@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
+import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -69,6 +70,8 @@ public class ContainersMonitorImpl extends AbstractService implements
   private boolean pmemCheckEnabled;
   private boolean vmemCheckEnabled;
 
+  private long maxVCoresAllottedForContainers;
+
   private static final long UNKNOWN_MEMORY_LIMIT = -1L;
 
   public ContainersMonitorImpl(ContainerExecutor exec,
@@ -107,10 +110,16 @@ public class ContainersMonitorImpl extends AbstractService implements
         YarnConfiguration.NM_PMEM_MB,
         YarnConfiguration.DEFAULT_NM_PMEM_MB) * 1024 * 1024l;
 
+    long configuredVCoresForContainers = conf.getLong(
+        YarnConfiguration.NM_VCORES,
+        YarnConfiguration.DEFAULT_NM_VCORES);
+
+
     // Setting these irrespective of whether checks are enabled. Required in
     // the UI.
     // ///////// Physical memory configuration //////
     this.maxPmemAllottedForContainers = configuredPMemForContainers;
+    this.maxVCoresAllottedForContainers = configuredVCoresForContainers;
 
     // ///////// Virtual memory configuration //////
     float vmemRatio = conf.getFloat(YarnConfiguration.NM_VMEM_PMEM_RATIO,
@@ -403,6 +412,7 @@ public class ContainersMonitorImpl extends AbstractService implements
 
             boolean isMemoryOverLimit = false;
             String msg = "";
+            int containerExitStatus = ContainerExitStatus.INVALID;
             if (isVmemCheckEnabled()
                 && isProcessTreeOverLimit(containerId.toString(),
                     currentVmemUsage, curMemUsageOfAgedProcesses, vmemLimit)) {
@@ -414,6 +424,7 @@ public class ContainersMonitorImpl extends AbstractService implements
                   currentPmemUsage, pmemLimit,
                   pId, containerId, pTree);
               isMemoryOverLimit = true;
+              containerExitStatus = ContainerExitStatus.KILLED_EXCEEDED_VMEM;
             } else if (isPmemCheckEnabled()
                 && isProcessTreeOverLimit(containerId.toString(),
                     currentPmemUsage, curRssMemUsageOfAgedProcesses,
@@ -426,6 +437,7 @@ public class ContainersMonitorImpl extends AbstractService implements
                   currentPmemUsage, pmemLimit,
                   pId, containerId, pTree);
               isMemoryOverLimit = true;
+              containerExitStatus = ContainerExitStatus.KILLED_EXCEEDED_PMEM;
             }
 
             if (isMemoryOverLimit) {
@@ -440,7 +452,8 @@ public class ContainersMonitorImpl extends AbstractService implements
               }
               // kill the container
               eventDispatcher.getEventHandler().handle(
-                  new ContainerKillEvent(containerId, msg));
+                  new ContainerKillEvent(containerId,
+                      containerExitStatus, msg));
               it.remove();
               LOG.info("Removed ProcessTree with root " + pId);
             } else {
@@ -511,6 +524,11 @@ public class ContainersMonitorImpl extends AbstractService implements
   @Override
   public long getPmemAllocatedForContainers() {
     return this.maxPmemAllottedForContainers;
+  }
+
+  @Override
+  public long getVCoresAllocatedForContainers() {
+    return this.maxVCoresAllottedForContainers;
   }
 
   /**

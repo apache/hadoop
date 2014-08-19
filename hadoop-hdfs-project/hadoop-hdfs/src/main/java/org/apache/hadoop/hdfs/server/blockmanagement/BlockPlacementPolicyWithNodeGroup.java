@@ -47,8 +47,8 @@ import org.apache.hadoop.net.NodeBase;
 public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefault {
 
   protected BlockPlacementPolicyWithNodeGroup(Configuration conf,  FSClusterStats stats,
-      NetworkTopology clusterMap) {
-    initialize(conf, stats, clusterMap);
+      NetworkTopology clusterMap, DatanodeManager datanodeManager) {
+    initialize(conf, stats, clusterMap, host2datanodeMap);
   }
 
   protected BlockPlacementPolicyWithNodeGroup() {
@@ -56,8 +56,9 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
 
   @Override
   public void initialize(Configuration conf,  FSClusterStats stats,
-          NetworkTopology clusterMap) {
-    super.initialize(conf, stats, clusterMap);
+          NetworkTopology clusterMap, 
+          Host2NodesMap host2datanodeMap) {
+    super.initialize(conf, stats, clusterMap, host2datanodeMap);
   }
 
   /** choose local node of localMachine as the target.
@@ -69,7 +70,8 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
   protected DatanodeStorageInfo chooseLocalStorage(Node localMachine,
       Set<Node> excludedNodes, long blocksize, int maxNodesPerRack,
       List<DatanodeStorageInfo> results, boolean avoidStaleNodes,
-      StorageType storageType) throws NotEnoughReplicasException {
+      StorageType storageType, boolean fallbackToLocalRack
+      ) throws NotEnoughReplicasException {
     // if no local machine, randomly choose one node
     if (localMachine == null)
       return chooseRandom(NodeBase.ROOT, excludedNodes, 
@@ -95,6 +97,10 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
         blocksize, maxNodesPerRack, results, avoidStaleNodes, storageType);
     if (chosenStorage != null) {
       return chosenStorage;
+    }
+
+    if (!fallbackToLocalRack) {
+      return null;
     }
     // try a node on local rack
     return chooseLocalRack(localMachine, excludedNodes, 
@@ -241,6 +247,36 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
         countOfExcludedNodes++;
       }
     }
+    
+    countOfExcludedNodes += addDependentNodesToExcludedNodes(
+        chosenNode, excludedNodes);
+    return countOfExcludedNodes;
+  }
+  
+  /**
+   * Add all nodes from a dependent nodes list to excludedNodes.
+   * @return number of new excluded nodes
+   */
+  private int addDependentNodesToExcludedNodes(DatanodeDescriptor chosenNode,
+      Set<Node> excludedNodes) {
+    if (this.host2datanodeMap == null) {
+      return 0;
+    }
+    int countOfExcludedNodes = 0;
+    for(String hostname : chosenNode.getDependentHostNames()) {
+      DatanodeDescriptor node =
+          this.host2datanodeMap.getDataNodeByHostName(hostname);
+      if(node!=null) {
+        if (excludedNodes.add(node)) {
+          countOfExcludedNodes++;
+        }
+      } else {
+        LOG.warn("Not able to find datanode " + hostname
+            + " which has dependency with datanode "
+            + chosenNode.getHostName());
+      }
+    }
+    
     return countOfExcludedNodes;
   }
 
@@ -255,9 +291,9 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
    * If first is empty, then pick second.
    */
   @Override
-  public Collection<DatanodeDescriptor> pickupReplicaSet(
-      Collection<DatanodeDescriptor> first,
-      Collection<DatanodeDescriptor> second) {
+  public Collection<DatanodeStorageInfo> pickupReplicaSet(
+      Collection<DatanodeStorageInfo> first,
+      Collection<DatanodeStorageInfo> second) {
     // If no replica within same rack, return directly.
     if (first.isEmpty()) {
       return second;
@@ -265,25 +301,24 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
     // Split data nodes in the first set into two sets, 
     // moreThanOne contains nodes on nodegroup with more than one replica
     // exactlyOne contains the remaining nodes
-    Map<String, List<DatanodeDescriptor>> nodeGroupMap = 
-        new HashMap<String, List<DatanodeDescriptor>>();
+    Map<String, List<DatanodeStorageInfo>> nodeGroupMap = 
+        new HashMap<String, List<DatanodeStorageInfo>>();
     
-    for(DatanodeDescriptor node : first) {
-      final String nodeGroupName = 
-          NetworkTopology.getLastHalf(node.getNetworkLocation());
-      List<DatanodeDescriptor> datanodeList = 
-          nodeGroupMap.get(nodeGroupName);
-      if (datanodeList == null) {
-        datanodeList = new ArrayList<DatanodeDescriptor>();
-        nodeGroupMap.put(nodeGroupName, datanodeList);
+    for(DatanodeStorageInfo storage : first) {
+      final String nodeGroupName = NetworkTopology.getLastHalf(
+          storage.getDatanodeDescriptor().getNetworkLocation());
+      List<DatanodeStorageInfo> storageList = nodeGroupMap.get(nodeGroupName);
+      if (storageList == null) {
+        storageList = new ArrayList<DatanodeStorageInfo>();
+        nodeGroupMap.put(nodeGroupName, storageList);
       }
-      datanodeList.add(node);
+      storageList.add(storage);
     }
     
-    final List<DatanodeDescriptor> moreThanOne = new ArrayList<DatanodeDescriptor>();
-    final List<DatanodeDescriptor> exactlyOne = new ArrayList<DatanodeDescriptor>();
+    final List<DatanodeStorageInfo> moreThanOne = new ArrayList<DatanodeStorageInfo>();
+    final List<DatanodeStorageInfo> exactlyOne = new ArrayList<DatanodeStorageInfo>();
     // split nodes into two sets
-    for(List<DatanodeDescriptor> datanodeList : nodeGroupMap.values()) {
+    for(List<DatanodeStorageInfo> datanodeList : nodeGroupMap.values()) {
       if (datanodeList.size() == 1 ) {
         // exactlyOne contains nodes on nodegroup with exactly one replica
         exactlyOne.add(datanodeList.get(0));

@@ -99,7 +99,8 @@ public class TestNMWebServicesApps extends JerseyTest {
       healthChecker.init(conf);
       dirsHandler = healthChecker.getDiskHandler();
       aclsManager = new ApplicationACLsManager(conf);
-      nmContext = new NodeManager.NMContext(null, null, dirsHandler, aclsManager);
+      nmContext = new NodeManager.NMContext(null, null, dirsHandler,
+          aclsManager, null);
       NodeId nodeId = NodeId.newInstance("testhost.foo.com", 9999);
       ((NodeManager.NMContext)nmContext).setNodeId(nodeId);
       resourceView = new ResourceView() {
@@ -114,6 +115,12 @@ public class TestNMWebServicesApps extends JerseyTest {
           // 16G in bytes
           return new Long("17179869184");
         }
+
+        @Override
+        public long getVCoresAllocatedForContainers() {
+          return new Long("4000");
+        }
+
 
         @Override
         public boolean isVmemCheckEnabled() {

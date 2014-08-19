@@ -88,7 +88,11 @@ class BlockPoolManager {
   
   synchronized void remove(BPOfferService t) {
     offerServices.remove(t);
-    bpByBlockPoolId.remove(t.getBlockPoolId());
+    if (t.hasBlockPoolId()) {
+      // It's possible that the block pool never successfully registered
+      // with any NN, so it was never added it to this map
+      bpByBlockPoolId.remove(t.getBlockPoolId());
+    }
     
     boolean removed = false;
     for (Iterator<BPOfferService> it = bpByNameserviceId.values().iterator();

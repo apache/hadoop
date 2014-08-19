@@ -109,7 +109,7 @@ public abstract class CompositeRecordReader<
         }
         // create priority queue
         if (null == q) {
-          cmp = WritableComparator.get(keyclass);
+          cmp = WritableComparator.get(keyclass, conf);
           q = new PriorityQueue<ComposableRecordReader<K,?>>(3,
                 new Comparator<ComposableRecordReader<K,?>>() {
                   public int compare(ComposableRecordReader<K,?> o1,

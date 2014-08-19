@@ -29,8 +29,10 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
@@ -38,6 +40,7 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -56,7 +59,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   
   private static final Log LOG = LogFactory.getLog(RMContainerRequestor.class);
 
-  private int lastResponseID;
+  protected int lastResponseID;
   private Resource availableResources;
 
   private final RecordFactory recordFactory =
@@ -75,8 +78,11 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   // numContainers dont end up as duplicates
   private final Set<ResourceRequest> ask = new TreeSet<ResourceRequest>(
       new org.apache.hadoop.yarn.api.records.ResourceRequest.ResourceRequestComparator());
-  private final Set<ContainerId> release = new TreeSet<ContainerId>(); 
-
+  private final Set<ContainerId> release = new TreeSet<ContainerId>();
+  // pendingRelease holds history or release requests.request is removed only if
+  // RM sends completedContainer.
+  // How it different from release? --> release is for per allocate() request.
+  protected Set<ContainerId> pendingRelease = new TreeSet<ContainerId>();
   private boolean nodeBlacklistingEnabled;
   private int blacklistDisablePercent;
   private AtomicBoolean ignoreBlacklisting = new AtomicBoolean(false);
@@ -96,6 +102,8 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     super(clientService, context);
   }
 
+  @Private
+  @VisibleForTesting
   static class ContainerRequest {
     final TaskAttemptId attemptID;
     final Resource capability;
@@ -103,20 +111,39 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     final String[] racks;
     //final boolean earlierAttemptFailed;
     final Priority priority;
-    
+    /**
+     * the time when this request object was formed; can be used to avoid
+     * aggressive preemption for recently placed requests
+     */
+    final long requestTimeMs;
+
     public ContainerRequest(ContainerRequestEvent event, Priority priority) {
       this(event.getAttemptID(), event.getCapability(), event.getHosts(),
           event.getRacks(), priority);
     }
-    
+
+    public ContainerRequest(ContainerRequestEvent event, Priority priority,
+                            long requestTimeMs) {
+      this(event.getAttemptID(), event.getCapability(), event.getHosts(),
+          event.getRacks(), priority, requestTimeMs);
+    }
+
     public ContainerRequest(TaskAttemptId attemptID,
-        Resource capability, String[] hosts, String[] racks, 
-        Priority priority) {
+                            Resource capability, String[] hosts, String[] racks,
+                            Priority priority) {
+      this(attemptID, capability, hosts, racks, priority,
+          System.currentTimeMillis());
+    }
+
+    public ContainerRequest(TaskAttemptId attemptID,
+        Resource capability, String[] hosts, String[] racks,
+        Priority priority, long requestTimeMs) {
       this.attemptID = attemptID;
       this.capability = capability;
       this.hosts = hosts;
       this.racks = racks;
       this.priority = priority;
+      this.requestTimeMs = requestTimeMs;
     }
     
     public String toString() {
@@ -163,6 +190,10 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     } catch (YarnException e) {
       throw new IOException(e);
     }
+
+    if (isResyncCommand(allocateResponse)) {
+      return allocateResponse;
+    }
     lastResponseID = allocateResponse.getResponseId();
     availableResources = allocateResponse.getAvailableResources();
     lastClusterNmCount = clusterNmCount;
@@ -189,6 +220,28 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     blacklistAdditions.clear();
     blacklistRemovals.clear();
     return allocateResponse;
+  }
+
+  protected boolean isResyncCommand(AllocateResponse allocateResponse) {
+    return allocateResponse.getAMCommand() != null
+        && allocateResponse.getAMCommand() == AMCommand.AM_RESYNC;
+  }
+
+  protected void addOutstandingRequestOnResync() {
+    for (Map<String, Map<Resource, ResourceRequest>> rr : remoteRequestsTable
+        .values()) {
+      for (Map<Resource, ResourceRequest> capabalities : rr.values()) {
+        for (ResourceRequest request : capabalities.values()) {
+          addResourceRequestToAsk(request);
+        }
+      }
+    }
+    if (!ignoreBlacklisting.get()) {
+      blacklistAdditions.addAll(blacklistedNodes);
+    }
+    if (!pendingRelease.isEmpty()) {
+      release.addAll(pendingRelease);
+    }
   }
 
   // May be incorrect if there's multiple NodeManagers running on a single host.

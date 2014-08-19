@@ -1,0 +1,97 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="X-UA-Compatible" content="IE=9" />
+  <link rel="stylesheet" type="text/css"
+       href="/static/bootstrap-3.0.2/css/bootstrap.min.css" />
+  <link rel="stylesheet" type="text/css" href="/static/hadoop.css" />
+  <title>SecondaryNamenode information</title>
+</head>
+<body>
+
+<header class="navbar navbar-inverse bs-docs-nav" role="banner">
+<div class="container">
+  <div class="navbar-header">
+    <div class="navbar-brand">Hadoop</div>
+  </div>
+
+  <ul class="nav navbar-nav" id="ui-tabs">
+    <li><a>Overview</a></li>
+  </ul>
+</div>
+</header>
+
+<div class="container">
+
+<div id="alert-panel">
+  <div class="alert alert-danger">
+    <button type="button" class="close" onclick="$('#alert-panel').hide();">&times;</button>
+    <div class="alert-body" id="alert-panel-body"></div>
+  </div>
+</div>
+
+<div class="tab-content">
+  <div class="tab-pane" id="tab-overview"></div>
+</div>
+
+<div class="row">
+  <hr />
+  <div class="col-xs-2"><p>Hadoop, 2014.</p></div>
+</div>
+</div>
+
+<script type="text/x-dust-template" id="tmpl-snn">
+{#snn}
+<div class="page-header"><h1>Overview</h1></div>
+<table class="table table-bordered table-striped">
+  <tr><th>Version</th><td>{SoftwareVersion}</td></tr>
+  <tr><th>Compiled</th><td>{CompileInfo}</td></tr>
+  <tr><th>NameNode Address</th><td>{HostAndPort}</td></tr>
+  <tr><th>Started</th><td>{StartTime|date_tostring}</td></tr>
+  <tr><th>Last Checkpoint</th><td>{@if cond="{LastCheckpointTime} === 0"}Never{:else}{LastCheckpointTime|date_tostring}{/if}</td></tr>
+  <tr><th>Checkpoint Period</th><td>{CheckpointPeriod} seconds</td></tr>
+  <tr><th>Checkpoint Transactions</th><td>{TxnCount}</td></tr>
+</table>
+
+<div class="page-header"><h2><small>Checkpoint Image URI</small></h2></div>
+<ul>
+  {#CheckpointDirectories}
+  <li>{.}</li>
+  {/CheckpointDirectories}
+</ul>
+
+<div class="page-header"><h2><small>Checkpoint Editlog URI</small></h2></div>
+<ul>
+  {#CheckpointEditlogDirectories}
+  <li>{.}</li>
+  {/CheckpointEditlogDirectories}
+</ul>
+{/snn}
+</script>
+
+<script type="text/javascript" src="/static/jquery-1.10.2.min.js">
+</script><script type="text/javascript" src="/static/bootstrap-3.0.2/js/bootstrap.min.js">
+</script><script type="text/javascript" src="/static/dust-full-2.0.0.min.js">
+</script><script type="text/javascript" src="/static/dust-helpers-1.1.1.min.js">
+</script><script type="text/javascript" src="/static/dfs-dust.js">
+</script><script type="text/javascript" src="snn.js">
+</script>
+</body>
+</html>

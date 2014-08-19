@@ -71,6 +71,17 @@
   </property>
 
   <property>
+    <description>
+      The actual address the server will bind to. If this optional address is
+      set, the RPC and webapp servers will bind to this address and the port specified in
+      yarn.resourcemanager.address and yarn.resourcemanager.webapp.address, respectively. This
+      is most useful for making RM listen to all interfaces by setting to 0.0.0.0.
+    </description>
+    <name>yarn.resourcemanager.bind-host</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>The number of threads used to handle applications manager requests.</description>
     <name>yarn.resourcemanager.client.thread-count</name>
     <value>50</value>
@@ -195,6 +206,15 @@
   </property>
 
   <property>
+    <description>Flag to enable override of the default kerberos authentication
+    filter with the RM authentication filter to allow authentication using
+    delegation tokens(fallback to kerberos if the tokens are missing). Only
+    applicable when the http authentication type is kerberos.</description>
+    <name>yarn.resourcemanager.webapp.delegation-token-auth-filter.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <description>How long to wait until a node manager is considered dead.</description>
     <name>yarn.nm.liveness-monitor.expiry-interval-ms</name>
     <value>600000</value>
@@ -270,6 +290,14 @@
   </property>
 
   <property>
+    <description>Enable RM work preserving recovery. This configuration is private
+    to YARN for experimenting the feature.
+    </description>
+    <name>yarn.resourcemanager.work-preserving-recovery.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>The class to use as the persistent store.
 
       If org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
@@ -309,14 +337,17 @@
   <property>
     <description>Number of times RM tries to connect to ZooKeeper.</description>
     <name>yarn.resourcemanager.zk-num-retries</name>
-    <value>500</value>
+    <value>1000</value>
   </property>
 
   <property>
     <description>Retry interval in milliseconds when connecting to ZooKeeper.
+      When HA is enabled, the value here is NOT used. It is generated
+      automatically from yarn.resourcemanager.zk-timeout-ms and
+      yarn.resourcemanager.zk-num-retries.
     </description>
     <name>yarn.resourcemanager.zk-retry-interval-ms</name>
-    <value>2000</value>
+    <value>1000</value>
   </property>
 
   <property>
@@ -367,6 +398,18 @@
       takes over (exclusively) the create-delete access.
     </description>
     <name>yarn.resourcemanager.zk-state-store.root-node.acl</name>
+  </property>
+
+  <property>
+    <description>
+        Specify the auths to be used for the ACL's specified in both the
+        yarn.resourcemanager.zk-acl and
+        yarn.resourcemanager.zk-state-store.root-node.acl properties.  This
+        takes a comma-separated list of authentication mechanisms, each of the
+        form 'scheme:auth' (the same syntax used for the 'addAuth' command in
+        the ZK CLI).
+    </description>
+    <name>yarn.resourcemanager.zk-auth</name>
   </property>
 
   <property>
@@ -431,7 +474,7 @@
   <property>
     <description>Name of the cluster. In a HA setting,
       this is used to ensure the RM participates in leader
-      election fo this cluster and ensures it does not affect
+      election for this cluster and ensures it does not affect
       other clusters</description>
     <name>yarn.resourcemanager.cluster-id</name>
     <!--value>yarn-cluster</value-->
@@ -604,6 +647,17 @@
   </property>
 
   <property>
+    <description>
+      The actual address the server will bind to. If this optional address is
+      set, the RPC and webapp servers will bind to this address and the port specified in
+      yarn.nodemanager.address and yarn.nodemanager.webapp.address, respectively. This is
+      most useful for making NM listen to all interfaces by setting to 0.0.0.0.
+    </description>
+    <name>yarn.nodemanager.bind-host</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>Environment variables that should be forwarded from the NodeManager's environment to the container's.</description>
     <name>yarn.nodemanager.admin-env</name>
     <value>MALLOC_ARENA_MAX=$MALLOC_ARENA_MAX</value>
@@ -733,7 +787,14 @@
   </property>
 
   <property>
-    <description>Whether to enable log aggregation</description>
+    <description>Whether to enable log aggregation. Log aggregation collects
+      each container's logs and moves these logs onto a file-system, for e.g.
+      HDFS, after the application completes. Users can configure the
+      "yarn.nodemanager.remote-app-log-dir" and
+      "yarn.nodemanager.remote-app-log-dir-suffix" properties to determine
+      where these logs are moved to. Users can access the logs via the
+      Application Timeline Server.
+    </description>
     <name>yarn.log-aggregation-enable</name>
     <value>false</value>
   </property>
@@ -1105,7 +1166,7 @@
     If enabled, clients will put entities and events to the timeline server.
     </description>
     <name>yarn.timeline-service.enabled</name>
-    <value>true</value>
+    <value>false</value>
   </property>
 
   <property>
@@ -1134,9 +1195,21 @@
   </property>
 
   <property>
+    <description>
+      The actual address the server will bind to. If this optional address is
+      set, the RPC and webapp servers will bind to this address and the port specified in
+      yarn.timeline-service.address and yarn.timeline-service.webapp.address, respectively.
+      This is most useful for making the service listen to all interfaces by setting to
+      0.0.0.0.
+    </description>
+    <name>yarn.timeline-service.bind-host</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>Store class name for timeline store.</description>
     <name>yarn.timeline-service.store-class</name>
-    <value>org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.LeveldbTimelineStore</value>
+    <value>org.apache.hadoop.yarn.server.timeline.LeveldbTimelineStore</value>
   </property>
 
   <property>
@@ -1154,7 +1227,7 @@
   <property>
     <description>Store file name for leveldb timeline store.</description>
     <name>yarn.timeline-service.leveldb-timeline-store.path</name>
-    <value>${yarn.log.dir}/timeline</value>
+    <value>${hadoop.tmp.dir}/yarn/timeline</value>
   </property>
 
   <property>
@@ -1188,6 +1261,36 @@
   </property>
 
   <property>
+    <name>yarn.timeline-service.http-authentication.type</name>
+    <value>simple</value>
+    <description>
+      Defines authentication used for the timeline server HTTP endpoint.
+      Supported values are: simple | kerberos | #AUTHENTICATION_HANDLER_CLASSNAME#
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.timeline-service.http-authentication.simple.anonymous.allowed</name>
+    <value>true</value>
+    <description>
+      Indicates if anonymous requests are allowed by the timeline server when using
+      'simple' authentication.
+    </description>
+  </property>
+
+  <property>
+    <description>The Kerberos principal for the timeline server.</description>
+    <name>yarn.timeline-service.principal</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>The Kerberos keytab for the timeline server.</description>
+    <name>yarn.timeline-service.keytab</name>
+    <value>/etc/krb5.keytab</value>
+  </property>
+
+  <property>
     <description>Indicate to ResourceManager as well as clients whether
     history-service is enabled or not. If enabled, ResourceManager starts
     recording historical data that ApplicationHistory service can consume.
@@ -1203,7 +1306,7 @@
     org.apache.hadoop.yarn.server.applicationhistoryservice.FileSystemApplicationHistoryStore
     as the value for yarn.timeline-service.generic-application-history.store-class</description>
     <name>yarn.timeline-service.generic-application-history.fs-history-store.uri</name>
-    <value>${hadoop.log.dir}/yarn/system/history</value>
+    <value>${hadoop.tmp.dir}/yarn/timeline/generic-history</value>
   </property>
 
   <property>

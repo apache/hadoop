@@ -23,6 +23,7 @@ import org.junit.Assert;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalCacheDirectoryManager.Directory;
 import org.junit.Test;
 
 public class TestLocalCacheDirectoryManager {
@@ -73,7 +74,7 @@ public class TestLocalCacheDirectoryManager {
     conf.set(YarnConfiguration.NM_LOCAL_CACHE_MAX_FILES_PER_DIRECTORY, "1");
     Exception e = null;
     ResourceLocalizationService service =
-        new ResourceLocalizationService(null, null, null, null);
+        new ResourceLocalizationService(null, null, null, null, null);
     try {
       service.init(conf);
     } catch (Exception e1) {
@@ -108,5 +109,50 @@ public class TestLocalCacheDirectoryManager {
     // As no space is now available in root directory so it should be from
     // first sub directory
     Assert.assertEquals(firstSubDir, dir.getRelativePathForLocalization());
+  }
+
+  @Test
+  public void testDirectoryConversion() {
+    for (int i = 0; i < 10000; ++i) {
+      String path = Directory.getRelativePath(i);
+      Assert.assertEquals("Incorrect conversion for " + i, i,
+          Directory.getDirectoryNumber(path));
+    }
+  }
+
+  @Test
+  public void testIncrementFileCountForPath() {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.NM_LOCAL_CACHE_MAX_FILES_PER_DIRECTORY,
+        LocalCacheDirectoryManager.DIRECTORIES_PER_LEVEL + 2);
+    LocalCacheDirectoryManager mgr = new LocalCacheDirectoryManager(conf);
+    final String rootPath = "";
+    mgr.incrementFileCountForPath(rootPath);
+    Assert.assertEquals(rootPath, mgr.getRelativePathForLocalization());
+    Assert.assertFalse("root dir should be full",
+        rootPath.equals(mgr.getRelativePathForLocalization()));
+    // finish filling the other directory
+    mgr.getRelativePathForLocalization();
+    // free up space in the root dir
+    mgr.decrementFileCountForPath(rootPath);
+    mgr.decrementFileCountForPath(rootPath);
+    Assert.assertEquals(rootPath, mgr.getRelativePathForLocalization());
+    Assert.assertEquals(rootPath, mgr.getRelativePathForLocalization());
+    String otherDir = mgr.getRelativePathForLocalization();
+    Assert.assertFalse("root dir should be full", otherDir.equals(rootPath));
+
+    final String deepDir0 = "d/e/e/p/0";
+    final String deepDir1 = "d/e/e/p/1";
+    final String deepDir2 = "d/e/e/p/2";
+    final String deepDir3 = "d/e/e/p/3";
+    mgr.incrementFileCountForPath(deepDir0);
+    Assert.assertEquals(otherDir, mgr.getRelativePathForLocalization());
+    Assert.assertEquals(deepDir0, mgr.getRelativePathForLocalization());
+    Assert.assertEquals("total dir count incorrect after increment",
+        deepDir1, mgr.getRelativePathForLocalization());
+    mgr.incrementFileCountForPath(deepDir2);
+    mgr.incrementFileCountForPath(deepDir1);
+    mgr.incrementFileCountForPath(deepDir2);
+    Assert.assertEquals(deepDir3, mgr.getRelativePathForLocalization());
   }
 }

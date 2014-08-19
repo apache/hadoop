@@ -31,7 +31,7 @@ import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Collection;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobID;
@@ -218,8 +218,8 @@ public class TestClientServiceDelegate {
     Assert.assertNotNull(jobStatus);
     Assert.assertEquals("TestJobFilePath", jobStatus.getJobFile());                               
     Assert.assertEquals("http://TestTrackingUrl", jobStatus.getTrackingUrl());                    
-    Assert.assertEquals(1.0f, jobStatus.getMapProgress());                                        
-    Assert.assertEquals(1.0f, jobStatus.getReduceProgress());                                     
+    Assert.assertEquals(1.0f, jobStatus.getMapProgress(), 0.0f);
+    Assert.assertEquals(1.0f, jobStatus.getReduceProgress(), 0.0f);
   }
   
   @Test
@@ -358,8 +358,8 @@ public class TestClientServiceDelegate {
     Assert.assertNotNull(jobStatus1);
     Assert.assertEquals("TestJobFilePath", jobStatus1.getJobFile());                               
     Assert.assertEquals("http://TestTrackingUrl", jobStatus1.getTrackingUrl());                    
-    Assert.assertEquals(1.0f, jobStatus1.getMapProgress());                                        
-    Assert.assertEquals(1.0f, jobStatus1.getReduceProgress());
+    Assert.assertEquals(1.0f, jobStatus1.getMapProgress(), 0.0f);
+    Assert.assertEquals(1.0f, jobStatus1.getReduceProgress(), 0.0f);
     
     verify(clientServiceDelegate, times(0)).instantiateAMProxy(
         any(InetSocketAddress.class));

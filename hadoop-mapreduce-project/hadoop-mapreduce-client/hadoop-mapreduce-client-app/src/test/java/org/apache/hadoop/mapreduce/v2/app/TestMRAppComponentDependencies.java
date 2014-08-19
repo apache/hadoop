@@ -20,7 +20,7 @@ package org.apache.hadoop.mapreduce.v2.app;
 
 import java.io.IOException;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;

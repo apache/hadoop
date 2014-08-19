@@ -49,9 +49,12 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.HealthCheckFailedException;
@@ -113,6 +116,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.FinalizeCommand;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
@@ -130,6 +134,8 @@ import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.WritableRpcEngine;
+import org.apache.hadoop.ipc.RefreshRegistry;
+import org.apache.hadoop.ipc.RefreshResponse;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Groups;
@@ -145,6 +151,9 @@ import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolServerSi
 import org.apache.hadoop.ipc.protocolPB.RefreshCallQueueProtocolPB;
 import org.apache.hadoop.ipc.protocolPB.RefreshCallQueueProtocolServerSideTranslatorPB;
 import org.apache.hadoop.ipc.proto.RefreshCallQueueProtocolProtos.RefreshCallQueueProtocolService;
+import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolPB;
+import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolServerSideTranslatorPB;
+import org.apache.hadoop.ipc.proto.GenericRefreshProtocolProtos.GenericRefreshProtocolService;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.tools.proto.GetUserMappingsProtocolProtos.GetUserMappingsProtocolService;
@@ -227,6 +236,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
     BlockingService refreshCallQueueService = RefreshCallQueueProtocolService
         .newReflectiveBlockingService(refreshCallQueueXlator);
 
+    GenericRefreshProtocolServerSideTranslatorPB genericRefreshXlator =
+        new GenericRefreshProtocolServerSideTranslatorPB(this);
+    BlockingService genericRefreshService = GenericRefreshProtocolService
+        .newReflectiveBlockingService(genericRefreshXlator);
+
     GetUserMappingsProtocolServerSideTranslatorPB getUserMappingXlator = 
         new GetUserMappingsProtocolServerSideTranslatorPB(this);
     BlockingService getUserMappingService = GetUserMappingsProtocolService
@@ -276,6 +290,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
       // We support Refreshing call queue here in case the client RPC queue is full
       DFSUtil.addPBProtocol(conf, RefreshCallQueueProtocolPB.class,
           refreshCallQueueService, serviceRpcServer);
+      DFSUtil.addPBProtocol(conf, GenericRefreshProtocolPB.class,
+          genericRefreshService, serviceRpcServer);
       DFSUtil.addPBProtocol(conf, GetUserMappingsProtocolPB.class, 
           getUserMappingService, serviceRpcServer);
   
@@ -320,6 +336,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
         refreshUserMappingService, clientRpcServer);
     DFSUtil.addPBProtocol(conf, RefreshCallQueueProtocolPB.class,
         refreshCallQueueService, clientRpcServer);
+    DFSUtil.addPBProtocol(conf, GenericRefreshProtocolPB.class,
+        genericRefreshService, clientRpcServer);
     DFSUtil.addPBProtocol(conf, GetUserMappingsProtocolPB.class, 
         getUserMappingService, clientRpcServer);
 
@@ -368,6 +386,12 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @VisibleForTesting
   RPC.Server getClientRpcServer() {
     return clientRpcServer;
+  }
+  
+  /** Allow access to the service RPC server for testing */
+  @VisibleForTesting
+  RPC.Server getServiceRpcServer() {
+    return serviceRpcServer;
   }
   
   /**
@@ -594,13 +618,15 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public LocatedBlock getAdditionalDatanode(final String src, final ExtendedBlock blk,
+  public LocatedBlock getAdditionalDatanode(final String src,
+      final long fileId, final ExtendedBlock blk,
       final DatanodeInfo[] existings, final String[] existingStorageIDs,
       final DatanodeInfo[] excludes,
       final int numAdditionalNodes, final String clientName
       ) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("getAdditionalDatanode: src=" + src
+          + ", fileId=" + fileId
           + ", blk=" + blk
           + ", existings=" + Arrays.asList(existings)
           + ", excludes=" + Arrays.asList(excludes)
@@ -617,20 +643,20 @@ class NameNodeRpcServer implements NamenodeProtocols {
         excludeSet.add(node);
       }
     }
-    return namesystem.getAdditionalDatanode(src, blk, existings,
+    return namesystem.getAdditionalDatanode(src, fileId, blk, existings,
         existingStorageIDs, excludeSet, numAdditionalNodes, clientName);
   }
   /**
    * The client needs to give up on the block.
    */
   @Override // ClientProtocol
-  public void abandonBlock(ExtendedBlock b, String src, String holder)
-      throws IOException {
+  public void abandonBlock(ExtendedBlock b, long fileId, String src,
+        String holder) throws IOException {
     if(stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*BLOCK* NameNode.abandonBlock: "
           +b+" of file "+src);
     }
-    if (!namesystem.abandonBlock(b, src, holder)) {
+    if (!namesystem.abandonBlock(b, fileId, src, holder)) {
       throw new IOException("Cannot abandon block during write to " + src);
     }
   }
@@ -806,11 +832,23 @@ class NameNodeRpcServer implements NamenodeProtocols {
   throws IOException {
     DatanodeInfo results[] = namesystem.datanodeReport(type);
     if (results == null ) {
-      throw new IOException("Cannot find datanode report");
+      throw new IOException("Failed to get datanode report for " + type
+          + " datanodes.");
     }
     return results;
   }
     
+  @Override // ClientProtocol
+  public DatanodeStorageReport[] getDatanodeStorageReport(
+      DatanodeReportType type) throws IOException {
+    final DatanodeStorageReport[] reports = namesystem.getDatanodeStorageReport(type);
+    if (reports == null ) {
+      throw new IOException("Failed to get datanode storage report for " + type
+          + " datanodes.");
+    }
+    return reports;
+  }
+
   @Override // ClientProtocol
   public boolean setSafeMode(SafeModeAction action, boolean isChecked)
       throws IOException {
@@ -938,9 +976,10 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
   
   @Override // ClientProtocol
-  public void fsync(String src, String clientName, long lastBlockLength)
+  public void fsync(String src, long fileId, String clientName,
+                    long lastBlockLength)
       throws IOException {
-    namesystem.fsync(src, clientName, lastBlockLength);
+    namesystem.fsync(src, fileId, clientName, lastBlockLength);
   }
 
   @Override // ClientProtocol
@@ -1018,16 +1057,21 @@ class NameNodeRpcServer implements NamenodeProtocols {
            + "from " + nodeReg + ", reports.length=" + reports.length);
     }
     final BlockManager bm = namesystem.getBlockManager(); 
-    boolean hasStaleStorages = true;
+    boolean noStaleStorages = false;
     for(StorageBlockReport r : reports) {
       final BlockListAsLongs blocks = new BlockListAsLongs(r.getBlocks());
-      hasStaleStorages = bm.processReport(nodeReg, r.getStorage(), poolId, blocks);
+      //
+      // BlockManager.processReport accumulates information of prior calls
+      // for the same node and storage, so the value returned by the last
+      // call of this loop is the final updated value for noStaleStorage.
+      //
+      noStaleStorages = bm.processReport(nodeReg, r.getStorage(), blocks);
       metrics.incrStorageBlockReportOps();
     }
 
     if (nn.getFSImage().isUpgradeFinalized() &&
         !nn.isStandbyState() &&
-        !hasStaleStorages) {
+        noStaleStorages) {
       return new FinalizeCommand(poolId);
     }
 
@@ -1057,7 +1101,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
           +" blocks.");
     }
     for(StorageReceivedDeletedBlocks r : receivedAndDeletedBlocks) {
-      namesystem.processIncrementalBlockReport(nodeReg, poolId, r);
+      namesystem.processIncrementalBlockReport(nodeReg, r);
     }
   }
 
@@ -1143,6 +1187,12 @@ class NameNodeRpcServer implements NamenodeProtocols {
       serviceRpcServer.refreshCallQueue(conf);
     }
   }
+
+  @Override // GenericRefreshProtocol
+  public Collection<RefreshResponse> refresh(String identifier, String[] args) {
+    // Let the registry handle as needed
+    return RefreshRegistry.defaultRegistry().dispatch(identifier, args);
+  }
   
   @Override // GetUserMappingsProtocol
   public String[] getGroupsForUser(String user) throws IOException {
@@ -1180,9 +1230,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   /**
    * Verify version.
-   * 
-   * @param version
-   * @throws IOException
+   * @param version layout version
+   * @throws IOException on layout version mismatch
    */
   void verifyLayoutVersion(int version) throws IOException {
     if (version != HdfsConstants.NAMENODE_LAYOUT_VERSION)
@@ -1372,6 +1421,33 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override
   public AclStatus getAclStatus(String src) throws IOException {
     return namesystem.getAclStatus(src);
+  }
+  
+  @Override
+  public void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag)
+      throws IOException {
+    namesystem.setXAttr(src, xAttr, flag);
+  }
+  
+  @Override
+  public List<XAttr> getXAttrs(String src, List<XAttr> xAttrs) 
+      throws IOException {
+    return namesystem.getXAttrs(src, xAttrs);
+  }
+
+  @Override
+  public List<XAttr> listXAttrs(String src) throws IOException {
+    return namesystem.listXAttrs(src);
+  }
+  
+  @Override
+  public void removeXAttr(String src, XAttr xAttr) throws IOException {
+    namesystem.removeXAttr(src, xAttr);
+  }
+
+  @Override
+  public void checkAccess(String path, FsAction mode) throws IOException {
+    namesystem.checkAccess(path, mode);
   }
 }
 

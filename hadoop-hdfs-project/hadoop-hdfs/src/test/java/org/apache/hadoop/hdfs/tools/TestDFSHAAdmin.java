@@ -176,6 +176,7 @@ public class TestDFSHAAdmin {
   
   @Test
   public void testTransitionToActive() throws Exception {
+    Mockito.doReturn(STANDBY_READY_RESULT).when(mockProtocol).getServiceStatus();
     assertEquals(0, runTool("-transitionToActive", "nn1"));
     Mockito.verify(mockProtocol).transitionToActive(
         reqInfoCaptor.capture());
@@ -414,6 +415,6 @@ public class TestDFSHAAdmin {
   }
   
   private StateChangeRequestInfo anyReqInfo() {
-    return Mockito.<StateChangeRequestInfo>any();
+    return Mockito.any();
   }
 }

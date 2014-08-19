@@ -36,6 +36,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -58,11 +61,16 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
@@ -87,8 +95,11 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SlidingWindowReservoir;
 import com.codahale.metrics.Timer;
 
-public class ResourceSchedulerWrapper implements
-        SchedulerWrapper,ResourceScheduler,Configurable {
+@Private
+@Unstable
+final public class ResourceSchedulerWrapper
+    extends AbstractYarnScheduler<SchedulerApplicationAttempt, SchedulerNode>
+    implements SchedulerWrapper, ResourceScheduler, Configurable {
   private static final String EOL = System.getProperty("line.separator");
   private static final int SAMPLING_SIZE = 60;
   private ScheduledExecutorService pool;
@@ -144,6 +155,7 @@ public class ResourceSchedulerWrapper implements
   public final Logger LOG = Logger.getLogger(ResourceSchedulerWrapper.class);
 
   public ResourceSchedulerWrapper() {
+    super(ResourceSchedulerWrapper.class.getName());
     samplerLock = new ReentrantLock();
     queueLock = new ReentrantLock();
   }
@@ -565,7 +577,7 @@ public class ResourceSchedulerWrapper implements
       new Gauge<Integer>() {
         @Override
         public Integer getValue() {
-          if(scheduler == null || scheduler.getRootQueueMetrics() == null) {
+          if (scheduler == null || scheduler.getRootQueueMetrics() == null) {
             return 0;
           } else {
             return scheduler.getRootQueueMetrics().getAppsRunning();
@@ -712,17 +724,18 @@ public class ResourceSchedulerWrapper implements
   public void addAMRuntime(ApplicationId appId,
                            long traceStartTimeMS, long traceEndTimeMS,
                            long simulateStartTimeMS, long simulateEndTimeMS) {
-
-    try {
-      // write job runtime information
-      StringBuilder sb = new StringBuilder();
-      sb.append(appId).append(",").append(traceStartTimeMS).append(",")
-              .append(traceEndTimeMS).append(",").append(simulateStartTimeMS)
-              .append(",").append(simulateEndTimeMS);
-      jobRuntimeLogBW.write(sb.toString() + EOL);
-      jobRuntimeLogBW.flush();
-    } catch (IOException e) {
-      e.printStackTrace();
+    if (metricsON) {
+      try {
+        // write job runtime information
+        StringBuilder sb = new StringBuilder();
+        sb.append(appId).append(",").append(traceStartTimeMS).append(",")
+            .append(traceEndTimeMS).append(",").append(simulateStartTimeMS)
+            .append(",").append(simulateEndTimeMS);
+        jobRuntimeLogBW.write(sb.toString() + EOL);
+        jobRuntimeLogBW.flush();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
     }
   }
 
@@ -792,10 +805,39 @@ public class ResourceSchedulerWrapper implements
     return conf;
   }
 
+  @SuppressWarnings("unchecked")
   @Override
-  public void reinitialize(Configuration entries, RMContext rmContext)
-          throws IOException {
-    scheduler.reinitialize(entries, rmContext);
+  public void serviceInit(Configuration conf) throws Exception {
+    ((AbstractYarnScheduler<SchedulerApplicationAttempt, SchedulerNode>)
+        scheduler).init(conf);
+    super.serviceInit(conf);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public void serviceStart() throws Exception {
+    ((AbstractYarnScheduler<SchedulerApplicationAttempt, SchedulerNode>)
+        scheduler).start();
+    super.serviceStart();
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public void serviceStop() throws Exception {
+    ((AbstractYarnScheduler<SchedulerApplicationAttempt, SchedulerNode>)
+        scheduler).stop();
+    super.serviceStop();
+  }
+
+  @Override
+  public void setRMContext(RMContext rmContext) {
+    scheduler.setRMContext(rmContext);
+  }
+
+  @Override
+  public void reinitialize(Configuration conf, RMContext rmContext)
+      throws IOException {
+    scheduler.reinitialize(conf, rmContext);
   }
 
   @Override
@@ -871,5 +913,31 @@ public class ResourceSchedulerWrapper implements
   public String moveApplication(ApplicationId appId, String newQueue)
       throws YarnException {
     return scheduler.moveApplication(appId, newQueue);
+  }
+
+  @Override
+  @LimitedPrivate("yarn")
+  @Unstable
+  public Resource getClusterResource() {
+    return null;
+  }
+
+  @Override
+  public synchronized List<Container> getTransferredContainers(
+      ApplicationAttemptId currentAttempt) {
+    return new ArrayList<Container>();
+  }
+
+  @Override
+  public Map<ApplicationId, SchedulerApplication<SchedulerApplicationAttempt>>
+      getSchedulerApplications() {
+    return new HashMap<ApplicationId,
+        SchedulerApplication<SchedulerApplicationAttempt>>();
+  }
+
+  @Override
+  protected void completedContainer(RMContainer rmContainer,
+      ContainerStatus containerStatus, RMContainerEventType event) {
+    // do nothing
   }
 }

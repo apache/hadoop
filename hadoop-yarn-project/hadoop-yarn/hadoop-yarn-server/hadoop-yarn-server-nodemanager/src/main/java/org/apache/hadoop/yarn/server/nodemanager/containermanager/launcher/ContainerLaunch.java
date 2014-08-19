@@ -87,22 +87,23 @@ public class ContainerLaunch implements Callable<Integer> {
   public static final String FINAL_CONTAINER_TOKENS_FILE = "container_tokens";
 
   private static final String PID_FILE_NAME_FMT = "%s.pid";
+  private static final String EXIT_CODE_FILE_SUFFIX = ".exitcode";
 
-  private final Dispatcher dispatcher;
-  private final ContainerExecutor exec;
+  protected final Dispatcher dispatcher;
+  protected final ContainerExecutor exec;
   private final Application app;
-  private final Container container;
+  protected final Container container;
   private final Configuration conf;
   private final Context context;
   private final ContainerManagerImpl containerManager;
   
-  private volatile AtomicBoolean shouldLaunchContainer = new AtomicBoolean(false);
-  private volatile AtomicBoolean completed = new AtomicBoolean(false);
+  protected AtomicBoolean shouldLaunchContainer = new AtomicBoolean(false);
+  protected AtomicBoolean completed = new AtomicBoolean(false);
 
   private long sleepDelayBeforeSigKill = 250;
   private long maxKillWaitTime = 2000;
 
-  private Path pidFilePath = null;
+  protected Path pidFilePath = null;
 
   private final LocalDirsHandlerService dirsHandler;
 
@@ -223,14 +224,11 @@ public class ContainerLaunch implements Callable<Integer> {
               + Path.SEPARATOR + containerIdStr,
               LocalDirAllocator.SIZE_UNKNOWN, false);
 
-      String pidFileSuffix = String.format(ContainerLaunch.PID_FILE_NAME_FMT,
-          containerIdStr);
+      String pidFileSubpath = getPidFileSubpath(appIdStr, containerIdStr);
 
       // pid file should be in nm private dir so that it is not 
       // accessible by users
-      pidFilePath = dirsHandler.getLocalPathForWrite(
-          ResourceLocalizationService.NM_PRIVATE_DIR + Path.SEPARATOR 
-          + pidFileSuffix);
+      pidFilePath = dirsHandler.getLocalPathForWrite(pidFileSubpath);
       List<String> localDirs = dirsHandler.getLocalDirs();
       List<String> logDirs = dirsHandler.getLogDirs();
 
@@ -288,6 +286,7 @@ public class ContainerLaunch implements Callable<Integer> {
       dispatcher.getEventHandler().handle(new ContainerEvent(
             containerID,
             ContainerEventType.CONTAINER_LAUNCHED));
+      context.getNMStateStore().storeContainerLaunched(containerID);
 
       // Check if the container is signalled to be killed.
       if (!shouldLaunchContainer.compareAndSet(false, true)) {
@@ -310,6 +309,11 @@ public class ContainerLaunch implements Callable<Integer> {
     } finally {
       completed.set(true);
       exec.deactivateContainer(containerID);
+      try {
+        context.getNMStateStore().storeContainerCompleted(containerID, ret);
+      } catch (IOException e) {
+        LOG.error("Unable to set exit code for container " + containerID);
+      }
     }
 
     if (LOG.isDebugEnabled()) {
@@ -342,6 +346,11 @@ public class ContainerLaunch implements Callable<Integer> {
             ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS));
     return 0;
   }
+
+  protected String getPidFileSubpath(String appIdStr, String containerIdStr) {
+    return getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
+        + String.format(ContainerLaunch.PID_FILE_NAME_FMT, containerIdStr);
+  }
   
   /**
    * Cleanup the container.
@@ -356,6 +365,13 @@ public class ContainerLaunch implements Callable<Integer> {
     ContainerId containerId = container.getContainerId();
     String containerIdStr = ConverterUtils.toString(containerId);
     LOG.info("Cleaning up container " + containerIdStr);
+
+    try {
+      context.getNMStateStore().storeContainerKilled(containerId);
+    } catch (IOException e) {
+      LOG.error("Unable to mark container " + containerId
+          + " killed in store", e);
+    }
 
     // launch flag will be set to true if process already launched
     boolean alreadyLaunched = !shouldLaunchContainer.compareAndSet(false, true);
@@ -421,6 +437,7 @@ public class ContainerLaunch implements Callable<Integer> {
       if (pidFilePath != null) {
         FileContext lfs = FileContext.getLocalFSFileContext();
         lfs.delete(pidFilePath, false);
+        lfs.delete(pidFilePath.suffix(EXIT_CODE_FILE_SUFFIX), false);
       }
     }
   }
@@ -479,15 +496,24 @@ public class ContainerLaunch implements Callable<Integer> {
         + appIdStr;
   }
 
-  private static abstract class ShellScriptBuilder {
+  Context getContext() {
+    return context;
+  }
+
+  @VisibleForTesting
+  static abstract class ShellScriptBuilder {
+    public static ShellScriptBuilder create() {
+      return Shell.WINDOWS ? new WindowsShellScriptBuilder() :
+        new UnixShellScriptBuilder();
+    }
 
     private static final String LINE_SEPARATOR =
         System.getProperty("line.separator");
     private final StringBuilder sb = new StringBuilder();
 
-    public abstract void command(List<String> command);
+    public abstract void command(List<String> command) throws IOException;
 
-    public abstract void env(String key, String value);
+    public abstract void env(String key, String value) throws IOException;
 
     public final void symlink(Path src, Path dst) throws IOException {
       if (!src.isAbsolute()) {
@@ -520,10 +546,18 @@ public class ContainerLaunch implements Callable<Integer> {
 
     protected abstract void link(Path src, Path dst) throws IOException;
 
-    protected abstract void mkdir(Path path);
+    protected abstract void mkdir(Path path) throws IOException;
   }
 
   private static final class UnixShellScriptBuilder extends ShellScriptBuilder {
+
+    private void errorCheck() {
+      line("hadoop_shell_errorcode=$?");
+      line("if [ $hadoop_shell_errorcode -ne 0 ]");
+      line("then");
+      line("  exit $hadoop_shell_errorcode");
+      line("fi");
+    }
 
     public UnixShellScriptBuilder(){
       line("#!/bin/bash");
@@ -533,6 +567,7 @@ public class ContainerLaunch implements Callable<Integer> {
     @Override
     public void command(List<String> command) {
       line("exec /bin/bash -c \"", StringUtils.join(" ", command), "\"");
+      errorCheck();
     }
 
     @Override
@@ -543,16 +578,27 @@ public class ContainerLaunch implements Callable<Integer> {
     @Override
     protected void link(Path src, Path dst) throws IOException {
       line("ln -sf \"", src.toUri().getPath(), "\" \"", dst.toString(), "\"");
+      errorCheck();
     }
 
     @Override
     protected void mkdir(Path path) {
       line("mkdir -p ", path.toString());
+      errorCheck();
     }
   }
 
   private static final class WindowsShellScriptBuilder
       extends ShellScriptBuilder {
+
+    private void errorCheck() {
+      line("@if %errorlevel% neq 0 exit /b %errorlevel%");
+    }
+
+    private void lineWithLenCheck(String... commands) throws IOException {
+      Shell.checkWindowsCommandLineLength(commands);
+      line(commands);
+    }
 
     public WindowsShellScriptBuilder() {
       line("@setlocal");
@@ -560,14 +606,15 @@ public class ContainerLaunch implements Callable<Integer> {
     }
 
     @Override
-    public void command(List<String> command) {
-      line("@call ", StringUtils.join(" ", command));
+    public void command(List<String> command) throws IOException {
+      lineWithLenCheck("@call ", StringUtils.join(" ", command));
+      errorCheck();
     }
 
     @Override
-    public void env(String key, String value) {
-      line("@set ", key, "=", value,
-          "\nif %errorlevel% neq 0 exit /b %errorlevel%");
+    public void env(String key, String value) throws IOException {
+      lineWithLenCheck("@set ", key, "=", value);
+      errorCheck();
     }
 
     @Override
@@ -578,16 +625,20 @@ public class ContainerLaunch implements Callable<Integer> {
       // If not on Java7+ on Windows, then copy file instead of symlinking.
       // See also FileUtil#symLink for full explanation.
       if (!Shell.isJava7OrAbove() && srcFile.isFile()) {
-        line(String.format("@copy \"%s\" \"%s\"", srcFileStr, dstFileStr));
+        lineWithLenCheck(String.format("@copy \"%s\" \"%s\"", srcFileStr, dstFileStr));
+        errorCheck();
       } else {
-        line(String.format("@%s symlink \"%s\" \"%s\"", Shell.WINUTILS,
+        lineWithLenCheck(String.format("@%s symlink \"%s\" \"%s\"", Shell.WINUTILS,
           dstFileStr, srcFileStr));
+        errorCheck();
       }
     }
 
     @Override
-    protected void mkdir(Path path) {
-      line("@if not exist ", path.toString(), " mkdir ", path.toString());
+    protected void mkdir(Path path) throws IOException {
+      lineWithLenCheck(String.format("@if not exist \"%s\" mkdir \"%s\"",
+          path.toString(), path.toString()));
+      errorCheck();
     }
   }
 
@@ -730,8 +781,7 @@ public class ContainerLaunch implements Callable<Integer> {
       Map<String,String> environment, Map<Path,List<String>> resources,
       List<String> command)
       throws IOException {
-    ShellScriptBuilder sb = Shell.WINDOWS ? new WindowsShellScriptBuilder() :
-      new UnixShellScriptBuilder();
+    ShellScriptBuilder sb = ShellScriptBuilder.create();
     if (environment != null) {
       for (Map.Entry<String,String> env : environment.entrySet()) {
         sb.env(env.getKey().toString(), env.getValue().toString());
@@ -758,4 +808,7 @@ public class ContainerLaunch implements Callable<Integer> {
     }
   }
 
+  public static String getExitCodeFile(String pidFile) {
+    return pidFile + EXIT_CODE_FILE_SUFFIX;
+  }
 }

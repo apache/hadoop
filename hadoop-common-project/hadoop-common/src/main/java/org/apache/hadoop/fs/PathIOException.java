@@ -40,7 +40,7 @@ public class PathIOException extends IOException {
    *  @param path for the exception
    */
   public PathIOException(String path) {
-    this(path, EIO, null);
+    this(path, EIO);
   }
 
   /**
@@ -59,7 +59,8 @@ public class PathIOException extends IOException {
    * @param error custom string to use an the error text
    */
   public PathIOException(String path, String error) {
-    this(path, error, null);
+    super(error);
+    this.path = path;
   }
 
   protected PathIOException(String path, String error, Throwable cause) {

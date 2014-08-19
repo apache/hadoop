@@ -18,8 +18,6 @@
 
 Yarn Commands
 
-  \[ {{{./index.html}Go Back}} \]
-
 %{toc|section=1|fromDepth=0}
 
 * Overview
@@ -159,8 +157,17 @@ Usage: yarn [--config confdir] COMMAND
   Start the ResourceManager
 
 -------
-  Usage: yarn resourcemanager
+  Usage: yarn resourcemanager [-format-state-store]
 -------
+
+*---------------+--------------+
+|| COMMAND_OPTIONS || Description                   |
+*---------------+--------------+
+| -format-state-store | Formats the RMStateStore. This will clear the
+|                     | RMStateStore and is useful if past applications are no
+|                     | longer needed. This should be run only when the
+|                     | ResourceManager is not running.
+*---------------+--------------+
 
 ** nodemanager
 

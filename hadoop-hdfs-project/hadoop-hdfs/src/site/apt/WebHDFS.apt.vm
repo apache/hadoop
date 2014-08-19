@@ -70,6 +70,21 @@ WebHDFS REST API
     * {{{Get Delegation Tokens}<<<GETDELEGATIONTOKENS>>>}}
         (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getDelegationTokens)
 
+    * {{{Get an XAttr}<<<GETXATTRS>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getXAttr)
+
+    * {{{Get multiple XAttrs}<<<GETXATTRS>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getXAttrs)
+
+    * {{{Get all XAttrs}<<<GETXATTRS>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getXAttrs)
+
+    * {{{List all XAttrs}<<<LISTXATTRS>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.listXAttrs)
+
+    * {{{Check access}<<<CHECKACCESS>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.access)
+
   * HTTP PUT
 
     * {{{Create and Write to a File}<<<CREATE>>>}}
@@ -102,6 +117,18 @@ WebHDFS REST API
     * {{{Cancel Delegation Token}<<<CANCELDELEGATIONTOKEN>>>}}
         (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.cancelDelegationToken)
 
+    * {{{Create Snapshot}<<<CREATESNAPSHOT>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.createSnapshot)
+
+    * {{{Rename Snapshot}<<<RENAMESNAPSHOT>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.renameSnapshot)
+
+    * {{{Set XAttr}<<<SETXATTR>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.setXAttr)
+
+    * {{{Remove XAttr}<<<REMOVEXATTR>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.removeXAttr)
+
   * HTTP POST
 
     * {{{Append to a File}<<<APPEND>>>}}
@@ -114,6 +141,9 @@ WebHDFS REST API
 
     * {{{Delete a File/Directory}<<<DELETE>>>}}
         (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.delete)
+ 
+    * {{{Delete Snapshot}<<<DELETESNAPSHOT>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.deleteSnapshot)
 
 ** {FileSystem URIs vs HTTP URLs}
 
@@ -146,7 +176,7 @@ WebHDFS REST API
 *-------------------------------------------------+---------------------------------------------------+
 | <<<dfs.webhdfs.enabled                      >>> | Enable/disable WebHDFS in Namenodes and Datanodes |
 *-------------------------------------------------+---------------------------------------------------+
-| <<<dfs.web.authentication.kerberos.principal>>> | The HTTP Kerberos principal used by Hadoop-Auth in the HTTP endpoint. The HTTP Kerberos principal MUST start with 'HTTP/' per Kerberos HTTP SPNEGO specification. |
+| <<<dfs.web.authentication.kerberos.principal>>> | The HTTP Kerberos principal used by Hadoop-Auth in the HTTP endpoint. The HTTP Kerberos principal MUST start with 'HTTP/' per Kerberos HTTP SPNEGO specification.  A value of "*" will use all HTTP principals found in the keytab. |
 *-------------------------------------------------+---------------------------------------------------+
 | <<<dfs.web.authentication.kerberos.keytab   >>> | The Kerberos keytab file with the credentials for the HTTP Kerberos principal used by Hadoop-Auth in the HTTP endpoint. |
 *-------------------------------------------------+---------------------------------------------------+
@@ -367,7 +397,7 @@ Hello, webhdfs user!
   * Submit a HTTP PUT request.
 
 +---------------------------------
-curl -i -X PUT "http://<HOST>:<PORT>/<PATH>?op=MKDIRS[&permission=<OCTAL>]"
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=MKDIRS[&permission=<OCTAL>]"
 +---------------------------------
 
   The client receives a response with a {{{Boolean JSON Schema}<<<boolean>>> JSON object}}:
@@ -392,7 +422,7 @@ Transfer-Encoding: chunked
   * Submit a HTTP PUT request.
 
 +---------------------------------
-curl -i -X PUT "http://<HOST>:<PORT>/<PATH>?op=CREATESYMLINK
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=CREATESYMLINK
                               &destination=<PATH>[&createParent=<true|false>]"
 +---------------------------------
 
@@ -900,6 +930,279 @@ Transfer-Encoding: chunked
   {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getAclStatus
 
 
+** {Check access}
+
+  * Submit a HTTP GET request.
+  
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=CHECKACCESS
+                              &fsaction=<FSACTION>
++---------------------------------
+
+  The client receives a response with zero content length:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Length: 0
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.access
+    
+
+* {Extended Attributes(XAttrs) Operations}
+
+** {Set XAttr}
+
+  * Submit a HTTP PUT request.
+
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=SETXATTR
+                              &xattr.name=<XATTRNAME>&xattr.value=<XATTRVALUE>
+                              &flag=<FLAG>"
++---------------------------------
+
+  The client receives a response with zero content length:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Length: 0
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.setXAttr
+
+
+** {Remove XAttr}
+
+  * Submit a HTTP PUT request.
+
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=REMOVEXATTR
+                              &xattr.name=<XATTRNAME>"
++---------------------------------
+
+  The client receives a response with zero content length:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Length: 0
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.removeXAttr
+
+
+** {Get an XAttr}
+
+  * Submit a HTTP GET request.
+
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETXATTRS
+                              &xattr.name=<XATTRNAME>&encoding=<ENCODING>"
++---------------------------------
+
+  The client receives a response with a {{{XAttrs JSON Schema}<<<XAttrs>>> JSON object}}:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{
+    "XAttrs": [
+        {
+            "name":"XATTRNAME",
+            "value":"XATTRVALUE"
+        }
+    ]
+}
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getXAttr
+
+
+** {Get multiple XAttrs}
+
+  * Submit a HTTP GET request.
+
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETXATTRS
+                              &xattr.name=<XATTRNAME1>&xattr.name=<XATTRNAME2>
+                              &encoding=<ENCODING>"
++---------------------------------
+
+  The client receives a response with a {{{XAttrs JSON Schema}<<<XAttrs>>> JSON object}}:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{
+    "XAttrs": [
+        {
+            "name":"XATTRNAME1",
+            "value":"XATTRVALUE1"
+        },
+        {
+            "name":"XATTRNAME2",
+            "value":"XATTRVALUE2"
+        }
+    ]
+}
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getXAttrs
+
+
+** {Get all XAttrs}
+
+  * Submit a HTTP GET request.
+
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETXATTRS
+                              &encoding=<ENCODING>"
++---------------------------------
+
+  The client receives a response with a {{{XAttrs JSON Schema}<<<XAttrs>>> JSON object}}:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{
+    "XAttrs": [
+        {
+            "name":"XATTRNAME1",
+            "value":"XATTRVALUE1"
+        },
+        {
+            "name":"XATTRNAME2",
+            "value":"XATTRVALUE2"
+        },
+        {
+            "name":"XATTRNAME3",
+            "value":"XATTRVALUE3"
+        }
+    ]
+}
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getXAttrs
+
+
+** {List all XAttrs}
+
+  * Submit a HTTP GET request.
+
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=LISTXATTRS"
++---------------------------------
+
+  The client receives a response with a {{{XAttrNames JSON Schema}<<<XAttrNames>>> JSON object}}:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{
+    "XAttrNames":"[\"XATTRNAME1\",\"XATTRNAME2\",\"XATTRNAME3\"]"
+}
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.listXAttrs
+
+
+* {Snapshot Operations}
+
+** {Create Snapshot}
+
+  * Submit a HTTP PUT request.
+
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=CREATESNAPSHOT[&snapshotname=<SNAPSHOTNAME>]"
++---------------------------------
+
+  The client receives a response with a {{{Path JSON Schema}<<<Path>>> JSON object}}:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{"Path": "/user/szetszwo/.snapshot/s1"}
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.createSnapshot
+
+
+** {Delete Snapshot}
+
+  * Submit a HTTP DELETE request.
+
++---------------------------------
+curl -i -X DELETE "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=DELETESNAPSHOT&snapshotname=<SNAPSHOTNAME>"
++---------------------------------
+
+  The client receives a response with zero content length:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Length: 0
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.deleteSnapshot
+
+
+** {Rename Snapshot}
+
+  * Submit a HTTP PUT request.
+
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=RENAMESNAPSHOT
+                   &oldsnapshotname=<SNAPSHOTNAME>&snapshotname=<SNAPSHOTNAME>"
++---------------------------------
+
+  The client receives a response with zero content length:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Length: 0
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.renameSnapshot
+
+
 * {Delegation Token Operations}
 
 ** {Get Delegation Token}
@@ -1168,6 +1471,58 @@ Transfer-Encoding: chunked
           "required"   : true
         },
       }
+    }
+  }
+}
++---------------------------------
+
+
+** {XAttrs JSON Schema}
+
++---------------------------------
+{
+  "name"      : "XAttrs",
+  "properties":
+  {
+    "XAttrs":
+    {
+      "type"      : "array",
+      "items":
+      {
+        "type"    " "object",
+        "properties":
+        {
+          "name":
+          {
+            "description": "XAttr name.",
+            "type"       : "string",
+            "required"   : true
+          },
+          "value":
+          {
+            "description": "XAttr value.",
+            "type"       : "string"
+          }
+        }
+      }
+    }
+  }
+}
++---------------------------------
+
+
+** {XAttrNames JSON Schema}
+
++---------------------------------
+{
+  "name"      : "XAttrNames",
+  "properties":
+  {
+    "XAttrNames":
+    {
+      "description": "XAttr names.",
+      "type"       : "string"
+      "required"   : true
     }
   }
 }
@@ -1610,6 +1965,83 @@ var tokenProperties =
 *----------------+-------------------------------------------------------------------+
 
 
+** {XAttr Name}
+
+*----------------+-------------------------------------------------------------------+
+|| Name          | <<<xattr.name>>> |
+*----------------+-------------------------------------------------------------------+
+|| Description   | The XAttr name of a file/directory. |
+*----------------+-------------------------------------------------------------------+
+|| Type          | String |
+*----------------+-------------------------------------------------------------------+
+|| Default Value | \<empty\> |
+*----------------+-------------------------------------------------------------------+
+|| Valid Values  | Any string prefixed with user./trusted./system./security.. |
+*----------------+-------------------------------------------------------------------+
+|| Syntax        | Any string prefixed with user./trusted./system./security.. |
+*----------------+-------------------------------------------------------------------+
+
+
+** {XAttr Value}
+
+*----------------+-------------------------------------------------------------------+
+|| Name          | <<<xattr.value>>> |
+*----------------+-------------------------------------------------------------------+
+|| Description   | The XAttr value of a file/directory. |
+*----------------+-------------------------------------------------------------------+
+|| Type          | String |
+*----------------+-------------------------------------------------------------------+
+|| Default Value | \<empty\> |
+*----------------+-------------------------------------------------------------------+
+|| Valid Values  | An encoded value. |
+*----------------+-------------------------------------------------------------------+
+|| Syntax        | Enclosed in double quotes or prefixed with 0x or 0s. |
+*----------------+-------------------------------------------------------------------+
+
+  See also:
+  {{{./ExtendedAttributes.html}Extended Attributes}}
+
+
+** {XAttr set flag}
+
+*----------------+-------------------------------------------------------------------+
+|| Name          | <<<flag>>> |
+*----------------+-------------------------------------------------------------------+
+|| Description   | The XAttr set flag. |
+*----------------+-------------------------------------------------------------------+
+|| Type          | String |
+*----------------+-------------------------------------------------------------------+
+|| Default Value | \<empty\> |
+*----------------+-------------------------------------------------------------------+
+|| Valid Values  | CREATE,REPLACE. |
+*----------------+-------------------------------------------------------------------+
+|| Syntax        | CREATE,REPLACE. |
+*----------------+-------------------------------------------------------------------+
+
+  See also:
+  {{{./ExtendedAttributes.html}Extended Attributes}}
+
+
+** {XAttr value encoding}
+
+*----------------+-------------------------------------------------------------------+
+|| Name          | <<<encoding>>> |
+*----------------+-------------------------------------------------------------------+
+|| Description   | The XAttr value encoding. |
+*----------------+-------------------------------------------------------------------+
+|| Type          | String |
+*----------------+-------------------------------------------------------------------+
+|| Default Value | \<empty\> |
+*----------------+-------------------------------------------------------------------+
+|| Valid Values  | text \| hex \| base64 |
+*----------------+-------------------------------------------------------------------+
+|| Syntax        | text \| hex \| base64 |
+*----------------+-------------------------------------------------------------------+
+
+  See also:
+  {{{./ExtendedAttributes.html}Extended Attributes}}
+
+
 ** {Access Time}
 
 *----------------+-------------------------------------------------------------------+
@@ -1759,6 +2191,25 @@ var tokenProperties =
   {{Proxy Users}}
 
 
+** {Fs Action}
+
+*----------------+-------------------------------------------------------------------+
+|| Name          | <<<fsaction>>> |
+*----------------+-------------------------------------------------------------------+
+|| Description   | File system operation read/write/execute |
+*----------------+-------------------------------------------------------------------+
+|| Type          | String |
+*----------------+-------------------------------------------------------------------+
+|| Default Value | null (an invalid value) |
+*----------------+-------------------------------------------------------------------+
+|| Valid Values  | Strings matching regex pattern \"[rwx-]\{3\}\" |
+*----------------+-------------------------------------------------------------------+
+|| Syntax        | \"[rwx-]\{3\}\" |
+*----------------+-------------------------------------------------------------------+
+
+  See also:
+  {{{Check access}<<<CHECKACCESS>>>}},
+
 ** {Group}
 
 *----------------+-------------------------------------------------------------------+
@@ -1837,6 +2288,26 @@ var tokenProperties =
 
   See also:
   {{{Open and Read a File}<<<OPEN>>>}}
+
+
+** {Old Snapshot Name}
+
+*----------------+-------------------------------------------------------------------+
+|| Name          | <<<oldsnapshotname>>> |
+*----------------+-------------------------------------------------------------------+
+|| Description   | The old name of the snapshot to be renamed. |
+*----------------+-------------------------------------------------------------------+
+|| Type          | String |
+*----------------+-------------------------------------------------------------------+
+|| Default Value | null |
+*----------------+-------------------------------------------------------------------+
+|| Valid Values  | An existing snapshot name. |
+*----------------+-------------------------------------------------------------------+
+|| Syntax        | Any string. |
+*----------------+-------------------------------------------------------------------+
+
+  See also:
+  {{{Rename Snapshot}<<<RENAMESNAPSHOT>>>}}
 
 
 ** {Op}
@@ -1983,6 +2454,29 @@ var tokenProperties =
   {{{Set Replication Factor}<<<SETREPLICATION>>>}}
 
 
+** {Snapshot Name}
+
+*----------------+-------------------------------------------------------------------+
+|| Name          | <<<snapshotname>>> |
+*----------------+-------------------------------------------------------------------+
+|| Description   | The name of the snapshot to be created/deleted. |
+||               | Or the new name for snapshot rename.            |
+*----------------+-------------------------------------------------------------------+
+|| Type          | String |
+*----------------+-------------------------------------------------------------------+
+|| Default Value | null |
+*----------------+-------------------------------------------------------------------+
+|| Valid Values  | Any valid snapshot name. |
+*----------------+-------------------------------------------------------------------+
+|| Syntax        | Any string. |
+*----------------+-------------------------------------------------------------------+
+
+  See also:
+  {{{Create Snapshot}<<<CREATESNAPSHOT>>>}},
+  {{{Delete Snapshot}<<<DELETESNAPSHOT>>>}},
+  {{{Rename Snapshot}<<<RENAMESNAPSHOT>>>}}
+
+
 ** {Sources}
 
 *----------------+-------------------------------------------------------------------+
@@ -2042,4 +2536,3 @@ var tokenProperties =
 
   See also:
   {{Authentication}}
-

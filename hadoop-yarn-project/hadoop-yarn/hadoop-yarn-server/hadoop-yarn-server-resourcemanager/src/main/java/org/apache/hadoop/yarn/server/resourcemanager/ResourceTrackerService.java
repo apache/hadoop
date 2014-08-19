@@ -32,7 +32,6 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.VersionUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -45,6 +44,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
@@ -60,6 +60,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeReconnectEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStartedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStatusEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
@@ -120,6 +121,7 @@ public class ResourceTrackerService extends AbstractService implements
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     resourceTrackerAddress = conf.getSocketAddr(
+        YarnConfiguration.RM_BIND_HOST,
         YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT);
@@ -174,9 +176,11 @@ public class ResourceTrackerService extends AbstractService implements
       }
       refreshServiceAcls(conf, RMPolicyProvider.getInstance());
     }
-
+ 
     this.server.start();
-    conf.updateConnectAddr(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+    conf.updateConnectAddr(YarnConfiguration.RM_BIND_HOST,
+			   YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+			   YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
                            server.getListenerAddress());
   }
 
@@ -195,7 +199,7 @@ public class ResourceTrackerService extends AbstractService implements
    */
   @SuppressWarnings("unchecked")
   @VisibleForTesting
-  void handleContainerStatus(ContainerStatus containerStatus) {
+  void handleNMContainerStatus(NMContainerStatus containerStatus) {
     ApplicationAttemptId appAttemptId =
         containerStatus.getContainerId().getApplicationAttemptId();
     RMApp rmApp =
@@ -219,11 +223,14 @@ public class ResourceTrackerService extends AbstractService implements
     RMAppAttempt rmAppAttempt = rmApp.getRMAppAttempt(appAttemptId);
     Container masterContainer = rmAppAttempt.getMasterContainer();
     if (masterContainer.getId().equals(containerStatus.getContainerId())
-        && containerStatus.getState() == ContainerState.COMPLETE) {
+        && containerStatus.getContainerState() == ContainerState.COMPLETE) {
+      ContainerStatus status =
+          ContainerStatus.newInstance(containerStatus.getContainerId(),
+            containerStatus.getContainerState(), containerStatus.getDiagnostics(),
+            containerStatus.getContainerExitStatus());
       // sending master container finished event.
       RMAppAttemptContainerFinishedEvent evt =
-          new RMAppAttemptContainerFinishedEvent(appAttemptId,
-              containerStatus);
+          new RMAppAttemptContainerFinishedEvent(appAttemptId, status);
       rmContext.getDispatcher().getEventHandler().handle(evt);
     }
   }
@@ -240,13 +247,6 @@ public class ResourceTrackerService extends AbstractService implements
     Resource capability = request.getResource();
     String nodeManagerVersion = request.getNMVersion();
 
-    if (!request.getContainerStatuses().isEmpty()) {
-      LOG.info("received container statuses on node manager register :"
-          + request.getContainerStatuses());
-      for (ContainerStatus containerStatus : request.getContainerStatuses()) {
-        handleContainerStatus(containerStatus);
-      }
-    }
     RegisterNodeManagerResponse response = recordFactory
         .newRecordInstance(RegisterNodeManagerResponse.class);
 
@@ -305,17 +305,31 @@ public class ResourceTrackerService extends AbstractService implements
     RMNode oldNode = this.rmContext.getRMNodes().putIfAbsent(nodeId, rmNode);
     if (oldNode == null) {
       this.rmContext.getDispatcher().getEventHandler().handle(
-          new RMNodeEvent(nodeId, RMNodeEventType.STARTED));
+              new RMNodeStartedEvent(nodeId, request.getNMContainerStatuses(),
+                  request.getRunningApplications()));
     } else {
       LOG.info("Reconnect from the node at: " + host);
       this.nmLivelinessMonitor.unregister(nodeId);
       this.rmContext.getDispatcher().getEventHandler().handle(
-          new RMNodeReconnectEvent(nodeId, rmNode));
+          new RMNodeReconnectEvent(nodeId, rmNode,
+              request.getRunningApplications()));
     }
     // On every node manager register we will be clearing NMToken keys if
     // present for any running application.
     this.nmTokenSecretManager.removeNodeKey(nodeId);
     this.nmLivelinessMonitor.register(nodeId);
+    
+    // Handle received container status, this should be processed after new
+    // RMNode inserted
+    if (!rmContext.isWorkPreservingRecoveryEnabled()) {
+      if (!request.getNMContainerStatuses().isEmpty()) {
+        LOG.info("received container statuses on node manager register :"
+            + request.getNMContainerStatuses());
+        for (NMContainerStatus status : request.getNMContainerStatuses()) {
+          handleNMContainerStatus(status);
+        }
+      }
+    }
 
     String message =
         "NodeManager from node " + host + "(cmPort: " + cmPort + " httpPort: "

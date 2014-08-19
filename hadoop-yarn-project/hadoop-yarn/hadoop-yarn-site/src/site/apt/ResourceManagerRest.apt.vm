@@ -18,8 +18,6 @@
 
 ResourceManager REST API's.
 
-  \[ {{{./index.html}Go Back}} \]
-
 %{toc|section=1|fromDepth=0|toDepth=2}
 
 * Overview
@@ -197,6 +195,14 @@ ResourceManager REST API's.
 *---------------+--------------+-------------------------------+
 | totalMB       | long         | The amount of total memory in MB |
 *---------------+--------------+-------------------------------+
+| reservedVirtualCores    | long         | The number of reserved virtual cores |
+*---------------+--------------+-------------------------------+
+| availableVirtualCores   | long         | The number of available virtual cores |
+*---------------+--------------+-------------------------------+
+| allocatedVirtualCores   | long         | The number of allocated virtual cores |
+*---------------+--------------+-------------------------------+
+| totalVirtualCores       | long         | The total number of virtual cores |
+*---------------+--------------+-------------------------------+
 | containersAllocated | int | The number of containers allocated |
 *---------------+--------------+-------------------------------+
 | containersReserved | int | The number of containers reserved |
@@ -249,10 +255,14 @@ ResourceManager REST API's.
       "reservedMB":0,
       "availableMB":17408,
       "allocatedMB":0,
+      "reservedVirtualCores":0,
+      "availableVirtualCores":7,
+      "allocatedVirtualCores":1,
       "containersAllocated":0,
       "containersReserved":0,
       "containersPending":0,
       "totalMB":17408,
+      "totalVirtualCores":8,
       "totalNodes":1,
       "lostNodes":0,
       "unhealthyNodes":0,
@@ -295,10 +305,14 @@ ResourceManager REST API's.
   <reservedMB>0</reservedMB>
   <availableMB>17408</availableMB>
   <allocatedMB>0</allocatedMB>
+  <reservedVirtualCores>0</reservedVirtualCores>
+  <availableVirtualCores>7</availableVirtualCores>
+  <allocatedVirtualCores>1</allocatedVirtualCores>
   <containersAllocated>0</containersAllocated>
   <containersReserved>0</containersReserved>
   <containersPending>0</containersPending>
   <totalMB>17408</totalMB>
+  <totalVirtualCores>8</totalVirtualCores>
   <totalNodes>1</totalNodes>
   <lostNodes>0</lostNodes>
   <unhealthyNodes>0</unhealthyNodes>
@@ -1091,9 +1105,9 @@ ResourceManager REST API's.
 </scheduler>
 +---+
 
-* Cluster Applications API
+* {Cluster Applications API}
 
-  With the Applications API, you can obtain a collection of resources, each of which represents an application. When you run a GET operation on this resource, you obtain a collection of Application Objects. 
+  With the Applications API, you can obtain a collection of resources, each of which represents an application. When you run a GET operation on this resource, you obtain a collection of Application Objects.
 
 ** URI
 
@@ -1109,7 +1123,7 @@ ResourceManager REST API's.
 
 ** Query Parameters Supported
 
-  Multiple parameters can be specified.  The started and finished times have a begin and end parameter to allow you to specify ranges.  For example, one could request all applications that started between 1:00am and 2:00pm on 12/19/2011 with startedTimeBegin=1324256400&startedTimeEnd=1324303200. If the Begin parameter is not specified, it defaults to 0, and if the End parameter is not specified, it defaults to infinity.
+  Multiple parameters can be specified for GET operations.  The started and finished times have a begin and end parameter to allow you to specify ranges.  For example, one could request all applications that started between 1:00am and 2:00pm on 12/19/2011 with startedTimeBegin=1324256400&startedTimeEnd=1324303200. If the Begin parameter is not specified, it defaults to 0, and if the End parameter is not specified, it defaults to infinity.
 
 ------
   * state [deprecated] - state of the application
@@ -1281,7 +1295,6 @@ _01_000001</amContainerLogs>
     <runningContainers>0</runningContainers>
   </app>
 </apps>
-
 +---+
 
 * Cluster Application Statistics API
@@ -1413,7 +1426,7 @@ _01_000001</amContainerLogs>
 
 ** URI
 
-  Use the following URI to obtain an app object, from a application identified by the {appid} value. 
+  Use the following URI to obtain an app object, from a application identified by the {appid} value.
 
 ------
   * http://<rm http address:port>/ws/v1/cluster/apps/{appid}
@@ -1524,7 +1537,7 @@ _01_000001</amContainerLogs>
 }
 +---+
 
-  <<JSON response>>
+  <<XML response>>
 
   HTTP Request:
 
@@ -1761,8 +1774,10 @@ _01_000001</amContainerLogs>
         "lastHealthUpdate":1324056895432,
         "healthReport":"Healthy",
         "numContainers":0,
-        "usedMemoryMB":0
-        "availMemoryMB":8192
+        "usedMemoryMB":0,
+        "availMemoryMB":8192,
+        "usedVirtualCores":0,
+        "availableVirtualCores":8
       },
       {
         "rack":"\/default-rack",
@@ -1775,7 +1790,9 @@ _01_000001</amContainerLogs>
         "healthReport":"Healthy",
         "numContainers":0,
         "usedMemoryMB":0,
-        "availMemoryMB":8192
+        "availMemoryMB":8192,
+        "usedVirtualCores":0,
+        "availableVirtualCores":8
       }
     ]
   }
@@ -1817,6 +1834,8 @@ _01_000001</amContainerLogs>
     <numContainers>0</numContainers>
     <usedMemoryMB>0</usedMemoryMB>
     <availMemoryMB>5120</availMemoryMB>
+    <usedVirtualCores>0</usedVirtualCores>
+    <availableVirtualCores>8</availableVirtualCores>
   </node>
   <node>
     <rack>/default-rack</rack>
@@ -1830,6 +1849,8 @@ _01_000001</amContainerLogs>
     <numContainers>0</numContainers>
     <usedMemoryMB>0</usedMemoryMB>
     <availMemoryMB>5120</availMemoryMB>
+    <usedVirtualCores>0</usedVirtualCores>
+    <availableVirtualCores>8</availableVirtualCores>
   </node>
 </nodes>
 +---+
@@ -1880,9 +1901,13 @@ _01_000001</amContainerLogs>
 *---------------+--------------+-------------------------------+
 | lastHealthUpdate | long | The last time the node reported its health (in ms since epoch)|
 *---------------+--------------+-------------------------------+
-| usedMemoryMB | long | The total about of memory currently used on the node (in MB)|
+| usedMemoryMB | long | The total amount of memory currently used on the node (in MB)|
 *---------------+--------------+-------------------------------+
 | availMemoryMB | long | The total amount of memory currently available on the node (in MB)|
+*---------------+--------------+-------------------------------+
+| usedVirtualCores | long | The total number of vCores currently used on the node |
+*---------------+--------------+-------------------------------+
+| availableVirtualCores | long | The total number of vCores available on the node |
 *---------------+--------------+-------------------------------+
 | numContainers | int | The total number of containers currently running on the node|
 *---------------+--------------+-------------------------------+
@@ -1922,7 +1947,9 @@ _01_000001</amContainerLogs>
     "healthReport":"Healthy",
     "numContainers":0,
     "usedMemoryMB":0,
-    "availMemoryMB":5120
+    "availMemoryMB":5120,
+    "usedVirtualCores":0,
+    "availableVirtualCores":8
   }
 }
 +---+
@@ -1961,6 +1988,948 @@ _01_000001</amContainerLogs>
   <numContainers>0</numContainers>
   <usedMemoryMB>0</usedMemoryMB>
   <availMemoryMB>5120</availMemoryMB>
+  <usedVirtualCores>0</usedVirtualCores>
+  <availableVirtualCores>5120</availableVirtualCores>
 </node>
 +---+
 
+* {Cluster Writeable APIs}
+
+  The setions below refer to APIs which allow to create and modify applications. These APIs are currently in alpha and may change in the future.
+
+* {Cluster New Application API}
+
+  With the New Application API, you can obtain an application-id which can then be used as part of the {{{Cluster_Applications_API(Submit_Application)}Cluster Submit Applications API}} to submit applications. The response also includes the maximum resource capabilities available on the cluster.
+
+   This feature is currently in the alpha stage and may change in the future.
+
+** URI
+
+------
+  * http://<rm http address:port>/ws/v1/cluster/apps/new-application
+------
+
+** HTTP Operations Supported
+
+------
+  * POST
+------
+
+** Query Parameters Supported
+
+------
+  * None
+------
+
+** Elements of the NewApplication object
+
+  The NewApplication response contains the following elements:
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                  |
+*---------------+--------------+-------------------------------+
+| application-id | string      | The newly created application id |
+*---------------+--------------+--------------------------------+
+| maximum-resource-capabilities | object  | The maximum resource capabilities available on this cluster |
+*---------------+--------------+--------------------------------+
+
+  The <maximum-resource-capabilites> object contains the following elements:
+
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                  |
+*---------------+--------------+-------------------------------+
+| memory        | int          | The maxiumim memory available for a container |
+*---------------+--------------+--------------------------------+
+| vCores        | int          | The maximum number of cores available for a container |
+*---------------+--------------+--------------------------------+
+
+** Response Examples
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  POST http://<rm http address:port>/ws/v1/cluster/apps/new-application
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/json
+  Transfer-Encoding: chunked
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+{
+  "application-id":"application_1404198295326_0001",
+  "maximum-resource-capability":
+   {
+      "memory":"8192",
+      "vCores":"32"
+   }
+}
++---+
+
+  <<XML response>>
+
+  HTTP Request:
+
+------
+  POST http://<rm http address:port>/ws/v1/cluster/apps/new-application
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/xml
+  Content-Length: 248
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<NewApplication>
+  <application-id>application_1404198295326_0003</application-id>
+  <maximum-resource-capability>
+    <memory>8192</memory>
+    <vCores>32</vCores>
+  </maximum-resource-capability>
+</NewApplication>
++---+
+
+* {Cluster Applications API(Submit Application)}
+
+  The Submit Applications API can be used to submit applications. In case of submitting applications, you must first obtain an application-id using the {{{Cluster_New_Application_API}Cluster New Application API}}. The application-id must be part of the request body. The response contains a URL to the application page which can be used to track the state and progress of your application.
+
+** URI
+
+------
+  * http://<rm http address:port>/ws/v1/cluster/apps
+------
+
+** HTTP Operations Supported 
+
+------
+  * POST
+------
+
+** POST Response Examples
+
+  POST requests can be used to submit apps to the ResourceManager. As mentioned above, an application-id must be obtained first. Successful submissions result in a 202 response code and a Location header specifying where to get information about the app. Please note that in order to submit an app, you must have an authentication filter setup for the HTTP interface. The functionality requires that a username is set in the HttpServletRequest. If no filter is setup, the response will be an "UNAUTHORIZED" response.
+
+  Please note that this feature is currently in the alpha stage and may change in the future.
+
+*** Elements of the POST request object
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                  |
+*---------------+--------------+-------------------------------+
+| application-id | string      | The application id            |
+*---------------+--------------+-------------------------------+
+| application-name | string    | The application name          |
+*---------------+--------------+-------------------------------+
+| queue         | string       | The name of the queue to which the application should be submitted |
+*---------------+--------------+-------------------------------+
+| priority      | int          | The priority of the application |
+*---------------+--------------+-------------------------------+
+| am-container-spec | object   | The application master container launch context, described below |
+*---------------+--------------+-------------------------------+
+| unmanaged-AM  | boolean      | Is the application using an unmanaged application master |
+*---------------+--------------+-------------------------------+
+| max-app-attempts | int       | The max number of attempts for this application |
+*---------------+--------------+-------------------------------+
+| resource      | object       | The resources the application master requires, described below |
+*---------------+--------------+-------------------------------+
+| application-type | string    | The application type(MapReduce, Pig, Hive, etc) |
+*---------------+--------------+-------------------------------+
+| keep-containers-across-application-attempts | boolean | Should YARN keep the containers used by this application instead of destroying them |
+*---------------+--------------+-------------------------------+
+| application-tags | object    | List of application tags, please see the request examples on how to speciy the tags |
+*---------------+--------------+-------------------------------+
+
+  Elements of the <am-container-spec> object
+
+  The am-container-spec object should be used to provide the container launch context for the application master.
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                  |
+*---------------+--------------+-------------------------------+
+| local-resources | object     | Object describing the resources that need to be localized, described below |
+*---------------+--------------+-------------------------------+
+| environment   | object       | Environment variables for your containers, specified as key value pairs |
+*---------------+--------------+-------------------------------+
+| commands      | object       | The commands for launching your container, in the order in which they should be executed |
+*---------------+--------------+-------------------------------+
+| service-data  | object       | Application specific service data; key is the name of the auxiliary servce, value is base-64 encoding of the data you wish to pass |
+*---------------+--------------+-------------------------------+
+| credentials   | object       | The credentials required for your application to run, described below |
+*---------------+--------------+-------------------------------+
+| application-acls | objec     | ACLs for your application; the key can be "VIEW_APP" or "MODIFY_APP", the value is the list of users with the permissions |
+*---------------+--------------+-------------------------------+
+
+  Elements of the <local-resources> object
+
+  The object is a collection of key-value pairs. They key is an identifier for the resources to be localized and the value is the details of the resource. The elements of the value are described below:
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                  |
+*---------------+--------------+-------------------------------+
+| resource      | string       | Location of the resource to be localized |
+*---------------+--------------+-------------------------------+
+| type          | string       | Type of the resource; options are "ARCHIVE", "FILE", and "PATTERN" |
+*---------------+--------------+-------------------------------+
+| visibility    | string       | Visibility the resource to be localized; options are "PUBLIC", "PRIVATE", and "APPLICATION" |
+*---------------+--------------+-------------------------------+
+| size          | long         | Size of the resource to be localized |
+*---------------+--------------+-------------------------------+
+| timestamp     | long         | Timestamp of the resource to be localized |
+*---------------+--------------+-------------------------------+
+
+  Elements of the <credentials> object
+
+  The credentials object should be used to pass data required for the application to authenticate itself such as delegation-tokens and secrets.
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                  |
+*---------------+--------------+-------------------------------+
+| tokens        | object       | Tokens that you wish to pass to your application, specified as key-value pairs. The key is an identifier for the token and the value is the token(which should be obtained using the respective web-services) |
+*---------------+--------------+-------------------------------+
+| secrets       | object       | Secrets that you wish to use in your application, specified as key-value pairs. They key is an identifier and the value is the base-64 encoding of the secret |
+*---------------+--------------+-------------------------------+
+
+
+  Elements of the POST request body <resource> object
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                  |
+*---------------+--------------+-------------------------------+
+| memory        | int          | Memory required for each container |
+*---------------+--------------+-------------------------------+
+| vCores        | int          | Virtual cores required for each container |
+*---------------+--------------+-------------------------------+
+
+  <<JSON response>>
+
+  HTTP Request:
+
++---+
+  POST http://<rm http address:port>/ws/v1/cluster/apps
+  Accept: application/json
+  Content-Type: application/json
+  {
+    "application-id":"application_1404203615263_0001",
+    "application-name":"test",
+    "am-container-spec":
+    {
+      "local-resources":
+      {
+        "entry":
+        [
+          {
+            "key":"AppMaster.jar",
+            "value":
+            {
+              "resource":"hdfs://hdfs-namenode:9000/user/testuser/DistributedShell/demo-app/AppMaster.jar",
+              "type":"FILE",
+              "visibility":"APPLICATION",
+              "size": "43004",
+              "timestamp": "1405452071209"
+            }
+          }
+        ]
+      },
+      "commands":
+      {
+        "command":"{{JAVA_HOME}}/bin/java -Xmx10m org.apache.hadoop.yarn.applications.distributedshell.ApplicationMaster --container_memory 10 --container_vcores 1 --num_containers 1 --priority 0 1><LOG_DIR>/AppMaster.stdout 2><LOG_DIR>/AppMaster.stderr"
+      },
+      "environment":
+      {
+        "entry":
+        [
+          {
+            "key": "DISTRIBUTEDSHELLSCRIPTTIMESTAMP",
+            "value": "1405459400754"
+          },
+          {
+            "key": "CLASSPATH",
+            "value": "{{CLASSPATH}}<CPS>./*<CPS>{{HADOOP_CONF_DIR}}<CPS>{{HADOOP_COMMON_HOME}}/share/hadoop/common/*<CPS>{{HADOOP_COMMON_HOME}}/share/hadoop/common/lib/*<CPS>{{HADOOP_HDFS_HOME}}/share/hadoop/hdfs/*<CPS>{{HADOOP_HDFS_HOME}}/share/hadoop/hdfs/lib/*<CPS>{{HADOOP_YARN_HOME}}/share/hadoop/yarn/*<CPS>{{HADOOP_YARN_HOME}}/share/hadoop/yarn/lib/*<CPS>./log4j.properties"
+          },
+          {
+            "key": "DISTRIBUTEDSHELLSCRIPTLEN",
+            "value": "6"
+          },
+          {
+            "key": "DISTRIBUTEDSHELLSCRIPTLOCATION",
+            "value": "hdfs://hdfs-namenode:9000/user/testuser/demo-app/shellCommands"
+          }
+        ]
+      }
+    },
+    "unmanaged-AM":"false",
+    "max-app-attempts":"2",
+    "resource":
+    {
+      "memory":"1024",
+      "vCores":"1"
+    },
+    "application-type":"YARN",
+    "keep-containers-across-application-attempts":"false"
+  }
+
++---+
+
+  Response Header:
+
++---+
+  HTTP/1.1 202
+  Transfer-Encoding: chunked
+  Location: http://<rm http address:port>/ws/v1/cluster/apps/application_1404203615263_0001
+  Content-Type: application/json
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+  No response body
++---+
+
+  <<XML response>>
+
+  HTTP Request:
+
++---+
+  POST http://<rm http address:port>/ws/v1/cluster/apps
+  Accept: application/xml
+  Content-Type: application/xml
+  <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  <application-submission-context>
+    <application-id>application_1404204891930_0002</application-id>
+    <application-name>test</application-name>
+    <queue>testqueue</queue>
+    <priority>3</priority>
+    <am-container-spec>
+      <local-resources>
+        <entry>
+          <key>example</key>
+          <value>
+            <resource>hdfs://hdfs-namenode:9000/user/testuser/DistributedShell/demo-app/AppMaster.jar</resource>
+            <type>FILE</type>
+            <visibility>APPLICATION</visibility>
+            <size>43004</size>
+            <timestamp>1405452071209</timestamp>
+          </value>
+        </entry>
+      </local-resources>
+      <environment>
+        <entry>
+          <key>DISTRIBUTEDSHELLSCRIPTTIMESTAMP</key>
+          <value>1405459400754</value>
+        </entry>
+        <entry>
+          <key>CLASSPATH</key>
+          <value>{{CLASSPATH}}&lt;CPS&gt;./*&lt;CPS&gt;{{HADOOP_CONF_DIR}}&lt;CPS&gt;{{HADOOP_COMMON_HOME}}/share/hadoop/common/*&lt;CPS&gt;{{HADOOP_COMMON_HOME}}/share/hadoop/common/lib/*&lt;CPS&gt;{{HADOOP_HDFS_HOME}}/share/hadoop/hdfs/*&lt;CPS&gt;{{HADOOP_HDFS_HOME}}/share/hadoop/hdfs/lib/*&lt;CPS&gt;{{HADOOP_YARN_HOME}}/share/hadoop/yarn/*&lt;CPS&gt;{{HADOOP_YARN_HOME}}/share/hadoop/yarn/lib/*&lt;CPS&gt;./log4j.properties</value>
+        </entry>
+        <entry>
+          <key>DISTRIBUTEDSHELLSCRIPTLEN</key>
+          <value>6</value>
+        </entry>
+        <entry>
+          <key>DISTRIBUTEDSHELLSCRIPTLOCATION</key>
+          <value>hdfs://hdfs-namenode:9000/user/testuser/demo-app/shellCommands</value>
+        </entry>
+      </environment>
+      <commands>
+        <command>{{JAVA_HOME}}/bin/java -Xmx10m org.apache.hadoop.yarn.applications.distributedshell.ApplicationMaster --container_memory 10 --container_vcores 1 --num_containers 1 --priority 0 1&gt;&lt;LOG_DIR&gt;/AppMaster.stdout 2&gt;&lt;LOG_DIR&gt;/AppMaster.stderr</command>
+      </commands>
+      <service-data>
+        <entry>
+          <key>test</key>
+          <value>dmFsdWUxMg</value>
+        </entry>
+      </service-data>
+      <credentials>
+        <tokens/>
+        <secrets>
+          <entry>
+            <key>secret1</key>
+            <value>c2VjcmV0MQ</value>
+          </entry>
+        </secrets>
+      </credentials>
+      <application-acls>
+        <entry>
+          <key>VIEW_APP</key>
+          <value>testuser3, testuser4</value>
+        </entry>
+        <entry>
+          <key>MODIFY_APP</key>
+          <value>testuser1, testuser2</value>
+        </entry>
+      </application-acls>
+    </am-container-spec>
+    <unmanaged-AM>false</unmanaged-AM>
+    <max-app-attempts>2</max-app-attempts>
+    <resource>
+      <memory>1024</memory>
+      <vCores>1</vCores>
+    </resource>
+    <application-type>YARN</application-type>
+    <keep-containers-across-application-attempts>false</keep-containers-across-application-attempts>
+    <application-tags>
+      <tag>tag 2</tag>
+      <tag>tag1</tag>
+    </application-tags>
+  </application-submission-context>
++---+
+
+  Response Header:
+
++---+
+  HTTP/1.1 202
+  Transfer-Encoding: chunked
+  Location: http://<rm http address:port>/ws/v1/cluster/apps/application_1404204891930_0002
+  Content-Type: application/xml
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+  No response body
++---+
+
+* Cluster Application State API
+
+  With the application state API, you can query the state of a submitted app as well kill a running app by modifying the state of a running app using a PUT request with the state set to "KILLED". To perform the PUT operation, authentication has to be setup for the RM web services. In addition, you must be authorized to kill the app. Currently you can only change the state to "KILLED"; an attempt to change the state to any other results in a 400 error response. Examples of the unauthorized and bad request errors are below. When you carry out a successful PUT, the iniital response may be a 202. You can confirm that the app is killed by repeating the PUT request until you get a 200, querying the state using the GET method or querying for app information and checking the state. In the examples below, we repeat the PUT request and get a 200 response.
+
+  Please note that in order to kill an app, you must have an authentication filter setup for the HTTP interface. The functionality requires that a username is set in the HttpServletRequest. If no filter is setup, the response will be an "UNAUTHORIZED" response.
+
+  This feature is currently in the alpha stage and may change in the future.
+
+** URI
+
+-----
+  * http://<rm http address:port>/ws/v1/cluster/apps/{appid}/state
+-----
+
+** HTTP Operations Supported
+
+------
+  * GET
+  * PUT
+------
+
+** Query Parameters Supported
+
+------
+  None
+------
+
+** Elements of <appstate> object
+
+  When you make a request for the state of an app, the information returned has the following fields
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                  |
+*---------------+--------------+-------------------------------+
+| state | string  | The application state - can be one of "NEW", "NEW_SAVING", "SUBMITTED", "ACCEPTED", "RUNNING", "FINISHED", "FAILED", "KILLED" |
+*---------------+--------------+--------------------------------+
+
+
+** Response Examples
+
+  <<JSON responses>>
+
+  HTTP Request
+
+-----
+  GET http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+-----
+
+  Response Header:
+
++---+
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+{
+  "state":"ACCEPTED"
+}
++---+
+
+  HTTP Request
+
+-----
+  PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+----
+
+  Request Body:
+
++---+
+{
+  "state":"KILLED"
+}
++---+
+
+  Response Header:
+
++---+
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+Transfer-Encoding: chunked
+Location: http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003
+Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+{
+  "state":"ACCEPTED"
+}
++---+
+
+-----
+  PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+----
+
+  Request Body:
+
++---+
+{
+  "state":"KILLED"
+}
++---+
+
+  Response Header:
+
++---+
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+{
+  "state":"KILLED"
+}
++---+
+
+  <<XML responses>>
+
+  HTTP Request
+
+-----
+  GET http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+-----
+
+  Response Header:
+
++---+
+HTTP/1.1 200 OK
+Content-Type: application/xml
+Content-Length: 99
+Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<appstate>
+  <state>ACCEPTED</state>
+</appstate>
++---+
+
+  HTTP Request
+
+-----
+  PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+----
+
+  Request Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<appstate>
+  <state>KILLED</state>
+</appstate>
++---+
+
+  Response Header:
+
++---+
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+Content-Length: 794
+Location: http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003
+Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<appstate>
+  <state>ACCEPTED</state>
+</appstate>
++---+
+
+  HTTP Request
+
+-----
+  PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+----
+
+  Request Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<appstate>
+  <state>KILLED</state>
+</appstate>
++---+
+
+  Response Header:
+
++---+
+HTTP/1.1 200 OK
+Content-Type: application/xml
+Content-Length: 917
+Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<appstate>
+  <state>KILLED</state>
+</appstate>
++---+
+
+  <<Unauthorized Error Response>>
+
+  HTTP Request
+
+-----
+  PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+----
+
+  Request Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<appstate>
+  <state>KILLED</state>
+</appstate>
++---+
+
+  Response Header:
+
++---+
+HTTP/1.1 403 Unauthorized
+Content-Type: application/json
+Transfer-Encoding: chunked
+Server: Jetty(6.1.26)
++---+
+
+
+  <<Bad Request Error Response>>
+
+  HTTP Request
+
+-----
+  PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+----
+
+  Request Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<appstate>
+  <state>RUNNING</state>
+</appstate>
++---+
+
+  Response Header:
+
++---+
+HTTP/1.1 400
+Content-Length: 295
+Content-Type: application/xml
+Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<RemoteException>
+  <exception>BadRequestException</exception>
+  <message>java.lang.Exception: Only 'KILLED' is allowed as a target state.</message>
+  <javaClassName>org.apache.hadoop.yarn.webapp.BadRequestException</javaClassName>
+</RemoteException>
++---+
+
+
+* Cluster {Delegation Tokens API}
+
+  The Delegation Tokens API can be used to create, renew and cancel YARN ResourceManager delegation tokens. All delegation token requests must be carried out on a Kerberos authenticated connection(using SPNEGO). Carrying out operations on a non-kerberos connection will result in a FORBIDDEN response. In case of renewing a token, only the renewer specified when creating the token can renew the token. Other users(including the owner) are forbidden from renewing tokens. It should be noted that when cancelling or renewing a token, the token to be cancelled or renewed is specified by setting a header.
+
+  This feature is currently in the alpha stage and may change in the future.
+
+** URI
+
+  Use the following URI to create and cancel delegation tokens.
+
+------
+  * http://<rm http address:port>/ws/v1/cluster/delegation-token
+------
+
+  Use the following URI to renew delegation tokens.
+
+------
+  * http://<rm http address:port>/ws/v1/cluster/delegation-token/expiration
+------
+
+** HTTP Operations Supported
+
+------
+  * POST
+  * DELETE
+------
+
+** Query Parameters Supported
+
+------
+  None
+------
+
+** Elements of the <delegation-token> object
+
+  The response from the delegation tokens API contains one of the fields listed below.
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                   |
+*---------------+--------------+-------------------------------+
+| token         | string       | The delegation token          |
+*---------------+--------------+-------------------------------+
+| renewer       | string       | The user who is allowed to renew the delegation token |
+*---------------+--------------+-------------------------------+
+| owner         | string       | The owner of the delegation token |
+*---------------+--------------+-------------------------------+
+| kind          | string       | The kind of delegation token  |
+*---------------+--------------+-------------------------------+
+| expiration-time | long       | The expiration time of the token |
+*---------------+--------------+-------------------------------+
+| max-validity  | long         | The maximum validity of the token |
+*---------------+--------------+-------------------------------+
+
+** Response Examples
+
+*** Creating a token
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  POST http://<rm http address:port>/ws/v1/cluster/delegation-token
+  Accept: application/json
+  Content-Type: application/json
+  {
+    "renewer" : "test-renewer"
+  }
+------
+
+  Response Header
+
++---+
+  HTTP/1.1 200 OK
+  WWW-Authenticate: Negotiate ...
+  Date: Sat, 28 Jun 2014 18:08:11 GMT
+  Server: Jetty(6.1.26)
+  Set-Cookie: ...
+  Content-Type: application/json
++---+
+
+  Response body
+
++---+
+  {
+    "token":"MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUckiEZpigFHSJTKaQECFN9EMM9BzfPoDxu572EVUpzqhnSGE1JNX0RFTEVHQVRJT05fVE9LRU4A",
+    "renewer":"test-renewer",
+    "owner":"client@EXAMPLE.COM",
+    "kind":"RM_DELEGATION_TOKEN",
+    "expiration-time":"1405153616489",
+    "max-validity":"1405672016489"
+  }
++---+
+
+  <<XML response>>
+
+  HTTP Request
+
+------
+  POST http://<rm http address:port>/ws/v1/cluster/delegation-token
+  Accept: application/xml
+  Content-Type: application/xml
+  <delegation-token>
+    <renewer>test-renewer</renewer>
+  </delegation-token>
+------
+
+  Response Header
+
++---+
+  HTTP/1.1 200 OK
+  WWW-Authenticate: Negotiate ...
+  Date: Sat, 28 Jun 2014 18:08:11 GMT
+  Content-Length: 423
+  Server: Jetty(6.1.26)
+  Set-Cookie: ...
+  Content-Type: application/xml
++---+
+
+  Response Body
+
++---+
+  <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  <delegation-token>
+    <token>MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUckgZ8yigFHSI4jMgcCFDTG8X6XFFn2udQngzSXQL8vWaKIE1JNX0RFTEVHQVRJT05fVE9LRU4A</token>
+    <renewer>test-renewer</renewer>
+    <owner>client@EXAMPLE.COM</owner>
+    <kind>RM_DELEGATION_TOKEN</kind>
+    <expiration-time>1405153180466</expiration-time>
+    <max-validity>1405671580466</max-validity>
+  </delegation-token>
++---+
+
+*** Renewing a token
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  POST http://<rm http address:port>/ws/v1/cluster/delegation-token/expiration
+  Accept: application/json
+  Hadoop-YARN-RM-Delegation-Token: MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUbjqcHHigFHB7ZFxwQCFKWD3znCkDSy6SQIjRCLDydxbxvgE1JNX0RFTEVHQVRJT05fVE9LRU4A
+  Content-Type: application/json
+------
+
+  Response Header
+
++---+
+  HTTP/1.1 200 OK
+  WWW-Authenticate: Negotiate ...
+  Date: Sat, 28 Jun 2014 18:08:11 GMT
+  Server: Jetty(6.1.26)
+  Set-Cookie: ...
+  Content-Type: application/json
++---+
+
+  Response body
+
++---+
+  {
+    "expiration-time":"1404112520402"
+  }
++---+
+
+  <<XML response>>
+
+  HTTP Request
+
+------
+  POST http://<rm http address:port>/ws/v1/cluster/delegation-token/expiration
+  Accept: application/xml
+  Content-Type: application/xml
+  Hadoop-YARN-RM-Delegation-Token: MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUbjqcHHigFHB7ZFxwQCFKWD3znCkDSy6SQIjRCLDydxbxvgE1JNX0RFTEVHQVRJT05fVE9LRU4A
+------
+
+  Response Header
+
++---+
+  HTTP/1.1 200 OK
+  WWW-Authenticate: Negotiate ...
+  Date: Sat, 28 Jun 2014 18:08:11 GMT
+  Content-Length: 423
+  Server: Jetty(6.1.26)
+  Set-Cookie: ...
+  Content-Type: application/xml
++---+
+
+  Response Body
+
++---+
+  <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  <delegation-token>
+    <expiration-time>1404112520402</expiration-time>
+  </delegation-token>
++---+
+
+*** Cancelling a token
+
+  HTTP Request
+
+-----
+DELETE http://<rm http address:port>/ws/v1/cluster/delegation-token
+Hadoop-YARN-RM-Delegation-Token: MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUbjqcHHigFHB7ZFxwQCFKWD3znCkDSy6SQIjRCLDydxbxvgE1JNX0RFTEVHQVRJT05fVE9LRU4A
+Accept: application/xml
+-----
+
+  Response Header
+
++---+
+  HTTP/1.1 200 OK
+  WWW-Authenticate: Negotiate ...
+  Date: Sun, 29 Jun 2014 07:25:18 GMT
+  Transfer-Encoding: chunked
+  Server: Jetty(6.1.26)
+  Set-Cookie: ...
+  Content-Type: application/xml
++---+
+
+  No response body.
+
+** Authentication using delegation tokens
+
+  This feature is in the alpha mode and may change in the future.
+
+  You can use delegation tokens to authenticate yourself when using YARN RM webservices. However, this requires setting the right configurations. The conditions for this are:
+
+    * Hadoop is setup in secure mode with the authentication type set to kerberos.
+
+    * Hadoop HTTP authentication is setup with the authentication type set to kerberos
+
+  Once setup, delegation tokens can be fetched using the web services listed above and used as shown in an example below:
+
++---+
+  PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
+  Hadoop-YARN-Auth-Delegation-Token: MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUbjqcHHigFHB7ZFxwQCFKWD3znCkDSy6SQIjRCLDydxbxvgE1JNX0RFTEVHQVRJT05fVE9LRU4A
+  Content-Type: application/json; charset=UTF8
+  {
+    "state":"KILLED"
+  }
++---+

@@ -253,6 +253,12 @@ public class TestJobEndNotifier extends JobEndNotifier {
     HttpServer2 server = startHttpServer();
     MRApp app = spy(new MRAppWithCustomContainerAllocator(2, 2, false,
         this.getClass().getName(), true, 2, false));
+    // Currently, we will have isLastRetry always equals to false at beginning
+    // of MRAppMaster, except staging area exists or commit already started at 
+    // the beginning.
+    // Now manually set isLastRetry to true and this should reset to false when
+    // unregister failed.
+    app.isLastAMRetry = true;
     doNothing().when(app).sysexit();
     JobConf conf = new JobConf();
     conf.set(JobContext.MR_JOB_END_NOTIFICATION_URL,
@@ -264,13 +270,13 @@ public class TestJobEndNotifier extends JobEndNotifier {
     app.waitForInternalState(job, JobStateInternal.REBOOT);
     // Now shutdown. User should see FAILED state.
     // Unregistration fails: isLastAMRetry is recalculated, this is
-    app.shutDownJob();
-    Assert.assertTrue(app.isLastAMRetry());
-    Assert.assertEquals(1, JobEndServlet.calledTimes);
-    Assert.assertEquals("jobid=" + job.getID() + "&status=FAILED",
-        JobEndServlet.requestUri.getQuery());
-    Assert.assertEquals(JobState.FAILED.toString(),
-      JobEndServlet.foundJobState);
+    ///reboot will stop service internally, we don't need to shutdown twice
+    app.waitForServiceToStop(10000);
+    Assert.assertFalse(app.isLastAMRetry());
+    // Since it's not last retry, JobEndServlet didn't called
+    Assert.assertEquals(0, JobEndServlet.calledTimes);
+    Assert.assertNull(JobEndServlet.requestUri);
+    Assert.assertNull(JobEndServlet.foundJobState);
     server.stop();
   }
 

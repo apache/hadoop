@@ -28,7 +28,7 @@ import java.net.InetSocketAddress;
 
 import javax.ws.rs.core.MediaType;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,6 +37,8 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.HealthCheckFailedException;
+import org.apache.hadoop.metrics2.MetricsSystem;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.service.AbstractService;
@@ -92,6 +94,9 @@ public class TestRMHA {
     // Enable webapp to test web-services also
     configuration.setBoolean(MockRM.ENABLE_WEBAPP, true);
     configuration.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+    ClusterMetrics.destroy();
+    QueueMetrics.clearQueueMetrics();
+    DefaultMetricsSystem.shutdown();
   }
 
   private void checkMonitorHealth() throws IOException {
@@ -326,6 +331,10 @@ public class TestRMHA {
     rm.adminService.transitionToStandby(requestInfo);
     rm.adminService.transitionToActive(requestInfo);
     rm.adminService.transitionToStandby(requestInfo);
+    
+    MyCountingDispatcher dispatcher =
+        (MyCountingDispatcher) rm.getRMContext().getDispatcher();
+    assertTrue(!dispatcher.isStopped());
 
     rm.adminService.transitionToActive(requestInfo);
     assertEquals(errorMessageForEventHandler, expectedEventHandlerCount,
@@ -334,6 +343,11 @@ public class TestRMHA {
     assertEquals(errorMessageForService, expectedServiceCount,
         rm.getServices().size());
 
+    
+    // Keep the dispatcher reference before transitioning to standby
+    dispatcher = (MyCountingDispatcher) rm.getRMContext().getDispatcher();
+    
+    
     rm.adminService.transitionToStandby(requestInfo);
     assertEquals(errorMessageForEventHandler, expectedEventHandlerCount,
         ((MyCountingDispatcher) rm.getRMContext().getDispatcher())
@@ -341,6 +355,8 @@ public class TestRMHA {
     assertEquals(errorMessageForService, expectedServiceCount,
         rm.getServices().size());
 
+    assertTrue(dispatcher.isStopped());
+    
     rm.stop();
   }
 
@@ -375,7 +391,19 @@ public class TestRMHA {
   }
 
   @Test
-  public void testHAWithRMHostName() {
+  public void testHAWithRMHostName() throws Exception {
+    innerTestHAWithRMHostName(false);
+    configuration.clear();
+    setUp();
+    innerTestHAWithRMHostName(true);
+  }
+
+  public void innerTestHAWithRMHostName(boolean includeBindHost) {
+    //this is run two times, with and without a bind host configured
+    if (includeBindHost) {
+      configuration.set(YarnConfiguration.RM_BIND_HOST, "9.9.9.9");
+    }
+
     //test if both RM_HOSTBANE_{rm_id} and RM_RPCADDRESS_{rm_id} are set
     //We should only read rpc addresses from RM_RPCADDRESS_{rm_id} configuration
     configuration.set(HAUtil.addSuffix(YarnConfiguration.RM_HOSTNAME,
@@ -395,6 +423,15 @@ public class TestRMHA {
             RM2_ADDRESS, conf.get(HAUtil.addSuffix(confKey, RM2_NODE_ID)));
         assertEquals("RPC address not set for " + confKey,
             RM3_ADDRESS, conf.get(HAUtil.addSuffix(confKey, RM3_NODE_ID)));
+        if (includeBindHost) {
+          assertEquals("Web address misconfigured WITH bind-host",
+                       rm.webAppAddress.substring(0, 7), "9.9.9.9");
+        } else {
+          //YarnConfiguration tries to figure out which rm host it's on by binding to it,
+          //which doesn't happen for any of these fake addresses, so we end up with 0.0.0.0
+          assertEquals("Web address misconfigured WITHOUT bind-host",
+                       rm.webAppAddress.substring(0, 7), "0.0.0.0");
+        }
       }
     } catch (YarnRuntimeException e) {
       fail("Should not throw any exceptions.");
@@ -466,6 +503,8 @@ public class TestRMHA {
 
     private int eventHandlerCount;
 
+    private volatile boolean stopped = false;
+
     public MyCountingDispatcher() {
       super("MyCountingDispatcher");
       this.eventHandlerCount = 0;
@@ -483,6 +522,16 @@ public class TestRMHA {
 
     public int getEventHandlerCount() {
       return this.eventHandlerCount;
+    }
+
+    @Override
+    protected void serviceStop() throws Exception {
+      this.stopped = true;
+      super.serviceStop();
+    }
+
+    public boolean isStopped() {
+      return this.stopped;
     }
   }
 }

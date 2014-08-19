@@ -30,6 +30,7 @@ import java.net.URI;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
@@ -49,8 +50,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.XAttrCodec;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -58,49 +62,28 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
-import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
-import org.apache.hadoop.hdfs.web.resources.AclPermissionParam;
-import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
-import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
-import org.apache.hadoop.hdfs.web.resources.ConcatSourcesParam;
-import org.apache.hadoop.hdfs.web.resources.CreateParentParam;
-import org.apache.hadoop.hdfs.web.resources.DelegationParam;
-import org.apache.hadoop.hdfs.web.resources.DeleteOpParam;
-import org.apache.hadoop.hdfs.web.resources.DestinationParam;
-import org.apache.hadoop.hdfs.web.resources.DoAsParam;
-import org.apache.hadoop.hdfs.web.resources.GetOpParam;
-import org.apache.hadoop.hdfs.web.resources.GroupParam;
-import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
-import org.apache.hadoop.hdfs.web.resources.LengthParam;
-import org.apache.hadoop.hdfs.web.resources.ModificationTimeParam;
-import org.apache.hadoop.hdfs.web.resources.OffsetParam;
-import org.apache.hadoop.hdfs.web.resources.OverwriteParam;
-import org.apache.hadoop.hdfs.web.resources.OwnerParam;
-import org.apache.hadoop.hdfs.web.resources.Param;
-import org.apache.hadoop.hdfs.web.resources.PermissionParam;
-import org.apache.hadoop.hdfs.web.resources.PostOpParam;
-import org.apache.hadoop.hdfs.web.resources.PutOpParam;
-import org.apache.hadoop.hdfs.web.resources.RecursiveParam;
-import org.apache.hadoop.hdfs.web.resources.RenameOptionSetParam;
-import org.apache.hadoop.hdfs.web.resources.RenewerParam;
-import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
-import org.apache.hadoop.hdfs.web.resources.TokenArgumentParam;
-import org.apache.hadoop.hdfs.web.resources.UserParam;
+import org.apache.hadoop.hdfs.web.resources.*;
+import org.apache.hadoop.hdfs.web.resources.HttpOpParam.Op;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.security.token.TokenSelector;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelector;
 import org.apache.hadoop.util.Progressable;
 import org.mortbay.util.ajax.JSON;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
 /** A FileSystem for HDFS over the web. */
@@ -119,7 +102,7 @@ public class WebHdfsFileSystem extends FileSystem
 
   /** Delegation token kind */
   public static final Text TOKEN_KIND = new Text("WEBHDFS delegation");
-  protected TokenAspect<? extends WebHdfsFileSystem> tokenAspect;
+  private boolean canRefreshDelegationToken;
 
   private UserGroupInformation ugi;
   private URI uri;
@@ -148,13 +131,8 @@ public class WebHdfsFileSystem extends FileSystem
     return "http";
   }
 
-  /**
-   * Initialize tokenAspect. This function is intended to
-   * be overridden by SWebHdfsFileSystem.
-   */
-  protected synchronized void initializeTokenAspect() {
-    tokenAspect = new TokenAspect<WebHdfsFileSystem>(this, tokenServiceName,
-        TOKEN_KIND);
+  protected Text getTokenKind() {
+    return TOKEN_KIND;
   }
 
   @Override
@@ -175,12 +153,14 @@ public class WebHdfsFileSystem extends FileSystem
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
     this.nnAddrs = resolveNNAddr();
 
-    boolean isHA = HAUtil.isLogicalUri(conf, this.uri);
-    // In non-HA case, the code needs to call getCanonicalUri() in order to
-    // handle the case where no port is specified in the URI
-    this.tokenServiceName = isHA ? HAUtil.buildTokenServiceForLogicalUri(uri)
+    boolean isHA = HAUtil.isClientFailoverConfigured(conf, this.uri);
+    boolean isLogicalUri = isHA && HAUtil.isLogicalUri(conf, this.uri);
+    // In non-HA or non-logical URI case, the code needs to call
+    // getCanonicalUri() in order to handle the case where no port is
+    // specified in the URI
+    this.tokenServiceName = isLogicalUri ?
+        HAUtil.buildTokenServiceForLogicalUri(uri, getScheme())
         : SecurityUtil.buildTokenService(getCanonicalUri());
-    initializeTokenAspect();
 
     if (!isHA) {
       this.retryPolicy =
@@ -213,10 +193,8 @@ public class WebHdfsFileSystem extends FileSystem
     }
 
     this.workingDir = getHomeDirectory();
-
-    if (UserGroupInformation.isSecurityEnabled()) {
-      tokenAspect.initDelegationToken(ugi);
-    }
+    this.canRefreshDelegationToken = UserGroupInformation.isSecurityEnabled();
+    this.delegationToken = null;
   }
 
   @Override
@@ -231,9 +209,44 @@ public class WebHdfsFileSystem extends FileSystem
     return b;
   }
 
+  TokenSelector<DelegationTokenIdentifier> tokenSelector =
+      new AbstractDelegationTokenSelector<DelegationTokenIdentifier>(getTokenKind()){};
+
+  // the first getAuthParams() for a non-token op will either get the
+  // internal token from the ugi or lazy fetch one
   protected synchronized Token<?> getDelegationToken() throws IOException {
-    tokenAspect.ensureTokenInitialized();
+    if (canRefreshDelegationToken && delegationToken == null) {
+      Token<?> token = tokenSelector.selectToken(
+          new Text(getCanonicalServiceName()), ugi.getTokens());
+      // ugi tokens are usually indicative of a task which can't
+      // refetch tokens.  even if ugi has credentials, don't attempt
+      // to get another token to match hdfs/rpc behavior
+      if (token != null) {
+        LOG.debug("Using UGI token: " + token);
+        canRefreshDelegationToken = false; 
+      } else {
+        token = getDelegationToken(null);
+        if (token != null) {
+          LOG.debug("Fetched new token: " + token);
+        } else { // security is disabled
+          canRefreshDelegationToken = false;
+        }
+      }
+      setDelegationToken(token);
+    }
     return delegationToken;
+  }
+
+  @VisibleForTesting
+  synchronized boolean replaceExpiredDelegationToken() throws IOException {
+    boolean replaced = false;
+    if (canRefreshDelegationToken) {
+      Token<?> token = getDelegationToken(null);
+      LOG.debug("Replaced expired token: " + token);
+      setDelegationToken(token);
+      replaced = (token != null);
+    }
+    return replaced;
   }
 
   @Override
@@ -306,8 +319,8 @@ public class WebHdfsFileSystem extends FileSystem
     final int code = conn.getResponseCode();
     // server is demanding an authentication we don't support
     if (code == HttpURLConnection.HTTP_UNAUTHORIZED) {
-      throw new IOException(
-          new AuthenticationException(conn.getResponseMessage()));
+      // match hdfs/rpc exception
+      throw new AccessControlException(conn.getResponseMessage());
     }
     if (code != op.getExpectedHttpResponseCode()) {
       final Map<?, ?> m;
@@ -327,7 +340,15 @@ public class WebHdfsFileSystem extends FileSystem
         return m;
       }
 
-      final RemoteException re = JsonUtil.toRemoteException(m);
+      IOException re = JsonUtil.toRemoteException(m);
+      // extract UGI-related exceptions and unwrap InvalidToken
+      // the NN mangles these exceptions but the DN does not and may need
+      // to re-fetch a token if either report the token is expired
+      if (re.getMessage().startsWith("Failed to obtain user group information:")) {
+        String[] parts = re.getMessage().split(":\\s+", 3);
+        re = new RemoteException(parts[1], parts[2]);
+        re = ((RemoteException)re).unwrapRemoteException(InvalidToken.class);
+      }
       throw unwrapException? toIOException(re): re;
     }
     return null;
@@ -362,8 +383,6 @@ public class WebHdfsFileSystem extends FileSystem
    */
   private synchronized void resetStateToFailOver() {
     currentNNAddrIndex = (currentNNAddrIndex + 1) % nnAddrs.length;
-    delegationToken = null;
-    tokenAspect.reset();
   }
 
   /**
@@ -389,7 +408,7 @@ public class WebHdfsFileSystem extends FileSystem
     // Skip adding delegation token for token operations because these
     // operations require authentication.
     Token<?> token = null;
-    if (UserGroupInformation.isSecurityEnabled() && !op.getRequireAuth()) {
+    if (!op.getRequireAuth()) {
       token = getDelegationToken();
     }
     if (token != null) {
@@ -422,40 +441,24 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   /**
-   * Run a http operation.
-   * Connect to the http server, validate response, and obtain the JSON output.
-   * 
-   * @param op http operation
-   * @param fspath file system path
-   * @param parameters parameters for the operation
-   * @return a JSON object, e.g. Object[], Map<?, ?>, etc.
-   * @throws IOException
-   */
-  private Map<?, ?> run(final HttpOpParam.Op op, final Path fspath,
-      final Param<?,?>... parameters) throws IOException {
-    return new FsPathRunner(op, fspath, parameters).run().json;
-  }
-
-  /**
    * This class is for initialing a HTTP connection, connecting to server,
    * obtaining a response, and also handling retry on failures.
    */
-  abstract class AbstractRunner {
+  abstract class AbstractRunner<T> {
     abstract protected URL getUrl() throws IOException;
 
     protected final HttpOpParam.Op op;
     private final boolean redirected;
+    protected ExcludeDatanodesParam excludeDatanodes = new ExcludeDatanodesParam("");
 
     private boolean checkRetry;
-    protected HttpURLConnection conn = null;
-    private Map<?, ?> json = null;
 
     protected AbstractRunner(final HttpOpParam.Op op, boolean redirected) {
       this.op = op;
       this.redirected = redirected;
     }
 
-    AbstractRunner run() throws IOException {
+    T run() throws IOException {
       UserGroupInformation connectUgi = ugi.getRealUser();
       if (connectUgi == null) {
         connectUgi = ugi;
@@ -467,9 +470,9 @@ public class WebHdfsFileSystem extends FileSystem
         // the entire lifecycle of the connection must be run inside the
         // doAs to ensure authentication is performed correctly
         return connectUgi.doAs(
-            new PrivilegedExceptionAction<AbstractRunner>() {
+            new PrivilegedExceptionAction<T>() {
               @Override
-              public AbstractRunner run() throws IOException {
+              public T run() throws IOException {
                 return runWithRetry();
               }
             });
@@ -477,32 +480,97 @@ public class WebHdfsFileSystem extends FileSystem
         throw new IOException(e);
       }
     }
-    
-    private void init() throws IOException {
-      checkRetry = !redirected;
-      URL url = getUrl();
-      conn = (HttpURLConnection) connectionFactory.openConnection(url);
-    }
-    
-    private void connect() throws IOException {
-      connect(op.getDoOutput());
-    }
 
-    private void connect(boolean doOutput) throws IOException {
-      conn.setRequestMethod(op.getType().toString());
-      conn.setDoOutput(doOutput);
-      conn.setInstanceFollowRedirects(false);
-      conn.connect();
-    }
+    /**
+     * Two-step requests redirected to a DN
+     * 
+     * Create/Append:
+     * Step 1) Submit a Http request with neither auto-redirect nor data. 
+     * Step 2) Submit another Http request with the URL from the Location header with data.
+     * 
+     * The reason of having two-step create/append is for preventing clients to
+     * send out the data before the redirect. This issue is addressed by the
+     * "Expect: 100-continue" header in HTTP/1.1; see RFC 2616, Section 8.2.3.
+     * Unfortunately, there are software library bugs (e.g. Jetty 6 http server
+     * and Java 6 http client), which do not correctly implement "Expect:
+     * 100-continue". The two-step create/append is a temporary workaround for
+     * the software library bugs.
+     * 
+     * Open/Checksum
+     * Also implements two-step connects for other operations redirected to
+     * a DN such as open and checksum
+     */
+    private HttpURLConnection connect(URL url) throws IOException {
+      //redirect hostname and port
+      String redirectHost = null;
 
-    private void disconnect() {
-      if (conn != null) {
-        conn.disconnect();
-        conn = null;
+      
+      // resolve redirects for a DN operation unless already resolved
+      if (op.getRedirect() && !redirected) {
+        final HttpOpParam.Op redirectOp =
+            HttpOpParam.TemporaryRedirectOp.valueOf(op);
+        final HttpURLConnection conn = connect(redirectOp, url);
+        // application level proxy like httpfs might not issue a redirect
+        if (conn.getResponseCode() == op.getExpectedHttpResponseCode()) {
+          return conn;
+        }
+        try {
+          validateResponse(redirectOp, conn, false);
+          url = new URL(conn.getHeaderField("Location"));
+          redirectHost = url.getHost() + ":" + url.getPort();
+        } finally {
+          conn.disconnect();
+        }
       }
+      try {
+        return connect(op, url);
+      } catch (IOException ioe) {
+        if (redirectHost != null) {
+          if (excludeDatanodes.getValue() != null) {
+            excludeDatanodes = new ExcludeDatanodesParam(redirectHost + ","
+                + excludeDatanodes.getValue());
+          } else {
+            excludeDatanodes = new ExcludeDatanodesParam(redirectHost);
+          }
+        }
+        throw ioe;
+      }      
     }
 
-    private AbstractRunner runWithRetry() throws IOException {
+    private HttpURLConnection connect(final HttpOpParam.Op op, final URL url)
+        throws IOException {
+      final HttpURLConnection conn =
+          (HttpURLConnection)connectionFactory.openConnection(url);
+      final boolean doOutput = op.getDoOutput();
+      conn.setRequestMethod(op.getType().toString());
+      conn.setInstanceFollowRedirects(false);
+      switch (op.getType()) {
+        // if not sending a message body for a POST or PUT operation, need
+        // to ensure the server/proxy knows this 
+        case POST:
+        case PUT: {
+          conn.setDoOutput(true);
+          if (!doOutput) {
+            // explicitly setting content-length to 0 won't do spnego!!
+            // opening and closing the stream will send "Content-Length: 0"
+            conn.getOutputStream().close();
+          } else {
+            conn.setRequestProperty("Content-Type",
+                MediaType.APPLICATION_OCTET_STREAM);
+            conn.setChunkedStreamingMode(32 << 10); //32kB-chunk
+          }
+          break;
+        }
+        default: {
+          conn.setDoOutput(doOutput);
+          break;
+        }
+      }
+      conn.connect();
+      return conn;
+    }
+
+    private T runWithRetry() throws IOException {
       /**
        * Do the real work.
        *
@@ -520,19 +588,26 @@ public class WebHdfsFileSystem extends FileSystem
        * examines the exception and swallows it if it decides to rerun the work.
        */
       for(int retry = 0; ; retry++) {
+        checkRetry = !redirected;
+        final URL url = getUrl();
         try {
-          init();
-          if (op.getDoOutput()) {
-            twoStepWrite();
-          } else {
-            getResponse(op != GetOpParam.Op.OPEN);
+          final HttpURLConnection conn = connect(url);
+          // output streams will validate on close
+          if (!op.getDoOutput()) {
+            validateResponse(op, conn, false);
           }
-          return this;
-        } catch(IOException ioe) {
-          Throwable cause = ioe.getCause();
-          if (cause != null && cause instanceof AuthenticationException) {
-            throw ioe; // no retries for auth failures
+          return getResponse(conn);
+        } catch (AccessControlException ace) {
+          // no retries for auth failures
+          throw ace;
+        } catch (InvalidToken it) {
+          // try to replace the expired token with a new one.  the attempt
+          // to acquire a new token must be outside this operation's retry
+          // so if it fails after its own retries, this operation fails too.
+          if (op.getRequireAuth() || !replaceExpiredDelegationToken()) {
+            throw it;
           }
+        } catch (IOException ioe) {
           shouldRetry(ioe, retry);
         }
       }
@@ -570,87 +645,159 @@ public class WebHdfsFileSystem extends FileSystem
       throw toIOException(ioe);
     }
 
-    /**
-     * Two-step Create/Append:
-     * Step 1) Submit a Http request with neither auto-redirect nor data. 
-     * Step 2) Submit another Http request with the URL from the Location header with data.
-     * 
-     * The reason of having two-step create/append is for preventing clients to
-     * send out the data before the redirect. This issue is addressed by the
-     * "Expect: 100-continue" header in HTTP/1.1; see RFC 2616, Section 8.2.3.
-     * Unfortunately, there are software library bugs (e.g. Jetty 6 http server
-     * and Java 6 http client), which do not correctly implement "Expect:
-     * 100-continue". The two-step create/append is a temporary workaround for
-     * the software library bugs.
-     */
-    HttpURLConnection twoStepWrite() throws IOException {
-      //Step 1) Submit a Http request with neither auto-redirect nor data. 
-      connect(false);
-      validateResponse(HttpOpParam.TemporaryRedirectOp.valueOf(op), conn, false);
-      final String redirect = conn.getHeaderField("Location");
-      disconnect();
-      checkRetry = false;
-      
-      //Step 2) Submit another Http request with the URL from the Location header with data.
-      conn = (HttpURLConnection) connectionFactory.openConnection(new URL(
-          redirect));
-      conn.setRequestProperty("Content-Type",
-          MediaType.APPLICATION_OCTET_STREAM);
-      conn.setChunkedStreamingMode(32 << 10); //32kB-chunk
-      connect();
-      return conn;
-    }
-
-    FSDataOutputStream write(final int bufferSize) throws IOException {
-      return WebHdfsFileSystem.this.write(op, conn, bufferSize);
-    }
-
-    void getResponse(boolean getJsonAndDisconnect) throws IOException {
-      try {
-        connect();
-        final int code = conn.getResponseCode();
-        if (!redirected && op.getRedirect()
-            && code != op.getExpectedHttpResponseCode()) {
-          final String redirect = conn.getHeaderField("Location");
-          json = validateResponse(HttpOpParam.TemporaryRedirectOp.valueOf(op),
-              conn, false);
-          disconnect();
-  
-          checkRetry = false;
-          conn = (HttpURLConnection) connectionFactory.openConnection(new URL(
-              redirect));
-          connect();
-        }
-
-        json = validateResponse(op, conn, false);
-        if (json == null && getJsonAndDisconnect) {
-          json = jsonParse(conn, false);
-        }
-      } finally {
-        if (getJsonAndDisconnect) {
-          disconnect();
-        }
-      }
-    }
+    abstract T getResponse(HttpURLConnection conn) throws IOException;
   }
 
-  final class FsPathRunner extends AbstractRunner {
+  /**
+   * Abstract base class to handle path-based operations with params
+   */
+  abstract class AbstractFsPathRunner<T> extends AbstractRunner<T> {
     private final Path fspath;
-    private final Param<?, ?>[] parameters;
-
-    FsPathRunner(final HttpOpParam.Op op, final Path fspath, final Param<?,?>... parameters) {
+    private final Param<?,?>[] parameters;
+    
+    AbstractFsPathRunner(final HttpOpParam.Op op, final Path fspath,
+        Param<?,?>... parameters) {
       super(op, false);
       this.fspath = fspath;
       this.parameters = parameters;
     }
-
+    
+    AbstractFsPathRunner(final HttpOpParam.Op op, Param<?,?>[] parameters,
+        final Path fspath) {
+      super(op, false);
+      this.fspath = fspath;
+      this.parameters = parameters;
+    }
+    
     @Override
     protected URL getUrl() throws IOException {
-      return toUrl(op, fspath, parameters);
+      if (excludeDatanodes.getValue() != null) {
+        Param<?, ?>[] tmpParam = new Param<?, ?>[parameters.length + 1];
+        System.arraycopy(parameters, 0, tmpParam, 0, parameters.length);
+        tmpParam[parameters.length] = excludeDatanodes;
+        return toUrl(op, fspath, tmpParam);
+      } else {
+        return toUrl(op, fspath, parameters);
+      }
     }
   }
 
-  final class URLRunner extends AbstractRunner {
+  /**
+   * Default path-based implementation expects no json response
+   */
+  class FsPathRunner extends AbstractFsPathRunner<Void> {
+    FsPathRunner(Op op, Path fspath, Param<?,?>... parameters) {
+      super(op, fspath, parameters);
+    }
+    
+    @Override
+    Void getResponse(HttpURLConnection conn) throws IOException {
+      return null;
+    }
+  }
+
+  /**
+   * Handle path-based operations with a json response
+   */
+  abstract class FsPathResponseRunner<T> extends AbstractFsPathRunner<T> {
+    FsPathResponseRunner(final HttpOpParam.Op op, final Path fspath,
+        Param<?,?>... parameters) {
+      super(op, fspath, parameters);
+    }
+    
+    FsPathResponseRunner(final HttpOpParam.Op op, Param<?,?>[] parameters,
+        final Path fspath) {
+      super(op, parameters, fspath);
+    }
+    
+    @Override
+    final T getResponse(HttpURLConnection conn) throws IOException {
+      try {
+        final Map<?,?> json = jsonParse(conn, false);
+        if (json == null) {
+          // match exception class thrown by parser
+          throw new IllegalStateException("Missing response");
+        }
+        return decodeResponse(json);
+      } catch (IOException ioe) {
+        throw ioe;
+      } catch (Exception e) { // catch json parser errors
+        final IOException ioe =
+            new IOException("Response decoding failure: "+e.toString(), e);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(ioe);
+        }
+        throw ioe;
+      } finally {
+        conn.disconnect();
+      }
+    }
+    
+    abstract T decodeResponse(Map<?,?> json) throws IOException;
+  }
+
+  /**
+   * Handle path-based operations with json boolean response
+   */
+  class FsPathBooleanRunner extends FsPathResponseRunner<Boolean> {
+    FsPathBooleanRunner(Op op, Path fspath, Param<?,?>... parameters) {
+      super(op, fspath, parameters);
+    }
+    
+    @Override
+    Boolean decodeResponse(Map<?,?> json) throws IOException {
+      return (Boolean)json.get("boolean");
+    }
+  }
+
+  /**
+   * Handle create/append output streams
+   */
+  class FsPathOutputStreamRunner extends AbstractFsPathRunner<FSDataOutputStream> {
+    private final int bufferSize;
+    
+    FsPathOutputStreamRunner(Op op, Path fspath, int bufferSize,
+        Param<?,?>... parameters) {
+      super(op, fspath, parameters);
+      this.bufferSize = bufferSize;
+    }
+    
+    @Override
+    FSDataOutputStream getResponse(final HttpURLConnection conn)
+        throws IOException {
+      return new FSDataOutputStream(new BufferedOutputStream(
+          conn.getOutputStream(), bufferSize), statistics) {
+        @Override
+        public void close() throws IOException {
+          try {
+            super.close();
+          } finally {
+            try {
+              validateResponse(op, conn, true);
+            } finally {
+              conn.disconnect();
+            }
+          }
+        }
+      };
+    }
+  }
+
+  class FsPathConnectionRunner extends AbstractFsPathRunner<HttpURLConnection> {
+    FsPathConnectionRunner(Op op, Path fspath, Param<?,?>... parameters) {
+      super(op, fspath, parameters);
+    }
+    @Override
+    HttpURLConnection getResponse(final HttpURLConnection conn)
+        throws IOException {
+      return conn;
+    }
+  }
+  
+  /**
+   * Used by open() which tracks the resolved url itself
+   */
+  final class URLRunner extends AbstractRunner<HttpURLConnection> {
     private final URL url;
     @Override
     protected URL getUrl() {
@@ -660,6 +807,11 @@ public class WebHdfsFileSystem extends FileSystem
     protected URLRunner(final HttpOpParam.Op op, final URL url, boolean redirected) {
       super(op, redirected);
       this.url = url;
+    }
+
+    @Override
+    HttpURLConnection getResponse(HttpURLConnection conn) throws IOException {
+      return conn;
     }
   }
 
@@ -672,8 +824,12 @@ public class WebHdfsFileSystem extends FileSystem
 
   private HdfsFileStatus getHdfsFileStatus(Path f) throws IOException {
     final HttpOpParam.Op op = GetOpParam.Op.GETFILESTATUS;
-    final Map<?, ?> json = run(op, f);
-    final HdfsFileStatus status = JsonUtil.toFileStatus(json, true);
+    HdfsFileStatus status = new FsPathResponseRunner<HdfsFileStatus>(op, f) {
+      @Override
+      HdfsFileStatus decodeResponse(Map<?,?> json) {
+        return JsonUtil.toFileStatus(json, true);
+      }
+    }.run();
     if (status == null) {
       throw new FileNotFoundException("File does not exist: " + f);
     }
@@ -697,8 +853,12 @@ public class WebHdfsFileSystem extends FileSystem
   @Override
   public AclStatus getAclStatus(Path f) throws IOException {
     final HttpOpParam.Op op = GetOpParam.Op.GETACLSTATUS;
-    final Map<?, ?> json = run(op, f);
-    AclStatus status = JsonUtil.toAclStatus(json);
+    AclStatus status = new FsPathResponseRunner<AclStatus>(op, f) {
+      @Override
+      AclStatus decodeResponse(Map<?,?> json) {
+        return JsonUtil.toAclStatus(json);
+      }
+    }.run();
     if (status == null) {
       throw new FileNotFoundException("File does not exist: " + f);
     }
@@ -709,9 +869,9 @@ public class WebHdfsFileSystem extends FileSystem
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
     statistics.incrementWriteOps(1);
     final HttpOpParam.Op op = PutOpParam.Op.MKDIRS;
-    final Map<?, ?> json = run(op, f,
-        new PermissionParam(applyUMask(permission)));
-    return (Boolean)json.get("boolean");
+    return new FsPathBooleanRunner(op, f,
+        new PermissionParam(applyUMask(permission))
+    ).run();
   }
 
   /**
@@ -722,17 +882,19 @@ public class WebHdfsFileSystem extends FileSystem
       ) throws IOException {
     statistics.incrementWriteOps(1);
     final HttpOpParam.Op op = PutOpParam.Op.CREATESYMLINK;
-    run(op, f, new DestinationParam(makeQualified(destination).toUri().getPath()),
-        new CreateParentParam(createParent));
+    new FsPathRunner(op, f,
+        new DestinationParam(makeQualified(destination).toUri().getPath()),
+        new CreateParentParam(createParent)
+    ).run();
   }
 
   @Override
   public boolean rename(final Path src, final Path dst) throws IOException {
     statistics.incrementWriteOps(1);
     final HttpOpParam.Op op = PutOpParam.Op.RENAME;
-    final Map<?, ?> json = run(op, src,
-        new DestinationParam(makeQualified(dst).toUri().getPath()));
-    return (Boolean)json.get("boolean");
+    return new FsPathBooleanRunner(op, src,
+        new DestinationParam(makeQualified(dst).toUri().getPath())
+    ).run();
   }
 
   @SuppressWarnings("deprecation")
@@ -741,8 +903,87 @@ public class WebHdfsFileSystem extends FileSystem
       final Options.Rename... options) throws IOException {
     statistics.incrementWriteOps(1);
     final HttpOpParam.Op op = PutOpParam.Op.RENAME;
-    run(op, src, new DestinationParam(makeQualified(dst).toUri().getPath()),
-        new RenameOptionSetParam(options));
+    new FsPathRunner(op, src,
+        new DestinationParam(makeQualified(dst).toUri().getPath()),
+        new RenameOptionSetParam(options)
+    ).run();
+  }
+  
+  @Override
+  public void setXAttr(Path p, String name, byte[] value, 
+      EnumSet<XAttrSetFlag> flag) throws IOException {
+    statistics.incrementWriteOps(1);
+    final HttpOpParam.Op op = PutOpParam.Op.SETXATTR;
+    if (value != null) {
+      new FsPathRunner(op, p, new XAttrNameParam(name), new XAttrValueParam(
+          XAttrCodec.encodeValue(value, XAttrCodec.HEX)), 
+          new XAttrSetFlagParam(flag)).run();
+    } else {
+      new FsPathRunner(op, p, new XAttrNameParam(name), 
+          new XAttrSetFlagParam(flag)).run();
+    }
+  }
+  
+  @Override
+  public byte[] getXAttr(Path p, final String name) throws IOException {
+    final HttpOpParam.Op op = GetOpParam.Op.GETXATTRS;
+    return new FsPathResponseRunner<byte[]>(op, p, new XAttrNameParam(name), 
+        new XAttrEncodingParam(XAttrCodec.HEX)) {
+      @Override
+      byte[] decodeResponse(Map<?, ?> json) throws IOException {
+        return JsonUtil.getXAttr(json, name);
+      }
+    }.run();
+  }
+  
+  @Override
+  public Map<String, byte[]> getXAttrs(Path p) throws IOException {
+    final HttpOpParam.Op op = GetOpParam.Op.GETXATTRS;
+    return new FsPathResponseRunner<Map<String, byte[]>>(op, p, 
+        new XAttrEncodingParam(XAttrCodec.HEX)) {
+      @Override
+      Map<String, byte[]> decodeResponse(Map<?, ?> json) throws IOException {
+        return JsonUtil.toXAttrs(json);
+      }
+    }.run();
+  }
+  
+  @Override
+  public Map<String, byte[]> getXAttrs(Path p, final List<String> names) 
+      throws IOException {
+    Preconditions.checkArgument(names != null && !names.isEmpty(), 
+        "XAttr names cannot be null or empty.");
+    Param<?,?>[] parameters = new Param<?,?>[names.size() + 1];
+    for (int i = 0; i < parameters.length - 1; i++) {
+      parameters[i] = new XAttrNameParam(names.get(i));
+    }
+    parameters[parameters.length - 1] = new XAttrEncodingParam(XAttrCodec.HEX);
+    
+    final HttpOpParam.Op op = GetOpParam.Op.GETXATTRS;
+    return new FsPathResponseRunner<Map<String, byte[]>>(op, parameters, p) {
+      @Override
+      Map<String, byte[]> decodeResponse(Map<?, ?> json) throws IOException {
+        return JsonUtil.toXAttrs(json);
+      }
+    }.run();
+  }
+  
+  @Override
+  public List<String> listXAttrs(Path p) throws IOException {
+    final HttpOpParam.Op op = GetOpParam.Op.LISTXATTRS;
+    return new FsPathResponseRunner<List<String>>(op, p) {
+      @Override
+      List<String> decodeResponse(Map<?, ?> json) throws IOException {
+        return JsonUtil.toXAttrNames(json);
+      }
+    }.run();
+  }
+
+  @Override
+  public void removeXAttr(Path p, String name) throws IOException {
+    statistics.incrementWriteOps(1);
+    final HttpOpParam.Op op = PutOpParam.Op.REMOVEXATTR;
+    new FsPathRunner(op, p, new XAttrNameParam(name)).run();
   }
 
   @Override
@@ -754,7 +995,9 @@ public class WebHdfsFileSystem extends FileSystem
 
     statistics.incrementWriteOps(1);
     final HttpOpParam.Op op = PutOpParam.Op.SETOWNER;
-    run(op, p, new OwnerParam(owner), new GroupParam(group));
+    new FsPathRunner(op, p,
+        new OwnerParam(owner), new GroupParam(group)
+    ).run();
   }
 
   @Override
@@ -762,7 +1005,7 @@ public class WebHdfsFileSystem extends FileSystem
       ) throws IOException {
     statistics.incrementWriteOps(1);
     final HttpOpParam.Op op = PutOpParam.Op.SETPERMISSION;
-    run(op, p, new PermissionParam(permission));
+    new FsPathRunner(op, p,new PermissionParam(permission)).run();
   }
 
   @Override
@@ -770,7 +1013,7 @@ public class WebHdfsFileSystem extends FileSystem
       throws IOException {
     statistics.incrementWriteOps(1);
     final HttpOpParam.Op op = PutOpParam.Op.MODIFYACLENTRIES;
-    run(op, path, new AclPermissionParam(aclSpec));
+    new FsPathRunner(op, path, new AclPermissionParam(aclSpec)).run();
   }
 
   @Override
@@ -778,21 +1021,21 @@ public class WebHdfsFileSystem extends FileSystem
       throws IOException {
     statistics.incrementWriteOps(1);
     final HttpOpParam.Op op = PutOpParam.Op.REMOVEACLENTRIES;
-    run(op, path, new AclPermissionParam(aclSpec));
+    new FsPathRunner(op, path, new AclPermissionParam(aclSpec)).run();
   }
 
   @Override
   public void removeDefaultAcl(Path path) throws IOException {
     statistics.incrementWriteOps(1);
     final HttpOpParam.Op op = PutOpParam.Op.REMOVEDEFAULTACL;
-    run(op, path);
+    new FsPathRunner(op, path).run();
   }
 
   @Override
   public void removeAcl(Path path) throws IOException {
     statistics.incrementWriteOps(1);
     final HttpOpParam.Op op = PutOpParam.Op.REMOVEACL;
-    run(op, path);
+    new FsPathRunner(op, path).run();
   }
 
   @Override
@@ -800,7 +1043,39 @@ public class WebHdfsFileSystem extends FileSystem
       throws IOException {
     statistics.incrementWriteOps(1);
     final HttpOpParam.Op op = PutOpParam.Op.SETACL;
-    run(op, p, new AclPermissionParam(aclSpec));
+    new FsPathRunner(op, p, new AclPermissionParam(aclSpec)).run();
+  }
+
+  @Override
+  public Path createSnapshot(final Path path, final String snapshotName) 
+      throws IOException {
+    statistics.incrementWriteOps(1);
+    final HttpOpParam.Op op = PutOpParam.Op.CREATESNAPSHOT;
+    Path spath = new FsPathResponseRunner<Path>(op, path,
+        new SnapshotNameParam(snapshotName)) {
+      @Override
+      Path decodeResponse(Map<?,?> json) {
+        return new Path((String) json.get(Path.class.getSimpleName()));
+      }
+    }.run();
+    return spath;
+  }
+
+  @Override
+  public void deleteSnapshot(final Path path, final String snapshotName)
+      throws IOException {
+    statistics.incrementWriteOps(1);
+    final HttpOpParam.Op op = DeleteOpParam.Op.DELETESNAPSHOT;
+    new FsPathRunner(op, path, new SnapshotNameParam(snapshotName)).run();
+  }
+
+  @Override
+  public void renameSnapshot(final Path path, final String snapshotOldName,
+      final String snapshotNewName) throws IOException {
+    statistics.incrementWriteOps(1);
+    final HttpOpParam.Op op = PutOpParam.Op.RENAMESNAPSHOT;
+    new FsPathRunner(op, path, new OldSnapshotNameParam(snapshotOldName),
+        new SnapshotNameParam(snapshotNewName)).run();
   }
 
   @Override
@@ -808,8 +1083,9 @@ public class WebHdfsFileSystem extends FileSystem
      ) throws IOException {
     statistics.incrementWriteOps(1);
     final HttpOpParam.Op op = PutOpParam.Op.SETREPLICATION;
-    final Map<?, ?> json = run(op, p, new ReplicationParam(replication));
-    return (Boolean)json.get("boolean");
+    return new FsPathBooleanRunner(op, p,
+        new ReplicationParam(replication)
+    ).run();
   }
 
   @Override
@@ -817,7 +1093,10 @@ public class WebHdfsFileSystem extends FileSystem
       ) throws IOException {
     statistics.incrementWriteOps(1);
     final HttpOpParam.Op op = PutOpParam.Op.SETTIMES;
-    run(op, p, new ModificationTimeParam(mtime), new AccessTimeParam(atime));
+    new FsPathRunner(op, p,
+        new ModificationTimeParam(mtime),
+        new AccessTimeParam(atime)
+    ).run();
   }
 
   @Override
@@ -832,32 +1111,11 @@ public class WebHdfsFileSystem extends FileSystem
         DFSConfigKeys.DFS_REPLICATION_DEFAULT);
   }
 
-  FSDataOutputStream write(final HttpOpParam.Op op,
-      final HttpURLConnection conn, final int bufferSize) throws IOException {
-    return new FSDataOutputStream(new BufferedOutputStream(
-        conn.getOutputStream(), bufferSize), statistics) {
-      @Override
-      public void close() throws IOException {
-        try {
-          super.close();
-        } finally {
-          try {
-            validateResponse(op, conn, true);
-          } finally {
-            conn.disconnect();
-          }
-        }
-      }
-    };
-  }
-
   @Override
   public void concat(final Path trg, final Path [] srcs) throws IOException {
     statistics.incrementWriteOps(1);
     final HttpOpParam.Op op = PostOpParam.Op.CONCAT;
-
-    ConcatSourcesParam param = new ConcatSourcesParam(srcs);
-    run(op, trg, param);
+    new FsPathRunner(op, trg, new ConcatSourcesParam(srcs)).run();
   }
 
   @Override
@@ -867,14 +1125,13 @@ public class WebHdfsFileSystem extends FileSystem
     statistics.incrementWriteOps(1);
 
     final HttpOpParam.Op op = PutOpParam.Op.CREATE;
-    return new FsPathRunner(op, f,
+    return new FsPathOutputStreamRunner(op, f, bufferSize,
         new PermissionParam(applyUMask(permission)),
         new OverwriteParam(overwrite),
         new BufferSizeParam(bufferSize),
         new ReplicationParam(replication),
-        new BlockSizeParam(blockSize))
-      .run()
-      .write(bufferSize);
+        new BlockSizeParam(blockSize)
+    ).run();
   }
 
   @Override
@@ -883,16 +1140,17 @@ public class WebHdfsFileSystem extends FileSystem
     statistics.incrementWriteOps(1);
 
     final HttpOpParam.Op op = PostOpParam.Op.APPEND;
-    return new FsPathRunner(op, f, new BufferSizeParam(bufferSize))
-      .run()
-      .write(bufferSize);
+    return new FsPathOutputStreamRunner(op, f, bufferSize,
+        new BufferSizeParam(bufferSize)
+    ).run();
   }
 
   @Override
   public boolean delete(Path f, boolean recursive) throws IOException {
     final HttpOpParam.Op op = DeleteOpParam.Op.DELETE;
-    final Map<?, ?> json = run(op, f, new RecursiveParam(recursive));
-    return (Boolean)json.get("boolean");
+    return new FsPathBooleanRunner(op, f,
+        new RecursiveParam(recursive)
+    ).run();
   }
 
   @Override
@@ -900,16 +1158,41 @@ public class WebHdfsFileSystem extends FileSystem
       ) throws IOException {
     statistics.incrementReadOps(1);
     final HttpOpParam.Op op = GetOpParam.Op.OPEN;
-    final URL url = toUrl(op, f, new BufferSizeParam(buffersize));
+    // use a runner so the open can recover from an invalid token
+    FsPathConnectionRunner runner =
+        new FsPathConnectionRunner(op, f, new BufferSizeParam(buffersize));
     return new FSDataInputStream(new OffsetUrlInputStream(
-        new OffsetUrlOpener(url), new OffsetUrlOpener(null)));
+        new UnresolvedUrlOpener(runner), new OffsetUrlOpener(null)));
   }
 
   @Override
-  public void close() throws IOException {
-    super.close();
-    synchronized (this) {
-      tokenAspect.removeRenewAction();
+  public synchronized void close() throws IOException {
+    try {
+      if (canRefreshDelegationToken && delegationToken != null) {
+        cancelDelegationToken(delegationToken);
+      }
+    } catch (IOException ioe) {
+      LOG.debug("Token cancel failed: "+ioe);
+    } finally {
+      super.close();
+    }
+  }
+
+  // use FsPathConnectionRunner to ensure retries for InvalidTokens
+  class UnresolvedUrlOpener extends ByteRangeInputStream.URLOpener {
+    private final FsPathConnectionRunner runner;
+    UnresolvedUrlOpener(FsPathConnectionRunner runner) {
+      super(null);
+      this.runner = runner;
+    }
+
+    @Override
+    protected HttpURLConnection connect(long offset, boolean resolved)
+        throws IOException {
+      assert offset == 0;
+      HttpURLConnection conn = runner.run();
+      setURL(conn.getURL());
+      return conn;
     }
   }
 
@@ -924,7 +1207,7 @@ public class WebHdfsFileSystem extends FileSystem
         final boolean resolved) throws IOException {
       final URL offsetUrl = offset == 0L? url
           : new URL(url + "&" + new OffsetParam(offset));
-      return new URLRunner(GetOpParam.Op.OPEN, offsetUrl, resolved).run().conn;
+      return new URLRunner(GetOpParam.Op.OPEN, offsetUrl, resolved).run();
     }  
   }
 
@@ -962,7 +1245,7 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   static class OffsetUrlInputStream extends ByteRangeInputStream {
-    OffsetUrlInputStream(OffsetUrlOpener o, OffsetUrlOpener r)
+    OffsetUrlInputStream(UnresolvedUrlOpener o, OffsetUrlOpener r)
         throws IOException {
       super(o, r);
     }
@@ -980,25 +1263,36 @@ public class WebHdfsFileSystem extends FileSystem
     statistics.incrementReadOps(1);
 
     final HttpOpParam.Op op = GetOpParam.Op.LISTSTATUS;
-    final Map<?, ?> json  = run(op, f);
-    final Map<?, ?> rootmap = (Map<?, ?>)json.get(FileStatus.class.getSimpleName() + "es");
-    final Object[] array = (Object[])rootmap.get(FileStatus.class.getSimpleName());
+    return new FsPathResponseRunner<FileStatus[]>(op, f) {
+      @Override
+      FileStatus[] decodeResponse(Map<?,?> json) {
+        final Map<?, ?> rootmap = (Map<?, ?>)json.get(FileStatus.class.getSimpleName() + "es");
+        final Object[] array = (Object[])rootmap.get(FileStatus.class.getSimpleName());
 
-    //convert FileStatus
-    final FileStatus[] statuses = new FileStatus[array.length];
-    for(int i = 0; i < array.length; i++) {
-      final Map<?, ?> m = (Map<?, ?>)array[i];
-      statuses[i] = makeQualified(JsonUtil.toFileStatus(m, false), f);
-    }
-    return statuses;
+        //convert FileStatus
+        final FileStatus[] statuses = new FileStatus[array.length];
+        for (int i = 0; i < array.length; i++) {
+          final Map<?, ?> m = (Map<?, ?>)array[i];
+          statuses[i] = makeQualified(JsonUtil.toFileStatus(m, false), f);
+        }
+        return statuses;
+      }
+    }.run();
   }
 
   @Override
   public Token<DelegationTokenIdentifier> getDelegationToken(
       final String renewer) throws IOException {
     final HttpOpParam.Op op = GetOpParam.Op.GETDELEGATIONTOKEN;
-    final Map<?, ?> m = run(op, null, new RenewerParam(renewer));
-    final Token<DelegationTokenIdentifier> token = JsonUtil.toDelegationToken(m);
+    Token<DelegationTokenIdentifier> token =
+        new FsPathResponseRunner<Token<DelegationTokenIdentifier>>(
+            op, null, new RenewerParam(renewer)) {
+      @Override
+      Token<DelegationTokenIdentifier> decodeResponse(Map<?,?> json)
+          throws IOException {
+        return JsonUtil.toDelegationToken(json);
+      }
+    }.run();
     token.setService(tokenServiceName);
     return token;
   }
@@ -1020,19 +1314,22 @@ public class WebHdfsFileSystem extends FileSystem
   public synchronized long renewDelegationToken(final Token<?> token
       ) throws IOException {
     final HttpOpParam.Op op = PutOpParam.Op.RENEWDELEGATIONTOKEN;
-    TokenArgumentParam dtargParam = new TokenArgumentParam(
-        token.encodeToUrlString());
-    final Map<?, ?> m = run(op, null, dtargParam);
-    return (Long) m.get("long");
+    return new FsPathResponseRunner<Long>(op, null,
+        new TokenArgumentParam(token.encodeToUrlString())) {
+      @Override
+      Long decodeResponse(Map<?,?> json) throws IOException {
+        return (Long) json.get("long");
+      }
+    }.run();
   }
 
   @Override
   public synchronized void cancelDelegationToken(final Token<?> token
       ) throws IOException {
     final HttpOpParam.Op op = PutOpParam.Op.CANCELDELEGATIONTOKEN;
-    TokenArgumentParam dtargParam = new TokenArgumentParam(
-        token.encodeToUrlString());
-    run(op, null, dtargParam);
+    new FsPathRunner(op, null,
+        new TokenArgumentParam(token.encodeToUrlString())
+    ).run();
   }
   
   @Override
@@ -1050,9 +1347,20 @@ public class WebHdfsFileSystem extends FileSystem
     statistics.incrementReadOps(1);
 
     final HttpOpParam.Op op = GetOpParam.Op.GET_BLOCK_LOCATIONS;
-    final Map<?, ?> m = run(op, p, new OffsetParam(offset),
-        new LengthParam(length));
-    return DFSUtil.locatedBlocks2Locations(JsonUtil.toLocatedBlocks(m));
+    return new FsPathResponseRunner<BlockLocation[]>(op, p,
+        new OffsetParam(offset), new LengthParam(length)) {
+      @Override
+      BlockLocation[] decodeResponse(Map<?,?> json) throws IOException {
+        return DFSUtil.locatedBlocks2Locations(
+            JsonUtil.toLocatedBlocks(json));
+      }
+    }.run();
+  }
+
+  @Override
+  public void access(final Path path, final FsAction mode) throws IOException {
+    final HttpOpParam.Op op = GetOpParam.Op.CHECKACCESS;
+    new FsPathRunner(op, path, new FsActionParam(mode)).run();
   }
 
   @Override
@@ -1060,8 +1368,12 @@ public class WebHdfsFileSystem extends FileSystem
     statistics.incrementReadOps(1);
 
     final HttpOpParam.Op op = GetOpParam.Op.GETCONTENTSUMMARY;
-    final Map<?, ?> m = run(op, p);
-    return JsonUtil.toContentSummary(m);
+    return new FsPathResponseRunner<ContentSummary>(op, p) {
+      @Override
+      ContentSummary decodeResponse(Map<?,?> json) {
+        return JsonUtil.toContentSummary(json);        
+      }
+    }.run();
   }
 
   @Override
@@ -1070,15 +1382,19 @@ public class WebHdfsFileSystem extends FileSystem
     statistics.incrementReadOps(1);
   
     final HttpOpParam.Op op = GetOpParam.Op.GETFILECHECKSUM;
-    final Map<?, ?> m = run(op, p);
-    return JsonUtil.toMD5MD5CRC32FileChecksum(m);
+    return new FsPathResponseRunner<MD5MD5CRC32FileChecksum>(op, p) {
+      @Override
+      MD5MD5CRC32FileChecksum decodeResponse(Map<?,?> json) throws IOException {
+        return JsonUtil.toMD5MD5CRC32FileChecksum(json);
+      }
+    }.run();
   }
 
   /**
    * Resolve an HDFS URL into real INetSocketAddress. It works like a DNS
    * resolver when the URL points to an non-HA cluster. When the URL points to
-   * an HA cluster, the resolver further resolves the logical name (i.e., the
-   * authority in the URL) into real namenode addresses.
+   * an HA cluster with its logical name, the resolver further resolves the
+   * logical name(i.e., the authority in the URL) into real namenode addresses.
    */
   private InetSocketAddress[] resolveNNAddr() throws IOException {
     Configuration conf = getConf();
@@ -1095,10 +1411,10 @@ public class WebHdfsFileSystem extends FileSystem
       Map<String, Map<String, InetSocketAddress>> addresses = DFSUtil
           .getHaNnWebHdfsAddresses(conf, scheme);
 
-      for (Map<String, InetSocketAddress> addrs : addresses.values()) {
-        for (InetSocketAddress addr : addrs.values()) {
-          ret.add(addr);
-        }
+      // Extract the entry corresponding to the logical name.
+      Map<String, InetSocketAddress> addrs = addresses.get(uri.getHost());
+      for (InetSocketAddress addr : addrs.values()) {
+        ret.add(addr);
       }
     }
 
@@ -1110,5 +1426,10 @@ public class WebHdfsFileSystem extends FileSystem
   public String getCanonicalServiceName() {
     return tokenServiceName == null ? super.getCanonicalServiceName()
         : tokenServiceName.toString();
+  }
+
+  @VisibleForTesting
+  InetSocketAddress[] getResolvedNNAddr() {
+    return nnAddrs;
   }
 }

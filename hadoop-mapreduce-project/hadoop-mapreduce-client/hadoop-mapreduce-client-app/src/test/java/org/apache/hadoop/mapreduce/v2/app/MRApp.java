@@ -24,8 +24,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.EnumSet;
 
-import junit.framework.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -92,6 +90,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -101,6 +100,7 @@ import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
+import org.junit.Assert;
 
 
 /**
@@ -228,8 +228,8 @@ public class MRApp extends MRAppMaster {
       int maps, int reduces, boolean autoComplete, String testName,
       boolean cleanOnStart, int startCount, Clock clock, boolean unregistered,
       String assignedQueue) {
-    super(appAttemptId, amContainerId, NM_HOST, NM_PORT, NM_HTTP_PORT, clock, System
-        .currentTimeMillis(), MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
+    super(appAttemptId, amContainerId, NM_HOST, NM_PORT, NM_HTTP_PORT, clock,
+        System.currentTimeMillis());
     this.testWorkDir = new File("target", testName);
     testAbsPath = new Path(testWorkDir.getAbsolutePath());
     LOG.info("PathUsed: " + testAbsPath);
@@ -573,7 +573,8 @@ public class MRApp extends MRAppMaster {
         Resource resource = Resource.newInstance(1234, 2);
         ContainerTokenIdentifier containerTokenIdentifier =
             new ContainerTokenIdentifier(cId, nodeId.toString(), "user",
-              resource, System.currentTimeMillis() + 10000, 42, 42);
+            resource, System.currentTimeMillis() + 10000, 42, 42,
+            Priority.newInstance(0), 0);
         Token containerToken = newContainerToken(nodeId, "password".getBytes(),
               containerTokenIdentifier);
         Container container = Container.newInstance(cId, nodeId,
@@ -627,10 +628,18 @@ public class MRApp extends MRAppMaster {
           throws IOException {
         committer.abortJob(jobContext, state);
       }
+
+      @Override
+      public boolean isRecoverySupported(JobContext jobContext) throws IOException{
+        return committer.isRecoverySupported(jobContext);
+      }
+
+      @SuppressWarnings("deprecation")
       @Override
       public boolean isRecoverySupported() {
         return committer.isRecoverySupported();
       }
+
       @Override
       public void setupTask(TaskAttemptContext taskContext)
           throws IOException {

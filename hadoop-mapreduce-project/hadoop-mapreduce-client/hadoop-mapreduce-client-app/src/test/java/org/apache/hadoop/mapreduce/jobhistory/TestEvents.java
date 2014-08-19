@@ -24,7 +24,7 @@ import java.io.DataInputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import static junit.framework.Assert.*;
+import static org.junit.Assert.*;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;

@@ -81,6 +81,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.event.InlineDispatcher;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -535,7 +536,7 @@ public class TestJobImpl {
 
     // Verify access
     JobImpl job1 = new JobImpl(jobId, null, conf1, null, null, null, null, null,
-        null, null, null, true, null, 0, null, null, null, null);
+        null, null, null, true, user1, 0, null, null, null, null);
     Assert.assertTrue(job1.checkAccess(ugi1, JobACL.VIEW_JOB));
     Assert.assertFalse(job1.checkAccess(ugi2, JobACL.VIEW_JOB));
 
@@ -546,7 +547,7 @@ public class TestJobImpl {
 
     // Verify access
     JobImpl job2 = new JobImpl(jobId, null, conf2, null, null, null, null, null,
-        null, null, null, true, null, 0, null, null, null, null);
+        null, null, null, true, user1, 0, null, null, null, null);
     Assert.assertTrue(job2.checkAccess(ugi1, JobACL.VIEW_JOB));
     Assert.assertTrue(job2.checkAccess(ugi2, JobACL.VIEW_JOB));
 
@@ -557,7 +558,7 @@ public class TestJobImpl {
 
     // Verify access
     JobImpl job3 = new JobImpl(jobId, null, conf3, null, null, null, null, null,
-        null, null, null, true, null, 0, null, null, null, null);
+        null, null, null, true, user1, 0, null, null, null, null);
     Assert.assertTrue(job3.checkAccess(ugi1, JobACL.VIEW_JOB));
     Assert.assertTrue(job3.checkAccess(ugi2, JobACL.VIEW_JOB));
 
@@ -568,7 +569,7 @@ public class TestJobImpl {
 
     // Verify access
     JobImpl job4 = new JobImpl(jobId, null, conf4, null, null, null, null, null,
-        null, null, null, true, null, 0, null, null, null, null);
+        null, null, null, true, user1, 0, null, null, null, null);
     Assert.assertTrue(job4.checkAccess(ugi1, JobACL.VIEW_JOB));
     Assert.assertTrue(job4.checkAccess(ugi2, JobACL.VIEW_JOB));
 
@@ -579,7 +580,7 @@ public class TestJobImpl {
 
     // Verify access
     JobImpl job5 = new JobImpl(jobId, null, conf5, null, null, null, null, null,
-        null, null, null, true, null, 0, null, null, null, null);
+        null, null, null, true, user1, 0, null, null, null, null);
     Assert.assertTrue(job5.checkAccess(ugi1, null));
     Assert.assertTrue(job5.checkAccess(ugi2, null));
   }
@@ -656,6 +657,15 @@ public class TestJobImpl {
     conf.setInt(MRJobConfig.JOB_UBERTASK_MAXMAPS, 1);
     isUber = testUberDecision(conf);
     Assert.assertFalse(isUber);
+    
+ // enable uber mode of 0 reducer no matter how much memory assigned to reducer
+    conf = new Configuration();
+    conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, true);  
+    conf.setInt(MRJobConfig.NUM_REDUCES, 0);           
+    conf.setInt(MRJobConfig.REDUCE_MEMORY_MB, 2048);
+    conf.setInt(MRJobConfig.REDUCE_CPU_VCORES, 10);
+    isUber = testUberDecision(conf);
+    Assert.assertTrue(isUber);
   }
 
   private boolean testUberDecision(Configuration conf) {
@@ -726,6 +736,35 @@ public class TestJobImpl {
 
     dispatcher.stop();
     commitHandler.stop();
+  }
+
+  static final String EXCEPTIONMSG = "Splits max exceeded";
+  @Test
+  public void testMetaInfoSizeOverMax() throws Exception {
+    Configuration conf = new Configuration();
+    JobID jobID = JobID.forName("job_1234567890000_0001");
+    JobId jobId = TypeConverter.toYarn(jobID);
+    MRAppMetrics mrAppMetrics = MRAppMetrics.create();
+    JobImpl job =
+        new JobImpl(jobId, ApplicationAttemptId.newInstance(
+          ApplicationId.newInstance(0, 0), 0), conf, mock(EventHandler.class),
+          null, new JobTokenSecretManager(), new Credentials(), null, null,
+          mrAppMetrics, null, true, null, 0, null, null, null, null);
+    InitTransition initTransition = new InitTransition() {
+        @Override
+        protected TaskSplitMetaInfo[] createSplits(JobImpl job, JobId jobId) {
+          throw new YarnRuntimeException(EXCEPTIONMSG);
+        }
+      };
+    JobEvent mockJobEvent = mock(JobEvent.class);
+
+    JobStateInternal jobSI = initTransition.transition(job, mockJobEvent);
+    Assert.assertTrue("When init fails, return value from InitTransition.transition should equal NEW.",
+                      jobSI.equals(JobStateInternal.NEW));
+    Assert.assertTrue("Job diagnostics should contain YarnRuntimeException",
+                      job.getDiagnostics().toString().contains("YarnRuntimeException"));
+    Assert.assertTrue("Job diagnostics should contain " + EXCEPTIONMSG,
+                      job.getDiagnostics().toString().contains(EXCEPTIONMSG));
   }
 
   private static CommitterEventHandler createCommitterEventHandler(

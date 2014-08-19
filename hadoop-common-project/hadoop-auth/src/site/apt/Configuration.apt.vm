@@ -20,8 +20,6 @@
 Hadoop Auth, Java HTTP SPNEGO ${project.version} - Server Side
 Configuration
 
-  \[ {{{./index.html}Go Back}} \]
-
 * Server Side Configuration Setup
 
   The AuthenticationFilter filter is Hadoop Auth's server side component.
@@ -241,5 +239,3 @@ Configuration
     ...
 </web-app>
 +---+
-
-  \[ {{{./index.html}Go Back}} \]

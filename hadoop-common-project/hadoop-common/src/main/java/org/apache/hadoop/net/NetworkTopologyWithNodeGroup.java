@@ -248,25 +248,42 @@ public class NetworkTopologyWithNodeGroup extends NetworkTopology {
     }
   }
 
-  /** Sort nodes array by their distances to <i>reader</i>
-   * It linearly scans the array, if a local node is found, swap it with
-   * the first element of the array.
-   * If a local node group node is found, swap it with the first element 
-   * following the local node.
-   * If a local rack node is found, swap it with the first element following
-   * the local node group node.
-   * If neither local node, node group node or local rack node is found, put a 
-   * random replica location at position 0.
-   * It leaves the rest nodes untouched.
-   * @param reader the node that wishes to read a block from one of the nodes
-   * @param nodes the list of nodes containing data for the reader
+  @Override
+  protected int getWeight(Node reader, Node node) {
+    // 0 is local, 1 is same node group, 2 is same rack, 3 is off rack
+    // Start off by initializing to off rack
+    int weight = 3;
+    if (reader != null) {
+      if (reader == node) {
+        weight = 0;
+      } else if (isOnSameNodeGroup(reader, node)) {
+        weight = 1;
+      } else if (isOnSameRack(reader, node)) {
+        weight = 2;
+      }
+    }
+    return weight;
+  }
+
+  /**
+   * Sort nodes array by their distances to <i>reader</i>.
+   * <p/>
+   * This is the same as
+   * {@link NetworkTopology#sortByDistance(Node, Node[], long)} except with a
+   * four-level network topology which contains the additional network distance
+   * of a "node group" which is between local and same rack.
+   * 
+   * @param reader Node where data will be read
+   * @param nodes Available replicas with the requested data
+   * @param seed Used to seed the pseudo-random generator that randomizes the
+   *          set of nodes at each network distance.
    */
   @Override
-  public void pseudoSortByDistance( Node reader, Node[] nodes ) {
-
+  public void sortByDistance(Node reader, Node[] nodes, int activeLen,
+      long seed, boolean randomizeBlockLocationsPerBlock) {
+    // If reader is not a datanode (not in NetworkTopology tree), we need to
+    // replace this reader with a sibling leaf node in tree.
     if (reader != null && !this.contains(reader)) {
-      // if reader is not a datanode (not in NetworkTopology tree), we will 
-      // replace this reader with a sibling leaf node in tree.
       Node nodeGroup = getNode(reader.getNetworkLocation());
       if (nodeGroup != null && nodeGroup instanceof InnerNode) {
         InnerNode parentNode = (InnerNode) nodeGroup;
@@ -276,62 +293,8 @@ public class NetworkTopologyWithNodeGroup extends NetworkTopology {
         return;
       }
     }
-    int tempIndex = 0;
-    int localRackNode = -1;
-    int localNodeGroupNode = -1;
-    if (reader != null) {  
-      //scan the array to find the local node & local rack node
-      for (int i = 0; i < nodes.length; i++) {
-        if (tempIndex == 0 && reader == nodes[i]) { //local node
-          //swap the local node and the node at position 0
-          if (i != 0) {
-            swap(nodes, tempIndex, i);
-          }
-          tempIndex=1;
-
-          if (localRackNode != -1 && (localNodeGroupNode !=-1)) {
-            if (localRackNode == 0) {
-              localRackNode = i;
-            }
-            if (localNodeGroupNode == 0) {
-              localNodeGroupNode = i;
-            }
-            break;
-          }
-        } else if (localNodeGroupNode == -1 && isOnSameNodeGroup(reader, 
-            nodes[i])) {
-          //local node group
-          localNodeGroupNode = i;
-          // node local and rack local are already found
-          if(tempIndex != 0 && localRackNode != -1) break;
-        } else if (localRackNode == -1 && isOnSameRack(reader, nodes[i])) {
-          localRackNode = i;
-          if (tempIndex != 0 && localNodeGroupNode != -1) break;
-        }
-      }
-
-      // swap the local nodegroup node and the node at position tempIndex
-      if(localNodeGroupNode != -1 && localNodeGroupNode != tempIndex) {
-        swap(nodes, tempIndex, localNodeGroupNode);
-        if (localRackNode == tempIndex) {
-          localRackNode = localNodeGroupNode;
-        }
-        tempIndex++;
-      }
-
-      // swap the local rack node and the node at position tempIndex
-      if(localRackNode != -1 && localRackNode != tempIndex) {
-        swap(nodes, tempIndex, localRackNode);
-        tempIndex++;
-      }
-    }
-
-    // put a random node at position 0 if there is not a local/local-nodegroup/
-    // local-rack node
-    if (tempIndex == 0 && localNodeGroupNode == -1 && localRackNode == -1
-        && nodes.length != 0) {
-      swap(nodes, 0, r.nextInt(nodes.length));
-    }
+    super.sortByDistance(reader, nodes, activeLen, seed,
+        randomizeBlockLocationsPerBlock);
   }
 
   /** InnerNodeWithNodeGroup represents a switch/router of a data center, rack

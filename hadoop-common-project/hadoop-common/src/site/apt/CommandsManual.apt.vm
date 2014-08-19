@@ -81,88 +81,30 @@ User Commands
 
 * <<<archive>>>
 
-   Creates a hadoop archive. More information can be found at Hadoop
-   Archives.
-
-   Usage: <<<hadoop archive -archiveName NAME <src>* <dest> >>>
-
-*-------------------+-------------------------------------------------------+
-||COMMAND_OPTION    ||                   Description
-*-------------------+-------------------------------------------------------+
-| -archiveName NAME |  Name of the archive to be created.
-*-------------------+-------------------------------------------------------+
-| src               | Filesystem pathnames which work as usual with regular
-                    | expressions.
-*-------------------+-------------------------------------------------------+
-| dest              | Destination directory which would contain the archive.
-*-------------------+-------------------------------------------------------+
+   Creates a hadoop archive. More information can be found at
+   {{{../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/HadoopArchives.html}
+   Hadoop Archives Guide}}.
 
 * <<<distcp>>>
 
    Copy file or directories recursively. More information can be found at
-   Hadoop DistCp Guide.
-
-   Usage: <<<hadoop distcp <srcurl> <desturl> >>>
-
-*-------------------+--------------------------------------------+
-||COMMAND_OPTION    || Description
-*-------------------+--------------------------------------------+
-| srcurl            | Source Url
-*-------------------+--------------------------------------------+
-| desturl           | Destination Url
-*-------------------+--------------------------------------------+
+   {{{../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/DistCp.html}
+   Hadoop DistCp Guide}}.
 
 * <<<fs>>>
 
-   Usage: <<<hadoop fs [GENERIC_OPTIONS] [COMMAND_OPTIONS]>>>
-
-   Deprecated, use <<<hdfs dfs>>> instead.
-
-   Runs a generic filesystem user client.
-
-   The various COMMAND_OPTIONS can be found at File System Shell Guide.
+   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#dfs}<<<hdfs dfs>>>}}
+   instead.
 
 * <<<fsck>>>
 
-   Runs a HDFS filesystem checking utility.
-   See {{{../hadoop-hdfs/HdfsUserGuide.html#fsck}fsck}} for more info.
-
-   Usage: <<<hadoop fsck [GENERIC_OPTIONS] <path> [-move | -delete | -openforwrite] [-files [-blocks [-locations | -racks]]]>>>
-
-*------------------+---------------------------------------------+
-||  COMMAND_OPTION || Description
-*------------------+---------------------------------------------+
-|   <path>         | Start checking from this path.
-*------------------+---------------------------------------------+
-|   -move          | Move corrupted files to /lost+found
-*------------------+---------------------------------------------+
-|   -delete        | Delete corrupted files.
-*------------------+---------------------------------------------+
-|   -openforwrite  | Print out files opened for write.
-*------------------+---------------------------------------------+
-|   -files         | Print out files being checked.
-*------------------+---------------------------------------------+
-|   -blocks        | Print out block report.
-*------------------+---------------------------------------------+
-|   -locations     | Print out locations for every block.
-*------------------+---------------------------------------------+
-|   -racks         | Print out network topology for data-node locations.
-*------------------+---------------------------------------------+
+   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#fsck}<<<hdfs fsck>>>}}
+   instead.
 
 * <<<fetchdt>>>
 
-   Gets Delegation Token from a NameNode.
-   See {{{../hadoop-hdfs/HdfsUserGuide.html#fetchdt}fetchdt}} for more info.
-
-   Usage: <<<hadoop fetchdt [GENERIC_OPTIONS] [--webservice <namenode_http_addr>] <path> >>>
-
-*------------------------------+---------------------------------------------+
-|| COMMAND_OPTION              || Description
-*------------------------------+---------------------------------------------+
-| <fileName>                   | File name to store the token into.
-*------------------------------+---------------------------------------------+
-| --webservice <https_address> | use http protocol instead of RPC
-*------------------------------+---------------------------------------------+
+   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#fetchdt}
+   <<<hdfs fetchdt>>>}} instead.
 
 * <<<jar>>>
 
@@ -179,103 +121,21 @@ User Commands
 
 * <<<job>>>
 
-   Command to interact with Map Reduce Jobs.
-
-   Usage: <<<hadoop job [GENERIC_OPTIONS] [-submit <job-file>] | [-status <job-id>] | [-counter <job-id> <group-name> <counter-name>] | [-kill <job-id>] | [-events <job-id> <from-event-#> <#-of-events>] | [-history [all] <jobOutputDir>] | [-list [all]] | [-kill-task <task-id>] | [-fail-task <task-id>] | [-set-priority <job-id> <priority>]>>>
-
-*------------------------------+---------------------------------------------+
-|| COMMAND_OPTION              || Description
-*------------------------------+---------------------------------------------+
-| -submit <job-file>           | Submits the job.
-*------------------------------+---------------------------------------------+
-| -status <job-id>             | Prints the map and reduce completion
-                               | percentage and all job counters.
-*------------------------------+---------------------------------------------+
-| -counter <job-id> <group-name> <counter-name> | Prints the counter value.
-*------------------------------+---------------------------------------------+
-| -kill <job-id>               | Kills the job.
-*------------------------------+---------------------------------------------+
-| -events <job-id> <from-event-#> <#-of-events> | Prints the events' details
-                               | received by jobtracker for the given range.
-*------------------------------+---------------------------------------------+
-| -history [all]<jobOutputDir> | Prints job details, failed and killed tip
-                               | details.  More details about the job such as
-                               | successful tasks and task attempts made for
-                               | each task can be viewed by specifying the [all]
-                               | option.
-*------------------------------+---------------------------------------------+
-| -list [all]                  | Displays jobs which are yet to complete.
-                               | <<<-list all>>> displays all jobs.
-*------------------------------+---------------------------------------------+
-| -kill-task <task-id>         | Kills the task. Killed tasks are NOT counted
-                               | against failed attempts.
-*------------------------------+---------------------------------------------+
-| -fail-task <task-id>         | Fails the task. Failed tasks are counted
-                               | against failed attempts.
-*------------------------------+---------------------------------------------+
-| -set-priority <job-id> <priority> | Changes the priority of the job. Allowed
-                               | priority values are VERY_HIGH, HIGH, NORMAL,
-                               | LOW, VERY_LOW
-*------------------------------+---------------------------------------------+
+   Deprecated. Use
+   {{{../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapredCommands.html#job}
+   <<<mapred job>>>}} instead.
 
 * <<<pipes>>>
 
-   Runs a pipes job.
-
-   Usage: <<<hadoop pipes [-conf <path>] [-jobconf <key=value>, <key=value>,
-   ...] [-input <path>] [-output <path>] [-jar <jar file>] [-inputformat
-   <class>] [-map <class>] [-partitioner <class>] [-reduce <class>] [-writer
-   <class>] [-program <executable>] [-reduces <num>]>>>
- 
-*----------------------------------------+------------------------------------+
-|| COMMAND_OPTION                        || Description
-*----------------------------------------+------------------------------------+
-| -conf <path>                           | Configuration for job
-*----------------------------------------+------------------------------------+
-| -jobconf <key=value>, <key=value>, ... | Add/override configuration for job
-*----------------------------------------+------------------------------------+
-| -input <path>                          | Input directory
-*----------------------------------------+------------------------------------+
-| -output <path>                         | Output directory
-*----------------------------------------+------------------------------------+
-| -jar <jar file>                        | Jar filename
-*----------------------------------------+------------------------------------+
-| -inputformat <class>                   | InputFormat class
-*----------------------------------------+------------------------------------+
-| -map <class>                           | Java Map class
-*----------------------------------------+------------------------------------+
-| -partitioner <class>                   | Java Partitioner
-*----------------------------------------+------------------------------------+
-| -reduce <class>                        | Java Reduce class
-*----------------------------------------+------------------------------------+
-| -writer <class>                        | Java RecordWriter
-*----------------------------------------+------------------------------------+
-| -program <executable>                  | Executable URI
-*----------------------------------------+------------------------------------+
-| -reduces <num>                         | Number of reduces
-*----------------------------------------+------------------------------------+
+   Deprecated. Use
+   {{{../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapredCommands.html#pipes}
+   <<<mapred pipes>>>}} instead.
 
 * <<<queue>>>
 
-   command to interact and view Job Queue information
-
-   Usage: <<<hadoop queue [-list] | [-info <job-queue-name> [-showJobs]] | [-showacls]>>>
-
-*-----------------+-----------------------------------------------------------+
-|| COMMAND_OPTION || Description
-*-----------------+-----------------------------------------------------------+
-| -list           | Gets list of Job Queues configured in the system.
-                  | Along with scheduling information associated with the job queues.
-*-----------------+-----------------------------------------------------------+
-| -info <job-queue-name> [-showJobs] | Displays the job queue information and
-                  | associated scheduling information of particular job queue.
-                  | If <<<-showJobs>>> options is present a list of jobs
-                  | submitted to the particular job queue is displayed.
-*-----------------+-----------------------------------------------------------+
-| -showacls       | Displays the queue name and associated queue operations
-                  | allowed for the current user. The list consists of only
-                  | those queues to which the user has access.
-*-----------------+-----------------------------------------------------------+
+   Deprecated. Use
+   {{{../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapredCommands.html#queue}
+   <<<mapred queue>>>}} instead.
 
 * <<<version>>>
 
@@ -294,9 +154,24 @@ User Commands
 * <<<classpath>>>
 
    Prints the class path needed to get the Hadoop jar and the required
-   libraries.
+   libraries.  If called without arguments, then prints the classpath set up by
+   the command scripts, which is likely to contain wildcards in the classpath
+   entries.  Additional options print the classpath after wildcard expansion or
+   write the classpath into the manifest of a jar file.  The latter is useful in
+   environments where wildcards cannot be used and the expanded classpath exceeds
+   the maximum supported command line length.
 
-   Usage: <<<hadoop classpath>>>
+   Usage: <<<hadoop classpath [--glob|--jar <path>|-h|--help]>>>
+
+*-----------------+-----------------------------------------------------------+
+|| COMMAND_OPTION || Description
+*-----------------+-----------------------------------------------------------+
+| --glob          | expand wildcards
+*-----------------+-----------------------------------------------------------+
+| --jar <path>    | write classpath as manifest in jar named <path>
+*-----------------+-----------------------------------------------------------+
+| -h, --help      | print help
+*-----------------+-----------------------------------------------------------+
 
 Administration Commands
 
@@ -304,18 +179,8 @@ Administration Commands
 
 * <<<balancer>>>
 
-   Runs a cluster balancing utility. An administrator can simply press Ctrl-C
-   to stop the rebalancing process. See
-   {{{../hadoop-hdfs/HdfsUserGuide.html#Rebalancer}Rebalancer}} for more details.
-
-   Usage: <<<hadoop balancer [-threshold <threshold>]>>>
-
-*------------------------+-----------------------------------------------------------+
-|| COMMAND_OPTION        | Description
-*------------------------+-----------------------------------------------------------+
-| -threshold <threshold> | Percentage of disk capacity. This overwrites the
-                         | default threshold.
-*------------------------+-----------------------------------------------------------+
+   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#balancer}
+   <<<hdfs balancer>>>}} instead.
 
 * <<<daemonlog>>>
 
@@ -338,164 +203,20 @@ Administration Commands
 
 * <<<datanode>>>
 
-   Runs a HDFS datanode.
-
-   Usage: <<<hadoop datanode [-rollback]>>>
-
-*-----------------+-----------------------------------------------------------+
-|| COMMAND_OPTION || Description
-*-----------------+-----------------------------------------------------------+
-| -rollback       | Rollsback the datanode to the previous version. This should
-                  | be used after stopping the datanode and distributing the old
-                  | hadoop version.
-*-----------------+-----------------------------------------------------------+
+   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#datanode}
+   <<<hdfs datanode>>>}} instead.
 
 * <<<dfsadmin>>>
 
-   Runs a HDFS dfsadmin client.
-
-   Usage: <<<hadoop dfsadmin [GENERIC_OPTIONS] [-report] [-safemode enter | leave | get | wait] [-refreshNodes] [-finalizeUpgrade] [-upgradeProgress status | details | force] [-metasave filename] [-setQuota <quota> <dirname>...<dirname>] [-clrQuota <dirname>...<dirname>] [-restoreFailedStorage true|false|check] [-help [cmd]]>>>
-
-*-----------------+-----------------------------------------------------------+
-|| COMMAND_OPTION || Description
-*-----------------+-----------------------------------------------------------+
-| -report         | Reports basic filesystem information and statistics.
-*-----------------+-----------------------------------------------------------+
-| -safemode enter / leave / get / wait | Safe mode maintenance command. Safe
-                  | mode is a Namenode state in which it \
-                  | 1. does not accept changes to the name space (read-only) \
-                  | 2. does not replicate or delete blocks. \
-                  | Safe mode is entered automatically at Namenode startup, and
-                  | leaves safe mode automatically when the configured minimum
-                  | percentage of blocks satisfies the minimum replication
-                  | condition. Safe mode can also be entered manually, but then
-                  | it can only be turned off manually as well.
-*-----------------+-----------------------------------------------------------+
-| -refreshNodes   | Re-read the hosts and exclude files to update the set of
-                  | Datanodes that are allowed to connect to the Namenode and
-                  | those that should be decommissioned or recommissioned.
-*-----------------+-----------------------------------------------------------+
-| -finalizeUpgrade| Finalize upgrade of HDFS. Datanodes delete their previous
-                  | version working directories, followed by Namenode doing the
-                  | same. This completes the upgrade process.
-*-----------------+-----------------------------------------------------------+
-| -upgradeProgress status / details / force | Request current distributed
-                  | upgrade status, a detailed status or force the upgrade to
-                  | proceed.
-*-----------------+-----------------------------------------------------------+
-| -metasave filename | Save Namenode's primary data structures to <filename> in
-                  | the directory specified by hadoop.log.dir property.
-                  | <filename> is overwritten if it exists.
-                  | <filename> will contain one line for each of the following\
-                  | 1. Datanodes heart beating with Namenode\
-                  | 2. Blocks waiting to be replicated\
-                  | 3. Blocks currrently being replicated\
-                  | 4. Blocks waiting to be deleted\
-*-----------------+-----------------------------------------------------------+
-| -setQuota <quota> <dirname>...<dirname> | Set the quota <quota> for each
-                  | directory <dirname>. The directory quota is a long integer
-                  | that puts a hard limit on the number of names in the
-                  | directory tree.  Best effort for the directory, with faults
-                  | reported if \
-                  | 1. N is not a positive integer, or \
-                  | 2. user is not an administrator, or \
-                  | 3. the directory does not exist or is a file, or \
-                  | 4. the directory would immediately exceed the new quota. \
-*-----------------+-----------------------------------------------------------+
-| -clrQuota <dirname>...<dirname> | Clear the quota for each directory
-                  | <dirname>.  Best effort for the directory. with fault
-                  | reported if \
-                  | 1. the directory does not exist or is a file, or \
-                  | 2. user is not an administrator.  It does not fault if the
-                  | directory has no quota.
-*-----------------+-----------------------------------------------------------+
-| -restoreFailedStorage true / false / check | This option will turn on/off automatic attempt to restore failed storage replicas.
-                  | If a failed storage becomes available again the system will attempt to restore
-                  | edits and/or fsimage during checkpoint. 'check' option will return current setting.
-*-----------------+-----------------------------------------------------------+
-| -help [cmd]     | Displays help for the given command or all commands if none
-                  | is specified.
-*-----------------+-----------------------------------------------------------+
-
-* <<<mradmin>>>
-
-   Runs MR admin client
-
-   Usage: <<<hadoop mradmin [ GENERIC_OPTIONS ] [-refreshQueueAcls]>>>
-
-*-------------------+-----------------------------------------------------------+
-|| COMMAND_OPTION   || Description
-*-------------------+-----------------------------------------------------------+
-| -refreshQueueAcls | Refresh the queue acls used by hadoop, to check access
-                    | during submissions and administration of the job by the
-                    | user. The properties present in mapred-queue-acls.xml is
-                    | reloaded by the queue manager.
-*-------------------+-----------------------------------------------------------+
-
-* <<<jobtracker>>>
-
-   Runs the MapReduce job Tracker node.
-
-   Usage: <<<hadoop jobtracker [-dumpConfiguration]>>>
-
-*--------------------+-----------------------------------------------------------+
-|| COMMAND_OPTION    || Description
-*--------------------+-----------------------------------------------------------+
-| -dumpConfiguration | Dumps the configuration used by the JobTracker alongwith
-                     | queue configuration in JSON format into Standard output
-                     | used by the jobtracker and exits.
-*--------------------+-----------------------------------------------------------+
+   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#dfsadmin}
+   <<<hdfs dfsadmin>>>}} instead.
 
 * <<<namenode>>>
 
-   Runs the namenode. More info about the upgrade, rollback and finalize is
-   at {{{../hadoop-hdfs/HdfsUserGuide.html#Upgrade_and_Rollback}Upgrade Rollback}}.
-
-   Usage: <<<hadoop namenode [-format] | [-upgrade] | [-rollback] | [-finalize] | [-importCheckpoint]>>>
-
-*--------------------+-----------------------------------------------------------+
-|| COMMAND_OPTION    || Description
-*--------------------+-----------------------------------------------------------+
-| -format            | Formats the namenode. It starts the namenode, formats
-                     | it and then shut it down.
-*--------------------+-----------------------------------------------------------+
-| -upgrade           | Namenode should be started with upgrade option after
-                     | the distribution of new hadoop version.
-*--------------------+-----------------------------------------------------------+
-| -rollback          | Rollsback the namenode to the previous version. This
-                     | should be used after stopping the cluster and
-                     | distributing the old hadoop version.
-*--------------------+-----------------------------------------------------------+
-| -finalize          | Finalize will remove the previous state of the files
-                     | system. Recent upgrade will become permanent.  Rollback
-                     | option will not be available anymore. After finalization
-                     | it shuts the namenode down.
-*--------------------+-----------------------------------------------------------+
-| -importCheckpoint  | Loads image from a checkpoint directory and save it
-                     | into the current one. Checkpoint dir is read from
-                     | property fs.checkpoint.dir
-*--------------------+-----------------------------------------------------------+
+   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#namenode}
+   <<<hdfs namenode>>>}} instead.
 
 * <<<secondarynamenode>>>
 
-   Runs the HDFS secondary namenode.
-   See {{{../hadoop-hdfs/HdfsUserGuide.html#Secondary_NameNode}Secondary Namenode}}
-   for more info.
-
-   Usage: <<<hadoop secondarynamenode [-checkpoint [force]] | [-geteditsize]>>>
-
-*----------------------+-----------------------------------------------------------+
-|| COMMAND_OPTION      || Description
-*----------------------+-----------------------------------------------------------+
-| -checkpoint [-force] | Checkpoints the Secondary namenode if EditLog size
-                       | >= fs.checkpoint.size. If <<<-force>>> is used,
-                       | checkpoint irrespective of EditLog size.
-*----------------------+-----------------------------------------------------------+
-| -geteditsize         | Prints the EditLog size.
-*----------------------+-----------------------------------------------------------+
-
-* <<<tasktracker>>>
-
-   Runs a MapReduce task Tracker node.
-
-   Usage: <<<hadoop tasktracker>>>
+   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#secondarynamenode}
+   <<<hdfs secondarynamenode>>>}} instead.

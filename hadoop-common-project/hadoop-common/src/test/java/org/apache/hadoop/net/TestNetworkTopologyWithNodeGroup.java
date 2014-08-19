@@ -96,7 +96,7 @@ public class TestNetworkTopologyWithNodeGroup {
   }
 
   @Test
-  public void testPseudoSortByDistance() throws Exception {
+  public void testSortByDistance() throws Exception {
     NodeBase[] testNodes = new NodeBase[4];
 
     // array contains both local node, local node group & local rack node
@@ -104,7 +104,8 @@ public class TestNetworkTopologyWithNodeGroup {
     testNodes[1] = dataNodes[2];
     testNodes[2] = dataNodes[3];
     testNodes[3] = dataNodes[0];
-    cluster.pseudoSortByDistance(dataNodes[0], testNodes );
+    cluster.sortByDistance(dataNodes[0], testNodes,
+        testNodes.length, 0xDEADBEEF, false);
     assertTrue(testNodes[0] == dataNodes[0]);
     assertTrue(testNodes[1] == dataNodes[1]);
     assertTrue(testNodes[2] == dataNodes[2]);
@@ -115,7 +116,8 @@ public class TestNetworkTopologyWithNodeGroup {
     testNodes[1] = dataNodes[4];
     testNodes[2] = dataNodes[1];
     testNodes[3] = dataNodes[0];
-    cluster.pseudoSortByDistance(dataNodes[0], testNodes );
+    cluster.sortByDistance(dataNodes[0], testNodes,
+        testNodes.length, 0xDEADBEEF, false);
     assertTrue(testNodes[0] == dataNodes[0]);
     assertTrue(testNodes[1] == dataNodes[1]);
 
@@ -124,7 +126,8 @@ public class TestNetworkTopologyWithNodeGroup {
     testNodes[1] = dataNodes[3];
     testNodes[2] = dataNodes[2];
     testNodes[3] = dataNodes[0];
-    cluster.pseudoSortByDistance(dataNodes[0], testNodes );
+    cluster.sortByDistance(dataNodes[0], testNodes,
+        testNodes.length, 0xDEADBEEF, false);
     assertTrue(testNodes[0] == dataNodes[0]);
     assertTrue(testNodes[1] == dataNodes[2]);
 
@@ -133,7 +136,8 @@ public class TestNetworkTopologyWithNodeGroup {
     testNodes[1] = dataNodes[7];
     testNodes[2] = dataNodes[2];
     testNodes[3] = dataNodes[0];
-    cluster.pseudoSortByDistance(computeNode, testNodes );
+    cluster.sortByDistance(computeNode, testNodes,
+        testNodes.length, 0xDEADBEEF, false);
     assertTrue(testNodes[0] == dataNodes[0]);
     assertTrue(testNodes[1] == dataNodes[2]);
   }

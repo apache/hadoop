@@ -34,6 +34,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -54,9 +55,16 @@ import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
+import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
+import static org.apache.hadoop.fs.permission.AclEntryScope.DEFAULT;
+import static org.apache.hadoop.fs.permission.AclEntryType.*;
+import static org.apache.hadoop.fs.permission.FsAction.*;
+import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.*;
+
+import com.google.common.collect.Lists;
 
 /**
  * This class tests commands from DFSShell.
@@ -155,7 +163,7 @@ public class TestDFSShell {
   }
   
   @Test (timeout = 30000)
-  public void testRecrusiveRm() throws IOException {
+  public void testRecursiveRm() throws IOException {
 	  Configuration conf = new HdfsConfiguration();
 	  MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
 	  FileSystem fs = cluster.getFileSystem();
@@ -1471,7 +1479,8 @@ public class TestDFSShell {
     Path root = new Path("/test/get");
     final Path remotef = new Path(root, fname);
     final Configuration conf = new HdfsConfiguration();
-
+    // Set short retry timeouts so this test runs faster
+    conf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, 10);
     TestGetRunner runner = new TestGetRunner() {
     	private int count = 0;
     	private final FsShell shell = new FsShell(conf);
@@ -1583,6 +1592,7 @@ public class TestDFSShell {
       cluster.shutdown();
     }
   }
+
   private static String runLsr(final FsShell shell, String root, int returnvalue
       ) throws Exception {
     System.out.println("root=" + root + ", returnvalue=" + returnvalue);
@@ -1618,6 +1628,400 @@ public class TestDFSShell {
     admin.setConf(conf);
     int res = admin.run(new String[] {"-refreshNodes"});
     assertEquals("expected to fail -1", res , -1);
+  }
+  
+  // Preserve Copy Option is -ptopxa (timestamps, ownership, permission, XATTR,
+  // ACLs)
+  @Test (timeout = 120000)
+  public void testCopyCommandsWithPreserveOption() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, true);
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
+        .format(true).build();
+    FsShell shell = null;
+    FileSystem fs = null;
+    final String testdir = "/tmp/TestDFSShell-testCopyCommandsWithPreserveOption-"
+        + counter.getAndIncrement();
+    final Path hdfsTestDir = new Path(testdir);
+    try {
+      fs = cluster.getFileSystem();
+      fs.mkdirs(hdfsTestDir);
+      Path src = new Path(hdfsTestDir, "srcfile");
+      fs.create(src).close();
+
+      fs.setAcl(src, Lists.newArrayList(
+          aclEntry(ACCESS, USER, ALL),
+          aclEntry(ACCESS, USER, "foo", ALL),
+          aclEntry(ACCESS, GROUP, READ_EXECUTE),
+          aclEntry(ACCESS, GROUP, "bar", READ_EXECUTE),
+          aclEntry(ACCESS, OTHER, EXECUTE)));
+
+      FileStatus status = fs.getFileStatus(src);
+      final long mtime = status.getModificationTime();
+      final long atime = status.getAccessTime();
+      final String owner = status.getOwner();
+      final String group = status.getGroup();
+      final FsPermission perm = status.getPermission();
+      
+      fs.setXAttr(src, "user.a1", new byte[]{0x31, 0x32, 0x33});
+      fs.setXAttr(src, "trusted.a1", new byte[]{0x31, 0x31, 0x31});
+      
+      shell = new FsShell(conf);
+      
+      // -p
+      Path target1 = new Path(hdfsTestDir, "targetfile1");
+      String[] argv = new String[] { "-cp", "-p", src.toUri().toString(), 
+          target1.toUri().toString() };
+      int ret = ToolRunner.run(shell, argv);
+      assertEquals("cp -p is not working", SUCCESS, ret);
+      FileStatus targetStatus = fs.getFileStatus(target1);
+      assertEquals(mtime, targetStatus.getModificationTime());
+      assertEquals(atime, targetStatus.getAccessTime());
+      assertEquals(owner, targetStatus.getOwner());
+      assertEquals(group, targetStatus.getGroup());
+      FsPermission targetPerm = targetStatus.getPermission();
+      assertTrue(perm.equals(targetPerm));
+      Map<String, byte[]> xattrs = fs.getXAttrs(target1);
+      assertTrue(xattrs.isEmpty());
+      List<AclEntry> acls = fs.getAclStatus(target1).getEntries();
+      assertTrue(acls.isEmpty());
+      assertFalse(targetPerm.getAclBit());
+
+      // -ptop
+      Path target2 = new Path(hdfsTestDir, "targetfile2");
+      argv = new String[] { "-cp", "-ptop", src.toUri().toString(), 
+          target2.toUri().toString() };
+      ret = ToolRunner.run(shell, argv);
+      assertEquals("cp -ptop is not working", SUCCESS, ret);
+      targetStatus = fs.getFileStatus(target2);
+      assertEquals(mtime, targetStatus.getModificationTime());
+      assertEquals(atime, targetStatus.getAccessTime());
+      assertEquals(owner, targetStatus.getOwner());
+      assertEquals(group, targetStatus.getGroup());
+      targetPerm = targetStatus.getPermission();
+      assertTrue(perm.equals(targetPerm));
+      xattrs = fs.getXAttrs(target2);
+      assertTrue(xattrs.isEmpty());
+      acls = fs.getAclStatus(target2).getEntries();
+      assertTrue(acls.isEmpty());
+      assertFalse(targetPerm.getAclBit());
+
+      // -ptopx
+      Path target3 = new Path(hdfsTestDir, "targetfile3");
+      argv = new String[] { "-cp", "-ptopx", src.toUri().toString(), 
+          target3.toUri().toString() };
+      ret = ToolRunner.run(shell, argv);
+      assertEquals("cp -ptopx is not working", SUCCESS, ret);
+      targetStatus = fs.getFileStatus(target3);
+      assertEquals(mtime, targetStatus.getModificationTime());
+      assertEquals(atime, targetStatus.getAccessTime());
+      assertEquals(owner, targetStatus.getOwner());
+      assertEquals(group, targetStatus.getGroup());
+      targetPerm = targetStatus.getPermission();
+      assertTrue(perm.equals(targetPerm));
+      xattrs = fs.getXAttrs(target3);
+      assertEquals(xattrs.size(), 2);
+      assertArrayEquals(new byte[]{0x31, 0x32, 0x33}, xattrs.get("user.a1"));
+      assertArrayEquals(new byte[]{0x31, 0x31, 0x31}, xattrs.get("trusted.a1"));
+      acls = fs.getAclStatus(target3).getEntries();
+      assertTrue(acls.isEmpty());
+      assertFalse(targetPerm.getAclBit());
+
+      // -ptopa
+      Path target4 = new Path(hdfsTestDir, "targetfile4");
+      argv = new String[] { "-cp", "-ptopa", src.toUri().toString(),
+          target4.toUri().toString() };
+      ret = ToolRunner.run(shell, argv);
+      assertEquals("cp -ptopa is not working", SUCCESS, ret);
+      targetStatus = fs.getFileStatus(target4);
+      assertEquals(mtime, targetStatus.getModificationTime());
+      assertEquals(atime, targetStatus.getAccessTime());
+      assertEquals(owner, targetStatus.getOwner());
+      assertEquals(group, targetStatus.getGroup());
+      targetPerm = targetStatus.getPermission();
+      assertTrue(perm.equals(targetPerm));
+      xattrs = fs.getXAttrs(target4);
+      assertTrue(xattrs.isEmpty());
+      acls = fs.getAclStatus(target4).getEntries();
+      assertFalse(acls.isEmpty());
+      assertTrue(targetPerm.getAclBit());
+      assertEquals(fs.getAclStatus(src), fs.getAclStatus(target4));
+
+      // -ptoa (verify -pa option will preserve permissions also)
+      Path target5 = new Path(hdfsTestDir, "targetfile5");
+      argv = new String[] { "-cp", "-ptoa", src.toUri().toString(),
+          target5.toUri().toString() };
+      ret = ToolRunner.run(shell, argv);
+      assertEquals("cp -ptoa is not working", SUCCESS, ret);
+      targetStatus = fs.getFileStatus(target5);
+      assertEquals(mtime, targetStatus.getModificationTime());
+      assertEquals(atime, targetStatus.getAccessTime());
+      assertEquals(owner, targetStatus.getOwner());
+      assertEquals(group, targetStatus.getGroup());
+      targetPerm = targetStatus.getPermission();
+      assertTrue(perm.equals(targetPerm));
+      xattrs = fs.getXAttrs(target5);
+      assertTrue(xattrs.isEmpty());
+      acls = fs.getAclStatus(target5).getEntries();
+      assertFalse(acls.isEmpty());
+      assertTrue(targetPerm.getAclBit());
+      assertEquals(fs.getAclStatus(src), fs.getAclStatus(target5));
+    } finally {
+      if (null != shell) {
+        shell.close();
+      }
+
+      if (null != fs) {
+        fs.delete(hdfsTestDir, true);
+        fs.close();
+      }
+      cluster.shutdown();
+    }
+  }
+
+  // verify cp -ptopxa option will preserve directory attributes.
+  @Test (timeout = 120000)
+  public void testCopyCommandsToDirectoryWithPreserveOption()
+      throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, true);
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
+        .format(true).build();
+    FsShell shell = null;
+    FileSystem fs = null;
+    final String testdir =
+        "/tmp/TestDFSShell-testCopyCommandsToDirectoryWithPreserveOption-"
+        + counter.getAndIncrement();
+    final Path hdfsTestDir = new Path(testdir);
+    try {
+      fs = cluster.getFileSystem();
+      fs.mkdirs(hdfsTestDir);
+      Path srcDir = new Path(hdfsTestDir, "srcDir");
+      fs.mkdirs(srcDir);
+
+      fs.setAcl(srcDir, Lists.newArrayList(
+          aclEntry(ACCESS, USER, ALL),
+          aclEntry(ACCESS, USER, "foo", ALL),
+          aclEntry(ACCESS, GROUP, READ_EXECUTE),
+          aclEntry(DEFAULT, GROUP, "bar", READ_EXECUTE),
+          aclEntry(ACCESS, OTHER, EXECUTE)));
+      // set sticky bit
+      fs.setPermission(srcDir,
+          new FsPermission(ALL, READ_EXECUTE, EXECUTE, true));
+
+      // Create a file in srcDir to check if modification time of
+      // srcDir to be preserved after copying the file.
+      // If cp -p command is to preserve modification time and then copy child
+      // (srcFile), modification time will not be preserved.
+      Path srcFile = new Path(srcDir, "srcFile");
+      fs.create(srcFile).close();
+
+      FileStatus status = fs.getFileStatus(srcDir);
+      final long mtime = status.getModificationTime();
+      final long atime = status.getAccessTime();
+      final String owner = status.getOwner();
+      final String group = status.getGroup();
+      final FsPermission perm = status.getPermission();
+
+      fs.setXAttr(srcDir, "user.a1", new byte[]{0x31, 0x32, 0x33});
+      fs.setXAttr(srcDir, "trusted.a1", new byte[]{0x31, 0x31, 0x31});
+
+      shell = new FsShell(conf);
+
+      // -p
+      Path targetDir1 = new Path(hdfsTestDir, "targetDir1");
+      String[] argv = new String[] { "-cp", "-p", srcDir.toUri().toString(),
+          targetDir1.toUri().toString() };
+      int ret = ToolRunner.run(shell, argv);
+      assertEquals("cp -p is not working", SUCCESS, ret);
+      FileStatus targetStatus = fs.getFileStatus(targetDir1);
+      assertEquals(mtime, targetStatus.getModificationTime());
+      assertEquals(atime, targetStatus.getAccessTime());
+      assertEquals(owner, targetStatus.getOwner());
+      assertEquals(group, targetStatus.getGroup());
+      FsPermission targetPerm = targetStatus.getPermission();
+      assertTrue(perm.equals(targetPerm));
+      Map<String, byte[]> xattrs = fs.getXAttrs(targetDir1);
+      assertTrue(xattrs.isEmpty());
+      List<AclEntry> acls = fs.getAclStatus(targetDir1).getEntries();
+      assertTrue(acls.isEmpty());
+      assertFalse(targetPerm.getAclBit());
+
+      // -ptop
+      Path targetDir2 = new Path(hdfsTestDir, "targetDir2");
+      argv = new String[] { "-cp", "-ptop", srcDir.toUri().toString(),
+          targetDir2.toUri().toString() };
+      ret = ToolRunner.run(shell, argv);
+      assertEquals("cp -ptop is not working", SUCCESS, ret);
+      targetStatus = fs.getFileStatus(targetDir2);
+      assertEquals(mtime, targetStatus.getModificationTime());
+      assertEquals(atime, targetStatus.getAccessTime());
+      assertEquals(owner, targetStatus.getOwner());
+      assertEquals(group, targetStatus.getGroup());
+      targetPerm = targetStatus.getPermission();
+      assertTrue(perm.equals(targetPerm));
+      xattrs = fs.getXAttrs(targetDir2);
+      assertTrue(xattrs.isEmpty());
+      acls = fs.getAclStatus(targetDir2).getEntries();
+      assertTrue(acls.isEmpty());
+      assertFalse(targetPerm.getAclBit());
+
+      // -ptopx
+      Path targetDir3 = new Path(hdfsTestDir, "targetDir3");
+      argv = new String[] { "-cp", "-ptopx", srcDir.toUri().toString(),
+          targetDir3.toUri().toString() };
+      ret = ToolRunner.run(shell, argv);
+      assertEquals("cp -ptopx is not working", SUCCESS, ret);
+      targetStatus = fs.getFileStatus(targetDir3);
+      assertEquals(mtime, targetStatus.getModificationTime());
+      assertEquals(atime, targetStatus.getAccessTime());
+      assertEquals(owner, targetStatus.getOwner());
+      assertEquals(group, targetStatus.getGroup());
+      targetPerm = targetStatus.getPermission();
+      assertTrue(perm.equals(targetPerm));
+      xattrs = fs.getXAttrs(targetDir3);
+      assertEquals(xattrs.size(), 2);
+      assertArrayEquals(new byte[]{0x31, 0x32, 0x33}, xattrs.get("user.a1"));
+      assertArrayEquals(new byte[]{0x31, 0x31, 0x31}, xattrs.get("trusted.a1"));
+      acls = fs.getAclStatus(targetDir3).getEntries();
+      assertTrue(acls.isEmpty());
+      assertFalse(targetPerm.getAclBit());
+
+      // -ptopa
+      Path targetDir4 = new Path(hdfsTestDir, "targetDir4");
+      argv = new String[] { "-cp", "-ptopa", srcDir.toUri().toString(),
+          targetDir4.toUri().toString() };
+      ret = ToolRunner.run(shell, argv);
+      assertEquals("cp -ptopa is not working", SUCCESS, ret);
+      targetStatus = fs.getFileStatus(targetDir4);
+      assertEquals(mtime, targetStatus.getModificationTime());
+      assertEquals(atime, targetStatus.getAccessTime());
+      assertEquals(owner, targetStatus.getOwner());
+      assertEquals(group, targetStatus.getGroup());
+      targetPerm = targetStatus.getPermission();
+      assertTrue(perm.equals(targetPerm));
+      xattrs = fs.getXAttrs(targetDir4);
+      assertTrue(xattrs.isEmpty());
+      acls = fs.getAclStatus(targetDir4).getEntries();
+      assertFalse(acls.isEmpty());
+      assertTrue(targetPerm.getAclBit());
+      assertEquals(fs.getAclStatus(srcDir), fs.getAclStatus(targetDir4));
+
+      // -ptoa (verify -pa option will preserve permissions also)
+      Path targetDir5 = new Path(hdfsTestDir, "targetDir5");
+      argv = new String[] { "-cp", "-ptoa", srcDir.toUri().toString(),
+          targetDir5.toUri().toString() };
+      ret = ToolRunner.run(shell, argv);
+      assertEquals("cp -ptoa is not working", SUCCESS, ret);
+      targetStatus = fs.getFileStatus(targetDir5);
+      assertEquals(mtime, targetStatus.getModificationTime());
+      assertEquals(atime, targetStatus.getAccessTime());
+      assertEquals(owner, targetStatus.getOwner());
+      assertEquals(group, targetStatus.getGroup());
+      targetPerm = targetStatus.getPermission();
+      assertTrue(perm.equals(targetPerm));
+      xattrs = fs.getXAttrs(targetDir5);
+      assertTrue(xattrs.isEmpty());
+      acls = fs.getAclStatus(targetDir5).getEntries();
+      assertFalse(acls.isEmpty());
+      assertTrue(targetPerm.getAclBit());
+      assertEquals(fs.getAclStatus(srcDir), fs.getAclStatus(targetDir5));
+    } finally {
+      if (shell != null) {
+        shell.close();
+      }
+      if (fs != null) {
+        fs.delete(hdfsTestDir, true);
+        fs.close();
+      }
+      cluster.shutdown();
+    }
+  }
+
+  // Verify cp -pa option will preserve both ACL and sticky bit.
+  @Test (timeout = 120000)
+  public void testCopyCommandsPreserveAclAndStickyBit() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
+        .format(true).build();
+    FsShell shell = null;
+    FileSystem fs = null;
+    final String testdir =
+        "/tmp/TestDFSShell-testCopyCommandsPreserveAclAndStickyBit-"
+        + counter.getAndIncrement();
+    final Path hdfsTestDir = new Path(testdir);
+    try {
+      fs = cluster.getFileSystem();
+      fs.mkdirs(hdfsTestDir);
+      Path src = new Path(hdfsTestDir, "srcfile");
+      fs.create(src).close();
+
+      fs.setAcl(src, Lists.newArrayList(
+          aclEntry(ACCESS, USER, ALL),
+          aclEntry(ACCESS, USER, "foo", ALL),
+          aclEntry(ACCESS, GROUP, READ_EXECUTE),
+          aclEntry(ACCESS, GROUP, "bar", READ_EXECUTE),
+          aclEntry(ACCESS, OTHER, EXECUTE)));
+      // set sticky bit
+      fs.setPermission(src,
+          new FsPermission(ALL, READ_EXECUTE, EXECUTE, true));
+
+      FileStatus status = fs.getFileStatus(src);
+      final long mtime = status.getModificationTime();
+      final long atime = status.getAccessTime();
+      final String owner = status.getOwner();
+      final String group = status.getGroup();
+      final FsPermission perm = status.getPermission();
+
+      shell = new FsShell(conf);
+
+      // -p preserves sticky bit and doesn't preserve ACL
+      Path target1 = new Path(hdfsTestDir, "targetfile1");
+      String[] argv = new String[] { "-cp", "-p", src.toUri().toString(),
+          target1.toUri().toString() };
+      int ret = ToolRunner.run(shell, argv);
+      assertEquals("cp is not working", SUCCESS, ret);
+      FileStatus targetStatus = fs.getFileStatus(target1);
+      assertEquals(mtime, targetStatus.getModificationTime());
+      assertEquals(atime, targetStatus.getAccessTime());
+      assertEquals(owner, targetStatus.getOwner());
+      assertEquals(group, targetStatus.getGroup());
+      FsPermission targetPerm = targetStatus.getPermission();
+      assertTrue(perm.equals(targetPerm));
+      List<AclEntry> acls = fs.getAclStatus(target1).getEntries();
+      assertTrue(acls.isEmpty());
+      assertFalse(targetPerm.getAclBit());
+
+      // -ptopa preserves both sticky bit and ACL
+      Path target2 = new Path(hdfsTestDir, "targetfile2");
+      argv = new String[] { "-cp", "-ptopa", src.toUri().toString(),
+          target2.toUri().toString() };
+      ret = ToolRunner.run(shell, argv);
+      assertEquals("cp -ptopa is not working", SUCCESS, ret);
+      targetStatus = fs.getFileStatus(target2);
+      assertEquals(mtime, targetStatus.getModificationTime());
+      assertEquals(atime, targetStatus.getAccessTime());
+      assertEquals(owner, targetStatus.getOwner());
+      assertEquals(group, targetStatus.getGroup());
+      targetPerm = targetStatus.getPermission();
+      assertTrue(perm.equals(targetPerm));
+      acls = fs.getAclStatus(target2).getEntries();
+      assertFalse(acls.isEmpty());
+      assertTrue(targetPerm.getAclBit());
+      assertEquals(fs.getAclStatus(src), fs.getAclStatus(target2));
+    } finally {
+      if (null != shell) {
+        shell.close();
+      }
+      if (null != fs) {
+        fs.delete(hdfsTestDir, true);
+        fs.close();
+      }
+      cluster.shutdown();
+    }
   }
 
   // force Copy Option is -f
@@ -1872,6 +2276,449 @@ public class TestDFSShell {
       assertThat(res, not(0));
     } finally {
       cluster.shutdown();
+    }
+  }
+  
+  @Test (timeout = 30000)
+  public void testSetXAttrPermission() throws Exception {
+    UserGroupInformation user = UserGroupInformation.
+        createUserForTesting("user", new String[] {"mygroup"});
+    MiniDFSCluster cluster = null;
+    PrintStream bak = null;
+    try {
+      final Configuration conf = new HdfsConfiguration();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+      
+      FileSystem fs = cluster.getFileSystem();
+      Path p = new Path("/foo");
+      fs.mkdirs(p);
+      bak = System.err;
+      
+      final FsShell fshell = new FsShell(conf);
+      final ByteArrayOutputStream out = new ByteArrayOutputStream();
+      System.setErr(new PrintStream(out));
+      
+      // No permission to write xattr
+      fs.setPermission(p, new FsPermission((short) 0700));
+      user.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          int ret = ToolRunner.run(fshell, new String[]{
+              "-setfattr", "-n", "user.a1", "-v", "1234", "/foo"});
+          assertEquals("Returned should be 1", 1, ret);
+          String str = out.toString();
+          assertTrue("Permission denied printed", 
+              str.indexOf("Permission denied") != -1);
+          out.reset();
+          return null;
+        }
+      });
+      
+      int ret = ToolRunner.run(fshell, new String[]{
+          "-setfattr", "-n", "user.a1", "-v", "1234", "/foo"});
+      assertEquals("Returned should be 0", 0, ret);
+      out.reset();
+      
+      // No permission to read and remove
+      fs.setPermission(p, new FsPermission((short) 0750));
+      user.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          // Read
+          int ret = ToolRunner.run(fshell, new String[]{
+              "-getfattr", "-n", "user.a1", "/foo"});
+          assertEquals("Returned should be 1", 1, ret);
+          String str = out.toString();
+          assertTrue("Permission denied printed",
+              str.indexOf("Permission denied") != -1);
+          out.reset();           
+          // Remove
+          ret = ToolRunner.run(fshell, new String[]{
+              "-setfattr", "-x", "user.a1", "/foo"});
+          assertEquals("Returned should be 1", 1, ret);
+          str = out.toString();
+          assertTrue("Permission denied printed",
+              str.indexOf("Permission denied") != -1);
+          out.reset();  
+          return null;
+        }
+      });
+    } finally {
+      if (bak != null) {
+        System.setErr(bak);
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /* HDFS-6413 xattr names erroneously handled as case-insensitive */
+  @Test (timeout = 30000)
+  public void testSetXAttrCaseSensitivity() throws Exception {
+    UserGroupInformation user = UserGroupInformation.
+        createUserForTesting("user", new String[] {"mygroup"});
+    MiniDFSCluster cluster = null;
+    PrintStream bak = null;
+    try {
+      final Configuration conf = new HdfsConfiguration();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+
+      FileSystem fs = cluster.getFileSystem();
+      Path p = new Path("/mydir");
+      fs.mkdirs(p);
+      bak = System.err;
+
+      final FsShell fshell = new FsShell(conf);
+      final ByteArrayOutputStream out = new ByteArrayOutputStream();
+      System.setOut(new PrintStream(out));
+
+      doSetXattr(out, fshell,
+        new String[] {"-setfattr", "-n", "User.Foo", "/mydir"},
+        new String[] {"-getfattr", "-d", "/mydir"},
+        new String[] {"user.Foo"},
+        new String[] {});
+
+      doSetXattr(out, fshell,
+        new String[] {"-setfattr", "-n", "user.FOO", "/mydir"},
+        new String[] {"-getfattr", "-d", "/mydir"},
+        new String[] {"user.Foo", "user.FOO"},
+        new String[] {});
+
+      doSetXattr(out, fshell,
+        new String[] {"-setfattr", "-n", "USER.foo", "/mydir"},
+        new String[] {"-getfattr", "-d", "/mydir"},
+        new String[] {"user.Foo", "user.FOO", "user.foo"},
+        new String[] {});
+
+      doSetXattr(out, fshell,
+        new String[] {"-setfattr", "-n", "USER.fOo", "-v", "myval", "/mydir"},
+        new String[] {"-getfattr", "-d", "/mydir"},
+        new String[] {"user.Foo", "user.FOO", "user.foo", "user.fOo=\"myval\""},
+        new String[] {"user.Foo=", "user.FOO=", "user.foo="});
+
+      doSetXattr(out, fshell,
+        new String[] {"-setfattr", "-x", "useR.foo", "/mydir"},
+        new String[] {"-getfattr", "-d", "/mydir"},
+        new String[] {"user.Foo", "user.FOO"},
+        new String[] {"foo"});
+
+      doSetXattr(out, fshell,
+        new String[] {"-setfattr", "-x", "USER.FOO", "/mydir"},
+        new String[] {"-getfattr", "-d", "/mydir"},
+        new String[] {"user.Foo"},
+        new String[] {"FOO"});
+
+      doSetXattr(out, fshell,
+        new String[] {"-setfattr", "-x", "useR.Foo", "/mydir"},
+        new String[] {"-getfattr", "-n", "User.Foo", "/mydir"},
+        new String[] {},
+        new String[] {"Foo"});
+
+    } finally {
+      if (bak != null) {
+        System.setOut(bak);
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  private void doSetXattr(ByteArrayOutputStream out, FsShell fshell,
+    String[] setOp, String[] getOp, String[] expectArr,
+    String[] dontExpectArr) throws Exception {
+    int ret = ToolRunner.run(fshell, setOp);
+    out.reset();
+    ret = ToolRunner.run(fshell, getOp);
+    final String str = out.toString();
+    for (int i = 0; i < expectArr.length; i++) {
+      final String expect = expectArr[i];
+      final StringBuilder sb = new StringBuilder
+        ("Incorrect results from getfattr. Expected: ");
+      sb.append(expect).append(" Full Result: ");
+      sb.append(str);
+      assertTrue(sb.toString(),
+        str.indexOf(expect) != -1);
+    }
+
+    for (int i = 0; i < dontExpectArr.length; i++) {
+      String dontExpect = dontExpectArr[i];
+      final StringBuilder sb = new StringBuilder
+        ("Incorrect results from getfattr. Didn't Expect: ");
+      sb.append(dontExpect).append(" Full Result: ");
+      sb.append(str);
+      assertTrue(sb.toString(),
+        str.indexOf(dontExpect) == -1);
+    }
+    out.reset();
+  }
+
+  /**
+   * 
+   * Test to make sure that user namespace xattrs can be set only if path has
+   * access and for sticky directorries, only owner/privileged user can write.
+   * Trusted namespace xattrs can be set only with privileged users.
+   * 
+   * As user1: Create a directory (/foo) as user1, chown it to user1 (and
+   * user1's group), grant rwx to "other".
+   * 
+   * As user2: Set an xattr (should pass with path access).
+   * 
+   * As user1: Set an xattr (should pass).
+   * 
+   * As user2: Read the xattr (should pass). Remove the xattr (should pass with
+   * path access).
+   * 
+   * As user1: Read the xattr (should pass). Remove the xattr (should pass).
+   * 
+   * As user1: Change permissions only to owner
+   * 
+   * As User2: Set an Xattr (Should fail set with no path access) Remove an
+   * Xattr (Should fail with no path access)
+   * 
+   * As SuperUser: Set an Xattr with Trusted (Should pass)
+   */
+  @Test (timeout = 30000)
+  public void testSetXAttrPermissionAsDifferentOwner() throws Exception {
+    final String USER1 = "user1";
+    final String GROUP1 = "supergroup";
+    final UserGroupInformation user1 = UserGroupInformation.
+        createUserForTesting(USER1, new String[] {GROUP1});
+    final UserGroupInformation user2 = UserGroupInformation.
+        createUserForTesting("user2", new String[] {"mygroup2"});
+    final UserGroupInformation SUPERUSER = UserGroupInformation.getCurrentUser();
+    MiniDFSCluster cluster = null;
+    PrintStream bak = null;
+    try {
+      final Configuration conf = new HdfsConfiguration();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+
+      final FileSystem fs = cluster.getFileSystem();
+      fs.setOwner(new Path("/"), USER1, GROUP1);
+      bak = System.err;
+
+      final FsShell fshell = new FsShell(conf);
+      final ByteArrayOutputStream out = new ByteArrayOutputStream();
+      System.setErr(new PrintStream(out));
+
+      //Test 1.  Let user1 be owner for /foo
+      user1.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          final int ret = ToolRunner.run(fshell, new String[]{
+              "-mkdir", "/foo"});
+          assertEquals("Return should be 0", 0, ret);
+          out.reset();
+          return null;
+        }
+      });
+      
+      //Test 2. Give access to others
+      user1.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          // Give access to "other"
+          final int ret = ToolRunner.run(fshell, new String[]{
+              "-chmod", "707", "/foo"});
+          assertEquals("Return should be 0", 0, ret);
+          out.reset();
+          return null;
+        }
+      });
+
+      // Test 3. Should be allowed to write xattr if there is a path access to
+      // user (user2).
+      user2.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          final int ret = ToolRunner.run(fshell, new String[]{
+              "-setfattr", "-n", "user.a1", "-v", "1234", "/foo"});
+          assertEquals("Returned should be 0", 0, ret);
+          out.reset();
+          return null;
+        }
+      });
+
+      //Test 4. There should be permission to write xattr for
+      // the owning user with write permissions.
+      user1.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          final int ret = ToolRunner.run(fshell, new String[]{
+              "-setfattr", "-n", "user.a1", "-v", "1234", "/foo"});
+          assertEquals("Returned should be 0", 0, ret);
+          out.reset();
+          return null;
+        }
+      });
+
+      // Test 5. There should be permission to read non-owning user (user2) if
+      // there is path access to that user and also can remove.
+      user2.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          // Read
+          int ret = ToolRunner.run(fshell, new String[] { "-getfattr", "-n",
+              "user.a1", "/foo" });
+          assertEquals("Returned should be 0", 0, ret);
+          out.reset();
+          // Remove
+          ret = ToolRunner.run(fshell, new String[] { "-setfattr", "-x",
+              "user.a1", "/foo" });
+          assertEquals("Returned should be 0", 0, ret);
+          out.reset();
+          return null;
+        }
+      });
+
+      // Test 6. There should be permission to read/remove for
+      // the owning user with path access.
+      user1.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          return null;
+        }
+      });
+      
+      // Test 7. Change permission to have path access only to owner(user1)
+      user1.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          // Give access to "other"
+          final int ret = ToolRunner.run(fshell, new String[]{
+              "-chmod", "700", "/foo"});
+          assertEquals("Return should be 0", 0, ret);
+          out.reset();
+          return null;
+        }
+      });
+      
+      // Test 8. There should be no permissions to set for
+      // the non-owning user with no path access.
+      user2.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          // set
+          int ret = ToolRunner.run(fshell, new String[] { "-setfattr", "-n",
+              "user.a2", "/foo" });
+          assertEquals("Returned should be 1", 1, ret);
+          final String str = out.toString();
+          assertTrue("Permission denied printed",
+              str.indexOf("Permission denied") != -1);
+          out.reset();
+          return null;
+        }
+      });
+      
+      // Test 9. There should be no permissions to remove for
+      // the non-owning user with no path access.
+      user2.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          // set
+          int ret = ToolRunner.run(fshell, new String[] { "-setfattr", "-x",
+              "user.a2", "/foo" });
+          assertEquals("Returned should be 1", 1, ret);
+          final String str = out.toString();
+          assertTrue("Permission denied printed",
+              str.indexOf("Permission denied") != -1);
+          out.reset();
+          return null;
+        }
+      });
+      
+      // Test 10. Superuser should be allowed to set with trusted namespace
+      SUPERUSER.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          // set
+          int ret = ToolRunner.run(fshell, new String[] { "-setfattr", "-n",
+              "trusted.a3", "/foo" });
+          assertEquals("Returned should be 0", 0, ret);
+          out.reset();
+          return null;
+        }
+      });
+    } finally {
+      if (bak != null) {
+        System.setErr(bak);
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /*
+   * 1. Test that CLI throws an exception and returns non-0 when user does
+   * not have permission to read an xattr.
+   * 2. Test that CLI throws an exception and returns non-0 when a non-existent
+   * xattr is requested.
+   */
+  @Test (timeout = 120000)
+  public void testGetFAttrErrors() throws Exception {
+    final UserGroupInformation user = UserGroupInformation.
+        createUserForTesting("user", new String[] {"mygroup"});
+    MiniDFSCluster cluster = null;
+    PrintStream bakErr = null;
+    try {
+      final Configuration conf = new HdfsConfiguration();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+
+      final FileSystem fs = cluster.getFileSystem();
+      final Path p = new Path("/foo");
+      fs.mkdirs(p);
+      bakErr = System.err;
+
+      final FsShell fshell = new FsShell(conf);
+      final ByteArrayOutputStream out = new ByteArrayOutputStream();
+      System.setErr(new PrintStream(out));
+
+      // No permission for "other".
+      fs.setPermission(p, new FsPermission((short) 0700));
+
+      {
+        final int ret = ToolRunner.run(fshell, new String[] {
+            "-setfattr", "-n", "user.a1", "-v", "1234", "/foo"});
+        assertEquals("Returned should be 0", 0, ret);
+        out.reset();
+      }
+
+      user.doAs(new PrivilegedExceptionAction<Object>() {
+          @Override
+          public Object run() throws Exception {
+            int ret = ToolRunner.run(fshell, new String[] {
+                "-getfattr", "-n", "user.a1", "/foo"});
+            String str = out.toString();
+            assertTrue("xattr value was incorrectly returned",
+                str.indexOf("1234") == -1);
+            out.reset();
+            return null;
+          }
+        });
+
+      {
+        final int ret = ToolRunner.run(fshell, new String[]{
+            "-getfattr", "-n", "user.nonexistent", "/foo"});
+        String str = out.toString();
+        assertTrue("xattr value was incorrectly returned",
+          str.indexOf(
+              "getfattr: At least one of the attributes provided was not found")
+               >= 0);
+        out.reset();
+      }
+    } finally {
+      if (bakErr != null) {
+        System.setErr(bakErr);
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 

@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.fs;
 
-import static junit.framework.Assert.assertSame;
-import static junit.framework.Assert.assertNotSame;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertNotSame;
 
 import java.io.IOException;
 import java.net.URI;

@@ -17,11 +17,8 @@
  */
 package org.apache.hadoop.nfs;
 
-import junit.framework.Assert;
-
-import org.apache.hadoop.nfs.AccessPrivilege;
-import org.apache.hadoop.nfs.NfsExports;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestNfsExports {
@@ -32,9 +29,9 @@ public class TestNfsExports {
   private final String hostname2 = "a.b.org";
   
   private static final long ExpirationPeriod = 
-      Nfs3Constant.EXPORTS_CACHE_EXPIRYTIME_MILLIS_DEFAULT * 1000 * 1000;
+      Nfs3Constant.NFS_EXPORTS_CACHE_EXPIRYTIME_MILLIS_DEFAULT * 1000 * 1000;
   
-  private static final int CacheSize = Nfs3Constant.EXPORTS_CACHE_SIZE_DEFAULT;
+  private static final int CacheSize = Nfs3Constant.NFS_EXPORTS_CACHE_SIZE_DEFAULT;
   private static final long NanosPerMillis = 1000000;
 
   @Test
@@ -196,5 +193,17 @@ public class TestNfsExports {
       Thread.sleep(500);
     } while ((System.nanoTime() - startNanos) / NanosPerMillis < 5000);
     Assert.assertEquals(AccessPrivilege.NONE, ap);
+  }
+
+  @Test(expected=IllegalArgumentException.class)
+  public void testInvalidHost() {
+      NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod,
+        "foo#bar");
+  }
+
+  @Test(expected=IllegalArgumentException.class)
+  public void testInvalidSeparator() {
+      NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod,
+        "foo ro : bar rw");
   }
 }

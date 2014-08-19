@@ -831,10 +831,10 @@ public abstract class Storage extends StorageInfo {
   }
 
   /**
-   * Checks if the upgrade from the given old version is supported. If
-   * no upgrade is supported, it throws IncorrectVersionException.
-   * 
-   * @param oldVersion
+   * Checks if the upgrade from {@code oldVersion} is supported.
+   * @param oldVersion the version of the metadata to check with the current
+   *                   version
+   * @throws IOException if upgrade is not supported
    */
   public static void checkVersionUpgradable(int oldVersion) 
                                      throws IOException {

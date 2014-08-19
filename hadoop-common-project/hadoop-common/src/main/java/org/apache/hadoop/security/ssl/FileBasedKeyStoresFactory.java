@@ -131,7 +131,8 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
     throws IOException, GeneralSecurityException {
 
     boolean requireClientCert =
-      conf.getBoolean(SSLFactory.SSL_REQUIRE_CLIENT_CERT_KEY, true);
+      conf.getBoolean(SSLFactory.SSL_REQUIRE_CLIENT_CERT_KEY,
+          SSLFactory.DEFAULT_SSL_REQUIRE_CLIENT_CERT);
 
     // certificate store
     String keystoreType =
@@ -149,7 +150,7 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
       }
       String passwordProperty =
         resolvePropertyName(mode, SSL_KEYSTORE_PASSWORD_TPL_KEY);
-      String keystorePassword = conf.get(passwordProperty, "");
+      String keystorePassword = getPassword(conf, passwordProperty, "");
       if (keystorePassword.isEmpty()) {
         throw new GeneralSecurityException("The property '" + passwordProperty +
           "' has not been set in the ssl configuration file.");
@@ -159,7 +160,8 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
       // Key password defaults to the same value as store password for
       // compatibility with legacy configurations that did not use a separate
       // configuration property for key password.
-      keystoreKeyPassword = conf.get(keyPasswordProperty, keystorePassword);
+      keystoreKeyPassword = getPassword(
+          conf, keyPasswordProperty, keystorePassword);
       LOG.debug(mode.toString() + " KeyStore: " + keystoreLocation);
 
       InputStream is = new FileInputStream(keystoreLocation);
@@ -187,33 +189,48 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
     String locationProperty =
       resolvePropertyName(mode, SSL_TRUSTSTORE_LOCATION_TPL_KEY);
     String truststoreLocation = conf.get(locationProperty, "");
-    if (truststoreLocation.isEmpty()) {
-      throw new GeneralSecurityException("The property '" + locationProperty +
-        "' has not been set in the ssl configuration file.");
+    if (!truststoreLocation.isEmpty()) {
+      String passwordProperty = resolvePropertyName(mode,
+          SSL_TRUSTSTORE_PASSWORD_TPL_KEY);
+      String truststorePassword = getPassword(conf, passwordProperty, "");
+      if (truststorePassword.isEmpty()) {
+        throw new GeneralSecurityException("The property '" + passwordProperty +
+            "' has not been set in the ssl configuration file.");
+      }
+      long truststoreReloadInterval =
+          conf.getLong(
+              resolvePropertyName(mode, SSL_TRUSTSTORE_RELOAD_INTERVAL_TPL_KEY),
+              DEFAULT_SSL_TRUSTSTORE_RELOAD_INTERVAL);
+
+      LOG.debug(mode.toString() + " TrustStore: " + truststoreLocation);
+
+      trustManager = new ReloadingX509TrustManager(truststoreType,
+          truststoreLocation,
+          truststorePassword,
+          truststoreReloadInterval);
+      trustManager.init();
+      LOG.debug(mode.toString() + " Loaded TrustStore: " + truststoreLocation);
+      trustManagers = new TrustManager[]{trustManager};
+    } else {
+      LOG.warn("The property '" + locationProperty + "' has not been set, " +
+          "no TrustStore will be loaded");
+      trustManagers = null;
     }
+  }
 
-    String passwordProperty = resolvePropertyName(mode,
-                                                  SSL_TRUSTSTORE_PASSWORD_TPL_KEY);
-    String truststorePassword = conf.get(passwordProperty, "");
-    if (truststorePassword.isEmpty()) {
-      throw new GeneralSecurityException("The property '" + passwordProperty +
-        "' has not been set in the ssl configuration file.");
+  String getPassword(Configuration conf, String alias, String defaultPass) {
+    String password = defaultPass;
+    try {
+      char[] passchars = conf.getPassword(alias);
+      if (passchars != null) {
+        password = new String(passchars);
+      }
     }
-    long truststoreReloadInterval =
-      conf.getLong(
-        resolvePropertyName(mode, SSL_TRUSTSTORE_RELOAD_INTERVAL_TPL_KEY),
-        DEFAULT_SSL_TRUSTSTORE_RELOAD_INTERVAL);
-
-    LOG.debug(mode.toString() + " TrustStore: " + truststoreLocation);
-
-    trustManager = new ReloadingX509TrustManager(truststoreType,
-                                                 truststoreLocation,
-                                                 truststorePassword,
-                                                 truststoreReloadInterval);
-    trustManager.init();
-    LOG.debug(mode.toString() + " Loaded TrustStore: " + truststoreLocation);
-
-    trustManagers = new TrustManager[]{trustManager};
+    catch (IOException ioe) {
+      LOG.warn("Exception while trying to get password for alias " + alias +
+          ": " + ioe.getMessage());
+    }
+    return password;
   }
 
   /**

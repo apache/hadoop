@@ -66,4 +66,5 @@ public interface AppContext {
 
   boolean hasSuccessfullyUnregistered();
 
+  String getNMHostname();
 }

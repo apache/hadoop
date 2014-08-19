@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.util.StringUtils;
 
 /** Store the summary of a content (a directory or a file). */
 @InterfaceAudience.Public
@@ -102,7 +103,7 @@ public class ContentSummary implements Writable{
    * <----12----> <----12----> <-------18------->
    *    DIR_COUNT   FILE_COUNT       CONTENT_SIZE FILE_NAME    
    */
-  private static final String STRING_FORMAT = "%12d %12d %18d ";
+  private static final String STRING_FORMAT = "%12s %12s %18s ";
   /** 
    * Output format:
    * <----12----> <----15----> <----15----> <----15----> <----12----> <----12----> <-------18------->
@@ -117,7 +118,7 @@ public class ContentSummary implements Writable{
 
   private static final String QUOTA_HEADER = String.format(
       QUOTA_STRING_FORMAT + SPACE_QUOTA_STRING_FORMAT, 
-      "quota", "remaining quota", "space quota", "reamaining quota") +
+      "name quota", "rem name quota", "space quota", "rem space quota") +
       HEADER;
   
   /** Return the header of the output.
@@ -139,11 +140,25 @@ public class ContentSummary implements Writable{
   /** Return the string representation of the object in the output format.
    * if qOption is false, output directory count, file count, and content size;
    * if qOption is true, output quota and remaining quota as well.
-   * 
+   *
    * @param qOption a flag indicating if quota needs to be printed or not
    * @return the string representation of the object
-   */
+  */
   public String toString(boolean qOption) {
+    return toString(qOption, false);
+  }
+
+  /** Return the string representation of the object in the output format.
+   * if qOption is false, output directory count, file count, and content size;
+   * if qOption is true, output quota and remaining quota as well.
+   * if hOption is false file sizes are returned in bytes
+   * if hOption is true file sizes are returned in human readable 
+   * 
+   * @param qOption a flag indicating if quota needs to be printed or not
+   * @param hOption a flag indicating if human readable output if to be used
+   * @return the string representation of the object
+   */
+  public String toString(boolean qOption, boolean hOption) {
     String prefix = "";
     if (qOption) {
       String quotaStr = "none";
@@ -152,19 +167,32 @@ public class ContentSummary implements Writable{
       String spaceQuotaRem = "inf";
       
       if (quota>0) {
-        quotaStr = Long.toString(quota);
-        quotaRem = Long.toString(quota-(directoryCount+fileCount));
+        quotaStr = formatSize(quota, hOption);
+        quotaRem = formatSize(quota-(directoryCount+fileCount), hOption);
       }
       if (spaceQuota>0) {
-        spaceQuotaStr = Long.toString(spaceQuota);
-        spaceQuotaRem = Long.toString(spaceQuota - spaceConsumed);        
+        spaceQuotaStr = formatSize(spaceQuota, hOption);
+        spaceQuotaRem = formatSize(spaceQuota - spaceConsumed, hOption);
       }
       
       prefix = String.format(QUOTA_STRING_FORMAT + SPACE_QUOTA_STRING_FORMAT, 
                              quotaStr, quotaRem, spaceQuotaStr, spaceQuotaRem);
     }
     
-    return prefix + String.format(STRING_FORMAT, directoryCount, 
-                                  fileCount, length);
+    return prefix + String.format(STRING_FORMAT,
+     formatSize(directoryCount, hOption),
+     formatSize(fileCount, hOption),
+     formatSize(length, hOption));
+  }
+  /**
+   * Formats a size to be human readable or in bytes
+   * @param size value to be formatted
+   * @param humanReadable flag indicating human readable or not
+   * @return String representation of the size
+  */
+  private String formatSize(long size, boolean humanReadable) {
+    return humanReadable
+      ? StringUtils.TraditionalBinaryPrefix.long2String(size, "", 1)
+      : String.valueOf(size);
   }
 }

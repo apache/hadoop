@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.ipc.RemoteException;
@@ -88,12 +89,13 @@ public class TestSnapshotRename {
   public ExpectedException exception = ExpectedException.none();
   
   /**
-   * Check the correctness of snapshot list within
-   * {@link INodeDirectorySnapshottable}
+   * Check the correctness of snapshot list within snapshottable dir
    */
-  private void checkSnapshotList(INodeDirectorySnapshottable srcRoot,
+  private void checkSnapshotList(INodeDirectory srcRoot,
       String[] sortedNames, String[] names) {
-    ReadOnlyList<Snapshot> listByName = srcRoot.getSnapshotsByNames();
+    assertTrue(srcRoot.isSnapshottable());
+    ReadOnlyList<Snapshot> listByName = srcRoot
+        .getDirectorySnapshottableFeature().getSnapshotList();
     assertEquals(sortedNames.length, listByName.size());
     for (int i = 0; i < listByName.size(); i++) {
       assertEquals(sortedNames[i], listByName.get(i).getRoot().getLocalName());
@@ -101,7 +103,8 @@ public class TestSnapshotRename {
     List<DirectoryDiff> listByTime = srcRoot.getDiffs().asList();
     assertEquals(names.length, listByTime.size());
     for (int i = 0; i < listByTime.size(); i++) {
-      Snapshot s = srcRoot.getSnapshotById(listByTime.get(i).getSnapshotId());
+      Snapshot s = srcRoot.getDirectorySnapshottableFeature().getSnapshotById(
+          listByTime.get(i).getSnapshotId());
       assertEquals(names[i], s.getRoot().getLocalName());
     }
   }
@@ -121,8 +124,7 @@ public class TestSnapshotRename {
     // Rename s3 to s22
     hdfs.renameSnapshot(sub1, "s3", "s22");
     // Check the snapshots list
-    INodeDirectorySnapshottable srcRoot = INodeDirectorySnapshottable.valueOf(
-        fsdir.getINode(sub1.toString()), sub1.toString());
+    INodeDirectory srcRoot = fsdir.getINode(sub1.toString()).asDirectory();
     checkSnapshotList(srcRoot, new String[] { "s1", "s2", "s22" },
         new String[] { "s1", "s2", "s22" });
     

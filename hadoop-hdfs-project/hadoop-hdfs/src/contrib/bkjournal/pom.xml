@@ -163,38 +163,24 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <build>
         <plugins>
           <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-shade-plugin</artifactId>
-            <version>1.5</version>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <version>2.8</version>
             <executions>
               <execution>
+                <id>dist</id>
                 <phase>package</phase>
                 <goals>
-                  <goal>shade</goal>
+                  <goal>copy</goal>
                 </goals>
                 <configuration>
-                  <createDependencyReducedPom>false</createDependencyReducedPom>
-                  <artifactSet>
-                    <includes>
-                      <include>org.apache.bookkeeper:bookkeeper-server</include>
-                      <include>org.apache.zookeeper:zookeeper</include>
-                      <include>org.jboss.netty:netty</include>
-                    </includes>
-                  </artifactSet>
-                <relocations>
-                  <relocation>
-                    <pattern>org.apache.bookkeeper</pattern>
-                    <shadedPattern>hidden.bkjournal.org.apache.bookkeeper</shadedPattern>
-                  </relocation>
-                  <relocation>
-                    <pattern>org.apache.zookeeper</pattern>
-                    <shadedPattern>hidden.bkjournal.org.apache.zookeeper</shadedPattern>
-                  </relocation>
-                  <relocation>
-                    <pattern>org.jboss.netty</pattern>
-                    <shadedPattern>hidden.bkjournal.org.jboss.netty</shadedPattern>
-                  </relocation>
-                </relocations>
+                  <artifactItems>
+                    <artifactItem>
+                      <groupId>org.apache.bookkeeper</groupId>
+                      <artifactId>bookkeeper-server</artifactId>
+                      <type>jar</type>
+                    </artifactItem>
+                  </artifactItems>
+                  <outputDirectory>${project.build.directory}/lib</outputDirectory>
                 </configuration>
               </execution>
             </executions>

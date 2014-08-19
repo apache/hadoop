@@ -33,8 +33,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 
-import org.junit.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -46,6 +44,7 @@ import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
@@ -54,10 +53,9 @@ import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
 import org.apache.hadoop.yarn.server.api.AuxiliaryService;
 import org.apache.hadoop.yarn.server.api.ContainerInitializationContext;
 import org.apache.hadoop.yarn.server.api.ContainerTerminationContext;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container
-    .Container;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container
-    .ContainerImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestAuxServices {
@@ -192,8 +190,9 @@ public class TestAuxServices {
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(appId1, 1);
     ContainerTokenIdentifier cti = new ContainerTokenIdentifier(
         ContainerId.newInstance(attemptId, 1), "", "",
-        Resource.newInstance(1, 1), 0,0,0);
-    Container container = new ContainerImpl(null, null, null, null, null, cti);
+        Resource.newInstance(1, 1), 0,0,0, Priority.newInstance(0), 0);
+    Container container = new ContainerImpl(null, null, null, null, null,
+        null, cti);
     ContainerId containerId = container.getContainerId();
     Resource resource = container.getResource();
     event = new AuxServicesEvent(AuxServicesEventType.CONTAINER_INIT,container);

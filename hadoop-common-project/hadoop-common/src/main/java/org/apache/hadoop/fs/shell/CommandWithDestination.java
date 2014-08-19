@@ -22,7 +22,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -34,6 +40,9 @@ import org.apache.hadoop.fs.PathIsDirectoryException;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.fs.PathOperationException;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclUtil;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 
 /**
@@ -45,7 +54,6 @@ import org.apache.hadoop.io.IOUtils;
 abstract class CommandWithDestination extends FsCommand {  
   protected PathData dst;
   private boolean overwrite = false;
-  private boolean preserve = false;
   private boolean verifyChecksum = true;
   private boolean writeChecksum = true;
   
@@ -74,7 +82,54 @@ abstract class CommandWithDestination extends FsCommand {
    * implementation allows.
    */
   protected void setPreserve(boolean preserve) {
-    this.preserve = preserve;
+    if (preserve) {
+      preserve(FileAttribute.TIMESTAMPS);
+      preserve(FileAttribute.OWNERSHIP);
+      preserve(FileAttribute.PERMISSION);
+    } else {
+      preserveStatus.clear();
+    }
+  }
+  
+  protected static enum FileAttribute {
+    TIMESTAMPS, OWNERSHIP, PERMISSION, ACL, XATTR;
+
+    public static FileAttribute getAttribute(char symbol) {
+      for (FileAttribute attribute : values()) {
+        if (attribute.name().charAt(0) == Character.toUpperCase(symbol)) {
+          return attribute;
+        }
+      }
+      throw new NoSuchElementException("No attribute for " + symbol);
+    }
+  }
+  
+  private EnumSet<FileAttribute> preserveStatus = 
+      EnumSet.noneOf(FileAttribute.class);
+  
+  /**
+   * Checks if the input attribute should be preserved or not
+   *
+   * @param attribute - Attribute to check
+   * @return boolean true if attribute should be preserved, false otherwise
+   */
+  private boolean shouldPreserve(FileAttribute attribute) {
+    return preserveStatus.contains(attribute);
+  }
+  
+  /**
+   * Add file attributes that need to be preserved. This method may be
+   * called multiple times to add attributes.
+   *
+   * @param fileAttribute - Attribute to add, one at a time
+   */
+  protected void preserve(FileAttribute fileAttribute) {
+    for (FileAttribute attribute : preserveStatus) {
+      if (attribute.equals(fileAttribute)) {
+        return;
+      }
+    }
+    preserveStatus.add(fileAttribute);
   }
 
   /**
@@ -212,6 +267,9 @@ abstract class CommandWithDestination extends FsCommand {
         dst.refreshStatus(); // need to update stat to know it exists now
       }      
       super.recursePath(src);
+      if (dst.stat.isDirectory()) {
+        preserveAttributes(src, dst);
+      }
     } finally {
       dst = savedDst;
     }
@@ -243,19 +301,7 @@ abstract class CommandWithDestination extends FsCommand {
     try {
       in = src.fs.open(src.path);
       copyStreamToTarget(in, target);
-      if(preserve) {
-        target.fs.setTimes(
-          target.path,
-          src.stat.getModificationTime(),
-          src.stat.getAccessTime());
-        target.fs.setOwner(
-          target.path,
-          src.stat.getOwner(),
-          src.stat.getGroup());
-        target.fs.setPermission(
-          target.path,
-          src.stat.getPermission());
-      }
+      preserveAttributes(src, target);
     } finally {
       IOUtils.closeStream(in);
     }
@@ -282,6 +328,56 @@ abstract class CommandWithDestination extends FsCommand {
       targetFs.rename(tempTarget, target);
     } finally {
       targetFs.close(); // last ditch effort to ensure temp file is removed
+    }
+  }
+
+  /**
+   * Preserve the attributes of the source to the target.
+   * The method calls {@link #shouldPreserve(FileAttribute)} to check what
+   * attribute to preserve.
+   * @param src source to preserve
+   * @param target where to preserve attributes
+   * @throws IOException if fails to preserve attributes
+   */
+  protected void preserveAttributes(PathData src, PathData target)
+      throws IOException {
+    if (shouldPreserve(FileAttribute.TIMESTAMPS)) {
+      target.fs.setTimes(
+          target.path,
+          src.stat.getModificationTime(),
+          src.stat.getAccessTime());
+    }
+    if (shouldPreserve(FileAttribute.OWNERSHIP)) {
+      target.fs.setOwner(
+          target.path,
+          src.stat.getOwner(),
+          src.stat.getGroup());
+    }
+    if (shouldPreserve(FileAttribute.PERMISSION) ||
+        shouldPreserve(FileAttribute.ACL)) {
+      target.fs.setPermission(
+          target.path,
+          src.stat.getPermission());
+    }
+    if (shouldPreserve(FileAttribute.ACL)) {
+      FsPermission perm = src.stat.getPermission();
+      if (perm.getAclBit()) {
+        List<AclEntry> srcEntries =
+            src.fs.getAclStatus(src.path).getEntries();
+        List<AclEntry> srcFullEntries =
+            AclUtil.getAclFromPermAndEntries(perm, srcEntries);
+        target.fs.setAcl(target.path, srcFullEntries);
+      }
+    }
+    if (shouldPreserve(FileAttribute.XATTR)) {
+      Map<String, byte[]> srcXAttrs = src.fs.getXAttrs(src.path);
+      if (srcXAttrs != null) {
+        Iterator<Entry<String, byte[]>> iter = srcXAttrs.entrySet().iterator();
+        while (iter.hasNext()) {
+          Entry<String, byte[]> entry = iter.next();
+          target.fs.setXAttr(target.path, entry.getKey(), entry.getValue());
+        }
+      }
     }
   }
 

@@ -54,7 +54,7 @@ public class FinalizedReplica extends ReplicaInfo {
 
   /**
    * Copy constructor.
-   * @param from
+   * @param from where to copy construct from
    */
   public FinalizedReplica(FinalizedReplica from) {
     super(from);

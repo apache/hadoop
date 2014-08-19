@@ -397,7 +397,7 @@ public class TestHardLink {
     //basic checks on array lengths
     assertEquals(5, win.hardLinkCommand.length); 
     assertEquals(7, win.hardLinkMultPrefix.length);
-    assertEquals(8, win.hardLinkMultSuffix.length);
+    assertEquals(7, win.hardLinkMultSuffix.length);
     assertEquals(4, win.getLinkCountCommand.length);
 
     assertTrue(win.hardLinkMultPrefix[4].equals("%f"));
@@ -406,9 +406,6 @@ public class TestHardLink {
     assertTrue(win.hardLinkMultDir.equals("\\%f"));
     //make sure "\\%f" was munged correctly
     assertEquals(3, ("\\%f").length()); 
-    assertTrue(win.hardLinkMultSuffix[7].equals("1>NUL"));
-    //make sure "1>NUL" was not munged
-    assertEquals(5, ("1>NUL").length()); 
     assertTrue(win.getLinkCountCommand[1].equals("hardlink"));
     //make sure "-c%h" was not munged
     assertEquals(4, ("-c%h").length()); 

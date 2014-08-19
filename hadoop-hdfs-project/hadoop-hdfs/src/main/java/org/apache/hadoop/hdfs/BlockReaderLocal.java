@@ -31,7 +31,7 @@ import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.shortcircuit.ClientMmap;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitReplica;
-import org.apache.hadoop.hdfs.util.DirectBufferPool;
+import org.apache.hadoop.util.DirectBufferPool;
 import org.apache.hadoop.util.DataChecksum;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -182,7 +182,7 @@ class BlockReaderLocal implements BlockReader {
 
   /**
    * Maximum amount of readahead we'll do.  This will always be at least the,
-   * size of a single chunk, even if {@link zeroReadaheadRequested} is true.
+   * size of a single chunk, even if {@link #zeroReadaheadRequested} is true.
    * The reason is because we need to do a certain amount of buffering in order
    * to do checksumming.
    * 

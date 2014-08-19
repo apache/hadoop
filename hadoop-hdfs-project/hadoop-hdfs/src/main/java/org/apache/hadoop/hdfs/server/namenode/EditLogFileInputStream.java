@@ -93,10 +93,6 @@ public class EditLogFileInputStream extends EditLogInputStream {
    * @param name filename to open
    * @param firstTxId first transaction found in file
    * @param lastTxId last transaction id found in file
-   * @throws LogHeaderCorruptException if the header is either missing or
-   *         appears to be corrupt/truncated
-   * @throws IOException if an actual IO error occurs while reading the
-   *         header
    */
   public EditLogFileInputStream(File name, long firstTxId, long lastTxId,
       boolean isInProgress) {

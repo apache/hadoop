@@ -18,19 +18,67 @@
 # included in all the hdfs scripts with source command
 # should not be executed directly
 
-bin=`which "$0"`
-bin=`dirname "${bin}"`
-bin=`cd "$bin"; pwd`
+function hadoop_subproject_init
+{
+  if [ -e "${HADOOP_CONF_DIR}/hdfs-env.sh" ]; then
+    . "${HADOOP_CONF_DIR}/hdfs-env.sh"
+  fi
+  
+  # at some point in time, someone thought it would be a good idea to
+  # create separate vars for every subproject.  *sigh*
+  # let's perform some overrides and setup some defaults for bw compat
+  # this way the common hadoop var's == subproject vars and can be
+  # used interchangeable from here on out
+  # ...
+  # this should get deprecated at some point.
+  HADOOP_LOG_DIR="${HADOOP_HDFS_LOG_DIR:-$HADOOP_LOG_DIR}"
+  HADOOP_HDFS_LOG_DIR="${HADOOP_LOG_DIR}"
+  
+  HADOOP_LOGFILE="${HADOOP_HDFS_LOGFILE:-$HADOOP_LOGFILE}"
+  HADOOP_HDFS_LOGFILE="${HADOOP_LOGFILE}"
+  
+  HADOOP_NICENESS=${HADOOP_HDFS_NICENESS:-$HADOOP_NICENESS}
+  HADOOP_HDFS_NICENESS="${HADOOP_NICENESS}"
+  
+  HADOOP_STOP_TIMEOUT=${HADOOP_HDFS_STOP_TIMEOUT:-$HADOOP_STOP_TIMEOUT}
+  HADOOP_HDFS_STOP_TIMEOUT="${HADOOP_STOP_TIMEOUT}"
+  
+  HADOOP_PID_DIR="${HADOOP_HDFS_PID_DIR:-$HADOOP_PID_DIR}"
+  HADOOP_HDFS_PID_DIR="${HADOOP_PID_DIR}"
+  
+  HADOOP_ROOT_LOGGER=${HADOOP_HDFS_ROOT_LOGGER:-$HADOOP_ROOT_LOGGER}
+  HADOOP_HDFS_ROOT_LOGGER="${HADOOP_ROOT_LOGGER}"
+  
+  HADOOP_HDFS_HOME="${HADOOP_HDFS_HOME:-$HADOOP_HOME_DIR}"
+  
+  HADOOP_IDENT_STRING="${HADOOP_HDFS_IDENT_STRING:-$HADOOP_IDENT_STRING}"
+  HADOOP_HDFS_IDENT_STRING="${HADOOP_IDENT_STRING}"
+  
+  # turn on the defaults
+  
+  export HADOOP_NAMENODE_OPTS=${HADOOP_NAMENODE_OPTS:-"-Dhadoop.security.logger=INFO,RFAS -Dhdfs.audit.logger=INFO,NullAppender"}
+  export HADOOP_SECONDARYNAMENODE_OPTS=${HADOOP_SECONDARYNAMENODE_OPTS:-"-Dhadoop.security.logger=INFO,RFAS -Dhdfs.audit.logger=INFO,NullAppender"}
+  export HADOOP_DATANODE_OPTS=${HADOOP_DATANODE_OPTS:-"-Dhadoop.security.logger=ERROR,RFAS"}
+  export HADOOP_DN_SECURE_EXTRA_OPTS=${HADOOP_DN_SECURE_EXTRA_OPTS:-"-jvm server"}
+  export HADOOP_NFS3_SECURE_EXTRA_OPTS=${HADOOP_NFS3_SECURE_EXTRA_OPTS:-"-jvm server"}
+  export HADOOP_PORTMAP_OPTS=${HADOOP_PORTMAP_OPTS:-"-Xmx512m"}
+  
+  
+}
 
-DEFAULT_LIBEXEC_DIR="$bin"/../libexec
-HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
-if [ -e "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh" ]; then
-  . ${HADOOP_LIBEXEC_DIR}/hadoop-config.sh
-elif [ -e "${HADOOP_COMMON_HOME}/libexec/hadoop-config.sh" ]; then
-  . "$HADOOP_COMMON_HOME"/libexec/hadoop-config.sh
-elif [ -e "${HADOOP_HOME}/libexec/hadoop-config.sh" ]; then
-  . "$HADOOP_HOME"/libexec/hadoop-config.sh
-else
-  echo "Hadoop common not found."
-  exit
+if [[ -z "${HADOOP_LIBEXEC_DIR}" ]]; then
+  _hd_this="${BASH_SOURCE-$0}"
+  HADOOP_LIBEXEC_DIR=$(cd -P -- "$(dirname -- "${_hd_this}")" >/dev/null && pwd -P)
 fi
+
+if [ -e "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh" ]; then
+  . "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh"
+elif [ -e "${HADOOP_COMMON_HOME}/libexec/hadoop-config.sh" ]; then
+  . "${HADOOP_COMMON_HOME}/libexec/hadoop-config.sh"
+elif [ -e "${HADOOP_HOME}/libexec/hadoop-config.sh" ]; then
+  . "${HADOOP_HOME}/libexec/hadoop-config.sh"
+else
+  echo "ERROR: Hadoop common not found." 2>&1
+  exit 1
+fi
+

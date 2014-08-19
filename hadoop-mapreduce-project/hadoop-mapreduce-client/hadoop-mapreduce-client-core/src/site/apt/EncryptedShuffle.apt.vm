@@ -18,8 +18,6 @@
 
 Hadoop MapReduce Next Generation - Encrypted Shuffle
 
-  \[ {{{./index.html}Go Back}} \]
-
 * {Introduction}
 
   The Encrypted Shuffle capability allows encryption of the MapReduce shuffle

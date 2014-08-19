@@ -107,6 +107,17 @@ public class TimelinePutResponse {
      */
     public static final int IO_EXCEPTION = 2;
 
+    /**
+     * Error code returned if the user specifies the timeline system reserved
+     * filter key
+     */
+    public static final int SYSTEM_FILTER_CONFLICT = 3;
+
+    /**
+     * Error code returned if the user is denied to access the timeline data
+     */
+    public static final int ACCESS_DENIED = 4;
+
     private String entityId;
     private String entityType;
     private int errorCode;

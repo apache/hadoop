@@ -36,7 +36,7 @@ import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -891,4 +891,58 @@ public class TestJobHistoryParsing {
       fsdis.close();
     }
   }
+  
+  /**
+   * Test compatibility of JobHistoryParser with 2.0.3-alpha history files
+   * @throws IOException
+   */
+  @Test
+  public void testTaskAttemptUnsuccessfulCompletionWithoutCounters203() throws IOException 
+    { 
+      Path histPath = new Path(getClass().getClassLoader().getResource(
+        "job_2.0.3-alpha-FAILED.jhist").getFile());
+      JobHistoryParser parser = new JobHistoryParser(FileSystem.getLocal
+          (new Configuration()), histPath);
+      JobInfo jobInfo = parser.parse(); 
+      LOG.info(" job info: " + jobInfo.getJobname() + " "
+        + jobInfo.getFinishedMaps() + " " 
+        + jobInfo.getTotalMaps() + " " 
+        + jobInfo.getJobId() ) ;
+    }
+  
+  /**
+   * Test compatibility of JobHistoryParser with 2.4.0 history files
+   * @throws IOException
+   */
+  @Test
+  public void testTaskAttemptUnsuccessfulCompletionWithoutCounters240() throws IOException 
+    {
+      Path histPath = new Path(getClass().getClassLoader().getResource(
+        "job_2.4.0-FAILED.jhist").getFile());
+      JobHistoryParser parser = new JobHistoryParser(FileSystem.getLocal
+          (new Configuration()), histPath);
+      JobInfo jobInfo = parser.parse(); 
+      LOG.info(" job info: " + jobInfo.getJobname() + " "
+        + jobInfo.getFinishedMaps() + " "
+        + jobInfo.getTotalMaps() + " "
+        + jobInfo.getJobId() );
+    }
+
+  /**
+   * Test compatibility of JobHistoryParser with 0.23.9 history files
+   * @throws IOException
+   */
+  @Test
+  public void testTaskAttemptUnsuccessfulCompletionWithoutCounters0239() throws IOException 
+    {
+      Path histPath = new Path(getClass().getClassLoader().getResource(
+          "job_0.23.9-FAILED.jhist").getFile());
+      JobHistoryParser parser = new JobHistoryParser(FileSystem.getLocal
+          (new Configuration()), histPath);
+      JobInfo jobInfo = parser.parse(); 
+      LOG.info(" job info: " + jobInfo.getJobname() + " "
+        + jobInfo.getFinishedMaps() + " " 
+        + jobInfo.getTotalMaps() + " " 
+        + jobInfo.getJobId() ) ;
+      }
 }

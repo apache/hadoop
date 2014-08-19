@@ -199,7 +199,9 @@ public class ClientRMService extends AbstractService implements
     }
     
     this.server.start();
-    clientBindAddress = conf.updateConnectAddr(YarnConfiguration.RM_ADDRESS,
+    clientBindAddress = conf.updateConnectAddr(YarnConfiguration.RM_BIND_HOST,
+                                               YarnConfiguration.RM_ADDRESS,
+                                               YarnConfiguration.DEFAULT_RM_ADDRESS,
                                                server.getListenerAddress());
     super.serviceStart();
   }
@@ -213,7 +215,9 @@ public class ClientRMService extends AbstractService implements
   }
 
   InetSocketAddress getBindAddress(Configuration conf) {
-    return conf.getSocketAddr(YarnConfiguration.RM_ADDRESS,
+    return conf.getSocketAddr(
+            YarnConfiguration.RM_BIND_HOST,
+            YarnConfiguration.RM_ADDRESS,
             YarnConfiguration.DEFAULT_RM_ADDRESS,
             YarnConfiguration.DEFAULT_RM_PORT);
   }
@@ -919,7 +923,7 @@ public class ClientRMService extends AbstractService implements
           protoToken.getIdentifier().array(), protoToken.getPassword().array(),
           new Text(protoToken.getKind()), new Text(protoToken.getService()));
 
-      String user = getRenewerForToken(token);
+      String user = UserGroupInformation.getCurrentUser().getUserName();
       rmDTSecretManager.cancelToken(token, user);
       return Records.newRecord(CancelDelegationTokenResponse.class);
     } catch (IOException e) {

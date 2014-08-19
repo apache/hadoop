@@ -104,6 +104,8 @@ public class FSImageHandler extends SimpleChannelUpstreamHandler {
         content = loader.getFileStatus(path);
       } else if (op.equals("LISTSTATUS")) {
         content = loader.listStatus(path);
+      } else if (op.equals("GETACLSTATUS")) {
+        content = loader.getAclStatus(path);
       } else {
         response.setStatus(HttpResponseStatus.BAD_REQUEST);
       }

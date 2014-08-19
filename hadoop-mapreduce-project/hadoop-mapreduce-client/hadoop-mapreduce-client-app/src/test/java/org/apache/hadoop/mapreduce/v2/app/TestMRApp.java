@@ -26,7 +26,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -110,6 +110,15 @@ public class TestMRApp {
             TaskAttemptEventType.TA_COMMIT_PENDING));
 
     //wait for first attempt to commit pending
+    app.waitForState(attempt, TaskAttemptState.COMMIT_PENDING);
+
+    //re-send the commit pending signal to the task
+    app.getContext().getEventHandler().handle(
+        new TaskAttemptEvent(
+            attempt.getID(),
+            TaskAttemptEventType.TA_COMMIT_PENDING));
+
+    //the task attempt should be still at COMMIT_PENDING
     app.waitForState(attempt, TaskAttemptState.COMMIT_PENDING);
 
     //send the done signal to the task

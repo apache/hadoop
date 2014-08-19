@@ -71,6 +71,7 @@ public class TestAbandonBlock {
       fout.write(123);
     }
     fout.hflush();
+    long fileId = ((DFSOutputStream)fout.getWrappedStream()).getFileId();
 
     // Now abandon the last block
     DFSClient dfsclient = DFSClientAdapter.getDFSClient(fs);
@@ -78,11 +79,11 @@ public class TestAbandonBlock {
       dfsclient.getNamenode().getBlockLocations(src, 0, Integer.MAX_VALUE);
     int orginalNumBlocks = blocks.locatedBlockCount();
     LocatedBlock b = blocks.getLastLocatedBlock();
-    dfsclient.getNamenode().abandonBlock(b.getBlock(), src,
+    dfsclient.getNamenode().abandonBlock(b.getBlock(), fileId, src,
         dfsclient.clientName);
     
     // call abandonBlock again to make sure the operation is idempotent
-    dfsclient.getNamenode().abandonBlock(b.getBlock(), src,
+    dfsclient.getNamenode().abandonBlock(b.getBlock(), fileId, src,
         dfsclient.clientName);
 
     // And close the file

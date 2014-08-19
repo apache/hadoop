@@ -19,10 +19,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.assertTrue;
 
-import java.net.InetSocketAddress;
-import java.net.URL;
+import java.lang.management.ManagementFactory;
 
-import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,6 +33,9 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.junit.Test;
+
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 
 /**
  * DFS_HOSTS and DFS_HOSTS_EXCLUDE tests
@@ -73,7 +74,7 @@ public class TestHostsFiles {
   }
 
   @Test
-  public void testHostsExcludeDfshealthJsp() throws Exception {
+  public void testHostsExcludeInUI() throws Exception {
     Configuration conf = getConf();
     short REPLICATION_FACTOR = 2;
     final Path filePath = new Path("/testFile");
@@ -117,19 +118,55 @@ public class TestHostsFiles {
 
       // Check the block still has sufficient # replicas across racks
       DFSTestUtil.waitForReplication(cluster, b, 2, REPLICATION_FACTOR, 0);
-      
-      InetSocketAddress nnHttpAddress = cluster.getNameNode().getHttpAddress();
-      LOG.info("nnaddr = '" + nnHttpAddress + "'");
-      String nnHostName = nnHttpAddress.getHostName();
-      URL nnjsp = new URL("http://" + nnHostName + ":" + nnHttpAddress.getPort() + "/dfshealth.jsp");
-      LOG.info("fetching " + nnjsp);
-      String dfshealthPage = StringEscapeUtils.unescapeHtml(DFSTestUtil.urlGet(nnjsp));
-      LOG.info("got " + dfshealthPage);
-      assertTrue("dfshealth should contain " + nnHostName + ", got:" + dfshealthPage,
-          dfshealthPage.contains(nnHostName));
 
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxbeanName = new ObjectName(
+              "Hadoop:service=NameNode,name=NameNodeInfo");
+      String nodes = (String) mbs.getAttribute(mxbeanName, "LiveNodes");
+      assertTrue("Live nodes should contain the decommissioned node",
+              nodes.contains("Decommissioned"));
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testHostsIncludeForDeadCount() throws Exception {
+    Configuration conf = getConf();
+
+    // Configure an excludes file
+    FileSystem localFileSys = FileSystem.getLocal(conf);
+    Path workingDir = localFileSys.getWorkingDirectory();
+    Path dir = new Path(workingDir, "build/test/data/temp/decommission");
+    Path excludeFile = new Path(dir, "exclude");
+    Path includeFile = new Path(dir, "include");
+    assertTrue(localFileSys.mkdirs(dir));
+    StringBuilder includeHosts = new StringBuilder();
+    includeHosts.append("localhost:52").append("\n").append("127.0.0.1:7777")
+        .append("\n");
+    DFSTestUtil.writeFile(localFileSys, excludeFile, "");
+    DFSTestUtil.writeFile(localFileSys, includeFile, includeHosts.toString());
+    conf.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
+    conf.set(DFSConfigKeys.DFS_HOSTS, includeFile.toUri().getPath());
+
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      final FSNamesystem ns = cluster.getNameNode().getNamesystem();
+      assertTrue(ns.getNumDeadDataNodes() == 2);
+      assertTrue(ns.getNumLiveDataNodes() == 0);
+
+      // Testing using MBeans
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxbeanName = new ObjectName(
+          "Hadoop:service=NameNode,name=FSNamesystemState");
+      String nodes = mbs.getAttribute(mxbeanName, "NumDeadDataNodes") + "";
+      assertTrue((Integer) mbs.getAttribute(mxbeanName, "NumDeadDataNodes") == 2);
+      assertTrue((Integer) mbs.getAttribute(mxbeanName, "NumLiveDataNodes") == 0);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 }

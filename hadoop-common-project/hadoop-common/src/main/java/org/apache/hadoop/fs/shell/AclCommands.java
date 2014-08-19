@@ -18,7 +18,7 @@
 package org.apache.hadoop.fs.shell;
 
 import java.io.IOException;
-import java.util.Iterator;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -31,8 +31,10 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.AclUtil;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.ScopedAclEntries;
 
 /**
  * Acl related operations
@@ -57,8 +59,8 @@ class AclCommands extends FsCommand {
     public static String DESCRIPTION = "Displays the Access Control Lists"
         + " (ACLs) of files and directories. If a directory has a default ACL,"
         + " then getfacl also displays the default ACL.\n"
-        + "-R: List the ACLs of all files and directories recursively.\n"
-        + "<path>: File or directory to list.\n";
+        + "  -R: List the ACLs of all files and directories recursively.\n"
+        + "  <path>: File or directory to list.\n";
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
@@ -75,84 +77,43 @@ class AclCommands extends FsCommand {
 
     @Override
     protected void processPath(PathData item) throws IOException {
-      AclStatus aclStatus = item.fs.getAclStatus(item.path);
       out.println("# file: " + item);
-      out.println("# owner: " + aclStatus.getOwner());
-      out.println("# group: " + aclStatus.getGroup());
-      List<AclEntry> entries = aclStatus.getEntries();
-      if (aclStatus.isStickyBit()) {
-        String stickyFlag = "T";
-        for (AclEntry aclEntry : entries) {
-          if (aclEntry.getType() == AclEntryType.OTHER
-              && aclEntry.getScope() == AclEntryScope.ACCESS
-              && aclEntry.getPermission().implies(FsAction.EXECUTE)) {
-            stickyFlag = "t";
-            break;
-          }
-        }
-        out.println("# flags: --" + stickyFlag);
-      }
-
+      out.println("# owner: " + item.stat.getOwner());
+      out.println("# group: " + item.stat.getGroup());
       FsPermission perm = item.stat.getPermission();
-      if (entries.isEmpty()) {
-        printMinimalAcl(perm);
-      } else {
-        printExtendedAcl(perm, entries);
+      if (perm.getStickyBit()) {
+        out.println("# flags: --" +
+          (perm.getOtherAction().implies(FsAction.EXECUTE) ? "t" : "T"));
       }
 
+      List<AclEntry> entries = perm.getAclBit() ?
+        item.fs.getAclStatus(item.path).getEntries() :
+        Collections.<AclEntry>emptyList();
+      ScopedAclEntries scopedEntries = new ScopedAclEntries(
+        AclUtil.getAclFromPermAndEntries(perm, entries));
+      printAclEntriesForSingleScope(scopedEntries.getAccessEntries());
+      printAclEntriesForSingleScope(scopedEntries.getDefaultEntries());
       out.println();
     }
 
     /**
-     * Prints an extended ACL, including all extended ACL entries and also the
-     * base entries implied by the permission bits.
+     * Prints all the ACL entries in a single scope.
      *
-     * @param perm FsPermission of file
      * @param entries List<AclEntry> containing ACL entries of file
      */
-    private void printExtendedAcl(FsPermission perm, List<AclEntry> entries) {
-      // Print owner entry implied by owner permission bits.
-      out.println(new AclEntry.Builder()
-        .setScope(AclEntryScope.ACCESS)
-        .setType(AclEntryType.USER)
-        .setPermission(perm.getUserAction())
-        .build());
-
-      // Print all extended access ACL entries.
-      boolean hasAccessAcl = false;
-      Iterator<AclEntry> entryIter = entries.iterator();
-      AclEntry curEntry = null;
-      while (entryIter.hasNext()) {
-        curEntry = entryIter.next();
-        if (curEntry.getScope() == AclEntryScope.DEFAULT) {
-          break;
-        }
-        hasAccessAcl = true;
-        printExtendedAclEntry(curEntry, perm.getGroupAction());
+    private void printAclEntriesForSingleScope(List<AclEntry> entries) {
+      if (entries.isEmpty()) {
+        return;
       }
-
-      // Print mask entry implied by group permission bits, or print group entry
-      // if there is no access ACL (only default ACL).
-      out.println(new AclEntry.Builder()
-        .setScope(AclEntryScope.ACCESS)
-        .setType(hasAccessAcl ? AclEntryType.MASK : AclEntryType.GROUP)
-        .setPermission(perm.getGroupAction())
-        .build());
-
-      // Print other entry implied by other bits.
-      out.println(new AclEntry.Builder()
-        .setScope(AclEntryScope.ACCESS)
-        .setType(AclEntryType.OTHER)
-        .setPermission(perm.getOtherAction())
-        .build());
-
-      // Print default ACL entries.
-      if (curEntry != null && curEntry.getScope() == AclEntryScope.DEFAULT) {
-        out.println(curEntry);
-        // ACL sort order guarantees default mask is the second-to-last entry.
+      if (AclUtil.isMinimalAcl(entries)) {
+        for (AclEntry entry: entries) {
+          out.println(entry);
+        }
+      } else {
+        // ACL sort order guarantees mask is the second-to-last entry.
         FsAction maskPerm = entries.get(entries.size() - 2).getPermission();
-        while (entryIter.hasNext()) {
-          printExtendedAclEntry(entryIter.next(), maskPerm);
+        for (AclEntry entry: entries) {
+          printExtendedAclEntry(entry, maskPerm);
         }
       }
     }
@@ -180,30 +141,6 @@ class AclCommands extends FsCommand {
         out.println(entry);
       }
     }
-
-    /**
-     * Prints a minimal ACL, consisting of exactly 3 ACL entries implied by the
-     * permission bits.
-     *
-     * @param perm FsPermission of file
-     */
-    private void printMinimalAcl(FsPermission perm) {
-      out.println(new AclEntry.Builder()
-        .setScope(AclEntryScope.ACCESS)
-        .setType(AclEntryType.USER)
-        .setPermission(perm.getUserAction())
-        .build());
-      out.println(new AclEntry.Builder()
-        .setScope(AclEntryScope.ACCESS)
-        .setType(AclEntryType.GROUP)
-        .setPermission(perm.getGroupAction())
-        .build());
-      out.println(new AclEntry.Builder()
-        .setScope(AclEntryScope.ACCESS)
-        .setType(AclEntryType.OTHER)
-        .setPermission(perm.getOtherAction())
-        .build());
-    }
   }
 
   /**
@@ -216,19 +153,19 @@ class AclCommands extends FsCommand {
     public static String DESCRIPTION = "Sets Access Control Lists (ACLs)"
         + " of files and directories.\n" 
         + "Options:\n"
-        + "-b :Remove all but the base ACL entries. The entries for user,"
+        + "  -b :Remove all but the base ACL entries. The entries for user,"
         + " group and others are retained for compatibility with permission "
         + "bits.\n" 
-        + "-k :Remove the default ACL.\n"
-        + "-R :Apply operations to all files and directories recursively.\n"
-        + "-m :Modify ACL. New entries are added to the ACL, and existing"
+        + "  -k :Remove the default ACL.\n"
+        + "  -R :Apply operations to all files and directories recursively.\n"
+        + "  -m :Modify ACL. New entries are added to the ACL, and existing"
         + " entries are retained.\n"
-        + "-x :Remove specified ACL entries. Other ACL entries are retained.\n"
-        + "--set :Fully replace the ACL, discarding all existing entries."
+        + "  -x :Remove specified ACL entries. Other ACL entries are retained.\n"
+        + "  --set :Fully replace the ACL, discarding all existing entries."
         + " The <acl_spec> must include entries for user, group, and others"
         + " for compatibility with permission bits.\n"
-        + "<acl_spec>: Comma separated list of ACL entries.\n"
-        + "<path>: File or directory to modify.\n";
+        + "  <acl_spec>: Comma separated list of ACL entries.\n"
+        + "  <path>: File or directory to modify.\n";
 
     CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, "b", "k", "R",
         "m", "x", "-set");

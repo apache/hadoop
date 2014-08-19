@@ -18,6 +18,7 @@ import org.apache.hadoop.security.authentication.KerberosTestUtils;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.ietf.jgss.GSSContext;
@@ -30,10 +31,18 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.ietf.jgss.Oid;
 
+import javax.security.auth.Subject;
+import javax.security.auth.kerberos.KerberosPrincipal;
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import java.io.File;
+import java.security.Principal;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 public class TestKerberosAuthenticationHandler
@@ -110,8 +119,65 @@ public class TestKerberosAuthenticationHandler
 
   @Test(timeout=60000)
   public void testInit() throws Exception {
-    Assert.assertEquals(KerberosTestUtils.getServerPrincipal(), handler.getPrincipal());
     Assert.assertEquals(KerberosTestUtils.getKeytabFile(), handler.getKeytab());
+    Set<KerberosPrincipal> principals = handler.getPrincipals();
+    Principal expectedPrincipal =
+        new KerberosPrincipal(KerberosTestUtils.getServerPrincipal());
+    Assert.assertTrue(principals.contains(expectedPrincipal));
+    Assert.assertEquals(1, principals.size());
+  }
+
+  // dynamic configuration of HTTP principals
+  @Test(timeout=60000)
+  public void testDynamicPrincipalDiscovery() throws Exception {
+    String[] keytabUsers = new String[]{
+        "HTTP/host1", "HTTP/host2", "HTTP2/host1", "XHTTP/host"
+    };
+    String keytab = KerberosTestUtils.getKeytabFile();
+    getKdc().createPrincipal(new File(keytab), keytabUsers);
+
+    // destroy handler created in setUp()
+    handler.destroy();
+    Properties props = new Properties();
+    props.setProperty(KerberosAuthenticationHandler.KEYTAB, keytab);
+    props.setProperty(KerberosAuthenticationHandler.PRINCIPAL, "*");
+    handler = getNewAuthenticationHandler();
+    handler.init(props);
+
+    Assert.assertEquals(KerberosTestUtils.getKeytabFile(), handler.getKeytab());    
+    
+    Set<KerberosPrincipal> loginPrincipals = handler.getPrincipals();
+    for (String user : keytabUsers) {
+      Principal principal = new KerberosPrincipal(
+          user + "@" + KerberosTestUtils.getRealm());
+      boolean expected = user.startsWith("HTTP/");
+      Assert.assertEquals("checking for "+user, expected, 
+          loginPrincipals.contains(principal));
+    }
+  }
+
+  // dynamic configuration of HTTP principals
+  @Test(timeout=60000)
+  public void testDynamicPrincipalDiscoveryMissingPrincipals() throws Exception {
+    String[] keytabUsers = new String[]{"hdfs/localhost"};
+    String keytab = KerberosTestUtils.getKeytabFile();
+    getKdc().createPrincipal(new File(keytab), keytabUsers);
+
+    // destroy handler created in setUp()
+    handler.destroy();
+    Properties props = new Properties();
+    props.setProperty(KerberosAuthenticationHandler.KEYTAB, keytab);
+    props.setProperty(KerberosAuthenticationHandler.PRINCIPAL, "*");
+    handler = getNewAuthenticationHandler();
+    try {
+      handler.init(props);
+      Assert.fail("init should have failed");
+    } catch (ServletException ex) {
+      Assert.assertEquals("Principals do not exist in the keytab",
+          ex.getCause().getMessage());
+    } catch (Throwable t) {
+      Assert.fail("wrong exception: "+t);
+    }
   }
 
   @Test(timeout=60000)
@@ -190,7 +256,8 @@ public class TestKerberosAuthenticationHandler
 
     Mockito.when(request.getHeader(KerberosAuthenticator.AUTHORIZATION))
       .thenReturn(KerberosAuthenticator.NEGOTIATE + " " + token);
-
+    Mockito.when(request.getServerName()).thenReturn("localhost");
+    
     AuthenticationToken authToken = handler.authenticate(request, response);
 
     if (authToken != null) {

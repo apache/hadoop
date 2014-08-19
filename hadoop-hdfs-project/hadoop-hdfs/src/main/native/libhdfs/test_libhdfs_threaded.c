@@ -19,11 +19,11 @@
 #include "expect.h"
 #include "hdfs.h"
 #include "native_mini_dfs.h"
+#include "os/thread.h"
 
 #include <errno.h>
 #include <inttypes.h>
-#include <semaphore.h>
-#include <pthread.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,8 +35,6 @@
 
 #define TLH_DEFAULT_BLOCK_SIZE 134217728
 
-static sem_t tlhSem;
-
 static struct NativeMiniDfsCluster* tlhCluster;
 
 struct tlhThreadInfo {
@@ -44,18 +42,19 @@ struct tlhThreadInfo {
     int threadIdx;
     /** 0 = thread was successful; error code otherwise */
     int success;
-    /** pthread identifier */
-    pthread_t thread;
+    /** thread identifier */
+    thread theThread;
 };
 
 static int hdfsSingleNameNodeConnect(struct NativeMiniDfsCluster *cl, hdfsFS *fs,
                                      const char *username)
 {
-    int ret, port;
+    int ret;
+    tPort port;
     hdfsFS hdfs;
     struct hdfsBuilder *bld;
     
-    port = nmdGetNameNodePort(cl);
+    port = (tPort)nmdGetNameNodePort(cl);
     if (port < 0) {
         fprintf(stderr, "hdfsSingleNameNodeConnect: nmdGetNameNodePort "
                 "returned error %d\n", port);
@@ -122,7 +121,7 @@ struct tlhPaths {
 
 static int setupPaths(const struct tlhThreadInfo *ti, struct tlhPaths *paths)
 {
-    memset(paths, sizeof(*paths), 0);
+    memset(paths, 0, sizeof(*paths));
     if (snprintf(paths->prefix, sizeof(paths->prefix), "/tlhData%04d",
                  ti->threadIdx) >= sizeof(paths->prefix)) {
         return ENAMETOOLONG;
@@ -164,7 +163,7 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
     EXPECT_NONNULL(file);
 
     /* TODO: implement writeFully and use it here */
-    expected = strlen(paths->prefix);
+    expected = (int)strlen(paths->prefix);
     ret = hdfsWrite(fs, file, paths->prefix, expected);
     if (ret < 0) {
         ret = errno;
@@ -186,9 +185,9 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
 
     EXPECT_ZERO(hdfsFileGetReadStatistics(file, &readStats));
     errno = 0;
-    EXPECT_ZERO(readStats->totalBytesRead);
-    EXPECT_ZERO(readStats->totalLocalBytesRead);
-    EXPECT_ZERO(readStats->totalShortCircuitBytesRead);
+    EXPECT_UINT64_EQ(UINT64_C(0), readStats->totalBytesRead);
+    EXPECT_UINT64_EQ(UINT64_C(0), readStats->totalLocalBytesRead);
+    EXPECT_UINT64_EQ(UINT64_C(0), readStats->totalShortCircuitBytesRead);
     hdfsFileFreeReadStatistics(readStats);
     /* TODO: implement readFully and use it here */
     ret = hdfsRead(fs, file, tmp, sizeof(tmp));
@@ -204,7 +203,7 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
     }
     EXPECT_ZERO(hdfsFileGetReadStatistics(file, &readStats));
     errno = 0;
-    EXPECT_INT_EQ(expected, readStats->totalBytesRead);
+    EXPECT_UINT64_EQ((uint64_t)expected, readStats->totalBytesRead);
     hdfsFileFreeReadStatistics(readStats);
     EXPECT_ZERO(memcmp(paths->prefix, tmp, expected));
     EXPECT_ZERO(hdfsCloseFile(fs, file));
@@ -262,12 +261,11 @@ static int testHdfsOperationsImpl(struct tlhThreadInfo *ti)
     return 0;
 }
 
-static void *testHdfsOperations(void *v)
+static void testHdfsOperations(void *v)
 {
     struct tlhThreadInfo *ti = (struct tlhThreadInfo*)v;
     int ret = testHdfsOperationsImpl(ti);
     ti->success = ret;
-    return NULL;
 }
 
 static int checkFailures(struct tlhThreadInfo *ti, int tlhNumThreads)
@@ -304,7 +302,7 @@ int main(void)
     const char *tlhNumThreadsStr;
     struct tlhThreadInfo ti[TLH_MAX_THREADS];
     struct NativeMiniDfsConf conf = {
-        .doFormat = 1,
+        1, /* doFormat */
     };
 
     tlhNumThreadsStr = getenv("TLH_NUM_THREADS");
@@ -323,21 +321,20 @@ int main(void)
         ti[i].threadIdx = i;
     }
 
-    EXPECT_ZERO(sem_init(&tlhSem, 0, tlhNumThreads));
     tlhCluster = nmdCreate(&conf);
     EXPECT_NONNULL(tlhCluster);
     EXPECT_ZERO(nmdWaitClusterUp(tlhCluster));
 
     for (i = 0; i < tlhNumThreads; i++) {
-        EXPECT_ZERO(pthread_create(&ti[i].thread, NULL,
-            testHdfsOperations, &ti[i]));
+        ti[i].theThread.start = testHdfsOperations;
+        ti[i].theThread.arg = &ti[i];
+        EXPECT_ZERO(threadCreate(&ti[i].theThread));
     }
     for (i = 0; i < tlhNumThreads; i++) {
-        EXPECT_ZERO(pthread_join(ti[i].thread, NULL));
+        EXPECT_ZERO(threadJoin(&ti[i].theThread));
     }
 
     EXPECT_ZERO(nmdShutdown(tlhCluster));
     nmdFree(tlhCluster);
-    EXPECT_ZERO(sem_destroy(&tlhSem));
     return checkFailures(ti, tlhNumThreads);
 }

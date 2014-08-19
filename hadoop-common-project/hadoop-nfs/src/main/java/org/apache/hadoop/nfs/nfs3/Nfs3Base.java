@@ -25,6 +25,8 @@ import org.apache.hadoop.oncrpc.SimpleTcpServer;
 import org.apache.hadoop.portmap.PortmapMapping;
 import org.apache.hadoop.util.ShutdownHookManager;
 
+import static org.apache.hadoop.util.ExitUtil.terminate;
+
 /**
  * Nfs server. Supports NFS v3 using {@link RpcProgram}.
  * Currently Mountd program is also started inside this class.
@@ -33,38 +35,40 @@ import org.apache.hadoop.util.ShutdownHookManager;
 public abstract class Nfs3Base {
   public static final Log LOG = LogFactory.getLog(Nfs3Base.class);
   private final RpcProgram rpcProgram;
-  private final int nfsPort;
   private int nfsBoundPort; // Will set after server starts
-    
+
   public RpcProgram getRpcProgram() {
     return rpcProgram;
   }
 
   protected Nfs3Base(RpcProgram rpcProgram, Configuration conf) {
     this.rpcProgram = rpcProgram;
-    this.nfsPort = conf.getInt(Nfs3Constant.NFS3_SERVER_PORT,
-        Nfs3Constant.NFS3_SERVER_PORT_DEFAULT);
-    LOG.info("NFS server port set to: " + nfsPort);
+    LOG.info("NFS server port set to: " + rpcProgram.getPort());
   }
 
   public void start(boolean register) {
     startTCPServer(); // Start TCP server
-    
+
     if (register) {
       ShutdownHookManager.get().addShutdownHook(new Unregister(),
           SHUTDOWN_HOOK_PRIORITY);
-      rpcProgram.register(PortmapMapping.TRANSPORT_TCP, nfsBoundPort);
+      try {
+        rpcProgram.register(PortmapMapping.TRANSPORT_TCP, nfsBoundPort);
+      } catch (Throwable e) {
+        LOG.fatal("Failed to start the server. Cause:", e);
+        terminate(1, e);
+      }
     }
   }
 
   private void startTCPServer() {
-    SimpleTcpServer tcpServer = new SimpleTcpServer(nfsPort,
+    SimpleTcpServer tcpServer = new SimpleTcpServer(rpcProgram.getPort(),
         rpcProgram, 0);
     rpcProgram.startDaemons();
     tcpServer.run();
     nfsBoundPort = tcpServer.getBoundPort();
   }
-  
+
   /**
    * Priority of the nfsd shutdown hook.
    */

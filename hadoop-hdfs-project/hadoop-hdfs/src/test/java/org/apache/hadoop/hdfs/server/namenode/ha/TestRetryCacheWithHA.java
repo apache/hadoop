@@ -33,6 +33,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -45,9 +46,11 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -126,6 +129,7 @@ public class TestRetryCacheWithHA {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_DIRECTIVES_NUM_RESPONSES, ResponseSize);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES, ResponseSize);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, true);
     cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(MiniDFSNNTopology.simpleHATopology())
         .numDataNodes(DataNodes).build();
@@ -157,7 +161,7 @@ public class TestRetryCacheWithHA {
     FSNamesystem fsn0 = cluster.getNamesystem(0);
     LightWeightCache<CacheEntry, CacheEntry> cacheSet = 
         (LightWeightCache<CacheEntry, CacheEntry>) fsn0.getRetryCache().getCacheSet();
-    assertEquals(20, cacheSet.size());
+    assertEquals(23, cacheSet.size());
     
     Map<CacheEntry, CacheEntry> oldEntries = 
         new HashMap<CacheEntry, CacheEntry>();
@@ -178,7 +182,7 @@ public class TestRetryCacheWithHA {
     FSNamesystem fsn1 = cluster.getNamesystem(1);
     cacheSet = (LightWeightCache<CacheEntry, CacheEntry>) fsn1
         .getRetryCache().getCacheSet();
-    assertEquals(20, cacheSet.size());
+    assertEquals(23, cacheSet.size());
     iter = cacheSet.iterator();
     while (iter.hasNext()) {
       CacheEntry entry = iter.next();
@@ -188,12 +192,9 @@ public class TestRetryCacheWithHA {
   
   private DFSClient genClientWithDummyHandler() throws IOException {
     URI nnUri = dfs.getUri();
-    Class<FailoverProxyProvider<ClientProtocol>> failoverProxyProviderClass = 
-        NameNodeProxies.getFailoverProxyProviderClass(conf, nnUri, 
-            ClientProtocol.class);
     FailoverProxyProvider<ClientProtocol> failoverProxyProvider = 
         NameNodeProxies.createFailoverProxyProvider(conf, 
-            failoverProxyProviderClass, ClientProtocol.class, nnUri);
+            nnUri, ClientProtocol.class, true);
     InvocationHandler dummyHandler = new DummyRetryInvocationHandler(
         failoverProxyProvider, RetryPolicies
         .failoverOnNetworkException(RetryPolicies.TRY_ONCE_THEN_FAIL,
@@ -725,7 +726,12 @@ public class TestRetryCacheWithHA {
       
       client.getNamenode().updatePipeline(client.getClientName(), oldBlock,
           newBlock, newNodes, storageIDs);
-      out.close();
+      // close can fail if the out.close() commit the block after block received
+      // notifications from Datanode.
+      // Since datanodes and output stream have still old genstamps, these
+      // blocks will be marked as corrupt after HDFS-5723 if RECEIVED
+      // notifications reaches namenode first and close() will fail.
+      DFSTestUtil.abortStream((DFSOutputStream) out.getWrappedStream());
     }
 
     @Override
@@ -1004,6 +1010,91 @@ public class TestRetryCacheWithHA {
       return null;
     }
   }
+  
+  /** setXAttr */
+  class SetXAttrOp extends AtMostOnceOp {
+    private final String src;
+
+    SetXAttrOp(DFSClient client, String src) {
+      super("setXAttr", client);
+      this.src = src;
+    }
+
+    @Override
+    void prepare() throws Exception {
+      Path p = new Path(src);
+      if (!dfs.exists(p)) {
+        DFSTestUtil.createFile(dfs, p, BlockSize, DataNodes, 0);
+      }
+    }
+
+    @Override
+    void invoke() throws Exception {
+      client.setXAttr(src, "user.key", "value".getBytes(),
+          EnumSet.of(XAttrSetFlag.CREATE));
+    }
+
+    @Override
+    boolean checkNamenodeBeforeReturn() throws Exception {
+      for (int i = 0; i < CHECKTIMES; i++) {
+        Map<String, byte[]> iter = dfs.getXAttrs(new Path(src));
+        Set<String> keySet = iter.keySet();
+        if (keySet.contains("user.key")) {
+          return true;
+        }
+        Thread.sleep(1000);
+      }
+      return false;
+    }
+
+    @Override
+    Object getResult() {
+      return null;
+    }
+  }
+
+  /** removeXAttr */
+  class RemoveXAttrOp extends AtMostOnceOp {
+    private final String src;
+
+    RemoveXAttrOp(DFSClient client, String src) {
+      super("removeXAttr", client);
+      this.src = src;
+    }
+
+    @Override
+    void prepare() throws Exception {
+      Path p = new Path(src);
+      if (!dfs.exists(p)) {
+        DFSTestUtil.createFile(dfs, p, BlockSize, DataNodes, 0);
+        client.setXAttr(src, "user.key", "value".getBytes(),
+          EnumSet.of(XAttrSetFlag.CREATE));
+      }
+    }
+
+    @Override
+    void invoke() throws Exception {
+      client.removeXAttr(src, "user.key");
+    }
+
+    @Override
+    boolean checkNamenodeBeforeReturn() throws Exception {
+      for (int i = 0; i < CHECKTIMES; i++) {
+        Map<String, byte[]> iter = dfs.getXAttrs(new Path(src));
+        Set<String> keySet = iter.keySet();
+        if (!keySet.contains("user.key")) {
+          return true;
+        }
+        Thread.sleep(1000);
+      }
+      return false;
+    }
+
+    @Override
+    Object getResult() {
+      return null;
+    }
+  }
 
   @Test (timeout=60000)
   public void testCreateSnapshot() throws Exception {
@@ -1131,6 +1222,20 @@ public class TestRetryCacheWithHA {
   public void testRemoveCachePool() throws Exception {
     DFSClient client = genClientWithDummyHandler();
     AtMostOnceOp op = new RemoveCachePoolOp(client, "pool");
+    testClientRetryWithFailover(op);
+  }
+  
+  @Test (timeout=60000)
+  public void testSetXAttr() throws Exception {
+    DFSClient client = genClientWithDummyHandler();
+    AtMostOnceOp op = new SetXAttrOp(client, "/setxattr");
+    testClientRetryWithFailover(op);
+  }
+
+  @Test (timeout=60000)
+  public void testRemoveXAttr() throws Exception {
+    DFSClient client = genClientWithDummyHandler();
+    AtMostOnceOp op = new RemoveXAttrOp(client, "/removexattr");
     testClientRetryWithFailover(op);
   }
 

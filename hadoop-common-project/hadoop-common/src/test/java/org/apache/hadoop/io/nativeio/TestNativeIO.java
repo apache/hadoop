@@ -49,7 +49,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.NativeCodeLoader;
-import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Time;
 
 public class TestNativeIO {
@@ -572,7 +571,6 @@ public class TestNativeIO {
   @Test(timeout=10000)
   public void testMlock() throws Exception {
     assumeTrue(NativeIO.isAvailable());
-    assumeTrue(Shell.LINUX);
     final File TEST_FILE = new File(new File(
         System.getProperty("test.build.data","build/test/data")),
         "testMlockFile");
@@ -607,8 +605,8 @@ public class TestNativeIO {
         sum += mapbuf.get(i);
       }
       assertEquals("Expected sums to be equal", bufSum, sum);
-      // munlock the buffer
-      NativeIO.POSIX.munlock(mapbuf, fileSize);
+      // munmap the buffer, which also implicitly unlocks it
+      NativeIO.POSIX.munmap(mapbuf);
     } finally {
       if (channel != null) {
         channel.close();

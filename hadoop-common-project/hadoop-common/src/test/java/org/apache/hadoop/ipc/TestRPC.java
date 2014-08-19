@@ -496,6 +496,8 @@ public class TestRPC {
       caught = true;
     }
     assertTrue(caught);
+    rb = getMetrics(server.rpcDetailedMetrics.name());
+    assertCounter("IOExceptionNumOps", 1L, rb);
 
     proxy.testServerGet();
 
@@ -581,14 +583,14 @@ public class TestRPC {
       }
       MetricsRecordBuilder rb = getMetrics(server.rpcMetrics.name());
       if (expectFailure) {
-        assertCounter("RpcAuthorizationFailures", 1, rb);
+        assertCounter("RpcAuthorizationFailures", 1L, rb);
       } else {
-        assertCounter("RpcAuthorizationSuccesses", 1, rb);
+        assertCounter("RpcAuthorizationSuccesses", 1L, rb);
       }
       //since we don't have authentication turned ON, we should see 
       // 0 for the authentication successes and 0 for failure
-      assertCounter("RpcAuthenticationFailures", 0, rb);
-      assertCounter("RpcAuthenticationSuccesses", 0, rb);
+      assertCounter("RpcAuthenticationFailures", 0L, rb);
+      assertCounter("RpcAuthenticationSuccesses", 0L, rb);
     }
   }
   

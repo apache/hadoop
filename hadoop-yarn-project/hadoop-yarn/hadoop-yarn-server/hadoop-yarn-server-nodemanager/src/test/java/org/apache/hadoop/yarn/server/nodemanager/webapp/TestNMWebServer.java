@@ -49,6 +49,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -77,7 +79,8 @@ public class TestNMWebServer {
   }
   
   private int startNMWebAppServer(String webAddr) {
-    Context nmContext = new NodeManager.NMContext(null, null, null, null);
+    Context nmContext = new NodeManager.NMContext(null, null, null, null,
+        null);
     ResourceView resourceView = new ResourceView() {
       @Override
       public long getVmemAllocatedForContainers() {
@@ -85,6 +88,10 @@ public class TestNMWebServer {
       }
       @Override
       public long getPmemAllocatedForContainers() {
+        return 0;
+      }
+      @Override
+      public long getVCoresAllocatedForContainers() {
         return 0;
       }
       @Override
@@ -135,7 +142,8 @@ public class TestNMWebServer {
 
   @Test
   public void testNMWebApp() throws IOException, YarnException {
-    Context nmContext = new NodeManager.NMContext(null, null, null, null);
+    Context nmContext = new NodeManager.NMContext(null, null, null, null,
+        null);
     ResourceView resourceView = new ResourceView() {
       @Override
       public long getVmemAllocatedForContainers() {
@@ -143,6 +151,10 @@ public class TestNMWebServer {
       }
       @Override
       public long getPmemAllocatedForContainers() {
+        return 0;
+      }
+      @Override
+      public long getVCoresAllocatedForContainers() {
         return 0;
       }
       @Override
@@ -185,6 +197,7 @@ public class TestNMWebServer {
     ContainerId container2 =
         BuilderUtils.newContainerId(recordFactory, appId, appAttemptId, 1);
     NodeManagerMetrics metrics = mock(NodeManagerMetrics.class);
+    NMStateStoreService stateStore = new NMNullStateStoreService();
     for (ContainerId containerId : new ContainerId[] { container1,
         container2}) {
       // TODO: Use builder utils
@@ -196,7 +209,7 @@ public class TestNMWebServer {
             BuilderUtils.newResource(1024, 1), currentTime + 10000L, 123,
             "password".getBytes(), currentTime);
       Container container =
-          new ContainerImpl(conf, dispatcher, launchContext,
+          new ContainerImpl(conf, dispatcher, stateStore, launchContext,
             null, metrics,
             BuilderUtils.newContainerTokenIdentifier(containerToken)) {
 

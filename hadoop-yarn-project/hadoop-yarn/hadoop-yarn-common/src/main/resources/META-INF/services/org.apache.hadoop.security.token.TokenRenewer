@@ -14,3 +14,4 @@
 org.apache.hadoop.yarn.security.AMRMTokenIdentifier$Renewer
 org.apache.hadoop.yarn.security.ContainerTokenIdentifier$Renewer
 org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier$Renewer
+org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier$Renewer

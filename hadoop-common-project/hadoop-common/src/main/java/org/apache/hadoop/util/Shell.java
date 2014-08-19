@@ -53,6 +53,34 @@ abstract public class Shell {
     return IS_JAVA7_OR_ABOVE;
   }
 
+  /**
+   * Maximum command line length in Windows
+   * KB830473 documents this as 8191
+   */
+  public static final int WINDOWS_MAX_SHELL_LENGHT = 8191;
+
+  /**
+   * Checks if a given command (String[]) fits in the Windows maximum command line length
+   * Note that the input is expected to already include space delimiters, no extra count
+   * will be added for delimiters.
+   *
+   * @param commands command parts, including any space delimiters
+   */
+  public static void checkWindowsCommandLineLength(String...commands)
+      throws IOException {
+    int len = 0;
+    for (String s: commands) {
+      len += s.length();
+    }
+    if (len > WINDOWS_MAX_SHELL_LENGHT) {
+      throw new IOException(String.format(
+          "The command line has a length of %d exceeds maximum allowed length of %d. " +
+          "Command starts with: %s",
+          len, WINDOWS_MAX_SHELL_LENGHT,
+          StringUtils.join("", commands).substring(0, 100)));
+    }
+  }
+
   /** a Unix command to get the current user's name */
   public final static String USER_NAME_COMMAND = "whoami";
 
@@ -98,17 +126,26 @@ abstract public class Shell {
   public static final boolean LINUX   = (osType == OSType.OS_TYPE_LINUX);
   public static final boolean OTHER   = (osType == OSType.OS_TYPE_OTHER);
 
+  public static final boolean PPC_64
+                = System.getProperties().getProperty("os.arch").contains("ppc64");
+
   /** a Unix command to get the current user's groups list */
   public static String[] getGroupsCommand() {
     return (WINDOWS)? new String[]{"cmd", "/c", "groups"}
                     : new String[]{"bash", "-c", "groups"};
   }
 
-  /** a Unix command to get a given user's groups list */
+  /**
+   * a Unix command to get a given user's groups list.
+   * If the OS is not WINDOWS, the command will get the user's primary group
+   * first and finally get the groups list which includes the primary group.
+   * i.e. the user's primary group will be included twice.
+   */
   public static String[] getGroupsForUserCommand(final String user) {
     //'groups username' command return is non-consistent across different unixes
     return (WINDOWS)? new String[] { WINUTILS, "groups", "-F", "\"" + user + "\""}
-                    : new String [] {"bash", "-c", "id -Gn " + user};
+                    : new String [] {"bash", "-c", "id -gn " + user
+                                     + "&& id -Gn " + user};
   }
 
   /** a Unix command to get a given netgroup's user list */
@@ -492,12 +529,8 @@ abstract public class Shell {
       }
       // wait for the process to finish and check the exit code
       exitCode  = process.waitFor();
-      try {
-        // make sure that the error thread exits
-        errThread.join();
-      } catch (InterruptedException ie) {
-        LOG.warn("Interrupted while reading the error stream", ie);
-      }
+      // make sure that the error thread exits
+      joinThread(errThread);
       completed.set(true);
       //the timeout thread handling
       //taken care in finally block
@@ -526,13 +559,9 @@ abstract public class Shell {
       } catch (IOException ioe) {
         LOG.warn("Error while closing the input stream", ioe);
       }
-      try {
-        if (!completed.get()) {
-          errThread.interrupt();
-          errThread.join();
-        }
-      } catch (InterruptedException ie) {
-        LOG.warn("Interrupted while joining errThread");
+      if (!completed.get()) {
+        errThread.interrupt();
+        joinThread(errThread);
       }
       try {
         InputStream stderr = process.getErrorStream();
@@ -544,6 +573,19 @@ abstract public class Shell {
       }
       process.destroy();
       lastTime = Time.now();
+    }
+  }
+
+  private static void joinThread(Thread t) {
+    while (t.isAlive()) {
+      try {
+        t.join();
+      } catch (InterruptedException ie) {
+        if (LOG.isWarnEnabled()) {
+          LOG.warn("Interrupted while joining on: " + t, ie);
+        }
+        t.interrupt(); // propagate interrupt
+      }
     }
   }
 
@@ -579,7 +621,7 @@ abstract public class Shell {
    * This is an IOException with exit code added.
    */
   public static class ExitCodeException extends IOException {
-    int exitCode;
+    private final int exitCode;
     
     public ExitCodeException(int exitCode, String message) {
       super(message);
@@ -588,6 +630,16 @@ abstract public class Shell {
     
     public int getExitCode() {
       return exitCode;
+    }
+
+    @Override
+    public String toString() {
+      final StringBuilder sb =
+          new StringBuilder("ExitCodeException ");
+      sb.append("exitCode=").append(exitCode)
+        .append(": ");
+      sb.append(super.getMessage());
+      return sb.toString();
     }
   }
   

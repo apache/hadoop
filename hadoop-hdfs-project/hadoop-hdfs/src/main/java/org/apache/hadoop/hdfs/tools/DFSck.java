@@ -77,7 +77,7 @@ public class DFSck extends Configured implements Tool {
   private static final String USAGE = "Usage: DFSck <path> "
       + "[-list-corruptfileblocks | "
       + "[-move | -delete | -openforwrite] "
-      + "[-files [-blocks [-locations | -racks]]]]\n"
+      + "[-files [-blocks [-locations | -racks]]]] [-showprogress]\n"
       + "\t<path>\tstart checking from this path\n"
       + "\t-move\tmove corrupted files to /lost+found\n"
       + "\t-delete\tdelete corrupted files\n"
@@ -90,7 +90,8 @@ public class DFSck extends Configured implements Tool {
       + "blocks and files they belong to\n"
       + "\t-blocks\tprint out block report\n"
       + "\t-locations\tprint out locations for every block\n"
-      + "\t-racks\tprint out network topology for data-node locations\n\n"
+      + "\t-racks\tprint out network topology for data-node locations\n"
+      + "\t-showprogress\tshow progress in output. Default is OFF (no progress)\n\n"
       + "Please Note:\n"
       + "\t1. By default fsck ignores files opened for write, "
       + "use -openforwrite to report such files. They are usually "
@@ -130,9 +131,6 @@ public class DFSck extends Configured implements Tool {
     out.println(USAGE + "\n");
     ToolRunner.printGenericCommandUsage(out);
   }
-  /**
-   * @param args
-   */
   @Override
   public int run(final String[] args) throws IOException {
     if (args.length == 0) {
@@ -273,6 +271,7 @@ public class DFSck extends Configured implements Tool {
       else if (args[idx].equals("-blocks")) { url.append("&blocks=1"); }
       else if (args[idx].equals("-locations")) { url.append("&locations=1"); }
       else if (args[idx].equals("-racks")) { url.append("&racks=1"); }
+      else if (args[idx].equals("-showprogress")) { url.append("&showprogress=1"); }
       else if (args[idx].equals("-list-corruptfileblocks")) {
         url.append("&listcorruptfileblocks=1");
         doListCorruptFileBlocks = true;

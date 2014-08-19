@@ -26,7 +26,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
@@ -35,6 +35,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenInfo;
@@ -326,8 +327,8 @@ public class MiniRPCBenchmark {
     String shortUserName =
       UserGroupInformation.createRemoteUser(user).getShortUserName();
     try {
-      conf.setStrings(ProxyUsers.getProxySuperuserGroupConfKey(shortUserName),
-          GROUP_NAME_1);
+      conf.setStrings(DefaultImpersonationProvider.getTestProvider().
+              getProxySuperuserGroupConfKey(shortUserName), GROUP_NAME_1);
       configureSuperUserIPAddresses(conf, shortUserName);
       // start the server
       miniServer = new MiniServer(conf, user, keytabFile);
@@ -410,7 +411,7 @@ public class MiniRPCBenchmark {
     }
     builder.append("127.0.1.1,");
     builder.append(InetAddress.getLocalHost().getCanonicalHostName());
-    conf.setStrings(ProxyUsers.getProxySuperuserIpConfKey(superUserShortName),
-        builder.toString());
+    conf.setStrings(DefaultImpersonationProvider.getTestProvider().
+            getProxySuperuserIpConfKey(superUserShortName), builder.toString());
   }
 }

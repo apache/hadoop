@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 
 public class ApplicationHistoryClientService extends AbstractService {
@@ -75,10 +76,11 @@ public class ApplicationHistoryClientService extends AbstractService {
   protected void serviceStart() throws Exception {
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
-    InetSocketAddress address =
-        conf.getSocketAddr(YarnConfiguration.TIMELINE_SERVICE_ADDRESS,
-          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ADDRESS,
-          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_PORT);
+    InetSocketAddress address = conf.getSocketAddr(
+        YarnConfiguration.TIMELINE_SERVICE_BIND_HOST,
+        YarnConfiguration.TIMELINE_SERVICE_ADDRESS,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ADDRESS,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_PORT);
 
     server =
         rpc.getServer(ApplicationHistoryProtocol.class, protocolHandler,
@@ -88,8 +90,10 @@ public class ApplicationHistoryClientService extends AbstractService {
 
     server.start();
     this.bindAddress =
-        conf.updateConnectAddr(YarnConfiguration.TIMELINE_SERVICE_ADDRESS,
-          server.getListenerAddress());
+        conf.updateConnectAddr(YarnConfiguration.TIMELINE_SERVICE_BIND_HOST,
+                               YarnConfiguration.TIMELINE_SERVICE_ADDRESS,
+                               YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ADDRESS,
+                               server.getListenerAddress());
     LOG.info("Instantiated ApplicationHistoryClientService at "
         + this.bindAddress);
 

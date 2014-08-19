@@ -25,14 +25,16 @@ import java.net.InetSocketAddress;
 
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocolPB.ClientDatanodeProtocolTranslatorPB;
-import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.InterDatanodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.JournalProtocolTranslatorPB;
-import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RpcClientUtil;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -76,16 +78,22 @@ public class TestIsMethodSupported {
 
   @Test
   public void testNamenodeProtocol() throws IOException {
-    NamenodeProtocolTranslatorPB translator =
-        (NamenodeProtocolTranslatorPB) NameNodeProxies.createNonHAProxy(conf,
+    NamenodeProtocol np =
+        NameNodeProxies.createNonHAProxy(conf,
             nnAddress, NamenodeProtocol.class, UserGroupInformation.getCurrentUser(),
             true).getProxy();
-    boolean exists = translator.isMethodSupported("rollEditLog");
+
+    boolean exists = RpcClientUtil.isMethodSupported(np,
+        NamenodeProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+        RPC.getProtocolVersion(NamenodeProtocolPB.class), "rollEditLog");
+
     assertTrue(exists);
-    exists = translator.isMethodSupported("bogusMethod");
+    exists = RpcClientUtil.isMethodSupported(np,
+        NamenodeProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+        RPC.getProtocolVersion(NamenodeProtocolPB.class), "bogusMethod");
     assertFalse(exists);
   }
-  
+
   @Test
   public void testDatanodeProtocol() throws IOException {
     DatanodeProtocolClientSideTranslatorPB translator = 
@@ -107,16 +115,18 @@ public class TestIsMethodSupported {
         NetUtils.getDefaultSocketFactory(conf));
     assertTrue(translator.isMethodSupported("refreshNamenodes"));
   }
-  
+
   @Test
   public void testClientNamenodeProtocol() throws IOException {
-    ClientNamenodeProtocolTranslatorPB translator = 
-        (ClientNamenodeProtocolTranslatorPB) NameNodeProxies.createNonHAProxy(
+    ClientProtocol cp =
+        NameNodeProxies.createNonHAProxy(
             conf, nnAddress, ClientProtocol.class,
             UserGroupInformation.getCurrentUser(), true).getProxy();
-    assertTrue(translator.isMethodSupported("mkdirs"));
+    RpcClientUtil.isMethodSupported(cp,
+        ClientNamenodeProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+        RPC.getProtocolVersion(ClientNamenodeProtocolPB.class), "mkdirs");
   }
-  
+
   @Test
   public void tesJournalProtocol() throws IOException {
     JournalProtocolTranslatorPB translator = (JournalProtocolTranslatorPB)

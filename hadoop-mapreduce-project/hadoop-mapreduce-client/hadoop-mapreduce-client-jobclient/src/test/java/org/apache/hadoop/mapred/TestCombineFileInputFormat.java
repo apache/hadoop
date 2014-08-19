@@ -28,7 +28,7 @@ import org.apache.hadoop.mapred.lib.CombineFileSplit;
 import org.apache.hadoop.mapred.lib.CombineFileRecordReader;
 
 import org.junit.Test;
-import static junit.framework.Assert.*;
+import static org.junit.Assert.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

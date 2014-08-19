@@ -278,7 +278,7 @@ public class AclEntry {
     }
 
     if (includePermission) {
-      if (split.length < index) {
+      if (split.length <= index) {
         throw new HadoopIllegalArgumentException("Invalid <aclSpec> : "
             + aclStr);
       }
@@ -297,5 +297,19 @@ public class AclEntry {
     }
     AclEntry aclEntry = builder.build();
     return aclEntry;
+  }
+
+  /**
+   * Convert a List of AclEntries into a string - the reverse of parseAclSpec.
+   * @param aclSpec List of AclEntries to convert
+   * @return String representation of aclSpec
+   */
+  public static String aclSpecToString(List<AclEntry> aclSpec) {
+    StringBuilder buf = new StringBuilder();
+    for ( AclEntry e : aclSpec ) {
+      buf.append(e.toString());
+      buf.append(",");
+    }
+    return buf.substring(0, buf.length()-1);  // remove last ,
   }
 }

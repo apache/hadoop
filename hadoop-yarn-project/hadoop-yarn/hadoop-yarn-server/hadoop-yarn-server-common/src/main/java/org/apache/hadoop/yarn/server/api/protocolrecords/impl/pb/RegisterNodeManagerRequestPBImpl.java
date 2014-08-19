@@ -23,21 +23,26 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerStatusPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
-import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NMContainerStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.RegisterNodeManagerRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.RegisterNodeManagerRequestProtoOrBuilder;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 
 
@@ -49,7 +54,8 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
   
   private Resource resource = null;
   private NodeId nodeId = null;
-  private List<ContainerStatus> containerStatuses = null;
+  private List<NMContainerStatus> containerStatuses = null;
+  private List<ApplicationId> runningApplications = null;
   
   public RegisterNodeManagerRequestPBImpl() {
     builder = RegisterNodeManagerRequestProto.newBuilder();
@@ -69,7 +75,10 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
 
   private void mergeLocalToBuilder() {
     if (this.containerStatuses != null) {
-      addContainerStatusesToProto();
+      addNMContainerStatusesToProto();
+    }
+    if (this.runningApplications != null) {
+      addRunningApplicationsToProto();
     }
     if (this.resource != null) {
       builder.setResource(convertToProtoFormat(this.resource));
@@ -80,6 +89,18 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
 
   }
 
+  private synchronized void addNMContainerStatusesToProto() {
+    maybeInitBuilder();
+    builder.clearContainerStatuses();
+    List<NMContainerStatusProto> list =
+        new ArrayList<NMContainerStatusProto>();
+    for (NMContainerStatus status : this.containerStatuses) {
+      list.add(convertToProtoFormat(status));
+    }
+    builder.addAllContainerStatuses(list);
+  }
+
+    
   private void mergeLocalToProto() {
     if (viaProto) 
       maybeInitBuilder();
@@ -152,46 +173,46 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
     maybeInitBuilder();
     builder.setHttpPort(httpPort);
   }
-
+  
   @Override
-  public List<ContainerStatus> getContainerStatuses() {
-    initContainerStatuses();
-    return containerStatuses;
+  public List<ApplicationId> getRunningApplications() {
+    initRunningApplications();
+    return runningApplications;
   }
   
-  private void initContainerStatuses() {
-    if (this.containerStatuses != null) {
+  private void initRunningApplications() {
+    if (this.runningApplications != null) {
       return;
     }
     RegisterNodeManagerRequestProtoOrBuilder p = viaProto ? proto : builder;
-    List<ContainerStatusProto> list = p.getContainerStatusesList();
-    this.containerStatuses = new ArrayList<ContainerStatus>();
-    for (ContainerStatusProto c : list) {
-      this.containerStatuses.add(convertFromProtoFormat(c));
+    List<ApplicationIdProto> list = p.getRunningApplicationsList();
+    this.runningApplications = new ArrayList<ApplicationId>();
+    for (ApplicationIdProto c : list) {
+      this.runningApplications.add(convertFromProtoFormat(c));
     }
   }
 
   @Override
-  public void setContainerStatuses(List<ContainerStatus> containers) {
-    if (containers == null) {
+  public void setRunningApplications(List<ApplicationId> apps) {
+    if (apps == null) {
       return;
     }
-    initContainerStatuses();
-    this.containerStatuses.addAll(containers);
+    initRunningApplications();
+    this.runningApplications.addAll(apps);
   }
   
-  private void addContainerStatusesToProto() {
+  private void addRunningApplicationsToProto() {
     maybeInitBuilder();
-    builder.clearContainerStatuses();
-    if (containerStatuses == null) {
+    builder.clearRunningApplications();
+    if (runningApplications == null) {
       return;
     }
-    Iterable<ContainerStatusProto> it = new Iterable<ContainerStatusProto>() {
+    Iterable<ApplicationIdProto> it = new Iterable<ApplicationIdProto>() {
       
       @Override
-      public Iterator<ContainerStatusProto> iterator() {
-        return new Iterator<ContainerStatusProto>() {
-          Iterator<ContainerStatus> iter = containerStatuses.iterator();
+      public Iterator<ApplicationIdProto> iterator() {
+        return new Iterator<ApplicationIdProto>() {
+          Iterator<ApplicationId> iter = runningApplications.iterator();
           
           @Override
           public boolean hasNext() {
@@ -199,7 +220,7 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
           }
           
           @Override
-          public ContainerStatusProto next() {
+          public ApplicationIdProto next() {
             return convertToProtoFormat(iter.next());  
           }
           
@@ -210,7 +231,35 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
         };
       }
     };
-    builder.addAllContainerStatuses(it);
+    builder.addAllRunningApplications(it);
+  }
+
+  @Override
+  public List<NMContainerStatus> getNMContainerStatuses() {
+    initContainerRecoveryReports();
+    return containerStatuses;
+  }
+  
+  private void initContainerRecoveryReports() {
+    if (this.containerStatuses != null) {
+      return;
+    }
+    RegisterNodeManagerRequestProtoOrBuilder p = viaProto ? proto : builder;
+    List<NMContainerStatusProto> list = p.getContainerStatusesList();
+    this.containerStatuses = new ArrayList<NMContainerStatus>();
+    for (NMContainerStatusProto c : list) {
+      this.containerStatuses.add(convertFromProtoFormat(c));
+    }
+  }
+
+  @Override
+  public void setContainerStatuses(
+      List<NMContainerStatus> containerReports) {
+    if (containerReports == null) {
+      return;
+    }
+    initContainerRecoveryReports();
+    this.containerStatuses.addAll(containerReports);
   }
   
   @Override
@@ -242,6 +291,14 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
     maybeInitBuilder();
     builder.setNmVersion(version);
   }
+  
+  private ApplicationIdPBImpl convertFromProtoFormat(ApplicationIdProto p) {
+    return new ApplicationIdPBImpl(p);
+  }
+
+  private ApplicationIdProto convertToProtoFormat(ApplicationId t) {
+    return ((ApplicationIdPBImpl)t).getProto();
+  }
 
   private NodeIdPBImpl convertFromProtoFormat(NodeIdProto p) {
     return new NodeIdPBImpl(p);
@@ -259,11 +316,11 @@ public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest
     return ((ResourcePBImpl)t).getProto();
   }
 
-  private ContainerStatusPBImpl convertFromProtoFormat(ContainerStatusProto c) {
-    return new ContainerStatusPBImpl(c);
+  private NMContainerStatusPBImpl convertFromProtoFormat(NMContainerStatusProto c) {
+    return new NMContainerStatusPBImpl(c);
   }
   
-  private ContainerStatusProto convertToProtoFormat(ContainerStatus c) {
-    return ((ContainerStatusPBImpl)c).getProto();
+  private NMContainerStatusProto convertToProtoFormat(NMContainerStatus c) {
+    return ((NMContainerStatusPBImpl)c).getProto();
   }
 }

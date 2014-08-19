@@ -18,11 +18,14 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -33,18 +36,19 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
@@ -56,16 +60,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
-
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
 
 public class TestResourceTrackerService {
 
@@ -487,33 +484,37 @@ public class TestResourceTrackerService {
     RMApp app = rm.submitApp(1024, true);
 
     // Case 1.1: AppAttemptId is null
-    ContainerStatus status = ContainerStatus.newInstance(
-        ContainerId.newInstance(ApplicationAttemptId.newInstance(
-            app.getApplicationId(), 2), 1),
-        ContainerState.COMPLETE, "Dummy Completed", 0);
-    rm.getResourceTrackerService().handleContainerStatus(status);
+    NMContainerStatus report =
+        NMContainerStatus.newInstance(
+          ContainerId.newInstance(
+            ApplicationAttemptId.newInstance(app.getApplicationId(), 2), 1),
+          ContainerState.COMPLETE, Resource.newInstance(1024, 1),
+          "Dummy Completed", 0, Priority.newInstance(10), 1234);
+    rm.getResourceTrackerService().handleNMContainerStatus(report);
     verify(handler, never()).handle((Event) any());
 
     // Case 1.2: Master container is null
     RMAppAttemptImpl currentAttempt =
         (RMAppAttemptImpl) app.getCurrentAppAttempt();
     currentAttempt.setMasterContainer(null);
-    status = ContainerStatus.newInstance(
-        ContainerId.newInstance(currentAttempt.getAppAttemptId(), 0),
-        ContainerState.COMPLETE, "Dummy Completed", 0);
-    rm.getResourceTrackerService().handleContainerStatus(status);
+    report = NMContainerStatus.newInstance(
+          ContainerId.newInstance(currentAttempt.getAppAttemptId(), 0),
+          ContainerState.COMPLETE, Resource.newInstance(1024, 1),
+          "Dummy Completed", 0, Priority.newInstance(10), 1234);
+    rm.getResourceTrackerService().handleNMContainerStatus(report);
     verify(handler, never()).handle((Event)any());
 
     // Case 2: Managed AM
     app = rm.submitApp(1024);
 
     // Case 2.1: AppAttemptId is null
-    status = ContainerStatus.newInstance(
-        ContainerId.newInstance(ApplicationAttemptId.newInstance(
-            app.getApplicationId(), 2), 1),
-        ContainerState.COMPLETE, "Dummy Completed", 0);
+    report = NMContainerStatus.newInstance(
+          ContainerId.newInstance(
+            ApplicationAttemptId.newInstance(app.getApplicationId(), 2), 1),
+          ContainerState.COMPLETE, Resource.newInstance(1024, 1),
+          "Dummy Completed", 0, Priority.newInstance(10), 1234);
     try {
-      rm.getResourceTrackerService().handleContainerStatus(status);
+      rm.getResourceTrackerService().handleNMContainerStatus(report);
     } catch (Exception e) {
       // expected - ignore
     }
@@ -523,11 +524,12 @@ public class TestResourceTrackerService {
     currentAttempt =
         (RMAppAttemptImpl) app.getCurrentAppAttempt();
     currentAttempt.setMasterContainer(null);
-    status = ContainerStatus.newInstance(
-        ContainerId.newInstance(currentAttempt.getAppAttemptId(), 0),
-        ContainerState.COMPLETE, "Dummy Completed", 0);
+    report = NMContainerStatus.newInstance(
+      ContainerId.newInstance(currentAttempt.getAppAttemptId(), 0),
+      ContainerState.COMPLETE, Resource.newInstance(1024, 1),
+      "Dummy Completed", 0, Priority.newInstance(10), 1234);
     try {
-      rm.getResourceTrackerService().handleContainerStatus(status);
+      rm.getResourceTrackerService().handleNMContainerStatus(report);
     } catch (Exception e) {
       // expected - ignore
     }
@@ -593,7 +595,7 @@ public class TestResourceTrackerService {
     // reconnect of node with changed capability
     nm1 = rm.registerNode("host2:5678", 10240);
     dispatcher.await();
-    response = nm2.nodeHeartbeat(true);
+    response = nm1.nodeHeartbeat(true);
     dispatcher.await();
     Assert.assertTrue(NodeAction.NORMAL.equals(response.getNodeAction()));
     Assert.assertEquals(5120 + 10240, metrics.getAvailableMB());

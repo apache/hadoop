@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.nfs;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.hadoop.nfs.NfsTime;
 import org.apache.hadoop.oncrpc.XDR;

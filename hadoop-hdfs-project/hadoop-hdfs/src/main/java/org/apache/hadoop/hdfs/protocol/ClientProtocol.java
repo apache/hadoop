@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -31,12 +32,14 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Options;
-import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
@@ -45,6 +48,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.AtMostOnce;
@@ -268,7 +272,7 @@ public interface ClientProtocol {
   /**
    * Set Owner of a path (i.e. a file or a directory).
    * The parameters username and groupname cannot both be null.
-   * @param src
+   * @param src file path
    * @param username If it is null, the original username remains unchanged.
    * @param groupname If it is null, the original groupname remains unchanged.
    *
@@ -290,13 +294,20 @@ public interface ClientProtocol {
    * file.
    * Any partial writes to the block will be discarded.
    * 
+   * @param b         Block to abandon
+   * @param fileId    The id of the file where the block resides.  Older clients
+   *                    will pass GRANDFATHER_INODE_ID here.
+   * @param src       The path of the file where the block resides.
+   * @param holder    Lease holder.
+   *
    * @throws AccessControlException If access is denied
    * @throws FileNotFoundException file <code>src</code> is not found
    * @throws UnresolvedLinkException If <code>src</code> contains a symlink
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
-  public void abandonBlock(ExtendedBlock b, String src, String holder)
+  public void abandonBlock(ExtendedBlock b, long fileId,
+      String src, String holder)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException;
 
@@ -344,6 +355,7 @@ public interface ClientProtocol {
    * Get a datanode for an existing pipeline.
    * 
    * @param src the file being written
+   * @param fileId the ID of the file being written
    * @param blk the block being written
    * @param existings the existing nodes in the pipeline
    * @param excludes the excluded nodes
@@ -359,8 +371,10 @@ public interface ClientProtocol {
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
-  public LocatedBlock getAdditionalDatanode(final String src, final ExtendedBlock blk,
-      final DatanodeInfo[] existings, final String[] existingStorageIDs,
+  public LocatedBlock getAdditionalDatanode(final String src,
+      final long fileId, final ExtendedBlock blk,
+      final DatanodeInfo[] existings,
+      final String[] existingStorageIDs,
       final DatanodeInfo[] excludes,
       final int numAdditionalNodes, final String clientName
       ) throws AccessControlException, FileNotFoundException,
@@ -643,6 +657,13 @@ public interface ClientProtocol {
       throws IOException;
 
   /**
+   * Get a report on the current datanode storages.
+   */
+  @Idempotent
+  public DatanodeStorageReport[] getDatanodeStorageReport(
+      HdfsConstants.DatanodeReportType type) throws IOException;
+
+  /**
    * Get the block size for the given file.
    * @param filename The name of the file
    * @return The number of bytes in each block
@@ -896,6 +917,8 @@ public interface ClientProtocol {
    * Write all metadata for this file into persistent storage.
    * The file must be currently open for writing.
    * @param src The string representation of the path
+   * @param inodeId The inode ID, or GRANDFATHER_INODE_ID if the client is
+   *                too old to support fsync with inode IDs.
    * @param client The string representation of the client
    * @param lastBlockLength The length of the last block (under construction) 
    *                        to be reported to NameNode 
@@ -905,7 +928,8 @@ public interface ClientProtocol {
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
-  public void fsync(String src, String client, long lastBlockLength) 
+  public void fsync(String src, long inodeId, String client,
+                    long lastBlockLength)
       throws AccessControlException, FileNotFoundException, 
       UnresolvedLinkException, IOException;
 
@@ -1126,7 +1150,6 @@ public interface ClientProtocol {
   /**
    * Modify a CacheDirective in the CacheManager.
    * 
-   * @return directive The directive to modify. Must contain a directive ID.
    * @param flags {@link CacheFlag}s to use for this operation.
    * @throws IOException if the directive could not be modified
    */
@@ -1242,4 +1265,85 @@ public interface ClientProtocol {
    */
   @Idempotent
   public AclStatus getAclStatus(String src) throws IOException;
+  
+  /**
+   * Set xattr of a file or directory.
+   * The name must be prefixed with the namespace followed by ".". For example,
+   * "user.attr".
+   * <p/>
+   * Refer to the HDFS extended attributes user documentation for details.
+   *
+   * @param src file or directory
+   * @param xAttr <code>XAttr</code> to set
+   * @param flag set flag
+   * @throws IOException
+   */
+  @AtMostOnce
+  public void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag) 
+      throws IOException;
+  
+  /**
+   * Get xattrs of a file or directory. Values in xAttrs parameter are ignored.
+   * If xAttrs is null or empty, this is the same as getting all xattrs of the
+   * file or directory.  Only those xattrs for which the logged-in user has
+   * permissions to view are returned.
+   * <p/>
+   * Refer to the HDFS extended attributes user documentation for details.
+   *
+   * @param src file or directory
+   * @param xAttrs xAttrs to get
+   * @return List<XAttr> <code>XAttr</code> list 
+   * @throws IOException
+   */
+  @Idempotent
+  public List<XAttr> getXAttrs(String src, List<XAttr> xAttrs) 
+      throws IOException;
+
+  /**
+   * List the xattrs names for a file or directory.
+   * Only the xattr names for which the logged in user has the permissions to
+   * access will be returned.
+   * <p/>
+   * Refer to the HDFS extended attributes user documentation for details.
+   *
+   * @param src file or directory
+   * @param xAttrs xAttrs to get
+   * @return List<XAttr> <code>XAttr</code> list
+   * @throws IOException
+   */
+  @Idempotent
+  public List<XAttr> listXAttrs(String src)
+      throws IOException;
+  
+  /**
+   * Remove xattr of a file or directory.Value in xAttr parameter is ignored.
+   * The name must be prefixed with the namespace followed by ".". For example,
+   * "user.attr".
+   * <p/>
+   * Refer to the HDFS extended attributes user documentation for details.
+   *
+   * @param src file or directory
+   * @param xAttr <code>XAttr</code> to remove
+   * @throws IOException
+   */
+  @AtMostOnce
+  public void removeXAttr(String src, XAttr xAttr) throws IOException;
+
+  /**
+   * Checks if the user can access a path.  The mode specifies which access
+   * checks to perform.  If the requested permissions are granted, then the
+   * method returns normally.  If access is denied, then the method throws an
+   * {@link AccessControlException}.
+   * In general, applications should avoid using this method, due to the risk of
+   * time-of-check/time-of-use race conditions.  The permissions on a file may
+   * change immediately after the access call returns.
+   *
+   * @param path Path to check
+   * @param mode type of access to check
+   * @throws AccessControlException if access is denied
+   * @throws FileNotFoundException if the path does not exist
+   * @throws IOException see specific implementation
+   */
+  @Idempotent
+  public void checkAccess(String path, FsAction mode) throws IOException;
 }

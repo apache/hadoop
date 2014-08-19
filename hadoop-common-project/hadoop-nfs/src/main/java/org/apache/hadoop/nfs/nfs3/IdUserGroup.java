@@ -18,12 +18,19 @@
 package org.apache.hadoop.nfs.nfs3;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BiMap;
@@ -43,11 +50,15 @@ public class IdUserGroup {
   static final String MAC_GET_ALL_USERS_CMD = "dscl . -list /Users UniqueID";
   static final String MAC_GET_ALL_GROUPS_CMD = "dscl . -list /Groups PrimaryGroupID";
 
-  // Do update every 15 minutes by default
-  final static long TIMEOUT_DEFAULT = 15 * 60 * 1000; // ms
-  final static long TIMEOUT_MIN = 1 * 60 * 1000; // ms
+  private final File staticMappingFile;
+
+  // Used for parsing the static mapping file.
+  private static final Pattern EMPTY_LINE = Pattern.compile("^\\s*$");
+  private static final Pattern COMMENT_LINE = Pattern.compile("^\\s*#.*$");
+  private static final Pattern MAPPING_LINE =
+      Pattern.compile("^(uid|gid)\\s+(\\d+)\\s+(\\d+)\\s*(#.*)?$");
+
   final private long timeout;
-  final static String NFS_USERUPDATE_MILLY = "hadoop.nfs.userupdate.milly";
   
   // Maps for id to name map. Guarded by this object monitor lock
   private BiMap<Integer, String> uidNameMap = HashBiMap.create();
@@ -55,21 +66,23 @@ public class IdUserGroup {
 
   private long lastUpdateTime = 0; // Last time maps were updated
   
-  public IdUserGroup() throws IOException {
-    timeout = TIMEOUT_DEFAULT;
-    updateMaps();
-  }
-  
   public IdUserGroup(Configuration conf) throws IOException {
-    long updateTime = conf.getLong(NFS_USERUPDATE_MILLY, TIMEOUT_DEFAULT);
+    long updateTime = conf.getLong(
+        Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_KEY,
+        Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_DEFAULT);
     // Minimal interval is 1 minute
-    if (updateTime < TIMEOUT_MIN) {
+    if (updateTime < Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_MIN) {
       LOG.info("User configured user account update time is less"
           + " than 1 minute. Use 1 minute instead.");
-      timeout = TIMEOUT_MIN;
+      timeout = Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_MIN;
     } else {
       timeout = updateTime;
     }
+    
+    String staticFilePath = conf.get(Nfs3Constant.NFS_STATIC_MAPPING_FILE_KEY,
+        Nfs3Constant.NFS_STATIC_MAPPING_FILE_DEFAULT);
+    staticMappingFile = new File(staticFilePath);
+    
     updateMaps();
   }
 
@@ -79,7 +92,7 @@ public class IdUserGroup {
   }
   
   synchronized private boolean isExpired() {
-    return lastUpdateTime - System.currentTimeMillis() > timeout;
+    return Time.monotonicNow() - lastUpdateTime > timeout;
   }
 
   // If can't update the maps, will keep using the old ones
@@ -113,14 +126,31 @@ public class IdUserGroup {
           "The new entry is to be ignored for the following reason.",
           DUPLICATE_NAME_ID_DEBUG_INFO));
   }
-      
+
+  /**
+   * uid and gid are defined as uint32 in linux. Some systems create
+   * (intended or unintended) <nfsnobody, 4294967294> kind of <name,Id>
+   * mapping, where 4294967294 is 2**32-2 as unsigned int32. As an example,
+   *   https://bugzilla.redhat.com/show_bug.cgi?id=511876.
+   * Because user or group id are treated as Integer (signed integer or int32)
+   * here, the number 4294967294 is out of range. The solution is to convert
+   * uint32 to int32, so to map the out-of-range ID to the negative side of
+   * Integer, e.g. 4294967294 maps to -2 and 4294967295 maps to -1.
+   */
+  private static Integer parseId(final String idStr) {
+    Long longVal = Long.parseLong(idStr);
+    int intVal = longVal.intValue();
+    return Integer.valueOf(intVal);
+  }
+  
   /**
    * Get the whole list of users and groups and save them in the maps.
    * @throws IOException 
    */
   @VisibleForTesting
   public static void updateMapInternal(BiMap<Integer, String> map, String mapName,
-      String command, String regex) throws IOException  {
+      String command, String regex, Map<Integer, Integer> staticMapping)
+      throws IOException  {
     BufferedReader br = null;
     try {
       Process process = Runtime.getRuntime().exec(
@@ -134,8 +164,8 @@ public class IdUserGroup {
         }
         LOG.debug("add to " + mapName + "map:" + nameId[0] + " id:" + nameId[1]);
         // HDFS can't differentiate duplicate names with simple authentication
-        final Integer key = Integer.valueOf(nameId[1]);
-        final String value = nameId[0];        
+        final Integer key = staticMapping.get(parseId(nameId[1]));
+        final String value = nameId[0];
         if (map.containsKey(key)) {
           final String prevValue = map.get(key);
           if (value.equals(prevValue)) {
@@ -156,7 +186,7 @@ public class IdUserGroup {
         }
         map.put(key, value);
       }
-      LOG.info("Updated " + mapName + " map size:" + map.size());
+      LOG.info("Updated " + mapName + " map size: " + map.size());
       
     } catch (IOException e) {
       LOG.error("Can't update " + mapName + " map");
@@ -182,19 +212,114 @@ public class IdUserGroup {
           + " 'nobody' will be used for any user and group.");
       return;
     }
+    
+    StaticMapping staticMapping = new StaticMapping(
+        new HashMap<Integer, Integer>(), new HashMap<Integer, Integer>());
+    if (staticMappingFile.exists()) {
+      LOG.info("Using '" + staticMappingFile + "' for static UID/GID mapping...");
+      staticMapping = parseStaticMap(staticMappingFile);
+    } else {
+      LOG.info("Not doing static UID/GID mapping because '" + staticMappingFile
+          + "' does not exist.");
+    }
 
     if (OS.startsWith("Linux")) {
-      updateMapInternal(uMap, "user", LINUX_GET_ALL_USERS_CMD, ":");
-      updateMapInternal(gMap, "group", LINUX_GET_ALL_GROUPS_CMD, ":");
+      updateMapInternal(uMap, "user", LINUX_GET_ALL_USERS_CMD, ":",
+          staticMapping.uidMapping);
+      updateMapInternal(gMap, "group", LINUX_GET_ALL_GROUPS_CMD, ":",
+          staticMapping.gidMapping);
     } else {
       // Mac
-      updateMapInternal(uMap, "user", MAC_GET_ALL_USERS_CMD, "\\s+");
-      updateMapInternal(gMap, "group", MAC_GET_ALL_GROUPS_CMD, "\\s+");
+      updateMapInternal(uMap, "user", MAC_GET_ALL_USERS_CMD, "\\s+",
+          staticMapping.uidMapping);
+      updateMapInternal(gMap, "group", MAC_GET_ALL_GROUPS_CMD, "\\s+",
+          staticMapping.gidMapping);
     }
 
     uidNameMap = uMap;
     gidNameMap = gMap;
-    lastUpdateTime = System.currentTimeMillis();
+    lastUpdateTime = Time.monotonicNow();
+  }
+  
+  @SuppressWarnings("serial")
+  static final class PassThroughMap<K> extends HashMap<K, K> {
+    
+    public PassThroughMap() {
+      this(new HashMap<K, K>());
+    }
+    
+    public PassThroughMap(Map<K, K> mapping) {
+      super();
+      for (Map.Entry<K, K> entry : mapping.entrySet()) {
+        super.put(entry.getKey(), entry.getValue());
+      }
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public K get(Object key) {
+      if (super.containsKey(key)) {
+        return super.get(key);
+      } else {
+        return (K) key;
+      }
+    }
+  }
+  
+  @VisibleForTesting
+  static final class StaticMapping {
+    final Map<Integer, Integer> uidMapping;
+    final Map<Integer, Integer> gidMapping;
+    
+    public StaticMapping(Map<Integer, Integer> uidMapping,
+        Map<Integer, Integer> gidMapping) {
+      this.uidMapping = new PassThroughMap<Integer>(uidMapping);
+      this.gidMapping = new PassThroughMap<Integer>(gidMapping);
+    }
+  }
+  
+  static StaticMapping parseStaticMap(File staticMapFile)
+      throws IOException {
+    
+    Map<Integer, Integer> uidMapping = new HashMap<Integer, Integer>();
+    Map<Integer, Integer> gidMapping = new HashMap<Integer, Integer>();
+    
+    BufferedReader in = new BufferedReader(new InputStreamReader(
+        new FileInputStream(staticMapFile)));
+    
+    try {
+      String line = null;
+      while ((line = in.readLine()) != null) {
+        // Skip entirely empty and comment lines.
+        if (EMPTY_LINE.matcher(line).matches() ||
+            COMMENT_LINE.matcher(line).matches()) {
+          continue;
+        }
+        
+        Matcher lineMatcher = MAPPING_LINE.matcher(line);
+        if (!lineMatcher.matches()) {
+          LOG.warn("Could not parse line '" + line + "'. Lines should be of " +
+              "the form '[uid|gid] [remote id] [local id]'. Blank lines and " +
+              "everything following a '#' on a line will be ignored.");
+          continue;
+        }
+        
+        // We know the line is fine to parse without error checking like this
+        // since it matched the regex above.
+        String firstComponent = lineMatcher.group(1);
+        int remoteId = Integer.parseInt(lineMatcher.group(2));
+        int localId = Integer.parseInt(lineMatcher.group(3));
+        if (firstComponent.equals("uid")) {
+          uidMapping.put(localId, remoteId);
+        } else {
+          gidMapping.put(localId, remoteId);
+        }
+      }
+    } finally {
+      in.close();
+    }
+    
+    return new StaticMapping(uidMapping, gidMapping);
   }
 
   synchronized public int getUid(String user) throws IOException {

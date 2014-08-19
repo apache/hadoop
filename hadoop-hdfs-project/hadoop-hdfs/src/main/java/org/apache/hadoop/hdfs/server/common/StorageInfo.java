@@ -148,8 +148,8 @@ public class StorageInfo {
    * Get common storage fields.
    * Should be overloaded if additional fields need to be get.
    * 
-   * @param props
-   * @throws IOException
+   * @param props properties
+   * @throws IOException on error
    */
   protected void setFieldsFromProperties(
       Properties props, StorageDirectory sd) throws IOException {

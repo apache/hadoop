@@ -25,14 +25,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.swift.exceptions.SwiftConfigurationException;
-import org.apache.hadoop.fs.swift.exceptions.SwiftNotDirectoryException;
 import org.apache.hadoop.fs.swift.exceptions.SwiftOperationFailedException;
-import org.apache.hadoop.fs.swift.exceptions.SwiftPathExistsException;
 import org.apache.hadoop.fs.swift.exceptions.SwiftUnsupportedFeatureException;
 import org.apache.hadoop.fs.swift.http.SwiftProtocolConstants;
 import org.apache.hadoop.fs.swift.util.DurationStats;
@@ -373,7 +373,7 @@ public class SwiftNativeFileSystem extends FileSystem {
    * @param directory path to query
    * @return true iff the directory should be created
    * @throws IOException IO problems
-   * @throws SwiftNotDirectoryException if the path references a file
+   * @throws ParentNotDirectoryException if the path references a file
    */
   private boolean shouldCreate(Path directory) throws IOException {
     FileStatus fileStatus;
@@ -388,9 +388,9 @@ public class SwiftNativeFileSystem extends FileSystem {
 
       if (!SwiftUtils.isDirectory(fileStatus)) {
         //if it's a file, raise an error
-        throw new SwiftNotDirectoryException(directory,
-                String.format(": can't mkdir since it exists and is not a directory: %s",
-                        fileStatus));
+        throw new ParentNotDirectoryException(
+                String.format("%s: can't mkdir since it exists and is not a directory: %s",
+                    directory, fileStatus));
       } else {
         //path exists, and it is a directory
         if (LOG.isDebugEnabled()) {
@@ -488,7 +488,7 @@ public class SwiftNativeFileSystem extends FileSystem {
         //overwrite set -> delete the object.
         store.delete(absolutePath, true);
       } else {
-        throw new SwiftPathExistsException("Path exists: " + file);
+        throw new FileAlreadyExistsException("Path exists: " + file);
       }
     } else {
       // destination does not exist -trigger creation of the parent
@@ -578,6 +578,9 @@ public class SwiftNativeFileSystem extends FileSystem {
       //success
       return true;
     } catch (SwiftOperationFailedException e) {
+      //downgrade to a failure
+      return false;
+    } catch (FileAlreadyExistsException e) {
       //downgrade to a failure
       return false;
     } catch (FileNotFoundException e) {

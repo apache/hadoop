@@ -98,7 +98,6 @@ public class BlockMetadataHeader {
 
   /**
    * This reads all the fields till the beginning of checksum.
-   * @param in 
    * @return Metadata Header
    * @throws IOException
    */
@@ -109,9 +108,7 @@ public class BlockMetadataHeader {
   /**
    * Reads header at the top of metadata file and returns the header.
    * 
-   * @param dataset
-   * @param block
-   * @return
+   * @return metadata header for the block
    * @throws IOException
    */
   public static BlockMetadataHeader readHeader(File file) throws IOException {
@@ -147,8 +144,6 @@ public class BlockMetadataHeader {
   /**
    * This writes all the fields till the beginning of checksum.
    * @param out DataOutputStream
-   * @param header 
-   * @return 
    * @throws IOException
    */
   @VisibleForTesting
@@ -161,9 +156,7 @@ public class BlockMetadataHeader {
   
   /**
    * Writes all the fields till the beginning of checksum.
-   * @param out
-   * @param checksum
-   * @throws IOException
+   * @throws IOException on error
    */
   static void writeHeader(DataOutputStream out, DataChecksum checksum)
                          throws IOException {

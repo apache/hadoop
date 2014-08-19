@@ -69,7 +69,15 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   @Public
   @Stable
   public List<QueueUserACLInfo> getQueueUserAclInfo();
-  
+
+  /**
+   * Get the whole resource capacity of the cluster.
+   * @return the whole resource capacity of the cluster.
+   */
+  @LimitedPrivate("yarn")
+  @Unstable
+  public Resource getClusterResource();
+
   /**
    * Get minimum allocatable {@link Resource}.
    * @return minimum allocatable resource
@@ -182,7 +190,7 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   @LimitedPrivate("yarn")
   @Unstable
   public RMContainer getRMContainer(ContainerId containerId);
-  
+
   /**
    * Moves the given application to the given queue
    * @param appId
@@ -194,4 +202,22 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   @Evolving
   public String moveApplication(ApplicationId appId, String newQueue)
       throws YarnException;
+
+  /**
+   * Completely drain sourceQueue of applications, by moving all of them to
+   * destQueue.
+   *
+   * @param sourceQueue
+   * @param destQueue
+   * @throws YarnException
+   */
+  void moveAllApps(String sourceQueue, String destQueue) throws YarnException;
+
+  /**
+   * Terminate all applications in the specified queue.
+   *
+   * @param queueName the name of queue to be drained
+   * @throws YarnException
+   */
+  void killAllAppsInQueue(String queueName) throws YarnException;
 }

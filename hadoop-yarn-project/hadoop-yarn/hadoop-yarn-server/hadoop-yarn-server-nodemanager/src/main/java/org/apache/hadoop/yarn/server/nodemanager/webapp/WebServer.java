@@ -55,7 +55,9 @@ public class WebServer extends AbstractService {
 
   @Override
   protected void serviceStart() throws Exception {
-    String bindAddress = WebAppUtils.getNMWebAppURLWithoutScheme(getConfig());
+    String bindAddress = WebAppUtils.getWebAppBindURL(getConfig(),
+                          YarnConfiguration.NM_BIND_HOST,
+                          WebAppUtils.getNMWebAppURLWithoutScheme(getConfig()));
     
     LOG.info("Instantiating NMWebApp at " + bindAddress);
     try {

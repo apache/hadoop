@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
@@ -49,6 +50,8 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FilesUnderConstructio
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeDirectorySection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.AclFeatureProto;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.XAttrCompactProto;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.XAttrFeatureProto;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
@@ -74,6 +77,14 @@ public final class FSImageFormatPBINode {
       .values();
   private static final AclEntryType[] ACL_ENTRY_TYPE_VALUES = AclEntryType
       .values();
+  
+  private static final int XATTR_NAMESPACE_MASK = 3;
+  private static final int XATTR_NAMESPACE_OFFSET = 30;
+  private static final int XATTR_NAME_MASK = (1 << 24) - 1;
+  private static final int XATTR_NAME_OFFSET = 6;
+  private static final XAttr.NameSpace[] XATTR_NAMESPACE_VALUES = 
+      XAttr.NameSpace.values();
+  
 
   private static final Log LOG = LogFactory.getLog(FSImageFormatPBINode.class);
 
@@ -103,6 +114,25 @@ public final class FSImageFormatPBINode {
       }
       return b.build();
     }
+    
+    public static ImmutableList<XAttr> loadXAttrs(
+        XAttrFeatureProto proto, final String[] stringTable) {
+      ImmutableList.Builder<XAttr> b = ImmutableList.builder();
+      for (XAttrCompactProto xAttrCompactProto : proto.getXAttrsList()) {
+        int v = xAttrCompactProto.getName();
+        int nid = (v >> XATTR_NAME_OFFSET) & XATTR_NAME_MASK;
+        int ns = (v >> XATTR_NAMESPACE_OFFSET) & XATTR_NAMESPACE_MASK;
+        String name = stringTable[nid];
+        byte[] value = null;
+        if (xAttrCompactProto.getValue() != null) {
+          value = xAttrCompactProto.getValue().toByteArray();
+        }
+        b.add(new XAttr.Builder().setNameSpace(XATTR_NAMESPACE_VALUES[ns])
+            .setName(name).setValue(value).build());
+      }
+      
+      return b.build();
+    }
 
     public static INodeDirectory loadINodeDirectory(INodeSection.INode n,
         LoaderContext state) {
@@ -122,6 +152,10 @@ public final class FSImageFormatPBINode {
       if (d.hasAcl()) {
         dir.addAclFeature(new AclFeature(loadAclEntries(d.getAcl(),
             state.getStringTable())));
+      }
+      if (d.hasXAttrs()) {
+        dir.addXAttrFeature(new XAttrFeature(
+            loadXAttrs(d.getXAttrs(), state.getStringTable())));
       }
       return dir;
     }
@@ -255,12 +289,16 @@ public final class FSImageFormatPBINode {
         file.addAclFeature(new AclFeature(loadAclEntries(f.getAcl(),
             state.getStringTable())));
       }
+      
+      if (f.hasXAttrs()) {
+        file.addXAttrFeature(new XAttrFeature(
+            loadXAttrs(f.getXAttrs(), state.getStringTable())));
+      }
 
       // under-construction information
       if (f.hasFileUC()) {
         INodeSection.FileUnderConstructionFeature uc = f.getFileUC();
-        file.toUnderConstruction(uc.getClientName(), uc.getClientMachine(),
-            null);
+        file.toUnderConstruction(uc.getClientName(), uc.getClientMachine());
         if (blocks.length > 0) {
           BlockInfo lastBlk = file.getLastBlock();
           // replace the last block of file
@@ -295,6 +333,11 @@ public final class FSImageFormatPBINode {
       }
       dir.rootDir.cloneModificationTime(root);
       dir.rootDir.clonePermissionStatus(root);
+      // root dir supports having extended attributes according to POSIX
+      final XAttrFeature f = root.getXAttrFeature();
+      if (f != null) {
+        dir.rootDir.addXAttrFeature(f);
+      }
     }
   }
 
@@ -320,6 +363,26 @@ public final class FSImageFormatPBINode {
       }
       return b;
     }
+    
+    private static XAttrFeatureProto.Builder buildXAttrs(XAttrFeature f,
+        final SaverContext.DeduplicationMap<String> stringMap) {
+      XAttrFeatureProto.Builder b = XAttrFeatureProto.newBuilder();
+      for (XAttr a : f.getXAttrs()) {
+        XAttrCompactProto.Builder xAttrCompactBuilder = XAttrCompactProto.
+            newBuilder();
+        int v = ((a.getNameSpace().ordinal() & XATTR_NAMESPACE_MASK) << 
+            XATTR_NAMESPACE_OFFSET) 
+            | ((stringMap.getId(a.getName()) & XATTR_NAME_MASK) << 
+                XATTR_NAME_OFFSET);
+        xAttrCompactBuilder.setName(v);
+        if (a.getValue() != null) {
+          xAttrCompactBuilder.setValue(PBHelper.getByteString(a.getValue()));
+        }
+        b.addXAttrs(xAttrCompactBuilder.build());
+      }
+      
+      return b;
+    }
 
     public static INodeSection.INodeFile.Builder buildINodeFile(
         INodeFileAttributes file, final SaverContext state) {
@@ -333,6 +396,10 @@ public final class FSImageFormatPBINode {
       AclFeature f = file.getAclFeature();
       if (f != null) {
         b.setAcl(buildAclEntries(f, state.getStringMap()));
+      }
+      XAttrFeature xAttrFeature = file.getXAttrFeature();
+      if (xAttrFeature != null) {
+        b.setXAttrs(buildXAttrs(xAttrFeature, state.getStringMap()));
       }
       return b;
     }
@@ -349,6 +416,10 @@ public final class FSImageFormatPBINode {
       AclFeature f = dir.getAclFeature();
       if (f != null) {
         b.setAcl(buildAclEntries(f, state.getStringMap()));
+      }
+      XAttrFeature xAttrFeature = dir.getXAttrFeature();
+      if (xAttrFeature != null) {
+        b.setXAttrs(buildXAttrs(xAttrFeature, state.getStringMap()));
       }
       return b;
     }
@@ -460,8 +531,10 @@ public final class FSImageFormatPBINode {
       INodeSection.INodeFile.Builder b = buildINodeFile(n,
           parent.getSaverContext());
 
-      for (Block block : n.getBlocks()) {
-        b.addBlocks(PBHelper.convert(block));
+      if (n.getBlocks() != null) {
+        for (Block block : n.getBlocks()) {
+          b.addBlocks(PBHelper.convert(block));
+        }
       }
 
       FileUnderConstructionFeature uc = n.getFileUnderConstructionFeature();

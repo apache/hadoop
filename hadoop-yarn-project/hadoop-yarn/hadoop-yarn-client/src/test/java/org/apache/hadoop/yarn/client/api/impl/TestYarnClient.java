@@ -25,19 +25,26 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.junit.Assert;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.DataInputByteBuffer;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
@@ -69,19 +76,23 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationIdNotProvidedException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestYarnClient {
@@ -724,5 +735,81 @@ public class TestYarnClient {
     } finally {
       IOUtils.closeQuietly(client);
     }
+  }
+
+  @Test
+  public void testAutomaticTimelineDelegationTokenLoading()
+      throws Exception {
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, conf);
+    final Token<TimelineDelegationTokenIdentifier> dToken =
+        new Token<TimelineDelegationTokenIdentifier>();
+    // crate a mock client
+    YarnClientImpl client = new YarnClientImpl() {
+      @Override
+      protected void serviceInit(Configuration conf) throws Exception {
+        if (getConfig().getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED,
+            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED)) {
+          timelineServiceEnabled = true;
+          timelineClient = mock(TimelineClient.class);
+          when(timelineClient.getDelegationToken(any(String.class)))
+              .thenReturn(dToken);
+          timelineClient.init(getConfig());
+          timelineService = TimelineUtils.buildTimelineTokenService(getConfig());
+        }
+        this.setConfig(conf);
+      }
+
+      @Override
+      protected void serviceStart() throws Exception {
+        rmClient = mock(ApplicationClientProtocol.class);
+      }
+
+      @Override
+      protected void serviceStop() throws Exception {
+      }
+
+      @Override
+      public ApplicationReport getApplicationReport(ApplicationId appId) {
+        ApplicationReport report = mock(ApplicationReport.class);
+        when(report.getYarnApplicationState())
+            .thenReturn(YarnApplicationState.SUBMITTED);
+        return report;
+      }
+
+      @Override
+      public boolean isSecurityEnabled() {
+        return true;
+      }
+    };
+    client.init(conf);
+    client.start();
+    ApplicationSubmissionContext context =
+        mock(ApplicationSubmissionContext.class);
+    ApplicationId applicationId = ApplicationId.newInstance(0, 1);
+    when(context.getApplicationId()).thenReturn(applicationId);
+    DataOutputBuffer dob = new DataOutputBuffer();
+    Credentials credentials = new Credentials();
+    credentials.writeTokenStorageToStream(dob);
+    ByteBuffer tokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+    ContainerLaunchContext clc = ContainerLaunchContext.newInstance(
+        null, null, null, null, tokens, null);
+    when(context.getAMContainerSpec()).thenReturn(clc);
+    client.submitApplication(context);
+    // Check whether token is added or not
+    credentials = new Credentials();
+    DataInputByteBuffer dibb = new DataInputByteBuffer();
+    tokens = clc.getTokens();
+    if (tokens != null) {
+      dibb.reset(tokens);
+      credentials.readTokenStorageStream(dibb);
+      tokens.rewind();
+    }
+    Collection<Token<? extends TokenIdentifier>> dTokens =
+        credentials.getAllTokens();
+    Assert.assertEquals(1, dTokens.size());
+    Assert.assertEquals(dToken, dTokens.iterator().next());
+    client.stop();
   }
 }

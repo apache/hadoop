@@ -77,7 +77,8 @@ public class NNStorage extends Storage implements Closeable,
     IMAGE_ROLLBACK("fsimage_rollback"),
     EDITS_NEW ("edits.new"), // from "old" pre-HDFS-1073 format
     EDITS_INPROGRESS ("edits_inprogress"),
-    EDITS_TMP ("edits_tmp");
+    EDITS_TMP ("edits_tmp"),
+    IMAGE_LEGACY_OIV ("fsimage_legacy_oiv");  // For pre-PB format
 
     private String fileName = null;
     private NameNodeFile(String name) { this.fileName = name; }
@@ -425,8 +426,7 @@ public class NNStorage extends Storage implements Closeable,
   
   /**
    * Write last checkpoint time into a separate file.
-   *
-   * @param sd
+   * @param sd storage directory
    * @throws IOException
    */
   void writeTransactionIdFile(StorageDirectory sd, long txid) throws IOException {
@@ -694,6 +694,10 @@ public class NNStorage extends Storage implements Closeable,
     return getNameNodeFileName(NameNodeFile.IMAGE_ROLLBACK, txid);
   }
 
+  public static String getLegacyOIVImageFileName(long txid) {
+    return getNameNodeFileName(NameNodeFile.IMAGE_LEGACY_OIV, txid);
+  }
+
   private static String getNameNodeFileName(NameNodeFile nnf, long txid) {
     return String.format("%s_%019d", nnf.getName(), txid);
   }
@@ -832,7 +836,7 @@ public class NNStorage extends Storage implements Closeable,
    */
   void processStartupOptionsForUpgrade(StartupOption startOpt, int layoutVersion)
       throws IOException {
-    if (startOpt == StartupOption.UPGRADE) {
+    if (startOpt == StartupOption.UPGRADE || startOpt == StartupOption.UPGRADEONLY) {
       // If upgrade from a release that does not support federation,
       // if clusterId is provided in the startupOptions use it.
       // Else generate a new cluster ID      

@@ -158,6 +158,17 @@ public class FsPermission implements Writable {
     return (short)s;
   }
 
+  /**
+   * Encodes the object to a short.  Unlike {@link #toShort()}, this method may
+   * return values outside the fixed range 00000 - 01777 if extended features
+   * are encoded into this permission, such as the ACL bit.
+   *
+   * @return short extended short representation of this permission
+   */
+  public short toExtendedShort() {
+    return toShort();
+  }
+
   @Override
   public boolean equals(Object obj) {
     if (obj instanceof FsPermission) {
@@ -271,6 +282,16 @@ public class FsPermission implements Writable {
 
   public boolean getStickyBit() {
     return stickyBit;
+  }
+
+  /**
+   * Returns true if there is also an ACL (access control list).
+   *
+   * @return boolean true if there is also an ACL (access control list).
+   */
+  public boolean getAclBit() {
+    // File system subclasses that support the ACL bit would override this.
+    return false;
   }
 
   /** Set the user file creation mask (umask) */

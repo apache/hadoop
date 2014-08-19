@@ -111,7 +111,7 @@ public class ShortCircuitCache implements Closeable {
         Long evictionTimeNs = Long.valueOf(0);
         while (true) {
           Entry<Long, ShortCircuitReplica> entry = 
-              evictableMmapped.ceilingEntry(evictionTimeNs);
+              evictable.ceilingEntry(evictionTimeNs);
           if (entry == null) break;
           evictionTimeNs = entry.getKey();
           long evictionTimeMs = 
@@ -384,10 +384,6 @@ public class ShortCircuitCache implements Closeable {
     this.shmManager = shmManager;
   }
 
-  public long getMmapRetryTimeoutMs() {
-    return mmapRetryTimeoutMs;
-  }
-
   public long getStaleThresholdMs() {
     return staleThresholdMs;
   }
@@ -437,11 +433,22 @@ public class ShortCircuitCache implements Closeable {
   void unref(ShortCircuitReplica replica) {
     lock.lock();
     try {
-      // If the replica is stale, but we haven't purged it yet, let's do that.
-      // It would be a shame to evict a non-stale replica so that we could put
-      // a stale one into the cache.
-      if ((!replica.purged) && replica.isStale()) {
-        purge(replica);
+      // If the replica is stale or unusable, but we haven't purged it yet,
+      // let's do that.  It would be a shame to evict a non-stale replica so
+      // that we could put a stale or unusable one into the cache.
+      if (!replica.purged) {
+        String purgeReason = null;
+        if (!replica.getDataStream().getChannel().isOpen()) {
+          purgeReason = "purging replica because its data channel is closed.";
+        } else if (!replica.getMetaStream().getChannel().isOpen()) {
+          purgeReason = "purging replica because its meta channel is closed.";
+        } else if (replica.isStale()) {
+          purgeReason = "purging replica because it is stale.";
+        }
+        if (purgeReason != null) {
+          LOG.debug(this + ": " + purgeReason);
+          purge(replica);
+        }
       }
       String addedString = "";
       boolean shouldTrimEvictionMaps = false;
@@ -836,7 +843,7 @@ public class ShortCircuitCache implements Closeable {
         } else if (replica.mmapData instanceof Long) {
           long lastAttemptTimeMs = (Long)replica.mmapData;
           long delta = Time.monotonicNow() - lastAttemptTimeMs;
-          if (delta < staleThresholdMs) {
+          if (delta < mmapRetryTimeoutMs) {
             if (LOG.isTraceEnabled()) {
               LOG.trace(this + ": can't create client mmap for " +
                   replica + " because we failed to " +

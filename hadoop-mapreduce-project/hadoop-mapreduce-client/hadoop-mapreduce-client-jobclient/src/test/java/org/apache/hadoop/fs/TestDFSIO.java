@@ -201,7 +201,6 @@ public class TestDFSIO implements Tool {
   @BeforeClass
   public static void beforeClass() throws Exception {
     bench = new TestDFSIO();
-    bench.getConf().setBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY, true);
     cluster = new MiniDFSCluster.Builder(bench.getConf())
                                 .numDataNodes(2)
                                 .format(true)
@@ -733,7 +732,6 @@ public class TestDFSIO implements Tool {
 
     config.setInt("test.io.file.buffer.size", bufferSize);
     config.setLong("test.io.skip.size", skipSize);
-    config.setBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY, true);
     FileSystem fs = FileSystem.get(config);
 
     if (isSequential) {

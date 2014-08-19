@@ -92,11 +92,11 @@
                                    }
           },
           {"name": "jobQueueName", "type": "string"},
-          {"name": "workflowId", "type": "string"},
-          {"name": "workflowName", "type": "string"},
-          {"name": "workflowNodeName", "type": "string"},
-          {"name": "workflowAdjacencies", "type": "string"},
-          {"name": "workflowTags", "type": "string"}
+          {"name": "workflowId", "type": ["null","string"], "default": null},
+          {"name": "workflowName", "type": ["null","string"], "default": null},
+          {"name": "workflowNodeName", "type": ["null","string"], "default": null},
+          {"name": "workflowAdjacencies", "type": ["null","string"], "default": null},
+          {"name": "workflowTags", "type": ["null","string"], "default": null}
       ]
      },
 
@@ -136,7 +136,7 @@
           {"name": "finishedMaps", "type": "int"},
           {"name": "finishedReduces", "type": "int"},
           {"name": "jobStatus", "type": "string"},
-          {"name": "diagnostics", "type": "string"}
+          {"name": "diagnostics", "type": ["null","string"], "default": null}
       ]
      },
 
@@ -205,8 +205,8 @@
           {"name": "httpPort", "type": "int"},
           {"name": "shufflePort", "type": "int"},
           {"name": "containerId", "type": "string"},
-          {"name": "locality", "type": "string"},
-          {"name": "avataar", "type": "string"}
+          {"name": "locality", "type": ["null","string"], "default": null},
+          {"name": "avataar", "type": ["null","string"], "default": null}
       ]
      },
 
@@ -221,7 +221,7 @@
           {"name": "rackname", "type": "string"},
           {"name": "status", "type": "string"},
           {"name": "error", "type": "string"},
-          {"name": "counters", "type": "JhCounters"},
+          {"name": "counters", "type": ["null","JhCounters"], "default": null},
           {"name": "clockSplits", "type": { "type": "array", "items": "int"}},
           {"name": "cpuUsages", "type": { "type": "array", "items": "int"}},
           {"name": "vMemKbytes", "type": { "type": "array", "items": "int"}},
@@ -237,7 +237,7 @@
           {"name": "error", "type": "string"},
           {"name": "failedDueToAttempt", "type": ["null", "string"] },
           {"name": "status", "type": "string"},
-          {"name": "counters", "type": "JhCounters"}
+          {"name": "counters", "type": ["null","JhCounters"], "default": null}
       ]
      },
 
@@ -248,7 +248,7 @@
           {"name": "finishTime", "type": "long"},
           {"name": "status", "type": "string"},
           {"name": "counters", "type": "JhCounters"},
-          {"name": "successfulAttemptId", "type": "string"}
+          {"name": "successfulAttemptId", "type": ["null","string"], "default": null}
       ]
      },
      	

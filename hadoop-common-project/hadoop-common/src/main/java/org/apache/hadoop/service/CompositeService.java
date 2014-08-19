@@ -141,8 +141,7 @@ public class CompositeService extends AbstractService {
    * @throws RuntimeException the first exception raised during the
    * stop process -<i>after all services are stopped</i>
    */
-  private synchronized void stop(int numOfServicesStarted,
-                                 boolean stopOnlyStartedServices) {
+  private void stop(int numOfServicesStarted, boolean stopOnlyStartedServices) {
     // stop in reverse order of start
     Exception firstException = null;
     List<Service> services = getServices();

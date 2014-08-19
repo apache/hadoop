@@ -30,9 +30,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 @InterfaceAudience.Private
 public class HDFSConcat {
   private final static String def_uri = "hdfs://localhost:9000";
-  /**
-   * @param args
-   */
+
   public static void main(String... args) throws IOException {
 
     if(args.length < 2) {

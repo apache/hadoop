@@ -165,7 +165,7 @@ public class TestRMApplicationHistoryWriter {
     when(container.getAllocatedResource()).thenReturn(
       Resource.newInstance(-1, -1));
     when(container.getAllocatedPriority()).thenReturn(Priority.UNDEFINED);
-    when(container.getStartTime()).thenReturn(0L);
+    when(container.getCreationTime()).thenReturn(0L);
     when(container.getFinishTime()).thenReturn(1L);
     when(container.getDiagnosticsInfo()).thenReturn("test diagnostics info");
     when(container.getLogURL()).thenReturn("test log url");
@@ -281,7 +281,7 @@ public class TestRMApplicationHistoryWriter {
     Assert.assertEquals(Resource.newInstance(-1, -1),
       containerHD.getAllocatedResource());
     Assert.assertEquals(Priority.UNDEFINED, containerHD.getPriority());
-    Assert.assertEquals(0L, container.getStartTime());
+    Assert.assertEquals(0L, container.getCreationTime());
 
     writer.containerFinished(container);
     for (int i = 0; i < MAX_RETRIES; ++i) {
@@ -420,7 +420,7 @@ public class TestRMApplicationHistoryWriter {
     int waitCount = 0;
     int allocatedSize = allocated.size();
     while (allocatedSize < request && waitCount++ < 200) {
-      Thread.sleep(100);
+      Thread.sleep(300);
       allocated =
           am.allocate(new ArrayList<ResourceRequest>(),
             new ArrayList<ContainerId>()).getAllocatedContainers();

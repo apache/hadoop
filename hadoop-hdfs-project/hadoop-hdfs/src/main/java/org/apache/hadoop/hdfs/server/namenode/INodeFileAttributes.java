@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile.HeaderFormat;
+import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
 
 /**
  * The attributes of a file.
@@ -35,6 +36,8 @@ public interface INodeFileAttributes extends INodeAttributes {
   /** @return the header as a long. */
   public long getHeaderLong();
 
+  public boolean metadataEquals(INodeFileAttributes other);
+
   /** A copy of the inode file attributes */
   public static class SnapshotCopy extends INodeAttributes.SnapshotCopy
       implements INodeFileAttributes {
@@ -42,11 +45,10 @@ public interface INodeFileAttributes extends INodeAttributes {
 
     public SnapshotCopy(byte[] name, PermissionStatus permissions,
         AclFeature aclFeature, long modificationTime, long accessTime,
-        short replication, long preferredBlockSize) {
-      super(name, permissions, aclFeature, modificationTime, accessTime);
-
-      final long h = HeaderFormat.combineReplication(0L, replication);
-      header = HeaderFormat.combinePreferredBlockSize(h, preferredBlockSize);
+        short replication, long preferredBlockSize, XAttrFeature xAttrsFeature) {
+      super(name, permissions, aclFeature, modificationTime, accessTime, 
+          xAttrsFeature);
+      header = HeaderFormat.toLong(preferredBlockSize, replication);
     }
 
     public SnapshotCopy(INodeFile file) {
@@ -67,6 +69,15 @@ public interface INodeFileAttributes extends INodeAttributes {
     @Override
     public long getHeaderLong() {
       return header;
+    }
+
+    @Override
+    public boolean metadataEquals(INodeFileAttributes other) {
+      return other != null
+          && getHeaderLong()== other.getHeaderLong()
+          && getPermissionLong() == other.getPermissionLong()
+          && getAclFeature() == other.getAclFeature()
+          && getXAttrFeature() == other.getXAttrFeature();
     }
   }
 }

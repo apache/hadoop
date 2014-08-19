@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_DEFAULT;
@@ -1106,6 +1107,55 @@ public final class FileContext {
         return fs.getFileStatus(p);
       }
     }.resolve(this, absF);
+  }
+
+  /**
+   * Checks if the user can access a path.  The mode specifies which access
+   * checks to perform.  If the requested permissions are granted, then the
+   * method returns normally.  If access is denied, then the method throws an
+   * {@link AccessControlException}.
+   * <p/>
+   * The default implementation of this method calls {@link #getFileStatus(Path)}
+   * and checks the returned permissions against the requested permissions.
+   * Note that the getFileStatus call will be subject to authorization checks.
+   * Typically, this requires search (execute) permissions on each directory in
+   * the path's prefix, but this is implementation-defined.  Any file system
+   * that provides a richer authorization model (such as ACLs) may override the
+   * default implementation so that it checks against that model instead.
+   * <p>
+   * In general, applications should avoid using this method, due to the risk of
+   * time-of-check/time-of-use race conditions.  The permissions on a file may
+   * change immediately after the access call returns.  Most applications should
+   * prefer running specific file system actions as the desired user represented
+   * by a {@link UserGroupInformation}.
+   *
+   * @param path Path to check
+   * @param mode type of access to check
+   * @throws AccessControlException if access is denied
+   * @throws FileNotFoundException if the path does not exist
+   * @throws UnsupportedFileSystemException if file system for <code>path</code>
+   *   is not supported
+   * @throws IOException see specific implementation
+   * 
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws 
+   *           undeclared exception to RPC server
+   */
+  @InterfaceAudience.LimitedPrivate({"HDFS", "Hive"})
+  public void access(final Path path, final FsAction mode)
+      throws AccessControlException, FileNotFoundException,
+      UnsupportedFileSystemException, IOException {
+    final Path absPath = fixRelativePart(path);
+    new FSLinkResolver<Void>() {
+      @Override
+      public Void next(AbstractFileSystem fs, Path p) throws IOException,
+          UnresolvedLinkException {
+        fs.access(p, mode);
+        return null;
+      }
+    }.resolve(this, absPath);
   }
 
   /**
@@ -2291,6 +2341,164 @@ public final class FileContext {
       public AclStatus next(final AbstractFileSystem fs, final Path p)
           throws IOException {
         return fs.getAclStatus(p);
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
+   * Set an xattr of a file or directory.
+   * The name must be prefixed with the namespace followed by ".". For example,
+   * "user.attr".
+   * <p/>
+   * Refer to the HDFS extended attributes user documentation for details.
+   *
+   * @param path Path to modify
+   * @param name xattr name.
+   * @param value xattr value.
+   * @throws IOException
+   */
+  public void setXAttr(Path path, String name, byte[] value)
+      throws IOException {
+    setXAttr(path, name, value, EnumSet.of(XAttrSetFlag.CREATE,
+        XAttrSetFlag.REPLACE));
+  }
+
+  /**
+   * Set an xattr of a file or directory.
+   * The name must be prefixed with the namespace followed by ".". For example,
+   * "user.attr".
+   * <p/>
+   * Refer to the HDFS extended attributes user documentation for details.
+   *
+   * @param path Path to modify
+   * @param name xattr name.
+   * @param value xattr value.
+   * @param flag xattr set flag
+   * @throws IOException
+   */
+  public void setXAttr(Path path, final String name, final byte[] value,
+      final EnumSet<XAttrSetFlag> flag) throws IOException {
+    final Path absF = fixRelativePart(path);
+    new FSLinkResolver<Void>() {
+      @Override
+      public Void next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        fs.setXAttr(p, name, value, flag);
+        return null;
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
+   * Get an xattr for a file or directory.
+   * The name must be prefixed with the namespace followed by ".". For example,
+   * "user.attr".
+   * <p/>
+   * Refer to the HDFS extended attributes user documentation for details.
+   *
+   * @param path Path to get extended attribute
+   * @param name xattr name.
+   * @return byte[] xattr value.
+   * @throws IOException
+   */
+  public byte[] getXAttr(Path path, final String name) throws IOException {
+    final Path absF = fixRelativePart(path);
+    return new FSLinkResolver<byte[]>() {
+      @Override
+      public byte[] next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        return fs.getXAttr(p, name);
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
+   * Get all of the xattrs for a file or directory.
+   * Only those xattrs for which the logged-in user has permissions to view
+   * are returned.
+   * <p/>
+   * Refer to the HDFS extended attributes user documentation for details.
+   *
+   * @param path Path to get extended attributes
+   * @return Map<String, byte[]> describing the XAttrs of the file or directory
+   * @throws IOException
+   */
+  public Map<String, byte[]> getXAttrs(Path path) throws IOException {
+    final Path absF = fixRelativePart(path);
+    return new FSLinkResolver<Map<String, byte[]>>() {
+      @Override
+      public Map<String, byte[]> next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        return fs.getXAttrs(p);
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
+   * Get all of the xattrs for a file or directory.
+   * Only those xattrs for which the logged-in user has permissions to view
+   * are returned.
+   * <p/>
+   * Refer to the HDFS extended attributes user documentation for details.
+   *
+   * @param path Path to get extended attributes
+   * @param names XAttr names.
+   * @return Map<String, byte[]> describing the XAttrs of the file or directory
+   * @throws IOException
+   */
+  public Map<String, byte[]> getXAttrs(Path path, final List<String> names)
+      throws IOException {
+    final Path absF = fixRelativePart(path);
+    return new FSLinkResolver<Map<String, byte[]>>() {
+      @Override
+      public Map<String, byte[]> next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        return fs.getXAttrs(p, names);
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
+   * Remove an xattr of a file or directory.
+   * The name must be prefixed with the namespace followed by ".". For example,
+   * "user.attr".
+   * <p/>
+   * Refer to the HDFS extended attributes user documentation for details.
+   *
+   * @param path Path to remove extended attribute
+   * @param name xattr name
+   * @throws IOException
+   */
+  public void removeXAttr(Path path, final String name) throws IOException {
+    final Path absF = fixRelativePart(path);
+    new FSLinkResolver<Void>() {
+      @Override
+      public Void next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        fs.removeXAttr(p, name);
+        return null;
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
+   * Get all of the xattr names for a file or directory.
+   * Only those xattr names which the logged-in user has permissions to view
+   * are returned.
+   * <p/>
+   * Refer to the HDFS extended attributes user documentation for details.
+   *
+   * @param path Path to get extended attributes
+   * @return List<String> of the XAttr names of the file or directory
+   * @throws IOException
+   */
+  public List<String> listXAttrs(Path path) throws IOException {
+    final Path absF = fixRelativePart(path);
+    return new FSLinkResolver<List<String>>() {
+      @Override
+      public List<String> next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        return fs.listXAttrs(p);
       }
     }.resolve(this, absF);
   }

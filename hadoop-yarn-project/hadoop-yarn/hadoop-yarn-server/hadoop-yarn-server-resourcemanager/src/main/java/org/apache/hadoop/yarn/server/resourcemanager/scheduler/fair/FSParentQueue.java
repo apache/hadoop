@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -32,8 +33,11 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 
 @Private
 @Unstable
@@ -157,6 +161,27 @@ public class FSParentQueue extends FSQueue {
   }
 
   @Override
+  public RMContainer preemptContainer() {
+    RMContainer toBePreempted = null;
+
+    // Find the childQueue which is most over fair share
+    FSQueue candidateQueue = null;
+    Comparator<Schedulable> comparator = policy.getComparator();
+    for (FSQueue queue : childQueues) {
+      if (candidateQueue == null ||
+          comparator.compare(queue, candidateQueue) > 0) {
+        candidateQueue = queue;
+      }
+    }
+
+    // Let the selected queue choose which of its container to preempt
+    if (candidateQueue != null) {
+      toBePreempted = candidateQueue.preemptContainer();
+    }
+    return toBePreempted;
+  }
+
+  @Override
   public List<FSQueue> getChildQueues() {
     return childQueues;
   }
@@ -199,5 +224,12 @@ public class FSParentQueue extends FSQueue {
   public ActiveUsersManager getActiveUsersManager() {
     // Should never be called since all applications are submitted to LeafQueues
     return null;
+  }
+
+  @Override
+  public void recoverContainer(Resource clusterResource,
+      SchedulerApplicationAttempt schedulerAttempt, RMContainer rmContainer) {
+    // TODO Auto-generated method stub
+    
   }
 }

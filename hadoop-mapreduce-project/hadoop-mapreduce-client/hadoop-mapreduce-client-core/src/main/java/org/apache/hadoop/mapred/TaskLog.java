@@ -199,16 +199,18 @@ public class TaskLog {
     // file first and then rename.
     File tmpIndexFile = getTmpIndexFile(currentTaskid, isCleanup);
 
-    BufferedOutputStream bos = 
-      new BufferedOutputStream(
-        SecureIOUtils.createForWrite(tmpIndexFile, 0644));
-    DataOutputStream dos = new DataOutputStream(bos);
-    //the format of the index file is
-    //LOG_DIR: <the dir where the task logs are really stored>
-    //STDOUT: <start-offset in the stdout file> <length>
-    //STDERR: <start-offset in the stderr file> <length>
-    //SYSLOG: <start-offset in the syslog file> <length>   
+    BufferedOutputStream bos = null;
+    DataOutputStream dos = null;
     try{
+      bos = new BufferedOutputStream(
+          SecureIOUtils.createForWrite(tmpIndexFile, 0644));
+      dos = new DataOutputStream(bos);
+      //the format of the index file is
+      //LOG_DIR: <the dir where the task logs are really stored>
+      //STDOUT: <start-offset in the stdout file> <length>
+      //STDERR: <start-offset in the stderr file> <length>
+      //SYSLOG: <start-offset in the syslog file> <length>   
+
       dos.writeBytes(LogFileDetail.LOCATION + logLocation + "\n"
           + LogName.STDOUT.toString() + ":");
       dos.writeBytes(Long.toString(prevOutLength) + " ");
@@ -225,8 +227,10 @@ public class TaskLog {
           + "\n");
       dos.close();
       dos = null;
+      bos.close();
+      bos = null;
     } finally {
-      IOUtils.cleanup(LOG, dos);
+      IOUtils.cleanup(LOG, dos, bos);
     }
 
     File indexFile = getIndexFile(currentTaskid, isCleanup);

@@ -168,7 +168,7 @@ class BlockSender implements java.io.Closeable {
    * @param block Block that is being read
    * @param startOffset starting offset to read from
    * @param length length of data to read
-   * @param corruptChecksumOk
+   * @param corruptChecksumOk if true, corrupt checksum is okay
    * @param verifyChecksum verify checksum while reading the data
    * @param sendChecksum send checksum to client.
    * @param datanode datanode from which the block is being read
@@ -687,7 +687,7 @@ class BlockSender implements java.io.Closeable {
     // Trigger readahead of beginning of file if configured.
     manageOsCache();
 
-    final long startTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
+    final long startTime = ClientTraceLog.isDebugEnabled() ? System.nanoTime() : 0;
     try {
       int maxChunksPerPacket;
       int pktBufSize = PacketHeader.PKT_MAX_HEADER_LEN;
@@ -733,9 +733,9 @@ class BlockSender implements java.io.Closeable {
         sentEntireByteRange = true;
       }
     } finally {
-      if (clientTraceFmt != null) {
+      if ((clientTraceFmt != null) && ClientTraceLog.isDebugEnabled()) {
         final long endTime = System.nanoTime();
-        ClientTraceLog.info(String.format(clientTraceFmt, totalRead,
+        ClientTraceLog.debug(String.format(clientTraceFmt, totalRead,
             initialOffset, endTime - startTime));
       }
       close();

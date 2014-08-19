@@ -135,7 +135,10 @@ public class DatanodeManager {
   
   /** The number of stale DataNodes */
   private volatile int numStaleNodes;
-  
+
+  /** The number of stale storages */
+  private volatile int numStaleStorages;
+
   /**
    * Whether or not this cluster has ever consisted of more than 1 rack,
    * according to the NetworkTopology.
@@ -331,9 +334,22 @@ public class DatanodeManager {
     return heartbeatManager;
   }
 
+  private boolean isInactive(DatanodeInfo datanode) {
+    if (datanode.isDecommissioned()) {
+      return true;
+    }
+
+    if (avoidStaleDataNodesForRead) {
+      return datanode.isStale(staleInterval);
+    }
+      
+    return false;
+  }
+  
   /** Sort the located blocks by the distance to the target host. */
   public void sortLocatedBlocks(final String targethost,
-      final List<LocatedBlock> locatedblocks) {
+      final List<LocatedBlock> locatedblocks,
+      boolean randomizeBlockLocationsPerBlock) {
     //sort the blocks
     // As it is possible for the separation of node manager and datanode, 
     // here we should get node but not datanode only .
@@ -351,9 +367,17 @@ public class DatanodeManager {
         DFSUtil.DECOM_COMPARATOR;
         
     for (LocatedBlock b : locatedblocks) {
-      networktopology.pseudoSortByDistance(client, b.getLocations());
+      DatanodeInfo[] di = b.getLocations();
       // Move decommissioned/stale datanodes to the bottom
-      Arrays.sort(b.getLocations(), comparator);
+      Arrays.sort(di, comparator);
+      
+      int lastActiveIndex = di.length - 1;
+      while (lastActiveIndex > 0 && isInactive(di[lastActiveIndex])) {
+          --lastActiveIndex;
+      }
+      int activeLen = lastActiveIndex + 1;      
+      networktopology.sortByDistance(client, b.getLocations(), activeLen, b
+          .getBlock().getBlockId(), randomizeBlockLocationsPerBlock);
     }
   }
   
@@ -371,6 +395,11 @@ public class DatanodeManager {
   /** @return the datanode descriptor for the host. */
   public DatanodeDescriptor getDatanodeByXferAddr(String host, int xferPort) {
     return host2DatanodeMap.getDatanodeByXferAddr(host, xferPort);
+  }
+
+  /** @return the Host2NodesMap */
+  public Host2NodesMap getHost2DatanodeMap() {
+    return this.host2DatanodeMap;
   }
 
   /**
@@ -435,9 +464,9 @@ public class DatanodeManager {
   }
 
   /**
-   * Get data node by storage ID.
+   * Get data node by datanode ID.
    * 
-   * @param nodeID
+   * @param nodeID datanode ID
    * @return DatanodeDescriptor or null if the node is not found.
    * @throws UnregisteredNodeException
    */
@@ -678,6 +707,52 @@ public class DatanodeManager {
   }
 
   /**
+   * Resolve a node's dependencies in the network. If the DNS to switch 
+   * mapping fails then this method returns empty list of dependencies 
+   * @param node to get dependencies for
+   * @return List of dependent host names
+   */
+  private List<String> getNetworkDependenciesWithDefault(DatanodeInfo node) {
+    List<String> dependencies;
+    try {
+      dependencies = getNetworkDependencies(node);
+    } catch (UnresolvedTopologyException e) {
+      LOG.error("Unresolved dependency mapping for host " + 
+          node.getHostName() +". Continuing with an empty dependency list");
+      dependencies = Collections.emptyList();
+    }
+    return dependencies;
+  }
+  
+  /**
+   * Resolves a node's dependencies in the network. If the DNS to switch 
+   * mapping fails to get dependencies, then this method throws 
+   * UnresolvedTopologyException. 
+   * @param node to get dependencies for
+   * @return List of dependent host names 
+   * @throws UnresolvedTopologyException if the DNS to switch mapping fails
+   */
+  private List<String> getNetworkDependencies(DatanodeInfo node)
+      throws UnresolvedTopologyException {
+    List<String> dependencies = Collections.emptyList();
+
+    if (dnsToSwitchMapping instanceof DNSToSwitchMappingWithDependency) {
+      //Get dependencies
+      dependencies = 
+          ((DNSToSwitchMappingWithDependency)dnsToSwitchMapping).getDependency(
+              node.getHostName());
+      if(dependencies == null) {
+        LOG.error("The dependency call returned null for host " + 
+            node.getHostName());
+        throw new UnresolvedTopologyException("The dependency call returned " + 
+            "null for host " + node.getHostName());
+      }
+    }
+
+    return dependencies;
+  }
+
+  /**
    * Remove an already decommissioned data node who is neither in include nor
    * exclude hosts lists from the the list of live or dead nodes.  This is used
    * to not display an already decommssioned data node to the operators.
@@ -749,7 +824,9 @@ public class DatanodeManager {
   }
 
   /** Start decommissioning the specified datanode. */
-  private void startDecommission(DatanodeDescriptor node) {
+  @InterfaceAudience.Private
+  @VisibleForTesting
+  public void startDecommission(DatanodeDescriptor node) {
     if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
       for (DatanodeStorageInfo storage : node.getStorageInfos()) {
         LOG.info("Start Decommissioning " + node + " " + storage
@@ -869,12 +946,14 @@ public class DatanodeManager {
           nodeS.setDisallowed(false); // Node is in the include list
 
           // resolve network location
-          if(this.rejectUnresolvedTopologyDN)
-          {
-            nodeS.setNetworkLocation(resolveNetworkLocation(nodeS));  
+          if(this.rejectUnresolvedTopologyDN) {
+            nodeS.setNetworkLocation(resolveNetworkLocation(nodeS));
+            nodeS.setDependentHostNames(getNetworkDependencies(nodeS));
           } else {
             nodeS.setNetworkLocation(
                 resolveNetworkLocationWithFallBackToDefaultLocation(nodeS));
+            nodeS.setDependentHostNames(
+                getNetworkDependenciesWithDefault(nodeS));
           }
           getNetworkTopology().add(nodeS);
             
@@ -900,9 +979,12 @@ public class DatanodeManager {
         // resolve network location
         if(this.rejectUnresolvedTopologyDN) {
           nodeDescr.setNetworkLocation(resolveNetworkLocation(nodeDescr));
+          nodeDescr.setDependentHostNames(getNetworkDependencies(nodeDescr));
         } else {
           nodeDescr.setNetworkLocation(
               resolveNetworkLocationWithFallBackToDefaultLocation(nodeDescr));
+          nodeDescr.setDependentHostNames(
+              getNetworkDependenciesWithDefault(nodeDescr));
         }
         networktopology.add(nodeDescr);
         nodeDescr.setSoftwareVersion(nodeReg.getSoftwareVersion());
@@ -1001,34 +1083,23 @@ public class DatanodeManager {
 
   /** @return the number of dead datanodes. */
   public int getNumDeadDataNodes() {
-    int numDead = 0;
-    synchronized (datanodeMap) {   
-      for(DatanodeDescriptor dn : datanodeMap.values()) {
-        if (isDatanodeDead(dn) ) {
-          numDead++;
-        }
-      }
-    }
-    return numDead;
+    return getDatanodeListForReport(DatanodeReportType.DEAD).size();
   }
 
   /** @return list of datanodes where decommissioning is in progress. */
   public List<DatanodeDescriptor> getDecommissioningNodes() {
-    namesystem.readLock();
-    try {
-      final List<DatanodeDescriptor> decommissioningNodes
-          = new ArrayList<DatanodeDescriptor>();
-      final List<DatanodeDescriptor> results = getDatanodeListForReport(
-          DatanodeReportType.LIVE);
-      for(DatanodeDescriptor node : results) {
-        if (node.isDecommissionInProgress()) {
-          decommissioningNodes.add(node);
-        }
+    // There is no need to take namesystem reader lock as
+    // getDatanodeListForReport will synchronize on datanodeMap
+    final List<DatanodeDescriptor> decommissioningNodes
+        = new ArrayList<DatanodeDescriptor>();
+    final List<DatanodeDescriptor> results = getDatanodeListForReport(
+        DatanodeReportType.LIVE);
+    for(DatanodeDescriptor node : results) {
+      if (node.isDecommissionInProgress()) {
+        decommissioningNodes.add(node);
       }
-      return decommissioningNodes;
-    } finally {
-      namesystem.readUnlock();
     }
+    return decommissioningNodes;
   }
   
   /* Getter and Setter for stale DataNodes related attributes */
@@ -1074,6 +1145,22 @@ public class DatanodeManager {
     return this.numStaleNodes;
   }
 
+  /**
+   * Get the number of content stale storages.
+   */
+  public int getNumStaleStorages() {
+    return numStaleStorages;
+  }
+
+  /**
+   * Set the number of content stale storages.
+   *
+   * @param numStaleStorages The number of content stale storages.
+   */
+  void setNumStaleStorages(int numStaleStorages) {
+    this.numStaleStorages = numStaleStorages;
+  }
+
   /** Fetch live and dead datanodes. */
   public void fetchDatanodes(final List<DatanodeDescriptor> live, 
       final List<DatanodeDescriptor> dead, final boolean removeDecommissionNode) {
@@ -1081,23 +1168,20 @@ public class DatanodeManager {
       throw new HadoopIllegalArgumentException("Both live and dead lists are null");
     }
 
-    namesystem.readLock();
-    try {
-      final List<DatanodeDescriptor> results =
-          getDatanodeListForReport(DatanodeReportType.ALL);    
-      for(DatanodeDescriptor node : results) {
-        if (isDatanodeDead(node)) {
-          if (dead != null) {
-            dead.add(node);
-          }
-        } else {
-          if (live != null) {
-            live.add(node);
-          }
+    // There is no need to take namesystem reader lock as
+    // getDatanodeListForReport will synchronize on datanodeMap
+    final List<DatanodeDescriptor> results =
+        getDatanodeListForReport(DatanodeReportType.ALL);
+    for(DatanodeDescriptor node : results) {
+      if (isDatanodeDead(node)) {
+        if (dead != null) {
+          dead.add(node);
+        }
+      } else {
+        if (live != null) {
+          live.add(node);
         }
       }
-    } finally {
-      namesystem.readUnlock();
     }
     
     if (removeDecommissionNode) {
@@ -1189,10 +1273,15 @@ public class DatanodeManager {
   /** For generating datanode reports */
   public List<DatanodeDescriptor> getDatanodeListForReport(
       final DatanodeReportType type) {
-    boolean listLiveNodes = type == DatanodeReportType.ALL ||
-                            type == DatanodeReportType.LIVE;
-    boolean listDeadNodes = type == DatanodeReportType.ALL ||
-                            type == DatanodeReportType.DEAD;
+    final boolean listLiveNodes =
+        type == DatanodeReportType.ALL ||
+        type == DatanodeReportType.LIVE;
+    final boolean listDeadNodes =
+        type == DatanodeReportType.ALL ||
+        type == DatanodeReportType.DEAD;
+    final boolean listDecommissioningNodes =
+        type == DatanodeReportType.ALL ||
+        type == DatanodeReportType.DECOMMISSIONING;
 
     ArrayList<DatanodeDescriptor> nodes;
     final HostFileManager.HostSet foundNodes = new HostFileManager.HostSet();
@@ -1203,7 +1292,10 @@ public class DatanodeManager {
       nodes = new ArrayList<DatanodeDescriptor>(datanodeMap.size());
       for (DatanodeDescriptor dn : datanodeMap.values()) {
         final boolean isDead = isDatanodeDead(dn);
-        if ((listLiveNodes && !isDead) || (listDeadNodes && isDead)) {
+        final boolean isDecommissioning = dn.isDecommissionInProgress();
+        if ((listLiveNodes && !isDead) ||
+            (listDeadNodes && isDead) ||
+            (listDecommissioningNodes && isDecommissioning)) {
             nodes.add(dn);
         }
         foundNodes.add(HostFileManager.resolvedAddressFromDatanodeID(dn));

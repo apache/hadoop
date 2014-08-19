@@ -104,7 +104,7 @@ public class HdfsConstants {
 
   // type of the datanode report
   public static enum DatanodeReportType {
-    ALL, LIVE, DEAD
+    ALL, LIVE, DEAD, DECOMMISSIONING
   }
 
   // An invalid transaction ID that will never be seen in a real namesystem.
@@ -124,7 +124,7 @@ public class HdfsConstants {
    * of a delgation token, indicating that the URI is a logical (HA)
    * URI.
    */
-  public static final String HA_DT_SERVICE_PREFIX = "ha-hdfs:";
+  public static final String HA_DT_SERVICE_PREFIX = "ha-";
 
 
   /**

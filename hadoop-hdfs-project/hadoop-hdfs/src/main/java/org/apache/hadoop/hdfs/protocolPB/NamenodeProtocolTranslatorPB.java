@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
+import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
 
@@ -61,7 +62,7 @@ import com.google.protobuf.ServiceException;
 @InterfaceAudience.Private
 @InterfaceStability.Stable
 public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
-    ProtocolMetaInterface, Closeable {
+    ProtocolMetaInterface, Closeable, ProtocolTranslator {
   /** RpcController is not used and hence is set to null */
   private final static RpcController NULL_CONTROLLER = null;
   
@@ -86,6 +87,11 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
   @Override
   public void close() {
     RPC.stopProxy(rpcProxy);
+  }
+
+  @Override
+  public Object getUnderlyingProxyObject() {
+    return rpcProxy;
   }
 
   @Override

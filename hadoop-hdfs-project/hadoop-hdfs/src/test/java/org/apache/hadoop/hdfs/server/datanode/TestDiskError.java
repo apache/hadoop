@@ -18,16 +18,13 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
-import java.nio.channels.ClosedChannelException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -38,6 +35,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -47,6 +45,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -149,9 +148,9 @@ public class TestDiskError {
 
     DataChecksum checksum = DataChecksum.newDataChecksum(
         DataChecksum.Type.CRC32, 512);
-    new Sender(out).writeBlock(block.getBlock(),
+    new Sender(out).writeBlock(block.getBlock(), StorageType.DEFAULT,
         BlockTokenSecretManager.DUMMY_TOKEN, "",
-        new DatanodeInfo[0], null,
+        new DatanodeInfo[0], new StorageType[0], null,
         BlockConstructionStage.PIPELINE_SETUP_CREATE, 1, 0L, 0L, 0L,
         checksum, CachingStrategy.newDefaultStrategy());
     out.flush();
@@ -201,15 +200,23 @@ public class TestDiskError {
     }
   }
   
+  /**
+   * Checks whether {@link DataNode#checkDiskErrorAsync()} is being called or not.
+   * Before refactoring the code the above function was not getting called 
+   * @throws IOException, InterruptedException
+   */
   @Test
-  public void testNetworkErrorsIgnored() {
-    DataNode dn = cluster.getDataNodes().iterator().next();
-    
-    assertTrue(dn.isNetworkRelatedException(new SocketException()));
-    assertTrue(dn.isNetworkRelatedException(new SocketTimeoutException()));
-    assertTrue(dn.isNetworkRelatedException(new ClosedChannelException()));
-    assertTrue(dn.isNetworkRelatedException(new Exception("Broken pipe foo bar")));
-    assertFalse(dn.isNetworkRelatedException(new Exception()));
-    assertFalse(dn.isNetworkRelatedException(new Exception("random problem")));
+  public void testcheckDiskError() throws IOException, InterruptedException {
+    if(cluster.getDataNodes().size() <= 0) {
+      cluster.startDataNodes(conf, 1, true, null, null);
+      cluster.waitActive();
+    }
+    DataNode dataNode = cluster.getDataNodes().get(0);
+    long slackTime = dataNode.checkDiskErrorInterval/2;
+    //checking for disk error
+    dataNode.checkDiskErrorAsync();
+    Thread.sleep(dataNode.checkDiskErrorInterval);
+    long lastDiskErrorCheck = dataNode.getLastDiskErrorCheck();
+    assertTrue("Disk Error check is not performed within  " + dataNode.checkDiskErrorInterval +  "  ms", ((Time.monotonicNow()-lastDiskErrorCheck) < (dataNode.checkDiskErrorInterval + slackTime)));
   }
 }

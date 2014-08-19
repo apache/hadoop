@@ -24,6 +24,7 @@ import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.util.Random;
+import com.google.common.base.Charsets;
 import com.google.common.primitives.Bytes;
 
 /** Unit tests for LargeUTF8. */
@@ -362,6 +363,27 @@ public class TestText extends TestCase {
     } catch(Exception ex) {
       fail("testReadWriteOperations error !!!");
     }        
+  }
+
+  public void testReadWithKnownLength() throws IOException {
+    String line = "hello world";
+    byte[] inputBytes = line.getBytes(Charsets.UTF_8);
+    DataInputBuffer in = new DataInputBuffer();
+    Text text = new Text();
+
+    in.reset(inputBytes, inputBytes.length);
+    text.readWithKnownLength(in, 5);
+    assertEquals("hello", text.toString());
+
+    // Read longer length, make sure it lengthens
+    in.reset(inputBytes, inputBytes.length);
+    text.readWithKnownLength(in, 7);
+    assertEquals("hello w", text.toString());
+
+    // Read shorter length, make sure it shortens
+    in.reset(inputBytes, inputBytes.length);
+    text.readWithKnownLength(in, 2);
+    assertEquals("he", text.toString());
   }
   
   /**

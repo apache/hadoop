@@ -94,10 +94,4 @@ public class WebHdfsTestUtil {
     Assert.assertEquals(expectedResponseCode, conn.getResponseCode());
     return WebHdfsFileSystem.jsonParse(conn, false);
   }
-
-  public static FSDataOutputStream write(final WebHdfsFileSystem webhdfs,
-      final HttpOpParam.Op op, final HttpURLConnection conn,
-      final int bufferSize) throws IOException {
-    return webhdfs.write(op, conn, bufferSize);
-  }
 }

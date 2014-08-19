@@ -53,6 +53,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.api.ResourceManagerConstants;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.api.ServerRMProxy;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
@@ -246,13 +247,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   @VisibleForTesting
   protected void registerWithRM()
       throws YarnException, IOException {
-    List<ContainerStatus> containerStatuses = getContainerStatuses();
+    List<NMContainerStatus> containerReports = getNMContainerStatuses();
     RegisterNodeManagerRequest request =
         RegisterNodeManagerRequest.newInstance(nodeId, httpPort, totalResource,
-          nodeManagerVersionId, containerStatuses);
-    if (containerStatuses != null) {
-      LOG.info("Registering with RM using finished containers :"
-          + containerStatuses);
+          nodeManagerVersionId, containerReports, getRunningApplications());
+    if (containerReports != null) {
+      LOG.info("Registering with RM using containers :" + containerReports);
     }
     RegisterNodeManagerResponse regNMResponse =
         resourceTracker.registerNodeManager(request);
@@ -364,8 +364,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         // Adding to finished containers cache. Cache will keep it around at
         // least for #durationToTrackStoppedContainers duration. In the
         // subsequent call to stop container it will get removed from cache.
-        updateStoppedContainersInCache(container.getContainerId());
-        addCompletedContainer(container);
+        addCompletedContainer(container.getContainerId());
       }
     }
     if (LOG.isDebugEnabled()) {
@@ -374,10 +373,42 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     }
     return containerStatuses;
   }
+  
+  private List<ApplicationId> getRunningApplications() {
+    List<ApplicationId> runningApplications = new ArrayList<ApplicationId>();
+    runningApplications.addAll(this.context.getApplications().keySet());
+    return runningApplications;
+  }
 
-  private void addCompletedContainer(Container container) {
+  // These NMContainerStatus are sent on NM registration and used by YARN only.
+  private List<NMContainerStatus> getNMContainerStatuses() {
+    List<NMContainerStatus> containerStatuses =
+        new ArrayList<NMContainerStatus>();
+    for (Container container : this.context.getContainers().values()) {
+      NMContainerStatus status =
+          container.getNMContainerStatus();
+      containerStatuses.add(status);
+      if (status.getContainerState().equals(ContainerState.COMPLETE)) {
+        // Adding to finished containers cache. Cache will keep it around at
+        // least for #durationToTrackStoppedContainers duration. In the
+        // subsequent call to stop container it will get removed from cache.
+        addCompletedContainer(container.getContainerId());
+      }
+    }
+    LOG.info("Sending out " + containerStatuses.size()
+      + " NM container statuses: " + containerStatuses);
+    return containerStatuses;
+  }
+
+  @Override
+  public void addCompletedContainer(ContainerId containerId) {
     synchronized (previousCompletedContainers) {
-      previousCompletedContainers.add(container.getContainerId());
+      previousCompletedContainers.add(containerId);
+    }
+    synchronized (recentlyStoppedContainers) {
+      removeVeryOldStoppedContainersFromCache();
+      recentlyStoppedContainers.put(containerId,
+        System.currentTimeMillis() + durationToTrackStoppedContainers);
     }
   }
 
@@ -424,16 +455,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     }
   }
   
-  @Private
-  @VisibleForTesting
-  public void updateStoppedContainersInCache(ContainerId containerId) {
-    synchronized (recentlyStoppedContainers) {
-      removeVeryOldStoppedContainersFromCache();
-      recentlyStoppedContainers.put(containerId,
-        System.currentTimeMillis() + durationToTrackStoppedContainers);
-    }
-  }
-  
   @Override
   public void clearFinishedContainersFromCache() {
     synchronized (recentlyStoppedContainers) {
@@ -449,8 +470,14 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       Iterator<ContainerId> i =
           recentlyStoppedContainers.keySet().iterator();
       while (i.hasNext()) {
-        if (recentlyStoppedContainers.get(i.next()) < currentTime) {
+        ContainerId cid = i.next();
+        if (recentlyStoppedContainers.get(cid) < currentTime) {
           i.remove();
+          try {
+            context.getNMStateStore().removeContainer(cid);
+          } catch (IOException e) {
+            LOG.error("Unable to remove container " + cid + " in store", e);
+          }
         } else {
           break;
         }
@@ -493,6 +520,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                     + " hence shutting down.");
               LOG.warn("Message from ResourceManager: "
                   + response.getDiagnosticsMessage());
+              context.setDecommissioned(true);
               dispatcher.getEventHandler().handle(
                   new NodeManagerEvent(NodeManagerEventType.SHUTDOWN));
               break;

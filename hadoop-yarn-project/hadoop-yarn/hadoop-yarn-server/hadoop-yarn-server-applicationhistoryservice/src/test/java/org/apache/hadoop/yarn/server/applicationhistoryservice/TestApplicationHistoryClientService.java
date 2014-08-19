@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.AHSWebApp;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -68,12 +69,13 @@ public class TestApplicationHistoryClientService extends
     historyServer.init(config);
     historyServer.start();
     store =
-        ((ApplicationHistoryManagerImpl) historyServer.getApplicationHistory())
+        ((ApplicationHistoryManagerImpl) historyServer.getApplicationHistoryManager())
           .getHistoryStore();
   }
 
   @After
   public void tearDown() throws Exception {
+    AHSWebApp.resetInstance();
     historyServer.stop();
   }
 

@@ -60,6 +60,7 @@ public class RMContextImpl implements RMContext {
     = new ConcurrentHashMap<String, RMNode>();
 
   private boolean isHAEnabled;
+  private boolean isWorkPreservingRecoveryEnabled;
   private HAServiceState haServiceState =
       HAServiceProtocol.HAServiceState.INITIALIZING;
   
@@ -81,6 +82,7 @@ public class RMContextImpl implements RMContext {
   private ApplicationMasterService applicationMasterService;
   private RMApplicationHistoryWriter rmApplicationHistoryWriter;
   private ConfigurationProvider configurationProvider;
+  private int epoch;
 
   /**
    * Default constructor. To be used in conjunction with setter methods for
@@ -329,6 +331,15 @@ public class RMContextImpl implements RMContext {
     }
   }
 
+  public void setWorkPreservingRecoveryEnabled(boolean enabled) {
+    this.isWorkPreservingRecoveryEnabled = enabled;
+  }
+
+  @Override
+  public boolean isWorkPreservingRecoveryEnabled() {
+    return this.isWorkPreservingRecoveryEnabled;
+  }
+
   @Override
   public RMApplicationHistoryWriter getRMApplicationHistoryWriter() {
     return rmApplicationHistoryWriter;
@@ -348,5 +359,14 @@ public class RMContextImpl implements RMContext {
   public void setConfigurationProvider(
       ConfigurationProvider configurationProvider) {
     this.configurationProvider = configurationProvider;
+  }
+
+  @Override
+  public int getEpoch() {
+    return this.epoch;
+  }
+
+ void setEpoch(int epoch) {
+    this.epoch = epoch;
   }
 }

@@ -107,17 +107,21 @@ message OpWriteBlockProto {
    */
   required ChecksumProto requestedChecksum = 9;
   optional CachingStrategyProto cachingStrategy = 10;
+  optional StorageTypeProto storageType = 11 [default = DISK];
+  repeated StorageTypeProto targetStorageTypes = 12;
 }
   
 message OpTransferBlockProto {
   required ClientOperationHeaderProto header = 1;
   repeated DatanodeInfoProto targets = 2;
+  repeated StorageTypeProto targetStorageTypes = 3;
 }
 
 message OpReplaceBlockProto {
   required BaseHeaderProto header = 1;
   required string delHint = 2;
   required DatanodeInfoProto source = 3;
+  optional StorageTypeProto storageType = 4 [default = DISK];
 }
 
 message OpCopyBlockProto {
@@ -203,6 +207,7 @@ enum Status {
   OOB_RESERVED1 = 9;          // Reserved
   OOB_RESERVED2 = 10;         // Reserved
   OOB_RESERVED3 = 11;         // Reserved
+  IN_PROGRESS = 12;
 }
 
 message PipelineAckProto {

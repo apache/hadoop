@@ -169,12 +169,11 @@ public class TestRenameWithSnapshots {
   }
   
   private static boolean existsInDiffReport(List<DiffReportEntry> entries,
-      DiffType type, String relativePath) {
+      DiffType type, String sourcePath, String targetPath) {
     for (DiffReportEntry entry : entries) {
-      System.out.println("DiffEntry is:" + entry.getType() + "\""
-          + new String(entry.getRelativePath()) + "\"");
-      if ((entry.getType() == type)
-          && ((new String(entry.getRelativePath())).compareTo(relativePath) == 0)) {
+      if (entry.equals(new DiffReportEntry(type, DFSUtil
+          .string2Bytes(sourcePath), targetPath == null ? null : DFSUtil
+          .string2Bytes(targetPath)))) {
         return true;
       }
     }
@@ -197,8 +196,9 @@ public class TestRenameWithSnapshots {
     SnapshotDiffReport diffReport = hdfs.getSnapshotDiffReport(sub1, snap1, "");
     List<DiffReportEntry> entries = diffReport.getDiffList();
     assertTrue(entries.size() == 2);
-    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, ""));
-    assertTrue(existsInDiffReport(entries, DiffType.CREATE, file2.getName()));
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, "", null));
+    assertTrue(existsInDiffReport(entries, DiffType.CREATE, file2.getName(),
+        null));
   }
 
   /**
@@ -217,10 +217,10 @@ public class TestRenameWithSnapshots {
     SnapshotDiffReport diffReport = hdfs.getSnapshotDiffReport(sub1, snap1, "");
     System.out.println("DiffList is " + diffReport.toString());
     List<DiffReportEntry> entries = diffReport.getDiffList();
-    assertTrue(entries.size() == 3);
-    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, ""));
-    assertTrue(existsInDiffReport(entries, DiffType.CREATE, file2.getName()));
-    assertTrue(existsInDiffReport(entries, DiffType.DELETE, file1.getName()));
+    assertTrue(entries.size() == 2);
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, "", null));
+    assertTrue(existsInDiffReport(entries, DiffType.RENAME, file1.getName(),
+        file2.getName()));
   }
 
   @Test (timeout=60000)
@@ -240,26 +240,26 @@ public class TestRenameWithSnapshots {
     diffReport = hdfs.getSnapshotDiffReport(sub1, snap1, snap2);
     LOG.info("DiffList is " + diffReport.toString());
     List<DiffReportEntry> entries = diffReport.getDiffList();
-    assertTrue(entries.size() == 3);
-    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, ""));
-    assertTrue(existsInDiffReport(entries, DiffType.CREATE, file2.getName()));
-    assertTrue(existsInDiffReport(entries, DiffType.DELETE, file1.getName()));
+    assertTrue(entries.size() == 2);
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, "", null));
+    assertTrue(existsInDiffReport(entries, DiffType.RENAME, file1.getName(),
+        file2.getName()));
     
     diffReport = hdfs.getSnapshotDiffReport(sub1, snap2, "");
     LOG.info("DiffList is " + diffReport.toString());
     entries = diffReport.getDiffList();
-    assertTrue(entries.size() == 3);
-    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, ""));
-    assertTrue(existsInDiffReport(entries, DiffType.CREATE, file3.getName()));
-    assertTrue(existsInDiffReport(entries, DiffType.DELETE, file2.getName()));
+    assertTrue(entries.size() == 2);
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, "", null));
+    assertTrue(existsInDiffReport(entries, DiffType.RENAME, file2.getName(),
+        file3.getName()));
     
     diffReport = hdfs.getSnapshotDiffReport(sub1, snap1, "");
     LOG.info("DiffList is " + diffReport.toString());
     entries = diffReport.getDiffList();
-    assertTrue(entries.size() == 3);
-    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, ""));
-    assertTrue(existsInDiffReport(entries, DiffType.CREATE, file3.getName()));
-    assertTrue(existsInDiffReport(entries, DiffType.DELETE, file1.getName()));
+    assertTrue(entries.size() == 2);
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, "", null));
+    assertTrue(existsInDiffReport(entries, DiffType.RENAME, file1.getName(),
+        file3.getName()));
   }
   
   @Test (timeout=60000)
@@ -282,11 +282,10 @@ public class TestRenameWithSnapshots {
         "");
     LOG.info("DiffList is \n\"" + diffReport.toString() + "\"");
     List<DiffReportEntry> entries = diffReport.getDiffList();
-    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, sub2.getName()));
-    assertTrue(existsInDiffReport(entries, DiffType.CREATE, sub2.getName()
-        + "/" + sub2file2.getName()));
-    assertTrue(existsInDiffReport(entries, DiffType.DELETE, sub2.getName()
-        + "/" + sub2file1.getName()));
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, sub2.getName(),
+        null));
+    assertTrue(existsInDiffReport(entries, DiffType.RENAME, sub2.getName()
+        + "/" + sub2file1.getName(), sub2.getName() + "/" + sub2file2.getName()));
   }
 
   @Test (timeout=60000)
@@ -309,10 +308,10 @@ public class TestRenameWithSnapshots {
         "");
     LOG.info("DiffList is \n\"" + diffReport.toString() + "\"");
     List<DiffReportEntry> entries = diffReport.getDiffList();
-    assertEquals(3, entries.size());
-    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, ""));
-    assertTrue(existsInDiffReport(entries, DiffType.CREATE, sub3.getName()));
-    assertTrue(existsInDiffReport(entries, DiffType.DELETE, sub2.getName()));
+    assertEquals(2, entries.size());
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, "", null));
+    assertTrue(existsInDiffReport(entries, DiffType.RENAME, sub2.getName(),
+        sub3.getName()));
   }
   
   /**
@@ -403,8 +402,7 @@ public class TestRenameWithSnapshots {
     final Path foo_s3 = SnapshotTestHelper.getSnapshotPath(sdir1, "s3",
         "foo");
     assertFalse(hdfs.exists(foo_s3));
-    INodeDirectorySnapshottable sdir2Node = 
-        (INodeDirectorySnapshottable) fsdir.getINode(sdir2.toString());
+    INodeDirectory sdir2Node = fsdir.getINode(sdir2.toString()).asDirectory();
     Snapshot s2 = sdir2Node.getSnapshot(DFSUtil.string2Bytes("s2"));
     INodeFile sfoo = fsdir.getINode(newfoo.toString()).asFile();
     assertEquals(s2.getId(), sfoo.getDiffs().getLastSnapshotId());
@@ -607,8 +605,7 @@ public class TestRenameWithSnapshots {
     
     INodeFile snode = fsdir.getINode(newfoo.toString()).asFile();
     assertEquals(1, snode.getDiffs().asList().size());
-    INodeDirectorySnapshottable sdir2Node = 
-        (INodeDirectorySnapshottable) fsdir.getINode(sdir2.toString());
+    INodeDirectory sdir2Node = fsdir.getINode(sdir2.toString()).asDirectory();
     Snapshot s2 = sdir2Node.getSnapshot(DFSUtil.string2Bytes("s2"));
     assertEquals(s2.getId(), snode.getDiffs().getLastSnapshotId());
     
@@ -763,8 +760,7 @@ public class TestRenameWithSnapshots {
     assertEquals(2, fooWithCount.getReferenceCount());
     INodeDirectory foo = fooWithCount.asDirectory();
     assertEquals(1, foo.getDiffs().asList().size());
-    INodeDirectorySnapshottable sdir1Node = 
-        (INodeDirectorySnapshottable) fsdir.getINode(sdir1.toString());
+    INodeDirectory sdir1Node = fsdir.getINode(sdir1.toString()).asDirectory();
     Snapshot s1 = sdir1Node.getSnapshot(DFSUtil.string2Bytes("s1"));
     assertEquals(s1.getId(), foo.getDirectoryWithSnapshotFeature()
         .getLastSnapshotId());
@@ -973,12 +969,9 @@ public class TestRenameWithSnapshots {
     hdfs.rename(bar_dir2, bar_dir1);
     
     // check the internal details
-    INodeDirectorySnapshottable sdir1Node = 
-        (INodeDirectorySnapshottable) fsdir.getINode(sdir1.toString());
-    INodeDirectorySnapshottable sdir2Node = 
-        (INodeDirectorySnapshottable) fsdir.getINode(sdir2.toString());
-    INodeDirectorySnapshottable sdir3Node = 
-        (INodeDirectorySnapshottable) fsdir.getINode(sdir3.toString());
+    INodeDirectory sdir1Node = fsdir.getINode(sdir1.toString()).asDirectory();
+    INodeDirectory sdir2Node = fsdir.getINode(sdir2.toString()).asDirectory();
+    INodeDirectory sdir3Node = fsdir.getINode(sdir3.toString()).asDirectory();
     
     INodeReference fooRef = fsdir.getINode4Write(foo_dir1.toString())
         .asReference();
@@ -1183,8 +1176,7 @@ public class TestRenameWithSnapshots {
     assertTrue(hdfs.exists(bar_s2));
     
     // check internal details
-    INodeDirectorySnapshottable sdir2Node = 
-        (INodeDirectorySnapshottable) fsdir.getINode(sdir2.toString());
+    INodeDirectory sdir2Node = fsdir.getINode(sdir2.toString()).asDirectory();
     Snapshot s2 = sdir2Node.getSnapshot(DFSUtil.string2Bytes("s2"));
     final Path foo_s2 = SnapshotTestHelper.getSnapshotPath(sdir2, "s2", "foo");
     INodeReference fooRef = fsdir.getINode(foo_s2.toString()).asReference();
@@ -1291,8 +1283,8 @@ public class TestRenameWithSnapshots {
     assertFalse(result);
     
     // check the current internal details
-    INodeDirectorySnapshottable dir1Node = (INodeDirectorySnapshottable) fsdir
-        .getINode4Write(sdir1.toString());
+    INodeDirectory dir1Node = fsdir.getINode4Write(sdir1.toString())
+        .asDirectory();
     Snapshot s1 = dir1Node.getSnapshot(DFSUtil.string2Bytes("s1"));
     ReadOnlyList<INode> dir1Children = dir1Node
         .getChildrenList(Snapshot.CURRENT_STATE_ID);
@@ -1361,8 +1353,8 @@ public class TestRenameWithSnapshots {
     assertFalse(result);
     
     // check the current internal details
-    INodeDirectorySnapshottable dir1Node = (INodeDirectorySnapshottable) fsdir
-        .getINode4Write(sdir1.toString());
+    INodeDirectory dir1Node = fsdir.getINode4Write(sdir1.toString())
+        .asDirectory();
     Snapshot s1 = dir1Node.getSnapshot(DFSUtil.string2Bytes("s1"));
     ReadOnlyList<INode> dir1Children = dir1Node
         .getChildrenList(Snapshot.CURRENT_STATE_ID);
@@ -1428,11 +1420,11 @@ public class TestRenameWithSnapshots {
     assertFalse(result);
     
     // check the current internal details
-    INodeDirectorySnapshottable dir1Node = (INodeDirectorySnapshottable) fsdir
-        .getINode4Write(sdir1.toString());
+    INodeDirectory dir1Node = fsdir.getINode4Write(sdir1.toString())
+        .asDirectory();
     Snapshot s1 = dir1Node.getSnapshot(DFSUtil.string2Bytes("s1"));
-    INodeDirectorySnapshottable dir2Node = (INodeDirectorySnapshottable) fsdir
-        .getINode4Write(sdir2.toString());
+    INodeDirectory dir2Node = fsdir.getINode4Write(sdir2.toString())
+        .asDirectory();
     Snapshot s2 = dir2Node.getSnapshot(DFSUtil.string2Bytes("s2"));
     ReadOnlyList<INode> dir2Children = dir2Node
         .getChildrenList(Snapshot.CURRENT_STATE_ID);
@@ -1459,8 +1451,7 @@ public class TestRenameWithSnapshots {
     assertFalse(result);
 
     // check internal details again
-    dir2Node = (INodeDirectorySnapshottable) fsdir.getINode4Write(sdir2
-        .toString());
+    dir2Node = fsdir.getINode4Write(sdir2.toString()).asDirectory();
     Snapshot s3 = dir2Node.getSnapshot(DFSUtil.string2Bytes("s3"));
     fooNode = fsdir.getINode4Write(foo_dir2.toString());
     dir2Children = dir2Node.getChildrenList(Snapshot.CURRENT_STATE_ID);
@@ -1600,8 +1591,8 @@ public class TestRenameWithSnapshots {
     assertTrue(diff.getChildrenDiff().getList(ListType.DELETED).isEmpty());
     
     // check dir2
-    INode dir2Node = fsdir.getINode4Write(dir2.toString());
-    assertTrue(dir2Node.getClass() == INodeDirectorySnapshottable.class);
+    INodeDirectory dir2Node = fsdir.getINode4Write(dir2.toString()).asDirectory();
+    assertTrue(dir2Node.isSnapshottable());
     Quota.Counts counts = dir2Node.computeQuotaUsage();
     assertEquals(3, counts.get(Quota.NAMESPACE));
     assertEquals(0, counts.get(Quota.DISKSPACE));
@@ -1611,8 +1602,7 @@ public class TestRenameWithSnapshots {
     INode subdir2Node = childrenList.get(0);
     assertSame(dir2Node, subdir2Node.getParent());
     assertSame(subdir2Node, fsdir.getINode4Write(subdir2.toString()));
-    diffList = ((INodeDirectorySnapshottable) dir2Node)
-        .getDiffs().asList();
+    diffList = dir2Node.getDiffs().asList();
     assertEquals(1, diffList.size());
     diff = diffList.get(0);
     assertTrue(diff.getChildrenDiff().getList(ListType.CREATED).isEmpty());
@@ -1674,8 +1664,8 @@ public class TestRenameWithSnapshots {
     assertTrue(diff.getChildrenDiff().getList(ListType.DELETED).isEmpty());
     
     // check dir2
-    INode dir2Node = fsdir.getINode4Write(dir2.toString());
-    assertTrue(dir2Node.getClass() == INodeDirectorySnapshottable.class);
+    INodeDirectory dir2Node = fsdir.getINode4Write(dir2.toString()).asDirectory();
+    assertTrue(dir2Node.isSnapshottable());
     Quota.Counts counts = dir2Node.computeQuotaUsage();
     assertEquals(4, counts.get(Quota.NAMESPACE));
     assertEquals(0, counts.get(Quota.DISKSPACE));
@@ -1690,7 +1680,7 @@ public class TestRenameWithSnapshots {
     assertTrue(subsubdir2Node.getClass() == INodeDirectory.class);
     assertSame(subdir2Node, subsubdir2Node.getParent());
     
-    diffList = ((INodeDirectorySnapshottable) dir2Node).getDiffs().asList();
+    diffList = (  dir2Node).getDiffs().asList();
     assertEquals(1, diffList.size());
     diff = diffList.get(0);
     assertTrue(diff.getChildrenDiff().getList(ListType.CREATED).isEmpty());
@@ -1724,8 +1714,8 @@ public class TestRenameWithSnapshots {
     }
     
     // check
-    INodeDirectorySnapshottable rootNode = (INodeDirectorySnapshottable) fsdir
-        .getINode4Write(root.toString());
+    INodeDirectory rootNode = fsdir.getINode4Write(root.toString())
+        .asDirectory();
     INodeDirectory fooNode = fsdir.getINode4Write(foo.toString()).asDirectory();
     ReadOnlyList<INode> children = fooNode
         .getChildrenList(Snapshot.CURRENT_STATE_ID);
@@ -1795,7 +1785,7 @@ public class TestRenameWithSnapshots {
     
     // check dir2
     INode dir2Node = fsdir.getINode4Write(dir2.toString());
-    assertTrue(dir2Node.getClass() == INodeDirectorySnapshottable.class);
+    assertTrue(dir2Node.asDirectory().isSnapshottable());
     Quota.Counts counts = dir2Node.computeQuotaUsage();
     assertEquals(7, counts.get(Quota.NAMESPACE));
     assertEquals(BLOCKSIZE * REPL * 2, counts.get(Quota.DISKSPACE));
@@ -1829,7 +1819,7 @@ public class TestRenameWithSnapshots {
   }
   
   /**
-   * move a directory to its prior descedant
+   * move a directory to its prior descendant
    */
   @Test
   public void testRename2PreDescendant_2() throws Exception {
@@ -1962,12 +1952,12 @@ public class TestRenameWithSnapshots {
     hdfs.deleteSnapshot(sdir2, "s3");
     
     // check
-    final INodeDirectorySnapshottable dir1Node = 
-        (INodeDirectorySnapshottable) fsdir.getINode4Write(sdir1.toString());
+    final INodeDirectory dir1Node = fsdir.getINode4Write(sdir1.toString())
+        .asDirectory();
     Quota.Counts q1 = dir1Node.getDirectoryWithQuotaFeature().getSpaceConsumed();  
     assertEquals(4, q1.get(Quota.NAMESPACE));
-    final INodeDirectorySnapshottable dir2Node = 
-        (INodeDirectorySnapshottable) fsdir.getINode4Write(sdir2.toString());
+    final INodeDirectory dir2Node = fsdir.getINode4Write(sdir2.toString())
+        .asDirectory();
     Quota.Counts q2 = dir2Node.getDirectoryWithQuotaFeature().getSpaceConsumed();  
     assertEquals(2, q2.get(Quota.NAMESPACE));
     
@@ -2031,13 +2021,13 @@ public class TestRenameWithSnapshots {
     hdfs.deleteSnapshot(sdir2, "s3");
     
     // check
-    final INodeDirectorySnapshottable dir1Node = 
-        (INodeDirectorySnapshottable) fsdir.getINode4Write(sdir1.toString());
+    final INodeDirectory dir1Node = fsdir.getINode4Write(sdir1.toString())
+        .asDirectory();
     // sdir1 + s1 + foo_s1 (foo) + foo (foo + s1 + bar~bar3)
     Quota.Counts q1 = dir1Node.getDirectoryWithQuotaFeature().getSpaceConsumed();  
     assertEquals(9, q1.get(Quota.NAMESPACE));
-    final INodeDirectorySnapshottable dir2Node = 
-        (INodeDirectorySnapshottable) fsdir.getINode4Write(sdir2.toString());
+    final INodeDirectory dir2Node = fsdir.getINode4Write(sdir2.toString())
+        .asDirectory();
     Quota.Counts q2 = dir2Node.getDirectoryWithQuotaFeature().getSpaceConsumed();  
     assertEquals(2, q2.get(Quota.NAMESPACE));
     
@@ -2253,8 +2243,8 @@ public class TestRenameWithSnapshots {
     List<DirectoryDiff> barDiffList = barNode.getDiffs().asList();
     assertEquals(1, barDiffList.size());
     DirectoryDiff diff = barDiffList.get(0);
-    INodeDirectorySnapshottable testNode = 
-        (INodeDirectorySnapshottable) fsdir.getINode4Write(test.toString());
+    INodeDirectory testNode = fsdir.getINode4Write(test.toString())
+        .asDirectory();
     Snapshot s0 = testNode.getSnapshot(DFSUtil.string2Bytes("s0"));
     assertEquals(s0.getId(), diff.getSnapshotId());
     // and file should be stored in the deleted list of this snapshot diff
@@ -2266,14 +2256,10 @@ public class TestRenameWithSnapshots {
     INodeDirectory dir2Node = fsdir.getINode4Write(dir2.toString())
         .asDirectory();
     List<DirectoryDiff> dir2DiffList = dir2Node.getDiffs().asList();
-    // dir2Node should contain 2 snapshot diffs, one for s2, and the other was
-    // originally s1 (created when dir2 was transformed to a snapshottable dir),
-    // and currently is s0
-    assertEquals(2, dir2DiffList.size());
-    dList = dir2DiffList.get(1).getChildrenDiff().getList(ListType.DELETED);
+    // dir2Node should contain 1 snapshot diffs for s2
+    assertEquals(1, dir2DiffList.size());
+    dList = dir2DiffList.get(0).getChildrenDiff().getList(ListType.DELETED);
     assertEquals(1, dList.size());
-    cList = dir2DiffList.get(0).getChildrenDiff().getList(ListType.CREATED);
-    assertTrue(cList.isEmpty());
     final Path foo_s2 = SnapshotTestHelper.getSnapshotPath(dir2, "s2", 
         foo.getName());
     INodeReference.WithName fooNode_s2 = 
@@ -2373,5 +2359,47 @@ public class TestRenameWithSnapshots {
 
     // save namespace and restart
     restartClusterAndCheckImage(true);
+  }
+
+  @Test
+  public void testRenameWithOverWrite() throws Exception {
+    final Path root = new Path("/");
+    final Path foo = new Path(root, "foo");
+    final Path file1InFoo = new Path(foo, "file1");
+    final Path file2InFoo = new Path(foo, "file2");
+    final Path file3InFoo = new Path(foo, "file3");
+    DFSTestUtil.createFile(hdfs, file1InFoo, 1L, REPL, SEED);
+    DFSTestUtil.createFile(hdfs, file2InFoo, 1L, REPL, SEED);
+    DFSTestUtil.createFile(hdfs, file3InFoo, 1L, REPL, SEED);
+    final Path bar = new Path(root, "bar");
+    hdfs.mkdirs(bar);
+
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s0");
+    // move file1 from foo to bar
+    final Path fileInBar = new Path(bar, "file1");
+    hdfs.rename(file1InFoo, fileInBar);
+    // rename bar to newDir
+    final Path newDir = new Path(root, "newDir");
+    hdfs.rename(bar, newDir);
+    // move file2 from foo to newDir
+    final Path file2InNewDir = new Path(newDir, "file2");
+    hdfs.rename(file2InFoo, file2InNewDir);
+    // move file3 from foo to newDir and rename it to file1, this will overwrite
+    // the original file1
+    final Path file1InNewDir = new Path(newDir, "file1");
+    hdfs.rename(file3InFoo, file1InNewDir, Rename.OVERWRITE);
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s1");
+
+    SnapshotDiffReport report = hdfs.getSnapshotDiffReport(root, "s0", "s1");
+    LOG.info("DiffList is \n\"" + report.toString() + "\"");
+    List<DiffReportEntry> entries = report.getDiffList();
+    assertEquals(7, entries.size());
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, "", null));
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, foo.getName(), null));
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, bar.getName(), null));
+    assertTrue(existsInDiffReport(entries, DiffType.DELETE, "foo/file1", null));
+    assertTrue(existsInDiffReport(entries, DiffType.RENAME, "bar", "newDir"));
+    assertTrue(existsInDiffReport(entries, DiffType.RENAME, "foo/file2", "newDir/file2"));
+    assertTrue(existsInDiffReport(entries, DiffType.RENAME, "foo/file3", "newDir/file1"));
   }
 }

@@ -138,7 +138,7 @@ copyToLocal
 
 count
 
-   Usage: <<<hdfs dfs -count [-q] <paths> >>>
+   Usage: <<<hdfs dfs -count [-q] [-h] <paths> >>>
 
    Count the number of directories, files and bytes under the paths that match
    the specified file pattern.  The output columns with -count are: DIR_COUNT,
@@ -147,11 +147,15 @@ count
    The output columns with -count -q are: QUOTA, REMAINING_QUATA, SPACE_QUOTA,
    REMAINING_SPACE_QUOTA, DIR_COUNT, FILE_COUNT, CONTENT_SIZE, FILE_NAME
 
+   The -h option shows sizes in human readable format.
+
    Example:
 
      * <<<hdfs dfs -count hdfs://nn1.example.com/file1 hdfs://nn2.example.com/file2>>>
 
      * <<<hdfs dfs -count -q hdfs://nn1.example.com/file1>>>
+
+     * <<<hdfs dfs -count -q -h hdfs://nn1.example.com/file1>>>
 
    Exit Code:
 
@@ -159,7 +163,7 @@ count
 
 cp
 
-   Usage: <<<hdfs dfs -cp [-f] URI [URI ...] <dest> >>>
+   Usage: <<<hdfs dfs -cp [-f] [-p | -p[topax]] URI [URI ...] <dest> >>>
 
    Copy files from source to destination. This command allows multiple sources
    as well in which case the destination must be a directory.
@@ -167,6 +171,12 @@ cp
     Options:
 
       * The -f option will overwrite the destination if it already exists.
+      
+      * The -p option will preserve file attributes [topx] (timestamps, 
+        ownership, permission, ACL, XAttr). If -p is specified with no <arg>,
+        then preserves timestamps, ownership, permission. If -pa is specified,
+        then preserves permission also because ACL is a super-set of
+        permission.
 
    Example:
 
@@ -249,6 +259,35 @@ getfacl
      * <<<hdfs dfs -getfacl /file>>>
 
      * <<<hdfs dfs -getfacl -R /dir>>>
+
+   Exit Code:
+
+   Returns 0 on success and non-zero on error.
+
+getfattr
+
+   Usage: <<<hdfs dfs -getfattr [-R] {-n name | -d} [-e en] <path> >>>
+
+   Displays the extended attribute names and values (if any) for a file or
+   directory.
+
+   Options:
+
+     * -R: Recursively list the attributes for all files and directories.
+
+     * -n name: Dump the named extended attribute value.
+
+     * -d: Dump all extended attribute values associated with pathname.
+
+     * -e <encoding>: Encode values after retrieving them. Valid encodings are "text", "hex", and "base64". Values encoded as text strings are enclosed in double quotes ("), and values encoded as hexadecimal and base64 are prefixed with 0x and 0s, respectively.
+
+     * <path>: The file or directory.
+
+   Examples:
+
+     * <<<hdfs dfs -getfattr -d /file>>>
+
+     * <<<hdfs dfs -getfattr -R -n user.myAttr /dir>>>
 
    Exit Code:
 
@@ -445,6 +484,36 @@ setfacl
       * <<<hdfs dfs -setfacl -R -m user:hadoop:r-x /dir>>>
 
       * <<<hdfs dfs -setfacl -m default:user:hadoop:r-x /dir>>>
+
+   Exit Code:
+
+   Returns 0 on success and non-zero on error.
+
+setfattr
+
+   Usage: <<<hdfs dfs -setfattr {-n name [-v value] | -x name} <path> >>>
+
+   Sets an extended attribute name and value for a file or directory.
+
+   Options:
+
+     * -b: Remove all but the base ACL entries. The entries for user, group and others are retained for compatibility with permission bits.
+
+     * -n name: The extended attribute name.
+
+     * -v value: The extended attribute value. There are three different encoding methods for the value. If the argument is enclosed in double quotes, then the value is the string inside the quotes. If the argument is prefixed with 0x or 0X, then it is taken as a hexadecimal number. If the argument begins with 0s or 0S, then it is taken as a base64 encoding.
+
+     * -x name: Remove the extended attribute.
+
+     * <path>: The file or directory.
+
+   Examples:
+
+      * <<<hdfs dfs -setfattr -n user.myAttr -v myValue /file>>>
+
+      * <<<hdfs dfs -setfattr -n user.noValue /file>>>
+
+      * <<<hdfs dfs -setfattr -x user.myAttr /file>>>
 
    Exit Code:
 

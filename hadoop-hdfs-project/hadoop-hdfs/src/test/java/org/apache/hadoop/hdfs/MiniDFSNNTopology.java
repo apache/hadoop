@@ -211,6 +211,7 @@ public class MiniDFSNNTopology {
     private final String nnId;
     private int httpPort;
     private int ipcPort;
+    private String clusterId;
     
     public NNConf(String nnId) {
       this.nnId = nnId;
@@ -228,6 +229,10 @@ public class MiniDFSNNTopology {
       return httpPort;
     }
 
+    String getClusterId() {
+      return clusterId;
+    }
+
     public NNConf setHttpPort(int httpPort) {
       this.httpPort = httpPort;
       return this;
@@ -235,6 +240,11 @@ public class MiniDFSNNTopology {
 
     public NNConf setIpcPort(int ipcPort) {
       this.ipcPort = ipcPort;
+      return this;
+    }
+
+    public NNConf setClusterId(String clusterId) {
+      this.clusterId = clusterId;
       return this;
     }
   }

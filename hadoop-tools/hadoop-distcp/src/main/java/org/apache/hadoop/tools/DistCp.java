@@ -125,6 +125,12 @@ public class DistCp extends Configured implements Tool {
     } catch (DuplicateFileException e) {
       LOG.error("Duplicate files in input path: ", e);
       return DistCpConstants.DUPLICATE_INPUT;
+    } catch (AclsNotSupportedException e) {
+      LOG.error("ACLs not supported on at least one file system: ", e);
+      return DistCpConstants.ACLS_NOT_SUPPORTED;
+    } catch (XAttrsNotSupportedException e) {
+      LOG.error("XAttrs not supported on at least one file system: ", e);
+      return DistCpConstants.XATTRS_NOT_SUPPORTED;
     } catch (Exception e) {
       LOG.error("Exception encountered ", e);
       return DistCpConstants.UNKNOWN_ERROR;
@@ -298,7 +304,12 @@ public class DistCp extends Configured implements Tool {
     FileSystem targetFS = targetPath.getFileSystem(configuration);
     targetPath = targetPath.makeQualified(targetFS.getUri(),
                                           targetFS.getWorkingDirectory());
-
+    if (inputOptions.shouldPreserve(DistCpOptions.FileAttribute.ACL)) {
+      DistCpUtils.checkFileSystemAclSupport(targetFS);
+    }
+    if (inputOptions.shouldPreserve(DistCpOptions.FileAttribute.XATTR)) {
+      DistCpUtils.checkFileSystemXAttrSupport(targetFS);
+    }
     if (inputOptions.shouldAtomicCommit()) {
       Path workDir = inputOptions.getAtomicWorkPath();
       if (workDir == null) {

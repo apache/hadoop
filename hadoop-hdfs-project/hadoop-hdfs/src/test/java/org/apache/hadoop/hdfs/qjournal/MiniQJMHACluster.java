@@ -22,8 +22,12 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 
 import java.io.IOException;
+import java.net.BindException;
 import java.net.URI;
+import java.util.Random;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -37,14 +41,13 @@ public class MiniQJMHACluster {
   private MiniDFSCluster cluster;
   private MiniJournalCluster journalCluster;
   private final Configuration conf;
+  private static final Log LOG = LogFactory.getLog(MiniQJMHACluster.class);
   
   public static final String NAMESERVICE = "ns1";
   private static final String NN1 = "nn1";
   private static final String NN2 = "nn2";
-  private static final int NN1_IPC_PORT = 10000;
-  private static final int NN1_INFO_PORT = 10001;
-  private static final int NN2_IPC_PORT = 10002;
-  private static final int NN2_INFO_PORT = 10003;
+  private static final Random RANDOM = new Random();
+  private int basePort = 10000;
 
   public static class Builder {
     private final Configuration conf;
@@ -69,51 +72,62 @@ public class MiniQJMHACluster {
     }
   }
   
-  public static MiniDFSNNTopology createDefaultTopology() {
+  public static MiniDFSNNTopology createDefaultTopology(int basePort) {
     return new MiniDFSNNTopology()
       .addNameservice(new MiniDFSNNTopology.NSConf(NAMESERVICE).addNN(
-        new MiniDFSNNTopology.NNConf("nn1").setIpcPort(NN1_IPC_PORT)
-            .setHttpPort(NN1_INFO_PORT)).addNN(
-        new MiniDFSNNTopology.NNConf("nn2").setIpcPort(NN2_IPC_PORT)
-            .setHttpPort(NN2_INFO_PORT)));
+        new MiniDFSNNTopology.NNConf("nn1").setIpcPort(basePort)
+            .setHttpPort(basePort + 1)).addNN(
+        new MiniDFSNNTopology.NNConf("nn2").setIpcPort(basePort + 2)
+            .setHttpPort(basePort + 3)));
   }
-  
+
   private MiniQJMHACluster(Builder builder) throws IOException {
     this.conf = builder.conf;
-    // start 3 journal nodes
-    journalCluster = new MiniJournalCluster.Builder(conf).format(true)
-        .build();
-    URI journalURI = journalCluster.getQuorumJournalURI(NAMESERVICE);
-    
-    // start cluster with 2 NameNodes
-    MiniDFSNNTopology topology = createDefaultTopology();
-    
-    initHAConf(journalURI, builder.conf);
-    
-    // First start up the NNs just to format the namespace. The MinIDFSCluster
-    // has no way to just format the NameNodes without also starting them.
-    cluster = builder.dfsBuilder.nnTopology(topology)
-        .manageNameDfsSharedDirs(false).build();
-    cluster.waitActive();
-    cluster.shutdown();
-    
-    // initialize the journal nodes
-    Configuration confNN0 = cluster.getConfiguration(0);
-    NameNode.initializeSharedEdits(confNN0, true);
-    
-    cluster.getNameNodeInfos()[0].setStartOpt(builder.startOpt);
-    cluster.getNameNodeInfos()[1].setStartOpt(builder.startOpt);
-    
-    // restart the cluster
-    cluster.restartNameNodes();
+    int retryCount = 0;
+    while (true) {
+      try {
+        basePort = 10000 + RANDOM.nextInt(1000) * 4;
+        // start 3 journal nodes
+        journalCluster = new MiniJournalCluster.Builder(conf).format(true)
+            .build();
+        URI journalURI = journalCluster.getQuorumJournalURI(NAMESERVICE);
+
+        // start cluster with 2 NameNodes
+        MiniDFSNNTopology topology = createDefaultTopology(basePort);
+
+        initHAConf(journalURI, builder.conf);
+
+        // First start up the NNs just to format the namespace. The MinIDFSCluster
+        // has no way to just format the NameNodes without also starting them.
+        cluster = builder.dfsBuilder.nnTopology(topology)
+            .manageNameDfsSharedDirs(false).build();
+        cluster.waitActive();
+        cluster.shutdown();
+
+        // initialize the journal nodes
+        Configuration confNN0 = cluster.getConfiguration(0);
+        NameNode.initializeSharedEdits(confNN0, true);
+
+        cluster.getNameNodeInfos()[0].setStartOpt(builder.startOpt);
+        cluster.getNameNodeInfos()[1].setStartOpt(builder.startOpt);
+
+        // restart the cluster
+        cluster.restartNameNodes();
+        ++retryCount;
+        break;
+      } catch (BindException e) {
+        LOG.info("MiniQJMHACluster port conflicts, retried " +
+            retryCount + " times");
+      }
+    }
   }
   
   private Configuration initHAConf(URI journalURI, Configuration conf) {
     conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
         journalURI.toString());
     
-    String address1 = "127.0.0.1:" + NN1_IPC_PORT;
-    String address2 = "127.0.0.1:" + NN2_IPC_PORT;
+    String address1 = "127.0.0.1:" + basePort;
+    String address2 = "127.0.0.1:" + (basePort + 2);
     conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY,
         NAMESERVICE, NN1), address1);
     conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY,

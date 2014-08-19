@@ -191,7 +191,8 @@ class BlockStorageLocationUtil {
   
   /**
    * Group the per-replica {@link VolumeId} info returned from
-   * {@link DFSClient#queryDatanodesForHdfsBlocksMetadata(Map)} to be associated
+   * {@link DFSClient#queryDatanodesForHdfsBlocksMetadata(Map)} to be
+   * associated
    * with the corresponding {@link LocatedBlock}.
    * 
    * @param blocks

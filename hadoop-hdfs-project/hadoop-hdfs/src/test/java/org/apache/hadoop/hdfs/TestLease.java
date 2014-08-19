@@ -243,11 +243,56 @@ public class TestLease {
       Assert.assertTrue(pRenamedAgain+" not found", fs2.exists(pRenamedAgain));
       Assert.assertTrue("no lease for "+pRenamedAgain, hasLease(cluster, pRenamedAgain));
       Assert.assertEquals(1, leaseCount(cluster));
+      out.close();
     } finally {
       cluster.shutdown();
     }
   }
-  
+
+  /**
+   * Test that we can open up a file for write, move it to another location,
+   * and then create a new file in the previous location, without causing any
+   * lease conflicts.  This is possible because we now use unique inode IDs
+   * to identify files to the NameNode.
+   */
+  @Test
+  public void testLeaseAfterRenameAndRecreate() throws Exception {
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+    try {
+      final Path path1 = new Path("/test-file");
+      final String contents1 = "contents1";
+      final Path path2 = new Path("/test-file-new-location");
+      final String contents2 = "contents2";
+
+      // open a file to get a lease
+      FileSystem fs = cluster.getFileSystem();
+      FSDataOutputStream out1 = fs.create(path1);
+      out1.writeBytes(contents1);
+      Assert.assertTrue(hasLease(cluster, path1));
+      Assert.assertEquals(1, leaseCount(cluster));
+
+      DistributedFileSystem fs2 = (DistributedFileSystem)
+          FileSystem.newInstance(fs.getUri(), fs.getConf());
+      fs2.rename(path1, path2);
+
+      FSDataOutputStream out2 = fs2.create(path1);
+      out2.writeBytes(contents2);
+      out2.close();
+
+      // The first file should still be open and valid
+      Assert.assertTrue(hasLease(cluster, path2));
+      out1.close();
+
+      // Contents should be as expected
+      DistributedFileSystem fs3 = (DistributedFileSystem)
+          FileSystem.newInstance(fs.getUri(), fs.getConf());
+      Assert.assertEquals(contents1, DFSTestUtil.readFile(fs3, path2));
+      Assert.assertEquals(contents2, DFSTestUtil.readFile(fs3, path1));
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   @Test
   public void testLease() throws Exception {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();

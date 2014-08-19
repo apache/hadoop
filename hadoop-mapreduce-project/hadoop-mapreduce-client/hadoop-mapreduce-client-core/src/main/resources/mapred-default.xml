@@ -83,6 +83,16 @@
 </property>
 
 <property>
+  <name>mapreduce.job.reducer.preempt.delay.sec</name>
+  <value>0</value>
+  <description>The threshold in terms of seconds after which an unsatisfied mapper 
+  request triggers reducer preemption to free space. Default 0 implies that the 
+  reduces should be preempted immediately after allocation if there is currently no
+  room for newly allocated mappers.
+  </description>
+</property>
+
+<property>
     <name>mapreduce.job.max.split.locations</name>
     <value>10</value>
     <description>The max number of block locations to store for each split for 
@@ -661,7 +671,7 @@
 
   <property>
     <name>mapreduce.task.profile.params</name>
-    <value></value>
+    <value>-agentlib:hprof=cpu=samples,heap=sites,force=n,thread=y,verbose=n,file=%s</value>
     <description>JVM profiler parameters used to profile map and reduce task
       attempts. This string may contain a single format specifier %s that will
       be replaced by the path to profile.out in the task attempt log directory.
@@ -1215,7 +1225,9 @@
 
 <property>
    <name>mapreduce.job.classloader.system.classes</name>
-   <value>java.,javax.,org.apache.commons.logging.,org.apache.log4j.,org.apache.hadoop.</value>
+   <value>java.,javax.,org.w3c.dom.,org.xml.sax.,org.apache.commons.logging.,
+          org.apache.log4j.,org.apache.hadoop.,core-default.xml,
+          hdfs-default.xml,mapred-default.xml,yarn-default.xml</value>
   <description>A comma-separated list of classes that should be loaded from the
     system classpath, not the user-supplied JARs, when mapreduce.job.classloader
     is enabled. Names ending in '.' (period) are treated as package names,

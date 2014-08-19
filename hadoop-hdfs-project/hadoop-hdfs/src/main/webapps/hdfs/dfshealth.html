@@ -18,6 +18,7 @@
 -->
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
+<meta http-equiv="X-UA-Compatible" content="IE=9" />
 <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.0.2/css/bootstrap.min.css" />
 <link rel="stylesheet" type="text/css" href="/static/hadoop.css" />
 <title>Namenode information</title>
@@ -65,14 +66,13 @@
 <div class="row">
   <hr />
   <div class="col-xs-2"><p>Hadoop, 2014.</p></div>
-  <div class="col-xs-1 pull-right"><a style="color: #ddd" href="dfshealth.jsp">Legacy UI</a></div>
 </div>
 </div>
 
 <script type="text/x-dust-template" id="tmpl-dfshealth">
 
 {#nn}
-{@if cond="{DistinctVersionCount} > 1 || '{RollingUpgradeStatus}'.length"}
+{@if cond="{DistinctVersionCount} > 1 || '{RollingUpgradeStatus}'.length || !'{UpgradeFinalized}'"}
 <div class="alert alert-dismissable alert-info">
   <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
 
@@ -92,6 +92,10 @@
     {key} ({value}) {@sep},{/sep}
     {/DistinctVersions}
   {/if}
+
+  {^UpgradeFinalized}
+     <p>Upgrade in progress. Not yet finalized.</p>
+  {/UpgradeFinalized}
 </div>
 {/if}
 
@@ -277,8 +281,8 @@
   {#DeadNodes}
   <tr class="danger">
     <td>{name} ({xferaddr})</td>
-    <td>{lastContact}</td>
-    <td>Dead{?decomissioned}, Decomissioned{/decomissioned}</td>
+    <td>{#helper_lastcontact_tostring value="{lastContact}"/}</td>
+    <td>Dead{?decommissioned}, Decommissioned{/decommissioned}</td>
     <td>-</td>
     <td>-</td>
     <td>-</td>
@@ -351,7 +355,7 @@
 </script><script type="text/javascript" src="/static/bootstrap-3.0.2/js/bootstrap.min.js">
 </script><script type="text/javascript" src="/static/dust-full-2.0.0.min.js">
 </script><script type="text/javascript" src="/static/dust-helpers-1.1.1.min.js">
-</script><script type="text/javascript" src="dfs-dust.js">
+</script><script type="text/javascript" src="/static/dfs-dust.js">
 </script><script type="text/javascript" src="dfshealth.js">
 </script>
 </body>

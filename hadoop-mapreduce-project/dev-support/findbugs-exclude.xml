@@ -158,6 +158,7 @@
        <Or>
        <Method name="commitJob" />
        <Method name="recoverTask" />
+       <Method name="isRecoverySupported" />
        </Or>
        <Bug pattern="NM_WRONG_PACKAGE" />
      </Match>
@@ -168,6 +169,7 @@
        <Method name="commitJob" />
        <Method name="cleanupJob" />
        <Method name="recoverTask" />
+       <Method name="isRecoverySupported" />
        </Or>
        <Bug pattern="NM_WRONG_PACKAGE_INTENTIONAL" />
      </Match>
@@ -463,6 +465,9 @@
   <Match>
     <Class name="~org\.apache\.hadoop\.mapreduce\.v2\.proto.*" />
   </Match>
+  <Match>
+    <Package name="org.apache.hadoop.mapred.proto" />
+  </Match>
   
    <!--
      The below fields are accessed locally and only via methods that are synchronized. 
@@ -470,8 +475,8 @@
    <Match>
      <Class name="org.apache.hadoop.mapreduce.v2.app.rm.RMContainerAllocator" />
      <Or>
-      <Field name="mapResourceReqt" />
-      <Field name="reduceResourceReqt" />
+      <Field name="mapResourceRequest" />
+      <Field name="reduceResourceRequest" />
       <Field name="maxReduceRampupLimit" />
       <Field name="reduceSlowStart" />
      </Or>

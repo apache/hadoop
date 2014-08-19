@@ -25,6 +25,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -32,6 +33,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.hdfs.CorruptFileBlockIterator;
@@ -67,9 +69,8 @@ public class Hdfs extends AbstractFileSystem {
    * This constructor has the signature needed by
    * {@link AbstractFileSystem#createFileSystem(URI, Configuration)}
    * 
-   * @param theUri
-   *          which must be that of Hdfs
-   * @param conf
+   * @param theUri which must be that of Hdfs
+   * @param conf configuration
    * @throws IOException
    */
   Hdfs(final URI theUri, final Configuration conf) throws IOException, URISyntaxException {
@@ -116,7 +117,7 @@ public class Hdfs extends AbstractFileSystem {
   @Override
   public FileChecksum getFileChecksum(Path f) 
       throws IOException, UnresolvedLinkException {
-    return dfs.getFileChecksum(getUriPath(f));
+    return dfs.getFileChecksum(getUriPath(f), Long.MAX_VALUE);
   }
 
   @Override
@@ -414,6 +415,43 @@ public class Hdfs extends AbstractFileSystem {
   @Override
   public AclStatus getAclStatus(Path path) throws IOException {
     return dfs.getAclStatus(getUriPath(path));
+  }
+  
+  @Override
+  public void setXAttr(Path path, String name, byte[] value, 
+      EnumSet<XAttrSetFlag> flag) throws IOException {
+    dfs.setXAttr(getUriPath(path), name, value, flag);
+  }
+  
+  @Override
+  public byte[] getXAttr(Path path, String name) throws IOException {
+    return dfs.getXAttr(getUriPath(path), name);
+  }
+  
+  @Override
+  public Map<String, byte[]> getXAttrs(Path path) throws IOException {
+    return dfs.getXAttrs(getUriPath(path));
+  }
+  
+  @Override
+  public Map<String, byte[]> getXAttrs(Path path, List<String> names) 
+      throws IOException {
+    return dfs.getXAttrs(getUriPath(path), names);
+  }
+
+  @Override
+  public List<String> listXAttrs(Path path) throws IOException {
+    return dfs.listXAttrs(getUriPath(path));
+  }
+  
+  @Override
+  public void removeXAttr(Path path, String name) throws IOException {
+    dfs.removeXAttr(getUriPath(path), name);
+  }
+
+  @Override
+  public void access(Path path, final FsAction mode) throws IOException {
+    dfs.checkAccess(getUriPath(path), mode);
   }
 
   /**

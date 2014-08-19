@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 
 import java.util.List;
-import java.util.Set;
 
 import javax.crypto.SecretKey;
 
@@ -32,7 +31,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
-import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -113,12 +111,6 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
    * if the AM has not unregistered itself. 
    */
   FinalApplicationStatus getFinalApplicationStatus();
-
-  /**
-   * Nodes on which the containers for this {@link RMAppAttempt} ran.
-   * @return the set of nodes that ran any containers from this {@link RMAppAttempt}
-   */
-  Set<NodeId> getRanNodes();
 
   /**
    * Return a list of the last set of finished containers, resetting the
@@ -204,4 +196,21 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
    */
   ApplicationAttemptReport createApplicationAttemptReport();
 
+  /**
+   * Return the flag which indicates whether the attempt failure should be
+   * counted to attempt retry count.
+   * <ul>
+   * There failure types should not be counted to attempt retry count:
+   * <li>preempted by the scheduler.</li>
+   * <li>hardware failures, such as NM failing, lost NM and NM disk errors.</li>
+   * <li>killed by RM because of RM restart or failover.</li>
+   * </ul>
+   */
+  boolean shouldCountTowardsMaxAttemptRetry();
+  
+  /**
+   * Get metrics from the {@link RMAppAttempt}
+   * @return metrics
+   */
+  RMAppAttemptMetrics getRMAppAttemptMetrics();
 }

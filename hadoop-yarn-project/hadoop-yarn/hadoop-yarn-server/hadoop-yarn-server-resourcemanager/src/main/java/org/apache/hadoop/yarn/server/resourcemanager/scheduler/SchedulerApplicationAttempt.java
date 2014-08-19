@@ -20,9 +20,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,6 +34,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NMToken;
@@ -46,9 +49,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEven
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerReservedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
 
@@ -76,9 +81,19 @@ public class SchedulerApplicationAttempt {
   protected final Resource currentReservation = Resource.newInstance(0, 0);
   private Resource resourceLimit = Resource.newInstance(0, 0);
   protected Resource currentConsumption = Resource.newInstance(0, 0);
+  private Resource amResource;
+  private boolean unmanagedAM = true;
+  private boolean amRunning = false;
 
   protected List<RMContainer> newlyAllocatedContainers = 
       new ArrayList<RMContainer>();
+
+  // This pendingRelease is used in work-preserving recovery scenario to keep
+  // track of the AM's outstanding release requests. RM on recovery could
+  // receive the release request form AM before it receives the container status
+  // from NM for recovery. In this case, the to-be-recovered containers reported
+  // by NM should not be recovered.
+  private Set<ContainerId> pendingRelease = null;
 
   /**
    * Count how many times the application has been given an opportunity
@@ -101,11 +116,23 @@ public class SchedulerApplicationAttempt {
   public SchedulerApplicationAttempt(ApplicationAttemptId applicationAttemptId, 
       String user, Queue queue, ActiveUsersManager activeUsersManager,
       RMContext rmContext) {
+    Preconditions.checkNotNull("RMContext should not be null", rmContext);
     this.rmContext = rmContext;
     this.appSchedulingInfo = 
         new AppSchedulingInfo(applicationAttemptId, user, queue,  
-            activeUsersManager);
+            activeUsersManager, rmContext.getEpoch());
     this.queue = queue;
+    this.pendingRelease = new HashSet<ContainerId>();
+    if (rmContext.getRMApps() != null &&
+        rmContext.getRMApps()
+            .containsKey(applicationAttemptId.getApplicationId())) {
+      ApplicationSubmissionContext appSubmissionContext =
+          rmContext.getRMApps().get(applicationAttemptId.getApplicationId())
+              .getApplicationSubmissionContext();
+      if (appSubmissionContext != null) {
+        unmanagedAM = appSubmissionContext.getUnmanagedAM();
+      }
+    }
   }
   
   /**
@@ -144,6 +171,10 @@ public class SchedulerApplicationAttempt {
     return appSchedulingInfo.getResourceRequests(priority);
   }
 
+  public Set<ContainerId> getPendingRelease() {
+    return this.pendingRelease;
+  }
+
   public int getNewContainerId() {
     return appSchedulingInfo.getNewContainerId();
   }
@@ -168,6 +199,26 @@ public class SchedulerApplicationAttempt {
     return appSchedulingInfo.getQueueName();
   }
   
+  public Resource getAMResource() {
+    return amResource;
+  }
+
+  public void setAMResource(Resource amResource) {
+    this.amResource = amResource;
+  }
+
+  public boolean isAmRunning() {
+    return amRunning;
+  }
+
+  public void setAmRunning(boolean bool) {
+    amRunning = bool;
+  }
+
+  public boolean getUnmanagedAM() {
+    return unmanagedAM;
+  }
+
   public synchronized RMContainer getRMContainer(ContainerId id) {
     return liveContainers.get(id);
   }
@@ -202,7 +253,14 @@ public class SchedulerApplicationAttempt {
   public synchronized void updateResourceRequests(
       List<ResourceRequest> requests) {
     if (!isStopped) {
-      appSchedulingInfo.updateResourceRequests(requests);
+      appSchedulingInfo.updateResourceRequests(requests, false);
+    }
+  }
+  
+  public synchronized void recoverResourceRequests(
+      List<ResourceRequest> requests) {
+    if (!isStopped) {
+      appSchedulingInfo.updateResourceRequests(requests, true);
     }
   }
   
@@ -378,7 +436,8 @@ public class SchedulerApplicationAttempt {
         // create container token and NMToken altogether.
         container.setContainerToken(rmContext.getContainerTokenSecretManager()
           .createContainerToken(container.getId(), container.getNodeId(),
-            getUser(), container.getResource()));
+            getUser(), container.getResource(), container.getPriority(),
+            rmContainer.getCreationTime()));
         NMToken nmToken =
             rmContext.getNMTokenSecretManager().createAndGetNMToken(getUser(),
               getApplicationAttemptId(), container);
@@ -499,5 +558,24 @@ public class SchedulerApplicationAttempt {
 
     appSchedulingInfo.move(newQueue);
     this.queue = newQueue;
-  }  
+  }
+
+  public synchronized void recoverContainer(RMContainer rmContainer) {
+    // recover app scheduling info
+    appSchedulingInfo.recoverContainer(rmContainer);
+
+    if (rmContainer.getState().equals(RMContainerState.COMPLETED)) {
+      return;
+    }
+    LOG.info("SchedulerAttempt " + getApplicationAttemptId()
+      + " is recovering container " + rmContainer.getContainerId());
+    liveContainers.put(rmContainer.getContainerId(), rmContainer);
+    Resources.addTo(currentConsumption, rmContainer.getContainer()
+      .getResource());
+    // resourceLimit: updated when LeafQueue#recoverContainer#allocateResource
+    // is called.
+    // newlyAllocatedContainers.add(rmContainer);
+    // schedulingOpportunities
+    // lastScheduledContainer
+  }
 }

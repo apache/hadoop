@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
@@ -36,6 +37,7 @@ import java.lang.reflect.Modifier;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.hadoop.fs.Options.ChecksumOpt;
 import static org.apache.hadoop.fs.Options.CreateOpts;
@@ -138,6 +140,7 @@ public class TestHarFileSystem {
     public int getDefaultPort();
     public String getCanonicalServiceName();
     public Token<?> getDelegationToken(String renewer) throws IOException;
+    public FileChecksum getFileChecksum(Path f) throws IOException;
     public boolean deleteOnExit(Path f) throws IOException;
     public boolean cancelDeleteOnExit(Path f) throws IOException;
     public Token<?>[] addDelegationTokens(String renewer, Credentials creds)
@@ -181,7 +184,26 @@ public class TestHarFileSystem {
 
     public void setAcl(Path path, List<AclEntry> aclSpec) throws IOException;
 
+    public void setXAttr(Path path, String name, byte[] value)
+        throws IOException;
+
+    public void setXAttr(Path path, String name, byte[] value,
+        EnumSet<XAttrSetFlag> flag) throws IOException;
+
+    public byte[] getXAttr(Path path, String name) throws IOException;
+
+    public Map<String, byte[]> getXAttrs(Path path) throws IOException;
+
+    public Map<String, byte[]> getXAttrs(Path path, List<String> names)
+        throws IOException;
+
+    public List<String> listXAttrs(Path path) throws IOException;
+
+    public void removeXAttr(Path path, String name) throws IOException;
+
     public AclStatus getAclStatus(Path path) throws IOException;
+
+    public void access(Path path, FsAction mode) throws IOException;
   }
 
   @Test
@@ -207,10 +229,16 @@ public class TestHarFileSystem {
   }
 
   @Test
-  public void testFileChecksum() {
+  public void testFileChecksum() throws Exception {
     final Path p = new Path("har://file-localhost/foo.har/file1");
     final HarFileSystem harfs = new HarFileSystem();
-    Assert.assertEquals(null, harfs.getFileChecksum(p));
+    try {
+      Assert.assertEquals(null, harfs.getFileChecksum(p));
+    } finally {
+      if (harfs != null) {
+        harfs.close();
+      }
+    }
   }
 
   /**

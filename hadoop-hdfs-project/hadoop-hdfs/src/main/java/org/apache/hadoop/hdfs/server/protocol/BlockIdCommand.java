@@ -32,7 +32,6 @@ public class BlockIdCommand extends DatanodeCommand {
 
   /**
    * Create BlockCommand for the given action
-   * @param blocks blocks related to the action
    */
   public BlockIdCommand(int action, String poolId, long[] blockIds) {
     super(action);

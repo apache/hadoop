@@ -30,10 +30,10 @@ import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSInputStream;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -72,7 +72,7 @@ class DFSClientCache {
   final static int DEFAULT_DFS_INPUTSTREAM_CACHE_SIZE = 1024;
   final static int DEFAULT_DFS_INPUTSTREAM_CACHE_TTL = 10 * 60;
 
-  private final Configuration config;
+  private final NfsConfiguration config;
 
   private static class DFSInputStreamCaheKey {
     final String userId;
@@ -99,11 +99,11 @@ class DFSClientCache {
     }
   }
 
-  DFSClientCache(Configuration config) {
+  DFSClientCache(NfsConfiguration config) {
     this(config, DEFAULT_DFS_CLIENT_CACHE_SIZE);
   }
   
-  DFSClientCache(Configuration config, int clientCache) {
+  DFSClientCache(NfsConfiguration config, int clientCache) {
     this.config = config;
     this.clientCache = CacheBuilder.newBuilder()
         .maximumSize(clientCache)

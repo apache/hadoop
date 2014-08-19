@@ -91,4 +91,5 @@ DECLARE_PROTOS(
     ${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/JournalProtocol.proto
     ${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/NamenodeProtocol.proto
     ${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/ClientNamenodeProtocol.proto
+    ${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/xattr.proto
 )

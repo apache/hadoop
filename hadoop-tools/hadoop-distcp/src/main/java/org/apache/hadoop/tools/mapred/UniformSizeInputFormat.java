@@ -23,11 +23,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.DistCpConstants;
 import org.apache.hadoop.tools.util.DistCpUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileRecordReader;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
@@ -44,7 +44,8 @@ import java.util.ArrayList;
  * that the total-number of bytes to be copied for each input split is
  * uniform.
  */
-public class UniformSizeInputFormat extends InputFormat<Text, FileStatus> {
+public class UniformSizeInputFormat
+    extends InputFormat<Text, CopyListingFileStatus> {
   private static final Log LOG
                 = LogFactory.getLog(UniformSizeInputFormat.class);
 
@@ -76,7 +77,7 @@ public class UniformSizeInputFormat extends InputFormat<Text, FileStatus> {
     List<InputSplit> splits = new ArrayList<InputSplit>(numSplits);
     long nBytesPerSplit = (long) Math.ceil(totalSizeBytes * 1.0 / numSplits);
 
-    FileStatus srcFileStatus = new FileStatus();
+    CopyListingFileStatus srcFileStatus = new CopyListingFileStatus();
     Text srcRelPath = new Text();
     long currentSplitSize = 0;
     long lastSplitStart = 0;
@@ -161,9 +162,9 @@ public class UniformSizeInputFormat extends InputFormat<Text, FileStatus> {
    * @throws InterruptedException
    */
   @Override
-  public RecordReader<Text, FileStatus> createRecordReader(InputSplit split,
-                                                     TaskAttemptContext context)
-                                      throws IOException, InterruptedException {
-    return new SequenceFileRecordReader<Text, FileStatus>();
+  public RecordReader<Text, CopyListingFileStatus> createRecordReader(
+      InputSplit split, TaskAttemptContext context)
+      throws IOException, InterruptedException {
+    return new SequenceFileRecordReader<Text, CopyListingFileStatus>();
   }
 }

@@ -68,7 +68,7 @@ public class ReplicaBeingWritten extends ReplicaInPipeline {
 
   /**
    * Copy constructor.
-   * @param from
+   * @param from where to copy from
    */
   public ReplicaBeingWritten(ReplicaBeingWritten from) {
     super(from);

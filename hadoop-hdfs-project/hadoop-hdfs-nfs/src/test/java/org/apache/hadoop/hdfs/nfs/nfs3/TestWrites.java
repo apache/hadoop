@@ -22,16 +22,16 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentNavigableMap;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
 import org.apache.hadoop.hdfs.nfs.nfs3.OpenFileCtx.COMMIT_STATUS;
 import org.apache.hadoop.hdfs.nfs.nfs3.OpenFileCtx.CommitCtx;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -50,6 +50,7 @@ import org.apache.hadoop.nfs.nfs3.response.CREATE3Response;
 import org.apache.hadoop.nfs.nfs3.response.READ3Response;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.SecurityHandler;
+import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.jboss.netty.channel.Channel;
 import org.junit.Assert;
@@ -138,7 +139,7 @@ public class TestWrites {
     Mockito.when(fos.getPos()).thenReturn((long) 0);
 
     OpenFileCtx ctx = new OpenFileCtx(fos, attr, "/dumpFilePath", dfsClient,
-        new IdUserGroup());
+        new IdUserGroup(new NfsConfiguration()));
 
     COMMIT_STATUS ret;
 
@@ -190,6 +191,29 @@ public class TestWrites {
     ret = ctx.checkCommit(dfsClient, 0, ch, 1, attr, false);
     Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
   }
+  
+  @Test
+  public void testCheckCommitAixCompatMode() throws IOException {
+    DFSClient dfsClient = Mockito.mock(DFSClient.class);
+    Nfs3FileAttributes attr = new Nfs3FileAttributes();
+    HdfsDataOutputStream fos = Mockito.mock(HdfsDataOutputStream.class);
+
+    // Last argument "true" here to enable AIX compatibility mode.
+    OpenFileCtx ctx = new OpenFileCtx(fos, attr, "/dumpFilePath", dfsClient,
+        new IdUserGroup(new NfsConfiguration()), true);
+    
+    // Test fall-through to pendingWrites check in the event that commitOffset
+    // is greater than the number of bytes we've so far flushed.
+    Mockito.when(fos.getPos()).thenReturn((long) 2);
+    COMMIT_STATUS status = ctx.checkCommitInternal(5, null, 1, attr, false);
+    Assert.assertTrue(status == COMMIT_STATUS.COMMIT_FINISHED);
+    
+    // Test the case when we actually have received more bytes than we're trying
+    // to commit.
+    Mockito.when(fos.getPos()).thenReturn((long) 10);
+    status = ctx.checkCommitInternal(5, null, 1, attr, false);
+    Assert.assertTrue(status == COMMIT_STATUS.COMMIT_DO_SYNC);
+  }
 
   @Test
   // Validate all the commit check return codes OpenFileCtx.COMMIT_STATUS, which
@@ -200,13 +224,14 @@ public class TestWrites {
     Nfs3FileAttributes attr = new Nfs3FileAttributes();
     HdfsDataOutputStream fos = Mockito.mock(HdfsDataOutputStream.class);
     Mockito.when(fos.getPos()).thenReturn((long) 0);
+    NfsConfiguration config = new NfsConfiguration();
 
     OpenFileCtx ctx = new OpenFileCtx(fos, attr, "/dumpFilePath", dfsClient,
-        new IdUserGroup());
+        new IdUserGroup(config));
 
     FileHandle h = new FileHandle(1); // fake handle for "/dumpFilePath"
     COMMIT_STATUS ret;
-    WriteManager wm = new WriteManager(new IdUserGroup(), new Configuration());
+    WriteManager wm = new WriteManager(new IdUserGroup(config), config, false);
     assertTrue(wm.addOpenFileStream(h, ctx));
     
     // Test inactive open file context
@@ -279,7 +304,7 @@ public class TestWrites {
 
   @Test
   public void testWriteStableHow() throws IOException, InterruptedException {
-    HdfsConfiguration config = new HdfsConfiguration();
+    NfsConfiguration config = new NfsConfiguration();
     DFSClient client = null;
     MiniDFSCluster cluster = null;
     RpcProgramNfs3 nfsd;
@@ -288,10 +313,12 @@ public class TestWrites {
         System.getProperty("user.name"));
     String currentUser = System.getProperty("user.name");
     config.set(
-            ProxyUsers.getProxySuperuserGroupConfKey(currentUser),
+            DefaultImpersonationProvider.getTestProvider().
+                getProxySuperuserGroupConfKey(currentUser),
             "*");
     config.set(
-            ProxyUsers.getProxySuperuserIpConfKey(currentUser),
+            DefaultImpersonationProvider.getTestProvider().
+                getProxySuperuserIpConfKey(currentUser),
             "*");
     ProxyUsers.refreshSuperUserGroupsConfiguration(config);
 
@@ -317,7 +344,7 @@ public class TestWrites {
       XDR createXdr = new XDR();
       createReq.serialize(createXdr);
       CREATE3Response createRsp = nfsd.create(createXdr.asReadOnlyWrap(),
-          securityHandler, InetAddress.getLocalHost());
+          securityHandler, new InetSocketAddress("localhost", 1234));
       FileHandle handle = createRsp.getObjHandle();
 
       // Test DATA_SYNC
@@ -330,7 +357,7 @@ public class TestWrites {
       XDR writeXdr = new XDR();
       writeReq.serialize(writeXdr);
       nfsd.write(writeXdr.asReadOnlyWrap(), null, 1, securityHandler,
-          InetAddress.getLocalHost());
+          new InetSocketAddress("localhost", 1234));
 
       waitWrite(nfsd, handle, 60000);
 
@@ -339,7 +366,7 @@ public class TestWrites {
       XDR readXdr = new XDR();
       readReq.serialize(readXdr);
       READ3Response readRsp = nfsd.read(readXdr.asReadOnlyWrap(),
-          securityHandler, InetAddress.getLocalHost());
+          securityHandler, new InetSocketAddress("localhost", 1234));
 
       assertTrue(Arrays.equals(buffer, readRsp.getData().array()));
 
@@ -351,7 +378,7 @@ public class TestWrites {
       XDR createXdr2 = new XDR();
       createReq2.serialize(createXdr2);
       CREATE3Response createRsp2 = nfsd.create(createXdr2.asReadOnlyWrap(),
-          securityHandler, InetAddress.getLocalHost());
+          securityHandler, new InetSocketAddress("localhost", 1234));
       FileHandle handle2 = createRsp2.getObjHandle();
 
       WRITE3Request writeReq2 = new WRITE3Request(handle2, 0, 10,
@@ -359,7 +386,7 @@ public class TestWrites {
       XDR writeXdr2 = new XDR();
       writeReq2.serialize(writeXdr2);
       nfsd.write(writeXdr2.asReadOnlyWrap(), null, 1, securityHandler,
-          InetAddress.getLocalHost());
+          new InetSocketAddress("localhost", 1234));
 
       waitWrite(nfsd, handle2, 60000);
 
@@ -368,13 +395,89 @@ public class TestWrites {
       XDR readXdr2 = new XDR();
       readReq2.serialize(readXdr2);
       READ3Response readRsp2 = nfsd.read(readXdr2.asReadOnlyWrap(),
-          securityHandler, InetAddress.getLocalHost());
+          securityHandler, new InetSocketAddress("localhost", 1234));
 
       assertTrue(Arrays.equals(buffer, readRsp2.getData().array()));
       // FILE_SYNC should sync the file size
       status = client.getFileInfo("/file2");
       assertTrue(status.getLen() == 10);
 
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testOOOWrites() throws IOException, InterruptedException {
+    NfsConfiguration config = new NfsConfiguration();
+    MiniDFSCluster cluster = null;
+    RpcProgramNfs3 nfsd;
+    final int bufSize = 32;
+    final int numOOO = 3;
+    SecurityHandler securityHandler = Mockito.mock(SecurityHandler.class);
+    Mockito.when(securityHandler.getUser()).thenReturn(
+        System.getProperty("user.name"));
+    String currentUser = System.getProperty("user.name");
+    config.set(
+        DefaultImpersonationProvider.getTestProvider().
+            getProxySuperuserGroupConfKey(currentUser),
+        "*");
+    config.set(
+        DefaultImpersonationProvider.getTestProvider().
+            getProxySuperuserIpConfKey(currentUser),
+        "*");
+    ProxyUsers.refreshSuperUserGroupsConfiguration(config);
+    // Use emphral port in case tests are running in parallel
+    config.setInt("nfs3.mountd.port", 0);
+    config.setInt("nfs3.server.port", 0);
+
+    try {
+      cluster = new MiniDFSCluster.Builder(config).numDataNodes(1).build();
+      cluster.waitActive();
+
+      Nfs3 nfs3 = new Nfs3(config);
+      nfs3.startServiceInternal(false);
+      nfsd = (RpcProgramNfs3) nfs3.getRpcProgram();
+
+      DFSClient dfsClient = new DFSClient(NameNode.getAddress(config), config);
+      HdfsFileStatus status = dfsClient.getFileInfo("/");
+      FileHandle rootHandle = new FileHandle(status.getFileId());
+
+      CREATE3Request createReq = new CREATE3Request(rootHandle,
+          "out-of-order-write" + System.currentTimeMillis(),
+          Nfs3Constant.CREATE_UNCHECKED, new SetAttr3(), 0);
+      XDR createXdr = new XDR();
+      createReq.serialize(createXdr);
+      CREATE3Response createRsp = nfsd.create(createXdr.asReadOnlyWrap(),
+          securityHandler, new InetSocketAddress("localhost", 1234));
+      FileHandle handle = createRsp.getObjHandle();
+
+      byte[][] oooBuf = new byte[numOOO][bufSize];
+      for (int i = 0; i < numOOO; i++) {
+        Arrays.fill(oooBuf[i], (byte) i);
+      }
+
+      for (int i = 0; i < numOOO; i++) {
+        final long offset = (numOOO - 1 - i) * bufSize;
+        WRITE3Request writeReq = new WRITE3Request(handle, offset, bufSize,
+            WriteStableHow.UNSTABLE, ByteBuffer.wrap(oooBuf[i]));
+        XDR writeXdr = new XDR();
+        writeReq.serialize(writeXdr);
+        nfsd.write(writeXdr.asReadOnlyWrap(), null, 1, securityHandler,
+            new InetSocketAddress("localhost", 1234));
+      }
+
+      waitWrite(nfsd, handle, 60000);
+      READ3Request readReq = new READ3Request(handle, bufSize, bufSize);
+      XDR readXdr = new XDR();
+      readReq.serialize(readXdr);
+      READ3Response readRsp = nfsd.read(readXdr.asReadOnlyWrap(),
+          securityHandler, new InetSocketAddress("localhost", config.getInt(
+              NfsConfigKeys.DFS_NFS_SERVER_PORT_KEY,
+              NfsConfigKeys.DFS_NFS_SERVER_PORT_DEFAULT)));
+      assertTrue(Arrays.equals(oooBuf[1], readRsp.getData().array()));
     } finally {
       if (cluster != null) {
         cluster.shutdown();

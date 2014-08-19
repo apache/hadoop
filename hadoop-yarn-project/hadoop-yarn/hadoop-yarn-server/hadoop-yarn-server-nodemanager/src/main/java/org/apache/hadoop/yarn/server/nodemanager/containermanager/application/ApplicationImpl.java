@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.application;
 
+import java.io.IOException;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogsRetentionPolicy;
@@ -375,6 +377,7 @@ public class ApplicationImpl implements Application {
       for (ContainerId containerID : app.containers.keySet()) {
         app.dispatcher.getEventHandler().handle(
             new ContainerKillEvent(containerID,
+                ContainerExitStatus.KILLED_AFTER_APP_COMPLETION,
                 "Container killed on application-finish event: " + appEvent.getDiagnostic()));
       }
       return ApplicationState.FINISHING_CONTAINERS_WAIT;
@@ -426,6 +429,11 @@ public class ApplicationImpl implements Application {
       ApplicationId appId = event.getApplicationID();
       app.context.getApplications().remove(appId);
       app.aclsManager.removeApplication(appId);
+      try {
+        app.context.getNMStateStore().removeApplication(appId);
+      } catch (IOException e) {
+        LOG.error("Unable to remove application from state store", e);
+      }
     }
   }
 

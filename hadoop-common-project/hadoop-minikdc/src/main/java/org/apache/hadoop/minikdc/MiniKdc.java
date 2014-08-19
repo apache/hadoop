@@ -17,6 +17,7 @@
  */
 
 package org.apache.hadoop.minikdc;
+import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.text.StrSubstitutor;
@@ -56,7 +57,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringReader;
@@ -126,9 +127,9 @@ public class MiniKdc {
               + file.getAbsolutePath());
     }
     Properties userConf = new Properties();
-    FileReader r = null;
+    InputStreamReader r = null;
     try {
-      r = new FileReader(file);
+      r = new InputStreamReader(new FileInputStream(file), Charsets.UTF_8);
       userConf.load(r);
     } finally {
       if (r != null) {
@@ -393,18 +394,22 @@ public class MiniKdc {
     map.put("4", bindAddress);
 
     ClassLoader cl = Thread.currentThread().getContextClassLoader();
-    InputStream is = cl.getResourceAsStream("minikdc.ldiff");
+    InputStream is1 = cl.getResourceAsStream("minikdc.ldiff");
 
     SchemaManager schemaManager = ds.getSchemaManager();
-    final String content = StrSubstitutor.replace(IOUtils.toString(is), map);
-    LdifReader reader = new LdifReader(new StringReader(content));
+    LdifReader reader = null;
+
     try {
+      final String content = StrSubstitutor.replace(IOUtils.toString(is1), map);
+      reader = new LdifReader(new StringReader(content));
+
       for (LdifEntry ldifEntry : reader) {
         ds.getAdminSession().add(new DefaultEntry(schemaManager,
                 ldifEntry.getEntry()));
       }
     } finally {
-      reader.close();
+      IOUtils.closeQuietly(reader);
+      IOUtils.closeQuietly(is1);
     }
 
     kdc = new KdcServer();
@@ -429,14 +434,23 @@ public class MiniKdc {
     kdc.start();
 
     StringBuilder sb = new StringBuilder();
-    is = cl.getResourceAsStream("minikdc-krb5.conf");
-    BufferedReader r = new BufferedReader(new InputStreamReader(is));
-    String line = r.readLine();
-    while (line != null) {
-      sb.append(line).append("{3}");
-      line = r.readLine();
+    InputStream is2 = cl.getResourceAsStream("minikdc-krb5.conf");
+
+    BufferedReader r = null;
+
+    try {
+      r = new BufferedReader(new InputStreamReader(is2, Charsets.UTF_8));
+      String line = r.readLine();
+
+      while (line != null) {
+        sb.append(line).append("{3}");
+        line = r.readLine();
+      }
+    } finally {
+      IOUtils.closeQuietly(r);
+      IOUtils.closeQuietly(is2);
     }
-    r.close();
+
     krb5conf = new File(workDir, "krb5.conf").getAbsoluteFile();
     FileUtils.writeStringToFile(krb5conf,
             MessageFormat.format(sb.toString(), getRealm(), getHost(),

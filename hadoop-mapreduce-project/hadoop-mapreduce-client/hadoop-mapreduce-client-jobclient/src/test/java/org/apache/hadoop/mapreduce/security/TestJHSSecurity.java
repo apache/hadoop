@@ -26,7 +26,7 @@ import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -198,6 +198,11 @@ public class TestJHSSecurity {
         fail("Unexpected exception" + e);
       }
       cancelDelegationToken(loggedInUser, hsService, token);
+
+      // Testing the token with different renewer to cancel the token
+      Token tokenWithDifferentRenewer = getDelegationToken(loggedInUser,
+          hsService, "yarn");
+      cancelDelegationToken(loggedInUser, hsService, tokenWithDifferentRenewer);
       if (clientUsingDT != null) {
 //        RPC.stopProxy(clientUsingDT);
         clientUsingDT = null;

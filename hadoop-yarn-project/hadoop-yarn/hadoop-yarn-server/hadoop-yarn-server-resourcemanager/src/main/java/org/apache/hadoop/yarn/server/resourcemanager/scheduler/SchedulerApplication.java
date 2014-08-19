@@ -23,11 +23,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 
 @Private
 @Unstable
-public class SchedulerApplication {
+public class SchedulerApplication<T extends SchedulerApplicationAttempt> {
 
   private Queue queue;
   private final String user;
-  private SchedulerApplicationAttempt currentAttempt;
+  private T currentAttempt;
 
   public SchedulerApplication(Queue queue, String user) {
     this.queue = queue;
@@ -46,11 +46,11 @@ public class SchedulerApplication {
     return user;
   }
 
-  public SchedulerApplicationAttempt getCurrentAppAttempt() {
+  public T getCurrentAppAttempt() {
     return currentAttempt;
   }
 
-  public void setCurrentAppAttempt(SchedulerApplicationAttempt currentAttempt) {
+  public void setCurrentAppAttempt(T currentAttempt) {
     this.currentAttempt = currentAttempt;
   }
 

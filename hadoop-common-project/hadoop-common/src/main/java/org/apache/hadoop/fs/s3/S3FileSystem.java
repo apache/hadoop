@@ -32,6 +32,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -226,7 +227,7 @@ public class S3FileSystem extends FileSystem {
       if (overwrite) {
         delete(file, true);
       } else {
-        throw new IOException("File already exists: " + file);
+        throw new FileAlreadyExistsException("File already exists: " + file);
       }
     } else {
       Path parent = file.getParent();

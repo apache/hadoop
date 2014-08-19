@@ -288,8 +288,18 @@ public class JobHistoryParser implements HistoryEventHandler {
   private void handleTaskAttemptFailedEvent(
       TaskAttemptUnsuccessfulCompletionEvent event) {
     TaskInfo taskInfo = info.tasksMap.get(event.getTaskId());
+    if(taskInfo == null) {
+      LOG.warn("TaskInfo is null for TaskAttemptUnsuccessfulCompletionEvent"
+          + " taskId:  " + event.getTaskId().toString());
+      return;
+    }
     TaskAttemptInfo attemptInfo = 
       taskInfo.attemptsMap.get(event.getTaskAttemptId());
+    if(attemptInfo == null) {
+      LOG.warn("AttemptInfo is null for TaskAttemptUnsuccessfulCompletionEvent"
+          + " taskAttemptId:  " + event.getTaskAttemptId().toString());
+      return;
+    }
     attemptInfo.finishTime = event.getFinishTime();
     attemptInfo.error = StringInterner.weakIntern(event.getError());
     attemptInfo.status = StringInterner.weakIntern(event.getTaskStatus());

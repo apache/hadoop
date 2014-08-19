@@ -249,8 +249,16 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
                    TaskEventType.T_ATTEMPT_SUCCEEDED))
 
     // Transitions from KILLED state
+    // There could be a race condition where TaskImpl might receive
+    // T_ATTEMPT_SUCCEEDED followed by T_ATTEMPTED_KILLED for the same attempt.
+    // a. The task is in KILL_WAIT.
+    // b. Before TA transitions to SUCCEEDED state, Task sends TA_KILL event.
+    // c. TA transitions to SUCCEEDED state and thus send T_ATTEMPT_SUCCEEDED
+    //    to the task. The task transitions to KILLED state.
+    // d. TA processes TA_KILL event and sends T_ATTEMPT_KILLED to the task.
     .addTransition(TaskStateInternal.KILLED, TaskStateInternal.KILLED,
         EnumSet.of(TaskEventType.T_KILL,
+                   TaskEventType.T_ATTEMPT_KILLED,
                    TaskEventType.T_ADD_SPEC_ATTEMPT))
 
     // create the topology tables

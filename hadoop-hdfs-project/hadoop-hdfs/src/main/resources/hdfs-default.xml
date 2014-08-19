@@ -55,11 +55,11 @@
   <name>dfs.namenode.rpc-bind-host</name>
   <value></value>
   <description>
-    The actual address the server will bind to. If this optional address is
-    set, the RPC server will bind to this address and the port specified in
-    dfs.namenode.rpc-address for the RPC server. It can also be specified
-    per name node or name service for HA/Federation. This is most useful for
-    making name node listen to all interfaces by setting to 0.0.0.0.
+    The actual address the RPC server will bind to. If this optional address is
+    set, it overrides only the hostname portion of dfs.namenode.rpc-address.
+    It can also be specified per name node or name service for HA/Federation.
+    This is useful for making the name node listen on all interfaces by
+    setting it to 0.0.0.0.
   </description>
 </property>
 
@@ -80,11 +80,11 @@
   <name>dfs.namenode.servicerpc-bind-host</name>
   <value></value>
   <description>
-    The actual address the server will bind to. If this optional address is
-    set, the service RPC server will bind to this address and the port 
-    specified in dfs.namenode.servicerpc-address. It can also be specified
-    per name node or name service for HA/Federation. This is most useful for
-    making name node listen to all interfaces by setting to 0.0.0.0.
+    The actual address the service RPC server will bind to. If this optional address is
+    set, it overrides only the hostname portion of dfs.namenode.servicerpc-address.
+    It can also be specified per name node or name service for HA/Federation.
+    This is useful for making the name node listen on all interfaces by
+    setting it to 0.0.0.0.
   </description>
 </property>
 
@@ -139,6 +139,18 @@
   <value>0.0.0.0:50070</value>
   <description>
     The address and the base port where the dfs namenode web ui will listen on.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.http-bind-host</name>
+  <value></value>
+  <description>
+    The actual adress the HTTP server will bind to. If this optional address
+    is set, it overrides only the hostname portion of dfs.namenode.http-address.
+    It can also be specified per name node or name service for HA/Federation.
+    This is useful for making the name node HTTP server listen on all
+    interfaces by setting it to 0.0.0.0.
   </description>
 </property>
 
@@ -205,6 +217,18 @@
   <name>dfs.namenode.https-address</name>
   <value>0.0.0.0:50470</value>
   <description>The namenode secure http server address and port.</description>
+</property>
+
+<property>
+  <name>dfs.namenode.https-bind-host</name>
+  <value></value>
+  <description>
+    The actual adress the HTTPS server will bind to. If this optional address
+    is set, it overrides only the hostname portion of dfs.namenode.https-address.
+    It can also be specified per name node or name service for HA/Federation.
+    This is useful for making the name node HTTPS server listen on all
+    interfaces by setting it to 0.0.0.0.
+  </description>
 </property>
 
  <property>
@@ -1272,8 +1296,56 @@
     non-zero integer.
   </description>
 </property>
+
 <property>
-  <name>dfs.nfs.keytab.file</name>
+  <name>nfs.server.port</name>
+  <value>2049</value>
+  <description>
+      Specify the port number used by Hadoop NFS.
+  </description>
+</property>
+
+<property>
+  <name>nfs.mountd.port</name>
+  <value>4242</value>
+  <description>
+      Specify the port number used by Hadoop mount daemon.
+  </description>
+</property>
+
+<property>    
+  <name>nfs.dump.dir</name>
+  <value>/tmp/.hdfs-nfs</value>
+  <description>
+    This directory is used to temporarily save out-of-order writes before
+    writing to HDFS. For each file, the out-of-order writes are dumped after
+    they are accumulated to exceed certain threshold (e.g., 1MB) in memory. 
+    One needs to make sure the directory has enough space.
+  </description>
+</property>
+
+<property>
+  <name>nfs.rtmax</name>
+  <value>1048576</value>
+  <description>This is the maximum size in bytes of a READ request
+    supported by the NFS gateway. If you change this, make sure you
+    also update the nfs mount's rsize(add rsize= # of bytes to the 
+    mount directive).
+  </description>
+</property>
+
+<property>
+  <name>nfs.wtmax</name>
+  <value>1048576</value>
+  <description>This is the maximum size in bytes of a WRITE request
+    supported by the NFS gateway. If you change this, make sure you
+    also update the nfs mount's wsize(add wsize= # of bytes to the 
+    mount directive).
+  </description>
+</property>
+
+<property>
+  <name>nfs.keytab.file</name>
   <value></value>
   <description>
     *Note*: Advanced property. Change with caution.
@@ -1283,13 +1355,24 @@
 </property>
 
 <property>
-  <name>dfs.nfs.kerberos.principal</name>
+  <name>nfs.kerberos.principal</name>
   <value></value>
   <description>
     *Note*: Advanced property. Change with caution.
     This is the name of the kerberos principal. This is required when
     the cluster is kerberized.It must be of this format:
     nfs-gateway-user/nfs-gateway-host@kerberos-realm
+  </description>
+</property>
+
+<property>
+  <name>nfs.allow.insecure.ports</name>
+  <value>true</value>
+  <description>
+    When set to false, client connections originating from unprivileged ports
+    (those above 1023) will be rejected. This is to ensure that clients
+    connecting to this NFS Gateway must have had root privilege on the machine
+    where they're connecting from.
   </description>
 </property>
 
@@ -1365,6 +1448,37 @@
       encrypted even if dfs.encrypt.data.transfer is set to true. The
       default implementation returns false indicating that the channel 
       is not trusted.
+  </description>
+</property>
+
+<property>
+  <name>dfs.data.transfer.protection</name>
+  <value></value>
+  <description>
+    A comma-separated list of SASL protection values used for secured
+    connections to the DataNode when reading or writing block data.  Possible
+    values are authentication, integrity and privacy.  authentication means
+    authentication only and no integrity or privacy; integrity implies
+    authentication and integrity are enabled; and privacy implies all of
+    authentication, integrity and privacy are enabled.  If
+    dfs.encrypt.data.transfer is set to true, then it supersedes the setting for
+    dfs.data.transfer.protection and enforces that all connections must use a
+    specialized encrypted SASL handshake.  This property is ignored for
+    connections to a DataNode listening on a privileged port.  In this case, it
+    is assumed that the use of a privileged port establishes sufficient trust.
+  </description>
+</property>
+
+<property>
+  <name>dfs.data.transfer.saslproperties.resolver.class</name>
+  <value></value>
+  <description>
+    SaslPropertiesResolver used to resolve the QOP used for a connection to the
+    DataNode when reading or writing block data.  If not specified, the full set
+    of values specified in dfs.data.transfer.protection is used while
+    determining the QOP used for the connection. If a class is specified, then
+    the QOP values returned by the class will be used while determining the QOP
+    used for the connection.
   </description>
 </property>
 
@@ -1869,6 +1983,81 @@
     behavior to allow datanode registration with the default rack if the 
     resolving topology failed.
   </description>
+</property>
+
+<property>
+  <name>dfs.namenode.xattrs.enabled</name>
+  <value>true</value>
+  <description>
+    Whether support for extended attributes is enabled on the NameNode.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.fs-limits.max-xattrs-per-inode</name>
+  <value>32</value>
+  <description>
+    Maximum number of extended attributes per inode.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.fs-limits.max-xattr-size</name>
+  <value>16384</value>
+  <description>
+    The maximum combined size of the name and value of an extended attribute in bytes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.slow.io.warning.threshold.ms</name>
+  <value>30000</value>
+  <description>The threshold in milliseconds at which we will log a slow
+    io warning in a dfsclient. By default, this parameter is set to 30000
+    milliseconds (30 seconds).
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.slow.io.warning.threshold.ms</name>
+  <value>300</value>
+  <description>The threshold in milliseconds at which we will log a slow
+    io warning in a datanode. By default, this parameter is set to 300
+    milliseconds.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.startup.delay.block.deletion.sec</name>
+  <value>0</value>
+  <description>The delay in seconds at which we will pause the blocks deletion
+    after Namenode startup. By default it's disabled.
+    In the case a directory has large number of directories and files are
+    deleted, suggested delay is one hour to give the administrator enough time
+    to notice large number of pending deletion blocks and take corrective
+    action.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.randomize-block-locations-per-block</name>
+  <value>false</value>
+  <description>When fetching replica locations of a block, the replicas
+   are sorted based on network distance. This configuration parameter
+   determines whether the replicas at the same network distance are randomly
+   shuffled. By default, this is false, such that repeated requests for a block's
+   replicas always result in the same order. This potentially improves page cache
+   behavior. However, for some network topologies, it is desirable to shuffle this
+   order for better load balancing.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.block.id.layout.upgrade.threads</name>
+  <value>12</value>
+  <description>The number of threads to use when creating hard links from
+    current to previous blocks during upgrade of a DataNode to block ID-based
+    block layout (see HDFS-6482 for details on the layout).</description>
 </property>
 
 </configuration>

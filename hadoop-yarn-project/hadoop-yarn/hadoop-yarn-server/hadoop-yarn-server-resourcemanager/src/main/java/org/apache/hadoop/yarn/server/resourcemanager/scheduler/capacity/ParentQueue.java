@@ -38,7 +38,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
@@ -49,9 +48,11 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -143,7 +144,7 @@ public class ParentQueue implements CSQueue {
     this.queueInfo.setQueueName(queueName);
     this.queueInfo.setChildQueues(new ArrayList<QueueInfo>());
 
-    setupQueueConfigs(cs.getClusterResources(),
+    setupQueueConfigs(cs.getClusterResource(),
         capacity, absoluteCapacity, 
         maximumCapacity, absoluteMaxCapacity, state, acls);
     
@@ -770,13 +771,16 @@ public class ParentQueue implements CSQueue {
   
   @Override
   public void recoverContainer(Resource clusterResource,
-      FiCaSchedulerApp application, Container container) {
+      SchedulerApplicationAttempt attempt, RMContainer rmContainer) {
+    if (rmContainer.getState().equals(RMContainerState.COMPLETED)) {
+      return;
+    }
     // Careful! Locking order is important! 
     synchronized (this) {
-      allocateResource(clusterResource, container.getResource());
+      allocateResource(clusterResource,rmContainer.getContainer().getResource());
     }
     if (parent != null) {
-      parent.recoverContainer(clusterResource, application, container);
+      parent.recoverContainer(clusterResource, attempt, rmContainer);
     }
   }
 
@@ -785,6 +789,39 @@ public class ParentQueue implements CSQueue {
       Collection<ApplicationAttemptId> apps) {
     for (CSQueue queue : childQueues) {
       queue.collectSchedulerApplications(apps);
+    }
+  }
+
+  @Override
+  public void attachContainer(Resource clusterResource,
+      FiCaSchedulerApp application, RMContainer rmContainer) {
+    if (application != null) {
+      allocateResource(clusterResource, rmContainer.getContainer()
+          .getResource());
+      LOG.info("movedContainer" + " queueMoveIn=" + getQueueName()
+          + " usedCapacity=" + getUsedCapacity() + " absoluteUsedCapacity="
+          + getAbsoluteUsedCapacity() + " used=" + usedResources + " cluster="
+          + clusterResource);
+      // Inform the parent
+      if (parent != null) {
+        parent.attachContainer(clusterResource, application, rmContainer);
+      }
+    }
+  }
+
+  @Override
+  public void detachContainer(Resource clusterResource,
+      FiCaSchedulerApp application, RMContainer rmContainer) {
+    if (application != null) {
+      releaseResource(clusterResource, rmContainer.getContainer().getResource());
+      LOG.info("movedContainer" + " queueMoveOut=" + getQueueName()
+          + " usedCapacity=" + getUsedCapacity() + " absoluteUsedCapacity="
+          + getAbsoluteUsedCapacity() + " used=" + usedResources + " cluster="
+          + clusterResource);
+      // Inform the parent
+      if (parent != null) {
+        parent.detachContainer(clusterResource, application, rmContainer);
+      }
     }
   }
 }

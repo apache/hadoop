@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -56,6 +57,7 @@ import org.apache.hadoop.yarn.util.Records;
  *     <li>A list of nodes whose status has been updated.</li>
  *     <li>The number of available nodes in a cluster.</li>
  *     <li>A description of resources requested back by the cluster</li>
+ *     <li>AMRMToken, if AMRMToken has been rolled over</li>
  *   </ul>
  * </p>
  * 
@@ -99,6 +101,23 @@ public abstract class AllocateResponse {
         numClusterNodes, preempt, nmTokens);
     response.setIncreasedContainers(increasedContainers);
     response.setDecreasedContainers(decreasedContainers);
+    return response;
+  }
+
+  @Private
+  @Unstable
+  public static AllocateResponse newInstance(int responseId,
+      List<ContainerStatus> completedContainers,
+      List<Container> allocatedContainers, List<NodeReport> updatedNodes,
+      Resource availResources, AMCommand command, int numClusterNodes,
+      PreemptionMessage preempt, List<NMToken> nmTokens, Token amRMToken,
+      List<ContainerResourceIncrease> increasedContainers,
+      List<ContainerResourceDecrease> decreasedContainers) {
+    AllocateResponse response =
+        newInstance(responseId, completedContainers, allocatedContainers,
+          updatedNodes, availResources, command, numClusterNodes, preempt,
+          nmTokens, increasedContainers, decreasedContainers);
+    response.setAMRMToken(amRMToken);
     return response;
   }
 
@@ -270,4 +289,17 @@ public abstract class AllocateResponse {
   @Unstable
   public abstract void setDecreasedContainers(
       List<ContainerResourceDecrease> decreasedContainers);
+
+  /**
+   * The AMRMToken that belong to this attempt
+   *
+   * @return The AMRMToken that belong to this attempt
+   */
+  @Public
+  @Unstable
+  public abstract Token getAMRMToken();
+
+  @Private
+  @Unstable
+  public abstract void setAMRMToken(Token amRMToken);
 }

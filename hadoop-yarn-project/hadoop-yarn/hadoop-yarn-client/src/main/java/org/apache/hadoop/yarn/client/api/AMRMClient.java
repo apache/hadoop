@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -37,12 +39,14 @@ import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
     AbstractService {
+  private static final Log LOG = LogFactory.getLog(AMRMClient.class);
 
   /**
    * Create a new instance of AMRMClient.
@@ -207,14 +211,21 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
   
   /**
    * Request additional containers and receive new container allocations.
-   * Requests made via <code>addContainerRequest</code> are sent to the 
-   * <code>ResourceManager</code>. New containers assigned to the master are 
-   * retrieved. Status of completed containers and node health updates are 
-   * also retrieved.
-   * This also doubles up as a heartbeat to the ResourceManager and must be 
-   * made periodically.
-   * The call may not always return any new allocations of containers.
-   * App should not make concurrent allocate requests. May cause request loss.
+   * Requests made via <code>addContainerRequest</code> are sent to the
+   * <code>ResourceManager</code>. New containers assigned to the master are
+   * retrieved. Status of completed containers and node health updates are also
+   * retrieved. This also doubles up as a heartbeat to the ResourceManager and
+   * must be made periodically. The call may not always return any new
+   * allocations of containers. App should not make concurrent allocate
+   * requests. May cause request loss.
+   * 
+   * <p>
+   * Note : If the user has not removed container requests that have already
+   * been satisfied, then the re-register may end up sending the entire
+   * container requests to the RM (including matched requests). Which would mean
+   * the RM could end up giving it a lot of new allocated containers.
+   * </p>
+   * 
    * @param progressIndicator Indicates progress made by the master
    * @return the response of the allocate request
    * @throws YarnException
@@ -327,6 +338,65 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
    */
   public NMTokenCache getNMTokenCache() {
     return nmTokenCache;
+  }
+
+  /**
+   * Wait for <code>check</code> to return true for each 1000 ms.
+   * See also {@link #waitFor(com.google.common.base.Supplier, int)}
+   * and {@link #waitFor(com.google.common.base.Supplier, int, int)}
+   * @param check
+   */
+  public void waitFor(Supplier<Boolean> check) throws InterruptedException {
+    waitFor(check, 1000);
+  }
+
+  /**
+   * Wait for <code>check</code> to return true for each
+   * <code>checkEveryMillis</code> ms.
+   * See also {@link #waitFor(com.google.common.base.Supplier, int, int)}
+   * @param check user defined checker
+   * @param checkEveryMillis interval to call <code>check</code>
+   */
+  public void waitFor(Supplier<Boolean> check, int checkEveryMillis)
+      throws InterruptedException {
+    waitFor(check, checkEveryMillis, 1);
+  }
+
+  /**
+   * Wait for <code>check</code> to return true for each
+   * <code>checkEveryMillis</code> ms. In the main loop, this method will log
+   * the message "waiting in main loop" for each <code>logInterval</code> times
+   * iteration to confirm the thread is alive.
+   * @param check user defined checker
+   * @param checkEveryMillis interval to call <code>check</code>
+   * @param logInterval interval to log for each
+   */
+  public void waitFor(Supplier<Boolean> check, int checkEveryMillis,
+      int logInterval) throws InterruptedException {
+    Preconditions.checkNotNull(check, "check should not be null");
+    Preconditions.checkArgument(checkEveryMillis >= 0,
+        "checkEveryMillis should be positive value");
+    Preconditions.checkArgument(logInterval >= 0,
+        "logInterval should be positive value");
+
+    int loggingCounter = logInterval;
+    do {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Check the condition for main loop.");
+      }
+
+      boolean result = check.get();
+      if (result) {
+        LOG.info("Exits the main loop.");
+        return;
+      }
+      if (--loggingCounter <= 0) {
+        LOG.info("Waiting in main loop.");
+        loggingCounter = logInterval;
+      }
+
+      Thread.sleep(checkEveryMillis);
+    } while (true);
   }
 
 }

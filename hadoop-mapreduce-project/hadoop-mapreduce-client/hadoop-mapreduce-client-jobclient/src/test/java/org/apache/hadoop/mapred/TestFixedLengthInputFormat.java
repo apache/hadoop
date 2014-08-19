@@ -38,7 +38,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static junit.framework.Assert.*;
+import static org.junit.Assert.*;
 
 public class TestFixedLengthInputFormat {
 
@@ -372,10 +372,13 @@ public class TestFixedLengthInputFormat {
         format.getRecordReader(split, job, voidReporter);
     LongWritable key = reader.createKey();
     BytesWritable value = reader.createValue();
-    while (reader.next(key, value)) {
-      result.add(new String(value.getBytes(), 0, value.getLength()));
+    try {
+      while (reader.next(key, value)) {
+        result.add(new String(value.getBytes(), 0, value.getLength()));
+      }
+    } finally {
+      reader.close();
     }
-    reader.close();
     return result;
   }
 

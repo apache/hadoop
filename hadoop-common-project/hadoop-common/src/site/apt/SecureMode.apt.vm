@@ -176,9 +176,11 @@ KVNO Timestamp         Principal
   the rule specified by <<<hadoop.security.auth_to_local>>>
   which works in the same way as the <<<auth_to_local>>> in
   {{{http://web.mit.edu/Kerberos/krb5-latest/doc/admin/conf_files/krb5_conf.html}Kerberos configuration file (krb5.conf)}}.
+  In addition, Hadoop <<<auth_to_local>>> mapping supports the <</L>> flag that
+  lowercases the returned name.
 
   By default, it picks the first component of principal name as a user name
-  if the realms matches to the <<<defalut_realm>>> (usually defined in /etc/krb5.conf).
+  if the realms matches to the <<<default_realm>>> (usually defined in /etc/krb5.conf).
   For example, <<<host/full.qualified.domain.name@REALM.TLD>>> is mapped to <<<host>>>
   by default rule.
 
@@ -201,7 +203,9 @@ KVNO Timestamp         Principal
   Some products such as Apache Oozie which access the services of Hadoop
   on behalf of end users need to be able to impersonate end users.
   You can configure proxy user using properties
-  <<<hadoop.proxyuser.${superuser}.hosts>>> and <<<hadoop.proxyuser.${superuser}.groups>>>.
+  <<<hadoop.proxyuser.${superuser}.hosts>>> along with either or both of 
+  <<<hadoop.proxyuser.${superuser}.groups>>>
+  and <<<hadoop.proxyuser.${superuser}.users>>>.
 
   For example, by specifying as below in core-site.xml,
   user named <<<oozie>>> accessing from any host
@@ -211,6 +215,39 @@ KVNO Timestamp         Principal
   <property>
     <name>hadoop.proxyuser.oozie.hosts</name>
     <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.oozie.groups</name>
+    <value>*</value>
+  </property>
+----
+
+  User named <<<oozie>>> accessing from any host
+  can impersonate user1 and user2 by specifying as below in core-site.xml.
+
+----
+  <property>
+    <name>hadoop.proxyuser.oozie.hosts</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.oozie.users</name>
+    <value>user1,user2</value>
+  </property>
+----
+
+  The <<<hadoop.proxyuser.${superuser}.hosts>>> accepts list of ip addresses,
+  ip address ranges in CIDR format and/or host names.
+  
+  For example, by specifying as below in core-site.xml,
+  user named <<<oozie>>> accessing from hosts in the range 
+  10.222.0.0-15 and 10.113.221.221
+  can impersonate any user belonging to any group.
+  
+  ----
+  <property>
+    <name>hadoop.proxyuser.oozie.hosts</name>
+    <value>10.222.0.0/16,10.113.221.221</value>
   </property>
   <property>
     <name>hadoop.proxyuser.oozie.groups</name>

@@ -20,8 +20,11 @@ package org.apache.hadoop.hdfs;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -36,6 +39,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
@@ -421,6 +425,79 @@ public class TestDFSPermission {
     }
   }
 
+  @Test
+  public void testAccessOwner() throws IOException, InterruptedException {
+    FileSystem rootFs = FileSystem.get(conf);
+    Path p1 = new Path("/p1");
+    rootFs.mkdirs(p1);
+    rootFs.setOwner(p1, USER1_NAME, GROUP1_NAME);
+    fs = USER1.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      @Override
+      public FileSystem run() throws Exception {
+        return FileSystem.get(conf);
+      }
+    });
+    fs.setPermission(p1, new FsPermission((short) 0444));
+    fs.access(p1, FsAction.READ);
+    try {
+      fs.access(p1, FsAction.WRITE);
+      fail("The access call should have failed.");
+    } catch (AccessControlException e) {
+      // expected
+    }
+
+    Path badPath = new Path("/bad/bad");
+    try {
+      fs.access(badPath, FsAction.READ);
+      fail("The access call should have failed");
+    } catch (FileNotFoundException e) {
+      // expected
+    }
+  }
+
+  @Test
+  public void testAccessGroupMember() throws IOException, InterruptedException {
+    FileSystem rootFs = FileSystem.get(conf);
+    Path p2 = new Path("/p2");
+    rootFs.mkdirs(p2);
+    rootFs.setOwner(p2, UserGroupInformation.getCurrentUser().getShortUserName(), GROUP1_NAME);
+    rootFs.setPermission(p2, new FsPermission((short) 0740));
+    fs = USER1.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      @Override
+      public FileSystem run() throws Exception {
+        return FileSystem.get(conf);
+      }
+    });
+    fs.access(p2, FsAction.READ);
+    try {
+      fs.access(p2, FsAction.EXECUTE);
+      fail("The access call should have failed.");
+    } catch (AccessControlException e) {
+      // expected
+    }
+  }
+
+  @Test
+  public void testAccessOthers() throws IOException, InterruptedException {
+    FileSystem rootFs = FileSystem.get(conf);
+    Path p3 = new Path("/p3");
+    rootFs.mkdirs(p3);
+    rootFs.setPermission(p3, new FsPermission((short) 0774));
+    fs = USER1.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      @Override
+      public FileSystem run() throws Exception {
+        return FileSystem.get(conf);
+      }
+    });
+    fs.access(p3, FsAction.READ);
+    try {
+      fs.access(p3, FsAction.READ_WRITE);
+      fail("The access call should have failed.");
+    } catch (AccessControlException e) {
+      // expected
+    }
+  }
+
   /* Check if namenode performs permission checking correctly 
    * for the given user for operations mkdir, open, setReplication, 
    * getFileInfo, isDirectory, exists, getContentLength, list, rename,
@@ -429,6 +506,7 @@ public class TestDFSPermission {
       short[] ancestorPermission, short[] parentPermission,
       short[] filePermission, Path[] parentDirs, Path[] files, Path[] dirs)
       throws Exception {
+    boolean[] isDirEmpty = new boolean[NUM_TEST_PERMISSIONS];
     login(SUPERUSER);
     for (int i = 0; i < NUM_TEST_PERMISSIONS; i++) {
       create(OpType.CREATE, files[i]);
@@ -441,6 +519,8 @@ public class TestDFSPermission {
       FsPermission fsPermission = new FsPermission(filePermission[i]);
       fs.setPermission(files[i], fsPermission);
       fs.setPermission(dirs[i], fsPermission);
+
+      isDirEmpty[i] = (fs.listStatus(dirs[i]).length == 0);
     }
 
     login(ugi);
@@ -461,7 +541,7 @@ public class TestDFSPermission {
           parentPermission[i], ancestorPermission[next], parentPermission[next]);
       testDeleteFile(ugi, files[i], ancestorPermission[i], parentPermission[i]);
       testDeleteDir(ugi, dirs[i], ancestorPermission[i], parentPermission[i],
-          filePermission[i], null);
+          filePermission[i], null, isDirEmpty[i]);
     }
     
     // test non existent file
@@ -924,7 +1004,8 @@ public class TestDFSPermission {
   }
 
   /* A class that verifies the permission checking is correct for
-   * directory deletion */
+   * directory deletion
+   */
   private class DeleteDirPermissionVerifier extends DeletePermissionVerifier {
     private short[] childPermissions;
 
@@ -958,6 +1039,17 @@ public class TestDFSPermission {
     }
   }
 
+  /* A class that verifies the permission checking is correct for
+   * empty-directory deletion
+   */
+  private class DeleteEmptyDirPermissionVerifier extends DeleteDirPermissionVerifier {
+    @Override
+    void setOpPermission() {
+      this.opParentPermission = SEARCH_MASK | WRITE_MASK;
+      this.opPermission = NULL_MASK;
+    }
+  }
+
   final DeletePermissionVerifier fileDeletionVerifier =
     new DeletePermissionVerifier();
 
@@ -971,14 +1063,19 @@ public class TestDFSPermission {
   final DeleteDirPermissionVerifier dirDeletionVerifier =
     new DeleteDirPermissionVerifier();
 
+  final DeleteEmptyDirPermissionVerifier emptyDirDeletionVerifier =
+      new DeleteEmptyDirPermissionVerifier();
+
   /* test if the permission checking of directory deletion is correct */
   private void testDeleteDir(UserGroupInformation ugi, Path path,
       short ancestorPermission, short parentPermission, short permission,
-      short[] childPermissions) throws Exception {
-    dirDeletionVerifier.set(path, ancestorPermission, parentPermission,
-        permission, childPermissions);
-    dirDeletionVerifier.verifyPermission(ugi);
-
+      short[] childPermissions,
+      final boolean isDirEmpty) throws Exception {
+    DeleteDirPermissionVerifier ddpv = isDirEmpty?
+        emptyDirDeletionVerifier : dirDeletionVerifier;
+    ddpv.set(path, ancestorPermission, parentPermission, permission,
+        childPermissions);
+    ddpv.verifyPermission(ugi);
   }
 
   /* log into dfs as the given user */

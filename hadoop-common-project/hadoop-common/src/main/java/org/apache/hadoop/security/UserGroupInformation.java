@@ -37,6 +37,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -1156,13 +1157,25 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public static UserGroupInformation createRemoteUser(String user) {
+    return createRemoteUser(user, AuthMethod.SIMPLE);
+  }
+  
+  /**
+   * Create a user from a login name. It is intended to be used for remote
+   * users in RPC, since it won't have any credentials.
+   * @param user the full user principal name, must not be empty or null
+   * @return the UserGroupInformation for the remote user.
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
+  public static UserGroupInformation createRemoteUser(String user, AuthMethod authMethod) {
     if (user == null || user.isEmpty()) {
       throw new IllegalArgumentException("Null user");
     }
     Subject subject = new Subject();
     subject.getPrincipals().add(new User(user));
     UserGroupInformation result = new UserGroupInformation(subject);
-    result.setAuthenticationMethod(AuthenticationMethod.SIMPLE);
+    result.setAuthenticationMethod(authMethod);
     return result;
   }
 
@@ -1391,7 +1404,7 @@ public class UserGroupInformation {
    * @param token Token to be added
    * @return true on successful add of new token
    */
-  public synchronized boolean addToken(Token<? extends TokenIdentifier> token) {
+  public boolean addToken(Token<? extends TokenIdentifier> token) {
     return (token != null) ? addToken(token.getService(), token) : false;
   }
 
@@ -1402,10 +1415,11 @@ public class UserGroupInformation {
    * @param token Token to be added
    * @return true on successful add of new token
    */
-  public synchronized boolean addToken(Text alias,
-                                       Token<? extends TokenIdentifier> token) {
-    getCredentialsInternal().addToken(alias, token);
-    return true;
+  public boolean addToken(Text alias, Token<? extends TokenIdentifier> token) {
+    synchronized (subject) {
+      getCredentialsInternal().addToken(alias, token);
+      return true;
+    }
   }
   
   /**
@@ -1413,10 +1427,11 @@ public class UserGroupInformation {
    * 
    * @return an unmodifiable collection of tokens associated with user
    */
-  public synchronized
-  Collection<Token<? extends TokenIdentifier>> getTokens() {
-    return Collections.unmodifiableCollection(
-        new ArrayList<Token<?>>(getCredentialsInternal().getAllTokens()));
+  public Collection<Token<? extends TokenIdentifier>> getTokens() {
+    synchronized (subject) {
+      return Collections.unmodifiableCollection(
+          new ArrayList<Token<?>>(getCredentialsInternal().getAllTokens()));
+    }
   }
 
   /**
@@ -1424,23 +1439,27 @@ public class UserGroupInformation {
    * 
    * @return Credentials of tokens associated with this user
    */
-  public synchronized Credentials getCredentials() {
-    Credentials creds = new Credentials(getCredentialsInternal());
-    Iterator<Token<?>> iter = creds.getAllTokens().iterator();
-    while (iter.hasNext()) {
-      if (iter.next() instanceof Token.PrivateToken) {
-        iter.remove();
+  public Credentials getCredentials() {
+    synchronized (subject) {
+      Credentials creds = new Credentials(getCredentialsInternal());
+      Iterator<Token<?>> iter = creds.getAllTokens().iterator();
+      while (iter.hasNext()) {
+        if (iter.next() instanceof Token.PrivateToken) {
+          iter.remove();
+        }
       }
+      return creds;
     }
-    return creds;
   }
   
   /**
    * Add the given Credentials to this user.
    * @param credentials of tokens and secrets
    */
-  public synchronized void addCredentials(Credentials credentials) {
-    getCredentialsInternal().addAll(credentials);
+  public void addCredentials(Credentials credentials) {
+    synchronized (subject) {
+      getCredentialsInternal().addAll(credentials);
+    }
   }
 
   private synchronized Credentials getCredentialsInternal() {
@@ -1464,7 +1483,8 @@ public class UserGroupInformation {
   public synchronized String[] getGroupNames() {
     ensureInitialized();
     try {
-      List<String> result = groups.getGroups(getShortUserName());
+      Set<String> result = new LinkedHashSet<String>
+        (groups.getGroups(getShortUserName()));
       return result.toArray(new String[result.size()]);
     } catch (IOException ie) {
       LOG.warn("No groups available for user " + getShortUserName());

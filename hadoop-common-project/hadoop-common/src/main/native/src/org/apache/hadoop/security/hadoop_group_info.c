@@ -27,23 +27,24 @@
 #include <string.h>
 #include <unistd.h>
 
+// Assuming the average of user name length of 15 bytes,
+// 8KB buffer will be large enough for a group with about 500 members.
+// 2MB buffer will be large enough for a group with about 130K members.
+#define INITIAL_GROUP_BUFFER_SIZE (8*1024)
+#define MAX_GROUP_BUFFER_SIZE (2*1024*1024)
+
 struct hadoop_group_info *hadoop_group_info_alloc(void)
 {
   struct hadoop_group_info *ginfo;
-  size_t buf_sz;
   char *buf;
 
   ginfo = calloc(1, sizeof(struct hadoop_group_info));
-  buf_sz = sysconf(_SC_GETGR_R_SIZE_MAX);
-  if (buf_sz < 1024) {
-    buf_sz = 1024;
-  }
-  buf = malloc(buf_sz);
+  buf = malloc(INITIAL_GROUP_BUFFER_SIZE);
   if (!buf) {
     free(ginfo);
     return NULL;
   }
-  ginfo->buf_sz = buf_sz;
+  ginfo->buf_sz = INITIAL_GROUP_BUFFER_SIZE;
   ginfo->buf = buf;
   return ginfo;
 }
@@ -84,30 +85,48 @@ static int getgrgid_error_translate(int err)
 int hadoop_group_info_fetch(struct hadoop_group_info *ginfo, gid_t gid)
 {
   struct group *group;
-  int err;
+  int ret; 
   size_t buf_sz;
   char *nbuf;
 
   hadoop_group_info_clear(ginfo);
   for (;;) {
-    do {
-      group = NULL;
-      err = getgrgid_r(gid, &ginfo->group, ginfo->buf,
-                         ginfo->buf_sz, &group);
-    } while ((!group) && (err == EINTR));
-    if (group) {
-      return 0;
+    // On success, the following call returns 0 and group is set to non-NULL.
+    group = NULL;
+    ret = getgrgid_r(gid, &ginfo->group, ginfo->buf,
+                       ginfo->buf_sz, &group);
+    switch(ret) {
+      case 0:
+        if (!group) {
+          // Not found.
+          return ENOENT;
+        }
+        // Found.
+        return 0;
+      case EINTR:
+        // EINTR: a signal was handled and this thread was allowed to continue.
+        break;
+      case ERANGE:
+        // ERANGE: the buffer was not big enough.
+        if (ginfo->buf_sz == MAX_GROUP_BUFFER_SIZE) {
+          // Already tried with the max size.
+          return ENOMEM;
+        }
+        buf_sz = ginfo->buf_sz * 2;
+        if (buf_sz > MAX_GROUP_BUFFER_SIZE) {
+          buf_sz = MAX_GROUP_BUFFER_SIZE;
+        }
+        nbuf = realloc(ginfo->buf, buf_sz);
+        if (!nbuf) {
+          return ENOMEM;
+        }
+        ginfo->buf = nbuf;
+        ginfo->buf_sz = buf_sz;
+        break;
+      default:
+        // Lookup failed.
+        return getgrgid_error_translate(ret);
     }
-    if (err != ERANGE) {
-      return getgrgid_error_translate(errno);
-    }
-    buf_sz = ginfo->buf_sz * 2;
-    nbuf = realloc(ginfo->buf, buf_sz);
-    if (!nbuf) {
-      return ENOMEM;
-    }
-    ginfo->buf = nbuf;
-    ginfo->buf_sz = buf_sz;
   }
 }
 

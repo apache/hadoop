@@ -31,7 +31,7 @@ import java.util.Map.Entry;
 
 import javax.net.ssl.SSLException;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.commons.httpclient.HttpStatus;
 import org.apache.hadoop.conf.Configuration;

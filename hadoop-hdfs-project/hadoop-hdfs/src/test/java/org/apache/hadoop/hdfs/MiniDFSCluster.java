@@ -19,12 +19,15 @@ package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY;
@@ -83,10 +86,12 @@ import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
+import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
 import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter;
 import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter.SecureResources;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
@@ -658,73 +663,81 @@ public class MiniDFSCluster {
       boolean checkDataNodeHostConfig,
       Configuration[] dnConfOverlays)
   throws IOException {
-    ExitUtil.disableSystemExit();
-
-    synchronized (MiniDFSCluster.class) {
-      instanceId = instanceCount++;
-    }
-
-    this.conf = conf;
-    base_dir = new File(determineDfsBaseDir());
-    data_dir = new File(base_dir, "data");
-    this.waitSafeMode = waitSafeMode;
-    this.checkExitOnShutdown = checkExitOnShutdown;
-    
-    int replication = conf.getInt(DFS_REPLICATION_KEY, 3);
-    conf.setInt(DFS_REPLICATION_KEY, Math.min(replication, numDataNodes));
-    int safemodeExtension = conf.getInt(
-        DFS_NAMENODE_SAFEMODE_EXTENSION_TESTING_KEY, 0);
-    conf.setInt(DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, safemodeExtension);
-    conf.setInt(DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 3); // 3 second
-    conf.setClass(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY, 
-                   StaticMapping.class, DNSToSwitchMapping.class);
-    
-    // In an HA cluster, in order for the StandbyNode to perform checkpoints,
-    // it needs to know the HTTP port of the Active. So, if ephemeral ports
-    // are chosen, disable checkpoints for the test.
-    if (!nnTopology.allHttpPortsSpecified() &&
-        nnTopology.isHA()) {
-      LOG.info("MiniDFSCluster disabling checkpointing in the Standby node " +
-          "since no HTTP ports have been specified.");
-      conf.setBoolean(DFS_HA_STANDBY_CHECKPOINTS_KEY, false);
-    }
-    if (!nnTopology.allIpcPortsSpecified() &&
-        nnTopology.isHA()) {
-      LOG.info("MiniDFSCluster disabling log-roll triggering in the "
-          + "Standby node since no IPC ports have been specified.");
-      conf.setInt(DFS_HA_LOGROLL_PERIOD_KEY, -1);
-    }
-    
-    federation = nnTopology.isFederated();
+    boolean success = false;
     try {
-      createNameNodesAndSetConf(
-          nnTopology, manageNameDfsDirs, manageNameDfsSharedDirs,
-          enableManagedDfsDirsRedundancy,
-          format, startOpt, clusterId, conf);
-    } catch (IOException ioe) {
-      LOG.error("IOE creating namenodes. Permissions dump:\n" +
-          createPermissionsDiagnosisString(data_dir));
-      throw ioe;
-    }
-    if (format) {
-      if (data_dir.exists() && !FileUtil.fullyDelete(data_dir)) {
-        throw new IOException("Cannot remove data directory: " + data_dir +
+      ExitUtil.disableSystemExit();
+
+      synchronized (MiniDFSCluster.class) {
+        instanceId = instanceCount++;
+      }
+
+      this.conf = conf;
+      base_dir = new File(determineDfsBaseDir());
+      data_dir = new File(base_dir, "data");
+      this.waitSafeMode = waitSafeMode;
+      this.checkExitOnShutdown = checkExitOnShutdown;
+    
+      int replication = conf.getInt(DFS_REPLICATION_KEY, 3);
+      conf.setInt(DFS_REPLICATION_KEY, Math.min(replication, numDataNodes));
+      int safemodeExtension = conf.getInt(
+          DFS_NAMENODE_SAFEMODE_EXTENSION_TESTING_KEY, 0);
+      conf.setInt(DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, safemodeExtension);
+      conf.setInt(DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 3); // 3 second
+      conf.setClass(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY, 
+                     StaticMapping.class, DNSToSwitchMapping.class);
+    
+      // In an HA cluster, in order for the StandbyNode to perform checkpoints,
+      // it needs to know the HTTP port of the Active. So, if ephemeral ports
+      // are chosen, disable checkpoints for the test.
+      if (!nnTopology.allHttpPortsSpecified() &&
+          nnTopology.isHA()) {
+        LOG.info("MiniDFSCluster disabling checkpointing in the Standby node " +
+            "since no HTTP ports have been specified.");
+        conf.setBoolean(DFS_HA_STANDBY_CHECKPOINTS_KEY, false);
+      }
+      if (!nnTopology.allIpcPortsSpecified() &&
+          nnTopology.isHA()) {
+        LOG.info("MiniDFSCluster disabling log-roll triggering in the "
+            + "Standby node since no IPC ports have been specified.");
+        conf.setInt(DFS_HA_LOGROLL_PERIOD_KEY, -1);
+      }
+    
+      federation = nnTopology.isFederated();
+      try {
+        createNameNodesAndSetConf(
+            nnTopology, manageNameDfsDirs, manageNameDfsSharedDirs,
+            enableManagedDfsDirsRedundancy,
+            format, startOpt, clusterId, conf);
+      } catch (IOException ioe) {
+        LOG.error("IOE creating namenodes. Permissions dump:\n" +
             createPermissionsDiagnosisString(data_dir));
+        throw ioe;
+      }
+      if (format) {
+        if (data_dir.exists() && !FileUtil.fullyDelete(data_dir)) {
+          throw new IOException("Cannot remove data directory: " + data_dir +
+              createPermissionsDiagnosisString(data_dir));
+        }
+      }
+    
+      if (startOpt == StartupOption.RECOVER) {
+        return;
+      }
+
+      // Start the DataNodes
+      startDataNodes(conf, numDataNodes, storageType, manageDataDfsDirs,
+          dnStartOpt != null ? dnStartOpt : startOpt,
+          racks, hosts, simulatedCapacities, setupHostsFile,
+          checkDataNodeAddrConfig, checkDataNodeHostConfig, dnConfOverlays);
+      waitClusterUp();
+      //make sure ProxyUsers uses the latest conf
+      ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+      success = true;
+    } finally {
+      if (!success) {
+        shutdown();
       }
     }
-    
-    if (startOpt == StartupOption.RECOVER) {
-      return;
-    }
-
-    // Start the DataNodes
-    startDataNodes(conf, numDataNodes, storageType, manageDataDfsDirs,
-        dnStartOpt != null ? dnStartOpt : startOpt,
-        racks, hosts, simulatedCapacities, setupHostsFile,
-        checkDataNodeAddrConfig, checkDataNodeHostConfig, dnConfOverlays);
-    waitClusterUp();
-    //make sure ProxyUsers uses the latest conf
-    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
   }
   
   /**
@@ -758,8 +771,11 @@ public class MiniDFSCluster {
 
     if (!federation && nnTopology.countNameNodes() == 1) {
       NNConf onlyNN = nnTopology.getOnlyNameNode();
-      // we only had one NN, set DEFAULT_NAME for it
-      conf.set(FS_DEFAULT_NAME_KEY, "127.0.0.1:" + onlyNN.getIpcPort());
+      // we only had one NN, set DEFAULT_NAME for it. If not explicitly
+      // specified initially, the port will be 0 to make NN bind to any
+      // available port. It will be set to the right address after
+      // NN is started.
+      conf.set(FS_DEFAULT_NAME_KEY, "hdfs://127.0.0.1:" + onlyNN.getIpcPort());
     }
     
     List<String> allNsIds = Lists.newArrayList();
@@ -775,6 +791,7 @@ public class MiniDFSCluster {
     int nnCounter = 0;
     for (MiniDFSNNTopology.NSConf nameservice : nnTopology.getNameservices()) {
       String nsId = nameservice.getId();
+      String lastDefaultFileSystem = null;
       
       Preconditions.checkArgument(
           !federation || nsId != null,
@@ -842,6 +859,13 @@ public class MiniDFSCluster {
         
         nnCounterForFormat++;
         if (formatThisOne) {
+          // Allow overriding clusterID for specific NNs to test
+          // misconfiguration.
+          if (nn.getClusterId() == null) {
+            StartupOption.FORMAT.setClusterId(clusterId);
+          } else {
+            StartupOption.FORMAT.setClusterId(nn.getClusterId());
+          }
           DFSTestUtil.formatNameNode(conf);
         }
         prevNNDirs = namespaceDirs;
@@ -851,10 +875,19 @@ public class MiniDFSCluster {
       for (NNConf nn : nameservice.getNNs()) {
         initNameNodeConf(conf, nsId, nn.getNnId(), manageNameDfsDirs,
             enableManagedDfsDirsRedundancy, nnCounter);
-        createNameNode(nnCounter++, conf, numDataNodes, false, operation,
+        createNameNode(nnCounter, conf, numDataNodes, false, operation,
             clusterId, nsId, nn.getNnId());
+        // Record the last namenode uri
+        if (nameNodes[nnCounter] != null && nameNodes[nnCounter].conf != null) {
+          lastDefaultFileSystem =
+              nameNodes[nnCounter].conf.get(FS_DEFAULT_NAME_KEY);
+        }
+        nnCounter++;
       }
-      
+      if (!federation && lastDefaultFileSystem != null) {
+        // Set the default file system to the actual bind address of NN.
+        conf.set(FS_DEFAULT_NAME_KEY, lastDefaultFileSystem);
+      }
     }
 
   }
@@ -903,7 +936,7 @@ public class MiniDFSCluster {
     }
   }
 
-  private void copyNameDirs(Collection<URI> srcDirs, Collection<URI> dstDirs,
+  public static void copyNameDirs(Collection<URI> srcDirs, Collection<URI> dstDirs,
       Configuration dstConf) throws IOException {
     URI srcDir = Lists.newArrayList(srcDirs).get(0);
     FileSystem dstFS = FileSystem.getLocal(dstConf).getRaw();
@@ -968,7 +1001,8 @@ public class MiniDFSCluster {
       operation.setClusterId(clusterId);
     }
     
-    // Start the NameNode
+    // Start the NameNode after saving the default file system.
+    String originalDefaultFs = conf.get(FS_DEFAULT_NAME_KEY);
     String[] args = createArgs(operation);
     NameNode nn =  NameNode.createNameNode(args, conf);
     if (operation == StartupOption.RECOVER) {
@@ -992,6 +1026,12 @@ public class MiniDFSCluster {
         DFS_NAMENODE_HTTP_ADDRESS_KEY);
     nameNodes[nnIndex] = new NameNodeInfo(nn, nameserviceId, nnId,
         operation, new Configuration(conf));
+    // Restore the default fs name
+    if (originalDefaultFs == null) {
+      conf.set(FS_DEFAULT_NAME_KEY, "");
+    } else {
+      conf.set(FS_DEFAULT_NAME_KEY, originalDefaultFs);
+    }
   }
 
   /**
@@ -1279,15 +1319,42 @@ public class MiniDFSCluster {
       }
 
       SecureResources secureResources = null;
-      if (UserGroupInformation.isSecurityEnabled()) {
+      if (UserGroupInformation.isSecurityEnabled() &&
+          conf.get(DFS_DATA_TRANSFER_PROTECTION_KEY) == null) {
         try {
           secureResources = SecureDataNodeStarter.getSecureResources(dnConf);
         } catch (Exception ex) {
           ex.printStackTrace();
         }
       }
-      DataNode dn = DataNode.instantiateDataNode(dnArgs, dnConf,
-                                                 secureResources);
+      final int maxRetriesOnSasl = conf.getInt(
+        IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_KEY,
+        IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_DEFAULT);
+      int numRetries = 0;
+      DataNode dn = null;
+      while (true) {
+        try {
+          dn = DataNode.instantiateDataNode(dnArgs, dnConf,
+                                            secureResources);
+          break;
+        } catch (IOException e) {
+          // Work around issue testing security where rapidly starting multiple
+          // DataNodes using the same principal gets rejected by the KDC as a
+          // replay attack.
+          if (UserGroupInformation.isSecurityEnabled() &&
+              numRetries < maxRetriesOnSasl) {
+            try {
+              Thread.sleep(1000);
+            } catch (InterruptedException ie) {
+              Thread.currentThread().interrupt();
+              break;
+            }
+            ++numRetries;
+            continue;
+          }
+          throw e;
+        }
+      }
       if(dn == null)
         throw new IOException("Cannot start DataNode in "
             + dnConf.get(DFS_DATANODE_DATA_DIR_KEY));
@@ -1384,8 +1451,8 @@ public class MiniDFSCluster {
   /**
    * Finalize cluster for the namenode at the given index 
    * @see MiniDFSCluster#finalizeCluster(Configuration)
-   * @param nnIndex
-   * @param conf
+   * @param nnIndex index of the namenode
+   * @param conf configuration
    * @throws Exception
    */
   public void finalizeCluster(int nnIndex, Configuration conf) throws Exception {
@@ -1697,6 +1764,14 @@ public class MiniDFSCluster {
     raFile.close();
     LOG.warn("Corrupting the block " + blockFile);
     return true;
+  }
+  
+  public static boolean changeGenStampOfBlock(int dnIndex, ExtendedBlock blk,
+      long newGenStamp) throws IOException {
+    File blockFile = getBlockFile(dnIndex, blk);
+    File metaFile = FsDatasetUtil.findMetaFile(blockFile);
+    return metaFile.renameTo(new File(DatanodeUtil.getMetaName(
+        blockFile.getAbsolutePath(), newGenStamp)));
   }
 
   /*
@@ -2216,7 +2291,7 @@ public class MiniDFSCluster {
    * to determine the location of the storage of a DN instance in the mini cluster
    * @param dnIndex datanode index
    * @param dirIndex directory index.
-   * @return
+   * @return storage directory path
    */
   private static String getStorageDirPath(int dnIndex, int dirIndex) {
     return "data/data" + (2 * dnIndex + 1 + dirIndex);
@@ -2242,8 +2317,8 @@ public class MiniDFSCluster {
   }
   /**
    * Get directory relative to block pool directory in the datanode
-   * @param storageDir
-   * @return current directory
+   * @param storageDir storage directory
+   * @return current directory in the given storage directory
    */
   public static String getBPDir(File storageDir, String bpid, String dirName) {
     return getBPDir(storageDir, bpid) + dirName + "/";
@@ -2278,8 +2353,8 @@ public class MiniDFSCluster {
    * @return data file corresponding to the block
    */
   public static File getBlockFile(File storageDir, ExtendedBlock blk) {
-    return new File(getFinalizedDir(storageDir, blk.getBlockPoolId()), 
-        blk.getBlockName());
+    return new File(DatanodeUtil.idToBlockDir(getFinalizedDir(storageDir,
+        blk.getBlockPoolId()), blk.getBlockId()), blk.getBlockName());
   }
 
   /**
@@ -2289,10 +2364,32 @@ public class MiniDFSCluster {
    * @return metadata file corresponding to the block
    */
   public static File getBlockMetadataFile(File storageDir, ExtendedBlock blk) {
-    return new File(getFinalizedDir(storageDir, blk.getBlockPoolId()), 
-        blk.getBlockName() + "_" + blk.getGenerationStamp() +
-        Block.METADATA_EXTENSION);
-    
+    return new File(DatanodeUtil.idToBlockDir(getFinalizedDir(storageDir,
+        blk.getBlockPoolId()), blk.getBlockId()), blk.getBlockName() + "_" +
+        blk.getGenerationStamp() + Block.METADATA_EXTENSION);
+  }
+
+  /**
+   * Return all block metadata files in given directory (recursive search)
+   */
+  public static List<File> getAllBlockMetadataFiles(File storageDir) {
+    List<File> results = new ArrayList<File>();
+    File[] files = storageDir.listFiles();
+    if (files == null) {
+      return null;
+    }
+    for (File f : files) {
+      if (f.getName().startsWith("blk_") && f.getName().endsWith(
+          Block.METADATA_EXTENSION)) {
+        results.add(f);
+      } else if (f.isDirectory()) {
+        List<File> subdirResults = getAllBlockMetadataFiles(f);
+        if (subdirResults != null) {
+          results.addAll(subdirResults);
+        }
+      }
+    }
+    return results;
   }
 
   /**

@@ -45,8 +45,10 @@ public enum DistCpOptionSwitch {
    *
    */
   PRESERVE_STATUS(DistCpConstants.CONF_LABEL_PRESERVE_STATUS,
-      new Option("p", true, "preserve status (rbugpc)" +
-          "(replication, block-size, user, group, permission, checksum-type)")),
+      new Option("p", true, "preserve status (rbugpcax)(replication, " +
+          "block-size, user, group, permission, checksum-type, ACL, XATTR).  " +
+          "If -p is specified with no <arg>, then preserves replication, " +
+          "block size, user, group, permission and checksum type.")),
 
   /**
    * Update target location by copying only files that are missing
@@ -136,6 +138,10 @@ public enum DistCpOptionSwitch {
       new Option("overwrite", false, "Choose to overwrite target files " +
           "unconditionally, even if they exist.")),
 
+  APPEND(DistCpConstants.CONF_LABEL_APPEND,
+      new Option("append", false,
+          "Reuse existing data in target files and append new data to them if possible")),
+
   /**
    * Should DisctpExecution be blocking
    */
@@ -156,6 +162,7 @@ public enum DistCpOptionSwitch {
   BANDWIDTH(DistCpConstants.CONF_LABEL_BANDWIDTH_MB,
       new Option("bandwidth", true, "Specify bandwidth per map in MB"));
 
+  static final String PRESERVE_STATUS_DEFAULT = "-prbugpc";
   private final String confLabel;
   private final Option option;
 

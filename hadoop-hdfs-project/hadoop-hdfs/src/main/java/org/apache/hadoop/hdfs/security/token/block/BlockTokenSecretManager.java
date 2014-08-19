@@ -101,9 +101,9 @@ public class BlockTokenSecretManager extends
    * 
    * @param keyUpdateInterval how often a new key will be generated
    * @param tokenLifetime how long an individual token is valid
-   * @param isHaEnabled whether or not HA is enabled
-   * @param thisNnId the NN ID of this NN in an HA setup
-   * @param otherNnId the NN ID of the other NN in an HA setup
+   * @param nnIndex namenode index
+   * @param blockPoolId block pool ID
+   * @param encryptionAlgorithm encryption algorithm to use
    */
   public BlockTokenSecretManager(long keyUpdateInterval,
       long tokenLifetime, int nnIndex, String blockPoolId,
@@ -412,8 +412,7 @@ public class BlockTokenSecretManager extends
    * @param keyId identifier of the secret key used to generate the encryption key.
    * @param nonce random value used to create the encryption key
    * @return the encryption key which corresponds to this (keyId, blockPoolId, nonce)
-   * @throws InvalidToken
-   * @throws InvalidEncryptionKeyException 
+   * @throws InvalidEncryptionKeyException
    */
   public byte[] retrieveDataEncryptionKey(int keyId, byte[] nonce)
       throws InvalidEncryptionKeyException {

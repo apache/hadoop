@@ -77,7 +77,7 @@ HDFS Users Guide
           * <<<fetchdt>>>: a utility to fetch DelegationToken and store it in a
             file on the local system.
 
-          * Rebalancer: tool to balance the cluster when the data is
+          * Balancer: tool to balance the cluster when the data is
             unevenly distributed among DataNodes.
 
           * Upgrade and rollback: after a software upgrade, it is possible
@@ -143,8 +143,8 @@ HDFS Users Guide
 
 **  DFSAdmin Command
 
-   The <<<bin/hadoop dfsadmin>>> command supports a few HDFS administration
-   related operations. The <<<bin/hadoop dfsadmin -help>>> command lists all the
+   The <<<bin/hdfs dfsadmin>>> command supports a few HDFS administration
+   related operations. The <<<bin/hdfs dfsadmin -help>>> command lists all the
    commands currently supported. For e.g.:
 
      * <<<-report>>>: reports basic statistics of HDFS. Some of this
@@ -172,7 +172,7 @@ HDFS Users Guide
        of racks and datanodes attached to the tracks as viewed by the
        NameNode.
 
-   For command usage, see {{{../hadoop-common/CommandsManual.html#dfsadmin}dfsadmin}}.
+   For command usage, see {{{./HDFSCommands.html#dfsadmin}dfsadmin}}.
 
 * Secondary NameNode
 
@@ -207,7 +207,7 @@ HDFS Users Guide
    primary NameNode if necessary.
 
    For command usage,
-   see {{{../hadoop-common/CommandsManual.html#secondarynamenode}secondarynamenode}}.
+   see {{{./HDFSCommands.html#secondarynamenode}secondarynamenode}}.
 
 * Checkpoint Node
 
@@ -249,7 +249,7 @@ HDFS Users Guide
    Multiple checkpoint nodes may be specified in the cluster configuration
    file.
 
-   For command usage, see {{{../hadoop-common/CommandsManual.html#namenode}namenode}}.
+   For command usage, see {{{./HDFSCommands.html#namenode}namenode}}.
 
 * Backup Node
 
@@ -291,7 +291,7 @@ HDFS Users Guide
 
    For a complete discussion of the motivation behind the creation of the
    Backup node and Checkpoint node, see {{{https://issues.apache.org/jira/browse/HADOOP-4539}HADOOP-4539}}.
-   For command usage, see {{{../hadoop-common/CommandsManual.html#namenode}namenode}}.
+   For command usage, see {{{./HDFSCommands.html#namenode}namenode}}.
 
 * Import Checkpoint
 
@@ -314,9 +314,9 @@ HDFS Users Guide
    verifies that the image in <<<dfs.namenode.checkpoint.dir>>> is consistent,
    but does not modify it in any way.
 
-   For command usage, see {{{../hadoop-common/CommandsManual.html#namenode}namenode}}.
+   For command usage, see {{{./HDFSCommands.html#namenode}namenode}}.
 
-* Rebalancer
+* Balancer
 
    HDFS data might not always be be placed uniformly across the DataNode.
    One common reason is addition of new DataNodes to an existing cluster.
@@ -338,10 +338,10 @@ HDFS Users Guide
    Due to multiple competing considerations, data might not be uniformly
    placed across the DataNodes. HDFS provides a tool for administrators
    that analyzes block placement and rebalanaces data across the DataNode.
-   A brief administrator's guide for rebalancer as a PDF is attached to
+   A brief administrator's guide for balancer is available at 
    {{{https://issues.apache.org/jira/browse/HADOOP-1652}HADOOP-1652}}.
 
-   For command usage, see {{{../hadoop-common/CommandsManual.html#balancer}balancer}}.
+   For command usage, see {{{./HDFSCommands.html#balancer}balancer}}.
 
 * Rack Awareness
 
@@ -368,7 +368,7 @@ HDFS Users Guide
    allow any modifications to file system or blocks. Normally the NameNode
    leaves Safemode automatically after the DataNodes have reported that
    most file system blocks are available. If required, HDFS could be
-   placed in Safemode explicitly using <<<bin/hadoop dfsadmin -safemode>>>
+   placed in Safemode explicitly using <<<bin/hdfs dfsadmin -safemode>>>
    command. NameNode front page shows whether Safemode is on or off. A
    more detailed description and configuration is maintained as JavaDoc
    for <<<setSafeMode()>>>.
@@ -383,8 +383,8 @@ HDFS Users Guide
    most of the recoverable failures. By default fsck ignores open files
    but provides an option to select all files during reporting. The HDFS
    fsck command is not a Hadoop shell command. It can be run as
-   <<<bin/hadoop fsck>>>. For command usage, see 
-   {{{../hadoop-common/CommandsManual.html#fsck}fsck}}. fsck can be run on
+   <<<bin/hdfs fsck>>>. For command usage, see
+   {{{./HDFSCommands.html#fsck}fsck}}. fsck can be run on
    the whole file system or on a subset of files.
 
 * fetchdt
@@ -395,11 +395,11 @@ HDFS Users Guide
    Utility uses either RPC or HTTPS (over Kerberos) to get the token, and
    thus requires kerberos tickets to be present before the run (run kinit
    to get the tickets). The HDFS fetchdt command is not a Hadoop shell
-   command. It can be run as <<<bin/hadoop fetchdt DTfile>>>. After you got
+   command. It can be run as <<<bin/hdfs fetchdt DTfile>>>. After you got
    the token you can run an HDFS command without having Kerberos tickets,
    by pointing <<<HADOOP_TOKEN_FILE_LOCATION>>> environmental variable to the
    delegation token file. For command usage, see
-   {{{../hadoop-common/CommandsManual.html#fetchdt}fetchdt}} command.
+   {{{./HDFSCommands.html#fetchdt}fetchdt}} command.
 
 * Recovery Mode
 
@@ -533,5 +533,4 @@ HDFS Users Guide
      * Explore {{{./hdfs-default.xml}hdfs-default.xml}}. It includes
        brief description of most of the configuration variables available.
 
-     * {{{../hadoop-common/CommandsManual.html}Hadoop Commands Guide}}:
-       Hadoop commands usage.
+     * {{{./HDFSCommands.html}HDFS Commands Guide}}: HDFS commands usage.

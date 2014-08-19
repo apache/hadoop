@@ -61,7 +61,7 @@ public abstract class BlockPlacementPolicy {
    * @param srcPath the file to which this chooseTargets is being invoked.
    * @param numOfReplicas additional number of replicas wanted.
    * @param writer the writer's machine, null if not in the cluster.
-   * @param chosenNodes datanodes that have been chosen as targets.
+   * @param chosen datanodes that have been chosen as targets.
    * @param returnChosenNodes decide if the chosenNodes are returned.
    * @param excludedNodes datanodes that should not be considered as targets.
    * @param blocksize size of the data to be written.
@@ -78,8 +78,8 @@ public abstract class BlockPlacementPolicy {
                                              StorageType storageType);
   
   /**
-   * Same as {@link #chooseTarget(String, int, Node, List, boolean, 
-   * Set, long)} with added parameter {@code favoredDatanodes}
+   * Same as {@link #chooseTarget(String, int, Node, Set, long, List, StorageType)}
+   * with added parameter {@code favoredDatanodes}
    * @param favoredNodes datanodes that should be favored as targets. This
    *          is only a hint and due to cluster state, namenode may not be 
    *          able to place the blocks on these datanodes.
@@ -124,11 +124,12 @@ public abstract class BlockPlacementPolicy {
                    listed in the previous parameter.
    * @return the replica that is the best candidate for deletion
    */
-  abstract public DatanodeDescriptor chooseReplicaToDelete(BlockCollection srcBC,
-                                      Block block, 
-                                      short replicationFactor,
-                                      Collection<DatanodeDescriptor> existingReplicas,
-                                      Collection<DatanodeDescriptor> moreExistingReplicas);
+  abstract public DatanodeStorageInfo chooseReplicaToDelete(
+      BlockCollection srcBC,
+      Block block, 
+      short replicationFactor,
+      Collection<DatanodeStorageInfo> existingReplicas,
+      Collection<DatanodeStorageInfo> moreExistingReplicas);
 
   /**
    * Used to setup a BlockPlacementPolicy object. This should be defined by 
@@ -139,11 +140,13 @@ public abstract class BlockPlacementPolicy {
    * @param clusterMap cluster topology
    */
   abstract protected void initialize(Configuration conf,  FSClusterStats stats, 
-                                     NetworkTopology clusterMap);
+                                     NetworkTopology clusterMap, 
+                                     Host2NodesMap host2datanodeMap);
     
   /**
    * Get an instance of the configured Block Placement Policy based on the
-   * the configuration property {@link DFS_BLOCK_REPLICATOR_CLASSNAME_KEY}.
+   * the configuration property
+   * {@link  DFSConfigKeys#DFS_BLOCK_REPLICATOR_CLASSNAME_KEY}.
    * 
    * @param conf the configuration to be used
    * @param stats an object that is used to retrieve the load on the cluster
@@ -152,14 +155,15 @@ public abstract class BlockPlacementPolicy {
    */
   public static BlockPlacementPolicy getInstance(Configuration conf, 
                                                  FSClusterStats stats,
-                                                 NetworkTopology clusterMap) {
+                                                 NetworkTopology clusterMap,
+                                                 Host2NodesMap host2datanodeMap) {
     final Class<? extends BlockPlacementPolicy> replicatorClass = conf.getClass(
         DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
         DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_DEFAULT,
         BlockPlacementPolicy.class);
     final BlockPlacementPolicy replicator = ReflectionUtils.newInstance(
         replicatorClass, conf);
-    replicator.initialize(conf, stats, clusterMap);
+    replicator.initialize(conf, stats, clusterMap, host2datanodeMap);
     return replicator;
   }
   
@@ -172,21 +176,23 @@ public abstract class BlockPlacementPolicy {
    * @param exactlyOne The List of replica nodes on rack with only one replica
    * @param cur current replica to remove
    */
-  public void adjustSetsWithChosenReplica(final Map<String, 
-      List<DatanodeDescriptor>> rackMap,
-      final List<DatanodeDescriptor> moreThanOne,
-      final List<DatanodeDescriptor> exactlyOne, final DatanodeInfo cur) {
+  public void adjustSetsWithChosenReplica(
+      final Map<String, List<DatanodeStorageInfo>> rackMap,
+      final List<DatanodeStorageInfo> moreThanOne,
+      final List<DatanodeStorageInfo> exactlyOne,
+      final DatanodeStorageInfo cur) {
     
-    String rack = getRack(cur);
-    final List<DatanodeDescriptor> datanodes = rackMap.get(rack);
-    datanodes.remove(cur);
-    if (datanodes.isEmpty()) {
+    final String rack = getRack(cur.getDatanodeDescriptor());
+    final List<DatanodeStorageInfo> storages = rackMap.get(rack);
+    storages.remove(cur);
+    if (storages.isEmpty()) {
       rackMap.remove(rack);
     }
     if (moreThanOne.remove(cur)) {
-      if (datanodes.size() == 1) {
-        moreThanOne.remove(datanodes.get(0));
-        exactlyOne.add(datanodes.get(0));
+      if (storages.size() == 1) {
+        final DatanodeStorageInfo remaining = storages.get(0);
+        moreThanOne.remove(remaining);
+        exactlyOne.add(remaining);
       }
     } else {
       exactlyOne.remove(cur);
@@ -195,7 +201,6 @@ public abstract class BlockPlacementPolicy {
 
   /**
    * Get rack string from a data node
-   * @param datanode
    * @return rack of data node
    */
   protected String getRack(final DatanodeInfo datanode) {
@@ -206,34 +211,34 @@ public abstract class BlockPlacementPolicy {
    * Split data nodes into two sets, one set includes nodes on rack with
    * more than one  replica, the other set contains the remaining nodes.
    * 
-   * @param dataNodes
+   * @param dataNodes datanodes to be split into two sets
    * @param rackMap a map from rack to datanodes
    * @param moreThanOne contains nodes on rack with more than one replica
    * @param exactlyOne remains contains the remaining nodes
    */
   public void splitNodesWithRack(
-      Collection<DatanodeDescriptor> dataNodes,
-      final Map<String, List<DatanodeDescriptor>> rackMap,
-      final List<DatanodeDescriptor> moreThanOne,
-      final List<DatanodeDescriptor> exactlyOne) {
-    for(DatanodeDescriptor node : dataNodes) {
-      final String rackName = getRack(node);
-      List<DatanodeDescriptor> datanodeList = rackMap.get(rackName);
-      if (datanodeList == null) {
-        datanodeList = new ArrayList<DatanodeDescriptor>();
-        rackMap.put(rackName, datanodeList);
+      final Iterable<DatanodeStorageInfo> storages,
+      final Map<String, List<DatanodeStorageInfo>> rackMap,
+      final List<DatanodeStorageInfo> moreThanOne,
+      final List<DatanodeStorageInfo> exactlyOne) {
+    for(DatanodeStorageInfo s: storages) {
+      final String rackName = getRack(s.getDatanodeDescriptor());
+      List<DatanodeStorageInfo> storageList = rackMap.get(rackName);
+      if (storageList == null) {
+        storageList = new ArrayList<DatanodeStorageInfo>();
+        rackMap.put(rackName, storageList);
       }
-      datanodeList.add(node);
+      storageList.add(s);
     }
     
     // split nodes into two sets
-    for(List<DatanodeDescriptor> datanodeList : rackMap.values()) {
-      if (datanodeList.size() == 1) {
+    for(List<DatanodeStorageInfo> storageList : rackMap.values()) {
+      if (storageList.size() == 1) {
         // exactlyOne contains nodes on rack with only one replica
-        exactlyOne.add(datanodeList.get(0));
+        exactlyOne.add(storageList.get(0));
       } else {
         // moreThanOne contains nodes on rack with more than one replica
-        moreThanOne.addAll(datanodeList);
+        moreThanOne.addAll(storageList);
       }
     }
   }

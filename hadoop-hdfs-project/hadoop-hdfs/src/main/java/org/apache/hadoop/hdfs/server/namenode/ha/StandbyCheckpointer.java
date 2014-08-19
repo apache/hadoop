@@ -183,6 +183,12 @@ public class StandbyCheckpointer {
       txid = img.getStorage().getMostRecentCheckpointTxId();
       assert txid == thisCheckpointTxId : "expected to save checkpoint at txid=" +
         thisCheckpointTxId + " but instead saved at txid=" + txid;
+
+      // Save the legacy OIV image, if the output dir is defined.
+      String outputDir = checkpointConf.getLegacyOivImageDir();
+      if (outputDir != null && !outputDir.isEmpty()) {
+        img.saveLegacyOIVImage(namesystem, outputDir, canceler);
+      }
     } finally {
       namesystem.longReadUnlock();
     }

@@ -348,14 +348,14 @@ public class TestRMAdminService {
 
     rm.adminService.refreshSuperUserGroupsConfiguration(
         RefreshSuperUserGroupsConfigurationRequest.newInstance());
-    Assert.assertTrue(ProxyUsers.getProxyGroups()
+    Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyGroups()
         .get("hadoop.proxyuser.test.groups").size() == 1);
-    Assert.assertTrue(ProxyUsers.getProxyGroups()
+    Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyGroups()
         .get("hadoop.proxyuser.test.groups").contains("test_groups"));
 
-    Assert.assertTrue(ProxyUsers.getProxyHosts()
+    Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyHosts()
         .get("hadoop.proxyuser.test.hosts").size() == 1);
-    Assert.assertTrue(ProxyUsers.getProxyHosts()
+    Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyHosts()
         .get("hadoop.proxyuser.test.hosts").contains("test_hosts"));
   }
 
@@ -708,14 +708,14 @@ public class TestRMAdminService {
           aclsString);
 
       // verify ProxyUsers and ProxyHosts
-      Assert.assertTrue(ProxyUsers.getProxyGroups()
+      Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyGroups()
           .get("hadoop.proxyuser.test.groups").size() == 1);
-      Assert.assertTrue(ProxyUsers.getProxyGroups()
+      Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyGroups()
           .get("hadoop.proxyuser.test.groups").contains("test_groups"));
 
-      Assert.assertTrue(ProxyUsers.getProxyHosts()
+      Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyHosts()
           .get("hadoop.proxyuser.test.hosts").size() == 1);
-      Assert.assertTrue(ProxyUsers.getProxyHosts()
+      Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyHosts()
           .get("hadoop.proxyuser.test.hosts").contains("test_hosts"));
 
       // verify UserToGroupsMappings

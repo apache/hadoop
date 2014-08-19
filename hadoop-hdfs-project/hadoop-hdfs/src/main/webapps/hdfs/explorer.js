@@ -45,7 +45,7 @@
     return function (jqxhr, text, err) {
       switch(jqxhr.status) {
         case 401:
-          var msg = '<p>Authentication failed when trying to open ' + url + ': Unauthrozied.</p>';
+          var msg = '<p>Authentication failed when trying to open ' + url + ': Unauthorized.</p>';
           break;
         case 403:
           if(jqxhr.responseJSON !== undefined && jqxhr.responseJSON.RemoteException !== undefined) {
@@ -58,7 +58,7 @@
           var msg = '<p>Path does not exist on HDFS or WebHDFS is disabled.  Please check your path or enable WebHDFS</p>';
           break;
         default:
-          var msg = '<p>Failed to retreive data from ' + url + ': ' + err + '</p>';
+          var msg = '<p>Failed to retrieve data from ' + url + ': ' + err + '</p>';
         }
       show_err_msg(msg);
     };
@@ -75,8 +75,7 @@
   }
 
   function get_response_err_msg(data) {
-    var msg = data.RemoteException !== undefined ? data.RemoteException.message : "";
-    return msg;
+    return data.RemoteException !== undefined ? data.RemoteException.message : "";
   }
 
   function view_file_details(path, abs_path) {
@@ -104,7 +103,7 @@
     }
 
     var url = '/webhdfs/v1' + abs_path + '?op=GET_BLOCK_LOCATIONS';
-    $.ajax({"url": url, "crossDomain": true}).done(function(data) {
+    $.get(url).done(function(data) {
       var d = get_response(data, "LocatedBlocks");
       if (d === null) {
         show_err_msg(get_response_err_msg(data));

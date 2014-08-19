@@ -51,13 +51,13 @@ class Delete {
     public static final String NAME = "rm";
     public static final String USAGE = "[-f] [-r|-R] [-skipTrash] <src> ...";
     public static final String DESCRIPTION =
-      "Delete all files that match the specified file pattern.\n" +
+      "Delete all files that match the specified file pattern. " +
       "Equivalent to the Unix command \"rm <src>\"\n" +
-      "-skipTrash option bypasses trash, if enabled, and immediately\n" +
+      "-skipTrash: option bypasses trash, if enabled, and immediately " +
       "deletes <src>\n" +
-      "  -f     If the file does not exist, do not display a diagnostic\n" +
-      "         message or modify the exit status to reflect an error.\n" +
-      "  -[rR]  Recursively deletes directories";
+      "-f: If the file does not exist, do not display a diagnostic " +
+      "message or modify the exit status to reflect an error.\n" +
+      "-[rR]:  Recursively deletes directories";
 
     private boolean skipTrash = false;
     private boolean deleteDirs = false;
@@ -118,7 +118,11 @@ class Delete {
         } catch(FileNotFoundException fnfe) {
           throw fnfe;
         } catch (IOException ioe) {
-            throw new IOException(ioe.getMessage() + ". Consider using -skipTrash option", ioe);
+          String msg = ioe.getMessage();
+          if (ioe.getCause() != null) {
+            msg += ": " + ioe.getCause().getMessage();
+	  }
+          throw new IOException(msg + ". Consider using -skipTrash option", ioe);
         }
       }
       return success;
@@ -147,7 +151,7 @@ class Delete {
     public static final String USAGE =
       "[--ignore-fail-on-non-empty] <dir> ...";
     public static final String DESCRIPTION =
-      "Removes the directory entry specified by each directory argument,\n" +
+      "Removes the directory entry specified by each directory argument, " +
       "provided it is empty.\n"; 
     
     private boolean ignoreNonEmpty = false;

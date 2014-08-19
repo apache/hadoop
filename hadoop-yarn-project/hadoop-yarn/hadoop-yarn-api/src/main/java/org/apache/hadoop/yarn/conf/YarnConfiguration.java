@@ -126,6 +126,10 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_RM_ADDRESS =
     "0.0.0.0:" + DEFAULT_RM_PORT;
 
+  /** The actual bind address for the RM.*/
+  public static final String RM_BIND_HOST =
+    RM_PREFIX + "bind-host";
+
   /** The number of threads used to handle applications manager requests.*/
   public static final String RM_CLIENT_THREAD_COUNT =
     RM_PREFIX + "client.thread-count";
@@ -263,6 +267,17 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY =
       RM_PREFIX + "webapp.spnego-keytab-file";
 
+  /**
+   * Flag to enable override of the default kerberos authentication filter with
+   * the RM authentication filter to allow authentication using delegation
+   * tokens(fallback to kerberos if the tokens are missing). Only applicable
+   * when the http authentication type is kerberos.
+   */
+  public static final String RM_WEBAPP_DELEGATION_TOKEN_AUTH_FILTER = RM_PREFIX
+      + "webapp.delegation-token-auth-filter.enabled";
+  public static final boolean DEFAULT_RM_WEBAPP_DELEGATION_TOKEN_AUTH_FILTER =
+      true;
+
   /** How long to wait until a container is considered dead.*/
   public static final String RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS = 
     RM_PREFIX + "rm.container-allocation.expiry-interval-ms";
@@ -318,17 +333,24 @@ public class YarnConfiguration extends Configuration {
   public static final String RECOVERY_ENABLED = RM_PREFIX + "recovery.enabled";
   public static final boolean DEFAULT_RM_RECOVERY_ENABLED = false;
 
+  @Private
+  public static final String RM_WORK_PRESERVING_RECOVERY_ENABLED = RM_PREFIX
+      + "work-preserving-recovery.enabled";
+  @Private
+  public static final boolean DEFAULT_RM_WORK_PRESERVING_RECOVERY_ENABLED =
+      false;
+
   /** Zookeeper interaction configs */
   public static final String RM_ZK_PREFIX = RM_PREFIX + "zk-";
 
   public static final String RM_ZK_ADDRESS = RM_ZK_PREFIX + "address";
 
   public static final String RM_ZK_NUM_RETRIES = RM_ZK_PREFIX + "num-retries";
-  public static final int DEFAULT_ZK_RM_NUM_RETRIES = 500;
+  public static final int DEFAULT_ZK_RM_NUM_RETRIES = 1000;
 
   public static final String RM_ZK_RETRY_INTERVAL_MS =
       RM_ZK_PREFIX + "retry-interval-ms";
-  public static final long DEFAULT_RM_ZK_RETRY_INTERVAL_MS = 2000;
+  public static final long DEFAULT_RM_ZK_RETRY_INTERVAL_MS = 1000;
 
   public static final String RM_ZK_TIMEOUT_MS = RM_ZK_PREFIX + "timeout-ms";
   public static final int DEFAULT_RM_ZK_TIMEOUT_MS = 10000;
@@ -527,6 +549,10 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NM_ADDRESS = "0.0.0.0:"
       + DEFAULT_NM_PORT;
   
+  /** The actual bind address or the NM.*/
+  public static final String NM_BIND_HOST =
+    NM_PREFIX + "bind-host";
+
   /** who will execute(launch) the containers.*/
   public static final String NM_CONTAINER_EXECUTOR = 
     NM_PREFIX + "container-executor.class";
@@ -908,7 +934,7 @@ public class YarnConfiguration extends Configuration {
     PROXY_PREFIX + "address";
   public static final int DEFAULT_PROXY_PORT = 9099;
   public static final String DEFAULT_PROXY_ADDRESS =
-    "0.0.0.0:" + DEFAULT_RM_PORT;
+    "0.0.0.0:" + DEFAULT_PROXY_PORT;
   
   /**
    * YARN Service Level Authorization
@@ -1105,7 +1131,7 @@ public class YarnConfiguration extends Configuration {
   /** The setting that controls whether timeline service is enabled or not. */
   public static final String TIMELINE_SERVICE_ENABLED =
       TIMELINE_SERVICE_PREFIX + "enabled";
-  public static final boolean DEFAULT_TIMELINE_SERVICE_ENABLED = true;
+  public static final boolean DEFAULT_TIMELINE_SERVICE_ENABLED = false;
 
   /** host:port address for timeline service RPC APIs. */
   public static final String TIMELINE_SERVICE_ADDRESS =
@@ -1113,6 +1139,10 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_TIMELINE_SERVICE_PORT = 10200;
   public static final String DEFAULT_TIMELINE_SERVICE_ADDRESS = "0.0.0.0:"
       + DEFAULT_TIMELINE_SERVICE_PORT;
+
+  /** The listening endpoint for the timeline service application.*/
+  public static final String TIMELINE_SERVICE_BIND_HOST =
+      TIMELINE_SERVICE_PREFIX + "bind-host";
 
   /** The number of threads to handle client RPC API requests. */
   public static final String TIMELINE_SERVICE_HANDLER_THREAD_COUNT =
@@ -1135,14 +1165,6 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_PORT = 8190;
   public static final String DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS =
       "0.0.0.0:" + DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_PORT;
-
-  /**The kerberos principal to be used for spnego filter for timeline service.*/
-  public static final String TIMELINE_SERVICE_WEBAPP_SPNEGO_USER_NAME_KEY =
-      TIMELINE_SERVICE_PREFIX + "webapp.spnego-principal";
-
-  /**The kerberos keytab to be used for spnego filter for timeline service.*/
-  public static final String TIMELINE_SERVICE_WEBAPP_SPNEGO_KEYTAB_FILE_KEY =
-      TIMELINE_SERVICE_PREFIX + "webapp.spnego-keytab-file";
 
   /** Timeline service store class */
   public static final String TIMELINE_SERVICE_STORE =
@@ -1195,6 +1217,14 @@ public class YarnConfiguration extends Configuration {
 
   public static final long DEFAULT_TIMELINE_SERVICE_LEVELDB_TTL_INTERVAL_MS =
       1000 * 60 * 5;
+
+  /** The Kerberos principal for the timeline server.*/
+  public static final String TIMELINE_SERVICE_PRINCIPAL =
+      TIMELINE_SERVICE_PREFIX + "principal";
+
+  /** The Kerberos keytab for the timeline server.*/
+  public static final String TIMELINE_SERVICE_KEYTAB =
+      TIMELINE_SERVICE_PREFIX + "keytab";
 
   ////////////////////////////////
   // Other Configs
@@ -1340,7 +1370,7 @@ public class YarnConfiguration extends Configuration {
   public static String getClusterId(Configuration conf) {
     String clusterId = conf.get(YarnConfiguration.RM_CLUSTER_ID);
     if (clusterId == null) {
-      throw new HadoopIllegalArgumentException("Configuration doesn't specify" +
+      throw new HadoopIllegalArgumentException("Configuration doesn't specify " +
           YarnConfiguration.RM_CLUSTER_ID);
     }
     return clusterId;

@@ -27,7 +27,6 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import com.google.common.base.Preconditions;
@@ -44,6 +43,28 @@ public class INodesInPath {
   private static boolean isDotSnapshotDir(byte[] pathComponent) {
     return pathComponent == null ? false
         : Arrays.equals(HdfsConstants.DOT_SNAPSHOT_DIR_BYTES, pathComponent);
+  }
+
+  static INodesInPath fromINode(INode inode) {
+    int depth = 0, index;
+    INode tmp = inode;
+    while (tmp != null) {
+      depth++;
+      tmp = tmp.getParent();
+    }
+    final byte[][] path = new byte[depth][];
+    final INode[] inodes = new INode[depth];
+    final INodesInPath iip = new INodesInPath(path, depth);
+    tmp = inode;
+    index = depth;
+    while (tmp != null) {
+      index--;
+      path[index] = tmp.getKey();
+      inodes[index] = tmp;
+      tmp = tmp.getParent();
+    }
+    iip.setINodes(inodes);
+    return iip;
   }
 
   /**
@@ -186,8 +207,7 @@ public class INodesInPath {
       final byte[] childName = components[count + 1];
       
       // check if the next byte[] in components is for ".snapshot"
-      if (isDotSnapshotDir(childName)
-          && isDir && dir instanceof INodeDirectorySnapshottable) {
+      if (isDotSnapshotDir(childName) && isDir && dir.isSnapshottable()) {
         // skip the ".snapshot" in components
         count++;
         index++;
@@ -200,8 +220,7 @@ public class INodesInPath {
           break;
         }
         // Resolve snapshot root
-        final Snapshot s = ((INodeDirectorySnapshottable)dir).getSnapshot(
-            components[count + 1]);
+        final Snapshot s = dir.getSnapshot(components[count + 1]);
         if (s == null) {
           //snapshot not found
           curNode = null;
@@ -340,6 +359,11 @@ public class INodesInPath {
    */
   private void addNode(INode node) {
     inodes[numNonNull++] = node;
+  }
+
+  private void setINodes(INode inodes[]) {
+    this.inodes = inodes;
+    this.numNonNull = this.inodes.length;
   }
   
   void setINode(int i, INode inode) {

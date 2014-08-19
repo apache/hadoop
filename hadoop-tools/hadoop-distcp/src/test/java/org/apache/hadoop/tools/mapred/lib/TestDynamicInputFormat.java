@@ -18,19 +18,20 @@
 
 package org.apache.hadoop.tools.mapred.lib;
 
-import junit.framework.Assert;
+import org.apache.hadoop.tools.DistCpConstants;
+import org.junit.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.tools.CopyListing;
+import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.hadoop.tools.StubContext;
 import org.apache.hadoop.security.Credentials;
@@ -117,15 +118,15 @@ public class TestDynamicInputFormat {
                     +"/tmp/testDynInputFormat/fileList.seq"), options);
 
     JobContext jobContext = new JobContextImpl(configuration, new JobID());
-    DynamicInputFormat<Text, FileStatus> inputFormat =
-        new DynamicInputFormat<Text, FileStatus>();
+    DynamicInputFormat<Text, CopyListingFileStatus> inputFormat =
+        new DynamicInputFormat<Text, CopyListingFileStatus>();
     List<InputSplit> splits = inputFormat.getSplits(jobContext);
 
     int nFiles = 0;
     int taskId = 0;
 
     for (InputSplit split : splits) {
-      RecordReader<Text, FileStatus> recordReader =
+      RecordReader<Text, CopyListingFileStatus> recordReader =
            inputFormat.createRecordReader(split, null);
       StubContext stubContext = new StubContext(jobContext.getConfiguration(),
                                                 recordReader, taskId);
@@ -135,7 +136,7 @@ public class TestDynamicInputFormat {
       recordReader.initialize(splits.get(0), taskAttemptContext);
       float previousProgressValue = 0f;
       while (recordReader.nextKeyValue()) {
-        FileStatus fileStatus = recordReader.getCurrentValue();
+        CopyListingFileStatus fileStatus = recordReader.getCurrentValue();
         String source = fileStatus.getPath().toString();
         System.out.println(source);
         Assert.assertTrue(expectedFilePaths.contains(source));
@@ -160,5 +161,25 @@ public class TestDynamicInputFormat {
     Assert.assertEquals(2, DynamicInputFormat.getSplitRatio(11000000, 10));
     Assert.assertEquals(4, DynamicInputFormat.getSplitRatio(30, 700));
     Assert.assertEquals(2, DynamicInputFormat.getSplitRatio(30, 200));
+
+    // Tests with negative value configuration
+    Configuration conf = new Configuration();
+    conf.setInt(DistCpConstants.CONF_LABEL_MAX_CHUNKS_TOLERABLE, -1);
+    conf.setInt(DistCpConstants.CONF_LABEL_MAX_CHUNKS_IDEAL, -1);
+    conf.setInt(DistCpConstants.CONF_LABEL_MIN_RECORDS_PER_CHUNK, -1);
+    conf.setInt(DistCpConstants.CONF_LABEL_SPLIT_RATIO, -1);
+    Assert.assertEquals(1,
+        DynamicInputFormat.getSplitRatio(1, 1000000000, conf));
+    Assert.assertEquals(2,
+        DynamicInputFormat.getSplitRatio(11000000, 10, conf));
+    Assert.assertEquals(4, DynamicInputFormat.getSplitRatio(30, 700, conf));
+    Assert.assertEquals(2, DynamicInputFormat.getSplitRatio(30, 200, conf));
+
+    // Tests with valid configuration
+    conf.setInt(DistCpConstants.CONF_LABEL_MAX_CHUNKS_TOLERABLE, 100);
+    conf.setInt(DistCpConstants.CONF_LABEL_MAX_CHUNKS_IDEAL, 30);
+    conf.setInt(DistCpConstants.CONF_LABEL_MIN_RECORDS_PER_CHUNK, 10);
+    conf.setInt(DistCpConstants.CONF_LABEL_SPLIT_RATIO, 53);
+    Assert.assertEquals(53, DynamicInputFormat.getSplitRatio(3, 200, conf));
   }
 }

@@ -35,8 +35,11 @@ import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
@@ -92,6 +95,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetCon
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDataEncryptionKeyRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDataEncryptionKeyResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDatanodeReportRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDatanodeStorageReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileInfoRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileLinkInfoRequestProto;
@@ -141,10 +145,16 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SetSaf
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SetTimesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpdateBlockForPipelineRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpdatePipelineRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CheckAccessRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.GetXAttrsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.ListXAttrsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.RemoveXAttrRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.SetXAttrRequestProto;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.ProtobufHelper;
@@ -329,11 +339,12 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public void abandonBlock(ExtendedBlock b, String src, String holder)
-      throws AccessControlException, FileNotFoundException,
-      UnresolvedLinkException, IOException {
+  public void abandonBlock(ExtendedBlock b, long fileId, String src,
+      String holder) throws AccessControlException, FileNotFoundException,
+        UnresolvedLinkException, IOException {
     AbandonBlockRequestProto req = AbandonBlockRequestProto.newBuilder()
-        .setB(PBHelper.convert(b)).setSrc(src).setHolder(holder).build();
+        .setB(PBHelper.convert(b)).setSrc(src).setHolder(holder)
+            .setFileId(fileId).build();
     try {
       rpcProxy.abandonBlock(null, req);
     } catch (ServiceException e) {
@@ -365,8 +376,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public LocatedBlock getAdditionalDatanode(String src, ExtendedBlock blk,
-      DatanodeInfo[] existings, String[] existingStorageIDs,
+  public LocatedBlock getAdditionalDatanode(String src, long fileId,
+      ExtendedBlock blk, DatanodeInfo[] existings, String[] existingStorageIDs,
       DatanodeInfo[] excludes,
       int numAdditionalNodes, String clientName) throws AccessControlException,
       FileNotFoundException, SafeModeException, UnresolvedLinkException,
@@ -374,6 +385,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
     GetAdditionalDatanodeRequestProto req = GetAdditionalDatanodeRequestProto
         .newBuilder()
         .setSrc(src)
+        .setFileId(fileId)
         .setBlk(PBHelper.convert(blk))
         .addAllExistings(PBHelper.convert(existings))
         .addAllExistingStorageUuids(Arrays.asList(existingStorageIDs))
@@ -573,6 +585,20 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
+  public DatanodeStorageReport[] getDatanodeStorageReport(DatanodeReportType type)
+      throws IOException {
+    final GetDatanodeStorageReportRequestProto req
+        = GetDatanodeStorageReportRequestProto.newBuilder()
+            .setType(PBHelper.convert(type)).build();
+    try {
+      return PBHelper.convertDatanodeStorageReports(
+          rpcProxy.getDatanodeStorageReport(null, req).getDatanodeStorageReportsList());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
   public long getPreferredBlockSize(String filename) throws IOException,
       UnresolvedLinkException {
     GetPreferredBlockSizeRequestProto req = GetPreferredBlockSizeRequestProto
@@ -750,11 +776,13 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public void fsync(String src, String client, long lastBlockLength)
+  public void fsync(String src, long fileId, String client,
+                    long lastBlockLength)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException {
     FsyncRequestProto req = FsyncRequestProto.newBuilder().setSrc(src)
-        .setClient(client).setLastBlockLength(lastBlockLength).build();
+        .setClient(client).setLastBlockLength(lastBlockLength)
+            .setFileId(fileId).build();
     try {
       rpcProxy.fsync(null, req);
     } catch (ServiceException e) {
@@ -1260,6 +1288,73 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .setSrc(src).build();
     try {
       return PBHelper.convert(rpcProxy.getAclStatus(null, req));
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+  
+  @Override
+  public void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag)
+      throws IOException {
+    SetXAttrRequestProto req = SetXAttrRequestProto.newBuilder()
+        .setSrc(src)
+        .setXAttr(PBHelper.convertXAttrProto(xAttr))
+        .setFlag(PBHelper.convert(flag))
+        .build();
+    try {
+      rpcProxy.setXAttr(null, req);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+  
+  @Override
+  public List<XAttr> getXAttrs(String src, List<XAttr> xAttrs) 
+      throws IOException {
+    GetXAttrsRequestProto.Builder builder = GetXAttrsRequestProto.newBuilder();
+    builder.setSrc(src);
+    if (xAttrs != null) {
+      builder.addAllXAttrs(PBHelper.convertXAttrProto(xAttrs));
+    }
+    GetXAttrsRequestProto req = builder.build();
+    try {
+      return PBHelper.convert(rpcProxy.getXAttrs(null, req));
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+  
+  @Override
+  public List<XAttr> listXAttrs(String src)
+      throws IOException {
+    ListXAttrsRequestProto.Builder builder = ListXAttrsRequestProto.newBuilder();
+    builder.setSrc(src);
+    ListXAttrsRequestProto req = builder.build();
+    try {
+      return PBHelper.convert(rpcProxy.listXAttrs(null, req));
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void removeXAttr(String src, XAttr xAttr) throws IOException {
+    RemoveXAttrRequestProto req = RemoveXAttrRequestProto
+        .newBuilder().setSrc(src)
+        .setXAttr(PBHelper.convertXAttrProto(xAttr)).build();
+    try {
+      rpcProxy.removeXAttr(null, req);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void checkAccess(String path, FsAction mode) throws IOException {
+    CheckAccessRequestProto req = CheckAccessRequestProto.newBuilder()
+        .setPath(path).setMode(PBHelper.convert(mode)).build();
+    try {
+      rpcProxy.checkAccess(null, req);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

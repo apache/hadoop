@@ -32,6 +32,8 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
@@ -57,6 +59,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.FsAclPermission;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
@@ -87,6 +90,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheP
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolStatsProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateFlagProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DatanodeReportTypeProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DatanodeStorageReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsStatsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeActionProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeInfoProto;
@@ -99,14 +103,11 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockIdComma
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeRegistrationProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeStorageProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeStorageProto.StorageState;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.FinalizeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.KeyUpdateCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.NNHAStatusHeartbeatProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReceivedDeletedBlockInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterCommandProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
@@ -122,6 +123,8 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto.AdminState;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeLocalInfoProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeStorageProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeStorageProto.StorageState;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DirectoryListingProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExportedBlockKeysProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
@@ -146,9 +149,16 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshotDiffReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshottableDirectoryListingProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshottableDirectoryStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypeProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypesProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageUuidsProto;
 import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.JournalInfoProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.GetXAttrsResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.ListXAttrsResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.XAttrProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.XAttrProto.XAttrNamespaceProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.XAttrSetFlagProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockKey;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
@@ -173,6 +183,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.FinalizeCommand;
 import org.apache.hadoop.hdfs.server.protocol.JournalInfo;
 import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
@@ -220,6 +231,8 @@ public class PBHelper {
       AclEntryType.values();
   private static final FsAction[] FSACTION_VALUES =
       FsAction.values();
+  private static final XAttr.NameSpace[] XATTR_NAMESPACE_VALUES = 
+      XAttr.NameSpace.values();
 
   private PBHelper() {
     /** Hidden constructor */
@@ -339,15 +352,19 @@ public class PBHelper {
     return BlockWithLocationsProto.newBuilder()
         .setBlock(convert(blk.getBlock()))
         .addAllDatanodeUuids(Arrays.asList(blk.getDatanodeUuids()))
-        .addAllStorageUuids(Arrays.asList(blk.getStorageIDs())).build();
+        .addAllStorageUuids(Arrays.asList(blk.getStorageIDs()))
+        .addAllStorageTypes(convertStorageTypes(blk.getStorageTypes()))
+        .build();
   }
 
   public static BlockWithLocations convert(BlockWithLocationsProto b) {
     final List<String> datanodeUuids = b.getDatanodeUuidsList();
     final List<String> storageUuids = b.getStorageUuidsList();
+    final List<StorageTypeProto> storageTypes = b.getStorageTypesList();
     return new BlockWithLocations(convert(b.getBlock()),
         datanodeUuids.toArray(new String[datanodeUuids.size()]),
-        storageUuids.toArray(new String[storageUuids.size()]));
+        storageUuids.toArray(new String[storageUuids.size()]),
+        convertStorageTypes(storageTypes, storageUuids.size()));
   }
 
   public static BlocksWithLocationsProto convert(BlocksWithLocations blks) {
@@ -609,6 +626,41 @@ public class PBHelper {
     return builder.build();
   }
 
+  public static DatanodeStorageReportProto convertDatanodeStorageReport(
+      DatanodeStorageReport report) {
+    return DatanodeStorageReportProto.newBuilder()
+        .setDatanodeInfo(convert(report.getDatanodeInfo()))
+        .addAllStorageReports(convertStorageReports(report.getStorageReports()))
+        .build();
+  }
+
+  public static List<DatanodeStorageReportProto> convertDatanodeStorageReports(
+      DatanodeStorageReport[] reports) {
+    final List<DatanodeStorageReportProto> protos
+        = new ArrayList<DatanodeStorageReportProto>(reports.length);
+    for(int i = 0; i < reports.length; i++) {
+      protos.add(convertDatanodeStorageReport(reports[i]));
+    }
+    return protos;
+  }
+
+  public static DatanodeStorageReport convertDatanodeStorageReport(
+      DatanodeStorageReportProto proto) {
+    return new DatanodeStorageReport(
+        convert(proto.getDatanodeInfo()),
+        convertStorageReports(proto.getStorageReportsList()));
+  }
+
+  public static DatanodeStorageReport[] convertDatanodeStorageReports(
+      List<DatanodeStorageReportProto> protos) {
+    final DatanodeStorageReport[] reports
+        = new DatanodeStorageReport[protos.size()];
+    for(int i = 0; i < reports.length; i++) {
+      reports[i] = convertDatanodeStorageReport(protos.get(i));
+    }
+    return reports;
+  }
+
   public static AdminStates convert(AdminState adminState) {
     switch(adminState) {
     case DECOMMISSION_INPROGRESS:
@@ -664,14 +716,8 @@ public class PBHelper {
       targets[i] = PBHelper.convert(locs.get(i));
     }
 
-    final int storageTypesCount = proto.getStorageTypesCount();
-    final StorageType[] storageTypes;
-    if (storageTypesCount == 0) {
-      storageTypes = null;
-    } else {
-      Preconditions.checkState(storageTypesCount == locs.size());
-      storageTypes = convertStorageTypeProtos(proto.getStorageTypesList());
-    }
+    final StorageType[] storageTypes = convertStorageTypes(
+        proto.getStorageTypesList(), locs.size());
 
     final int storageIDsCount = proto.getStorageIDsCount();
     final String[] storageIDs;
@@ -959,6 +1005,20 @@ public class PBHelper {
       targets[i] = PBHelper.convert(targetList.get(i));
     }
 
+    StorageType[][] targetStorageTypes = new StorageType[targetList.size()][];
+    List<StorageTypesProto> targetStorageTypesList = blkCmd.getTargetStorageTypesList();
+    if (targetStorageTypesList.isEmpty()) { // missing storage types
+      for(int i = 0; i < targetStorageTypes.length; i++) {
+        targetStorageTypes[i] = new StorageType[targets[i].length];
+        Arrays.fill(targetStorageTypes[i], StorageType.DEFAULT);
+      }
+    } else {
+      for(int i = 0; i < targetStorageTypes.length; i++) {
+        List<StorageTypeProto> p = targetStorageTypesList.get(i).getStorageTypesList();
+        targetStorageTypes[i] = p.toArray(new StorageType[p.size()]);
+      }
+    }
+
     List<StorageUuidsProto> targetStorageUuidsList = blkCmd.getTargetStorageUuidsList();
     String[][] targetStorageIDs = new String[targetStorageUuidsList.size()][];
     for(int i = 0; i < targetStorageIDs.length; i++) {
@@ -981,7 +1041,7 @@ public class PBHelper {
       throw new AssertionError("Unknown action type: " + blkCmd.getAction());
     }
     return new BlockCommand(action, blkCmd.getBlockPoolId(), blocks, targets,
-        targetStorageIDs);
+        targetStorageTypes, targetStorageIDs);
   }
 
   public static BlockIdCommand convert(BlockIdCommandProto blkIdCmd) {
@@ -1186,13 +1246,11 @@ public class PBHelper {
   }
   
   public static FsPermissionProto convert(FsPermission p) {
-    if (p == null) return null;
-    return FsPermissionProto.newBuilder().setPerm(p.toShort()).build();
+    return FsPermissionProto.newBuilder().setPerm(p.toExtendedShort()).build();
   }
   
   public static FsPermission convert(FsPermissionProto p) {
-    if (p == null) return null;
-    return new FsPermission((short)p.getPerm());
+    return new FsAclPermission((short)p.getPerm());
   }
   
   
@@ -1414,6 +1472,7 @@ public class PBHelper {
     case ALL: return DatanodeReportTypeProto.ALL;
     case LIVE: return DatanodeReportTypeProto.LIVE;
     case DEAD: return DatanodeReportTypeProto.DEAD;
+    case DECOMMISSIONING: return DatanodeReportTypeProto.DECOMMISSIONING;
     default: 
       throw new IllegalArgumentException("Unexpected data type report:" + t);
     }
@@ -1425,6 +1484,7 @@ public class PBHelper {
     case ALL: return DatanodeReportType.ALL;
     case LIVE: return DatanodeReportType.LIVE;
     case DEAD: return DatanodeReportType.DEAD;
+    case DECOMMISSIONING: return DatanodeReportType.DECOMMISSIONING;
     default: 
       throw new IllegalArgumentException("Unexpected data type report:" + t);
     }
@@ -1595,8 +1655,25 @@ public class PBHelper {
     }
   }
 
-  private static StorageTypeProto convertStorageType(
-      StorageType type) {
+  public static List<StorageTypeProto> convertStorageTypes(
+      StorageType[] types) {
+    return convertStorageTypes(types, 0);
+  }
+
+  public static List<StorageTypeProto> convertStorageTypes(
+      StorageType[] types, int startIdx) {
+    if (types == null) {
+      return null;
+    }
+    final List<StorageTypeProto> protos = new ArrayList<StorageTypeProto>(
+        types.length);
+    for (int i = startIdx; i < types.length; ++i) {
+      protos.add(convertStorageType(types[i]));
+    }
+    return protos; 
+  }
+
+  public static StorageTypeProto convertStorageType(StorageType type) {
     switch(type) {
     case DISK:
       return StorageTypeProto.DISK;
@@ -1611,7 +1688,7 @@ public class PBHelper {
   public static DatanodeStorage convert(DatanodeStorageProto s) {
     return new DatanodeStorage(s.getStorageUuid(),
                                PBHelper.convertState(s.getState()),
-                               PBHelper.convertType(s.getStorageType()));
+                               PBHelper.convertStorageType(s.getStorageType()));
   }
 
   private static State convertState(StorageState state) {
@@ -1624,7 +1701,7 @@ public class PBHelper {
     }
   }
 
-  private static StorageType convertType(StorageTypeProto type) {
+  public static StorageType convertStorageType(StorageTypeProto type) {
     switch(type) {
       case DISK:
         return StorageType.DISK;
@@ -1636,11 +1713,16 @@ public class PBHelper {
     }
   }
 
-  private static StorageType[] convertStorageTypeProtos(
-      List<StorageTypeProto> storageTypesList) {
-    final StorageType[] storageTypes = new StorageType[storageTypesList.size()];
-    for (int i = 0; i < storageTypes.length; ++i) {
-      storageTypes[i] = PBHelper.convertType(storageTypesList.get(i));
+  public static StorageType[] convertStorageTypes(
+      List<StorageTypeProto> storageTypesList, int expectedSize) {
+    final StorageType[] storageTypes = new StorageType[expectedSize];
+    if (storageTypesList.size() != expectedSize) { // missing storage types
+      Preconditions.checkState(storageTypesList.isEmpty());
+      Arrays.fill(storageTypes, StorageType.DEFAULT);
+    } else {
+      for (int i = 0; i < storageTypes.length; ++i) {
+        storageTypes[i] = convertStorageType(storageTypesList.get(i));
+      }
     }
     return storageTypes;
   }
@@ -1670,6 +1752,15 @@ public class PBHelper {
       report[i] = convert(list.get(i));
     }
     return report;
+  }
+
+  public static List<StorageReportProto> convertStorageReports(StorageReport[] storages) {
+    final List<StorageReportProto> protos = new ArrayList<StorageReportProto>(
+        storages.length);
+    for(int i = 0; i < storages.length; i++) {
+      protos.add(convert(storages[i]));
+    }
+    return protos;
   }
 
   public static JournalInfo convert(JournalInfoProto info) {
@@ -1726,24 +1817,29 @@ public class PBHelper {
     }
     DiffType type = DiffType.getTypeFromLabel(entry
         .getModificationLabel());
-    return type == null ? null : 
-      new DiffReportEntry(type, entry.getFullpath().toByteArray());
+    return type == null ? null : new DiffReportEntry(type, entry.getFullpath()
+        .toByteArray(), entry.hasTargetPath() ? entry.getTargetPath()
+        .toByteArray() : null);
   }
   
   public static SnapshotDiffReportEntryProto convert(DiffReportEntry entry) {
     if (entry == null) {
       return null;
     }
-    byte[] fullPath = entry.getRelativePath();
-    ByteString fullPathString = ByteString
-        .copyFrom(fullPath == null ? DFSUtil.EMPTY_BYTES : fullPath);
-    
+    ByteString sourcePath = ByteString
+        .copyFrom(entry.getSourcePath() == null ? DFSUtil.EMPTY_BYTES : entry
+            .getSourcePath());
     String modification = entry.getType().getLabel();
-    
-    SnapshotDiffReportEntryProto entryProto = SnapshotDiffReportEntryProto
-        .newBuilder().setFullpath(fullPathString)
-        .setModificationLabel(modification).build();
-    return entryProto;
+    SnapshotDiffReportEntryProto.Builder builder = SnapshotDiffReportEntryProto
+        .newBuilder().setFullpath(sourcePath)
+        .setModificationLabel(modification);
+    if (entry.getType() == DiffType.RENAME) {
+      ByteString targetPath = ByteString
+          .copyFrom(entry.getTargetPath() == null ? DFSUtil.EMPTY_BYTES : entry
+              .getTargetPath());
+      builder.setTargetPath(targetPath);
+    }
+    return builder.build();
   }
   
   public static SnapshotDiffReport convert(SnapshotDiffReportProto reportProto) {
@@ -2006,12 +2102,20 @@ public class PBHelper {
   private static AclEntryType convert(AclEntryTypeProto v) {
     return castEnum(v, ACL_ENTRY_TYPE_VALUES);
   }
+  
+  private static XAttrNamespaceProto convert(XAttr.NameSpace v) {
+    return XAttrNamespaceProto.valueOf(v.ordinal());
+  }
+  
+  private static XAttr.NameSpace convert(XAttrNamespaceProto v) {
+    return castEnum(v, XATTR_NAMESPACE_VALUES);
+  }
 
-  private static FsActionProto convert(FsAction v) {
+  public static FsActionProto convert(FsAction v) {
     return FsActionProto.valueOf(v != null ? v.ordinal() : 0);
   }
 
-  private static FsAction convert(FsActionProto v) {
+  public static FsAction convert(FsActionProto v) {
     return castEnum(v, FSACTION_VALUES);
   }
 
@@ -2058,6 +2162,126 @@ public class PBHelper {
         .setGroup(e.getGroup()).setSticky(e.isStickyBit())
         .addAllEntries(convertAclEntryProto(e.getEntries())).build();
     return GetAclStatusResponseProto.newBuilder().setResult(r).build();
+  }
+  
+  public static XAttrProto convertXAttrProto(XAttr a) {
+    XAttrProto.Builder builder = XAttrProto.newBuilder();
+    builder.setNamespace(convert(a.getNameSpace()));
+    if (a.getName() != null) {
+      builder.setName(a.getName());
+    }
+    if (a.getValue() != null) {
+      builder.setValue(getByteString(a.getValue()));
+    }
+    return builder.build();
+  }
+  
+  public static List<XAttrProto> convertXAttrProto(
+      List<XAttr> xAttrSpec) {
+    if (xAttrSpec == null) {
+      return Lists.newArrayListWithCapacity(0);
+    }
+    ArrayList<XAttrProto> xAttrs = Lists.newArrayListWithCapacity(
+        xAttrSpec.size());
+    for (XAttr a : xAttrSpec) {
+      XAttrProto.Builder builder = XAttrProto.newBuilder();
+      builder.setNamespace(convert(a.getNameSpace()));
+      if (a.getName() != null) {
+        builder.setName(a.getName());
+      }
+      if (a.getValue() != null) {
+        builder.setValue(getByteString(a.getValue()));
+      }
+      xAttrs.add(builder.build());
+    }
+    return xAttrs;
+  }
+  
+  /**
+   * The flag field in PB is a bitmask whose values are the same a the 
+   * emum values of XAttrSetFlag
+   */
+  public static int convert(EnumSet<XAttrSetFlag> flag) {
+    int value = 0;
+    if (flag.contains(XAttrSetFlag.CREATE)) {
+      value |= XAttrSetFlagProto.XATTR_CREATE.getNumber();
+    }
+    if (flag.contains(XAttrSetFlag.REPLACE)) {
+      value |= XAttrSetFlagProto.XATTR_REPLACE.getNumber();
+    }
+    return value;
+  }
+ 
+  public static EnumSet<XAttrSetFlag> convert(int flag) {
+    EnumSet<XAttrSetFlag> result = 
+        EnumSet.noneOf(XAttrSetFlag.class);
+    if ((flag & XAttrSetFlagProto.XATTR_CREATE_VALUE) == 
+        XAttrSetFlagProto.XATTR_CREATE_VALUE) {
+      result.add(XAttrSetFlag.CREATE);
+    }
+    if ((flag & XAttrSetFlagProto.XATTR_REPLACE_VALUE) == 
+        XAttrSetFlagProto.XATTR_REPLACE_VALUE) {
+      result.add(XAttrSetFlag.REPLACE);
+    }
+    return result;
+  }
+  
+  public static XAttr convertXAttr(XAttrProto a) {
+    XAttr.Builder builder = new XAttr.Builder();
+    builder.setNameSpace(convert(a.getNamespace()));
+    if (a.hasName()) {
+      builder.setName(a.getName());
+    }
+    if (a.hasValue()) {
+      builder.setValue(a.getValue().toByteArray());
+    }
+    return builder.build();
+  }
+  
+  public static List<XAttr> convertXAttrs(List<XAttrProto> xAttrSpec) {
+    ArrayList<XAttr> xAttrs = Lists.newArrayListWithCapacity(xAttrSpec.size());
+    for (XAttrProto a : xAttrSpec) {
+      XAttr.Builder builder = new XAttr.Builder();
+      builder.setNameSpace(convert(a.getNamespace()));
+      if (a.hasName()) {
+        builder.setName(a.getName());
+      }
+      if (a.hasValue()) {
+        builder.setValue(a.getValue().toByteArray());
+      }
+      xAttrs.add(builder.build());
+    }
+    return xAttrs;
+  }
+  
+  public static List<XAttr> convert(GetXAttrsResponseProto a) {
+    List<XAttrProto> xAttrs = a.getXAttrsList();
+    return convertXAttrs(xAttrs);
+  }
+
+  public static GetXAttrsResponseProto convertXAttrsResponse(
+      List<XAttr> xAttrs) {
+    GetXAttrsResponseProto.Builder builder = GetXAttrsResponseProto
+        .newBuilder();
+    if (xAttrs != null) {
+      builder.addAllXAttrs(convertXAttrProto(xAttrs));
+    }
+    return builder.build();
+  }
+
+  public static List<XAttr> convert(ListXAttrsResponseProto a) {
+    final List<XAttrProto> xAttrs = a.getXAttrsList();
+    return convertXAttrs(xAttrs);
+  }
+
+  public static ListXAttrsResponseProto convertListXAttrsResponse(
+    List<XAttr> names) {
+    ListXAttrsResponseProto.Builder builder =
+      ListXAttrsResponseProto.newBuilder();
+    if (names != null) {
+      builder.addAllXAttrs(convertXAttrProto(names));
+    }
+    return builder.build();
   }
 
   public static ShortCircuitShmSlotProto convert(SlotId slotId) {

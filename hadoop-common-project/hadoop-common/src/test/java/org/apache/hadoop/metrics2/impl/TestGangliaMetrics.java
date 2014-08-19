@@ -60,12 +60,12 @@ public class TestGangliaMetrics {
   @Test
   public void testTagsForPrefix() throws Exception {
     ConfigBuilder cb = new ConfigBuilder()
-      .add("Test.sink.ganglia.tagsForPrefix.all", "*")
-      .add("Test.sink.ganglia.tagsForPrefix.some", "NumActiveSinks, " +
+      .add("test.sink.ganglia.tagsForPrefix.all", "*")
+      .add("test.sink.ganglia.tagsForPrefix.some", "NumActiveSinks, " +
               "NumActiveSources")
-      .add("Test.sink.ganglia.tagsForPrefix.none", "");
+      .add("test.sink.ganglia.tagsForPrefix.none", "");
     GangliaSink30 sink = new GangliaSink30();
-    sink.init(cb.subset("Test.sink.ganglia"));
+    sink.init(cb.subset("test.sink.ganglia"));
 
     List<MetricsTag> tags = new ArrayList<MetricsTag>();
     tags.add(new MetricsTag(MsInfo.Context, "all"));
@@ -98,8 +98,8 @@ public class TestGangliaMetrics {
   
   @Test public void testGangliaMetrics2() throws Exception {
     ConfigBuilder cb = new ConfigBuilder().add("default.period", 10)
-        .add("Test.sink.gsink30.context", "test") // filter out only "test"
-        .add("Test.sink.gsink31.context", "test") // filter out only "test"
+        .add("test.sink.gsink30.context", "test") // filter out only "test"
+        .add("test.sink.gsink31.context", "test") // filter out only "test"
         .save(TestMetricsConfig.getTestFilename("hadoop-metrics2-test"));
 
     MetricsSystemImpl ms = new MetricsSystemImpl("Test");

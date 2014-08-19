@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
@@ -177,12 +178,13 @@ public class TestPersistBlocks {
       
       // Abandon the last block
       DFSClient dfsclient = DFSClientAdapter.getDFSClient((DistributedFileSystem)fs);
+      HdfsFileStatus fileStatus = dfsclient.getNamenode().getFileInfo(FILE_NAME);
       LocatedBlocks blocks = dfsclient.getNamenode().getBlockLocations(
           FILE_NAME, 0, BLOCK_SIZE * NUM_BLOCKS);
       assertEquals(NUM_BLOCKS, blocks.getLocatedBlocks().size());
       LocatedBlock b = blocks.getLastLocatedBlock();
-      dfsclient.getNamenode().abandonBlock(b.getBlock(), FILE_NAME,
-          dfsclient.clientName);
+      dfsclient.getNamenode().abandonBlock(b.getBlock(), fileStatus.getFileId(),
+          FILE_NAME, dfsclient.clientName);
       
       // explicitly do NOT close the file.
       cluster.restartNameNode();

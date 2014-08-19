@@ -29,7 +29,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.tools.CopyListingFileStatus;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -57,7 +57,7 @@ public class DynamicInputFormat<K, V> extends InputFormat<K, V> {
           = "mapred.num.splits";
   private static final String CONF_LABEL_NUM_ENTRIES_PER_CHUNK
           = "mapred.num.entries.per.chunk";
-
+  
   /**
    * Implementation of InputFormat::getSplits(). This method splits up the
    * copy-listing file into chunks, and assigns the first batch to different
@@ -91,7 +91,7 @@ public class DynamicInputFormat<K, V> extends InputFormat<K, V> {
           // Setting non-zero length for FileSplit size, to avoid a possible
           // future when 0-sized file-splits are considered "empty" and skipped
           // over.
-          MIN_RECORDS_PER_CHUNK,
+          getMinRecordsPerChunk(jobContext.getConfiguration()),
           null));
     }
     DistCpUtils.publish(jobContext.getConfiguration(),
@@ -107,9 +107,11 @@ public class DynamicInputFormat<K, V> extends InputFormat<K, V> {
     final Configuration configuration = context.getConfiguration();
     int numRecords = getNumberOfRecords(configuration);
     int numMaps = getNumMapTasks(configuration);
+    int maxChunksTolerable = getMaxChunksTolerable(configuration);
+
     // Number of chunks each map will process, on average.
     int splitRatio = getListingSplitRatio(configuration, numMaps, numRecords);
-    validateNumChunksUsing(splitRatio, numMaps);
+    validateNumChunksUsing(splitRatio, numMaps, maxChunksTolerable);
 
     int numEntriesPerChunk = (int)Math.ceil((float)numRecords
                                           /(splitRatio * numMaps));
@@ -131,7 +133,7 @@ public class DynamicInputFormat<K, V> extends InputFormat<K, V> {
     
     List<DynamicInputChunk> chunksFinal = new ArrayList<DynamicInputChunk>();
 
-    FileStatus fileStatus = new FileStatus();
+    CopyListingFileStatus fileStatus = new CopyListingFileStatus();
     Text relPath = new Text();
     int recordCounter = 0;
     int chunkCount = 0;
@@ -168,9 +170,9 @@ public class DynamicInputFormat<K, V> extends InputFormat<K, V> {
     return chunksFinal;
   }
 
-  private static void validateNumChunksUsing(int splitRatio, int numMaps)
-                                              throws IOException {
-    if (splitRatio * numMaps > MAX_CHUNKS_TOLERABLE)
+  private static void validateNumChunksUsing(int splitRatio, int numMaps,
+      int maxChunksTolerable) throws IOException {
+    if (splitRatio * numMaps > maxChunksTolerable)
       throw new IOException("Too many chunks created with splitRatio:"
                  + splitRatio + ", numMaps:" + numMaps
                  + ". Reduce numMaps or decrease split-ratio to proceed.");
@@ -238,14 +240,61 @@ public class DynamicInputFormat<K, V> extends InputFormat<K, V> {
                                             int numMaps, int numPaths) {
     return configuration.getInt(
             CONF_LABEL_LISTING_SPLIT_RATIO,
-            getSplitRatio(numMaps, numPaths));
+            getSplitRatio(numMaps, numPaths, configuration));
+  }
+  
+  private static int getMaxChunksTolerable(Configuration conf) {
+    int maxChunksTolerable = conf.getInt(
+        DistCpConstants.CONF_LABEL_MAX_CHUNKS_TOLERABLE,
+        DistCpConstants.MAX_CHUNKS_TOLERABLE_DEFAULT);
+    if (maxChunksTolerable <= 0) {
+      LOG.warn(DistCpConstants.CONF_LABEL_MAX_CHUNKS_TOLERABLE +
+          " should be positive. Fall back to default value: "
+          + DistCpConstants.MAX_CHUNKS_TOLERABLE_DEFAULT);
+      maxChunksTolerable = DistCpConstants.MAX_CHUNKS_TOLERABLE_DEFAULT;
+    }
+    return maxChunksTolerable;
+  }
+  
+  private static int getMaxChunksIdeal(Configuration conf) {
+    int maxChunksIdeal = conf.getInt(
+        DistCpConstants.CONF_LABEL_MAX_CHUNKS_IDEAL,
+        DistCpConstants.MAX_CHUNKS_IDEAL_DEFAULT);
+    if (maxChunksIdeal <= 0) {
+      LOG.warn(DistCpConstants.CONF_LABEL_MAX_CHUNKS_IDEAL +
+          " should be positive. Fall back to default value: "
+          + DistCpConstants.MAX_CHUNKS_IDEAL_DEFAULT);
+      maxChunksIdeal = DistCpConstants.MAX_CHUNKS_IDEAL_DEFAULT;
+    }
+    return maxChunksIdeal;
+  }
+  
+  private static int getMinRecordsPerChunk(Configuration conf) {
+    int minRecordsPerChunk = conf.getInt(
+        DistCpConstants.CONF_LABEL_MIN_RECORDS_PER_CHUNK,
+        DistCpConstants.MIN_RECORDS_PER_CHUNK_DEFAULT);
+    if (minRecordsPerChunk <= 0) {
+      LOG.warn(DistCpConstants.CONF_LABEL_MIN_RECORDS_PER_CHUNK +
+          " should be positive. Fall back to default value: "
+          + DistCpConstants.MIN_RECORDS_PER_CHUNK_DEFAULT);
+      minRecordsPerChunk = DistCpConstants.MIN_RECORDS_PER_CHUNK_DEFAULT;
+    }
+    return minRecordsPerChunk;
   }
 
-  private static final int MAX_CHUNKS_TOLERABLE = 400;
-  private static final int MAX_CHUNKS_IDEAL     = 100;
-  private static final int MIN_RECORDS_PER_CHUNK = 5;
-  private static final int SPLIT_RATIO_DEFAULT  = 2;
-
+  private static int getSplitRatio(Configuration conf) {
+    int splitRatio = conf.getInt(
+        DistCpConstants.CONF_LABEL_SPLIT_RATIO,
+        DistCpConstants.SPLIT_RATIO_DEFAULT);
+    if (splitRatio <= 0) {
+      LOG.warn(DistCpConstants.CONF_LABEL_SPLIT_RATIO +
+          " should be positive. Fall back to default value: "
+          + DistCpConstants.SPLIT_RATIO_DEFAULT);
+      splitRatio = DistCpConstants.SPLIT_RATIO_DEFAULT;
+    }
+    return splitRatio;
+  }
+  
   /**
    * Package private, for testability.
    * @param nMaps The number of maps requested for.
@@ -253,19 +302,34 @@ public class DynamicInputFormat<K, V> extends InputFormat<K, V> {
    * @return The number of splits each map should handle, ideally.
    */
   static int getSplitRatio(int nMaps, int nRecords) {
+    return getSplitRatio(nMaps, nRecords,new Configuration());
+  }
+  
+  /**
+   * Package private, for testability.
+   * @param nMaps The number of maps requested for.
+   * @param nRecords The number of records to be copied.
+   * @param conf The configuration set by users.
+   * @return The number of splits each map should handle, ideally.
+   */
+  static int getSplitRatio(int nMaps, int nRecords, Configuration conf) {
+    int maxChunksIdeal = getMaxChunksIdeal(conf);
+    int minRecordsPerChunk = getMinRecordsPerChunk(conf);
+    int splitRatio = getSplitRatio(conf);
+    
     if (nMaps == 1) {
       LOG.warn("nMaps == 1. Why use DynamicInputFormat?");
       return 1;
     }
 
-    if (nMaps > MAX_CHUNKS_IDEAL)
-      return SPLIT_RATIO_DEFAULT;
+    if (nMaps > maxChunksIdeal)
+      return splitRatio;
 
-    int nPickups = (int)Math.ceil((float)MAX_CHUNKS_IDEAL/nMaps);
+    int nPickups = (int)Math.ceil((float)maxChunksIdeal/nMaps);
     int nRecordsPerChunk = (int)Math.ceil((float)nRecords/(nMaps*nPickups));
 
-    return nRecordsPerChunk < MIN_RECORDS_PER_CHUNK ?
-              SPLIT_RATIO_DEFAULT : nPickups;
+    return nRecordsPerChunk < minRecordsPerChunk ?
+              splitRatio : nPickups;
   }
 
   static int getNumEntriesPerChunk(Configuration configuration) {

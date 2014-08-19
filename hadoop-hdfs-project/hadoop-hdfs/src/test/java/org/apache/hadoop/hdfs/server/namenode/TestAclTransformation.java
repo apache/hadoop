@@ -304,7 +304,7 @@ public class TestAclTransformation {
       .add(aclEntry(DEFAULT, MASK, ALL))
       .add(aclEntry(DEFAULT, OTHER, READ))
       .build();
-    List<AclEntry> aclSpec = Lists.<AclEntry>newArrayList();
+    List<AclEntry> aclSpec = Lists.newArrayList();
     assertEquals(existing, filterAclEntriesByAclSpec(existing, aclSpec));
   }
 
@@ -705,7 +705,7 @@ public class TestAclTransformation {
       .add(aclEntry(DEFAULT, MASK, ALL))
       .add(aclEntry(DEFAULT, OTHER, READ))
       .build();
-    List<AclEntry> aclSpec = Lists.<AclEntry>newArrayList();
+    List<AclEntry> aclSpec = Lists.newArrayList();
     assertEquals(existing, mergeAclEntries(existing, aclSpec));
   }
 

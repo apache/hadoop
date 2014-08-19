@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -32,6 +34,8 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+@Private
+@Unstable
 public class QueuePlacementPolicy {
   private static final Map<String, Class<? extends QueuePlacementRule>> ruleClasses;
   static {
@@ -42,17 +46,19 @@ public class QueuePlacementPolicy {
     map.put("secondaryGroupExistingQueue",
         QueuePlacementRule.SecondaryGroupExistingQueue.class);
     map.put("specified", QueuePlacementRule.Specified.class);
+    map.put("nestedUserQueue",
+        QueuePlacementRule.NestedUserQueue.class);
     map.put("default", QueuePlacementRule.Default.class);
     map.put("reject", QueuePlacementRule.Reject.class);
     ruleClasses = Collections.unmodifiableMap(map);
   }
   
   private final List<QueuePlacementRule> rules;
-  private final Set<String> configuredQueues;
+  private final Map<FSQueueType, Set<String>> configuredQueues;
   private final Groups groups;
   
   public QueuePlacementPolicy(List<QueuePlacementRule> rules,
-      Set<String> configuredQueues, Configuration conf)
+      Map<FSQueueType, Set<String>> configuredQueues, Configuration conf)
       throws AllocationConfigurationException {
     for (int i = 0; i < rules.size()-1; i++) {
       if (rules.get(i).isTerminal()) {
@@ -72,28 +78,15 @@ public class QueuePlacementPolicy {
   /**
    * Builds a QueuePlacementPolicy from an xml element.
    */
-  public static QueuePlacementPolicy fromXml(Element el, Set<String> configuredQueues,
-      Configuration conf) throws AllocationConfigurationException {
+  public static QueuePlacementPolicy fromXml(Element el,
+      Map<FSQueueType, Set<String>> configuredQueues, Configuration conf)
+      throws AllocationConfigurationException {
     List<QueuePlacementRule> rules = new ArrayList<QueuePlacementRule>();
     NodeList elements = el.getChildNodes();
     for (int i = 0; i < elements.getLength(); i++) {
       Node node = elements.item(i);
       if (node instanceof Element) {
-        Element element = (Element)node;
-
-        String ruleName = element.getAttribute("name");
-        if ("".equals(ruleName)) {
-          throw new AllocationConfigurationException("No name provided for a " +
-            "rule element");
-        }
-
-        Class<? extends QueuePlacementRule> clazz = ruleClasses.get(ruleName);
-        if (clazz == null) {
-          throw new AllocationConfigurationException("No rule class found for "
-              + ruleName);
-        }
-        QueuePlacementRule rule = ReflectionUtils.newInstance(clazz, null);
-        rule.initializeFromXml(element);
+        QueuePlacementRule rule = createAndInitializeRule(node);
         rules.add(rule);
       }
     }
@@ -101,11 +94,37 @@ public class QueuePlacementPolicy {
   }
   
   /**
+   * Create and initialize a rule given a xml node
+   * @param node
+   * @return QueuePlacementPolicy
+   * @throws AllocationConfigurationException
+   */
+  public static QueuePlacementRule createAndInitializeRule(Node node)
+      throws AllocationConfigurationException {
+    Element element = (Element) node;
+
+    String ruleName = element.getAttribute("name");
+    if ("".equals(ruleName)) {
+      throw new AllocationConfigurationException("No name provided for a "
+          + "rule element");
+    }
+
+    Class<? extends QueuePlacementRule> clazz = ruleClasses.get(ruleName);
+    if (clazz == null) {
+      throw new AllocationConfigurationException("No rule class found for "
+          + ruleName);
+    }
+    QueuePlacementRule rule = ReflectionUtils.newInstance(clazz, null);
+    rule.initializeFromXml(element);
+    return rule;
+  }
+    
+  /**
    * Build a simple queue placement policy from the allow-undeclared-pools and
    * user-as-default-queue configuration options.
    */
   public static QueuePlacementPolicy fromConfiguration(Configuration conf,
-      Set<String> configuredQueues) {
+      Map<FSQueueType, Set<String>> configuredQueues) {
     boolean create = conf.getBoolean(
         FairSchedulerConfiguration.ALLOW_UNDECLARED_POOLS,
         FairSchedulerConfiguration.DEFAULT_ALLOW_UNDECLARED_POOLS);

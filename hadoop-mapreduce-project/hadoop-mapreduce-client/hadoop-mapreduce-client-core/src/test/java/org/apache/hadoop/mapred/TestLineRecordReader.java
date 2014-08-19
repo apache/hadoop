@@ -23,9 +23,12 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
 
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
@@ -96,5 +99,130 @@ public class TestLineRecordReader {
     // split which ends at compressed offset 136498 and the next
     // character is a linefeed
     testSplitRecords("blockEndingInCRThenLF.txt.bz2", 136498);
+  }
+
+  // Use the LineRecordReader to read records from the file
+  public ArrayList<String> readRecords(URL testFileUrl, int splitSize)
+      throws IOException {
+
+    // Set up context
+    File testFile = new File(testFileUrl.getFile());
+    long testFileSize = testFile.length();
+    Path testFilePath = new Path(testFile.getAbsolutePath());
+    Configuration conf = new Configuration();
+    conf.setInt("io.file.buffer.size", 1);
+
+    // Gather the records returned by the record reader
+    ArrayList<String> records = new ArrayList<String>();
+
+    long offset = 0;
+    LongWritable key = new LongWritable();
+    Text value = new Text();
+    while (offset < testFileSize) {
+      FileSplit split =
+          new FileSplit(testFilePath, offset, splitSize, (String[]) null);
+      LineRecordReader reader = new LineRecordReader(conf, split);
+
+      while (reader.next(key, value)) {
+        records.add(value.toString());
+      }
+      offset += splitSize;
+    }
+    return records;
+  }
+
+  // Gather the records by just splitting on new lines
+  public String[] readRecordsDirectly(URL testFileUrl, boolean bzip)
+      throws IOException {
+    int MAX_DATA_SIZE = 1024 * 1024;
+    byte[] data = new byte[MAX_DATA_SIZE];
+    FileInputStream fis = new FileInputStream(testFileUrl.getFile());
+    int count;
+    if (bzip) {
+      BZip2CompressorInputStream bzIn = new BZip2CompressorInputStream(fis);
+      count = bzIn.read(data);
+      bzIn.close();
+    } else {
+      count = fis.read(data);
+    }
+    fis.close();
+    assertTrue("Test file data too big for buffer", count < data.length);
+    return new String(data, 0, count, "UTF-8").split("\n");
+  }
+
+  public void checkRecordSpanningMultipleSplits(String testFile,
+                                                int splitSize,
+                                                boolean bzip)
+      throws IOException {
+    URL testFileUrl = getClass().getClassLoader().getResource(testFile);
+    ArrayList<String> records = readRecords(testFileUrl, splitSize);
+    String[] actuals = readRecordsDirectly(testFileUrl, bzip);
+
+    assertEquals("Wrong number of records", actuals.length, records.size());
+
+    boolean hasLargeRecord = false;
+    for (int i = 0; i < actuals.length; ++i) {
+      assertEquals(actuals[i], records.get(i));
+      if (actuals[i].length() > 2 * splitSize) {
+        hasLargeRecord = true;
+      }
+    }
+
+    assertTrue("Invalid test data. Doesn't have a large enough record",
+               hasLargeRecord);
+  }
+
+  @Test
+  public void testRecordSpanningMultipleSplits()
+      throws IOException {
+    checkRecordSpanningMultipleSplits("recordSpanningMultipleSplits.txt",
+        10, false);
+  }
+
+  @Test
+  public void testRecordSpanningMultipleSplitsCompressed()
+      throws IOException {
+    // The file is generated with bz2 block size of 100k. The split size
+    // needs to be larger than that for the CompressedSplitLineReader to
+    // work.
+    checkRecordSpanningMultipleSplits("recordSpanningMultipleSplits.txt.bz2",
+        200 * 1000, true);
+  }
+
+  @Test
+  public void testStripBOM() throws IOException {
+    // the test data contains a BOM at the start of the file
+    // confirm the BOM is skipped by LineRecordReader
+    String UTF8_BOM = "\uFEFF";
+    URL testFileUrl = getClass().getClassLoader().getResource("testBOM.txt");
+    assertNotNull("Cannot find testBOM.txt", testFileUrl);
+    File testFile = new File(testFileUrl.getFile());
+    Path testFilePath = new Path(testFile.getAbsolutePath());
+    long testFileSize = testFile.length();
+    Configuration conf = new Configuration();
+    conf.setInt(org.apache.hadoop.mapreduce.lib.input.
+        LineRecordReader.MAX_LINE_LENGTH, Integer.MAX_VALUE);
+
+    // read the data and check whether BOM is skipped
+    FileSplit split = new FileSplit(testFilePath, 0, testFileSize,
+        (String[])null);
+    LineRecordReader reader = new LineRecordReader(conf, split);
+    LongWritable key = new LongWritable();
+    Text value = new Text();
+    int numRecords = 0;
+    boolean firstLine = true;
+    boolean skipBOM = true;
+    while (reader.next(key, value)) {
+      if (firstLine) {
+        firstLine = false;
+        if (value.toString().startsWith(UTF8_BOM)) {
+          skipBOM = false;
+        }
+      }
+      ++numRecords;
+    }
+    reader.close();
+
+    assertTrue("BOM is not skipped", skipBOM);
   }
 }

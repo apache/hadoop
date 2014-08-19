@@ -26,7 +26,7 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.mapred.SplitLocationInfo;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.junit.After;
@@ -138,6 +139,28 @@ public class TestFileInputFormat {
     Assert.assertEquals("listLocatedStatuss calls",
         1, mockFs.numListLocatedStatusCalls);
     FileSystem.closeAll();
+  }
+  
+  @Test
+  public void testSplitLocationInfo() throws Exception {
+    Configuration conf = getConfiguration();
+    conf.set(org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR,
+        "test:///a1/a2");
+    Job job = Job.getInstance(conf);
+    TextInputFormat fileInputFormat = new TextInputFormat();
+    List<InputSplit> splits = fileInputFormat.getSplits(job);
+    String[] locations = splits.get(0).getLocations();
+    Assert.assertEquals(2, locations.length);
+    SplitLocationInfo[] locationInfo = splits.get(0).getLocationInfo();
+    Assert.assertEquals(2, locationInfo.length);
+    SplitLocationInfo localhostInfo = locations[0].equals("localhost") ?
+        locationInfo[0] : locationInfo[1];
+    SplitLocationInfo otherhostInfo = locations[0].equals("otherhost") ?
+        locationInfo[0] : locationInfo[1];
+    Assert.assertTrue(localhostInfo.isOnDisk());
+    Assert.assertTrue(localhostInfo.isInMemory());
+    Assert.assertTrue(otherhostInfo.isOnDisk());
+    Assert.assertFalse(otherhostInfo.isInMemory());
   }
 
   @Test
@@ -402,9 +425,9 @@ public class TestFileInputFormat {
     public BlockLocation[] getFileBlockLocations(Path p, long start, long len)
         throws IOException {
       return new BlockLocation[] {
-          new BlockLocation(new String[] { "localhost:50010" },
-              new String[] { "localhost" }, 0, len) };
-    }
+          new BlockLocation(new String[] { "localhost:50010", "otherhost:50010" },
+              new String[] { "localhost", "otherhost" }, new String[] { "localhost" },
+              new String[0], 0, len, false) };    }
 
     @Override
     protected RemoteIterator<LocatedFileStatus> listLocatedStatus(Path f,

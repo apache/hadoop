@@ -26,13 +26,13 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.net.InetAddress;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -73,6 +73,7 @@ public class TestDistributedShell {
     conf.setClass(YarnConfiguration.RM_SCHEDULER, 
         FifoScheduler.class, ResourceScheduler.class);
     conf.set("yarn.log.dir", "target");
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     if (yarnCluster == null) {
       yarnCluster = new MiniYARNCluster(
         TestDistributedShell.class.getSimpleName(), 1, 1, 1, 1, true);
@@ -168,7 +169,9 @@ public class TestDistributedShell {
     yarnClient.init(new Configuration(yarnCluster.getConfig()));
     yarnClient.start();
     String hostName = NetUtils.getHostname();
+
     boolean verified = false;
+    String errorMessage = "";
     while(!verified) {
       List<ApplicationReport> apps = yarnClient.getApplications();
       if (apps.size() == 0 ) {
@@ -176,15 +179,22 @@ public class TestDistributedShell {
         continue;
       }
       ApplicationReport appReport = apps.get(0);
-      if (appReport.getHost().startsWith(hostName)
-          && appReport.getRpcPort() == -1) {
+      if(appReport.getHost().equals("N/A")) {
+        Thread.sleep(10);
+        continue;
+      }
+      errorMessage =
+          "Expected host name to start with '" + hostName + "', was '"
+              + appReport.getHost() + "'. Expected rpc port to be '-1', was '"
+              + appReport.getRpcPort() + "'.";
+      if (checkHostname(appReport.getHost()) && appReport.getRpcPort() == -1) {
         verified = true;
       }
       if (appReport.getYarnApplicationState() == YarnApplicationState.FINISHED) {
         break;
       }
     }
-    Assert.assertTrue(verified);
+    Assert.assertTrue(errorMessage, verified);
     t.join();
     LOG.info("Client run completed. Result=" + result);
     Assert.assertTrue(result.get());
@@ -209,6 +219,64 @@ public class TestDistributedShell {
     Assert.assertEquals(2, entities.getEntities().size());
     Assert.assertEquals(entities.getEntities().get(0).getEntityType()
         .toString(), ApplicationMaster.DSEntity.DS_CONTAINER.toString());
+  }
+
+  /*
+   * NetUtils.getHostname() returns a string in the form "hostname/ip".
+   * Sometimes the hostname we get is the FQDN and sometimes the short name. In
+   * addition, on machines with multiple network interfaces, it runs any one of
+   * the ips. The function below compares the returns values for
+   * NetUtils.getHostname() accounting for the conditions mentioned.
+   */
+  private boolean checkHostname(String appHostname) throws Exception {
+
+    String hostname = NetUtils.getHostname();
+    if (hostname.equals(appHostname)) {
+      return true;
+    }
+
+    Assert.assertTrue("Unknown format for hostname " + appHostname,
+      appHostname.contains("/"));
+    Assert.assertTrue("Unknown format for hostname " + hostname,
+      hostname.contains("/"));
+
+    String[] appHostnameParts = appHostname.split("/");
+    String[] hostnameParts = hostname.split("/");
+
+    return (compareFQDNs(appHostnameParts[0], hostnameParts[0]) && checkIPs(
+      hostnameParts[0], hostnameParts[1], appHostnameParts[1]));
+  }
+
+  private boolean compareFQDNs(String appHostname, String hostname)
+      throws Exception {
+    if (appHostname.equals(hostname)) {
+      return true;
+    }
+    String appFQDN = InetAddress.getByName(appHostname).getCanonicalHostName();
+    String localFQDN = InetAddress.getByName(hostname).getCanonicalHostName();
+    return appFQDN.equals(localFQDN);
+  }
+
+  private boolean checkIPs(String hostname, String localIP, String appIP)
+      throws Exception {
+
+    if (localIP.equals(appIP)) {
+      return true;
+    }
+    boolean appIPCheck = false;
+    boolean localIPCheck = false;
+    InetAddress[] addresses = InetAddress.getAllByName(hostname);
+    for (InetAddress ia : addresses) {
+      if (ia.getHostAddress().equals(appIP)) {
+        appIPCheck = true;
+        continue;
+      }
+      if (ia.getHostAddress().equals(localIP)) {
+        localIPCheck = true;
+      }
+    }
+    return (appIPCheck && localIPCheck);
+
   }
 
   @Test(timeout=90000)

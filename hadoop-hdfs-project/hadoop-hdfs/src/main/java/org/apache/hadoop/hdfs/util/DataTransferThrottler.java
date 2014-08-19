@@ -63,8 +63,6 @@ public class DataTransferThrottler {
   /**
    * Sets throttle bandwidth. This takes affect latest by the end of current
    * period.
-   * 
-   * @param bytesPerSecond 
    */
   public synchronized void setBandwidth(long bytesPerSecond) {
     if ( bytesPerSecond <= 0 ) {

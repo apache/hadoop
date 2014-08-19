@@ -101,6 +101,10 @@ public class FairSchedulerConfiguration extends Configuration {
   /** Whether preemption is enabled. */
   protected static final String  PREEMPTION = CONF_PREFIX + "preemption";
   protected static final boolean DEFAULT_PREEMPTION = false;
+
+  protected static final String PREEMPTION_THRESHOLD =
+      CONF_PREFIX + "preemption.cluster-utilization-threshold";
+  protected static final float DEFAULT_PREEMPTION_THRESHOLD = 0.8f;
   
   protected static final String PREEMPTION_INTERVAL = CONF_PREFIX + "preemptionInterval";
   protected static final int DEFAULT_PREEMPTION_INTERVAL = 5000;
@@ -118,6 +122,11 @@ public class FairSchedulerConfiguration extends Configuration {
   /** Maximum number of containers to assign on each check-in. */
   protected static final String MAX_ASSIGN = CONF_PREFIX + "max.assign";
   protected static final int DEFAULT_MAX_ASSIGN = -1;
+
+  /** The update interval for calculating resources in FairScheduler .*/
+  public static final String UPDATE_INTERVAL_MS =
+      CONF_PREFIX + "update-interval-ms";
+  public static final int DEFAULT_UPDATE_INTERVAL_MS = 500;
 
   public FairSchedulerConfiguration() {
     super();
@@ -185,6 +194,10 @@ public class FairSchedulerConfiguration extends Configuration {
     return getBoolean(PREEMPTION, DEFAULT_PREEMPTION);
   }
 
+  public float getPreemptionUtilizationThreshold() {
+    return getFloat(PREEMPTION_THRESHOLD, DEFAULT_PREEMPTION_THRESHOLD);
+  }
+
   public boolean getAssignMultiple() {
     return getBoolean(ASSIGN_MULTIPLE, DEFAULT_ASSIGN_MULTIPLE);
   }
@@ -237,6 +250,10 @@ public class FairSchedulerConfiguration extends Configuration {
       throw new AllocationConfigurationException(
           "Error reading resource config", ex);
     }
+  }
+
+  public long getUpdateInterval() {
+    return getLong(UPDATE_INTERVAL_MS, DEFAULT_UPDATE_INTERVAL_MS);
   }
   
   private static int findResource(String val, String units)

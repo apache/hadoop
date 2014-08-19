@@ -48,6 +48,8 @@ public class TestFSLeafQueue {
     ResourceManager resourceManager = new ResourceManager();
     resourceManager.init(conf);
     ((AsyncDispatcher)resourceManager.getRMContext().getDispatcher()).start();
+    scheduler.init(conf);
+    scheduler.start();
     scheduler.reinitialize(conf, resourceManager.getRMContext());
     
     String queueName = "root.queue1";
@@ -60,7 +62,7 @@ public class TestFSLeafQueue {
 
   @Test
   public void testUpdateDemand() {
-    AppSchedulable app = mock(AppSchedulable.class);
+    FSAppAttempt app = mock(FSAppAttempt.class);
     Mockito.when(app.getDemand()).thenReturn(maxResource);
 
     schedulable.addAppSchedulable(app);

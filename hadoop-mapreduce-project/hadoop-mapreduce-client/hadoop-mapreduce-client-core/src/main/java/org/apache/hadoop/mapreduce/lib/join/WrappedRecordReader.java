@@ -92,7 +92,7 @@ public class WrappedRecordReader<K extends WritableComparable<?>,
       keyclass = key.getClass().asSubclass(WritableComparable.class);
       valueclass = value.getClass();
       if (cmp == null) {
-        cmp = WritableComparator.get(keyclass);
+        cmp = WritableComparator.get(keyclass, conf);
       }
     }
   }

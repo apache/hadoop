@@ -30,7 +30,7 @@ import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.Map;
 
-import static junit.framework.Assert.assertEquals;
+import static org.junit.Assert.assertEquals;
 import static org.apache.hadoop.security.ssl.KeyStoreTestUtil.createTrustStore;
 import static org.apache.hadoop.security.ssl.KeyStoreTestUtil.generateCertificate;
 import static org.apache.hadoop.security.ssl.KeyStoreTestUtil.generateKeyPair;

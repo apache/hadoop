@@ -88,11 +88,11 @@ public class TestMetricsSystemImpl {
     DefaultMetricsSystem.shutdown();
     new ConfigBuilder().add("*.period", 8)
         //.add("test.sink.plugin.urls", getPluginUrlsAsString())
-        .add("Test.sink.test.class", TestSink.class.getName())
-        .add("Test.*.source.filter.exclude", "s0")
-        .add("Test.source.s1.metric.filter.exclude", "X*")
-        .add("Test.sink.sink1.metric.filter.exclude", "Y*")
-        .add("Test.sink.sink2.metric.filter.exclude", "Y*")
+        .add("test.sink.test.class", TestSink.class.getName())
+        .add("test.*.source.filter.exclude", "s0")
+        .add("test.source.s1.metric.filter.exclude", "X*")
+        .add("test.sink.sink1.metric.filter.exclude", "Y*")
+        .add("test.sink.sink2.metric.filter.exclude", "Y*")
         .save(TestMetricsConfig.getTestFilename("hadoop-metrics2-test"));
     MetricsSystemImpl ms = new MetricsSystemImpl("Test");
     ms.start();
@@ -130,11 +130,11 @@ public class TestMetricsSystemImpl {
     DefaultMetricsSystem.shutdown(); 
     new ConfigBuilder().add("*.period", 8)
         //.add("test.sink.plugin.urls", getPluginUrlsAsString())
-        .add("Test.sink.test.class", TestSink.class.getName())
-        .add("Test.*.source.filter.exclude", "s0")
-        .add("Test.source.s1.metric.filter.exclude", "X*")
-        .add("Test.sink.sink1.metric.filter.exclude", "Y*")
-        .add("Test.sink.sink2.metric.filter.exclude", "Y*")
+        .add("test.sink.test.class", TestSink.class.getName())
+        .add("test.*.source.filter.exclude", "s0")
+        .add("test.source.s1.metric.filter.exclude", "X*")
+        .add("test.sink.sink1.metric.filter.exclude", "Y*")
+        .add("test.sink.sink2.metric.filter.exclude", "Y*")
         .save(TestMetricsConfig.getTestFilename("hadoop-metrics2-test"));
     MetricsSystemImpl ms = new MetricsSystemImpl("Test");
     ms.start();
@@ -169,13 +169,14 @@ public class TestMetricsSystemImpl {
   @Test public void testMultiThreadedPublish() throws Exception {
     final int numThreads = 10;
     new ConfigBuilder().add("*.period", 80)
-      .add("Test.sink.Collector." + MetricsConfig.QUEUE_CAPACITY_KEY,
+      .add("test.sink.collector." + MetricsConfig.QUEUE_CAPACITY_KEY,
               numThreads)
       .save(TestMetricsConfig.getTestFilename("hadoop-metrics2-test"));
     final MetricsSystemImpl ms = new MetricsSystemImpl("Test");
     ms.start();
+
     final CollectingSink sink = new CollectingSink(numThreads);
-    ms.registerSink("Collector",
+    ms.registerSink("collector",
         "Collector of values from all threads.", sink);
     final TestSource[] sources = new TestSource[numThreads];
     final Thread[] threads = new Thread[numThreads];
@@ -280,10 +281,10 @@ public class TestMetricsSystemImpl {
 
   @Test public void testHangingSink() {
     new ConfigBuilder().add("*.period", 8)
-      .add("Test.sink.test.class", TestSink.class.getName())
-      .add("Test.sink.hanging.retry.delay", "1")
-      .add("Test.sink.hanging.retry.backoff", "1.01")
-      .add("Test.sink.hanging.retry.count", "0")
+      .add("test.sink.test.class", TestSink.class.getName())
+      .add("test.sink.hanging.retry.delay", "1")
+      .add("test.sink.hanging.retry.backoff", "1.01")
+      .add("test.sink.hanging.retry.count", "0")
       .save(TestMetricsConfig.getTestFilename("hadoop-metrics2-test"));
     MetricsSystemImpl ms = new MetricsSystemImpl("Test");
     ms.start();
@@ -360,6 +361,41 @@ public class TestMetricsSystemImpl {
     ms.register(ts);
   }
 
+  @Test public void testStartStopStart() {
+    DefaultMetricsSystem.shutdown(); // Clear pre-existing source names.
+    MetricsSystemImpl ms = new MetricsSystemImpl("test");
+    TestSource ts = new TestSource("ts");
+    ms.start();
+    ms.register("ts", "", ts);
+    MetricsSourceAdapter sa = ms.getSourceAdapter("ts");
+    assertNotNull(sa);
+    assertNotNull(sa.getMBeanName());
+    ms.stop();
+    ms.shutdown();
+    ms.start();
+    sa = ms.getSourceAdapter("ts");
+    assertNotNull(sa);
+    assertNotNull(sa.getMBeanName());
+    ms.stop();
+    ms.shutdown();
+  }
+
+  @Test public void testUnregisterSource() {
+    MetricsSystem ms = new MetricsSystemImpl();
+    TestSource ts1 = new TestSource("ts1");
+    TestSource ts2 = new TestSource("ts2");
+    ms.register("ts1", "", ts1);
+    ms.register("ts2", "", ts2);
+    MetricsSource s1 = ms.getSource("ts1");
+    assertNotNull(s1);
+    // should work when metrics system is not started
+    ms.unregisterSource("ts1");
+    s1 = ms.getSource("ts1");
+    assertNull(s1);
+    MetricsSource s2 = ms.getSource("ts2");
+    assertNotNull(s2);
+    ms.shutdown();
+  }
 
   private void checkMetricsRecords(List<MetricsRecord> recs) {
     LOG.debug(recs);

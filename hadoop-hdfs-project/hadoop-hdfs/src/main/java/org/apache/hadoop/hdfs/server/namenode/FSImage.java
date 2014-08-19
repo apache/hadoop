@@ -156,7 +156,7 @@ public class FSImage implements Closeable {
    * directory to allow them to format anyway. Otherwise, returns
    * false, unless 'force' is specified.
    * 
-   * @param force format regardless of whether dirs exist
+   * @param force if true, format regardless of whether dirs exist
    * @param interactive prompt the user when a dir exists
    * @return true if formatting should proceed
    * @throws IOException if some storage cannot be accessed
@@ -214,10 +214,18 @@ public class FSImage implements Closeable {
 
 
     int layoutVersion = storage.getLayoutVersion();
+    if (startOpt == StartupOption.METADATAVERSION) {
+      System.out.println("HDFS Image Version: " + layoutVersion);
+      System.out.println("Software format version: " +
+        HdfsConstants.NAMENODE_LAYOUT_VERSION);
+      return false;
+    }
+
     if (layoutVersion < Storage.LAST_PRE_UPGRADE_LAYOUT_VERSION) {
       NNStorage.checkVersionUpgradable(storage.getLayoutVersion());
     }
     if (startOpt != StartupOption.UPGRADE
+        && startOpt != StartupOption.UPGRADEONLY
         && !RollingUpgradeStartupOption.STARTED.matches(startOpt)
         && layoutVersion < Storage.LAST_PRE_UPGRADE_LAYOUT_VERSION
         && layoutVersion != HdfsConstants.NAMENODE_LAYOUT_VERSION) {
@@ -227,7 +235,7 @@ public class FSImage implements Closeable {
           + HdfsConstants.NAMENODE_LAYOUT_VERSION + " is required.\n"
           + "Please restart NameNode with the \""
           + RollingUpgradeStartupOption.STARTED.getOptionString()
-          + "\" option if a rolling upgraded is already started;"
+          + "\" option if a rolling upgrade is already started;"
           + " or restart NameNode with the \""
           + StartupOption.UPGRADE.getName() + "\" option to start"
           + " a new upgrade.");
@@ -256,6 +264,7 @@ public class FSImage implements Closeable {
     // 3. Do transitions
     switch(startOpt) {
     case UPGRADE:
+    case UPGRADEONLY:
       doUpgrade(target);
       return false; // upgrade saved image already
     case IMPORT:
@@ -289,6 +298,12 @@ public class FSImage implements Closeable {
                       storage.dirIterator(); it.hasNext();) {
       StorageDirectory sd = it.next();
       StorageState curState;
+      if (startOpt == StartupOption.METADATAVERSION) {
+        /* All we need is the layout version. */
+        storage.readProperties(sd);
+        return true;
+      }
+
       try {
         curState = sd.analyzeStorage(startOpt, storage);
         // sd is locked but not opened
@@ -495,7 +510,6 @@ public class FSImage implements Closeable {
     FSImage realImage = target.getFSImage();
     FSImage ckptImage = new FSImage(conf, 
                                     checkpointDirs, checkpointEditsDirs);
-    target.dir.fsImage = ckptImage;
     // load from the checkpoint dirs
     try {
       ckptImage.recoverTransitionRead(StartupOption.REGULAR, target, null);
@@ -507,7 +521,6 @@ public class FSImage implements Closeable {
     realImage.getEditLog().setNextTxId(ckptImage.getEditLog().getLastWrittenTxId()+1);
     realImage.initEditLog(StartupOption.IMPORT);
 
-    target.dir.fsImage = realImage;
     realImage.getStorage().setBlockPoolID(ckptImage.getBlockPoolID());
 
     // and save it but keep the same checkpointTime
@@ -542,7 +555,7 @@ public class FSImage implements Closeable {
   }
 
   @VisibleForTesting
-  void setEditLogForTesting(FSEditLog newLog) {
+  public void setEditLogForTesting(FSEditLog newLog) {
     editLog = newLog;
   }
 
@@ -737,11 +750,13 @@ public class FSImage implements Closeable {
       editLog.recoverUnclosedStreams();
     } else if (HAUtil.isHAEnabled(conf, nameserviceId)
         && (startOpt == StartupOption.UPGRADE
+            || startOpt == StartupOption.UPGRADEONLY
             || RollingUpgradeStartupOption.ROLLBACK.matches(startOpt))) {
       // This NN is HA, but we're doing an upgrade or a rollback of rolling
       // upgrade so init the edit log for write.
       editLog.initJournalsForWrite();
-      if (startOpt == StartupOption.UPGRADE) {
+      if (startOpt == StartupOption.UPGRADE
+          || startOpt == StartupOption.UPGRADEONLY) {
         long sharedLogCTime = editLog.getSharedLogCTime();
         if (this.storage.getCTime() < sharedLogCTime) {
           throw new IOException("It looks like the shared log is already " +
@@ -935,6 +950,25 @@ public class FSImage implements Closeable {
   }
 
   /**
+   * Save FSimage in the legacy format. This is not for NN consumption,
+   * but for tools like OIV.
+   */
+  public void saveLegacyOIVImage(FSNamesystem source, String targetDir,
+      Canceler canceler) throws IOException {
+    FSImageCompression compression =
+        FSImageCompression.createCompression(conf);
+    long txid = getLastAppliedOrWrittenTxId();
+    SaveNamespaceContext ctx = new SaveNamespaceContext(source, txid,
+        canceler);
+    FSImageFormat.Saver saver = new FSImageFormat.Saver(ctx);
+    String imageFileName = NNStorage.getLegacyOIVImageFileName(txid);
+    File imageFile = new File(targetDir, imageFileName);
+    saver.save(imageFile, compression);
+    archivalManager.purgeOldLegacyOIVImages(targetDir, txid);
+  }
+
+
+  /**
    * FSImageSaver is being run in a separate thread when saving
    * FSImage. There is one thread per each copy of the image.
    *
@@ -992,6 +1026,13 @@ public class FSImage implements Closeable {
   }
   
   /**
+   * Update version of all storage directories.
+   */
+  public synchronized void updateStorageVersion() throws IOException {
+    storage.writeAll();
+  }
+
+  /**
    * @see #saveNamespace(FSNamesystem, Canceler)
    */
   public synchronized void saveNamespace(FSNamesystem source)
@@ -1002,7 +1043,6 @@ public class FSImage implements Closeable {
   /**
    * Save the contents of the FS image to a new image file in each of the
    * current storage directories.
-   * @param canceler
    */
   public synchronized void saveNamespace(FSNamesystem source, NameNodeFile nnf,
       Canceler canceler) throws IOException {

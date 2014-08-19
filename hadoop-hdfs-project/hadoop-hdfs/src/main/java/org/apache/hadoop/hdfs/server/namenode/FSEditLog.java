@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
@@ -69,6 +70,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.OpInstanceCache;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ReassignLeaseOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemoveCacheDirectiveInfoOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemoveCachePoolOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemoveXAttrOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOldOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameSnapshotOp;
@@ -80,6 +82,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetOwnerOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetPermissionsOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetQuotaOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetReplicationOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetXAttrOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
@@ -424,7 +427,6 @@ public class FSEditLog implements LogsPurgeable {
 
   /**
    * Wait if an automatic sync is scheduled
-   * @throws InterruptedException
    */
   synchronized void waitIfAutoSyncScheduled() {
     try {
@@ -698,12 +700,19 @@ public class FSEditLog implements LogsPurgeable {
       .setBlocks(newNode.getBlocks())
       .setPermissionStatus(permissions)
       .setClientName(newNode.getFileUnderConstructionFeature().getClientName())
-      .setClientMachine(newNode.getFileUnderConstructionFeature().getClientMachine());
+      .setClientMachine(
+          newNode.getFileUnderConstructionFeature().getClientMachine());
 
     AclFeature f = newNode.getAclFeature();
     if (f != null) {
       op.setAclEntries(AclStorage.readINodeLogicalAcl(newNode));
     }
+
+    XAttrFeature x = newNode.getXAttrFeature();
+    if (x != null) {
+      op.setXAttrs(x.getXAttrs());
+    }
+
     logRpcIds(op, toLogRpcIds);
     logEdit(op);
   }
@@ -759,6 +768,11 @@ public class FSEditLog implements LogsPurgeable {
     if (f != null) {
       op.setAclEntries(AclStorage.readINodeLogicalAcl(newNode));
     }
+
+    XAttrFeature x = newNode.getXAttrFeature();
+    if (x != null) {
+      op.setXAttrs(x.getXAttrs());
+    }
     logEdit(op);
   }
   
@@ -802,7 +816,8 @@ public class FSEditLog implements LogsPurgeable {
   /** Add set namespace quota record to edit log
    * 
    * @param src the string representation of the path to a directory
-   * @param quota the directory size limit
+   * @param nsQuota namespace quota
+   * @param dsQuota diskspace quota
    */
   void logSetQuota(String src, long nsQuota, long dsQuota) {
     SetQuotaOp op = SetQuotaOp.getInstance(cache.get())
@@ -1050,6 +1065,22 @@ public class FSEditLog implements LogsPurgeable {
     op.aclEntries = entries;
     logEdit(op);
   }
+  
+  void logSetXAttrs(String src, List<XAttr> xAttrs, boolean toLogRpcIds) {
+    final SetXAttrOp op = SetXAttrOp.getInstance();
+    op.src = src;
+    op.xAttrs = xAttrs;
+    logRpcIds(op, toLogRpcIds);
+    logEdit(op);
+  }
+  
+  void logRemoveXAttrs(String src, List<XAttr> xAttrs, boolean toLogRpcIds) {
+    final RemoveXAttrOp op = RemoveXAttrOp.getInstance();
+    op.src = src;
+    op.xAttrs = xAttrs;
+    logRpcIds(op, toLogRpcIds);
+    logEdit(op);
+  }
 
   /**
    * Get all the journals this edit log is currently operating on.
@@ -1182,7 +1213,7 @@ public class FSEditLog implements LogsPurgeable {
    * Finalize the current log segment.
    * Transitions from IN_SEGMENT state to BETWEEN_LOG_SEGMENTS state.
    */
-  synchronized void endCurrentLogSegment(boolean writeEndTxn) {
+  public synchronized void endCurrentLogSegment(boolean writeEndTxn) {
     LOG.info("Ending log segment " + curSegmentTxId);
     Preconditions.checkState(isSegmentOpen(),
         "Bad state: %s", state);
@@ -1452,8 +1483,9 @@ public class FSEditLog implements LogsPurgeable {
    * Select a list of input streams.
    * 
    * @param fromTxId first transaction in the selected streams
-   * @param toAtLeast the selected streams must contain this transaction
-   * @param inProgessOk set to true if in-progress streams are OK
+   * @param toAtLeastTxId the selected streams must contain this transaction
+   * @param recovery recovery context
+   * @param inProgressOk set to true if in-progress streams are OK
    */
   public synchronized Collection<EditLogInputStream> selectInputStreams(
       long fromTxId, long toAtLeastTxId, MetaRecoveryContext recovery,

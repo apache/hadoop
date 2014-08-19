@@ -149,13 +149,16 @@ class BKJMUtil {
   int checkBookiesUp(int count, int timeout) throws Exception {
     ZooKeeper zkc = connectZooKeeper();
     try {
-      boolean up = false;
       int mostRecentSize = 0;
       for (int i = 0; i < timeout; i++) {
         try {
           List<String> children = zkc.getChildren("/ledgers/available",
                                                   false);
           mostRecentSize = children.size();
+          // Skip 'readonly znode' which is used for keeping R-O bookie details
+          if (children.contains("readonly")) {
+            mostRecentSize = children.size() - 1;
+          }
           if (LOG.isDebugEnabled()) {
             LOG.debug("Found " + mostRecentSize + " bookies up, "
                       + "waiting for " + count);
@@ -166,7 +169,6 @@ class BKJMUtil {
             }
           }
           if (mostRecentSize == count) {
-            up = true;
             break;
           }
         } catch (KeeperException e) {

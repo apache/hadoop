@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.avro.AvroRemoteException;
 import org.apache.commons.logging.Log;

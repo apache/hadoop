@@ -59,14 +59,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManage
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
-import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.Lock;
 import org.apache.hadoop.yarn.server.utils.Lock.NoLock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
+
+import com.google.common.annotations.VisibleForTesting;
 
 @Private
 @Unstable
@@ -174,12 +176,12 @@ public class LeafQueue implements CSQueue {
     int maxActiveApplications = 
         CSQueueUtils.computeMaxActiveApplications(
             resourceCalculator,
-            cs.getClusterResources(), this.minimumAllocation,
+            cs.getClusterResource(), this.minimumAllocation,
             maxAMResourcePerQueuePercent, absoluteMaxCapacity);
     this.maxActiveAppsUsingAbsCap = 
             CSQueueUtils.computeMaxActiveApplications(
                 resourceCalculator,
-                cs.getClusterResources(), this.minimumAllocation,
+                cs.getClusterResource(), this.minimumAllocation,
                 maxAMResourcePerQueuePercent, absoluteCapacity);
     int maxActiveApplicationsPerUser = 
         CSQueueUtils.computeMaxActiveApplicationsPerUser(maxActiveAppsUsingAbsCap, userLimit, 
@@ -195,7 +197,7 @@ public class LeafQueue implements CSQueue {
       cs.getConfiguration().getAcls(getQueuePath());
 
     setupQueueConfigs(
-        cs.getClusterResources(),
+        cs.getClusterResource(),
         capacity, absoluteCapacity, 
         maximumCapacity, absoluteMaxCapacity, 
         userLimit, userLimitFactor, 
@@ -564,7 +566,8 @@ public class LeafQueue implements CSQueue {
         "numContainers=" + getNumContainers();  
   }
 
-  private synchronized User getUser(String userName) {
+  @VisibleForTesting
+  public synchronized User getUser(String userName) {
     User user = users.get(userName);
     if (user == null) {
       user = new User();
@@ -640,7 +643,10 @@ public class LeafQueue implements CSQueue {
       addApplicationAttempt(application, user);
     }
 
-    metrics.submitAppAttempt(userName);
+    // We don't want to update metrics for move app
+    if (application.isPending()) {
+      metrics.submitAppAttempt(userName);
+    }
     getParent().submitApplicationAttempt(application, userName);
   }
 
@@ -698,7 +704,6 @@ public class LeafQueue implements CSQueue {
       throw ace;
     }
 
-    metrics.submitApp(userName);
   }
 
   private synchronized void activateApplications() {
@@ -973,13 +978,18 @@ public class LeafQueue implements CSQueue {
 
     Resource userLimit =                          // User limit
         computeUserLimit(application, clusterResource, required);
-    
+
+    //Max avail capacity needs to take into account usage by ancestor-siblings
+    //which are greater than their base capacity, so we are interested in "max avail"
+    //capacity
+    float absoluteMaxAvailCapacity = CSQueueUtils.getAbsoluteMaxAvailCapacity(
+      resourceCalculator, clusterResource, this);
 
     Resource queueMaxCap =                        // Queue Max-Capacity
         Resources.multiplyAndNormalizeDown(
             resourceCalculator, 
             clusterResource, 
-            absoluteMaxCapacity, 
+            absoluteMaxAvailCapacity,
             minimumAllocation);
     
     Resource userConsumed = getUser(user).getConsumedResources(); 
@@ -1346,8 +1356,7 @@ public class LeafQueue implements CSQueue {
       }
 
       // Inform the node
-      node.allocateContainer(application.getApplicationId(), 
-          allocatedContainer);
+      node.allocateContainer(allocatedContainer);
 
       LOG.info("assignedContainer" +
           " application attempt=" + application.getApplicationAttemptId() +
@@ -1446,7 +1455,7 @@ public class LeafQueue implements CSQueue {
   }
 
   synchronized void allocateResource(Resource clusterResource, 
-      FiCaSchedulerApp application, Resource resource) {
+      SchedulerApplicationAttempt application, Resource resource) {
     // Update queue metrics
     Resources.addTo(usedResources, resource);
     CSQueueUtils.updateQueueStatistics(
@@ -1530,7 +1539,8 @@ public class LeafQueue implements CSQueue {
     return metrics;
   }
 
-  static class User {
+  @VisibleForTesting
+  public static class User {
     Resource consumed = Resources.createResource(0, 0);
     int pendingApplications = 0;
     int activeApplications = 0;
@@ -1580,13 +1590,16 @@ public class LeafQueue implements CSQueue {
 
   @Override
   public void recoverContainer(Resource clusterResource,
-      FiCaSchedulerApp application, Container container) {
+      SchedulerApplicationAttempt attempt, RMContainer rmContainer) {
+    if (rmContainer.getState().equals(RMContainerState.COMPLETED)) {
+      return;
+    }
     // Careful! Locking order is important! 
     synchronized (this) {
-      allocateResource(clusterResource, application, container.getResource());
+      allocateResource(clusterResource, attempt, rmContainer.getContainer()
+        .getResource());
     }
-    getParent().recoverContainer(clusterResource, application, container);
-
+    getParent().recoverContainer(clusterResource, attempt, rmContainer);
   }
 
   /**
@@ -1609,9 +1622,43 @@ public class LeafQueue implements CSQueue {
   @Override
   public void collectSchedulerApplications(
       Collection<ApplicationAttemptId> apps) {
+    for (FiCaSchedulerApp pendingApp : pendingApplications) {
+      apps.add(pendingApp.getApplicationAttemptId());
+    }
     for (FiCaSchedulerApp app : activeApplications) {
       apps.add(app.getApplicationAttemptId());
     }
   }
 
+  @Override
+  public void attachContainer(Resource clusterResource,
+      FiCaSchedulerApp application, RMContainer rmContainer) {
+    if (application != null) {
+      allocateResource(clusterResource, application, rmContainer.getContainer()
+          .getResource());
+      LOG.info("movedContainer" + " container=" + rmContainer.getContainer()
+          + " resource=" + rmContainer.getContainer().getResource()
+          + " queueMoveIn=" + this + " usedCapacity=" + getUsedCapacity()
+          + " absoluteUsedCapacity=" + getAbsoluteUsedCapacity() + " used="
+          + usedResources + " cluster=" + clusterResource);
+      // Inform the parent queue
+      getParent().attachContainer(clusterResource, application, rmContainer);
+    }
+  }
+
+  @Override
+  public void detachContainer(Resource clusterResource,
+      FiCaSchedulerApp application, RMContainer rmContainer) {
+    if (application != null) {
+      releaseResource(clusterResource, application, rmContainer.getContainer()
+          .getResource());
+      LOG.info("movedContainer" + " container=" + rmContainer.getContainer()
+          + " resource=" + rmContainer.getContainer().getResource()
+          + " queueMoveOut=" + this + " usedCapacity=" + getUsedCapacity()
+          + " absoluteUsedCapacity=" + getAbsoluteUsedCapacity() + " used="
+          + usedResources + " cluster=" + clusterResource);
+      // Inform the parent queue
+      getParent().detachContainer(clusterResource, application, rmContainer);
+    }
+  }
 }

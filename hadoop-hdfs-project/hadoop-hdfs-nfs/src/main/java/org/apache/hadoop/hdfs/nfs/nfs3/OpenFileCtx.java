@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
 import org.apache.hadoop.hdfs.nfs.nfs3.WriteCtx.DataState;
 import org.apache.hadoop.io.BytesWritable.Comparator;
 import org.apache.hadoop.io.IOUtils;
@@ -54,6 +55,7 @@ import org.apache.hadoop.nfs.nfs3.response.WccData;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.Time;
 import org.jboss.netty.channel.Channel;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -93,6 +95,7 @@ class OpenFileCtx {
    */
   private AtomicLong nextOffset;
   private final HdfsDataOutputStream fos;
+  private final boolean aixCompatMode;
   
   // It's updated after each sync to HDFS
   private Nfs3FileAttributes latestAttr;
@@ -136,7 +139,7 @@ class OpenFileCtx {
       this.channel = channel;
       this.xid = xid;
       this.preOpAttr = preOpAttr;
-      this.startTime = System.currentTimeMillis();
+      this.startTime = Time.monotonicNow();
     }
 
     @Override
@@ -158,11 +161,11 @@ class OpenFileCtx {
   private Daemon dumpThread;
   
   private void updateLastAccessTime() {
-    lastAccessTime = System.currentTimeMillis();
+    lastAccessTime = Time.monotonicNow();
   }
 
   private boolean checkStreamTimeout(long streamTimeout) {
-    return System.currentTimeMillis() - lastAccessTime > streamTimeout;
+    return Time.monotonicNow() - lastAccessTime > streamTimeout;
   }
   
   long getLastAccessTime() {
@@ -197,8 +200,15 @@ class OpenFileCtx {
   
   OpenFileCtx(HdfsDataOutputStream fos, Nfs3FileAttributes latestAttr,
       String dumpFilePath, DFSClient client, IdUserGroup iug) {
+    this(fos, latestAttr, dumpFilePath, client, iug, false);
+  }
+  
+  OpenFileCtx(HdfsDataOutputStream fos, Nfs3FileAttributes latestAttr,
+      String dumpFilePath, DFSClient client, IdUserGroup iug,
+      boolean aixCompatMode) {
     this.fos = fos;
     this.latestAttr = latestAttr;
+    this.aixCompatMode = aixCompatMode;
     // We use the ReverseComparatorOnMin as the comparator of the map. In this
     // way, we first dump the data with larger offset. In the meanwhile, we
     // retrieve the last element to write back to HDFS.
@@ -696,7 +706,7 @@ class OpenFileCtx {
           + " updating the mtime, then return success");
       Nfs3FileAttributes postOpAttr = null;
       try {
-        dfsClient.setTimes(path, System.currentTimeMillis(), -1);
+        dfsClient.setTimes(path, Time.monotonicNow(), -1);
         postOpAttr = Nfs3Utils.getFileAttr(dfsClient, path, iug);
       } catch (IOException e) {
         LOG.info("Got error when processing perfect overwrite, path=" + path
@@ -778,15 +788,29 @@ class OpenFileCtx {
     }
 
     if (commitOffset > 0) {
-      if (commitOffset > flushed) {
-        if (!fromRead) {
-          CommitCtx commitCtx = new CommitCtx(commitOffset, channel, xid,
-              preOpAttr);
-          pendingCommits.put(commitOffset, commitCtx);
+      if (aixCompatMode) {
+        // The AIX NFS client misinterprets RFC-1813 and will always send 4096
+        // for the commitOffset even if fewer bytes than that have ever (or will
+        // ever) be sent by the client. So, if in AIX compatibility mode, we
+        // will always DO_SYNC if the number of bytes to commit have already all
+        // been flushed, else we will fall through to the logic below which
+        // checks for pending writes in the case that we're being asked to
+        // commit more bytes than have so far been flushed. See HDFS-6549 for
+        // more info.
+        if (commitOffset <= flushed) {
+          return COMMIT_STATUS.COMMIT_DO_SYNC;
         }
-        return COMMIT_STATUS.COMMIT_WAIT;
       } else {
-        return COMMIT_STATUS.COMMIT_DO_SYNC;
+        if (commitOffset > flushed) {
+          if (!fromRead) {
+            CommitCtx commitCtx = new CommitCtx(commitOffset, channel, xid,
+                preOpAttr);
+            pendingCommits.put(commitOffset, commitCtx);
+          }
+          return COMMIT_STATUS.COMMIT_WAIT;
+        } else {
+          return COMMIT_STATUS.COMMIT_DO_SYNC;
+        } 
       }
     }
 
@@ -822,7 +846,7 @@ class OpenFileCtx {
    */
   public synchronized boolean streamCleanup(long fileId, long streamTimeout) {
     Preconditions
-        .checkState(streamTimeout >= Nfs3Constant.OUTPUT_STREAM_TIMEOUT_MIN_DEFAULT);
+        .checkState(streamTimeout >= NfsConfigKeys.DFS_NFS_STREAM_TIMEOUT_MIN_DEFAULT);
     if (!activeState) {
       return true;
     }
@@ -997,7 +1021,7 @@ class OpenFileCtx {
       
       if (LOG.isDebugEnabled()) {
         LOG.debug("FileId: " + latestAttr.getFileId() + " Service time:"
-            + (System.currentTimeMillis() - commit.getStartTime())
+            + (Time.monotonicNow() - commit.getStartTime())
             + "ms. Sent response for commit:" + commit);
       }
       entry = pendingCommits.firstEntry();

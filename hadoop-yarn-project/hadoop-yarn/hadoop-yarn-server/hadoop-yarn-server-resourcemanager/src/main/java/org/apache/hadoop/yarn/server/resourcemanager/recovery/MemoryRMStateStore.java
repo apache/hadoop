@@ -32,9 +32,10 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
+import org.apache.hadoop.yarn.server.records.Version;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.AMRMTokenSecretManagerState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -43,6 +44,8 @@ import com.google.common.annotations.VisibleForTesting;
 public class MemoryRMStateStore extends RMStateStore {
   
   RMState state = new RMState();
+  private int epoch = 0;
+  
   @VisibleForTesting
   public RMState getState() {
     return state;
@@ -50,6 +53,13 @@ public class MemoryRMStateStore extends RMStateStore {
 
   @Override
   public void checkVersion() throws Exception {
+  }
+
+  @Override
+  public synchronized int getAndIncrementEpoch() throws Exception {
+    int currentEpoch = epoch;
+    epoch = epoch + 1;
+    return currentEpoch;
   }
 
   @Override
@@ -63,6 +73,10 @@ public class MemoryRMStateStore extends RMStateStore {
       state.rmSecretManagerState.getTokenState());
     returnState.rmSecretManagerState.dtSequenceNumber =
         state.rmSecretManagerState.dtSequenceNumber;
+    returnState.amrmTokenSecretManagerState =
+        state.amrmTokenSecretManagerState == null ? null
+            : AMRMTokenSecretManagerState
+              .newInstance(state.amrmTokenSecretManagerState);
     return returnState;
   }
   
@@ -80,7 +94,7 @@ public class MemoryRMStateStore extends RMStateStore {
 
   @Override
   public void storeApplicationStateInternal(ApplicationId appId,
-                                     ApplicationStateDataPBImpl appStateData)
+                                     ApplicationStateData appStateData)
       throws Exception {
     ApplicationState appState =
         new ApplicationState(appStateData.getSubmitTime(),
@@ -92,7 +106,7 @@ public class MemoryRMStateStore extends RMStateStore {
 
   @Override
   public void updateApplicationStateInternal(ApplicationId appId,
-      ApplicationStateDataPBImpl appStateData) throws Exception {
+      ApplicationStateData appStateData) throws Exception {
     ApplicationState updatedAppState =
         new ApplicationState(appStateData.getSubmitTime(),
           appStateData.getStartTime(),
@@ -112,7 +126,7 @@ public class MemoryRMStateStore extends RMStateStore {
   @Override
   public synchronized void storeApplicationAttemptStateInternal(
       ApplicationAttemptId appAttemptId,
-      ApplicationAttemptStateDataPBImpl attemptStateData)
+      ApplicationAttemptStateData attemptStateData)
       throws Exception {
     Credentials credentials = null;
     if(attemptStateData.getAppAttemptTokens() != null){
@@ -137,7 +151,7 @@ public class MemoryRMStateStore extends RMStateStore {
   @Override
   public synchronized void updateApplicationAttemptStateInternal(
       ApplicationAttemptId appAttemptId,
-      ApplicationAttemptStateDataPBImpl attemptStateData)
+      ApplicationAttemptStateData attemptStateData)
       throws Exception {
     Credentials credentials = null;
     if (attemptStateData.getAppAttemptTokens() != null) {
@@ -152,7 +166,8 @@ public class MemoryRMStateStore extends RMStateStore {
           attemptStateData.getStartTime(), attemptStateData.getState(),
           attemptStateData.getFinalTrackingUrl(),
           attemptStateData.getDiagnostics(),
-          attemptStateData.getFinalApplicationStatus());
+          attemptStateData.getFinalApplicationStatus(),
+          attemptStateData.getAMContainerExitStatus());
 
     ApplicationState appState =
         state.getApplicationState().get(
@@ -244,7 +259,7 @@ public class MemoryRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected RMStateVersion loadVersion() throws Exception {
+  protected Version loadVersion() throws Exception {
     return null;
   }
 
@@ -253,8 +268,22 @@ public class MemoryRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected RMStateVersion getCurrentVersion() {
+  protected Version getCurrentVersion() {
     return null;
+  }
+
+  @Override
+  public void storeOrUpdateAMRMTokenSecretManagerState(
+      AMRMTokenSecretManagerState amrmTokenSecretManagerState,
+      boolean isUpdate) {
+    if (amrmTokenSecretManagerState != null) {
+      state.amrmTokenSecretManagerState = AMRMTokenSecretManagerState
+          .newInstance(amrmTokenSecretManagerState);
+    }
+  }
+
+  @Override
+  public void deleteStore() throws Exception {
   }
 
 }

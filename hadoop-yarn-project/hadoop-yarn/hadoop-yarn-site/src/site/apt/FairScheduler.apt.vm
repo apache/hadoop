@@ -18,8 +18,6 @@
 
 Hadoop MapReduce Next Generation - Fair Scheduler
 
-  \[ {{{./index.html}Go Back}} \]
-
 %{toc|section=1|fromDepth=0}
 
 * {Purpose} 
@@ -156,6 +154,12 @@ Properties that can be placed in yarn-site.xml
     * Whether to use preemption. Note that preemption is experimental in the current
       version. Defaults to false.
 
+ * <<<yarn.scheduler.fair.preemption.cluster-utilization-threshold>>>
+
+    * The utilization threshold after which preemption kicks in. The
+      utilization is computed as the maximum ratio of usage to capacity among
+      all resources. Defaults to 0.8f.
+
  * <<<yarn.scheduler.fair.sizebasedweight>>>
   
     * Whether to assign shares to individual apps based on their size, rather than
@@ -201,13 +205,21 @@ Properties that can be placed in yarn-site.xml
       instead. Defaults to true. If a queue placement policy is given in the
       allocations file, this property is ignored.
 
+ * <<<yarn.scheduler.fair.update-interval-ms>>>
+ 
+    * The interval at which to lock the scheduler and recalculate fair shares,
+      recalculate demand, and check whether anything is due for preemption.
+      Defaults to 500 ms. 
+
 Allocation file format
 
   The allocation file must be in XML format. The format contains five types of
   elements:
 
- * <<Queue elements>>, which represent queues. Each may contain the following
-     properties:
+ * <<Queue elements>>, which represent queues. Queue elements can take an optional
+   attribute ’type’,which when set to ‘parent’ makes it a parent queue. This is useful
+   when we want to create a parent queue without configuring any leaf queues.
+   Each queue element may contain the following properties:
 
    * minResources: minimum resources the queue is entitled to, in the form
      "X mb, Y vcores". For the single-resource fairness policy, the vcores
@@ -230,6 +242,12 @@ Allocation file format
      put its aggregate usage over this limit.
 
    * maxRunningApps: limit the number of apps from the queue to run at once
+
+   * maxAMShare: limit the fraction of the queue's fair share that can be used
+     to run application masters. This property can only be used for leaf queues.
+     For example, if set to 1.0f, then AMs in the leaf queue can take up to 100%
+     of both the memory and CPU fair share. The default value is -1.0f, which
+     means that this check is disabled.
 
    * weight: to share the cluster non-proportionally with other queues. Weights
      default to 1, and a queue with weight 2 should receive approximately twice
@@ -273,6 +291,9 @@ Allocation file format
  * <<A queueMaxAppsDefault element>>, which sets the default running app limit
    for queues; overriden by maxRunningApps element in each queue.
 
+ * <<A queueMaxAMShareDefault element>>, which sets the default AM resource
+   limit for queue; overriden by maxAMShare element in each queue.
+
  * <<A defaultQueueSchedulingPolicy element>>, which sets the default scheduling
    policy for queues; overriden by the schedulingPolicy element in each queue
    if specified. Defaults to "fair".
@@ -299,7 +320,17 @@ Allocation file format
        that matches a secondary group of the user who submitted it. The first
        secondary group that matches a configured queue will be selected.
 
-     * default: the app is placed into the queue named "default".
+     * nestedUserQueue : the app is placed into a queue with the name of the user
+       under the queue suggested by the nested rule. This is similar to ‘user’
+       rule,the difference being in ‘nestedUserQueue’ rule,user queues can be created 
+       under any parent queue, while ‘user’ rule creates user queues only under root queue.
+       Note that nestedUserQueue rule would be applied only if the nested rule returns a 
+       parent queue.One can configure a parent queue either by setting ‘type’ attribute of queue
+       to ‘parent’ or by configuring at least one leaf under that queue which makes it a parent.
+       See example allocation for a sample use case. 
+
+     * default: the app is placed into the queue specified in the ‘queue’ attribute of the 
+       default rule. If ‘queue’ attribute is not specified, the app is placed into ‘root.default’ queue.
 
      * reject: the app is rejected.
 
@@ -312,12 +343,21 @@ Allocation file format
     <minResources>10000 mb,0vcores</minResources>
     <maxResources>90000 mb,0vcores</maxResources>
     <maxRunningApps>50</maxRunningApps>
+    <maxAMShare>0.1</maxAMShare>
     <weight>2.0</weight>
     <schedulingPolicy>fair</schedulingPolicy>
     <queue name="sample_sub_queue">
       <aclSubmitApps>charlie</aclSubmitApps>
       <minResources>5000 mb,0vcores</minResources>
     </queue>
+  </queue>
+
+  <queueMaxAMShareDefault>0.5</queueMaxAMShareDefault>
+
+  <!—- Queue ‘secondary_group_queue’ is a parent queue and may have
+       user queues under it -—>
+  <queue name=“secondary_group_queue” type=“parent”>
+  <weight>3.0</weight>
   </queue>
   
   <user name="sample_user">
@@ -328,7 +368,10 @@ Allocation file format
   <queuePlacementPolicy>
     <rule name="specified" />
     <rule name="primaryGroup" create="false" />
-    <rule name="default" />
+    <rule name=“nestedUserQueue”>
+        <rule name=“secondaryGroupExistingQueue” create=“false” />
+    </rule>
+    <rule name="default" queue=“sample_queue” />
   </queuePlacementPolicy>
 </allocations>
 ---

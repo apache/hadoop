@@ -28,6 +28,7 @@ public enum JobEventType {
 
   //Producer:MRAppMaster
   JOB_INIT,
+  JOB_INIT_FAILED,
   JOB_START,
 
   //Producer:Task

@@ -44,7 +44,7 @@ import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import org.junit.Test;
-import static junit.framework.Assert.*;
+import static org.junit.Assert.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -321,6 +321,7 @@ public class TestMRKeyValueTextInputFormat {
     while (reader.nextKeyValue()) {
       result.add(new Text(reader.getCurrentValue()));
     }
+    reader.close();
     return result;
   }
   

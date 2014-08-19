@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.RawComparator;

@@ -25,6 +25,7 @@ import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -56,8 +57,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResp
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryStore;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.MemoryApplicationHistoryStore;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.MemoryTimelineStore;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineStore;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.AHSWebApp;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
@@ -69,6 +69,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptE
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRegistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
+import org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore;
+import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -504,12 +506,6 @@ public class MiniYARNCluster extends CompositeService {
       String logDirsString = prepareDirs("log", numLogDirs);
       config.set(YarnConfiguration.NM_LOG_DIRS, logDirsString);
 
-      File remoteLogDir =
-          new File(testWorkDir, MiniYARNCluster.this.getName()
-              + "-remoteLogDir-nm-" + index);
-      remoteLogDir.mkdir();
-      config.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-          remoteLogDir.getAbsolutePath());
       // By default AM + 2 containers
       config.setInt(YarnConfiguration.NM_PMEM_MB, 4*1024);
       config.set(YarnConfiguration.NM_ADDRESS,
@@ -658,12 +654,14 @@ public class MiniYARNCluster extends CompositeService {
    */
   public boolean waitForNodeManagersToConnect(long timeout)
       throws YarnException, InterruptedException {
-    ResourceManager rm = getResourceManager();
     GetClusterMetricsRequest req = GetClusterMetricsRequest.newInstance();
-
     for (int i = 0; i < timeout / 100; i++) {
-      if (nodeManagers.length == rm.getClientRMService().getClusterMetrics(req)
-          .getClusterMetrics().getNumNodeManagers()) {
+      ResourceManager rm = getResourceManager();
+      if (rm == null) {
+        throw new YarnException("Can not find the active RM.");
+      }
+      else if (nodeManagers.length == rm.getClientRMService()
+            .getClusterMetrics(req).getClusterMetrics().getNumNodeManagers()) {
         return true;
       }
       Thread.sleep(100);
@@ -723,6 +721,7 @@ public class MiniYARNCluster extends CompositeService {
       if (appHistoryServer != null) {
         appHistoryServer.stop();
       }
+      AHSWebApp.resetInstance();
       super.serviceStop();
     }
   }

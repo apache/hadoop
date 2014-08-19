@@ -22,7 +22,7 @@
 #include <errno.h>
 
 static struct NativeMiniDfsConf conf = {
-    .doFormat = 1,
+    1, /* doFormat */
 };
 
 /**

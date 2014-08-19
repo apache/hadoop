@@ -72,6 +72,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Create
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateSnapshotResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateSymlinkRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateSymlinkResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DatanodeStorageReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DeleteRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DeleteResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DeleteSnapshotRequestProto;
@@ -93,6 +94,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDat
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDataEncryptionKeyResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDatanodeReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDatanodeReportResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDatanodeStorageReportRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDatanodeStorageReportResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileInfoRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileLinkInfoRequestProto;
@@ -171,9 +174,19 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Update
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpdateBlockForPipelineResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpdatePipelineRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpdatePipelineResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CheckAccessRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CheckAccessResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.GetXAttrsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.GetXAttrsResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.ListXAttrsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.ListXAttrsResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.RemoveXAttrRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.RemoveXAttrResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.SetXAttrRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.SetXAttrResponseProto;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
@@ -302,6 +315,15 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
 
   private static final RemoveAclResponseProto
     VOID_REMOVEACL_RESPONSE = RemoveAclResponseProto.getDefaultInstance();
+  
+  private static final SetXAttrResponseProto
+    VOID_SETXATTR_RESPONSE = SetXAttrResponseProto.getDefaultInstance();
+  
+  private static final RemoveXAttrResponseProto
+    VOID_REMOVEXATTR_RESPONSE = RemoveXAttrResponseProto.getDefaultInstance();
+
+  private static final CheckAccessResponseProto
+    VOID_CHECKACCESS_RESPONSE = CheckAccessResponseProto.getDefaultInstance();
 
   /**
    * Constructor
@@ -422,8 +444,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public AbandonBlockResponseProto abandonBlock(RpcController controller,
       AbandonBlockRequestProto req) throws ServiceException {
     try {
-      server.abandonBlock(PBHelper.convert(req.getB()), req.getSrc(),
-          req.getHolder());
+      server.abandonBlock(PBHelper.convert(req.getB()), req.getFileId(),
+          req.getSrc(), req.getHolder());
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -461,7 +483,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       List<String> existingStorageIDsList = req.getExistingStorageUuidsList();
       List<DatanodeInfoProto> excludesList = req.getExcludesList();
       LocatedBlock result = server.getAdditionalDatanode(req.getSrc(),
-          PBHelper.convert(req.getBlk()),
+          req.getFileId(), PBHelper.convert(req.getBlk()),
           PBHelper.convert(existingList.toArray(
               new DatanodeInfoProto[existingList.size()])),
           existingStorageIDsList.toArray(
@@ -635,6 +657,21 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
           .getDatanodeReport(PBHelper.convert(req.getType())));
       return GetDatanodeReportResponseProto.newBuilder()
           .addAllDi(result).build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public GetDatanodeStorageReportResponseProto getDatanodeStorageReport(
+      RpcController controller, GetDatanodeStorageReportRequestProto req)
+      throws ServiceException {
+    try {
+      List<DatanodeStorageReportProto> reports = PBHelper.convertDatanodeStorageReports(
+          server.getDatanodeStorageReport(PBHelper.convert(req.getType())));
+      return GetDatanodeStorageReportResponseProto.newBuilder()
+          .addAllDatanodeStorageReports(reports)
+          .build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -819,7 +856,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public FsyncResponseProto fsync(RpcController controller,
       FsyncRequestProto req) throws ServiceException {
     try {
-      server.fsync(req.getSrc(), req.getClient(), req.getLastBlockLength());
+      server.fsync(req.getSrc(), req.getFileId(),
+          req.getClient(), req.getLastBlockLength());
       return VOID_FSYNC_RESPONSE;
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -1260,5 +1298,60 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     } catch (IOException e) {
       throw new ServiceException(e);
     }
+  }
+  
+  @Override
+  public SetXAttrResponseProto setXAttr(RpcController controller,
+      SetXAttrRequestProto req) throws ServiceException {
+    try {
+      server.setXAttr(req.getSrc(), PBHelper.convertXAttr(req.getXAttr()), 
+          PBHelper.convert(req.getFlag()));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return VOID_SETXATTR_RESPONSE;
+  }
+
+  @Override
+  public GetXAttrsResponseProto getXAttrs(RpcController controller,
+      GetXAttrsRequestProto req) throws ServiceException {
+    try {
+      return PBHelper.convertXAttrsResponse(server.getXAttrs(req.getSrc(), 
+          PBHelper.convertXAttrs(req.getXAttrsList())));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public ListXAttrsResponseProto listXAttrs(RpcController controller,
+    ListXAttrsRequestProto req) throws ServiceException {
+    try {
+      return PBHelper.convertListXAttrsResponse(server.listXAttrs(req.getSrc()));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+  
+  @Override
+  public RemoveXAttrResponseProto removeXAttr(RpcController controller,
+      RemoveXAttrRequestProto req) throws ServiceException {
+    try {
+      server.removeXAttr(req.getSrc(), PBHelper.convertXAttr(req.getXAttr()));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return VOID_REMOVEXATTR_RESPONSE;
+  }
+
+  @Override
+  public CheckAccessResponseProto checkAccess(RpcController controller,
+     CheckAccessRequestProto req) throws ServiceException {
+    try {
+      server.checkAccess(req.getPath(), PBHelper.convert(req.getMode()));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return VOID_CHECKACCESS_RESPONSE;
   }
 }

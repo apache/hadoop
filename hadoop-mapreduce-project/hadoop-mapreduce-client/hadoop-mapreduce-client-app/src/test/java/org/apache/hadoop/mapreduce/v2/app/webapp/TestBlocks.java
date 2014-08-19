@@ -106,6 +106,7 @@ public class TestBlocks {
     when(report.getTaskState()).thenReturn(TaskState.SUCCEEDED);
     when(report.getStartTime()).thenReturn(100001L);
     when(report.getFinishTime()).thenReturn(100011L);
+    when(report.getStatus()).thenReturn("Dummy Status \n*");
 
 
     when(task.getReport()).thenReturn(report);
@@ -134,6 +135,8 @@ public class TestBlocks {
     assertTrue(data.toString().contains("SUCCEEDED"));
     assertTrue(data.toString().contains("100001"));
     assertTrue(data.toString().contains("100011"));
+    assertFalse(data.toString().contains("Dummy Status \n*"));
+    assertTrue(data.toString().contains("Dummy Status \\n*"));
 
 
   }

@@ -188,11 +188,9 @@ class RollingLogsImpl implements RollingLogs {
         if (reader != null && (line = reader.readLine()) != null) {
           return;
         }
-        if (line == null) {
-          // move to the next file.
-          if (openFile()) {
-            readNext();
-          }
+        // move to the next file.
+        if (openFile()) {
+          readNext();
         }
       } finally {
         if (!hasNext()) {

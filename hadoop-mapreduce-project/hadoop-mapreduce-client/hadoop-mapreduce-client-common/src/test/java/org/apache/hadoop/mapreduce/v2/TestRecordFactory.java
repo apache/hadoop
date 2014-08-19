@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;

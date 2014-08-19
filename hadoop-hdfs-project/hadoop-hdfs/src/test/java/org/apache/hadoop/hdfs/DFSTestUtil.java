@@ -44,6 +44,9 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
@@ -82,6 +85,7 @@ import java.util.concurrent.TimeoutException;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /** Utilities for HDFS tests */
 public class DFSTestUtil {
@@ -138,8 +142,8 @@ public class DFSTestUtil {
     String clusterId = StartupOption.FORMAT.getClusterId();
     if(clusterId == null || clusterId.isEmpty())
       StartupOption.FORMAT.setClusterId("testClusterID");
-
-    NameNode.format(conf);
+    // Use a copy of conf as it can be altered by namenode during format.
+    NameNode.format(new Configuration(conf));
   }
 
   /**
@@ -147,15 +151,39 @@ public class DFSTestUtil {
    */
   public static Configuration newHAConfiguration(final String logicalName) {
     Configuration conf = new Configuration();
-    conf.set(DFSConfigKeys.DFS_NAMESERVICES, logicalName);
+    addHAConfiguration(conf, logicalName);
+    return conf;
+  }
+
+  /**
+   * Add a new HA configuration.
+   */
+  public static void addHAConfiguration(Configuration conf,
+      final String logicalName) {
+    String nsIds = conf.get(DFSConfigKeys.DFS_NAMESERVICES);
+    if (nsIds == null) {
+      conf.set(DFSConfigKeys.DFS_NAMESERVICES, logicalName);
+    } else { // append the nsid
+      conf.set(DFSConfigKeys.DFS_NAMESERVICES, nsIds + "," + logicalName);
+    }
     conf.set(DFSUtil.addKeySuffixes(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX,
             logicalName), "nn1,nn2");
     conf.set(DFSConfigKeys.DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "" +
             "." + logicalName,
             ConfiguredFailoverProxyProvider.class.getName());
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
-    return conf;
   }
+
+  public static void setFakeHttpAddresses(Configuration conf,
+      final String logicalName) {
+    conf.set(DFSUtil.addKeySuffixes(
+        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY,
+        logicalName, "nn1"), "127.0.0.1:12345");
+    conf.set(DFSUtil.addKeySuffixes(
+        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY,
+        logicalName, "nn2"), "127.0.0.1:12346");
+  }
+
 
   /** class MyFile contains enough information to recreate the contents of
    * a single file.
@@ -355,7 +383,7 @@ public class DFSTestUtil {
    */
   public static void waitForReplication(MiniDFSCluster cluster, ExtendedBlock b,
       int racks, int replicas, int neededReplicas)
-      throws IOException, TimeoutException, InterruptedException {
+      throws TimeoutException, InterruptedException {
     int curRacks = 0;
     int curReplicas = 0;
     int curNeededReplicas = 0;
@@ -389,7 +417,7 @@ public class DFSTestUtil {
    */
   public static void waitCorruptReplicas(FileSystem fs, FSNamesystem ns,
       Path file, ExtendedBlock b, int corruptRepls)
-      throws IOException, TimeoutException, InterruptedException {
+      throws TimeoutException, InterruptedException {
     int count = 0;
     final int ATTEMPTS = 50;
     int repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
@@ -814,7 +842,8 @@ public class DFSTestUtil {
 
     // send the request
     new Sender(out).transferBlock(b, new Token<BlockTokenIdentifier>(),
-        dfsClient.clientName, new DatanodeInfo[]{datanodes[1]});
+        dfsClient.clientName, new DatanodeInfo[]{datanodes[1]},
+        new StorageType[]{StorageType.DEFAULT});
     out.flush();
 
     return BlockOpResponseProto.parseDelimitedFrom(in);
@@ -896,29 +925,47 @@ public class DFSTestUtil {
     return getDatanodeDescriptor(ipAddr, DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT,
         rackLocation);
   }
+  
+  public static DatanodeDescriptor getDatanodeDescriptor(String ipAddr,
+      String rackLocation, String hostname) {
+    return getDatanodeDescriptor(ipAddr, 
+        DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT, rackLocation, hostname);
+  }
 
   public static DatanodeStorageInfo createDatanodeStorageInfo(
       String storageID, String ip) {
-    return createDatanodeStorageInfo(storageID, ip, "defaultRack");
+    return createDatanodeStorageInfo(storageID, ip, "defaultRack", "host");
   }
+  
   public static DatanodeStorageInfo[] createDatanodeStorageInfos(String[] racks) {
-    return createDatanodeStorageInfos(racks.length, racks);
+    return createDatanodeStorageInfos(racks, null);
   }
-  public static DatanodeStorageInfo[] createDatanodeStorageInfos(int n, String... racks) {
+  
+  public static DatanodeStorageInfo[] createDatanodeStorageInfos(String[] racks, String[] hostnames) {
+    return createDatanodeStorageInfos(racks.length, racks, hostnames);
+  }
+  
+  public static DatanodeStorageInfo[] createDatanodeStorageInfos(int n) {
+    return createDatanodeStorageInfos(n, null, null);
+  }
+    
+  public static DatanodeStorageInfo[] createDatanodeStorageInfos(
+      int n, String[] racks, String[] hostnames) {
     DatanodeStorageInfo[] storages = new DatanodeStorageInfo[n];
     for(int i = storages.length; i > 0; ) {
       final String storageID = "s" + i;
       final String ip = i + "." + i + "." + i + "." + i;
       i--;
-      final String rack = i < racks.length? racks[i]: "defaultRack";
-      storages[i] = createDatanodeStorageInfo(storageID, ip, rack);
+      final String rack = (racks!=null && i < racks.length)? racks[i]: "defaultRack";
+      final String hostname = (hostnames!=null && i < hostnames.length)? hostnames[i]: "host";
+      storages[i] = createDatanodeStorageInfo(storageID, ip, rack, hostname);
     }
     return storages;
   }
   public static DatanodeStorageInfo createDatanodeStorageInfo(
-      String storageID, String ip, String rack) {
+      String storageID, String ip, String rack, String hostname) {
     final DatanodeStorage storage = new DatanodeStorage(storageID);
-    final DatanodeDescriptor dn = BlockManagerTestUtil.getDatanodeDescriptor(ip, rack, storage);
+    final DatanodeDescriptor dn = BlockManagerTestUtil.getDatanodeDescriptor(ip, rack, storage, hostname);
     return BlockManagerTestUtil.newDatanodeStorageInfo(dn, storage);
   }
   public static DatanodeDescriptor[] toDatanodeDescriptor(
@@ -931,13 +978,18 @@ public class DFSTestUtil {
   }
 
   public static DatanodeDescriptor getDatanodeDescriptor(String ipAddr,
-      int port, String rackLocation) {
-    DatanodeID dnId = new DatanodeID(ipAddr, "host",
+      int port, String rackLocation, String hostname) {
+    DatanodeID dnId = new DatanodeID(ipAddr, hostname,
         UUID.randomUUID().toString(), port,
         DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
         DFSConfigKeys.DFS_DATANODE_HTTPS_DEFAULT_PORT,
         DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT);
     return new DatanodeDescriptor(dnId, rackLocation);
+  }
+  
+  public static DatanodeDescriptor getDatanodeDescriptor(String ipAddr,
+      int port, String rackLocation) {
+    return getDatanodeDescriptor(ipAddr, port, rackLocation, "host");
   }
   
   public static DatanodeRegistration getLocalDatanodeRegistration() {
@@ -1133,6 +1185,13 @@ public class DFSTestUtil {
             .setType(AclEntryType.OTHER)
             .build());
     filesystem.setAcl(pathConcatTarget, aclEntryList);
+    // OP_SET_XATTR
+    filesystem.setXAttr(pathConcatTarget, "user.a1", 
+        new byte[]{0x31, 0x32, 0x33});
+    filesystem.setXAttr(pathConcatTarget, "user.a2", 
+        new byte[]{0x37, 0x38, 0x39});
+    // OP_REMOVE_XATTR
+    filesystem.removeXAttr(pathConcatTarget, "user.a2");
   }
 
   public static void abortStream(DFSOutputStream out) throws IOException {
@@ -1192,7 +1251,20 @@ public class DFSTestUtil {
     long c = (val + factor - 1) / factor;
     return c * factor;
   }
-  
+
+  public static void checkComponentsEquals(byte[][] expected, byte[][] actual) {
+    assertEquals("expected: " + DFSUtil.byteArray2PathString(expected)
+        + ", actual: " + DFSUtil.byteArray2PathString(actual), expected.length,
+        actual.length);
+    int i = 0;
+    for (byte[] e : expected) {
+      byte[] actualComponent = actual[i++];
+      assertTrue("expected: " + DFSUtil.bytes2String(e) + ", actual: "
+          + DFSUtil.bytes2String(actualComponent),
+          Arrays.equals(e, actualComponent));
+    }
+  }
+
   /**
    * A short-circuit test context which makes it easier to get a short-circuit
    * configuration and set everything up.
@@ -1230,5 +1302,34 @@ public class DFSTestUtil {
       DFSInputStream.tcpReadsDisabledForTesting = formerTcpReadsDisabled;
       sockDir.close();
     }
+  }
+
+  /**
+   * @return the node which is expected to run the recovery of the
+   * given block, which is known to be under construction inside the
+   * given NameNOde.
+   */
+  public static DatanodeDescriptor getExpectedPrimaryNode(NameNode nn,
+      ExtendedBlock blk) {
+    BlockManager bm0 = nn.getNamesystem().getBlockManager();
+    BlockInfo storedBlock = bm0.getStoredBlock(blk.getLocalBlock());
+    assertTrue("Block " + blk + " should be under construction, " +
+        "got: " + storedBlock,
+        storedBlock instanceof BlockInfoUnderConstruction);
+    BlockInfoUnderConstruction ucBlock =
+      (BlockInfoUnderConstruction)storedBlock;
+    // We expect that the replica with the most recent heart beat will be
+    // the one to be in charge of the synchronization / recovery protocol.
+    final DatanodeStorageInfo[] storages = ucBlock.getExpectedStorageLocations();
+    DatanodeStorageInfo expectedPrimary = storages[0];
+    long mostRecentLastUpdate = expectedPrimary.getDatanodeDescriptor().getLastUpdate();
+    for (int i = 1; i < storages.length; i++) {
+      final long lastUpdate = storages[i].getDatanodeDescriptor().getLastUpdate();
+      if (lastUpdate > mostRecentLastUpdate) {
+        expectedPrimary = storages[i];
+        mostRecentLastUpdate = lastUpdate;
+      }
+    }
+    return expectedPrimary.getDatanodeDescriptor();
   }
 }
