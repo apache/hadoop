@@ -61,12 +61,12 @@ abstract class CommandWithDestination extends FsCommand {
    * The name of the raw xattr namespace. It would be nice to use
    * XAttr.RAW.name() but we can't reference the hadoop-hdfs project.
    */
-  private final String RAW = "raw.";
+  private static final String RAW = "raw.";
 
   /**
    * The name of the reserved raw directory.
    */
-  private final String RESERVED_RAW = "/.reserved/raw";
+  private static final String RESERVED_RAW = "/.reserved/raw";
 
   /**
    * 

@@ -49,6 +49,8 @@ fs-encryption (Unreleased)
     HADOOP-10919. Copy command should preserve raw.* namespace
     extended attributes. (clamb)
 
+    HDFS-6873. Constants in CommandWithDestination should be static. (clamb)
+
   OPTIMIZATIONS
 
   BUG FIXES
