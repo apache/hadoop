@@ -9,6 +9,8 @@ Trunk (Unreleased)
 
     HADOOP-10474 Move o.a.h.record to hadoop-streaming. (wheat9)
 
+    HADOOP-9902. Shell script rewrite (aw)
+
   NEW FEATURES
 
     HADOOP-10433. Key Management Server based on KeyProvider API. (tucu)

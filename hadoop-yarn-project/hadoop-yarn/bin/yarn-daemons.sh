@@ -16,23 +16,31 @@
 # limitations under the License.
 
 
-# Run a Yarn command on all slave hosts.
+function hadoop_usage
+{
+  echo "Usage: yarn-daemons.sh [--config confdir] [--hosts hostlistfile] (start|stop|status) <yarn-command> <args...>"
+}
 
-usage="Usage: yarn-daemons.sh [--config confdir] [--hosts hostlistfile] [start
-|stop] command args..."
+this="${BASH_SOURCE-$0}"
+bin=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
 
-# if no args specified, show usage
-if [ $# -le 1 ]; then
-  echo $usage
+# let's locate libexec...
+if [[ -n "${HADOOP_PREFIX}" ]]; then
+  DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
+else
+  DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
+fi
+
+HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}"
+# shellcheck disable=SC2034
+HADOOP_NEW_CONFIG=true
+if [[ -f "${HADOOP_LIBEXEC_DIR}/yarn-config.sh" ]]; then
+  . "${HADOOP_LIBEXEC_DIR}/yarn-config.sh"
+else
+  echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/yarn-config.sh." 2>&1
   exit 1
 fi
 
-bin=`dirname "${BASH_SOURCE-$0}"`
-bin=`cd "$bin"; pwd`
-
-DEFAULT_LIBEXEC_DIR="$bin"/../libexec
-HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
-. $HADOOP_LIBEXEC_DIR/yarn-config.sh
-
-exec "$bin/slaves.sh" --config $YARN_CONF_DIR cd "$HADOOP_YARN_HOME" \; "$bin/yarn-daemon.sh" --config $YARN_CONF_DIR "$@"
+hadoop_connect_to_hosts "${bin}/yarn-daemon.sh" \
+--config "${HADOOP_CONF_DIR}" "$@"
 
