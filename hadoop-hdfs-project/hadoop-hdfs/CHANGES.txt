@@ -262,6 +262,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6569. OOB message can't be sent to the client when DataNode shuts down for upgrade
     (brandonli)
 
+    HDFS-6868. portmap and nfs3 are documented as hadoop commands instead of hdfs
+    (brandonli)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
