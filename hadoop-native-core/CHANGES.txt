@@ -1,0 +1,35 @@
+HADOOP-10388 Change Log
+
+    HADOOP-10877. native client: implement hdfsMove and hdfsCopy (cmccabe)
+
+    HADOOP-10725. Implement listStatus and getFileInfo in the native client (cmccabe)
+
+    HADOOP-10818. native client: refactor URI code to be clearer (cmccabe)
+
+    HADOOP-10806. ndfs: need to implement umask, pass permission bits to hdfsCreateDirectory (cmccabe)
+
+    HADOOP-10805. ndfs hdfsDelete should check the return boolean (cmccabe)
+
+    HADOOP-10667. Implement TCP connection reuse for native client (cmccabe)
+
+    HADOOP-10636. Add unit test case for call and client_id (Wenwu Peng via Binglin Chang)
+
+    HADOOP-10706. Fix initialization of hrpc_sync_ctx (decstery via cmccabe)
+
+    HADOOP-10640. Implement Namenode RPCs in HDFS native client (cmccabe)
+
+    HADOOP-10444. Add pom.xml infrastructure for hadoop-native-core (decstery via cmccabe)
+
+    HADOOP-10624. Fix some minor typos and add more test cases for hadoop_err (pengwenwu2008 via cmccabe)
+
+    HADOOP-10631. Native Hadoop Client: make clean should remove pb-c.h.s files (decstery via cmccabe)
+
+    HADOOP-10592. Add unit test case for net in hadoop native client (gujilangzi via cmccabe)
+
+    HADOOP-10564. Add username to native RPCv9 client (cmccabe)
+
+    HADOOP-10577. Native Hadoop Client: Fix some minor error and compile on macosx (Binglin Chang)
+
+    HADOOP-10573. fix hadoop native client CMakeLists.txt issue with older cmakes (Wenwu Peng via Colin Patrick McCabe)
+
+    HADOOP-10389. Native RPCv9 client (cmccabe)
