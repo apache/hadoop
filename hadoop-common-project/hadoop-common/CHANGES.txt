@@ -623,6 +623,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10873. Fix dead link in Configuration javadoc (Akira AJISAKA 
     via aw)
 
+    HADOOP-10968. hadoop native build fails to detect java_libarch on
+    ppc64le (Dinar Valeev via Colin Patrick McCabe)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
