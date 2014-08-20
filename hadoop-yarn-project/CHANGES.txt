@@ -205,6 +205,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2034. Description for yarn.nodemanager.localizer.cache.target-size-mb
     is incorrect (Chen He via jlowe)
 
+    YARN-1919. Potential NPE in EmbeddedElectorService#stop. 
+    (Tsuyoshi Ozawa via kasha)
+
 Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES
