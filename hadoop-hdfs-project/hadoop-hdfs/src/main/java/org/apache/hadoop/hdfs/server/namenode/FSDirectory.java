@@ -644,15 +644,20 @@ public class FSDirectory implements Closeable {
         tx.updateMtimeAndLease(timestamp);
 
         // Collect the blocks and remove the lease for previous dst
-        long filesDeleted = -1;
+        boolean filesDeleted = false;
         if (removedDst != null) {
           undoRemoveDst = false;
           if (removedNum > 0) {
             BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
             List<INode> removedINodes = new ChunkedArrayList<INode>();
-            filesDeleted = removedDst.cleanSubtree(Snapshot.CURRENT_STATE_ID,
-                dstIIP.getLatestSnapshotId(), collectedBlocks, removedINodes,
-                true).get(Quota.NAMESPACE);
+            if (!removedDst.isInLatestSnapshot(dstIIP.getLatestSnapshotId())) {
+              removedDst.destroyAndCollectBlocks(collectedBlocks, removedINodes);
+              filesDeleted = true;
+            } else {
+              filesDeleted = removedDst.cleanSubtree(Snapshot.CURRENT_STATE_ID,
+                  dstIIP.getLatestSnapshotId(), collectedBlocks, removedINodes,
+                  true).get(Quota.NAMESPACE) >= 0;
+            }
             getFSNamesystem().removePathAndBlocks(src, collectedBlocks,
                 removedINodes, false);
           }
@@ -665,7 +670,7 @@ public class FSDirectory implements Closeable {
         }
 
         tx.updateQuotasInSourceTree();
-        return filesDeleted >= 0;
+        return filesDeleted;
       }
     } finally {
       if (undoRemoveSrc) {
