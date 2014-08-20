@@ -179,7 +179,7 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10968. hadoop native build fails to detect java_libarch on
     ppc64le (Dinar Valeev via Colin Patrick McCabe)
 
-Release 2.5.0 - UNRELEASED
+Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES
 
