@@ -48,3 +48,9 @@ message NodeHealthStatusProto {
   optional string health_report = 2;
   optional int64 last_health_report_time = 3;
 }
+
+message VersionProto {
+  optional int32 major_version = 1;
+  optional int32 minor_version = 2;
+}
+

@@ -100,9 +100,9 @@ public class TestKeyProviderFactory {
   static void checkSpecificProvider(Configuration conf,
                                    String ourUrl) throws Exception {
     KeyProvider provider = KeyProviderFactory.getProviders(conf).get(0);
-    byte[] key1 = new byte[32];
-    byte[] key2 = new byte[32];
-    byte[] key3 = new byte[32];
+    byte[] key1 = new byte[16];
+    byte[] key2 = new byte[16];
+    byte[] key3 = new byte[16];
     for(int i =0; i < key1.length; ++i) {
       key1[i] = (byte) i;
       key2[i] = (byte) (i * 2);
@@ -146,7 +146,7 @@ public class TestKeyProviderFactory {
           KeyProvider.options(conf).setBitLength(8));
       assertTrue("should throw", false);
     } catch (IOException e) {
-      assertEquals("Wrong key length. Required 8, but got 256", e.getMessage());
+      assertEquals("Wrong key length. Required 8, but got 128", e.getMessage());
     }
     provider.createKey("key4", new byte[]{1},
         KeyProvider.options(conf).setBitLength(8));
@@ -162,7 +162,7 @@ public class TestKeyProviderFactory {
       provider.rollNewVersion("key4", key1);
       assertTrue("should throw", false);
     } catch (IOException e) {
-      assertEquals("Wrong key length. Required 8, but got 256", e.getMessage());
+      assertEquals("Wrong key length. Required 8, but got 128", e.getMessage());
     }
     try {
       provider.rollNewVersion("no-such-key", key1);
@@ -220,15 +220,80 @@ public class TestKeyProviderFactory {
     assertTrue(s.getPermission().toString().equals("rwx------"));
     assertTrue(file + " should exist", file.isFile());
 
+    // Corrupt file and Check if JKS can reload from _OLD file
+    File oldFile = new File(file.getPath() + "_OLD");
+    file.renameTo(oldFile);
+    file.delete();
+    file.createNewFile();
+    assertTrue(oldFile.exists());
+    KeyProvider provider = KeyProviderFactory.getProviders(conf).get(0);
+    assertTrue(file.exists());
+    assertTrue(oldFile + "should be deleted", !oldFile.exists());
+    verifyAfterReload(file, provider);
+    assertTrue(!oldFile.exists());
+
+    // _NEW and current file should not exist together
+    File newFile = new File(file.getPath() + "_NEW");
+    newFile.createNewFile();
+    try {
+      provider = KeyProviderFactory.getProviders(conf).get(0);
+      Assert.fail("_NEW and current file should not exist together !!");
+    } catch (Exception e) {
+      // Ignore
+    } finally {
+      if (newFile.exists()) {
+        newFile.delete();
+      }
+    }
+
+    // Load from _NEW file
+    file.renameTo(newFile);
+    file.delete();
+    try {
+      provider = KeyProviderFactory.getProviders(conf).get(0);
+      Assert.assertFalse(newFile.exists());
+      Assert.assertFalse(oldFile.exists());
+    } catch (Exception e) {
+      Assert.fail("JKS should load from _NEW file !!");
+      // Ignore
+    }
+    verifyAfterReload(file, provider);
+
+    // _NEW exists but corrupt.. must load from _OLD
+    newFile.createNewFile();
+    file.renameTo(oldFile);
+    file.delete();
+    try {
+      provider = KeyProviderFactory.getProviders(conf).get(0);
+      Assert.assertFalse(newFile.exists());
+      Assert.assertFalse(oldFile.exists());
+    } catch (Exception e) {
+      Assert.fail("JKS should load from _OLD file !!");
+      // Ignore
+    } finally {
+      if (newFile.exists()) {
+        newFile.delete();
+      }
+    }
+    verifyAfterReload(file, provider);
+
     // check permission retention after explicit change
     fs.setPermission(path, new FsPermission("777"));
     checkPermissionRetention(conf, ourUrl, path);
   }
 
+  private void verifyAfterReload(File file, KeyProvider provider)
+      throws IOException {
+    List<String> existingKeys = provider.getKeys();
+    assertTrue(existingKeys.contains("key4"));
+    assertTrue(existingKeys.contains("key3"));
+    assertTrue(file.exists());
+  }
+
   public void checkPermissionRetention(Configuration conf, String ourUrl, Path path) throws Exception {
     KeyProvider provider = KeyProviderFactory.getProviders(conf).get(0);
     // let's add a new key and flush and check that permissions are still set to 777
-    byte[] key = new byte[32];
+    byte[] key = new byte[16];
     for(int i =0; i < key.length; ++i) {
       key[i] = (byte) i;
     }
@@ -261,7 +326,7 @@ public class TestKeyProviderFactory {
       conf.set(JavaKeyStoreProvider.KEYSTORE_PASSWORD_FILE_KEY,
           "javakeystoreprovider.password");
       KeyProvider provider = KeyProviderFactory.getProviders(conf).get(0);
-      provider.createKey("key3", new byte[32], KeyProvider.options(conf));
+      provider.createKey("key3", new byte[16], KeyProvider.options(conf));
       provider.flush();
     } catch (Exception ex) {
       Assert.fail("could not create keystore with password file");

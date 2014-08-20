@@ -764,8 +764,6 @@ public class FSDirectory implements Closeable {
     checkSnapshot(srcInode, null);
   }
 
-
-
   private class RenameOperation {
     private final INodesInPath srcIIP;
     private final INodesInPath dstIIP;
@@ -798,7 +796,7 @@ public class FSDirectory implements Closeable {
       // snapshot is taken on the dst tree, changes will be recorded in the latest
       // snapshot of the src tree.
       if (isSrcInSnapshot) {
-        srcChild = srcChild.recordModification(srcIIP.getLatestSnapshotId());
+        srcChild.recordModification(srcIIP.getLatestSnapshotId());
       }
 
       // check srcChild for reference
@@ -928,8 +926,7 @@ public class FSDirectory implements Closeable {
       updateCount(iip, 0, dsDelta, true);
     }
 
-    file = file.setFileReplication(replication, iip.getLatestSnapshotId(),
-        inodeMap);
+    file.setFileReplication(replication, iip.getLatestSnapshotId());
     
     final short newBR = file.getBlockReplication(); 
     // check newBR < oldBR case. 
@@ -1081,9 +1078,6 @@ public class FSDirectory implements Closeable {
       count++;
     }
     
-    // update inodeMap
-    removeFromInodeMap(Arrays.asList(allSrcInodes));
-    
     trgInode.setModificationTime(timestamp, trgLatestSnapshot);
     trgParent.updateModificationTime(timestamp, trgLatestSnapshot);
     // update quota on the parent directory ('count' files removed, 0 space)
@@ -1215,8 +1209,7 @@ public class FSDirectory implements Closeable {
 
     // record modification
     final int latestSnapshot = iip.getLatestSnapshotId();
-    targetNode = targetNode.recordModification(latestSnapshot);
-    iip.setLastINode(targetNode);
+    targetNode.recordModification(latestSnapshot);
 
     // Remove the node from the namespace
     long removed = removeLastINode(iip);
@@ -2125,7 +2118,7 @@ public class FSDirectory implements Closeable {
       }
 
       final int latest = iip.getLatestSnapshotId();
-      dirNode = dirNode.recordModification(latest);
+      dirNode.recordModification(latest);
       dirNode.setQuota(nsQuota, dsQuota);
       return dirNode;
     }

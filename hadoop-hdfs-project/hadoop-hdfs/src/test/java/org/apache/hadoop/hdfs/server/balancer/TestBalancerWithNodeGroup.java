@@ -75,7 +75,7 @@ public class TestBalancerWithNodeGroup {
   static final int DEFAULT_BLOCK_SIZE = 100;
 
   static {
-    Balancer.setBlockMoveWaitTime(1000L) ;
+    Dispatcher.setBlockMoveWaitTime(1000L) ;
   }
 
   static Configuration createConf() {
@@ -175,8 +175,8 @@ public class TestBalancerWithNodeGroup {
 
     // start rebalancing
     Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
-    final int r = Balancer.run(namenodes, Balancer.Parameters.DEFALUT, conf);
-    assertEquals(Balancer.ReturnStatus.SUCCESS.code, r);
+    final int r = Balancer.run(namenodes, Balancer.Parameters.DEFAULT, conf);
+    assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
 
     waitForHeartBeat(totalUsedSpace, totalCapacity);
     LOG.info("Rebalancing with default factor.");
@@ -189,9 +189,9 @@ public class TestBalancerWithNodeGroup {
 
     // start rebalancing
     Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
-    final int r = Balancer.run(namenodes, Balancer.Parameters.DEFALUT, conf);
-    Assert.assertTrue(r == Balancer.ReturnStatus.SUCCESS.code ||
-        (r == Balancer.ReturnStatus.NO_MOVE_PROGRESS.code));
+    final int r = Balancer.run(namenodes, Balancer.Parameters.DEFAULT, conf);
+    Assert.assertTrue(r == ExitStatus.SUCCESS.getExitCode() ||
+        (r == ExitStatus.NO_MOVE_PROGRESS.getExitCode()));
     waitForHeartBeat(totalUsedSpace, totalCapacity);
     LOG.info("Rebalancing with default factor.");
   }

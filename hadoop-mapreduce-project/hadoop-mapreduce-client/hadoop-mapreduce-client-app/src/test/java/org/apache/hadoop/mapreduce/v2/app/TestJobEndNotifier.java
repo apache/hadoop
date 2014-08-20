@@ -270,7 +270,8 @@ public class TestJobEndNotifier extends JobEndNotifier {
     app.waitForInternalState(job, JobStateInternal.REBOOT);
     // Now shutdown. User should see FAILED state.
     // Unregistration fails: isLastAMRetry is recalculated, this is
-    app.shutDownJob();
+    ///reboot will stop service internally, we don't need to shutdown twice
+    app.waitForServiceToStop(10000);
     Assert.assertFalse(app.isLastAMRetry());
     // Since it's not last retry, JobEndServlet didn't called
     Assert.assertEquals(0, JobEndServlet.calledTimes);

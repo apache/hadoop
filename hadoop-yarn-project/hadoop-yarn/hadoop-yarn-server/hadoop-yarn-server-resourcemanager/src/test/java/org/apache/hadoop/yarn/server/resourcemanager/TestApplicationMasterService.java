@@ -171,7 +171,6 @@ public class TestApplicationMasterService {
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
     MockAM am1 = rm.sendAMLaunched(attempt1.getAppAttemptId());
     am1.registerAppAttempt();
-    am1.setAMRMProtocol(rm.getApplicationMasterService());
 
     AllocateRequestPBImpl allocateRequest = new AllocateRequestPBImpl();
     List<ContainerId> release = new ArrayList<ContainerId>();

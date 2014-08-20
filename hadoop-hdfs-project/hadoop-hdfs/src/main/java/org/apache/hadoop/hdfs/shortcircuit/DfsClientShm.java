@@ -32,11 +32,16 @@ import com.google.common.base.Preconditions;
  * DfsClientShm is a subclass of ShortCircuitShm which is used by the
  * DfsClient.
  * When the UNIX domain socket associated with this shared memory segment
- * closes unexpectedly, we mark the slots inside this segment as stale.
- * ShortCircuitReplica objects that contain stale slots are themselves stale,
+ * closes unexpectedly, we mark the slots inside this segment as disconnected.
+ * ShortCircuitReplica objects that contain disconnected slots are stale,
  * and will not be used to service new reads or mmap operations.
  * However, in-progress read or mmap operations will continue to proceed.
  * Once the last slot is deallocated, the segment can be safely munmapped.
+ *
+ * Slots may also become stale because the associated replica has been deleted
+ * on the DataNode.  In this case, the DataNode will clear the 'valid' bit.
+ * The client will then see these slots as stale (see
+ * #{ShortCircuitReplica#isStale}).
  */
 public class DfsClientShm extends ShortCircuitShm
     implements DomainSocketWatcher.Handler {
@@ -58,7 +63,7 @@ public class DfsClientShm extends ShortCircuitShm
    *
    * {@link DfsClientShm#handle} sets this to true.
    */
-  private boolean stale = false;
+  private boolean disconnected = false;
 
   DfsClientShm(ShmId shmId, FileInputStream stream, EndpointShmManager manager,
       DomainPeer peer) throws IOException {
@@ -76,14 +81,14 @@ public class DfsClientShm extends ShortCircuitShm
   }
 
   /**
-   * Determine if the shared memory segment is stale.
+   * Determine if the shared memory segment is disconnected from the DataNode.
    *
    * This must be called with the DfsClientShmManager lock held.
    *
    * @return   True if the shared memory segment is stale.
    */
-  public synchronized boolean isStale() {
-    return stale;
+  public synchronized boolean isDisconnected() {
+    return disconnected;
   }
 
   /**
@@ -97,8 +102,8 @@ public class DfsClientShm extends ShortCircuitShm
   public boolean handle(DomainSocket sock) {
     manager.unregisterShm(getShmId());
     synchronized (this) {
-      Preconditions.checkState(!stale);
-      stale = true;
+      Preconditions.checkState(!disconnected);
+      disconnected = true;
       boolean hadSlots = false;
       for (Iterator<Slot> iter = slotIterator(); iter.hasNext(); ) {
         Slot slot = iter.next();

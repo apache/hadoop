@@ -287,11 +287,9 @@ public abstract class INodeReference extends INode {
   }
 
   @Override
-  final INode recordModification(int latestSnapshotId)
+  final void recordModification(int latestSnapshotId)
       throws QuotaExceededException {
     referred.recordModification(latestSnapshotId);
-    // reference is never replaced 
-    return this;
   }
 
   @Override // used by WithCount

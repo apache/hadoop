@@ -25,6 +25,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -50,6 +51,7 @@ import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.io.Text;
@@ -2073,6 +2075,71 @@ public abstract class FileSystem extends Configured implements Closeable {
   public abstract FileStatus getFileStatus(Path f) throws IOException;
 
   /**
+   * Checks if the user can access a path.  The mode specifies which access
+   * checks to perform.  If the requested permissions are granted, then the
+   * method returns normally.  If access is denied, then the method throws an
+   * {@link AccessControlException}.
+   * <p/>
+   * The default implementation of this method calls {@link #getFileStatus(Path)}
+   * and checks the returned permissions against the requested permissions.
+   * Note that the getFileStatus call will be subject to authorization checks.
+   * Typically, this requires search (execute) permissions on each directory in
+   * the path's prefix, but this is implementation-defined.  Any file system
+   * that provides a richer authorization model (such as ACLs) may override the
+   * default implementation so that it checks against that model instead.
+   * <p>
+   * In general, applications should avoid using this method, due to the risk of
+   * time-of-check/time-of-use race conditions.  The permissions on a file may
+   * change immediately after the access call returns.  Most applications should
+   * prefer running specific file system actions as the desired user represented
+   * by a {@link UserGroupInformation}.
+   *
+   * @param path Path to check
+   * @param mode type of access to check
+   * @throws AccessControlException if access is denied
+   * @throws FileNotFoundException if the path does not exist
+   * @throws IOException see specific implementation
+   */
+  @InterfaceAudience.LimitedPrivate({"HDFS", "Hive"})
+  public void access(Path path, FsAction mode) throws AccessControlException,
+      FileNotFoundException, IOException {
+    checkAccessPermissions(this.getFileStatus(path), mode);
+  }
+
+  /**
+   * This method provides the default implementation of
+   * {@link #access(Path, FsAction)}.
+   *
+   * @param stat FileStatus to check
+   * @param mode type of access to check
+   * @throws IOException for any error
+   */
+  @InterfaceAudience.Private
+  static void checkAccessPermissions(FileStatus stat, FsAction mode)
+      throws IOException {
+    FsPermission perm = stat.getPermission();
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    String user = ugi.getShortUserName();
+    List<String> groups = Arrays.asList(ugi.getGroupNames());
+    if (user.equals(stat.getOwner())) {
+      if (perm.getUserAction().implies(mode)) {
+        return;
+      }
+    } else if (groups.contains(stat.getGroup())) {
+      if (perm.getGroupAction().implies(mode)) {
+        return;
+      }
+    } else {
+      if (perm.getOtherAction().implies(mode)) {
+        return;
+      }
+    }
+    throw new AccessControlException(String.format(
+      "Permission denied: user=%s, path=\"%s\":%s:%s:%s%s", user, stat.getPath(),
+      stat.getOwner(), stat.getGroup(), stat.isDirectory() ? "d" : "-", perm));
+  }
+
+  /**
    * See {@link FileContext#fixRelativePart}
    */
   protected Path fixRelativePart(Path p) {
@@ -2364,21 +2431,10 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   /**
    * Set an xattr of a file or directory.
-   * The name must be prefixed with user/trusted/security/system and
-   * followed by ".". For example, "user.attr".
+   * The name must be prefixed with the namespace followed by ".". For example,
+   * "user.attr".
    * <p/>
-   * A regular user can only set an xattr for the "user" namespace.
-   * The super user can set an xattr of either the "user" or "trusted" namespaces.
-   * The xattrs of the "security" and "system" namespaces are only used/exposed 
-   * internally by/to the FS impl.
-   * <p/>
-   * The access permissions of an xattr in the "user" namespace are
-   * defined by the file and directory permission bits.
-   * An xattr can only be set when the logged-in user has the correct permissions.
-   * If the xattr exists, it will be replaced.
-   * <p/>
-   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
-   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param path Path to modify
    * @param name xattr name.
@@ -2393,21 +2449,10 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   /**
    * Set an xattr of a file or directory.
-   * The name must be prefixed with user/trusted/security/system and
-   * followed by ".". For example, "user.attr".
+   * The name must be prefixed with the namespace followed by ".". For example,
+   * "user.attr".
    * <p/>
-   * A regular user can only set an xattr for the "user" namespace.
-   * The super user can set an xattr of either the "user" or "trusted" namespaces.
-   * The xattrs of the "security" and "system" namespaces are only used/exposed 
-   * internally by/to the FS impl.
-   * <p/>
-   * The access permissions of an xattr in the "user" namespace are
-   * defined by the file and directory permission bits.
-   * An xattr can only be set if the logged-in user has the correct permissions.
-   * If the xattr exists, it is replaced.
-   * <p/>
-   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
-   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param path Path to modify
    * @param name xattr name.
@@ -2423,20 +2468,10 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   /**
    * Get an xattr name and value for a file or directory.
-   * The name must be prefixed with user/trusted/security/system and
-   * followed by ".". For example, "user.attr".
+   * The name must be prefixed with the namespace followed by ".". For example,
+   * "user.attr".
    * <p/>
-   * 
-   * A regular user can only get an xattr for the "user" namespace.
-   * The super user can get an xattr of either the "user" or "trusted" namespaces.
-   * The xattrs of the "security" and "system" namespaces are only used/exposed 
-   * internally by/to the FS impl.
-   * <p/>
-   * An xattr will only be returned if the logged-in user has the
-   * correct permissions.
-   * <p/>
-   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
-   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param path Path to get extended attribute
    * @param name xattr name.
@@ -2453,13 +2488,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Only those xattrs which the logged-in user has permissions to view
    * are returned.
    * <p/>
-   * A regular user can only get xattrs for the "user" namespace.
-   * The super user can only get xattrs for "user" and "trusted" namespaces.
-   * The xattrs of the "security" and "system" namespaces are only used/exposed
-   * internally by/to the FS impl.
-   * <p/>
-   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
-   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param path Path to get extended attributes
    * @return Map<String, byte[]> describing the XAttrs of the file or directory
@@ -2475,13 +2504,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Only those xattrs which the logged-in user has permissions to view
    * are returned.
    * <p/>
-   * A regular user can only get xattrs for the "user" namespace.
-   * The super user can only get xattrs for "user" and "trusted" namespaces.
-   * The xattrs of the "security" and "system" namespaces are only used/exposed
-   * internally by/to the FS impl.
-   * <p/>
-   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
-   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param path Path to get extended attributes
    * @param names XAttr names.
@@ -2499,14 +2522,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Only those xattr names which the logged-in user has permissions to view
    * are returned.
    * <p/>
-   * A regular user can only get xattr names for the "user" namespace.
-   * The super user can only get xattr names for "user" and "trusted"
-   * namespaces.
-   * The xattrs of the "security" and "system" namespaces are only
-   * used/exposed internally by/to the FS impl.
-   * <p/>
-   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
-   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param path Path to get extended attributes
    * @return List<String> of the XAttr names of the file or directory
@@ -2519,21 +2535,10 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   /**
    * Remove an xattr of a file or directory.
-   * The name must be prefixed with user/trusted/security/system and
-   * followed by ".". For example, "user.attr".
+   * The name must be prefixed with the namespace followed by ".". For example,
+   * "user.attr".
    * <p/>
-   * A regular user can only remove an xattr for the "user" namespace.
-   * The super user can remove an xattr of either the "user" or "trusted" namespaces.
-   * The xattrs of the "security" and "system" namespaces are only used/exposed 
-   * internally by/to the FS impl.
-   * <p/>
-   * The access permissions of an xattr in the "user" namespace are
-   * defined by the file and directory permission bits.
-   * An xattr can only be set when the logged-in user has the correct permissions.
-   * If the xattr exists, it will be replaced.
-   * <p/>
-   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
-   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param path Path to remove extended attribute
    * @param name xattr name

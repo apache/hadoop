@@ -281,6 +281,19 @@ message GetDatanodeReportResponseProto {
   repeated DatanodeInfoProto di = 1;
 }
 
+message GetDatanodeStorageReportRequestProto {
+  required DatanodeReportTypeProto type = 1;
+}
+
+message DatanodeStorageReportProto {
+  required DatanodeInfoProto datanodeInfo = 1;
+  repeated StorageReportProto storageReports = 2;
+}
+
+message GetDatanodeStorageReportResponseProto {
+  repeated DatanodeStorageReportProto datanodeStorageReports = 1;
+}
+
 message GetPreferredBlockSizeRequestProto {
   required string filename = 1;
 }
@@ -641,6 +654,14 @@ message DeleteSnapshotRequestProto {
 message DeleteSnapshotResponseProto { // void response
 }
 
+message CheckAccessRequestProto {
+  required string path = 1;
+  required AclEntryProto.FsActionProto mode = 2;
+}
+
+message CheckAccessResponseProto { // void response
+}
+
 service ClientNamenodeProtocol {
   rpc getBlockLocations(GetBlockLocationsRequestProto)
       returns(GetBlockLocationsResponseProto);
@@ -672,6 +693,8 @@ service ClientNamenodeProtocol {
   rpc getFsStats(GetFsStatusRequestProto) returns(GetFsStatsResponseProto);
   rpc getDatanodeReport(GetDatanodeReportRequestProto)
       returns(GetDatanodeReportResponseProto);
+  rpc getDatanodeStorageReport(GetDatanodeStorageReportRequestProto)
+      returns(GetDatanodeStorageReportResponseProto);
   rpc getPreferredBlockSize(GetPreferredBlockSizeRequestProto)
       returns(GetPreferredBlockSizeResponseProto);
   rpc setSafeMode(SetSafeModeRequestProto)
@@ -768,4 +791,6 @@ service ClientNamenodeProtocol {
       returns(ListXAttrsResponseProto);
   rpc removeXAttr(RemoveXAttrRequestProto)
       returns(RemoveXAttrResponseProto);
+  rpc checkAccess(CheckAccessRequestProto)
+      returns(CheckAccessResponseProto);
 }

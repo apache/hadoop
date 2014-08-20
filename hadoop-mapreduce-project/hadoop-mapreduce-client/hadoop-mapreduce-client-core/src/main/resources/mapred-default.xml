@@ -1225,9 +1225,9 @@
 
 <property>
    <name>mapreduce.job.classloader.system.classes</name>
-   <value>java.,javax.,org.apache.commons.logging.,org.apache.log4j.,
-          org.apache.hadoop.,core-default.xml,hdfs-default.xml,
-          mapred-default.xml,yarn-default.xml</value>
+   <value>java.,javax.,org.w3c.dom.,org.xml.sax.,org.apache.commons.logging.,
+          org.apache.log4j.,org.apache.hadoop.,core-default.xml,
+          hdfs-default.xml,mapred-default.xml,yarn-default.xml</value>
   <description>A comma-separated list of classes that should be loaded from the
     system classpath, not the user-supplied JARs, when mapreduce.job.classloader
     is enabled. Names ending in '.' (period) are treated as package names,

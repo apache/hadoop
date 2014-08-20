@@ -107,6 +107,7 @@ extends ApplicationSubmissionContext {
       builder.setResource(convertToProtoFormat(this.resource));
     }
     if (this.applicationTags != null && !this.applicationTags.isEmpty()) {
+      builder.clearApplicationTags();
       builder.addAllApplicationTags(this.applicationTags);
     }
   }

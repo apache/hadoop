@@ -143,4 +143,9 @@ public class MockAppContext implements AppContext {
     return true;
   }
 
+@Override
+  public String getNMHostname() {
+    // bogus - Not Required
+    return null;
+  }
 }

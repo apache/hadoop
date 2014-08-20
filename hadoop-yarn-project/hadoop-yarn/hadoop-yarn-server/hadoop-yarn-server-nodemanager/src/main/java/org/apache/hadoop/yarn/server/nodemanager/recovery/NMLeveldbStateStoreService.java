@@ -35,19 +35,23 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainerRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
+import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
-import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.NMDBSchemaVersionProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerRequestProto;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
-import org.apache.hadoop.yarn.server.nodemanager.recovery.records.NMDBSchemaVersion;
-import org.apache.hadoop.yarn.server.nodemanager.recovery.records.impl.pb.NMDBSchemaVersionPBImpl;
+import org.apache.hadoop.yarn.server.records.Version;
+import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.fusesource.leveldbjni.JniDBFactory;
@@ -68,11 +72,16 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private static final String DB_NAME = "yarn-nm-state";
   private static final String DB_SCHEMA_VERSION_KEY = "nm-schema-version";
   
-  private static final NMDBSchemaVersion CURRENT_VERSION_INFO = NMDBSchemaVersion
+  private static final Version CURRENT_VERSION_INFO = Version
       .newInstance(1, 0);
 
   private static final String DELETION_TASK_KEY_PREFIX =
       "DeletionService/deltask_";
+
+  private static final String APPLICATIONS_KEY_PREFIX =
+      "ContainerManager/applications/";
+  private static final String FINISHED_APPS_KEY_PREFIX =
+      "ContainerManager/finishedApps/";
 
   private static final String LOCALIZATION_KEY_PREFIX = "Localization/";
   private static final String LOCALIZATION_PUBLIC_KEY_PREFIX =
@@ -83,6 +92,14 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private static final String LOCALIZATION_COMPLETED_SUFFIX = "completed/";
   private static final String LOCALIZATION_FILECACHE_SUFFIX = "filecache/";
   private static final String LOCALIZATION_APPCACHE_SUFFIX = "appcache/";
+
+  private static final String CONTAINERS_KEY_PREFIX =
+      "ContainerManager/containers/";
+  private static final String CONTAINER_REQUEST_KEY_SUFFIX = "/request";
+  private static final String CONTAINER_DIAGS_KEY_SUFFIX = "/diagnostics";
+  private static final String CONTAINER_LAUNCHED_KEY_SUFFIX = "/launched";
+  private static final String CONTAINER_KILLED_KEY_SUFFIX = "/killed";
+  private static final String CONTAINER_EXIT_CODE_KEY_SUFFIX = "/exitcode";
 
   private static final String CURRENT_MASTER_KEY_SUFFIX = "CurrentMasterKey";
   private static final String PREV_MASTER_KEY_SUFFIX = "PreviousMasterKey";
@@ -98,6 +115,8 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private static final String CONTAINER_TOKENS_PREV_MASTER_KEY =
       CONTAINER_TOKENS_KEY_PREFIX + PREV_MASTER_KEY_SUFFIX;
 
+  private static final byte[] EMPTY_VALUE = new byte[0];
+
   private DB db;
 
   public NMLeveldbStateStoreService() {
@@ -112,6 +131,246 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   protected void closeStorage() throws IOException {
     if (db != null) {
       db.close();
+    }
+  }
+
+
+  @Override
+  public List<RecoveredContainerState> loadContainersState()
+      throws IOException {
+    ArrayList<RecoveredContainerState> containers =
+        new ArrayList<RecoveredContainerState>();
+    LeveldbIterator iter = null;
+    try {
+      iter = new LeveldbIterator(db);
+      iter.seek(bytes(CONTAINERS_KEY_PREFIX));
+
+      while (iter.hasNext()) {
+        Entry<byte[],byte[]> entry = iter.peekNext();
+        String key = asString(entry.getKey());
+        if (!key.startsWith(CONTAINERS_KEY_PREFIX)) {
+          break;
+        }
+
+        int idEndPos = key.indexOf('/', CONTAINERS_KEY_PREFIX.length());
+        if (idEndPos < 0) {
+          throw new IOException("Unable to determine container in key: " + key);
+        }
+        ContainerId containerId = ConverterUtils.toContainerId(
+            key.substring(CONTAINERS_KEY_PREFIX.length(), idEndPos));
+        String keyPrefix = key.substring(0, idEndPos+1);
+        containers.add(loadContainerState(containerId, iter, keyPrefix));
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    } finally {
+      if (iter != null) {
+        iter.close();
+      }
+    }
+
+    return containers;
+  }
+
+  private RecoveredContainerState loadContainerState(ContainerId containerId,
+      LeveldbIterator iter, String keyPrefix) throws IOException {
+    RecoveredContainerState rcs = new RecoveredContainerState();
+    rcs.status = RecoveredContainerStatus.REQUESTED;
+    while (iter.hasNext()) {
+      Entry<byte[],byte[]> entry = iter.peekNext();
+      String key = asString(entry.getKey());
+      if (!key.startsWith(keyPrefix)) {
+        break;
+      }
+      iter.next();
+
+      String suffix = key.substring(keyPrefix.length()-1);  // start with '/'
+      if (suffix.equals(CONTAINER_REQUEST_KEY_SUFFIX)) {
+        rcs.startRequest = new StartContainerRequestPBImpl(
+            StartContainerRequestProto.parseFrom(entry.getValue()));
+      } else if (suffix.equals(CONTAINER_DIAGS_KEY_SUFFIX)) {
+        rcs.diagnostics = asString(entry.getValue());
+      } else if (suffix.equals(CONTAINER_LAUNCHED_KEY_SUFFIX)) {
+        if (rcs.status == RecoveredContainerStatus.REQUESTED) {
+          rcs.status = RecoveredContainerStatus.LAUNCHED;
+        }
+      } else if (suffix.equals(CONTAINER_KILLED_KEY_SUFFIX)) {
+        rcs.killed = true;
+      } else if (suffix.equals(CONTAINER_EXIT_CODE_KEY_SUFFIX)) {
+        rcs.status = RecoveredContainerStatus.COMPLETED;
+        rcs.exitCode = Integer.parseInt(asString(entry.getValue()));
+      } else {
+        throw new IOException("Unexpected container state key: " + key);
+      }
+    }
+    return rcs;
+  }
+
+  @Override
+  public void storeContainer(ContainerId containerId,
+      StartContainerRequest startRequest) throws IOException {
+    String key = CONTAINERS_KEY_PREFIX + containerId.toString()
+        + CONTAINER_REQUEST_KEY_SUFFIX;
+    try {
+      db.put(bytes(key),
+        ((StartContainerRequestPBImpl) startRequest).getProto().toByteArray());
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void storeContainerDiagnostics(ContainerId containerId,
+      StringBuilder diagnostics) throws IOException {
+    String key = CONTAINERS_KEY_PREFIX + containerId.toString()
+        + CONTAINER_DIAGS_KEY_SUFFIX;
+    try {
+      db.put(bytes(key), bytes(diagnostics.toString()));
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void storeContainerLaunched(ContainerId containerId)
+      throws IOException {
+    String key = CONTAINERS_KEY_PREFIX + containerId.toString()
+        + CONTAINER_LAUNCHED_KEY_SUFFIX;
+    try {
+      db.put(bytes(key), EMPTY_VALUE);
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void storeContainerKilled(ContainerId containerId)
+      throws IOException {
+    String key = CONTAINERS_KEY_PREFIX + containerId.toString()
+        + CONTAINER_KILLED_KEY_SUFFIX;
+    try {
+      db.put(bytes(key), EMPTY_VALUE);
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void storeContainerCompleted(ContainerId containerId,
+      int exitCode) throws IOException {
+    String key = CONTAINERS_KEY_PREFIX + containerId.toString()
+        + CONTAINER_EXIT_CODE_KEY_SUFFIX;
+    try {
+      db.put(bytes(key), bytes(Integer.toString(exitCode)));
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void removeContainer(ContainerId containerId)
+      throws IOException {
+    String keyPrefix = CONTAINERS_KEY_PREFIX + containerId.toString();
+    try {
+      WriteBatch batch = db.createWriteBatch();
+      try {
+        batch.delete(bytes(keyPrefix + CONTAINER_REQUEST_KEY_SUFFIX));
+        batch.delete(bytes(keyPrefix + CONTAINER_DIAGS_KEY_SUFFIX));
+        batch.delete(bytes(keyPrefix + CONTAINER_LAUNCHED_KEY_SUFFIX));
+        batch.delete(bytes(keyPrefix + CONTAINER_KILLED_KEY_SUFFIX));
+        batch.delete(bytes(keyPrefix + CONTAINER_EXIT_CODE_KEY_SUFFIX));
+        db.write(batch);
+      } finally {
+        batch.close();
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+
+  @Override
+  public RecoveredApplicationsState loadApplicationsState()
+      throws IOException {
+    RecoveredApplicationsState state = new RecoveredApplicationsState();
+    state.applications = new ArrayList<ContainerManagerApplicationProto>();
+    String keyPrefix = APPLICATIONS_KEY_PREFIX;
+    LeveldbIterator iter = null;
+    try {
+      iter = new LeveldbIterator(db);
+      iter.seek(bytes(keyPrefix));
+      while (iter.hasNext()) {
+        Entry<byte[], byte[]> entry = iter.next();
+        String key = asString(entry.getKey());
+        if (!key.startsWith(keyPrefix)) {
+          break;
+        }
+        state.applications.add(
+            ContainerManagerApplicationProto.parseFrom(entry.getValue()));
+      }
+
+      state.finishedApplications = new ArrayList<ApplicationId>();
+      keyPrefix = FINISHED_APPS_KEY_PREFIX;
+      iter.seek(bytes(keyPrefix));
+      while (iter.hasNext()) {
+        Entry<byte[], byte[]> entry = iter.next();
+        String key = asString(entry.getKey());
+        if (!key.startsWith(keyPrefix)) {
+          break;
+        }
+        ApplicationId appId =
+            ConverterUtils.toApplicationId(key.substring(keyPrefix.length()));
+        state.finishedApplications.add(appId);
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    } finally {
+      if (iter != null) {
+        iter.close();
+      }
+    }
+
+    return state;
+  }
+
+  @Override
+  public void storeApplication(ApplicationId appId,
+      ContainerManagerApplicationProto p) throws IOException {
+    String key = APPLICATIONS_KEY_PREFIX + appId;
+    try {
+      db.put(bytes(key), p.toByteArray());
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void storeFinishedApplication(ApplicationId appId)
+      throws IOException {
+    String key = FINISHED_APPS_KEY_PREFIX + appId;
+    try {
+      db.put(bytes(key), new byte[0]);
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void removeApplication(ApplicationId appId)
+      throws IOException {
+    try {
+      WriteBatch batch = db.createWriteBatch();
+      try {
+        String key = APPLICATIONS_KEY_PREFIX + appId;
+        batch.delete(bytes(key));
+        key = FINISHED_APPS_KEY_PREFIX + appId;
+        batch.delete(bytes(key));
+        db.write(batch);
+      } finally {
+        batch.close();
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
     }
   }
 
@@ -617,14 +876,14 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   }
 
 
-  NMDBSchemaVersion loadVersion() throws IOException {
+  Version loadVersion() throws IOException {
     byte[] data = db.get(bytes(DB_SCHEMA_VERSION_KEY));
     // if version is not stored previously, treat it as 1.0.
     if (data == null || data.length == 0) {
-      return NMDBSchemaVersion.newInstance(1, 0);
+      return Version.newInstance(1, 0);
     }
-    NMDBSchemaVersion version =
-        new NMDBSchemaVersionPBImpl(NMDBSchemaVersionProto.parseFrom(data));
+    Version version =
+        new VersionPBImpl(VersionProto.parseFrom(data));
     return version;
   }
 
@@ -634,14 +893,14 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   
   // Only used for test
   @VisibleForTesting
-  void storeVersion(NMDBSchemaVersion state) throws IOException {
+  void storeVersion(Version state) throws IOException {
     dbStoreVersion(state);
   }
   
-  private void dbStoreVersion(NMDBSchemaVersion state) throws IOException {
+  private void dbStoreVersion(Version state) throws IOException {
     String key = DB_SCHEMA_VERSION_KEY;
     byte[] data = 
-        ((NMDBSchemaVersionPBImpl) state).getProto().toByteArray();
+        ((VersionPBImpl) state).getProto().toByteArray();
     try {
       db.put(bytes(key), data);
     } catch (DBException e) {
@@ -649,7 +908,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     }
   }
 
-  NMDBSchemaVersion getCurrentVersion() {
+  Version getCurrentVersion() {
     return CURRENT_VERSION_INFO;
   }
   
@@ -664,9 +923,9 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
    *    upgrade NM state or remove incompatible old state.
    */
   private void checkVersion() throws IOException {
-    NMDBSchemaVersion loadedVersion = loadVersion();
+    Version loadedVersion = loadVersion();
     LOG.info("Loaded NM state version info " + loadedVersion);
-    if (loadedVersion != null && loadedVersion.equals(getCurrentVersion())) {
+    if (loadedVersion.equals(getCurrentVersion())) {
       return;
     }
     if (loadedVersion.isCompatibleTo(getCurrentVersion())) {

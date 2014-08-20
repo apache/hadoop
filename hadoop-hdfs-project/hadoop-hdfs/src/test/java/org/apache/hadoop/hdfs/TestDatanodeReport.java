@@ -21,19 +21,26 @@ import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
 
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
+import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.junit.Test;
 
 /**
  * This test ensures the all types of data node report work correctly.
  */
 public class TestDatanodeReport {
+  static final Log LOG = LogFactory.getLog(TestDatanodeReport.class);
   final static private Configuration conf = new HdfsConfiguration();
   final static private int NUM_OF_DATANODES = 4;
     
@@ -50,20 +57,18 @@ public class TestDatanodeReport {
     try {
       //wait until the cluster is up
       cluster.waitActive();
+      final String bpid = cluster.getNamesystem().getBlockPoolId();
+      final List<DataNode> datanodes = cluster.getDataNodes();
+      final DFSClient client = cluster.getFileSystem().dfs;
 
-      InetSocketAddress addr = new InetSocketAddress("localhost",
-          cluster.getNameNodePort());
-      DFSClient client = new DFSClient(addr, conf);
-
-      assertEquals(client.datanodeReport(DatanodeReportType.ALL).length,
-                   NUM_OF_DATANODES);
-      assertEquals(client.datanodeReport(DatanodeReportType.LIVE).length,
-                   NUM_OF_DATANODES);
-      assertEquals(client.datanodeReport(DatanodeReportType.DEAD).length, 0);
+      assertReports(NUM_OF_DATANODES, DatanodeReportType.ALL, client, datanodes, bpid);
+      assertReports(NUM_OF_DATANODES, DatanodeReportType.LIVE, client, datanodes, bpid);
+      assertReports(0, DatanodeReportType.DEAD, client, datanodes, bpid);
 
       // bring down one datanode
-      ArrayList<DataNode> datanodes = cluster.getDataNodes();
-      datanodes.remove(datanodes.size()-1).shutdown();
+      final DataNode last = datanodes.get(datanodes.size() - 1);
+      LOG.info("XXX shutdown datanode " + last.getDatanodeUuid());
+      last.shutdown();
 
       DatanodeInfo[] nodeInfo = client.datanodeReport(DatanodeReportType.DEAD);
       while (nodeInfo.length != 1) {
@@ -74,22 +79,59 @@ public class TestDatanodeReport {
         nodeInfo = client.datanodeReport(DatanodeReportType.DEAD);
       }
 
-      assertEquals(client.datanodeReport(DatanodeReportType.LIVE).length,
-                   NUM_OF_DATANODES-1);
-      assertEquals(client.datanodeReport(DatanodeReportType.ALL).length,
-                   NUM_OF_DATANODES);
+      assertReports(NUM_OF_DATANODES, DatanodeReportType.ALL, client, datanodes, null);
+      assertReports(NUM_OF_DATANODES - 1, DatanodeReportType.LIVE, client, datanodes, null);
+      assertReports(1, DatanodeReportType.DEAD, client, datanodes, null);
 
       Thread.sleep(5000);
       assertGauge("ExpiredHeartbeats", 1, getMetrics("FSNamesystem"));
-    }finally {
+    } finally {
       cluster.shutdown();
     }
   }
- 
-  public static void main(String[] args) throws Exception {
-    new TestDatanodeReport().testDatanodeReport();
+  
+  final static Comparator<StorageReport> CMP = new Comparator<StorageReport>() {
+    @Override
+    public int compare(StorageReport left, StorageReport right) {
+      return left.getStorage().getStorageID().compareTo(
+            right.getStorage().getStorageID());
+    }
+  };
+
+  static void assertReports(int numDatanodes, DatanodeReportType type,
+      DFSClient client, List<DataNode> datanodes, String bpid) throws IOException {
+    final DatanodeInfo[] infos = client.datanodeReport(type);
+    assertEquals(numDatanodes, infos.length);
+    final DatanodeStorageReport[] reports = client.getDatanodeStorageReport(type);
+    assertEquals(numDatanodes, reports.length);
+    
+    for(int i = 0; i < infos.length; i++) {
+      assertEquals(infos[i], reports[i].getDatanodeInfo());
+      
+      final DataNode d = findDatanode(infos[i].getDatanodeUuid(), datanodes);
+      if (bpid != null) {
+        //check storage
+        final StorageReport[] computed = reports[i].getStorageReports();
+        Arrays.sort(computed, CMP);
+        final StorageReport[] expected = d.getFSDataset().getStorageReports(bpid);
+        Arrays.sort(expected, CMP);
+  
+        assertEquals(expected.length, computed.length);
+        for(int j = 0; j < expected.length; j++) {
+          assertEquals(expected[j].getStorage().getStorageID(),
+                       computed[j].getStorage().getStorageID());
+        }
+      }
+    }
   }
   
+  static DataNode findDatanode(String id, List<DataNode> datanodes) {
+    for(DataNode d : datanodes) {
+      if (d.getDatanodeUuid().equals(id)) {
+        return d;
+      }
+    }
+    throw new IllegalStateException("Datnode " + id + " not in datanode list: "
+        + datanodes);
+  }
 }
-
-

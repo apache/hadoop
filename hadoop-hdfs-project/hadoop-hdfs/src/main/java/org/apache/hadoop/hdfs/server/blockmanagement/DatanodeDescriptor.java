@@ -234,18 +234,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
     updateHeartbeat(StorageReport.EMPTY_ARRAY, 0L, 0L, 0, 0);
   }
 
-  /**
-   * Add data-node to the block. Add block to the head of the list of blocks
-   * belonging to the data-node.
-   */
-  public boolean addBlock(String storageID, BlockInfo b) {
-    DatanodeStorageInfo s = getStorageInfo(storageID);
-    if (s != null) {
-      return s.addBlock(b);
-    }
-    return false;
-  }
-
   @VisibleForTesting
   public DatanodeStorageInfo getStorageInfo(String storageID) {
     synchronized (storageMap) {
@@ -257,6 +245,15 @@ public class DatanodeDescriptor extends DatanodeInfo {
       final Collection<DatanodeStorageInfo> storages = storageMap.values();
       return storages.toArray(new DatanodeStorageInfo[storages.size()]);
     }
+  }
+
+  public StorageReport[] getStorageReports() {
+    final DatanodeStorageInfo[] infos = getStorageInfos();
+    final StorageReport[] reports = new StorageReport[infos.length];
+    for(int i = 0; i < infos.length; i++) {
+      reports[i] = infos[i].toStorageReport();
+    }
+    return reports;
   }
 
   boolean hasStaleStorages() {
@@ -275,13 +272,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * data-node from the block.
    */
   boolean removeBlock(BlockInfo b) {
-    int index = b.findStorageInfo(this);
+    final DatanodeStorageInfo s = b.findStorageInfo(this);
     // if block exists on this datanode
-    if (index >= 0) {
-      DatanodeStorageInfo s = b.getStorageInfo(index);
-      if (s != null) {
-        return s.removeBlock(b);
-      }
+    if (s != null) {
+      return s.removeBlock(b);
     }
     return false;
   }
@@ -296,24 +290,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
       return s.removeBlock(b);
     }
     return false;
-  }
-
-  /**
-   * Replace specified old block with a new one in the DataNodeDescriptor.
-   *
-   * @param oldBlock - block to be replaced
-   * @param newBlock - a replacement block
-   * @return the new block
-   */
-  public BlockInfo replaceBlock(BlockInfo oldBlock, BlockInfo newBlock) {
-    int index = oldBlock.findStorageInfo(this);
-    DatanodeStorageInfo s = oldBlock.getStorageInfo(index);
-    boolean done = s.removeBlock(oldBlock);
-    assert done : "Old block should belong to the data-node when replacing";
-
-    done = s.addBlock(newBlock);
-    assert done : "New block should not belong to the data-node when replacing";
-    return newBlock;
   }
 
   public void resetBlocks() {

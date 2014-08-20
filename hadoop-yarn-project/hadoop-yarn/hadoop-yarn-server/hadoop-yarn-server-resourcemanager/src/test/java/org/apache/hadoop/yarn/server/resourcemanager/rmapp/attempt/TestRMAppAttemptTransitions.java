@@ -81,14 +81,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAllocatedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptLaunchFailedEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptNewSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRegistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUpdateSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
@@ -134,7 +133,8 @@ public class TestRMAppAttemptTransitions {
   private RMAppAttempt applicationAttempt;
 
   private Configuration conf = new Configuration();
-  private AMRMTokenSecretManager amRMTokenManager = spy(new AMRMTokenSecretManager(conf));
+  private AMRMTokenSecretManager amRMTokenManager =
+      spy(new AMRMTokenSecretManager(conf, rmContext));
   private ClientToAMTokenSecretManagerInRM clientToAMTokenManager =
       spy(new ClientToAMTokenSecretManagerInRM());
   private NMTokenSecretManagerInRM nmTokenManager =
@@ -347,7 +347,6 @@ public class TestRMAppAttemptTransitions {
       assertNull(applicationAttempt.createClientToken("some client"));
     }
     assertNull(applicationAttempt.createClientToken(null));
-    assertNotNull(applicationAttempt.getAMRMToken());
     // Check events
     verify(masterService).
         registerAppAttempt(applicationAttempt.getAppAttemptId());
@@ -443,7 +442,6 @@ public class TestRMAppAttemptTransitions {
     assertEquals(RMAppAttemptState.ALLOCATED, 
         applicationAttempt.getAppAttemptState());
     assertEquals(amContainer, applicationAttempt.getMasterContainer());
-    
     // Check events
     verify(applicationMasterLauncher).handle(any(AMLauncherEvent.class));
     verify(scheduler, times(2)).
@@ -570,15 +568,15 @@ public class TestRMAppAttemptTransitions {
     submitApplicationAttempt();
     applicationAttempt.handle(
         new RMAppAttemptEvent(
-            applicationAttempt.getAppAttemptId(), 
+            applicationAttempt.getAppAttemptId(),
             RMAppAttemptEventType.ATTEMPT_ADDED));
     
     if(unmanagedAM){
       assertEquals(RMAppAttemptState.LAUNCHED_UNMANAGED_SAVING, 
           applicationAttempt.getAppAttemptState());
       applicationAttempt.handle(
-          new RMAppAttemptNewSavedEvent(
-              applicationAttempt.getAppAttemptId(), null));
+        new RMAppAttemptEvent(applicationAttempt.getAppAttemptId(),
+            RMAppAttemptEventType.ATTEMPT_NEW_SAVED));
     }
     
     testAppAttemptScheduledState();
@@ -616,8 +614,8 @@ public class TestRMAppAttemptTransitions {
     assertEquals(RMAppAttemptState.ALLOCATED_SAVING, 
         applicationAttempt.getAppAttemptState());
     applicationAttempt.handle(
-        new RMAppAttemptNewSavedEvent(
-            applicationAttempt.getAppAttemptId(), null));
+        new RMAppAttemptEvent(applicationAttempt.getAppAttemptId(),
+            RMAppAttemptEventType.ATTEMPT_NEW_SAVED));
     
     testAppAttemptAllocatedState(container);
     
@@ -696,8 +694,8 @@ public class TestRMAppAttemptTransitions {
     assertEquals(RMAppAttemptState.FINAL_SAVING,
       applicationAttempt.getAppAttemptState());
     applicationAttempt.handle(
-      new RMAppAttemptUpdateSavedEvent(
-          applicationAttempt.getAppAttemptId(), null));
+      new RMAppAttemptEvent(applicationAttempt.getAppAttemptId(), 
+          RMAppAttemptEventType.ATTEMPT_UPDATE_SAVED));
   }
 
   @Test
@@ -779,6 +777,32 @@ public class TestRMAppAttemptTransitions {
     assertEquals(YarnApplicationAttemptState.SCHEDULED,
         applicationAttempt.createApplicationAttemptState());
     testAppAttemptKilledState(null, EMPTY_DIAGNOSTICS);
+  }
+
+  @Test
+  public void testAMCrashAtScheduled() {
+    // This is to test sending CONTAINER_FINISHED event at SCHEDULED state.
+    // Verify the state transition is correct.
+    scheduleApplicationAttempt();
+    ContainerStatus cs =
+        SchedulerUtils.createAbnormalContainerStatus(
+            BuilderUtils.newContainerId(
+                applicationAttempt.getAppAttemptId(), 1),
+            SchedulerUtils.LOST_CONTAINER);
+    // send CONTAINER_FINISHED event at SCHEDULED state,
+    // The state should be FINAL_SAVING with previous state SCHEDULED
+    applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
+        applicationAttempt.getAppAttemptId(), cs));
+    // createApplicationAttemptState will return previous state (SCHEDULED),
+    // if the current state is FINAL_SAVING.
+    assertEquals(YarnApplicationAttemptState.SCHEDULED,
+        applicationAttempt.createApplicationAttemptState());
+    // send ATTEMPT_UPDATE_SAVED event,
+    // verify the state is changed to state FAILED.
+    sendAttemptUpdateSavedEvent(applicationAttempt);
+    assertEquals(RMAppAttemptState.FAILED,
+        applicationAttempt.getAppAttemptState());
+    verifyApplicationAttemptFinished(RMAppAttemptState.FAILED);
   }
 
   @Test

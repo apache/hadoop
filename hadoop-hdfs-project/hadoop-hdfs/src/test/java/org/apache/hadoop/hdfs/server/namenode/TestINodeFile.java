@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -521,6 +522,7 @@ public class TestINodeFile {
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
         DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT);
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
@@ -568,6 +570,20 @@ public class TestINodeFile {
       // ClientProtocol#getPreferredBlockSize
       assertEquals(testFileBlockSize,
           nnRpc.getPreferredBlockSize(testFileInodePath.toString()));
+
+      /*
+       * HDFS-6749 added missing calls to FSDirectory.resolvePath in the
+       * following four methods. The calls below ensure that
+       * /.reserved/.inodes paths work properly. No need to check return
+       * values as these methods are tested elsewhere.
+       */
+      {
+        fs.isFileClosed(testFileInodePath);
+        fs.getAclStatus(testFileInodePath);
+        fs.getXAttrs(testFileInodePath);
+        fs.listXAttrs(testFileInodePath);
+        fs.access(testFileInodePath, FsAction.READ_WRITE);
+      }
       
       // symbolic link related tests
       

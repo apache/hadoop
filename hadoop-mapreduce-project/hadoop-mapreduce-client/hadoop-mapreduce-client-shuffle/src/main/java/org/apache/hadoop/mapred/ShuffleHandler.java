@@ -82,13 +82,13 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.NMDBSchemaVersionProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
 import org.apache.hadoop.yarn.server.api.AuxiliaryService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
-import org.apache.hadoop.yarn.server.nodemanager.recovery.records.NMDBSchemaVersion;
-import org.apache.hadoop.yarn.server.nodemanager.recovery.records.impl.pb.NMDBSchemaVersionPBImpl;
+import org.apache.hadoop.yarn.server.records.Version;
+import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.fusesource.leveldbjni.JniDBFactory;
@@ -151,8 +151,8 @@ public class ShuffleHandler extends AuxiliaryService {
 
   private static final String STATE_DB_NAME = "mapreduce_shuffle_state";
   private static final String STATE_DB_SCHEMA_VERSION_KEY = "shuffle-schema-version";
-  protected static final NMDBSchemaVersion CURRENT_VERSION_INFO = 
-      NMDBSchemaVersion.newInstance(1, 0);
+  protected static final Version CURRENT_VERSION_INFO = 
+      Version.newInstance(1, 0);
 
   private int port;
   private ChannelFactory selector;
@@ -491,21 +491,21 @@ public class ShuffleHandler extends AuxiliaryService {
   }
   
   @VisibleForTesting
-  NMDBSchemaVersion loadVersion() throws IOException {
+  Version loadVersion() throws IOException {
     byte[] data = stateDb.get(bytes(STATE_DB_SCHEMA_VERSION_KEY));
     // if version is not stored previously, treat it as 1.0.
     if (data == null || data.length == 0) {
-      return NMDBSchemaVersion.newInstance(1, 0);
+      return Version.newInstance(1, 0);
     }
-    NMDBSchemaVersion version =
-        new NMDBSchemaVersionPBImpl(NMDBSchemaVersionProto.parseFrom(data));
+    Version version =
+        new VersionPBImpl(VersionProto.parseFrom(data));
     return version;
   }
 
-  private void storeSchemaVersion(NMDBSchemaVersion version) throws IOException {
+  private void storeSchemaVersion(Version version) throws IOException {
     String key = STATE_DB_SCHEMA_VERSION_KEY;
     byte[] data = 
-        ((NMDBSchemaVersionPBImpl) version).getProto().toByteArray();
+        ((VersionPBImpl) version).getProto().toByteArray();
     try {
       stateDb.put(bytes(key), data);
     } catch (DBException e) {
@@ -519,11 +519,11 @@ public class ShuffleHandler extends AuxiliaryService {
   
   // Only used for test
   @VisibleForTesting
-  void storeVersion(NMDBSchemaVersion version) throws IOException {
+  void storeVersion(Version version) throws IOException {
     storeSchemaVersion(version);
   }
 
-  protected NMDBSchemaVersion getCurrentVersion() {
+  protected Version getCurrentVersion() {
     return CURRENT_VERSION_INFO;
   }
   
@@ -538,7 +538,7 @@ public class ShuffleHandler extends AuxiliaryService {
    *    upgrade shuffle info or remove incompatible old state.
    */
   private void checkVersion() throws IOException {
-    NMDBSchemaVersion loadedVersion = loadVersion();
+    Version loadedVersion = loadVersion();
     LOG.info("Loaded state DB schema version info " + loadedVersion);
     if (loadedVersion.equals(getCurrentVersion())) {
       return;

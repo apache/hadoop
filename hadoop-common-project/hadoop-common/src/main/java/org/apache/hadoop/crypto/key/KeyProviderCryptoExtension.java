@@ -21,11 +21,13 @@ package org.apache.hadoop.crypto.key;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
+
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import com.google.common.base.Preconditions;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
@@ -97,7 +99,7 @@ public class KeyProviderCryptoExtension extends
     public static EncryptedKeyVersion createForDecryption(String
         encryptionKeyVersionName, byte[] encryptedKeyIv,
         byte[] encryptedKeyMaterial) {
-      KeyVersion encryptedKeyVersion = new KeyVersion(null, null,
+      KeyVersion encryptedKeyVersion = new KeyVersion(null, EEK,
           encryptedKeyMaterial);
       return new EncryptedKeyVersion(null, encryptionKeyVersionName,
           encryptedKeyIv, encryptedKeyVersion);
@@ -217,6 +219,13 @@ public class KeyProviderCryptoExtension extends
   private static class DefaultCryptoExtension implements CryptoExtension {
 
     private final KeyProvider keyProvider;
+    private static final ThreadLocal<SecureRandom> RANDOM = 
+        new ThreadLocal<SecureRandom>() {
+      @Override
+      protected SecureRandom initialValue() {
+        return new SecureRandom();
+      }
+    };
 
     private DefaultCryptoExtension(KeyProvider keyProvider) {
       this.keyProvider = keyProvider;
@@ -231,10 +240,10 @@ public class KeyProviderCryptoExtension extends
           "No KeyVersion exists for key '%s' ", encryptionKeyName);
       // Generate random bytes for new key and IV
       Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding");
-      SecureRandom random = SecureRandom.getInstance("SHA1PRNG");
       final byte[] newKey = new byte[encryptionKey.getMaterial().length];
-      random.nextBytes(newKey);
-      final byte[] iv = random.generateSeed(cipher.getBlockSize());
+      RANDOM.get().nextBytes(newKey);
+      final byte[] iv = new byte[cipher.getBlockSize()];
+      RANDOM.get().nextBytes(iv);
       // Encryption key IV is derived from new key's IV
       final byte[] encryptionIV = EncryptedKeyVersion.deriveIV(iv);
       // Encrypt the new key
@@ -258,6 +267,13 @@ public class KeyProviderCryptoExtension extends
           keyProvider.getKeyVersion(encryptionKeyVersionName);
       Preconditions.checkNotNull(encryptionKey,
           "KeyVersion name '%s' does not exist", encryptionKeyVersionName);
+      Preconditions.checkArgument(
+              encryptedKeyVersion.getEncryptedKeyVersion().getVersionName()
+                    .equals(KeyProviderCryptoExtension.EEK),
+                "encryptedKey version name must be '%s', is '%s'",
+                KeyProviderCryptoExtension.EEK,
+                encryptedKeyVersion.getEncryptedKeyVersion().getVersionName()
+            );
       final byte[] encryptionKeyMaterial = encryptionKey.getMaterial();
       // Encryption key IV is determined from encrypted key's IV
       final byte[] encryptionIV =

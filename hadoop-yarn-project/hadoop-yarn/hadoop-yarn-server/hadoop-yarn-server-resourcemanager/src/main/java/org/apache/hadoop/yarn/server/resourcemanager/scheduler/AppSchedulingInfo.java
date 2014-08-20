@@ -54,7 +54,7 @@ public class AppSchedulingInfo {
   private static final Log LOG = LogFactory.getLog(AppSchedulingInfo.class);
   private final ApplicationAttemptId applicationAttemptId;
   final ApplicationId applicationId;
-  private final String queueName;
+  private String queueName;
   Queue queue;
   final String user;
   // TODO making containerIdCounter long
@@ -360,7 +360,7 @@ public class AppSchedulingInfo {
       List<ResourceRequest> resourceRequests) {
     // Update future requirements
     decrementOutstanding(offSwitchRequest);
-    // Update cloned RackLocal and OffRack requests for recovery
+    // Update cloned OffRack requests for recovery
     resourceRequests.add(cloneResourceRequest(offSwitchRequest));
   }
 
@@ -410,6 +410,7 @@ public class AppSchedulingInfo {
     activeUsersManager = newQueue.getActiveUsersManager();
     activeUsersManager.activateApplication(user, applicationId);
     this.queue = newQueue;
+    this.queueName = newQueue.getQueueName();
   }
 
   synchronized public void stop(RMAppAttemptState rmAppAttemptFinalState) {

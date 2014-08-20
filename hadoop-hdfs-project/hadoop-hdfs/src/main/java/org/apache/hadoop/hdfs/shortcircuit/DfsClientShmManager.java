@@ -271,12 +271,12 @@ public class DfsClientShmManager implements Closeable {
             loading = false;
             finishedLoading.signalAll();
           }
-          if (shm.isStale()) {
+          if (shm.isDisconnected()) {
             // If the peer closed immediately after the shared memory segment
             // was created, the DomainSocketWatcher callback might already have
-            // fired and marked the shm as stale.  In this case, we obviously
-            // don't want to add the SharedMemorySegment to our list of valid
-            // not-full segments.
+            // fired and marked the shm as disconnected.  In this case, we
+            // obviously don't want to add the SharedMemorySegment to our list
+            // of valid not-full segments.
             if (LOG.isDebugEnabled()) {
               LOG.debug(this + ": the UNIX domain socket associated with " +
                   "this short-circuit memory closed before we could make " +
@@ -299,7 +299,7 @@ public class DfsClientShmManager implements Closeable {
     void freeSlot(Slot slot) {
       DfsClientShm shm = (DfsClientShm)slot.getShm();
       shm.unregisterSlot(slot.getSlotIdx());
-      if (shm.isStale()) {
+      if (shm.isDisconnected()) {
         // Stale shared memory segments should not be tracked here.
         Preconditions.checkState(!full.containsKey(shm.getShmId()));
         Preconditions.checkState(!notFull.containsKey(shm.getShmId()));

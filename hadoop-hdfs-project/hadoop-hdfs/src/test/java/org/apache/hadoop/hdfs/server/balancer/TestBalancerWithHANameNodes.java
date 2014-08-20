@@ -44,7 +44,7 @@ public class TestBalancerWithHANameNodes {
   ClientProtocol client;
 
   static {
-    Balancer.setBlockMoveWaitTime(1000L);
+    Dispatcher.setBlockMoveWaitTime(1000L);
   }
 
   /**
@@ -97,10 +97,10 @@ public class TestBalancerWithHANameNodes {
       Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
       assertEquals(1, namenodes.size());
       assertTrue(namenodes.contains(HATestUtil.getLogicalUri(cluster)));
-      final int r = Balancer.run(namenodes, Balancer.Parameters.DEFALUT, conf);
-      assertEquals(Balancer.ReturnStatus.SUCCESS.code, r);
+      final int r = Balancer.run(namenodes, Balancer.Parameters.DEFAULT, conf);
+      assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
       TestBalancer.waitForBalancer(totalUsedSpace, totalCapacity, client,
-          cluster);
+          cluster, Balancer.Parameters.DEFAULT);
     } finally {
       cluster.shutdown();
     }

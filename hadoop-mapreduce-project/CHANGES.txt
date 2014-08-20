@@ -83,6 +83,9 @@ Trunk (Unreleased)
     MAPREDUCE-5912. Task.calculateOutputSize does not handle Windows files after
     MAPREDUCE-5196. (Remus Rusanu via cnauroth)
 
+    MAPREDUCE-6019. MapReduce changes for exposing YARN/MR endpoints on multiple
+    interfaces. (Craig Welch, Milan Potocnik, Arpit Agarwal via xgong)
+
   BUG FIXES
 
     MAPREDUCE-5714. Removed forceful JVM exit in shutDownJob.  
@@ -162,6 +165,15 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5963. ShuffleHandler DB schema should be versioned with
     compatible/incompatible changes (Junping Du via jlowe)
 
+    MAPREDUCE-883. harchive: Document how to unarchive (Akira AJISAKA and
+      Koji Noguchi via aw)
+
+    MAPREDUCE-4791. Javadoc for KeyValueTextInputFormat should include default
+      separator and how to change it (Akira AJISAKA via aw)
+
+    MAPREDUCE-5906. Inconsistent configuration in property
+      "mapreduce.reduce.shuffle.input.buffer.percent" (Akira AJISAKA via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -177,6 +189,52 @@ Release 2.6.0 - UNRELEASED
 
     MAPREDUCE-5756. CombineFileInputFormat.getSplits() including directories
     in its results (Jason Dere via jlowe)
+
+    MAPREDUCE-6014. New task status field in task attempts table can lead to
+    an empty web page (Mit Desai via jlowe)
+
+    MAPREDUCE-6021. MR AM should have working directory in LD_LIBRARY_PATH
+    (jlowe)
+
+    MAPREDUCE-6010. HistoryServerFileSystemStateStore fails to update tokens
+    (jlowe)
+
+    MAPREDUCE-5878. some standard JDK APIs are not part of system classes
+    defaults (Sangjin Lee via jlowe)
+
+    MAPREDUCE-5944. Remove MRv1 commands from CommandsManual.apt.vm
+      (Akira AJISAKA via aw)
+
+    MAPREDUCE-5943. Separate mapred commands from CommandManual.apt.vm
+      (Akira AJISAKA via aw)
+
+    MAPREDUCE-5363. Fix doc and spelling for TaskCompletionEvent#getTaskStatus
+      and getStatus (Akira AJISAKA via aw)
+
+    MAPREDUCE-5595. Typo in MergeManagerImpl.java (Akira AJISAKA via aw)
+
+    MAPREDUCE-5597. Missing alternatives in javadocs for deprecated constructors
+     in mapreduce.Job (Akira AJISAKA via aw)
+
+    MAPREDUCE-5950. incorrect description in distcp2 document (Akira AJISAKA
+      via aw)
+
+    MAPREDUCE-5998. CompositeInputFormat javadoc is broken (Akira AJISAKA via
+      aw)
+
+    MAPREDUCE-5999. Fix dead link in InputFormat javadoc (Akira AJISAKA via aw)
+
+    MAPREDUCE-6032. Made MR jobs write job history files on the default FS when
+    the current context's FS is different. (Benjamin Zhitomirsky via zjshen)
+
+    MAPREDUCE-6024. Shortened the time when Fetcher is stuck in retrying before
+    concluding the failure by configuration. (Yunjiong Zhao via zjshen)
+
+    MAPREDUCE-6036. TestJobEndNotifier fails intermittently in branch-2 (chang
+    li via jlowe)
+
+    MAPREDUCE-6012. DBInputSplit creates invalid ranges on Oracle. 
+    (Wei Yan via kasha)
 
 Release 2.5.0 - UNRELEASED
 
@@ -259,6 +317,9 @@ Release 2.5.0 - UNRELEASED
 
   BUG FIXES 
 
+    MAPREDUCE-6033. Updated access check for displaying job information 
+    (Yu Gao via Eric Yang)
+
     MAPREDUCE-5759. Remove unnecessary conf load in Limits (Sandy Ryza)
 
     MAPREDUCE-5014. Extend Distcp to accept a custom CopyListing.
@@ -324,6 +385,9 @@ Release 2.5.0 - UNRELEASED
 
     MAPREDUCE-5952. LocalContainerLauncher#renameMapOutputForReduce incorrectly 
     assumes a single dir for mapOutIndex. (Gera Shegalov via kasha)
+
+    MAPREDUCE-6002. Made MR task avoid reporting error to AM when the task process
+    is shutting down. (Wangda Tan via zjshen)
 
 Release 2.4.1 - 2014-06-23 
 

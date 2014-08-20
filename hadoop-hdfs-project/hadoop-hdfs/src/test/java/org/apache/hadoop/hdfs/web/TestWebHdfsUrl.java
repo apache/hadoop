@@ -31,6 +31,7 @@ import java.util.Arrays;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hdfs.web.resources.GetOpParam;
 import org.apache.hadoop.hdfs.web.resources.PutOpParam;
 import org.apache.hadoop.hdfs.web.resources.TokenArgumentParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
+import org.apache.hadoop.hdfs.web.resources.FsActionParam;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
@@ -282,6 +284,28 @@ public class TestWebHdfsUrl {
             new DoAsParam(ugi.getShortUserName()).toString()
         },
         fileStatusUrl);    
+  }
+
+  @Test(timeout=60000)
+  public void testCheckAccessUrl() throws IOException {
+    Configuration conf = new Configuration();
+
+    UserGroupInformation ugi =
+        UserGroupInformation.createRemoteUser("test-user");
+    UserGroupInformation.setLoginUser(ugi);
+
+    WebHdfsFileSystem webhdfs = getWebHdfsFileSystem(ugi, conf);
+    Path fsPath = new Path("/p1");
+
+    URL checkAccessUrl = webhdfs.toUrl(GetOpParam.Op.CHECKACCESS,
+        fsPath, new FsActionParam(FsAction.READ_WRITE));
+    checkQueryParams(
+        new String[]{
+            GetOpParam.Op.CHECKACCESS.toQueryString(),
+            new UserParam(ugi.getShortUserName()).toString(),
+            FsActionParam.NAME + "=" + FsAction.READ_WRITE.SYMBOL
+        },
+        checkAccessUrl);
   }
   
   private void checkQueryParams(String[] expected, URL url) {

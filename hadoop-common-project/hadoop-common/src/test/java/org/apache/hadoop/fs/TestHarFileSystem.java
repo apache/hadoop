@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
@@ -201,6 +202,8 @@ public class TestHarFileSystem {
     public void removeXAttr(Path path, String name) throws IOException;
 
     public AclStatus getAclStatus(Path path) throws IOException;
+
+    public void access(Path path, FsAction mode) throws IOException;
   }
 
   @Test

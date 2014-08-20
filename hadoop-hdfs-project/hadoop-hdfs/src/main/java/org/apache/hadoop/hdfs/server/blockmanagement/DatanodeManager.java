@@ -135,7 +135,10 @@ public class DatanodeManager {
   
   /** The number of stale DataNodes */
   private volatile int numStaleNodes;
-  
+
+  /** The number of stale storages */
+  private volatile int numStaleStorages;
+
   /**
    * Whether or not this cluster has ever consisted of more than 1 rack,
    * according to the NetworkTopology.
@@ -1140,6 +1143,22 @@ public class DatanodeManager {
    */
   public int getNumStaleNodes() {
     return this.numStaleNodes;
+  }
+
+  /**
+   * Get the number of content stale storages.
+   */
+  public int getNumStaleStorages() {
+    return numStaleStorages;
+  }
+
+  /**
+   * Set the number of content stale storages.
+   *
+   * @param numStaleStorages The number of content stale storages.
+   */
+  void setNumStaleStorages(int numStaleStorages) {
+    this.numStaleStorages = numStaleStorages;
   }
 
   /** Fetch live and dead datanodes. */

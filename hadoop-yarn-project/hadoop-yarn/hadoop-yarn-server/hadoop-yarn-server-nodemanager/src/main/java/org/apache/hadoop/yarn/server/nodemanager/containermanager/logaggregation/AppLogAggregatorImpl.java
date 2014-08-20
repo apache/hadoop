@@ -70,6 +70,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   private final BlockingQueue<ContainerId> pendingContainers;
   private final AtomicBoolean appFinishing = new AtomicBoolean();
   private final AtomicBoolean appAggregationFinished = new AtomicBoolean();
+  private final AtomicBoolean aborted = new AtomicBoolean();
   private final Map<ApplicationAccessType, String> appAcls;
 
   private LogWriter writer = null;
@@ -150,7 +151,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   private void doAppLogAggregation() {
     ContainerId containerId;
 
-    while (!this.appFinishing.get()) {
+    while (!this.appFinishing.get() && !this.aborted.get()) {
       synchronized(this) {
         try {
           wait(THREAD_SLEEP_TIME);
@@ -159,6 +160,10 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
           this.appFinishing.set(true);
         }
       }
+    }
+
+    if (this.aborted.get()) {
+      return;
     }
 
     // Application is finished. Finish pending-containers
@@ -253,6 +258,13 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   public synchronized void finishLogAggregation() {
     LOG.info("Application just finished : " + this.applicationId);
     this.appFinishing.set(true);
+    this.notifyAll();
+  }
+
+  @Override
+  public synchronized void abortLogAggregation() {
+    LOG.info("Aborting log aggregation for " + this.applicationId);
+    this.aborted.set(true);
     this.notifyAll();
   }
 }

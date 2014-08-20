@@ -81,7 +81,7 @@ public class TestDFSRollback {
         break;
       case DATA_NODE:
         assertEquals(
-            UpgradeUtilities.checksumContents(nodeType, curDir),
+            UpgradeUtilities.checksumContents(nodeType, curDir, false),
             UpgradeUtilities.checksumMasterDataNodeContents());
         break;
       }

@@ -40,9 +40,8 @@ class FsVolumeList {
   private final VolumeChoosingPolicy<FsVolumeImpl> blockChooser;
   private volatile int numFailedVolumes;
 
-  FsVolumeList(List<FsVolumeImpl> volumes, int failedVols,
+  FsVolumeList(int failedVols,
       VolumeChoosingPolicy<FsVolumeImpl> blockChooser) {
-    this.volumes = Collections.unmodifiableList(volumes);
     this.blockChooser = blockChooser;
     this.numFailedVolumes = failedVols;
   }
@@ -100,12 +99,6 @@ class FsVolumeList {
       remaining += vol.getAvailable();
     }
     return remaining;
-  }
-    
-  void initializeReplicaMaps(ReplicaMap globalReplicaMap) throws IOException {
-    for (FsVolumeImpl v : volumes) {
-      v.getVolumeMap(globalReplicaMap);
-    }
   }
   
   void getAllVolumesMap(final String bpid, final ReplicaMap volumeMap) throws IOException {
@@ -205,6 +198,19 @@ class FsVolumeList {
     return volumes.toString();
   }
 
+  /**
+   * Dynamically add new volumes to the existing volumes that this DN manages.
+   * @param newVolume the instance of new FsVolumeImpl.
+   */
+  synchronized void addVolume(FsVolumeImpl newVolume) {
+    // Make a copy of volumes to add new volumes.
+    final List<FsVolumeImpl> volumeList = volumes == null ?
+        new ArrayList<FsVolumeImpl>() :
+        new ArrayList<FsVolumeImpl>(volumes);
+    volumeList.add(newVolume);
+    volumes = Collections.unmodifiableList(volumeList);
+    FsDatasetImpl.LOG.info("Added new volume: " + newVolume.toString());
+  }
 
   void addBlockPool(final String bpid, final Configuration conf) throws IOException {
     long totalStartTime = Time.monotonicNow();

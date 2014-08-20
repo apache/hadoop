@@ -267,6 +267,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes{
   protected void startHACluster(int numOfNMs, boolean overrideClientRMService,
       boolean overrideRTS, boolean overrideApplicationMasterService)
       throws Exception {
+    conf.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
     conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     cluster =
         new MiniYARNClusterForHATesting(TestRMFailover.class.getName(), 2,

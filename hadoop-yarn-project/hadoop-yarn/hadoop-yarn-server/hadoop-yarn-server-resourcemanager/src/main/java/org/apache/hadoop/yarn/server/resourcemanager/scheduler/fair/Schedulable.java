@@ -27,20 +27,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
- * A Schedulable represents an entity that can launch tasks, such as a job
- * or a queue. It provides a common interface so that algorithms such as fair
- * sharing can be applied both within a queue and across queues. There are
- * currently two types of Schedulables: JobSchedulables, which represent a
- * single job, and QueueSchedulables, which allocate among jobs in their queue.
- *
- * Separate sets of Schedulables are used for maps and reduces. Each queue has
- * both a mapSchedulable and a reduceSchedulable, and so does each job.
+ * A Schedulable represents an entity that can be scheduled such as an
+ * application or a queue. It provides a common interface so that algorithms
+ * such as fair sharing can be applied both within a queue and across queues.
  *
  * A Schedulable is responsible for three roles:
- * 1) It can launch tasks through assignTask().
- * 2) It provides information about the job/queue to the scheduler, including:
+ * 1) Assign resources through {@link #assignContainer}.
+ * 2) It provides information about the app/queue to the scheduler, including:
  *    - Demand (maximum number of tasks required)
- *    - Number of currently running tasks
  *    - Minimum share (for queues)
  *    - Job/queue weight (for fair sharing)
  *    - Start time and priority (for FIFO)
@@ -57,69 +51,61 @@ import org.apache.hadoop.yarn.util.resource.Resources;
  */
 @Private
 @Unstable
-public abstract class Schedulable {
-  /** Fair share assigned to this Schedulable */
-  private Resource fairShare = Resources.createResource(0);
-
+public interface Schedulable {
   /**
    * Name of job/queue, used for debugging as well as for breaking ties in
    * scheduling order deterministically.
    */
-  public abstract String getName();
+  public String getName();
 
   /**
    * Maximum number of resources required by this Schedulable. This is defined as
    * number of currently utilized resources + number of unlaunched resources (that
    * are either not yet launched or need to be speculated).
    */
-  public abstract Resource getDemand();
+  public Resource getDemand();
 
   /** Get the aggregate amount of resources consumed by the schedulable. */
-  public abstract Resource getResourceUsage();
+  public Resource getResourceUsage();
 
   /** Minimum Resource share assigned to the schedulable. */
-  public abstract Resource getMinShare();
+  public Resource getMinShare();
 
   /** Maximum Resource share assigned to the schedulable. */
-  public abstract Resource getMaxShare();
+  public Resource getMaxShare();
 
   /** Job/queue weight in fair sharing. */
-  public abstract ResourceWeights getWeights();
+  public ResourceWeights getWeights();
 
   /** Start time for jobs in FIFO queues; meaningless for QueueSchedulables.*/
-  public abstract long getStartTime();
+  public long getStartTime();
 
  /** Job priority for jobs in FIFO queues; meaningless for QueueSchedulables. */
-  public abstract Priority getPriority();
+  public Priority getPriority();
 
   /** Refresh the Schedulable's demand and those of its children if any. */
-  public abstract void updateDemand();
+  public void updateDemand();
 
   /**
    * Assign a container on this node if possible, and return the amount of
    * resources assigned.
    */
-  public abstract Resource assignContainer(FSSchedulerNode node);
+  public Resource assignContainer(FSSchedulerNode node);
 
   /**
    * Preempt a container from this Schedulable if possible.
    */
-  public abstract RMContainer preemptContainer();
-
-  /** Assign a fair share to this Schedulable. */
-  public void setFairShare(Resource fairShare) {
-    this.fairShare = fairShare;
-  }
+  public RMContainer preemptContainer();
 
   /** Get the fair share assigned to this Schedulable. */
-  public Resource getFairShare() {
-    return fairShare;
-  }
+  public Resource getFairShare();
 
-  /** Convenient toString implementation for debugging. */
-  @Override
-  public String toString() {
-    return String.format("[%s, demand=%s, running=%s, share=%s, w=%s]",
-        getName(), getDemand(), getResourceUsage(), fairShare, getWeights());
-  }
+  /** Assign a fair share to this Schedulable. */
+  public void setFairShare(Resource fairShare);
+
+  /**
+   * Returns true if queue has atleast one app running. Always returns true for
+   * AppSchedulables.
+   */
+  public boolean isActive();
 }

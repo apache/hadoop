@@ -33,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.blockmanagement.CorruptReplicasMap.Reason;
 import org.junit.Test;
 
 
@@ -89,14 +90,14 @@ public class TestCorruptReplicaInfo {
       DatanodeDescriptor dn1 = DFSTestUtil.getLocalDatanodeDescriptor();
       DatanodeDescriptor dn2 = DFSTestUtil.getLocalDatanodeDescriptor();
       
-      crm.addToCorruptReplicasMap(getBlock(0), dn1, "TEST");
+      addToCorruptReplicasMap(crm, getBlock(0), dn1);
       assertEquals("Number of corrupt blocks not returning correctly",
                    1, crm.size());
-      crm.addToCorruptReplicasMap(getBlock(1), dn1, "TEST");
+      addToCorruptReplicasMap(crm, getBlock(1), dn1);
       assertEquals("Number of corrupt blocks not returning correctly",
                    2, crm.size());
       
-      crm.addToCorruptReplicasMap(getBlock(1), dn2, "TEST");
+      addToCorruptReplicasMap(crm, getBlock(1), dn2);
       assertEquals("Number of corrupt blocks not returning correctly",
                    2, crm.size());
       
@@ -109,7 +110,7 @@ public class TestCorruptReplicaInfo {
                    0, crm.size());
       
       for (Long block_id: block_ids) {
-        crm.addToCorruptReplicasMap(getBlock(block_id), dn1, "TEST");
+        addToCorruptReplicasMap(crm, getBlock(block_id), dn1);
       }
             
       assertEquals("Number of corrupt blocks not returning correctly",
@@ -126,5 +127,10 @@ public class TestCorruptReplicaInfo {
                 Arrays.equals(new long[]{8,9,10,11,12,13,14,15,16,17},
                               crm.getCorruptReplicaBlockIds(10, 7L)));
       
+  }
+  
+  private static void addToCorruptReplicasMap(CorruptReplicasMap crm,
+      Block blk, DatanodeDescriptor dn) {
+    crm.addToCorruptReplicasMap(blk, dn, "TEST", Reason.NONE);
   }
 }

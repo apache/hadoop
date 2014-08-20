@@ -327,6 +327,11 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
   }
 
   @Override
+  public void setStartRange(LongRange range) {
+    this.start = range;
+  }
+
+  @Override
   public void setStartRange(long begin, long end)
       throws IllegalArgumentException {
     if (begin > end) {
@@ -347,6 +352,11 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
       }
     }
     return this.finish;
+  }
+
+  @Override
+  public void setFinishRange(LongRange range) {
+    this.finish = range;
   }
 
   @Override

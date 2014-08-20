@@ -22,15 +22,18 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
+import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.ProviderUtils;
-import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
-import org.apache.hadoop.security.authentication.client.PseudoAuthenticator;
 import org.apache.hadoop.security.ssl.SSLFactory;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
 import org.apache.http.client.utils.URIBuilder;
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -50,6 +53,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivilegedExceptionAction;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -69,7 +73,10 @@ import com.google.common.base.Preconditions;
  * KMS client <code>KeyProvider</code> implementation.
  */
 @InterfaceAudience.Private
-public class KMSClientProvider extends KeyProvider implements CryptoExtension {
+public class KMSClientProvider extends KeyProvider implements CryptoExtension,
+    KeyProviderDelegationTokenExtension.DelegationTokenExtension {
+
+  public static final String TOKEN_KIND = "kms-dt";
 
   public static final String SCHEME_NAME = "kms";
 
@@ -229,6 +236,8 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension {
   private String kmsUrl;
   private SSLFactory sslFactory;
   private ConnectionConfigurator configurator;
+  private DelegationTokenAuthenticatedURL.Token authToken;
+  private UserGroupInformation loginUgi;
 
   @Override
   public String toString() {
@@ -309,6 +318,8 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension {
                 CommonConfigurationKeysPublic.
                     KMS_CLIENT_ENC_KEY_CACHE_NUM_REFILL_THREADS_DEFAULT),
             new EncryptedQueueRefiller());
+    authToken = new DelegationTokenAuthenticatedURL.Token();
+    loginUgi = UserGroupInformation.getCurrentUser();
   }
 
   private String createServiceURL(URL url) throws IOException {
@@ -325,12 +336,14 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension {
     try {
       StringBuilder sb = new StringBuilder();
       sb.append(kmsUrl);
-      sb.append(collection);
-      if (resource != null) {
-        sb.append("/").append(URLEncoder.encode(resource, UTF8));
-      }
-      if (subResource != null) {
-        sb.append("/").append(subResource);
+      if (collection != null) {
+        sb.append(collection);
+        if (resource != null) {
+          sb.append("/").append(URLEncoder.encode(resource, UTF8));
+          if (subResource != null) {
+            sb.append("/").append(subResource);
+          }
+        }
       }
       URIBuilder uriBuilder = new URIBuilder(sb.toString());
       if (parameters != null) {
@@ -365,14 +378,29 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension {
     return conn;
   }
 
-  private HttpURLConnection createConnection(URL url, String method)
+  private HttpURLConnection createConnection(final URL url, String method)
       throws IOException {
     HttpURLConnection conn;
     try {
-      AuthenticatedURL authUrl = new AuthenticatedURL(new PseudoAuthenticator(),
-          configurator);
-      conn = authUrl.openConnection(url, new AuthenticatedURL.Token());
-    } catch (AuthenticationException ex) {
+      // if current UGI is different from UGI at constructor time, behave as
+      // proxyuser
+      UserGroupInformation currentUgi = UserGroupInformation.getCurrentUser();
+      final String doAsUser =
+          (loginUgi.getShortUserName().equals(currentUgi.getShortUserName()))
+          ? null : currentUgi.getShortUserName();
+
+      // creating the HTTP connection using the current UGI at constructor time
+      conn = loginUgi.doAs(new PrivilegedExceptionAction<HttpURLConnection>() {
+        @Override
+        public HttpURLConnection run() throws Exception {
+          DelegationTokenAuthenticatedURL authUrl =
+              new DelegationTokenAuthenticatedURL(configurator);
+          return authUrl.openConnection(url, authToken, doAsUser);
+        }
+      });
+    } catch (IOException ex) {
+      throw ex;
+    } catch (Exception ex) {
       throw new IOException(ex);
     }
     conn.setUseCaches(false);
@@ -403,20 +431,27 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension {
     if (status != expected) {
       InputStream es = null;
       try {
-        es = conn.getErrorStream();
-        ObjectMapper mapper = new ObjectMapper();
-        Map json = mapper.readValue(es, Map.class);
-        String exClass = (String) json.get(
-            KMSRESTConstants.ERROR_EXCEPTION_JSON);
-        String exMsg = (String)
-            json.get(KMSRESTConstants.ERROR_MESSAGE_JSON);
         Exception toThrow;
-        try {
-          ClassLoader cl = KMSClientProvider.class.getClassLoader();
-          Class klass = cl.loadClass(exClass);
-          Constructor constr = klass.getConstructor(String.class);
-          toThrow = (Exception) constr.newInstance(exMsg);
-        } catch (Exception ex) {
+        String contentType = conn.getHeaderField(CONTENT_TYPE);
+        if (contentType != null &&
+            contentType.toLowerCase().startsWith(APPLICATION_JSON_MIME)) {
+          es = conn.getErrorStream();
+          ObjectMapper mapper = new ObjectMapper();
+          Map json = mapper.readValue(es, Map.class);
+          String exClass = (String) json.get(
+              KMSRESTConstants.ERROR_EXCEPTION_JSON);
+          String exMsg = (String)
+              json.get(KMSRESTConstants.ERROR_MESSAGE_JSON);
+          try {
+            ClassLoader cl = KMSClientProvider.class.getClassLoader();
+            Class klass = cl.loadClass(exClass);
+            Constructor constr = klass.getConstructor(String.class);
+            toThrow = (Exception) constr.newInstance(exMsg);
+          } catch (Exception ex) {
+            toThrow = new IOException(MessageFormat.format(
+                "HTTP status [{0}], {1}", status, conn.getResponseMessage()));
+          }
+        } else {
           toThrow = new IOException(MessageFormat.format(
               "HTTP status [{0}], {1}", status, conn.getResponseMessage()));
         }
@@ -512,7 +547,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension {
     List<String> batch = new ArrayList<String>();
     int batchLen = 0;
     for (String name : keyNames) {
-      int additionalLen = KMSRESTConstants.KEY_OP.length() + 1 + name.length();
+      int additionalLen = KMSRESTConstants.KEY.length() + 1 + name.length();
       batchLen += additionalLen;
       // topping at 1500 to account for initial URL and encoded names
       if (batchLen > 1500) {
@@ -536,7 +571,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension {
     for (String[] keySet : keySets) {
       if (keyNames.length > 0) {
         Map<String, Object> queryStr = new HashMap<String, Object>();
-        queryStr.put(KMSRESTConstants.KEY_OP, keySet);
+        queryStr.put(KMSRESTConstants.KEY, keySet);
         URL url = createURL(KMSRESTConstants.KEYS_METADATA_RESOURCE, null,
             null, queryStr);
         HttpURLConnection conn = createConnection(url, HTTP_GET);
@@ -653,7 +688,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension {
         encryptedKeyVersion.getEncryptedKeyVersion().getVersionName()
             .equals(KeyProviderCryptoExtension.EEK),
         "encryptedKey version name must be '%s', is '%s'",
-        KeyProviderCryptoExtension.EK,
+        KeyProviderCryptoExtension.EEK,
         encryptedKeyVersion.getEncryptedKeyVersion().getVersionName()
     );
     checkNotNull(encryptedKeyVersion.getEncryptedKeyVersion(), "encryptedKey");
@@ -727,6 +762,27 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension {
     } catch (ExecutionException e) {
       throw new IOException(e);
     }
+  }
+
+  @Override
+  public Token<?>[] addDelegationTokens(String renewer,
+      Credentials credentials) throws IOException {
+    Token<?>[] tokens;
+    URL url = createURL(null, null, null, null);
+    DelegationTokenAuthenticatedURL authUrl =
+        new DelegationTokenAuthenticatedURL(configurator);
+    try {
+      Token<?> token = authUrl.getDelegationToken(url, authToken, renewer);
+      if (token != null) {
+        credentials.addToken(token.getService(), token);
+        tokens = new Token<?>[] { token };
+      } else {
+        throw new IOException("Got NULL as delegation token");
+      }
+    } catch (AuthenticationException ex) {
+      throw new IOException(ex);
+    }
+    return tokens;
   }
 
 }

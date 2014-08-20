@@ -378,9 +378,15 @@ public class GenericOptionsParser {
     if (files == null) 
       return null;
     String[] fileArr = files.split(",");
+    if (fileArr.length == 0) {
+      throw new IllegalArgumentException("File name can't be empty string");
+    }
     String[] finalArr = new String[fileArr.length];
     for (int i =0; i < fileArr.length; i++) {
       String tmp = fileArr[i];
+      if (tmp.isEmpty()) {
+        throw new IllegalArgumentException("File name can't be empty string");
+      }
       String finalPath;
       URI pathURI;
       try {

@@ -55,16 +55,18 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.records.Version;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMDTSecretManagerState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.AMRMTokenSecretManagerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptNewSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
@@ -75,10 +77,9 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
   public static final Log LOG = LogFactory.getLog(RMStateStoreTestBase.class);
 
   static class TestDispatcher implements
-      Dispatcher, EventHandler<RMAppAttemptNewSavedEvent> {
+      Dispatcher, EventHandler<RMAppAttemptEvent> {
 
     ApplicationAttemptId attemptId;
-    Exception storedException;
 
     boolean notified = false;
 
@@ -89,9 +90,8 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     }
 
     @Override
-    public void handle(RMAppAttemptNewSavedEvent event) {
+    public void handle(RMAppAttemptEvent event) {
       assertEquals(attemptId, event.getApplicationAttemptId());
-      assertEquals(storedException, event.getStoredException());
       notified = true;
       synchronized (this) {
         notifyAll();
@@ -109,8 +109,8 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
   interface RMStateStoreHelper {
     RMStateStore getRMStateStore() throws Exception;
     boolean isFinalStateValid() throws Exception;
-    void writeVersion(RMStateVersion version) throws Exception;
-    RMStateVersion getCurrentVersion() throws Exception;
+    void writeVersion(Version version) throws Exception;
+    Version getCurrentVersion() throws Exception;
     boolean appExists(RMApp app) throws Exception;
   }
 
@@ -161,7 +161,6 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     when(mockAttempt.getClientTokenMasterKey())
         .thenReturn(clientTokenMasterKey);
     dispatcher.attemptId = attemptId;
-    dispatcher.storedException = null;
     store.storeNewApplicationAttempt(mockAttempt);
     waitNotify(dispatcher);
     return container.getId();
@@ -176,8 +175,12 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     TestDispatcher dispatcher = new TestDispatcher();
     store.setRMDispatcher(dispatcher);
 
-    AMRMTokenSecretManager appTokenMgr = spy(
-        new AMRMTokenSecretManager(conf));
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getStateStore()).thenReturn(store);
+
+    AMRMTokenSecretManager appTokenMgr =
+        spy(new AMRMTokenSecretManager(conf, rmContext));
+
     MasterKeyData masterKeyData = appTokenMgr.createNewMasterKey();
     when(appTokenMgr.getMasterKey()).thenReturn(masterKeyData);
 
@@ -192,8 +195,6 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     // create application token and client token key for attempt1
     Token<AMRMTokenIdentifier> appAttemptToken1 =
         generateAMRMToken(attemptId1, appTokenMgr);
-    HashSet<Token<?>> attemptTokenSet1 = new HashSet<Token<?>>();
-    attemptTokenSet1.add(appAttemptToken1);
     SecretKey clientTokenKey1 =
         clientToAMTokenMgr.createMasterKey(attemptId1);
 
@@ -208,8 +209,6 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     // create application token and client token key for attempt2
     Token<AMRMTokenIdentifier> appAttemptToken2 =
         generateAMRMToken(attemptId2, appTokenMgr);
-    HashSet<Token<?>> attemptTokenSet2 = new HashSet<Token<?>>();
-    attemptTokenSet2.add(appAttemptToken2);
     SecretKey clientTokenKey2 =
         clientToAMTokenMgr.createMasterKey(attemptId2);
 
@@ -274,10 +273,6 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     assertEquals(-1000, attemptState.getAMContainerExitStatus());
     // attempt1 container is loaded correctly
     assertEquals(containerId1, attemptState.getMasterContainer().getId());
-    // attempt1 applicationToken is loaded correctly
-    HashSet<Token<?>> savedTokens = new HashSet<Token<?>>();
-    savedTokens.addAll(attemptState.getAppAttemptCredentials().getAllTokens());
-    assertEquals(attemptTokenSet1, savedTokens);
     // attempt1 client token master key is loaded correctly
     assertArrayEquals(clientTokenKey1.getEncoded(),
         attemptState.getAppAttemptCredentials()
@@ -289,10 +284,6 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     assertEquals(attemptId2, attemptState.getAttemptId());
     // attempt2 container is loaded correctly
     assertEquals(containerId2, attemptState.getMasterContainer().getId());
-    // attempt2 applicationToken is loaded correctly
-    savedTokens.clear();
-    savedTokens.addAll(attemptState.getAppAttemptCredentials().getAllTokens());
-    assertEquals(attemptTokenSet2, savedTokens);
     // attempt2 client token master key is loaded correctly
     assertArrayEquals(clientTokenKey2.getEncoded(),
         attemptState.getAppAttemptCredentials()
@@ -471,13 +462,13 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     store.setRMDispatcher(new TestDispatcher());
 
     // default version
-    RMStateVersion defaultVersion = stateStoreHelper.getCurrentVersion();
+    Version defaultVersion = stateStoreHelper.getCurrentVersion();
     store.checkVersion();
     Assert.assertEquals(defaultVersion, store.loadVersion());
 
     // compatible version
-    RMStateVersion compatibleVersion =
-        RMStateVersion.newInstance(defaultVersion.getMajorVersion(),
+    Version compatibleVersion =
+        Version.newInstance(defaultVersion.getMajorVersion(),
           defaultVersion.getMinorVersion() + 2);
     stateStoreHelper.writeVersion(compatibleVersion);
     Assert.assertEquals(compatibleVersion, store.loadVersion());
@@ -486,8 +477,8 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     Assert.assertEquals(defaultVersion, store.loadVersion());
 
     // incompatible version
-    RMStateVersion incompatibleVersion =
-        RMStateVersion.newInstance(defaultVersion.getMajorVersion() + 2,
+    Version incompatibleVersion =
+        Version.newInstance(defaultVersion.getMajorVersion() + 2,
           defaultVersion.getMinorVersion());
     stateStoreHelper.writeVersion(incompatibleVersion);
     try {
@@ -576,4 +567,65 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
 
   }
 
+  public void testAMRMTokenSecretManagerStateStore(
+      RMStateStoreHelper stateStoreHelper) throws Exception {
+    System.out.println("Start testing");
+    RMStateStore store = stateStoreHelper.getRMStateStore();
+    TestDispatcher dispatcher = new TestDispatcher();
+    store.setRMDispatcher(dispatcher);
+
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getStateStore()).thenReturn(store);
+    Configuration conf = new YarnConfiguration();
+    AMRMTokenSecretManager appTokenMgr =
+        new AMRMTokenSecretManager(conf, rmContext);
+
+    //create and save the first masterkey
+    MasterKeyData firstMasterKeyData = appTokenMgr.createNewMasterKey();
+
+    AMRMTokenSecretManagerState state1 =
+        AMRMTokenSecretManagerState.newInstance(
+          firstMasterKeyData.getMasterKey(), null);
+    rmContext.getStateStore().storeOrUpdateAMRMTokenSecretManagerState(state1,
+      false);
+
+    // load state
+    store = stateStoreHelper.getRMStateStore();
+    store.setRMDispatcher(dispatcher);
+    RMState state = store.loadState();
+    Assert.assertNotNull(state.getAMRMTokenSecretManagerState());
+    Assert.assertEquals(firstMasterKeyData.getMasterKey(), state
+      .getAMRMTokenSecretManagerState().getCurrentMasterKey());
+    Assert.assertNull(state
+      .getAMRMTokenSecretManagerState().getNextMasterKey());
+
+    //create and save the second masterkey
+    MasterKeyData secondMasterKeyData = appTokenMgr.createNewMasterKey();
+    AMRMTokenSecretManagerState state2 =
+        AMRMTokenSecretManagerState
+          .newInstance(firstMasterKeyData.getMasterKey(),
+            secondMasterKeyData.getMasterKey());
+    rmContext.getStateStore().storeOrUpdateAMRMTokenSecretManagerState(state2,
+      true);
+
+    // load state
+    store = stateStoreHelper.getRMStateStore();
+    store.setRMDispatcher(dispatcher);
+    RMState state_2 = store.loadState();
+    Assert.assertNotNull(state_2.getAMRMTokenSecretManagerState());
+    Assert.assertEquals(firstMasterKeyData.getMasterKey(), state_2
+      .getAMRMTokenSecretManagerState().getCurrentMasterKey());
+    Assert.assertEquals(secondMasterKeyData.getMasterKey(), state_2
+      .getAMRMTokenSecretManagerState().getNextMasterKey());
+
+    // re-create the masterKeyData based on the recovered masterkey
+    // should have the same secretKey
+    appTokenMgr.recover(state_2);
+    Assert.assertEquals(appTokenMgr.getCurrnetMasterKeyData().getSecretKey(),
+      firstMasterKeyData.getSecretKey());
+    Assert.assertEquals(appTokenMgr.getNextMasterKeyData().getSecretKey(),
+      secondMasterKeyData.getSecretKey());
+
+    store.close();
+  }
 }

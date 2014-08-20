@@ -44,18 +44,24 @@ HDFS NFS Gateway
 
 * {Configuration}
 
-   The user running the NFS-gateway must be able to proxy all the users using the NFS mounts. 
-   For instance, if user 'nfsserver' is running the gateway, and users belonging to the groups 'nfs-users1'
-   and 'nfs-users2' use the NFS mounts, then in core-site.xml of the namenode, the following must be set
-   (NOTE: replace 'nfsserver' with the user name starting the gateway in your cluster):
+   The NFS-gateway uses proxy user to proxy all the users accessing the NFS mounts. 
+   In non-secure mode, the user running the gateway is the proxy user, while in secure mode the
+   user in Kerberos keytab is the proxy user. Suppose the proxy user is 'nfsserver'
+   and users belonging to the groups 'users-group1'
+   and 'users-group2' use the NFS mounts, then in core-site.xml of the NameNode, the following
+   two properities must be set and only NameNode needs restart after the configuration change
+   (NOTE: replace the string 'nfsserver' with the proxy user name in your cluster):
 
 ----
 <property>
   <name>hadoop.proxyuser.nfsserver.groups</name>
-  <value>nfs-users1,nfs-users2</value>
+  <value>root,users-group1,users-group2</value>
   <description>
-         The 'nfsserver' user is allowed to proxy all members of the 'nfs-users1' and 
-         'nfs-users2' groups. Set this to '*' to allow nfsserver user to proxy any group.
+         The 'nfsserver' user is allowed to proxy all members of the 'users-group1' and 
+         'users-group2' groups. Note that in most cases you will need to include the
+         group "root" because the user "root" (which usually belonges to "root" group) will
+         generally be the user that initially executes the mount on the NFS client system. 
+         Set this to '*' to allow nfsserver user to proxy any group.
   </description>
 </property>
 ----
@@ -72,7 +78,9 @@ HDFS NFS Gateway
 ----
 
    The above are the only required configuration for the NFS gateway in non-secure mode. For Kerberized
-   hadoop clusters, the following configurations need to be added to hdfs-site.xml:
+   hadoop clusters, the following configurations need to be added to hdfs-site.xml for the gateway (NOTE: replace 
+   string "nfsserver" with the proxy user name and ensure the user contained in the keytab is
+   also the same proxy user):
 
 ----
   <property>
@@ -87,6 +95,8 @@ HDFS NFS Gateway
     <value>nfsserver/_HOST@YOUR-REALM.COM</value>
   </property>
 ----
+  
+   The rest of the NFS gateway configurations are optional for both secure and non-secure mode.
 
    The AIX NFS client has a {{{https://issues.apache.org/jira/browse/HDFS-6549}few known issues}}
    that prevent it from working correctly by default with the HDFS NFS
@@ -108,7 +118,7 @@ HDFS NFS Gateway
    have been committed.
 
    It's strongly recommended for the users to update a few configuration properties based on their use
-   cases. All the related configuration properties can be added or updated in hdfs-site.xml.
+   cases. All the following configuration properties can be added or updated in hdfs-site.xml.
   
    * If the client mounts the export with access time update allowed, make sure the following 
     property is not disabled in the configuration file. Only NameNode needs to restart after 
@@ -144,36 +154,6 @@ HDFS NFS Gateway
     <value>/tmp/.hdfs-nfs</value>
   </property>
 ---- 
-
-   * For optimal performance, it is recommended that rtmax be updated to
-     1MB. However, note that this 1MB is a per client allocation, and not
-     from a shared memory pool, and therefore a larger value may adversely 
-     affect small reads, consuming a lot of memory. The maximum value of 
-     this property is 1MB.
-
-----
-<property>
-  <name>nfs.rtmax</name>
-  <value>1048576</value>
-  <description>This is the maximum size in bytes of a READ request
-    supported by the NFS gateway. If you change this, make sure you
-    also update the nfs mount's rsize(add rsize= # of bytes to the 
-    mount directive).
-  </description>
-</property>
-----
-
-----
-<property>
-  <name>nfs.wtmax</name>
-  <value>65536</value>
-  <description>This is the maximum size in bytes of a WRITE request
-    supported by the NFS gateway. If you change this, make sure you
-    also update the nfs mount's wsize(add wsize= # of bytes to the 
-    mount directive).
-  </description>
-</property>
-----
 
   * By default, the export can be mounted by any client. To better control the access,
     users can update the following property. The value string contains machine name and
@@ -229,7 +209,7 @@ HDFS NFS Gateway
    [[2]] Start package included portmap (needs root privileges):
 
 -------------------------
-     hadoop portmap
+     hdfs portmap
   
      OR
 
@@ -238,11 +218,13 @@ HDFS NFS Gateway
 
    [[3]] Start mountd and nfsd.
    
-     No root privileges are required for this command. However, ensure that the user starting
-     the Hadoop cluster and the user starting the NFS gateway are same.
+     No root privileges are required for this command. In non-secure mode, the NFS gateway
+     should be started by the proxy user mentioned at the beginning of this user guide. 
+     While in secure mode, any user can start NFS gateway 
+     as long as the user has read access to the Kerberos keytab defined in "nfs.keytab.file".
 
 -------------------------
-     hadoop nfs3
+     hdfs nfs3
 
      OR
 
@@ -339,7 +321,10 @@ HDFS NFS Gateway
 -------------------------------------------------------------------
 
   Then the users can access HDFS as part of the local file system except that, 
-  hard link and random write are not supported yet.
+  hard link and random write are not supported yet. To optimize the performance
+  of large file I/O, one can increase the NFS transfer size(rsize and wsize) during mount.
+  By default, NFS gateway supports 1MB as the maximum transfer size. For larger data
+  transfer size, one needs to update "nfs.rtmax" and "nfs.rtmax" in hdfs-site.xml.
 
 * {Allow mounts from unprivileged clients}
 

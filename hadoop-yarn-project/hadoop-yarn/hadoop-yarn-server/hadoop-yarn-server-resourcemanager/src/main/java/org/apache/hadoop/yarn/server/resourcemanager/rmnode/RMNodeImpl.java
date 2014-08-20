@@ -93,9 +93,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private final RMContext context;
   private final String hostName;
   private final int commandPort;
-  private final int httpPort;
+  private int httpPort;
   private final String nodeAddress; // The containerManager address
-  private final String httpAddress;
+  private String httpAddress;
   private volatile ResourceOption resourceOption;
   private final Node node;
 
@@ -456,6 +456,24 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     }
   }
 
+  private static void handleRunningAppOnNode(RMNodeImpl rmNode,
+      RMContext context, ApplicationId appId, NodeId nodeId) {
+    RMApp app = context.getRMApps().get(appId);
+
+    // if we failed getting app by appId, maybe something wrong happened, just
+    // add the app to the finishedApplications list so that the app can be
+    // cleaned up on the NM
+    if (null == app) {
+      LOG.warn("Cannot get RMApp by appId=" + appId
+          + ", just added it to finishedApplications list for cleanup");
+      rmNode.finishedApplications.add(appId);
+      return;
+    }
+
+    context.getDispatcher().getEventHandler()
+        .handle(new RMAppRunningOnNodeEvent(appId, nodeId));
+  }
+
   public static class AddNodeTransition implements
       SingleArcTransition<RMNodeImpl, RMNodeEvent> {
 
@@ -496,24 +514,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         new NodesListManagerEvent(
             NodesListManagerEventType.NODE_USABLE, rmNode));
     }
-
-    void handleRunningAppOnNode(RMNodeImpl rmNode, RMContext context,
-        ApplicationId appId, NodeId nodeId) {
-      RMApp app = context.getRMApps().get(appId);
-      
-      // if we failed getting app by appId, maybe something wrong happened, just
-      // add the app to the finishedApplications list so that the app can be
-      // cleaned up on the NM
-      if (null == app) {
-        LOG.warn("Cannot get RMApp by appId=" + appId
-            + ", just added it to finishedApplications list for cleanup");
-        rmNode.finishedApplications.add(appId);
-        return;
-      }
-
-      context.getDispatcher().getEventHandler()
-          .handle(new RMAppRunningOnNodeEvent(appId, nodeId));
-    }
   }
 
   public static class ReconnectNodeTransition implements
@@ -521,36 +521,22 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
     @Override
     public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
-      // Kill containers since node is rejoining.
-      rmNode.nodeUpdateQueue.clear();
-      rmNode.context.getDispatcher().getEventHandler().handle(
-          new NodeRemovedSchedulerEvent(rmNode));
-
-      RMNode newNode = ((RMNodeReconnectEvent)event).getReconnectedNode();
+      RMNodeReconnectEvent reconnectEvent = (RMNodeReconnectEvent) event;
+      RMNode newNode = reconnectEvent.getReconnectedNode();
       rmNode.nodeManagerVersion = newNode.getNodeManagerVersion();
-      if (rmNode.getTotalCapability().equals(newNode.getTotalCapability())
-          && rmNode.getHttpPort() == newNode.getHttpPort()) {
-        // Reset heartbeat ID since node just restarted.
-        rmNode.getLastNodeHeartBeatResponse().setResponseId(0);
-        if (rmNode.getState() != NodeState.UNHEALTHY) {
-          // Only add new node if old state is not UNHEALTHY
-          rmNode.context.getDispatcher().getEventHandler().handle(
-              new NodeAddedSchedulerEvent(rmNode));
+      rmNode.httpPort = newNode.getHttpPort();
+      rmNode.httpAddress = newNode.getHttpAddress();
+      rmNode.resourceOption = newNode.getResourceOption();
+
+      // Reset heartbeat ID since node just restarted.
+      rmNode.getLastNodeHeartBeatResponse().setResponseId(0);
+
+      if (null != reconnectEvent.getRunningApplications()) {
+        for (ApplicationId appId : reconnectEvent.getRunningApplications()) {
+          handleRunningAppOnNode(rmNode, rmNode.context, appId, rmNode.nodeId);
         }
-      } else {
-        // Reconnected node differs, so replace old node and start new node
-        switch (rmNode.getState()) {
-        case RUNNING:
-          ClusterMetrics.getMetrics().decrNumActiveNodes();
-          break;
-        case UNHEALTHY:
-          ClusterMetrics.getMetrics().decrNumUnhealthyNMs();
-          break;
-        }
-        rmNode.context.getRMNodes().put(newNode.getNodeID(), newNode);
-        rmNode.context.getDispatcher().getEventHandler().handle(
-            new RMNodeStartedEvent(newNode.getNodeID(), null, null));
       }
+
       rmNode.context.getDispatcher().getEventHandler().handle(
           new NodesListManagerEvent(
               NodesListManagerEventType.NODE_USABLE, rmNode));

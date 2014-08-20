@@ -239,7 +239,7 @@ public class TestDFSStorageStateRecovery {
         assertTrue(new File(baseDirs[i],"previous").isDirectory());
         assertEquals(
                      UpgradeUtilities.checksumContents(
-                                                       NAME_NODE, new File(baseDirs[i],"previous")),
+                     NAME_NODE, new File(baseDirs[i],"previous"), false),
                      UpgradeUtilities.checksumMasterNameNodeContents());
       }
     }
@@ -259,7 +259,8 @@ public class TestDFSStorageStateRecovery {
     if (currentShouldExist) {
       for (int i = 0; i < baseDirs.length; i++) {
         assertEquals(
-                     UpgradeUtilities.checksumContents(DATA_NODE, new File(baseDirs[i],"current")),
+                     UpgradeUtilities.checksumContents(DATA_NODE,
+                     new File(baseDirs[i],"current"), false),
                      UpgradeUtilities.checksumMasterDataNodeContents());
       }
     }
@@ -267,7 +268,8 @@ public class TestDFSStorageStateRecovery {
       for (int i = 0; i < baseDirs.length; i++) {
         assertTrue(new File(baseDirs[i],"previous").isDirectory());
         assertEquals(
-                     UpgradeUtilities.checksumContents(DATA_NODE, new File(baseDirs[i],"previous")),
+                     UpgradeUtilities.checksumContents(DATA_NODE,
+                     new File(baseDirs[i],"previous"), false),
                      UpgradeUtilities.checksumMasterDataNodeContents());
       }
     }
@@ -290,8 +292,8 @@ public class TestDFSStorageStateRecovery {
     if (currentShouldExist) {
       for (int i = 0; i < baseDirs.length; i++) {
         File bpCurDir = new File(baseDirs[i], Storage.STORAGE_DIR_CURRENT);
-        assertEquals(UpgradeUtilities.checksumContents(DATA_NODE, bpCurDir),
-                     UpgradeUtilities.checksumMasterBlockPoolContents());
+        assertEquals(UpgradeUtilities.checksumContents(DATA_NODE, bpCurDir,
+                false), UpgradeUtilities.checksumMasterBlockPoolContents());
       }
     }
     if (previousShouldExist) {
@@ -299,8 +301,8 @@ public class TestDFSStorageStateRecovery {
         File bpPrevDir = new File(baseDirs[i], Storage.STORAGE_DIR_PREVIOUS);
         assertTrue(bpPrevDir.isDirectory());
         assertEquals(
-                     UpgradeUtilities.checksumContents(DATA_NODE, bpPrevDir),
-                     UpgradeUtilities.checksumMasterBlockPoolContents());
+                     UpgradeUtilities.checksumContents(DATA_NODE, bpPrevDir,
+                     false), UpgradeUtilities.checksumMasterBlockPoolContents());
       }
     }
   }

@@ -39,7 +39,6 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 /**
  * An InputFormat capable of performing joins over a set of data sources sorted
  * and partitioned the same way.
- * @see #setFormat
  *
  * A user may define new join types by setting the property
  * <tt>mapreduce.join.define.&lt;ident&gt;</tt> to a classname. 
@@ -47,6 +46,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * assumed to be a ComposableRecordReader.
  * <tt>mapreduce.join.keycomparator</tt> can be a classname used to compare 
  * keys in the join.
+ * @see #setFormat
  * @see JoinRecordReader
  * @see MultiFilterRecordReader
  */

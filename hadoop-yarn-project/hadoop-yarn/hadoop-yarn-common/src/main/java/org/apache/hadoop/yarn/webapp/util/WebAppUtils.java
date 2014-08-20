@@ -19,12 +19,12 @@ package org.apache.hadoop.yarn.webapp.util;
 
 import static org.apache.hadoop.yarn.util.StringHelper.PATH_JOINER;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
@@ -34,11 +34,18 @@ import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.conf.HAUtil;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.RMHAUtils;
 
 @Private
 @Evolving
 public class WebAppUtils {
+  public static final String WEB_APP_TRUSTSTORE_PASSWORD_KEY =
+      "ssl.server.truststore.password";
+  public static final String WEB_APP_KEYSTORE_PASSWORD_KEY =
+      "ssl.server.keystore.password";
+  public static final String WEB_APP_KEY_PASSWORD_KEY =
+      "ssl.server.keystore.keypassword";
   public static final String HTTPS_PREFIX = "https://";
   public static final String HTTP_PREFIX = "http://";
 
@@ -170,6 +177,37 @@ public class WebAppUtils {
     return sb.toString();
   }
   
+  /**
+   * Get the URL to use for binding where bind hostname can be specified
+   * to override the hostname in the webAppURLWithoutScheme. Port specified in the
+   * webAppURLWithoutScheme will be used.
+   *
+   * @param conf the configuration
+   * @param hostProperty bind host property name
+   * @param webAppURLWithoutScheme web app URL without scheme String
+   * @return String representing bind URL
+   */
+  public static String getWebAppBindURL(
+      Configuration conf,
+      String hostProperty,
+      String webAppURLWithoutScheme) {
+
+    // If the bind-host setting exists then it overrides the hostname
+    // portion of the corresponding webAppURLWithoutScheme
+    String host = conf.getTrimmed(hostProperty);
+    if (host != null && !host.isEmpty()) {
+      if (webAppURLWithoutScheme.contains(":")) {
+        webAppURLWithoutScheme = host + ":" + webAppURLWithoutScheme.split(":")[1];
+      }
+      else {
+        throw new YarnRuntimeException("webAppURLWithoutScheme must include port specification but doesn't: " +
+                                       webAppURLWithoutScheme);
+      }
+    }
+
+    return webAppURLWithoutScheme;
+  }
+
   public static String getNMWebAppURLWithoutScheme(Configuration conf) {
     if (YarnConfiguration.useHttps(conf)) {
       return conf.get(YarnConfiguration.NM_WEBAPP_HTTPS_ADDRESS,
@@ -242,21 +280,56 @@ public class WebAppUtils {
 
   /**
    * Load the SSL keystore / truststore into the HttpServer builder.
+   * @param builder the HttpServer2.Builder to populate with ssl config
    */
   public static HttpServer2.Builder loadSslConfiguration(
       HttpServer2.Builder builder) {
-    Configuration sslConf = new Configuration(false);
+    return loadSslConfiguration(builder, null);
+  }
+
+  /**
+   * Load the SSL keystore / truststore into the HttpServer builder.
+   * @param builder the HttpServer2.Builder to populate with ssl config
+   * @param sslConf the Configuration instance to use during loading of SSL conf
+   */
+  public static HttpServer2.Builder loadSslConfiguration(
+      HttpServer2.Builder builder, Configuration sslConf) {
+    if (sslConf == null) {
+      sslConf = new Configuration(false);
+    }
     boolean needsClientAuth = YarnConfiguration.YARN_SSL_CLIENT_HTTPS_NEED_AUTH_DEFAULT;
     sslConf.addResource(YarnConfiguration.YARN_SSL_SERVER_RESOURCE_DEFAULT);
 
     return builder
         .needsClientAuth(needsClientAuth)
-        .keyPassword(sslConf.get("ssl.server.keystore.keypassword"))
+        .keyPassword(getPassword(sslConf, WEB_APP_KEY_PASSWORD_KEY))
         .keyStore(sslConf.get("ssl.server.keystore.location"),
-            sslConf.get("ssl.server.keystore.password"),
+            getPassword(sslConf, WEB_APP_KEYSTORE_PASSWORD_KEY),
             sslConf.get("ssl.server.keystore.type", "jks"))
         .trustStore(sslConf.get("ssl.server.truststore.location"),
-            sslConf.get("ssl.server.truststore.password"),
+            getPassword(sslConf, WEB_APP_TRUSTSTORE_PASSWORD_KEY),
             sslConf.get("ssl.server.truststore.type", "jks"));
+  }
+
+  /**
+   * Leverages the Configuration.getPassword method to attempt to get
+   * passwords from the CredentialProvider API before falling back to
+   * clear text in config - if falling back is allowed.
+   * @param conf Configuration instance
+   * @param alias name of the credential to retreive
+   * @return String credential value or null
+   */
+  static String getPassword(Configuration conf, String alias) {
+    String password = null;
+    try {
+      char[] passchars = conf.getPassword(alias);
+      if (passchars != null) {
+        password = new String(passchars);
+      }
+    }
+    catch (IOException ioe) {
+      password = null;
+    }
+    return password;
   }
 }

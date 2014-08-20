@@ -403,6 +403,13 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     }
   }
   
+  @Override
+  public boolean isContainerProcessAlive(String user, String pid)
+      throws IOException {
+    // Send a test signal to the process as the user to see if it's alive
+    return signalContainer(user, pid, Signal.NULL);
+  }
+
   public void mountCgroups(List<String> cgroupKVs, String hierarchy)
          throws IOException {
     List<String> command = new ArrayList<String>(

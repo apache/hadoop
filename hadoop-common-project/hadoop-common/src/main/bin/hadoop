@@ -15,126 +15,164 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script runs the hadoop core commands. 
-
-bin=`which $0`
-bin=`dirname ${bin}`
-bin=`cd "$bin" > /dev/null; pwd`
- 
-DEFAULT_LIBEXEC_DIR="$bin"/../libexec
-HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
-. $HADOOP_LIBEXEC_DIR/hadoop-config.sh
-
-function print_usage(){
+function hadoop_usage()
+{
   echo "Usage: hadoop [--config confdir] COMMAND"
   echo "       where COMMAND is one of:"
-  echo "  fs                   run a generic filesystem user client"
-  echo "  version              print the version"
-  echo "  jar <jar>            run a jar file"
-  echo "  checknative [-a|-h]  check native hadoop and compression libraries availability"
-  echo "  distcp <srcurl> <desturl> copy file or directories recursively"
-  echo "  archive -archiveName NAME -p <parent path> <src>* <dest> create a hadoop archive"
+  echo "  archive -archiveName NAME -p <parent path> <src>* <dest>"
+  echo "                       create a Hadoop archive"
+  echo "  checknative [-a|-h]  check native Hadoop and compression "
+  echo "                         libraries availability"
   echo "  classpath            prints the class path needed to get the"
-  echo "                       Hadoop jar and the required libraries"
+  echo "                         Hadoop jar and the required libraries"
+  echo "  credential           interact with credential providers"
   echo "  daemonlog            get/set the log level for each daemon"
+  echo "  distch path:owner:group:permisson"
+  echo "                       distributed metadata changer"
+  echo "  distcp <srcurl> <desturl> "
+  echo "                       copy file or directories recursively"
+  echo "  fs                   run a generic filesystem user client"
+  echo "  jar <jar>            run a jar file"
+  echo "  jnipath              prints the java.library.path"
+  echo "  key                  manage keys via the KeyProvider"
+  echo "  version              print the version"
   echo " or"
   echo "  CLASSNAME            run the class named CLASSNAME"
   echo ""
   echo "Most commands print help when invoked w/o parameters."
 }
 
+
+# This script runs the hadoop core commands.
+
+# let's locate libexec...
+if [[ -n "${HADOOP_PREFIX}" ]]; then
+  DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
+else
+  this="${BASH_SOURCE-$0}"
+  bin=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
+  DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
+fi
+
+HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}"
+# shellcheck disable=SC2034
+HADOOP_NEW_CONFIG=true
+if [[ -f "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh" ]]; then
+  . "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh"
+else
+  echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/hadoop-config.sh." 2>&1
+  exit 1
+fi
+
 if [ $# = 0 ]; then
-  print_usage
-  exit
+  hadoop_exit_with_usage 1
 fi
 
 COMMAND=$1
-case $COMMAND in
-  # usage flags
-  --help|-help|-h)
-    print_usage
-    exit
-    ;;
+shift
 
-  #hdfs commands
-  namenode|secondarynamenode|datanode|dfs|dfsadmin|fsck|balancer|fetchdt|oiv|dfsgroups|portmap|nfs3)
-    echo "DEPRECATED: Use of this script to execute hdfs command is deprecated." 1>&2
-    echo "Instead use the hdfs command for it." 1>&2
-    echo "" 1>&2
-    #try to locate hdfs and if present, delegate to it.  
-    shift
-    if [ -f "${HADOOP_HDFS_HOME}"/bin/hdfs ]; then
-      exec "${HADOOP_HDFS_HOME}"/bin/hdfs ${COMMAND/dfsgroups/groups}  "$@"
-    elif [ -f "${HADOOP_PREFIX}"/bin/hdfs ]; then
-      exec "${HADOOP_PREFIX}"/bin/hdfs ${COMMAND/dfsgroups/groups} "$@"
+case ${COMMAND} in
+  balancer|datanode|dfs|dfsadmin|dfsgroups|  \
+  namenode|secondarynamenode|fsck|fetchdt|oiv| \
+  portmap|nfs3)
+    hadoop_error "WARNING: Use of this script to execute ${COMMAND} is deprecated."
+    COMMAND=${COMMAND/dfsgroups/groups}
+    hadoop_error "WARNING: Attempting to execute replacement \"hdfs ${COMMAND}\" instead."
+    hadoop_error ""
+    #try to locate hdfs and if present, delegate to it.
+    if [[ -f "${HADOOP_HDFS_HOME}/bin/hdfs" ]]; then
+      # shellcheck disable=SC2086
+      exec "${HADOOP_HDFS_HOME}/bin/hdfs" \
+      --config "${HADOOP_CONF_DIR}" "${COMMAND}"  "$@"
+    elif [[ -f "${HADOOP_PREFIX}/bin/hdfs" ]]; then
+      # shellcheck disable=SC2086
+      exec "${HADOOP_PREFIX}/bin/hdfs" \
+      --config "${HADOOP_CONF_DIR}" "${COMMAND}" "$@"
     else
-      echo "HADOOP_HDFS_HOME not found!"
+      hadoop_error "HADOOP_HDFS_HOME not found!"
       exit 1
     fi
-    ;;
-
+  ;;
+  
   #mapred commands for backwards compatibility
   pipes|job|queue|mrgroups|mradmin|jobtracker|tasktracker)
-    echo "DEPRECATED: Use of this script to execute mapred command is deprecated." 1>&2
-    echo "Instead use the mapred command for it." 1>&2
-    echo "" 1>&2
+    hadoop_error "WARNING: Use of this script to execute ${COMMAND} is deprecated."
+    COMMAND=${COMMAND/mrgroups/groups}
+    hadoop_error "WARNING: Attempting to execute replacement \"mapred ${COMMAND}\" instead."
+    hadoop_error ""
     #try to locate mapred and if present, delegate to it.
-    shift
-    if [ -f "${HADOOP_MAPRED_HOME}"/bin/mapred ]; then
-      exec "${HADOOP_MAPRED_HOME}"/bin/mapred ${COMMAND/mrgroups/groups} "$@"
-    elif [ -f "${HADOOP_PREFIX}"/bin/mapred ]; then
-      exec "${HADOOP_PREFIX}"/bin/mapred ${COMMAND/mrgroups/groups} "$@"
+    if [[ -f "${HADOOP_MAPRED_HOME}/bin/mapred" ]]; then
+      exec "${HADOOP_MAPRED_HOME}/bin/mapred" \
+      --config "${HADOOP_CONF_DIR}" "${COMMAND}" "$@"
+    elif [[ -f "${HADOOP_PREFIX}/bin/mapred" ]]; then
+      exec "${HADOOP_PREFIX}/bin/mapred" \
+      --config "${HADOOP_CONF_DIR}" "${COMMAND}" "$@"
     else
-      echo "HADOOP_MAPRED_HOME not found!"
+      hadoop_error "HADOOP_MAPRED_HOME not found!"
       exit 1
     fi
-    ;;
-
+  ;;
+  archive)
+    CLASS=org.apache.hadoop.tools.HadoopArchives
+    hadoop_add_classpath "${TOOL_PATH}"
+  ;;
+  checknative)
+    CLASS=org.apache.hadoop.util.NativeLibraryChecker
+  ;;
   classpath)
-    echo $CLASSPATH
-    exit
-    ;;
-
-  #core commands  
-  *)
-    # the core commands
-    if [ "$COMMAND" = "fs" ] ; then
-      CLASS=org.apache.hadoop.fs.FsShell
-    elif [ "$COMMAND" = "version" ] ; then
-      CLASS=org.apache.hadoop.util.VersionInfo
-    elif [ "$COMMAND" = "jar" ] ; then
-      CLASS=org.apache.hadoop.util.RunJar
-    elif [ "$COMMAND" = "key" ] ; then
-      CLASS=org.apache.hadoop.crypto.key.KeyShell
-    elif [ "$COMMAND" = "checknative" ] ; then
-      CLASS=org.apache.hadoop.util.NativeLibraryChecker
-    elif [ "$COMMAND" = "distcp" ] ; then
-      CLASS=org.apache.hadoop.tools.DistCp
-      CLASSPATH=${CLASSPATH}:${TOOL_PATH}
-    elif [ "$COMMAND" = "daemonlog" ] ; then
-      CLASS=org.apache.hadoop.log.LogLevel
-    elif [ "$COMMAND" = "archive" ] ; then
-      CLASS=org.apache.hadoop.tools.HadoopArchives
-      CLASSPATH=${CLASSPATH}:${TOOL_PATH}
-    elif [ "$COMMAND" = "credential" ] ; then
-      CLASS=org.apache.hadoop.security.alias.CredentialShell
-    elif [[ "$COMMAND" = -*  ]] ; then
-        # class and package names cannot begin with a -
-        echo "Error: No command named \`$COMMAND' was found. Perhaps you meant \`hadoop ${COMMAND#-}'"
-        exit 1
-    else
-      CLASS=$COMMAND
+    if [[ "$#" -eq 1 ]]; then
+      CLASS=org.apache.hadoop.util.Classpath
+    else   
+      hadoop_finalize
+      echo "${CLASSPATH}"
+      exit 0
     fi
-    shift
-    
-    # Always respect HADOOP_OPTS and HADOOP_CLIENT_OPTS
-    HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
-
-    #make sure security appender is turned off
-    HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,NullAppender}"
-
-    export CLASSPATH=$CLASSPATH
-    exec "$JAVA" $JAVA_HEAP_MAX $HADOOP_OPTS $CLASS "$@"
-    ;;
-
+  ;;
+  credential)
+    CLASS=org.apache.hadoop.security.alias.CredentialShell
+  ;;
+  daemonlog)
+    CLASS=org.apache.hadoop.log.LogLevel
+  ;;
+  distch)
+    CLASS=org.apache.hadoop.tools.DistCh
+    hadoop_add_classpath "${TOOL_PATH}"
+  ;;
+  distcp)
+    CLASS=org.apache.hadoop.tools.DistCp
+    hadoop_add_classpath "${TOOL_PATH}"
+  ;;
+  fs)
+    CLASS=org.apache.hadoop.fs.FsShell
+  ;;
+  jar)
+    CLASS=org.apache.hadoop.util.RunJar
+  ;;
+  jnipath)
+    hadoop_finalize
+    echo "${JAVA_LIBRARY_PATH}"
+    exit 0
+  ;;
+  key)
+    CLASS=org.apache.hadoop.crypto.key.KeyShell
+  ;;
+  version)
+    CLASS=org.apache.hadoop.util.VersionInfo
+  ;;
+  -*|hdfs)
+    hadoop_exit_with_usage 1
+  ;;
+  *)
+    CLASS="${COMMAND}"
+  ;;
 esac
+
+# Always respect HADOOP_OPTS and HADOOP_CLIENT_OPTS
+HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+
+hadoop_add_param HADOOP_OPTS Xmx "${JAVA_HEAP_MAX}"
+
+hadoop_finalize
+export CLASSPATH
+hadoop_java_exec "${COMMAND}" "${CLASS}" "$@"
+

@@ -39,7 +39,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 @Private
 @Unstable
-public abstract class FSQueue extends Schedulable implements Queue {
+public abstract class FSQueue implements Queue, Schedulable {
+  private Resource fairShare = Resources.createResource(0, 0);
   private final String name;
   protected final FairScheduler scheduler;
   private final FSQueueMetrics metrics;
@@ -139,10 +140,15 @@ public abstract class FSQueue extends Schedulable implements Queue {
   public FSQueueMetrics getMetrics() {
     return metrics;
   }
-  
+
+  /** Get the fair share assigned to this Schedulable. */
+  public Resource getFairShare() {
+    return fairShare;
+  }
+
   @Override
   public void setFairShare(Resource fairShare) {
-    super.setFairShare(fairShare);
+    this.fairShare = fairShare;
     metrics.setFairShare(fairShare);
   }
   
@@ -186,5 +192,17 @@ public abstract class FSQueue extends Schedulable implements Queue {
       return false;
     }
     return true;
+  }
+
+  @Override
+  public boolean isActive() {
+    return getNumRunnableApps() > 0;
+  }
+
+  /** Convenient toString implementation for debugging. */
+  @Override
+  public String toString() {
+    return String.format("[%s, demand=%s, running=%s, share=%s, w=%s]",
+        getName(), getDemand(), getResourceUsage(), fairShare, getWeights());
   }
 }

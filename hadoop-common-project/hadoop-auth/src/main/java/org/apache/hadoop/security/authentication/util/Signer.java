@@ -24,18 +24,19 @@ import java.security.NoSuchAlgorithmException;
 public class Signer {
   private static final String SIGNATURE = "&s=";
 
-  private byte[] secret;
+  private SignerSecretProvider secretProvider;
 
   /**
-   * Creates a Signer instance using the specified secret.
+   * Creates a Signer instance using the specified SignerSecretProvider.  The
+   * SignerSecretProvider should already be initialized.
    *
-   * @param secret secret to use for creating the digest.
+   * @param secretProvider The SignerSecretProvider to use
    */
-  public Signer(byte[] secret) {
-    if (secret == null) {
-      throw new IllegalArgumentException("secret cannot be NULL");
+  public Signer(SignerSecretProvider secretProvider) {
+    if (secretProvider == null) {
+      throw new IllegalArgumentException("secretProvider cannot be NULL");
     }
-    this.secret = secret.clone();
+    this.secretProvider = secretProvider;
   }
 
   /**
@@ -47,11 +48,12 @@ public class Signer {
    *
    * @return the signed string.
    */
-  public String sign(String str) {
+  public synchronized String sign(String str) {
     if (str == null || str.length() == 0) {
       throw new IllegalArgumentException("NULL or empty string to sign");
     }
-    String signature = computeSignature(str);
+    byte[] secret = secretProvider.getCurrentSecret();
+    String signature = computeSignature(secret, str);
     return str + SIGNATURE + signature;
   }
 
@@ -71,21 +73,19 @@ public class Signer {
     }
     String originalSignature = signedStr.substring(index + SIGNATURE.length());
     String rawValue = signedStr.substring(0, index);
-    String currentSignature = computeSignature(rawValue);
-    if (!originalSignature.equals(currentSignature)) {
-      throw new SignerException("Invalid signature");
-    }
+    checkSignatures(rawValue, originalSignature);
     return rawValue;
   }
 
   /**
    * Returns then signature of a string.
    *
+   * @param secret The secret to use
    * @param str string to sign.
    *
    * @return the signature for the string.
    */
-  protected String computeSignature(String str) {
+  protected String computeSignature(byte[] secret, String str) {
     try {
       MessageDigest md = MessageDigest.getInstance("SHA");
       md.update(str.getBytes());
@@ -97,4 +97,22 @@ public class Signer {
     }
   }
 
+  protected void checkSignatures(String rawValue, String originalSignature)
+      throws SignerException {
+    boolean isValid = false;
+    byte[][] secrets = secretProvider.getAllSecrets();
+    for (int i = 0; i < secrets.length; i++) {
+      byte[] secret = secrets[i];
+      if (secret != null) {
+        String currentSignature = computeSignature(secret, rawValue);
+        if (originalSignature.equals(currentSignature)) {
+          isValid = true;
+          break;
+        }
+      }
+    }
+    if (!isValid) {
+      throw new SignerException("Invalid signature");
+    }
+  }
 }

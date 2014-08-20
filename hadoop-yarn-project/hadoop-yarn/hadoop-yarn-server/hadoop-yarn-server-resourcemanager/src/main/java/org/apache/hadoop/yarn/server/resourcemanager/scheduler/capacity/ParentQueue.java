@@ -791,4 +791,37 @@ public class ParentQueue implements CSQueue {
       queue.collectSchedulerApplications(apps);
     }
   }
+
+  @Override
+  public void attachContainer(Resource clusterResource,
+      FiCaSchedulerApp application, RMContainer rmContainer) {
+    if (application != null) {
+      allocateResource(clusterResource, rmContainer.getContainer()
+          .getResource());
+      LOG.info("movedContainer" + " queueMoveIn=" + getQueueName()
+          + " usedCapacity=" + getUsedCapacity() + " absoluteUsedCapacity="
+          + getAbsoluteUsedCapacity() + " used=" + usedResources + " cluster="
+          + clusterResource);
+      // Inform the parent
+      if (parent != null) {
+        parent.attachContainer(clusterResource, application, rmContainer);
+      }
+    }
+  }
+
+  @Override
+  public void detachContainer(Resource clusterResource,
+      FiCaSchedulerApp application, RMContainer rmContainer) {
+    if (application != null) {
+      releaseResource(clusterResource, rmContainer.getContainer().getResource());
+      LOG.info("movedContainer" + " queueMoveOut=" + getQueueName()
+          + " usedCapacity=" + getUsedCapacity() + " absoluteUsedCapacity="
+          + getAbsoluteUsedCapacity() + " used=" + usedResources + " cluster="
+          + clusterResource);
+      // Inform the parent
+      if (parent != null) {
+        parent.detachContainer(clusterResource, application, rmContainer);
+      }
+    }
+  }
 }

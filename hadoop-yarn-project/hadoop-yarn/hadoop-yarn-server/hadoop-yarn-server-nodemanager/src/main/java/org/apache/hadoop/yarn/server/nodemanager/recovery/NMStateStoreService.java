@@ -29,10 +29,13 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
+import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
@@ -43,6 +46,53 @@ public abstract class NMStateStoreService extends AbstractService {
 
   public NMStateStoreService(String name) {
     super(name);
+  }
+
+  public static class RecoveredApplicationsState {
+    List<ContainerManagerApplicationProto> applications;
+    List<ApplicationId> finishedApplications;
+
+    public List<ContainerManagerApplicationProto> getApplications() {
+      return applications;
+    }
+
+    public List<ApplicationId> getFinishedApplications() {
+      return finishedApplications;
+    }
+  }
+
+  public enum RecoveredContainerStatus {
+    REQUESTED,
+    LAUNCHED,
+    COMPLETED
+  }
+
+  public static class RecoveredContainerState {
+    RecoveredContainerStatus status;
+    int exitCode = ContainerExitStatus.INVALID;
+    boolean killed = false;
+    String diagnostics = "";
+    StartContainerRequest startRequest;
+
+    public RecoveredContainerStatus getStatus() {
+      return status;
+    }
+
+    public int getExitCode() {
+      return exitCode;
+    }
+
+    public boolean getKilled() {
+      return killed;
+    }
+
+    public String getDiagnostics() {
+      return diagnostics;
+    }
+
+    public StartContainerRequest getStartRequest() {
+      return startRequest;
+    }
   }
 
   public static class LocalResourceTrackerState {
@@ -163,6 +213,100 @@ public abstract class NMStateStoreService extends AbstractService {
 
 
   /**
+   * Load the state of applications
+   * @return recovered state for applications
+   * @throws IOException
+   */
+  public abstract RecoveredApplicationsState loadApplicationsState()
+      throws IOException;
+
+  /**
+   * Record the start of an application
+   * @param appId the application ID
+   * @param p state to store for the application
+   * @throws IOException
+   */
+  public abstract void storeApplication(ApplicationId appId,
+      ContainerManagerApplicationProto p) throws IOException;
+
+  /**
+   * Record that an application has finished
+   * @param appId the application ID
+   * @throws IOException
+   */
+  public abstract void storeFinishedApplication(ApplicationId appId)
+      throws IOException;
+
+  /**
+   * Remove records corresponding to an application
+   * @param appId the application ID
+   * @throws IOException
+   */
+  public abstract void removeApplication(ApplicationId appId)
+      throws IOException;
+
+
+  /**
+   * Load the state of containers
+   * @return recovered state for containers
+   * @throws IOException
+   */
+  public abstract List<RecoveredContainerState> loadContainersState()
+      throws IOException;
+
+  /**
+   * Record a container start request
+   * @param containerId the container ID
+   * @param startRequest the container start request
+   * @throws IOException
+   */
+  public abstract void storeContainer(ContainerId containerId,
+      StartContainerRequest startRequest) throws IOException;
+
+  /**
+   * Record that a container has been launched
+   * @param containerId the container ID
+   * @throws IOException
+   */
+  public abstract void storeContainerLaunched(ContainerId containerId)
+      throws IOException;
+
+  /**
+   * Record that a container has completed
+   * @param containerId the container ID
+   * @param exitCode the exit code from the container
+   * @throws IOException
+   */
+  public abstract void storeContainerCompleted(ContainerId containerId,
+      int exitCode) throws IOException;
+
+  /**
+   * Record a request to kill a container
+   * @param containerId the container ID
+   * @throws IOException
+   */
+  public abstract void storeContainerKilled(ContainerId containerId)
+      throws IOException;
+
+  /**
+   * Record diagnostics for a container
+   * @param containerId the container ID
+   * @param diagnostics the container diagnostics
+   * @throws IOException
+   */
+  public abstract void storeContainerDiagnostics(ContainerId containerId,
+      StringBuilder diagnostics) throws IOException;
+
+  /**
+   * Remove records corresponding to a container
+   * @param containerId the container ID
+   * @throws IOException
+   */
+  public abstract void removeContainer(ContainerId containerId)
+      throws IOException;
+
+
+  /**
    * Load the state of localized resources
    * @return recovered localized resource state
    * @throws IOException
@@ -203,43 +347,111 @@ public abstract class NMStateStoreService extends AbstractService {
       ApplicationId appId, Path localPath) throws IOException;
 
 
+  /**
+   * Load the state of the deletion service
+   * @return recovered deletion service state
+   * @throws IOException
+   */
   public abstract RecoveredDeletionServiceState loadDeletionServiceState()
       throws IOException;
 
+  /**
+   * Record a deletion task
+   * @param taskId the deletion task ID
+   * @param taskProto the deletion task protobuf
+   * @throws IOException
+   */
   public abstract void storeDeletionTask(int taskId,
       DeletionServiceDeleteTaskProto taskProto) throws IOException;
 
+  /**
+   * Remove records corresponding to a deletion task
+   * @param taskId the deletion task ID
+   * @throws IOException
+   */
   public abstract void removeDeletionTask(int taskId) throws IOException;
 
 
+  /**
+   * Load the state of NM tokens
+   * @return recovered state of NM tokens
+   * @throws IOException
+   */
   public abstract RecoveredNMTokensState loadNMTokensState()
       throws IOException;
 
+  /**
+   * Record the current NM token master key
+   * @param key the master key
+   * @throws IOException
+   */
   public abstract void storeNMTokenCurrentMasterKey(MasterKey key)
       throws IOException;
 
+  /**
+   * Record the previous NM token master key
+   * @param key the previous master key
+   * @throws IOException
+   */
   public abstract void storeNMTokenPreviousMasterKey(MasterKey key)
       throws IOException;
 
+  /**
+   * Record a master key corresponding to an application
+   * @param attempt the application attempt ID
+   * @param key the master key
+   * @throws IOException
+   */
   public abstract void storeNMTokenApplicationMasterKey(
       ApplicationAttemptId attempt, MasterKey key) throws IOException;
 
+  /**
+   * Remove a master key corresponding to an application
+   * @param attempt the application attempt ID
+   * @throws IOException
+   */
   public abstract void removeNMTokenApplicationMasterKey(
       ApplicationAttemptId attempt) throws IOException;
 
 
+  /**
+   * Load the state of container tokens
+   * @return recovered state of container tokens
+   * @throws IOException
+   */
   public abstract RecoveredContainerTokensState loadContainerTokensState()
       throws IOException;
 
+  /**
+   * Record the current container token master key
+   * @param key the master key
+   * @throws IOException
+   */
   public abstract void storeContainerTokenCurrentMasterKey(MasterKey key)
       throws IOException;
 
+  /**
+   * Record the previous container token master key
+   * @param key the previous master key
+   * @throws IOException
+   */
   public abstract void storeContainerTokenPreviousMasterKey(MasterKey key)
       throws IOException;
 
+  /**
+   * Record the expiration time for a container token
+   * @param containerId the container ID
+   * @param expirationTime the container token expiration time
+   * @throws IOException
+   */
   public abstract void storeContainerToken(ContainerId containerId,
       Long expirationTime) throws IOException;
 
+  /**
+   * Remove records for a container token
+   * @param containerId the container ID
+   * @throws IOException
+   */
   public abstract void removeContainerToken(ContainerId containerId)
       throws IOException;
 

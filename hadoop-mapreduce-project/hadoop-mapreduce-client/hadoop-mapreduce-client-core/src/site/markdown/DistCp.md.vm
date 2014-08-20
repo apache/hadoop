@@ -118,9 +118,9 @@ $H3 Basic Usage
 
 $H3 Update and Overwrite
 
-  `-update` is used to copy files from source that don't exist at the target,
-  or have different contents. `-overwrite` overwrites target-files even if they
-  exist at the source, or have the same contents.
+  `-update` is used to copy files from source that don't exist at the target
+  or differ than the target version. `-overwrite` overwrites target-files that
+  exist at the target.
 
   Update and Overwrite options warrant special attention, since their handling
   of source-paths varies from the defaults in a very subtle manner. Consider a
@@ -201,7 +201,7 @@ Flag              | Description                          | Notes
 `-log <logdir>` | Write logs to \<logdir\> | DistCp keeps logs of each file it attempts to copy as map output. If a map fails, the log output will not be retained if it is re-executed.
 `-m <num_maps>` | Maximum number of simultaneous copies | Specify the number of maps to copy data. Note that more maps may not necessarily improve throughput.
 `-overwrite` | Overwrite destination | If a map fails and `-i` is not specified, all the files in the split, not only those that failed, will be recopied. As discussed in the Usage documentation, it also changes the semantics for generating destination paths, so users should use this carefully.
-`-update` | Overwrite if src size different from dst size | As noted in the preceding, this is not a "sync" operation. The only criterion examined is the source and destination file sizes; if they differ, the source file replaces the destination file. As discussed in the Usage documentation, it also changes the semantics for generating destination paths, so users should use this carefully.
+`-update` | Overwrite if source and destination differ in size, blocksize, or checksum | As noted in the preceding, this is not a "sync" operation. The criteria examined are the source and destination file sizes, blocksizes, and checksums; if they differ, the source file replaces the destination file. As discussed in the Usage documentation, it also changes the semantics for generating destination paths, so users should use this carefully.
 `-f <urilist_uri>` | Use list at \<urilist_uri\> as src list | This is equivalent to listing each source on the command line. The `urilist_uri` list should be a fully qualified URI.
 `-filelimit <n>` | Limit the total number of files to be <= n | **Deprecated!** Ignored in the new DistCp.
 `-sizelimit <n>` | Limit the total size to be <= n bytes | **Deprecated!** Ignored in the new DistCp.
