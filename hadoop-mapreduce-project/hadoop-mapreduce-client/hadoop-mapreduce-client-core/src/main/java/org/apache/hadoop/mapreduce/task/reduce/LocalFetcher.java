@@ -36,6 +36,7 @@ import org.apache.hadoop.mapred.MapOutputFile;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.SpillRecord;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.CryptoUtils;
 
 /**
  * LocalFetcher is used by LocalJobRunner to perform a local filesystem
@@ -145,6 +146,9 @@ class LocalFetcher<K,V> extends Fetcher<K, V> {
     // now read the file, seek to the appropriate section, and send it.
     FileSystem localFs = FileSystem.getLocal(job).getRaw();
     FSDataInputStream inStream = localFs.open(mapOutputFileName);
+
+    inStream = CryptoUtils.wrapIfNecessary(job, inStream);
+
     try {
       inStream.seek(ir.startOffset);
 

@@ -48,7 +48,11 @@ public enum DistCpOptionSwitch {
       new Option("p", true, "preserve status (rbugpcax)(replication, " +
           "block-size, user, group, permission, checksum-type, ACL, XATTR).  " +
           "If -p is specified with no <arg>, then preserves replication, " +
-          "block size, user, group, permission and checksum type.")),
+          "block size, user, group, permission and checksum type." +
+          "raw.* xattrs are preserved when both the source and destination " +
+          "paths are in the /.reserved/raw hierarchy (HDFS only). raw.* xattr" +
+          "preservation is independent of the -p flag." +
+          "Refer to the DistCp documentation for more details.")),
 
   /**
    * Update target location by copying only files that are missing

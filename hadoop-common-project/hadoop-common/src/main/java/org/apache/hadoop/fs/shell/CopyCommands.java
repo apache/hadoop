@@ -143,7 +143,11 @@ class CopyCommands {
       "timestamps, ownership, permission. If -pa is specified, " +
       "then preserves permission also because ACL is a super-set of " +
       "permission. Passing -f overwrites the destination if it " +
-      "already exists.\n";
+      "already exists. raw namespace extended attributes are preserved " +
+      "if (1) they are supported (HDFS only) and, (2) all of the source and " +
+      "target pathnames are in the /.reserved/raw hierarchy. raw namespace " +
+      "xattr preservation is determined solely by the presence (or absence) " +
+      "of the /.reserved/raw prefix and not by the -p option.\n";
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {

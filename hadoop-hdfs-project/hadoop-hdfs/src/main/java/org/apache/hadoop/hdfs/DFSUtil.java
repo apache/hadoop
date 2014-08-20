@@ -71,6 +71,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
+import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -1721,5 +1724,40 @@ public class DFSUtil {
           Arrays.toString(resultsArray));
       }
     }
+  }
+
+  /**
+   * Creates a new KeyProviderCryptoExtension by wrapping the
+   * KeyProvider specified in the given Configuration.
+   *
+   * @param conf Configuration specifying a single, non-transient KeyProvider.
+   * @return new KeyProviderCryptoExtension, or null if no provider was found.
+   * @throws IOException if the KeyProvider is improperly specified in
+   *                             the Configuration
+   */
+  public static KeyProviderCryptoExtension createKeyProviderCryptoExtension(
+      final Configuration conf) throws IOException {
+    final List<KeyProvider> providers = KeyProviderFactory.getProviders(conf);
+    if (providers == null || providers.size() == 0) {
+      return null;
+    }
+    if (providers.size() > 1) {
+      StringBuilder builder = new StringBuilder();
+      builder.append("Found multiple KeyProviders but only one is permitted [");
+      String prefix = " ";
+      for (KeyProvider kp: providers) {
+        builder.append(prefix + kp.toString());
+        prefix = ", ";
+      }
+      builder.append("]");
+      throw new IOException(builder.toString());
+    }
+    KeyProviderCryptoExtension provider = KeyProviderCryptoExtension
+        .createKeyProviderCryptoExtension(providers.get(0));
+    if (provider.isTransient()) {
+      throw new IOException("KeyProvider " + provider.toString()
+          + " was found but it is a transient provider.");
+    }
+    return provider;
   }
 }

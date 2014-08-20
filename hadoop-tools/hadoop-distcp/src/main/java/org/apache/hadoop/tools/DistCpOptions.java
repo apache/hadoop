@@ -52,6 +52,8 @@ public class DistCpOptions {
 
   private EnumSet<FileAttribute> preserveStatus = EnumSet.noneOf(FileAttribute.class);
 
+  private boolean preserveRawXattrs;
+
   private Path atomicWorkPath;
 
   private Path logPath;
@@ -123,6 +125,7 @@ public class DistCpOptions {
       this.sslConfigurationFile = that.getSslConfigurationFile();
       this.copyStrategy = that.copyStrategy;
       this.preserveStatus = that.preserveStatus;
+      this.preserveRawXattrs = that.preserveRawXattrs;
       this.atomicWorkPath = that.getAtomicWorkPath();
       this.logPath = that.getLogPath();
       this.sourceFileListing = that.getSourceFileListing();
@@ -345,7 +348,7 @@ public class DistCpOptions {
   }
 
   /**
-   * Checks if the input attibute should be preserved or not
+   * Checks if the input attribute should be preserved or not
    *
    * @param attribute - Attribute to check
    * @return True if attribute should be preserved, false otherwise
@@ -367,6 +370,21 @@ public class DistCpOptions {
       }
     }
     preserveStatus.add(fileAttribute);
+  }
+
+  /**
+   * Return true if raw.* xattrs should be preserved.
+   * @return true if raw.* xattrs should be preserved.
+   */
+  public boolean shouldPreserveRawXattrs() {
+    return preserveRawXattrs;
+  }
+
+  /**
+   * Indicate that raw.* xattrs should be preserved
+   */
+  public void preserveRawXattrs() {
+    preserveRawXattrs = true;
   }
 
   /** Get work path for atomic commit. If null, the work
@@ -565,6 +583,7 @@ public class DistCpOptions {
         ", sourcePaths=" + sourcePaths +
         ", targetPath=" + targetPath +
         ", targetPathExists=" + targetPathExists +
+        ", preserveRawXattrs=" + preserveRawXattrs +
         '}';
   }
 

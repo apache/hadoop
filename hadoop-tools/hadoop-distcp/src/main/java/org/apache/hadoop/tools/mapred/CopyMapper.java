@@ -200,6 +200,8 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
 
     EnumSet<DistCpOptions.FileAttribute> fileAttributes
             = getFileAttributeSettings(context);
+    final boolean preserveRawXattrs = context.getConfiguration().getBoolean(
+        DistCpConstants.CONF_LABEL_PRESERVE_RAWXATTRS, false);
 
     final String description = "Copying " + sourcePath + " to " + target;
     context.setStatus(description);
@@ -211,10 +213,12 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
       FileSystem sourceFS;
       try {
         sourceFS = sourcePath.getFileSystem(conf);
+        final boolean preserveXAttrs =
+            fileAttributes.contains(FileAttribute.XATTR);
         sourceCurrStatus = DistCpUtils.toCopyListingFileStatus(sourceFS,
           sourceFS.getFileStatus(sourcePath),
           fileAttributes.contains(FileAttribute.ACL), 
-          fileAttributes.contains(FileAttribute.XATTR));
+          preserveXAttrs, preserveRawXattrs);
       } catch (FileNotFoundException e) {
         throw new IOException(new RetriableFileCopyCommand.CopyReadException(e));
       }
@@ -249,8 +253,8 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
             action, fileAttributes);
       }
 
-      DistCpUtils.preserve(target.getFileSystem(conf), target,
-                           sourceCurrStatus, fileAttributes);
+      DistCpUtils.preserve(target.getFileSystem(conf), target, sourceCurrStatus,
+          fileAttributes, preserveRawXattrs);
     } catch (IOException exception) {
       handleFailures(exception, sourceFileStatus, target, context);
     }

@@ -209,19 +209,20 @@ public class TestNamenodeRetryCache {
     // Two retried calls succeed
     newCall();
     HdfsFileStatus status = namesystem.startFile(src, perm, "holder",
-        "clientmachine", EnumSet.of(CreateFlag.CREATE), true, (short) 1, BlockSize);
+        "clientmachine", EnumSet.of(CreateFlag.CREATE), true, (short) 1, 
+        BlockSize, null);
     Assert.assertEquals(status, namesystem.startFile(src, perm, 
         "holder", "clientmachine", EnumSet.of(CreateFlag.CREATE), 
-        true, (short) 1, BlockSize));
+        true, (short) 1, BlockSize, null));
     Assert.assertEquals(status, namesystem.startFile(src, perm, 
         "holder", "clientmachine", EnumSet.of(CreateFlag.CREATE), 
-        true, (short) 1, BlockSize));
+        true, (short) 1, BlockSize, null));
     
     // A non-retried call fails
     newCall();
     try {
       namesystem.startFile(src, perm, "holder", "clientmachine",
-          EnumSet.of(CreateFlag.CREATE), true, (short) 1, BlockSize);
+          EnumSet.of(CreateFlag.CREATE), true, (short) 1, BlockSize, null);
       Assert.fail("testCreate - expected exception is not thrown");
     } catch (IOException e) {
       // expected

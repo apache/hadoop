@@ -23,6 +23,7 @@ import java.util.Comparator;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 
 /**
  * Collection of blocks with their locations and the file length.
@@ -35,22 +36,23 @@ public class LocatedBlocks {
   private final boolean underConstruction;
   private LocatedBlock lastLocatedBlock = null;
   private boolean isLastBlockComplete = false;
+  private FileEncryptionInfo fileEncryptionInfo = null;
 
   public LocatedBlocks() {
     fileLength = 0;
     blocks = null;
     underConstruction = false;
   }
-  
-  /** public Constructor */
+
   public LocatedBlocks(long flength, boolean isUnderConstuction,
-      List<LocatedBlock> blks, 
-      LocatedBlock lastBlock, boolean isLastBlockCompleted) {
+    List<LocatedBlock> blks, LocatedBlock lastBlock,
+    boolean isLastBlockCompleted, FileEncryptionInfo feInfo) {
     fileLength = flength;
     blocks = blks;
     underConstruction = isUnderConstuction;
     this.lastLocatedBlock = lastBlock;
     this.isLastBlockComplete = isLastBlockCompleted;
+    this.fileEncryptionInfo = feInfo;
   }
   
   /**
@@ -92,13 +94,20 @@ public class LocatedBlocks {
   }
 
   /**
-   * Return ture if file was under construction when 
-   * this LocatedBlocks was constructed, false otherwise.
+   * Return true if file was under construction when this LocatedBlocks was
+   * constructed, false otherwise.
    */
   public boolean isUnderConstruction() {
     return underConstruction;
   }
-  
+
+  /**
+   * @return the FileEncryptionInfo for the LocatedBlocks
+   */
+  public FileEncryptionInfo getFileEncryptionInfo() {
+    return fileEncryptionInfo;
+  }
+
   /**
    * Find block containing specified offset.
    * 
