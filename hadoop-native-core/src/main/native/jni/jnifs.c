@@ -61,9 +61,9 @@
  * The C equivalent of org.apache.org.hadoop.FSData(Input|Output)Stream .
  */
 enum hdfsStreamType {
-    UNINITIALIZED = 0,
-    INPUT = 1,
-    OUTPUT = 2,
+    HDFS_STREAM_UNINITIALIZED = 0,
+    HDFS_STREAM_INPUT = 1,
+    HDFS_STREAM_OUTPUT = 2,
 };
 
 struct jni_fs {
@@ -109,13 +109,13 @@ static jthrowable getFileInfoFromStat(JNIEnv *env, jobject jStat,
 static int jni_file_is_open_for_read(hdfsFile bfile)
 {
     struct jni_file *file = (struct jni_file*)bfile;
-    return (file->type == INPUT);
+    return (file->type == HDFS_STREAM_INPUT);
 }
 
 static int jni_file_is_open_for_write(hdfsFile bfile)
 {
     struct jni_file *file = (struct jni_file*)bfile;
-    return (file->type == OUTPUT);
+    return (file->type == HDFS_STREAM_OUTPUT);
 }
 
 static int jni_file_get_read_statistics(hdfsFile bfile,
@@ -133,7 +133,7 @@ static int jni_file_get_read_statistics(hdfsFile bfile,
         errno = EINTERNAL;
         return -1;
     }
-    if (file->type != INPUT) {
+    if (file->type != HDFS_STREAM_INPUT) {
         ret = EINVAL;
         goto done;
     }
@@ -325,7 +325,7 @@ static int calcEffectiveURI(struct hdfsBuilder *bld, char ** uri)
     if (bld->port == 0) {
         suffix[0] = '\0';
     } else {
-        lastColon = rindex(bld->nn, ':');
+        lastColon = strrchr(bld->nn, ':');
         if (lastColon && (strspn(lastColon + 1, "0123456789") ==
                           strlen(lastColon + 1))) {
             fprintf(stderr, "port %d was given, but URI '%s' already "
@@ -611,6 +611,11 @@ static hdfsFile jni_open_file(hdfsFS bfs, const char* path, int flags,
     jvalue jVal;
     struct jni_file *file = NULL;
     int ret;
+    /* The hadoop java api/signature */
+    const char* method = NULL;
+    const char* signature = NULL;
+    jint jBufferSize;
+    jshort jReplication;
 
     /*
       JAVA EQUIVALENT:
@@ -643,19 +648,15 @@ static hdfsFile jni_open_file(hdfsFS bfs, const char* path, int flags,
       fprintf(stderr, "WARN: hadoop does not truly support O_CREATE && O_EXCL\n");
     }
 
-    /* The hadoop java api/signature */
-    const char* method = NULL;
-    const char* signature = NULL;
-
     if (accmode == O_RDONLY) {
-	method = "open";
-        signature = JMETHOD2(JPARAM(HADOOP_PATH), "I", JPARAM(HADOOP_ISTRM));
+        method = "open";
+            signature = JMETHOD2(JPARAM(HADOOP_PATH), "I", JPARAM(HADOOP_ISTRM));
     } else if (flags & O_APPEND) {
-	method = "append";
-	signature = JMETHOD1(JPARAM(HADOOP_PATH), JPARAM(HADOOP_OSTRM));
+        method = "append";
+        signature = JMETHOD1(JPARAM(HADOOP_PATH), JPARAM(HADOOP_OSTRM));
     } else {
-	method = "create";
-	signature = JMETHOD2(JPARAM(HADOOP_PATH), "ZISJ", JPARAM(HADOOP_OSTRM));
+        method = "create";
+        signature = JMETHOD2(JPARAM(HADOOP_PATH), "ZISJ", JPARAM(HADOOP_OSTRM));
     }
 
     /* Create an object of org.apache.hadoop.fs.Path */
@@ -676,8 +677,8 @@ static hdfsFile jni_open_file(hdfsFS bfs, const char* path, int flags,
     }
     jConfiguration = jVal.l;
 
-    jint jBufferSize = bufferSize;
-    jshort jReplication = replication;
+    jBufferSize = bufferSize;
+    jReplication = replication;
     jStrBufferSize = (*env)->NewStringUTF(env, "io.file.buffer.size"); 
     if (!jStrBufferSize) {
         ret = printPendingExceptionAndFree(env, PRINT_EXC_ALL, "OOM");
@@ -714,7 +715,7 @@ static hdfsFile jni_open_file(hdfsFS bfs, const char* path, int flags,
                     path);
                 goto done;
             }
-            jReplication = jVal.i;
+            jReplication = (jshort)jVal.i;
         }
     }
  
@@ -764,7 +765,8 @@ static hdfsFile jni_open_file(hdfsFS bfs, const char* path, int flags,
             "jni_open_file(%s): NewGlobalRef", path); 
         goto done;
     }
-    file->type = (((flags & O_WRONLY) == 0) ? INPUT : OUTPUT);
+    file->type = (((flags & O_WRONLY) == 0) ? HDFS_STREAM_INPUT :
+                  HDFS_STREAM_OUTPUT);
     file->flags = 0;
 
     if ((flags & O_WRONLY) == 0) {
@@ -813,15 +815,15 @@ static int jni_close_file(hdfsFS fs __attribute__((unused)), hdfsFile bfile)
         errno = EINTERNAL;
         return -1;
     }
-    if (file->type == UNINITIALIZED) {
+    if (file->type == HDFS_STREAM_UNINITIALIZED) {
         errno = EBADF;
         return -1;
     }
-    interface = (file->type == INPUT) ?  HADOOP_ISTRM : HADOOP_OSTRM;
+    interface = (file->type == HDFS_STREAM_INPUT) ?  HADOOP_ISTRM : HADOOP_OSTRM;
     jthr = invokeMethod(env, NULL, INSTANCE, file->stream, interface,
                      "close", "()V");
     if (jthr) {
-        const char *interfaceShortName = (file->type == INPUT) ? 
+        const char *interfaceShortName = (file->type == HDFS_STREAM_INPUT) ? 
             "FSDataInputStream" : "FSDataOutputStream";
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                 "%s#close", interfaceShortName);
@@ -928,7 +930,7 @@ static tSize jni_read(hdfsFS bfs __attribute__((unused)), hdfsFile bfile,
     } else if (length < 0) {
         errno = EINVAL;
         return -1;
-    } else if (file->type != INPUT) {
+    } else if (file->type != HDFS_STREAM_INPUT) {
         errno = EINVAL;
         return -1;
     }
@@ -983,7 +985,7 @@ static tSize jni_pread(hdfsFS bfs __attribute__((unused)), hdfsFile bfile,
         errno = EINVAL;
         return -1;
     }
-    if (file->type == UNINITIALIZED) {
+    if (file->type == HDFS_STREAM_UNINITIALIZED) {
         errno = EBADF;
         return -1;
     }
@@ -995,7 +997,7 @@ static tSize jni_pread(hdfsFS bfs __attribute__((unused)), hdfsFile bfile,
     }
 
     //Error checking... make sure that this file is 'readable'
-    if (file->type != INPUT) {
+    if (file->type != HDFS_STREAM_INPUT) {
         fprintf(stderr, "Cannot read from a non-InputStream object!\n");
         errno = EINVAL;
         return -1;
@@ -1055,7 +1057,7 @@ static tSize jni_write(hdfsFS bfs __attribute__((unused)), hdfsFile bfile,
     }
 
     //Sanity check
-    if (file->type == UNINITIALIZED) {
+    if (file->type == HDFS_STREAM_UNINITIALIZED) {
         errno = EBADF;
         return -1;
     }
@@ -1064,7 +1066,7 @@ static tSize jni_write(hdfsFS bfs __attribute__((unused)), hdfsFile bfile,
     	return -1;
     }
     //Error checking... make sure that this file is 'writable'
-    if (file->type != OUTPUT) {
+    if (file->type != HDFS_STREAM_OUTPUT) {
         fprintf(stderr, "Cannot write into a non-OutputStream object!\n");
         errno = EINVAL;
         return -1;
@@ -1116,7 +1118,7 @@ static int jni_seek(hdfsFS bfs __attribute__((unused)), hdfsFile bfile,
       errno = EINTERNAL;
       return -1;
     }
-    if (file->type != INPUT) {
+    if (file->type != HDFS_STREAM_INPUT) {
         errno = EBADF;
         return -1;
     }
@@ -1145,13 +1147,13 @@ static tOffset jni_tell(hdfsFS bfs __attribute__((unused)), hdfsFile bfile)
     }
 
     //Sanity check
-    if (file->type == UNINITIALIZED) {
+    if (file->type == HDFS_STREAM_UNINITIALIZED) {
         errno = EBADF;
         return -1;
     }
 
     //Parameters
-    const char* interface = (file->type == INPUT) ?
+    const char* interface = (file->type == HDFS_STREAM_INPUT) ?
         HADOOP_ISTRM : HADOOP_OSTRM;
     jvalue jVal;
     jthrowable jthr = invokeMethod(env, &jVal, INSTANCE, file->stream,
@@ -1159,7 +1161,7 @@ static tOffset jni_tell(hdfsFS bfs __attribute__((unused)), hdfsFile bfile)
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "jni_tell: %s#getPos",
-            ((file->type == INPUT) ? "FSDataInputStream" :
+            ((file->type == HDFS_STREAM_INPUT) ? "FSDataInputStream" :
                                  "FSDataOutputStream"));
         return -1;
     }
@@ -1176,7 +1178,7 @@ static int jni_flush(hdfsFS bfs __attribute__((unused)), hdfsFile bfile)
       errno = EINTERNAL;
       return -1;
     }
-    if (file->type != OUTPUT) {
+    if (file->type != HDFS_STREAM_OUTPUT) {
         errno = EBADF;
         return -1;
     }
@@ -1200,7 +1202,7 @@ static int jni_hflush(hdfsFS bfs __attribute__((unused)), hdfsFile bfile)
       errno = EINTERNAL;
       return -1;
     }
-    if (file->type != OUTPUT) {
+    if (file->type != HDFS_STREAM_OUTPUT) {
         errno = EBADF;
         return -1;
     }
@@ -1224,7 +1226,7 @@ static int jni_hsync(hdfsFS bfs __attribute__((unused)), hdfsFile bfile)
       errno = EINTERNAL;
       return -1;
     }
-    if (file->type != OUTPUT) {
+    if (file->type != HDFS_STREAM_OUTPUT) {
         errno = EBADF;
         return -1;
     }
@@ -1250,7 +1252,7 @@ static int jni_available(hdfsFS bfs __attribute__((unused)), hdfsFile bfile)
       errno = EINTERNAL;
       return -1;
     }
-    if (file->type != INPUT) {
+    if (file->type != HDFS_STREAM_INPUT) {
         errno = EBADF;
         return -1;
     }
@@ -1397,17 +1399,17 @@ static int jni_rename(hdfsFS bfs, const char* oldPath, const char* newPath)
     //  Path new = new Path(newPath);
     //  fs.rename(old, new);
 
+    jthrowable jthr;
+    jobject jOldPath = NULL, jNewPath = NULL;
+    int ret = -1;
+    jvalue jVal;
+
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
     if (env == NULL) {
       errno = EINTERNAL;
       return -1;
     }
-
-    jthrowable jthr;
-    jobject jOldPath = NULL, jNewPath = NULL;
-    int ret = -1;
-    jvalue jVal;
 
     jthr = constructNewObjectOfPath(env, oldPath, &jOldPath );
     if (jthr) {
@@ -1449,6 +1451,13 @@ static char* jni_get_working_directory(hdfsFS bfs, char *buffer,
                                        size_t bufferSize)
 {
     struct jni_fs *fs = (struct jni_fs*)bfs;
+    jobject jPath = NULL;
+    jstring jPathString = NULL;
+    jvalue jVal;
+    jthrowable jthr;
+    int ret;
+    const char *jPathChars = NULL;
+
     // JAVA EQUIVALENT:
     //  Path p = fs.getWorkingDirectory(); 
     //  return p.toString()
@@ -1459,13 +1468,6 @@ static char* jni_get_working_directory(hdfsFS bfs, char *buffer,
       errno = EINTERNAL;
       return NULL;
     }
-
-    jobject jPath = NULL;
-    jstring jPathString = NULL;
-    jvalue jVal;
-    jthrowable jthr;
-    int ret;
-    const char *jPathChars = NULL;
 
     //FileSystem#getWorkingDirectory()
     jthr = invokeMethod(env, &jVal, INSTANCE, fs->obj,
@@ -1530,15 +1532,15 @@ static int jni_set_working_directory(hdfsFS bfs, const char* path)
     // JAVA EQUIVALENT:
     //  fs.setWorkingDirectory(Path(path)); 
 
+    jthrowable jthr;
+    jobject jPath;
+
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
     if (env == NULL) {
       errno = EINTERNAL;
       return -1;
     }
-
-    jthrowable jthr;
-    jobject jPath;
 
     //Create an object of org.apache.hadoop.fs.Path
     jthr = constructNewObjectOfPath(env, path, &jPath);
@@ -1569,15 +1571,15 @@ static int jni_mkdir(hdfsFS bfs, const char* path)
     // JAVA EQUIVALENT:
     //  fs.mkdirs(new Path(path));
 
+    jobject jPath;
+    jthrowable jthr;
+
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
     if (env == NULL) {
       errno = EINTERNAL;
       return -1;
     }
-
-    jobject jPath;
-    jthrowable jthr;
 
     //Create an object of org.apache.hadoop.fs.Path
     jthr = constructNewObjectOfPath(env, path, &jPath);
@@ -1619,7 +1621,8 @@ static int jni_set_replication(hdfsFS bfs, const char* path,
     struct jni_fs *fs = (struct jni_fs*)bfs;
     // JAVA EQUIVALENT:
     //  fs.setReplication(new Path(path), replication);
-
+    jthrowable jthr;
+    jobject jPath;
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
     if (env == NULL) {
@@ -1627,10 +1630,6 @@ static int jni_set_replication(hdfsFS bfs, const char* path,
       return -1;
     }
 
-    jthrowable jthr;
-
-    //Create an object of org.apache.hadoop.fs.Path
-    jobject jPath;
     jthr = constructNewObjectOfPath(env, path, &jPath);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -2040,7 +2039,7 @@ static struct hadoopRzBuffer* jni_read_zero(hdfsFile bfile,
         errno = EINTERNAL;
         return NULL;
     }
-    if (file->type != INPUT) {
+    if (file->type != HDFS_STREAM_INPUT) {
         fputs("Cannot read from a non-InputStream object!\n", stderr);
         ret = EINVAL;
         goto done;
@@ -2364,7 +2363,8 @@ static tOffset jni_get_capacity(hdfsFS bfs)
     //  FsStatus fss = fs.getStatus();
     //  return Fss.getCapacity();
 
-    //Get the JNIEnv* corresponding to current thread
+    jvalue  jVal;
+    jthrowable jthr;
     JNIEnv* env = getJNIEnv();
     if (env == NULL) {
       errno = EINTERNAL;
@@ -2372,8 +2372,6 @@ static tOffset jni_get_capacity(hdfsFS bfs)
     }
 
     //FileSystem#getStatus
-    jvalue  jVal;
-    jthrowable jthr;
     jthr = invokeMethod(env, &jVal, INSTANCE, fs->obj, HADOOP_FS,
                      "getStatus", "()Lorg/apache/hadoop/fs/FsStatus;");
     if (jthr) {
@@ -2575,7 +2573,8 @@ static hdfsFileInfo *jni_get_path_info(hdfsFS bfs, const char* path)
     //  fs.getLength(f)
     //  f.getPath()
 
-    //Get the JNIEnv* corresponding to current thread
+    jobject jPath;
+    jthrowable jthr;
     JNIEnv* env = getJNIEnv();
     if (env == NULL) {
       errno = EINTERNAL;
@@ -2583,8 +2582,7 @@ static hdfsFileInfo *jni_get_path_info(hdfsFS bfs, const char* path)
     }
 
     //Create an object of org.apache.hadoop.fs.Path
-    jobject jPath;
-    jthrowable jthr = constructNewObjectOfPath(env, path, &jPath);
+    jthr = constructNewObjectOfPath(env, path, &jPath);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "jni_get_path_info(%s): constructNewObjectOfPath", path);
@@ -2614,7 +2612,8 @@ static tOffset jni_get_used(hdfsFS bfs)
     //  FsStatus fss = fs.getStatus();
     //  return Fss.getUsed();
 
-    //Get the JNIEnv* corresponding to current thread
+    jvalue  jVal;
+    jthrowable jthr;
     JNIEnv* env = getJNIEnv();
     if (env == NULL) {
       errno = EINTERNAL;
@@ -2622,8 +2621,6 @@ static tOffset jni_get_used(hdfsFS bfs)
     }
 
     //FileSystem#getStatus
-    jvalue  jVal;
-    jthrowable jthr;
     jthr = invokeMethod(env, &jVal, INSTANCE, fs->obj, HADOOP_FS,
                      "getStatus", "()Lorg/apache/hadoop/fs/FsStatus;");
     if (jthr) {
@@ -2648,8 +2645,10 @@ int jni_chown(hdfsFS bfs, const char* path, const char *owner, const char *group
     struct jni_fs *fs = (struct jni_fs*)bfs;
     // JAVA EQUIVALENT:
     //  fs.setOwner(path, owner, group)
-
-    //Get the JNIEnv* corresponding to current thread
+    jobject jPath = NULL;
+    jstring jOwner = NULL, jGroup = NULL;
+    jthrowable jthr;
+    int ret;
     JNIEnv* env = getJNIEnv();
     if (env == NULL) {
       errno = EINTERNAL;
@@ -2659,11 +2658,6 @@ int jni_chown(hdfsFS bfs, const char* path, const char *owner, const char *group
     if (owner == NULL && group == NULL) {
       return 0;
     }
-
-    jobject jPath = NULL;
-    jstring jOwner = NULL, jGroup = NULL;
-    jthrowable jthr;
-    int ret;
 
     jthr = constructNewObjectOfPath(env, path, &jPath);
     if (jthr) {
@@ -2719,18 +2713,16 @@ int jni_chmod(hdfsFS bfs, const char* path, short mode)
     // JAVA EQUIVALENT:
     //  fs.setPermission(path, FsPermission)
 
-    //Get the JNIEnv* corresponding to current thread
+    jthrowable jthr;
+    jobject jPath = NULL, jPermObj = NULL;
+    jshort jmode = mode;
     JNIEnv* env = getJNIEnv();
     if (env == NULL) {
       errno = EINTERNAL;
       return -1;
     }
 
-    jthrowable jthr;
-    jobject jPath = NULL, jPermObj = NULL;
-
     // construct jPerm = FsPermission.createImmutable(short mode);
-    jshort jmode = mode;
     jthr = constructNewObjectOfClass(env, &jPermObj,
                 HADOOP_FSPERM,"(S)V",jmode);
     if (jthr) {
@@ -2779,27 +2771,21 @@ static int jni_utime(hdfsFS bfs, const char* path, tTime mtime, tTime atime)
     // JAVA EQUIVALENT:
     //  fs.setTimes(src, mtime, atime)
     jthrowable jthr;
-
-    //Get the JNIEnv* corresponding to current thread
+    jobject jPath;
+    const tTime NO_CHANGE = -1;
+    jlong jmtime = (mtime == NO_CHANGE) ? -1 : (mtime * (jlong)1000);
+    jlong jatime = (atime == NO_CHANGE) ? -1 : (atime * (jlong)1000);
     JNIEnv* env = getJNIEnv();
     if (env == NULL) {
       errno = EINTERNAL;
       return -1;
     }
-
-    //Create an object of org.apache.hadoop.fs.Path
-    jobject jPath;
     jthr = constructNewObjectOfPath(env, path, &jPath);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "jni_utime(path=%s): constructNewObjectOfPath", path);
         return -1;
     }
-
-    const tTime NO_CHANGE = -1;
-    jlong jmtime = (mtime == NO_CHANGE) ? -1 : (mtime * (jlong)1000);
-    jlong jatime = (atime == NO_CHANGE) ? -1 : (atime * (jlong)1000);
-
     jthr = invokeMethod(env, NULL, INSTANCE, fs->obj, HADOOP_FS,
             "setTimes", JMETHOD3(JPARAM(HADOOP_PATH), "J", "J", JAVA_VOID),
             jPath, jmtime, jatime);

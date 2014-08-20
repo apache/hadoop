@@ -16,17 +16,18 @@
  * limitations under the License.
  */
 
+#include "common/platform.h"
 #include "fs/hdfs.h"
 #include "test/native_mini_dfs.h"
 #include "test/test.h"
 
 #include <errno.h>
 #include <inttypes.h>
-#include <semaphore.h>
-#include <pthread.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <uv.h>
 
 #define TO_STR_HELPER(X) #X
 #define TO_STR(X) TO_STR_HELPER(X)
@@ -35,8 +36,6 @@
 
 #define TLH_DEFAULT_BLOCK_SIZE 134217728
 
-static sem_t tlhSem;
-
 static struct NativeMiniDfsCluster* tlhCluster;
 
 struct tlhThreadInfo {
@@ -44,18 +43,19 @@ struct tlhThreadInfo {
     int threadIdx;
     /** 0 = thread was successful; error code otherwise */
     int success;
-    /** pthread identifier */
-    pthread_t thread;
+    /** thread identifier */
+    uv_thread_t theThread;
 };
 
 static int hdfsSingleNameNodeConnect(struct NativeMiniDfsCluster *cl, hdfsFS *fs,
                                      const char *username)
 {
-    int ret, port;
+    int ret;
+    int port;
     hdfsFS hdfs;
     struct hdfsBuilder *bld;
     
-    port = nmdGetNameNodePort(cl);
+    port = (tPort)nmdGetNameNodePort(cl);
     if (port < 0) {
         fprintf(stderr, "hdfsSingleNameNodeConnect: nmdGetNameNodePort "
                 "returned error %d\n", port);
@@ -85,7 +85,7 @@ static int hdfsSingleNameNodeConnect(struct NativeMiniDfsCluster *cl, hdfsFS *fs
 
 static int doTestGetDefaultBlockSize(hdfsFS fs, const char *path)
 {
-    int64_t blockSize;
+    tOffset blockSize;
     int ret;
 
     blockSize = hdfsGetDefaultBlockSize(fs);
@@ -122,23 +122,24 @@ struct tlhPaths {
 
 static int setupPaths(const struct tlhThreadInfo *ti, struct tlhPaths *paths)
 {
-    memset(paths, sizeof(*paths), 0);
-    if ((size_t)snprintf(paths->prefix, sizeof(paths->prefix), "/tlhData%04d",
-                 ti->threadIdx) >= sizeof(paths->prefix)) {
+    memset(paths, 0, sizeof(*paths));
+    if (snprintf(paths->prefix, sizeof(paths->prefix), "/tlhData%04d",
+                 ti->threadIdx) >= (int)sizeof(paths->prefix)) {
         return ENAMETOOLONG;
     }
-    if ((size_t)snprintf(paths->file1, sizeof(paths->file1), "%s/file1",
-                 paths->prefix) >= sizeof(paths->file1)) {
+    if (snprintf(paths->file1, sizeof(paths->file1), "%s/file1",
+                 paths->prefix) >= (int)sizeof(paths->file1)) {
         return ENAMETOOLONG;
     }
-    if ((size_t)snprintf(paths->file2, sizeof(paths->file2), "%s/file2",
-                 paths->prefix) >= sizeof(paths->file2)) {
+    if (snprintf(paths->file2, sizeof(paths->file2), "%s/file2",
+                 paths->prefix) >= (int)sizeof(paths->file2)) {
         return ENAMETOOLONG;
     }
     return 0;
 }
 
-static int doTestHdfsOperations(hdfsFS fs, const struct tlhPaths *paths)
+static int doTestHdfsOperations(hdfsFS fs,
+                                const struct tlhPaths *paths)
 {
     char tmp[4096];
     hdfsFile file;
@@ -163,7 +164,7 @@ static int doTestHdfsOperations(hdfsFS fs, const struct tlhPaths *paths)
     EXPECT_NONNULL(file);
 
     /* TODO: implement writeFully and use it here */
-    expected = strlen(paths->prefix);
+    expected = (int)strlen(paths->prefix);
     ret = hdfsWrite(fs, file, paths->prefix, expected);
     if (ret < 0) {
         ret = errno;
@@ -185,9 +186,9 @@ static int doTestHdfsOperations(hdfsFS fs, const struct tlhPaths *paths)
 
     EXPECT_INT_ZERO(hdfsFileGetReadStatistics(file, &readStats));
     errno = 0;
-    EXPECT_INT_ZERO(readStats->totalBytesRead);
-    EXPECT_INT_ZERO(readStats->totalLocalBytesRead);
-    EXPECT_INT_ZERO(readStats->totalShortCircuitBytesRead);
+    EXPECT_UINT64_EQ(UINT64_C(0), readStats->totalBytesRead);
+    EXPECT_UINT64_EQ(UINT64_C(0), readStats->totalLocalBytesRead);
+    EXPECT_UINT64_EQ(UINT64_C(0), readStats->totalShortCircuitBytesRead);
     hdfsFileFreeReadStatistics(readStats);
     /* TODO: implement readFully and use it here */
     ret = hdfsRead(fs, file, tmp, sizeof(tmp));
@@ -203,7 +204,7 @@ static int doTestHdfsOperations(hdfsFS fs, const struct tlhPaths *paths)
     }
     EXPECT_INT_ZERO(hdfsFileGetReadStatistics(file, &readStats));
     errno = 0;
-    EXPECT_INT_EQ(expected, readStats->totalBytesRead);
+    EXPECT_UINT64_EQ((uint64_t)expected, readStats->totalBytesRead);
     hdfsFileFreeReadStatistics(readStats);
     EXPECT_INT_ZERO(memcmp(paths->prefix, tmp, expected));
     EXPECT_INT_ZERO(hdfsCloseFile(fs, file));
@@ -261,12 +262,11 @@ static int testHdfsOperationsImpl(struct tlhThreadInfo *ti)
     return 0;
 }
 
-static void *testHdfsOperations(void *v)
+static void testHdfsOperations(void *v)
 {
     struct tlhThreadInfo *ti = (struct tlhThreadInfo*)v;
     int ret = testHdfsOperationsImpl(ti);
     ti->success = ret;
-    return NULL;
 }
 
 static int checkFailures(struct tlhThreadInfo *ti, int tlhNumThreads)
@@ -303,7 +303,10 @@ int main(void)
     const char *tlhNumThreadsStr;
     struct tlhThreadInfo ti[TLH_MAX_THREADS];
     struct NativeMiniDfsConf conf = {
-        .doFormat = 1,
+        1, /* doFormat */
+        0, /* webHdfsEnabled */
+        0, /* nameNodeHttpPort */
+        0, /* configureShortCircuit */
     };
 
     tlhNumThreadsStr = getenv("TLH_NUM_THREADS");
@@ -322,21 +325,19 @@ int main(void)
         ti[i].threadIdx = i;
     }
 
-    EXPECT_INT_ZERO(sem_init(&tlhSem, 0, tlhNumThreads));
     tlhCluster = nmdCreate(&conf);
     EXPECT_NONNULL(tlhCluster);
     EXPECT_INT_ZERO(nmdWaitClusterUp(tlhCluster));
 
     for (i = 0; i < tlhNumThreads; i++) {
-        EXPECT_INT_ZERO(pthread_create(&ti[i].thread, NULL,
-            testHdfsOperations, &ti[i]));
+        EXPECT_INT_ZERO(uv_thread_create(&ti[i].theThread,
+                                     testHdfsOperations, &ti[i]));
     }
     for (i = 0; i < tlhNumThreads; i++) {
-        EXPECT_INT_ZERO(pthread_join(ti[i].thread, NULL));
+        EXPECT_INT_ZERO(uv_thread_join(&ti[i].theThread));
     }
 
     EXPECT_INT_ZERO(nmdShutdown(tlhCluster));
     nmdFree(tlhCluster);
-    EXPECT_INT_ZERO(sem_destroy(&tlhSem));
     return checkFailures(ti, tlhNumThreads);
 }

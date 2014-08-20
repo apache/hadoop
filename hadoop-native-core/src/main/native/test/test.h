@@ -121,6 +121,13 @@ void *xcalloc(size_t len);
   EXPECT(expected_buf, TEST_ERROR_LOCATION_TEXT, TEST_ERROR_EQ, "%d", x); \
 } while(0);
 
+#define EXPECT_UINT64_EQ(expected, x) do { \
+  char expected_buf[32] = { 0 }; \
+  snprintf(expected_buf, sizeof(expected_buf), "%" PRIu64, expected); \
+  EXPECT(expected_buf, TEST_ERROR_LOCATION_TEXT, TEST_ERROR_EQ, \
+         "%" PRIu64, x); \
+} while(0);
+
 #define EXPECT_INT64_EQ(expected, x) do { \
   char expected_buf[32] = { 0 }; \
   snprintf(expected_buf, sizeof(expected_buf), "%" PRId64, expected); \

@@ -241,7 +241,7 @@ static struct hadoop_err *hdfs_builder_parse_conn_uri(
     if (hdfs_bld->port == 0) {
         hdfs_bld->port = hdfs_bld->uri->port;
     } else {
-        if (hdfs_bld->port != hdfs_bld->uri->port) {
+        if ((hdfs_bld->port != hdfs_bld->uri->port) && (hdfs_bld->uri->port)) {
             err = hadoop_lerr_alloc(EINVAL, "The connection URI specified "
                     "port %d, but hdfsBuilderSetNameNodePort specified port "
                     "%d.  Please only specify the port once, preferrably in "
