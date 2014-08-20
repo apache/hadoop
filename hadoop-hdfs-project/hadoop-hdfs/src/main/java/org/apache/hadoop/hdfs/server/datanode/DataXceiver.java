@@ -714,7 +714,7 @@ class DataXceiver extends Receiver implements Runnable {
       if (blockReceiver != null) {
         String mirrorAddr = (mirrorSock == null) ? null : mirrorNode;
         blockReceiver.receiveBlock(mirrorOut, mirrorIn, replyOut,
-            mirrorAddr, null, targets);
+            mirrorAddr, null, targets, false);
 
         // send close-ack for transfer-RBW/Finalized 
         if (isTransfer) {
@@ -990,7 +990,7 @@ class DataXceiver extends Receiver implements Runnable {
     String errMsg = null;
     BlockReceiver blockReceiver = null;
     DataInputStream proxyReply = null;
-    
+    DataOutputStream replyOut = new DataOutputStream(getOutputStream());
     try {
       // get the output stream to the proxy
       final String dnAddr = proxySource.getXferAddr(connectToDnViaHostname);
@@ -1047,8 +1047,8 @@ class DataXceiver extends Receiver implements Runnable {
           CachingStrategy.newDropBehind());
 
       // receive a block
-      blockReceiver.receiveBlock(null, null, null, null, 
-          dataXceiverServer.balanceThrottler, null);
+      blockReceiver.receiveBlock(null, null, replyOut, null, 
+          dataXceiverServer.balanceThrottler, null, true);
                     
       // notify name node
       datanode.notifyNamenodeReceivedBlock(
@@ -1083,6 +1083,7 @@ class DataXceiver extends Receiver implements Runnable {
       IOUtils.closeStream(proxyOut);
       IOUtils.closeStream(blockReceiver);
       IOUtils.closeStream(proxyReply);
+      IOUtils.closeStream(replyOut);
     }
 
     //update metrics
