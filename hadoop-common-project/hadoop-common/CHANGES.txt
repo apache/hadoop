@@ -442,6 +442,56 @@ Trunk (Unreleased)
 
     HADOOP-8589. ViewFs tests fail when tests and home dirs are nested (sanjay Radia)
 
+  BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
+
+    HADOOP-10734. Implement high-performance secure random number sources.
+    (Yi Liu via Colin Patrick McCabe)
+
+    HADOOP-10603. Crypto input and output streams implementing Hadoop stream
+    interfaces. (Yi Liu and Charles Lamb)
+
+    HADOOP-10628. Javadoc and few code style improvement for Crypto
+    input and output streams. (Yi Liu via clamb)
+
+    HADOOP-10632. Minor improvements to Crypto input and output streams. 
+    (Yi Liu)
+
+    HADOOP-10635. Add a method to CryptoCodec to generate SRNs for IV. (Yi Liu)
+
+    HADOOP-10653. Add a new constructor for CryptoInputStream that 
+    receives current position of wrapped stream. (Yi Liu)
+
+    HADOOP-10662. NullPointerException in CryptoInputStream while wrapped
+    stream is not ByteBufferReadable. Add tests using normal stream. (Yi Liu)
+
+    HADOOP-10713. Refactor CryptoCodec#generateSecureRandom to take a byte[]. 
+    (wang via yliu)
+
+    HADOOP-10693. Implementation of AES-CTR CryptoCodec using JNI to OpenSSL. 
+    (Yi Liu via cmccabe)
+
+    HADOOP-10803. Update OpensslCipher#getInstance to accept CipherSuite#name
+    format. (Yi Liu)
+
+    HADOOP-10735. Fall back AesCtrCryptoCodec implementation from OpenSSL to
+    JCE if non native support. (Yi Liu)
+
+    HADOOP-10870. Failed to load OpenSSL cipher error logs on systems with old
+    openssl versions (cmccabe)
+
+    HADOOP-10853. Refactor get instance of CryptoCodec and support create via
+    algorithm/mode/padding. (Yi Liu)
+
+    HADOOP-10919. Copy command should preserve raw.* namespace
+    extended attributes. (clamb)
+
+    HDFS-6873. Constants in CommandWithDestination should be static. (clamb)
+
+    HADOOP-10871. incorrect prototype in OpensslSecureRandom.c (cmccabe)
+
+    HADOOP-10886. CryptoCodec#getCodecclasses throws NPE when configurations not 
+    loaded. (umamahesh)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

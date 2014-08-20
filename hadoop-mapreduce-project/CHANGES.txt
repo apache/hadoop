@@ -154,6 +154,16 @@ Trunk (Unreleased)
     MAPREDUCE-5867. Fix NPE in KillAMPreemptionPolicy related to 
     ProportionalCapacityPreemptionPolicy (Sunil G via devaraj)
 
+  BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
+
+    MAPREDUCE-5890. Support for encrypting Intermediate 
+    data and spills in local filesystem. (asuresh via tucu)
+
+    MAPREDUCE-6007. Add support to distcp to preserve raw.* namespace
+    extended attributes. (clamb)
+
+    MAPREDUCE-6041. Fix TestOptionsParser. (clamb)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
