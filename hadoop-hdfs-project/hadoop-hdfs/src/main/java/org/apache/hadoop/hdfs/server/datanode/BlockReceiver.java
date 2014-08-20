@@ -738,7 +738,12 @@ class BlockReceiver implements Closeable {
       LOG.warn("Error managing cache for writer of block " + block, t);
     }
   }
-
+  
+  public void sendOOB() throws IOException, InterruptedException {
+    ((PacketResponder) responder.getRunnable()).sendOOBResponse(PipelineAck
+        .getRestartOOBStatus());
+  }
+  
   void receiveBlock(
       DataOutputStream mirrOut, // output to next datanode
       DataInputStream mirrIn,   // input from next datanode
@@ -830,9 +835,7 @@ class BlockReceiver implements Closeable {
               // The worst case is not recovering this RBW replica. 
               // Client will fall back to regular pipeline recovery.
             }
-            try {
-              ((PacketResponder) responder.getRunnable()).
-                  sendOOBResponse(PipelineAck.getRestartOOBStatus());
+            try {              
               // Even if the connection is closed after the ack packet is
               // flushed, the client can react to the connection closure 
               // first. Insert a delay to lower the chance of client 
@@ -840,8 +843,6 @@ class BlockReceiver implements Closeable {
               Thread.sleep(1000);
             } catch (InterruptedException ie) {
               // It is already going down. Ignore this.
-            } catch (IOException ioe) {
-              LOG.info("Error sending OOB Ack.", ioe);
             }
           }
           responder.interrupt();

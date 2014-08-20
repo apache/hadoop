@@ -29,6 +29,7 @@
         <exclude>*-config.cmd</exclude>
         <exclude>start-*.cmd</exclude>
         <exclude>stop-*.cmd</exclude>
+        <exclude>hadoop-layout.sh.example</exclude>
       </excludes>
       <fileMode>0755</fileMode>
     </fileSet>
@@ -42,6 +43,8 @@
       <includes>
         <include>*-config.sh</include>
         <include>*-config.cmd</include>
+        <include>*-functions.sh</include>
+        <include>hadoop-layout.sh.example</include>
       </includes>
       <fileMode>0755</fileMode>
     </fileSet>
@@ -57,6 +60,10 @@
         <exclude>hadoop.cmd</exclude>
         <exclude>hdfs.cmd</exclude>
         <exclude>hadoop-config.cmd</exclude>
+        <exclude>hadoop-functions.sh</exclude>
+        <exclude>hadoop-layout.sh.example</exclude>
+        <exclude>hdfs-config.cmd</exclude>
+        <exclude>hdfs-config.sh</exclude>
       </excludes>
       <fileMode>0755</fileMode>
     </fileSet>

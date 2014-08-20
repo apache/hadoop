@@ -402,6 +402,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6850. Move NFS out of order write unit tests into TestWrites class.
     (Zhe Zhang via atm)
 
+    HDFS-6188. An ip whitelist based implementation of TrustedChannelResolver.
+    (Benoy Antony via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -513,6 +516,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6825. Edit log corruption due to delayed block removal.
     (Yongjun Zhang via wang)
+
+    HDFS-6569. OOB message can't be sent to the client when DataNode shuts down for upgrade
+    (brandonli)
 
 Release 2.5.0 - UNRELEASED
 

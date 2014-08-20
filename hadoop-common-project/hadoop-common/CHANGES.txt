@@ -9,6 +9,8 @@ Trunk (Unreleased)
 
     HADOOP-10474 Move o.a.h.record to hadoop-streaming. (wheat9)
 
+    HADOOP-9902. Shell script rewrite (aw)
+
   NEW FEATURES
 
     HADOOP-10433. Key Management Server based on KeyProvider API. (tucu)
@@ -614,6 +616,15 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10973. Native Libraries Guide contains format error. (Peter Klavins
     via Arpit Agarwal)
+
+    HADOOP-10972. Native Libraries Guide contains mis-spelt build line (Peter
+    Klavins via aw)
+
+    HADOOP-10873. Fix dead link in Configuration javadoc (Akira AJISAKA 
+    via aw)
+
+    HADOOP-10968. hadoop native build fails to detect java_libarch on
+    ppc64le (Dinar Valeev via Colin Patrick McCabe)
 
 Release 2.5.0 - UNRELEASED
 

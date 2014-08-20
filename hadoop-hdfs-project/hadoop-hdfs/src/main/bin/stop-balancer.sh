@@ -15,14 +15,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bin=`dirname "${BASH_SOURCE-$0}"`
-bin=`cd "$bin"; pwd`
+function hadoop_usage
+{
+  echo "Usage: stop-balancer.sh [--config confdir]"
+}
 
-DEFAULT_LIBEXEC_DIR="$bin"/../libexec
-HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
-. $HADOOP_LIBEXEC_DIR/hdfs-config.sh
+this="${BASH_SOURCE-$0}"
+bin=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
+
+# let's locate libexec...
+if [[ -n "${HADOOP_PREFIX}" ]]; then
+  DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
+else
+  DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
+fi
+
+HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}"
+# shellcheck disable=SC2034
+HADOOP_NEW_CONFIG=true
+if [[ -f "${HADOOP_LIBEXEC_DIR}/hdfs-config.sh" ]]; then
+  . "${HADOOP_LIBEXEC_DIR}/hdfs-config.sh"
+else
+  echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/hdfs-config.sh." 2>&1
+  exit 1
+fi
 
 # Stop balancer daemon.
 # Run this on the machine where the balancer is running
 
-"$HADOOP_PREFIX"/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script "$bin"/hdfs stop balancer
+"${bin}/hadoop-daemon.sh" --config "${HADOOP_CONF_DIR}" stop balancer

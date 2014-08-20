@@ -211,6 +211,12 @@ Release 2.6.0 - UNRELEASED
     YARN-2397. Avoided loading two authentication filters for RM and TS web
     interfaces. (Varun Vasudev via zjshen)
 
+    YARN-2409. RM ActiveToStandBy transition missing stoping previous rmDispatcher.
+    (Rohith via jianhe)
+
+    YARN-2249. Avoided AM release requests being lost on work preserving RM
+    restart. (Jian He via zjshen)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
