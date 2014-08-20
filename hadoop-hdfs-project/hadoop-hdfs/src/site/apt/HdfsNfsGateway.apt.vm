@@ -209,7 +209,7 @@ HDFS NFS Gateway
    [[2]] Start package included portmap (needs root privileges):
 
 -------------------------
-     hadoop portmap
+     hdfs portmap
   
      OR
 
@@ -224,7 +224,7 @@ HDFS NFS Gateway
      as long as the user has read access to the Kerberos keytab defined in "nfs.keytab.file".
 
 -------------------------
-     hadoop nfs3
+     hdfs nfs3
 
      OR
 

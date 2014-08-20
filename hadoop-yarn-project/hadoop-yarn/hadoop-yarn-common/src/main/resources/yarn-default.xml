@@ -757,7 +757,10 @@
   </property>
 
   <property>
-    <description>Target size of localizer cache in MB, per local directory.</description>
+    <description>Target size of localizer cache in MB, per nodemanager. It is
+      a target retention size that only includes resources with PUBLIC and 
+      PRIVATE visibility and excludes resources with APPLICATION visibility
+    </description>
     <name>yarn.nodemanager.localizer.cache.target-size-mb</name>
     <value>10240</value>
   </property>
