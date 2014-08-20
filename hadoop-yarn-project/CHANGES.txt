@@ -50,6 +50,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2411. Support simple user and group mappings to queues. (Ram Venkatesh
     via jianhe)
 
+    YARN-2174. Enable HTTPs for the writer REST API of TimelineServer.
+    (Zhijie Shen via jianhe)
+
   IMPROVEMENTS
 
     YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc
