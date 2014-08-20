@@ -249,7 +249,7 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6012. DBInputSplit creates invalid ranges on Oracle. 
     (Wei Yan via kasha)
 
-Release 2.5.0 - UNRELEASED
+Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES
 
