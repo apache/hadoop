@@ -150,6 +150,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6188. An ip whitelist based implementation of TrustedChannelResolver.
     (Benoy Antony via Arpit Agarwal)
 
+    HDFS-6858. Allow dfs.data.transfer.saslproperties.resolver.class default to
+    hadoop.security.saslproperties.resolver.class. (Benoy Antony via cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
