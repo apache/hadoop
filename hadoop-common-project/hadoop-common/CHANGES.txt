@@ -383,6 +383,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10433. Key Management Server based on KeyProvider API. (tucu)
 
+    HADOOP-10893. isolated classloader on the client side (Sangjin Lee via
+    jlowe)
+
   IMPROVEMENTS
 
     HADOOP-10808. Remove unused native code for munlock. (cnauroth)
