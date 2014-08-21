@@ -116,6 +116,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10534. KeyProvider getKeysMetadata should take a list of names
     rather than returning all keys. (omalley)
 
+    HADOOP-10719. Add generateEncryptedKey and decryptEncryptedKey
+    methods to KeyProvider. (asuresh via tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
