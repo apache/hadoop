@@ -119,6 +119,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10719. Add generateEncryptedKey and decryptEncryptedKey
     methods to KeyProvider. (asuresh via tucu)
 
+    HADOOP-10817. ProxyUsers configuration should support configurable
+    prefixes. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
