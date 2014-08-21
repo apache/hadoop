@@ -218,6 +218,8 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10583. bin/hadoop key throws NPE with no args and assorted other fixups. (clamb via tucu)
 
+    HADOOP-10586. KeyShell doesn't allow setting Options via CLI. (clamb via tucu)
+
 Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES

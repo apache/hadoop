@@ -89,6 +89,8 @@ public class KeyShell extends Configured implements Tool {
    * @throws IOException
    */
   private int init(String[] args) throws IOException {
+    final Options options = KeyProvider.options(getConf());
+
     for (int i = 0; i < args.length; i++) { // parse command line
       boolean moreTokens = (i < args.length - 1);
       if (args[i].equals("create")) {
@@ -97,7 +99,7 @@ public class KeyShell extends Configured implements Tool {
           keyName = args[++i];
         }
 
-        command = new CreateCommand(keyName);
+        command = new CreateCommand(keyName, options);
         if ("--help".equals(keyName)) {
           printKeyShellUsage();
           return -1;
@@ -127,9 +129,11 @@ public class KeyShell extends Configured implements Tool {
       } else if ("list".equals(args[i])) {
         command = new ListCommand();
       } else if ("--size".equals(args[i]) && moreTokens) {
-        getConf().set(KeyProvider.DEFAULT_BITLENGTH_NAME, args[++i]);
+        options.setBitLength(Integer.parseInt(args[++i]));
       } else if ("--cipher".equals(args[i]) && moreTokens) {
-        getConf().set(KeyProvider.DEFAULT_CIPHER_NAME, args[++i]);
+        options.setCipher(args[++i]);
+      } else if ("--description".equals(args[i]) && moreTokens) {
+        options.setDescription(args[++i]);
       } else if ("--provider".equals(args[i]) && moreTokens) {
         userSuppliedProvider = true;
         getConf().set(KeyProviderFactory.KEY_PROVIDER_PATH, args[++i]);
@@ -399,6 +403,7 @@ public class KeyShell extends Configured implements Tool {
   private class CreateCommand extends Command {
     public static final String USAGE =
       "create <keyname> [--cipher <cipher>] [--size <size>]\n" +
+      "                     [--description <description>]\n" +
       "                     [--provider <provider>] [--help]";
     public static final String DESC =
       "The create subcommand creates a new key for the name specified\n" +
@@ -408,10 +413,12 @@ public class KeyShell extends Configured implements Tool {
       "The default keysize is 256. You may specify the requested key\n" +
       "length using the --size argument.\n";
 
-    String keyName = null;
+    final String keyName;
+    final Options options;
 
-    public CreateCommand(String keyName) {
+    public CreateCommand(String keyName, Options options) {
       this.keyName = keyName;
+      this.options = options;
     }
 
     public boolean validate() {
@@ -434,7 +441,6 @@ public class KeyShell extends Configured implements Tool {
     public void execute() throws IOException, NoSuchAlgorithmException {
       warnIfTransientProvider();
       try {
-        Options options = KeyProvider.options(getConf());
         provider.createKey(keyName, options);
         out.println(keyName + " has been successfully created.");
         provider.flush();

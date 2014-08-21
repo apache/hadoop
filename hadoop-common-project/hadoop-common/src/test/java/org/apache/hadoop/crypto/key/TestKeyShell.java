@@ -111,6 +111,30 @@ public class TestKeyShell {
     assertFalse(outContent.toString(), outContent.toString().contains("key1"));
   }
 
+  /* HADOOP-10586 KeyShell didn't allow -description. */
+  @Test
+  public void testKeySuccessfulCreationWithDescription() throws Exception {
+    outContent.reset();
+    String[] args1 = {"create", "key1", "--provider",
+                      "jceks://file" + tmpDir + "/keystore.jceks",
+                      "--description", "someDescription"};
+    int rc = 0;
+    KeyShell ks = new KeyShell();
+    ks.setConf(new Configuration());
+    rc = ks.run(args1);
+    assertEquals(0, rc);
+    assertTrue(outContent.toString().contains("key1 has been successfully " +
+        "created."));
+
+    outContent.reset();
+    String[] args2a = {"list", "--metadata", "--provider",
+                      "jceks://file" + tmpDir + "/keystore.jceks"};
+    rc = ks.run(args2a);
+    assertEquals(0, rc);
+    assertTrue(outContent.toString().contains("description"));
+    assertTrue(outContent.toString().contains("someDescription"));
+  }
+
   @Test
   public void testInvalidKeySize() throws Exception {
     String[] args1 = {"create", "key1", "--size", "56", "--provider",
