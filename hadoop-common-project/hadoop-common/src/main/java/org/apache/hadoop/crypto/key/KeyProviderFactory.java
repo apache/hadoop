@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ServiceLoader;
 
@@ -46,6 +47,15 @@ public abstract class KeyProviderFactory {
 
   private static final ServiceLoader<KeyProviderFactory> serviceLoader =
       ServiceLoader.load(KeyProviderFactory.class);
+
+  // Iterate through the serviceLoader to avoid lazy loading.
+  // Lazy loading would require synchronization in concurrent use cases.
+  static {
+    Iterator<KeyProviderFactory> iterServices = serviceLoader.iterator();
+    while (iterServices.hasNext()) {
+      iterServices.next();
+    }
+  }
 
   public static List<KeyProvider> getProviders(Configuration conf
                                                ) throws IOException {
