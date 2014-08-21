@@ -28,6 +28,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5906. Inconsistent configuration in property 
       "mapreduce.reduce.shuffle.input.buffer.percent" (Akira AJISAKA via aw)
 
+    MAPREDUCE-5974. Allow specifying multiple MapOutputCollectors with 
+    fallback. (Todd Lipcon via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES

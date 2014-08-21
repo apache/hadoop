@@ -664,7 +664,9 @@
   <name>mapreduce.job.map.output.collector.class</name>
   <value>org.apache.hadoop.mapred.MapTask$MapOutputBuffer</value>
   <description>
-    It defines the MapOutputCollector implementation to use.
+    The MapOutputCollector implementation(s) to use. This may be a comma-separated
+    list of class names, in which case the map task will try to initialize each
+    of the collectors in turn. The first to successfully initialize will be used.
   </description>
 </property>
  
