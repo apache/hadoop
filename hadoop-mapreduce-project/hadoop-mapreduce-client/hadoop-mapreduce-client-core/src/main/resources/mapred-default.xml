@@ -397,55 +397,41 @@
 </property>
 
 <property>
-  <name>mapreduce.tasktracker.map.tasks.maximum</name>
-  <value>2</value>
-  <description>The maximum number of map tasks that will be run
-  simultaneously by a task tracker.
+  <name>mapreduce.map.memory.mb</name>
+  <value>1024</value>
+  <description>The amount of memory to request from the scheduler for each
+  map task.
   </description>
 </property>
 
 <property>
-  <name>mapreduce.tasktracker.reduce.tasks.maximum</name>
-  <value>2</value>
-  <description>The maximum number of reduce tasks that will be run
-  simultaneously by a task tracker.
+  <name>mapreduce.map.cpu.vcores</name>
+  <value>1</value>
+  <description>The number of virtual cores to request from the scheduler for
+  each map task.
   </description>
 </property>
 
 <property>
-  <name>mapreduce.jobtracker.retiredjobs.cache.size</name>
-  <value>1000</value>
-  <description>The number of retired job status to keep in the cache.
+  <name>mapreduce.reduce.memory.mb</name>
+  <value>1024</value>
+  <description>The amount of memory to request from the scheduler for each
+  reduce task.
   </description>
 </property>
 
 <property>
-  <name>mapreduce.tasktracker.outofband.heartbeat</name>
-  <value>false</value>
-  <description>Expert: Set this to true to let the tasktracker send an 
-  out-of-band heartbeat on task-completion for better latency.
-  </description>
-</property>
-
-<property>
-  <name>mapreduce.jobtracker.jobhistory.lru.cache.size</name>
-  <value>5</value>
-  <description>The number of job history files loaded in memory. The jobs are 
-  loaded when they are first accessed. The cache is cleared based on LRU.
-  </description>
-</property>
-
-<property>
-  <name>mapreduce.jobtracker.instrumentation</name>
-  <value>org.apache.hadoop.mapred.JobTrackerMetricsInst</value>
-  <description>Expert: The instrumentation class to associate with each JobTracker.
+  <name>mapreduce.reduce.cpu.vcores</name>
+  <value>1</value>
+  <description>The number of virtual cores to request from the scheduler for
+  each reduce task.
   </description>
 </property>
 
 <property>
   <name>mapred.child.java.opts</name>
   <value>-Xmx200m</value>
-  <description>Java opts for the task tracker child processes.  
+  <description>Java opts for the task processes.
   The following symbol, if present, will be interpolated: @taskid@ is replaced 
   by current TaskID. Any other occurrences of '@' will go unchanged.
   For example, to enable verbose gc logging to a file named for the taskid in
@@ -459,16 +445,54 @@
   </description>
 </property>
 
+<!-- This is commented out so that it won't override mapred.child.java.opts.
+<property>
+  <name>mapreduce.map.java.opts</name>
+  <value></value>
+  <description>Java opts only for the child processes that are maps. If set,
+  this will be used instead of mapred.child.java.opts.
+  </description>
+</property>
+-->
+
+<!-- This is commented out so that it won't override mapred.child.java.opts.
+<property>
+  <name>mapreduce.reduce.java.opts</name>
+  <value></value>
+  <description>Java opts only for the child processes that are reduces. If set,
+  this will be used instead of mapred.child.java.opts.
+  </description>
+</property>
+-->
+
 <property>
   <name>mapred.child.env</name>
   <value></value>
-  <description>User added environment variables for the task tracker child 
-  processes. Example :
+  <description>User added environment variables for the task processes.
+  Example :
   1) A=foo  This will set the env variable A to foo
   2) B=$B:c This is inherit nodemanager's B env variable on Unix.
   3) B=%B%;c This is inherit nodemanager's B env variable on Windows.
   </description>
 </property>
+
+<!-- This is commented out so that it won't override mapred.child.env.
+<property>
+  <name>mapreduce.map.env</name>
+  <value></value>
+  <description>User added environment variables for the map task processes.
+  </description>
+</property>
+-->
+
+<!-- This is commented out so that it won't override mapred.child.env.
+<property>
+  <name>mapreduce.reduce.env</name>
+  <value></value>
+  <description>User added environment variables for the reduce task processes.
+  </description>
+</property>
+-->
 
 <property>
   <name>mapreduce.admin.user.env</name>
@@ -754,12 +778,21 @@
   </description>
 </property>
 
+<<<<<<< .working
 <property>
   <name>mapreduce.jobtracker.maxtasks.perjob</name>
   <value>-1</value>
   <description>The maximum number of tasks for a single job.
   A value of -1 indicates that there is no maximum.  </description>
 </property>
+=======
+<property>
+  <name>mapreduce.input.lineinputformat.linespermap</name>
+  <value>1</value>
+  <description>When using NLineInputFormat, the number of lines of input data
+  to include in each split.</description>
+</property>
+>>>>>>> .merge-right.r1619626
 
 <property>
   <name>mapreduce.client.submit.file.replication</name>
@@ -1301,6 +1334,14 @@
   <value>10000</value>
   <description> The number of records to process during merge before
    sending a progress notification to the TaskTracker.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.task.combine.progress.records</name>
+  <value>10000</value>
+  <description> The number of records to process during combine output collection
+   before sending a progress notification.
   </description>
 </property>
 
