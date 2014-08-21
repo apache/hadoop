@@ -646,25 +646,28 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension {
   public KeyVersion decryptEncryptedKey(
       EncryptedKeyVersion encryptedKeyVersion) throws IOException,
                                                       GeneralSecurityException {
-    checkNotNull(encryptedKeyVersion.getKeyVersionName(), "versionName");
-    checkNotNull(encryptedKeyVersion.getIv(), "iv");
-    Preconditions.checkArgument(encryptedKeyVersion.getEncryptedKey()
-        .getVersionName().equals(KeyProviderCryptoExtension.EEK),
+    checkNotNull(encryptedKeyVersion.getEncryptionKeyVersionName(),
+        "versionName");
+    checkNotNull(encryptedKeyVersion.getEncryptedKeyIv(), "iv");
+    Preconditions.checkArgument(
+        encryptedKeyVersion.getEncryptedKeyVersion().getVersionName()
+            .equals(KeyProviderCryptoExtension.EEK),
         "encryptedKey version name must be '%s', is '%s'",
-        KeyProviderCryptoExtension.EK, encryptedKeyVersion.getEncryptedKey()
-            .getVersionName());
-    checkNotNull(encryptedKeyVersion.getEncryptedKey(), "encryptedKey");
+        KeyProviderCryptoExtension.EK,
+        encryptedKeyVersion.getEncryptedKeyVersion().getVersionName()
+    );
+    checkNotNull(encryptedKeyVersion.getEncryptedKeyVersion(), "encryptedKey");
     Map<String, String> params = new HashMap<String, String>();
     params.put(KMSRESTConstants.EEK_OP, KMSRESTConstants.EEK_DECRYPT);
     Map<String, Object> jsonPayload = new HashMap<String, Object>();
     jsonPayload.put(KMSRESTConstants.NAME_FIELD,
-        encryptedKeyVersion.getKeyName());
+        encryptedKeyVersion.getEncryptionKeyName());
     jsonPayload.put(KMSRESTConstants.IV_FIELD, Base64.encodeBase64String(
-        encryptedKeyVersion.getIv()));
+        encryptedKeyVersion.getEncryptedKeyIv()));
     jsonPayload.put(KMSRESTConstants.MATERIAL_FIELD, Base64.encodeBase64String(
-            encryptedKeyVersion.getEncryptedKey().getMaterial()));
+            encryptedKeyVersion.getEncryptedKeyVersion().getMaterial()));
     URL url = createURL(KMSRESTConstants.KEY_VERSION_RESOURCE,
-        encryptedKeyVersion.getKeyVersionName(),
+        encryptedKeyVersion.getEncryptionKeyVersionName(),
         KMSRESTConstants.EEK_SUB_RESOURCE, params);
     HttpURLConnection conn = createConnection(url, HTTP_POST);
     conn.setRequestProperty(CONTENT_TYPE, APPLICATION_JSON_MIME);

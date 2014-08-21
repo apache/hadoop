@@ -122,6 +122,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10817. ProxyUsers configuration should support configurable
     prefixes. (tucu)
 
+    HADOOP-10881. Clarify usage of encryption and encrypted encryption
+    key in KeyProviderCryptoExtension. (wang)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
