@@ -255,6 +255,20 @@ public abstract class KeyProvider {
                                             ) throws IOException;
 
   /**
+   * Get the key names for all keys.
+   * @return the list of key names
+   * @throws IOException
+   */
+  public abstract List<String> getKeys() throws IOException;
+
+  /**
+   * Get the key material for all versions of a specific key name.
+   * @return the list of key material
+   * @throws IOException
+   */
+  public abstract List<KeyVersion> getKeyVersions(String name) throws IOException;
+
+  /**
    * Get the current version of the key, which should be used for encrypting new
    * data.
    * @param name the base name of the key

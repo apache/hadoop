@@ -90,6 +90,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10975. org.apache.hadoop.util.DataChecksum should support calculating
     checksums in native code (James Thomas via Colin Patrick McCabe)
 
+    HADOOP-10201. Add listing to KeyProvider API. (Larry McCay via omalley)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)

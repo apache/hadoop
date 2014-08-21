@@ -36,8 +36,11 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -56,6 +59,7 @@ import java.util.Map;
  */
 @InterfaceAudience.Private
 public class JavaKeyStoreProvider extends KeyProvider {
+  private static final String KEY_METADATA = "KeyMetadata";
   public static final String SCHEME_NAME = "jceks";
   public static final String KEYSTORE_PASSWORD_NAME =
       "HADOOP_KEYSTORE_PASSWORD";
@@ -115,6 +119,44 @@ public class JavaKeyStoreProvider extends KeyProvider {
       throw new IOException("Can't recover key " + key + " from " + path, e);
     }
     return new KeyVersion(versionName, key.getEncoded());
+  }
+
+  @Override
+  public List<String> getKeys() throws IOException {
+    ArrayList<String> list = new ArrayList<String>();
+    String alias = null;
+    try {
+      Enumeration<String> e = keyStore.aliases();
+      while (e.hasMoreElements()) {
+         alias = e.nextElement();
+         // only include the metadata key names in the list of names
+         if (!alias.contains("@")) {
+             list.add(alias);
+         }
+      }
+    } catch (KeyStoreException e) {
+      throw new IOException("Can't get key " + alias + " from " + path, e);
+    }
+    return list;
+  }
+
+  @Override
+  public List<KeyVersion> getKeyVersions(String name) throws IOException {
+    List<KeyVersion> list = new ArrayList<KeyVersion>();
+    Metadata km = getMetadata(name);
+    if (km != null) {
+      int latestVersion = km.getVersions();
+      KeyVersion v = null;
+      String versionName = null;
+      for (int i = 0; i < latestVersion; i++) {
+        versionName = buildVersionName(name, i);
+        v = getKeyVersion(versionName);
+        if (v != null) {
+          list.add(v);
+        }
+      }
+    }
+    return list;
   }
 
   @Override
@@ -288,7 +330,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
 
     @Override
     public String getFormat() {
-      return "KeyMetadata";
+      return KEY_METADATA;
     }
 
     @Override
