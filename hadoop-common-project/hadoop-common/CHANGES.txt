@@ -6,6 +6,8 @@ Release 2.6.0 - UNRELEASED
 
   NEW FEATURES
 
+    HADOOP-10433. Key Management Server based on KeyProvider API. (tucu)
+
   IMPROVEMENTS
 
     HADOOP-10808. Remove unused native code for munlock. (cnauroth)

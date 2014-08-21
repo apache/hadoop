@@ -9,6 +9,7 @@
 .project
 .settings
 target
+hadoop-common-project/hadoop-kms/downloads/
 hadoop-hdfs-project/hadoop-hdfs/downloads
 hadoop-hdfs-project/hadoop-hdfs-httpfs/downloads
 hadoop-common-project/hadoop-common/src/test/resources/contract-test-options.xml
