@@ -279,6 +279,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10826. Iteration on KeyProviderFactory.serviceLoader is
     thread-unsafe. (benoyantony viat tucu)
 
+    HADOOP-10920. site plugin couldn't parse hadoop-kms index.apt.vm.
+    (Akira Ajisaka via wang)
+
 Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES
