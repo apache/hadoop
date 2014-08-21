@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.ProviderUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.security.ssl.SSLFactory;
@@ -52,6 +53,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivilegedExceptionAction;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -235,6 +237,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   private SSLFactory sslFactory;
   private ConnectionConfigurator configurator;
   private DelegationTokenAuthenticatedURL.Token authToken;
+  private UserGroupInformation loginUgi;
 
   @Override
   public String toString() {
@@ -316,6 +319,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
                     KMS_CLIENT_ENC_KEY_CACHE_NUM_REFILL_THREADS_DEFAULT),
             new EncryptedQueueRefiller());
     authToken = new DelegationTokenAuthenticatedURL.Token();
+    loginUgi = UserGroupInformation.getCurrentUser();
   }
 
   private String createServiceURL(URL url) throws IOException {
@@ -374,14 +378,29 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     return conn;
   }
 
-  private HttpURLConnection createConnection(URL url, String method)
+  private HttpURLConnection createConnection(final URL url, String method)
       throws IOException {
     HttpURLConnection conn;
     try {
-      DelegationTokenAuthenticatedURL authUrl =
-          new DelegationTokenAuthenticatedURL(configurator);
-      conn = authUrl.openConnection(url, authToken);
-    } catch (AuthenticationException ex) {
+      // if current UGI is different from UGI at constructor time, behave as
+      // proxyuser
+      UserGroupInformation currentUgi = UserGroupInformation.getCurrentUser();
+      final String doAsUser =
+          (loginUgi.getShortUserName().equals(currentUgi.getShortUserName()))
+          ? null : currentUgi.getShortUserName();
+
+      // creating the HTTP connection using the current UGI at constructor time
+      conn = loginUgi.doAs(new PrivilegedExceptionAction<HttpURLConnection>() {
+        @Override
+        public HttpURLConnection run() throws Exception {
+          DelegationTokenAuthenticatedURL authUrl =
+              new DelegationTokenAuthenticatedURL(configurator);
+          return authUrl.openConnection(url, authToken, doAsUser);
+        }
+      });
+    } catch (IOException ex) {
+      throw ex;
+    } catch (Exception ex) {
       throw new IOException(ex);
     }
     conn.setUseCaches(false);
@@ -412,20 +431,27 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     if (status != expected) {
       InputStream es = null;
       try {
-        es = conn.getErrorStream();
-        ObjectMapper mapper = new ObjectMapper();
-        Map json = mapper.readValue(es, Map.class);
-        String exClass = (String) json.get(
-            KMSRESTConstants.ERROR_EXCEPTION_JSON);
-        String exMsg = (String)
-            json.get(KMSRESTConstants.ERROR_MESSAGE_JSON);
         Exception toThrow;
-        try {
-          ClassLoader cl = KMSClientProvider.class.getClassLoader();
-          Class klass = cl.loadClass(exClass);
-          Constructor constr = klass.getConstructor(String.class);
-          toThrow = (Exception) constr.newInstance(exMsg);
-        } catch (Exception ex) {
+        String contentType = conn.getHeaderField(CONTENT_TYPE);
+        if (contentType != null &&
+            contentType.toLowerCase().startsWith(APPLICATION_JSON_MIME)) {
+          es = conn.getErrorStream();
+          ObjectMapper mapper = new ObjectMapper();
+          Map json = mapper.readValue(es, Map.class);
+          String exClass = (String) json.get(
+              KMSRESTConstants.ERROR_EXCEPTION_JSON);
+          String exMsg = (String)
+              json.get(KMSRESTConstants.ERROR_MESSAGE_JSON);
+          try {
+            ClassLoader cl = KMSClientProvider.class.getClassLoader();
+            Class klass = cl.loadClass(exClass);
+            Constructor constr = klass.getConstructor(String.class);
+            toThrow = (Exception) constr.newInstance(exMsg);
+          } catch (Exception ex) {
+            toThrow = new IOException(MessageFormat.format(
+                "HTTP status [{0}], {1}", status, conn.getResponseMessage()));
+          }
+        } else {
           toThrow = new IOException(MessageFormat.format(
               "HTTP status [{0}], {1}", status, conn.getResponseMessage()));
         }

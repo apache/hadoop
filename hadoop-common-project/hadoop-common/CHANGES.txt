@@ -127,6 +127,8 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10770. KMS add delegation token support. (tucu)
 
+    HADOOP-10698. KMS, add proxyuser support. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
