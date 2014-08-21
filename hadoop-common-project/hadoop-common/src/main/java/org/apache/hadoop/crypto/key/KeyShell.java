@@ -230,16 +230,16 @@ public class KeyShell extends Configured implements Tool {
     }
 
     public void execute() throws IOException {
-      List<String> keys;
       try {
+        List<String> keys = provider.getKeys();
         out.println("Listing keys for KeyProvider: " + provider.toString());
         if (metadata) {
-          Map<String, Metadata> keysMeta = provider.getKeysMetadata();
-          for (Map.Entry<String, Metadata> entry : keysMeta.entrySet()) {
-            out.println(entry.getKey() + " : " + entry.getValue());
+          Metadata[] meta =
+            provider.getKeysMetadata(keys.toArray(new String[keys.size()]));
+          for(int i=0; i < meta.length; ++i) {
+            out.println(keys.get(i) + " : " + meta[i]);
           }
         } else {
-          keys = provider.getKeys();
           for (String keyName : keys) {
             out.println(keyName);
           }

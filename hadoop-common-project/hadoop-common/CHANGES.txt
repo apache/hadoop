@@ -111,6 +111,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10431. Change visibility of KeyStore.Options getter methods to
     public. (tucu)
 
+    HADOOP-10534. KeyProvider getKeysMetadata should take a list of names
+    rather than returning all keys. (omalley)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
