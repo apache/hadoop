@@ -73,7 +73,7 @@ public class TestKeyShell {
   private void deleteKey(KeyShell ks, String keyName) throws Exception {
     int rc;
     outContent.reset();
-    final String[] delArgs = {"delete", keyName, "--provider", jceksProvider};
+    final String[] delArgs = {"delete", keyName, "-provider", jceksProvider};
     rc = ks.run(delArgs);
     assertEquals(0, rc);
     assertTrue(outContent.toString().contains(keyName + " has been " +
@@ -90,8 +90,8 @@ public class TestKeyShell {
   private String listKeys(KeyShell ks, boolean wantMetadata) throws Exception {
     int rc;
     outContent.reset();
-    final String[] listArgs = {"list", "--provider", jceksProvider };
-    final String[] listArgsM = {"list", "--metadata", "--provider", jceksProvider };
+    final String[] listArgs = {"list", "-provider", jceksProvider };
+    final String[] listArgsM = {"list", "-metadata", "-provider", jceksProvider };
     rc = ks.run(wantMetadata ? listArgsM : listArgs);
     assertEquals(0, rc);
     return outContent.toString();
@@ -106,7 +106,7 @@ public class TestKeyShell {
     ks.setConf(new Configuration());
 
     outContent.reset();
-    final String[] args1 = {"create", keyName, "--provider", jceksProvider};
+    final String[] args1 = {"create", keyName, "-provider", jceksProvider};
     rc = ks.run(args1);
     assertEquals(0, rc);
     assertTrue(outContent.toString().contains(keyName + " has been " +
@@ -121,7 +121,7 @@ public class TestKeyShell {
     assertTrue(listOut.contains("created"));
 
     outContent.reset();
-    final String[] args2 = {"roll", keyName, "--provider", jceksProvider};
+    final String[] args2 = {"roll", keyName, "-provider", jceksProvider};
     rc = ks.run(args2);
     assertEquals(0, rc);
     assertTrue(outContent.toString().contains("key1 has been successfully " +
@@ -137,8 +137,8 @@ public class TestKeyShell {
   @Test
   public void testKeySuccessfulCreationWithDescription() throws Exception {
     outContent.reset();
-    final String[] args1 = {"create", "key1", "--provider", jceksProvider,
-                      "--description", "someDescription"};
+    final String[] args1 = {"create", "key1", "-provider", jceksProvider,
+                      "-description", "someDescription"};
     int rc = 0;
     KeyShell ks = new KeyShell();
     ks.setConf(new Configuration());
@@ -154,7 +154,7 @@ public class TestKeyShell {
 
   @Test
   public void testInvalidKeySize() throws Exception {
-    final String[] args1 = {"create", "key1", "--size", "56", "--provider",
+    final String[] args1 = {"create", "key1", "-size", "56", "-provider",
             jceksProvider};
 
     int rc = 0;
@@ -167,7 +167,7 @@ public class TestKeyShell {
 
   @Test
   public void testInvalidCipher() throws Exception {
-    final String[] args1 = {"create", "key1", "--cipher", "LJM", "--provider",
+    final String[] args1 = {"create", "key1", "-cipher", "LJM", "-provider",
             jceksProvider};
 
     int rc = 0;
@@ -180,7 +180,7 @@ public class TestKeyShell {
 
   @Test
   public void testInvalidProvider() throws Exception {
-    final String[] args1 = {"create", "key1", "--cipher", "AES", "--provider",
+    final String[] args1 = {"create", "key1", "-cipher", "AES", "-provider",
       "sdff://file/tmp/keystore.jceks"};
 
     int rc = 0;
@@ -194,7 +194,7 @@ public class TestKeyShell {
 
   @Test
   public void testTransientProviderWarning() throws Exception {
-    final String[] args1 = {"create", "key1", "--cipher", "AES", "--provider",
+    final String[] args1 = {"create", "key1", "-cipher", "AES", "-provider",
       "user:///"};
 
     int rc = 0;
@@ -224,8 +224,8 @@ public class TestKeyShell {
   @Test
   public void testFullCipher() throws Exception {
     final String keyName = "key1";
-    final String[] args1 = {"create", keyName, "--cipher", "AES/CBC/pkcs5Padding",
-        "--provider", jceksProvider};
+    final String[] args1 = {"create", keyName, "-cipher", "AES/CBC/pkcs5Padding",
+        "-provider", jceksProvider};
 
     int rc = 0;
     KeyShell ks = new KeyShell();
@@ -245,8 +245,8 @@ public class TestKeyShell {
     ks.setConf(new Configuration());
 
     /* Simple creation test */
-    final String[] args1 = {"create", "keyattr1", "--provider", jceksProvider,
-            "--attr", "foo=bar"};
+    final String[] args1 = {"create", "keyattr1", "-provider", jceksProvider,
+            "-attr", "foo=bar"};
     rc = ks.run(args1);
     assertEquals(0, rc);
     assertTrue(outContent.toString().contains("keyattr1 has been " +
@@ -259,8 +259,8 @@ public class TestKeyShell {
 
     /* Negative tests: no attribute */
     outContent.reset();
-    final String[] args2 = {"create", "keyattr2", "--provider", jceksProvider,
-            "--attr", "=bar"};
+    final String[] args2 = {"create", "keyattr2", "-provider", jceksProvider,
+            "-attr", "=bar"};
     rc = ks.run(args2);
     assertEquals(1, rc);
 
@@ -288,10 +288,10 @@ public class TestKeyShell {
 
     /* Test several attrs together... */
     outContent.reset();
-    final String[] args3 = {"create", "keyattr3", "--provider", jceksProvider,
-            "--attr", "foo = bar",
-            "--attr", " glarch =baz  ",
-            "--attr", "abc=def"};
+    final String[] args3 = {"create", "keyattr3", "-provider", jceksProvider,
+            "-attr", "foo = bar",
+            "-attr", " glarch =baz  ",
+            "-attr", "abc=def"};
     rc = ks.run(args3);
     assertEquals(0, rc);
 
@@ -304,9 +304,9 @@ public class TestKeyShell {
 
     /* Negative test - repeated attributes should fail */
     outContent.reset();
-    final String[] args4 = {"create", "keyattr4", "--provider", jceksProvider,
-            "--attr", "foo=bar",
-            "--attr", "foo=glarch"};
+    final String[] args4 = {"create", "keyattr4", "-provider", jceksProvider,
+            "-attr", "foo=bar",
+            "-attr", "foo=glarch"};
     rc = ks.run(args4);
     assertEquals(1, rc);
 
