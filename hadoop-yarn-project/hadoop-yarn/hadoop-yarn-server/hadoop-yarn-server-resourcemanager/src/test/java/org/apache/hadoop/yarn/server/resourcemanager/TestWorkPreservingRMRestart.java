@@ -513,6 +513,19 @@ public class TestWorkPreservingRMRestart {
     // just-recovered containers.
     assertNull(scheduler.getRMContainer(runningContainer.getContainerId()));
     assertNull(scheduler.getRMContainer(completedContainer.getContainerId()));
+
+    rm2.waitForNewAMToLaunchAndRegister(app1.getApplicationId(), 2, nm1);
+
+    MockNM nm2 =
+        new MockNM("127.1.1.1:4321", 8192, rm2.getResourceTrackerService());
+    NMContainerStatus previousAttemptContainer =
+        TestRMRestart.createNMContainerStatus(am1.getApplicationAttemptId(), 4,
+          ContainerState.RUNNING);
+    nm2.registerNode(Arrays.asList(previousAttemptContainer), null);
+    // Wait for RM to settle down on recovering containers;
+    Thread.sleep(3000);
+    // check containers from previous failed attempt should not be recovered.
+    assertNull(scheduler.getRMContainer(previousAttemptContainer.getContainerId()));
   }
 
   // Apps already completed before RM restart. Restarted RM scheduler should not

@@ -231,6 +231,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2424. LCE should support non-cgroups, non-secure mode (Chris Douglas 
     via aw)
 
+    YARN-2434. RM should not recover containers from previously failed attempt
+    when AM restart is not enabled (Jian He via jlowe)
+
 Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES
