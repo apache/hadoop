@@ -499,6 +499,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6858. Allow dfs.data.transfer.saslproperties.resolver.class default to
     hadoop.security.saslproperties.resolver.class. (Benoy Antony via cnauroth)
 
+    HDFS-6878. Change MiniDFSCluster to support StorageType configuration
+    for individual directories (Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

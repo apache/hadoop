@@ -50,12 +50,14 @@ public class MiniDFSClusterWithNodeGroup extends MiniDFSCluster {
   }
 
   public synchronized void startDataNodes(Configuration conf, int numDataNodes,
-      StorageType storageType, boolean manageDfsDirs, StartupOption operation,
+      StorageType[][] storageTypes, boolean manageDfsDirs, StartupOption operation,
       String[] racks, String[] nodeGroups, String[] hosts,
       long[] simulatedCapacities,
       boolean setupHostsFile,
       boolean checkDataNodeAddrConfig,
       boolean checkDataNodeHostConfig) throws IOException {
+    assert storageTypes == null || storageTypes.length == numDataNodes;
+
     if (operation == StartupOption.RECOVER) {
       return;
     }
@@ -112,7 +114,7 @@ public class MiniDFSClusterWithNodeGroup extends MiniDFSCluster {
       // Set up datanode address
       setupDatanodeAddress(dnConf, setupHostsFile, checkDataNodeAddrConfig);
       if (manageDfsDirs) {
-        String dirs = makeDataNodeDirs(i, storageType);
+        String dirs = makeDataNodeDirs(i, storageTypes == null ? null : storageTypes[i]);
         dnConf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dirs);
         conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dirs);
       }
@@ -190,7 +192,7 @@ public class MiniDFSClusterWithNodeGroup extends MiniDFSCluster {
       String[] racks, String[] nodeGroups, String[] hosts,
       long[] simulatedCapacities,
       boolean setupHostsFile) throws IOException {
-    startDataNodes(conf, numDataNodes, StorageType.DEFAULT, manageDfsDirs, operation, racks, nodeGroups,
+    startDataNodes(conf, numDataNodes, null, manageDfsDirs, operation, racks, nodeGroups,
         hosts, simulatedCapacities, setupHostsFile, false, false);
   }
 
@@ -205,14 +207,14 @@ public class MiniDFSClusterWithNodeGroup extends MiniDFSCluster {
   // This is for initialize from parent class.
   @Override
   public synchronized void startDataNodes(Configuration conf, int numDataNodes, 
-      StorageType storageType, boolean manageDfsDirs, StartupOption operation,
+      StorageType[][] storageTypes, boolean manageDfsDirs, StartupOption operation,
       String[] racks, String[] hosts,
       long[] simulatedCapacities,
       boolean setupHostsFile,
       boolean checkDataNodeAddrConfig,
       boolean checkDataNodeHostConfig,
       Configuration[] dnConfOverlays) throws IOException {
-    startDataNodes(conf, numDataNodes, storageType, manageDfsDirs, operation, racks,
+    startDataNodes(conf, numDataNodes, storageTypes, manageDfsDirs, operation, racks,
         NODE_GROUPS, hosts, simulatedCapacities, setupHostsFile, 
         checkDataNodeAddrConfig, checkDataNodeHostConfig);
   }
