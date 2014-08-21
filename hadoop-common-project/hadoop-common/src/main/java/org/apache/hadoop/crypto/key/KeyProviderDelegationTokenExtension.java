@@ -20,6 +20,8 @@ package org.apache.hadoop.crypto.key;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 
+import java.io.IOException;
+
 /**
  * A KeyProvider extension with the ability to add a renewer's Delegation
  * Tokens to the provided Credentials.
@@ -45,9 +47,10 @@ public class KeyProviderDelegationTokenExtension extends
      * @param renewer the user allowed to renew the delegation tokens
      * @param credentials cache in which to add new delegation tokens
      * @return list of new delegation tokens
+     * @throws IOException thrown if IOException if an IO error occurs.
      */
     public Token<?>[] addDelegationTokens(final String renewer,
-        Credentials credentials);
+        Credentials credentials) throws IOException;
   }
 
   /**
@@ -76,9 +79,10 @@ public class KeyProviderDelegationTokenExtension extends
    * @param renewer the user allowed to renew the delegation tokens
    * @param credentials cache in which to add new delegation tokens
    * @return list of new delegation tokens
+   * @throws IOException thrown if IOException if an IO error occurs.
    */
   public Token<?>[] addDelegationTokens(final String renewer,
-      Credentials credentials) {
+      Credentials credentials) throws IOException {
     return getExtension().addDelegationTokens(renewer, credentials);
   }
 

@@ -21,9 +21,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.FilterOutputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.security.Principal;
 
 import org.apache.hadoop.crypto.key.kms.server.KMS.KMSOp;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.PropertyConfigurator;
 import org.junit.After;
@@ -81,8 +81,8 @@ public class TestKMSAudit {
 
   @Test
   public void testAggregation() throws Exception {
-    Principal luser = Mockito.mock(Principal.class);
-    Mockito.when(luser.getName()).thenReturn("luser");
+    UserGroupInformation luser = Mockito.mock(UserGroupInformation.class);
+    Mockito.when(luser.getShortUserName()).thenReturn("luser");
     kmsAudit.ok(luser, KMSOp.DECRYPT_EEK, "k1", "testmsg");
     kmsAudit.ok(luser, KMSOp.DECRYPT_EEK, "k1", "testmsg");
     kmsAudit.ok(luser, KMSOp.DECRYPT_EEK, "k1", "testmsg");
@@ -109,8 +109,8 @@ public class TestKMSAudit {
 
   @Test
   public void testAggregationUnauth() throws Exception {
-    Principal luser = Mockito.mock(Principal.class);
-    Mockito.when(luser.getName()).thenReturn("luser");
+    UserGroupInformation luser = Mockito.mock(UserGroupInformation.class);
+    Mockito.when(luser.getShortUserName()).thenReturn("luser");
     kmsAudit.unauthorized(luser, KMSOp.GENERATE_EEK, "k2");
     Thread.sleep(1000);
     kmsAudit.ok(luser, KMSOp.GENERATE_EEK, "k3", "testmsg");

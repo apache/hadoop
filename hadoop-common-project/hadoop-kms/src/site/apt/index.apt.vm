@@ -319,6 +319,46 @@ $ keytool -genkey -alias tomcat -keyalg RSA
 </configuration>
 +---+
 
+** KMS Delegation Token Configuration
+
+  KMS delegation token secret manager can be configured with the following
+  properties:
+
+  +---+
+    <property>
+      <name>hadoop.kms.authentication.delegation-token.update-interval.sec</name>
+      <value>86400</value>
+      <description>
+        How often the master key is rotated, in seconds. Default value 1 day.
+      </description>
+    </property>
+
+    <property>
+      <name>hadoop.kms.authentication.delegation-token.max-lifetime.sec</name>
+      <value>604800</value>
+      <description>
+        Maximum lifetime of a delagation token, in seconds. Default value 7 days.
+      </description>
+    </property>
+
+    <property>
+      <name>hadoop.kms.authentication.delegation-token.renew-interval.sec</name>
+      <value>86400</value>
+      <description>
+        Renewal interval of a delagation token, in seconds. Default value 1 day.
+      </description>
+    </property>
+
+    <property>
+      <name>hadoop.kms.authentication.delegation-token.removal-scan-interval.sec</name>
+      <value>3600</value>
+      <description>
+        Scan interval to remove expired delegation tokens.
+      </description>
+    </property>
+  +---+
+
+
 ** KMS HTTP REST API
 
 *** Create a Key

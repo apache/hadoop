@@ -22,8 +22,13 @@ import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
+import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.minikdc.MiniKdc;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.junit.AfterClass;
@@ -45,6 +50,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.ServerSocket;
 import java.net.SocketTimeoutException;
@@ -565,6 +571,17 @@ public class TestKMS {
         Assert.assertEquals("d", meta.getDescription());
         Assert.assertEquals(attributes, meta.getAttributes());
 
+        KeyProviderDelegationTokenExtension kpdte =
+            KeyProviderDelegationTokenExtension.
+                createKeyProviderDelegationTokenExtension(kp);
+        Credentials credentials = new Credentials();
+        kpdte.addDelegationTokens("foo", credentials);
+        Assert.assertEquals(1, credentials.getAllTokens().size());
+        InetSocketAddress kmsAddr = new InetSocketAddress(getKMSUrl().getHost(),
+            getKMSUrl().getPort());
+
+        Assert.assertEquals(new Text("kms-dt"), credentials.getToken(
+            SecurityUtil.buildTokenService(kmsAddr)).getKind());
         return null;
       }
     });
@@ -596,13 +613,13 @@ public class TestKMS {
       public Void call() throws Exception {
         final Configuration conf = new Configuration();
         conf.setInt(KeyProvider.DEFAULT_BITLENGTH_NAME, 128);
-        URI uri = createKMSUri(getKMSUrl());
-        final KeyProvider kp = new KMSClientProvider(uri, conf);
+        final URI uri = createKMSUri(getKMSUrl());
 
         //nothing allowed
         doAs("client", new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {
+            KeyProvider kp = new KMSClientProvider(uri, conf);
             try {
               kp.createKey("k", new KeyProvider.Options(conf));
               Assert.fail();
@@ -693,6 +710,7 @@ public class TestKMS {
         doAs("CREATE", new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {
+            KeyProvider kp = new KMSClientProvider(uri, conf);
             try {
               KeyProvider.KeyVersion kv = kp.createKey("k0",
                   new KeyProvider.Options(conf));
@@ -707,6 +725,7 @@ public class TestKMS {
         doAs("DELETE", new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {
+            KeyProvider kp = new KMSClientProvider(uri, conf);
             try {
               kp.deleteKey("k0");
             } catch (Exception ex) {
@@ -719,6 +738,7 @@ public class TestKMS {
         doAs("SET_KEY_MATERIAL", new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {
+            KeyProvider kp = new KMSClientProvider(uri, conf);
             try {
               KeyProvider.KeyVersion kv = kp.createKey("k1", new byte[16],
                   new KeyProvider.Options(conf));
@@ -733,6 +753,7 @@ public class TestKMS {
         doAs("ROLLOVER", new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {
+            KeyProvider kp = new KMSClientProvider(uri, conf);
             try {
               KeyProvider.KeyVersion kv = kp.rollNewVersion("k1");
               Assert.assertNull(kv.getMaterial());
@@ -746,6 +767,7 @@ public class TestKMS {
         doAs("SET_KEY_MATERIAL", new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {
+            KeyProvider kp = new KMSClientProvider(uri, conf);
             try {
               KeyProvider.KeyVersion kv =
                   kp.rollNewVersion("k1", new byte[16]);
@@ -761,6 +783,7 @@ public class TestKMS {
             doAs("GET", new PrivilegedExceptionAction<KeyVersion>() {
           @Override
           public KeyVersion run() throws Exception {
+            KeyProvider kp = new KMSClientProvider(uri, conf);
             try {
               kp.getKeyVersion("k1@0");
               KeyVersion kv = kp.getCurrentKey("k1");
@@ -777,6 +800,7 @@ public class TestKMS {
                 new PrivilegedExceptionAction<EncryptedKeyVersion>() {
           @Override
           public EncryptedKeyVersion run() throws Exception {
+            KeyProvider kp = new KMSClientProvider(uri, conf);
             try {
               KeyProviderCryptoExtension kpCE = KeyProviderCryptoExtension.
                       createKeyProviderCryptoExtension(kp);
@@ -793,6 +817,7 @@ public class TestKMS {
         doAs("DECRYPT_EEK", new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {
+            KeyProvider kp = new KMSClientProvider(uri, conf);
             try {
               KeyProviderCryptoExtension kpCE = KeyProviderCryptoExtension.
                       createKeyProviderCryptoExtension(kp);
@@ -807,6 +832,7 @@ public class TestKMS {
         doAs("GET_KEYS", new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {
+            KeyProvider kp = new KMSClientProvider(uri, conf);
             try {
               kp.getKeys();
             } catch (Exception ex) {
@@ -819,6 +845,7 @@ public class TestKMS {
         doAs("GET_METADATA", new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {
+            KeyProvider kp = new KMSClientProvider(uri, conf);
             try {
               kp.getMetadata("k1");
               kp.getKeysMetadata("k1");
@@ -836,6 +863,7 @@ public class TestKMS {
         Thread.sleep(10); // to ensure the ACLs file modifiedTime is newer
         conf.set(KMSACLs.Type.CREATE.getConfigKey(), "foo");
         writeConf(testDir, conf);
+        Thread.sleep(1000);
 
         KMSWebApp.getACLs().run(); // forcing a reload by hand.
 
@@ -844,6 +872,7 @@ public class TestKMS {
           @Override
           public Void run() throws Exception {
             try {
+              KeyProvider kp = new KMSClientProvider(uri, conf);
               KeyProvider.KeyVersion kv = kp.createKey("k2",
                   new KeyProvider.Options(conf));
               Assert.fail();
@@ -982,4 +1011,69 @@ public class TestKMS {
 
     sock.close();
   }
+
+  @Test
+  public void testDelegationTokenAccess() throws Exception {
+    final File testDir = getTestDir();
+    Configuration conf = createBaseKMSConf(testDir);
+    conf.set("hadoop.kms.authentication.type", "kerberos");
+    conf.set("hadoop.kms.authentication.kerberos.keytab",
+        keytab.getAbsolutePath());
+    conf.set("hadoop.kms.authentication.kerberos.principal", "HTTP/localhost");
+    conf.set("hadoop.kms.authentication.kerberos.name.rules", "DEFAULT");
+
+    writeConf(testDir, conf);
+
+    runServer(null, null, testDir, new KMSCallable() {
+      @Override
+      public Void call() throws Exception {
+        final Configuration conf = new Configuration();
+        conf.setInt(KeyProvider.DEFAULT_BITLENGTH_NAME, 64);
+        final URI uri = createKMSUri(getKMSUrl());
+        final Credentials credentials = new Credentials();
+        final UserGroupInformation nonKerberosUgi =
+            UserGroupInformation.getCurrentUser();
+
+        try {
+          KeyProvider kp = new KMSClientProvider(uri, conf);
+          kp.createKey("kA", new KeyProvider.Options(conf));
+        } catch (IOException ex) {
+          System.out.println(ex.getMessage());
+        }
+
+        doAs("client", new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            KeyProvider kp = new KMSClientProvider(uri, conf);
+            KeyProviderDelegationTokenExtension kpdte =
+                KeyProviderDelegationTokenExtension.
+                    createKeyProviderDelegationTokenExtension(kp);
+            kpdte.addDelegationTokens("foo", credentials);
+            return null;
+          }
+        });
+
+        nonKerberosUgi.addCredentials(credentials);
+
+        try {
+          KeyProvider kp = new KMSClientProvider(uri, conf);
+          kp.createKey("kA", new KeyProvider.Options(conf));
+        } catch (IOException ex) {
+          System.out.println(ex.getMessage());
+        }
+
+        nonKerberosUgi.doAs(new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            KeyProvider kp = new KMSClientProvider(uri, conf);
+            kp.createKey("kD", new KeyProvider.Options(conf));
+            return null;
+          }
+        });
+
+        return null;
+      }
+    });
+  }
+
 }
