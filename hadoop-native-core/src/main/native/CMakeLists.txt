@@ -113,7 +113,11 @@ set(FS_SRCS
     fs/common.c
     fs/copy.c
     fs/fs.c
-    ndfs/ndfs.c
+    ndfs/file.c
+    ndfs/meta.c
+    ndfs/ops.c
+    ndfs/permission.c
+    ndfs/util.c
     ${HDFS_PROTOBUF_SRCS}
 )
 

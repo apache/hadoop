@@ -1,5 +1,7 @@
 HADOOP-10388 Change Log
 
+    HADOOP-10985: native client: split ndfs.c into meta, file, util, and permission (cmccabe)
+
     HADOOP-10877. native client: implement hdfsMove and hdfsCopy (cmccabe)
 
     HADOOP-10725. Implement listStatus and getFileInfo in the native client (cmccabe)

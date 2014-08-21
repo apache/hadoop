@@ -23,6 +23,9 @@
 #include "common/uri.h"
 #include "fs/common.h"
 #include "fs/fs.h"
+#include "ndfs/meta.h"
+#include "ndfs/permission.h"
+#include "ndfs/util.h"
 #include "protobuf/ClientNamenodeProtocol.call.h"
 #include "protobuf/hdfs.pb-c.h.s"
 #include "rpc/messenger.h"
@@ -37,8 +40,6 @@
 
 #define DEFAULT_NN_PORT 8020
 
-#define CLIENT_NN_PROTOCOL "org.apache.hadoop.hdfs.protocol.ClientProtocol"
-
 #define FS_PERMISSIONS_UMASK_KEY "fs.permissions.umask-mode"
 
 #define FS_PERMISSIONS_UMASK_DEFAULT "022"
@@ -48,74 +49,6 @@
 
 #define DFS_CLIENT_WRITE_EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL_DEFAULT \
     (10LL * 60LL * 1000LL)
-
-struct native_fs {
-    /** Fields common to all filesystems. */
-    struct hadoop_fs_base base;
-
-    /**
-     * Address of the namenode.
-     * TODO: implement HA failover
-     * TODO: implement IPv6
-     */
-    struct sockaddr_in nn_addr;
-
-    /** The messenger used to perform RPCs. */
-    struct hrpc_messenger *msgr;
-
-    /** The default block size obtained from getServerDefaults. */
-    int64_t default_block_size;
-
-    /** Prefix to use when building URLs. */
-    char *url_prefix;
-
-    /** URI that was used when connecting. */
-    struct hadoop_uri *conn_uri;
-
-    /**
-     * A dynamically allocated working directory which will be prepended to
-     * all relative paths.
-     */
-    struct hadoop_uri *working_uri;
-
-    /** Lock which protects the working_uri. */
-    uv_mutex_t working_uri_lock;
-
-    /** Umask to use when creating files */
-    uint32_t umask;
-
-    /** How long to wait, in nanoseconds, before re-trying a dead datanode. */
-    uint64_t dead_dn_timeout_ns;
-};
-
-/**
- * Set if the file is read-only... otherwise, the file is assumed to be
- * write-only.
- */
-#define NDFS_FILE_FLAG_RO                       0x1
-
-/** This flag is for compatibility with some old test harnesses. */
-#define NDFS_FILE_FLAG_DISABLE_DIRECT_READ      0x2
-
-/** Base class for both read-only and write-only files. */
-struct native_file_base {
-    /** Fields common to all filesystems. */
-    struct hadoop_file_base base;
-
-    /** NDFS file flags. */
-    int flags;
-};
-
-/** A read-only file. */
-struct native_ro_file {
-    struct native_file_base base;
-    uint64_t bytes_read;
-};
-
-/** A write-only file. */
-struct native_wo_file {
-    struct native_file_base base;
-};
 
 /** Whole-filesystem stats sent back from the NameNode. */
 struct hadoop_vfs_stats {
@@ -132,95 +65,13 @@ struct ndfs_server_defaults {
     uint64_t blocksize;
 };
 
-static hdfsFileInfo *ndfs_get_path_info(hdfsFS bfs, const char* uri);
-
 static struct hadoop_err *ndfs_connect_setup_conf(struct native_fs *fs,
                                                   struct hconf *hconf);
 
-static void ndfs_free(struct native_fs *fs);
-
-struct hadoop_err *populate_file_info(struct file_info *info,
+static struct hadoop_err *populate_file_info(struct file_info *info,
                     HdfsFileStatusProto *status, const char *prefix);
 
-static void ndfs_nn_proxy_init(struct native_fs *fs, struct hrpc_proxy *proxy)
-{
-    hrpc_proxy_init(proxy, fs->msgr, &fs->nn_addr, CLIENT_NN_PROTOCOL,
-                    fs->conn_uri->user_info);
-}
-
-/**
- * Construct a canonical path from a URI.
- *
- * @param fs        The filesystem.
- * @param uri       The URI.
- * @param out       (out param) the canonical path.
- *
- * @return          NULL on success; the error otherwise.
- */
-static struct hadoop_err *build_path(struct native_fs *fs, const char *uri_str,
-                                     char **out)
-{
-    struct hadoop_err *err = NULL;
-    struct hadoop_uri *uri = NULL;
-
-    uv_mutex_lock(&fs->working_uri_lock);
-    err = hadoop_uri_parse(uri_str, fs->working_uri, &uri, H_URI_PARSE_PATH);
-    if (err)
-        goto done;
-    // TODO: check URI scheme and user against saved values?
-    if (uri->path[0]) {
-        *out = strdup(uri->path);
-    } else {
-        // As a special case, when the URI given has an empty path, we assume that
-        // we want the current working directory.  This is to allow things like
-        // hdfs://mynamenode to map to the current working directory, as they do in
-        // Hadoop.  Note that this is different than hdfs://mynamenode/ (note the
-        // trailing slash) which maps to the root directory.
-        *out = strdup(fs->working_uri->path);
-    }
-    if (!*out) {
-        err = hadoop_lerr_alloc(ENOMEM, "build_path: out of memory.");
-        goto done;
-    }
-    err = NULL;
-
-done:
-    uv_mutex_unlock(&fs->working_uri_lock);
-    hadoop_uri_free(uri);
-    return err;
-}
-
-static int ndfs_file_is_open_for_read(hdfsFile bfile)
-{
-    struct native_file_base *file = (struct native_file_base *)bfile;
-    return !!(file->flags & NDFS_FILE_FLAG_RO);
-}
-
-static int ndfs_file_is_open_for_write(hdfsFile bfile)
-{
-    struct native_file_base *file = (struct native_file_base *)bfile;
-    return !(file->flags & NDFS_FILE_FLAG_RO);
-}
-
-static int ndfs_file_get_read_statistics(hdfsFile bfile,
-            struct hdfsReadStatistics **out)
-{
-    struct hdfsReadStatistics *stats;
-    struct native_ro_file *file = (struct native_ro_file *)bfile;
-
-    if (!(file->base.flags & NDFS_FILE_FLAG_RO)) {
-        errno = EINVAL;
-        return -1;
-    }
-    stats = calloc(1, sizeof(*stats));
-    if (!stats) {
-        errno = ENOMEM; 
-        return -1;
-    }
-    stats->totalBytesRead = file->bytes_read;
-    *out = stats;
-    return 0;
-}
+static void ndfs_free(struct native_fs *fs);
 
 static struct hadoop_err *ndfs_get_server_defaults(struct native_fs *fs,
             struct ndfs_server_defaults *defaults)
@@ -410,24 +261,6 @@ done:
     return NULL; 
 }
 
-static struct hadoop_err *parse_permission(const char *str, uint32_t *perm)
-{
-    if (strspn(str, " 01234567") != strlen(str)) {
-        // TODO: support permission strings as in PermissionParser.java
-        return hadoop_lerr_alloc(ENOTSUP, "parse_permission(%s): "
-            "can't parse non-octal permissions (yet)", str);
-    }
-    errno = 0;
-    *perm = strtol(str, NULL, 8);
-    if (errno) {
-        int ret = errno;
-        return hadoop_lerr_alloc(EINVAL, "parse_permission(%s): "
-                "failed to parse this octal string: %s",
-                str, terror(ret));
-    }
-    return NULL;
-}
-
 /**
  * Configure the native file system using the Hadoop configuration.
  *
@@ -472,7 +305,7 @@ static void ndfs_free(struct native_fs *fs)
     free(fs);
 }
 
-static int ndfs_disconnect(hdfsFS bfs)
+int ndfs_disconnect(hdfsFS bfs)
 {
     struct native_fs *fs = (struct native_fs*)bfs;
 
@@ -480,63 +313,7 @@ static int ndfs_disconnect(hdfsFS bfs)
     return 0;
 }
 
-static struct hadoop_err *ndfs_open_file_for_read(
-        struct native_ro_file **out __attribute__((unused)),
-        struct native_fs *fs __attribute__((unused)),
-        const char *uri __attribute__((unused)))
-{
-    errno = ENOTSUP;
-    return NULL;
-}
-
-static struct hadoop_err *ndfs_open_file_for_write(
-        struct native_ro_file **out __attribute__((unused)),
-        struct native_fs *fs __attribute__((unused)),
-        const char *uri __attribute__((unused)),
-        int buffer_size __attribute__((unused)),
-        short replication __attribute__((unused)),
-        tSize block_size __attribute__((unused)))
-{
-    errno = ENOTSUP;
-    return NULL;
-}
-
-static hdfsFile ndfs_open_file(hdfsFS bfs, const char* uri, int flags, 
-                      int buffer_size, short replication, tSize block_size)
-{
-    struct native_fs *fs = (struct native_fs *)bfs;
-    struct native_ro_file *file = NULL;
-    struct hadoop_err *err;
-    int accmode;
-    char *path = NULL;
-
-    err = build_path(fs, uri, &path);
-    if (err) {
-        goto done;
-    }
-    accmode = flags & O_ACCMODE;
-    if (accmode == O_RDONLY) {
-        err = ndfs_open_file_for_read(&file, fs, path);
-    } else if (accmode == O_WRONLY) {
-        err = ndfs_open_file_for_write(&file, fs, path,
-                        buffer_size, replication, block_size);
-    } else {
-        err = hadoop_lerr_alloc(EINVAL, "cannot open a hadoop file in "
-                "mode 0x%x\n", accmode);
-    }
-done:
-    free(path);
-    return hadoopfs_errno_and_retptr(err, file);
-}
-
-static int ndfs_close_file(hdfsFS fs __attribute__((unused)),
-                           hdfsFile bfile __attribute__((unused)))
-{
-    errno = ENOTSUP;
-    return -1;
-}
-
-static int ndfs_file_exists(hdfsFS bfs, const char *uri)
+int ndfs_file_exists(hdfsFS bfs, const char *uri)
 {
     static hdfsFileInfo *info;
 
@@ -549,78 +326,7 @@ static int ndfs_file_exists(hdfsFS bfs, const char *uri)
     return 0;
 }
 
-static int ndfs_seek(hdfsFS bfs __attribute__((unused)),
-                     hdfsFile bfile __attribute__((unused)),
-                     tOffset desiredPos __attribute__((unused)))
-{
-    errno = ENOTSUP;
-    return -1;
-}
-
-static tOffset ndfs_tell(hdfsFS bfs __attribute__((unused)),
-                         hdfsFile bfile __attribute__((unused)))
-{
-    errno = ENOTSUP;
-    return -1;
-}
-
-static tSize ndfs_read(hdfsFS bfs __attribute__((unused)),
-                       hdfsFile bfile __attribute__((unused)),
-                       void *buffer __attribute__((unused)),
-                       tSize length __attribute__((unused)))
-{
-    errno = ENOTSUP;
-    return -1;
-}
-
-static tSize ndfs_pread(hdfsFS bfs __attribute__((unused)),
-            hdfsFile bfile __attribute__((unused)),
-            tOffset position __attribute__((unused)),
-            void* buffer __attribute__((unused)),
-            tSize length __attribute__((unused)))
-{
-    errno = ENOTSUP;
-    return -1;
-}
-
-static tSize ndfs_write(hdfsFS bfs __attribute__((unused)),
-            hdfsFile bfile __attribute__((unused)),
-            const void* buffer __attribute__((unused)),
-            tSize length __attribute__((unused)))
-{
-    errno = ENOTSUP;
-    return -1;
-}
-
-static int ndfs_flush(hdfsFS bfs __attribute__((unused)),
-                      hdfsFile bfile __attribute__((unused)))
-{
-    errno = ENOTSUP;
-    return -1;
-}
-
-static int ndfs_hflush(hdfsFS bfs __attribute__((unused)),
-                      hdfsFile bfile __attribute__((unused)))
-{
-    errno = ENOTSUP;
-    return -1;
-}
-
-static int ndfs_hsync(hdfsFS bfs __attribute__((unused)),
-                      hdfsFile bfile __attribute__((unused)))
-{
-    errno = ENOTSUP;
-    return -1;
-}
-
-static int ndfs_available(hdfsFS bfs __attribute__((unused)),
-                          hdfsFile bfile __attribute__((unused)))
-{
-    errno = ENOTSUP;
-    return -1;
-}
-
-static int ndfs_unlink(struct hdfs_internal *bfs,
+int ndfs_unlink(struct hdfs_internal *bfs,
                 const char *uri, int recursive)
 {
     struct native_fs *fs = (struct native_fs*)bfs;
@@ -655,7 +361,7 @@ done:
     return hadoopfs_errno_and_retcode(err);
 }
 
-static int ndfs_rename(hdfsFS bfs, const char *src_uri, const char *dst_uri)
+int ndfs_rename(hdfsFS bfs, const char *src_uri, const char *dst_uri)
 {
     struct native_fs *fs = (struct native_fs*)bfs;
     struct hadoop_err *err = NULL;
@@ -690,8 +396,7 @@ done:
     return hadoopfs_errno_and_retcode(err);
 }
 
-static char* ndfs_get_working_directory(hdfsFS bfs, char *buffer,
-                                       size_t bufferSize)
+char* ndfs_get_working_directory(hdfsFS bfs, char *buffer, size_t bufferSize)
 {
     size_t len;
     struct native_fs *fs = (struct native_fs *)bfs;
@@ -712,7 +417,7 @@ done:
     return hadoopfs_errno_and_retptr(err, buffer);
 }
 
-static int ndfs_set_working_directory(hdfsFS bfs, const char* uri_str)
+int ndfs_set_working_directory(hdfsFS bfs, const char* uri_str)
 {
     struct native_fs *fs = (struct native_fs *)bfs;
     struct hadoop_err *err = NULL;
@@ -734,7 +439,7 @@ done:
     return hadoopfs_errno_and_retcode(err);
 }
 
-static int ndfs_mkdir(hdfsFS bfs, const char* uri)
+int ndfs_mkdir(hdfsFS bfs, const char* uri)
 {
     struct native_fs *fs = (struct native_fs *)bfs;
     struct hadoop_err *err = NULL;
@@ -774,8 +479,7 @@ done:
     return hadoopfs_errno_and_retcode(err);
 }
 
-static int ndfs_set_replication(hdfsFS bfs, const char* uri,
-                               int16_t replication)
+int ndfs_set_replication(hdfsFS bfs, const char* uri, int16_t replication)
 {
     struct native_fs *fs = (struct native_fs *)bfs;
     struct hadoop_err *err = NULL;
@@ -809,7 +513,7 @@ done:
     return hadoopfs_errno_and_retcode(err);
 }
 
-struct hadoop_err *ndfs_list_partial(struct native_fs *fs,
+static struct hadoop_err *ndfs_list_partial(struct native_fs *fs,
         const char *path, const char *prev, uint32_t *entries_len,
         hdfsFileInfo **entries, uint32_t *remaining)
 {
@@ -868,7 +572,7 @@ done:
     return err;
 }
 
-struct hadoop_err *populate_file_info(struct file_info *info,
+static struct hadoop_err *populate_file_info(struct file_info *info,
                     HdfsFileStatusProto *status, const char *prefix)
 {
     if (status->filetype == IS_DIR) {
@@ -909,8 +613,7 @@ oom:
                             info->mName);
 }
 
-static hdfsFileInfo* ndfs_list_directory(hdfsFS bfs,
-                    const char* uri, int *numEntries)
+hdfsFileInfo* ndfs_list_directory(hdfsFS bfs, const char* uri, int *numEntries)
 {
     struct native_fs *fs = (struct native_fs *)bfs;
     struct hadoop_err *err = NULL;
@@ -953,7 +656,7 @@ done:
     return hadoopfs_errno_and_retptr(err, entries);
 }
 
-static hdfsFileInfo *ndfs_get_path_info(hdfsFS bfs, const char* uri)
+hdfsFileInfo *ndfs_get_path_info(hdfsFS bfs, const char* uri)
 {
     struct native_fs *fs = (struct native_fs*)bfs;
     struct hadoop_err *err = NULL;
@@ -1011,24 +714,13 @@ done:
     return hadoopfs_errno_and_retptr(err, info);
 }
 
-char***
-ndfs_get_hosts(hdfsFS bfs __attribute__((unused)),
-               const char* path __attribute__((unused)),
-               tOffset start __attribute__((unused)),
-               tOffset length __attribute__((unused)))
-{
-    errno = ENOTSUP;
-    return NULL;
-}
-
-static tOffset ndfs_get_default_block_size(hdfsFS bfs)
+tOffset ndfs_get_default_block_size(hdfsFS bfs)
 {
     struct native_fs *fs = (struct native_fs *)bfs;
     return fs->default_block_size;
 }
 
-static tOffset ndfs_get_default_block_size_at_path(hdfsFS bfs,
-                    const char *uri)
+tOffset ndfs_get_default_block_size_at_path(hdfsFS bfs, const char *uri)
 {
     struct native_fs *fs = (struct native_fs *)bfs;
     struct hadoop_err *err = NULL;
@@ -1062,7 +754,7 @@ done:
     return ret;
 }
 
-static struct hadoop_err *ndfs_statvfs(struct hadoop_fs_base *hfs,
+struct hadoop_err *ndfs_statvfs(struct hadoop_fs_base *hfs,
         struct hadoop_vfs_stats *stats)
 {
     struct native_fs *fs = (struct native_fs*)hfs;
@@ -1091,7 +783,7 @@ done:
     return err;
 }
 
-static tOffset ndfs_get_capacity(hdfsFS bfs)
+tOffset ndfs_get_capacity(hdfsFS bfs)
 {
     struct hadoop_err *err;
     struct hadoop_vfs_stats stats;
@@ -1102,7 +794,7 @@ static tOffset ndfs_get_capacity(hdfsFS bfs)
     return stats.capacity;
 }
 
-static tOffset ndfs_get_used(hdfsFS bfs)
+tOffset ndfs_get_used(hdfsFS bfs)
 {
     struct hadoop_err *err;
     struct hadoop_vfs_stats stats;
@@ -1113,7 +805,7 @@ static tOffset ndfs_get_used(hdfsFS bfs)
     return stats.used;
 }
 
-static int ndfs_chown(hdfsFS bfs, const char* uri,
+int ndfs_chown(hdfsFS bfs, const char* uri,
                       const char *user, const char *group)
 {
     struct native_fs *fs = (struct native_fs *)bfs;
@@ -1144,7 +836,7 @@ done:
     return hadoopfs_errno_and_retcode(err);
 }
 
-static int ndfs_chmod(hdfsFS bfs, const char* uri, short mode)
+int ndfs_chmod(hdfsFS bfs, const char* uri, short mode)
 {
     struct native_fs *fs = (struct native_fs *)bfs;
     FsPermissionProto perm = FS_PERMISSION_PROTO__INIT;
@@ -1175,8 +867,7 @@ done:
     return hadoopfs_errno_and_retcode(err);
 }
 
-static int ndfs_utime(hdfsFS bfs, const char* uri,
-                      int64_t mtime, int64_t atime)
+int ndfs_utime(hdfsFS bfs, const char* uri, int64_t mtime, int64_t atime)
 {
     struct native_fs *fs = (struct native_fs *)bfs;
     SetTimesRequestProto req = SET_TIMES_REQUEST_PROTO__INIT ;
@@ -1220,79 +911,5 @@ done:
     }
     return hadoopfs_errno_and_retcode(err);
 }
-
-static struct hadoopRzBuffer* ndfs_read_zero(
-            hdfsFile bfile __attribute__((unused)),
-            struct hadoopRzOptions *opts __attribute__((unused)),
-            int32_t maxLength __attribute__((unused)))
-{
-    errno = ENOTSUP;
-    return NULL;
-}
-
-static void ndfs_rz_buffer_free(hdfsFile bfile __attribute__((unused)),
-                struct hadoopRzBuffer *buffer __attribute__((unused)))
-{
-}
-
-int ndfs_file_uses_direct_read(hdfsFile bfile)
-{
-    // Set the 'disable direct reads' flag so that old test harnesses designed
-    // to test jniFS will run against NDFS.  The flag doesn't do anything,
-    // since all reads are always direct in NDFS.
-    struct native_file_base *file = (struct native_file_base *)bfile;
-    return (!(file->flags & NDFS_FILE_FLAG_DISABLE_DIRECT_READ));
-}
-
-void ndfs_file_disable_direct_read(hdfsFile bfile __attribute__((unused)))
-{
-    struct native_file_base *file = (struct native_file_base *)bfile;
-    file->flags |= NDFS_FILE_FLAG_DISABLE_DIRECT_READ;
-}
-
-const struct hadoop_fs_ops g_ndfs_ops = {
-    .name = "ndfs",
-    .file_is_open_for_read = ndfs_file_is_open_for_read,
-    .file_is_open_for_write = ndfs_file_is_open_for_write,
-    .get_read_statistics = ndfs_file_get_read_statistics,
-    .connect = ndfs_connect,
-    .disconnect = ndfs_disconnect,
-    .open = ndfs_open_file,
-    .close = ndfs_close_file,
-    .exists = ndfs_file_exists,
-    .seek = ndfs_seek,
-    .tell = ndfs_tell,
-    .read = ndfs_read,
-    .pread = ndfs_pread,
-    .write = ndfs_write,
-    .flush = ndfs_flush,
-    .hflush = ndfs_hflush,
-    .hsync = ndfs_hsync,
-    .available = ndfs_available,
-    .copy = NULL,
-    .move = NULL,
-    .unlink = ndfs_unlink,
-    .rename = ndfs_rename,
-    .get_working_directory = ndfs_get_working_directory,
-    .set_working_directory = ndfs_set_working_directory,
-    .mkdir = ndfs_mkdir,
-    .set_replication = ndfs_set_replication,
-    .list_directory = ndfs_list_directory,
-    .get_path_info = ndfs_get_path_info,
-    .get_hosts = ndfs_get_hosts,
-    .get_default_block_size = ndfs_get_default_block_size,
-    .get_default_block_size_at_path = ndfs_get_default_block_size_at_path,
-    .get_capacity = ndfs_get_capacity,
-    .get_used = ndfs_get_used,
-    .chown = ndfs_chown,
-    .chmod = ndfs_chmod,
-    .utime = ndfs_utime,
-    .read_zero = ndfs_read_zero,
-    .rz_buffer_free = ndfs_rz_buffer_free,
-
-    // test
-    .file_uses_direct_read = ndfs_file_uses_direct_read,
-    .file_disable_direct_read = ndfs_file_disable_direct_read,
-};
 
 // vim: ts=4:sw=4:tw=79:et
