@@ -1037,7 +1037,7 @@ public final class HttpServer2 implements FilterContainer {
 
     String remoteUser = request.getRemoteUser();
     if (remoteUser == null) {
-      response.sendError(HttpServletResponse.SC_UNAUTHORIZED,
+      response.sendError(HttpServletResponse.SC_FORBIDDEN,
                          "Unauthenticated users are not " +
                          "authorized to access this page.");
       return false;
@@ -1045,7 +1045,7 @@ public final class HttpServer2 implements FilterContainer {
 
     if (servletContext.getAttribute(ADMINS_ACL) != null &&
         !userHasAdministratorAccess(servletContext, remoteUser)) {
-      response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User "
+      response.sendError(HttpServletResponse.SC_FORBIDDEN, "User "
           + remoteUser + " is unauthorized to access this page.");
       return false;
     }

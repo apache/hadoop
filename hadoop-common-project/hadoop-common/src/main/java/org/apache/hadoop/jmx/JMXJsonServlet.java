@@ -140,6 +140,12 @@ public class JMXJsonServlet extends HttpServlet {
     mBeanServer = ManagementFactory.getPlatformMBeanServer();
   }
 
+  protected boolean isInstrumentationAccessAllowed(HttpServletRequest request,
+      HttpServletResponse response) throws IOException {
+    return HttpServer2.isInstrumentationAccessAllowed(getServletContext(),
+        request, response);
+  }
+
   /**
    * Process a GET request for the specified resource.
    * 
@@ -153,8 +159,7 @@ public class JMXJsonServlet extends HttpServlet {
     String jsonpcb = null;
     PrintWriter writer = null;
     try {
-      if (!HttpServer2.isInstrumentationAccessAllowed(getServletContext(),
-                                                     request, response)) {
+      if (!isInstrumentationAccessAllowed(request, response)) {
         return;
       }
       
