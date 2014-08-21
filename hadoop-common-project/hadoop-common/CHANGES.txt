@@ -247,6 +247,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10611. KMS, keyVersion name should not be assumed to be
     keyName@versionNumber. (tucu)
 
+    HADOOP-10816. KeyShell returns -1 on error to the shell, should be 1.
+    (Mike Yoder via wang)
+
 Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES
