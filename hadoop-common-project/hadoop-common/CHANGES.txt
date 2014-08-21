@@ -94,6 +94,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10177. Create CLI tools for managing keys. (Larry McCay via omalley)
 
+    HADOOP-10432. Refactor SSLFactory to expose static method to determine
+    HostnameVerifier. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
