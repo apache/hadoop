@@ -90,8 +90,8 @@ public class KMS {
 
   private static KeyProvider.KeyVersion removeKeyMaterial(
       KeyProvider.KeyVersion keyVersion) {
-    return new KMSClientProvider.KMSKeyVersion(keyVersion.getVersionName(),
-        null);
+    return new KMSClientProvider.KMSKeyVersion(keyVersion.getName(),
+        keyVersion.getVersionName(), null);
   }
 
   private static URI getKeyURI(String name) throws URISyntaxException {

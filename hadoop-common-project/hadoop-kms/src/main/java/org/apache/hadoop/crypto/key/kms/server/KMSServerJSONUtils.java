@@ -35,6 +35,8 @@ public class KMSServerJSONUtils {
   public static Map toJSON(KeyProvider.KeyVersion keyVersion) {
     Map json = new LinkedHashMap();
     if (keyVersion != null) {
+      json.put(KMSRESTConstants.NAME_FIELD,
+          keyVersion.getName());
       json.put(KMSRESTConstants.VERSION_NAME_FIELD,
           keyVersion.getVersionName());
       json.put(KMSRESTConstants.MATERIAL_FIELD, keyVersion.getMaterial());

@@ -63,13 +63,19 @@ public abstract class KeyProvider {
    * The combination of both the key version name and the key material.
    */
   public static class KeyVersion {
+    private final String name;
     private final String versionName;
     private final byte[] material;
 
-    protected KeyVersion(String versionName,
+    protected KeyVersion(String name, String versionName,
                          byte[] material) {
+      this.name = name;
       this.versionName = versionName;
       this.material = material;
+    }
+
+    public String getName() {
+      return name;
     }
 
     public String getVersionName() {

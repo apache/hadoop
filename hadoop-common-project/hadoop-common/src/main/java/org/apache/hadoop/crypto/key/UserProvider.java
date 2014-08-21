@@ -55,12 +55,13 @@ public class UserProvider extends KeyProvider {
   }
 
   @Override
-  public synchronized KeyVersion getKeyVersion(String versionName) {
+  public synchronized KeyVersion getKeyVersion(String versionName)
+      throws IOException {
     byte[] bytes = credentials.getSecretKey(new Text(versionName));
     if (bytes == null) {
       return null;
     }
-    return new KeyVersion(versionName, bytes);
+    return new KeyVersion(getBaseName(versionName), versionName, bytes);
   }
 
   @Override
@@ -94,7 +95,7 @@ public class UserProvider extends KeyProvider {
     String versionName = buildVersionName(name, 0);
     credentials.addSecretKey(nameT, meta.serialize());
     credentials.addSecretKey(new Text(versionName), material);
-    return new KeyVersion(versionName, material);
+    return new KeyVersion(name, versionName, material);
   }
 
   @Override
@@ -125,7 +126,7 @@ public class UserProvider extends KeyProvider {
     credentials.addSecretKey(new Text(name), meta.serialize());
     String versionName = buildVersionName(name, nextVersion);
     credentials.addSecretKey(new Text(versionName), material);
-    return new KeyVersion(versionName, material);
+    return new KeyVersion(name, versionName, material);
   }
 
   @Override
