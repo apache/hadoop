@@ -135,6 +135,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10769. Create KeyProvider extension to handle delegation tokens.
     (Arun Suresh via atm)
 
+    HADOOP-10812. Delegate KeyProviderExtension#toString to underlying
+    KeyProvider. (wang)
+
   BUG FIXES
 
     HADOOP-10781. Unportable getgrouplist() usage breaks FreeBSD (Dmitry

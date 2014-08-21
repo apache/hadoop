@@ -120,4 +120,9 @@ public abstract class KeyProviderExtension
   public void flush() throws IOException {
     keyProvider.flush();
   }
+
+  @Override
+  public String toString() {
+    return getClass().getSimpleName() + ": " + keyProvider.toString();
+  }
 }
