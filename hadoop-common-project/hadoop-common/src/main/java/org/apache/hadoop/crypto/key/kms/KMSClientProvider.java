@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.crypto.key.kms;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -27,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.security.authentication.client.PseudoAuthenticator;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.http.client.utils.URIBuilder;
@@ -70,6 +70,13 @@ public class KMSClientProvider extends KeyProvider {
   private static final String HTTP_POST = "POST";
   private static final String HTTP_PUT = "PUT";
   private static final String HTTP_DELETE = "DELETE";
+
+
+  private static final String CONFIG_PREFIX = "hadoop.security.kms.client.";
+
+  /* It's possible to specify a timeout, in seconds, in the config file */
+  public static final String TIMEOUT_ATTR = CONFIG_PREFIX + "timeout";
+  public static final int DEFAULT_TIMEOUT = 60;
 
   private static KeyVersion parseJSONKeyVersion(Map valueMap) {
     KeyVersion keyVersion = null;
@@ -141,12 +148,49 @@ public class KMSClientProvider extends KeyProvider {
 
   private String kmsUrl;
   private SSLFactory sslFactory;
+  private ConnectionConfigurator configurator;
 
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder("KMSClientProvider[");
     sb.append(kmsUrl).append("]");
     return sb.toString();
+  }
+
+  /**
+   * This small class exists to set the timeout values for a connection
+   */
+  private static class TimeoutConnConfigurator
+          implements ConnectionConfigurator {
+    private ConnectionConfigurator cc;
+    private int timeout;
+
+    /**
+     * Sets the timeout and wraps another connection configurator
+     * @param timeout - will set both connect and read timeouts - in seconds
+     * @param cc - another configurator to wrap - may be null
+     */
+    public TimeoutConnConfigurator(int timeout, ConnectionConfigurator cc) {
+      this.timeout = timeout;
+      this.cc = cc;
+    }
+
+    /**
+     * Calls the wrapped configure() method, then sets timeouts
+     * @param conn the {@link HttpURLConnection} instance to configure.
+     * @return the connection
+     * @throws IOException
+     */
+    @Override
+    public HttpURLConnection configure(HttpURLConnection conn)
+            throws IOException {
+      if (cc != null) {
+        conn = cc.configure(conn);
+      }
+      conn.setConnectTimeout(timeout * 1000);  // conversion to milliseconds
+      conn.setReadTimeout(timeout * 1000);
+      return conn;
+    }
   }
 
   public KMSClientProvider(URI uri, Configuration conf) throws IOException {
@@ -161,6 +205,8 @@ public class KMSClientProvider extends KeyProvider {
         throw new IOException(ex);
       }
     }
+    int timeout = conf.getInt(TIMEOUT_ATTR, DEFAULT_TIMEOUT);
+    configurator = new TimeoutConnConfigurator(timeout, sslFactory);
   }
 
   private String createServiceURL(URL url) throws IOException {
@@ -222,7 +268,7 @@ public class KMSClientProvider extends KeyProvider {
     HttpURLConnection conn;
     try {
       AuthenticatedURL authUrl = new AuthenticatedURL(new PseudoAuthenticator(),
-          sslFactory);
+          configurator);
       conn = authUrl.openConnection(url, new AuthenticatedURL.Token());
     } catch (AuthenticationException ex) {
       throw new IOException(ex);
