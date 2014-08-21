@@ -270,7 +270,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
             e);
       }
       Metadata meta = new Metadata(options.getCipher(), options.getBitLength(),
-          options.getDescription(), new Date(), 1);
+          options.getDescription(), options.getAttributes(), new Date(), 1);
       if (options.getBitLength() != 8 * material.length) {
         throw new IOException("Wrong key length. Required " +
             options.getBitLength() + ", but got " + (8 * material.length));

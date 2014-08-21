@@ -120,6 +120,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
 
+    HADOOP-10696. Add optional attributes to KeyProvider Options and Metadata.
+    (tucu)
+
   BUG FIXES
 
     HADOOP-10781. Unportable getgrouplist() usage breaks FreeBSD (Dmitry
