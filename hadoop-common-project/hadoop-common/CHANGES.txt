@@ -507,6 +507,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10698. KMS, add proxyuser support. (tucu)
 
+    HADOOP-8896. Javadoc points to Wrong Reader and Writer classes 
+    in SequenceFile (Ray Chiang via aw)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
