@@ -77,7 +77,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
   private JavaKeyStoreProvider(URI uri, Configuration conf) throws IOException {
     this.uri = uri;
     path = unnestUri(uri);
-    fs = FileSystem.get(conf);
+    fs = path.getFileSystem(conf);
     // Get the password from the user's environment
     String pw = System.getenv(KEYSTORE_PASSWORD_NAME);
     if (pw == null) {
