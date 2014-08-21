@@ -216,6 +216,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10244. TestKeyShell improperly tests the results of delete (Larry
     McCay via omalley)
 
+    HADOOP-10583. bin/hadoop key throws NPE with no args and assorted other fixups. (clamb via tucu)
+
 Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES

@@ -121,7 +121,7 @@ public class TestKeyShell {
     ks.setConf(new Configuration());
     rc = ks.run(args1);
     assertEquals(-1, rc);
-    assertTrue(outContent.toString().contains("key1 has NOT been created."));
+    assertTrue(outContent.toString().contains("key1 has not been created."));
   }
 
   @Test
@@ -134,7 +134,7 @@ public class TestKeyShell {
     ks.setConf(new Configuration());
     rc = ks.run(args1);
     assertEquals(-1, rc);
-    assertTrue(outContent.toString().contains("key1 has NOT been created."));
+    assertTrue(outContent.toString().contains("key1 has not been created."));
   }
 
   @Test
