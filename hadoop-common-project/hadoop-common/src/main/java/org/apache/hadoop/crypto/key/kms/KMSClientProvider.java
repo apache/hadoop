@@ -653,7 +653,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension {
         encryptedKeyVersion.getEncryptedKeyVersion().getVersionName()
             .equals(KeyProviderCryptoExtension.EEK),
         "encryptedKey version name must be '%s', is '%s'",
-        KeyProviderCryptoExtension.EK,
+        KeyProviderCryptoExtension.EEK,
         encryptedKeyVersion.getEncryptedKeyVersion().getVersionName()
     );
     checkNotNull(encryptedKeyVersion.getEncryptedKeyVersion(), "encryptedKey");
