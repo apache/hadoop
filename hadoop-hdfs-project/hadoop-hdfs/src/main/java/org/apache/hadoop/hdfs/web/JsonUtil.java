@@ -257,7 +257,7 @@ public class JsonUtil {
           BlockStoragePolicy.ID_UNSPECIFIED;
     return new HdfsFileStatus(len, type == PathType.DIRECTORY, replication,
         blockSize, mTime, aTime, permission, owner, group, symlink,
-        DFSUtil.string2Bytes(localName), fileId, childrenNum, storagePolicy);
+        DFSUtil.string2Bytes(localName), fileId, childrenNum, null, storagePolicy);
   }
 
   /** Convert an ExtendedBlock to a Json map. */
@@ -537,7 +537,7 @@ public class JsonUtil {
         (Map<?, ?>)m.get("lastLocatedBlock"));
     final boolean isLastBlockComplete = (Boolean)m.get("isLastBlockComplete");
     return new LocatedBlocks(fileLength, isUnderConstruction, locatedBlocks,
-        lastLocatedBlock, isLastBlockComplete);
+        lastLocatedBlock, isLastBlockComplete, null);
   }
 
   /** Convert a ContentSummary to a Json string. */

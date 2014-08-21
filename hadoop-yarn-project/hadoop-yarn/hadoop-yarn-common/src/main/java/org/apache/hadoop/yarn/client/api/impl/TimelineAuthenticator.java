@@ -32,6 +32,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.Authenticator;
+import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDelegationTokenResponse;
@@ -53,10 +54,13 @@ import com.google.common.annotations.VisibleForTesting;
 public class TimelineAuthenticator extends KerberosAuthenticator {
 
   private static ObjectMapper mapper;
+  private static TimelineAuthenticator authenticator;
+  private static ConnectionConfigurator connConfigurator;
 
   static {
     mapper = new ObjectMapper();
     YarnJacksonJaxbJsonProvider.configObjectMapper(mapper);
+    authenticator = new TimelineAuthenticator();
   }
 
   /**
@@ -98,6 +102,11 @@ public class TimelineAuthenticator extends KerberosAuthenticator {
     }
   }
 
+  public static void setStaticConnectionConfigurator(
+      ConnectionConfigurator connConfigurator) {
+    TimelineAuthenticator.connConfigurator = connConfigurator;
+  }
+
   public static Token<TimelineDelegationTokenIdentifier> getDelegationToken(
       URL url, AuthenticatedURL.Token token, String renewer) throws IOException {
     TimelineDelegationTokenOperation op =
@@ -107,7 +116,7 @@ public class TimelineAuthenticator extends KerberosAuthenticator {
     params.put(TimelineAuthenticationConsts.RENEWER_PARAM, renewer);
     url = appendParams(url, params);
     AuthenticatedURL aUrl =
-        new AuthenticatedURL(new TimelineAuthenticator());
+        new AuthenticatedURL(authenticator, connConfigurator);
     try {
       HttpURLConnection conn = aUrl.openConnection(url, token);
       conn.setRequestMethod(op.getHttpMethod());
@@ -137,7 +146,7 @@ public class TimelineAuthenticator extends KerberosAuthenticator {
         dToken.encodeToUrlString());
     url = appendParams(url, params);
     AuthenticatedURL aUrl =
-        new AuthenticatedURL(new TimelineAuthenticator());
+        new AuthenticatedURL(authenticator, connConfigurator);
     try {
       HttpURLConnection conn = aUrl.openConnection(url, token);
       conn.setRequestMethod(
@@ -164,7 +173,7 @@ public class TimelineAuthenticator extends KerberosAuthenticator {
         dToken.encodeToUrlString());
     url = appendParams(url, params);
     AuthenticatedURL aUrl =
-        new AuthenticatedURL(new TimelineAuthenticator());
+        new AuthenticatedURL(authenticator, connConfigurator);
     try {
       HttpURLConnection conn = aUrl.openConnection(url, token);
       conn.setRequestMethod(TimelineDelegationTokenOperation.CANCELDELEGATIONTOKEN

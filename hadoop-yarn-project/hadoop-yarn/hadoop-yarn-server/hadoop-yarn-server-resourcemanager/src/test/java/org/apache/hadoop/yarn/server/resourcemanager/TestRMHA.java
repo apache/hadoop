@@ -331,6 +331,10 @@ public class TestRMHA {
     rm.adminService.transitionToStandby(requestInfo);
     rm.adminService.transitionToActive(requestInfo);
     rm.adminService.transitionToStandby(requestInfo);
+    
+    MyCountingDispatcher dispatcher =
+        (MyCountingDispatcher) rm.getRMContext().getDispatcher();
+    assertTrue(!dispatcher.isStopped());
 
     rm.adminService.transitionToActive(requestInfo);
     assertEquals(errorMessageForEventHandler, expectedEventHandlerCount,
@@ -339,6 +343,11 @@ public class TestRMHA {
     assertEquals(errorMessageForService, expectedServiceCount,
         rm.getServices().size());
 
+    
+    // Keep the dispatcher reference before transitioning to standby
+    dispatcher = (MyCountingDispatcher) rm.getRMContext().getDispatcher();
+    
+    
     rm.adminService.transitionToStandby(requestInfo);
     assertEquals(errorMessageForEventHandler, expectedEventHandlerCount,
         ((MyCountingDispatcher) rm.getRMContext().getDispatcher())
@@ -346,6 +355,8 @@ public class TestRMHA {
     assertEquals(errorMessageForService, expectedServiceCount,
         rm.getServices().size());
 
+    assertTrue(dispatcher.isStopped());
+    
     rm.stop();
   }
 
@@ -492,6 +503,8 @@ public class TestRMHA {
 
     private int eventHandlerCount;
 
+    private volatile boolean stopped = false;
+
     public MyCountingDispatcher() {
       super("MyCountingDispatcher");
       this.eventHandlerCount = 0;
@@ -509,6 +522,16 @@ public class TestRMHA {
 
     public int getEventHandlerCount() {
       return this.eventHandlerCount;
+    }
+
+    @Override
+    protected void serviceStop() throws Exception {
+      this.stopped = true;
+      super.serviceStop();
+    }
+
+    public boolean isStopped() {
+      return this.stopped;
     }
   }
 }

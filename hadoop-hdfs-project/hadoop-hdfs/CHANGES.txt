@@ -278,6 +278,97 @@ Trunk (Unreleased)
     HDFS-6657. Remove link to 'Legacy UI' in trunk's Namenode UI.
     (Vinayakumar B via wheat 9)
 
+  BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
+
+    HDFS-6387. HDFS CLI admin tool for creating & deleting an
+    encryption zone. (clamb)
+
+    HDFS-6386. HDFS Encryption Zones (clamb)
+
+    HDFS-6388. HDFS integration with KeyProvider. (clamb)
+
+    HDFS-6473. Protocol and API for Encryption Zones (clamb)
+
+    HDFS-6392. Wire crypto streams for encrypted files in
+    DFSClient. (clamb and yliu)
+
+    HDFS-6476. Print out the KeyProvider after finding KP successfully on
+    startup. (Juan Yu via wang)
+
+    HDFS-6391. Get the Key/IV from the NameNode for encrypted files in
+    DFSClient. (Charles Lamb and wang)
+
+    HDFS-6389. Rename restrictions for encryption zones. (clamb)
+
+    HDFS-6605. Client server negotiation of cipher suite. (wang)
+
+    HDFS-6625. Remove the Delete Encryption Zone function (clamb)
+
+    HDFS-6516. List of Encryption Zones should be based on inodes (clamb)
+
+    HDFS-6629. Not able to create symlinks after HDFS-6516 (umamaheswararao)
+
+    HDFS-6635. Refactor encryption zone functionality into new
+    EncryptionZoneManager class. (wang)
+
+    HDFS-6474. Namenode needs to get the actual keys and iv from the
+    KeyProvider. (wang)
+
+    HDFS-6619. Clean up encryption-related tests. (wang)
+
+    HDFS-6405. Test Crypto streams in HDFS. (yliu via wang)
+
+    HDFS-6490. Fix the keyid format for generated keys in
+    FSNamesystem.createEncryptionZone (clamb)
+
+    HDFS-6716. Update usage of KeyProviderCryptoExtension APIs on NameNode.
+    (wang)
+
+    HDFS-6718. Remove EncryptionZoneManager lock. (wang)
+
+    HDFS-6720. Remove KeyProvider in EncryptionZoneManager. (wang)
+
+    HDFS-6738. Remove unnecessary getEncryptionZoneForPath call in
+    EZManager#createEncryptionZone. (clamb)
+
+    HDFS-6724. Decrypt EDEK before creating
+    CryptoInputStream/CryptoOutputStream. (wang)
+
+    HDFS-6509. Create a special /.reserved/raw directory for raw access to
+    encrypted data. (clamb via wang)
+
+    HDFS-6771. Require specification of an encryption key when creating
+    an encryption zone. (wang)
+
+    HDFS-6730. Create a .RAW extended attribute namespace. (clamb)
+
+    HDFS-6692. Add more HDFS encryption tests. (wang)
+
+    HDFS-6780. Batch the encryption zones listing API. (wang)
+
+    HDFS-6394. HDFS encryption documentation. (wang)
+
+    HDFS-6834. Improve the configuration guidance in DFSClient when there 
+    are no Codec classes found in configs. (umamahesh)
+
+    HDFS-6546. Add non-superuser capability to get the encryption zone
+    for a specific path. (clamb)
+
+    HDFS-6733. Creating encryption zone results in NPE when
+    KeyProvider is null. (clamb)
+
+    HDFS-6785. Should not be able to create encryption zone using path
+    to a non-directory file. (clamb)
+
+    HDFS-6807. Fix TestReservedRawPaths. (clamb)
+
+    HDFS-6814. Mistakenly dfs.namenode.list.encryption.zones.num.responses configured
+    as boolean. (umamahesh)
+
+    HDFS-6817. Fix findbugs and other warnings. (yliu)
+
+    HDFS-6839. Fix TestCLI to expect new output. (clamb)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -428,6 +519,15 @@ Release 2.6.0 - UNRELEASED
     HDFS-6188. An ip whitelist based implementation of TrustedChannelResolver.
     (Benoy Antony via Arpit Agarwal)
 
+    HDFS-6858. Allow dfs.data.transfer.saslproperties.resolver.class default to
+    hadoop.security.saslproperties.resolver.class. (Benoy Antony via cnauroth)
+
+    HDFS-6878. Change MiniDFSCluster to support StorageType configuration
+    for individual directories. (Arpit Agarwal)
+
+    HDFS-6758. block writer should pass the expected block size to
+    DataXceiverServer. (Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -543,7 +643,13 @@ Release 2.6.0 - UNRELEASED
     HDFS-6569. OOB message can't be sent to the client when DataNode shuts down for upgrade
     (brandonli)
 
-Release 2.5.0 - UNRELEASED
+    HDFS-6868. portmap and nfs3 are documented as hadoop commands instead of hdfs
+    (brandonli)
+
+    HDFS-6870. Blocks and INodes could leak for Rename with overwrite flag. (Yi
+    Liu via jing9)
+
+Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES
 

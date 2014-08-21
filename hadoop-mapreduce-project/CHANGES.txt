@@ -86,6 +86,9 @@ Trunk (Unreleased)
     MAPREDUCE-6019. MapReduce changes for exposing YARN/MR endpoints on multiple
     interfaces. (Craig Welch, Milan Potocnik, Arpit Agarwal via xgong)
 
+    MAPREDUCE-6013. [post-HADOOP-9902] mapred version is missing (Akira AJISAKA
+    via aw)
+
   BUG FIXES
 
     MAPREDUCE-5714. Removed forceful JVM exit in shutDownJob.  
@@ -150,6 +153,16 @@ Trunk (Unreleased)
 
     MAPREDUCE-5867. Fix NPE in KillAMPreemptionPolicy related to 
     ProportionalCapacityPreemptionPolicy (Sunil G via devaraj)
+
+  BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
+
+    MAPREDUCE-5890. Support for encrypting Intermediate 
+    data and spills in local filesystem. (asuresh via tucu)
+
+    MAPREDUCE-6007. Add support to distcp to preserve raw.* namespace
+    extended attributes. (clamb)
+
+    MAPREDUCE-6041. Fix TestOptionsParser. (clamb)
 
 Release 2.6.0 - UNRELEASED
 
@@ -236,7 +249,7 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6012. DBInputSplit creates invalid ranges on Oracle. 
     (Wei Yan via kasha)
 
-Release 2.5.0 - UNRELEASED
+Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES
 

@@ -64,7 +64,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>name must be prefixed with user/trusted/security/system, followed by a '.'</expected-output>
+          <expected-output>name must be prefixed with user/trusted/security/system/raw, followed by a '.'</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -125,6 +125,42 @@
       </comparators>
     </test>
     
+    <test>
+      <description>setfattr : Add an xattr of raw namespace</description>
+      <test-commands>
+          <command>-fs NAMENODE -touchz /file1</command>
+          <command>-fs NAMENODE -setfattr -n raw.a1 -v 123456 /file1</command>
+      </test-commands>
+      <cleanup-commands>
+          <command>-fs NAMENODE -rm /file1</command>
+      </cleanup-commands>
+      <comparators>
+          <comparator>
+              <type>SubstringComparator</type>
+              <expected-output>setfattr: User doesn't have permission for xattr: raw.a1</expected-output>
+          </comparator>
+      </comparators>
+
+    </test>
+
+    <test>
+        <description>setfattr : Add an xattr of raw namespace</description>
+        <test-commands>
+            <command>-fs NAMENODE -touchz /file1</command>
+            <command>-fs NAMENODE -setfattr -n raw.a1 -v 123456 /.reserved/raw/file1</command>
+            <command>-fs NAMENODE -getfattr -n raw.a1 /.reserved/raw/file1</command>
+        </test-commands>
+        <cleanup-commands>
+            <command>-fs NAMENODE -rm /file1</command>
+        </cleanup-commands>
+        <comparators>
+            <comparator>
+                <type>SubstringComparator</type>
+                <expected-output>raw.a1="123456"</expected-output>
+            </comparator>
+        </comparators>
+    </test>
+
     <test>
       <description>setfattr : Add an xattr, and encode is text</description>
       <test-commands>
@@ -255,6 +291,26 @@
           <expected-output># file: /file1#LF#user.a1="123456"#LF#</expected-output>
         </comparator>
       </comparators>
+    </test>
+
+    <test>
+        <description>setfattr : Remove an xattr of raw namespace</description>
+        <test-commands>
+            <command>-fs NAMENODE -touchz /file1</command>
+            <command>-fs NAMENODE -setfattr -n raw.a1 -v 123456 /.reserved/raw/file1</command>
+            <command>-fs NAMENODE -setfattr -n raw.a2 -v 123456 /.reserved/raw/file1</command>
+            <command>-fs NAMENODE -setfattr -x raw.a2 /.reserved/raw/file1</command>
+            <command>-fs NAMENODE -getfattr -d /.reserved/raw/file1</command>
+        </test-commands>
+        <cleanup-commands>
+            <command>-fs NAMENODE -rm /file1</command>
+        </cleanup-commands>
+        <comparators>
+            <comparator>
+                <type>SubstringComparator</type>
+		<expected-output># file: /.reserved/raw/file1#LF#raw.a1="123456"#LF#</expected-output>
+            </comparator>
+        </comparators>
     </test>
     
     <test>

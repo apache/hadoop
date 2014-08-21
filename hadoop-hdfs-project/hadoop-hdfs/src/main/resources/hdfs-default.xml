@@ -1475,11 +1475,8 @@
   <value></value>
   <description>
     SaslPropertiesResolver used to resolve the QOP used for a connection to the
-    DataNode when reading or writing block data.  If not specified, the full set
-    of values specified in dfs.data.transfer.protection is used while
-    determining the QOP used for the connection. If a class is specified, then
-    the QOP values returned by the class will be used while determining the QOP
-    used for the connection.
+    DataNode when reading or writing block data. If not specified, the value of
+    hadoop.security.saslproperties.resolver.class is used as the default value.
   </description>
 </property>
 
@@ -2059,6 +2056,15 @@
   <description>The number of threads to use when creating hard links from
     current to previous blocks during upgrade of a DataNode to block ID-based
     block layout (see HDFS-6482 for details on the layout).</description>
+</property>
+
+<property>
+  <name>dfs.namenode.list.encryption.zones.num.responses</name>
+  <value>100</value>
+  <description>When listing encryption zones, the maximum number of zones
+    that will be returned in a batch. Fetching the list incrementally in
+    batches improves namenode performance.
+  </description>
 </property>
 
 </configuration>

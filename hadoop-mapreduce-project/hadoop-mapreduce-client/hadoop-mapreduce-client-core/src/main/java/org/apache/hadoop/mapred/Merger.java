@@ -30,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.ChecksumFileSystem;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
@@ -40,6 +41,7 @@ import org.apache.hadoop.mapred.IFile.Reader;
 import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.CryptoUtils;
 import org.apache.hadoop.util.PriorityQueue;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.Progressable;
@@ -298,8 +300,12 @@ public class Merger {
     void init(Counters.Counter readsCounter) throws IOException {
       if (reader == null) {
         FSDataInputStream in = fs.open(file);
+
         in.seek(segmentOffset);
-        reader = new Reader<K, V>(conf, in, segmentLength, codec, readsCounter);
+        in = CryptoUtils.wrapIfNecessary(conf, in);
+        reader = new Reader<K, V>(conf, in,
+            segmentLength - CryptoUtils.cryptoPadding(conf),
+            codec, readsCounter);
       }
       
       if (mapOutputsCounter != null) {
@@ -714,9 +720,10 @@ public class Merger {
                                               tmpFilename.toString(),
                                               approxOutputSize, conf);
 
-          Writer<K, V> writer = 
-            new Writer<K, V>(conf, fs, outputFile, keyClass, valueClass, codec,
-                             writesCounter);
+          FSDataOutputStream out = fs.create(outputFile);
+          out = CryptoUtils.wrapIfNecessary(conf, out);
+          Writer<K, V> writer = new Writer<K, V>(conf, out, keyClass, valueClass,
+              codec, writesCounter, true);
           writeFile(this, writer, reporter, conf);
           writer.close();
           

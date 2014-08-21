@@ -606,7 +606,11 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_NM_LOCALIZER_CACHE_CLEANUP_INTERVAL_MS = 
     10 * 60 * 1000;
   
-  /** Target size of localizer cache in MB, per local directory.*/
+  /**
+   * Target size of localizer cache in MB, per nodemanager. It is a target
+   * retention size that only includes resources with PUBLIC and PRIVATE
+   * visibility and excludes resources with APPLICATION visibility
+   */
   public static final String NM_LOCALIZER_CACHE_TARGET_SIZE_MB =
     NM_PREFIX + "localizer.cache.target-size-mb";
   public static final long DEFAULT_NM_LOCALIZER_CACHE_TARGET_SIZE_MB = 10 * 1024;

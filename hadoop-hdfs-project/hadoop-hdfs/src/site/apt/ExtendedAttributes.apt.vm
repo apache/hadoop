@@ -30,7 +30,7 @@ Extended Attributes in HDFS
 
 ** {Namespaces and Permissions}
 
-  In HDFS, as in Linux, there are four valid namespaces: <<<user>>>, <<<trusted>>>, <<<system>>>, and <<<security>>>. Each of these namespaces have different access restrictions.
+  In HDFS, there are five valid namespaces: <<<user>>>, <<<trusted>>>, <<<system>>>, <<<security>>>, and <<<raw>>>. Each of these namespaces have different access restrictions.
 
   The <<<user>>> namespace is the namespace that will commonly be used by client applications. Access to extended attributes in the user namespace is controlled by the corresponding file permissions.
 
@@ -39,6 +39,8 @@ Extended Attributes in HDFS
   The <<<system>>> namespace is reserved for internal HDFS use. This namespace is not accessible through userspace methods, and is reserved for implementing internal HDFS features.
 
   The <<<security>>> namespace is reserved for internal HDFS use. This namespace is not accessible through userspace methods. It is currently unused.
+
+ The <<<raw>>> namespace is reserved for internal system attributes that sometimes need to be exposed. Like <<<system>>> namespace attributes they are not visible to the user except when <<<getXAttr>>>/<<<getXAttrs>>> is called on a file or directory in the <<</.reserved/raw>>> HDFS directory hierarchy. These attributes can only be accessed by the superuser. An example of where <<<raw>>> namespace extended attributes are used is the <<<distcp>>> utility. Encryption zone meta data is stored in <<<raw.*>>> extended attributes, so as long as the administrator uses <<</.reserved/raw>>> pathnames in source and target, the encrypted files in the encryption zones are transparently copied.
 
 * {Interacting with extended attributes}
 

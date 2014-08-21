@@ -289,7 +289,7 @@ public class TestRMRestart {
     
     // verify old AM is not accepted
     // change running AM to talk to new RM
-    am1.setAMRMProtocol(rm2.getApplicationMasterService());
+    am1.setAMRMProtocol(rm2.getApplicationMasterService(), rm2.getRMContext());
     AllocateResponse allocResponse = am1.allocate(
         new ArrayList<ResourceRequest>(),
         new ArrayList<ContainerId>());
@@ -1663,7 +1663,7 @@ public class TestRMRestart {
     nm1.setResourceTrackerService(rm2.getResourceTrackerService());
     // recover app
     RMApp loadedApp1 = rm2.getRMContext().getRMApps().get(app1.getApplicationId());
-    am1.setAMRMProtocol(rm2.getApplicationMasterService());
+    am1.setAMRMProtocol(rm2.getApplicationMasterService(), rm2.getRMContext());
     am1.allocate(new ArrayList<ResourceRequest>(), new ArrayList<ContainerId>());
     nm1.nodeHeartbeat(true);
     nm1 = new MockNM("127.0.0.1:1234", 15120, rm2.getResourceTrackerService());

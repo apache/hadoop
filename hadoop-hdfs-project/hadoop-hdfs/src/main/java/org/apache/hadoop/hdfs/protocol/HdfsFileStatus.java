@@ -21,6 +21,7 @@ import java.net.URI;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -45,6 +46,8 @@ public class HdfsFileStatus {
   private final String group;
   private final long fileId;
 
+  private final FileEncryptionInfo feInfo;
+  
   // Used by dir, not including dot and dotdot. Always zero for a regular file.
   private final int childrenNum;
   private final byte storagePolicy;
@@ -64,11 +67,13 @@ public class HdfsFileStatus {
    * @param group the group of the path
    * @param path the local name in java UTF8 encoding the same as that in-memory
    * @param fileId the file id
+   * @param feInfo the file's encryption info
    */
   public HdfsFileStatus(long length, boolean isdir, int block_replication,
       long blocksize, long modification_time, long access_time,
       FsPermission permission, String owner, String group, byte[] symlink,
-      byte[] path, long fileId, int childrenNum, byte storagePolicy) {
+      byte[] path, long fileId, int childrenNum, FileEncryptionInfo feInfo,
+      byte storagePolicy) {
     this.length = length;
     this.isdir = isdir;
     this.block_replication = (short)block_replication;
@@ -86,6 +91,7 @@ public class HdfsFileStatus {
     this.path = path;
     this.fileId = fileId;
     this.childrenNum = childrenNum;
+    this.feInfo = feInfo;
     this.storagePolicy = storagePolicy;
   }
 
@@ -240,6 +246,10 @@ public class HdfsFileStatus {
     return fileId;
   }
   
+  public final FileEncryptionInfo getFileEncryptionInfo() {
+    return feInfo;
+  }
+
   public final int getChildrenNum() {
     return childrenNum;
   }

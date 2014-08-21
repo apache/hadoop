@@ -15,47 +15,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-# The Hadoop record compiler
-#
-# Environment Variables
-#
-#   JAVA_HOME        The java implementation to use.  Overrides JAVA_HOME.
-#
-#   HADOOP_OPTS      Extra Java runtime options.
-#
-#   HADOOP_CONF_DIR  Alternate conf dir. Default is ${HADOOP_PREFIX}/conf.
-#
-
-bin=`dirname "${BASH_SOURCE-$0}"`
-bin=`cd "$bin"; pwd`
+# This script runs the hadoop core commands.
+this="${BASH_SOURCE-$0}"
+bin=$(cd -P -- "$(dirname -- "$this")" >/dev/null && pwd -P)
+script="$(basename -- "$this")"
+this="$bin/$script"
 
 DEFAULT_LIBEXEC_DIR="$bin"/../libexec
 HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
-. $HADOOP_LIBEXEC_DIR/hadoop-config.sh
+HADOOP_NEW_CONFIG=true
+. "$HADOOP_LIBEXEC_DIR/hadoop-config.sh"
 
-if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
-  . "${HADOOP_CONF_DIR}/hadoop-env.sh"
+if [ $# = 0 ]; then
+  hadoop_exit_with_usage 1
 fi
-
-# some Java parameters
-if [ "$JAVA_HOME" != "" ]; then
-  #echo "run java in $JAVA_HOME"
-  JAVA_HOME=$JAVA_HOME
-fi
-  
-if [ "$JAVA_HOME" = "" ]; then
-  echo "Error: JAVA_HOME is not set."
-  exit 1
-fi
-
-JAVA=$JAVA_HOME/bin/java
-JAVA_HEAP_MAX=-Xmx1000m 
-
-# restore ordinary behaviour
-unset IFS
 
 CLASS='org.apache.hadoop.record.compiler.generated.Rcc'
 
-# run it
-exec "$JAVA" $HADOOP_OPTS -classpath "$CLASSPATH" $CLASS "$@"
+# Always respect HADOOP_OPTS and HADOOP_CLIENT_OPTS
+HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
+
+hadoop_add_param HADOOP_OPTS Xmx "$JAVA_HEAP_MAX"
+
+hadoop_finalize
+export CLASSPATH
+hadoop_java_exec rcc "${CLASS}" "$@"

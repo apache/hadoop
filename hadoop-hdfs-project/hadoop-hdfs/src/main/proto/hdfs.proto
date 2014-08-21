@@ -201,6 +201,23 @@ message DataEncryptionKeyProto {
   optional string encryptionAlgorithm = 6;
 }
 
+/**
+ * Cipher suite.
+ */
+enum CipherSuite {
+    UNKNOWN = 1;
+    AES_CTR_NOPADDING = 2;
+}
+
+/**
+ * Encryption information for a file.
+ */
+message FileEncryptionInfoProto {
+  required CipherSuite suite = 1;
+  required bytes key = 2;
+  required bytes iv = 3;
+  required string ezKeyVersionName = 4;
+}
 
 /**
  * A set of file blocks and their locations.
@@ -211,8 +228,8 @@ message LocatedBlocksProto {
   required bool underConstruction = 3;
   optional LocatedBlockProto lastBlock = 4;
   required bool isLastBlockComplete = 5;
+  optional FileEncryptionInfoProto fileEncryptionInfo = 6;
 }
-
 
 /**
  * Status of a file, directory or symlink
@@ -244,8 +261,12 @@ message HdfsFileStatusProto {
   // Optional field for fileId
   optional uint64 fileId = 13 [default = 0]; // default as an invalid id
   optional int32 childrenNum = 14 [default = -1];
-  optional uint32 storagePolicy = 15 [default = 0]; // block storage policy id
-}
+
+  // Optional field for file encryption
+  optional FileEncryptionInfoProto fileEncryptionInfo = 15;
+
+  optional uint32 storagePolicy = 16 [default = 0]; // block storage policy id
+} 
 
 /**
  * Checksum algorithms/types used in HDFS

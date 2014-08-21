@@ -114,14 +114,14 @@ public class TestDistCpUtils {
       fs.setPermission(path, noPerm);
       fs.setOwner(path, "nobody", "nobody");
 
-      DistCpUtils.preserve(fs, path, srcStatus, attributes);
+      DistCpUtils.preserve(fs, path, srcStatus, attributes, false);
       FileStatus target = fs.getFileStatus(path);
       Assert.assertEquals(target.getPermission(), noPerm);
       Assert.assertEquals(target.getOwner(), "nobody");
       Assert.assertEquals(target.getGroup(), "nobody");
 
       attributes.add(FileAttribute.PERMISSION);
-      DistCpUtils.preserve(fs, path, srcStatus, attributes);
+      DistCpUtils.preserve(fs, path, srcStatus, attributes, false);
       target = fs.getFileStatus(path);
       Assert.assertEquals(target.getPermission(), srcStatus.getPermission());
       Assert.assertEquals(target.getOwner(), "nobody");
@@ -129,7 +129,7 @@ public class TestDistCpUtils {
 
       attributes.add(FileAttribute.GROUP);
       attributes.add(FileAttribute.USER);
-      DistCpUtils.preserve(fs, path, srcStatus, attributes);
+      DistCpUtils.preserve(fs, path, srcStatus, attributes, false);
       target = fs.getFileStatus(path);
       Assert.assertEquals(target.getPermission(), srcStatus.getPermission());
       Assert.assertEquals(target.getOwner(), srcStatus.getOwner());

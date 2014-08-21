@@ -18,13 +18,17 @@
 package org.apache.hadoop.hdfs.client;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.EnumSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.crypto.CryptoOutputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSOutputStream;
+
+import com.google.common.base.Preconditions;
 
 /**
  * The Hdfs implementation of {@link FSDataOutputStream}.
@@ -42,6 +46,18 @@ public class HdfsDataOutputStream extends FSDataOutputStream {
     this(out, stats, 0L);
   }
 
+  public HdfsDataOutputStream(CryptoOutputStream out, FileSystem.Statistics stats,
+      long startPosition) throws IOException {
+    super(out, stats, startPosition);
+    Preconditions.checkArgument(out.getWrappedStream() instanceof DFSOutputStream,
+        "CryptoOutputStream should wrap a DFSOutputStream");
+  }
+
+  public HdfsDataOutputStream(CryptoOutputStream out, FileSystem.Statistics stats)
+      throws IOException {
+    this(out, stats, 0L);
+  }
+
   /**
    * Get the actual number of replicas of the current block.
    * 
@@ -55,7 +71,11 @@ public class HdfsDataOutputStream extends FSDataOutputStream {
    * @return the number of valid replicas of the current block
    */
   public synchronized int getCurrentBlockReplication() throws IOException {
-    return ((DFSOutputStream)getWrappedStream()).getCurrentBlockReplication();
+    OutputStream wrappedStream = getWrappedStream();
+    if (wrappedStream instanceof CryptoOutputStream) {
+      wrappedStream = ((CryptoOutputStream) wrappedStream).getWrappedStream();
+    }
+    return ((DFSOutputStream) wrappedStream).getCurrentBlockReplication();
   }
   
   /**
@@ -67,13 +87,19 @@ public class HdfsDataOutputStream extends FSDataOutputStream {
    * @see FSDataOutputStream#hsync()
    */
   public void hsync(EnumSet<SyncFlag> syncFlags) throws IOException {
-    ((DFSOutputStream) getWrappedStream()).hsync(syncFlags);
+    OutputStream wrappedStream = getWrappedStream();
+    if (wrappedStream instanceof CryptoOutputStream) {
+      ((CryptoOutputStream) wrappedStream).flush();
+      wrappedStream = ((CryptoOutputStream) wrappedStream).getWrappedStream();
+    }
+    ((DFSOutputStream) wrappedStream).hsync(syncFlags);
   }
   
   public static enum SyncFlag {
+
     /**
-     * When doing sync to DataNodes, also update the metadata (block
-     * length) in the NameNode
+     * When doing sync to DataNodes, also update the metadata (block length) in
+     * the NameNode.
      */
     UPDATE_LENGTH;
   }

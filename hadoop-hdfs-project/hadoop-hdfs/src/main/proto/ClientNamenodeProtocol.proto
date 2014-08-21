@@ -32,6 +32,7 @@ import "Security.proto";
 import "hdfs.proto";
 import "acl.proto";
 import "xattr.proto";
+import "encryption.proto";
 
 /**
  * The ClientNamenodeProtocol Service defines the interface between a client 
@@ -73,6 +74,7 @@ message CreateRequestProto {
   required bool createParent = 5;
   required uint32 replication = 6; // Short: Only 16 bits used
   required uint64 blockSize = 7;
+  repeated CipherSuite cipherSuites = 8;
 }
 
 message CreateResponseProto {
@@ -803,4 +805,10 @@ service ClientNamenodeProtocol {
       returns(RemoveXAttrResponseProto);
   rpc checkAccess(CheckAccessRequestProto)
       returns(CheckAccessResponseProto);
+  rpc createEncryptionZone(CreateEncryptionZoneRequestProto)
+      returns(CreateEncryptionZoneResponseProto);
+  rpc listEncryptionZones(ListEncryptionZonesRequestProto)
+      returns(ListEncryptionZonesResponseProto);
+  rpc getEZForPath(GetEZForPathRequestProto)
+      returns(GetEZForPathResponseProto);
 }

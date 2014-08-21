@@ -15,250 +15,241 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Environment Variables
-#
-#   JSVC_HOME  home directory of jsvc binary.  Required for starting secure
-#              datanode.
-#
-#   JSVC_OUTFILE  path to jsvc output file.  Defaults to
-#                 $HADOOP_LOG_DIR/jsvc.out.
-#
-#   JSVC_ERRFILE  path to jsvc error file.  Defaults to $HADOOP_LOG_DIR/jsvc.err.
-
-bin=`which $0`
-bin=`dirname ${bin}`
-bin=`cd "$bin" > /dev/null; pwd`
-
-DEFAULT_LIBEXEC_DIR="$bin"/../libexec
-HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
-. $HADOOP_LIBEXEC_DIR/hdfs-config.sh
-
-function print_usage(){
-  echo "Usage: hdfs [--config confdir] COMMAND"
+function hadoop_usage
+{
+  echo "Usage: hdfs [--config confdir] [--daemon (start|stop|status)] COMMAND"
   echo "       where COMMAND is one of:"
-  echo "  dfs                  run a filesystem command on the file systems supported in Hadoop."
-  echo "  namenode -format     format the DFS filesystem"
-  echo "  secondarynamenode    run the DFS secondary namenode"
-  echo "  namenode             run the DFS namenode"
-  echo "  journalnode          run the DFS journalnode"
-  echo "  zkfc                 run the ZK Failover Controller daemon"
-  echo "  datanode             run a DFS datanode"
-  echo "  dfsadmin             run a DFS admin client"
-  echo "  haadmin              run a DFS HA admin client"
-  echo "  fsck                 run a DFS filesystem checking utility"
   echo "  balancer             run a cluster balancing utility"
-  echo "  jmxget               get JMX exported values from NameNode or DataNode."
-  echo "  oiv                  apply the offline fsimage viewer to an fsimage"
-  echo "  oiv_legacy           apply the offline fsimage viewer to an legacy fsimage"
-  echo "  oev                  apply the offline edits viewer to an edits file"
+  echo "  cacheadmin           configure the HDFS cache"
+  echo "  classpath            prints the class path needed to get the"
+  echo "                       Hadoop jar and the required libraries"
+  echo "  datanode             run a DFS datanode"
+  echo "  dfs                  run a filesystem command on the file system"
+  echo "  dfsadmin             run a DFS admin client"
   echo "  fetchdt              fetch a delegation token from the NameNode"
+  echo "  fsck                 run a DFS filesystem checking utility"
   echo "  getconf              get config values from configuration"
   echo "  groups               get the groups which users belong to"
+  echo "  haadmin              run a DFS HA admin client"
+  echo "  jmxget               get JMX exported values from NameNode or DataNode."
+  echo "  journalnode          run the DFS journalnode"
+  echo "  lsSnapshottableDir   list all snapshottable dirs owned by the current user"
+  echo "                               Use -help to see options"
+  echo "  namenode             run the DFS namenode"
+  echo "                               Use -format to initialize the DFS filesystem"
+  echo "  nfs3                 run an NFS version 3 gateway"
+  echo "  oev                  apply the offline edits viewer to an edits file"
+  echo "  oiv                  apply the offline fsimage viewer to an fsimage"
+  echo "  oiv_legacy           apply the offline fsimage viewer to a legacy fsimage"
+  echo "  portmap              run a portmap service"
+  echo "  secondarynamenode    run the DFS secondary namenode"
   echo "  snapshotDiff         diff two snapshots of a directory or diff the"
   echo "                       current directory contents with a snapshot"
-  echo "  lsSnapshottableDir   list all snapshottable dirs owned by the current user"
-  echo "						Use -help to see options"
-  echo "  portmap              run a portmap service"
-  echo "  nfs3                 run an NFS version 3 gateway"
-  echo "  cacheadmin           configure the HDFS cache"
+  echo "  zkfc                 run the ZK Failover Controller daemon"
+  echo "  crypto               configure HDFS encryption zones"
   echo ""
   echo "Most commands print help when invoked w/o parameters."
 }
 
-if [ $# = 0 ]; then
-  print_usage
-  exit
+# let's locate libexec...
+if [[ -n "${HADOOP_PREFIX}" ]]; then
+  DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
+else
+  this="${BASH_SOURCE-$0}"
+  bin=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
+  DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
+fi
+
+HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}"
+# shellcheck disable=SC2034
+HADOOP_NEW_CONFIG=true
+if [[ -f "${HADOOP_LIBEXEC_DIR}/hdfs-config.sh" ]]; then
+  . "${HADOOP_LIBEXEC_DIR}/hdfs-config.sh"
+else
+  echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/hdfs-config.sh." 2>&1
+  exit 1
+fi
+
+if [[ $# = 0 ]]; then
+  hadoop_exit_with_usage 1
 fi
 
 COMMAND=$1
 shift
 
-case $COMMAND in
-  # usage flags
-  --help|-help|-h)
-    print_usage
+case ${COMMAND} in
+  balancer)
+    CLASS=org.apache.hadoop.hdfs.server.balancer.Balancer
+    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_BALANCER_OPTS}"
+  ;;
+  cacheadmin)
+    CLASS=org.apache.hadoop.hdfs.tools.CacheAdmin
+  ;;
+  classpath)
+    hadoop_finalize
+    echo "${CLASSPATH}"
     exit
-    ;;
+  ;;
+  crypto)
+    CLASS=org.apache.hadoop.hdfs.tools.CryptoAdmin
+  ;;
+  datanode)
+    daemon="true"
+    # Determine if we're starting a secure datanode, and
+    # if so, redefine appropriate variables
+    if [[ -n "${HADOOP_SECURE_DN_USER}" ]]; then
+      secure_service="true"
+      secure_user="${HADOOP_SECURE_DN_USER}"
+      
+      # backward compatiblity
+      HADOOP_SECURE_PID_DIR="${HADOOP_SECURE_PID_DIR:-$HADOOP_SECURE_DN_PID_DIR}"
+      HADOOP_SECURE_LOG_DIR="${HADOOP_SECURE_LOG_DIR:-$HADOOP_SECURE_DN_LOG_DIR}"
+      
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_DN_SECURE_EXTRA_OPTS} ${HADOOP_DATANODE_OPTS}"
+      CLASS="org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter"
+    else
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_DATANODE_OPTS}"
+      CLASS='org.apache.hadoop.hdfs.server.datanode.DataNode'
+    fi
+  ;;
+  dfs)
+    CLASS=org.apache.hadoop.fs.FsShell
+    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+  ;;
+  dfsadmin)
+    CLASS=org.apache.hadoop.hdfs.tools.DFSAdmin
+    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+  ;;
+  fetchdt)
+    CLASS=org.apache.hadoop.hdfs.tools.DelegationTokenFetcher
+  ;;
+  fsck)
+    CLASS=org.apache.hadoop.hdfs.tools.DFSck
+    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+  ;;
+  getconf)
+    CLASS=org.apache.hadoop.hdfs.tools.GetConf
+  ;;
+  groups)
+    CLASS=org.apache.hadoop.hdfs.tools.GetGroups
+  ;;
+  haadmin)
+    CLASS=org.apache.hadoop.hdfs.tools.DFSHAAdmin
+    CLASSPATH="${CLASSPATH}:${TOOL_PATH}"
+    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+  ;;
+  journalnode)
+    daemon="true"
+    CLASS='org.apache.hadoop.hdfs.qjournal.server.JournalNode'
+    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_JOURNALNODE_OPTS}"
+  ;;
+  jmxget)
+    CLASS=org.apache.hadoop.hdfs.tools.JMXGet
+  ;;
+  lsSnapshottableDir)
+    CLASS=org.apache.hadoop.hdfs.tools.snapshot.LsSnapshottableDir
+  ;;
+  namenode)
+    daemon="true"
+    CLASS='org.apache.hadoop.hdfs.server.namenode.NameNode'
+    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_NAMENODE_OPTS}"
+  ;;
+  nfs3)
+    daemon="true"
+    if [[ -n "${HADOOP_PRIVILEGED_NFS_USER}" ]]; then
+      secure_service="true"
+      secure_user="${HADOOP_PRIVILEGED_NFS_USER}"
+      
+      # backward compatiblity
+      HADOOP_SECURE_PID_DIR="${HADOOP_SECURE_PID_DIR:-$HADOOP_SECURE_NFS3_PID_DIR}"
+      HADOOP_SECURE_LOG_DIR="${HADOOP_SECURE_LOG_DIR:-$HADOOP_SECURE_NFS3_LOG_DIR}"
+      
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_NFS3_SECURE_EXTRA_OPTS} ${HADOOP_NFS3_OPTS}"
+      CLASS=org.apache.hadoop.hdfs.nfs.nfs3.PrivilegedNfsGatewayStarter
+    else
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_NFS3_OPTS}"
+      CLASS=org.apache.hadoop.hdfs.nfs.nfs3.Nfs3
+    fi
+  ;;
+  oev)
+    CLASS=org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsViewer
+  ;;
+  oiv)
+    CLASS=org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewerPB
+  ;;
+  oiv_legacy)
+    CLASS=org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewer
+  ;;
+  portmap)
+    daemon="true"
+    CLASS=org.apache.hadoop.portmap.Portmap
+    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_PORTMAP_OPTS}"
+  ;;
+  secondarynamenode)
+    daemon="true"
+    CLASS='org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode'
+    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_SECONDARYNAMENODE_OPTS}"
+  ;;
+  snapshotDiff)
+    CLASS=org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff
+  ;;
+  zkfc)
+    daemon="true"
+    CLASS='org.apache.hadoop.hdfs.tools.DFSZKFailoverController'
+    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_ZKFC_OPTS}"
+  ;;
+  -*)
+    hadoop_exit_with_usage 1
+  ;;
+  *)
+    CLASS="${COMMAND}"
+  ;;
 esac
 
-# Determine if we're starting a secure datanode, and if so, redefine appropriate variables
-if [ "$COMMAND" == "datanode" ] && [ "$EUID" -eq 0 ] && [ -n "$HADOOP_SECURE_DN_USER" ]; then
-  if [ -n "$JSVC_HOME" ]; then
-    if [ -n "$HADOOP_SECURE_DN_PID_DIR" ]; then
-      HADOOP_PID_DIR=$HADOOP_SECURE_DN_PID_DIR
-    fi
-  
-    if [ -n "$HADOOP_SECURE_DN_LOG_DIR" ]; then
-      HADOOP_LOG_DIR=$HADOOP_SECURE_DN_LOG_DIR
-      HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.dir=$HADOOP_LOG_DIR"
-    fi
-   
-    HADOOP_IDENT_STRING=$HADOOP_SECURE_DN_USER
-    HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.id.str=$HADOOP_IDENT_STRING"
-    starting_secure_dn="true"
-  else
-    echo "It looks like you're trying to start a secure DN, but \$JSVC_HOME"\
-      "isn't set. Falling back to starting insecure DN."
+if [[ -n "${secure_service}" ]]; then
+  HADOOP_SECURE_USER="${secure_user}"
+  if hadoop_verify_secure_prereq; then
+    hadoop_setup_secure_service
+    priv_outfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${COMMAND-$HOSTNAME}.out"
+    priv_errfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${COMMAND-$HOSTNAME}.err"
+    priv_pidfile="${HADOOP_PID_DIR}/privileged-${HADOOP_IDENT_STRING}-${COMMAND-$HOSTNAME}.pid"
+    daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${COMMAND}-${HOSTNAME}.out"
+    daemon_pidfile="${HADOOP_PID_DIR}/hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${COMMAND}.pid"
   fi
-fi
-
-# Determine if we're starting a privileged NFS daemon, and if so, redefine appropriate variables
-if [ "$COMMAND" == "nfs3" ] && [ "$EUID" -eq 0 ] && [ -n "$HADOOP_PRIVILEGED_NFS_USER" ]; then
-  if [ -n "$JSVC_HOME" ]; then
-    if [ -n "$HADOOP_PRIVILEGED_NFS_PID_DIR" ]; then
-      HADOOP_PID_DIR=$HADOOP_PRIVILEGED_NFS_PID_DIR
-    fi
-  
-    if [ -n "$HADOOP_PRIVILEGED_NFS_LOG_DIR" ]; then
-      HADOOP_LOG_DIR=$HADOOP_PRIVILEGED_NFS_LOG_DIR
-      HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.dir=$HADOOP_LOG_DIR"
-    fi
-   
-    HADOOP_IDENT_STRING=$HADOOP_PRIVILEGED_NFS_USER
-    HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.id.str=$HADOOP_IDENT_STRING"
-    starting_privileged_nfs="true"
-  else
-    echo "It looks like you're trying to start a privileged NFS server, but"\
-      "\$JSVC_HOME isn't set. Falling back to starting unprivileged NFS server."
-  fi
-fi
-
-if [ "$COMMAND" = "namenode" ] ; then
-  CLASS='org.apache.hadoop.hdfs.server.namenode.NameNode'
-  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_NAMENODE_OPTS"
-elif [ "$COMMAND" = "zkfc" ] ; then
-  CLASS='org.apache.hadoop.hdfs.tools.DFSZKFailoverController'
-  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_ZKFC_OPTS"
-elif [ "$COMMAND" = "secondarynamenode" ] ; then
-  CLASS='org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode'
-  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_SECONDARYNAMENODE_OPTS"
-elif [ "$COMMAND" = "datanode" ] ; then
-  CLASS='org.apache.hadoop.hdfs.server.datanode.DataNode'
-  if [ "$starting_secure_dn" = "true" ]; then
-    HADOOP_OPTS="$HADOOP_OPTS -jvm server $HADOOP_DATANODE_OPTS"
-  else
-    HADOOP_OPTS="$HADOOP_OPTS -server $HADOOP_DATANODE_OPTS"
-  fi
-elif [ "$COMMAND" = "journalnode" ] ; then
-  CLASS='org.apache.hadoop.hdfs.qjournal.server.JournalNode'
-  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_JOURNALNODE_OPTS"
-elif [ "$COMMAND" = "dfs" ] ; then
-  CLASS=org.apache.hadoop.fs.FsShell
-  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
-elif [ "$COMMAND" = "dfsadmin" ] ; then
-  CLASS=org.apache.hadoop.hdfs.tools.DFSAdmin
-  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
-elif [ "$COMMAND" = "haadmin" ] ; then
-  CLASS=org.apache.hadoop.hdfs.tools.DFSHAAdmin
-  CLASSPATH=${CLASSPATH}:${TOOL_PATH}
-  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
-elif [ "$COMMAND" = "fsck" ] ; then
-  CLASS=org.apache.hadoop.hdfs.tools.DFSck
-  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
-elif [ "$COMMAND" = "balancer" ] ; then
-  CLASS=org.apache.hadoop.hdfs.server.balancer.Balancer
-  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_BALANCER_OPTS"
-elif [ "$COMMAND" = "jmxget" ] ; then
-  CLASS=org.apache.hadoop.hdfs.tools.JMXGet
-elif [ "$COMMAND" = "oiv" ] ; then
-  CLASS=org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewerPB
-elif [ "$COMMAND" = "oiv_legacy" ] ; then
-  CLASS=org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewer
-elif [ "$COMMAND" = "oev" ] ; then
-  CLASS=org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsViewer
-elif [ "$COMMAND" = "fetchdt" ] ; then
-  CLASS=org.apache.hadoop.hdfs.tools.DelegationTokenFetcher
-elif [ "$COMMAND" = "getconf" ] ; then
-  CLASS=org.apache.hadoop.hdfs.tools.GetConf
-elif [ "$COMMAND" = "groups" ] ; then
-  CLASS=org.apache.hadoop.hdfs.tools.GetGroups
-elif [ "$COMMAND" = "snapshotDiff" ] ; then
-  CLASS=org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff
-elif [ "$COMMAND" = "lsSnapshottableDir" ] ; then
-  CLASS=org.apache.hadoop.hdfs.tools.snapshot.LsSnapshottableDir
-elif [ "$COMMAND" = "portmap" ] ; then
-  CLASS=org.apache.hadoop.portmap.Portmap
-  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_PORTMAP_OPTS"
-elif [ "$COMMAND" = "nfs3" ] ; then
-  CLASS=org.apache.hadoop.hdfs.nfs.nfs3.Nfs3
-  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_NFS3_OPTS"
-elif [ "$COMMAND" = "cacheadmin" ] ; then
-  CLASS=org.apache.hadoop.hdfs.tools.CacheAdmin
 else
-  CLASS="$COMMAND"
+  daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_IDENT_STRING}-${COMMAND}-${HOSTNAME}.out"
+  daemon_pidfile="${HADOOP_PID_DIR}/hadoop-${HADOOP_IDENT_STRING}-${COMMAND}.pid"
 fi
 
-export CLASSPATH=$CLASSPATH
-
-HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,NullAppender}"
-
-# Check to see if we should start a secure datanode
-if [ "$starting_secure_dn" = "true" ]; then
-  if [ "$HADOOP_PID_DIR" = "" ]; then
-    HADOOP_SECURE_DN_PID="/tmp/hadoop_secure_dn.pid"
+if [[ "${HADOOP_DAEMON_MODE}" != "default" ]]; then
+  # shellcheck disable=SC2034
+  HADOOP_ROOT_LOGGER="${HADOOP_DAEMON_ROOT_LOGGER}"
+  if [[ -n "${secure_service}" ]]; then
+    # shellcheck disable=SC2034
+    HADOOP_LOGFILE="hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${COMMAND}-${HOSTNAME}.log"
   else
-    HADOOP_SECURE_DN_PID="$HADOOP_PID_DIR/hadoop_secure_dn.pid"
+    # shellcheck disable=SC2034
+    HADOOP_LOGFILE="hadoop-${HADOOP_IDENT_STRING}-${COMMAND}-${HOSTNAME}.log"
   fi
+fi
 
-  JSVC=$JSVC_HOME/jsvc
-  if [ ! -f $JSVC ]; then
-    echo "JSVC_HOME is not set correctly so jsvc cannot be found. jsvc is required to run secure datanodes. "
-    echo "Please download and install jsvc from http://archive.apache.org/dist/commons/daemon/binaries/ "\
-      "and set JSVC_HOME to the directory containing the jsvc binary."
-    exit
-  fi
+hadoop_add_param HADOOP_OPTS Xmx "${JAVA_HEAP_MAX}"
+hadoop_finalize
 
-  if [[ ! $JSVC_OUTFILE ]]; then
-    JSVC_OUTFILE="$HADOOP_LOG_DIR/jsvc.out"
-  fi
+export CLASSPATH
 
-  if [[ ! $JSVC_ERRFILE ]]; then
-    JSVC_ERRFILE="$HADOOP_LOG_DIR/jsvc.err"
-  fi
-
-  exec "$JSVC" \
-           -Dproc_$COMMAND -outfile "$JSVC_OUTFILE" \
-           -errfile "$JSVC_ERRFILE" \
-           -pidfile "$HADOOP_SECURE_DN_PID" \
-           -nodetach \
-           -user "$HADOOP_SECURE_DN_USER" \
-            -cp "$CLASSPATH" \
-           $JAVA_HEAP_MAX $HADOOP_OPTS \
-           org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter "$@"
-elif [ "$starting_privileged_nfs" = "true" ] ; then
-  if [ "$HADOOP_PID_DIR" = "" ]; then
-    HADOOP_PRIVILEGED_NFS_PID="/tmp/hadoop_privileged_nfs3.pid"
+if [[ -n "${daemon}" ]]; then
+  if [[ -n "${secure_service}" ]]; then
+    hadoop_secure_daemon_handler \
+    "${HADOOP_DAEMON_MODE}" "${COMMAND}" "${CLASS}"\
+    "${daemon_pidfile}" "${daemon_outfile}" \
+    "${priv_pidfile}" "${priv_outfile}" "${priv_errfile}" "$@"
   else
-    HADOOP_PRIVILEGED_NFS_PID="$HADOOP_PID_DIR/hadoop_privileged_nfs3.pid"
+    hadoop_daemon_handler "${HADOOP_DAEMON_MODE}" "${COMMAND}" "${CLASS}"\
+    "${daemon_pidfile}" "${daemon_outfile}" "$@"
   fi
-
-  JSVC=$JSVC_HOME/jsvc
-  if [ ! -f $JSVC ]; then
-    echo "JSVC_HOME is not set correctly so jsvc cannot be found. jsvc is required to run privileged NFS gateways. "
-    echo "Please download and install jsvc from http://archive.apache.org/dist/commons/daemon/binaries/ "\
-      "and set JSVC_HOME to the directory containing the jsvc binary."
-    exit
-  fi
-
-  if [[ ! $JSVC_OUTFILE ]]; then
-    JSVC_OUTFILE="$HADOOP_LOG_DIR/nfs3_jsvc.out"
-  fi
-
-  if [[ ! $JSVC_ERRFILE ]]; then
-    JSVC_ERRFILE="$HADOOP_LOG_DIR/nfs3_jsvc.err"
-  fi
-
-  exec "$JSVC" \
-           -Dproc_$COMMAND -outfile "$JSVC_OUTFILE" \
-           -errfile "$JSVC_ERRFILE" \
-           -pidfile "$HADOOP_PRIVILEGED_NFS_PID" \
-           -nodetach \
-           -user "$HADOOP_PRIVILEGED_NFS_USER" \
-           -cp "$CLASSPATH" \
-           $JAVA_HEAP_MAX $HADOOP_OPTS \
-           org.apache.hadoop.hdfs.nfs.nfs3.PrivilegedNfsGatewayStarter "$@"
+  exit $?
 else
-  # run it
-  exec "$JAVA" -Dproc_$COMMAND $JAVA_HEAP_MAX $HADOOP_OPTS $CLASS "$@"
+  # shellcheck disable=SC2086
+  hadoop_java_exec "${COMMAND}" "${CLASS}" "$@"
 fi
-

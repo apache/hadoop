@@ -37,6 +37,7 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.MapOutputFile;
 
 import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.CryptoUtils;
 import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -75,7 +76,7 @@ class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
     this.merger = merger;
     this.outputPath = outputPath;
     tmpOutputPath = getTempPath(outputPath, fetcher);
-    disk = fs.create(tmpOutputPath);
+    disk = CryptoUtils.wrapIfNecessary(conf, fs.create(tmpOutputPath));
   }
 
   @VisibleForTesting

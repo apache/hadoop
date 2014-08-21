@@ -16,20 +16,34 @@
 # limitations under the License.
 
 
-# Start all yarn daemons.  Run this on master node.
+function hadoop_usage
+{
+  echo "Usage: start-yarn.sh [--config confdir]"
+}
 
-echo "starting yarn daemons"
+this="${BASH_SOURCE-$0}"
+bin=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
 
-bin=`dirname "${BASH_SOURCE-$0}"`
-bin=`cd "$bin"; pwd`
+# let's locate libexec...
+if [[ -n "${HADOOP_PREFIX}" ]]; then
+  DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
+else
+  DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
+fi
 
-DEFAULT_LIBEXEC_DIR="$bin"/../libexec
-HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
-. $HADOOP_LIBEXEC_DIR/yarn-config.sh
+HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}"
+# shellcheck disable=SC2034
+HADOOP_NEW_CONFIG=true
+if [[ -f "${HADOOP_LIBEXEC_DIR}/yarn-config.sh" ]]; then
+  . "${HADOOP_LIBEXEC_DIR}/yarn-config.sh"
+else
+  echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/yarn-config.sh." 2>&1
+  exit 1
+fi
 
 # start resourceManager
-"$bin"/yarn-daemon.sh --config $YARN_CONF_DIR  start resourcemanager
+"${bin}/yarn-daemon.sh" --config "${YARN_CONF_DIR}"  start resourcemanager
 # start nodeManager
-"$bin"/yarn-daemons.sh --config $YARN_CONF_DIR  start nodemanager
+"${bin}/yarn-daemons.sh" --config "${YARN_CONF_DIR}"  start nodemanager
 # start proxyserver
-#"$bin"/yarn-daemon.sh --config $YARN_CONF_DIR  start proxyserver
+#"${bin}/yarn-daemon.sh" --config "${YARN_CONF_DIR}"  start proxyserver

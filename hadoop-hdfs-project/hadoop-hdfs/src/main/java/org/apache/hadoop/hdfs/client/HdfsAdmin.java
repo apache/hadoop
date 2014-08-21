@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.client;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.EnumSet;
@@ -33,7 +34,9 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 
 /**
@@ -224,5 +227,52 @@ public class HdfsAdmin {
    */
   public RemoteIterator<CachePoolEntry> listCachePools() throws IOException {
     return dfs.listCachePools();
+  }
+
+  /**
+   * Create an encryption zone rooted at an empty existing directory, using the
+   * specified encryption key. An encryption zone has an associated encryption
+   * key used when reading and writing files within the zone.
+   *
+   * @param path    The path of the root of the encryption zone. Must refer to
+   *                an empty, existing directory.
+   * @param keyName Name of key available at the KeyProvider.
+   * @throws IOException            if there was a general IO exception
+   * @throws AccessControlException if the caller does not have access to path
+   * @throws FileNotFoundException  if the path does not exist
+   */
+  public void createEncryptionZone(Path path, String keyName)
+    throws IOException, AccessControlException, FileNotFoundException {
+    dfs.createEncryptionZone(path, keyName);
+  }
+
+  /**
+   * Get the path of the encryption zone for a given file or directory.
+   *
+   * @param path The path to get the ez for.
+   *
+   * @return The EncryptionZone of the ez, or null if path is not in an ez.
+   * @throws IOException            if there was a general IO exception
+   * @throws AccessControlException if the caller does not have access to path
+   * @throws FileNotFoundException  if the path does not exist
+   */
+  public EncryptionZone getEncryptionZoneForPath(Path path)
+    throws IOException, AccessControlException, FileNotFoundException {
+    return dfs.getEZForPath(path);
+  }
+
+  /**
+   * Returns a RemoteIterator which can be used to list the encryption zones
+   * in HDFS. For large numbers of encryption zones, the iterator will fetch
+   * the list of zones in a number of small batches.
+   * <p/>
+   * Since the list is fetched in batches, it does not represent a
+   * consistent snapshot of the entire list of encryption zones.
+   * <p/>
+   * This method can only be called by HDFS superusers.
+   */
+  public RemoteIterator<EncryptionZone> listEncryptionZones()
+      throws IOException {
+    return dfs.listEncryptionZones();
   }
 }

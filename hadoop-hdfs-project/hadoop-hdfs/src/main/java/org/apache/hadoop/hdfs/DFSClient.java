@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
+import static org.apache.hadoop.crypto.key.KeyProviderCryptoExtension
+    .EncryptedKeyVersion;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
@@ -76,6 +81,7 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -95,6 +101,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.CipherSuite;
+import org.apache.hadoop.crypto.CryptoCodec;
+import org.apache.hadoop.crypto.CryptoInputStream;
+import org.apache.hadoop.crypto.CryptoOutputStream;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStorageLocation;
 import org.apache.hadoop.fs.CacheFlag;
@@ -102,6 +113,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
@@ -140,6 +152,9 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
+import org.apache.hadoop.hdfs.protocol.EncryptionZoneIterator;
+import org.apache.hadoop.hdfs.protocol.EncryptionZoneWithId;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -249,7 +264,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   private static final DFSHedgedReadMetrics HEDGED_READ_METRIC =
       new DFSHedgedReadMetrics();
   private static ThreadPoolExecutor HEDGED_READ_THREAD_POOL;
-  
+  private final CryptoCodec codec;
+  @VisibleForTesting
+  List<CipherSuite> cipherSuites;
+  @VisibleForTesting
+  KeyProviderCryptoExtension provider;
   /**
    * DFSClient configuration 
    */
@@ -581,7 +600,17 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     this.authority = nameNodeUri == null? "null": nameNodeUri.getAuthority();
     this.clientName = "DFSClient_" + dfsClientConf.taskId + "_" + 
         DFSUtil.getRandom().nextInt()  + "_" + Thread.currentThread().getId();
-    
+    this.codec = CryptoCodec.getInstance(conf);
+    this.cipherSuites = Lists.newArrayListWithCapacity(1);
+    if (codec != null) {
+      cipherSuites.add(codec.getCipherSuite());
+    }
+    provider = DFSUtil.createKeyProviderCryptoExtension(conf);
+    if (provider == null) {
+      LOG.info("No KeyProvider found.");
+    } else {
+      LOG.info("Found KeyProvider: " + provider.toString());
+    }
     int numResponseToDrop = conf.getInt(
         DFSConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY,
         DFSConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_DEFAULT);
@@ -1280,7 +1309,93 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
     return volumeBlockLocations;
   }
-  
+
+  /**
+   * Decrypts a EDEK by consulting the KeyProvider.
+   */
+  private KeyVersion decryptEncryptedDataEncryptionKey(FileEncryptionInfo
+      feInfo) throws IOException {
+    if (provider == null) {
+      throw new IOException("No KeyProvider is configured, cannot access" +
+          " an encrypted file");
+    }
+    EncryptedKeyVersion ekv = EncryptedKeyVersion.createForDecryption(
+        feInfo.getEzKeyVersionName(), feInfo.getIV(),
+        feInfo.getEncryptedDataEncryptionKey());
+    try {
+      return provider.decryptEncryptedKey(ekv);
+    } catch (GeneralSecurityException e) {
+      throw new IOException(e);
+    }
+  }
+
+  /**
+   * Wraps the stream in a CryptoInputStream if the underlying file is
+   * encrypted.
+   */
+  public HdfsDataInputStream createWrappedInputStream(DFSInputStream dfsis)
+      throws IOException {
+    final FileEncryptionInfo feInfo = dfsis.getFileEncryptionInfo();
+    if (feInfo != null) {
+      // File is encrypted, wrap the stream in a crypto stream.
+      KeyVersion decrypted = decryptEncryptedDataEncryptionKey(feInfo);
+      CryptoCodec codec = CryptoCodec
+          .getInstance(conf, feInfo.getCipherSuite());
+      if (codec == null) {
+        throw new IOException("No configuration found for the cipher suite "
+            + feInfo.getCipherSuite().getConfigSuffix() + " prefixed with "
+            + HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX
+            + ". Please see the example configuration "
+            + "hadoop.security.crypto.codec.classes.EXAMPLECIPHERSUITE "
+            + "at core-default.xml for details.");
+      }
+      final CryptoInputStream cryptoIn =
+          new CryptoInputStream(dfsis, codec, decrypted.getMaterial(),
+              feInfo.getIV());
+      return new HdfsDataInputStream(cryptoIn);
+    } else {
+      // No FileEncryptionInfo so no encryption.
+      return new HdfsDataInputStream(dfsis);
+    }
+  }
+
+  /**
+   * Wraps the stream in a CryptoOutputStream if the underlying file is
+   * encrypted.
+   */
+  public HdfsDataOutputStream createWrappedOutputStream(DFSOutputStream dfsos,
+      FileSystem.Statistics statistics) throws IOException {
+    return createWrappedOutputStream(dfsos, statistics, 0);
+  }
+
+  /**
+   * Wraps the stream in a CryptoOutputStream if the underlying file is
+   * encrypted.
+   */
+  public HdfsDataOutputStream createWrappedOutputStream(DFSOutputStream dfsos,
+      FileSystem.Statistics statistics, long startPos) throws IOException {
+    final FileEncryptionInfo feInfo = dfsos.getFileEncryptionInfo();
+    if (feInfo != null) {
+      if (codec == null) {
+        throw new IOException("No configuration found for the cipher suite "
+            + HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_KEY + " value prefixed with "
+            + HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX
+            + ". Please see the example configuration "
+            + "hadoop.security.crypto.codec.classes.EXAMPLECIPHERSUITE "
+            + "at core-default.xml for details.");
+      }
+      // File is encrypted, wrap the stream in a crypto stream.
+      KeyVersion decrypted = decryptEncryptedDataEncryptionKey(feInfo);
+      final CryptoOutputStream cryptoOut =
+          new CryptoOutputStream(dfsos, codec,
+              decrypted.getMaterial(), feInfo.getIV(), startPos);
+      return new HdfsDataOutputStream(cryptoOut, statistics, startPos);
+    } else {
+      // No FileEncryptionInfo present so no encryption.
+      return new HdfsDataOutputStream(dfsos, statistics, startPos);
+    }
+  }
+
   public DFSInputStream open(String src) 
       throws IOException, UnresolvedLinkException {
     return open(src, dfsClientConf.ioBufferSize, true, null);
@@ -1483,7 +1598,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
     final DFSOutputStream result = DFSOutputStream.newStreamForCreate(this,
         src, masked, flag, createParent, replication, blockSize, progress,
-        buffersize, dfsClientConf.createChecksum(checksumOpt), favoredNodeStrs);
+        buffersize, dfsClientConf.createChecksum(checksumOpt),
+        favoredNodeStrs, cipherSuites);
     beginFileLease(result.getFileId(), result);
     return result;
   }
@@ -1530,7 +1646,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       DataChecksum checksum = dfsClientConf.createChecksum(checksumOpt);
       result = DFSOutputStream.newStreamForCreate(this, src, absPermission,
           flag, createParent, replication, blockSize, progress, buffersize,
-          checksum);
+          checksum, null, cipherSuites);
     }
     beginFileLease(result.getFileId(), result);
     return result;
@@ -1608,7 +1724,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       final Progressable progress, final FileSystem.Statistics statistics
       ) throws IOException {
     final DFSOutputStream out = append(src, buffersize, progress);
-    return new HdfsDataOutputStream(out, statistics, out.getInitialLen());
+    return createWrappedOutputStream(out, statistics, out.getInitialLen());
   }
 
   private DFSOutputStream append(String src, int buffersize, Progressable progress) 
@@ -2772,6 +2888,36 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
   
+  public void createEncryptionZone(String src, String keyName)
+    throws IOException {
+    checkOpen();
+    try {
+      namenode.createEncryptionZone(src, keyName);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     SafeModeException.class,
+                                     UnresolvedPathException.class);
+    }
+  }
+
+  public EncryptionZone getEZForPath(String src)
+          throws IOException {
+    checkOpen();
+    try {
+      final EncryptionZoneWithId ezi = namenode.getEZForPath(src);
+      return (ezi.getId() < 0) ? null : ezi;
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     UnresolvedPathException.class);
+    }
+  }
+
+  public RemoteIterator<EncryptionZone> listEncryptionZones()
+      throws IOException {
+    checkOpen();
+    return new EncryptionZoneIterator(namenode);
+  }
+
   public void setXAttr(String src, String name, byte[] value, 
       EnumSet<XAttrSetFlag> flag) throws IOException {
     checkOpen();

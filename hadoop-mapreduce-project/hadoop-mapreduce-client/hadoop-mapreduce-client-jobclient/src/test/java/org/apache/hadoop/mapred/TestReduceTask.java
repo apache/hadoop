@@ -80,7 +80,7 @@ public class TestReduceTask extends TestCase {
     FileSystem rfs = ((LocalFileSystem)localFs).getRaw();
     Path path = new Path(tmpDir, "data.in");
     IFile.Writer<Text, Text> writer = 
-      new IFile.Writer<Text, Text>(conf, rfs, path, Text.class, Text.class,
+      new IFile.Writer<Text, Text>(conf, rfs.create(path), Text.class, Text.class,
                                    codec, null);
     for(Pair p: vals) {
       writer.append(new Text(p.key), new Text(p.value));

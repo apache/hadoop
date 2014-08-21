@@ -57,9 +57,9 @@ excludeFilenameRemote=$("$HADOOP_PREFIX/bin/hdfs" getconf -excludeFile)
 
 if [ "$excludeFilenameRemote" = '' ] ; then
   echo \
-    "Error: hdfs getconf -excludeFile returned empty string, " \
-    "please setup dfs.hosts.exclude in hdfs-site.xml in local cluster " \
-    "configuration and on all namenodes"
+  "Error: hdfs getconf -excludeFile returned empty string, " \
+  "please setup dfs.hosts.exclude in hdfs-site.xml in local cluster " \
+  "configuration and on all namenodes"
   exit 1
 fi
 

@@ -50,6 +50,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2411. Support simple user and group mappings to queues. (Ram Venkatesh
     via jianhe)
 
+    YARN-2174. Enable HTTPs for the writer REST API of TimelineServer.
+    (Zhijie Shen via jianhe)
+
   IMPROVEMENTS
 
     YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc
@@ -211,7 +214,19 @@ Release 2.6.0 - UNRELEASED
     YARN-2397. Avoided loading two authentication filters for RM and TS web
     interfaces. (Varun Vasudev via zjshen)
 
-Release 2.5.0 - UNRELEASED
+    YARN-2409. RM ActiveToStandBy transition missing stoping previous rmDispatcher.
+    (Rohith via jianhe)
+
+    YARN-2249. Avoided AM release requests being lost on work preserving RM
+    restart. (Jian He via zjshen)
+
+    YARN-2034. Description for yarn.nodemanager.localizer.cache.target-size-mb
+    is incorrect (Chen He via jlowe)
+
+    YARN-1919. Potential NPE in EmbeddedElectorService#stop. 
+    (Tsuyoshi Ozawa via kasha)
+
+Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES
 
