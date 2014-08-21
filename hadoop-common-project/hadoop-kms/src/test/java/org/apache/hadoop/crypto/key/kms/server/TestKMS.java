@@ -717,6 +717,9 @@ public class TestKMS {
           }
         });
 
+        //stop the reloader, to avoid running while we are writing the new file
+        KMSWebApp.getACLs().stopReloader();
+
         // test ACL reloading
         Thread.sleep(10); // to ensure the ACLs file modifiedTime is newer
         conf.set(KMSACLs.Type.CREATE.getConfigKey(), "foo");
