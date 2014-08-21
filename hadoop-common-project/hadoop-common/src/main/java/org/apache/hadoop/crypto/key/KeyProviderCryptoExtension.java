@@ -44,15 +44,21 @@ public class KeyProviderCryptoExtension extends
    * used to generate the encrypted Key and the encrypted KeyVersion
    */
   public static class EncryptedKeyVersion {
+    private String keyName;
     private String keyVersionName;
     private byte[] iv;
     private KeyVersion encryptedKey;
 
-    protected EncryptedKeyVersion(String keyVersionName, byte[] iv,
-        KeyVersion encryptedKey) {
+    protected EncryptedKeyVersion(String keyName, String keyVersionName,
+        byte[] iv, KeyVersion encryptedKey) {
+      this.keyName = keyName;
       this.keyVersionName = keyVersionName;
       this.iv = iv;
       this.encryptedKey = encryptedKey;
+    }
+
+    public String getKeyName() {
+      return keyName;
     }
 
     public String getKeyVersionName() {
@@ -153,7 +159,8 @@ public class KeyProviderCryptoExtension extends
       cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(keyVer.getMaterial(),
           "AES"), new IvParameterSpec(flipIV(iv)));
       byte[] ek = cipher.doFinal(newKey);
-      return new EncryptedKeyVersion(keyVersion.getVersionName(), iv,
+      return new EncryptedKeyVersion(keyVersion.getName(),
+          keyVersion.getVersionName(), iv,
           new KeyVersion(keyVer.getName(), EEK, ek));
     }
 

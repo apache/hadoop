@@ -145,6 +145,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10824. Refactor KMSACLs to avoid locking. (Benoy Antony via umamahesh)
 
+    HADOOP-10841. EncryptedKeyVersion should have a key name property.
+    (asuresh via tucu)
+
   BUG FIXES
 
     HADOOP-10781. Unportable getgrouplist() usage breaks FreeBSD (Dmitry
