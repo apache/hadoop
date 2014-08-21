@@ -22,7 +22,9 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.security.InvalidParameterException;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -90,6 +92,7 @@ public class KeyShell extends Configured implements Tool {
    */
   private int init(String[] args) throws IOException {
     final Options options = KeyProvider.options(getConf());
+    final Map<String, String> attributes = new HashMap<String, String>();
 
     for (int i = 0; i < args.length; i++) { // parse command line
       boolean moreTokens = (i < args.length - 1);
@@ -134,6 +137,23 @@ public class KeyShell extends Configured implements Tool {
         options.setCipher(args[++i]);
       } else if ("--description".equals(args[i]) && moreTokens) {
         options.setDescription(args[++i]);
+      } else if ("--attr".equals(args[i]) && moreTokens) {
+        final String attrval[] = args[++i].split("=", 2);
+        final String attr = attrval[0].trim();
+        final String val = attrval[1].trim();
+        if (attr.isEmpty() || val.isEmpty()) {
+          out.println("\nAttributes must be in attribute=value form, " +
+                  "or quoted\nlike \"attribute = value\"\n");
+          printKeyShellUsage();
+          return -1;
+        }
+        if (attributes.containsKey(attr)) {
+          out.println("\nEach attribute must correspond to only one value:\n" +
+                  "atttribute \"" + attr + "\" was repeated\n" );
+          printKeyShellUsage();
+          return -1;
+        }
+        attributes.put(attr, val);
       } else if ("--provider".equals(args[i]) && moreTokens) {
         userSuppliedProvider = true;
         getConf().set(KeyProviderFactory.KEY_PROVIDER_PATH, args[++i]);
@@ -154,6 +174,10 @@ public class KeyShell extends Configured implements Tool {
     if (command == null) {
       printKeyShellUsage();
       return -1;
+    }
+
+    if (!attributes.isEmpty()) {
+      options.setAttributes(attributes);
     }
 
     return 0;
@@ -404,6 +428,7 @@ public class KeyShell extends Configured implements Tool {
     public static final String USAGE =
       "create <keyname> [--cipher <cipher>] [--size <size>]\n" +
       "                     [--description <description>]\n" +
+      "                     [--attr <attribute=value>]\n" +
       "                     [--provider <provider>] [--help]";
     public static final String DESC =
       "The create subcommand creates a new key for the name specified\n" +
@@ -411,7 +436,9 @@ public class KeyShell extends Configured implements Tool {
       "--provider argument. You may specify a cipher with the --cipher\n" +
       "argument. The default cipher is currently \"AES/CTR/NoPadding\".\n" +
       "The default keysize is 256. You may specify the requested key\n" +
-      "length using the --size argument.\n";
+      "length using the --size argument. Arbitrary attribute=value\n" +
+      "style attributes may be specified using the --attr argument.\n" +
+      "--attr may be specified multiple times, once per attribute.\n";
 
     final String keyName;
     final Options options;

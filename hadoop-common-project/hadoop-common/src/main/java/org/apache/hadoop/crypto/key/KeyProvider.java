@@ -23,9 +23,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.net.URI;
 import java.security.NoSuchAlgorithmException;
-import java.text.MessageFormat;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -37,7 +35,6 @@ import com.google.gson.stream.JsonWriter;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 
 import javax.crypto.KeyGenerator;
 
@@ -137,9 +134,26 @@ public abstract class KeyProvider {
     }
 
     public String toString() {
-      return MessageFormat.format(
-          "cipher: {0}, length: {1} description: {2} created: {3} version: {4}",
-          cipher, bitLength, description, created, versions);
+      final StringBuilder metaSB = new StringBuilder();
+      metaSB.append("cipher: ").append(cipher).append(", ");
+      metaSB.append("length: ").append(bitLength).append(", ");
+      metaSB.append("description: ").append(description).append(", ");
+      metaSB.append("created: ").append(created).append(", ");
+      metaSB.append("version: ").append(versions).append(", ");
+      metaSB.append("attributes: ");
+      if ((attributes != null) && !attributes.isEmpty()) {
+        for (Map.Entry<String, String> attribute : attributes.entrySet()) {
+          metaSB.append("[");
+          metaSB.append(attribute.getKey());
+          metaSB.append("=");
+          metaSB.append(attribute.getValue());
+          metaSB.append("], ");
+        }
+        metaSB.deleteCharAt(metaSB.length() - 2);  // remove last ', '
+      } else {
+        metaSB.append("null");
+      }
+      return metaSB.toString();
     }
 
     public String getDescription() {

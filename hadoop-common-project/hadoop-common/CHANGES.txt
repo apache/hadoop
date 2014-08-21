@@ -138,6 +138,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10812. Delegate KeyProviderExtension#toString to underlying
     KeyProvider. (wang)
 
+    HADOOP-10736. Add key attributes to the key shell. (Mike Yoder via wang)
+
   BUG FIXES
 
     HADOOP-10781. Unportable getgrouplist() usage breaks FreeBSD (Dmitry
