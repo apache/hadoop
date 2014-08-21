@@ -102,6 +102,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10427. KeyProvider implementations should be thread safe. (tucu)
 
+    HADOOP-10428. JavaKeyStoreProvider should accept keystore password via
+    configuration falling back to ENV VAR. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)

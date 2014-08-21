@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.crypto.key;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -27,10 +28,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.URI;
+import java.net.URL;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -52,10 +55,21 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * any Hadoop FileSystem using the following name mangling:
  *  jks://hdfs@nn1.example.com/my/keys.jks -> hdfs://nn1.example.com/my/keys.jks
  *  jks://file/home/owen/keys.jks -> file:///home/owen/keys.jks
- *
- * The password for the keystore is taken from the HADOOP_KEYSTORE_PASSWORD
- * environment variable with a default of 'none'.
- *
+ * <p/>
+ * If the <code>HADOOP_KEYSTORE_PASSWORD</code> environment variable is set,
+ * its value is used as the password for the keystore.
+ * <p/>
+ * If the <code>HADOOP_KEYSTORE_PASSWORD</code> environment variable is not set,
+ * the password for the keystore is read from file specified in the
+ * {@link #KEYSTORE_PASSWORD_FILE_KEY} configuration property. The password file
+ * is looked up in Hadoop's configuration directory via the classpath.
+ * <p/>
+ * <b>NOTE:</b> Make sure the password in the password file does not have an
+ * ENTER at the end, else it won't be valid for the Java KeyStore.
+ * <p/>
+ * If the environment variable, nor the property are not set, the password used
+ * is 'none'.
+ * <p/>
  * It is expected for encrypted InputFormats and OutputFormats to copy the keys
  * from the original provider into the job's Credentials object, which is
  * accessed via the UserProvider. Therefore, this provider won't be used by
@@ -65,16 +79,20 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class JavaKeyStoreProvider extends KeyProvider {
   private static final String KEY_METADATA = "KeyMetadata";
   public static final String SCHEME_NAME = "jceks";
-  public static final String KEYSTORE_PASSWORD_NAME =
+
+  public static final String KEYSTORE_PASSWORD_FILE_KEY =
+      "hadoop.security.keystore.java-keystore-provider.password-file";
+
+  public static final String KEYSTORE_PASSWORD_ENV_VAR =
       "HADOOP_KEYSTORE_PASSWORD";
-  public static final String KEYSTORE_PASSWORD_DEFAULT = "none";
+  public static final char[] KEYSTORE_PASSWORD_DEFAULT = "none".toCharArray();
 
   private final URI uri;
   private final Path path;
   private final FileSystem fs;
   private final FsPermission permissions;
   private final KeyStore keyStore;
-  private final char[] password;
+  private char[] password;
   private boolean changed = false;
   private Lock readLock;
   private Lock writeLock;
@@ -85,12 +103,29 @@ public class JavaKeyStoreProvider extends KeyProvider {
     this.uri = uri;
     path = unnestUri(uri);
     fs = path.getFileSystem(conf);
-    // Get the password from the user's environment
-    String pw = System.getenv(KEYSTORE_PASSWORD_NAME);
-    if (pw == null) {
-      pw = KEYSTORE_PASSWORD_DEFAULT;
+    // Get the password file from the conf, if not present from the user's
+    // environment var
+    if (System.getenv().containsKey(KEYSTORE_PASSWORD_ENV_VAR)) {
+      password = System.getenv(KEYSTORE_PASSWORD_ENV_VAR).toCharArray();
     }
-    password = pw.toCharArray();
+    if (password == null) {
+      String pwFile = conf.get(KEYSTORE_PASSWORD_FILE_KEY);
+      if (pwFile != null) {
+        ClassLoader cl = Thread.currentThread().getContextClassLoader();
+        URL pwdFile = cl.getResource(pwFile);
+        if (pwdFile != null) {
+          InputStream is = pwdFile.openStream();
+          try {
+            password = IOUtils.toCharArray(is);
+          } finally {
+            is.close();
+          }
+        }
+      }
+    }
+    if (password == null) {
+      password = KEYSTORE_PASSWORD_DEFAULT;
+    }
     try {
       keyStore = KeyStore.getInstance(SCHEME_NAME);
       if (fs.exists(path)) {
