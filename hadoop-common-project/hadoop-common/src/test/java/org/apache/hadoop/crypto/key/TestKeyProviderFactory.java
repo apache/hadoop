@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Assert;
 import org.junit.Test;
@@ -204,7 +205,7 @@ public class TestKeyProviderFactory {
     file.delete();
     conf.set(KeyProviderFactory.KEY_PROVIDER_PATH, ourUrl);
     checkSpecificProvider(conf, ourUrl);
-    Path path = KeyProvider.unnestUri(new URI(ourUrl));
+    Path path = ProviderUtils.unnestUri(new URI(ourUrl));
     FileSystem fs = path.getFileSystem(conf);
     FileStatus s = fs.getFileStatus(path);
     assertTrue(s.getPermission().toString().equals("rwx------"));

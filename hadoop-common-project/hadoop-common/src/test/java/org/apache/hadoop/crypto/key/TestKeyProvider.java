@@ -21,6 +21,7 @@ import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.ProviderUtils;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -133,13 +134,13 @@ public class TestKeyProvider {
   @Test
   public void testUnnestUri() throws Exception {
     assertEquals(new Path("hdfs://nn.example.com/my/path"),
-        KeyProvider.unnestUri(new URI("myscheme://hdfs@nn.example.com/my/path")));
+        ProviderUtils.unnestUri(new URI("myscheme://hdfs@nn.example.com/my/path")));
     assertEquals(new Path("hdfs://nn/my/path?foo=bar&baz=bat#yyy"),
-        KeyProvider.unnestUri(new URI("myscheme://hdfs@nn/my/path?foo=bar&baz=bat#yyy")));
+        ProviderUtils.unnestUri(new URI("myscheme://hdfs@nn/my/path?foo=bar&baz=bat#yyy")));
     assertEquals(new Path("inner://hdfs@nn1.example.com/my/path"),
-        KeyProvider.unnestUri(new URI("outer://inner@hdfs@nn1.example.com/my/path")));
+        ProviderUtils.unnestUri(new URI("outer://inner@hdfs@nn1.example.com/my/path")));
     assertEquals(new Path("user:///"),
-        KeyProvider.unnestUri(new URI("outer://user/")));
+        ProviderUtils.unnestUri(new URI("outer://user/")));
   }
 
   private static class MyKeyProvider extends KeyProvider {
