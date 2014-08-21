@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.URI;
+import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import java.util.List;
 
@@ -33,6 +34,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+
+import javax.crypto.KeyGenerator;
 
 /**
  * A provider of secret key material for Hadoop applications. Provides an
@@ -315,6 +318,56 @@ public abstract class KeyProvider {
                                        Options options) throws IOException;
 
   /**
+   * Get the algorithm from the cipher.
+   *
+   * @return the algorithm name
+   */
+  private String getAlgorithm(String cipher) {
+    int slash = cipher.indexOf('/');
+    if (slash == -1) {
+      return cipher;
+    } else {
+      return cipher.substring(0, slash);
+    }
+  }
+
+  /**
+   * Generates a key material.
+   *
+   * @param size length of the key.
+   * @param algorithm algorithm to use for generating the key.
+   * @return the generated key.
+   * @throws NoSuchAlgorithmException
+   */
+  protected byte[] generateKey(int size, String algorithm)
+      throws NoSuchAlgorithmException {
+    algorithm = getAlgorithm(algorithm);
+    KeyGenerator keyGenerator = KeyGenerator.getInstance(algorithm);
+    keyGenerator.init(size);
+    byte[] key = keyGenerator.generateKey().getEncoded();
+    return key;
+  }
+
+  /**
+   * Create a new key generating the material for it.
+   * The given key must not already exist.
+   * <p/>
+   * This implementation generates the key material and calls the
+   * {@link #createKey(String, byte[], Options)} method.
+   *
+   * @param name the base name of the key
+   * @param options the options for the new key.
+   * @return the version name of the first version of the key.
+   * @throws IOException
+   * @throws NoSuchAlgorithmException
+   */
+  public KeyVersion createKey(String name, Options options)
+      throws NoSuchAlgorithmException, IOException {
+    byte[] material = generateKey(options.getBitLength(), options.getCipher());
+    return createKey(name, material, options);
+  }
+
+  /**
    * Delete the given key.
    * @param name the name of the key to delete
    * @throws IOException
@@ -331,6 +384,23 @@ public abstract class KeyProvider {
   public abstract KeyVersion rollNewVersion(String name,
                                              byte[] material
                                             ) throws IOException;
+
+  /**
+   * Roll a new version of the given key generating the material for it.
+   * <p/>
+   * This implementation generates the key material and calls the
+   * {@link #rollNewVersion(String, byte[])} method.
+   *
+   * @param name the basename of the key
+   * @return the name of the new version of the key
+   * @throws IOException
+   */
+  public KeyVersion rollNewVersion(String name) throws NoSuchAlgorithmException,
+                                                       IOException {
+    Metadata meta = getMetadata(name);
+    byte[] material = generateKey(meta.getBitLength(), meta.getCipher());
+    return rollNewVersion(name, material);
+  }
 
   /**
    * Ensures that any changes to the keys are written to persistent store.

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.crypto.key;
 
+import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.fs.Path;
@@ -24,15 +25,19 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.net.URI;
+import java.security.NoSuchAlgorithmException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertArrayEquals;
 
 public class TestKeyProvider {
+
+  private static final String CIPHER = "AES";
 
   @Test
   public void testBuildVersionName() throws Exception {
@@ -108,5 +113,83 @@ public class TestKeyProvider {
         KeyProvider.unnestUri(new URI("outer://inner@hdfs@nn1.example.com/my/path")));
     assertEquals(new Path("user:///"),
         KeyProvider.unnestUri(new URI("outer://user/")));
+  }
+
+  private static class MyKeyProvider extends KeyProvider {
+    private String algorithm;
+    private int size;
+    private byte[] material;
+
+    @Override
+    public KeyVersion getKeyVersion(String versionName)
+        throws IOException {
+      return null;
+    }
+
+    @Override
+    public List<String> getKeys() throws IOException {
+      return null;
+    }
+
+    @Override
+    public List<KeyVersion> getKeyVersions(String name)
+        throws IOException {
+      return null;
+    }
+
+    @Override
+    public Metadata getMetadata(String name) throws IOException {
+      return new Metadata(CIPHER, 128, new Date(), 0);
+    }
+
+    @Override
+    public KeyVersion createKey(String name, byte[] material,
+        Options options) throws IOException {
+      this.material = material;
+      return null;
+    }
+
+    @Override
+    public void deleteKey(String name) throws IOException {
+
+    }
+
+    @Override
+    public KeyVersion rollNewVersion(String name, byte[] material)
+        throws IOException {
+      this.material = material;
+      return null;
+    }
+
+    @Override
+    public void flush() throws IOException {
+
+    }
+
+    @Override
+    protected byte[] generateKey(int size, String algorithm)
+        throws NoSuchAlgorithmException {
+      this.size = size;
+      this.algorithm = algorithm;
+      return super.generateKey(size, algorithm);
+    }
+  }
+
+  @Test
+  public void testMaterialGeneration() throws Exception {
+    MyKeyProvider kp = new MyKeyProvider();
+    KeyProvider.Options options = new KeyProvider.Options(new Configuration());
+    options.setCipher(CIPHER);
+    options.setBitLength(128);
+    kp.createKey("hello", options);
+    Assert.assertEquals(128, kp.size);
+    Assert.assertEquals(CIPHER, kp.algorithm);
+    Assert.assertNotNull(kp.material);
+
+    kp = new MyKeyProvider();
+    kp.rollNewVersion("hello");
+    Assert.assertEquals(128, kp.size);
+    Assert.assertEquals(CIPHER, kp.algorithm);
+    Assert.assertNotNull(kp.material);
   }
 }

@@ -97,6 +97,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10432. Refactor SSLFactory to expose static method to determine
     HostnameVerifier. (tucu)
 
+    HADOOP-10429. KeyStores should have methods to generate the materials
+    themselves, KeyShell should use them. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
