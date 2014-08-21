@@ -42,6 +42,8 @@ import javax.crypto.KeyGenerator;
  * abstraction to separate key storage from users of encryption. It
  * is intended to support getting or storing keys in a variety of ways,
  * including third party bindings.
+ * <P/>
+ * <code>KeyProvider</code> implementations must be thread safe.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable

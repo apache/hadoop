@@ -100,6 +100,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10429. KeyStores should have methods to generate the materials
     themselves, KeyShell should use them. (tucu)
 
+    HADOOP-10427. KeyProvider implementations should be thread safe. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
