@@ -300,6 +300,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10862. Miscellaneous trivial corrections to KMS classes.
     (asuresh via tucu)
 
+    HADOOP-10967. Improve DefaultCryptoExtension#generateEncryptedKey
+    performance. (hitliuyi via tucu)
+
 Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES

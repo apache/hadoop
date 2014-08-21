@@ -219,6 +219,13 @@ public class KeyProviderCryptoExtension extends
   private static class DefaultCryptoExtension implements CryptoExtension {
 
     private final KeyProvider keyProvider;
+    private static final ThreadLocal<SecureRandom> RANDOM =
+        new ThreadLocal<SecureRandom>() {
+      @Override
+      protected SecureRandom initialValue() {
+        return new SecureRandom();
+      }
+    };
 
     private DefaultCryptoExtension(KeyProvider keyProvider) {
       this.keyProvider = keyProvider;
@@ -233,10 +240,10 @@ public class KeyProviderCryptoExtension extends
           "No KeyVersion exists for key '%s' ", encryptionKeyName);
       // Generate random bytes for new key and IV
       Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding");
-      SecureRandom random = SecureRandom.getInstance("SHA1PRNG");
       final byte[] newKey = new byte[encryptionKey.getMaterial().length];
-      random.nextBytes(newKey);
-      final byte[] iv = random.generateSeed(cipher.getBlockSize());
+      RANDOM.get().nextBytes(newKey);
+      final byte[] iv = new byte[cipher.getBlockSize()];
+      RANDOM.get().nextBytes(iv);
       // Encryption key IV is derived from new key's IV
       final byte[] encryptionIV = EncryptedKeyVersion.deriveIV(iv);
       // Encrypt the new key
