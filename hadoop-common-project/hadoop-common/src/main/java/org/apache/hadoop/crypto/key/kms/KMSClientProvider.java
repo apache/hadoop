@@ -512,7 +512,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension {
     List<String> batch = new ArrayList<String>();
     int batchLen = 0;
     for (String name : keyNames) {
-      int additionalLen = KMSRESTConstants.KEY_OP.length() + 1 + name.length();
+      int additionalLen = KMSRESTConstants.KEY.length() + 1 + name.length();
       batchLen += additionalLen;
       // topping at 1500 to account for initial URL and encoded names
       if (batchLen > 1500) {
@@ -536,7 +536,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension {
     for (String[] keySet : keySets) {
       if (keyNames.length > 0) {
         Map<String, Object> queryStr = new HashMap<String, Object>();
-        queryStr.put(KMSRESTConstants.KEY_OP, keySet);
+        queryStr.put(KMSRESTConstants.KEY, keySet);
         URL url = createURL(KMSRESTConstants.KEYS_METADATA_RESOURCE, null,
             null, queryStr);
         HttpURLConnection conn = createConnection(url, HTTP_GET);
