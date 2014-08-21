@@ -20,6 +20,8 @@ package org.apache.hadoop.crypto.key.kms.server;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
 import org.apache.hadoop.crypto.key.kms.KMSRESTConstants;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
@@ -29,6 +31,7 @@ import org.apache.hadoop.util.StringUtils;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -39,10 +42,14 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
+
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.Principal;
 import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -61,8 +68,10 @@ public class KMS {
   private static final String GET_CURRENT_KEY = "GET_CURRENT_KEY";
   private static final String GET_KEY_VERSIONS = "GET_KEY_VERSIONS";
   private static final String GET_METADATA = "GET_METADATA";
+  private static final String GENERATE_EEK = "GENERATE_EEK";
+  private static final String DECRYPT_EEK = "DECRYPT_EEK";
 
-  private KeyProvider provider;
+  private KeyProviderCryptoExtension provider;
 
   public KMS() throws Exception {
     provider = KMSWebApp.getKeyProvider();
@@ -287,6 +296,92 @@ public class KMS {
     Object json = KMSServerJSONUtils.toJSON(provider.getKeyVersion(versionName));
     KMSAudit.ok(user, GET_KEY_VERSION, versionName, "");
     return Response.ok().type(MediaType.APPLICATION_JSON).entity(json).build();
+  }
+
+  @SuppressWarnings({ "rawtypes", "unchecked" })
+  @GET
+  @Path(KMSRESTConstants.KEY_RESOURCE + "/{name:.*}/" +
+      KMSRESTConstants.EEK_SUB_RESOURCE)
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response generateEncryptedKeys(
+          @Context SecurityContext securityContext,
+          @PathParam("name") String name,
+          @QueryParam(KMSRESTConstants.EEK_OP) String edekOp,
+          @DefaultValue("1")
+          @QueryParam(KMSRESTConstants.EEK_NUM_KEYS) int numKeys)
+          throws Exception {
+    Principal user = getPrincipal(securityContext);
+    KMSClientProvider.checkNotEmpty(name, "name");
+    KMSClientProvider.checkNotNull(edekOp, "eekOp");
+
+    Object retJSON;
+    if (edekOp.equals(KMSRESTConstants.EEK_GENERATE)) {
+      assertAccess(KMSACLs.Type.GENERATE_EEK, user, GENERATE_EEK, name);
+
+      List<EncryptedKeyVersion> retEdeks =
+          new LinkedList<EncryptedKeyVersion>();
+      try {
+        for (int i = 0; i < numKeys; i ++) {
+          retEdeks.add(provider.generateEncryptedKey(name));
+        }
+      } catch (Exception e) {
+        throw new IOException(e);
+      }
+      KMSAudit.ok(user, GENERATE_EEK, name, "");
+      retJSON = new ArrayList();
+      for (EncryptedKeyVersion edek : retEdeks) {
+        ((ArrayList)retJSON).add(KMSServerJSONUtils.toJSON(edek));
+      }
+    } else {
+      throw new IllegalArgumentException("Wrong " + KMSRESTConstants.EEK_OP +
+          " value, it must be " + KMSRESTConstants.EEK_GENERATE + " or " +
+          KMSRESTConstants.EEK_DECRYPT);
+    }
+    KMSWebApp.getGenerateEEKCallsMeter().mark();
+    return Response.ok().type(MediaType.APPLICATION_JSON).entity(retJSON)
+        .build();
+  }
+
+  @SuppressWarnings("rawtypes")
+  @POST
+  @Path(KMSRESTConstants.KEY_VERSION_RESOURCE + "/{versionName:.*}/" +
+      KMSRESTConstants.EEK_SUB_RESOURCE)
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response decryptEncryptedKey(@Context SecurityContext securityContext,
+      @PathParam("versionName") String versionName,
+      @QueryParam(KMSRESTConstants.EEK_OP) String eekOp,
+      Map jsonPayload)
+      throws Exception {
+    Principal user = getPrincipal(securityContext);
+    KMSClientProvider.checkNotEmpty(versionName, "versionName");
+    KMSClientProvider.checkNotNull(eekOp, "eekOp");
+
+    String keyName = (String) jsonPayload.get(KMSRESTConstants.NAME_FIELD);
+    String ivStr = (String) jsonPayload.get(KMSRESTConstants.IV_FIELD);
+    String encMaterialStr =
+        (String) jsonPayload.get(KMSRESTConstants.MATERIAL_FIELD);
+    Object retJSON;
+    if (eekOp.equals(KMSRESTConstants.EEK_DECRYPT)) {
+      assertAccess(KMSACLs.Type.DECRYPT_EEK, user, DECRYPT_EEK, versionName);
+      KMSClientProvider.checkNotNull(ivStr, KMSRESTConstants.IV_FIELD);
+      byte[] iv = Base64.decodeBase64(ivStr);
+      KMSClientProvider.checkNotNull(encMaterialStr,
+          KMSRESTConstants.MATERIAL_FIELD);
+      byte[] encMaterial = Base64.decodeBase64(encMaterialStr);
+      KeyProvider.KeyVersion retKeyVersion =
+          provider.decryptEncryptedKey(
+              new KMSClientProvider.KMSEncryptedKeyVersion(keyName, versionName,
+                  iv, KeyProviderCryptoExtension.EEK, encMaterial));
+      retJSON = KMSServerJSONUtils.toJSON(retKeyVersion);
+      KMSAudit.ok(user, DECRYPT_EEK, versionName, "");
+    } else {
+      throw new IllegalArgumentException("Wrong " + KMSRESTConstants.EEK_OP +
+          " value, it must be " + KMSRESTConstants.EEK_GENERATE + " or " +
+          KMSRESTConstants.EEK_DECRYPT);
+    }
+    KMSWebApp.getDecryptEEKCallsMeter().mark();
+    return Response.ok().type(MediaType.APPLICATION_JSON).entity(retJSON)
+        .build();
   }
 
   @GET

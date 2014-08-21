@@ -27,17 +27,19 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * A KeyProvider with Cytographic Extensions specifically for generating
  * Encrypted Keys as well as decrypting them
  *
  */
+@InterfaceAudience.Private
 public class KeyProviderCryptoExtension extends
     KeyProviderExtension<KeyProviderCryptoExtension.CryptoExtension> {
 
-  protected static final String EEK = "EEK";
-  protected static final String EK = "EK";
+  public static final String EEK = "EEK";
+  public static final String EK = "EK";
 
   /**
    * This is a holder class whose instance contains the keyVersionName, iv
@@ -80,6 +82,14 @@ public class KeyProviderCryptoExtension extends
    * EncryptedKeys and to decrypt the same.
    */
   public interface CryptoExtension extends KeyProviderExtension.Extension {
+
+    /**
+     * Calls to this method allows the underlying KeyProvider to warm-up any
+     * implementation specific caches used to store the Encrypted Keys.
+     * @param keyNames Array of Key Names
+     */
+    public void warmUpEncryptedKeys(String... keyNames)
+        throws IOException;
 
     /**
      * Generates a key material and encrypts it using the given key version name
@@ -180,11 +190,33 @@ public class KeyProviderCryptoExtension extends
       return new KeyVersion(keyVer.getName(), EK, ek);
     }
 
+    @Override
+    public void warmUpEncryptedKeys(String... keyNames)
+        throws IOException {
+      // NO-OP since the default version does not cache any keys
+    }
+
   }
 
-  private KeyProviderCryptoExtension(KeyProvider keyProvider,
+  /**
+   * This constructor is to be used by sub classes that provide
+   * delegating/proxying functionality to the {@link KeyProviderCryptoExtension}
+   * @param keyProvider
+   * @param extension
+   */
+  protected KeyProviderCryptoExtension(KeyProvider keyProvider,
       CryptoExtension extension) {
     super(keyProvider, extension);
+  }
+
+  /**
+   * Notifies the Underlying CryptoExtension implementation to warm up any
+   * implementation specific caches for the specified KeyVersions
+   * @param keyNames Arrays of key Names
+   */
+  public void warmUpEncryptedKeys(String... keyNames)
+      throws IOException {
+    getExtension().warmUpEncryptedKeys(keyNames);
   }
 
   /**

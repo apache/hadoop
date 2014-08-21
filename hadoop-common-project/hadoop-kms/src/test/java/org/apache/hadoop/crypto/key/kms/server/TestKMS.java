@@ -19,6 +19,9 @@ package org.apache.hadoop.crypto.key.kms.server;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -36,6 +39,7 @@ import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.LoginContext;
+
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -267,7 +271,7 @@ public class TestKMS {
     }
   }
 
-  private void doAs(String user, final PrivilegedExceptionAction<Void> action)
+  private <T> T doAs(String user, final PrivilegedExceptionAction<T> action)
       throws Exception {
     Set<Principal> principals = new HashSet<Principal>();
     principals.add(new KerberosPrincipal(user));
@@ -280,7 +284,7 @@ public class TestKMS {
     try {
       loginContext.login();
       subject = loginContext.getSubject();
-      Subject.doAs(subject, action);
+      return Subject.doAs(subject, action);
     } finally {
       loginContext.logout();
     }
@@ -474,6 +478,32 @@ public class TestKMS {
         Assert.assertNotNull(kms1[0].getCreated());
         Assert.assertTrue(started.before(kms1[0].getCreated()));
 
+        // test generate and decryption of EEK
+        KeyProvider.KeyVersion kv = kp.getCurrentKey("k1");
+        KeyProviderCryptoExtension kpExt =
+            KeyProviderCryptoExtension.createKeyProviderCryptoExtension(kp);
+
+        EncryptedKeyVersion ek1 = kpExt.generateEncryptedKey(kv.getName());
+        Assert.assertEquals(KeyProviderCryptoExtension.EEK,
+            ek1.getEncryptedKey().getVersionName());
+        Assert.assertNotNull(ek1.getEncryptedKey().getMaterial());
+        Assert.assertEquals(kv.getMaterial().length,
+            ek1.getEncryptedKey().getMaterial().length);
+        KeyProvider.KeyVersion k1 = kpExt.decryptEncryptedKey(ek1);
+        Assert.assertEquals(KeyProviderCryptoExtension.EK, k1.getVersionName());
+        KeyProvider.KeyVersion k1a = kpExt.decryptEncryptedKey(ek1);
+        Assert.assertArrayEquals(k1.getMaterial(), k1a.getMaterial());
+        Assert.assertEquals(kv.getMaterial().length, k1.getMaterial().length);
+
+        EncryptedKeyVersion ek2 = kpExt.generateEncryptedKey(kv.getName());
+        KeyProvider.KeyVersion k2 = kpExt.decryptEncryptedKey(ek2);
+        boolean isEq = true;
+        for (int i = 0; isEq && i < ek2.getEncryptedKey().getMaterial().length;
+            i++) {
+          isEq = k2.getMaterial()[i] == k1.getMaterial()[i];
+        }
+        Assert.assertFalse(isEq);
+
         // deleteKey()
         kp.deleteKey("k1");
 
@@ -565,7 +595,7 @@ public class TestKMS {
       @Override
       public Void call() throws Exception {
         final Configuration conf = new Configuration();
-        conf.setInt(KeyProvider.DEFAULT_BITLENGTH_NAME, 64);
+        conf.setInt(KeyProvider.DEFAULT_BITLENGTH_NAME, 128);
         URI uri = createKMSUri(getKMSUrl());
         final KeyProvider kp = new KMSClientProvider(uri, conf);
 
@@ -582,7 +612,7 @@ public class TestKMS {
               Assert.fail(ex.toString());
             }
             try {
-              kp.createKey("k", new byte[8], new KeyProvider.Options(conf));
+              kp.createKey("k", new byte[16], new KeyProvider.Options(conf));
               Assert.fail();
             } catch (AuthorizationException ex) {
               //NOP
@@ -598,7 +628,7 @@ public class TestKMS {
               Assert.fail(ex.toString());
             }
             try {
-              kp.rollNewVersion("k", new byte[8]);
+              kp.rollNewVersion("k", new byte[16]);
               Assert.fail();
             } catch (AuthorizationException ex) {
               //NOP
@@ -690,7 +720,7 @@ public class TestKMS {
           @Override
           public Void run() throws Exception {
             try {
-              KeyProvider.KeyVersion kv = kp.createKey("k1", new byte[8],
+              KeyProvider.KeyVersion kv = kp.createKey("k1", new byte[16],
                   new KeyProvider.Options(conf));
               Assert.assertNull(kv.getMaterial());
             } catch (Exception ex) {
@@ -717,7 +747,8 @@ public class TestKMS {
           @Override
           public Void run() throws Exception {
             try {
-              KeyProvider.KeyVersion kv = kp.rollNewVersion("k1", new byte[8]);
+              KeyProvider.KeyVersion kv =
+                  kp.rollNewVersion("k1", new byte[16]);
               Assert.assertNull(kv.getMaterial());
             } catch (Exception ex) {
               Assert.fail(ex.toString());
@@ -726,12 +757,46 @@ public class TestKMS {
           }
         });
 
-        doAs("GET", new PrivilegedExceptionAction<Void>() {
+        final KeyVersion currKv =
+            doAs("GET", new PrivilegedExceptionAction<KeyVersion>() {
+          @Override
+          public KeyVersion run() throws Exception {
+            try {
+              kp.getKeyVersion("k1@0");
+              KeyVersion kv = kp.getCurrentKey("k1");
+              return kv;
+            } catch (Exception ex) {
+              Assert.fail(ex.toString());
+            }
+            return null;
+          }
+        });
+
+        final EncryptedKeyVersion encKv =
+            doAs("GENERATE_EEK",
+                new PrivilegedExceptionAction<EncryptedKeyVersion>() {
+          @Override
+          public EncryptedKeyVersion run() throws Exception {
+            try {
+              KeyProviderCryptoExtension kpCE = KeyProviderCryptoExtension.
+                      createKeyProviderCryptoExtension(kp);
+              EncryptedKeyVersion ek1 =
+                  kpCE.generateEncryptedKey(currKv.getName());
+              return ek1;
+            } catch (Exception ex) {
+              Assert.fail(ex.toString());
+            }
+            return null;
+          }
+        });
+
+        doAs("DECRYPT_EEK", new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {
             try {
-              kp.getKeyVersion("k1@0");
-              kp.getCurrentKey("k1");
+              KeyProviderCryptoExtension kpCE = KeyProviderCryptoExtension.
+                      createKeyProviderCryptoExtension(kp);
+              kpCE.decryptEncryptedKey(encKv);
             } catch (Exception ex) {
               Assert.fail(ex.toString());
             }
@@ -817,7 +882,7 @@ public class TestKMS {
       @Override
       public Void call() throws Exception {
         final Configuration conf = new Configuration();
-        conf.setInt(KeyProvider.DEFAULT_BITLENGTH_NAME, 64);
+        conf.setInt(KeyProvider.DEFAULT_BITLENGTH_NAME, 128);
         URI uri = createKMSUri(getKMSUrl());
         final KeyProvider kp = new KMSClientProvider(uri, conf);
 
@@ -883,6 +948,30 @@ public class TestKMS {
     try {
       KeyProvider kp = new KMSClientProvider(uri, conf);
       kp.getKeys();
+    } catch (SocketTimeoutException e) {
+      caughtTimeout = true;
+    } catch (IOException e) {
+      Assert.assertTrue("Caught unexpected exception" + e.toString(), false);
+    }
+
+    caughtTimeout = false;
+    try {
+      KeyProvider kp = new KMSClientProvider(uri, conf);
+      KeyProviderCryptoExtension.createKeyProviderCryptoExtension(kp)
+          .generateEncryptedKey("a");
+    } catch (SocketTimeoutException e) {
+      caughtTimeout = true;
+    } catch (IOException e) {
+      Assert.assertTrue("Caught unexpected exception" + e.toString(), false);
+    }
+
+    caughtTimeout = false;
+    try {
+      KeyProvider kp = new KMSClientProvider(uri, conf);
+      KeyProviderCryptoExtension.createKeyProviderCryptoExtension(kp)
+          .decryptEncryptedKey(
+              new KMSClientProvider.KMSEncryptedKeyVersion("a",
+                  "a", new byte[] {1, 2}, "EEK", new byte[] {1, 2}));
     } catch (SocketTimeoutException e) {
       caughtTimeout = true;
     } catch (IOException e) {

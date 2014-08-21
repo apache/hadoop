@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -34,12 +35,14 @@ import java.util.concurrent.TimeUnit;
  * hot-reloading them if the <code>kms-acls.xml</code> file where the ACLs
  * are defined has been updated.
  */
+@InterfaceAudience.Private
 public class KMSACLs implements Runnable {
   private static final Logger LOG = LoggerFactory.getLogger(KMSACLs.class);
 
 
   public enum Type {
-    CREATE, DELETE, ROLLOVER, GET, GET_KEYS, GET_METADATA, SET_KEY_MATERIAL;
+    CREATE, DELETE, ROLLOVER, GET, GET_KEYS, GET_METADATA,
+    SET_KEY_MATERIAL, GENERATE_EEK, DECRYPT_EEK;
 
     public String getConfigKey() {
       return KMSConfiguration.CONFIG_PREFIX + "acl." + this.toString();

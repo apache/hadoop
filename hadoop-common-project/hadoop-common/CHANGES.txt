@@ -154,6 +154,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10750. KMSKeyProviderCache should be in hadoop-common.
     (asuresh via tucu)
 
+    HADOOP-10720. KMS: Implement generateEncryptedKey and decryptEncryptedKey
+    in the REST API. (asuresh via tucu)
+
   BUG FIXES
 
     HADOOP-10781. Unportable getgrouplist() usage breaks FreeBSD (Dmitry
