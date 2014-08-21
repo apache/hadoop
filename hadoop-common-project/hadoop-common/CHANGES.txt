@@ -222,6 +222,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10645. TestKMS fails because race condition writing acl files. (tucu)
 
+    HADOOP-10611. KMS, keyVersion name should not be assumed to be
+    keyName@versionNumber. (tucu)
+
 Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES

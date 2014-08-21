@@ -577,7 +577,9 @@ public class TestKMS {
               Assert.fail(ex.toString());
             }
             try {
-              kp.getKeyVersion(KMSClientProvider.buildVersionName("k", 0));
+              // we are using JavaKeyStoreProvider for testing, so we know how
+              // the keyversion is created.
+              kp.getKeyVersion("k@0");
               Assert.fail();
             } catch (AuthorizationException ex) {
               //NOP
