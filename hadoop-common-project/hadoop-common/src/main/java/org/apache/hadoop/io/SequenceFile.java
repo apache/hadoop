@@ -53,8 +53,9 @@ import org.apache.hadoop.util.Time;
  * <code>SequenceFile</code>s are flat files consisting of binary key/value 
  * pairs.
  * 
- * <p><code>SequenceFile</code> provides {@link Writer}, {@link Reader} and
- * {@link Sorter} classes for writing, reading and sorting respectively.</p>
+ * <p><code>SequenceFile</code> provides {@link SequenceFile.Writer},
+ * {@link SequenceFile.Reader} and {@link Sorter} classes for writing,
+ * reading and sorting respectively.</p>
  * 
  * There are three <code>SequenceFile</code> <code>Writer</code>s based on the 
  * {@link CompressionType} used to compress key/value pairs:
@@ -79,8 +80,8 @@ import org.apache.hadoop.util.Time;
  * <p>The recommended way is to use the static <tt>createWriter</tt> methods
  * provided by the <code>SequenceFile</code> to chose the preferred format.</p>
  *
- * <p>The {@link Reader} acts as the bridge and can read any of the above 
- * <code>SequenceFile</code> formats.</p>
+ * <p>The {@link SequenceFile.Reader} acts as the bridge and can read any of the
+ * above <code>SequenceFile</code> formats.</p>
  *
  * <h4 id="Formats">SequenceFile Formats</h4>
  * 
