@@ -134,9 +134,63 @@ public class BlockStoragePolicy {
    */
   public List<StorageType> chooseStorageTypes(final short replication,
       final Iterable<StorageType> chosen) {
+    return chooseStorageTypes(replication, chosen, null);
+  }
+
+  private List<StorageType> chooseStorageTypes(final short replication,
+      final Iterable<StorageType> chosen, final List<StorageType> excess) {
     final List<StorageType> types = chooseStorageTypes(replication);
-    diff(types, chosen, null);
+    diff(types, chosen, excess);
     return types;
+  }
+
+  /**
+   * Choose the storage types for storing the remaining replicas, given the
+   * replication number, the storage types of the chosen replicas and
+   * the unavailable storage types.  It uses fallback storage in case that
+   * the desired storage type is unavailable.  
+   *
+   * @param replication the replication number.
+   * @param chosen the storage types of the chosen replicas.
+   * @param unavailables the unavailable storage types.
+   * @param isNewBlock Is it for new block creation?
+   * @return a list of {@link StorageType}s for storing the replicas of a block.
+   */
+  public List<StorageType> chooseStorageTypes(final short replication,
+      final Iterable<StorageType> chosen,
+      final EnumSet<StorageType> unavailables,
+      final boolean isNewBlock) {
+    final List<StorageType> excess = new LinkedList<StorageType>();
+    final List<StorageType> storageTypes = chooseStorageTypes(
+        replication, chosen, excess);
+    final int expectedSize = storageTypes.size() - excess.size();
+    final List<StorageType> removed = new LinkedList<StorageType>();
+    for(int i = storageTypes.size() - 1; i >= 0; i--) {
+      // replace/remove unavailable storage types.
+      final StorageType t = storageTypes.get(i);
+      if (unavailables.contains(t)) {
+        final StorageType fallback = isNewBlock?
+            getCreationFallback(unavailables)
+            : getReplicationFallback(unavailables);
+        if (fallback == null) {
+          removed.add(storageTypes.remove(i));
+        } else {
+          storageTypes.set(i, fallback);
+        }
+      }
+    }
+    // remove excess storage types after fallback replacement.
+    diff(storageTypes, excess, null);
+    if (storageTypes.size() < expectedSize) {
+      LOG.warn("Failed to place enough replicas: expected size is " + expectedSize 
+          + " but only " + storageTypes.size() + " storage types can be selected "
+          + "(replication=" + replication
+          + ", selected=" + storageTypes
+          + ", unavailable=" + unavailables
+          + ", removed=" + removed
+          + ", policy=" + this + ")");
+    }
+    return storageTypes;
   }
 
   /**

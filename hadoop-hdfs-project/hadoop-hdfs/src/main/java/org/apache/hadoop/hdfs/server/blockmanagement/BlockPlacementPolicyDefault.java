@@ -241,39 +241,6 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     return new int[] {numOfReplicas, maxNodesPerRack};
   }
 
-  private static List<StorageType> selectStorageTypes(
-      final BlockStoragePolicy storagePolicy,
-      final short replication,
-      final Iterable<StorageType> chosen,
-      final EnumSet<StorageType> unavailableStorages,
-      final boolean isNewBlock) {
-    final List<StorageType> storageTypes = storagePolicy.chooseStorageTypes(
-        replication, chosen);
-    final List<StorageType> removed = new ArrayList<StorageType>();
-    for(int i = storageTypes.size() - 1; i >= 0; i--) {
-      // replace/remove unavailable storage types.
-      final StorageType t = storageTypes.get(i);
-      if (unavailableStorages.contains(t)) {
-        final StorageType fallback = isNewBlock?
-            storagePolicy.getCreationFallback(unavailableStorages)
-            : storagePolicy.getReplicationFallback(unavailableStorages);
-        if (fallback == null) {
-          removed.add(storageTypes.remove(i));
-        } else {
-          storageTypes.set(i, fallback);
-        }
-      }
-    }
-    if (storageTypes.size() < replication) {
-      LOG.warn("Failed to place enough replicas: replication is " + replication
-          + " but only " + storageTypes.size() + " storage types can be selected "
-          + "(selected=" + storageTypes
-          + ", unavailable=" + unavailableStorages
-          + ", removed=" + removed
-          + ", policy=" + storagePolicy + ")");
-    }
-    return storageTypes;
-  }
   /**
    * choose <i>numOfReplicas</i> from all data nodes
    * @param numOfReplicas additional number of replicas wanted
@@ -309,7 +276,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         new HashSet<Node>(excludedNodes) : null;
 
     // choose storage types; use fallbacks for unavailable storages
-    final List<StorageType> storageTypes = selectStorageTypes(storagePolicy,
+    final List<StorageType> storageTypes = storagePolicy.chooseStorageTypes(
         (short)totalReplicasExpected, DatanodeStorageInfo.toStorageTypes(results),
         unavailableStorages, newBlock);
 
