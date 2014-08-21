@@ -29,6 +29,7 @@ function hadoop_usage
   echo "  pipes                run a Pipes job"
   echo "  queue                get information regarding JobQueues"
   echo "  sampler              sampler"
+  echo "  version              print the version"
   echo ""
   echo "Most commands print help when invoked w/o parameters."
 }
@@ -103,6 +104,10 @@ case ${COMMAND} in
   ;;
   sampler)
     CLASS=org.apache.hadoop.mapred.lib.InputSampler
+    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+  ;;
+  version)
+    CLASS=org.apache.hadoop.util.VersionInfo
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;
   -*|*)

@@ -576,7 +576,9 @@ class DataXceiver extends Receiver implements Runnable {
     // forward the original version of the block to downstream mirrors, so
     // make a copy here.
     final ExtendedBlock originalBlock = new ExtendedBlock(block);
-    block.setNumBytes(dataXceiverServer.estimateBlockSize);
+    if (block.getNumBytes() == 0) {
+      block.setNumBytes(dataXceiverServer.estimateBlockSize);
+    }
     LOG.info("Receiving " + block + " src: " + remoteAddress + " dest: "
         + localAddress);
 

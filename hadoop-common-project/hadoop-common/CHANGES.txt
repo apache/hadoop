@@ -13,8 +13,6 @@ Trunk (Unreleased)
 
   NEW FEATURES
 
-    HADOOP-10433. Key Management Server based on KeyProvider API. (tucu)
-
     HADOOP-9629. Support Windows Azure Storage - Blob as a file system in Hadoop.
     (Dexter Bradshaw, Mostafa Elhemali, Xi Fang, Johannes Klein, David Lao,
     Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
@@ -25,9 +23,6 @@ Trunk (Unreleased)
     Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
     Alexander Stojanovich, Brian Swan, and Min Wei via cnauroth)
     
-    HADOOP-10719. Add generateEncryptedKey and decryptEncryptedKey 
-    methods to KeyProvider. (asuresh via tucu)
-
   IMPROVEMENTS
 
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution
@@ -121,92 +116,14 @@ Trunk (Unreleased)
 
     HADOOP-9833 move slf4j to version 1.7.5 (Kousuke Saruta via stevel)
 
-    HADOOP-10141. Create KeyProvider API to separate encryption key storage
-    from the applications. (omalley)
-
-    HADOOP-10201. Add listing to KeyProvider API. (Larry McCay via omalley)
-
-    HADOOP-10177. Create CLI tools for managing keys. (Larry McCay via omalley)
-
-    HADOOP-10244. TestKeyShell improperly tests the results of delete (Larry
-    McCay via omalley)
-
     HADOOP-10325. Improve jenkins javadoc warnings from test-patch.sh (cmccabe)
 
     HADOOP-10342. Add a new method to UGI to use a Kerberos login subject to
     build a new UGI. (Larry McCay via omalley)
 
-    HADOOP-10237. JavaKeyStoreProvider needs to set keystore permissions 
-    correctly. (Larry McCay via omalley)
-
-    HADOOP-10432. Refactor SSLFactory to expose static method to determine
-    HostnameVerifier. (tucu)
-
-    HADOOP-10427. KeyProvider implementations should be thread safe. (tucu)
-
-    HADOOP-10429. KeyStores should have methods to generate the materials 
-    themselves, KeyShell should use them. (tucu)
-
-    HADOOP-10428. JavaKeyStoreProvider should accept keystore password via 
-    configuration falling back to ENV VAR. (tucu)
-
-    HADOOP-10430. KeyProvider Metadata should have an optional description, 
-    there should be a method to retrieve the metadata from all keys. (tucu)
-
-    HADOOP-10534. KeyProvider getKeysMetadata should take a list of names 
-    rather than returning all keys. (omalley)
-
     HADOOP-10563. Remove the dependency of jsp in trunk. (wheat9)
 
     HADOOP-10485. Remove dead classes in hadoop-streaming. (wheat9)
-
-    HADOOP-10696. Add optional attributes to KeyProvider Options and Metadata. 
-    (tucu)
-
-    HADOOP-10695. KMSClientProvider should respect a configurable timeout. 
-    (yoderme via tucu)
-
-    HADOOP-10757. KeyProvider KeyVersion should provide the key name. 
-    (asuresh via tucu)
-
-    HADOOP-10769. Create KeyProvider extension to handle delegation tokens.
-    (Arun Suresh via atm)
-
-    HADOOP-10812. Delegate KeyProviderExtension#toString to underlying
-    KeyProvider. (wang)
-
-    HADOOP-10736. Add key attributes to the key shell. (Mike Yoder via wang)
-
-    HADOOP-10824. Refactor KMSACLs to avoid locking. (Benoy Antony via umamahesh)
-
-    HADOOP-10841. EncryptedKeyVersion should have a key name property. 
-    (asuresh via tucu)
-
-    HADOOP-10842. CryptoExtension generateEncryptedKey method should 
-    receive the key name. (asuresh via tucu)
-
-    HADOOP-10750. KMSKeyProviderCache should be in hadoop-common. 
-    (asuresh via tucu)
-
-    HADOOP-10720. KMS: Implement generateEncryptedKey and decryptEncryptedKey
-    in the REST API. (asuresh via tucu)
-
-    HADOOP-10891. Add EncryptedKeyVersion factory method to
-    KeyProviderCryptoExtension. (wang)
-
-    HADOOP-10756. KMS audit log should consolidate successful similar requests. 
-    (asuresh via tucu)
-
-    HADOOP-10793. KeyShell args should use single-dash style. (wang)
-
-    HADOOP-10936. Change default KeyProvider bitlength to 128. (wang)
-
-    HADOOP-10224. JavaKeyStoreProvider has to protect against corrupting 
-    underlying store. (asuresh via tucu)
-
-    HADOOP-10770. KMS add delegation token support. (tucu)
-
-    HADOOP-10698. KMS, add proxyuser support. (tucu)
 
   BUG FIXES
 
@@ -379,21 +296,8 @@ Trunk (Unreleased)
 
     HADOOP-10044 Improve the javadoc of rpc code (sanjay Radia)
 
-    HADOOP-10488. TestKeyProviderFactory fails randomly. (tucu)
-
-    HADOOP-10431. Change visibility of KeyStore.Options getter methods to public. (tucu)
-
-    HADOOP-10583. bin/hadoop key throws NPE with no args and assorted other fixups. (clamb via tucu)
-
-    HADOOP-10586. KeyShell doesn't allow setting Options via CLI. (clamb via tucu)
-
     HADOOP-10625. Trim configuration names when putting/getting them
     to properties. (Wangda Tan via xgong)
-
-    HADOOP-10645. TestKMS fails because race condition writing acl files. (tucu)
-
-    HADOOP-10611. KMS, keyVersion name should not be assumed to be 
-    keyName@versionNumber. (tucu)
 
     HADOOP-10717. HttpServer2 should load jsp DTD from local jars instead of
     going remote. (Dapeng Sun via wheat9)
@@ -409,32 +313,11 @@ Trunk (Unreleased)
 
     HADOOP-10834. Typo in CredentialShell usage. (Benoy Antony via umamahesh)
 
-    HADOOP-10816. KeyShell returns -1 on error to the shell, should be 1.
-    (Mike Yoder via wang)
-
     HADOOP-10840. Fix OutOfMemoryError caused by metrics system in Azure File
     System. (Shanyu Zhao via cnauroth)
 
-    HADOOP-10826. Iteration on KeyProviderFactory.serviceLoader is 
-    thread-unsafe. (benoyantony viat tucu)
-
-    HADOOP-10881. Clarify usage of encryption and encrypted encryption
-    key in KeyProviderCryptoExtension. (wang)
-
-    HADOOP-10920. site plugin couldn't parse hadoop-kms index.apt.vm.
-    (Akira Ajisaka via wang)
-
     HADOOP-10925. Compilation fails in native link0 function on Windows.
     (cnauroth)
-
-    HADOOP-10939. Fix TestKeyProviderFactory testcases to use default 128 bit
-    length keys. (Arun Suresh via wang)
-
-    HADOOP-10862. Miscellaneous trivial corrections to KMS classes. 
-    (asuresh via tucu)
-
-    HADOOP-10967. Improve DefaultCryptoExtension#generateEncryptedKey 
-    performance. (hitliuyi via tucu)
 
   OPTIMIZATIONS
 
@@ -442,11 +325,66 @@ Trunk (Unreleased)
 
     HADOOP-8589. ViewFs tests fail when tests and home dirs are nested (sanjay Radia)
 
+  BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
+
+    HADOOP-10734. Implement high-performance secure random number sources.
+    (Yi Liu via Colin Patrick McCabe)
+
+    HADOOP-10603. Crypto input and output streams implementing Hadoop stream
+    interfaces. (Yi Liu and Charles Lamb)
+
+    HADOOP-10628. Javadoc and few code style improvement for Crypto
+    input and output streams. (Yi Liu via clamb)
+
+    HADOOP-10632. Minor improvements to Crypto input and output streams. 
+    (Yi Liu)
+
+    HADOOP-10635. Add a method to CryptoCodec to generate SRNs for IV. (Yi Liu)
+
+    HADOOP-10653. Add a new constructor for CryptoInputStream that 
+    receives current position of wrapped stream. (Yi Liu)
+
+    HADOOP-10662. NullPointerException in CryptoInputStream while wrapped
+    stream is not ByteBufferReadable. Add tests using normal stream. (Yi Liu)
+
+    HADOOP-10713. Refactor CryptoCodec#generateSecureRandom to take a byte[]. 
+    (wang via yliu)
+
+    HADOOP-10693. Implementation of AES-CTR CryptoCodec using JNI to OpenSSL. 
+    (Yi Liu via cmccabe)
+
+    HADOOP-10803. Update OpensslCipher#getInstance to accept CipherSuite#name
+    format. (Yi Liu)
+
+    HADOOP-10735. Fall back AesCtrCryptoCodec implementation from OpenSSL to
+    JCE if non native support. (Yi Liu)
+
+    HADOOP-10870. Failed to load OpenSSL cipher error logs on systems with old
+    openssl versions (cmccabe)
+
+    HADOOP-10853. Refactor get instance of CryptoCodec and support create via
+    algorithm/mode/padding. (Yi Liu)
+
+    HADOOP-10919. Copy command should preserve raw.* namespace
+    extended attributes. (clamb)
+
+    HDFS-6873. Constants in CommandWithDestination should be static. (clamb)
+
+    HADOOP-10871. incorrect prototype in OpensslSecureRandom.c (cmccabe)
+
+    HADOOP-10886. CryptoCodec#getCodecclasses throws NPE when configurations not 
+    loaded. (umamahesh)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
+
+    HADOOP-10433. Key Management Server based on KeyProvider API. (tucu)
+
+    HADOOP-10893. isolated classloader on the client side (Sangjin Lee via
+    jlowe)
 
   IMPROVEMENTS
 
@@ -532,9 +470,90 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10975. org.apache.hadoop.util.DataChecksum should support calculating
     checksums in native code (James Thomas via Colin Patrick McCabe)
 
+    HADOOP-10201. Add listing to KeyProvider API. (Larry McCay via omalley)
+
+    HADOOP-10177. Create CLI tools for managing keys. (Larry McCay via omalley)
+
+    HADOOP-10432. Refactor SSLFactory to expose static method to determine
+    HostnameVerifier. (tucu)
+
+    HADOOP-10429. KeyStores should have methods to generate the materials
+    themselves, KeyShell should use them. (tucu)
+
+    HADOOP-10427. KeyProvider implementations should be thread safe. (tucu)
+
+    HADOOP-10428. JavaKeyStoreProvider should accept keystore password via
+    configuration falling back to ENV VAR. (tucu)
+
+    HADOOP-10430. KeyProvider Metadata should have an optional description,
+    there should be a method to retrieve the metadata from all keys. (tucu)
+
+    HADOOP-10431. Change visibility of KeyStore.Options getter methods to
+    public. (tucu)
+
+    HADOOP-10534. KeyProvider getKeysMetadata should take a list of names
+    rather than returning all keys. (omalley)
+
+    HADOOP-10719. Add generateEncryptedKey and decryptEncryptedKey
+    methods to KeyProvider. (asuresh via tucu)
+
+    HADOOP-10817. ProxyUsers configuration should support configurable
+    prefixes. (tucu)
+
+    HADOOP-10881. Clarify usage of encryption and encrypted encryption
+    key in KeyProviderCryptoExtension. (wang)
+
+    HADOOP-10770. KMS add delegation token support. (tucu)
+
+    HADOOP-10698. KMS, add proxyuser support. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
+
+    HADOOP-10696. Add optional attributes to KeyProvider Options and Metadata.
+    (tucu)
+
+    HADOOP-10695. KMSClientProvider should respect a configurable timeout.
+    (yoderme via tucu)
+
+    HADOOP-10757. KeyProvider KeyVersion should provide the key name.
+    (asuresh via tucu)
+
+    HADOOP-10769. Create KeyProvider extension to handle delegation tokens.
+    (Arun Suresh via atm)
+
+    HADOOP-10812. Delegate KeyProviderExtension#toString to underlying
+    KeyProvider. (wang)
+
+    HADOOP-10736. Add key attributes to the key shell. (Mike Yoder via wang)
+
+    HADOOP-10824. Refactor KMSACLs to avoid locking. (Benoy Antony via umamahesh)
+
+    HADOOP-10841. EncryptedKeyVersion should have a key name property.
+    (asuresh via tucu)
+
+    HADOOP-10842. CryptoExtension generateEncryptedKey method should
+    receive the key name. (asuresh via tucu)
+
+    HADOOP-10750. KMSKeyProviderCache should be in hadoop-common.
+    (asuresh via tucu)
+
+    HADOOP-10720. KMS: Implement generateEncryptedKey and decryptEncryptedKey
+    in the REST API. (asuresh via tucu)
+
+    HADOOP-10891. Add EncryptedKeyVersion factory method to
+    KeyProviderCryptoExtension. (wang)
+
+    HADOOP-10756. KMS audit log should consolidate successful similar requests.
+    (asuresh via tucu)
+
+    HADOOP-10793. KeyShell args should use single-dash style. (wang)
+
+    HADOOP-10936. Change default KeyProvider bitlength to 128. (wang)
+
+    HADOOP-10224. JavaKeyStoreProvider has to protect against corrupting
+    underlying store. (asuresh via tucu)
 
   BUG FIXES
 
@@ -570,11 +589,6 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10927. Fix CredentialShell help behavior and error codes.
     (Josh Elser via wang)
-
-    HADOOP-10937. Need to set version name correctly before decrypting EEK.
-    (Arun Suresh via wang)
-
-    HADOOP-10918. JMXJsonServlet fails when used within Tomcat. (tucu)
 
     HADOOP-10933. FileBasedKeyStoresFactory Should use Configuration.getPassword 
     for SSL Passwords. (lmccay via tucu)
@@ -626,7 +640,50 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10968. hadoop native build fails to detect java_libarch on
     ppc64le (Dinar Valeev via Colin Patrick McCabe)
 
-Release 2.5.0 - UNRELEASED
+    HADOOP-10141. Create KeyProvider API to separate encryption key storage
+    from the applications. (omalley)
+
+    HADOOP-10237. JavaKeyStoreProvider needs to set keystore permissions
+    correctly. (Larry McCay via omalley)
+
+    HADOOP-10244. TestKeyShell improperly tests the results of delete (Larry
+    McCay via omalley)
+
+    HADOOP-10583. bin/hadoop key throws NPE with no args and assorted other fixups. (clamb via tucu)
+
+    HADOOP-10586. KeyShell doesn't allow setting Options via CLI. (clamb via tucu)
+
+    HADOOP-10645. TestKMS fails because race condition writing acl files. (tucu)
+
+    HADOOP-10611. KMS, keyVersion name should not be assumed to be
+    keyName@versionNumber. (tucu)
+
+    HADOOP-10816. KeyShell returns -1 on error to the shell, should be 1.
+    (Mike Yoder via wang)
+
+    HADOOP-10826. Iteration on KeyProviderFactory.serviceLoader is
+    thread-unsafe. (benoyantony viat tucu)
+
+    HADOOP-10920. site plugin couldn't parse hadoop-kms index.apt.vm.
+    (Akira Ajisaka via wang)
+
+    HADOOP-10937. Need to set version name correctly before decrypting EEK.
+    (Arun Suresh via wang)
+
+    HADOOP-10918. JMXJsonServlet fails when used within Tomcat. (tucu)
+
+    HADOOP-10939. Fix TestKeyProviderFactory testcases to use default 128 bit
+    length keys. (Arun Suresh via wang)
+
+    HADOOP-10862. Miscellaneous trivial corrections to KMS classes.
+    (asuresh via tucu)
+
+    HADOOP-10967. Improve DefaultCryptoExtension#generateEncryptedKey
+    performance. (hitliuyi via tucu)
+
+    HADOOP-10488. TestKeyProviderFactory fails randomly. (tucu)
+
+Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES
 

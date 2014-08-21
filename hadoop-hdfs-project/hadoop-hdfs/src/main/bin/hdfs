@@ -46,6 +46,7 @@ function hadoop_usage
   echo "  snapshotDiff         diff two snapshots of a directory or diff the"
   echo "                       current directory contents with a snapshot"
   echo "  zkfc                 run the ZK Failover Controller daemon"
+  echo "  crypto               configure HDFS encryption zones"
   echo ""
   echo "Most commands print help when invoked w/o parameters."
 }
@@ -88,6 +89,9 @@ case ${COMMAND} in
     hadoop_finalize
     echo "${CLASSPATH}"
     exit
+  ;;
+  crypto)
+    CLASS=org.apache.hadoop.hdfs.tools.CryptoAdmin
   ;;
   datanode)
     daemon="true"

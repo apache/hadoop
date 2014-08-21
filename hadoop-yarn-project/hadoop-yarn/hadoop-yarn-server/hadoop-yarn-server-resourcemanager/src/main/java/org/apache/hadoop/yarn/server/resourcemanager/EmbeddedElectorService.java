@@ -109,8 +109,14 @@ public class EmbeddedElectorService extends AbstractService
 
   @Override
   protected void serviceStop() throws Exception {
-    elector.quitElection(false);
-    elector.terminateConnection();
+    /**
+     * When error occurs in serviceInit(), serviceStop() can be called.
+     * We need null check for the case.
+     */
+    if (elector != null) {
+      elector.quitElection(false);
+      elector.terminateConnection();
+    }
     super.serviceStop();
   }
 

@@ -395,7 +395,7 @@ public class TestRetryCacheWithHA {
       this.status = client.getNamenode().create(fileName,
           FsPermission.getFileDefault(), client.getClientName(),
           new EnumSetWritable<CreateFlag>(createFlag), false, DataNodes,
-          BlockSize);
+          BlockSize, null);
     }
 
     @Override

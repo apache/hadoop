@@ -771,4 +771,18 @@ public interface MRJobConfig {
   
   public static final String TASK_PREEMPTION =
       "mapreduce.job.preemption";
+
+  public static final String MR_ENCRYPTED_INTERMEDIATE_DATA =
+      "mapreduce.job.encrypted-intermediate-data";
+  public static final boolean DEFAULT_MR_ENCRYPTED_INTERMEDIATE_DATA = false;
+
+  public static final String MR_ENCRYPTED_INTERMEDIATE_DATA_KEY_SIZE_BITS =
+      "mapreduce.job.encrypted-intermediate-data-key-size-bits";
+  public static final int DEFAULT_MR_ENCRYPTED_INTERMEDIATE_DATA_KEY_SIZE_BITS =
+      128;
+
+  public static final String MR_ENCRYPTED_INTERMEDIATE_DATA_BUFFER_KB =
+      "mapreduce.job.encrypted-intermediate-data.buffer.kb";
+  public static final int DEFAULT_MR_ENCRYPTED_INTERMEDIATE_DATA_BUFFER_KB =
+          128;
 }

@@ -18,6 +18,8 @@ Trunk - Unreleased
     YARN-2216 TestRMApplicationHistoryWriter sometimes fails in trunk.
     (Zhijie Shen via xgong)
 
+    YARN-2436. [post-HADOOP-9902] yarn application help doesn't work (aw)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -49,6 +51,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2411. Support simple user and group mappings to queues. (Ram Venkatesh
     via jianhe)
+
+    YARN-2174. Enable HTTPs for the writer REST API of TimelineServer.
+    (Zhijie Shen via jianhe)
 
   IMPROVEMENTS
 
@@ -217,7 +222,16 @@ Release 2.6.0 - UNRELEASED
     YARN-2249. Avoided AM release requests being lost on work preserving RM
     restart. (Jian He via zjshen)
 
-Release 2.5.0 - UNRELEASED
+    YARN-2034. Description for yarn.nodemanager.localizer.cache.target-size-mb
+    is incorrect (Chen He via jlowe)
+
+    YARN-1919. Potential NPE in EmbeddedElectorService#stop. 
+    (Tsuyoshi Ozawa via kasha)
+
+    YARN-2424. LCE should support non-cgroups, non-secure mode (Chris Douglas 
+    via aw)
+
+Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES
 

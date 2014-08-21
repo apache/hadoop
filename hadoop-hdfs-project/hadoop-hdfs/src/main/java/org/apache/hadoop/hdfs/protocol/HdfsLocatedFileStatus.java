@@ -21,6 +21,7 @@ import java.net.URI;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -51,15 +52,16 @@ public class HdfsLocatedFileStatus extends HdfsFileStatus {
    * @param path local path name in java UTF8 format 
    * @param fileId the file id
    * @param locations block locations
+   * @param feInfo file encryption info
    */
   public HdfsLocatedFileStatus(long length, boolean isdir,
       int block_replication, long blocksize, long modification_time,
       long access_time, FsPermission permission, String owner, String group,
       byte[] symlink, byte[] path, long fileId, LocatedBlocks locations,
-      int childrenNum) {
+    int childrenNum, FileEncryptionInfo feInfo) {
     super(length, isdir, block_replication, blocksize, modification_time,
-        access_time, permission, owner, group, symlink, path, fileId,
-        childrenNum);
+      access_time, permission, owner, group, symlink, path, fileId,
+      childrenNum, feInfo);
     this.locations = locations;
   }
 	

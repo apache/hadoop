@@ -191,6 +191,26 @@ $H3 Update and Overwrite
 
   If `-update` is used, `1` is overwritten as well.
 
+$H3 raw Namespace Extended Attribute Preservation
+
+  This section only applies to HDFS.
+
+  If the target and all of the source pathnames are in the /.reserved/raw
+  hierarchy, then 'raw' namespace extended attributes will be preserved.
+  'raw' xattrs are used by the system for internal functions such as encryption
+  meta data. They are only visible to users when accessed through the
+  /.reserved/raw hierarchy.
+
+  raw xattrs are preserved based solely on whether /.reserved/raw prefixes are
+  supplied. The -p (preserve, see below) flag does not impact preservation of
+  raw xattrs.
+
+  To prevent raw xattrs from being preserved, simply do not use the
+  /.reserved/raw prefix on any of the source and target paths.
+
+  If the /.reserved/raw prefix is specified on only a subset of the source and
+  target paths, an error will be displayed and a non-0 exit code returned.
+
 Command Line Options
 --------------------
 

@@ -111,6 +111,17 @@ esac
 # Should HADOOP_USER_CLASSPATH be first in the official CLASSPATH?
 # export HADOOP_USER_CLASSPATH_FIRST="yes"
 
+# If HADOOP_USE_CLIENT_CLASSLOADER is set, HADOOP_CLASSPATH along with the main
+# jar are handled by a separate isolated client classloader. If it is set,
+# HADOOP_USER_CLASSPATH_FIRST is ignored. Can be defined by doing
+# export HADOOP_USE_CLIENT_CLASSLOADER=true
+
+# HADOOP_CLIENT_CLASSLOADER_SYSTEM_CLASSES overrides the default definition of
+# system classes for the client classloader when HADOOP_USE_CLIENT_CLASSLOADER
+# is enabled. Names ending in '.' (period) are treated as package names, and
+# names starting with a '-' are treated as negative matches. For example,
+# export HADOOP_CLIENT_CLASSLOADER_SYSTEM_CLASSES="-org.apache.hadoop.UserClass,java.,javax.,org.apache.hadoop."
+
 ###
 # Options for remote shell connectivity
 ###

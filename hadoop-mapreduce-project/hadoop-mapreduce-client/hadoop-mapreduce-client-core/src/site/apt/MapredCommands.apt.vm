@@ -177,6 +177,12 @@ MapReduce Commands Guide
    Creates a hadoop archive. More information can be found at
    {{{./HadoopArchives.html}Hadoop Archives Guide}}.
 
+** <<<version>>>
+
+   Prints the version.
+
+   Usage: <<<mapred version>>>
+
 * Administration Commands
 
    Commands useful for administrators of a hadoop cluster.

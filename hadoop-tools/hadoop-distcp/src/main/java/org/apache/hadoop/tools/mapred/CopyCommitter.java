@@ -83,7 +83,9 @@ public class CopyCommitter extends FileOutputCommitter {
     cleanupTempFiles(jobContext);
 
     String attributes = conf.get(DistCpConstants.CONF_LABEL_PRESERVE_STATUS);
-    if (attributes != null && !attributes.isEmpty()) {
+    final boolean preserveRawXattrs =
+        conf.getBoolean(DistCpConstants.CONF_LABEL_PRESERVE_RAWXATTRS, false);
+    if ((attributes != null && !attributes.isEmpty()) || preserveRawXattrs) {
       preserveFileAttributesForDirectories(conf);
     }
 
@@ -167,6 +169,8 @@ public class CopyCommitter extends FileOutputCommitter {
     LOG.info("About to preserve attributes: " + attrSymbols);
 
     EnumSet<FileAttribute> attributes = DistCpUtils.unpackAttributes(attrSymbols);
+    final boolean preserveRawXattrs =
+        conf.getBoolean(DistCpConstants.CONF_LABEL_PRESERVE_RAWXATTRS, false);
 
     Path sourceListing = new Path(conf.get(DistCpConstants.CONF_LABEL_LISTING_FILE_PATH));
     FileSystem clusterFS = sourceListing.getFileSystem(conf);
@@ -194,7 +198,8 @@ public class CopyCommitter extends FileOutputCommitter {
         if (targetRoot.equals(targetFile) && syncOrOverwrite) continue;
 
         FileSystem targetFS = targetFile.getFileSystem(conf);
-        DistCpUtils.preserve(targetFS, targetFile, srcFileStatus,  attributes);
+        DistCpUtils.preserve(targetFS, targetFile, srcFileStatus, attributes,
+            preserveRawXattrs);
 
         taskAttemptContext.progress();
         taskAttemptContext.setStatus("Preserving status on directory entries. [" +

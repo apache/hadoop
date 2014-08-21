@@ -757,7 +757,10 @@
   </property>
 
   <property>
-    <description>Target size of localizer cache in MB, per local directory.</description>
+    <description>Target size of localizer cache in MB, per nodemanager. It is
+      a target retention size that only includes resources with PUBLIC and 
+      PRIVATE visibility and excludes resources with APPLICATION visibility
+    </description>
     <name>yarn.nodemanager.localizer.cache.target-size-mb</name>
     <value>10240</value>
   </property>
@@ -988,8 +991,22 @@
   </property>
 
   <property>
-    <description>The UNIX user that containers will run as when Linux-container-executor
-    is used in nonsecure mode (a use case for this is using cgroups).</description>
+    <description>This determines which of the two modes that LCE should use on
+      a non-secure cluster.  If this value is set to true, then all containers
+      will be launched as the user specified in
+      yarn.nodemanager.linux-container-executor.nonsecure-mode.local-user.  If
+      this value is set to false, then containers will run as the user who
+      submitted the application.</description>
+    <name>yarn.nodemanager.linux-container-executor.nonsecure-mode.limit-users</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>The UNIX user that containers will run as when
+      Linux-container-executor is used in nonsecure mode (a use case for this
+      is using cgroups) if the
+      yarn.nodemanager.linux-container-executor.nonsecure-mode.limit-users is
+      set to true.</description>
     <name>yarn.nodemanager.linux-container-executor.nonsecure-mode.local-user</name>
     <value>nobody</value>
   </property>

@@ -77,6 +77,13 @@ public class TestDFSShell {
 
   static final String TEST_ROOT_DIR = PathUtils.getTestDirName(TestDFSShell.class);
 
+  private static final String RAW_A1 = "raw.a1";
+  private static final String TRUSTED_A1 = "trusted.a1";
+  private static final String USER_A1 = "user.a1";
+  private static final byte[] RAW_A1_VALUE = new byte[]{0x32, 0x32, 0x32};
+  private static final byte[] TRUSTED_A1_VALUE = new byte[]{0x31, 0x31, 0x31};
+  private static final byte[] USER_A1_VALUE = new byte[]{0x31, 0x32, 0x33};
+
   static Path writeFile(FileSystem fs, Path f) throws IOException {
     DataOutputStream out = fs.create(f);
     out.writeBytes("dhruba: " + f);
@@ -1664,8 +1671,8 @@ public class TestDFSShell {
       final String group = status.getGroup();
       final FsPermission perm = status.getPermission();
       
-      fs.setXAttr(src, "user.a1", new byte[]{0x31, 0x32, 0x33});
-      fs.setXAttr(src, "trusted.a1", new byte[]{0x31, 0x31, 0x31});
+      fs.setXAttr(src, USER_A1, USER_A1_VALUE);
+      fs.setXAttr(src, TRUSTED_A1, TRUSTED_A1_VALUE);
       
       shell = new FsShell(conf);
       
@@ -1722,8 +1729,8 @@ public class TestDFSShell {
       assertTrue(perm.equals(targetPerm));
       xattrs = fs.getXAttrs(target3);
       assertEquals(xattrs.size(), 2);
-      assertArrayEquals(new byte[]{0x31, 0x32, 0x33}, xattrs.get("user.a1"));
-      assertArrayEquals(new byte[]{0x31, 0x31, 0x31}, xattrs.get("trusted.a1"));
+      assertArrayEquals(USER_A1_VALUE, xattrs.get(USER_A1));
+      assertArrayEquals(TRUSTED_A1_VALUE, xattrs.get(TRUSTED_A1));
       acls = fs.getAclStatus(target3).getEntries();
       assertTrue(acls.isEmpty());
       assertFalse(targetPerm.getAclBit());
@@ -1780,6 +1787,160 @@ public class TestDFSShell {
     }
   }
 
+  @Test (timeout = 120000)
+  public void testCopyCommandsWithRawXAttrs() throws Exception {
+    final Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, true);
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).
+      numDataNodes(1).format(true).build();
+    FsShell shell = null;
+    FileSystem fs = null;
+    final String testdir = "/tmp/TestDFSShell-testCopyCommandsWithRawXAttrs-"
+      + counter.getAndIncrement();
+    final Path hdfsTestDir = new Path(testdir);
+    final Path rawHdfsTestDir = new Path("/.reserved/raw" + testdir);
+    try {
+      fs = cluster.getFileSystem();
+      fs.mkdirs(hdfsTestDir);
+      final Path src = new Path(hdfsTestDir, "srcfile");
+      final String rawSrcBase = "/.reserved/raw" + testdir;
+      final Path rawSrc = new Path(rawSrcBase, "srcfile");
+      fs.create(src).close();
+
+      final Path srcDir = new Path(hdfsTestDir, "srcdir");
+      final Path rawSrcDir = new Path("/.reserved/raw" + testdir, "srcdir");
+      fs.mkdirs(srcDir);
+      final Path srcDirFile = new Path(srcDir, "srcfile");
+      final Path rawSrcDirFile =
+              new Path("/.reserved/raw" + srcDirFile);
+      fs.create(srcDirFile).close();
+
+      final Path[] paths = { rawSrc, rawSrcDir, rawSrcDirFile };
+      final String[] xattrNames = { USER_A1, RAW_A1 };
+      final byte[][] xattrVals = { USER_A1_VALUE, RAW_A1_VALUE };
+
+      for (int i = 0; i < paths.length; i++) {
+        for (int j = 0; j < xattrNames.length; j++) {
+          fs.setXAttr(paths[i], xattrNames[j], xattrVals[j]);
+        }
+      }
+
+      shell = new FsShell(conf);
+
+      /* Check that a file as the source path works ok. */
+      doTestCopyCommandsWithRawXAttrs(shell, fs, src, hdfsTestDir, false);
+      doTestCopyCommandsWithRawXAttrs(shell, fs, rawSrc, hdfsTestDir, false);
+      doTestCopyCommandsWithRawXAttrs(shell, fs, src, rawHdfsTestDir, false);
+      doTestCopyCommandsWithRawXAttrs(shell, fs, rawSrc, rawHdfsTestDir, true);
+
+      /* Use a relative /.reserved/raw path. */
+      final Path savedWd = fs.getWorkingDirectory();
+      try {
+        fs.setWorkingDirectory(new Path(rawSrcBase));
+        final Path relRawSrc = new Path("../srcfile");
+        final Path relRawHdfsTestDir = new Path("..");
+        doTestCopyCommandsWithRawXAttrs(shell, fs, relRawSrc, relRawHdfsTestDir,
+                true);
+      } finally {
+        fs.setWorkingDirectory(savedWd);
+      }
+
+      /* Check that a directory as the source path works ok. */
+      doTestCopyCommandsWithRawXAttrs(shell, fs, srcDir, hdfsTestDir, false);
+      doTestCopyCommandsWithRawXAttrs(shell, fs, rawSrcDir, hdfsTestDir, false);
+      doTestCopyCommandsWithRawXAttrs(shell, fs, srcDir, rawHdfsTestDir, false);
+      doTestCopyCommandsWithRawXAttrs(shell, fs, rawSrcDir, rawHdfsTestDir,
+        true);
+
+      /* Use relative in an absolute path. */
+      final String relRawSrcDir = "./.reserved/../.reserved/raw/../raw" +
+          testdir + "/srcdir";
+      final String relRawDstDir = "./.reserved/../.reserved/raw/../raw" +
+          testdir;
+      doTestCopyCommandsWithRawXAttrs(shell, fs, new Path(relRawSrcDir),
+          new Path(relRawDstDir), true);
+    } finally {
+      if (null != shell) {
+        shell.close();
+      }
+
+      if (null != fs) {
+        fs.delete(hdfsTestDir, true);
+        fs.close();
+      }
+      cluster.shutdown();
+    }
+  }
+
+  private void doTestCopyCommandsWithRawXAttrs(FsShell shell, FileSystem fs,
+      Path src, Path hdfsTestDir, boolean expectRaw) throws Exception {
+    Path target;
+    boolean srcIsRaw;
+    if (src.isAbsolute()) {
+      srcIsRaw = src.toString().contains("/.reserved/raw");
+    } else {
+      srcIsRaw = new Path(fs.getWorkingDirectory(), src).
+          toString().contains("/.reserved/raw");
+    }
+    final boolean destIsRaw = hdfsTestDir.toString().contains("/.reserved/raw");
+    final boolean srcDestMismatch = srcIsRaw ^ destIsRaw;
+
+    // -p (possibly preserve raw if src & dst are both /.r/r */
+    if (srcDestMismatch) {
+      doCopyAndTest(shell, hdfsTestDir, src, "-p", ERROR);
+    } else {
+      target = doCopyAndTest(shell, hdfsTestDir, src, "-p", SUCCESS);
+      checkXAttrs(fs, target, expectRaw, false);
+    }
+
+    // -px (possibly preserve raw, always preserve non-raw xattrs. */
+    if (srcDestMismatch) {
+      doCopyAndTest(shell, hdfsTestDir, src, "-px", ERROR);
+    } else {
+      target = doCopyAndTest(shell, hdfsTestDir, src, "-px", SUCCESS);
+      checkXAttrs(fs, target, expectRaw, true);
+    }
+
+    // no args (possibly preserve raw, never preserve non-raw xattrs. */
+    if (srcDestMismatch) {
+      doCopyAndTest(shell, hdfsTestDir, src, null, ERROR);
+    } else {
+      target = doCopyAndTest(shell, hdfsTestDir, src, null, SUCCESS);
+      checkXAttrs(fs, target, expectRaw, false);
+    }
+  }
+
+  private Path doCopyAndTest(FsShell shell, Path dest, Path src,
+      String cpArgs, int expectedExitCode) throws Exception {
+    final Path target = new Path(dest, "targetfile" +
+        counter.getAndIncrement());
+    final String[] argv = cpArgs == null ?
+        new String[] { "-cp",         src.toUri().toString(),
+            target.toUri().toString() } :
+        new String[] { "-cp", cpArgs, src.toUri().toString(),
+            target.toUri().toString() };
+    final int ret = ToolRunner.run(shell, argv);
+    assertEquals("cp -p is not working", expectedExitCode, ret);
+    return target;
+  }
+
+  private void checkXAttrs(FileSystem fs, Path target, boolean expectRaw,
+      boolean expectVanillaXAttrs) throws Exception {
+    final Map<String, byte[]> xattrs = fs.getXAttrs(target);
+    int expectedCount = 0;
+    if (expectRaw) {
+      assertArrayEquals("raw.a1 has incorrect value",
+          RAW_A1_VALUE, xattrs.get(RAW_A1));
+      expectedCount++;
+    }
+    if (expectVanillaXAttrs) {
+      assertArrayEquals("user.a1 has incorrect value",
+          USER_A1_VALUE, xattrs.get(USER_A1));
+      expectedCount++;
+    }
+    assertEquals("xattrs size mismatch", expectedCount, xattrs.size());
+  }
+
   // verify cp -ptopxa option will preserve directory attributes.
   @Test (timeout = 120000)
   public void testCopyCommandsToDirectoryWithPreserveOption()
@@ -1825,8 +1986,8 @@ public class TestDFSShell {
       final String group = status.getGroup();
       final FsPermission perm = status.getPermission();
 
-      fs.setXAttr(srcDir, "user.a1", new byte[]{0x31, 0x32, 0x33});
-      fs.setXAttr(srcDir, "trusted.a1", new byte[]{0x31, 0x31, 0x31});
+      fs.setXAttr(srcDir, USER_A1, USER_A1_VALUE);
+      fs.setXAttr(srcDir, TRUSTED_A1, TRUSTED_A1_VALUE);
 
       shell = new FsShell(conf);
 
@@ -1883,8 +2044,8 @@ public class TestDFSShell {
       assertTrue(perm.equals(targetPerm));
       xattrs = fs.getXAttrs(targetDir3);
       assertEquals(xattrs.size(), 2);
-      assertArrayEquals(new byte[]{0x31, 0x32, 0x33}, xattrs.get("user.a1"));
-      assertArrayEquals(new byte[]{0x31, 0x31, 0x31}, xattrs.get("trusted.a1"));
+      assertArrayEquals(USER_A1_VALUE, xattrs.get(USER_A1));
+      assertArrayEquals(TRUSTED_A1_VALUE, xattrs.get(TRUSTED_A1));
       acls = fs.getAclStatus(targetDir3).getEntries();
       assertTrue(acls.isEmpty());
       assertFalse(targetPerm.getAclBit());
