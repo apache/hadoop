@@ -208,6 +208,9 @@ Release 2.6.0 - UNRELEASED
     YARN-1919. Potential NPE in EmbeddedElectorService#stop. 
     (Tsuyoshi Ozawa via kasha)
 
+    YARN-2424. LCE should support non-cgroups, non-secure mode (Chris Douglas 
+    via aw)
+
 Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES

@@ -279,6 +279,13 @@ public class TestLinuxContainerExecutor {
       lce.setConf(conf);
       Assert.assertEquals("bar", lce.getRunAsUser("foo"));
 
+      //nonsecure without limits
+      conf.set(YarnConfiguration.NM_NONSECURE_MODE_LOCAL_USER_KEY, "bar");
+      conf.set(YarnConfiguration.NM_NONSECURE_MODE_LIMIT_USERS, "false");
+      lce = new LinuxContainerExecutor();
+      lce.setConf(conf);
+      Assert.assertEquals("foo", lce.getRunAsUser("foo"));
+
       //secure
       conf = new YarnConfiguration();
       conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,

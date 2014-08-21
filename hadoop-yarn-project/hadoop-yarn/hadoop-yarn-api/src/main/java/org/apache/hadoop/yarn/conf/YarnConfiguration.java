@@ -837,6 +837,15 @@ public class YarnConfiguration extends Configuration {
     NM_PREFIX + "linux-container-executor.group";
 
   /**
+   * If linux-container-executor should limit itself to one user
+   * when running in non-secure mode.
+   */
+  public static final String NM_NONSECURE_MODE_LIMIT_USERS= NM_PREFIX +
+     "linux-container-executor.nonsecure-mode.limit-users";
+
+  public static final boolean DEFAULT_NM_NONSECURE_MODE_LIMIT_USERS = true; 
+
+  /**
    * The UNIX user that containers will run as when Linux-container-executor
    * is used in nonsecure mode (a use case for this is using cgroups).
    */
