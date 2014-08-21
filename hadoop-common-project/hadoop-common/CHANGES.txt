@@ -102,6 +102,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10507. FsShell setfacl can throw ArrayIndexOutOfBoundsException when
     no perm is specified. (Stephen Chu and Sathish Gurram via cnauroth)
 
+  BUG FIXES
+
     HADOOP-10780. hadoop_user_info_alloc fails on FreeBSD due to incorrect
     sysconf use (Dmitry Sivachenko via Colin Patrick McCabe)
 
@@ -178,6 +180,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10968. hadoop native build fails to detect java_libarch on
     ppc64le (Dinar Valeev via Colin Patrick McCabe)
+
+    HADOOP-10141. Create KeyProvider API to separate encryption key storage
+    from the applications. (omalley)
 
 Release 2.5.0 - 2014-08-11
 
