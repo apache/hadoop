@@ -105,6 +105,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10428. JavaKeyStoreProvider should accept keystore password via
     configuration falling back to ENV VAR. (tucu)
 
+    HADOOP-10430. KeyProvider Metadata should have an optional description,
+    there should be a method to retrieve the metadata from all keys. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)

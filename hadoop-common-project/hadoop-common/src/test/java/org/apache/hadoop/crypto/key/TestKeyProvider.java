@@ -32,6 +32,7 @@ import java.util.Date;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertArrayEquals;
 
@@ -67,20 +68,44 @@ public class TestKeyProvider {
 
   @Test
   public void testMetadata() throws Exception {
+    //Metadata without description
     DateFormat format = new SimpleDateFormat("y/m/d");
     Date date = format.parse("2013/12/25");
-    KeyProvider.Metadata meta = new KeyProvider.Metadata("myCipher", 100,
+    KeyProvider.Metadata meta = new KeyProvider.Metadata("myCipher", 100, null,
         date, 123);
     assertEquals("myCipher", meta.getCipher());
     assertEquals(100, meta.getBitLength());
+    assertNull(meta.getDescription());
     assertEquals(date, meta.getCreated());
     assertEquals(123, meta.getVersions());
     KeyProvider.Metadata second = new KeyProvider.Metadata(meta.serialize());
     assertEquals(meta.getCipher(), second.getCipher());
     assertEquals(meta.getBitLength(), second.getBitLength());
+    assertNull(second.getDescription());
     assertEquals(meta.getCreated(), second.getCreated());
     assertEquals(meta.getVersions(), second.getVersions());
     int newVersion = second.addVersion();
+    assertEquals(123, newVersion);
+    assertEquals(124, second.getVersions());
+    assertEquals(123, meta.getVersions());
+
+    //Metadata with description
+    format = new SimpleDateFormat("y/m/d");
+    date = format.parse("2013/12/25");
+    meta = new KeyProvider.Metadata("myCipher", 100,
+        "description", date, 123);
+    assertEquals("myCipher", meta.getCipher());
+    assertEquals(100, meta.getBitLength());
+    assertEquals("description", meta.getDescription());
+    assertEquals(date, meta.getCreated());
+    assertEquals(123, meta.getVersions());
+    second = new KeyProvider.Metadata(meta.serialize());
+    assertEquals(meta.getCipher(), second.getCipher());
+    assertEquals(meta.getBitLength(), second.getBitLength());
+    assertEquals(meta.getDescription(), second.getDescription());
+    assertEquals(meta.getCreated(), second.getCreated());
+    assertEquals(meta.getVersions(), second.getVersions());
+    newVersion = second.addVersion();
     assertEquals(123, newVersion);
     assertEquals(124, second.getVersions());
     assertEquals(123, meta.getVersions());
@@ -95,9 +120,11 @@ public class TestKeyProvider {
     assertEquals("myCipher", options.getCipher());
     assertEquals(512, options.getBitLength());
     options.setCipher("yourCipher");
+    options.setDescription("description");
     options.setBitLength(128);
     assertEquals("yourCipher", options.getCipher());
     assertEquals(128, options.getBitLength());
+    assertEquals("description", options.getDescription());
     options = KeyProvider.options(new Configuration());
     assertEquals(KeyProvider.DEFAULT_CIPHER, options.getCipher());
     assertEquals(KeyProvider.DEFAULT_BITLENGTH, options.getBitLength());
@@ -139,7 +166,7 @@ public class TestKeyProvider {
 
     @Override
     public Metadata getMetadata(String name) throws IOException {
-      return new Metadata(CIPHER, 128, new Date(), 0);
+      return new Metadata(CIPHER, 128, "description", new Date(), 0);
     }
 
     @Override
