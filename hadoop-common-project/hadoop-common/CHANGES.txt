@@ -170,6 +170,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10936. Change default KeyProvider bitlength to 128. (wang)
 
+    HADOOP-10224. JavaKeyStoreProvider has to protect against corrupting
+    underlying store. (asuresh via tucu)
+
   BUG FIXES
 
     HADOOP-10781. Unportable getgrouplist() usage breaks FreeBSD (Dmitry

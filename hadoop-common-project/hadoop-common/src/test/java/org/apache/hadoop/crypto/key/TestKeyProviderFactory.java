@@ -211,9 +211,74 @@ public class TestKeyProviderFactory {
     assertTrue(s.getPermission().toString().equals("rwx------"));
     assertTrue(file + " should exist", file.isFile());
 
+    // Corrupt file and Check if JKS can reload from _OLD file
+    File oldFile = new File(file.getPath() + "_OLD");
+    file.renameTo(oldFile);
+    file.delete();
+    file.createNewFile();
+    assertTrue(oldFile.exists());
+    KeyProvider provider = KeyProviderFactory.getProviders(conf).get(0);
+    assertTrue(file.exists());
+    assertTrue(oldFile + "should be deleted", !oldFile.exists());
+    verifyAfterReload(file, provider);
+    assertTrue(!oldFile.exists());
+
+    // _NEW and current file should not exist together
+    File newFile = new File(file.getPath() + "_NEW");
+    newFile.createNewFile();
+    try {
+      provider = KeyProviderFactory.getProviders(conf).get(0);
+      Assert.fail("_NEW and current file should not exist together !!");
+    } catch (Exception e) {
+      // Ignore
+    } finally {
+      if (newFile.exists()) {
+        newFile.delete();
+      }
+    }
+
+    // Load from _NEW file
+    file.renameTo(newFile);
+    file.delete();
+    try {
+      provider = KeyProviderFactory.getProviders(conf).get(0);
+      Assert.assertFalse(newFile.exists());
+      Assert.assertFalse(oldFile.exists());
+    } catch (Exception e) {
+      Assert.fail("JKS should load from _NEW file !!");
+      // Ignore
+    }
+    verifyAfterReload(file, provider);
+
+    // _NEW exists but corrupt.. must load from _OLD
+    newFile.createNewFile();
+    file.renameTo(oldFile);
+    file.delete();
+    try {
+      provider = KeyProviderFactory.getProviders(conf).get(0);
+      Assert.assertFalse(newFile.exists());
+      Assert.assertFalse(oldFile.exists());
+    } catch (Exception e) {
+      Assert.fail("JKS should load from _OLD file !!");
+      // Ignore
+    } finally {
+      if (newFile.exists()) {
+        newFile.delete();
+      }
+    }
+    verifyAfterReload(file, provider);
+
     // check permission retention after explicit change
     fs.setPermission(path, new FsPermission("777"));
     checkPermissionRetention(conf, ourUrl, path);
+  }
+
+  private void verifyAfterReload(File file, KeyProvider provider)
+      throws IOException {
+    List<String> existingKeys = provider.getKeys();
+    assertTrue(existingKeys.contains("key4"));
+    assertTrue(existingKeys.contains("key3"));
+    assertTrue(file.exists());
   }
 
   public void checkPermissionRetention(Configuration conf, String ourUrl, Path path) throws Exception {
