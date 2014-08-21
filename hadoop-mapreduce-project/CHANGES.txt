@@ -190,6 +190,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5974. Allow specifying multiple MapOutputCollectors with 
     fallback. (Todd Lipcon via kasha)
 
+    MAPREDUCE-5130. Add missing job config options to mapred-default.xml
+    (Ray Chiang via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES

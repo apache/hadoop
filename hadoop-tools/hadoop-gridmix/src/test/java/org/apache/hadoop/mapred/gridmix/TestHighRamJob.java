@@ -97,10 +97,10 @@ public class TestHighRamJob {
     // check if the high ram properties are not set
     assertEquals(expectedMapMB, 
                  simulatedConf.getLong(MRJobConfig.MAP_MEMORY_MB,
-                                       JobConf.DISABLED_MEMORY_LIMIT));
+                                       MRJobConfig.DEFAULT_MAP_MEMORY_MB));
     assertEquals(expectedReduceMB, 
                  simulatedConf.getLong(MRJobConfig.REDUCE_MEMORY_MB, 
-                                       JobConf.DISABLED_MEMORY_LIMIT));
+                                       MRJobConfig.DEFAULT_MAP_MEMORY_MB));
   }
   
   /**
@@ -114,10 +114,10 @@ public class TestHighRamJob {
     
     // test : check high ram emulation disabled
     gridmixConf.setBoolean(GridmixJob.GRIDMIX_HIGHRAM_EMULATION_ENABLE, false);
-    testHighRamConfig(10, 20, 5, 10, JobConf.DISABLED_MEMORY_LIMIT, 
-                      JobConf.DISABLED_MEMORY_LIMIT, 
-                      JobConf.DISABLED_MEMORY_LIMIT, 
-                      JobConf.DISABLED_MEMORY_LIMIT, gridmixConf);
+    testHighRamConfig(10, 20, 5, 10, MRJobConfig.DEFAULT_MAP_MEMORY_MB, 
+                      MRJobConfig.DEFAULT_REDUCE_MEMORY_MB, 
+                      MRJobConfig.DEFAULT_MAP_MEMORY_MB, 
+                      MRJobConfig.DEFAULT_REDUCE_MEMORY_MB, gridmixConf);
     
     // test : check with high ram enabled (default) and no scaling
     gridmixConf = new Configuration();

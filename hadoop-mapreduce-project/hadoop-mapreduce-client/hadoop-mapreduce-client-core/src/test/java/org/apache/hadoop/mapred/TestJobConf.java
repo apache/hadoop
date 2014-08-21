@@ -140,18 +140,21 @@ public class TestJobConf {
     conf.setQueueName("qname");
     assertEquals("qname", conf.getQueueName());
 
-    assertEquals(1, conf.computeNumSlotsPerMap(100L));
-    assertEquals(1, conf.computeNumSlotsPerReduce(100L));
-
     conf.setMemoryForMapTask(100 * 1000);
-    assertEquals(1000, conf.computeNumSlotsPerMap(100L));
+    assertEquals(100 * 1000, conf.getMemoryForMapTask());
     conf.setMemoryForReduceTask(1000 * 1000);
-    assertEquals(1000, conf.computeNumSlotsPerReduce(1000L));
+    assertEquals(1000 * 1000, conf.getMemoryForReduceTask());
 
     assertEquals(-1, conf.getMaxPhysicalMemoryForTask());
     assertEquals("The variable key is no longer used.",
         JobConf.deprecatedString("key"));
-
+    
+    // make sure mapreduce.map|reduce.java.opts are not set by default
+    // so that they won't override mapred.child.java.opts
+    assertEquals("mapreduce.map.java.opts should not be set by default",
+        null, conf.get(JobConf.MAPRED_MAP_TASK_JAVA_OPTS));
+    assertEquals("mapreduce.reduce.java.opts should not be set by default",
+        null, conf.get(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS));
   }
 
   /**
