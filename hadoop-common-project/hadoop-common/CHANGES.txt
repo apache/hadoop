@@ -289,6 +289,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10918. JMXJsonServlet fails when used within Tomcat. (tucu)
 
+    HADOOP-10939. Fix TestKeyProviderFactory testcases to use default 128 bit
+    length keys. (Arun Suresh via wang)
+
 Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES

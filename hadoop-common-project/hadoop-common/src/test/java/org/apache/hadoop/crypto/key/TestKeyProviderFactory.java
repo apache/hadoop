@@ -91,9 +91,9 @@ public class TestKeyProviderFactory {
   static void checkSpecificProvider(Configuration conf,
                                    String ourUrl) throws Exception {
     KeyProvider provider = KeyProviderFactory.getProviders(conf).get(0);
-    byte[] key1 = new byte[32];
-    byte[] key2 = new byte[32];
-    byte[] key3 = new byte[32];
+    byte[] key1 = new byte[16];
+    byte[] key2 = new byte[16];
+    byte[] key3 = new byte[16];
     for(int i =0; i < key1.length; ++i) {
       key1[i] = (byte) i;
       key2[i] = (byte) (i * 2);
@@ -137,7 +137,7 @@ public class TestKeyProviderFactory {
           KeyProvider.options(conf).setBitLength(8));
       assertTrue("should throw", false);
     } catch (IOException e) {
-      assertEquals("Wrong key length. Required 8, but got 256", e.getMessage());
+      assertEquals("Wrong key length. Required 8, but got 128", e.getMessage());
     }
     provider.createKey("key4", new byte[]{1},
         KeyProvider.options(conf).setBitLength(8));
@@ -153,7 +153,7 @@ public class TestKeyProviderFactory {
       provider.rollNewVersion("key4", key1);
       assertTrue("should throw", false);
     } catch (IOException e) {
-      assertEquals("Wrong key length. Required 8, but got 256", e.getMessage());
+      assertEquals("Wrong key length. Required 8, but got 128", e.getMessage());
     }
     try {
       provider.rollNewVersion("no-such-key", key1);
@@ -219,7 +219,7 @@ public class TestKeyProviderFactory {
   public void checkPermissionRetention(Configuration conf, String ourUrl, Path path) throws Exception {
     KeyProvider provider = KeyProviderFactory.getProviders(conf).get(0);
     // let's add a new key and flush and check that permissions are still set to 777
-    byte[] key = new byte[32];
+    byte[] key = new byte[16];
     for(int i =0; i < key.length; ++i) {
       key[i] = (byte) i;
     }
@@ -252,7 +252,7 @@ public class TestKeyProviderFactory {
       conf.set(JavaKeyStoreProvider.KEYSTORE_PASSWORD_FILE_KEY,
           "javakeystoreprovider.password");
       KeyProvider provider = KeyProviderFactory.getProviders(conf).get(0);
-      provider.createKey("key3", new byte[32], KeyProvider.options(conf));
+      provider.createKey("key3", new byte[16], KeyProvider.options(conf));
       provider.flush();
     } catch (Exception ex) {
       Assert.fail("could not create keystore with password file");
