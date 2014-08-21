@@ -104,6 +104,25 @@ Hadoop Key Management Server (KMS) - Documentation Sets ${project.version}
   </property>
 +---+
 
+** KMS Aggregated Audit logs
+
+Audit logs are aggregated for API accesses to the GET_KEY_VERSION,
+GET_CURRENT_KEY, DECRYPT_EEK, GENERATE_EEK operations.
+
+Entries are grouped by the (user,key,operation) combined key for a configurable
+aggregation interval after which the number of accesses to the specified
+end-point by the user for a given key is flushed to the audit log.
+
+The Aggregation interval is configured via the property :
+
++---+
+  <property>
+    <name>hadoop.kms.aggregation.delay.ms</name>
+    <value>10000</value>
+  </property>
++---+
+
+
 ** Start/Stop the KMS
 
   To start/stop KMS use KMS's bin/kms.sh script. For example:

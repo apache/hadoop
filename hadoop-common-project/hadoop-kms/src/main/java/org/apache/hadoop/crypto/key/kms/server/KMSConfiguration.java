@@ -43,12 +43,17 @@ public class KMSConfiguration {
   // TImeout for the Current Key cache
   public static final String CURR_KEY_CACHE_TIMEOUT_KEY = CONFIG_PREFIX +
       "current.key.cache.timeout.ms";
+  // Delay for Audit logs that need aggregation
+  public static final String KMS_AUDIT_AGGREGATION_DELAY = CONFIG_PREFIX +
+      "aggregation.delay.ms";
 
   public static final boolean KEY_CACHE_ENABLE_DEFAULT = true;
   // 10 mins
   public static final long KEY_CACHE_TIMEOUT_DEFAULT = 10 * 60 * 1000;
   // 30 secs
   public static final long CURR_KEY_CACHE_TIMEOUT_DEFAULT = 30 * 1000;
+  // 10 secs
+  public static final long KMS_AUDIT_AGGREGATION_DELAY_DEFAULT = 10000;
 
   static Configuration getConfiguration(boolean loadHadoopDefaults,
       String ... resources) {

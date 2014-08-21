@@ -163,6 +163,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10891. Add EncryptedKeyVersion factory method to
     KeyProviderCryptoExtension. (wang)
 
+    HADOOP-10756. KMS audit log should consolidate successful similar requests.
+    (asuresh via tucu)
+
   BUG FIXES
 
     HADOOP-10781. Unportable getgrouplist() usage breaks FreeBSD (Dmitry
