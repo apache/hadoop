@@ -29,6 +29,23 @@
 #                                    by doing 
 #                                    export HADOOP_USER_CLASSPATH_FIRST=true
 #
+#   HADOOP_USE_CLIENT_CLASSLOADER    When defined, HADOOP_CLASSPATH and the jar
+#                                    as the hadoop jar argument are handled by
+#                                    by a separate isolated client classloader.
+#                                    If it is set, HADOOP_USER_CLASSPATH_FIRST
+#                                    is ignored. Can be defined by doing
+#                                    export HADOOP_USE_CLIENT_CLASSLOADER=true
+#
+#   HADOOP_CLIENT_CLASSLOADER_SYSTEM_CLASSES
+#                                    When defined, it overrides the default
+#                                    definition of system classes for the client
+#                                    classloader when
+#                                    HADOOP_USE_CLIENT_CLASSLOADER is enabled.
+#                                    Names ending in '.' (period) are treated as
+#                                    package names, and names starting with a
+#                                    '-' are treated as negative matches.
+#                                    For example,
+#                                    export HADOOP_CLIENT_CLASSLOADER_SYSTEM_CLASSES="-org.apache.hadoop.UserClass,java.,javax.,org.apache.hadoop."
 
 this="${BASH_SOURCE-$0}"
 common_bin=$(cd -P -- "$(dirname -- "$this")" && pwd -P)
@@ -282,7 +299,9 @@ fi
 # Add the user-specified CLASSPATH via HADOOP_CLASSPATH
 # Add it first or last depending on if user has
 # set env-var HADOOP_USER_CLASSPATH_FIRST
-if [ "$HADOOP_CLASSPATH" != "" ]; then
+# if the user set HADOOP_USE_CLIENT_CLASSLOADER, HADOOP_CLASSPATH is not added
+# to the classpath
+if [[ ( "$HADOOP_CLASSPATH" != "" ) && ( "$HADOOP_USE_CLIENT_CLASSLOADER" = "" ) ]]; then
   # Prefix it if its to be preceded
   if [ "$HADOOP_USER_CLASSPATH_FIRST" != "" ]; then
     CLASSPATH=${HADOOP_CLASSPATH}:${CLASSPATH}
