@@ -1643,6 +1643,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     DirectoryListing dlisting = null;
     Nfs3FileAttributes postOpDirAttr = null;
     long dotdotFileId = 0;
+    HdfsFileStatus dotdotStatus = null;
     try {
       String dirFileIdPath = Nfs3Utils.getFileIdPath(handle);
       dirStatus = dfsClient.getFileInfo(dirFileIdPath);
@@ -1678,7 +1679,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       if (cookie == 0) {
         // Get dotdot fileId
         String dotdotFileIdPath = dirFileIdPath + "/..";
-        HdfsFileStatus dotdotStatus = dfsClient.getFileInfo(dotdotFileIdPath);
+        dotdotStatus = dfsClient.getFileInfo(dotdotFileIdPath);
 
         if (dotdotStatus == null) {
           // This should not happen
@@ -1723,7 +1724,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
           postOpDirAttr.getFileId(), ".", 0, postOpDirAttr, new FileHandle(
               postOpDirAttr.getFileId()));
       entries[1] = new READDIRPLUS3Response.EntryPlus3(dotdotFileId, "..",
-          dotdotFileId, postOpDirAttr, new FileHandle(dotdotFileId));
+          dotdotFileId, Nfs3Utils.getNfs3FileAttrFromFileStatus(dotdotStatus,
+              iug), new FileHandle(dotdotFileId));
 
       for (int i = 2; i < n + 2; i++) {
         long fileId = fstatus[i - 2].getFileId();

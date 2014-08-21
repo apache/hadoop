@@ -280,6 +280,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-6870. Blocks and INodes could leak for Rename with overwrite flag. (Yi
     Liu via jing9)
 
+    HDFS-6890. NFS readdirplus doesn't return dotdot attributes (brandonli)
+
 Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES
