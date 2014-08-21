@@ -260,15 +260,15 @@ public abstract class KeyProvider {
       return this;
     }
 
-    protected String getCipher() {
+    public String getCipher() {
       return cipher;
     }
 
-    protected int getBitLength() {
+    public int getBitLength() {
       return bitLength;
     }
 
-    protected String getDescription() {
+    public String getDescription() {
       return description;
     }
   }

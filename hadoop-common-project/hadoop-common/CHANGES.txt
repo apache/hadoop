@@ -108,6 +108,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10430. KeyProvider Metadata should have an optional description,
     there should be a method to retrieve the metadata from all keys. (tucu)
 
+    HADOOP-10431. Change visibility of KeyStore.Options getter methods to
+    public. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
