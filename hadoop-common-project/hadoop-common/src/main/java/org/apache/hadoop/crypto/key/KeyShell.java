@@ -445,7 +445,7 @@ public class KeyShell extends Configured implements Tool {
       "by the <keyname> argument within the provider specified by the\n" +
       "-provider argument. You may specify a cipher with the -cipher\n" +
       "argument. The default cipher is currently \"AES/CTR/NoPadding\".\n" +
-      "The default keysize is 256. You may specify the requested key\n" +
+      "The default keysize is 128. You may specify the requested key\n" +
       "length using the -size argument. Arbitrary attribute=value\n" +
       "style attributes may be specified using the -attr argument.\n" +
       "-attr may be specified multiple times, once per attribute.\n";
@@ -479,7 +479,8 @@ public class KeyShell extends Configured implements Tool {
       warnIfTransientProvider();
       try {
         provider.createKey(keyName, options);
-        out.println(keyName + " has been successfully created.");
+        out.println(keyName + " has been successfully created with options "
+            + options.toString() + ".");
         provider.flush();
         printProviderWritten();
       } catch (InvalidParameterException e) {

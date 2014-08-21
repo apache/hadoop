@@ -168,6 +168,8 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10793. KeyShell args should use single-dash style. (wang)
 
+    HADOOP-10936. Change default KeyProvider bitlength to 128. (wang)
+
   BUG FIXES
 
     HADOOP-10781. Unportable getgrouplist() usage breaks FreeBSD (Dmitry

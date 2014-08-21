@@ -110,7 +110,7 @@ public class TestKeyShell {
     rc = ks.run(args1);
     assertEquals(0, rc);
     assertTrue(outContent.toString().contains(keyName + " has been " +
-            "successfully created."));
+            "successfully created"));
 
     String listOut = listKeys(ks, false);
     assertTrue(listOut.contains(keyName));
@@ -145,7 +145,7 @@ public class TestKeyShell {
     rc = ks.run(args1);
     assertEquals(0, rc);
     assertTrue(outContent.toString().contains("key1 has been successfully " +
-        "created."));
+        "created"));
 
     String listOut = listKeys(ks, true);
     assertTrue(listOut.contains("description"));
@@ -233,7 +233,7 @@ public class TestKeyShell {
     rc = ks.run(args1);
     assertEquals(0, rc);
     assertTrue(outContent.toString().contains(keyName + " has been " +
-            "successfully " +	"created."));
+            "successfully created"));
 
     deleteKey(ks, keyName);
   }
@@ -250,7 +250,7 @@ public class TestKeyShell {
     rc = ks.run(args1);
     assertEquals(0, rc);
     assertTrue(outContent.toString().contains("keyattr1 has been " +
-            "successfully " + "created."));
+            "successfully created"));
 
     /* ...and list to see that we have the attr */
     String listOut = listKeys(ks, true);
