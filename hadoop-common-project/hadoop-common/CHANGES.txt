@@ -140,6 +140,8 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10736. Add key attributes to the key shell. (Mike Yoder via wang)
 
+    HADOOP-10824. Refactor KMSACLs to avoid locking. (Benoy Antony via umamahesh)
+
   BUG FIXES
 
     HADOOP-10781. Unportable getgrouplist() usage breaks FreeBSD (Dmitry
