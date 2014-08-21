@@ -148,6 +148,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10841. EncryptedKeyVersion should have a key name property.
     (asuresh via tucu)
 
+    HADOOP-10842. CryptoExtension generateEncryptedKey method should
+    receive the key name. (asuresh via tucu)
+
   BUG FIXES
 
     HADOOP-10781. Unportable getgrouplist() usage breaks FreeBSD (Dmitry
