@@ -21,9 +21,10 @@ package org.apache.hadoop.crypto.key;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-
+import org.apache.hadoop.fs.permission.FsPermission;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -68,6 +69,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
   private final URI uri;
   private final Path path;
   private final FileSystem fs;
+  private final FsPermission permissions;
   private final KeyStore keyStore;
   private final char[] password;
   private boolean changed = false;
@@ -87,8 +89,14 @@ public class JavaKeyStoreProvider extends KeyProvider {
     try {
       keyStore = KeyStore.getInstance(SCHEME_NAME);
       if (fs.exists(path)) {
+        // save off permissions in case we need to
+        // rewrite the keystore in flush()
+        FileStatus s = fs.getFileStatus(path);
+        permissions = s.getPermission();
+
         keyStore.load(fs.open(path), password);
       } else {
+        permissions = new FsPermission("700");
         // required to create an empty keystore. *sigh*
         keyStore.load(null, password);
       }
@@ -277,7 +285,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
       }
     }
     // write out the keystore
-    FSDataOutputStream out = fs.create(path, true);
+    FSDataOutputStream out = FileSystem.create(fs, path, permissions);
     try {
       keyStore.store(out, password);
     } catch (KeyStoreException e) {
