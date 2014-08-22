@@ -397,6 +397,22 @@
 </property>
 
 <property>
+  <name>mapreduce.tasktracker.map.tasks.maximum</name>
+  <value>2</value>
+  <description>The maximum number of map tasks that will be run
+  simultaneously by a task tracker.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.tasktracker.reduce.tasks.maximum</name>
+  <value>2</value>
+  <description>The maximum number of reduce tasks that will be run
+  simultaneously by a task tracker.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.map.memory.mb</name>
   <value>1024</value>
   <description>The amount of memory to request from the scheduler for each
@@ -425,6 +441,36 @@
   <value>1</value>
   <description>The number of virtual cores to request from the scheduler for
   each reduce task.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.jobtracker.retiredjobs.cache.size</name>
+  <value>1000</value>
+  <description>The number of retired job status to keep in the cache.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.tasktracker.outofband.heartbeat</name>
+  <value>false</value>
+  <description>Expert: Set this to true to let the tasktracker send an 
+  out-of-band heartbeat on task-completion for better latency.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.jobtracker.jobhistory.lru.cache.size</name>
+  <value>5</value>
+  <description>The number of job history files loaded in memory. The jobs are 
+  loaded when they are first accessed. The cache is cleared based on LRU.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.jobtracker.instrumentation</name>
+  <value>org.apache.hadoop.mapred.JobTrackerMetricsInst</value>
+  <description>Expert: The instrumentation class to associate with each JobTracker.
   </description>
 </property>
 
@@ -778,21 +824,19 @@
   </description>
 </property>
 
-<<<<<<< .working
 <property>
   <name>mapreduce.jobtracker.maxtasks.perjob</name>
   <value>-1</value>
   <description>The maximum number of tasks for a single job.
   A value of -1 indicates that there is no maximum.  </description>
 </property>
-=======
+
 <property>
   <name>mapreduce.input.lineinputformat.linespermap</name>
   <value>1</value>
   <description>When using NLineInputFormat, the number of lines of input data
   to include in each split.</description>
 </property>
->>>>>>> .merge-right.r1619626
 
 <property>
   <name>mapreduce.client.submit.file.replication</name>
