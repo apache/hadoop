@@ -282,6 +282,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6890. NFS readdirplus doesn't return dotdot attributes (brandonli)
 
+    HDFS-6829. DFSAdmin refreshSuperUserGroupsConfiguration failed in
+    security cluster (zhaoyunjiong via Arpit Agarwal)
+
 Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES
