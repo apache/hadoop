@@ -24,7 +24,6 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
-import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
  * A Schedulable represents an entity that can be scheduled such as an
@@ -102,10 +101,4 @@ public interface Schedulable {
 
   /** Assign a fair share to this Schedulable. */
   public void setFairShare(Resource fairShare);
-
-  /**
-   * Returns true if queue has atleast one app running. Always returns true for
-   * AppSchedulables.
-   */
-  public boolean isActive();
 }

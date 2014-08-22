@@ -292,14 +292,19 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     createSchedulingRequest(10 * 1024, "root.default", "user1");
 
     scheduler.update();
+    scheduler.getQueueManager().getRootQueue()
+        .setSteadyFairShare(scheduler.getClusterResource());
+    scheduler.getQueueManager().getRootQueue().recomputeSteadyShares();
 
     Collection<FSLeafQueue> queues = scheduler.getQueueManager().getLeafQueues();
     assertEquals(3, queues.size());
     
-    // Divided three ways - betwen the two queues and the default queue
+    // Divided three ways - between the two queues and the default queue
     for (FSLeafQueue p : queues) {
       assertEquals(3414, p.getFairShare().getMemory());
       assertEquals(3414, p.getMetrics().getFairShareMB());
+      assertEquals(3414, p.getSteadyFairShare().getMemory());
+      assertEquals(3414, p.getMetrics().getSteadyFairShareMB());
     }
   }
   
@@ -323,6 +328,9 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     createSchedulingRequest(10 * 1024, "root.default", "user1");
 
     scheduler.update();
+    scheduler.getQueueManager().getRootQueue()
+        .setSteadyFairShare(scheduler.getClusterResource());
+    scheduler.getQueueManager().getRootQueue().recomputeSteadyShares();
 
     QueueManager queueManager = scheduler.getQueueManager();
     Collection<FSLeafQueue> queues = queueManager.getLeafQueues();
@@ -333,10 +341,16 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSLeafQueue queue3 = queueManager.getLeafQueue("parent.queue3", true);
     assertEquals(capacity / 2, queue1.getFairShare().getMemory());
     assertEquals(capacity / 2, queue1.getMetrics().getFairShareMB());
+    assertEquals(capacity / 2, queue1.getSteadyFairShare().getMemory());
+    assertEquals(capacity / 2, queue1.getMetrics().getSteadyFairShareMB());
     assertEquals(capacity / 4, queue2.getFairShare().getMemory());
     assertEquals(capacity / 4, queue2.getMetrics().getFairShareMB());
+    assertEquals(capacity / 4, queue2.getSteadyFairShare().getMemory());
+    assertEquals(capacity / 4, queue2.getMetrics().getSteadyFairShareMB());
     assertEquals(capacity / 4, queue3.getFairShare().getMemory());
     assertEquals(capacity / 4, queue3.getMetrics().getFairShareMB());
+    assertEquals(capacity / 4, queue3.getSteadyFairShare().getMemory());
+    assertEquals(capacity / 4, queue3.getMetrics().getSteadyFairShareMB());
   }
 
   @Test
@@ -771,6 +785,9 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     createSchedulingRequest(10 * 1024, "root.default", "user3");
 
     scheduler.update();
+    scheduler.getQueueManager().getRootQueue()
+        .setSteadyFairShare(scheduler.getClusterResource());
+    scheduler.getQueueManager().getRootQueue().recomputeSteadyShares();
 
     Collection<FSLeafQueue> leafQueues = scheduler.getQueueManager()
         .getLeafQueues();
@@ -780,12 +797,128 @@ public class TestFairScheduler extends FairSchedulerTestBase {
           || leaf.getName().equals("root.parentq.user2")) {
         // assert that the fair share is 1/4th node1's capacity
         assertEquals(capacity / 4, leaf.getFairShare().getMemory());
+        // assert that the steady fair share is 1/4th node1's capacity
+        assertEquals(capacity / 4, leaf.getSteadyFairShare().getMemory());
         // assert weights are equal for both the user queues
         assertEquals(1.0, leaf.getWeights().getWeight(ResourceType.MEMORY), 0);
       }
     }
   }
-  
+
+  @Test
+  public void testSteadyFairShareWithReloadAndNodeAddRemove() throws Exception {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<defaultQueueSchedulingPolicy>fair</defaultQueueSchedulingPolicy>");
+    out.println("<queue name=\"root\">");
+    out.println("  <schedulingPolicy>drf</schedulingPolicy>");
+    out.println("  <queue name=\"child1\">");
+    out.println("    <weight>1</weight>");
+    out.println("  </queue>");
+    out.println("  <queue name=\"child2\">");
+    out.println("    <weight>1</weight>");
+    out.println("  </queue>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // The steady fair share for all queues should be 0
+    QueueManager queueManager = scheduler.getQueueManager();
+    assertEquals(0, queueManager.getLeafQueue("child1", false)
+        .getSteadyFairShare().getMemory());
+    assertEquals(0, queueManager.getLeafQueue("child2", false)
+        .getSteadyFairShare().getMemory());
+
+    // Add one node
+    RMNode node1 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(6144), 1, "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+    assertEquals(6144, scheduler.getClusterResource().getMemory());
+
+    // The steady fair shares for all queues should be updated
+    assertEquals(2048, queueManager.getLeafQueue("child1", false)
+        .getSteadyFairShare().getMemory());
+    assertEquals(2048, queueManager.getLeafQueue("child2", false)
+        .getSteadyFairShare().getMemory());
+
+    // Reload the allocation configuration file
+    out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<defaultQueueSchedulingPolicy>fair</defaultQueueSchedulingPolicy>");
+    out.println("<queue name=\"root\">");
+    out.println("  <schedulingPolicy>drf</schedulingPolicy>");
+    out.println("  <queue name=\"child1\">");
+    out.println("    <weight>1</weight>");
+    out.println("  </queue>");
+    out.println("  <queue name=\"child2\">");
+    out.println("    <weight>2</weight>");
+    out.println("  </queue>");
+    out.println("  <queue name=\"child3\">");
+    out.println("    <weight>2</weight>");
+    out.println("  </queue>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // The steady fair shares for all queues should be updated
+    assertEquals(1024, queueManager.getLeafQueue("child1", false)
+        .getSteadyFairShare().getMemory());
+    assertEquals(2048, queueManager.getLeafQueue("child2", false)
+        .getSteadyFairShare().getMemory());
+    assertEquals(2048, queueManager.getLeafQueue("child3", false)
+        .getSteadyFairShare().getMemory());
+
+    // Remove the node, steady fair shares should back to 0
+    NodeRemovedSchedulerEvent nodeEvent2 = new NodeRemovedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent2);
+    assertEquals(0, scheduler.getClusterResource().getMemory());
+    assertEquals(0, queueManager.getLeafQueue("child1", false)
+        .getSteadyFairShare().getMemory());
+    assertEquals(0, queueManager.getLeafQueue("child2", false)
+        .getSteadyFairShare().getMemory());
+  }
+
+  @Test
+  public void testSteadyFairShareWithQueueCreatedRuntime() throws Exception {
+    conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+        SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
+    conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "true");
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // Add one node
+    RMNode node1 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(6144), 1, "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+    assertEquals(6144, scheduler.getClusterResource().getMemory());
+    assertEquals(6144, scheduler.getQueueManager().getRootQueue()
+        .getSteadyFairShare().getMemory());
+    assertEquals(6144, scheduler.getQueueManager()
+        .getLeafQueue("default", false).getSteadyFairShare().getMemory());
+
+    // Submit one application
+    ApplicationAttemptId appAttemptId1 = createAppAttemptId(1, 1);
+    createApplicationWithAMResource(appAttemptId1, "default", "user1", null);
+    assertEquals(3072, scheduler.getQueueManager()
+        .getLeafQueue("default", false).getSteadyFairShare().getMemory());
+    assertEquals(3072, scheduler.getQueueManager()
+        .getLeafQueue("user1", false).getSteadyFairShare().getMemory());
+  }
+
   /**
    * Make allocation requests and ensure they are reflected in queue demand.
    */
@@ -873,7 +1006,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   }
 
   @Test
-  public void testHierarchicalQueueAllocationFileParsing() throws IOException, SAXException, 
+  public void testHierarchicalQueueAllocationFileParsing() throws IOException, SAXException,
       AllocationConfigurationException, ParserConfigurationException {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 

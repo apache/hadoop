@@ -718,12 +718,6 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   }
 
   @Override
-  public boolean isActive() {
-    return true;
-  }
-
-
-  @Override
   public void updateDemand() {
     demand = Resources.createResource(0);
     // Demand is current consumption plus outstanding requests

@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Schedulable;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SchedulingPolicy;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
@@ -117,6 +118,13 @@ public class FairSharePolicy extends SchedulingPolicy {
   public void computeShares(Collection<? extends Schedulable> schedulables,
       Resource totalResources) {
     ComputeFairShares.computeShares(schedulables, totalResources, ResourceType.MEMORY);
+  }
+
+  @Override
+  public void computeSteadyShares(Collection<? extends FSQueue> queues,
+      Resource totalResources) {
+    ComputeFairShares.computeSteadyShares(queues, totalResources,
+        ResourceType.MEMORY);
   }
 
   @Override
