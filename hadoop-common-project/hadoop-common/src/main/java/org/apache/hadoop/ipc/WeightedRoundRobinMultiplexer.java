@@ -38,7 +38,7 @@ import org.apache.hadoop.conf.Configuration;
  * There may be more reads than the minimum due to race conditions. This is
  * allowed by design for performance reasons.
  */
-public class WeightedRoundRobinMultiplexer {
+public class WeightedRoundRobinMultiplexer implements RpcMultiplexer {
   // Config keys
   public static final String IPC_CALLQUEUE_WRRMUX_WEIGHTS_KEY =
     "faircallqueue.multiplexer.weights";
