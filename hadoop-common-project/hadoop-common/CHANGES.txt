@@ -560,6 +560,10 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10224. JavaKeyStoreProvider has to protect against corrupting
     underlying store. (asuresh via tucu)
 
+    HADOOP-10282. Create a FairCallQueue: a multi-level call queue which
+    schedules incoming calls and multiplexes outgoing calls. (Chris Li via
+    Arpit Agarwal)
+
   BUG FIXES
 
     HADOOP-10781. Unportable getgrouplist() usage breaks FreeBSD (Dmitry
