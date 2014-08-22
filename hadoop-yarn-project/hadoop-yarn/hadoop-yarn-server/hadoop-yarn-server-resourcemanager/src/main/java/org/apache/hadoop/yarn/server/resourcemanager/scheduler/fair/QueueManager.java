@@ -118,6 +118,11 @@ public class QueueManager {
       if (queue == null && create) {
         // if the queue doesn't exist,create it and return
         queue = createQueue(name, queueType);
+
+        // Update steady fair share for all queues
+        if (queue != null) {
+          rootQueue.recomputeSteadyShares();
+        }
       }
       return queue;
     }
@@ -190,7 +195,7 @@ public class QueueManager {
         parent = newParent;
       }
     }
-    
+
     return parent;
   }
 
@@ -376,5 +381,8 @@ public class QueueManager {
             + queue.getName(), ex);
       }
     }
+
+    // Update steady fair shares for all queues
+    rootQueue.recomputeSteadyShares();
   }
 }

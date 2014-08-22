@@ -22,6 +22,7 @@ import java.util.Collection;
 
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Schedulable;
 
 /**
@@ -49,14 +50,29 @@ public class ComputeFairShares {
       ResourceType type) {
     Collection<Schedulable> activeSchedulables = new ArrayList<Schedulable>();
     for (Schedulable sched : schedulables) {
-      if (sched.isActive()) {
-        activeSchedulables.add(sched);
-      } else {
+      if ((sched instanceof FSQueue) && !((FSQueue) sched).isActive()) {
         setResourceValue(0, sched.getFairShare(), type);
+      } else {
+        activeSchedulables.add(sched);
       }
     }
 
-    computeSharesInternal(activeSchedulables, totalResources, type);
+    computeSharesInternal(activeSchedulables, totalResources, type, false);
+  }
+
+  /**
+   * Compute the steady fair share of the given queues. The steady fair
+   * share is an allocation of shares considering all queues, i.e.,
+   * active and inactive.
+   *
+   * @param queues
+   * @param totalResources
+   * @param type
+   */
+  public static void computeSteadyShares(
+      Collection<? extends FSQueue> queues, Resource totalResources,
+      ResourceType type) {
+    computeSharesInternal(queues, totalResources, type, true);
   }
 
   /**
@@ -102,7 +118,7 @@ public class ComputeFairShares {
    */
   private static void computeSharesInternal(
       Collection<? extends Schedulable> schedulables, Resource totalResources,
-      ResourceType type) {
+      ResourceType type, boolean isSteadyShare) {
     if (schedulables.isEmpty()) {
       return;
     }
@@ -145,7 +161,13 @@ public class ComputeFairShares {
     }
     // Set the fair shares based on the value of R we've converged to
     for (Schedulable sched : schedulables) {
-      setResourceValue(computeShare(sched, right, type), sched.getFairShare(), type);
+      if (isSteadyShare) {
+        setResourceValue(computeShare(sched, right, type),
+            ((FSQueue) sched).getSteadyFairShare(), type);
+      } else {
+        setResourceValue(
+            computeShare(sched, right, type), sched.getFairShare(), type);
+      }
     }
   }
 

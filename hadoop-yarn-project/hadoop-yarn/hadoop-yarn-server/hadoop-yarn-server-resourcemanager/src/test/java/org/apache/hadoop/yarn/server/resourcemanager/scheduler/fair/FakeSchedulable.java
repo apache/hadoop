@@ -101,11 +101,6 @@ public class FakeSchedulable implements Schedulable {
   }
 
   @Override
-  public boolean isActive() {
-    return true;
-  }
-
-  @Override
   public Resource getDemand() {
     return null;
   }

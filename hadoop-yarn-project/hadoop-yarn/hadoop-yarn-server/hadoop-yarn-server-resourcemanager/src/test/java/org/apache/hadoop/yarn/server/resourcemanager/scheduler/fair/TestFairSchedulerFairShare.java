@@ -109,13 +109,15 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
 
     for (FSLeafQueue leaf : leafQueues) {
       if (leaf.getName().startsWith("root.parentA")) {
-        assertEquals(0, (double) leaf.getFairShare().getMemory() / nodeCapacity
-            * 100, 0);
+        assertEquals(0, (double) leaf.getFairShare().getMemory() / nodeCapacity,
+            0);
       } else if (leaf.getName().startsWith("root.parentB")) {
-        assertEquals(0, (double) leaf.getFairShare().getMemory() / nodeCapacity
-            * 100, 0.1);
+        assertEquals(0, (double) leaf.getFairShare().getMemory() / nodeCapacity,
+            0);
       }
     }
+
+    verifySteadyFairShareMemory(leafQueues, nodeCapacity);
   }
 
   @Test
@@ -135,14 +137,15 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
         100,
         (double) scheduler.getQueueManager()
             .getLeafQueue("root.parentA.childA1", false).getFairShare()
-            .getMemory()
-            / nodeCapacity * 100, 0.1);
+            .getMemory() / nodeCapacity * 100, 0.1);
     assertEquals(
         0,
         (double) scheduler.getQueueManager()
             .getLeafQueue("root.parentA.childA2", false).getFairShare()
-            .getMemory()
-            / nodeCapacity * 100, 0.1);
+            .getMemory() / nodeCapacity, 0.1);
+
+    verifySteadyFairShareMemory(scheduler.getQueueManager().getLeafQueues(),
+        nodeCapacity);
   }
 
   @Test
@@ -167,6 +170,9 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
               .getMemory()
               / nodeCapacity * 100, .9);
     }
+
+    verifySteadyFairShareMemory(scheduler.getQueueManager().getLeafQueues(),
+        nodeCapacity);
   }
 
   @Test
@@ -206,6 +212,9 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
             .getLeafQueue("root.parentB.childB1", false).getFairShare()
             .getMemory()
             / nodeCapacity * 100, .9);
+
+    verifySteadyFairShareMemory(scheduler.getQueueManager().getLeafQueues(),
+        nodeCapacity);
   }
 
   @Test
@@ -253,6 +262,9 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
             .getLeafQueue("root.parentA.childA2", false).getFairShare()
             .getMemory()
             / nodeCapacity * 100, 0.1);
+
+    verifySteadyFairShareMemory(scheduler.getQueueManager().getLeafQueues(),
+        nodeCapacity);
   }
 
   @Test
@@ -304,5 +316,45 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
             .getLeafQueue("root.parentB.childB1", false).getFairShare()
             .getVirtualCores()
             / nodeVCores * 100, .9);
+    Collection<FSLeafQueue> leafQueues = scheduler.getQueueManager()
+        .getLeafQueues();
+
+    for (FSLeafQueue leaf : leafQueues) {
+      if (leaf.getName().startsWith("root.parentA")) {
+        assertEquals(0.2,
+            (double) leaf.getSteadyFairShare().getMemory() / nodeMem, 0.001);
+        assertEquals(0.2,
+            (double) leaf.getSteadyFairShare().getVirtualCores() / nodeVCores,
+            0.001);
+      } else if (leaf.getName().startsWith("root.parentB")) {
+        assertEquals(0.05,
+            (double) leaf.getSteadyFairShare().getMemory() / nodeMem, 0.001);
+        assertEquals(0.1,
+            (double) leaf.getSteadyFairShare().getVirtualCores() / nodeVCores,
+            0.001);
+      }
+    }
+  }
+
+  /**
+   * Verify whether steady fair shares for all leaf queues still follow
+   * their weight, not related to active/inactive status.
+   *
+   * @param leafQueues
+   * @param nodeCapacity
+   */
+  private void verifySteadyFairShareMemory(Collection<FSLeafQueue> leafQueues,
+      int nodeCapacity) {
+    for (FSLeafQueue leaf : leafQueues) {
+      if (leaf.getName().startsWith("root.parentA")) {
+        assertEquals(0.2,
+            (double) leaf.getSteadyFairShare().getMemory() / nodeCapacity,
+            0.001);
+      } else if (leaf.getName().startsWith("root.parentB")) {
+        assertEquals(0.05,
+            (double) leaf.getSteadyFairShare().getMemory() / nodeCapacity,
+            0.001);
+      }
+    }
   }
 }
