@@ -346,6 +346,8 @@ Trunk (Unreleased)
 
     HDFS-6839. Fix TestCLI to expect new output. (clamb)
 
+    HDFS-6905. fs-encryption merge triggered release audit failures. (clamb via tucu)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
