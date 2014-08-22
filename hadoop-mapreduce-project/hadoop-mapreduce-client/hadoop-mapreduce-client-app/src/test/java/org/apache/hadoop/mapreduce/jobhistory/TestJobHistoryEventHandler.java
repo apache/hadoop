@@ -25,7 +25,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.never;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -53,6 +52,8 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -397,6 +398,33 @@ public class TestJobHistoryEventHandler {
     } finally {
       jheh.stop();
     }
+  }
+
+  @Test
+  public void testGetHistoryIntermediateDoneDirForUser() throws IOException {
+    // Test relative path
+    Configuration conf = new Configuration();
+    conf.set(JHAdminConfig.MR_HISTORY_INTERMEDIATE_DONE_DIR,
+        "/mapred/history/done_intermediate");
+    conf.set(MRJobConfig.USER_NAME, System.getProperty("user.name"));
+    String pathStr = JobHistoryUtils.getHistoryIntermediateDoneDirForUser(conf);
+    Assert.assertEquals("/mapred/history/done_intermediate/" +
+        System.getProperty("user.name"), pathStr);
+
+    // Test fully qualified path
+    // Create default configuration pointing to the minicluster
+    conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
+        dfsCluster.getURI().toString());
+    FileOutputStream os = new FileOutputStream(coreSitePath);
+    conf.writeXml(os);
+    os.close();
+    // Simulate execution under a non-default namenode
+    conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
+            "file:///");
+    pathStr = JobHistoryUtils.getHistoryIntermediateDoneDirForUser(conf);
+    Assert.assertEquals(dfsCluster.getURI().toString() +
+        "/mapred/history/done_intermediate/" + System.getProperty("user.name"),
+        pathStr);
   }
 
   private void queueEvent(JHEvenHandlerForTest jheh, JobHistoryEvent event) {

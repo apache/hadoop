@@ -96,6 +96,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6012. DBInputSplit creates invalid ranges on Oracle. 
     (Wei Yan via kasha)
 
+    MAPREDUCE-6044. Fully qualified intermediate done dir path breaks per-user dir
+    creation on Windows. (zjshen)
+
 Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES
