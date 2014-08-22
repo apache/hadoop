@@ -425,6 +425,8 @@ Release 2.6.0 - UNRELEASED
       HDFS-2975. Rename with overwrite flag true can make NameNode to stuck in safemode 
       on NN (crash + restart). (Yi Liu via umamahesh)
 
+      HDFS-6905. fs-encryption merge triggered release audit failures. (clamb via tucu)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
