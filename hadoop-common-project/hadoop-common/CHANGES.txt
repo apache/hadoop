@@ -311,6 +311,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10488. TestKeyProviderFactory fails randomly. (tucu)
 
+    HADOOP-10989. Work around buggy getgrouplist() implementations on Linux that
+    return 0 on failure. (cnauroth)
+
 Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES
