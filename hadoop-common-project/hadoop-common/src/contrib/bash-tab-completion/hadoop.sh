@@ -26,7 +26,7 @@ _hadoop() {
   COMPREPLY=()
   cur=${COMP_WORDS[COMP_CWORD]}
   prev=${COMP_WORDS[COMP_CWORD-1]}  
-  script=`which ${COMP_WORDS[0]}`
+  script=$(which ${COMP_WORDS[0]})
   
   # Bash lets you tab complete things even if the script doesn't
   # exist (or isn't executable). Check to make sure it is, as we
@@ -36,9 +36,9 @@ _hadoop() {
     1)
       # Completing the first argument (the command).
 
-      temp=`$script | grep -n "^\s*or"`;
-      temp=`$script | head -n $((${temp%%:*} - 1)) | awk '/^ / {print $1}' | sort | uniq`;
-      COMPREPLY=(`compgen -W "${temp}" -- ${cur}`);
+      temp=$($script | grep -n "^\s*or");
+      temp=$($script | head -n $((${temp%%:*} - 1)) | awk '/^ / {print $1}' | sort | uniq);
+      COMPREPLY=($(compgen -W "${temp}" -- ${cur}));
       return 0;;
 
     2)
@@ -51,21 +51,21 @@ _hadoop() {
       dfs | dfsadmin | fs | job | pipes)
         # One option per line, enclosed in square brackets
 
-        temp=`$script ${COMP_WORDS[1]} 2>&1 | awk '/^[ \t]*\[/ {gsub("[[\\]]", ""); print $1}'`;
-        COMPREPLY=(`compgen -W "${temp}" -- ${cur}`);
+        temp=$($script ${COMP_WORDS[1]} 2>&1 | awk '/^[ \t]*\[/ {gsub("[[\\]]", ""); print $1}');
+        COMPREPLY=($(compgen -W "${temp}" -- ${cur}));
         return 0;;
 
       jar)
         # Any (jar) file
 
-        COMPREPLY=(`compgen -A file -- ${cur}`);
+        COMPREPLY=($(compgen -A file -- ${cur}));
         return 0;;
 
       namenode)
         # All options specified in one line,
         # enclosed in [] and separated with |
-        temp=`$script ${COMP_WORDS[1]} -help 2>&1 | grep Usage: | cut -d '[' -f 2- | awk '{gsub("] \\| \\[|]", " "); print $0}'`;
-        COMPREPLY=(`compgen -W "${temp}" -- ${cur}`);
+        temp=$($script ${COMP_WORDS[1]} -help 2>&1 | grep Usage: | cut -d '[' -f 2- | awk '{gsub("] \\| \\[|]", " "); print $0}');
+        COMPREPLY=($(compgen -W "${temp}" -- ${cur}));
         return 0;;
 
       *)
@@ -83,26 +83,24 @@ _hadoop() {
         # Pull the list of options, grep for the one the user is trying to use,
         # and then select the description of the relevant argument
         temp=$((${COMP_CWORD} - 1));
-        temp=`$script ${COMP_WORDS[1]} 2>&1 | grep -- "${COMP_WORDS[2]} " | awk '{gsub("[[ \\]]", ""); print $0}' | cut -d '<' -f ${temp}`;
+        temp=$($script ${COMP_WORDS[1]} 2>&1 | grep -- "${COMP_WORDS[2]} " | awk '{gsub("[[ \\]]", ""); print $0}' | cut -d '<' -f ${temp} | cut -d '>' -f 1);
 
         if [ ${#temp} -lt 1 ]; then
           # No match
           return 1;
         fi;
 
-        temp=${temp:0:$((${#temp} - 1))};
-
         # Now do completion based on the argument
         case $temp in
         path | src | dst)
           # DFS path completion
-          temp=`$script ${COMP_WORDS[1]} -ls "${cur}*" 2>&1 | grep -vE '^Found ' | cut -f 1 | awk '{gsub("^.* ", ""); print $0;}'`
-          COMPREPLY=(`compgen -W "${temp}" -- ${cur}`);
+          temp=$($script ${COMP_WORDS[1]} -ls -d "${cur}*" 2>/dev/null | grep -vE '^Found ' | cut -f 1 | awk '{gsub("^.* ", ""); print $0;}');
+          COMPREPLY=($(compgen -W "${temp}" -- ${cur}));
           return 0;;
 
         localsrc | localdst)
           # Local path completion
-          COMPREPLY=(`compgen -A file -- ${cur}`);
+          COMPREPLY=($(compgen -A file -- ${cur}));
           return 0;;
 
         *)
