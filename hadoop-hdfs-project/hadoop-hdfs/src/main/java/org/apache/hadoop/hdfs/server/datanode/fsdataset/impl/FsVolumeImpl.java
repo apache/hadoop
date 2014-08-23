@@ -29,6 +29,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DF;
@@ -49,7 +50,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * It uses the {@link FsDatasetImpl} object for synchronization.
  */
 @InterfaceAudience.Private
-class FsVolumeImpl implements FsVolumeSpi {
+@VisibleForTesting
+public class FsVolumeImpl implements FsVolumeSpi {
   private final FsDatasetImpl dataset;
   private final String storageID;
   private final StorageType storageType;
@@ -58,6 +60,12 @@ class FsVolumeImpl implements FsVolumeSpi {
   private final File currentDir;    // <StorageDirectory>/current
   private final DF usage;           
   private final long reserved;
+
+  // Capacity configured. This is useful when we want to
+  // limit the visible capacity for tests. If negative, then we just
+  // query from the filesystem.
+  protected long configuredCapacity;
+
   /**
    * Per-volume worker pool that processes new blocks to cache.
    * The maximum number of workers per volume is bounded (configurable via
@@ -77,20 +85,26 @@ class FsVolumeImpl implements FsVolumeSpi {
     File parent = currentDir.getParentFile();
     this.usage = new DF(parent, conf);
     this.storageType = storageType;
+    this.configuredCapacity = -1;
+    cacheExecutor = initializeCacheExecutor(parent);
+  }
+
+  protected ThreadPoolExecutor initializeCacheExecutor(File parent) {
     final int maxNumThreads = dataset.datanode.getConf().getInt(
         DFSConfigKeys.DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_KEY,
-        DFSConfigKeys.DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_DEFAULT
-        );
+        DFSConfigKeys.DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_DEFAULT);
+
     ThreadFactory workerFactory = new ThreadFactoryBuilder()
         .setDaemon(true)
         .setNameFormat("FsVolumeImplWorker-" + parent.toString() + "-%d")
         .build();
-    cacheExecutor = new ThreadPoolExecutor(
+    ThreadPoolExecutor executor = new ThreadPoolExecutor(
         1, maxNumThreads,
         60, TimeUnit.SECONDS,
         new LinkedBlockingQueue<Runnable>(),
         workerFactory);
-    cacheExecutor.allowCoreThreadTimeOut(true);
+    executor.allowCoreThreadTimeOut(true);
+    return executor;
   }
   
   File getCurrentDir() {
@@ -129,9 +143,24 @@ class FsVolumeImpl implements FsVolumeSpi {
    * reserved capacity.
    * @return the unreserved number of bytes left in this filesystem. May be zero.
    */
-  long getCapacity() {
-    long remaining = usage.getCapacity() - reserved;
-    return remaining > 0 ? remaining : 0;
+  @VisibleForTesting
+  public long getCapacity() {
+    if (configuredCapacity < 0) {
+      long remaining = usage.getCapacity() - reserved;
+      return remaining > 0 ? remaining : 0;
+    }
+
+    return configuredCapacity;
+  }
+
+  /**
+   * This function MUST NOT be used outside of tests.
+   *
+   * @param capacity
+   */
+  @VisibleForTesting
+  public void setCapacityForTesting(long capacity) {
+    this.configuredCapacity = capacity;
   }
 
   @Override
