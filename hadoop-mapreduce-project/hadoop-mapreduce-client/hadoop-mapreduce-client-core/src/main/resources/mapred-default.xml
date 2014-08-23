@@ -185,11 +185,42 @@
   </description>
 </property>
 
+<property>
+  <name>mapreduce.map.memory.mb</name>
+  <value>1024</value>
+  <description>The amount of memory to request from the scheduler for each
+  map task.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.map.cpu.vcores</name>
+  <value>1</value>
+  <description>The number of virtual cores to request from the scheduler for
+  each map task.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.reduce.memory.mb</name>
+  <value>1024</value>
+  <description>The amount of memory to request from the scheduler for each
+  reduce task.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.reduce.cpu.vcores</name>
+  <value>1</value>
+  <description>The number of virtual cores to request from the scheduler for
+  each reduce task.
+  </description>
+</property>
 
 <property>
   <name>mapred.child.java.opts</name>
   <value>-Xmx200m</value>
-  <description>Java opts for the task tracker child processes.  
+  <description>Java opts for the task processes.
   The following symbol, if present, will be interpolated: @taskid@ is replaced 
   by current TaskID. Any other occurrences of '@' will go unchanged.
   For example, to enable verbose gc logging to a file named for the taskid in
@@ -203,16 +234,54 @@
   </description>
 </property>
 
+<!-- This is commented out so that it won't override mapred.child.java.opts.
+<property>
+  <name>mapreduce.map.java.opts</name>
+  <value></value>
+  <description>Java opts only for the child processes that are maps. If set,
+  this will be used instead of mapred.child.java.opts.
+  </description>
+</property>
+-->
+
+<!-- This is commented out so that it won't override mapred.child.java.opts.
+<property>
+  <name>mapreduce.reduce.java.opts</name>
+  <value></value>
+  <description>Java opts only for the child processes that are reduces. If set,
+  this will be used instead of mapred.child.java.opts.
+  </description>
+</property>
+-->
+
 <property>
   <name>mapred.child.env</name>
   <value></value>
-  <description>User added environment variables for the task tracker child 
-  processes. Example :
+  <description>User added environment variables for the task processes.
+  Example :
   1) A=foo  This will set the env variable A to foo
   2) B=$B:c This is inherit nodemanager's B env variable on Unix.
   3) B=%B%;c This is inherit nodemanager's B env variable on Windows.
   </description>
 </property>
+
+<!-- This is commented out so that it won't override mapred.child.env.
+<property>
+  <name>mapreduce.map.env</name>
+  <value></value>
+  <description>User added environment variables for the map task processes.
+  </description>
+</property>
+-->
+
+<!-- This is commented out so that it won't override mapred.child.env.
+<property>
+  <name>mapreduce.reduce.env</name>
+  <value></value>
+  <description>User added environment variables for the reduce task processes.
+  </description>
+</property>
+-->
 
 <property>
   <name>mapreduce.admin.user.env</name>
@@ -408,7 +477,9 @@
   <name>mapreduce.job.map.output.collector.class</name>
   <value>org.apache.hadoop.mapred.MapTask$MapOutputBuffer</value>
   <description>
-    It defines the MapOutputCollector implementation to use.
+    The MapOutputCollector implementation(s) to use. This may be a comma-separated
+    list of class names, in which case the map task will try to initialize each
+    of the collectors in turn. The first to successfully initialize will be used.
   </description>
 </property>
  
@@ -488,6 +559,12 @@
   </description>
 </property>
 
+<property>
+  <name>mapreduce.input.lineinputformat.linespermap</name>
+  <value>1</value>
+  <description>When using NLineInputFormat, the number of lines of input data
+  to include in each split.</description>
+</property>
 
 
 <property>
@@ -922,6 +999,14 @@
 </property>
 
 <property>
+  <name>mapreduce.task.combine.progress.records</name>
+  <value>10000</value>
+  <description> The number of records to process during combine output collection
+   before sending a progress notification.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.job.reduce.slowstart.completedmaps</name>
   <value>0.05</value>
   <description>Fraction of the number of maps in the job which should be 
@@ -1225,13 +1310,13 @@
 
 <property>
    <name>mapreduce.job.classloader.system.classes</name>
-   <value>java.,javax.,org.w3c.dom.,org.xml.sax.,org.apache.commons.logging.,
-          org.apache.log4j.,org.apache.hadoop.,core-default.xml,
-          hdfs-default.xml,mapred-default.xml,yarn-default.xml</value>
-  <description>A comma-separated list of classes that should be loaded from the
-    system classpath, not the user-supplied JARs, when mapreduce.job.classloader
-    is enabled. Names ending in '.' (period) are treated as package names,
-    and names starting with a '-' are treated as negative matches.
+   <value></value>
+  <description>Used to override the default definition of the system classes for
+    the job classloader. The system classes are a comma-separated list of
+    classes that should be loaded from the system classpath, not the
+    user-supplied JARs, when mapreduce.job.classloader is enabled. Names ending
+    in '.' (period) are treated as package names, and names starting with a '-'
+    are treated as negative matches.
   </description>
 </property>
 

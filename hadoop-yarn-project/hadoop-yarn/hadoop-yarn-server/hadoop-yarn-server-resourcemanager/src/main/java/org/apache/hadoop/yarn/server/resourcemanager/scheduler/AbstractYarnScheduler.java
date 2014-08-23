@@ -273,6 +273,19 @@ public abstract class AbstractYarnScheduler
       SchedulerApplicationAttempt schedulerAttempt =
           schedulerApp.getCurrentAppAttempt();
 
+      if (!rmApp.getApplicationSubmissionContext()
+        .getKeepContainersAcrossApplicationAttempts()) {
+        // Do not recover containers for stopped attempt or previous attempt.
+        if (schedulerAttempt.isStopped()
+            || !schedulerAttempt.getApplicationAttemptId().equals(
+              container.getContainerId().getApplicationAttemptId())) {
+          LOG.info("Skip recovering container " + container
+              + " for already stopped attempt.");
+          killOrphanContainerOnNode(nm, container);
+          continue;
+        }
+      }
+
       // create container
       RMContainer rmContainer = recoverAndCreateContainer(container, nm);
 

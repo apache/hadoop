@@ -71,10 +71,15 @@ Hadoop MapReduce Next Generation - Pluggable Shuffle and Pluggable Sort
 *--------------------------------------+---------------------+-----------------+
 | <<<mapreduce.job.reduce.shuffle.consumer.plugin.class>>> | <<<org.apache.hadoop.mapreduce.task.reduce.Shuffle>>>         | The <<<ShuffleConsumerPlugin>>> implementation to use |
 *--------------------------------------+---------------------+-----------------+
-| <<<mapreduce.job.map.output.collector.class>>>   | <<<org.apache.hadoop.mapred.MapTask$MapOutputBuffer>>> | The <<<MapOutputCollector>>> implementation to use |
+| <<<mapreduce.job.map.output.collector.class>>>   | <<<org.apache.hadoop.mapred.MapTask$MapOutputBuffer>>> | The <<<MapOutputCollector>>> implementation(s) to use |
 *--------------------------------------+---------------------+-----------------+
 
   These properties can also be set in the <<<mapred-site.xml>>> to change the default values for all jobs.
+
+  The collector class configuration may specify a comma-separated list of collector implementations.
+  In this case, the map task will attempt to instantiate each in turn until one of the
+  implementations successfully initializes. This can be useful if a given collector
+  implementation is only compatible with certain types of keys or values, for example.
 
 ** NodeManager Configuration properties, <<<yarn-site.xml>>> in all nodes:
 
@@ -91,4 +96,3 @@ Hadoop MapReduce Next Generation - Pluggable Shuffle and Pluggable Sort
   <<<yarn.nodemanager.aux-services>>> property, for example <<<mapred.shufflex>>>.
   Then the property defining the corresponding class must be
   <<<yarn.nodemanager.aux-services.mapreduce_shufflex.class>>>.
-  

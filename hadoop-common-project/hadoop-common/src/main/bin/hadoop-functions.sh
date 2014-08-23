@@ -450,7 +450,8 @@ function hadoop_add_to_classpath_mapred
 function hadoop_add_to_classpath_userpath
 {
   # Add the user-specified HADOOP_CLASSPATH to the
-  # official CLASSPATH env var.
+  # official CLASSPATH env var if HADOOP_USE_CLIENT_CLASSLOADER
+  # is not set.
   # Add it first or last depending on if user has
   # set env-var HADOOP_USER_CLASSPATH_FIRST
   # we'll also dedupe it, because we're cool like that.
@@ -469,14 +470,16 @@ function hadoop_add_to_classpath_userpath
     done
     let j=c-1
     
-    if [[ -z "${HADOOP_USER_CLASSPATH_FIRST}" ]]; then
-      for ((i=j; i>=0; i--)); do
-        hadoop_add_classpath "${array[$i]}" before
-      done
-    else
-      for ((i=0; i<=j; i++)); do
-        hadoop_add_classpath "${array[$i]}" after
-      done
+    if [[ -z "${HADOOP_USE_CLIENT_CLASSLOADER}" ]]; then
+      if [[ -z "${HADOOP_USER_CLASSPATH_FIRST}" ]]; then
+        for ((i=j; i>=0; i--)); do
+          hadoop_add_classpath "${array[$i]}" before
+        done
+      else
+        for ((i=0; i<=j; i++)); do
+          hadoop_add_classpath "${array[$i]}" after
+        done
+      fi
     fi
   fi
 }

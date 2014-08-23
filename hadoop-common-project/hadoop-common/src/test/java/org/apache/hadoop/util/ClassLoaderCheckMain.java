@@ -15,25 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode;
-
-import java.io.IOException;
-
-import com.google.common.annotations.VisibleForTesting;
+package org.apache.hadoop.util;
 
 /**
- * Used to inject certain faults for testing.
+ * Test class used by {@link TestRunJar} to verify that it is loaded by the
+ * {@link ApplicationClassLoader}.
  */
-public class EncryptionFaultInjector {
-  @VisibleForTesting
-  public static EncryptionFaultInjector instance =
-      new EncryptionFaultInjector();
-
-  @VisibleForTesting
-  public static EncryptionFaultInjector getInstance() {
-    return instance;
+public class ClassLoaderCheckMain {
+  public static void main(String[] args) {
+    // ClassLoaderCheckMain should be loaded by the application classloader
+    ClassLoaderCheck.checkClassLoader(ClassLoaderCheckMain.class, true);
+    // ClassLoaderCheckSecond should NOT be loaded by the application
+    // classloader
+    ClassLoaderCheck.checkClassLoader(ClassLoaderCheckSecond.class, false);
+    // ClassLoaderCheckThird should be loaded by the application classloader
+    ClassLoaderCheck.checkClassLoader(ClassLoaderCheckThird.class, true);
   }
-
-  @VisibleForTesting
-  public void startFileAfterGenerateKey() throws IOException {}
 }

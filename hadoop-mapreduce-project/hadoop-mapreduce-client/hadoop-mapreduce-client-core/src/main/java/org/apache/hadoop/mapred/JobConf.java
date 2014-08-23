@@ -151,7 +151,9 @@ public class JobConf extends Configuration {
   /**
    * A value which if set for memory related configuration options,
    * indicates that the options are turned off.
+   * Deprecated because it makes no sense in the context of MR2.
    */
+  @Deprecated
   public static final long DISABLED_MEMORY_LIMIT = -1L;
 
   /**
@@ -1809,27 +1811,19 @@ public class JobConf extends Configuration {
    * Get memory required to run a map task of the job, in MB.
    * 
    * If a value is specified in the configuration, it is returned.
-   * Else, it returns {@link #DISABLED_MEMORY_LIMIT}.
+   * Else, it returns {@link JobContext#DEFAULT_MAP_MEMORY_MB}.
    * <p/>
    * For backward compatibility, if the job configuration sets the
    * key {@link #MAPRED_TASK_MAXVMEM_PROPERTY} to a value different
    * from {@link #DISABLED_MEMORY_LIMIT}, that value will be used
    * after converting it from bytes to MB.
    * @return memory required to run a map task of the job, in MB,
-   *          or {@link #DISABLED_MEMORY_LIMIT} if unset.
    */
   public long getMemoryForMapTask() {
     long value = getDeprecatedMemoryValue();
-    if (value == DISABLED_MEMORY_LIMIT) {
-      value = normalizeMemoryConfigValue(
-                getLong(JobConf.MAPREDUCE_JOB_MAP_MEMORY_MB_PROPERTY,
-                          DISABLED_MEMORY_LIMIT));
-    }
-    // In case that M/R 1.x applications use the old property name
-    if (value == DISABLED_MEMORY_LIMIT) {
-      value = normalizeMemoryConfigValue(
-                getLong(JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY,
-                          DISABLED_MEMORY_LIMIT));
+    if (value < 0) {
+      return getLong(JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY,
+          JobContext.DEFAULT_MAP_MEMORY_MB);
     }
     return value;
   }
@@ -1844,27 +1838,19 @@ public class JobConf extends Configuration {
    * Get memory required to run a reduce task of the job, in MB.
    * 
    * If a value is specified in the configuration, it is returned.
-   * Else, it returns {@link #DISABLED_MEMORY_LIMIT}.
+   * Else, it returns {@link JobContext#DEFAULT_REDUCE_MEMORY_MB}.
    * <p/>
    * For backward compatibility, if the job configuration sets the
    * key {@link #MAPRED_TASK_MAXVMEM_PROPERTY} to a value different
    * from {@link #DISABLED_MEMORY_LIMIT}, that value will be used
    * after converting it from bytes to MB.
-   * @return memory required to run a reduce task of the job, in MB,
-   *          or {@link #DISABLED_MEMORY_LIMIT} if unset.
+   * @return memory required to run a reduce task of the job, in MB.
    */
   public long getMemoryForReduceTask() {
     long value = getDeprecatedMemoryValue();
-    if (value == DISABLED_MEMORY_LIMIT) {
-      value = normalizeMemoryConfigValue(
-                getLong(JobConf.MAPREDUCE_JOB_REDUCE_MEMORY_MB_PROPERTY,
-                        DISABLED_MEMORY_LIMIT));
-    }
-    // In case that M/R 1.x applications use the old property name
-    if (value == DISABLED_MEMORY_LIMIT) {
-      value = normalizeMemoryConfigValue(
-                getLong(JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY,
-                        DISABLED_MEMORY_LIMIT));
+    if (value < 0) {
+      return getLong(JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY,
+          JobContext.DEFAULT_REDUCE_MEMORY_MB);
     }
     return value;
   }
@@ -1876,8 +1862,7 @@ public class JobConf extends Configuration {
   private long getDeprecatedMemoryValue() {
     long oldValue = getLong(MAPRED_TASK_MAXVMEM_PROPERTY, 
         DISABLED_MEMORY_LIMIT);
-    oldValue = normalizeMemoryConfigValue(oldValue);
-    if (oldValue != DISABLED_MEMORY_LIMIT) {
+    if (oldValue > 0) {
       oldValue /= (1024*1024);
     }
     return oldValue;
@@ -1921,39 +1906,6 @@ public class JobConf extends Configuration {
     return val;
   }
 
-  /**
-   * Compute the number of slots required to run a single map task-attempt
-   * of this job.
-   * @param slotSizePerMap cluster-wide value of the amount of memory required
-   *                       to run a map-task
-   * @return the number of slots required to run a single map task-attempt
-   *          1 if memory parameters are disabled.
-   */
-  int computeNumSlotsPerMap(long slotSizePerMap) {
-    if ((slotSizePerMap==DISABLED_MEMORY_LIMIT) ||
-        (getMemoryForMapTask()==DISABLED_MEMORY_LIMIT)) {
-      return 1;
-    }
-    return (int)(Math.ceil((float)getMemoryForMapTask() / (float)slotSizePerMap));
-  }
-  
-  /**
-   * Compute the number of slots required to run a single reduce task-attempt
-   * of this job.
-   * @param slotSizePerReduce cluster-wide value of the amount of memory 
-   *                          required to run a reduce-task
-   * @return the number of slots required to run a single reduce task-attempt
-   *          1 if memory parameters are disabled
-   */
-  int computeNumSlotsPerReduce(long slotSizePerReduce) {
-    if ((slotSizePerReduce==DISABLED_MEMORY_LIMIT) ||
-        (getMemoryForReduceTask()==DISABLED_MEMORY_LIMIT)) {
-      return 1;
-    }
-    return 
-    (int)(Math.ceil((float)getMemoryForReduceTask() / (float)slotSizePerReduce));
-  }
-
   /** 
    * Find a jar that contains a class of the same name, if any.
    * It will return a jar file, even if that is not the first thing
@@ -1975,14 +1927,12 @@ public class JobConf extends Configuration {
    * set for map and reduce tasks of a job, in MB. 
    * <p/>
    * For backward compatibility, if the job configuration sets the
-   * key {@link #MAPRED_TASK_MAXVMEM_PROPERTY} to a value different
-   * from {@link #DISABLED_MEMORY_LIMIT}, that value is returned. 
+   * key {@link #MAPRED_TASK_MAXVMEM_PROPERTY}, that value is returned. 
    * Otherwise, this method will return the larger of the values returned by 
    * {@link #getMemoryForMapTask()} and {@link #getMemoryForReduceTask()}
    * after converting them into bytes.
    *
-   * @return Memory required to run a task of this job, in bytes,
-   *          or {@link #DISABLED_MEMORY_LIMIT}, if unset.
+   * @return Memory required to run a task of this job, in bytes.
    * @see #setMaxVirtualMemoryForTask(long)
    * @deprecated Use {@link #getMemoryForMapTask()} and
    *             {@link #getMemoryForReduceTask()}
@@ -1993,15 +1943,8 @@ public class JobConf extends Configuration {
       "getMaxVirtualMemoryForTask() is deprecated. " +
       "Instead use getMemoryForMapTask() and getMemoryForReduceTask()");
 
-    long value = getLong(MAPRED_TASK_MAXVMEM_PROPERTY, DISABLED_MEMORY_LIMIT);
-    value = normalizeMemoryConfigValue(value);
-    if (value == DISABLED_MEMORY_LIMIT) {
-      value = Math.max(getMemoryForMapTask(), getMemoryForReduceTask());
-      value = normalizeMemoryConfigValue(value);
-      if (value != DISABLED_MEMORY_LIMIT) {
-        value *= 1024*1024;
-      }
-    }
+    long value = getLong(MAPRED_TASK_MAXVMEM_PROPERTY,
+        Math.max(getMemoryForMapTask(), getMemoryForReduceTask()) * 1024 * 1024);
     return value;
   }
 
@@ -2027,9 +1970,8 @@ public class JobConf extends Configuration {
   public void setMaxVirtualMemoryForTask(long vmem) {
     LOG.warn("setMaxVirtualMemoryForTask() is deprecated."+
       "Instead use setMemoryForMapTask() and setMemoryForReduceTask()");
-    if(vmem != DISABLED_MEMORY_LIMIT && vmem < 0) {
-      setMemoryForMapTask(DISABLED_MEMORY_LIMIT);
-      setMemoryForReduceTask(DISABLED_MEMORY_LIMIT);
+    if (vmem < 0) {
+      throw new IllegalArgumentException("Task memory allocation may not be < 0");
     }
 
     if(get(JobConf.MAPRED_TASK_MAXVMEM_PROPERTY) == null) {

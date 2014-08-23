@@ -51,6 +51,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
+import org.apache.hadoop.util.ApplicationClassLoader;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -58,7 +59,6 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.util.ApplicationClassLoader;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -514,7 +514,8 @@ public class TestMRApps {
   @Test
   public void testSystemClasses() {
     final List<String> systemClasses =
-        Arrays.asList(MRApps.getSystemClasses(new Configuration()));
+        Arrays.asList(StringUtils.getTrimmedStrings(
+        ApplicationClassLoader.DEFAULT_SYSTEM_CLASSES));
     for (String defaultXml : DEFAULT_XMLS) {
       assertTrue(defaultXml + " must be system resource",
           ApplicationClassLoader.isSystemClass(defaultXml, systemClasses));

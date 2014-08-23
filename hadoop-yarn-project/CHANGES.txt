@@ -18,6 +18,8 @@ Trunk - Unreleased
     YARN-2216 TestRMApplicationHistoryWriter sometimes fails in trunk.
     (Zhijie Shen via xgong)
 
+    YARN-2436. [post-HADOOP-9902] yarn application help doesn't work (aw)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -52,6 +54,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2174. Enable HTTPs for the writer REST API of TimelineServer.
     (Zhijie Shen via jianhe)
+
+    YARN-2393. FairScheduler: Add the notion of steady fair share. 
+    (Wei Yan via kasha)
 
   IMPROVEMENTS
 
@@ -228,6 +233,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2424. LCE should support non-cgroups, non-secure mode (Chris Douglas 
     via aw)
+
+    YARN-2434. RM should not recover containers from previously failed attempt
+    when AM restart is not enabled (Jian He via jlowe)
 
 Release 2.5.0 - 2014-08-11
 

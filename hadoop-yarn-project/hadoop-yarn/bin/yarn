@@ -73,6 +73,7 @@ case "${COMMAND}" in
   application|applicationattempt|container)
     CLASS=org.apache.hadoop.yarn.client.cli.ApplicationCLI
     YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
+    set -- "${COMMAND}" "$@"
   ;;
   classpath)
     hadoop_finalize

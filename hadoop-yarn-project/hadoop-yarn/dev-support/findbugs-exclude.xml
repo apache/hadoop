@@ -344,4 +344,11 @@
       <Class name="org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider"/>
       <Bug pattern="DC_DOUBLECHECK" />
   </Match>
+
+  <!-- ApplicationClassLoader is deprecated and moved to hadoop-common; ignore
+       warning on the identical name as it should be removed later -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.util.ApplicationClassLoader"/>
+    <Bug pattern="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS"/>
+  </Match>
 </FindBugsFilter>

@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 @Unstable
 public abstract class FSQueue implements Queue, Schedulable {
   private Resource fairShare = Resources.createResource(0, 0);
+  private Resource steadyFairShare = Resources.createResource(0, 0);
   private final String name;
   protected final FairScheduler scheduler;
   private final FSQueueMetrics metrics;
@@ -151,7 +152,17 @@ public abstract class FSQueue implements Queue, Schedulable {
     this.fairShare = fairShare;
     metrics.setFairShare(fairShare);
   }
-  
+
+  /** Get the steady fair share assigned to this Schedulable. */
+  public Resource getSteadyFairShare() {
+    return steadyFairShare;
+  }
+
+  public void setSteadyFairShare(Resource steadyFairShare) {
+    this.steadyFairShare = steadyFairShare;
+    metrics.setSteadyFairShare(steadyFairShare);
+  }
+
   public boolean hasAccess(QueueACL acl, UserGroupInformation user) {
     return scheduler.getAllocationConfiguration().hasAccess(name, acl, user);
   }
@@ -161,7 +172,7 @@ public abstract class FSQueue implements Queue, Schedulable {
    * queue's current share
    */
   public abstract void recomputeShares();
-  
+
   /**
    * Gets the children of this queue, if any.
    */
@@ -194,7 +205,9 @@ public abstract class FSQueue implements Queue, Schedulable {
     return true;
   }
 
-  @Override
+  /**
+   * Returns true if queue has at least one app running.
+   */
   public boolean isActive() {
     return getNumRunnableApps() > 0;
   }

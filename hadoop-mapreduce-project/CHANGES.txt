@@ -187,6 +187,12 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5906. Inconsistent configuration in property
       "mapreduce.reduce.shuffle.input.buffer.percent" (Akira AJISAKA via aw)
 
+    MAPREDUCE-5974. Allow specifying multiple MapOutputCollectors with 
+    fallback. (Todd Lipcon via kasha)
+
+    MAPREDUCE-5130. Add missing job config options to mapred-default.xml
+    (Ray Chiang via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -248,6 +254,9 @@ Release 2.6.0 - UNRELEASED
 
     MAPREDUCE-6012. DBInputSplit creates invalid ranges on Oracle. 
     (Wei Yan via kasha)
+
+    MAPREDUCE-6044. Fully qualified intermediate done dir path breaks per-user dir
+    creation on Windows. (zjshen)
 
 Release 2.5.0 - 2014-08-11
 
