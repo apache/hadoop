@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 
 
@@ -105,7 +106,7 @@ public class TestBlockHasMultipleReplicasOnSameDN {
     DataNode dn = cluster.getDataNodes().get(0);
     DatanodeRegistration dnReg = dn.getDNRegistrationForBP(bpid);
     StorageBlockReport reports[] =
-        new StorageBlockReport[cluster.getStoragesPerDatanode()];
+        new StorageBlockReport[MiniDFSCluster.DIRS_PER_DATANODE];
 
     ArrayList<Block> blocks = new ArrayList<Block>();
 
@@ -113,7 +114,7 @@ public class TestBlockHasMultipleReplicasOnSameDN {
       blocks.add(locatedBlock.getBlock().getLocalBlock());
     }
 
-    for (int i = 0; i < cluster.getStoragesPerDatanode(); ++i) {
+    for (int i = 0; i < MiniDFSCluster.DIRS_PER_DATANODE; ++i) {
       BlockListAsLongs bll = new BlockListAsLongs(blocks, null);
       FsVolumeSpi v = dn.getFSDataset().getVolumes().get(i);
       DatanodeStorage dns = new DatanodeStorage(v.getStorageID());
