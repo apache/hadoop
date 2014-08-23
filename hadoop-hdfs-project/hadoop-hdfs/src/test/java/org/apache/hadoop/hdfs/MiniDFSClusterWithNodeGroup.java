@@ -22,7 +22,6 @@ import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,8 +31,6 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter.SecureResources;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.StaticMapping;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -55,15 +52,11 @@ public class MiniDFSClusterWithNodeGroup extends MiniDFSCluster {
   public synchronized void startDataNodes(Configuration conf, int numDataNodes,
       StorageType[][] storageTypes, boolean manageDfsDirs, StartupOption operation,
       String[] racks, String[] nodeGroups, String[] hosts,
-      long[][] storageCapacities,
       long[] simulatedCapacities,
       boolean setupHostsFile,
       boolean checkDataNodeAddrConfig,
       boolean checkDataNodeHostConfig) throws IOException {
-
-    assert storageCapacities == null || simulatedCapacities == null;
     assert storageTypes == null || storageTypes.length == numDataNodes;
-    assert storageCapacities == null || storageCapacities.length == numDataNodes;
 
     if (operation == StartupOption.RECOVER) {
       return;
@@ -116,7 +109,6 @@ public class MiniDFSClusterWithNodeGroup extends MiniDFSCluster {
     operation != StartupOption.ROLLBACK) ?
         null : new String[] {operation.getName()};
 
-    DataNode[] dns = new DataNode[numDataNodes];
     for (int i = curDatanodesNum; i < curDatanodesNum+numDataNodes; i++) {
       Configuration dnConf = new HdfsConfiguration(conf);
       // Set up datanode address
@@ -189,23 +181,10 @@ public class MiniDFSClusterWithNodeGroup extends MiniDFSCluster {
       }
       dn.runDatanodeDaemon();
       dataNodes.add(new DataNodeProperties(dn, newconf, dnArgs, secureResources, dn.getIpcPort()));
-      dns[i - curDatanodesNum] = dn;
     }
     curDatanodesNum += numDataNodes;
     this.numDataNodes += numDataNodes;
     waitActive();
-
-    if (storageCapacities != null) {
-      for (int i = curDatanodesNum; i < curDatanodesNum+numDataNodes; ++i) {
-        List<? extends FsVolumeSpi> volumes = dns[i].getFSDataset().getVolumes();
-        assert volumes.size() == storagesPerDatanode;
-
-        for (int j = 0; j < volumes.size(); ++j) {
-          FsVolumeImpl volume = (FsVolumeImpl) volumes.get(j);
-          volume.setCapacityForTesting(storageCapacities[i][j]);
-        }
-      }
-    }
   }
 
   public synchronized void startDataNodes(Configuration conf, int numDataNodes, 
@@ -214,7 +193,7 @@ public class MiniDFSClusterWithNodeGroup extends MiniDFSCluster {
       long[] simulatedCapacities,
       boolean setupHostsFile) throws IOException {
     startDataNodes(conf, numDataNodes, null, manageDfsDirs, operation, racks, nodeGroups,
-        hosts, null, simulatedCapacities, setupHostsFile, false, false);
+        hosts, simulatedCapacities, setupHostsFile, false, false);
   }
 
   public void startDataNodes(Configuration conf, int numDataNodes, 
@@ -230,14 +209,13 @@ public class MiniDFSClusterWithNodeGroup extends MiniDFSCluster {
   public synchronized void startDataNodes(Configuration conf, int numDataNodes, 
       StorageType[][] storageTypes, boolean manageDfsDirs, StartupOption operation,
       String[] racks, String[] hosts,
-      long[][] storageCapacities,
       long[] simulatedCapacities,
       boolean setupHostsFile,
       boolean checkDataNodeAddrConfig,
       boolean checkDataNodeHostConfig,
       Configuration[] dnConfOverlays) throws IOException {
     startDataNodes(conf, numDataNodes, storageTypes, manageDfsDirs, operation, racks,
-        NODE_GROUPS, hosts, storageCapacities, simulatedCapacities, setupHostsFile,
+        NODE_GROUPS, hosts, simulatedCapacities, setupHostsFile, 
         checkDataNodeAddrConfig, checkDataNodeHostConfig);
   }
 
