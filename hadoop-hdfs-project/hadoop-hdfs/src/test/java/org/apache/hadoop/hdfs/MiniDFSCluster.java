@@ -55,7 +55,6 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.channels.FileChannel;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -91,7 +90,9 @@ import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter;
 import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter.SecureResources;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetUtil;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
@@ -132,10 +133,14 @@ public class MiniDFSCluster {
   public static final String  DFS_NAMENODE_SAFEMODE_EXTENSION_TESTING_KEY
       = DFS_NAMENODE_SAFEMODE_EXTENSION_KEY + ".testing";
 
-  // Changing this value may break some tests that assume it is 2.
-  public static final int DIRS_PER_DATANODE = 2;
+  // Changing this default may break some tests that assume it is 2.
+  private static final int DEFAULT_STORAGES_PER_DATANODE = 2;
 
   static { DefaultMetricsSystem.setMiniClusterMode(true); }
+
+  public int getStoragesPerDatanode() {
+    return storagesPerDatanode;
+  }
 
   /**
    * Class to construct instances of MiniDFSClusters with specific options.
@@ -146,6 +151,8 @@ public class MiniDFSCluster {
     private final Configuration conf;
     private int numDataNodes = 1;
     private StorageType[][] storageTypes = null;
+    private StorageType[] storageTypes1D = null;
+    private int storagesPerDatanode = DEFAULT_STORAGES_PER_DATANODE;
     private boolean format = true;
     private boolean manageNameDfsDirs = true;
     private boolean manageNameDfsSharedDirs = true;
@@ -156,6 +163,8 @@ public class MiniDFSCluster {
     private String[] racks = null; 
     private String [] hosts = null;
     private long [] simulatedCapacities = null;
+    private long [][] storageCapacities = null;
+    private long [] storageCapacities1D = null;
     private String clusterId = null;
     private boolean waitSafeMode = true;
     private boolean setupHostsFile = false;
@@ -194,16 +203,20 @@ public class MiniDFSCluster {
     }
 
     /**
+     * Default: DEFAULT_STORAGES_PER_DATANODE
+     */
+    public Builder storagesPerDatanode(int numStorages) {
+      this.storagesPerDatanode = numStorages;
+      return this;
+    }
+
+    /**
      * Set the same storage type configuration for each datanode.
      * If storageTypes is uninitialized or passed null then
      * StorageType.DEFAULT is used.
      */
     public Builder storageTypes(StorageType[] types) {
-      assert types.length == DIRS_PER_DATANODE;
-      this.storageTypes = new StorageType[numDataNodes][types.length];
-      for (int i = 0; i < numDataNodes; ++i) {
-        this.storageTypes[i] = types;
-      }
+      this.storageTypes1D = types;
       return this;
     }
 
@@ -214,6 +227,26 @@ public class MiniDFSCluster {
      */
     public Builder storageTypes(StorageType[][] types) {
       this.storageTypes = types;
+      return this;
+    }
+
+    /**
+     * Set the same storage capacity configuration for each datanode.
+     * If storageTypes is uninitialized or passed null then
+     * StorageType.DEFAULT is used.
+     */
+    public Builder storageCapacities(long[] capacities) {
+      this.storageCapacities1D = capacities;
+      return this;
+    }
+
+    /**
+     * Set custom storage capacity configuration for each datanode.
+     * If storageCapacities is uninitialized or passed null then
+     * capacity is limited by available disk space.
+     */
+    public Builder storageCapacities(long[][] capacities) {
+      this.storageCapacities = capacities;
       return this;
     }
 
@@ -290,6 +323,11 @@ public class MiniDFSCluster {
     }
 
     /**
+     * Use SimulatedFSDataset and limit the capacity of each DN per
+     * the values passed in val.
+     *
+     * For limiting the capacity of volumes with real storage, see
+     * {@link FsVolumeImpl#setCapacityForTesting}
      * Default: null
      */
     public Builder simulatedCapacities(long[] val) {
@@ -392,7 +430,28 @@ public class MiniDFSCluster {
     LOG.info("starting cluster: numNameNodes=" + numNameNodes
         + ", numDataNodes=" + builder.numDataNodes);
     nameNodes = new NameNodeInfo[numNameNodes];
+    this.storagesPerDatanode = builder.storagesPerDatanode;
+
+    // Duplicate the storageType setting for each DN.
+    if (builder.storageTypes == null && builder.storageTypes1D != null) {
+      assert builder.storageTypes1D.length == storagesPerDatanode;
+      builder.storageTypes = new StorageType[builder.numDataNodes][storagesPerDatanode];
       
+      for (int i = 0; i < builder.numDataNodes; ++i) {
+        builder.storageTypes[i] = builder.storageTypes1D;
+      }
+    }
+
+    // Duplicate the storageCapacity setting for each DN.
+    if (builder.storageCapacities == null && builder.storageCapacities1D != null) {
+      assert builder.storageCapacities1D.length == storagesPerDatanode;
+      builder.storageCapacities = new long[builder.numDataNodes][storagesPerDatanode];
+
+      for (int i = 0; i < builder.numDataNodes; ++i) {
+        builder.storageCapacities[i] = builder.storageCapacities1D;
+      }
+    }
+
     initMiniDFSCluster(builder.conf,
                        builder.numDataNodes,
                        builder.storageTypes,
@@ -405,6 +464,7 @@ public class MiniDFSCluster {
                        builder.dnOption,
                        builder.racks,
                        builder.hosts,
+                       builder.storageCapacities,
                        builder.simulatedCapacities,
                        builder.clusterId,
                        builder.waitSafeMode,
@@ -447,6 +507,7 @@ public class MiniDFSCluster {
   private boolean waitSafeMode = true;
   private boolean federation;
   private boolean checkExitOnShutdown = true;
+  protected final int storagesPerDatanode;
   
   /**
    * A unique instance identifier for the cluster. This
@@ -485,6 +546,7 @@ public class MiniDFSCluster {
    */
   public MiniDFSCluster() {
     nameNodes = new NameNodeInfo[0]; // No namenode in the cluster
+    storagesPerDatanode = DEFAULT_STORAGES_PER_DATANODE;
     synchronized (MiniDFSCluster.class) {
       instanceId = instanceCount++;
     }
@@ -659,11 +721,12 @@ public class MiniDFSCluster {
                         String[] racks, String hosts[],
                         long[] simulatedCapacities) throws IOException {
     this.nameNodes = new NameNodeInfo[1]; // Single namenode in the cluster
+    this.storagesPerDatanode = DEFAULT_STORAGES_PER_DATANODE;
     initMiniDFSCluster(conf, numDataNodes, null, format,
-        manageNameDfsDirs, true, manageDataDfsDirs, manageDataDfsDirs, 
-        operation, null, racks, hosts,
-        simulatedCapacities, null, true, false,
-        MiniDFSNNTopology.simpleSingleNN(nameNodePort, 0), true, false, false, null);
+                       manageNameDfsDirs, true, manageDataDfsDirs, manageDataDfsDirs,
+                       operation, null, racks, hosts,
+                       null, simulatedCapacities, null, true, false,
+                       MiniDFSNNTopology.simpleSingleNN(nameNodePort, 0), true, false, false, null);
   }
 
   private void initMiniDFSCluster(
@@ -672,7 +735,8 @@ public class MiniDFSCluster {
       boolean manageNameDfsSharedDirs, boolean enableManagedDfsDirsRedundancy,
       boolean manageDataDfsDirs, StartupOption startOpt,
       StartupOption dnStartOpt, String[] racks,
-      String[] hosts, long[] simulatedCapacities, String clusterId,
+      String[] hosts,
+      long[][] storageCapacities, long[] simulatedCapacities, String clusterId,
       boolean waitSafeMode, boolean setupHostsFile,
       MiniDFSNNTopology nnTopology, boolean checkExitOnShutdown,
       boolean checkDataNodeAddrConfig,
@@ -746,7 +810,7 @@ public class MiniDFSCluster {
       // Start the DataNodes
       startDataNodes(conf, numDataNodes, storageTypes, manageDataDfsDirs,
           dnStartOpt != null ? dnStartOpt : startOpt,
-          racks, hosts, simulatedCapacities, setupHostsFile,
+          racks, hosts, storageCapacities, simulatedCapacities, setupHostsFile,
           checkDataNodeAddrConfig, checkDataNodeHostConfig, dnConfOverlays);
       waitClusterUp();
       //make sure ProxyUsers uses the latest conf
@@ -1121,8 +1185,8 @@ public class MiniDFSCluster {
 
   String makeDataNodeDirs(int dnIndex, StorageType[] storageTypes) throws IOException {
     StringBuilder sb = new StringBuilder();
-    assert storageTypes == null || storageTypes.length == DIRS_PER_DATANODE;
-    for (int j = 0; j < DIRS_PER_DATANODE; ++j) {
+    assert storageTypes == null || storageTypes.length == storagesPerDatanode;
+    for (int j = 0; j < storagesPerDatanode; ++j) {
       File dir = getInstanceStorageDir(dnIndex, j);
       dir.mkdirs();
       if (!dir.isDirectory()) {
@@ -1198,7 +1262,7 @@ public class MiniDFSCluster {
                              long[] simulatedCapacities,
                              boolean setupHostsFile) throws IOException {
     startDataNodes(conf, numDataNodes, null, manageDfsDirs, operation, racks, hosts,
-        simulatedCapacities, setupHostsFile, false, false, null);
+        null, simulatedCapacities, setupHostsFile, false, false, null);
   }
 
   public synchronized void startDataNodes(Configuration conf, int numDataNodes,
@@ -1208,7 +1272,7 @@ public class MiniDFSCluster {
       boolean setupHostsFile,
       boolean checkDataNodeAddrConfig) throws IOException {
     startDataNodes(conf, numDataNodes, null, manageDfsDirs, operation, racks, hosts,
-        simulatedCapacities, setupHostsFile, checkDataNodeAddrConfig, false, null);
+        null, simulatedCapacities, setupHostsFile, checkDataNodeAddrConfig, false, null);
   }
 
   /**
@@ -1242,12 +1306,15 @@ public class MiniDFSCluster {
   public synchronized void startDataNodes(Configuration conf, int numDataNodes,
       StorageType[][] storageTypes, boolean manageDfsDirs, StartupOption operation,
       String[] racks, String[] hosts,
+      long[][] storageCapacities,
       long[] simulatedCapacities,
       boolean setupHostsFile,
       boolean checkDataNodeAddrConfig,
       boolean checkDataNodeHostConfig,
       Configuration[] dnConfOverlays) throws IOException {
+    assert storageCapacities == null || simulatedCapacities == null;
     assert storageTypes == null || storageTypes.length == numDataNodes;
+    assert storageCapacities == null || storageCapacities.length == numDataNodes;
 
     if (operation == StartupOption.RECOVER) {
       return;
@@ -1300,7 +1367,7 @@ public class MiniDFSCluster {
                         operation != StartupOption.ROLLBACK) ?
         null : new String[] {operation.getName()};
     
-    
+    DataNode[] dns = new DataNode[numDataNodes];
     for (int i = curDatanodesNum; i < curDatanodesNum+numDataNodes; i++) {
       Configuration dnConf = new HdfsConfiguration(conf);
       if (dnConfOverlays != null) {
@@ -1391,10 +1458,24 @@ public class MiniDFSCluster {
       dn.runDatanodeDaemon();
       dataNodes.add(new DataNodeProperties(dn, newconf, dnArgs,
           secureResources, dn.getIpcPort()));
+      dns[i - curDatanodesNum] = dn;
     }
     curDatanodesNum += numDataNodes;
     this.numDataNodes += numDataNodes;
     waitActive();
+
+    if (storageCapacities != null) {
+      for (int i = curDatanodesNum; i < curDatanodesNum+numDataNodes; ++i) {
+        List<? extends FsVolumeSpi> volumes = dns[i].getFSDataset().getVolumes();
+        assert storageCapacities[i].length == storagesPerDatanode;
+        assert volumes.size() == storagesPerDatanode;
+
+        for (int j = 0; j < volumes.size(); ++j) {
+          FsVolumeImpl volume = (FsVolumeImpl) volumes.get(j);
+          volume.setCapacityForTesting(storageCapacities[i][j]);
+        }
+      }
+    }
   }
   
   

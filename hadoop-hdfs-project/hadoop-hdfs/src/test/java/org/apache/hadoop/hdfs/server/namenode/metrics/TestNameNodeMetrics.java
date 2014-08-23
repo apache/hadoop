@@ -444,7 +444,7 @@ public class TestNameNodeMetrics {
     assertCounter("SyncsNumOps", 1L, rb);
     // Each datanode reports in when the cluster comes up
     assertCounter("BlockReportNumOps",
-                  (long)DATANODE_COUNT*MiniDFSCluster.DIRS_PER_DATANODE, rb);
+                  (long)DATANODE_COUNT * cluster.getStoragesPerDatanode(), rb);
     
     // Sleep for an interval+slop to let the percentiles rollover
     Thread.sleep((PERCENTILES_INTERVAL+1)*1000);
