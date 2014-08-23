@@ -285,6 +285,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-6829. DFSAdmin refreshSuperUserGroupsConfiguration failed in
     security cluster (zhaoyunjiong via Arpit Agarwal)
 
+    HDFS-4852. libhdfs documentation is out of date. (cnauroth)
+
 Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES
