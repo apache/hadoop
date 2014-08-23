@@ -159,6 +159,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6758. block writer should pass the expected block size to
     DataXceiverServer. (Arpit Agarwal)
 
+    HDFS-6899. Allow changing MiniDFSCluster volumes per DN and capacity
+    per volume. (Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

@@ -213,7 +213,7 @@ public class TestSafeMode {
       @Override
       public Boolean get() {
         return getLongCounter("StorageBlockReportOps", getMetrics(NN_METRICS)) ==
-            MiniDFSCluster.DIRS_PER_DATANODE;
+            cluster.getStoragesPerDatanode();
       }
     }, 10, 10000);
 
