@@ -59,8 +59,7 @@ function hadoop_bootstrap_init
   TOOL_PATH=${TOOL_PATH:-${HADOOP_PREFIX}/share/hadoop/tools/lib/*}
 
   export HADOOP_OS_TYPE=${HADOOP_OS_TYPE:-$(uname -s)}
-
-  
+ 
   # defaults
   export HADOOP_OPTS=${HADOOP_OPTS:-"-Djava.net.preferIPv4Stack=true"}
 }
@@ -93,7 +92,6 @@ function hadoop_exec_hadoopenv
     fi
   fi
 }
-
 
 function hadoop_basic_init
 {
@@ -446,7 +444,6 @@ function hadoop_add_to_classpath_mapred
   hadoop_add_classpath "${HADOOP_MAPRED_HOME}/${MAPRED_DIR}"'/*'
 }
 
-
 function hadoop_add_to_classpath_userpath
 {
   # Add the user-specified HADOOP_CLASSPATH to the
@@ -551,7 +548,6 @@ function hadoop_java_setup
   fi
 }
 
-
 function hadoop_finalize_libpaths
 {
   if [[ -n "${JAVA_LIBRARY_PATH}" ]]; then
@@ -564,17 +560,14 @@ function hadoop_finalize_libpaths
 #
 # fill in any last minute options that might not have been defined yet
 #
-# Note that we are replacing ' ' with '\ ' so that directories with
-# spaces work correctly when run exec blah
-#
 function hadoop_finalize_hadoop_opts
 {
-  hadoop_add_param HADOOP_OPTS hadoop.log.dir "-Dhadoop.log.dir=${HADOOP_LOG_DIR/ /\ }"
-  hadoop_add_param HADOOP_OPTS hadoop.log.file "-Dhadoop.log.file=${HADOOP_LOGFILE/ /\ }"
-  hadoop_add_param HADOOP_OPTS hadoop.home.dir "-Dhadoop.home.dir=${HADOOP_PREFIX/ /\ }"
-  hadoop_add_param HADOOP_OPTS hadoop.id.str "-Dhadoop.id.str=${HADOOP_IDENT_STRING/ /\ }"
+  hadoop_add_param HADOOP_OPTS hadoop.log.dir "-Dhadoop.log.dir=${HADOOP_LOG_DIR}"
+  hadoop_add_param HADOOP_OPTS hadoop.log.file "-Dhadoop.log.file=${HADOOP_LOGFILE}"
+  hadoop_add_param HADOOP_OPTS hadoop.home.dir "-Dhadoop.home.dir=${HADOOP_PREFIX}"
+  hadoop_add_param HADOOP_OPTS hadoop.id.str "-Dhadoop.id.str=${HADOOP_IDENT_STRING}"
   hadoop_add_param HADOOP_OPTS hadoop.root.logger "-Dhadoop.root.logger=${HADOOP_ROOT_LOGGER}"
-  hadoop_add_param HADOOP_OPTS hadoop.policy.file "-Dhadoop.policy.file=${HADOOP_POLICYFILE/ /\ }"
+  hadoop_add_param HADOOP_OPTS hadoop.policy.file "-Dhadoop.policy.file=${HADOOP_POLICYFILE}"
   hadoop_add_param HADOOP_OPTS hadoop.security.logger "-Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER}"
 }
 
@@ -724,10 +717,8 @@ function hadoop_java_exec
   local command=$1
   local class=$2
   shift 2
-  # we eval this so that paths with spaces work
   #shellcheck disable=SC2086
-  eval exec "$JAVA" "-Dproc_${command}" ${HADOOP_OPTS} "${class}" "$@"
-
+  exec "${JAVA}" "-Dproc_${command}" ${HADOOP_OPTS} "${class}" "$@"
 }
 
 function hadoop_start_daemon
@@ -739,7 +730,7 @@ function hadoop_start_daemon
   local class=$2
   shift 2
   #shellcheck disable=SC2086
-  eval exec "$JAVA" "-Dproc_${command}" ${HADOOP_OPTS} "${class}" "$@"
+  exec "${JAVA}" "-Dproc_${command}" ${HADOOP_OPTS} "${class}" "$@"
 }
 
 function hadoop_start_daemon_wrapper
@@ -802,9 +793,7 @@ function hadoop_start_secure_daemon
   # where to send stderr.  same thing, except &2 = stderr
   local daemonerrfile=$5
   shift 5
-  
-  
-  
+ 
   hadoop_rotate_log "${daemonoutfile}"
   hadoop_rotate_log "${daemonerrfile}"
   
@@ -925,7 +914,6 @@ function hadoop_stop_daemon
   fi
 }
 
-
 function hadoop_stop_secure_daemon
 {
   local command=$1
@@ -983,7 +971,6 @@ function hadoop_daemon_handler
     ;;
   esac
 }
-
 
 function hadoop_secure_daemon_handler
 {
