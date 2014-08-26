@@ -154,16 +154,6 @@ Trunk (Unreleased)
     MAPREDUCE-5867. Fix NPE in KillAMPreemptionPolicy related to 
     ProportionalCapacityPreemptionPolicy (Sunil G via devaraj)
 
-  BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
-
-    MAPREDUCE-5890. Support for encrypting Intermediate 
-    data and spills in local filesystem. (asuresh via tucu)
-
-    MAPREDUCE-6007. Add support to distcp to preserve raw.* namespace
-    extended attributes. (clamb)
-
-    MAPREDUCE-6041. Fix TestOptionsParser. (clamb)
-
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -261,6 +251,17 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5885. build/test/test.mapred.spill causes release audit warnings
     (Chen He via jlowe)
 
+    BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
+  
+      MAPREDUCE-5890. Support for encrypting Intermediate 
+      data and spills in local filesystem. (asuresh via tucu)
+  
+      MAPREDUCE-6007. Add support to distcp to preserve raw.* namespace
+      extended attributes. (clamb)
+  
+      MAPREDUCE-6041. Fix TestOptionsParser. (clamb)
+    --
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -273,7 +274,7 @@ Release 2.5.1 - UNRELEASED
 
   BUG FIXES
 
-    MAPREDUCE-6033. Updated access check for displaying job information 
+    MAPREDUCE-6033. Updated access check for displaying job information
     (Yu Gao via Eric Yang)
 
 Release 2.5.0 - 2014-08-11
