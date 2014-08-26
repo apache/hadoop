@@ -18,6 +18,8 @@
 package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
@@ -42,7 +44,7 @@ public class TestIFile {
     DefaultCodec codec = new GzipCodec();
     codec.setConf(conf);
     IFile.Writer<Text, Text> writer =
-      new IFile.Writer<Text, Text>(conf, rfs, path, Text.class, Text.class,
+      new IFile.Writer<Text, Text>(conf, rfs.create(path), Text.class, Text.class,
                                    codec, null);
     writer.close();
   }
@@ -56,12 +58,15 @@ public class TestIFile {
     Path path = new Path(new Path("build/test.ifile"), "data");
     DefaultCodec codec = new GzipCodec();
     codec.setConf(conf);
+    FSDataOutputStream out = rfs.create(path);
     IFile.Writer<Text, Text> writer =
-        new IFile.Writer<Text, Text>(conf, rfs, path, Text.class, Text.class,
+        new IFile.Writer<Text, Text>(conf, out, Text.class, Text.class,
                                      codec, null);
     writer.close();
+    FSDataInputStream in = rfs.open(path);
     IFile.Reader<Text, Text> reader =
-      new IFile.Reader<Text, Text>(conf, rfs, path, codec, null);
+      new IFile.Reader<Text, Text>(conf, in, rfs.getFileStatus(path).getLen(),
+          codec, null);
     reader.close();
     
     // test check sum 

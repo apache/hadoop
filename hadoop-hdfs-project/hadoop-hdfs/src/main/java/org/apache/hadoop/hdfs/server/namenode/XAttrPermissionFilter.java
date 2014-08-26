@@ -47,15 +47,27 @@ import com.google.common.base.Preconditions;
  * <br>
  * SYSTEM - extended system attributes: these are used by the HDFS
  * core and are not available through admin/user API.
+ * <br>
+ * RAW - extended system attributes: these are used for internal system
+ *   attributes that sometimes need to be exposed. Like SYSTEM namespace
+ *   attributes they are not visible to the user except when getXAttr/getXAttrs
+ *   is called on a file or directory in the /.reserved/raw HDFS directory
+ *   hierarchy. These attributes can only be accessed by the superuser.
+ * </br>
  */
 @InterfaceAudience.Private
 public class XAttrPermissionFilter {
   
-  static void checkPermissionForApi(FSPermissionChecker pc, XAttr xAttr) 
+  static void checkPermissionForApi(FSPermissionChecker pc, XAttr xAttr,
+      boolean isRawPath)
       throws AccessControlException {
+    final boolean isSuperUser = pc.isSuperUser();
     if (xAttr.getNameSpace() == XAttr.NameSpace.USER || 
-        (xAttr.getNameSpace() == XAttr.NameSpace.TRUSTED && 
-        pc.isSuperUser())) {
+        (xAttr.getNameSpace() == XAttr.NameSpace.TRUSTED && isSuperUser)) {
+      return;
+    }
+    if (xAttr.getNameSpace() == XAttr.NameSpace.RAW &&
+        isRawPath && isSuperUser) {
       return;
     }
     throw new AccessControlException("User doesn't have permission for xattr: "
@@ -63,30 +75,34 @@ public class XAttrPermissionFilter {
   }
 
   static void checkPermissionForApi(FSPermissionChecker pc,
-                                    List<XAttr> xAttrs) throws AccessControlException {
+      List<XAttr> xAttrs, boolean isRawPath) throws AccessControlException {
     Preconditions.checkArgument(xAttrs != null);
     if (xAttrs.isEmpty()) {
       return;
     }
 
     for (XAttr xAttr : xAttrs) {
-      checkPermissionForApi(pc, xAttr);
+      checkPermissionForApi(pc, xAttr, isRawPath);
     }
   }
 
   static List<XAttr> filterXAttrsForApi(FSPermissionChecker pc,
-      List<XAttr> xAttrs) {
+      List<XAttr> xAttrs, boolean isRawPath) {
     assert xAttrs != null : "xAttrs can not be null";
     if (xAttrs == null || xAttrs.isEmpty()) {
       return xAttrs;
     }
     
     List<XAttr> filteredXAttrs = Lists.newArrayListWithCapacity(xAttrs.size());
+    final boolean isSuperUser = pc.isSuperUser();
     for (XAttr xAttr : xAttrs) {
       if (xAttr.getNameSpace() == XAttr.NameSpace.USER) {
         filteredXAttrs.add(xAttr);
       } else if (xAttr.getNameSpace() == XAttr.NameSpace.TRUSTED && 
-          pc.isSuperUser()) {
+          isSuperUser) {
+        filteredXAttrs.add(xAttr);
+      } else if (xAttr.getNameSpace() == XAttr.NameSpace.RAW &&
+          isSuperUser && isRawPath) {
         filteredXAttrs.add(xAttr);
       }
     }

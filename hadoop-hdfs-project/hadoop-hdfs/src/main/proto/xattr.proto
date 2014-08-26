@@ -27,6 +27,7 @@ message XAttrProto {
     TRUSTED   = 1;
     SECURITY  = 2;
     SYSTEM    = 3;
+    RAW       = 4;
   }
   
   required XAttrNamespaceProto namespace = 1;

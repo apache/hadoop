@@ -17,16 +17,20 @@
  */
 package org.apache.hadoop.hdfs.client;
 
+import java.io.InputStream;
 import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.crypto.CryptoInputStream;
 import org.apache.hadoop.hdfs.DFSInputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+
+import com.google.common.base.Preconditions;
 
 /**
  * The Hdfs implementation of {@link FSDataInputStream}.
@@ -38,25 +42,49 @@ public class HdfsDataInputStream extends FSDataInputStream {
     super(in);
   }
 
+  public HdfsDataInputStream(CryptoInputStream in) throws IOException {
+    super(in);
+    Preconditions.checkArgument(in.getWrappedStream() instanceof DFSInputStream,
+        "CryptoInputStream should wrap a DFSInputStream");
+  }
+
+  private DFSInputStream getDFSInputStream() {
+    if (in instanceof CryptoInputStream) {
+      return (DFSInputStream) ((CryptoInputStream) in).getWrappedStream();
+    }
+    return (DFSInputStream) in;
+  }
+
+  /**
+   * Get a reference to the wrapped output stream. We always want to return the
+   * actual underlying InputStream, even when we're using a CryptoStream. e.g.
+   * in the delegated methods below.
+   *
+   * @return the underlying output stream
+   */
+  public InputStream getWrappedStream() {
+      return in;
+  }
+
   /**
    * Get the datanode from which the stream is currently reading.
    */
   public DatanodeInfo getCurrentDatanode() {
-    return ((DFSInputStream) in).getCurrentDatanode();
+    return getDFSInputStream().getCurrentDatanode();
   }
 
   /**
    * Get the block containing the target position.
    */
   public ExtendedBlock getCurrentBlock() {
-    return ((DFSInputStream) in).getCurrentBlock();
+    return getDFSInputStream().getCurrentBlock();
   }
 
   /**
    * Get the collection of blocks that has already been located.
    */
   public synchronized List<LocatedBlock> getAllBlocks() throws IOException {
-    return ((DFSInputStream) in).getAllBlocks();
+    return getDFSInputStream().getAllBlocks();
   }
 
   /**
@@ -66,7 +94,7 @@ public class HdfsDataInputStream extends FSDataInputStream {
    * @return The visible length of the file.
    */
   public long getVisibleLength() throws IOException {
-    return ((DFSInputStream) in).getFileLength();
+    return getDFSInputStream().getFileLength();
   }
 
   /**
@@ -76,6 +104,6 @@ public class HdfsDataInputStream extends FSDataInputStream {
    * bytes read through HdfsDataInputStream.
    */
   public synchronized DFSInputStream.ReadStatistics getReadStatistics() {
-    return ((DFSInputStream) in).getReadStatistics();
+    return getDFSInputStream().getReadStatistics();
   }
 }

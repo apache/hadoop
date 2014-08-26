@@ -29,7 +29,7 @@ import org.junit.Test;
  * Tests for <code>XAttr</code> objects.
  */
 public class TestXAttr {
-  private static XAttr XATTR, XATTR1, XATTR2, XATTR3, XATTR4;
+  private static XAttr XATTR, XATTR1, XATTR2, XATTR3, XATTR4, XATTR5;
   
   @BeforeClass
   public static void setUp() throws Exception {
@@ -58,6 +58,11 @@ public class TestXAttr {
       .setName("name")
       .setValue(value)
       .build();
+    XATTR5 = new XAttr.Builder()
+      .setNameSpace(XAttr.NameSpace.RAW)
+      .setName("name")
+      .setValue(value)
+      .build();
   }
   
   @Test
@@ -65,14 +70,17 @@ public class TestXAttr {
     assertNotSame(XATTR1, XATTR2);
     assertNotSame(XATTR2, XATTR3);
     assertNotSame(XATTR3, XATTR4);
+    assertNotSame(XATTR4, XATTR5);
     assertEquals(XATTR, XATTR1);
     assertEquals(XATTR1, XATTR1);
     assertEquals(XATTR2, XATTR2);
     assertEquals(XATTR3, XATTR3);
     assertEquals(XATTR4, XATTR4);
+    assertEquals(XATTR5, XATTR5);
     assertFalse(XATTR1.equals(XATTR2));
     assertFalse(XATTR2.equals(XATTR3));
     assertFalse(XATTR3.equals(XATTR4));
+    assertFalse(XATTR4.equals(XATTR5));
   }
   
   @Test
@@ -81,5 +89,6 @@ public class TestXAttr {
     assertFalse(XATTR1.hashCode() == XATTR2.hashCode());
     assertFalse(XATTR2.hashCode() == XATTR3.hashCode());
     assertFalse(XATTR3.hashCode() == XATTR4.hashCode());
+    assertFalse(XATTR4.hashCode() == XATTR5.hashCode());
   }
 }

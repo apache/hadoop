@@ -66,6 +66,7 @@ import org.apache.hadoop.mapreduce.lib.map.WrappedMapper;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormatCounter;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitIndex;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
+import org.apache.hadoop.mapreduce.CryptoUtils;
 import org.apache.hadoop.util.IndexedSortable;
 import org.apache.hadoop.util.IndexedSorter;
 import org.apache.hadoop.util.Progress;
@@ -1599,7 +1600,8 @@ public class MapTask extends Task {
           IFile.Writer<K, V> writer = null;
           try {
             long segmentStart = out.getPos();
-            writer = new Writer<K, V>(job, out, keyClass, valClass, codec,
+            FSDataOutputStream partitionOut = CryptoUtils.wrapIfNecessary(job, out);
+            writer = new Writer<K, V>(job, partitionOut, keyClass, valClass, codec,
                                       spilledRecordsCounter);
             if (combinerRunner == null) {
               // spill directly
@@ -1636,8 +1638,8 @@ public class MapTask extends Task {
 
             // record offsets
             rec.startOffset = segmentStart;
-            rec.rawLength = writer.getRawLength();
-            rec.partLength = writer.getCompressedLength();
+            rec.rawLength = writer.getRawLength() + CryptoUtils.cryptoPadding(job);
+            rec.partLength = writer.getCompressedLength() + CryptoUtils.cryptoPadding(job);
             spillRec.putIndex(rec, i);
 
             writer = null;
@@ -1687,7 +1689,8 @@ public class MapTask extends Task {
           try {
             long segmentStart = out.getPos();
             // Create a new codec, don't care!
-            writer = new IFile.Writer<K,V>(job, out, keyClass, valClass, codec,
+            FSDataOutputStream partitionOut = CryptoUtils.wrapIfNecessary(job, out);
+            writer = new IFile.Writer<K,V>(job, partitionOut, keyClass, valClass, codec,
                                             spilledRecordsCounter);
 
             if (i == partition) {
@@ -1701,8 +1704,8 @@ public class MapTask extends Task {
 
             // record offsets
             rec.startOffset = segmentStart;
-            rec.rawLength = writer.getRawLength();
-            rec.partLength = writer.getCompressedLength();
+            rec.rawLength = writer.getRawLength() + CryptoUtils.cryptoPadding(job);
+            rec.partLength = writer.getCompressedLength() + CryptoUtils.cryptoPadding(job);
             spillRec.putIndex(rec, i);
 
             writer = null;
@@ -1844,12 +1847,13 @@ public class MapTask extends Task {
         try {
           for (int i = 0; i < partitions; i++) {
             long segmentStart = finalOut.getPos();
+            FSDataOutputStream finalPartitionOut = CryptoUtils.wrapIfNecessary(job, finalOut);
             Writer<K, V> writer =
-              new Writer<K, V>(job, finalOut, keyClass, valClass, codec, null);
+              new Writer<K, V>(job, finalPartitionOut, keyClass, valClass, codec, null);
             writer.close();
             rec.startOffset = segmentStart;
-            rec.rawLength = writer.getRawLength();
-            rec.partLength = writer.getCompressedLength();
+            rec.rawLength = writer.getRawLength() + CryptoUtils.cryptoPadding(job);
+            rec.partLength = writer.getCompressedLength() + CryptoUtils.cryptoPadding(job);
             sr.putIndex(rec, i);
           }
           sr.writeToFile(finalIndexFile, job);
@@ -1898,8 +1902,9 @@ public class MapTask extends Task {
 
           //write merged output to disk
           long segmentStart = finalOut.getPos();
+          FSDataOutputStream finalPartitionOut = CryptoUtils.wrapIfNecessary(job, finalOut);
           Writer<K, V> writer =
-              new Writer<K, V>(job, finalOut, keyClass, valClass, codec,
+              new Writer<K, V>(job, finalPartitionOut, keyClass, valClass, codec,
                                spilledRecordsCounter);
           if (combinerRunner == null || numSpills < minSpillsForCombine) {
             Merger.writeFile(kvIter, writer, reporter, job);
@@ -1915,8 +1920,8 @@ public class MapTask extends Task {
           
           // record offsets
           rec.startOffset = segmentStart;
-          rec.rawLength = writer.getRawLength();
-          rec.partLength = writer.getCompressedLength();
+          rec.rawLength = writer.getRawLength() + CryptoUtils.cryptoPadding(job);
+          rec.partLength = writer.getCompressedLength() + CryptoUtils.cryptoPadding(job);
           spillRec.putIndex(rec, parts);
         }
         spillRec.writeToFile(finalIndexFile, job);

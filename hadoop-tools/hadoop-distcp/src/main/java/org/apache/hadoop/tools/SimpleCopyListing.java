@@ -37,6 +37,9 @@ import com.google.common.annotations.VisibleForTesting;
 import java.io.*;
 import java.util.Stack;
 
+import static org.apache.hadoop.tools.DistCpConstants
+        .HDFS_RESERVED_RAW_DIRECTORY_NAME;
+
 /**
  * The SimpleCopyListing is responsible for making the exhaustive list of
  * all files/directories under its specified list of input-paths.
@@ -67,6 +70,10 @@ public class SimpleCopyListing extends CopyListing {
     Path targetPath = options.getTargetPath();
     FileSystem targetFS = targetPath.getFileSystem(getConf());
     boolean targetIsFile = targetFS.isFile(targetPath);
+    targetPath = targetFS.makeQualified(targetPath);
+    final boolean targetIsReservedRaw =
+        Path.getPathWithoutSchemeAndAuthority(targetPath).toString().
+            startsWith(HDFS_RESERVED_RAW_DIRECTORY_NAME);
 
     //If target is a file, then source has to be single file
     if (targetIsFile) {
@@ -93,6 +100,27 @@ public class SimpleCopyListing extends CopyListing {
       if (!fs.exists(path)) {
         throw new InvalidInputException(path + " doesn't exist");
       }
+      if (Path.getPathWithoutSchemeAndAuthority(path).toString().
+          startsWith(HDFS_RESERVED_RAW_DIRECTORY_NAME)) {
+        if (!targetIsReservedRaw) {
+          final String msg = "The source path '" + path + "' starts with " +
+              HDFS_RESERVED_RAW_DIRECTORY_NAME + " but the target path '" +
+              targetPath + "' does not. Either all or none of the paths must " +
+              "have this prefix.";
+          throw new InvalidInputException(msg);
+        }
+      } else if (targetIsReservedRaw) {
+        final String msg = "The target path '" + targetPath + "' starts with " +
+                HDFS_RESERVED_RAW_DIRECTORY_NAME + " but the source path '" +
+                path + "' does not. Either all or none of the paths must " +
+                "have this prefix.";
+        throw new InvalidInputException(msg);
+      }
+    }
+
+    if (targetIsReservedRaw) {
+      options.preserveRawXattrs();
+      getConf().setBoolean(DistCpConstants.CONF_LABEL_PRESERVE_RAWXATTRS, true);
     }
 
     /* This is requires to allow map tasks to access each of the source
@@ -135,6 +163,9 @@ public class SimpleCopyListing extends CopyListing {
     try {
       for (Path path: options.getSourcePaths()) {
         FileSystem sourceFS = path.getFileSystem(getConf());
+        final boolean preserveAcls = options.shouldPreserve(FileAttribute.ACL);
+        final boolean preserveXAttrs = options.shouldPreserve(FileAttribute.XATTR);
+        final boolean preserveRawXAttrs = options.shouldPreserveRawXattrs();
         path = makeQualified(path);
 
         FileStatus rootStatus = sourceFS.getFileStatus(path);
@@ -145,8 +176,7 @@ public class SimpleCopyListing extends CopyListing {
         if (!explore || rootStatus.isDirectory()) {
           CopyListingFileStatus rootCopyListingStatus =
             DistCpUtils.toCopyListingFileStatus(sourceFS, rootStatus,
-              options.shouldPreserve(FileAttribute.ACL), 
-              options.shouldPreserve(FileAttribute.XATTR));
+                preserveAcls, preserveXAttrs, preserveRawXAttrs);
           writeToFileListingRoot(fileListWriter, rootCopyListingStatus,
               sourcePathRoot, options);
         }
@@ -157,9 +187,9 @@ public class SimpleCopyListing extends CopyListing {
             }
             CopyListingFileStatus sourceCopyListingStatus =
               DistCpUtils.toCopyListingFileStatus(sourceFS, sourceStatus,
-                options.shouldPreserve(FileAttribute.ACL) &&
-                sourceStatus.isDirectory(), options.shouldPreserve(
-                    FileAttribute.XATTR) && sourceStatus.isDirectory());
+                  preserveAcls && sourceStatus.isDirectory(),
+                  preserveXAttrs && sourceStatus.isDirectory(),
+                  preserveRawXAttrs && sourceStatus.isDirectory());
             writeToFileListing(fileListWriter, sourceCopyListingStatus,
                 sourcePathRoot, options);
 
@@ -261,6 +291,9 @@ public class SimpleCopyListing extends CopyListing {
                                          DistCpOptions options)
                                          throws IOException {
     FileSystem sourceFS = sourcePathRoot.getFileSystem(getConf());
+    final boolean preserveAcls = options.shouldPreserve(FileAttribute.ACL);
+    final boolean preserveXAttrs = options.shouldPreserve(FileAttribute.XATTR);
+    final boolean preserveRawXattrs = options.shouldPreserveRawXattrs();
     Stack<FileStatus> pathStack = new Stack<FileStatus>();
     pathStack.push(sourceStatus);
 
@@ -271,8 +304,9 @@ public class SimpleCopyListing extends CopyListing {
                     + sourceStatus.getPath() + " for copy.");
         CopyListingFileStatus childCopyListingStatus =
           DistCpUtils.toCopyListingFileStatus(sourceFS, child,
-            options.shouldPreserve(FileAttribute.ACL) && child.isDirectory(), 
-            options.shouldPreserve(FileAttribute.XATTR) && child.isDirectory());
+            preserveAcls && child.isDirectory(),
+            preserveXAttrs && child.isDirectory(),
+            preserveRawXattrs && child.isDirectory());
         writeToFileListing(fileListWriter, childCopyListingStatus,
              sourcePathRoot, options);
         if (isDirectoryAndNotEmpty(sourceFS, child)) {
