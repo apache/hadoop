@@ -50,7 +50,7 @@ import java.util.*;
 public class Mover {
   static final Log LOG = LogFactory.getLog(Mover.class);
 
-  private static final Path MOVER_ID_PATH = new Path("/system/mover.id");
+  static final Path MOVER_ID_PATH = new Path("/system/mover.id");
 
   private static class StorageMap {
     private final StorageGroupMap<Source> sources
@@ -111,22 +111,25 @@ public class Mover {
     this.storages = new StorageMap();
     this.blockStoragePolicies = BlockStoragePolicy.readBlockStorageSuite(conf);
   }
-  
-  private ExitStatus run() {
-    try {
-      final List<DatanodeStorageReport> reports = dispatcher.init();
-      for(DatanodeStorageReport r : reports) {
-        final DDatanode dn = dispatcher.newDatanode(r.getDatanodeInfo());
-        for(StorageType t : StorageType.asList()) {
-          final long maxRemaining = getMaxRemaining(r, t);
-          if (maxRemaining > 0L) {
-            final Source source = dn.addSource(t, Long.MAX_VALUE, dispatcher); 
-            final StorageGroup target = dn.addTarget(t, maxRemaining);
-            storages.add(source, target);
-          }
+
+  void init() throws IOException {
+    final List<DatanodeStorageReport> reports = dispatcher.init();
+    for(DatanodeStorageReport r : reports) {
+      final DDatanode dn = dispatcher.newDatanode(r.getDatanodeInfo());
+      for(StorageType t : StorageType.asList()) {
+        final long maxRemaining = getMaxRemaining(r, t);
+        if (maxRemaining > 0L) {
+          final Source source = dn.addSource(t, Long.MAX_VALUE, dispatcher); 
+          final StorageGroup target = dn.addTarget(t, maxRemaining);
+          storages.add(source, target);
         }
       }
+    }
+  }
 
+  private ExitStatus run() {
+    try {
+      init();
       new Processor().processNamespace();
 
       return ExitStatus.IN_PROGRESS;
@@ -139,6 +142,14 @@ public class Mover {
     } finally {
       dispatcher.shutdownNow();
     }
+  }
+
+  DBlock newDBlock(Block block, List<MLocation> locations) {
+    final DBlock db = new DBlock(block);
+    for(MLocation ml : locations) {
+      db.addLocation(storages.getTarget(ml));
+    }
+    return db;
   }
 
   private static long getMaxRemaining(DatanodeStorageReport report, StorageType t) {
@@ -169,11 +180,11 @@ public class Mover {
     return sb.toString();
   }
 
-  private class Processor {
+  class Processor {
     private final DFSClient dfs;
     private final List<String> snapshottableDirs = new ArrayList<String>();
 
-    private Processor() {
+    Processor() {
       dfs = dispatcher.getDistributedFileSystem().getClient();
     }
 
@@ -290,15 +301,11 @@ public class Mover {
         }
       }
     }
-    
+
     void scheduleMoves4Block(StorageTypeDiff diff, LocatedBlock lb) {
       final List<MLocation> locations = MLocation.toLocations(lb);
       Collections.shuffle(locations);
-      
-      final DBlock db = new DBlock(lb.getBlock().getLocalBlock());
-      for(MLocation ml : locations) {
-        db.addLocation(storages.getTarget(ml));
-      }
+      final DBlock db = newDBlock(lb.getBlock().getLocalBlock(), locations);
 
       for(final Iterator<StorageType> i = diff.existing.iterator(); i.hasNext(); ) {
         final StorageType t = i.next();
@@ -310,10 +317,16 @@ public class Mover {
             if (scheduleMoveReplica(db, ml, source, diff.expected)) {
               i.remove();
               j.remove();
+              return;
             }
           }
         }
       }
+    }
+
+    boolean scheduleMoveReplica(DBlock db, MLocation ml,
+        List<StorageType> targetTypes) {
+      return scheduleMoveReplica(db, ml, storages.getSource(ml), targetTypes);
     }
 
     boolean scheduleMoveReplica(DBlock db, MLocation ml, Source source,
@@ -341,12 +354,10 @@ public class Mover {
       for(final Iterator<StorageType> i = targetTypes.iterator(); i.hasNext(); ) {
         final StorageType t = i.next();
         for(StorageGroup target : storages.getTargetStorages(t)) {
-          if (matcher.match(cluster, ml.datanode, target.getDatanodeInfo())
-              && dispatcher.isGoodBlockCandidate(source, target, t, db)) {
-            final PendingMove pm = dispatcher.new PendingMove(db, source, target);
-            if (pm.chooseProxySource()) {
+          if (matcher.match(cluster, ml.datanode, target.getDatanodeInfo())) {
+            final PendingMove pm = source.addPendingMove(db, target);
+            if (pm != null) {
               i.remove();
-              target.incScheduledSize(ml.size);
               dispatcher.executePendingMove(pm);
               return true;
             }

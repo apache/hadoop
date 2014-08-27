@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs;
 import static org.apache.hadoop.hdfs.BlockStoragePolicy.ID_UNSPECIFIED;
 
 import java.io.FileNotFoundException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -61,20 +60,6 @@ public class TestBlockStoragePolicy {
   static final byte COLD = (byte) 4;
   static final byte WARM = (byte) 8;
   static final byte HOT  = (byte) 12;
-
-  static final List<List<StorageType>> chosens = new ArrayList<List<StorageType>>();
-  static {
-    chosens.add(Arrays.<StorageType>asList());
-    chosens.add(Arrays.asList(StorageType.DISK));
-    chosens.add(Arrays.asList(StorageType.ARCHIVE));
-    chosens.add(Arrays.asList(StorageType.DISK, StorageType.DISK));
-    chosens.add(Arrays.asList(StorageType.DISK, StorageType.ARCHIVE));
-    chosens.add(Arrays.asList(StorageType.ARCHIVE, StorageType.ARCHIVE));
-    chosens.add(Arrays.asList(StorageType.DISK, StorageType.DISK, StorageType.DISK));
-    chosens.add(Arrays.asList(StorageType.DISK, StorageType.DISK, StorageType.ARCHIVE));
-    chosens.add(Arrays.asList(StorageType.DISK, StorageType.ARCHIVE, StorageType.ARCHIVE));
-    chosens.add(Arrays.asList(StorageType.ARCHIVE, StorageType.ARCHIVE, StorageType.ARCHIVE));
-  }
 
   @Test
   public void testDefaultPolicies() {
@@ -124,6 +109,17 @@ public class TestBlockStoragePolicy {
       assertCreationFallback(hot, null, null, null);
       assertReplicationFallback(hot, StorageType.ARCHIVE, null, StorageType.ARCHIVE);
     }
+  }
+
+  static StorageType[] newStorageTypes(int nDisk, int nArchive) {
+    final StorageType[] t = new StorageType[nDisk + nArchive];
+    Arrays.fill(t, 0, nDisk, StorageType.DISK);
+    Arrays.fill(t, nDisk, t.length, StorageType.ARCHIVE);
+    return t;
+  }
+
+  static List<StorageType> asList(int nDisk, int nArchive) {
+    return Arrays.asList(newStorageTypes(nDisk, nArchive));
   }
 
   static void assertStorageType(List<StorageType> computed, short replication,
@@ -369,10 +365,14 @@ public class TestBlockStoragePolicy {
     final BlockStoragePolicy cold = POLICY_SUITE.getPolicy(COLD);
 
     final short replication = 3;
-    for(List<StorageType> c : chosens) {
-      method.checkChooseStorageTypes(hot, replication, c);
-      method.checkChooseStorageTypes(warm, replication, c);
-      method.checkChooseStorageTypes(cold, replication, c);
+    for(int n = 0; n <= 3; n++) {
+      for(int d = 0; d <= n; d++) {
+        final int a = n - d;
+        final List<StorageType> chosen = asList(d, a);
+        method.checkChooseStorageTypes(hot, replication, chosen);
+        method.checkChooseStorageTypes(warm, replication, chosen);
+        method.checkChooseStorageTypes(cold, replication, chosen);
+      }
     }
   }
 
@@ -712,6 +712,47 @@ public class TestBlockStoragePolicy {
     Arrays.sort(expected);
     Arrays.sort(computed);
     Assert.assertArrayEquals(expected, computed);
+  }
+
+  @Test
+  public void testChooseExcess() {
+    final BlockStoragePolicy hot = POLICY_SUITE.getPolicy(HOT);
+    final BlockStoragePolicy warm = POLICY_SUITE.getPolicy(WARM);
+    final BlockStoragePolicy cold = POLICY_SUITE.getPolicy(COLD);
+
+    final short replication = 3;
+    for(int n = 0; n <= 6; n++) {
+      for(int d = 0; d <= n; d++) {
+        final int a = n - d;
+        final List<StorageType> chosen = asList(d, a);
+        {
+          final int nDisk = Math.max(0, d - replication); 
+          final int nArchive = a;
+          final StorageType[] expected = newStorageTypes(nDisk, nArchive);
+          checkChooseExcess(hot, replication, chosen, expected);
+        }
+
+        {
+          final int nDisk = Math.max(0, d - 1); 
+          final int nArchive = Math.max(0, a - replication + 1);
+          final StorageType[] expected = newStorageTypes(nDisk, nArchive);
+          checkChooseExcess(warm, replication, chosen, expected);
+        }
+
+        {
+          final int nDisk = d; 
+          final int nArchive = Math.max(0, a - replication );
+          final StorageType[] expected = newStorageTypes(nDisk, nArchive);
+          checkChooseExcess(cold, replication, chosen, expected);
+        }
+      }
+    }
+  }
+
+  static void checkChooseExcess(BlockStoragePolicy p, short replication,
+      List<StorageType> chosen, StorageType... expected) {
+    final List<StorageType> types = p.chooseExcess(replication, chosen);
+    assertStorageTypes(types, expected);
   }
 
   private void checkDirectoryListing(HdfsFileStatus[] stats, byte... policies) {

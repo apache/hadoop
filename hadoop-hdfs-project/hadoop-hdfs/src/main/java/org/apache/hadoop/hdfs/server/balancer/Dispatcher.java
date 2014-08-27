@@ -175,11 +175,7 @@ public class Dispatcher {
     private DDatanode proxySource;
     private StorageGroup target;
 
-    private PendingMove() {
-    }
-
-    public PendingMove(DBlock block, Source source, StorageGroup target) {
-      this.block = block;
+    private PendingMove(Source source, StorageGroup target) {
       this.source = source;
       this.target = target;
     }
@@ -199,9 +195,11 @@ public class Dispatcher {
      * @return true if a block and its proxy are chosen; false otherwise
      */
     private boolean chooseBlockAndProxy() {
+      // source and target must have the same storage type
+      final StorageType t = source.getStorageType();
       // iterate all source's blocks until find a good one
       for (Iterator<DBlock> i = source.getBlockIterator(); i.hasNext();) {
-        if (markMovedIfGoodBlock(i.next())) {
+        if (markMovedIfGoodBlock(i.next(), t)) {
           i.remove();
           return true;
         }
@@ -212,10 +210,10 @@ public class Dispatcher {
     /**
      * @return true if the given block is good for the tentative move.
      */
-    private boolean markMovedIfGoodBlock(DBlock block) {
+    private boolean markMovedIfGoodBlock(DBlock block, StorageType targetStorageType) {
       synchronized (block) {
         synchronized (movedBlocks) {
-          if (isGoodBlockCandidate(source, target, block)) {
+          if (isGoodBlockCandidate(source, target, targetStorageType, block)) {
             this.block = block;
             if (chooseProxySource()) {
               movedBlocks.put(block);
@@ -235,7 +233,7 @@ public class Dispatcher {
      * 
      * @return true if a proxy is found; otherwise false
      */
-    public boolean chooseProxySource() {
+    private boolean chooseProxySource() {
       final DatanodeInfo targetDN = target.getDatanodeInfo();
       // if node group is supported, first try add nodes in the same node group
       if (cluster.isNodeGroupAware()) {
@@ -440,6 +438,18 @@ public class Dispatcher {
         scheduledSize = 0L;
       }
 
+      private PendingMove addPendingMove(DBlock block, final PendingMove pm) {
+        if (getDDatanode().addPendingBlock(pm)) {
+          if (pm.markMovedIfGoodBlock(block, getStorageType())) {
+            incScheduledSize(pm.block.getNumBytes());
+            return pm;
+          } else {
+            getDDatanode().removePendingBlock(pm);
+          }
+        }
+        return null;
+      }
+
       /** @return the name for display */
       String getDisplayName() {
         return datanode + ":" + storageType;
@@ -599,8 +609,11 @@ public class Dispatcher {
 
     /** Decide if the given block is a good candidate to move or not */
     private boolean isGoodBlockCandidate(DBlock block) {
+      // source and target must have the same storage type
+      final StorageType sourceStorageType = getStorageType();
       for (Task t : tasks) {
-        if (Dispatcher.this.isGoodBlockCandidate(this, t.target, block)) {
+        if (Dispatcher.this.isGoodBlockCandidate(this, t.target,
+            sourceStorageType, block)) {
           return true;
         }
       }
@@ -620,11 +633,9 @@ public class Dispatcher {
       for (Iterator<Task> i = tasks.iterator(); i.hasNext();) {
         final Task task = i.next();
         final DDatanode target = task.target.getDDatanode();
-        PendingMove pendingBlock = new PendingMove();
+        final PendingMove pendingBlock = new PendingMove(this, task.target);
         if (target.addPendingBlock(pendingBlock)) {
           // target is not busy, so do a tentative block allocation
-          pendingBlock.source = this;
-          pendingBlock.target = task.target;
           if (pendingBlock.chooseBlockAndProxy()) {
             long blockSize = pendingBlock.block.getNumBytes();
             incScheduledSize(-blockSize);
@@ -640,6 +651,11 @@ public class Dispatcher {
         }
       }
       return null;
+    }
+    
+    /** Add a pending move */
+    public PendingMove addPendingMove(DBlock block, StorageGroup target) {
+      return target.addPendingMove(block, new PendingMove(this, target));
     }
 
     /** Iterate all source's blocks to remove moved ones */
@@ -901,12 +917,6 @@ public class Dispatcher {
     }
   }
 
-  private boolean isGoodBlockCandidate(StorageGroup source, StorageGroup target,
-      DBlock block) {
-    // match source and target storage type
-    return isGoodBlockCandidate(source, target, source.getStorageType(), block);
-  }
-
   /**
    * Decide if the block is a good candidate to be moved from source to target.
    * A block is a good candidate if 
@@ -914,7 +924,7 @@ public class Dispatcher {
    * 2. the block does not have a replica on the target;
    * 3. doing the move does not reduce the number of racks that the block has
    */
-  public boolean isGoodBlockCandidate(StorageGroup source, StorageGroup target,
+  private boolean isGoodBlockCandidate(StorageGroup source, StorageGroup target,
       StorageType targetStorageType, DBlock block) {
     if (target.storageType != targetStorageType) {
       return false;
