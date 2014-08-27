@@ -190,6 +190,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>xercesImpl</artifactId>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>org.htrace</groupId>
+      <artifactId>htrace-core</artifactId>
+    </dependency>
   </dependencies>
 
   <build>

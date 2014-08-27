@@ -41,6 +41,8 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.*;
+import org.htrace.Trace;
+import org.htrace.TraceScope;
 
 /** An RpcEngine implementation for Writable data. */
 @InterfaceStability.Evolving
@@ -227,9 +229,19 @@ public class WritableRpcEngine implements RpcEngine {
       if (LOG.isDebugEnabled()) {
         startTime = Time.now();
       }
-
-      ObjectWritable value = (ObjectWritable)
-        client.call(RPC.RpcKind.RPC_WRITABLE, new Invocation(method, args), remoteId);
+      TraceScope traceScope = null;
+      if (Trace.isTracing()) {
+        traceScope = Trace.startSpan(
+            method.getDeclaringClass().getCanonicalName() +
+            "." + method.getName());
+      }
+      ObjectWritable value;
+      try {
+        value = (ObjectWritable)
+          client.call(RPC.RpcKind.RPC_WRITABLE, new Invocation(method, args), remoteId);
+      } finally {
+        if (traceScope != null) traceScope.close();
+      }
       if (LOG.isDebugEnabled()) {
         long callTime = Time.now() - startTime;
         LOG.debug("Call: " + method.getName() + " " + callTime);
