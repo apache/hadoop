@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.mover;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -130,9 +131,8 @@ public class Mover {
   private ExitStatus run() {
     try {
       init();
-      new Processor().processNamespace();
-
-      return ExitStatus.IN_PROGRESS;
+      boolean hasRemaining = new Processor().processNamespace();
+      return hasRemaining ? ExitStatus.IN_PROGRESS : ExitStatus.SUCCESS;
     } catch (IllegalArgumentException e) {
       System.out.println(e + ".  Exiting ...");
       return ExitStatus.ILLEGAL_ARGUMENTS;
@@ -223,16 +223,29 @@ public class Mover {
       }
     }
 
-    private void processNamespace() {
+    /**
+     * @return whether there is still remaining migration work for the next
+     *         round
+     */
+    private boolean processNamespace() {
       getSnapshottableDirs();
+      boolean hasRemaining = true;
       try {
-        processDirRecursively("", dfs.getFileInfo("/"));
+        hasRemaining = processDirRecursively("", dfs.getFileInfo("/"));
       } catch (IOException e) {
         LOG.warn("Failed to get root directory status. Ignore and continue.", e);
       }
+      // wait for pending move to finish and retry the failed migration
+      hasRemaining |= Dispatcher.waitForMoveCompletion(storages.targets.values());
+      return hasRemaining;
     }
 
-    private void processChildrenList(String fullPath) {
+    /**
+     * @return whether there is still remaing migration work for the next
+     *         round
+     */
+    private boolean processChildrenList(String fullPath) {
+      boolean hasRemaining = false;
       for (byte[] lastReturnedName = HdfsFileStatus.EMPTY_NAME;;) {
         final DirectoryListing children;
         try {
@@ -240,124 +253,128 @@ public class Mover {
         } catch(IOException e) {
           LOG.warn("Failed to list directory " + fullPath
               + ". Ignore the directory and continue.", e);
-          return;
+          return hasRemaining;
         }
         if (children == null) {
-          return;
+          return hasRemaining;
         }
         for (HdfsFileStatus child : children.getPartialListing()) {
-          processDirRecursively(fullPath, child);
+          hasRemaining |= processDirRecursively(fullPath, child);
         }
-        if (!children.hasMore()) {
+        if (children.hasMore()) {
           lastReturnedName = children.getLastName();
         } else {
-          return;
+          return hasRemaining;
         }
       }
     }
 
-    private void processDirRecursively(String parent, HdfsFileStatus status) {
+    /** @return whether the migration requires next round */
+    private boolean processDirRecursively(String parent,
+                                          HdfsFileStatus status) {
       String fullPath = status.getFullName(parent);
-      if (status.isSymlink()) {
-        return; //ignore symlinks
-      } else if (status.isDir()) {
+      boolean hasRemaining = false;
+      if (status.isDir()) {
         if (!fullPath.endsWith(Path.SEPARATOR)) {
-          fullPath = fullPath + Path.SEPARATOR; 
+          fullPath = fullPath + Path.SEPARATOR;
         }
 
-        processChildrenList(fullPath);
+        hasRemaining = processChildrenList(fullPath);
         // process snapshots if this is a snapshottable directory
         if (snapshottableDirs.contains(fullPath)) {
           final String dirSnapshot = fullPath + HdfsConstants.DOT_SNAPSHOT_DIR;
-          processChildrenList(dirSnapshot);
+          hasRemaining |= processChildrenList(dirSnapshot);
         }
-      } else { // file
+      } else if (!status.isSymlink()) { // file
         try {
-          if (isSnapshotPathInCurrent(fullPath)) {
+          if (!isSnapshotPathInCurrent(fullPath)) {
             // the full path is a snapshot path but it is also included in the
             // current directory tree, thus ignore it.
-            return;
+            hasRemaining = processFile((HdfsLocatedFileStatus)status);
           }
         } catch (IOException e) {
           LOG.warn("Failed to check the status of " + parent
               + ". Ignore it and continue.", e);
-          return;
+          return false;
         }
-        processFile(parent, (HdfsLocatedFileStatus)status);
       }
+      return hasRemaining;
     }
 
-    private void processFile(String parent, HdfsLocatedFileStatus status) { 
+    /** @return true if it is necessary to run another round of migration */
+    private boolean processFile(HdfsLocatedFileStatus status) {
       final BlockStoragePolicy policy = blockStoragePolicies.getPolicy(
           status.getStoragePolicy());
       final List<StorageType> types = policy.chooseStorageTypes(
           status.getReplication());
 
-      final LocatedBlocks locations = status.getBlockLocations();
-      for(LocatedBlock lb : locations.getLocatedBlocks()) {
-        final StorageTypeDiff diff = new StorageTypeDiff(types, lb.getStorageTypes());
+      final LocatedBlocks locatedBlocks = status.getBlockLocations();
+      boolean hasRemaining = false;
+      for(LocatedBlock lb : locatedBlocks.getLocatedBlocks()) {
+        final StorageTypeDiff diff = new StorageTypeDiff(types,
+            lb.getStorageTypes());
         if (!diff.removeOverlap()) {
-          scheduleMoves4Block(diff, lb);
+          if (scheduleMoves4Block(diff, lb)) {
+            hasRemaining |= (diff.existing.size() > 1 &&
+                diff.expected.size() > 1);
+          } else {
+            hasRemaining = true;
+          }
         }
       }
+      return hasRemaining;
     }
 
-    void scheduleMoves4Block(StorageTypeDiff diff, LocatedBlock lb) {
+    boolean scheduleMoves4Block(StorageTypeDiff diff, LocatedBlock lb) {
       final List<MLocation> locations = MLocation.toLocations(lb);
       Collections.shuffle(locations);
       final DBlock db = newDBlock(lb.getBlock().getLocalBlock(), locations);
 
-      for(final Iterator<StorageType> i = diff.existing.iterator(); i.hasNext(); ) {
-        final StorageType t = i.next();
-        for(final Iterator<MLocation> j = locations.iterator(); j.hasNext(); ) {
-          final MLocation ml = j.next();
-          final Source source = storages.getSource(ml); 
+      for (final StorageType t : diff.existing) {
+        for (final MLocation ml : locations) {
+          final Source source = storages.getSource(ml);
           if (ml.storageType == t) {
-            // try to schedule replica move.
-            if (scheduleMoveReplica(db, ml, source, diff.expected)) {
-              i.remove();
-              j.remove();
-              return;
+            // try to schedule one replica move.
+            if (scheduleMoveReplica(db, source, diff.expected)) {
+              return true;
             }
           }
         }
       }
+      return false;
     }
 
+    @VisibleForTesting
     boolean scheduleMoveReplica(DBlock db, MLocation ml,
-        List<StorageType> targetTypes) {
-      return scheduleMoveReplica(db, ml, storages.getSource(ml), targetTypes);
+                                List<StorageType> targetTypes) {
+      return scheduleMoveReplica(db, storages.getSource(ml), targetTypes);
     }
 
-    boolean scheduleMoveReplica(DBlock db, MLocation ml, Source source,
+    boolean scheduleMoveReplica(DBlock db, Source source,
         List<StorageType> targetTypes) {
       if (dispatcher.getCluster().isNodeGroupAware()) {
-        if (chooseTarget(db, ml, source, targetTypes, Matcher.SAME_NODE_GROUP)) {
+        if (chooseTarget(db, source, targetTypes, Matcher.SAME_NODE_GROUP)) {
           return true;
         }
       }
       
       // Then, match nodes on the same rack
-      if (chooseTarget(db, ml, source, targetTypes, Matcher.SAME_RACK)) {
+      if (chooseTarget(db, source, targetTypes, Matcher.SAME_RACK)) {
         return true;
       }
       // At last, match all remaining nodes
-      if (chooseTarget(db, ml, source, targetTypes, Matcher.ANY_OTHER)) {
-        return true;
-      }
-      return false;
+      return chooseTarget(db, source, targetTypes, Matcher.ANY_OTHER);
     }
 
-    boolean chooseTarget(DBlock db, MLocation ml, Source source,
+    boolean chooseTarget(DBlock db, Source source,
         List<StorageType> targetTypes, Matcher matcher) {
       final NetworkTopology cluster = dispatcher.getCluster(); 
-      for(final Iterator<StorageType> i = targetTypes.iterator(); i.hasNext(); ) {
-        final StorageType t = i.next();
+      for (StorageType t : targetTypes) {
         for(StorageGroup target : storages.getTargetStorages(t)) {
-          if (matcher.match(cluster, ml.datanode, target.getDatanodeInfo())) {
+          if (matcher.match(cluster, source.getDatanodeInfo(),
+              target.getDatanodeInfo())) {
             final PendingMove pm = source.addPendingMove(db, target);
             if (pm != null) {
-              i.remove();
               dispatcher.executePendingMove(pm);
               return true;
             }
@@ -367,7 +384,6 @@ public class Mover {
       return false;
     }
   }
-  
 
   static class MLocation {
     final DatanodeInfo datanode;
@@ -392,7 +408,8 @@ public class Mover {
     }
   }
 
-  private static class StorageTypeDiff {
+  @VisibleForTesting
+  static class StorageTypeDiff {
     final List<StorageType> expected;
     final List<StorageType> existing;
 
@@ -403,7 +420,8 @@ public class Mover {
     
     /**
      * Remove the overlap between the expected types and the existing types.
-     * @return if the existing types is empty after removed the overlap.
+     * @return if the existing types or the expected types is empty after
+     *         removing the overlap.
      */
     boolean removeOverlap() { 
       for(Iterator<StorageType> i = existing.iterator(); i.hasNext(); ) {
@@ -412,38 +430,42 @@ public class Mover {
           i.remove();
         }
       }
-      return existing.isEmpty();
+      return expected.isEmpty() || existing.isEmpty();
     }
   }
 
   static int run(Collection<URI> namenodes, Configuration conf)
       throws IOException, InterruptedException {
-    final long sleeptime = 2000*conf.getLong(
+    final long sleeptime = 2000 * conf.getLong(
         DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
         DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT);
     LOG.info("namenodes = " + namenodes);
     
     List<NameNodeConnector> connectors = Collections.emptyList();
     try {
-      connectors = NameNodeConnector.newNameNodeConnectors(namenodes, 
+      connectors = NameNodeConnector.newNameNodeConnectors(namenodes,
             Mover.class.getSimpleName(), MOVER_ID_PATH, conf);
     
-      while (true) {
+      while (connectors.size() > 0) {
         Collections.shuffle(connectors);
-        for(NameNodeConnector nnc : connectors) {
+        Iterator<NameNodeConnector> iter = connectors.iterator();
+        while (iter.hasNext()) {
+          NameNodeConnector nnc = iter.next();
           final Mover m = new Mover(nnc, conf);
           final ExitStatus r = m.run();
 
-          if (r != ExitStatus.IN_PROGRESS) {
-            //must be an error statue, return.
+          if (r == ExitStatus.SUCCESS) {
+            iter.remove();
+          } else if (r != ExitStatus.IN_PROGRESS) {
+            // must be an error statue, return
             return r.getExitCode();
           }
         }
-
         Thread.sleep(sleeptime);
       }
+      return ExitStatus.SUCCESS.getExitCode();
     } finally {
-      for(NameNodeConnector nnc : connectors) {
+      for (NameNodeConnector nnc : connectors) {
         IOUtils.cleanup(LOG, nnc);
       }
     }

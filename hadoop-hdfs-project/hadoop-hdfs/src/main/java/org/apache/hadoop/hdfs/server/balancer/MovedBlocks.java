@@ -40,7 +40,7 @@ public class MovedBlocks<L> {
   public static class Locations<L> {
     private final Block block; // the block
     /** The locations of the replicas of the block. */
-    private final List<L> locations = new ArrayList<L>(3);
+    protected final List<L> locations = new ArrayList<L>(3);
     
     public Locations(Block block) {
       this.block = block;

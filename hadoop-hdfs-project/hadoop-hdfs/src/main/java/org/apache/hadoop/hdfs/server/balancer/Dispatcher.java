@@ -43,6 +43,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -165,6 +166,10 @@ public class Dispatcher {
 
     void clear() {
       map.clear();
+    }
+
+    public Collection<G> values() {
+      return map.values();
     }
   }
 
@@ -306,6 +311,7 @@ public class Dispatcher {
         LOG.info("Successfully moved " + this);
       } catch (IOException e) {
         LOG.warn("Failed to move " + this + ": " + e.getMessage());
+        target.getDDatanode().setHasFailure();
         // Proxy or target may have some issues, delay before using these nodes
         // further in order to avoid a potential storm of "threads quota
         // exceeded" warnings when the dispatcher gets out of sync with work
@@ -365,6 +371,19 @@ public class Dispatcher {
   public static class DBlock extends MovedBlocks.Locations<StorageGroup> {
     public DBlock(Block block) {
       super(block);
+    }
+
+    @Override
+    public synchronized boolean isLocatedOn(StorageGroup loc) {
+      // currently we only check if replicas are located on the same DataNodes
+      // since we do not have the capability to store two replicas in the same
+      // DataNode even though they are on two different storage types
+      for (StorageGroup existing : locations) {
+        if (existing.getDatanodeInfo().equals(loc.getDatanodeInfo())) {
+          return true;
+        }
+      }
+      return false;
     }
   }
 
@@ -469,6 +488,7 @@ public class Dispatcher {
     protected long delayUntil = 0L;
     /** blocks being moved but not confirmed yet */
     private final List<PendingMove> pendings;
+    private volatile boolean hasFailure = false;
     private final int maxConcurrentMoves;
 
     @Override
@@ -537,6 +557,10 @@ public class Dispatcher {
     /** Remove a scheduled block move from the node */
     synchronized boolean removePendingBlock(PendingMove pendingBlock) {
       return pendings.remove(pendingBlock);
+    }
+
+    void setHasFailure() {
+      this.hasFailure = true;
     }
   }
 
@@ -884,7 +908,7 @@ public class Dispatcher {
     }
 
     // wait for all block moving to be done
-    waitForMoveCompletion();
+    waitForMoveCompletion(targets);
 
     return bytesMoved.get() - bytesLastMoved;
   }
@@ -892,23 +916,25 @@ public class Dispatcher {
   /** The sleeping period before checking if block move is completed again */
   static private long blockMoveWaitTime = 30000L;
 
-  /** set the sleeping period for block move completion check */
-  static void setBlockMoveWaitTime(long time) {
-    blockMoveWaitTime = time;
-  }
-
-  /** Wait for all block move confirmations. */
-  private void waitForMoveCompletion() {
+  /**
+   * Wait for all block move confirmations.
+   * @return true if there is failed move execution
+   */
+  public static boolean waitForMoveCompletion(
+      Iterable<? extends StorageGroup> targets) {
+    boolean hasFailure = false;
     for(;;) {
       boolean empty = true;
       for (StorageGroup t : targets) {
         if (!t.getDDatanode().isPendingQEmpty()) {
           empty = false;
           break;
+        } else {
+          hasFailure |= t.getDDatanode().hasFailure;
         }
       }
       if (empty) {
-        return; //all pending queues are empty
+        return hasFailure; // all pending queues are empty
       }
       try {
         Thread.sleep(blockMoveWaitTime);
@@ -919,7 +945,7 @@ public class Dispatcher {
 
   /**
    * Decide if the block is a good candidate to be moved from source to target.
-   * A block is a good candidate if 
+   * A block is a good candidate if
    * 1. the block is not in the process of being moved/has not been moved;
    * 2. the block does not have a replica on the target;
    * 3. doing the move does not reduce the number of racks that the block has
@@ -986,7 +1012,7 @@ public class Dispatcher {
    * Check if there are any replica (other than source) on the same node group
    * with target. If true, then target is not a good candidate for placing
    * specific replica as we don't want 2 replicas under the same nodegroup.
-   * 
+   *
    * @return true if there are any replica (other than source) on the same node
    *         group with target
    */
@@ -1011,9 +1037,17 @@ public class Dispatcher {
     movedBlocks.cleanup();
   }
 
+  /** set the sleeping period for block move completion check */
+  @VisibleForTesting
+  public static void setBlockMoveWaitTime(long time) {
+    blockMoveWaitTime = time;
+  }
+
   /** shutdown thread pools */
   public void shutdownNow() {
-    dispatchExecutor.shutdownNow();
+    if (dispatchExecutor != null) {
+      dispatchExecutor.shutdownNow();
+    }
     moveExecutor.shutdownNow();
   }
 
