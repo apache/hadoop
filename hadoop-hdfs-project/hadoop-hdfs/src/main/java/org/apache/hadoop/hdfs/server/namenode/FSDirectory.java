@@ -2431,7 +2431,6 @@ public class FSDirectory implements Closeable {
        blocksize = fileNode.getPreferredBlockSize();
        isEncrypted = (feInfo != null) ||
            (isRawPath && isInAnEZ(INodesInPath.fromINode(node)));
-       isLazyPersist = fileNode.getLazyPersistFlag();
      } else {
        isEncrypted = isInAnEZ(INodesInPath.fromINode(node));
      }
