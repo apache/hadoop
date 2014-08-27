@@ -55,6 +55,12 @@ public interface BlockCollection {
   public long getPreferredBlockSize();
 
   /**
+   * Return true if the file was created with {@Link CreateFlag#LAZY_PERSIST}.
+   * @return
+   */
+  public boolean getLazyPersistFlag();
+
+  /**
    * Get block replication for the collection 
    * @return block replication value
    */

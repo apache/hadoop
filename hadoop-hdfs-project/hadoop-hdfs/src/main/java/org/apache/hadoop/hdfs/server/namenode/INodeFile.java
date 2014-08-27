@@ -80,7 +80,8 @@ public class INodeFile extends INodeWithAdditionalFields
     PREFERRED_BLOCK_SIZE(null, 48, 1),
     REPLICATION(PREFERRED_BLOCK_SIZE.BITS, 12, 1),
     STORAGE_POLICY_ID(REPLICATION.BITS, BlockStoragePolicySuite.ID_BIT_LENGTH,
-        0);
+        0),
+    LAZY_PERSIST(REPLICATION.BITS, 4, 0);
 
     private final LongBitFormat BITS;
 
@@ -106,7 +107,11 @@ public class INodeFile extends INodeWithAdditionalFields
       h = PREFERRED_BLOCK_SIZE.BITS.combine(preferredBlockSize, h);
       h = REPLICATION.BITS.combine(replication, h);
       h = STORAGE_POLICY_ID.BITS.combine(storagePolicyID, h);
+      h = LAZY_PERSIST.BITS.combine(isLazyPersist ? 1 : 0, h);
       return h;
+    }
+    static boolean getLazyPersistFlag(long header) {
+      return LAZY_PERSIST.BITS.retrieve(header) == 0 ? false : true;
     }
   }
 
@@ -116,10 +121,10 @@ public class INodeFile extends INodeWithAdditionalFields
 
   INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime,
       long atime, BlockInfo[] blklist, short replication,
-      long preferredBlockSize, byte storagePolicyID) {
+      long preferredBlockSize, byte storagePolicyID, boolean isLazyPersist) {
     super(id, name, permissions, mtime, atime);
     header = HeaderFormat.toLong(preferredBlockSize, replication,
-        storagePolicyID);
+        storagePolicyID, isLazyPersist);
     this.blocks = blklist;
   }
   
@@ -391,6 +396,9 @@ public class INodeFile extends INodeWithAdditionalFields
       int latestSnapshotId) throws QuotaExceededException {
     recordModification(latestSnapshotId);
     setStoragePolicyID(storagePolicyId);
+  }
+  public boolean getLazyPersistFlag() {
+    return HeaderFormat.getLazyPersistFlag(header);
   }
 
   @Override
