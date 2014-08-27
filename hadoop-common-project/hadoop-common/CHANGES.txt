@@ -232,9 +232,6 @@ Trunk (Unreleased)
     HADOOP-8813. Add InterfaceAudience and InterfaceStability annotations
     to RPC Server and Client classes. (Brandon Li via suresh)
 
-    HADOOP-8815. RandomDatum needs to override hashCode().
-    (Brandon Li via suresh)
-
     HADOOP-8436. NPE In getLocalPathForWrite ( path, conf ) when the
     required context item is not configured
     (Brahma Reddy Battula via harsh)
@@ -703,6 +700,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10989. Work around buggy getgrouplist() implementations on Linux that
     return 0 on failure. (cnauroth)
+
+    HADOOP-8815. RandomDatum needs to override hashCode().
+    (Brandon Li via suresh)
 
 Release 2.5.1 - UNRELEASED
 
