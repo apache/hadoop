@@ -237,6 +237,18 @@ Release 2.6.0 - UNRELEASED
     YARN-2434. RM should not recover containers from previously failed attempt
     when AM restart is not enabled (Jian He via jlowe)
 
+Release 2.5.1 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES
