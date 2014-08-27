@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -559,7 +560,81 @@ public class TestSnapshotDeletion {
           + toDeleteFileInSnapshot.toString(), e);
     }
   }
-  
+
+  /**
+   * Delete a snapshot that is taken before a directory deletion,
+   * directory diff list should be combined correctly.
+   */
+  @Test (timeout=60000)
+  public void testDeleteSnapshot1() throws Exception {
+    final Path root = new Path("/");
+
+    Path dir = new Path("/dir1");
+    Path file1 = new Path(dir, "file1");
+    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);
+
+    hdfs.allowSnapshot(root);
+    hdfs.createSnapshot(root, "s1");
+
+    Path file2 = new Path(dir, "file2");
+    DFSTestUtil.createFile(hdfs, file2, BLOCKSIZE, REPLICATION, seed);
+
+    hdfs.createSnapshot(root, "s2");
+
+    // delete file
+    hdfs.delete(file1, true);
+    hdfs.delete(file2, true);
+
+    // delete directory
+    assertTrue(hdfs.delete(dir, false));
+
+    // delete second snapshot
+    hdfs.deleteSnapshot(root, "s2");
+
+    NameNodeAdapter.enterSafeMode(cluster.getNameNode(), false);
+    NameNodeAdapter.saveNamespace(cluster.getNameNode());
+
+    // restart NN
+    cluster.restartNameNodes();
+  }
+
+  /**
+   * Delete a snapshot that is taken before a directory deletion (recursively),
+   * directory diff list should be combined correctly.
+   */
+  @Test (timeout=60000)
+  public void testDeleteSnapshot2() throws Exception {
+    final Path root = new Path("/");
+
+    Path dir = new Path("/dir1");
+    Path file1 = new Path(dir, "file1");
+    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);
+
+    hdfs.allowSnapshot(root);
+    hdfs.createSnapshot(root, "s1");
+
+    Path file2 = new Path(dir, "file2");
+    DFSTestUtil.createFile(hdfs, file2, BLOCKSIZE, REPLICATION, seed);
+    INodeFile file2Node = fsdir.getINode(file2.toString()).asFile();
+    long file2NodeId = file2Node.getId();
+
+    hdfs.createSnapshot(root, "s2");
+
+    // delete directory recursively
+    assertTrue(hdfs.delete(dir, true));
+    assertNotNull(fsdir.getInode(file2NodeId));
+
+    // delete second snapshot
+    hdfs.deleteSnapshot(root, "s2");
+    assertTrue(fsdir.getInode(file2NodeId) == null);
+
+    NameNodeAdapter.enterSafeMode(cluster.getNameNode(), false);
+    NameNodeAdapter.saveNamespace(cluster.getNameNode());
+
+    // restart NN
+    cluster.restartNameNodes();
+  }
+
   /**
    * Test deleting snapshots in a more complicated scenario: need to combine
    * snapshot diffs, but no need to handle diffs distributed in a dir tree
