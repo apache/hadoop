@@ -358,7 +358,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       Path symlink = stat.isSymlink() ? new Path(stat.getSymlink()) : null;
       Path path = dst != null ? new Path(dst) : new Path(src);
       status = new FileStatus(stat.getLen(), stat.isDir(),
-          stat.getReplication(), stat.getBlockSize(), stat.getModificationTime(),
+          stat.getReplication(), stat.getBlockSize(), stat.isLazyPersist(),
+          stat.getModificationTime(),
           stat.getAccessTime(), stat.getPermission(), stat.getOwner(),
           stat.getGroup(), symlink, path);
     }
@@ -2435,6 +2436,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     boolean create = flag.contains(CreateFlag.CREATE);
     boolean overwrite = flag.contains(CreateFlag.OVERWRITE);
+    boolean isLazyPersist = flag.contains(CreateFlag.LAZY_PERSIST);
 
     waitForLoadingFSImage();
 
@@ -2497,8 +2499,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           checkNameNodeSafeMode("Cannot create file" + src);
           src = resolvePath(src, pathComponents);
           startFileInternal(pc, src, permissions, holder, clientMachine, create,
-              overwrite, createParent, replication, blockSize, suite, edek,
-              logRetryCache);
+              overwrite, createParent, replication, blockSize, isLazyPersist,
+              suite, edek, logRetryCache);
           stat = dir.getFileInfo(src, false,
               FSDirectory.isReservedRawName(srcArg));
         } catch (StandbyException se) {
@@ -2538,8 +2540,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private void startFileInternal(FSPermissionChecker pc, String src,
       PermissionStatus permissions, String holder, String clientMachine,
       boolean create, boolean overwrite, boolean createParent,
-      short replication, long blockSize, CipherSuite suite,
-      EncryptedKeyVersion edek, boolean logRetryEntry)
+      short replication, long blockSize, boolean isLazyPersist,
+      CipherSuite suite, EncryptedKeyVersion edek, boolean logRetryEntry)
       throws FileAlreadyExistsException, AccessControlException,
       UnresolvedLinkException, FileNotFoundException,
       ParentNotDirectoryException, RetryStartFileException, IOException {
@@ -2614,7 +2616,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (parent != null && mkdirsRecursively(parent.toString(),
               permissions, true, now())) {
         newNode = dir.addFile(src, permissions, replication, blockSize,
-                holder, clientMachine);
+                              holder, clientMachine);
       }
 
       if (newNode == null) {

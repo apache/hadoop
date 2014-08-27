@@ -1,0 +1,4 @@
+  BREAKDOWN OF HDFS-6581 SUBTASKS AND RELATED JIRAS
+
+    HDFS-6921. Add LazyPersist flag to FileStatus. (Arpit Agarwal)
+

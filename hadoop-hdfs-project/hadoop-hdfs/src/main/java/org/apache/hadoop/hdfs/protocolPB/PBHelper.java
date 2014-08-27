@@ -1277,6 +1277,9 @@ public class PBHelper {
     if (flag.contains(CreateFlag.OVERWRITE)) {
       value |= CreateFlagProto.OVERWRITE.getNumber();
     }
+    if (flag.contains(CreateFlag.LAZY_PERSIST)) {
+      value |= CreateFlagProto.LAZY_PERSIST.getNumber();
+    }
     return value;
   }
   
@@ -1292,6 +1295,10 @@ public class PBHelper {
     if ((flag & CreateFlagProto.OVERWRITE_VALUE) 
         == CreateFlagProto.OVERWRITE_VALUE) {
       result.add(CreateFlag.OVERWRITE);
+    }
+    if ((flag & CreateFlagProto.LAZY_PERSIST_VALUE)
+        == CreateFlagProto.LAZY_PERSIST_VALUE) {
+      result.add(CreateFlag.LAZY_PERSIST);
     }
     return new EnumSetWritable<CreateFlag>(result);
   }
@@ -1318,6 +1325,7 @@ public class PBHelper {
     return new HdfsLocatedFileStatus(
         fs.getLength(), fs.getFileType().equals(FileType.IS_DIR), 
         fs.getBlockReplication(), fs.getBlocksize(),
+        fs.hasIsLazyPersist() ? fs.getIsLazyPersist() : false,
         fs.getModificationTime(), fs.getAccessTime(),
         PBHelper.convert(fs.getPermission()), fs.getOwner(), fs.getGroup(), 
         fs.getFileType().equals(FileType.IS_SYMLINK) ? 
@@ -1366,6 +1374,7 @@ public class PBHelper {
       setFileType(fType).
       setBlockReplication(fs.getReplication()).
       setBlocksize(fs.getBlockSize()).
+      setIsLazyPersist(fs.isLazyPersist()).
       setModificationTime(fs.getModificationTime()).
       setAccessTime(fs.getAccessTime()).
       setPermission(PBHelper.convert(fs.getPermission())).

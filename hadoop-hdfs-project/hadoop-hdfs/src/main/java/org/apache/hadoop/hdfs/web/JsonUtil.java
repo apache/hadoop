@@ -244,6 +244,8 @@ public class JsonUtil {
     final long aTime = (Long) m.get("accessTime");
     final long mTime = (Long) m.get("modificationTime");
     final long blockSize = (Long) m.get("blockSize");
+    final boolean isLazyPersist = m.containsKey("lazyPersist")
+        ? (Boolean) m.get("lazyPersist") : false;
     final short replication = (short) (long) (Long) m.get("replication");
     final long fileId = m.containsKey("fileId") ? (Long) m.get("fileId")
         : INodeId.GRANDFATHER_INODE_ID;
@@ -251,9 +253,8 @@ public class JsonUtil {
     final int childrenNum = (childrenNumLong == null) ? -1
             : childrenNumLong.intValue();
     return new HdfsFileStatus(len, type == PathType.DIRECTORY, replication,
-        blockSize, mTime, aTime, permission, owner, group,
-        symlink, DFSUtil.string2Bytes(localName), fileId, childrenNum,
-        null);
+        blockSize, isLazyPersist, mTime, aTime, permission, owner, group,
+        symlink, DFSUtil.string2Bytes(localName), fileId, childrenNum, null);
   }
 
   /** Convert an ExtendedBlock to a Json map. */

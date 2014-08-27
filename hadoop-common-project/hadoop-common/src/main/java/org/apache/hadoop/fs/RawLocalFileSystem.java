@@ -762,6 +762,7 @@ public class RawLocalFileSystem extends FileSystem {
           false,
           fs.getReplication(),
           fs.getBlockSize(),
+          fs.isLazyPersist(),
           fs.getModificationTime(),
           fs.getAccessTime(),
           fs.getPermission(),
@@ -777,7 +778,7 @@ public class RawLocalFileSystem extends FileSystem {
        * when available.
        */
       if (!target.isEmpty()) {
-        return new FileStatus(0, false, 0, 0, 0, 0, FsPermission.getDefault(),
+        return new FileStatus(0, false, 0, 0, false, 0, 0, FsPermission.getDefault(),
             "", "", new Path(target), f);
       }
       // f refers to a file or directory that does not exist

@@ -263,6 +263,7 @@ message HdfsFileStatusProto {
 
   // Optional field for file encryption
   optional FileEncryptionInfoProto fileEncryptionInfo = 15;
+  optional bool isLazyPersist = 16 [default = false];
 } 
 
 /**

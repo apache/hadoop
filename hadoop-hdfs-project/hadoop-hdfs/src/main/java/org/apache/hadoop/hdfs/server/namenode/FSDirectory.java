@@ -1438,7 +1438,7 @@ public class FSDirectory implements Closeable {
   private HdfsFileStatus getFileInfo4DotSnapshot(String src)
       throws UnresolvedLinkException {
     if (getINode4DotSnapshot(src) != null) {
-      return new HdfsFileStatus(0, true, 0, 0, 0, 0, null, null, null, null,
+      return new HdfsFileStatus(0, true, 0, 0, false, 0, 0, null, null, null, null,
           HdfsFileStatus.EMPTY_NAME, -1L, 0, null);
     }
     return null;
@@ -2300,6 +2300,7 @@ public class FSDirectory implements Closeable {
         node.isDirectory(), 
         replication, 
         blocksize,
+        false,
         node.getModificationTime(snapshot),
         node.getAccessTime(snapshot),
         getPermissionForFileStatus(node, snapshot),
@@ -2347,7 +2348,7 @@ public class FSDirectory implements Closeable {
 
     HdfsLocatedFileStatus status =
         new HdfsLocatedFileStatus(size, node.isDirectory(), replication,
-          blocksize, node.getModificationTime(snapshot),
+          blocksize, false, node.getModificationTime(snapshot),
           node.getAccessTime(snapshot),
           getPermissionForFileStatus(node, snapshot),
           node.getUserName(snapshot), node.getGroupName(snapshot),

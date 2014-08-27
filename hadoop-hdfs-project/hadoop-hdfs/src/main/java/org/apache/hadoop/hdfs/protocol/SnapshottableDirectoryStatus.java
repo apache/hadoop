@@ -59,7 +59,7 @@ public class SnapshottableDirectoryStatus {
       FsPermission permission, String owner, String group, byte[] localName,
       long inodeId, int childrenNum,
       int snapshotNumber, int snapshotQuota, byte[] parentFullPath) {
-    this.dirStatus = new HdfsFileStatus(0, true, 0, 0, modification_time,
+    this.dirStatus = new HdfsFileStatus(0, true, 0, 0, false, modification_time,
         access_time, permission, owner, group, null, localName, inodeId,
         childrenNum, null);
     this.snapshotNumber = snapshotNumber;

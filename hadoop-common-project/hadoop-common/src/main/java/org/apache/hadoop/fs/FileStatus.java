@@ -38,6 +38,7 @@ public class FileStatus implements Writable, Comparable {
   private boolean isdir;
   private short block_replication;
   private long blocksize;
+  private boolean isLazyPersist;
   private long modification_time;
   private long access_time;
   private FsPermission permission;
@@ -73,6 +74,18 @@ public class FileStatus implements Writable, Comparable {
                     FsPermission permission, String owner, String group, 
                     Path symlink,
                     Path path) {
+    this(length, isdir, block_replication, blocksize, false,
+        modification_time, access_time, permission, owner, group,
+        symlink, path);
+  }
+
+  public FileStatus(long length, boolean isdir,
+                    int block_replication,
+                    long blocksize, boolean isLazyPersist,
+                    long modification_time, long access_time,
+                    FsPermission permission, String owner, String group,
+                    Path symlink,
+                    Path path) {
     this.length = length;
     this.isdir = isdir;
     this.block_replication = (short)block_replication;
@@ -92,6 +105,7 @@ public class FileStatus implements Writable, Comparable {
     this.group = (group == null) ? "" : group;
     this.symlink = symlink;
     this.path = path;
+    this.isLazyPersist = isLazyPersist;
     // The variables isdir and symlink indicate the type:
     // 1. isdir implies directory, in which case symlink must be null.
     // 2. !isdir implies a file or symlink, symlink != null implies a
@@ -165,6 +179,13 @@ public class FileStatus implements Writable, Comparable {
    */
   public long getBlockSize() {
     return blocksize;
+  }
+
+  /**
+   * Get whether the file is lazyPersist.
+   */
+  public boolean isLazyPersist() {
+    return isLazyPersist;
   }
 
   /**

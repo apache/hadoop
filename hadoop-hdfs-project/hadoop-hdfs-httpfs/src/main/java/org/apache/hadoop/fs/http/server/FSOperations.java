@@ -125,6 +125,7 @@ public class FSOperations {
               fileStatus.getModificationTime());
       json.put(HttpFSFileSystem.BLOCK_SIZE_JSON, fileStatus.getBlockSize());
       json.put(HttpFSFileSystem.REPLICATION_JSON, fileStatus.getReplication());
+      json.put(HttpFSFileSystem.LAZY_PERSIST_JSON, fileStatus.isLazyPersist());
       if ( (aclStatus != null) && !(aclStatus.getEntries().isEmpty()) ) {
         json.put(HttpFSFileSystem.ACL_BIT_JSON,true);
       }

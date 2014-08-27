@@ -39,6 +39,7 @@ public class HdfsFileStatus {
   private final boolean isdir;
   private final short block_replication;
   private final long blocksize;
+  private final boolean isLazyPersist;
   private final long modification_time;
   private final long access_time;
   private final FsPermission permission;
@@ -69,13 +70,15 @@ public class HdfsFileStatus {
    * @param feInfo the file's encryption info
    */
   public HdfsFileStatus(long length, boolean isdir, int block_replication,
-      long blocksize, long modification_time, long access_time,
-      FsPermission permission, String owner, String group, byte[] symlink,
-    byte[] path, long fileId, int childrenNum, FileEncryptionInfo feInfo) {
+      long blocksize, boolean isLazyPersist, long modification_time,
+      long access_time, FsPermission permission, String owner,
+      String group, byte[] symlink, byte[] path, long fileId,
+      int childrenNum, FileEncryptionInfo feInfo) {
     this.length = length;
     this.isdir = isdir;
     this.block_replication = (short)block_replication;
     this.blocksize = blocksize;
+    this.isLazyPersist = isLazyPersist;
     this.modification_time = modification_time;
     this.access_time = access_time;
     this.permission = (permission == null) ? 
@@ -122,6 +125,13 @@ public class HdfsFileStatus {
    */
   public final long getBlockSize() {
     return blocksize;
+  }
+
+  /**
+   * @return true if the file is lazyPersist.
+   */
+  final public boolean isLazyPersist() {
+    return isLazyPersist;
   }
 
   /**
@@ -253,7 +263,7 @@ public class HdfsFileStatus {
 
   public final FileStatus makeQualified(URI defaultUri, Path path) {
     return new FileStatus(getLen(), isDir(), getReplication(),
-        getBlockSize(), getModificationTime(),
+        getBlockSize(), isLazyPersist(), getModificationTime(),
         getAccessTime(),
         getPermission(), getOwner(), getGroup(),
         isSymlink() ? new Path(getSymlink()) : null,
