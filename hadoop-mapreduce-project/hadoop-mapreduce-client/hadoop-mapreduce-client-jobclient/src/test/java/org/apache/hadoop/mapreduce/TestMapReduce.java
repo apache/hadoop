@@ -23,14 +23,14 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.File;
 import java.util.Iterator;
 import java.util.Random;
-
-import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.SequenceFile;
@@ -41,6 +41,10 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MapFileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
+import org.junit.After;
+import org.junit.Test;
+
+import static org.junit.Assert.assertTrue;
 
 /**********************************************************
  * MapredLoadTest generates a bunch of work that exercises
@@ -75,8 +79,10 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
  * 7) A mapred job integrates all the count files into a single one.
  *
  **********************************************************/
-public class TestMapReduce extends TestCase {
-  
+public class TestMapReduce {
+  private static final File TEST_DIR = new File(
+      System.getProperty("test.build.data",
+          System.getProperty("java.io.tmpdir")), "TestMapReduce-mapreduce");
   private static FileSystem fs;
   
   static {
@@ -215,6 +221,12 @@ public class TestMapReduce extends TestCase {
   private static int counts = 100;
   private static Random r = new Random();
 
+  @After
+  public void cleanup() {
+    FileUtil.fullyDelete(TEST_DIR);
+  }
+
+  @Test
   public void testMapred() throws Exception {
     launch();
   }
@@ -239,7 +251,7 @@ public class TestMapReduce extends TestCase {
     //
     // Write the answer key to a file.  
     //
-    Path testdir = new Path("mapred.loadtest");
+    Path testdir = new Path(TEST_DIR.getAbsolutePath());
     if (!fs.mkdirs(testdir)) {
       throw new IOException("Mkdirs failed to create " + testdir.toString());
     }
@@ -488,13 +500,17 @@ public class TestMapReduce extends TestCase {
       System.err.println("Usage: TestMapReduce <range> <counts>");
       System.err.println();
       System.err.println("Note: a good test will have a <counts> value" +
-        " that is substantially larger than the <range>");
+          " that is substantially larger than the <range>");
       return;
     }
 
     int i = 0;
     range = Integer.parseInt(argv[i++]);
     counts = Integer.parseInt(argv[i++]);
-    launch();
+    try {
+      launch();
+    } finally {
+      FileUtil.fullyDelete(TEST_DIR);
+    }
   }
 }

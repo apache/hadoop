@@ -17,21 +17,36 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.mapred.lib.*;
+import java.io.File;
+import java.io.IOException;
+import java.util.Iterator;
+
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.MRConfig;
-import junit.framework.TestCase;
-import java.io.*;
-import java.util.*;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import static org.junit.Assert.fail;
+
 
 /** 
  * TestMapOutputType checks whether the Map task handles type mismatch
  * between mapper output and the type specified in
  * JobConf.MapOutputKeyType and JobConf.MapOutputValueType.
  */
-public class TestMapOutputType extends TestCase 
-{
+public class TestMapOutputType {
+  private static final File TEST_DIR = new File(
+      System.getProperty("test.build.data",
+          System.getProperty("java.io.tmpdir")), "TestMapOutputType-mapred");
   JobConf conf = new JobConf(TestMapOutputType.class);
   JobClient jc;
   /** 
@@ -75,9 +90,9 @@ public class TestMapOutputType extends TestCase
     }
   }
 
-
+  @Before
   public void configure() throws Exception {
-    Path testdir = new Path("build/test/test.mapred.spill");
+    Path testdir = new Path(TEST_DIR.getAbsolutePath());
     Path inDir = new Path(testdir, "in");
     Path outDir = new Path(testdir, "out");
     FileSystem fs = FileSystem.get(conf);
@@ -101,17 +116,21 @@ public class TestMapOutputType extends TestCase
       throw new IOException("Mkdirs failed to create " + inDir.toString());
     }
     Path inFile = new Path(inDir, "part0");
-    SequenceFile.Writer writer = SequenceFile.createWriter(fs, conf, inFile, 
+    SequenceFile.Writer writer = SequenceFile.createWriter(fs, conf, inFile,
                                                            Text.class, Text.class);
     writer.append(new Text("rec: 1"), new Text("Hello"));
     writer.close();
     
     jc = new JobClient(conf);
   }
-  
+
+  @After
+  public void cleanup() {
+    FileUtil.fullyDelete(TEST_DIR);
+  }
+
+  @Test
   public void testKeyMismatch() throws Exception {
-    configure();
-    
     //  Set bad MapOutputKeyClass and MapOutputValueClass
     conf.setMapOutputKeyClass(IntWritable.class);
     conf.setMapOutputValueClass(IntWritable.class);
@@ -125,11 +144,9 @@ public class TestMapOutputType extends TestCase
       fail("Oops! The job was supposed to break due to an exception");
     }
   }
-  
+
+  @Test
   public void testValueMismatch() throws Exception {
-    configure();
-  
-    // Set good MapOutputKeyClass, bad MapOutputValueClass    
     conf.setMapOutputKeyClass(Text.class);
     conf.setMapOutputValueClass(IntWritable.class);
     
@@ -142,11 +159,10 @@ public class TestMapOutputType extends TestCase
       fail("Oops! The job was supposed to break due to an exception");
     }
   }
-  
-  public void testNoMismatch() throws Exception{ 
-    configure();
-    
-    //  Set good MapOutputKeyClass and MapOutputValueClass    
+
+  @Test
+  public void testNoMismatch() throws Exception{
+    //  Set good MapOutputKeyClass and MapOutputValueClass
     conf.setMapOutputKeyClass(Text.class);
     conf.setMapOutputValueClass(Text.class);
      
