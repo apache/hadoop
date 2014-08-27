@@ -162,6 +162,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6899. Allow changing MiniDFSCluster volumes per DN and capacity
     per volume. (Arpit Agarwal)
 
+    HDFS-4486. Add log category for long-running DFSClient notices (Zhe Zhang
+    via Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

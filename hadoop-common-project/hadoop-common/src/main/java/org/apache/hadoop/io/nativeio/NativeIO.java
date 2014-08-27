@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.SecureIOUtils.AlreadyExistsException;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.PerformanceAdvisory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -195,7 +196,7 @@ public class NativeIO {
           // This can happen if the user has an older version of libhadoop.so
           // installed - in this case we can continue without native IO
           // after warning
-          LOG.error("Unable to initialize NativeIO libraries", t);
+          PerformanceAdvisory.LOG.debug("Unable to initialize NativeIO libraries", t);
         }
       }
     }
@@ -573,7 +574,7 @@ public class NativeIO {
           // This can happen if the user has an older version of libhadoop.so
           // installed - in this case we can continue without native IO
           // after warning
-          LOG.error("Unable to initialize NativeIO libraries", t);
+          PerformanceAdvisory.LOG.debug("Unable to initialize NativeIO libraries", t);
         }
       }
     }
@@ -592,7 +593,7 @@ public class NativeIO {
         // This can happen if the user has an older version of libhadoop.so
         // installed - in this case we can continue without native IO
         // after warning
-        LOG.error("Unable to initialize NativeIO libraries", t);
+        PerformanceAdvisory.LOG.debug("Unable to initialize NativeIO libraries", t);
       }
     }
   }

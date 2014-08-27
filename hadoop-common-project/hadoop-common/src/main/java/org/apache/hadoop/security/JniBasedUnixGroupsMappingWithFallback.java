@@ -24,6 +24,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.NativeCodeLoader;
+import org.apache.hadoop.util.PerformanceAdvisory;
 
 public class JniBasedUnixGroupsMappingWithFallback implements
     GroupMappingServiceProvider {
@@ -37,7 +38,7 @@ public class JniBasedUnixGroupsMappingWithFallback implements
     if (NativeCodeLoader.isNativeCodeLoaded()) {
       this.impl = new JniBasedUnixGroupsMapping();
     } else {
-      LOG.debug("Falling back to shell based");
+      PerformanceAdvisory.LOG.debug("Falling back to shell based");
       this.impl = new ShellBasedUnixGroupsMapping();
     }
     if (LOG.isDebugEnabled()){
