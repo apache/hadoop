@@ -19,6 +19,7 @@ package org.apache.hadoop.nfs.nfs3.request;
 
 import java.io.IOException;
 
+import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.oncrpc.XDR;
 
 /**
@@ -29,13 +30,22 @@ public class READDIR3Request extends RequestWithHandle {
   private final long cookieVerf;
   private final int count;
 
-  public READDIR3Request(XDR xdr) throws IOException {
-    super(xdr);
-    cookie = xdr.readHyper();
-    cookieVerf = xdr.readHyper();
-    count = xdr.readInt();
+  public static READDIR3Request deserialize(XDR xdr) throws IOException {
+    FileHandle handle = readHandle(xdr);
+    long cookie = xdr.readHyper();
+    long cookieVerf = xdr.readHyper();
+    int count = xdr.readInt();
+    return new READDIR3Request(handle, cookie, cookieVerf, count);
   }
-
+  
+  public READDIR3Request(FileHandle handle, long cookie, long cookieVerf,
+      int count) {
+    super(handle);
+    this.cookie = cookie;
+    this.cookieVerf = cookieVerf;
+    this.count = count;
+  }
+  
   public long getCookie() {
     return this.cookie;
   }
@@ -46,5 +56,13 @@ public class READDIR3Request extends RequestWithHandle {
 
   public long getCount() {
     return this.count;
+  }
+
+  @Override
+  public void serialize(XDR xdr) {
+    handle.serialize(xdr);
+    xdr.writeLongAsHyper(cookie);
+    xdr.writeLongAsHyper(cookieVerf);
+    xdr.writeInt(count);
   }
 }

@@ -23,21 +23,23 @@ import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.oncrpc.XDR;
 
 /**
- * READLINK3 Request
+ * An NFS request that uses {@link FileHandle} to identify a file.
  */
-public class READLINK3Request extends RequestWithHandle {
-
-  public static READLINK3Request deserialize(XDR xdr) throws IOException {
-    FileHandle handle = readHandle(xdr);
-    return new READLINK3Request(handle);
+public abstract class NFS3Request {
+  
+  /**
+   * Deserialize a handle from an XDR object
+   */
+  static FileHandle readHandle(XDR xdr) throws IOException {
+    FileHandle handle = new FileHandle();
+    if (!handle.deserialize(xdr)) {
+      throw new IOException("can't deserialize file handle");
+    }
+    return handle;
   }
   
-  public READLINK3Request(FileHandle handle) {
-    super(handle);
-  }
-  
-  @Override
-  public void serialize(XDR xdr) {
-    handle.serialize(xdr);   
-  }
+  /**
+   * Subclass should implement. Usually handle is the first to be serialized
+   */
+  public abstract void serialize(XDR xdr);
 }

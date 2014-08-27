@@ -19,13 +19,24 @@ package org.apache.hadoop.nfs.nfs3.request;
 
 import java.io.IOException;
 
+import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.oncrpc.XDR;
 
 /**
  * GETATTR3 Request
  */
 public class GETATTR3Request extends RequestWithHandle {
-  public GETATTR3Request(XDR xdr) throws IOException {
-    super(xdr);
+  public static GETATTR3Request deserialize(XDR xdr) throws IOException {
+    FileHandle handle = readHandle(xdr);
+    return new GETATTR3Request(handle);
+  }
+
+  public GETATTR3Request(FileHandle handle) {
+    super(handle);
+  }
+  
+  @Override
+  public void serialize(XDR xdr) {
+    handle.serialize(xdr);    
   }
 }
