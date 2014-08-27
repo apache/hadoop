@@ -44,6 +44,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -415,6 +416,17 @@ public final class HttpServer2 implements FilterContainer {
   private static WebAppContext createWebAppContext(String name,
       Configuration conf, AccessControlList adminsAcl, final String appDir) {
     WebAppContext ctx = new WebAppContext();
+    ctx.setDefaultsDescriptor(null);
+    ServletHolder holder = new ServletHolder(new DefaultServlet());
+    Map<String, String> params = ImmutableMap. <String, String> builder()
+            .put("acceptRanges", "true")
+            .put("dirAllowed", "false")
+            .put("gzip", "true")
+            .put("useFileMappedBuffer", "true")
+            .build();
+    holder.setInitParameters(params);
+    ctx.setWelcomeFiles(new String[] {"index.html"});
+    ctx.addServlet(holder, "/");
     ctx.setDisplayName(name);
     ctx.setContextPath("/");
     ctx.setWar(appDir + "/" + name);

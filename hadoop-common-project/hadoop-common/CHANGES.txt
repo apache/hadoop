@@ -323,6 +323,8 @@ Trunk (Unreleased)
 
     HADOOP-10996. Stop violence in the *_HOME (aw)
 
+    HADOOP-10748. HttpServer2 should not load JspServlet. (wheat9)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
