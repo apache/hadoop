@@ -109,7 +109,6 @@ import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.URI;
 import java.security.GeneralSecurityException;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -123,7 +122,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -521,9 +519,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private final NNConf nnConf;
 
   private KeyProviderCryptoExtension provider = null;
-  private KeyProvider.Options providerOptions = null;
-
-  private final CryptoCodec codec;
 
   private volatile boolean imageLoaded = false;
   private final Condition cond;
@@ -744,8 +739,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     } else {
       LOG.info("Found KeyProvider: " + provider.toString());
     }
-    providerOptions = KeyProvider.options(conf);
-    this.codec = CryptoCodec.getInstance(conf);
     if (conf.getBoolean(DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY,
                         DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT)) {
       LOG.info("Enabling async auditlog");

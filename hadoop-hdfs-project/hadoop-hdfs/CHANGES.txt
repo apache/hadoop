@@ -1301,7 +1301,6 @@ Release 2.5.2 - 2014-11-10
 
     HDFS-7274. Disable SSLv3 in HttpFS. (Robert Kanter via kasha)
 
-
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
