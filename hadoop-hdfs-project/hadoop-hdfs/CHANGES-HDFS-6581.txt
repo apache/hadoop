@@ -16,3 +16,5 @@
     HDFS-6926. DN support for saving replicas to persistent storage and
     evicting in-memory replicas. (Arpit Agarwal)
 
+    HDFS-6927. Initial unit tests for lazy persist files. (Arpit Agarwal)
+
