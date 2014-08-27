@@ -6,4 +6,7 @@
 
     HDFS-6922. Add LazyPersist flag to INodeFile, save it in FsImage and
     edit logs. (Arpit Agarwal)
+  
+    HDFS-6923. Propagate LazyPersist flag to DNs via DataTransferProtocol.
+    (Arpit Agarwal)
 

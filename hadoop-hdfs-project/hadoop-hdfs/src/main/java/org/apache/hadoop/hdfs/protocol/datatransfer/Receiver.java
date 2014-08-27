@@ -137,7 +137,8 @@ public abstract class Receiver implements DataTransferProtocol {
         fromProto(proto.getRequestedChecksum()),
         (proto.hasCachingStrategy() ?
             getCachingStrategy(proto.getCachingStrategy()) :
-          CachingStrategy.newDefaultStrategy()));
+          CachingStrategy.newDefaultStrategy()),
+        (proto.hasAllowLazyPersist() ? proto.getAllowLazyPersist() : false));
   }
 
   /** Receive {@link Op#TRANSFER_BLOCK} */
