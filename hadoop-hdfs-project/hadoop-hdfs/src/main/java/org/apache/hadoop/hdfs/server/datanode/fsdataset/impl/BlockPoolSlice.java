@@ -28,6 +28,7 @@ import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.util.Scanner;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DU;
 import org.apache.hadoop.fs.FileUtil;
@@ -61,6 +62,7 @@ class BlockPoolSlice {
   private final File currentDir; // StorageDirectory/current/bpid/current
   // directory where finalized replicas are stored
   private final File finalizedDir;
+  private final File lazypersistDir;
   private final File rbwDir; // directory store RBW replica
   private final File tmpDir; // directory store Temporary replica
   private static final String DU_CACHE_FILE = "dfsUsed";
@@ -85,9 +87,21 @@ class BlockPoolSlice {
     this.currentDir = new File(bpDir, DataStorage.STORAGE_DIR_CURRENT); 
     this.finalizedDir = new File(
         currentDir, DataStorage.STORAGE_DIR_FINALIZED);
+    this.lazypersistDir = new File(currentDir, DataStorage.STORAGE_DIR_LAZY_PERSIST);
     if (!this.finalizedDir.exists()) {
       if (!this.finalizedDir.mkdirs()) {
         throw new IOException("Failed to mkdirs " + this.finalizedDir);
+      }
+    }
+
+    // Delete all checkpointed replicas on startup.
+    // TODO: We can move checkpointed replicas to the finalized dir and delete
+    //       the copy on RAM_DISK. For now we take the simpler approach.
+
+    FileUtil.fullyDelete(lazypersistDir);
+    if (!this.lazypersistDir.exists()) {
+      if (!this.lazypersistDir.mkdirs()) {
+        throw new IOException("Failed to mkdirs " + this.lazypersistDir);
       }
     }
 
@@ -142,6 +156,10 @@ class BlockPoolSlice {
     return finalizedDir;
   }
   
+  File getLazypersistDir() {
+    return lazypersistDir;
+  }
+
   File getRbwDir() {
     return rbwDir;
   }
@@ -258,12 +276,37 @@ class BlockPoolSlice {
     dfsUsage.incDfsUsed(b.getNumBytes()+metaFile.length());
     return blockFile;
   }
-    
+
+  File lazyPersistReplica(Block b, File f) throws IOException {
+    File blockFile = FsDatasetImpl.copyBlockFiles(b, f, lazypersistDir);
+    File metaFile = FsDatasetUtil.getMetaFile(blockFile, b.getGenerationStamp());
+    dfsUsage.incDfsUsed(b.getNumBytes() + metaFile.length());
+    return blockFile;
+  }
+
+  /**
+   * Move a persisted replica from lazypersist directory to a subdirectory
+   * under finalized.
+   */
+  File activateSavedReplica(Block b, File blockFile) throws IOException {
+    final File blockDir = DatanodeUtil.idToBlockDir(finalizedDir, b.getBlockId());
+    final File metaFile = FsDatasetUtil.getMetaFile(blockFile, b.getGenerationStamp());
+    final File targetBlockFile = new File(blockDir, blockFile.getName());
+    final File targetMetaFile = new File(blockDir, metaFile.getName());
+    FileUtils.moveFile(blockFile, targetBlockFile);
+    FsDatasetImpl.LOG.info("Moved " + blockFile + " to " + targetBlockFile);
+    FileUtils.moveFile(metaFile, targetMetaFile);
+    FsDatasetImpl.LOG.info("Moved " + metaFile + " to " + targetMetaFile);
+    return targetBlockFile;
+  }
+
   void checkDirs() throws DiskErrorException {
     DiskChecker.checkDirs(finalizedDir);
     DiskChecker.checkDir(tmpDir);
     DiskChecker.checkDir(rbwDir);
   }
+
+
     
   void getVolumeMap(ReplicaMap volumeMap) throws IOException {
     // add finalized replicas
