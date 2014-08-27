@@ -162,7 +162,7 @@ void Merger::merge() {
   _writer->getStatistics(output_size, real_output_size);
 
   if (total_record != 0) {
-    LOG("[Merge] Merged segment#: %lu, record#: %llu, avg record size: %llu, uncompressed total bytes: %llu, compressed total bytes: %llu, time: %llu ms",
+    LOG("[Merge] Merged segment#: %lu, record#: %"PRIu64", avg record size: %"PRIu64", uncompressed total bytes: %"PRIu64", compressed total bytes: %"PRIu64", time: %"PRIu64" ms",
         _entries.size(),
         total_record,
         output_size / (total_record),
@@ -170,7 +170,7 @@ void Merger::merge() {
         real_output_size,
         interval / M);
   } else {
-    LOG("[Merge] Merged segments#, %lu, uncompressed total bytes: %llu, compressed total bytes: %llu, time: %llu ms",
+    LOG("[Merge] Merged segments#, %lu, uncompressed total bytes: %"PRIu64", compressed total bytes: %"PRIu64", time: %"PRIu64" ms",
         _entries.size(),
         output_size,
         real_output_size,

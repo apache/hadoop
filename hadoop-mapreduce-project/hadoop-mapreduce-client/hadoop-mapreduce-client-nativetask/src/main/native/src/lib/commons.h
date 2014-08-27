@@ -30,6 +30,9 @@
 #include <memory.h>
 #include <fcntl.h>
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 #include <limits>
 #include <string>
 #include <vector>

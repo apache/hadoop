@@ -55,8 +55,8 @@ private:
 
 public:
   CombineRunnerWrapper(Config * config, SpillOutputService * service)
-      : _spillOutput(service), _config(config), _isJavaCombiner(false), _combineRunner(NULL),
-          _combinerInited(false) {
+      : _config(config), _combineRunner(NULL), _isJavaCombiner(false),
+          _combinerInited(false), _spillOutput(service) {
   }
 
   ~CombineRunnerWrapper() {

@@ -44,6 +44,7 @@ TEST(MemoryBlock, test) {
 
   ASSERT_EQ(2, block.getKVCount());
   ASSERT_EQ(kv1, block.getKVBuffer(0));
+  ASSERT_EQ(kv2, block.getKVBuffer(1));
 
   ASSERT_EQ(BUFFER_LENGTH - 2 * KV_SIZE, block.remainSpace());
   ASSERT_EQ(false, block.sorted());

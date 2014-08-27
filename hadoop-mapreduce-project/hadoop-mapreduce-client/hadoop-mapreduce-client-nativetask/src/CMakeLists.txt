@@ -90,7 +90,7 @@ SET(CMAKE_FIND_LIBRARY_SUFFIXES STORED_CMAKE_FIND_LIBRARY_SUFFIXES)
 
 # primitive configs
 set(PRFLAGS "-DSIMPLE_MEMCPY")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${PRFLAGS} -Wall")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${PRFLAGS} -fno-strict-aliasing -Wall -Wno-sign-compare")
 set(CMAKE_LD_FLAGS "${CMAKE_LD_FLAGS} -no-undefined -version-info 0:1:0
     -L${_JAVA_HOME}/jre/lib/amd64/server -ljvm")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS} -g -O2 -DNDEBUG -fPIC")
@@ -150,7 +150,6 @@ CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
 
 include_directories(
     ${GENERATED_JAVAH}
-    ${D}
     ${D}/src
     ${D}/src/util
     ${D}/src/lib
@@ -160,6 +159,8 @@ include_directories(
     ${JNI_INCLUDE_DIRS}
     ${SNAPPY_INCLUDE_DIR}
 )
+# add gtest as system library to suppress gcc warnings
+include_directories(SYSTEM ${D}/gtest/include)
 
 
 SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
@@ -220,8 +221,9 @@ add_dual_library(nativetask
 
 target_link_libraries(nativetask ${NT_DEPEND_LIBRARY})
 
+add_library(gtest ${D}/gtest/gtest-all.cc)
+set_target_properties(gtest PROPERTIES COMPILE_FLAGS "-w")
 add_executable(nttest
-    ${D}/gtest/gtest-all.cc
     ${D}/test/lib/TestByteArray.cc
     ${D}/test/lib/TestByteBuffer.cc
     ${D}/test/lib/TestComparatorForDualPivotQuickSort.cc
@@ -260,6 +262,7 @@ ENDIF()
 
 target_link_libraries(nttest
      nativetask_static
+     gtest
      ${NT_DEPEND_LIBRARY}
 )
 

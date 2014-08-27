@@ -88,8 +88,6 @@ void TestKeyGroupIterator() {
     int * keyPtr = (int *)key;
     const char * value = NULL;
     while (NULL != (value = groupIterator->nextValue(length))) {
-      int * valuePtr = (int *)value;
-
       if (actualKeyCount.find(*keyPtr) == actualKeyCount.end()) {
         actualKeyCount[*keyPtr] = 0;
       }

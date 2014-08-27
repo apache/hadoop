@@ -24,7 +24,7 @@ static uint64_t test_length(int64_t len, size_t size, size_t loopTime) {
   TestConfig.setInt(GenerateLen, len);
   Generate(data, size, "bytes");
   Timer t;
-  uint64_t ret;
+  uint64_t ret = 0;
   for (size_t m = 0; m < loopTime; m++) {
     for (size_t i = 0; i < data.size(); i++) {
       ret += Hash::BytesHash(data[i].c_str(), data[i].length());

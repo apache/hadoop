@@ -50,8 +50,8 @@ private:
 public:
   PartitionBucket(MemoryPool * pool, uint32_t partition, ComparatorPtr comparator,
       ICombineRunner * combineRunner, uint32_t blockSize)
-      : _pool(pool), _partition(partition), _keyComparator(comparator),
-          _combineRunner(combineRunner), _blockSize(blockSize), _sorted(false) {
+      : _pool(pool), _partition(partition), _blockSize(blockSize),
+          _keyComparator(comparator), _combineRunner(combineRunner),  _sorted(false) {
     if (NULL == _pool || NULL == comparator) {
       THROW_EXCEPTION_EX(IOException, "pool is NULL, or comparator is not set");
     }
@@ -102,11 +102,11 @@ public:
     }
     _sorted = false;
     MemoryBlock * memBlock = NULL;
-    uint32_t memBockSize = _memBlocks.size();
-    if (memBockSize > 0) {
-      memBlock = _memBlocks[memBockSize - 1];
+    uint32_t memBlockSize = _memBlocks.size();
+    if (memBlockSize > 0) {
+      memBlock = _memBlocks[memBlockSize - 1];
     }
-    if (NULL != memBockSize && memBlock->remainSpace() >= kvLength) {
+    if (NULL != memBlock && memBlock->remainSpace() >= kvLength) {
       return memBlock->allocateKVBuffer(kvLength);
     } else {
       uint32_t min = kvLength;

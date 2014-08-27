@@ -27,9 +27,9 @@ namespace NativeTask {
 ///////////////////////////////////////////////////////////
 
 IFileReader::IFileReader(InputStream * stream, SingleSpillInfo * spill, bool deleteInputStream)
-    : _deleteSourceStream(deleteInputStream), _stream(stream), _source(NULL),
-        _checksumType(spill->checkSumType), _kType(spill->keyType), _vType(spill->valueType),
-        _codec(spill->codec), _segmentIndex(-1), _spillInfo(spill), _valuePos(NULL), _valueLen(0) {
+    :  _stream(stream), _source(NULL), _checksumType(spill->checkSumType), _kType(spill->keyType),
+        _vType(spill->valueType), _codec(spill->codec), _segmentIndex(-1), _spillInfo(spill),
+        _valuePos(NULL), _valueLen(0), _deleteSourceStream(deleteInputStream) {
   _source = new ChecksumInputStream(_stream, _checksumType);
   _source->setLimit(0);
   _reader.init(128 * 1024, _source, _codec);
@@ -97,9 +97,8 @@ IFileWriter * IFileWriter::create(const std::string & filepath, const MapOutputS
 
 IFileWriter::IFileWriter(OutputStream * stream, ChecksumType checksumType, KeyValueType ktype,
     KeyValueType vtype, const string & codec, Counter * counter, bool deleteTargetStream)
-    : _deleteTargetStream(deleteTargetStream), _stream(stream), _dest(NULL),
-        _checksumType(checksumType), _kType(ktype), _vType(vtype), _codec(codec),
-        _recordCounter(counter) {
+    : _stream(stream), _dest(NULL), _checksumType(checksumType), _kType(ktype), _vType(vtype),
+        _codec(codec), _recordCounter(counter), _deleteTargetStream(deleteTargetStream) {
   _dest = new ChecksumOutputStream(_stream, _checksumType);
   _appendBuffer.init(128 * 1024, _dest, _codec);
 }

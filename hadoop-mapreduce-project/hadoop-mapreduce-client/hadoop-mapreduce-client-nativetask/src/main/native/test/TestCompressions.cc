@@ -181,13 +181,11 @@ void MeasureSingleFileLz4(const string & path, CompressResult & total, size_t bl
   char * dest = new char[blockSize + 8];
   CompressResult result;
   Timer t;
-  int compressedSize;
   for (size_t start = 0; start < data.length(); start += blockSize) {
     size_t currentblocksize = std::min(data.length() - start, blockSize);
     uint64_t startTime = t.now();
     for (int i = 0; i < times; i++) {
       int osize = LZ4_compress((char*)data.data() + start, outputBuffer, currentblocksize);
-      compressedSize = osize;
       result.compressedSize += osize;
       result.uncompressedSize += currentblocksize;
     }
@@ -197,6 +195,7 @@ void MeasureSingleFileLz4(const string & path, CompressResult & total, size_t bl
     for (int i = 0; i < times; i++) {
 //      memset(dest, 0, currentblocksize+8);
       int osize = LZ4_uncompress(outputBuffer, dest, currentblocksize);
+      ASSERT_EQ(currentblocksize, osize);
 //      printf("%016llx blocksize: %lu\n", bswap64(*(uint64_t*)(dest+currentblocksize)), currentblocksize);
     }
     endTime = t.now();
@@ -239,7 +238,7 @@ void MeasureSingleFileSnappy(const string & path, CompressResult & total, size_t
   char * dest = new char[blockSize];
   CompressResult result;
   Timer t;
-  int compressedSize;
+  int compressedSize = -1;
   for (size_t start = 0; start < data.length(); start += blockSize) {
     size_t currentblocksize = std::min(data.length() - start, blockSize);
     uint64_t startTime = t.now();
@@ -272,7 +271,7 @@ TEST(Perf, RawCompressionSnappy) {
   vector<FileEntry> inputfiles;
   FileSystem::getLocal().list(inputdir, inputfiles);
   CompressResult total;
-  printf("Block size: %lldK\n", blockSize / 1024);
+  printf("Block size: %"PRId64"K\n", blockSize / 1024);
   for (size_t i = 0; i < inputfiles.size(); i++) {
     if (!inputfiles[i].isDirectory) {
       MeasureSingleFileSnappy((inputdir + "/" + inputfiles[i].name).c_str(), total, blockSize,

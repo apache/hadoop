@@ -43,7 +43,7 @@ TEST(FixSizeContainer, test) {
 
   container->fill(toBeFilled.c_str(), toBeFilled.length());
 
-  for (int i = 0; i < container->position(); i++) {
+  for (uint32_t i = 0; i < container->position(); i++) {
     char * c = container->base() + i;
     ASSERT_EQ(toBeFilled[i], *c);
   }

@@ -23,7 +23,7 @@
 namespace NativeTask {
 
 BlockCompressStream::BlockCompressStream(OutputStream * stream, uint32_t bufferSizeHint)
-    : CompressStream(stream), _compressedBytesWritten(0), _tempBufferSize(0), _tempBuffer(NULL) {
+    : CompressStream(stream), _tempBuffer(NULL), _tempBufferSize(0), _compressedBytesWritten(0) {
   _hint = bufferSizeHint;
   _blockMax = bufferSizeHint / 2 * 3;
 }
@@ -68,7 +68,7 @@ uint64_t BlockCompressStream::compressedBytesWritten() {
 //////////////////////////////////////////////////////////////
 
 BlockDecompressStream::BlockDecompressStream(InputStream * stream, uint32_t bufferSizeHint)
-    : DecompressStream(stream), _tempBufferSize(0), _tempBuffer(NULL) {
+    : DecompressStream(stream), _tempBuffer(NULL), _tempBufferSize(0) {
   _hint = bufferSizeHint;
   _blockMax = bufferSizeHint / 2 * 3;
   _tempDecompressBuffer = NULL;

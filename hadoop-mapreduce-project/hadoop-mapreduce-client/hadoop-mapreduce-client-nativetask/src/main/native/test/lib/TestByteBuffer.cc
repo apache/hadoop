@@ -35,7 +35,7 @@ TEST(ByteBuffer, read) {
   ASSERT_EQ(buff, byteBuffer.current());
   ASSERT_EQ(0, byteBuffer.remain());
 
-  int newPos = byteBuffer.advance(3);
+  byteBuffer.advance(3);
   ASSERT_EQ(3, byteBuffer.current() - byteBuffer.base());
 
   byteBuffer.rewind(10, 20);

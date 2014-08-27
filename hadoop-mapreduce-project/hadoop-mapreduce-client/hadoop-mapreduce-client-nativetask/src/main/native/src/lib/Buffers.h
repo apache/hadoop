@@ -429,8 +429,8 @@ public:
 
   void rewind(int newPos, int newLimit) {
     this->_position = newPos;
-    if (newLimit > this->_capacity) {
-      THROW_EXCEPTION(IOException, "length larger than input buffer capacity");
+    if (newLimit < 0 || newLimit > this->_capacity) {
+      THROW_EXCEPTION(IOException, "length smaller than zero or larger than input buffer capacity");
     }
     this->_limit = newLimit;
   }

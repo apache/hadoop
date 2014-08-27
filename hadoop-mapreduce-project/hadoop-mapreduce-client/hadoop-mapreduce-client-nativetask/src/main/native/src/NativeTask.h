@@ -622,7 +622,6 @@ typedef void (*ANY_FUNC_PTR)();
 #define DEFINE_NATIVE_LIBRARY(Library) \
   static std::map<std::string, NativeTask::ObjectCreatorFunc> Library##ClassMap__; \
   extern "C" void * Library##GetFunctionGetter(const std::string & name) { \
-      void * ret = NULL; \
       std::map<std::string, NativeTask::ObjectCreatorFunc>::iterator itr = Library##ClassMap__.find(name); \
       if (itr != Library##ClassMap__.end()) { \
         return (void *)(itr->second); \
@@ -630,7 +629,6 @@ typedef void (*ANY_FUNC_PTR)();
       return NULL; \
     } \
   extern "C" NativeTask::ObjectCreatorFunc Library##GetObjectCreator(const std::string & name) { \
-    NativeObject * ret = NULL; \
     std::map<std::string, NativeTask::ObjectCreatorFunc>::iterator itr = Library##ClassMap__.find(name); \
     if (itr != Library##ClassMap__.end()) { \
       return itr->second; \

@@ -103,10 +103,10 @@ protected:
    */
   inline void output(const char * buff, uint32_t length) {
     while (length > 0) {
-      if (length > _out.remain()) {
+      uint32_t remain = _out.remain();
+      if (length > remain) {
         flushOutput();
       }
-      uint32_t remain = _out.remain();
       uint32_t cp = length < remain ? length : remain;
       simple_memcpy(_out.current(), buff, cp);
       buff += cp;

@@ -27,13 +27,12 @@ namespace NativeTask {
 
 TEST(MemoryBlockIterator, test) {
   const uint32_t BUFFER_LENGTH = 100;
-  const uint32_t BLOCK_ID = 3;
   char * bytes = new char[BUFFER_LENGTH];
   MemoryBlock block(bytes, BUFFER_LENGTH);
 
   const uint32_t KV_SIZE = 60;
-  KVBuffer * kv1 = block.allocateKVBuffer(KV_SIZE);
-  KVBuffer * kv2 = block.allocateKVBuffer(KV_SIZE);
+  block.allocateKVBuffer(KV_SIZE);
+  block.allocateKVBuffer(KV_SIZE);
 
   MemBlockIterator iter(&block);
 
@@ -50,7 +49,6 @@ class MemoryBlockFactory {
 public:
   static MemoryBlock * create(std::vector<int> & keys) {
     const uint32_t BUFFER_LENGTH = 1000;
-    const uint32_t BLOCK_ID = 3;
     char * bytes = new char[BUFFER_LENGTH];
     MemoryBlock * block1 = new MemoryBlock(bytes, BUFFER_LENGTH);
 

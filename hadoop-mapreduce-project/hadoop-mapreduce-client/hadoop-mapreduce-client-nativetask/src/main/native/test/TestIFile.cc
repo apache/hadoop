@@ -119,13 +119,17 @@ void TestIFileWriteRead2(vector<pair<string, string> > & kvs, char * buff, size_
   InputBuffer inputBuffer = InputBuffer(buff, outputBuffer.tell());
   IFileReader * ir = new IFileReader(&inputBuffer, info);
   timer.reset();
+  int sum = 0;
   while (ir->nextPartition()) {
     const char * key, *value;
     uint32_t keyLen, valueLen;
     while (NULL != (key = ir->nextKey(keyLen))) {
       value = ir->value(valueLen);
+      sum += value[0];
     }
   }
+  // use the result so that value() calls don't get optimized out
+  ASSERT_NE(0xdeadbeef, sum);
   LOG("%s",
       timer.getSpeedM2(" Read data", info->getEndPosition(), info->getRealEndPosition()).c_str());
   delete ir;
