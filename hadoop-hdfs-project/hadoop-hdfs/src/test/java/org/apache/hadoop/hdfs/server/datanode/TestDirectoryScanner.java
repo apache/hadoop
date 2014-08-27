@@ -215,7 +215,7 @@ public class TestDirectoryScanner {
   }
 
   private void scan(long totalBlocks, int diffsize, long missingMetaFile, long missingBlockFile,
-      long missingMemoryBlocks, long mismatchBlocks) {
+      long missingMemoryBlocks, long mismatchBlocks) throws IOException {
     scanner.reconcile();
     
     assertTrue(scanner.diffs.containsKey(bpid));
@@ -431,6 +431,10 @@ public class TestDirectoryScanner {
 
     @Override
     public void releaseReservedSpace(long bytesToRelease) {
+
+    @Override
+    public boolean isTransientStorage() {
+      return false;
     }
   }
 

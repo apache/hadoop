@@ -56,4 +56,7 @@ public interface FsVolumeSpi {
    * Release disk space previously reserved for RBW block.
    */
   public void releaseReservedSpace(long bytesToRelease);
+
+  /** Returns true if the volume is NOT backed by persistent storage. */
+  public boolean isTransientStorage();
 }

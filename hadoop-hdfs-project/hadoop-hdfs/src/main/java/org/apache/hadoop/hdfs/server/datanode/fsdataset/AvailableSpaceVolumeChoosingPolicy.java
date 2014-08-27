@@ -99,7 +99,7 @@ public class AvailableSpaceVolumeChoosingPolicy<V extends FsVolumeSpi>
 
   @Override
   public synchronized V chooseVolume(List<V> volumes,
-      final long replicaSize) throws IOException {
+      long replicaSize) throws IOException {
     if (volumes.size() < 1) {
       throw new DiskOutOfSpaceException("No more available volumes");
     }
