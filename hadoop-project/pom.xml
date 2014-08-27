@@ -678,6 +678,11 @@
         <version>0.1.42</version>
       </dependency>
       <dependency>
+        <groupId>org.htrace</groupId>
+        <artifactId>htrace-core</artifactId>
+        <version>3.0.4</version>
+      </dependency>
+      <dependency>
         <groupId>org.jdom</groupId>
         <artifactId>jdom</artifactId>
         <version>1.1</version>
