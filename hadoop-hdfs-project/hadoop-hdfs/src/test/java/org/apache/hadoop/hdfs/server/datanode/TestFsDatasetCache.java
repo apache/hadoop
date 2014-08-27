@@ -108,7 +108,6 @@ public class TestFsDatasetCache {
   private static CacheManipulator prevCacheManipulator;
 
   static {
-    EditLogFileOutputStream.setShouldSkipFsyncForTesting(false);
     LogManager.getLogger(FsDatasetCache.class).setLevel(Level.DEBUG);
   }
 
