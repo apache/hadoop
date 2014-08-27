@@ -13,3 +13,6 @@
     HDFS-6925. DataNode should attempt to place replicas on transient storage
     first if lazyPersist flag is received. (Arpit Agarwal)
 
+    HDFS-6926. DN support for saving replicas to persistent storage and
+    evicting in-memory replicas. (Arpit Agarwal)
+

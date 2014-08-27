@@ -328,6 +328,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
     File bpCurrentDir = new File(bpDir, DataStorage.STORAGE_DIR_CURRENT);
     File finalizedDir = new File(bpCurrentDir,
         DataStorage.STORAGE_DIR_FINALIZED);
+    File lazypersistDir = new File(bpCurrentDir,
+        DataStorage.STORAGE_DIR_LAZY_PERSIST);
     File rbwDir = new File(bpCurrentDir, DataStorage.STORAGE_DIR_RBW);
     if (force) {
       FileUtil.fullyDelete(bpDir);
@@ -338,6 +340,10 @@ public class FsVolumeImpl implements FsVolumeSpi {
       if (!DatanodeUtil.dirNoFilesRecursive(finalizedDir) ||
           !FileUtil.fullyDelete(finalizedDir)) {
         throw new IOException("Failed to delete " + finalizedDir);
+      }
+      if (!DatanodeUtil.dirNoFilesRecursive(lazypersistDir) ||
+          !FileUtil.fullyDelete(lazypersistDir)) {
+        throw new IOException("Failed to delete " + lazypersistDir);
       }
       FileUtil.fullyDelete(tmpDir);
       for (File f : FileUtil.listFiles(bpCurrentDir)) {
