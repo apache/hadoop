@@ -348,6 +348,10 @@ Trunk (Unreleased)
 
     HDFS-6905. fs-encryption merge triggered release audit failures. (clamb via tucu)
 
+    HDFS-6694. TestPipelinesFailover.testPipelineRecoveryStress tests fail
+    intermittently with various symptoms - debugging patch. (Yongjun Zhang via
+    Arpit Agarwal)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
