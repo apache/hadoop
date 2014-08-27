@@ -34,7 +34,7 @@ public class FsDatasetTestUtil {
 
   public static File getBlockFile(FsDatasetSpi<?> fsd, String bpid, Block b
       ) throws IOException {
-    return ((FsDatasetImpl)fsd).getBlockFile(bpid, b);
+    return ((FsDatasetImpl)fsd).getBlockFile(bpid, b.getBlockId());
   }
 
   public static File getMetaFile(FsDatasetSpi<?> fsd, String bpid, Block b)

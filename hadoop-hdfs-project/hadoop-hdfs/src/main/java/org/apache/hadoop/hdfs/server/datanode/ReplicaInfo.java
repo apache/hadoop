@@ -62,17 +62,6 @@ abstract public class ReplicaInfo extends Block implements Replica {
   private static final Map<String, File> internedBaseDirs = new HashMap<String, File>();
 
   /**
-   * Constructor for a zero length replica
-   * @param blockId block id
-   * @param genStamp replica generation stamp
-   * @param vol volume where replica is located
-   * @param dir directory path where block and meta files are located
-   */
-  ReplicaInfo(long blockId, long genStamp, FsVolumeSpi vol, File dir) {
-    this( blockId, 0L, genStamp, vol, dir);
-  }
-  
-  /**
    * Constructor
    * @param block a block
    * @param vol volume where replica is located
@@ -296,20 +285,6 @@ abstract public class ReplicaInfo extends Block implements Replica {
     return true;
   }
 
-  /**
-   * Set this replica's generation stamp to be a newer one
-   * @param newGS new generation stamp
-   * @throws IOException is the new generation stamp is not greater than the current one
-   */
-  void setNewerGenerationStamp(long newGS) throws IOException {
-    long curGS = getGenerationStamp();
-    if (newGS <= curGS) {
-      throw new IOException("New generation stamp (" + newGS 
-          + ") must be greater than current one (" + curGS + ")");
-    }
-    setGenerationStamp(newGS);
-  }
-  
   @Override  //Object
   public String toString() {
     return getClass().getSimpleName()
@@ -320,5 +295,10 @@ abstract public class ReplicaInfo extends Block implements Replica {
         + "\n  getVisibleLength()= " + getVisibleLength()
         + "\n  getVolume()       = " + getVolume()
         + "\n  getBlockFile()    = " + getBlockFile();
+  }
+
+  @Override
+  public boolean isOnTransientStorage() {
+    return volume.isTransientStorage();
   }
 }

@@ -45,6 +45,9 @@ import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
 import com.google.common.collect.Lists;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.TreeMultimap;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -278,7 +281,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     // If IOException raises from FsVolumeImpl() or getVolumeMap(), there is
     // nothing needed to be rolled back to make various data structures, e.g.,
     // storageMap and asyncDiskService, consistent.
-    FsVolumeImpl fsVolume = new FsVolumeImpl(
+    FsVolumeImpl fsVolume = FsVolumeImplAllocator.createVolume(
         this, sd.getStorageUuid(), dir, this.conf, storageType);
     ReplicaMap tempVolumeMap = new ReplicaMap(this);
     fsVolume.getVolumeMap(tempVolumeMap);
@@ -550,16 +553,16 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    * Get File name for a given block.
    */
   private File getBlockFile(ExtendedBlock b) throws IOException {
-    return getBlockFile(b.getBlockPoolId(), b.getLocalBlock());
+    return getBlockFile(b.getBlockPoolId(), b.getBlockId());
   }
   
   /**
    * Get File name for a given block.
    */
-  File getBlockFile(String bpid, Block b) throws IOException {
-    File f = validateBlockFile(bpid, b);
+  File getBlockFile(String bpid, long blockId) throws IOException {
+    File f = validateBlockFile(bpid, blockId);
     if(f == null) {
-      throw new IOException("Block " + b + " is not valid.");
+      throw new IOException("BlockId " + blockId + " is not valid.");
     }
     return f;
   }
@@ -949,8 +952,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
   @Override // FsDatasetSpi
   public synchronized ReplicaInPipeline createRbw(StorageType storageType,
-      ExtendedBlock b) throws IOException {
-    ReplicaInfo replicaInfo = volumeMap.get(b.getBlockPoolId(), 
+      ExtendedBlock b, boolean allowLazyPersist) throws IOException {
+    ReplicaInfo replicaInfo = volumeMap.get(b.getBlockPoolId(),
         b.getBlockId());
     if (replicaInfo != null) {
       throw new ReplicaAlreadyExistsException("Block " + b +
@@ -958,8 +961,25 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       " and thus cannot be created.");
     }
     // create a new block
-    FsVolumeImpl v = volumes.getNextVolume(storageType, b.getNumBytes());
-    // create a rbw file to hold block in the designated volume
+    FsVolumeImpl v;
+    while (true) {
+      try {
+        if (allowLazyPersist) {
+          // First try to place the block on a transient volume.
+          v = volumes.getNextTransientVolume(b.getNumBytes());
+        } else {
+          v = volumes.getNextVolume(storageType, b.getNumBytes());
+        }
+      } catch (DiskOutOfSpaceException de) {
+        if (allowLazyPersist) {
+          allowLazyPersist = false;
+          continue;
+        }
+        throw de;
+      }
+      break;
+    }
+    // create an rbw file to hold block in the designated volume
     File f = v.createRbwFile(b.getBlockPoolId(), b.getLocalBlock());
     ReplicaBeingWritten newReplicaInfo = new ReplicaBeingWritten(b.getBlockId(), 
         b.getGenerationStamp(), v, f.getParentFile(), b.getNumBytes());
@@ -1321,11 +1341,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   /**
    * Find the file corresponding to the block and return it if it exists.
    */
-  File validateBlockFile(String bpid, Block b) {
+  File validateBlockFile(String bpid, long blockId) {
     //Should we check for metadata file too?
     final File f;
     synchronized(this) {
-      f = getFile(bpid, b.getBlockId());
+      f = getFile(bpid, blockId);
     }
     
     if(f != null ) {
@@ -1337,7 +1357,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
     
     if (LOG.isDebugEnabled()) {
-      LOG.debug("b=" + b + ", f=" + f);
+      LOG.debug("blockId=" + blockId + ", f=" + f);
     }
     return null;
   }
@@ -1495,6 +1515,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         } catch (ClassCastException e) {
           LOG.warn("Failed to cache block with id " + blockId +
               ": volume was not an instance of FsVolumeImpl.");
+          return;
+        }
+        if (volume.isTransientStorage()) {
+          LOG.warn("Caching not supported on block with id " + blockId +
+              " since the volume is backed by RAM.");
           return;
         }
         success = true;
