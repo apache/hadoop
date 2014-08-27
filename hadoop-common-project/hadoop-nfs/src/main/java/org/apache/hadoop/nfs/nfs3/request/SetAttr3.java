@@ -52,6 +52,15 @@ public class SetAttr3 {
     size = 0;
     updateFields = EnumSet.noneOf(SetAttrField.class);
   }
+  
+  public SetAttr3(int mode, int uid, int gid, long size, NfsTime atime,
+      NfsTime mtime, EnumSet<SetAttrField> updateFields) {
+    this.mode = mode;
+    this.uid = uid;
+    this.gid = gid;
+    this.size = size;
+    this.updateFields = updateFields;
+  }
 
   public int getMode() {
     return mode;

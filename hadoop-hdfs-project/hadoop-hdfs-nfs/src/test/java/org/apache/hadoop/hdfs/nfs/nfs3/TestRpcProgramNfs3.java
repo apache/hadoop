@@ -17,12 +17,71 @@
  */
 package org.apache.hadoop.hdfs.nfs.nfs3;
 
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.EnumSet;
+
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.nfs.nfs3.FileHandle;
+import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
+import org.apache.hadoop.nfs.nfs3.Nfs3Constant.WriteStableHow;
+import org.apache.hadoop.nfs.nfs3.Nfs3Status;
+import org.apache.hadoop.nfs.nfs3.request.ACCESS3Request;
+import org.apache.hadoop.nfs.nfs3.request.COMMIT3Request;
+import org.apache.hadoop.nfs.nfs3.request.CREATE3Request;
+import org.apache.hadoop.nfs.nfs3.request.FSINFO3Request;
+import org.apache.hadoop.nfs.nfs3.request.FSSTAT3Request;
+import org.apache.hadoop.nfs.nfs3.request.GETATTR3Request;
+import org.apache.hadoop.nfs.nfs3.request.LOOKUP3Request;
+import org.apache.hadoop.nfs.nfs3.request.MKDIR3Request;
+import org.apache.hadoop.nfs.nfs3.request.PATHCONF3Request;
+import org.apache.hadoop.nfs.nfs3.request.READ3Request;
+import org.apache.hadoop.nfs.nfs3.request.READDIR3Request;
+import org.apache.hadoop.nfs.nfs3.request.READDIRPLUS3Request;
+import org.apache.hadoop.nfs.nfs3.request.READLINK3Request;
+import org.apache.hadoop.nfs.nfs3.request.REMOVE3Request;
+import org.apache.hadoop.nfs.nfs3.request.RENAME3Request;
+import org.apache.hadoop.nfs.nfs3.request.RMDIR3Request;
+import org.apache.hadoop.nfs.nfs3.request.SETATTR3Request;
+import org.apache.hadoop.nfs.nfs3.request.SYMLINK3Request;
+import org.apache.hadoop.nfs.nfs3.request.SetAttr3;
+import org.apache.hadoop.nfs.nfs3.request.SetAttr3.SetAttrField;
+import org.apache.hadoop.nfs.nfs3.request.WRITE3Request;
+import org.apache.hadoop.nfs.nfs3.response.ACCESS3Response;
+import org.apache.hadoop.nfs.nfs3.response.COMMIT3Response;
+import org.apache.hadoop.nfs.nfs3.response.CREATE3Response;
+import org.apache.hadoop.nfs.nfs3.response.FSINFO3Response;
+import org.apache.hadoop.nfs.nfs3.response.FSSTAT3Response;
+import org.apache.hadoop.nfs.nfs3.response.GETATTR3Response;
+import org.apache.hadoop.nfs.nfs3.response.LOOKUP3Response;
+import org.apache.hadoop.nfs.nfs3.response.MKDIR3Response;
+import org.apache.hadoop.nfs.nfs3.response.PATHCONF3Response;
+import org.apache.hadoop.nfs.nfs3.response.READ3Response;
+import org.apache.hadoop.nfs.nfs3.response.READDIR3Response;
+import org.apache.hadoop.nfs.nfs3.response.READDIRPLUS3Response;
+import org.apache.hadoop.nfs.nfs3.response.READLINK3Response;
+import org.apache.hadoop.nfs.nfs3.response.REMOVE3Response;
+import org.apache.hadoop.nfs.nfs3.response.RENAME3Response;
+import org.apache.hadoop.nfs.nfs3.response.RMDIR3Response;
+import org.apache.hadoop.nfs.nfs3.response.SETATTR3Response;
+import org.apache.hadoop.nfs.nfs3.response.SYMLINK3Response;
+import org.apache.hadoop.nfs.nfs3.response.WRITE3Response;
+import org.apache.hadoop.oncrpc.XDR;
+import org.apache.hadoop.oncrpc.security.SecurityHandler;
+import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.jboss.netty.channel.Channel;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -30,46 +89,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
-
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
-import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.nfs.nfs3.FileHandle;
-import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
-import org.apache.hadoop.nfs.nfs3.Nfs3Constant.WriteStableHow;
-import org.apache.hadoop.nfs.nfs3.Nfs3Status;
-import org.apache.hadoop.nfs.nfs3.request.LOOKUP3Request;
-import org.apache.hadoop.nfs.nfs3.request.READ3Request;
-import org.apache.hadoop.nfs.nfs3.request.WRITE3Request;
-import org.apache.hadoop.nfs.nfs3.response.ACCESS3Response;
-import org.apache.hadoop.nfs.nfs3.response.COMMIT3Response;
-import org.apache.hadoop.nfs.nfs3.response.CREATE3Response;
-import org.apache.hadoop.nfs.nfs3.response.FSSTAT3Response;
-import org.apache.hadoop.nfs.nfs3.response.FSINFO3Response;
-import org.apache.hadoop.nfs.nfs3.response.GETATTR3Response;
-import org.apache.hadoop.nfs.nfs3.response.LOOKUP3Response;
-import org.apache.hadoop.nfs.nfs3.response.PATHCONF3Response;
-import org.apache.hadoop.nfs.nfs3.response.READ3Response;
-import org.apache.hadoop.nfs.nfs3.response.REMOVE3Response;
-import org.apache.hadoop.nfs.nfs3.response.RMDIR3Response;
-import org.apache.hadoop.nfs.nfs3.response.RENAME3Response;
-import org.apache.hadoop.nfs.nfs3.response.READDIR3Response;
-import org.apache.hadoop.nfs.nfs3.response.READDIRPLUS3Response;
-import org.apache.hadoop.nfs.nfs3.response.READLINK3Response;
-import org.apache.hadoop.nfs.nfs3.response.SETATTR3Response;
-import org.apache.hadoop.nfs.nfs3.response.SYMLINK3Response;
-import org.apache.hadoop.nfs.nfs3.response.WRITE3Response;
-import org.apache.hadoop.nfs.nfs3.request.SetAttr3;
-import org.apache.hadoop.oncrpc.XDR;
-import org.apache.hadoop.oncrpc.security.SecurityHandler;
-import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
-import org.apache.hadoop.security.authorize.ProxyUsers;
 
 
 /**
@@ -143,8 +162,9 @@ public class TestRpcProgramNfs3 {
     long dirId = status.getFileId();
     FileHandle handle = new FileHandle(dirId);
     XDR xdr_req = new XDR();
-    handle.serialize(xdr_req);
-
+    GETATTR3Request req = new GETATTR3Request(handle);
+    req.serialize(xdr_req);
+    
     // Attempt by an unpriviledged user should fail.
     GETATTR3Response response1 = nfsd.getattr(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
@@ -165,13 +185,12 @@ public class TestRpcProgramNfs3 {
     long dirId = status.getFileId();
     XDR xdr_req = new XDR();
     FileHandle handle = new FileHandle(dirId);
-    handle.serialize(xdr_req);
-    xdr_req.writeString("bar");
-    SetAttr3 symAttr = new SetAttr3();
-    symAttr.serialize(xdr_req);
-    xdr_req.writeBoolean(false);
+    SetAttr3 symAttr = new SetAttr3(0, 1, 0, 0, null, null,
+        EnumSet.of(SetAttrField.UID));
+    SETATTR3Request req = new SETATTR3Request(handle, symAttr, false, null);
+    req.serialize(xdr_req);
 
-    // Attempt by an unpriviledged user should fail.
+    // Attempt by an unprivileged user should fail.
     SETATTR3Response response1 = nfsd.setattr(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
@@ -214,7 +233,8 @@ public class TestRpcProgramNfs3 {
     long dirId = status.getFileId();
     FileHandle handle = new FileHandle(dirId);
     XDR xdr_req = new XDR();
-    handle.serialize(xdr_req);
+    ACCESS3Request req = new ACCESS3Request(handle);
+    req.serialize(xdr_req);
 
     // Attempt by an unpriviledged user should fail.
     ACCESS3Response response1 = nfsd.access(xdr_req.asReadOnlyWrap(),
@@ -237,12 +257,10 @@ public class TestRpcProgramNfs3 {
     long dirId = status.getFileId();
     XDR xdr_req = new XDR();
     FileHandle handle = new FileHandle(dirId);
-    handle.serialize(xdr_req);
-    xdr_req.writeString("fubar");
-    SetAttr3 symAttr = new SetAttr3();
-    symAttr.serialize(xdr_req);
-    xdr_req.writeString("bar");
-
+    SYMLINK3Request req = new SYMLINK3Request(handle, "fubar", new SetAttr3(),
+        "bar");
+    req.serialize(xdr_req);
+    
     SYMLINK3Response response = nfsd.symlink(xdr_req.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
     assertEquals("Incorrect return code:", Nfs3Status.NFS3_OK,
@@ -251,7 +269,8 @@ public class TestRpcProgramNfs3 {
     // Now perform readlink operations.
     FileHandle handle2 = response.getObjFileHandle();
     XDR xdr_req2 = new XDR();
-    handle2.serialize(xdr_req2);
+    READLINK3Request req2 = new READLINK3Request(handle2);
+    req2.serialize(xdr_req2);
 
     // Attempt by an unpriviledged user should fail.
     READLINK3Response response1 = nfsd.readlink(xdr_req2.asReadOnlyWrap(),
@@ -327,12 +346,10 @@ public class TestRpcProgramNfs3 {
     long dirId = status.getFileId();
     XDR xdr_req = new XDR();
     FileHandle handle = new FileHandle(dirId);
-    handle.serialize(xdr_req);
-    xdr_req.writeString("fubar");
-    xdr_req.writeInt(Nfs3Constant.CREATE_UNCHECKED);
-    SetAttr3 symAttr = new SetAttr3();
-    symAttr.serialize(xdr_req);
-
+    CREATE3Request req = new CREATE3Request(handle, "fubar",
+        Nfs3Constant.CREATE_UNCHECKED, new SetAttr3(), 0);
+    req.serialize(xdr_req);
+    
     // Attempt by an unpriviledged user should fail.
     CREATE3Response response1 = nfsd.create(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
@@ -348,26 +365,27 @@ public class TestRpcProgramNfs3 {
   }
 
   @Test(timeout = 60000)
-  public void testMkdir() throws Exception {
+  public void testMkdir() throws Exception {//FixME
     HdfsFileStatus status = nn.getRpcServer().getFileInfo(testdir);
     long dirId = status.getFileId();
     XDR xdr_req = new XDR();
     FileHandle handle = new FileHandle(dirId);
-    handle.serialize(xdr_req);
-    xdr_req.writeString("fubar");
-    SetAttr3 symAttr = new SetAttr3();
-    symAttr.serialize(xdr_req);
-    xdr_req.writeString("bar");
-
-    // Attempt to remove by an unpriviledged user should fail.
-    SYMLINK3Response response1 = nfsd.symlink(xdr_req.asReadOnlyWrap(),
+    MKDIR3Request req = new MKDIR3Request(handle, "fubar1", new SetAttr3());
+    req.serialize(xdr_req);
+    
+    // Attempt to mkdir by an unprivileged user should fail.
+    MKDIR3Response response1 = nfsd.mkdir(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
     assertEquals("Incorrect return code:", Nfs3Status.NFS3ERR_ACCES,
         response1.getStatus());
 
-    // Attempt to remove by a priviledged user should pass.
-    SYMLINK3Response response2 = nfsd.symlink(xdr_req.asReadOnlyWrap(),
+    XDR xdr_req2 = new XDR();
+    MKDIR3Request req2 = new MKDIR3Request(handle, "fubar2", new SetAttr3());
+    req2.serialize(xdr_req2);
+    
+    // Attempt to mkdir by a privileged user should pass.
+    MKDIR3Response response2 = nfsd.mkdir(xdr_req2.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
     assertEquals("Incorrect return code:", Nfs3Status.NFS3_OK,
         response2.getStatus());
@@ -379,20 +397,18 @@ public class TestRpcProgramNfs3 {
     long dirId = status.getFileId();
     XDR xdr_req = new XDR();
     FileHandle handle = new FileHandle(dirId);
-    handle.serialize(xdr_req);
-    xdr_req.writeString("fubar");
-    SetAttr3 symAttr = new SetAttr3();
-    symAttr.serialize(xdr_req);
-    xdr_req.writeString("bar");
+    SYMLINK3Request req = new SYMLINK3Request(handle, "fubar", new SetAttr3(),
+        "bar");
+    req.serialize(xdr_req);
 
-    // Attempt by an unpriviledged user should fail.
+    // Attempt by an unprivileged user should fail.
     SYMLINK3Response response1 = nfsd.symlink(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
     assertEquals("Incorrect return code:", Nfs3Status.NFS3ERR_ACCES,
         response1.getStatus());
 
-    // Attempt by a priviledged user should pass.
+    // Attempt by a privileged user should pass.
     SYMLINK3Response response2 = nfsd.symlink(xdr_req.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
     assertEquals("Incorrect return code:", Nfs3Status.NFS3_OK,
@@ -405,8 +421,8 @@ public class TestRpcProgramNfs3 {
     long dirId = status.getFileId();
     XDR xdr_req = new XDR();
     FileHandle handle = new FileHandle(dirId);
-    handle.serialize(xdr_req);
-    xdr_req.writeString("bar");
+    REMOVE3Request req = new REMOVE3Request(handle, "bar");
+    req.serialize(xdr_req);
 
     // Attempt by an unpriviledged user should fail.
     REMOVE3Response response1 = nfsd.remove(xdr_req.asReadOnlyWrap(),
@@ -428,17 +444,17 @@ public class TestRpcProgramNfs3 {
     long dirId = status.getFileId();
     XDR xdr_req = new XDR();
     FileHandle handle = new FileHandle(dirId);
-    handle.serialize(xdr_req);
-    xdr_req.writeString("foo");
+    RMDIR3Request req = new RMDIR3Request(handle, "foo");
+    req.serialize(xdr_req);
 
-    // Attempt by an unpriviledged user should fail.
+    // Attempt by an unprivileged user should fail.
     RMDIR3Response response1 = nfsd.rmdir(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
     assertEquals("Incorrect return code:", Nfs3Status.NFS3ERR_ACCES,
         response1.getStatus());
 
-    // Attempt by a priviledged user should pass.
+    // Attempt by a privileged user should pass.
     RMDIR3Response response2 = nfsd.rmdir(xdr_req.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
     assertEquals("Incorrect return code:", Nfs3Status.NFS3_OK,
@@ -451,19 +467,17 @@ public class TestRpcProgramNfs3 {
     long dirId = status.getFileId();
     XDR xdr_req = new XDR();
     FileHandle handle = new FileHandle(dirId);
-    handle.serialize(xdr_req);
-    xdr_req.writeString("bar");
-    handle.serialize(xdr_req);
-    xdr_req.writeString("fubar");
-
-    // Attempt by an unpriviledged user should fail.
+    RENAME3Request req = new RENAME3Request(handle, "bar", handle, "fubar");
+    req.serialize(xdr_req);
+    
+    // Attempt by an unprivileged user should fail.
     RENAME3Response response1 = nfsd.rename(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
     assertEquals("Incorrect return code:", Nfs3Status.NFS3ERR_ACCES,
         response1.getStatus());
 
-    // Attempt by a priviledged user should pass.
+    // Attempt by a privileged user should pass.
     RENAME3Response response2 = nfsd.rename(xdr_req.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
     assertEquals("Incorrect return code:", Nfs3Status.NFS3_OK,
@@ -476,10 +490,8 @@ public class TestRpcProgramNfs3 {
     long dirId = status.getFileId();
     FileHandle handle = new FileHandle(dirId);
     XDR xdr_req = new XDR();
-    handle.serialize(xdr_req);
-    xdr_req.writeLongAsHyper(0);
-    xdr_req.writeLongAsHyper(0);
-    xdr_req.writeInt(100);
+    READDIR3Request req = new READDIR3Request(handle, 0, 0, 100);
+    req.serialize(xdr_req);
 
     // Attempt by an unpriviledged user should fail.
     READDIR3Response response1 = nfsd.readdir(xdr_req.asReadOnlyWrap(),
@@ -501,20 +513,17 @@ public class TestRpcProgramNfs3 {
     long dirId = status.getFileId();
     FileHandle handle = new FileHandle(dirId);
     XDR xdr_req = new XDR();
-    handle.serialize(xdr_req);
-    xdr_req.writeLongAsHyper(0);
-    xdr_req.writeLongAsHyper(0);
-    xdr_req.writeInt(3);
-    xdr_req.writeInt(2);
-
-    // Attempt by an unpriviledged user should fail.
+    READDIRPLUS3Request req = new READDIRPLUS3Request(handle, 0, 0, 3, 2);
+    req.serialize(xdr_req);
+    
+    // Attempt by an unprivileged user should fail.
     READDIRPLUS3Response response1 = nfsd.readdirplus(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
         new InetSocketAddress("localhost", 1234));
     assertEquals("Incorrect return code:", Nfs3Status.NFS3ERR_ACCES,
         response1.getStatus());
 
-    // Attempt by a priviledged user should pass.
+    // Attempt by a privileged user should pass.
     READDIRPLUS3Response response2 = nfsd.readdirplus(xdr_req.asReadOnlyWrap(),
         securityHandler, new InetSocketAddress("localhost", 1234));
     assertEquals("Incorrect return code:", Nfs3Status.NFS3_OK,
@@ -527,8 +536,9 @@ public class TestRpcProgramNfs3 {
     long dirId = status.getFileId();
     FileHandle handle = new FileHandle(dirId);
     XDR xdr_req = new XDR();
-    handle.serialize(xdr_req);
-
+    FSSTAT3Request req = new FSSTAT3Request(handle);
+    req.serialize(xdr_req);
+    
     // Attempt by an unpriviledged user should fail.
     FSSTAT3Response response1 = nfsd.fsstat(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
@@ -549,8 +559,9 @@ public class TestRpcProgramNfs3 {
     long dirId = status.getFileId();
     FileHandle handle = new FileHandle(dirId);
     XDR xdr_req = new XDR();
-    handle.serialize(xdr_req);
-
+    FSINFO3Request req = new FSINFO3Request(handle);
+    req.serialize(xdr_req);
+    
     // Attempt by an unpriviledged user should fail.
     FSINFO3Response response1 = nfsd.fsinfo(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
@@ -571,8 +582,9 @@ public class TestRpcProgramNfs3 {
     long dirId = status.getFileId();
     FileHandle handle = new FileHandle(dirId);
     XDR xdr_req = new XDR();
-    handle.serialize(xdr_req);
-
+    PATHCONF3Request req = new PATHCONF3Request(handle);
+    req.serialize(xdr_req);
+    
     // Attempt by an unpriviledged user should fail.
     PATHCONF3Response response1 = nfsd.pathconf(xdr_req.asReadOnlyWrap(),
         securityHandlerUnpriviledged,
@@ -593,9 +605,8 @@ public class TestRpcProgramNfs3 {
     long dirId = status.getFileId();
     FileHandle handle = new FileHandle(dirId);
     XDR xdr_req = new XDR();
-    handle.serialize(xdr_req);
-    xdr_req.writeLongAsHyper(0);
-    xdr_req.writeInt(5);
+    COMMIT3Request req = new COMMIT3Request(handle, 0, 5);
+    req.serialize(xdr_req);
 
     Channel ch = Mockito.mock(Channel.class);
 
