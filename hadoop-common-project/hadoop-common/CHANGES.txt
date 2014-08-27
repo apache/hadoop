@@ -321,6 +321,8 @@ Trunk (Unreleased)
 
     HADOOP-11002. shell escapes are incompatible with previous releases (aw)
 
+    HADOOP-10996. Stop violence in the *_HOME (aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)

@@ -68,17 +68,18 @@ function hadoop_find_confdir
 {
   # NOTE: This function is not user replaceable.
 
+  local conf_dir
   # Look for the basic hadoop configuration area.
   #
   #
   # An attempt at compatibility with some Hadoop 1.x
   # installs.
   if [[ -e "${HADOOP_PREFIX}/conf/hadoop-env.sh" ]]; then
-    DEFAULT_CONF_DIR="conf"
+    conf_dir="conf"
   else
-    DEFAULT_CONF_DIR="etc/hadoop"
+    conf_dir="etc/hadoop"
   fi
-  export HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-${HADOOP_PREFIX}/${DEFAULT_CONF_DIR}}"
+  export HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-${HADOOP_PREFIX}/${conf_dir}}"
 }
 
 function hadoop_exec_hadoopenv
@@ -573,10 +574,7 @@ function hadoop_finalize_hadoop_opts
 
 function hadoop_finalize_classpath
 {
-  
-  # we want the HADOOP_CONF_DIR at the end
-  # according to oom, it gives a 2% perf boost
-  hadoop_add_classpath "${HADOOP_CONF_DIR}" after
+  hadoop_add_classpath "${HADOOP_CONF_DIR}" before
   
   # user classpath gets added at the last minute. this allows
   # override of CONF dirs and more

@@ -53,7 +53,10 @@ if [[ -z "${HADOOP_LIBEXEC_DIR}" ]]; then
 fi
 
 # get our functions defined for usage later
-if [[ -f "${HADOOP_LIBEXEC_DIR}/hadoop-functions.sh" ]]; then
+if [[ -n "${HADOOP_COMMON_HOME}" ]] && 
+   [[ -e "${HADOOP_COMMON_HOME}/libexec/hadoop-functions.sh" ]]; then
+  . "${HADOOP_COMMON_HOME}/libexec/hadoop-functions.sh"
+elif [[ -e "${HADOOP_LIBEXEC_DIR}/hadoop-functions.sh" ]]; then
   . "${HADOOP_LIBEXEC_DIR}/hadoop-functions.sh"
 else
   echo "ERROR: Unable to exec ${HADOOP_LIBEXEC_DIR}/hadoop-functions.sh." 1>&2
@@ -61,7 +64,10 @@ else
 fi
 
 # allow overrides of the above and pre-defines of the below
-if [[ -f "${HADOOP_LIBEXEC_DIR}/hadoop-layout.sh" ]]; then
+if [[ -n "${HADOOP_COMMON_HOME}" ]] &&
+   [[ -e "${HADOOP_COMMON_HOME}/libexec/hadoop-layout.sh" ]]; then
+  . "${HADOOP_COMMON_HOME}/libexec/hadoop-layout.sh"
+elif [[ -e "${HADOOP_LIBEXEC_DIR}/hadoop-layout.sh" ]]; then
   . "${HADOOP_LIBEXEC_DIR}/hadoop-layout.sh"
 fi
 
