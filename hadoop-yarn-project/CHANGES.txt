@@ -240,6 +240,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2434. RM should not recover containers from previously failed attempt
     when AM restart is not enabled (Jian He via jlowe)
 
+    YARN-2035. FileSystemApplicationHistoryStore should not make working dir
+    when it already exists. (Jonathan Eagles via zjshen)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
