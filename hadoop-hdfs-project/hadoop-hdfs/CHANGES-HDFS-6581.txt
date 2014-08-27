@@ -2,3 +2,7 @@
 
     HDFS-6921. Add LazyPersist flag to FileStatus. (Arpit Agarwal)
 
+    HDFS-6924. Add new RAM_DISK storage type. (Arpit Agarwal)
+
+
+
