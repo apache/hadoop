@@ -24,7 +24,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.util.Collections;
+import java.io.File;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -34,6 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -46,11 +47,11 @@ import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.junit.After;
 import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 
 /**********************************************************
  * MapredLoadTest generates a bunch of work that exercises
@@ -110,6 +111,10 @@ public class TestMapRed extends Configured implements Tool {
    * of numbers in random order, but where each number appears
    * as many times as we were instructed.
    */
+  private static final File TEST_DIR = new File(
+      System.getProperty("test.build.data",
+          System.getProperty("java.io.tmpdir")), "TestMapRed-mapred");
+
   static class RandomGenMapper
     implements Mapper<IntWritable, IntWritable, IntWritable, IntWritable> {
     
@@ -248,6 +253,11 @@ public class TestMapRed extends Configured implements Tool {
   private static int counts = 100;
   private static Random r = new Random();
 
+  @After
+  public void cleanup() {
+    FileUtil.fullyDelete(TEST_DIR);
+  }
+
   /**
      public TestMapRed(int range, int counts, Configuration conf) throws IOException {
      this.range = range;
@@ -372,7 +382,7 @@ public class TestMapRed extends Configured implements Tool {
                                 boolean includeCombine
                                 ) throws Exception {
     JobConf conf = new JobConf(TestMapRed.class);
-    Path testdir = new Path("build/test/test.mapred.compress");
+    Path testdir = new Path(TEST_DIR.getAbsolutePath());
     Path inDir = new Path(testdir, "in");
     Path outDir = new Path(testdir, "out");
     FileSystem fs = FileSystem.get(conf);
@@ -440,7 +450,7 @@ public class TestMapRed extends Configured implements Tool {
     //
     // Generate distribution of ints.  This is the answer key.
     //
-    JobConf conf = null;
+    JobConf conf;
     //Check to get configuration and check if it is configured thro' Configured
     //interface. This would happen when running testcase thro' command line.
     if(getConf() == null) {
@@ -465,7 +475,7 @@ public class TestMapRed extends Configured implements Tool {
     // Write the answer key to a file.  
     //
     FileSystem fs = FileSystem.get(conf);
-    Path testdir = new Path("mapred.loadtest");
+    Path testdir = new Path(TEST_DIR.getAbsolutePath(), "mapred.loadtest");
     if (!fs.mkdirs(testdir)) {
       throw new IOException("Mkdirs failed to create " + testdir.toString());
     }
@@ -635,8 +645,8 @@ public class TestMapRed extends Configured implements Tool {
       in.close();
     }
     int originalTotal = 0;
-    for (int i = 0; i < dist.length; i++) {
-      originalTotal += dist[i];
+    for (int aDist : dist) {
+      originalTotal += aDist;
     }
     System.out.println("Original sum: " + originalTotal);
     System.out.println("Recomputed sum: " + totalseen);
@@ -727,7 +737,7 @@ public class TestMapRed extends Configured implements Tool {
   public void runJob(int items) {
     try {
       JobConf conf = new JobConf(TestMapRed.class);
-      Path testdir = new Path("build/test/test.mapred.spill");
+      Path testdir = new Path(TEST_DIR.getAbsolutePath());
       Path inDir = new Path(testdir, "in");
       Path outDir = new Path(testdir, "out");
       FileSystem fs = FileSystem.get(conf);
@@ -777,7 +787,7 @@ public class TestMapRed extends Configured implements Tool {
       System.err.println("Usage: TestMapRed <range> <counts>");
       System.err.println();
       System.err.println("Note: a good test will have a " +
-      		"<counts> value that is substantially larger than the <range>");
+          "<counts> value that is substantially larger than the <range>");
       return -1;
     }
 

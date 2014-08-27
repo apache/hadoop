@@ -258,6 +258,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6044. Fully qualified intermediate done dir path breaks per-user dir
     creation on Windows. (zjshen)
 
+    MAPREDUCE-5885. build/test/test.mapred.spill causes release audit warnings
+    (Chen He via jlowe)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
