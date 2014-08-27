@@ -15,37 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.datanode.fsdataset;
+package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.StorageType;
 
 /**
- * This is an interface for the underlying volume.
+ * Generate volumes based on the storageType.
  */
-public interface FsVolumeSpi {
-  /** @return the StorageUuid of the volume */
-  public String getStorageID();
-
-  /** @return a list of block pools. */
-  public String[] getBlockPoolList();
-
-  /** @return the available storage space in bytes. */
-  public long getAvailable() throws IOException;
-
-  /** @return the base path to the volume */
-  public String getBasePath();
-
-  /** @return the path to the volume */
-  public String getPath(String bpid) throws IOException;
-
-  /** @return the directory for the finalized blocks in the block pool. */
-  public File getFinalizedDir(String bpid) throws IOException;
-  
-  public StorageType getStorageType();
-
-  /** Returns true if the volume is NOT backed by persistent storage. */
-  public boolean isTransientStorage();
+@InterfaceAudience.Private
+class FsVolumeImplAllocator {
+  static FsVolumeImpl createVolume(FsDatasetImpl fsDataset, String storageUuid,
+      File dir, Configuration conf, StorageType storageType)
+          throws IOException {
+    switch(storageType) {
+      case RAM_DISK:
+        return new FsTransientVolumeImpl(
+            fsDataset, storageUuid, dir, conf, storageType);
+      default:
+        return new FsVolumeImpl(
+            fsDataset, storageUuid, dir, conf, storageType);
+    }
+  }
 }

@@ -68,7 +68,25 @@ class FsVolumeList {
     }
     return blockChooser.chooseVolume(list, blockSize);
   }
-    
+
+  /**
+   * Get next volume. Synchronized to ensure {@link #curVolume} is updated
+   * by a single thread and next volume is chosen with no concurrent
+   * update to {@link #volumes}.
+   * @param blockSize free space needed on the volume
+   * @return next volume to store the block in.
+   */
+  synchronized FsVolumeImpl getNextTransientVolume(
+      long blockSize) throws IOException {
+    final List<FsVolumeImpl> list = new ArrayList<FsVolumeImpl>(volumes.size());
+    for(FsVolumeImpl v : volumes) {
+      if (v.isTransientStorage()) {
+        list.add(v);
+      }
+    }
+    return blockChooser.chooseVolume(list, blockSize);
+  }
+
   long getDfsUsed() throws IOException {
     long dfsUsed = 0L;
     for (FsVolumeImpl v : volumes) {

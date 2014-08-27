@@ -73,7 +73,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
    * dfs.datanode.fsdatasetcache.max.threads.per.volume) to limit resource
    * contention.
    */
-  private final ThreadPoolExecutor cacheExecutor;
+  protected ThreadPoolExecutor cacheExecutor;
   
   FsVolumeImpl(FsDatasetImpl dataset, String storageID, File currentDir,
       Configuration conf, StorageType storageType) throws IOException {
@@ -192,6 +192,11 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
   
   @Override
+  public boolean isTransientStorage() {
+    return false;
+  }
+
+  @Override
   public String getPath(String bpid) throws IOException {
     return getBlockPoolSlice(bpid).getDirectory().getAbsolutePath();
   }
@@ -272,7 +277,9 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   void shutdown() {
-    cacheExecutor.shutdown();
+    if (cacheExecutor != null) {
+      cacheExecutor.shutdown();
+    }
     Set<Entry<String, BlockPoolSlice>> set = bpSlices.entrySet();
     for (Entry<String, BlockPoolSlice> entry : set) {
       entry.getValue().shutdown();
@@ -365,6 +372,5 @@ public class FsVolumeImpl implements FsVolumeSpi {
   DatanodeStorage toDatanodeStorage() {
     return new DatanodeStorage(storageID, DatanodeStorage.State.NORMAL, storageType);
   }
-
 }
 
