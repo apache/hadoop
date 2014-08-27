@@ -17,17 +17,20 @@
 */
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 public class RMStateStoreFactory {
+  private static final Log LOG = LogFactory.getLog(RMStateStoreFactory.class);
   
   public static RMStateStore getStore(Configuration conf) {
-    RMStateStore store = ReflectionUtils.newInstance(
-        conf.getClass(YarnConfiguration.RM_STORE, 
-            MemoryRMStateStore.class, RMStateStore.class), 
-            conf);
-    return store;
+    Class<? extends RMStateStore> storeClass =
+        conf.getClass(YarnConfiguration.RM_STORE,
+            MemoryRMStateStore.class, RMStateStore.class);
+    LOG.info("Using RMStateStore implementation - " + storeClass);
+    return ReflectionUtils.newInstance(storeClass, conf);
   }
 }

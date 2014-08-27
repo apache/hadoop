@@ -154,6 +154,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2389. Added functionality for schedulers to kill all applications in a
     queue. (Subramaniam Venkatraman Krishnan via jianhe)
 
+    YARN-1326. RM should log using RMStore at startup time. 
+    (Tsuyoshi Ozawa via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
