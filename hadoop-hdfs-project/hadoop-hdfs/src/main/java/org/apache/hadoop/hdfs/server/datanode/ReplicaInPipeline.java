@@ -250,7 +250,7 @@ public class ReplicaInPipeline extends ReplicaInfo
         }
       }
     } else {
-      // for create, we can use the requested checksum
+			// for create, we can use the requested checksum
       checksum = requestedChecksum;
     }
     

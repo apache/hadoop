@@ -68,6 +68,7 @@ public class DataStorage extends Storage {
   final static String STORAGE_DIR_DETACHED = "detach";
   public final static String STORAGE_DIR_RBW = "rbw";
   public final static String STORAGE_DIR_FINALIZED = "finalized";
+  public final static String STORAGE_DIR_LAZY_PERSIST = "lazypersist";
   public final static String STORAGE_DIR_TMP = "tmp";
 
   /**
