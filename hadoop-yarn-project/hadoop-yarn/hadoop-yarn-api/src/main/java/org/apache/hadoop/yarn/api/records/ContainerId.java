@@ -83,7 +83,7 @@ public abstract class ContainerId implements Comparable<ContainerId>{
  
   
   // TODO: fail the app submission if attempts are more than 10 or something
-  private static final ThreadLocal<NumberFormat> appAttemptIdFormat =
+  private static final ThreadLocal<NumberFormat> appAttemptIdAndEpochFormat =
       new ThreadLocal<NumberFormat>() {
         @Override
         public NumberFormat initialValue() {
@@ -153,9 +153,13 @@ public abstract class ContainerId implements Comparable<ContainerId>{
     sb.append(ApplicationId.appIdFormat.get().format(appId.getId()))
         .append("_");
     sb.append(
-        appAttemptIdFormat.get().format(
+        appAttemptIdAndEpochFormat.get().format(
             getApplicationAttemptId().getAttemptId())).append("_");
-    sb.append(containerIdFormat.get().format(getId()));
+    sb.append(containerIdFormat.get().format(0x3fffff & getId()));
+    int epoch = getId() >> 22;
+    if (epoch > 0) {
+      sb.append("_").append(appAttemptIdAndEpochFormat.get().format(epoch));
+    }
     return sb.toString();
   }
 
