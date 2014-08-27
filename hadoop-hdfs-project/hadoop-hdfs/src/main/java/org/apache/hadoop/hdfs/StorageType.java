@@ -33,7 +33,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 public enum StorageType {
   DISK,
   SSD,
-  ARCHIVE;
+  ARCHIVE,
+  RAM_DISK;
 
   public static final StorageType DEFAULT = DISK;
   
