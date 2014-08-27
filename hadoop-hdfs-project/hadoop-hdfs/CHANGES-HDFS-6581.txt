@@ -18,3 +18,7 @@
 
     HDFS-6927. Initial unit tests for lazy persist files. (Arpit Agarwal)
 
+    HDFS-6929. NN periodically unlinks lazy persist files with missing
+    replicas from namespace. (Arpit Agarwal)
+
+

@@ -204,6 +204,52 @@ public class TestLazyPersistFiles {
     }
   }
 
+  /**
+   * If one or more replicas of a lazyPersist file are lost, then the file
+   * must be discarded by the NN, instead of being kept around as a
+   * 'corrupt' file.
+   */
+  @Test (timeout=300000)
+  public void testLazyPersistFilesAreDiscarded()
+      throws IOException, InterruptedException {
+    startUpCluster(REPL_FACTOR,
+                   new StorageType[] {RAM_DISK, DEFAULT },
+                   (2 * BLOCK_SIZE - 1));   // 1 replica + delta.
+    final String METHOD_NAME = GenericTestUtils.getMethodName();
+    Path path1 = new Path("/" + METHOD_NAME + ".01.dat");
+    Path path2 = new Path("/" + METHOD_NAME + ".02.dat");
+
+    makeTestFile(path1, BLOCK_SIZE, true);
+    makeTestFile(path2, BLOCK_SIZE, false);
+    ensureFileReplicasOnStorageType(path1, RAM_DISK);
+    ensureFileReplicasOnStorageType(path2, DEFAULT);
+
+    // Stop the DataNode and sleep for the time it takes the NN to
+    // detect the DN as being dead.
+    cluster.shutdownDataNodes();
+    Thread.sleep(30000L);
+    assertThat(cluster.getNamesystem().getNumDeadDataNodes(), is(1));
+
+    // Next, wait for the replication monitor to mark the file as
+    // corrupt, plus some delta.
+    Thread.sleep(2 * DFS_NAMENODE_REPLICATION_INTERVAL_DEFAULT * 1000);
+
+    // Wait for the LazyPersistFileScrubber to run, plus some delta.
+    Thread.sleep(2 * LAZY_WRITE_FILE_SCRUBBER_INTERVAL_SEC * 1000);
+
+    // Ensure that path1 does not exist anymore, whereas path2 does.
+    assert(!fs.exists(path1));
+    assert(fs.exists(path2));
+
+    // We should have only one block that needs replication i.e. the one
+    // belonging to path2.
+    assertThat(cluster.getNameNode()
+                      .getNamesystem()
+                      .getBlockManager()
+                      .getUnderReplicatedBlocksCount(),
+               is(1L));
+  }
+
   @Test (timeout=300000)
   public void testLazyPersistBlocksAreSaved()
       throws IOException, InterruptedException {
