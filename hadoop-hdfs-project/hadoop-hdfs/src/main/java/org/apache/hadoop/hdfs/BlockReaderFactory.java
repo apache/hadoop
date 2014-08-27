@@ -54,6 +54,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.PerformanceAdvisory;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -343,10 +344,9 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
       return null;
     }
     if (clientContext.getDisableLegacyBlockReaderLocal()) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace(this + ": can't construct BlockReaderLocalLegacy because " +
-            "disableLegacyBlockReaderLocal is set.");
-      }
+      PerformanceAdvisory.LOG.debug(this + ": can't construct " +
+          "BlockReaderLocalLegacy because " +
+          "disableLegacyBlockReaderLocal is set.");
       return null;
     }
     IOException ioe = null;
@@ -385,10 +385,8 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
                       getPathInfo(inetSocketAddress, conf);
     }
     if (!pathInfo.getPathState().getUsableForShortCircuit()) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace(this + ": " + pathInfo + " is not " +
-            "usable for short circuit; giving up on BlockReaderLocal.");
-      }
+      PerformanceAdvisory.LOG.debug(this + ": " + pathInfo + " is not " +
+          "usable for short circuit; giving up on BlockReaderLocal.");
       return null;
     }
     ShortCircuitCache cache = clientContext.getShortCircuitCache();
@@ -404,8 +402,9 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
     }
     if (info.getReplica() == null) {
       if (LOG.isTraceEnabled()) {
-        LOG.trace(this + ": failed to get ShortCircuitReplica.  " +
-            "Cannot construct BlockReaderLocal via " + pathInfo.getPath());
+        PerformanceAdvisory.LOG.debug(this + ": failed to get " +
+            "ShortCircuitReplica. Cannot construct " +
+            "BlockReaderLocal via " + pathInfo.getPath());
       }
       return null;
     }
@@ -580,11 +579,9 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
                       getPathInfo(inetSocketAddress, conf);
     }
     if (!pathInfo.getPathState().getUsableForDataTransfer()) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace(this + ": not trying to create a remote block reader " +
-            "because the UNIX domain socket at " + pathInfo +
-            " is not usable.");
-      }
+      PerformanceAdvisory.LOG.debug(this + ": not trying to create a " +
+          "remote block reader because the UNIX domain socket at " +
+          pathInfo + " is not usable.");
       return null;
     }
     if (LOG.isTraceEnabled()) {

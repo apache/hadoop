@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.util.NativeCodeLoader;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.PerformanceAdvisory;
 
 /**
  * OpenSSL secure random using JNI.
@@ -67,6 +68,8 @@ public class OpensslSecureRandom extends Random {
   
   public OpensslSecureRandom() {
     if (!nativeEnabled) {
+      PerformanceAdvisory.LOG.debug("Build does not support openssl, " +
+          "falling back to Java SecureRandom.");
       fallback = new java.security.SecureRandom();
     }
   }
