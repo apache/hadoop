@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
@@ -935,6 +936,12 @@ public class TestReplicationPolicy {
     assertEquals(2, first.size());
     assertEquals(2, second.size());
     List<StorageType> excessTypes = new ArrayList<StorageType>();
+    {
+      // test returning null
+      excessTypes.add(StorageType.SSD);
+      assertNull(replicator.chooseReplicaToDelete(
+          null, null, (short)3, first, second, excessTypes));
+    }
     excessTypes.add(StorageType.DEFAULT);
     DatanodeStorageInfo chosen = replicator.chooseReplicaToDelete(
         null, null, (short)3, first, second, excessTypes);
@@ -950,7 +957,7 @@ public class TestReplicationPolicy {
         null, null, (short)2, first, second, excessTypes);
     assertEquals(chosen, storages[5]);
   }
-  
+
   /**
    * This testcase tests whether the default value returned by
    * DFSUtil.getInvalidateWorkPctPerIteration() is positive, 

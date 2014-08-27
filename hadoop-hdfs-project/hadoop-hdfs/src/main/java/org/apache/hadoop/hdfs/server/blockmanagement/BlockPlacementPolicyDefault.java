@@ -792,8 +792,15 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         minSpaceStorage = storage;
       }
     }
-    final DatanodeStorageInfo storage = oldestHeartbeatStorage != null?
-        oldestHeartbeatStorage : minSpaceStorage;
+
+    final DatanodeStorageInfo storage;
+    if (oldestHeartbeatStorage != null) {
+      storage = oldestHeartbeatStorage;
+    } else if (minSpaceStorage != null) {
+      storage = minSpaceStorage;
+    } else {
+      return null;
+    }
     excessTypes.remove(storage.getStorageType());
     return storage;
   }

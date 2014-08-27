@@ -2771,12 +2771,9 @@ public class BlockManager {
     final DatanodeStorageInfo addedNodeStorage
         = DatanodeStorageInfo.getDatanodeStorageInfo(nonExcess, addedNode);
     while (nonExcess.size() - replication > 0) {
-      // check if we can delete delNodeHint
       final DatanodeStorageInfo cur;
-      if (firstOne && delNodeHintStorage != null
-          && (moreThanOne.contains(delNodeHintStorage)
-              || (addedNodeStorage != null
-                  && !moreThanOne.contains(addedNodeStorage)))) {
+      if (useDelHint(firstOne, delNodeHintStorage, addedNodeStorage,
+          moreThanOne, excessTypes)) {
         cur = delNodeHintStorage;
       } else { // regular excessive replica removal
         cur = replicator.chooseReplicaToDelete(bc, b, replication,
@@ -2803,6 +2800,27 @@ public class BlockManager {
       addToInvalidates(b, cur.getDatanodeDescriptor());
       blockLog.info("BLOCK* chooseExcessReplicates: "
                 +"("+cur+", "+b+") is added to invalidated blocks set");
+    }
+  }
+
+  /** Check if we can use delHint */
+  static boolean useDelHint(boolean isFirst, DatanodeStorageInfo delHint,
+      DatanodeStorageInfo added, List<DatanodeStorageInfo> moreThan1Racks,
+      List<StorageType> excessTypes) {
+    if (!isFirst) {
+      return false; // only consider delHint for the first case
+    } else if (delHint == null) {
+      return false; // no delHint
+    } else if (!excessTypes.remove(delHint.getStorageType())) {
+      return false; // delHint storage type is not an excess type
+    } else {
+      // check if removing delHint reduces the number of racks
+      if (moreThan1Racks.contains(delHint)) {
+        return true; // delHint and some other nodes are under the same rack 
+      } else if (added != null && !moreThan1Racks.contains(added)) {
+        return true; // the added node adds a new rack
+      }
+      return false; // removing delHint reduces the number of racks;
     }
   }
 
