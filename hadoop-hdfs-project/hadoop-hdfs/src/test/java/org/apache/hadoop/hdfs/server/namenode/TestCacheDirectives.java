@@ -110,7 +110,6 @@ public class TestCacheDirectives {
 
   static {
     NativeIO.POSIX.setCacheManipulator(new NoMlockCacheManipulator());
-    EditLogFileOutputStream.setShouldSkipFsyncForTesting(false);
   }
 
   private static final long BLOCK_SIZE = 4096;

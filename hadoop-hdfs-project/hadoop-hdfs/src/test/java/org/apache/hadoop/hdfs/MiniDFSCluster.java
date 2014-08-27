@@ -93,6 +93,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetUtil;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
+import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
@@ -172,6 +173,7 @@ public class MiniDFSCluster {
     private boolean checkDataNodeAddrConfig = false;
     private boolean checkDataNodeHostConfig = false;
     private Configuration[] dnConfOverlays;
+    private boolean skipFsyncForTesting = true;
     
     public Builder(Configuration conf) {
       this.conf = conf;
@@ -405,6 +407,15 @@ public class MiniDFSCluster {
       this.dnConfOverlays = dnConfOverlays;
       return this;
     }
+
+    /**
+     * Default: true
+     * When true, we skip fsync() calls for speed improvements.
+     */
+    public Builder skipFsyncForTesting(boolean val) {
+      this.skipFsyncForTesting = val;
+      return this;
+    }
     
     /**
      * Construct the actual MiniDFSCluster
@@ -472,7 +483,8 @@ public class MiniDFSCluster {
                        builder.checkExitOnShutdown,
                        builder.checkDataNodeAddrConfig,
                        builder.checkDataNodeHostConfig,
-                       builder.dnConfOverlays);
+                       builder.dnConfOverlays,
+                       builder.skipFsyncForTesting);
   }
   
   public class DataNodeProperties {
@@ -727,7 +739,8 @@ public class MiniDFSCluster {
                        manageNameDfsDirs, true, manageDataDfsDirs, manageDataDfsDirs,
                        operation, null, racks, hosts,
                        null, simulatedCapacities, null, true, false,
-                       MiniDFSNNTopology.simpleSingleNN(nameNodePort, 0), true, false, false, null);
+                       MiniDFSNNTopology.simpleSingleNN(nameNodePort, 0),
+                       true, false, false, null, true);
   }
 
   private void initMiniDFSCluster(
@@ -742,7 +755,8 @@ public class MiniDFSCluster {
       MiniDFSNNTopology nnTopology, boolean checkExitOnShutdown,
       boolean checkDataNodeAddrConfig,
       boolean checkDataNodeHostConfig,
-      Configuration[] dnConfOverlays)
+      Configuration[] dnConfOverlays,
+      boolean skipFsyncForTesting)
   throws IOException {
     boolean success = false;
     try {
@@ -782,6 +796,8 @@ public class MiniDFSCluster {
             + "Standby node since no IPC ports have been specified.");
         conf.setInt(DFS_HA_LOGROLL_PERIOD_KEY, -1);
       }
+
+      EditLogFileOutputStream.setShouldSkipFsyncForTesting(skipFsyncForTesting);
     
       federation = nnTopology.isFederated();
       try {
