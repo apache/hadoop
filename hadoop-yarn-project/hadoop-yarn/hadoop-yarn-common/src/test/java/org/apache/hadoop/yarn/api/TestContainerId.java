@@ -54,7 +54,9 @@ public class TestContainerId {
     long ts = System.currentTimeMillis();
     ContainerId c6 = newContainerId(36473, 4365472, ts, 25645811);
     Assert.assertEquals("container_10_0001_01_000001", c1.toString());
-    Assert.assertEquals("container_" + ts + "_36473_4365472_25645811",
+    Assert.assertEquals(479987, 0x003fffff & c6.getId());
+    Assert.assertEquals(6, c6.getId() >> 22);
+    Assert.assertEquals("container_" + ts + "_36473_4365472_479987_06",
         c6.toString());
   }
 

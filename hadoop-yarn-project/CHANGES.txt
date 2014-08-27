@@ -137,6 +137,9 @@ Release 2.6.0 - UNRELEASED
     YARN-1326. RM should log using RMStore at startup time. 
     (Tsuyoshi Ozawa via kasha)
 
+    YARN-2182. Updated ContainerId#toString() to append RM Epoch number.
+    (Tsuyoshi OZAWA via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
