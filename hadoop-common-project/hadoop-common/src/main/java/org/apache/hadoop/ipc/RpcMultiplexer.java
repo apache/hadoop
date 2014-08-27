@@ -15,25 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.IOException;
-
-import com.google.common.annotations.VisibleForTesting;
+package org.apache.hadoop.ipc;
 
 /**
- * Used to inject certain faults for testing.
+ * Implement this interface to make a pluggable multiplexer in the
+ * FairCallQueue.
  */
-public class EncryptionFaultInjector {
-  @VisibleForTesting
-  public static EncryptionFaultInjector instance =
-      new EncryptionFaultInjector();
-
-  @VisibleForTesting
-  public static EncryptionFaultInjector getInstance() {
-    return instance;
-  }
-
-  @VisibleForTesting
-  public void startFileAfterGenerateKey() throws IOException {}
+public interface RpcMultiplexer {
+  /**
+   * Should get current index and optionally perform whatever is needed
+   * to prepare the next index.
+   * @return current index
+   */
+  int getAndAdvanceCurrentIndex();
 }

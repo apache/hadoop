@@ -292,8 +292,8 @@ public class JobHistoryUtils {
    * @return the intermediate done directory for jobhistory files.
    */
   public static String getHistoryIntermediateDoneDirForUser(Configuration conf) throws IOException {
-    return getConfiguredHistoryIntermediateDoneDirPrefix(conf) + File.separator
-        + UserGroupInformation.getCurrentUser().getShortUserName();
+    return new Path(getConfiguredHistoryIntermediateDoneDirPrefix(conf),
+        UserGroupInformation.getCurrentUser().getShortUserName()).toString();
   }
 
   public static boolean shouldCreateNonUserDirectory(Configuration conf) {

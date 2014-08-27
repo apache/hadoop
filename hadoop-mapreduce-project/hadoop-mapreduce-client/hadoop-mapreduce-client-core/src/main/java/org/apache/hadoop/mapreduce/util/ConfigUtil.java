@@ -278,6 +278,8 @@ public class ConfigUtil {
         MRJobConfig.TASK_DEBUGOUT_LINES),
       new DeprecationDelta("mapred.merge.recordsBeforeProgress",
         MRJobConfig.RECORDS_BEFORE_PROGRESS),
+      new DeprecationDelta("mapred.merge.recordsBeforeProgress",
+        MRJobConfig.COMBINE_RECORDS_BEFORE_PROGRESS),
       new DeprecationDelta("mapred.skip.attempts.to.start.skipping",
         MRJobConfig.SKIP_START_ATTEMPTS),
       new DeprecationDelta("mapred.task.id",

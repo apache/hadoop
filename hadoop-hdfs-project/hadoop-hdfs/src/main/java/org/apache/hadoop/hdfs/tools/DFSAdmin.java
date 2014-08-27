@@ -356,7 +356,7 @@ public class DFSAdmin extends FsShell {
    * Construct a DFSAdmin object.
    */
   public DFSAdmin() {
-    this(null);
+    this(new HdfsConfiguration());
   }
 
   /**

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapred.lib;
 
-import java.io.*;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -35,9 +34,23 @@ import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.mapred.Utils;
+import org.junit.After;
+import org.junit.Test;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 
 public class TestKeyFieldBasedComparator extends HadoopTestCase {
+
+  private static final File TEST_DIR = new File(
+      System.getProperty("test.build.data",
+          System.getProperty("java.io.tmpdir")),
+          "TestKeyFieldBasedComparator-lib");
   JobConf conf;
   JobConf localConf;
   
@@ -50,8 +63,9 @@ public class TestKeyFieldBasedComparator extends HadoopTestCase {
     localConf = createJobConf();
     localConf.set(JobContext.MAP_OUTPUT_KEY_FIELD_SEPERATOR, " ");
   }
+
   public void configure(String keySpec, int expect) throws Exception {
-    Path testdir = new Path("build/test/test.mapred.spill");
+    Path testdir = new Path(TEST_DIR.getAbsolutePath());
     Path inDir = new Path(testdir, "in");
     Path outDir = new Path(testdir, "out");
     FileSystem fs = getFileSystem();
@@ -116,6 +130,13 @@ public class TestKeyFieldBasedComparator extends HadoopTestCase {
       reader.close();
     }
   }
+
+  @After
+  public void cleanup() {
+    FileUtil.fullyDelete(TEST_DIR);
+  }
+
+  @Test
   public void testBasicUnixComparator() throws Exception {
     configure("-k1,1n", 1);
     configure("-k2,2n", 1);

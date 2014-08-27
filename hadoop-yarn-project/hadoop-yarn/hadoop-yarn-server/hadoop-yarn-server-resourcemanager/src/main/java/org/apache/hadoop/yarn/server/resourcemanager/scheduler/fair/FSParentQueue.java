@@ -35,7 +35,6 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 
@@ -65,6 +64,16 @@ public class FSParentQueue extends FSQueue {
     for (FSQueue childQueue : childQueues) {
       childQueue.getMetrics().setFairShare(childQueue.getFairShare());
       childQueue.recomputeShares();
+    }
+  }
+
+  public void recomputeSteadyShares() {
+    policy.computeSteadyShares(childQueues, getSteadyFairShare());
+    for (FSQueue childQueue : childQueues) {
+      childQueue.getMetrics().setSteadyFairShare(childQueue.getSteadyFairShare());
+      if (childQueue instanceof FSParentQueue) {
+        ((FSParentQueue) childQueue).recomputeSteadyShares();
+      }
     }
   }
 

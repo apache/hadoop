@@ -20,8 +20,16 @@ package org.apache.hadoop.yarn.server.applicationhistoryservice;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.junit.Assert;
+
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -53,6 +61,11 @@ public class TestFileSystemApplicationHistoryStore extends
   @Before
   public void setup() throws Exception {
     fs = new RawLocalFileSystem();
+    initStore(fs);
+  }
+
+  private void initStore(final FileSystem fs) throws IOException,
+      URISyntaxException {
     Configuration conf = new Configuration();
     fs.initialize(new URI("/"), conf);
     fsWorkingPath =
@@ -61,7 +74,12 @@ public class TestFileSystemApplicationHistoryStore extends
     fs.delete(fsWorkingPath, true);
     conf.set(YarnConfiguration.FS_APPLICATION_HISTORY_STORE_URI,
       fsWorkingPath.toString());
-    store = new FileSystemApplicationHistoryStore();
+    store = new FileSystemApplicationHistoryStore() {
+      @Override
+      protected FileSystem getFileSystem(Path path, Configuration conf) {
+        return fs;
+      }
+    };
     store.init(conf);
     store.start();
   }
@@ -242,5 +260,47 @@ public class TestFileSystemApplicationHistoryStore extends
     LOG.info("Starting testMissingApplicationAttemptHistoryData");
     testWriteHistoryData(3, false, true);
     testReadHistoryData(3, false, true);
+  }
+
+  @Test
+  public void testInitExistingWorkingDirectoryInSafeMode() throws Exception {
+    LOG.info("Starting testInitExistingWorkingDirectoryInSafeMode");
+    tearDown();
+
+    // Setup file system to inject startup conditions
+    FileSystem fs = spy(new RawLocalFileSystem());
+    doReturn(true).when(fs).isDirectory(any(Path.class));
+
+    try {
+      initStore(fs);
+    } catch (Exception e) {
+      Assert.fail("Exception should not be thrown: " + e);
+    }
+
+    // Make sure that directory creation was not attempted
+    verify(fs, times(1)).isDirectory(any(Path.class));
+    verify(fs, times(0)).mkdirs(any(Path.class));
+  }
+
+  @Test
+  public void testInitNonExistingWorkingDirectoryInSafeMode() throws Exception {
+    LOG.info("Starting testInitNonExistingWorkingDirectoryInSafeMode");
+    tearDown();
+
+    // Setup file system to inject startup conditions
+    FileSystem fs = spy(new RawLocalFileSystem());
+    doReturn(false).when(fs).isDirectory(any(Path.class));
+    doThrow(new IOException()).when(fs).mkdirs(any(Path.class));
+
+    try {
+      initStore(fs);
+      Assert.fail("Exception should have been thrown");
+    } catch (Exception e) {
+      // Expected failure
+    }
+
+    // Make sure that directory creation was attempted
+    verify(fs, times(1)).isDirectory(any(Path.class));
+    verify(fs, times(1)).mkdirs(any(Path.class));
   }
 }

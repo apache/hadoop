@@ -20,7 +20,7 @@
 
 function hadoop_subproject_init
 {
-  if [ -e "${HADOOP_CONF_DIR}/mapred-env.sh" ]; then
+  if [[ -e "${HADOOP_CONF_DIR}/mapred-env.sh" ]]; then
     . "${HADOOP_CONF_DIR}/mapred-env.sh"
   fi
   
@@ -49,7 +49,7 @@ function hadoop_subproject_init
   HADOOP_ROOT_LOGGER="${HADOOP_MAPRED_ROOT_LOGGER:-INFO,console}"
   HADOOP_MAPRED_ROOT_LOGGER="${HADOOP_ROOT_LOGGER}"
   
-  HADOOP_MAPRED_HOME="${HADOOP_MAPRED_HOME:-$HADOOP_HOME_DIR}"
+  HADOOP_MAPRED_HOME="${HADOOP_MAPRED_HOME:-$HADOOP_PREFIX}"
   
   HADOOP_IDENT_STRING="${HADOOP_MAPRED_IDENT_STRING:-$HADOOP_IDENT_STRING}"
   HADOOP_MAPRED_IDENT_STRING="${HADOOP_IDENT_STRING}"
@@ -60,13 +60,15 @@ if [[ -z "${HADOOP_LIBEXEC_DIR}" ]]; then
   HADOOP_LIBEXEC_DIR=$(cd -P -- "$(dirname -- "${_mc_this}")" >/dev/null && pwd -P)
 fi
 
-if [[ -e "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh" ]]; then
-  . "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh"
-elif [[ -e "${HADOOP_COMMON_HOME}/libexec/hadoop-config.sh" ]]; then
+if [[ -n "${HADOOP_COMMON_HOME}" ]] &&
+   [[ -e "${HADOOP_COMMON_HOME}/libexec/hadoop-config.sh" ]]; then
   . "${HADOOP_COMMON_HOME}/libexec/hadoop-config.sh"
-elif [[ -e "${HADOOP_HOME}/libexec/hadoop-config.sh" ]]; then
-  . "${HADOOP_HOME}/libexec/hadoop-config.sh"
+elif [[ -e "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh" ]]; then
+  . "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh"
+elif [ -e "${HADOOP_PREFIX}/libexec/hadoop-config.sh" ]; then
+  . "${HADOOP_PREFIX}/libexec/hadoop-config.sh"
 else
-  echo "Hadoop common not found."
-  exit
+  echo "ERROR: Hadoop common not found." 2>&1
+  exit 1
 fi
+
