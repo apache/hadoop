@@ -299,13 +299,14 @@ public class FSDirectory implements Closeable {
    */
   INodeFile addFile(String path, PermissionStatus permissions,
                     short replication, long preferredBlockSize,
+                    boolean isLazyPersist,
                     String clientName, String clientMachine)
     throws FileAlreadyExistsException, QuotaExceededException,
       UnresolvedLinkException, SnapshotAccessControlException, AclException {
 
     long modTime = now();
     INodeFile newNode = newINodeFile(namesystem.allocateNewInodeId(),
-        permissions, modTime, modTime, replication, preferredBlockSize);
+        permissions, modTime, modTime, replication, preferredBlockSize, isLazyPersist);
     newNode.toUnderConstruction(clientName, clientMachine);
 
     boolean added = false;
@@ -335,6 +336,7 @@ public class FSDirectory implements Closeable {
                             long modificationTime,
                             long atime,
                             long preferredBlockSize,
+                            boolean isLazyPersist,
                             boolean underConstruction,
                             String clientName,
                             String clientMachine,
@@ -343,12 +345,12 @@ public class FSDirectory implements Closeable {
     assert hasWriteLock();
     if (underConstruction) {
       newNode = newINodeFile(id, permissions, modificationTime,
-          modificationTime, replication, preferredBlockSize, storagePolicyId);
+          modificationTime, replication, preferredBlockSize, storagePolicyId, isLazyPersist);
       newNode.toUnderConstruction(clientName, clientMachine);
 
     } else {
       newNode = newINodeFile(id, permissions, modificationTime, atime,
-          replication, preferredBlockSize, storagePolicyId);
+          replication, preferredBlockSize, storagePolicyId, isLazyPersist);
     }
 
     try {
@@ -2408,6 +2410,7 @@ public class FSDirectory implements Closeable {
      final FileEncryptionInfo feInfo = isRawPath ? null :
          getFileEncryptionInfo(node, snapshot, iip);
 
+     boolean isLazyPersist = false;
      if (node.isFile()) {
        final INodeFile fileNode = node.asFile();
        size = fileNode.computeFileSize(snapshot);
@@ -2415,6 +2418,7 @@ public class FSDirectory implements Closeable {
        blocksize = fileNode.getPreferredBlockSize();
        isEncrypted = (feInfo != null) ||
            (isRawPath && isInAnEZ(INodesInPath.fromINode(node)));
+       isLazyPersist = fileNode.getLazyPersistFlag();
      } else {
        isEncrypted = isInAnEZ(INodesInPath.fromINode(node));
      }
@@ -2427,6 +2431,7 @@ public class FSDirectory implements Closeable {
         node.isDirectory(), 
         replication, 
         blocksize,
+        isLazyPersist,
         node.getModificationTime(snapshot),
         node.getAccessTime(snapshot),
         getPermissionForFileStatus(node, snapshot, isEncrypted),
@@ -2450,6 +2455,7 @@ public class FSDirectory implements Closeable {
     long size = 0; // length is zero for directories
     short replication = 0;
     long blocksize = 0;
+    boolean isLazyPersist = false;
     LocatedBlocks loc = null;
     final boolean isEncrypted;
     final FileEncryptionInfo feInfo = isRawPath ? null :
@@ -2458,7 +2464,7 @@ public class FSDirectory implements Closeable {
       final INodeFile fileNode = node.asFile();
       size = fileNode.computeFileSize(snapshot);
       replication = fileNode.getFileReplication(snapshot);
-      blocksize = fileNode.getPreferredBlockSize();
+      isLazyPersist = fileNode.getLazyPersistFlag();
 
       final boolean inSnapshot = snapshot != Snapshot.CURRENT_STATE_ID; 
       final boolean isUc = !inSnapshot && fileNode.isUnderConstruction();
@@ -2481,7 +2487,7 @@ public class FSDirectory implements Closeable {
 
     HdfsLocatedFileStatus status =
         new HdfsLocatedFileStatus(size, node.isDirectory(), replication,
-          blocksize, node.getModificationTime(snapshot),
+          blocksize, isLazyPersist, node.getModificationTime(snapshot),
           node.getAccessTime(snapshot),
           getPermissionForFileStatus(node, snapshot, isEncrypted),
           node.getUserName(snapshot), node.getGroupName(snapshot),

@@ -70,6 +70,8 @@ public class NameNodeLayoutVersion {
       "creating file with overwrite"),
     XATTRS_NAMESPACE_EXT(-59, "Increase number of xattr namespaces"),
     BLOCK_STORAGE_POLICY(-60, "Block Storage policy");
+    LAZY_PERSIST_FILES(-61, "Support for optional lazy persistence of "
+        + " files with reduced durability guarantees");
     
     private final FeatureInfo info;
 

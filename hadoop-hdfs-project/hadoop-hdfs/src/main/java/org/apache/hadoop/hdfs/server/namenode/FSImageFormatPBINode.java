@@ -290,7 +290,7 @@ public final class FSImageFormatPBINode {
       final INodeFile file = new INodeFile(n.getId(),
           n.getName().toByteArray(), permissions, f.getModificationTime(),
           f.getAccessTime(), blocks, replication, f.getPreferredBlockSize(),
-          (byte)f.getStoragePolicyID());
+          (byte)f.getStoragePolicyID(), f.hasIsLazyPersist() ? f.getIsLazyPersist() : false);
 
       if (f.hasAcl()) {
         file.addAclFeature(new AclFeature(loadAclEntries(f.getAcl(),
@@ -400,7 +400,8 @@ public final class FSImageFormatPBINode {
           .setPermission(buildPermissionStatus(file, state.getStringMap()))
           .setPreferredBlockSize(file.getPreferredBlockSize())
           .setReplication(file.getFileReplication())
-          .setStoragePolicyID(file.getLocalStoragePolicyID());
+          .setStoragePolicyID(file.getLocalStoragePolicyID())
+          .setIsLazyPersist(file.getLazyPersistFlag());
 
       AclFeature f = file.getAclFeature();
       if (f != null) {
