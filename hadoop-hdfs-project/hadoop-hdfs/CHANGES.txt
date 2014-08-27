@@ -301,6 +301,11 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6892. Add XDR packaging method for each NFS request (brandonli)
 
+    HDFS-6938. Cleanup javac warnings in FSNamesystem (Charles Lamb via wheat9)
+
+    HDFS-6902. FileWriter should be closed in finally block in
+    BlockReceiver#receiveBlock() (Tsuyoshi OZAWA via Colin Patrick McCabe)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
