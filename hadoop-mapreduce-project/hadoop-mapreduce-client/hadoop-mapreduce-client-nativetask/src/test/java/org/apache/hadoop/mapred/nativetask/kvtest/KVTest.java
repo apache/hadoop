@@ -20,31 +20,28 @@ package org.apache.hadoop.mapred.nativetask.kvtest;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapred.nativetask.testutil.ResultVerifier;
 import org.apache.hadoop.mapred.nativetask.testutil.ScenarioConfiguration;
 import org.apache.hadoop.mapred.nativetask.testutil.TestConstants;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
+import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
+
 @RunWith(Parameterized.class)
 public class KVTest {
   private static final Log LOG = LogFactory.getLog(KVTest.class);
-
-  private static Class<?>[] keyclasses = null;
-  private static Class<?>[] valueclasses = null;
-  private static String[] keyclassNames = null;
-  private static String[] valueclassNames = null;
 
   private static Configuration nativekvtestconf = ScenarioConfiguration.getNativeConfiguration();
   private static Configuration hadoopkvtestconf = ScenarioConfiguration.getNormalConfiguration();
@@ -53,50 +50,46 @@ public class KVTest {
     hadoopkvtestconf.addResource(TestConstants.KVTEST_CONF_PATH);
   }
 
+  private static List<Class<?>> parseClassNames(String spec) {
+    List<Class<?>> ret = Lists.newArrayList();
+      Iterable<String> classNames = Splitter.on(';').trimResults()
+        .omitEmptyStrings().split(spec);
+    for (String className : classNames) {
+      try {
+        ret.add(Class.forName(className));
+      } catch (ClassNotFoundException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    return ret;
+  }
+
+  /**
+   * Parameterize the test with the specified key and value types.
+   */
   @Parameters(name = "key:{0}\nvalue:{1}")
-  public static Iterable<Class<?>[]> data() {
-    final String valueclassesStr = nativekvtestconf
+  public static Iterable<Class<?>[]> data() throws Exception {
+    // Parse the config.
+    final String valueClassesStr = nativekvtestconf
         .get(TestConstants.NATIVETASK_KVTEST_VALUECLASSES);
-    LOG.info(valueclassesStr);
-    valueclassNames = valueclassesStr.replaceAll("\\s", "").split(";");// delete
-    // " "
-    final ArrayList<Class<?>> tmpvalueclasses = new ArrayList<Class<?>>();
-    for (int i = 0; i < valueclassNames.length; i++) {
-      try {
-        if (valueclassNames[i].equals("")) {
-          continue;
-        }
-        tmpvalueclasses.add(Class.forName(valueclassNames[i]));
-      } catch (final ClassNotFoundException e) {
-        e.printStackTrace();
-      }
+    LOG.info("Parameterizing with value classes: " + valueClassesStr);
+    List<Class<?>> valueClasses = parseClassNames(valueClassesStr);
+    
+    final String keyClassesStr = nativekvtestconf.get(
+        TestConstants.NATIVETASK_KVTEST_KEYCLASSES);
+    LOG.info("Parameterizing with key classes: " + keyClassesStr);
+    List<Class<?>> keyClasses = parseClassNames(keyClassesStr);
+
+    // Generate an entry for each key type.
+    List<Class<?>[]> pairs = Lists.newArrayList();
+    for (Class<?> keyClass : keyClasses) {
+      pairs.add(new Class<?>[]{ keyClass, LongWritable.class });
     }
-    valueclasses = tmpvalueclasses.toArray(new Class[tmpvalueclasses.size()]);
-    final String keyclassesStr = nativekvtestconf.get(TestConstants.NATIVETASK_KVTEST_KEYCLASSES);
-    LOG.info(keyclassesStr);
-    keyclassNames = keyclassesStr.replaceAll("\\s", "").split(";");// delete
-    // " "
-    final ArrayList<Class<?>> tmpkeyclasses = new ArrayList<Class<?>>();
-    for (int i = 0; i < keyclassNames.length; i++) {
-      try {
-        if (keyclassNames[i].equals("")) {
-          continue;
-        }
-        tmpkeyclasses.add(Class.forName(keyclassNames[i]));
-      } catch (final ClassNotFoundException e) {
-        e.printStackTrace();
-      }
+    // ...and for each value type.
+    for (Class<?> valueClass : valueClasses) {
+      pairs.add(new Class<?>[]{ LongWritable.class, valueClass });
     }
-    keyclasses = tmpkeyclasses.toArray(new Class[tmpkeyclasses.size()]);
-    final Class<?>[][] kvgroup = new Class<?>[keyclassNames.length * valueclassNames.length][2];
-    for (int i = 0; i < keyclassNames.length; i++) {
-      final int tmpindex = i * valueclassNames.length;
-      for (int j = 0; j < valueclassNames.length; j++) {
-        kvgroup[tmpindex + j][0] = keyclasses[i];
-        kvgroup[tmpindex + j][1] = valueclasses[j];
-      }
-    }
-    return Arrays.asList(kvgroup);
+    return pairs;
   }
 
   private final Class<?> keyclass;
@@ -105,12 +98,10 @@ public class KVTest {
   public KVTest(Class<?> keyclass, Class<?> valueclass) {
     this.keyclass = keyclass;
     this.valueclass = valueclass;
-
   }
 
   @Test
   public void testKVCompability() {
-
     try {
       final String nativeoutput = this.runNativeTest(
           "Test:" + keyclass.getSimpleName() + "--" + valueclass.getSimpleName(), keyclass, valueclass);
@@ -133,11 +124,6 @@ public class KVTest {
     } catch (final Exception e) {
       assertEquals("test run exception:", null, e);
     }
-  }
-
-  @Before
-  public void startUp() {
-
   }
 
   private String runNativeTest(String jobname, Class<?> keyclass, Class<?> valueclass) throws IOException {

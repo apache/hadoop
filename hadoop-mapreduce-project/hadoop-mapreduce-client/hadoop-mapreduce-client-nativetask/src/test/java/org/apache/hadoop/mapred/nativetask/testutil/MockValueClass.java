@@ -51,6 +51,14 @@ public class MockValueClass implements Writable {
     txt = new Text(BytesUtil.toStringBinary(array));
   }
 
+  public void set(byte[] seed) {
+    a = seed.length;
+    array = new byte[seed.length];
+    System.arraycopy(seed, 0, array, 0, seed.length);
+    longWritable.set(a);
+    txt.set(BytesUtil.toStringBinary(array));
+  }
+
   @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(a);

@@ -36,6 +36,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.VIntWritable;
 import org.apache.hadoop.io.VLongWritable;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.nativetask.testutil.BytesFactory;
 import org.apache.hadoop.mapred.nativetask.testutil.ScenarioConfiguration;
 import org.apache.hadoop.mapred.nativetask.testutil.TestConstants;
@@ -123,7 +124,7 @@ public class TestInputFile {
   }
   
   public void createSequenceTestFile(String filepath, int base,  byte start) throws Exception {
-    LOG.info("create file " + filepath);
+    LOG.info("creating file " + filepath + "(" + filesize + " bytes)");
     LOG.info(keyClsName + " " + valueClsName);
     Class<?> tmpkeycls, tmpvaluecls;
     try {
@@ -178,6 +179,9 @@ public class TestInputFile {
     int valuebytesnum = 0;
     int offset = 0;
 
+    Writable keyWritable = BytesFactory.newObject(null, keyClsName);
+    Writable valWritable = BytesFactory.newObject(null, valueClsName);
+
     while (offset < buflen) {
       final int remains = buflen - offset;
       keybytesnum = keyMaxBytesNum;
@@ -202,9 +206,12 @@ public class TestInputFile {
 
       System.arraycopy(databuf, offset, value, 0, valuebytesnum);
       offset += valuebytesnum;
-      
+
+      BytesFactory.updateObject(keyWritable, key);
+      BytesFactory.updateObject(valWritable, value);
+     
       try {
-        writer.append(BytesFactory.newObject(key, this.keyClsName), BytesFactory.newObject(value, this.valueClsName));
+        writer.append(keyWritable, valWritable);
       } catch (final IOException e) {
         e.printStackTrace();
         throw new Exception("sequence file create failed", e);

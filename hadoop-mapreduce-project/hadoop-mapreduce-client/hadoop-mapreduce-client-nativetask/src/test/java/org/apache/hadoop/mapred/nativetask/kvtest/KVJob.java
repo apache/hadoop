@@ -20,7 +20,11 @@ package org.apache.hadoop.mapred.nativetask.kvtest;
 import java.io.IOException;
 import java.util.zip.CRC32;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.primitives.Longs;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,6 +40,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 public class KVJob {
   public static final String INPUTPATH = "nativetask.kvtest.inputfile.path";
   public static final String OUTPUTPATH = "nativetask.kvtest.outputfile.path";
+  private static final Log LOG = LogFactory.getLog(KVJob.class);
   Job job = null;
 
   public static class ValueMapper<KTYPE, VTYPE> extends Mapper<KTYPE, VTYPE, KTYPE, VTYPE> {
@@ -82,8 +87,9 @@ public class KVJob {
       final TestInputFile testfile = new TestInputFile(Integer.valueOf(conf.get(
           TestConstants.FILESIZE_KEY, "1000")),
           keyclass.getName(), valueclass.getName(), conf);
+      Stopwatch sw = new Stopwatch().start();
       testfile.createSequenceTestFile(inputpath);
-
+      LOG.info("Created test file " + inputpath + " in " + sw.elapsedMillis() + "ms");
     }
     job.setInputFormatClass(SequenceFileInputFormat.class);
     FileInputFormat.addInputPath(job, new Path(inputpath));

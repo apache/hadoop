@@ -23,6 +23,9 @@ import com.google.common.primitives.Longs;
 
 public class BytesUtil {
 
+  private static final char[] HEX_CHARS =
+      "0123456789abcdef".toCharArray();
+
   /**
    * Converts a big-endian byte array to a long value.
    *
@@ -124,7 +127,9 @@ public class BytesUtil {
         || " `~!@#$%^&*()-_=+[]{}|;:'\",.<>/?".indexOf(ch) >= 0 ) {
         result.append((char)ch);
       } else {
-        result.append(String.format("\\x%02X", ch));
+        result.append("\\x");
+        result.append(HEX_CHARS[(ch >> 4) & 0x0F]);
+        result.append(HEX_CHARS[ch & 0x0F]);
       }
     }
     return result.toString();

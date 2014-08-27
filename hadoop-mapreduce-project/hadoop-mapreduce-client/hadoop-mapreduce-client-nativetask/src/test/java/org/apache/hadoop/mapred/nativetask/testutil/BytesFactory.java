@@ -19,8 +19,10 @@ package org.apache.hadoop.mapred.nativetask.testutil;
 
 import java.util.Random;
 
+import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.ByteWritable;
 import org.apache.hadoop.io.BytesWritable;
@@ -32,43 +34,58 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.VIntWritable;
 import org.apache.hadoop.io.VLongWritable;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.nativetask.util.BytesUtil;
 
 
 public class BytesFactory {
   public static Random r = new Random();
 
-  public static Object newObject(byte[] seed, String className) {
-    r.setSeed(seed.hashCode());
-    if (className.equals(IntWritable.class.getName())) {
-      return new IntWritable(Ints.fromByteArray(seed));
-    } else if (className.equals(FloatWritable.class.getName())) {
-      return new FloatWritable(r.nextFloat());
-    } else if (className.equals(DoubleWritable.class.getName())) {
-      return new DoubleWritable(r.nextDouble());
-    } else if (className.equals(LongWritable.class.getName())) {
-      return new LongWritable(Longs.fromByteArray(seed));
-    } else if (className.equals(VIntWritable.class.getName())) {
-      return new VIntWritable(Ints.fromByteArray(seed));
-    } else if (className.equals(VLongWritable.class.getName())) {
-      return new VLongWritable(Longs.fromByteArray(seed));
-    } else if (className.equals(BooleanWritable.class.getName())) {
-      return new BooleanWritable(seed[0] % 2 == 1 ? true : false);
-    } else if (className.equals(Text.class.getName())) {
-      return new Text(BytesUtil.toStringBinary(seed));
-    } else if (className.equals(ByteWritable.class.getName())) {
-      return new ByteWritable(seed.length > 0 ? seed[0] : 0);
-    } else if (className.equals(BytesWritable.class.getName())) {
-      return new BytesWritable(seed);
-    } else if (className.equals(UTF8.class.getName())) {
-      return new UTF8(BytesUtil.toStringBinary(seed));
-    } else if (className.equals(MockValueClass.class.getName())) {
-      return new MockValueClass(seed);
+  public static void updateObject(Writable obj, byte[] seed) {
+    if (obj instanceof IntWritable) {
+      ((IntWritable)obj).set(Ints.fromByteArray(seed));
+    } else if (obj instanceof FloatWritable) {
+      ((FloatWritable)obj).set(r.nextFloat());
+    } else if (obj instanceof DoubleWritable) {
+      ((DoubleWritable)obj).set(r.nextDouble());
+    } else if (obj instanceof LongWritable) {
+      ((LongWritable)obj).set(Longs.fromByteArray(seed));
+    } else if (obj instanceof VIntWritable) {
+      ((VIntWritable)obj).set(Ints.fromByteArray(seed));
+    } else if (obj instanceof VLongWritable) {
+      ((VLongWritable)obj).set(Longs.fromByteArray(seed));
+    } else if (obj instanceof BooleanWritable) {
+      ((BooleanWritable)obj).set(seed[0] % 2 == 1 ? true : false);
+    } else if (obj instanceof Text) {
+      ((Text)obj).set(BytesUtil.toStringBinary(seed));
+    } else if (obj instanceof ByteWritable) {
+      ((ByteWritable)obj).set(seed.length > 0 ? seed[0] : 0);
+    } else if (obj instanceof BytesWritable) {
+      ((BytesWritable)obj).set(seed, 0, seed.length);
+    } else if (obj instanceof UTF8) {
+      ((UTF8)obj).set(BytesUtil.toStringBinary(seed));
+    } else if (obj instanceof MockValueClass) {
+      ((MockValueClass)obj).set(seed);
     } else {
-      return null;
+      throw new IllegalArgumentException("unknown writable: " +
+                                         obj.getClass().getName());
     }
   }
 
+  public static Writable newObject(byte[] seed, String className) {
+    Writable ret;
+    try {
+      Class<?> clazz = Class.forName(className);
+      Preconditions.checkArgument(Writable.class.isAssignableFrom(clazz));
+      ret = (Writable)clazz.newInstance();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    if (seed != null) {
+      updateObject(ret, seed);
+    }
+    return ret;
+  }
 
   public static <VTYPE> byte[] fromBytes(byte[] bytes) throws Exception {
     throw new Exception("Not supported");

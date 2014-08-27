@@ -53,4 +53,11 @@ public class TestBytesUtil extends TestCase {
 
     Assert.assertEquals(d, BytesUtil.toDouble(doubleBytes));
   }
+  
+  public void testToStringBinary() {
+    Assert.assertEquals("\\x01\\x02ABC",
+        BytesUtil.toStringBinary(new byte[] { 1, 2, 65, 66, 67 }));
+    Assert.assertEquals("\\x10\\x11",
+        BytesUtil.toStringBinary(new byte[] { 16, 17 }));
+  }
 }
