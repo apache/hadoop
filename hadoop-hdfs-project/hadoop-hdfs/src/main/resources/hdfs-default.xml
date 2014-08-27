@@ -398,6 +398,16 @@
 </property>
 
 <property>
+  <name>dfs.namenode.lazypersist.file.scrub.interval.sec</name>
+  <value>300</value>
+  <description>
+    The NameNode periodically scans the namespace for LazyPersist files with
+    missing blocks and unlinks them from the namespace. This configuration key
+    controls the interval between successive scans. Set it to a negative value
+    to disable this behavior.
+  </description>
+</property>
+<property>
   <name>dfs.block.access.token.enable</name>
   <value>false</value>
   <description>
