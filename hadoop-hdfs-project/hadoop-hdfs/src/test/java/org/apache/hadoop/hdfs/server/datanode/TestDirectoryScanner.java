@@ -576,6 +576,7 @@ public class TestDirectoryScanner {
 
     @Override
     public void releaseReservedSpace(long bytesToRelease) {
+    }
 
     @Override
     public boolean isTransientStorage() {

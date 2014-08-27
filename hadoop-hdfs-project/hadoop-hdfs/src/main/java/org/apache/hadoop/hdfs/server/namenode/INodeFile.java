@@ -108,9 +108,6 @@ public class INodeFile extends INodeWithAdditionalFields
       h = STORAGE_POLICY_ID.BITS.combine(storagePolicyID, h);
       return h;
     }
-    static boolean getLazyPersistFlag(long header) {
-      return LAZY_PERSIST.BITS.retrieve(header) == 0 ? false : true;
-    }
   }
 
   private long header = 0L;
@@ -401,9 +398,6 @@ public class INodeFile extends INodeWithAdditionalFields
       int latestSnapshotId) throws QuotaExceededException {
     recordModification(latestSnapshotId);
     setStoragePolicyID(storagePolicyId);
-  }
-  public boolean getLazyPersistFlag() {
-    return HeaderFormat.getLazyPersistFlag(header);
   }
 
   @Override

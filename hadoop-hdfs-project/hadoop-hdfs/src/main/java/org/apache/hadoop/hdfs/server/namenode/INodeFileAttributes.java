@@ -74,9 +74,6 @@ public interface INodeFileAttributes extends INodeAttributes {
     }
 
     @Override
-    public boolean getLazyPersistFlag() { return HeaderFormat.getLazyPersistFlag(header); }
-
-    @Override
     public long getHeaderLong() {
       return header;
     }
