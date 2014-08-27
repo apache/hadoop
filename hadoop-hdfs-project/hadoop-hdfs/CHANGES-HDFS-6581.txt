@@ -4,5 +4,6 @@
 
     HDFS-6924. Add new RAM_DISK storage type. (Arpit Agarwal)
 
-
+    HDFS-6922. Add LazyPersist flag to INodeFile, save it in FsImage and
+    edit logs. (Arpit Agarwal)
 

@@ -697,6 +697,7 @@ public class FSEditLog implements LogsPurgeable {
       .setModificationTime(newNode.getModificationTime())
       .setAccessTime(newNode.getAccessTime())
       .setBlockSize(newNode.getPreferredBlockSize())
+      .setLazyPersistFlag(newNode.getLazyPersistFlag())
       .setBlocks(newNode.getBlocks())
       .setPermissionStatus(permissions)
       .setClientName(newNode.getFileUnderConstructionFeature().getClientName())
@@ -727,6 +728,7 @@ public class FSEditLog implements LogsPurgeable {
       .setModificationTime(newNode.getModificationTime())
       .setAccessTime(newNode.getAccessTime())
       .setBlockSize(newNode.getPreferredBlockSize())
+      .setLazyPersistFlag(newNode.getLazyPersistFlag())
       .setBlocks(newNode.getBlocks())
       .setPermissionStatus(newNode.getPermissionStatus());
     

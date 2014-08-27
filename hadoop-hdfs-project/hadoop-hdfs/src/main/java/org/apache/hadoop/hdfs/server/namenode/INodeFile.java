@@ -74,7 +74,9 @@ public class INodeFile extends INodeWithAdditionalFields
   /** Format: [16 bits for replication][48 bits for PreferredBlockSize] */
   static enum HeaderFormat {
     PREFERRED_BLOCK_SIZE(null, 48, 1),
-    REPLICATION(PREFERRED_BLOCK_SIZE.BITS, 16, 1);
+    REPLICATION(PREFERRED_BLOCK_SIZE.BITS, 12, 1),
+    LAZY_PERSIST(REPLICATION.BITS, 4, 0);
+
 
     private final LongBitFormat BITS;
 
@@ -90,12 +92,18 @@ public class INodeFile extends INodeWithAdditionalFields
       return PREFERRED_BLOCK_SIZE.BITS.retrieve(header);
     }
 
-    static long toLong(long preferredBlockSize, short replication) {
+    static boolean getLazyPersistFlag(long header) {
+      return LAZY_PERSIST.BITS.retrieve(header) == 0 ? false : true;
+    }
+
+    static long toLong(long preferredBlockSize, short replication, boolean isLazyPersist) {
       long h = 0;
       h = PREFERRED_BLOCK_SIZE.BITS.combine(preferredBlockSize, h);
       h = REPLICATION.BITS.combine(replication, h);
+      h = LAZY_PERSIST.BITS.combine(isLazyPersist ? 1 : 0, h);
       return h;
     }
+
   }
 
   private long header = 0L;
@@ -104,9 +112,9 @@ public class INodeFile extends INodeWithAdditionalFields
 
   INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime,
       long atime, BlockInfo[] blklist, short replication,
-      long preferredBlockSize) {
+      long preferredBlockSize, boolean isLazyPersist) {
     super(id, name, permissions, mtime, atime);
-    header = HeaderFormat.toLong(preferredBlockSize, replication);
+    header = HeaderFormat.toLong(preferredBlockSize, replication, isLazyPersist);
     this.blocks = blklist;
   }
   
@@ -160,7 +168,6 @@ public class INodeFile extends INodeWithAdditionalFields
     return getFileUnderConstructionFeature() != null;
   }
 
-  /** Convert this file to an {@link INodeFileUnderConstruction}. */
   INodeFile toUnderConstruction(String clientName, String clientMachine) {
     Preconditions.checkState(!isUnderConstruction(),
         "file is already under construction");
@@ -353,6 +360,11 @@ public class INodeFile extends INodeWithAdditionalFields
   @Override
   public long getPreferredBlockSize() {
     return HeaderFormat.getPreferredBlockSize(header);
+  }
+
+  @Override
+  public boolean getLazyPersistFlag() {
+    return HeaderFormat.getLazyPersistFlag(header);
   }
 
   @Override

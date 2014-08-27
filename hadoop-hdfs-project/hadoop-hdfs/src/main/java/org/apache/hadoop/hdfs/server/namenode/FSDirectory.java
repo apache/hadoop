@@ -278,6 +278,7 @@ public class FSDirectory implements Closeable {
    */
   INodeFile addFile(String path, PermissionStatus permissions,
                     short replication, long preferredBlockSize,
+                    boolean isLazyPersist,
                     String clientName, String clientMachine)
     throws FileAlreadyExistsException, QuotaExceededException,
       UnresolvedLinkException, SnapshotAccessControlException, AclException {
@@ -285,7 +286,7 @@ public class FSDirectory implements Closeable {
     long modTime = now();
     INodeFile newNode = new INodeFile(namesystem.allocateNewInodeId(), null,
         permissions, modTime, modTime, BlockInfo.EMPTY_ARRAY, replication,
-        preferredBlockSize);
+        preferredBlockSize, isLazyPersist);
     newNode.toUnderConstruction(clientName, clientMachine);
 
     boolean added = false;
@@ -315,6 +316,7 @@ public class FSDirectory implements Closeable {
                             long modificationTime,
                             long atime,
                             long preferredBlockSize,
+                            boolean isLazyPersist,
                             boolean underConstruction,
                             String clientName,
                             String clientMachine) {
@@ -323,12 +325,12 @@ public class FSDirectory implements Closeable {
     if (underConstruction) {
       newNode = new INodeFile(id, null, permissions, modificationTime,
           modificationTime, BlockInfo.EMPTY_ARRAY, replication,
-          preferredBlockSize);
+          preferredBlockSize, isLazyPersist);
       newNode.toUnderConstruction(clientName, clientMachine);
 
     } else {
       newNode = new INodeFile(id, null, permissions, modificationTime, atime,
-          BlockInfo.EMPTY_ARRAY, replication, preferredBlockSize);
+          BlockInfo.EMPTY_ARRAY, replication, preferredBlockSize, isLazyPersist);
     }
 
     try {
@@ -2283,11 +2285,13 @@ public class FSDirectory implements Closeable {
      long size = 0;     // length is zero for directories
      short replication = 0;
      long blocksize = 0;
+     boolean isLazyPersist = false;
      if (node.isFile()) {
        final INodeFile fileNode = node.asFile();
        size = fileNode.computeFileSize(snapshot);
        replication = fileNode.getFileReplication(snapshot);
        blocksize = fileNode.getPreferredBlockSize();
+       isLazyPersist = fileNode.getLazyPersistFlag();
      }
      int childrenNum = node.isDirectory() ? 
          node.asDirectory().getChildrenNum(snapshot) : 0;
@@ -2300,7 +2304,7 @@ public class FSDirectory implements Closeable {
         node.isDirectory(), 
         replication, 
         blocksize,
-        false,
+        isLazyPersist,
         node.getModificationTime(snapshot),
         node.getAccessTime(snapshot),
         getPermissionForFileStatus(node, snapshot),
@@ -2322,6 +2326,7 @@ public class FSDirectory implements Closeable {
     long size = 0; // length is zero for directories
     short replication = 0;
     long blocksize = 0;
+    boolean isLazyPersist = false;
     LocatedBlocks loc = null;
     final FileEncryptionInfo feInfo = isRawPath ? null :
         getFileEncryptionInfo(node, snapshot);
@@ -2329,7 +2334,7 @@ public class FSDirectory implements Closeable {
       final INodeFile fileNode = node.asFile();
       size = fileNode.computeFileSize(snapshot);
       replication = fileNode.getFileReplication(snapshot);
-      blocksize = fileNode.getPreferredBlockSize();
+      isLazyPersist = fileNode.getLazyPersistFlag();
 
       final boolean inSnapshot = snapshot != Snapshot.CURRENT_STATE_ID; 
       final boolean isUc = !inSnapshot && fileNode.isUnderConstruction();
@@ -2348,7 +2353,7 @@ public class FSDirectory implements Closeable {
 
     HdfsLocatedFileStatus status =
         new HdfsLocatedFileStatus(size, node.isDirectory(), replication,
-          blocksize, false, node.getModificationTime(snapshot),
+          blocksize, isLazyPersist, node.getModificationTime(snapshot),
           node.getAccessTime(snapshot),
           getPermissionForFileStatus(node, snapshot),
           node.getUserName(snapshot), node.getGroupName(snapshot),

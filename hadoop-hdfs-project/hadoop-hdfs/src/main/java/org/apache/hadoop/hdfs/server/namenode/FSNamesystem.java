@@ -2616,7 +2616,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (parent != null && mkdirsRecursively(parent.toString(),
               permissions, true, now())) {
         newNode = dir.addFile(src, permissions, replication, blockSize,
-                              holder, clientMachine);
+                              isLazyPersist, holder, clientMachine);
       }
 
       if (newNode == null) {
