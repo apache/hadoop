@@ -261,7 +261,9 @@ public class TestFileAppend{
         start += 29;
       }
       stm.write(fileContents, start, AppendTestUtil.FILE_SIZE -start);
-
+      // need to make sure we completely write out all full blocks before
+      // the checkFile() call (see FSOutputSummer#flush)
+      stm.flush();
       // verify that full blocks are sane
       checkFile(fs, file1, 1);
       stm.close();

@@ -154,6 +154,9 @@ public class TestDecommissioningStatus {
     Random rand = new Random(seed);
     rand.nextBytes(buffer);
     stm.write(buffer);
+    // need to make sure that we actually write out both file blocks
+    // (see FSOutputSummer#flush)
+    stm.flush();
     // Do not close stream, return it
     // so that it is not garbage collected
     return stm;

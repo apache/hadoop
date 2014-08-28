@@ -175,6 +175,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6773. MiniDFSCluster should skip edit log fsync by default (Stephen
     Chu via Colin Patrick McCabe)
 
+    HDFS-6865. Byte array native checksumming on client side
+    (James Thomas via todd)
+
   BUG FIXES
 
     HDFS-6823. dfs.web.authentication.kerberos.principal shows up in logs for 

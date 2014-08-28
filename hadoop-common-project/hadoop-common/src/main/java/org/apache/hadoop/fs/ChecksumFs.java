@@ -337,7 +337,8 @@ public abstract class ChecksumFs extends FilterFs {
       final short replication, final long blockSize, 
       final Progressable progress, final ChecksumOpt checksumOpt,
       final boolean createParent) throws IOException {
-      super(DataChecksum.newCrc32(), fs.getBytesPerSum(), 4);
+      super(DataChecksum.newDataChecksum(DataChecksum.Type.CRC32,
+          fs.getBytesPerSum()));
 
       // checksumOpt is passed down to the raw fs. Unless it implements
       // checksum impelemts internally, checksumOpt will be ignored.
@@ -370,10 +371,11 @@ public abstract class ChecksumFs extends FilterFs {
     }
     
     @Override
-    protected void writeChunk(byte[] b, int offset, int len, byte[] checksum)
+    protected void writeChunk(byte[] b, int offset, int len, byte[] checksum,
+        int ckoff, int cklen)
       throws IOException {
       datas.write(b, offset, len);
-      sums.write(checksum);
+      sums.write(checksum, ckoff, cklen);
     }
 
     @Override

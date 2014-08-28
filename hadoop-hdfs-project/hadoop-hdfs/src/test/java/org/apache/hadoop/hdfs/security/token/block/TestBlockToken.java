@@ -394,6 +394,8 @@ public class TestBlockToken {
       Path filePath = new Path(fileName);
       FSDataOutputStream out = fs.create(filePath, (short) 1);
       out.write(new byte[1000]);
+      // ensure that the first block is written out (see FSOutputSummer#flush)
+      out.flush();
       LocatedBlocks locatedBlocks = cluster.getNameNodeRpc().getBlockLocations(
           fileName, 0, 1000);
       while (locatedBlocks.getLastLocatedBlock() == null) {
