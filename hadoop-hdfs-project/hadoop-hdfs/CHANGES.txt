@@ -673,6 +673,9 @@ Release 2.5.1 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-10957. The globber will sometimes erroneously return a permission
+    denied exception when there is a non-terminal wildcard (cmccabe)
+
 Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES
