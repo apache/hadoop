@@ -284,11 +284,13 @@ public class TestDelegationTokenAuthenticationHandlerWithMocks {
 
   @Test
   public void testAuthenticate() throws Exception {
-    testValidDelegationToken();
-    testInvalidDelegationToken();
+    testValidDelegationTokenQueryString();
+    testValidDelegationTokenHeader();
+    testInvalidDelegationTokenQueryString();
+    testInvalidDelegationTokenHeader();
   }
 
-  private void testValidDelegationToken() throws Exception {
+  private void testValidDelegationTokenQueryString() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
     Token<DelegationTokenIdentifier> dToken =
@@ -307,11 +309,47 @@ public class TestDelegationTokenAuthenticationHandlerWithMocks {
     Assert.assertTrue(token.isExpired());
   }
 
-  private void testInvalidDelegationToken() throws Exception {
+  private void testValidDelegationTokenHeader() throws Exception {
+    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    Token<DelegationTokenIdentifier> dToken =
+        handler.getTokenManager().createToken(
+            UserGroupInformation.getCurrentUser(), "user");
+    Mockito.when(request.getHeader(Mockito.eq(
+        DelegationTokenAuthenticator.DELEGATION_TOKEN_HEADER))).thenReturn(
+        dToken.encodeToUrlString());
+
+    AuthenticationToken token = handler.authenticate(request, response);
+    Assert.assertEquals(UserGroupInformation.getCurrentUser().
+        getShortUserName(), token.getUserName());
+    Assert.assertEquals(0, token.getExpires());
+    Assert.assertEquals(handler.getType(),
+        token.getType());
+    Assert.assertTrue(token.isExpired());
+  }
+
+  private void testInvalidDelegationTokenQueryString() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
     Mockito.when(request.getQueryString()).thenReturn(
         DelegationTokenAuthenticator.DELEGATION_PARAM + "=invalid");
+
+    try {
+      handler.authenticate(request, response);
+      Assert.fail();
+    } catch (AuthenticationException ex) {
+      //NOP
+    } catch (Exception ex) {
+      Assert.fail();
+    }
+  }
+
+  private void testInvalidDelegationTokenHeader() throws Exception {
+    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    Mockito.when(request.getHeader(Mockito.eq(
+        DelegationTokenAuthenticator.DELEGATION_TOKEN_HEADER))).thenReturn(
+        "invalid");
 
     try {
       handler.authenticate(request, response);

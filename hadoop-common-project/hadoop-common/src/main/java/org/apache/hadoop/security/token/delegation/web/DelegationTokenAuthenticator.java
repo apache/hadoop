@@ -56,6 +56,9 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
 
   public static final String OP_PARAM = "op";
 
+  public static final String DELEGATION_TOKEN_HEADER =
+      "X-Hadoop-Delegation-Token";
+
   public static final String DELEGATION_PARAM = "delegation";
   public static final String TOKEN_PARAM = "token";
   public static final String RENEWER_PARAM = "renewer";
@@ -101,15 +104,23 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
     authenticator.setConnectionConfigurator(configurator);
   }
 
-  private boolean hasDelegationToken(URL url) {
-    String queryStr = url.getQuery();
-    return (queryStr != null) && queryStr.contains(DELEGATION_PARAM + "=");
+  private boolean hasDelegationToken(URL url, AuthenticatedURL.Token token) {
+    boolean hasDt = false;
+    if (token instanceof DelegationTokenAuthenticatedURL.Token) {
+      hasDt = ((DelegationTokenAuthenticatedURL.Token) token).
+          getDelegationToken() != null;
+    }
+    if (!hasDt) {
+      String queryStr = url.getQuery();
+      hasDt = (queryStr != null) && queryStr.contains(DELEGATION_PARAM + "=");
+    }
+    return hasDt;
   }
 
   @Override
   public void authenticate(URL url, AuthenticatedURL.Token token)
       throws IOException, AuthenticationException {
-    if (!hasDelegationToken(url)) {
+    if (!hasDelegationToken(url, token)) {
       authenticator.authenticate(url, token);
     }
   }
