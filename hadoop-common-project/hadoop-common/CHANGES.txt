@@ -713,6 +713,8 @@ Release 2.5.1 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-11001. Fix test-patch to work with the git repo. (kasha)
+
 Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES
