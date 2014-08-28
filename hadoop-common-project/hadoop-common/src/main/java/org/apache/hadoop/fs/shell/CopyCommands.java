@@ -215,21 +215,25 @@ class CopyCommands {
    */
   public static class Put extends CommandWithDestination {
     public static final String NAME = "put";
-    public static final String USAGE = "[-f] [-p] <localsrc> ... <dst>";
+    public static final String USAGE = "[-f] [-p] [-l] <localsrc> ... <dst>";
     public static final String DESCRIPTION =
       "Copy files from the local file system " +
       "into fs. Copying fails if the file already " +
-      "exists, unless the -f flag is given. Passing " +
-      "-p preserves access and modification times, " +
-      "ownership and the mode. Passing -f overwrites " +
-      "the destination if it already exists.\n";
+      "exists, unless the -f flag is given.\n" +
+      "Flags:\n" +
+      "  -p : Preserves access and modification times, ownership and the mode.\n" +
+      "  -f : Overwrites the destination if it already exists.\n" +
+      "  -l : Allow DataNode to lazily persist the file to disk. Forces\n" +
+      "       replication factor of 1. This flag will result in reduced\n" +
+      "       durability. Use with care.\n";
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(1, Integer.MAX_VALUE, "f", "p");
+      CommandFormat cf = new CommandFormat(1, Integer.MAX_VALUE, "f", "p", "l");
       cf.parse(args);
       setOverwrite(cf.getOpt("f"));
       setPreserve(cf.getOpt("p"));
+      setLazyPersist(cf.getOpt("l"));
       getRemoteDestination(args);
       // should have a -r option
       setRecursive(true);

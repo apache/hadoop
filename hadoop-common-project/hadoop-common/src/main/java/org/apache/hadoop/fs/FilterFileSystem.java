@@ -179,8 +179,19 @@ public class FilterFileSystem extends FileSystem {
     return fs.create(f, permission,
         overwrite, bufferSize, replication, blockSize, progress);
   }
-  
 
+  @Override
+  public FSDataOutputStream create(Path f,
+        FsPermission permission,
+        EnumSet<CreateFlag> flags,
+        int bufferSize,
+        short replication,
+        long blockSize,
+        Progressable progress,
+        ChecksumOpt checksumOpt) throws IOException {
+    return fs.create(f, permission,
+      flags, bufferSize, replication, blockSize, progress);
+  }
   
   @Override
   @Deprecated
