@@ -137,6 +137,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10998. Fix bash tab completion code to work (Jim Hester via aw)
 
+    HADOOP-10880. Move HTTP delegation tokens out of URL querystring to 
+    a header. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)

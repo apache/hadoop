@@ -331,8 +331,7 @@ public abstract class DelegationTokenAuthenticationHandler
       HttpServletResponse response)
       throws IOException, AuthenticationException {
     AuthenticationToken token;
-    String delegationParam = ServletUtils.getParameter(request,
-        KerberosDelegationTokenAuthenticator.DELEGATION_PARAM);
+    String delegationParam = getDelegationToken(request);
     if (delegationParam != null) {
       try {
         Token<DelegationTokenIdentifier> dt =
@@ -354,6 +353,17 @@ public abstract class DelegationTokenAuthenticationHandler
       token = authHandler.authenticate(request, response);
     }
     return token;
+  }
+
+  private String getDelegationToken(HttpServletRequest request)
+      throws IOException {
+    String dToken = request.getHeader(
+        DelegationTokenAuthenticator.DELEGATION_TOKEN_HEADER);
+    if (dToken == null) {
+      dToken = ServletUtils.getParameter(request,
+          KerberosDelegationTokenAuthenticator.DELEGATION_PARAM);
+    }
+    return dToken;
   }
 
 }
