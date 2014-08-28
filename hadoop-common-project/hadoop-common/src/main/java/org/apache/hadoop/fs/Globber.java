@@ -232,6 +232,10 @@ class Globber {
               }
             }
             for (FileStatus child : children) {
+              if (componentIdx < components.size() - 1) {
+                // Don't try to recurse into non-directories.  See HADOOP-10957.
+                if (!child.isDirectory()) continue; 
+              }
               // Set the child path based on the parent path.
               child.setPath(new Path(candidate.getPath(),
                       child.getPath().getName()));
@@ -249,8 +253,8 @@ class Globber {
                 new Path(candidate.getPath(), component));
             if (childStatus != null) {
               newCandidates.add(childStatus);
-             }
-           }
+            }
+          }
         }
         candidates = newCandidates;
       }
