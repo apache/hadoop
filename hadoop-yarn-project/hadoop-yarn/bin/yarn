@@ -72,6 +72,7 @@ shift
 case "${COMMAND}" in
   application|applicationattempt|container)
     CLASS=org.apache.hadoop.yarn.client.cli.ApplicationCLI
+    hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
     set -- "${COMMAND}" "$@"
   ;;
@@ -82,10 +83,12 @@ case "${COMMAND}" in
   ;;
   daemonlog)
     CLASS=org.apache.hadoop.log.LogLevel
+    hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
   ;;
   jar)
     CLASS=org.apache.hadoop.util.RunJar
+    hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
   ;;
   historyserver)
@@ -97,15 +100,18 @@ case "${COMMAND}" in
   ;;
   logs)
     CLASS=org.apache.hadoop.yarn.logaggregation.LogDumper
+    hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
   ;;
   node)
     CLASS=org.apache.hadoop.yarn.client.cli.NodeCLI
+    hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
   ;;
   nodemanager)
     daemon="true"
     CLASS='org.apache.hadoop.yarn.server.nodemanager.NodeManager'
+    hadoop_debug "Append YARN_NODEMANAGER_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_NODEMANAGER_OPTS}"
     if [[ -n "${YARN_NODEMANAGER_HEAPSIZE}" ]]; then
       JAVA_HEAP_MAX="-Xmx${YARN_NODEMANAGER_HEAPSIZE}m"
@@ -114,6 +120,7 @@ case "${COMMAND}" in
   proxyserver)
     daemon="true"
     CLASS='org.apache.hadoop.yarn.server.webproxy.WebAppProxyServer'
+    hadoop_debug "Append YARN_PROXYSERVER_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_PROXYSERVER_OPTS}"
     if [[ -n "${YARN_PROXYSERVER_HEAPSIZE}" ]]; then
       JAVA_HEAP_MAX="-Xmx${YARN_PROXYSERVER_HEAPSIZE}m"
@@ -123,17 +130,20 @@ case "${COMMAND}" in
     daemon="true"
     CLASS='org.apache.hadoop.yarn.server.resourcemanager.ResourceManager'
     YARN_OPTS="${YARN_OPTS} ${YARN_RESOURCEMANAGER_OPTS}"
+    hadoop_debug "Append YARN_RESOURCEMANAGER_OPTS onto YARN_OPTS"
     if [[ -n "${YARN_RESOURCEMANAGER_HEAPSIZE}" ]]; then
       JAVA_HEAP_MAX="-Xmx${YARN_RESOURCEMANAGER_HEAPSIZE}m"
     fi
   ;;
   rmadmin)
     CLASS='org.apache.hadoop.yarn.client.cli.RMAdminCLI'
+    hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
   ;;
   timelineserver)
     daemon="true"
     CLASS='org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer'
+    hadoop_debug "Append YARN_TIMELINESERVER_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_TIMELINESERVER_OPTS}"
     if [[ -n "${YARN_TIMELINESERVER_HEAPSIZE}" ]]; then
       JAVA_HEAP_MAX="-Xmx${YARN_TIMELINESERVER_HEAPSIZE}m"
@@ -141,6 +151,7 @@ case "${COMMAND}" in
   ;;
   version)
     CLASS=org.apache.hadoop.util.VersionInfo
+    hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
   ;;
   -*)
@@ -153,6 +164,8 @@ esac
 
 # set HADOOP_OPTS to YARN_OPTS so that we can use
 # finalize, etc, without doing anything funky
+hadoop_debug "Resetting HADOOP_OPTS=YARN_OPTS"
+# shellcheck disable=SC2034
 HADOOP_OPTS="${YARN_OPTS}"
 
 daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_IDENT_STRING}-${COMMAND}-${HOSTNAME}.out"
@@ -179,8 +192,6 @@ hadoop_add_param HADOOP_OPTS yarn.home.dir "-Dyarn.home.dir=${HADOOP_YARN_HOME/ 
 hadoop_add_param HADOOP_OPTS yarn.root.logger "-Dyarn.root.logger=${YARN_ROOT_LOGGER:-INFO,console}"
 
 hadoop_finalize
-
-export CLASSPATH
 
 if [[ -n "${daemon}" ]]; then
   if [[ -n "${secure_service}" ]]; then

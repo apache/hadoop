@@ -64,13 +64,15 @@ shift
 
 case ${COMMAND} in
   mradmin|jobtracker|tasktracker|groups)
-    echo "Sorry, the ${COMMAND} command is no longer supported."
-    echo "You may find similar functionality with the \"yarn\" shell command."
+    hadoop_error "Sorry, the ${COMMAND} command is no longer supported."
+    hadoop_error "You may find similar functionality with the \"yarn\" shell command."
     hadoop_exit_with_usage 1
   ;;
   archive)
     CLASS=org.apache.hadoop.tools.HadoopArchives
+    hadoop_debug "Injecting TOOL_PATH into CLASSPATH"
     hadoop_add_classpath "${TOOL_PATH}"
+    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;
   classpath)
@@ -80,12 +82,15 @@ case ${COMMAND} in
   ;;
   distcp)
     CLASS=org.apache.hadoop.tools.DistCp
+    hadoop_debug "Injecting TOOL_PATH into CLASSPATH"
     hadoop_add_classpath "${TOOL_PATH}"
+    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;
   historyserver)
     daemon="true"
     CLASS=org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer
+    hadoop_debug "Appending HADOOP_JOB_HISTORYSERVER_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_JOB_HISTORYSERVER_OPTS}"
     if [ -n "${HADOOP_JOB_HISTORYSERVER_HEAPSIZE}" ]; then
       JAVA_HEAP_MAX="-Xmx${HADOOP_JOB_HISTORYSERVER_HEAPSIZE}m"
@@ -97,6 +102,7 @@ case ${COMMAND} in
   ;;
   pipes)
     CLASS=org.apache.hadoop.mapred.pipes.Submitter
+    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;
   queue)
@@ -104,10 +110,12 @@ case ${COMMAND} in
   ;;
   sampler)
     CLASS=org.apache.hadoop.mapred.lib.InputSampler
+    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;
   version)
     CLASS=org.apache.hadoop.util.VersionInfo
+    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;
   -*|*)
@@ -129,8 +137,6 @@ fi
 
 hadoop_add_param HADOOP_OPTS Xmx "${JAVA_HEAP_MAX}"
 hadoop_finalize
-
-export CLASSPATH
 
 if [[ -n "${daemon}" ]]; then
   if [[ -n "${secure_service}" ]]; then
