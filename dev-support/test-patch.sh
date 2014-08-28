@@ -16,7 +16,7 @@
 ulimit -n 1024
 
 ### Setup some variables.  
-### SVN_REVISION and BUILD_URL are set by Hudson if it is run by patch process
+### BUILD_URL is set by Hudson if it is run by patch process
 ### Read variables from properties file
 bindir=$(dirname $0)
 
@@ -36,7 +36,7 @@ BASEDIR=$(pwd)
 PS=${PS:-ps}
 AWK=${AWK:-awk}
 WGET=${WGET:-wget}
-SVN=${SVN:-svn}
+GIT=${GIT:-git}
 GREP=${GREP:-grep}
 PATCH=${PATCH:-patch}
 JIRACLI=${JIRA:-jira}
@@ -58,12 +58,12 @@ printUsage() {
   echo "--mvn-cmd=<cmd>        The 'mvn' command to use (default \$MAVEN_HOME/bin/mvn, or 'mvn')"
   echo "--ps-cmd=<cmd>         The 'ps' command to use (default 'ps')"
   echo "--awk-cmd=<cmd>        The 'awk' command to use (default 'awk')"
-  echo "--svn-cmd=<cmd>        The 'svn' command to use (default 'svn')"
+  echo "--git-cmd=<cmd>        The 'git' command to use (default 'git')"
   echo "--grep-cmd=<cmd>       The 'grep' command to use (default 'grep')"
   echo "--patch-cmd=<cmd>      The 'patch' command to use (default 'patch')"
   echo "--findbugs-home=<path> Findbugs home directory (default FINDBUGS_HOME environment variable)"
   echo "--forrest-home=<path>  Forrest home directory (default FORREST_HOME environment variable)"
-  echo "--dirty-workspace      Allow the local SVN workspace to have uncommitted changes"
+  echo "--dirty-workspace      Allow the local git workspace to have uncommitted changes"
   echo "--run-tests            Run all tests below the base directory"
   echo
   echo "Jenkins-only options:"
@@ -104,8 +104,8 @@ parseArgs() {
     --wget-cmd=*)
       WGET=${i#*=}
       ;;
-    --svn-cmd=*)
-      SVN=${i#*=}
+    --git-cmd=*)
+      GIT=${i#*=}
       ;;
     --grep-cmd=*)
       GREP=${i#*=}
@@ -184,7 +184,7 @@ checkout () {
   echo ""
   ### When run by a developer, if the workspace contains modifications, do not continue
   ### unless the --dirty-workspace option was set
-  status=`$SVN stat --ignore-externals | sed -e '/^X[ ]*/D'`
+  status=`$GIT status --porcelain`
   if [[ $JENKINS == "false" ]] ; then
     if [[ "$status" != "" && -z $DIRTY_WORKSPACE ]] ; then
       echo "ERROR: can't run in a workspace that contains the following modifications"
@@ -194,10 +194,12 @@ checkout () {
     echo
   else   
     cd $BASEDIR
-    $SVN revert -R .
-    rm -rf `$SVN status --no-ignore`
-    $SVN update
+    $GIT reset --hard
+    $GIT clean -xdf
+    $GIT checkout trunk
+    $GIT pull --rebase
   fi
+  GIT_REVISION=`git rev-parse --verify --short HEAD`
   return $?
 }
 
@@ -216,10 +218,10 @@ setup () {
     echo "$defect patch is being downloaded at `date` from"
     echo "$patchURL"
     $WGET -q -O $PATCH_DIR/patch $patchURL
-    VERSION=${SVN_REVISION}_${defect}_PATCH-${patchNum}
+    VERSION=${GIT_REVISION}_${defect}_PATCH-${patchNum}
     JIRA_COMMENT="Here are the results of testing the latest attachment 
   $patchURL
-  against trunk revision ${SVN_REVISION}."
+  against trunk revision ${GIT_REVISION}."
 
     ### Copy in any supporting files needed by this process
     cp -r $SUPPORT_DIR/lib/* ./lib
