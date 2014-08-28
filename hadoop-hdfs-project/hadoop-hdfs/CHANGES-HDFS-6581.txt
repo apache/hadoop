@@ -21,4 +21,6 @@
     HDFS-6929. NN periodically unlinks lazy persist files with missing
     replicas from namespace. (Arpit Agarwal)
 
+    HDFS-6928. 'hdfs put' command should accept lazyPersist flag for testing.
+    (Arpit Agarwal)
 
