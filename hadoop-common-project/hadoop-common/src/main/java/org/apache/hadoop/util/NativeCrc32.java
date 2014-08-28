@@ -42,7 +42,7 @@ class NativeCrc32 {
    * modified.
    * 
    * @param bytesPerSum the chunk size (eg 512 bytes)
-   * @param checksumType the DataChecksum type constant
+   * @param checksumType the DataChecksum type constant (NULL is not supported)
    * @param sums the DirectByteBuffer pointing at the beginning of the
    *             stored checksums
    * @param data the DirectByteBuffer pointing at the beginning of the
