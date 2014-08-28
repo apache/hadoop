@@ -202,7 +202,7 @@ public class CommitterEventHandler extends AbstractService
   private synchronized void cancelJobCommit() {
     Thread threadCommitting = jobCommitThread;
     if (threadCommitting != null && threadCommitting.isAlive()) {
-      LOG.info("Canceling commit");
+      LOG.info("Cancelling commit");
       threadCommitting.interrupt();
 
       // wait up to configured timeout for commit thread to finish
