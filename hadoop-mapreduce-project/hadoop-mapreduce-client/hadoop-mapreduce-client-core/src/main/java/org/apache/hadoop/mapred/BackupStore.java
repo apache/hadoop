@@ -607,7 +607,7 @@ public class BackupStore<K,V> {
 
     int reserve(int requestedSize, int minSize) {
       if (availableSize < minSize) {
-        LOG.debug("No Space available. Available: " + availableSize + 
+        LOG.debug("No space available. Available: " + availableSize + 
             " MinSize: " + minSize);
         return 0;
       } else {
