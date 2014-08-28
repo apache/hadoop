@@ -1076,7 +1076,7 @@ public class JHLogAnalyzer {
                                      long execTime,
                                      Path resFileName
                                      ) throws IOException {
-    LOG.info("Analizing results ...");
+    LOG.info("Analyzing results ...");
     DataOutputStream out = null;
     BufferedWriter writer = null;
     try {
@@ -1118,7 +1118,7 @@ public class JHLogAnalyzer {
       if(writer != null) writer.close();
       if(out != null) out.close();
     }
-    LOG.info("Analizing results ... done.");
+    LOG.info("Analyzing results ... done.");
   }
 
   private static void cleanup(Configuration conf) throws IOException {

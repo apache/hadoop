@@ -252,15 +252,17 @@ Release 2.6.0 - UNRELEASED
     (Chen He via jlowe)
 
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
-  
+
       MAPREDUCE-5890. Support for encrypting Intermediate 
       data and spills in local filesystem. (asuresh via tucu)
-  
+
       MAPREDUCE-6007. Add support to distcp to preserve raw.* namespace
       extended attributes. (clamb)
-  
+
       MAPREDUCE-6041. Fix TestOptionsParser. (clamb)
     --
+
+    MAPREDUCE-6051. Fix typos in log messages. (Ray Chiang via cdouglas)
 
 Release 2.5.1 - UNRELEASED
 
