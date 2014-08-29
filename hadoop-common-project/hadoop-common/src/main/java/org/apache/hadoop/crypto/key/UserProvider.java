@@ -44,7 +44,8 @@ public class UserProvider extends KeyProvider {
   private final Credentials credentials;
   private final Map<String, Metadata> cache = new HashMap<String, Metadata>();
 
-  private UserProvider() throws IOException {
+  private UserProvider(Configuration conf) throws IOException {
+    super(conf);
     user = UserGroupInformation.getCurrentUser();
     credentials = user.getCredentials();
   }
@@ -145,7 +146,7 @@ public class UserProvider extends KeyProvider {
     public KeyProvider createProvider(URI providerName,
                                       Configuration conf) throws IOException {
       if (SCHEME_NAME.equals(providerName.getScheme())) {
-        return new UserProvider();
+        return new UserProvider(conf);
       }
       return null;
     }

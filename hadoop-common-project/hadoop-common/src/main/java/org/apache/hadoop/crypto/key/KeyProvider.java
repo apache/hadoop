@@ -56,6 +56,8 @@ public abstract class KeyProvider {
       "hadoop.security.key.default.bitlength";
   public static final int DEFAULT_BITLENGTH = 128;
 
+  private final Configuration conf;
+
   /**
    * The combination of both the key version name and the key material.
    */
@@ -353,6 +355,24 @@ public abstract class KeyProvider {
     }
   }
 
+  /**
+   * Constructor.
+   * 
+   * @param conf configuration for the provider
+   */
+  public KeyProvider(Configuration conf) {
+    this.conf = new Configuration(conf);
+  }
+
+  /**
+   * Return the provider configuration.
+   * 
+   * @return the provider configuration
+   */
+  public Configuration getConf() {
+    return conf;
+  }
+  
   /**
    * A helper function to create an options object.
    * @param conf the configuration to use

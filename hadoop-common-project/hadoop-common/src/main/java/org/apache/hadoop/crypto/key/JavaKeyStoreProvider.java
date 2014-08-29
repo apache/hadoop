@@ -108,6 +108,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
   private final Map<String, Metadata> cache = new HashMap<String, Metadata>();
 
   private JavaKeyStoreProvider(URI uri, Configuration conf) throws IOException {
+    super(conf);
     this.uri = uri;
     path = ProviderUtils.unnestUri(uri);
     fs = path.getFileSystem(conf);

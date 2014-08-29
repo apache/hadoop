@@ -19,6 +19,7 @@
 package org.apache.hadoop.crypto.key;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 
@@ -29,6 +30,9 @@ import javax.crypto.spec.SecretKeySpec;
 import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.crypto.CryptoCodec;
+import org.apache.hadoop.crypto.Decryptor;
+import org.apache.hadoop.crypto.Encryptor;
 
 /**
  * A KeyProvider with Cryptographic Extensions specifically for generating
@@ -239,18 +243,25 @@ public class KeyProviderCryptoExtension extends
       Preconditions.checkNotNull(encryptionKey,
           "No KeyVersion exists for key '%s' ", encryptionKeyName);
       // Generate random bytes for new key and IV
-      Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding");
+
+      CryptoCodec cc = CryptoCodec.getInstance(keyProvider.getConf());
       final byte[] newKey = new byte[encryptionKey.getMaterial().length];
-      RANDOM.get().nextBytes(newKey);
-      final byte[] iv = new byte[cipher.getBlockSize()];
-      RANDOM.get().nextBytes(iv);
+      cc.generateSecureRandom(newKey);
+      final byte[] iv = new byte[cc.getCipherSuite().getAlgorithmBlockSize()];
+      cc.generateSecureRandom(iv);
       // Encryption key IV is derived from new key's IV
       final byte[] encryptionIV = EncryptedKeyVersion.deriveIV(iv);
-      // Encrypt the new key
-      cipher.init(Cipher.ENCRYPT_MODE,
-          new SecretKeySpec(encryptionKey.getMaterial(), "AES"),
-          new IvParameterSpec(encryptionIV));
-      final byte[] encryptedKey = cipher.doFinal(newKey);
+      Encryptor encryptor = cc.createEncryptor();
+      encryptor.init(encryptionKey.getMaterial(), encryptionIV);
+      int keyLen = newKey.length;
+      ByteBuffer bbIn = ByteBuffer.allocateDirect(keyLen);
+      ByteBuffer bbOut = ByteBuffer.allocateDirect(keyLen);
+      bbIn.put(newKey);
+      bbIn.flip();
+      encryptor.encrypt(bbIn, bbOut);
+      bbOut.flip();
+      byte[] encryptedKey = new byte[keyLen];
+      bbOut.get(encryptedKey);    
       return new EncryptedKeyVersion(encryptionKeyName,
           encryptionKey.getVersionName(), iv,
           new KeyVersion(encryptionKey.getName(), EEK, encryptedKey));
@@ -274,19 +285,25 @@ public class KeyProviderCryptoExtension extends
                 KeyProviderCryptoExtension.EEK,
                 encryptedKeyVersion.getEncryptedKeyVersion().getVersionName()
             );
-      final byte[] encryptionKeyMaterial = encryptionKey.getMaterial();
+
       // Encryption key IV is determined from encrypted key's IV
       final byte[] encryptionIV =
           EncryptedKeyVersion.deriveIV(encryptedKeyVersion.getEncryptedKeyIv());
-      // Init the cipher with encryption key parameters
-      Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding");
-      cipher.init(Cipher.DECRYPT_MODE,
-          new SecretKeySpec(encryptionKeyMaterial, "AES"),
-          new IvParameterSpec(encryptionIV));
-      // Decrypt the encrypted key
+
+      CryptoCodec cc = CryptoCodec.getInstance(keyProvider.getConf());
+      Decryptor decryptor = cc.createDecryptor();
+      decryptor.init(encryptionKey.getMaterial(), encryptionIV);
       final KeyVersion encryptedKV =
           encryptedKeyVersion.getEncryptedKeyVersion();
-      final byte[] decryptedKey = cipher.doFinal(encryptedKV.getMaterial());
+      int keyLen = encryptedKV.getMaterial().length;
+      ByteBuffer bbIn = ByteBuffer.allocateDirect(keyLen);
+      ByteBuffer bbOut = ByteBuffer.allocateDirect(keyLen);
+      bbIn.put(encryptedKV.getMaterial());
+      bbIn.flip();
+      decryptor.decrypt(bbIn, bbOut);
+      bbOut.flip();
+      byte[] decryptedKey = new byte[keyLen];
+      bbOut.get(decryptedKey);
       return new KeyVersion(encryptionKey.getName(), EK, decryptedKey);
     }
 

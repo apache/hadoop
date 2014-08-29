@@ -146,6 +146,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10814. Update Tomcat version used by HttpFS and KMS to latest
     6.x version. (rkanter via tucu)
 
+    HADOOP-10994. KeyProviderCryptoExtension should use CryptoCodec for 
+    generation/decryption of keys. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
