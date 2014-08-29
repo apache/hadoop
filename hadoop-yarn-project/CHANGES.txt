@@ -251,6 +251,10 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2405. NPE in FairSchedulerAppsBlock. (Tsuyoshi Ozawa via kasha)
 
+    YARN-2449. Fixed the bug that TimelineAuthenticationFilterInitializer
+    is not automatically added when hadoop.http.filter.initializers is not
+    configured. (Varun Vasudev via zjshen)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
