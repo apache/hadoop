@@ -313,6 +313,33 @@ public class DataStorage extends Storage {
   }
 
   /**
+   * Remove volumes from DataStorage.
+   * @param locations a collection of volumes.
+   */
+  synchronized void removeVolumes(Collection<StorageLocation> locations) {
+    if (locations.isEmpty()) {
+      return;
+    }
+
+    Set<File> dataDirs = new HashSet<File>();
+    for (StorageLocation sl : locations) {
+      dataDirs.add(sl.getFile());
+    }
+
+    for (BlockPoolSliceStorage bpsStorage : this.bpStorageMap.values()) {
+      bpsStorage.removeVolumes(dataDirs);
+    }
+
+    for (Iterator<StorageDirectory> it = this.storageDirs.iterator();
+         it.hasNext(); ) {
+      StorageDirectory sd = it.next();
+      if (dataDirs.contains(sd.getRoot())) {
+        it.remove();
+      }
+    }
+  }
+
+  /**
    * Analyze storage directories.
    * Recover from previous transitions if required.
    * Perform fs state transition if necessary depending on the namespace info.

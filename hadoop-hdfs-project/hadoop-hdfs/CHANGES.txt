@@ -168,6 +168,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6879. Adding tracing to Hadoop RPC (Masatake Iwasaki via Colin Patrick
     McCabe)
 
+    HDFS-6774. Make FsDataset and DataStore support removing volumes. (Lei Xu
+    via atm)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

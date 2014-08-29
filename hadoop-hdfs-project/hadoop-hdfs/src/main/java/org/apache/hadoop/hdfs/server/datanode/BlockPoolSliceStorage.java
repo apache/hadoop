@@ -202,6 +202,20 @@ public class BlockPoolSliceStorage extends Storage {
   }
 
   /**
+   * Remove storage directories.
+   * @param storageDirs a set of storage directories to be removed.
+   */
+  void removeVolumes(Set<File> storageDirs) {
+    for (Iterator<StorageDirectory> it = this.storageDirs.iterator();
+         it.hasNext(); ) {
+      StorageDirectory sd = it.next();
+      if (storageDirs.contains(sd.getRoot())) {
+        it.remove();
+      }
+    }
+  }
+
+  /**
    * Set layoutVersion, namespaceID and blockpoolID into block pool storage
    * VERSION file
    */

@@ -302,7 +302,7 @@ class BlockPoolSlice {
             loadRwr = false;
           }
           sc.close();
-          if (restartMeta.delete()) {
+          if (!restartMeta.delete()) {
             FsDatasetImpl.LOG.warn("Failed to delete restart meta file: " +
               restartMeta.getPath());
           }

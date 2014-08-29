@@ -97,6 +97,9 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   public void addVolumes(Collection<StorageLocation> volumes)
       throws IOException;
 
+  /** Removes a collection of volumes from FsDataset. */
+  public void removeVolumes(Collection<StorageLocation> volumes);
+
   /** @return a storage with the given storage ID */
   public DatanodeStorage getStorage(final String storageUuid);
 
