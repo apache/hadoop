@@ -313,6 +313,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6902. FileWriter should be closed in finally block in
     BlockReceiver#receiveBlock() (Tsuyoshi OZAWA via Colin Patrick McCabe)
 
+    HDFS-6972. TestRefreshUserMappings.testRefreshSuperUserGroupsConfiguration
+    doesn't decode url correctly. (Yongjun Zhang via wang)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
