@@ -24,3 +24,6 @@
     HDFS-6928. 'hdfs put' command should accept lazyPersist flag for testing.
     (Arpit Agarwal)
 
+    HDFS-6960. Bugfix in LazyWriter, fix test case and some refactoring.
+    (Arpit Agarwal)
+

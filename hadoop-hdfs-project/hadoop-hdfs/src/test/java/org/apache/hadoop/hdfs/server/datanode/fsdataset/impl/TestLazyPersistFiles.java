@@ -40,7 +40,9 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.*;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -61,6 +63,7 @@ public class TestLazyPersistFiles {
   static {
     ((Log4JLogger) NameNode.blockStateChangeLog).getLogger().setLevel(Level.ALL);
     ((Log4JLogger) NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger) FsDatasetImpl.LOG).getLogger().setLevel(Level.ALL);
   }
 
   private static short REPL_FACTOR = 1;
@@ -68,7 +71,7 @@ public class TestLazyPersistFiles {
   private static final int LAZY_WRITE_FILE_SCRUBBER_INTERVAL_SEC = 3;
   private static final long HEARTBEAT_INTERVAL_SEC = 1;
   private static final int HEARTBEAT_RECHECK_INTERVAL_MSEC = 500;
-  private static final int LAZY_WRITER_INTERVAL_SEC = 3;
+  private static final int LAZY_WRITER_INTERVAL_SEC = 1;
   private static final int BUFFER_LENGTH = 4096;
 
   private MiniDFSCluster cluster;
@@ -283,8 +286,9 @@ public class TestLazyPersistFiles {
       File lazyPersistDir = volume.getBlockPoolSlice(bpid).getLazypersistDir();
 
       for (LocatedBlock lb : locatedBlocks.getLocatedBlocks()) {
-        File persistedBlockFile = new File(lazyPersistDir, "blk_" + lb.getBlock().getBlockId());
-        if (persistedBlockFile.exists()) {
+        File targetDir = DatanodeUtil.idToBlockDir(lazyPersistDir, lb.getBlock().getBlockId());
+        File blockFile = new File(targetDir, lb.getBlock().getBlockName());
+        if (blockFile.exists()) {
           // Found a persisted copy for this block!
           boolean added = persistedBlockIds.add(lb.getBlock().getBlockId());
           assertThat(added, is(true));

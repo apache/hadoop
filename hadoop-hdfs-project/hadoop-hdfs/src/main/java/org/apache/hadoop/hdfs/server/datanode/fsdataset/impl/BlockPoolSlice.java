@@ -271,10 +271,13 @@ class BlockPoolSlice {
     return blockFile;
   }
 
-  File lazyPersistReplica(Block b, File f) throws IOException {
-    File blockFile = FsDatasetImpl.copyBlockFiles(b, f, lazypersistDir);
-    File metaFile = FsDatasetUtil.getMetaFile(blockFile, b.getGenerationStamp());
-    dfsUsage.incDfsUsed(b.getNumBytes() + metaFile.length());
+  File lazyPersistReplica(ReplicaInfo replicaInfo) throws IOException {
+    if (!lazypersistDir.exists() && !lazypersistDir.mkdirs()) {
+      FsDatasetImpl.LOG.warn("Failed to create " + lazypersistDir);
+    }
+    File metaFile = FsDatasetImpl.copyBlockFiles(replicaInfo, lazypersistDir);
+    File blockFile = Block.metaToBlockFile(metaFile);
+    dfsUsage.incDfsUsed(replicaInfo.getNumBytes() + metaFile.length());
     return blockFile;
   }
 
