@@ -473,6 +473,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11005. Fix HTTP content type for ReconfigurationServlet.
     (Lei Xu via wang)
 
+    HADOOP-10814. Update Tomcat version used by HttpFS and KMS to latest
+    6.x version. (rkanter via tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
