@@ -152,6 +152,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11021. Configurable replication factor in the hadoop archive
     command. (Zhe Zhang via wang)
 
+    HADOOP-11030. Define a variable jackson.version instead of using constant 
+    at multiple places. (Juan Yu via kasha)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
