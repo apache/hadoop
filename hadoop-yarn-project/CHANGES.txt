@@ -235,6 +235,8 @@ Release 2.6.0 - UNRELEASED
     is not automatically added when hadoop.http.filter.initializers is not
     configured. (Varun Vasudev via zjshen)
 
+    YARN-2450. Fix typos in log messages. (Ray Chiang via hitesh)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

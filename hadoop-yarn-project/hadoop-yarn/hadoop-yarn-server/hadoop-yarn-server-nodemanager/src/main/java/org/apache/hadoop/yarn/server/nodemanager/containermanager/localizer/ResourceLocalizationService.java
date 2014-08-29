@@ -801,7 +801,7 @@ public class ResourceLocalizationService extends CompositeService
             try {
               Path local = completed.get();
               if (null == assoc) {
-                LOG.error("Localized unkonwn resource to " + completed);
+                LOG.error("Localized unknown resource to " + completed);
                 // TODO delete
                 return;
               }
@@ -810,7 +810,7 @@ public class ResourceLocalizationService extends CompositeService
                 .getDU(new File(local.toUri()))));
               assoc.getResource().unlock();
             } catch (ExecutionException e) {
-              LOG.info("Failed to download rsrc " + assoc.getResource(),
+              LOG.info("Failed to download resource " + assoc.getResource(),
                   e.getCause());
               LocalResourceRequest req = assoc.getResource().getRequest();
               publicRsrc.handle(new ResourceFailedLocalizationEvent(req,

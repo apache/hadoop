@@ -608,7 +608,7 @@ public class ZKRMStateStore extends RMStateStore {
         appState.attempts.put(attemptState.getAttemptId(), attemptState);
       }
     }
-    LOG.debug("Done Loading applications from ZK state store");
+    LOG.debug("Done loading applications from ZK state store");
   }
 
   @Override
