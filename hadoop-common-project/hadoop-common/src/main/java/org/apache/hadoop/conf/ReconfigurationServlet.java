@@ -200,6 +200,7 @@ public class ReconfigurationServlet extends HttpServlet {
   protected void doGet(HttpServletRequest req, HttpServletResponse resp)
     throws ServletException, IOException {
     LOG.info("GET");
+    resp.setContentType("text/html");
     PrintWriter out = resp.getWriter();
     
     Reconfigurable reconf = getReconfigurable(req);
@@ -214,6 +215,7 @@ public class ReconfigurationServlet extends HttpServlet {
   protected void doPost(HttpServletRequest req, HttpServletResponse resp)
     throws ServletException, IOException {
     LOG.info("POST");
+    resp.setContentType("text/html");
     PrintWriter out = resp.getWriter();
 
     Reconfigurable reconf = getReconfigurable(req);
