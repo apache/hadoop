@@ -247,10 +247,9 @@ public class DataNode extends Configured
     LogFactory.getLog(DataNode.class.getName() + ".clienttrace");
   
   private static final String USAGE =
-      "Usage: java DataNode [-regular | -rollback | -rollingupgrade rollback]\n" +
+      "Usage: java DataNode [-regular | -rollback]\n" +
       "    -regular                 : Normal DataNode startup (default).\n" +
-      "    -rollback                : Rollback a standard upgrade.\n" +
-      "    -rollingupgrade rollback : Rollback a rolling upgrade operation.\n" +
+      "    -rollback                : Rollback a standard or rolling upgrade.\n" +
       "  Refer to HDFS documentation for the difference between standard\n" +
       "  and rolling upgrades.";
 

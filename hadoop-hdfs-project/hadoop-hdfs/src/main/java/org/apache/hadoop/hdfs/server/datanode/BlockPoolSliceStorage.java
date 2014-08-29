@@ -269,7 +269,14 @@ public class BlockPoolSliceStorage extends Storage {
    */
   private void doTransition(DataNode datanode, StorageDirectory sd,
       NamespaceInfo nsInfo, StartupOption startOpt) throws IOException {
-    if (startOpt == StartupOption.ROLLBACK) {
+    if (startOpt == StartupOption.ROLLBACK && sd.getPreviousDir().exists()) {
+      // we will already restore everything in the trash by rolling back to
+      // the previous directory, so we must delete the trash to ensure
+      // that it's not restored by BPOfferService.signalRollingUpgrade()
+      if (!FileUtil.fullyDelete(getTrashRootDir(sd))) {
+        throw new IOException("Unable to delete trash directory prior to " +
+            "restoration of previous directory: " + getTrashRootDir(sd));
+      }
       doRollback(sd, nsInfo); // rollback if applicable
     } else {
       // Restore all the files in the trash. The restored files are retained
