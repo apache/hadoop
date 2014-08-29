@@ -114,6 +114,7 @@ case ${COMMAND} in
   ;;
   archive)
     CLASS=org.apache.hadoop.tools.HadoopArchives
+    hadoop_debug "Injecting TOOL_PATH into CLASSPATH"
     hadoop_add_classpath "${TOOL_PATH}"
   ;;
   checknative)
@@ -136,10 +137,12 @@ case ${COMMAND} in
   ;;
   distch)
     CLASS=org.apache.hadoop.tools.DistCh
+    hadoop_debug "Injecting TOOL_PATH into CLASSPATH"
     hadoop_add_classpath "${TOOL_PATH}"
   ;;
   distcp)
     CLASS=org.apache.hadoop.tools.DistCp
+    hadoop_debug "Injecting TOOL_PATH into CLASSPATH"
     hadoop_add_classpath "${TOOL_PATH}"
   ;;
   fs)
@@ -168,11 +171,11 @@ case ${COMMAND} in
 esac
 
 # Always respect HADOOP_OPTS and HADOOP_CLIENT_OPTS
+hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
 HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
 
 hadoop_add_param HADOOP_OPTS Xmx "${JAVA_HEAP_MAX}"
 
 hadoop_finalize
-export CLASSPATH
 hadoop_java_exec "${COMMAND}" "${CLASS}" "$@"
 

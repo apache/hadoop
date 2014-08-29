@@ -21,6 +21,13 @@ function hadoop_error
   echo "$*" 1>&2
 }
 
+function hadoop_debug
+{
+  if [[ -n "${HADOOP_SHELL_SCRIPT_DEBUG}" ]]; then
+    echo "DEBUG: $*" 1>&2
+  fi
+}
+
 function hadoop_bootstrap_init
 {
   # NOTE: This function is not user replaceable.
@@ -62,6 +69,7 @@ function hadoop_bootstrap_init
  
   # defaults
   export HADOOP_OPTS=${HADOOP_OPTS:-"-Djava.net.preferIPv4Stack=true"}
+  hadoop_debug "Initial HADOOP_OPTS=${HADOOP_OPTS}"
 }
 
 function hadoop_find_confdir
@@ -80,6 +88,8 @@ function hadoop_find_confdir
     conf_dir="etc/hadoop"
   fi
   export HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-${HADOOP_PREFIX}/${conf_dir}}"
+
+  hadoop_debug "HADOOP_CONF_DIR=${HADOOP_CONF_DIR}"
 }
 
 function hadoop_exec_hadoopenv
@@ -105,6 +115,7 @@ function hadoop_basic_init
   
   # CLASSPATH initially contains $HADOOP_CONF_DIR
   CLASSPATH="${HADOOP_CONF_DIR}"
+  hadoop_debug "Initial CLASSPATH=${HADOOP_CONF_DIR}"
   
   if [[ -z "${HADOOP_COMMON_HOME}" ]] &&
   [[ -d "${HADOOP_PREFIX}/${HADOOP_COMMON_DIR}" ]]; then
@@ -116,19 +127,19 @@ function hadoop_basic_init
   
   # define HADOOP_HDFS_HOME
   if [[ -z "${HADOOP_HDFS_HOME}" ]] &&
-  [[ -d "${HADOOP_PREFIX}/${HDFS_DIR}" ]]; then
+     [[ -d "${HADOOP_PREFIX}/${HDFS_DIR}" ]]; then
     export HADOOP_HDFS_HOME="${HADOOP_PREFIX}"
   fi
   
   # define HADOOP_YARN_HOME
   if [[ -z "${HADOOP_YARN_HOME}" ]] &&
-  [[ -d "${HADOOP_PREFIX}/${YARN_DIR}" ]]; then
+     [[ -d "${HADOOP_PREFIX}/${YARN_DIR}" ]]; then
     export HADOOP_YARN_HOME="${HADOOP_PREFIX}"
   fi
   
   # define HADOOP_MAPRED_HOME
   if [[ -z "${HADOOP_MAPRED_HOME}" ]] &&
-  [[ -d "${HADOOP_PREFIX}/${MAPRED_DIR}" ]]; then
+     [[ -d "${HADOOP_PREFIX}/${MAPRED_DIR}" ]]; then
     export HADOOP_MAPRED_HOME="${HADOOP_PREFIX}"
   fi
   
@@ -274,6 +285,9 @@ function hadoop_add_param
   if [[ ! ${!1} =~ $2 ]] ; then
     # shellcheck disable=SC2086
     eval $1="'${!1} $3'"
+    hadoop_debug "$1 accepted $3"
+  else
+    hadoop_debug "$1 declined $3"
   fi
 }
 
@@ -283,8 +297,8 @@ function hadoop_add_classpath
   # $1 = directory, file, wildcard, whatever to add
   # $2 = before or after, which determines where in the
   #      classpath this object should go. default is after
-  # return 0 = success
-  # return 1 = failure (duplicate, doesn't exist, whatever)
+  # return 0 = success (added or duplicate)
+  # return 1 = failure (doesn't exist, whatever)
   
   # However, with classpath (& JLP), we can do dedupe
   # along with some sanity checking (e.g., missing directories)
@@ -295,23 +309,29 @@ function hadoop_add_classpath
   if [[ $1 =~ ^.*\*$ ]]; then
     local mp=$(dirname "$1")
     if [[ ! -d "${mp}" ]]; then
+      hadoop_debug "Rejected CLASSPATH: $1 (not a dir)"
       return 1
     fi
     
     # no wildcard in the middle, so check existence
     # (doesn't matter *what* it is)
   elif [[ ! $1 =~ ^.*\*.*$ ]] && [[ ! -e "$1" ]]; then
+    hadoop_debug "Rejected CLASSPATH: $1 (does not exist)"
     return 1
   fi
-  
   if [[ -z "${CLASSPATH}" ]]; then
     CLASSPATH=$1
+    hadoop_debug "Initial CLASSPATH=$1"
   elif [[ ":${CLASSPATH}:" != *":$1:"* ]]; then
     if [[ "$2" = "before" ]]; then
       CLASSPATH="$1:${CLASSPATH}"
+      hadoop_debug "Prepend CLASSPATH: $1"
     else
       CLASSPATH+=:$1
+      hadoop_debug "Append CLASSPATH: $1"
     fi
+  else
+    hadoop_debug "Dupe CLASSPATH: $1"
   fi
   return 0
 }
@@ -331,14 +351,20 @@ function hadoop_add_colonpath
     if [[ -z "${!1}" ]]; then
       # shellcheck disable=SC2086
       eval $1="'$2'"
+      hadoop_debug "Initial colonpath($1): $2"
     elif [[ "$3" = "before" ]]; then
       # shellcheck disable=SC2086
       eval $1="'$2:${!1}'"
+      hadoop_debug "Prepend colonpath($1): $2"
     else
       # shellcheck disable=SC2086
       eval $1+="'$2'"
+      hadoop_debug "Append colonpath($1): $2"
     fi
+    return 0
   fi
+  hadoop_debug "Rejected colonpath($1): $2"
+  return 1
 }
 
 function hadoop_add_javalibpath
@@ -397,6 +423,7 @@ function hadoop_add_to_classpath_hdfs
 
 function hadoop_add_to_classpath_yarn
 {
+  local i
   #
   # get all of the yarn jars+config in the path
   #
@@ -459,7 +486,7 @@ function hadoop_add_to_classpath_userpath
   local i
   local j
   let c=0
-  
+
   if [[ -n "${HADOOP_CLASSPATH}" ]]; then
     # I wonder if Java runs on VMS.
     for i in $(echo "${HADOOP_CLASSPATH}" | tr : '\n'); do
@@ -715,6 +742,11 @@ function hadoop_java_exec
   local command=$1
   local class=$2
   shift 2
+  
+  hadoop_debug "Final CLASSPATH: ${CLASSPATH}"
+  hadoop_debug "Final HADOOP_OPTS: ${HADOOP_OPTS}"
+
+  export CLASSPATH
   #shellcheck disable=SC2086
   exec "${JAVA}" "-Dproc_${command}" ${HADOOP_OPTS} "${class}" "$@"
 }
@@ -727,6 +759,11 @@ function hadoop_start_daemon
   local command=$1
   local class=$2
   shift 2
+
+  hadoop_debug "Final CLASSPATH: ${CLASSPATH}"
+  hadoop_debug "Final HADOOP_OPTS: ${HADOOP_OPTS}"
+
+  export CLASSPATH
   #shellcheck disable=SC2086
   exec "${JAVA}" "-Dproc_${command}" ${HADOOP_OPTS} "${class}" "$@"
 }
@@ -807,6 +844,9 @@ function hadoop_start_secure_daemon
   # note that shellcheck will throw a
   # bogus for-our-use-case 2086 here.
   # it doesn't properly support multi-line situations
+
+  hadoop_debug "Final CLASSPATH: ${CLASSPATH}"
+  hadoop_debug "Final HADOOP_OPTS: ${HADOOP_OPTS}"
   
   exec "${jsvc}" \
   "-Dproc_${daemonname}" \
