@@ -67,6 +67,8 @@
     <protoc.path>${env.HADOOP_PROTOC_PATH}</protoc.path>
 
     <zookeeper.version>3.4.6</zookeeper.version>
+
+    <tomcat.version>6.0.41</tomcat.version>
   </properties>
 
   <dependencyManagement>
