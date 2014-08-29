@@ -229,6 +229,8 @@ Release 2.6.0 - UNRELEASED
     YARN-2035. FileSystemApplicationHistoryStore should not make working dir
     when it already exists. (Jonathan Eagles via zjshen)
 
+    YARN-2405. NPE in FairSchedulerAppsBlock. (Tsuyoshi Ozawa via kasha)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
