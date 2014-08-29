@@ -157,6 +157,24 @@ public class TestHadoopArchives {
     final List<String> harPaths = lsr(shell, fullHarPathStr);
     Assert.assertEquals(originalPaths, harPaths);
   }
+
+  @Test
+  public void testRelativePathWitRepl() throws Exception {
+    final Path sub1 = new Path(inputPath, "dir1");
+    fs.mkdirs(sub1);
+    createFile(inputPath, fs, sub1.getName(), "a");
+    final FsShell shell = new FsShell(conf);
+
+    final List<String> originalPaths = lsr(shell, "input");
+    System.out.println("originalPaths: " + originalPaths);
+
+    // make the archive:
+    final String fullHarPathStr = makeArchiveWithRepl();
+
+    // compare results:
+    final List<String> harPaths = lsr(shell, fullHarPathStr);
+    Assert.assertEquals(originalPaths, harPaths);
+  }
   
 @Test
   public void testPathWithSpaces() throws Exception {
@@ -619,6 +637,29 @@ public class TestHadoopArchives {
     final String fullHarPathStr = prefix + harName;
     final String[] args = { "-archiveName", harName, "-p", inputPathStr, "*",
         archivePath.toString() };
+    System.setProperty(HadoopArchives.TEST_HADOOP_ARCHIVES_JAR_PATH,
+        HADOOP_ARCHIVES_JAR);
+    final HadoopArchives har = new HadoopArchives(conf);
+    assertEquals(0, ToolRunner.run(har, args));
+    return fullHarPathStr;
+  }
+
+  /*
+ * Run the HadoopArchives tool to create an archive on the
+ * given file system with a specified replication degree.
+ */
+  private String makeArchiveWithRepl() throws Exception {
+    final String inputPathStr = inputPath.toUri().getPath();
+    System.out.println("inputPathStr = " + inputPathStr);
+
+    final URI uri = fs.getUri();
+    final String prefix = "har://hdfs-" + uri.getHost() + ":" + uri.getPort()
+        + archivePath.toUri().getPath() + Path.SEPARATOR;
+
+    final String harName = "foo.har";
+    final String fullHarPathStr = prefix + harName;
+    final String[] args = { "-archiveName", harName, "-p", inputPathStr,
+        "-r 3", "*", archivePath.toString() };
     System.setProperty(HadoopArchives.TEST_HADOOP_ARCHIVES_JAR_PATH,
         HADOOP_ARCHIVES_JAR);
     final HadoopArchives har = new HadoopArchives(conf);
