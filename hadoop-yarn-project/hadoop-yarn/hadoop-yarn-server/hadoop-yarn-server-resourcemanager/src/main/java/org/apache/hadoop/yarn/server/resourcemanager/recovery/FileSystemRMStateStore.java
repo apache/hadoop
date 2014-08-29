@@ -300,7 +300,7 @@ public class FileSystemRMStateStore extends RMStateStore {
         assert appState != null;
         appState.attempts.put(attemptState.getAttemptId(), attemptState);
       }
-      LOG.info("Done Loading applications from FS state store");
+      LOG.info("Done loading applications from FS state store");
     } catch (Exception e) {
       LOG.error("Failed to load state.", e);
       throw e;
