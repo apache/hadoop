@@ -94,17 +94,6 @@ class BlockPoolSlice {
       }
     }
 
-    // Delete all checkpointed replicas on startup.
-    // TODO: We can move checkpointed replicas to the finalized dir and delete
-    //       the copy on RAM_DISK. For now we take the simpler approach.
-
-    FileUtil.fullyDelete(lazypersistDir);
-    if (!this.lazypersistDir.exists()) {
-      if (!this.lazypersistDir.mkdirs()) {
-        throw new IOException("Failed to mkdirs " + this.lazypersistDir);
-      }
-    }
-
     // Files that were being written when the datanode was last shutdown
     // are now moved back to the data directory. It is possible that
     // in the future, we might want to do some sort of datanode-local
@@ -271,6 +260,13 @@ class BlockPoolSlice {
     return blockFile;
   }
 
+  /**
+   * Save the given replica to persistent storage.
+   *
+   * @param replicaInfo
+   * @return The saved block file.
+   * @throws IOException
+   */
   File lazyPersistReplica(ReplicaInfo replicaInfo) throws IOException {
     if (!lazypersistDir.exists() && !lazypersistDir.mkdirs()) {
       FsDatasetImpl.LOG.warn("Failed to create " + lazypersistDir);
@@ -305,11 +301,21 @@ class BlockPoolSlice {
 
 
     
-  void getVolumeMap(ReplicaMap volumeMap) throws IOException {
+  void getVolumeMap(ReplicaMap volumeMap,
+                    final LazyWriteReplicaTracker lazyWriteReplicaMap)
+      throws IOException {
+    // Recover lazy persist replicas, they will be added to the volumeMap
+    // when we scan the finalized directory.
+    if (lazypersistDir.exists()) {
+      int numRecovered = moveLazyPersistReplicasToFinalized(lazypersistDir);
+      FsDatasetImpl.LOG.info(
+          "Recovered " + numRecovered + " replicas from " + lazypersistDir);
+    }
+
     // add finalized replicas
-    addToReplicasMap(volumeMap, finalizedDir, true);
+    addToReplicasMap(volumeMap, finalizedDir, lazyWriteReplicaMap, true);
     // add rbw replicas
-    addToReplicasMap(volumeMap, rbwDir, false);
+    addToReplicasMap(volumeMap, rbwDir, lazyWriteReplicaMap, false);
   }
 
   /**
@@ -338,18 +344,68 @@ class BlockPoolSlice {
 
 
   /**
+   * Move replicas in the lazy persist directory to their corresponding locations
+   * in the finalized directory.
+   * @return number of replicas recovered.
+   */
+  private int moveLazyPersistReplicasToFinalized(File source)
+      throws IOException {
+    File files[] = FileUtil.listFiles(source);
+    int numRecovered = 0;
+    for (File file : files) {
+      if (file.isDirectory()) {
+        numRecovered += moveLazyPersistReplicasToFinalized(file);
+      }
+
+      if (Block.isMetaFilename(file.getName())) {
+        File metaFile = file;
+        File blockFile = Block.metaToBlockFile(metaFile);
+        long blockId = Block.filename2id(blockFile.getName());
+        File targetDir = DatanodeUtil.idToBlockDir(finalizedDir, blockId);
+
+        if (blockFile.exists()) {
+          File targetBlockFile = new File(targetDir, blockFile.getName());
+          File targetMetaFile = new File(targetDir, metaFile.getName());
+
+          if (!targetDir.exists() && !targetDir.mkdirs()) {
+            FsDatasetImpl.LOG.warn("Failed to move " + blockFile + " to " + targetDir);
+            continue;
+          }
+
+          metaFile.renameTo(targetMetaFile);
+          blockFile.renameTo(targetBlockFile);
+
+          if (targetBlockFile.exists() && targetMetaFile.exists()) {
+            ++numRecovered;
+          } else {
+            // Failure should be rare.
+            FsDatasetImpl.LOG.warn("Failed to move " + blockFile + " to " + targetDir);
+          }
+        }
+      }
+    }
+
+    FileUtil.fullyDelete(source);
+    return numRecovered;
+  }
+
+  /**
    * Add replicas under the given directory to the volume map
    * @param volumeMap the replicas map
    * @param dir an input directory
+   * @param lazyWriteReplicaMap Map of replicas on transient
+   *                                storage.
    * @param isFinalized true if the directory has finalized replicas;
    *                    false if the directory has rbw replicas
    */
-  void addToReplicasMap(ReplicaMap volumeMap, File dir, boolean isFinalized
-      ) throws IOException {
+  void addToReplicasMap(ReplicaMap volumeMap, File dir,
+                        final LazyWriteReplicaTracker lazyWriteReplicaMap,
+                        boolean isFinalized)
+      throws IOException {
     File files[] = FileUtil.listFiles(dir);
     for (File file : files) {
       if (file.isDirectory()) {
-        addToReplicasMap(volumeMap, file, isFinalized);
+        addToReplicasMap(volumeMap, file, lazyWriteReplicaMap, isFinalized);
       }
 
       if (isFinalized && FsDatasetUtil.isUnlinkTmpFile(file)) {
@@ -405,12 +461,82 @@ class BlockPoolSlice {
         }
       }
 
-      ReplicaInfo oldReplica = volumeMap.add(bpid, newReplica);
-      if (oldReplica != null) {
-        FsDatasetImpl.LOG.warn("Two block files with the same block id exist " +
-            "on disk: " + oldReplica.getBlockFile() + " and " + file );
+      ReplicaInfo oldReplica = volumeMap.get(bpid, newReplica.getBlockId());
+      if (oldReplica == null) {
+        volumeMap.add(bpid, newReplica);
+      } else {
+        // We have multiple replicas of the same block so decide which one
+        // to keep.
+        newReplica = resolveDuplicateReplicas(newReplica, oldReplica, volumeMap);
+      }
+
+      // If we are retaining a replica on transient storage make sure
+      // it is in the lazyWriteReplicaMap so it can be persisted
+      // eventually.
+      if (newReplica.getVolume().isTransientStorage()) {
+        lazyWriteReplicaMap.addReplica(bpid, blockId, newReplica.getVolume());
+      } else {
+        lazyWriteReplicaMap.discardReplica(bpid, blockId, true);
       }
     }
+  }
+
+  /**
+   * This method is invoked during DN startup when volumes are scanned to
+   * build up the volumeMap.
+   *
+   * Given two replicas, decide which one to keep. The preference is as
+   * follows:
+   *   1. Prefer the replica with the higher generation stamp.
+   *   2. If generation stamps are equal, prefer the replica with the
+   *      larger on-disk length.
+   *   3. If on-disk length is the same, prefer the replica on persistent
+   *      storage volume.
+   *   4. All other factors being equal, keep replica1.
+   *
+   * The other replica is removed from the volumeMap and is deleted from
+   * its storage volume.
+   *
+   * @param replica1
+   * @param replica2
+   * @param volumeMap
+   * @return the replica that is retained.
+   * @throws IOException
+   */
+  private ReplicaInfo resolveDuplicateReplicas(
+      final ReplicaInfo replica1, final ReplicaInfo replica2,
+      final ReplicaMap volumeMap) throws IOException {
+
+    ReplicaInfo replicaToKeep;
+    ReplicaInfo replicaToDelete;
+
+    if (replica1.getGenerationStamp() != replica2.getGenerationStamp()) {
+      replicaToKeep = replica1.getGenerationStamp() > replica2.getGenerationStamp()
+          ? replica1 : replica2;
+    } else if (replica1.getNumBytes() != replica2.getNumBytes()) {
+      replicaToKeep = replica1.getNumBytes() > replica2.getNumBytes() ?
+          replica1 : replica2;
+    } else if (replica1.getVolume().isTransientStorage() &&
+               !replica2.getVolume().isTransientStorage()) {
+      replicaToKeep = replica2;
+    } else {
+      replicaToKeep = replica1;
+    }
+
+    replicaToDelete = (replicaToKeep == replica1) ? replica2 : replica1;
+
+    // Update volumeMap.
+    volumeMap.add(bpid, replicaToKeep);
+
+    // Delete the files on disk. Failure here is okay.
+    replicaToDelete.getBlockFile().delete();
+    replicaToDelete.getMetaFile().delete();
+
+    FsDatasetImpl.LOG.info(
+        "resolveDuplicateReplicas keeping " + replicaToKeep.getBlockFile() +
+        ", deleting " + replicaToDelete.getBlockFile());
+
+    return replicaToKeep;
   }
   
   /**

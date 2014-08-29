@@ -265,7 +265,9 @@ public class TestLazyPersistFiles {
     LocatedBlocks locatedBlocks = ensureFileReplicasOnStorageType(path, RAM_DISK);
 
     // Sleep for a short time to allow the lazy writer thread to do its job
-    Thread.sleep(3 * LAZY_WRITER_INTERVAL_SEC * 1000);
+    Thread.sleep(6 * LAZY_WRITER_INTERVAL_SEC * 1000);
+    
+    LOG.info("Verifying copy was saved to lazyPersist/");
 
     // Make sure that there is a saved copy of the replica on persistent
     // storage.
@@ -330,23 +332,52 @@ public class TestLazyPersistFiles {
     ensureFileReplicasOnStorageType(path1, DEFAULT);
   }
 
-  /**
-   * TODO: Stub test, to be completed.
-   * Verify that checksum computation is skipped for files written to memory.
-   */
   @Test (timeout=300000)
-  public void testChecksumIsSkipped()
+  public void testDnRestartWithSavedReplicas()
       throws IOException, InterruptedException {
+
     startUpCluster(REPL_FACTOR,
-                   new StorageType[] {RAM_DISK, DEFAULT }, -1);
+        new StorageType[] {RAM_DISK, DEFAULT },
+        (2 * BLOCK_SIZE - 1));     // 1 replica + delta.
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path1 = new Path("/" + METHOD_NAME + ".01.dat");
 
     makeTestFile(path1, BLOCK_SIZE, true);
     ensureFileReplicasOnStorageType(path1, RAM_DISK);
 
-    // Verify checksum was not computed.
+    // Sleep for a short time to allow the lazy writer thread to do its job.
+    // However the block replica should not be evicted from RAM_DISK yet.
+    Thread.sleep(3 * LAZY_WRITER_INTERVAL_SEC * 1000);
+    ensureFileReplicasOnStorageType(path1, RAM_DISK);
 
+    LOG.info("Restarting the DataNode");
+    cluster.restartDataNode(0, true);
+    cluster.waitActive();
+
+    // Ensure that the replica is now on persistent storage.
+    ensureFileReplicasOnStorageType(path1, DEFAULT);
+  }
+
+  @Test (timeout=300000)
+  public void testDnRestartWithUnsavedReplicas()
+      throws IOException, InterruptedException {
+
+    startUpCluster(REPL_FACTOR,
+                   new StorageType[] {RAM_DISK, DEFAULT },
+                   (2 * BLOCK_SIZE - 1));     // 1 replica + delta.
+    stopLazyWriter(cluster.getDataNodes().get(0));
+
+    final String METHOD_NAME = GenericTestUtils.getMethodName();
+    Path path1 = new Path("/" + METHOD_NAME + ".01.dat");
+    makeTestFile(path1, BLOCK_SIZE, true);
+    ensureFileReplicasOnStorageType(path1, RAM_DISK);
+
+    LOG.info("Restarting the DataNode");
+    cluster.restartDataNode(0, true);
+    cluster.waitActive();
+
+    // Ensure that the replica is still on transient storage.
+    ensureFileReplicasOnStorageType(path1, RAM_DISK);
   }
 
   // ---- Utility functions for all test cases -------------------------------
@@ -442,5 +473,11 @@ public class TestLazyPersistFiles {
     }
 
     return locatedBlocks;
+  }
+
+  private void stopLazyWriter(DataNode dn) {
+    // Stop the lazyWriter daemon.
+    FsDatasetImpl fsDataset = ((FsDatasetImpl) dn.getFSDataset());
+    ((FsDatasetImpl.LazyWriter) fsDataset.lazyWriter.getRunnable()).stop();
   }
 }

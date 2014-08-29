@@ -119,7 +119,10 @@ class FsVolumeList {
     return remaining;
   }
   
-  void getAllVolumesMap(final String bpid, final ReplicaMap volumeMap) throws IOException {
+  void getAllVolumesMap(final String bpid,
+                        final ReplicaMap volumeMap,
+                        final LazyWriteReplicaTracker lazyWriteReplicaMap)
+      throws IOException {
     long totalStartTime = Time.monotonicNow();
     final List<IOException> exceptions = Collections.synchronizedList(
         new ArrayList<IOException>());
@@ -131,7 +134,7 @@ class FsVolumeList {
             FsDatasetImpl.LOG.info("Adding replicas to map for block pool " +
                 bpid + " on volume " + v + "...");
             long startTime = Time.monotonicNow();
-            v.getVolumeMap(bpid, volumeMap);
+            v.getVolumeMap(bpid, volumeMap, lazyWriteReplicaMap);
             long timeTaken = Time.monotonicNow() - startTime;
             FsDatasetImpl.LOG.info("Time to add replicas to map for block pool"
                 + " " + bpid + " on volume " + v + ": " + timeTaken + "ms");
@@ -160,17 +163,6 @@ class FsVolumeList {
         + totalTimeTaken + "ms");
   }
 
-  void getVolumeMap(String bpid, FsVolumeImpl volume, ReplicaMap volumeMap)
-      throws IOException {
-    FsDatasetImpl.LOG.info("Adding replicas to map for block pool " + bpid +
-                               " on volume " + volume + "...");
-    long startTime = Time.monotonicNow();
-    volume.getVolumeMap(bpid, volumeMap);
-    long timeTaken = Time.monotonicNow() - startTime;
-    FsDatasetImpl.LOG.info("Time to add replicas to map for block pool " + bpid +
-                               " on volume " + volume + ": " + timeTaken + "ms");
-  }
-    
   /**
    * Calls {@link FsVolumeImpl#checkDirs()} on each volume, removing any
    * volumes from the active list that result in a DiskErrorException.

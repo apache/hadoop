@@ -27,3 +27,6 @@
     HDFS-6960. Bugfix in LazyWriter, fix test case and some refactoring.
     (Arpit Agarwal)
 
+    HDFS-6931. Move lazily persisted replicas to finalized directory on DN
+    startup. (Arpit Agarwal)
+

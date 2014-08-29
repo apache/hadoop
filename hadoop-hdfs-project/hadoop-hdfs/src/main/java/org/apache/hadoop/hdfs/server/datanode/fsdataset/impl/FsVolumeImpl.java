@@ -245,14 +245,18 @@ public class FsVolumeImpl implements FsVolumeSpi {
     }
   }
     
-  void getVolumeMap(ReplicaMap volumeMap) throws IOException {
+  void getVolumeMap(ReplicaMap volumeMap,
+                    final LazyWriteReplicaTracker lazyWriteReplicaMap)
+      throws IOException {
     for(BlockPoolSlice s : bpSlices.values()) {
-      s.getVolumeMap(volumeMap);
+      s.getVolumeMap(volumeMap, lazyWriteReplicaMap);
     }
   }
   
-  void getVolumeMap(String bpid, ReplicaMap volumeMap) throws IOException {
-    getBlockPoolSlice(bpid).getVolumeMap(volumeMap);
+  void getVolumeMap(String bpid, ReplicaMap volumeMap,
+                    final LazyWriteReplicaTracker lazyWriteReplicaMap)
+      throws IOException {
+    getBlockPoolSlice(bpid).getVolumeMap(volumeMap, lazyWriteReplicaMap);
   }
   
   @Override
