@@ -307,22 +307,6 @@ public class FsVolumeImpl implements FsVolumeSpi {
     getBlockPoolSlice(bpid).getVolumeMap(volumeMap);
   }
   
-  /**
-   * Add replicas under the given directory to the volume map
-   * @param volumeMap the replicas map
-   * @param dir an input directory
-   * @param isFinalized true if the directory has finalized replicas;
-   *                    false if the directory has rbw replicas
-   * @throws IOException 
-   */
-  void addToReplicasMap(String bpid, ReplicaMap volumeMap, 
-      File dir, boolean isFinalized) throws IOException {
-    BlockPoolSlice bp = getBlockPoolSlice(bpid);
-    // TODO move this up
-    // dfsUsage.incDfsUsed(b.getNumBytes()+metaFile.length());
-    bp.addToReplicasMap(volumeMap, dir, isFinalized);
-  }
-
   @Override
   public String toString() {
     return currentDir.getAbsolutePath();

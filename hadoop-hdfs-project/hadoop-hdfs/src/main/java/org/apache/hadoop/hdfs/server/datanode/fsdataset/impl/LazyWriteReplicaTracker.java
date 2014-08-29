@@ -19,12 +19,11 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 
-import com.google.common.collect.Multimap;
 import com.google.common.collect.TreeMultimap;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 
 import java.io.File;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 class LazyWriteReplicaTracker {
 
@@ -43,7 +42,7 @@ class LazyWriteReplicaTracker {
     /**
      * transient storage volume that holds the original replica.
      */
-    final FsVolumeImpl transientVolume;
+    final FsVolumeSpi transientVolume;
 
     /**
      * Persistent volume that holds or will hold the saved replica.
@@ -51,13 +50,18 @@ class LazyWriteReplicaTracker {
     FsVolumeImpl lazyPersistVolume;
     File savedBlockFile;
 
-    ReplicaState(final String bpid, final long blockId, FsVolumeImpl transientVolume) {
+    ReplicaState(final String bpid, final long blockId, FsVolumeSpi transientVolume) {
       this.bpid = bpid;
       this.blockId = blockId;
       this.transientVolume = transientVolume;
       state = State.IN_MEMORY;
       lazyPersistVolume = null;
       savedBlockFile = null;
+    }
+
+    @Override
+    public String toString() {
+      return "[Bpid=" + bpid + ";blockId=" + blockId + "]";
     }
 
     @Override
@@ -99,35 +103,43 @@ class LazyWriteReplicaTracker {
   final Map<String, Map<Long, ReplicaState>> replicaMaps;
 
   /**
+   * Queue of replicas that need to be written to disk.
+   */
+  final Queue<ReplicaState> replicasNotPersisted;
+
+  /**
    * A map of blockId to persist complete time for transient blocks. This allows
    * us to evict LRU blocks from transient storage. Protected by 'this'
    * Object lock.
    */
-  final Map<ReplicaState, Long> persistTimeMap;
+  final Map<ReplicaState, Long> replicasPersisted;
 
   LazyWriteReplicaTracker(final FsDatasetImpl fsDataset) {
     this.fsDataset = fsDataset;
     replicaMaps = new HashMap<String, Map<Long, ReplicaState>>();
-    persistTimeMap = new HashMap<ReplicaState, Long>();
+    replicasNotPersisted = new LinkedList<ReplicaState>();
+    replicasPersisted = new HashMap<ReplicaState, Long>();
   }
 
   TreeMultimap<Long, ReplicaState> getLruMap() {
     // TODO: This can be made more efficient.
     TreeMultimap<Long, ReplicaState> reversedMap = TreeMultimap.create();
-    for (Map.Entry<ReplicaState, Long> entry : persistTimeMap.entrySet()) {
+    for (Map.Entry<ReplicaState, Long> entry : replicasPersisted.entrySet()) {
       reversedMap.put(entry.getValue(), entry.getKey());
     }
     return reversedMap;
   }
 
   synchronized void addReplica(String bpid, long blockId,
-                               final FsVolumeImpl transientVolume) {
+                               final FsVolumeSpi transientVolume) {
     Map<Long, ReplicaState> map = replicaMaps.get(bpid);
     if (map == null) {
       map = new HashMap<Long, ReplicaState>();
       replicaMaps.put(bpid, map);
     }
-    map.put(blockId, new ReplicaState(bpid, blockId, transientVolume));
+    ReplicaState replicaState = new ReplicaState(bpid, blockId, transientVolume);
+    map.put(blockId, replicaState);
+    replicasNotPersisted.add(replicaState);
   }
 
   synchronized void recordStartLazyPersist(
@@ -149,12 +161,49 @@ class LazyWriteReplicaTracker {
     }
     replicaState.state = State.LAZY_PERSIST_COMPLETE;
     replicaState.savedBlockFile = savedBlockFile;
-    persistTimeMap.put(replicaState, System.currentTimeMillis() / 1000);
+
+    if (replicasNotPersisted.peek() == replicaState) {
+      // Common case.
+      replicasNotPersisted.remove();
+    } else {
+      // Should never occur in practice as lazy writer always persists
+      // the replica at the head of the queue before moving to the next
+      // one.
+      replicasNotPersisted.remove(replicaState);
+    }
+    replicasPersisted.put(replicaState, System.currentTimeMillis() / 1000);
+  }
+
+  synchronized ReplicaState dequeueNextReplicaToPersist() {
+    while (replicasNotPersisted.size() != 0) {
+      ReplicaState replicaState = replicasNotPersisted.remove();
+      Map<Long, ReplicaState> replicaMap = replicaMaps.get(replicaState.bpid);
+
+      if (replicaMap != null && replicaMap.get(replicaState.blockId) != null) {
+        return replicaState;
+      }
+
+      // The replica no longer exists, look for the next one.
+    }
+    return null;
+  }
+
+  synchronized void reenqueueReplica(final ReplicaState replicaState) {
+    replicasNotPersisted.add(replicaState);
+  }
+
+  synchronized int numReplicasNotPersisted() {
+    return replicasNotPersisted.size();
   }
 
   synchronized void discardReplica(
       final String bpid, final long blockId, boolean force) {
     Map<Long, ReplicaState> map = replicaMaps.get(bpid);
+
+    if (map == null) {
+      return;
+    }
+
     ReplicaState replicaState = map.get(blockId);
 
     if (replicaState == null) {
@@ -172,6 +221,9 @@ class LazyWriteReplicaTracker {
     }
 
     map.remove(blockId);
-    persistTimeMap.remove(replicaState);
+    replicasPersisted.remove(replicaState);
+
+    // Leave the replica in replicasNotPersisted if its present.
+    // dequeueNextReplicaToPersist will GC it eventually.
   }
 }
