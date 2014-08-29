@@ -13,7 +13,22 @@
  */
 package org.apache.hadoop.security.authentication.client;
 
+import org.apache.catalina.deploy.FilterDef;
+import org.apache.catalina.deploy.FilterMap;
+import org.apache.catalina.startup.Tomcat;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
+import org.apache.http.HttpResponse;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.Credentials;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.params.AuthPolicy;
+import org.apache.http.entity.InputStreamEntity;
+import org.apache.http.impl.auth.SPNegoSchemeFactory;
+import org.apache.http.impl.client.SystemDefaultHttpClient;
+import org.apache.http.util.EntityUtils;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.FilterHolder;
@@ -24,16 +39,19 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.Writer;
 import java.net.HttpURLConnection;
 import java.net.ServerSocket;
 import java.net.URL;
+import java.security.Principal;
 import java.util.Properties;
 import org.junit.Assert;
 
@@ -41,9 +59,17 @@ public class AuthenticatorTestCase {
   private Server server;
   private String host = null;
   private int port = -1;
+  private boolean useTomcat = false;
+  private Tomcat tomcat = null;
   Context context;
 
   private static Properties authenticatorConfig;
+
+  public AuthenticatorTestCase() {}
+
+  public AuthenticatorTestCase(boolean useTomcat) {
+    this.useTomcat = useTomcat;
+  }
 
   protected static void setAuthenticationHandlerConfig(Properties config) {
     authenticatorConfig = config;
@@ -80,7 +106,19 @@ public class AuthenticatorTestCase {
     }
   }
 
+  protected int getLocalPort() throws Exception {
+    ServerSocket ss = new ServerSocket(0);
+    int ret = ss.getLocalPort();
+    ss.close();
+    return ret;
+  }
+
   protected void start() throws Exception {
+    if (useTomcat) startTomcat();
+    else startJetty();
+  }
+
+  protected void startJetty() throws Exception {
     server = new Server(0);
     context = new Context();
     context.setContextPath("/foo");
@@ -88,16 +126,42 @@ public class AuthenticatorTestCase {
     context.addFilter(new FilterHolder(TestFilter.class), "/*", 0);
     context.addServlet(new ServletHolder(TestServlet.class), "/bar");
     host = "localhost";
-    ServerSocket ss = new ServerSocket(0);
-    port = ss.getLocalPort();
-    ss.close();
+    port = getLocalPort();
     server.getConnectors()[0].setHost(host);
     server.getConnectors()[0].setPort(port);
     server.start();
     System.out.println("Running embedded servlet container at: http://" + host + ":" + port);
   }
 
+  protected void startTomcat() throws Exception {
+    tomcat = new Tomcat();
+    File base = new File(System.getProperty("java.io.tmpdir"));
+    org.apache.catalina.Context ctx =
+      tomcat.addContext("/foo",base.getAbsolutePath());
+    FilterDef fd = new FilterDef();
+    fd.setFilterClass(TestFilter.class.getName());
+    fd.setFilterName("TestFilter");
+    FilterMap fm = new FilterMap();
+    fm.setFilterName("TestFilter");
+    fm.addURLPattern("/*");
+    fm.addServletName("/bar");
+    ctx.addFilterDef(fd);
+    ctx.addFilterMap(fm);
+    tomcat.addServlet(ctx, "/bar", TestServlet.class.getName());
+    ctx.addServletMapping("/bar", "/bar");
+    host = "localhost";
+    port = getLocalPort();
+    tomcat.setHostname(host);
+    tomcat.setPort(port);
+    tomcat.start();
+  }
+
   protected void stop() throws Exception {
+    if (useTomcat) stopTomcat();
+    else stopJetty();
+  }
+
+  protected void stopJetty() throws Exception {
     try {
       server.stop();
     } catch (Exception e) {
@@ -105,6 +169,18 @@ public class AuthenticatorTestCase {
 
     try {
       server.destroy();
+    } catch (Exception e) {
+    }
+  }
+
+  protected void stopTomcat() throws Exception {
+    try {
+      tomcat.stop();
+    } catch (Exception e) {
+    }
+
+    try {
+      tomcat.destroy();
     } catch (Exception e) {
     }
   }
@@ -165,4 +241,57 @@ public class AuthenticatorTestCase {
     }
   }
 
+  private SystemDefaultHttpClient getHttpClient() {
+    final SystemDefaultHttpClient httpClient = new SystemDefaultHttpClient();
+    httpClient.getAuthSchemes().register(AuthPolicy.SPNEGO, new SPNegoSchemeFactory(true));
+     Credentials use_jaas_creds = new Credentials() {
+       public String getPassword() {
+         return null;
+       }
+
+       public Principal getUserPrincipal() {
+         return null;
+       }
+     };
+
+     httpClient.getCredentialsProvider().setCredentials(
+       AuthScope.ANY, use_jaas_creds);
+     return httpClient;
+  }
+
+  private void doHttpClientRequest(HttpClient httpClient, HttpUriRequest request) throws Exception {
+    HttpResponse response = null;
+    try {
+      response = httpClient.execute(request);
+      final int httpStatus = response.getStatusLine().getStatusCode();
+      Assert.assertEquals(HttpURLConnection.HTTP_OK, httpStatus);
+    } finally {
+      if (response != null) EntityUtils.consumeQuietly(response.getEntity());
+    }
+  }
+
+  protected void _testAuthenticationHttpClient(Authenticator authenticator, boolean doPost) throws Exception {
+    start();
+    try {
+      SystemDefaultHttpClient httpClient = getHttpClient();
+      doHttpClientRequest(httpClient, new HttpGet(getBaseURL()));
+
+      // Always do a GET before POST to trigger the SPNego negotiation
+      if (doPost) {
+        HttpPost post = new HttpPost(getBaseURL());
+        byte [] postBytes = POST.getBytes();
+        ByteArrayInputStream bis = new ByteArrayInputStream(postBytes);
+        InputStreamEntity entity = new InputStreamEntity(bis, postBytes.length);
+
+        // Important that the entity is not repeatable -- this means if
+        // we have to renegotiate (e.g. b/c the cookie wasn't handled properly)
+        // the test will fail.
+        Assert.assertFalse(entity.isRepeatable());
+        post.setEntity(entity);
+        doHttpClientRequest(httpClient, post);
+      }
+    } finally {
+      stop();
+    }
+  }
 }

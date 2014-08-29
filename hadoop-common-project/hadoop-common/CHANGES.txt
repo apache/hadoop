@@ -710,6 +710,9 @@ Release 2.6.0 - UNRELEASED
       loaded. (umamahesh)      
     --
 
+    HADOOP-10911. hadoop.auth cookie after HADOOP-10710 still not proper
+    according to RFC2109. (gchanan via tucu)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

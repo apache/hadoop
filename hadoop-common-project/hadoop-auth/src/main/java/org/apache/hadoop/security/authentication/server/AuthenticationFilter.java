@@ -519,9 +519,7 @@ public class AuthenticationFilter implements Filter {
     StringBuilder sb = new StringBuilder(AuthenticatedURL.AUTH_COOKIE)
                            .append("=");
     if (token != null && token.length() > 0) {
-      sb.append("\"")
-          .append(token)
-          .append("\"");
+      sb.append(token);
     }
     sb.append("; Version=1");
 
