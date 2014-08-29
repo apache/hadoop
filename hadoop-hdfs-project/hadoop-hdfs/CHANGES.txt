@@ -427,6 +427,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6879. Adding tracing to Hadoop RPC (Masatake Iwasaki via Colin Patrick
     McCabe)
 
+    HDFS-6774. Make FsDataset and DataStore support removing volumes. (Lei Xu
+    via atm)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -570,6 +573,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6902. FileWriter should be closed in finally block in
     BlockReceiver#receiveBlock() (Tsuyoshi OZAWA via Colin Patrick McCabe)
+
+    HDFS-6800. Support Datanode layout changes with rolling upgrade.
+    (James Thomas via Arpit Agarwal)
 
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   

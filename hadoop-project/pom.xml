@@ -67,6 +67,8 @@
     <protoc.path>${env.HADOOP_PROTOC_PATH}</protoc.path>
 
     <zookeeper.version>3.4.6</zookeeper.version>
+
+    <tomcat.version>6.0.41</tomcat.version>
   </properties>
 
   <dependencyManagement>
@@ -397,6 +399,16 @@
         <groupId>org.mortbay.jetty</groupId>
         <artifactId>jetty-util</artifactId>
         <version>6.1.26</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.tomcat.embed</groupId>
+        <artifactId>tomcat-embed-core</artifactId>
+        <version>7.0.55</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.tomcat.embed</groupId>
+        <artifactId>tomcat-embed-logging-juli</artifactId>
+        <version>7.0.55</version>
       </dependency>
       <dependency>
         <groupId>javax.servlet.jsp</groupId>

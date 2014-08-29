@@ -206,7 +206,7 @@
       <li>Restore the pre-upgrade release in all machines.</li>
       <li>Start <em>NNs</em> with the
         "<a href="#namenode_-rollingUpgrade"><code>-rollingUpgrade rollback</code></a>" option.</li>
-      <li>Start <em>DNs</em> normally.</li>
+      <li>Start <em>DNs</em> with the "<code>-rollback</code>" option.</li>
     </ol></li>
   </ul>
 

@@ -197,6 +197,7 @@ public class ApplicationHistoryServer extends CompositeService {
     // the customized filter will be loaded by the timeline server to do Kerberos
     // + DT authentication.
     String initializers = conf.get("hadoop.http.filter.initializers");
+    boolean modifiedInitialiers = false;
 
     initializers =
         initializers == null || initializers.length() == 0 ? "" : initializers;
@@ -206,6 +207,7 @@ public class ApplicationHistoryServer extends CompositeService {
       initializers =
           TimelineAuthenticationFilterInitializer.class.getName() + ","
               + initializers;
+      modifiedInitialiers = true;
     }
 
     String[] parts = initializers.split(",");
@@ -214,13 +216,14 @@ public class ApplicationHistoryServer extends CompositeService {
       filterInitializer = filterInitializer.trim();
       if (filterInitializer.equals(AuthenticationFilterInitializer.class
         .getName())) {
+        modifiedInitialiers = true;
         continue;
       }
       target.add(filterInitializer);
     }
     String actualInitializers =
         org.apache.commons.lang.StringUtils.join(target, ",");
-    if (!actualInitializers.equals(initializers)) {
+    if (modifiedInitialiers) {
       conf.set("hadoop.http.filter.initializers", actualInitializers);
     }
     String bindAddress = WebAppUtils.getWebAppBindURL(conf,

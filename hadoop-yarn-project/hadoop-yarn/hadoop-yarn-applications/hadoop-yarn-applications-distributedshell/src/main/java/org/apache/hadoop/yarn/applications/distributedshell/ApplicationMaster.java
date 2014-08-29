@@ -519,7 +519,7 @@ public class ApplicationMaster {
       publishApplicationAttemptEvent(timelineClient, appAttemptID.toString(),
           DSEvent.DS_APP_ATTEMPT_START);
     } catch (Exception e) {
-      LOG.error("App Attempt start event coud not be pulished for "
+      LOG.error("App Attempt start event could not be published for "
           + appAttemptID.toString(), e);
     }
 
@@ -616,7 +616,7 @@ public class ApplicationMaster {
       publishApplicationAttemptEvent(timelineClient, appAttemptID.toString(),
           DSEvent.DS_APP_ATTEMPT_END);
     } catch (Exception e) {
-      LOG.error("App Attempt start event coud not be pulished for "
+      LOG.error("App Attempt start event could not be published for "
           + appAttemptID.toString(), e);
     }
   }
@@ -726,7 +726,7 @@ public class ApplicationMaster {
         try {
           publishContainerEndEvent(timelineClient, containerStatus);
         } catch (Exception e) {
-          LOG.error("Container start event could not be pulished for "
+          LOG.error("Container start event could not be published for "
               + containerStatus.getContainerId().toString(), e);
         }
       }
@@ -847,7 +847,7 @@ public class ApplicationMaster {
         ApplicationMaster.publishContainerStartEvent(
             applicationMaster.timelineClient, container);
       } catch (Exception e) {
-        LOG.error("Container start event coud not be pulished for "
+        LOG.error("Container start event could not be published for "
             + container.getId().toString(), e);
       }
     }

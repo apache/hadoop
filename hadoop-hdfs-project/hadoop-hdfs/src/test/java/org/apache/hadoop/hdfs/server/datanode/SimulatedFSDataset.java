@@ -1132,6 +1132,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
+  public synchronized void removeVolumes(Collection<StorageLocation> volumes) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public void submitBackgroundSyncFileRangeRequest(ExtendedBlock block,
       FileDescriptor fd, long offset, long nbytes, int flags) {
     throw new UnsupportedOperationException();
