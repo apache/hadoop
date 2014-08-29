@@ -40,6 +40,7 @@ public abstract class KeyProviderExtension
   private E extension;
 
   public KeyProviderExtension(KeyProvider keyProvider, E extensions) {
+    super(keyProvider.getConf());
     this.keyProvider = keyProvider;
     this.extension = extensions;
   }
