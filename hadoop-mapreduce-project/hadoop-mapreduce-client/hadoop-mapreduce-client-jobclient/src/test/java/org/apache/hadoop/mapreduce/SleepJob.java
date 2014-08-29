@@ -224,11 +224,7 @@ public class SleepJob extends Configured implements Tool {
   public int run(String[] args) throws Exception {
 
     if(args.length < 1) {
-      System.err.println("SleepJob [-m numMapper] [-r numReducer]" +
-          " [-mt mapSleepTime (msec)] [-rt reduceSleepTime (msec)]" +
-          " [-recordt recordSleepTime (msec)]");
-      ToolRunner.printGenericCommandUsage(System.err);
-      return 2;
+      return printUsage("number of arguments must be > 0");
     }
 
     int numMapper = 1, numReducer = 1;
@@ -238,18 +234,34 @@ public class SleepJob extends Configured implements Tool {
     for(int i=0; i < args.length; i++ ) {
       if(args[i].equals("-m")) {
         numMapper = Integer.parseInt(args[++i]);
+        if (numMapper < 0) {
+          return printUsage(numMapper + ": numMapper must be >= 0");
+        }
       }
       else if(args[i].equals("-r")) {
         numReducer = Integer.parseInt(args[++i]);
+        if (numReducer < 0) {
+          return printUsage(numReducer + ": numReducer must be >= 0");
+        }
       }
       else if(args[i].equals("-mt")) {
         mapSleepTime = Long.parseLong(args[++i]);
+        if (mapSleepTime < 0) {
+          return printUsage(mapSleepTime + ": mapSleepTime must be >= 0");
+        }
       }
       else if(args[i].equals("-rt")) {
         reduceSleepTime = Long.parseLong(args[++i]);
+        if (reduceSleepTime < 0) {
+          return printUsage(
+              reduceSleepTime + ": reduceSleepTime must be >= 0");
+        }
       }
       else if (args[i].equals("-recordt")) {
         recSleepTime = Long.parseLong(args[++i]);
+        if (recSleepTime < 0) {
+          return printUsage(recSleepTime + ": recordSleepTime must be >= 0");
+        }
       }
     }
     
@@ -261,4 +273,14 @@ public class SleepJob extends Configured implements Tool {
     return job.waitForCompletion(true) ? 0 : 1;
   }
 
+  private int printUsage(String error) {
+    if (error != null) {
+      System.err.println("ERROR: " + error);
+    }
+    System.err.println("SleepJob [-m numMapper] [-r numReducer]" +
+        " [-mt mapSleepTime (msec)] [-rt reduceSleepTime (msec)]" +
+        " [-recordt recordSleepTime (msec)]");
+    ToolRunner.printGenericCommandUsage(System.err);
+    return 2;
+  }
 }
