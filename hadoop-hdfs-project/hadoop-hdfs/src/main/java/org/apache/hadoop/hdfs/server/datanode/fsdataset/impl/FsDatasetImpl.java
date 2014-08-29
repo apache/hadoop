@@ -275,13 +275,13 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     volumes = new FsVolumeList(volsFailed, blockChooserImpl);
     asyncDiskService = new FsDatasetAsyncDiskService(datanode);
 
-    // TODO: Initialize transientReplicaTracker from blocks on disk.
-
     for (int idx = 0; idx < storage.getNumStorageDirs(); idx++) {
       addVolume(dataLocations, storage.getStorageDir(idx));
     }
 
     cacheManager = new FsDatasetCache(this);
+
+    // Start the lazy writer once we have built the replica maps.
     lazyWriter = new Daemon(new LazyWriter(
         conf.getInt(DFSConfigKeys.DFS_DATANODE_LAZY_WRITER_INTERVAL_SEC,
                     DFSConfigKeys.DFS_DATANODE_LAZY_WRITER_INTERVAL_DEFAULT_SEC)));
@@ -301,7 +301,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     FsVolumeImpl fsVolume = FsVolumeImplAllocator.createVolume(
         this, sd.getStorageUuid(), dir, this.conf, storageType);
     ReplicaMap tempVolumeMap = new ReplicaMap(this);
-    fsVolume.getVolumeMap(tempVolumeMap);
+    fsVolume.getVolumeMap(volumeMap, lazyWriteReplicaTracker);
 
     volumeMap.addAll(tempVolumeMap);
     volumes.addVolume(fsVolume);
@@ -2194,7 +2194,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       volumes.addBlockPool(bpid, conf);
       volumeMap.initBlockPool(bpid);
     }
-    volumes.getAllVolumesMap(bpid, volumeMap);
+    volumes.getAllVolumesMap(bpid, volumeMap, lazyWriteReplicaTracker);
   }
 
   @Override
@@ -2444,6 +2444,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         LOG.warn("Exception saving replica " + replicaState, ioe);
       } finally {
         if (!succeeded && replicaState != null) {
+          LOG.warn("Failed to save replica " + replicaState + ". re-enqueueing it.");
           lazyWriteReplicaTracker.reenqueueReplica(replicaState);
         }
       }
