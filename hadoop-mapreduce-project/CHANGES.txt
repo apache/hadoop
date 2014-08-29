@@ -115,6 +115,9 @@ Release 2.6.0 - UNRELEASED
 
     MAPREDUCE-6051. Fix typos in log messages. (Ray Chiang via cdouglas)
 
+    MAPREDUCE-5931. Validate SleepJob command line parameters (Gera Shegalov
+    via jlowe)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
