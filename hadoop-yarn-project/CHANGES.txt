@@ -140,6 +140,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2182. Updated ContainerId#toString() to append RM Epoch number.
     (Tsuyoshi OZAWA via jianhe)
 
+    YARN-2406. Move RM recovery related proto to
+    yarn_server_resourcemanager_recovery.proto. (Tsuyoshi Ozawa via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
