@@ -240,6 +240,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2447. RM web service app submission doesn't pass secrets correctly.
     (Varun Vasudev via jianhe)
 
+    YARN-2462. TestNodeManagerResync#testBlockNewContainerRequestsOnStartAndResync
+    should have a test timeout (Eric Payne via jlowe)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
