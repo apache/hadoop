@@ -237,6 +237,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2450. Fix typos in log messages. (Ray Chiang via hitesh)
 
+    YARN-2447. RM web service app submission doesn't pass secrets correctly.
+    (Varun Vasudev via jianhe)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
