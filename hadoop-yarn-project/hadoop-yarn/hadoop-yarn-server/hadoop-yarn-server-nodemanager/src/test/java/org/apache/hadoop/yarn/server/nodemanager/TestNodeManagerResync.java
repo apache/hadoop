@@ -159,7 +159,7 @@ public class TestNodeManagerResync {
   // This test tests new container requests are blocked when NM starts from
   // scratch until it register with RM AND while NM is resyncing with RM
   @SuppressWarnings("unchecked")
-  @Test
+  @Test(timeout=60000)
   public void testBlockNewContainerRequestsOnStartAndResync()
       throws IOException, InterruptedException, YarnException {
     NodeManager nm = new TestNodeManager2();
