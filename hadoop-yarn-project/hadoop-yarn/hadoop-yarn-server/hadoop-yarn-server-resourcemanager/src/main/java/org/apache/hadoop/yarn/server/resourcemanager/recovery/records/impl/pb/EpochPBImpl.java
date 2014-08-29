@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb;
 
-import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.EpochProto;
-import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.EpochProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.EpochProto;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.EpochProtoOrBuilder;
 
 
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.Epoch;
