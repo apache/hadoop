@@ -571,6 +571,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6902. FileWriter should be closed in finally block in
     BlockReceiver#receiveBlock() (Tsuyoshi OZAWA via Colin Patrick McCabe)
 
+    HDFS-6800. Support Datanode layout changes with rolling upgrade.
+    (James Thomas via Arpit Agarwal)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
