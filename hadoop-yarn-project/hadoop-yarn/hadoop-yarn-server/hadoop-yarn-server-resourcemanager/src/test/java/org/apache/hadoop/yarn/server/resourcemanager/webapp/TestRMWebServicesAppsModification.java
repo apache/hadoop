@@ -22,9 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
-import java.io.IOException;
-import java.io.StringReader;
-import java.io.StringWriter;
+import java.io.*;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -47,6 +45,9 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -77,6 +78,7 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -684,7 +686,8 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
     CredentialsInfo credentials = new CredentialsInfo();
     HashMap<String, String> tokens = new HashMap<String, String>();
     HashMap<String, String> secrets = new HashMap<String, String>();
-    secrets.put("secret1", Base64.encodeBase64URLSafeString("secret1".getBytes("UTF8")));
+    secrets.put("secret1", Base64.encodeBase64String(
+        "mysecret".getBytes("UTF8")));
     credentials.setSecrets(secrets);
     credentials.setTokens(tokens);
     ApplicationSubmissionContextInfo appInfo = new ApplicationSubmissionContextInfo();
@@ -757,6 +760,16 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
     assertEquals(y.getType(), exampleLR.getType());
     assertEquals(y.getPattern(), exampleLR.getPattern());
     assertEquals(y.getVisibility(), exampleLR.getVisibility());
+    Credentials cs = new Credentials();
+    ByteArrayInputStream str =
+        new ByteArrayInputStream(app.getApplicationSubmissionContext()
+          .getAMContainerSpec().getTokens().array());
+    DataInputStream di = new DataInputStream(str);
+    cs.readTokenStorageStream(di);
+    Text key = new Text("secret1");
+    assertTrue("Secrets missing from credentials object", cs
+        .getAllSecretKeys().contains(key));
+    assertEquals("mysecret", new String(cs.getSecretKey(key), "UTF-8"));
 
     response =
         this.constructWebResource("apps", appId).accept(acceptMedia)

@@ -1061,7 +1061,7 @@ public class RMWebServices {
         token.decodeFromUrlString(entry.getValue());
         ret.addToken(alias, token);
       }
-      for (Map.Entry<String, String> entry : credentials.getTokens().entrySet()) {
+      for (Map.Entry<String, String> entry : credentials.getSecrets().entrySet()) {
         Text alias = new Text(entry.getKey());
         Base64 decoder = new Base64(0, null, true);
         byte[] secret = decoder.decode(entry.getValue());
