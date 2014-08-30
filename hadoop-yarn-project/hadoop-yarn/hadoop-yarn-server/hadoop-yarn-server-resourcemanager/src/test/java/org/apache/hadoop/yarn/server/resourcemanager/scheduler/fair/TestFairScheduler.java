@@ -1059,7 +1059,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     out.println("  <queue name=\"child2\">");
     out.println("    <minResources>1024mb,4vcores</minResources>");
     out.println("  </queue>");
+    out.println("  <fairSharePreemptionTimeout>100</fairSharePreemptionTimeout>");
+    out.println("  <minSharePreemptionTimeout>120</minSharePreemptionTimeout>");
     out.println("</queue>");
+    out.println("<defaultFairSharePreemptionTimeout>300</defaultFairSharePreemptionTimeout>");
+    out.println("<defaultMinSharePreemptionTimeout>200</defaultMinSharePreemptionTimeout>");
     out.println("</allocations>");
     out.close();
 
@@ -1073,6 +1077,9 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     
     assertNotNull(queueManager.getLeafQueue("child1", false));
     assertNotNull(queueManager.getLeafQueue("child2", false));
+
+    assertEquals(100000, root.getFairSharePreemptionTimeout());
+    assertEquals(120000, root.getMinSharePreemptionTimeout());
   }
   
   @Test (timeout = 5000)
@@ -1378,7 +1385,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     out.println("<queue name=\"queueB\">");
     out.println("<weight>2</weight>");
     out.println("</queue>");
-    out.print("<fairSharePreemptionTimeout>10</fairSharePreemptionTimeout>");
+    out.print("<defaultFairSharePreemptionTimeout>10</defaultFairSharePreemptionTimeout>");
     out.println("</allocations>");
     out.close();
 
@@ -1462,7 +1469,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     out.println("<minResources>1024mb,0vcores</minResources>");
     out.println("</queue>");
     out.print("<defaultMinSharePreemptionTimeout>5</defaultMinSharePreemptionTimeout>");
-    out.print("<fairSharePreemptionTimeout>10</fairSharePreemptionTimeout>");
+    out.print("<defaultFairSharePreemptionTimeout>10</defaultFairSharePreemptionTimeout>");
     out.println("</allocations>");
     out.close();
 
@@ -1488,7 +1495,6 @@ public class TestFairScheduler extends FairSchedulerTestBase {
             "127.0.0.3");
     NodeAddedSchedulerEvent nodeEvent3 = new NodeAddedSchedulerEvent(node3);
     scheduler.handle(nodeEvent3);
-
 
     // Queue A and B each request three containers
     ApplicationAttemptId app1 =
@@ -1561,6 +1567,279 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         1536 , scheduler.resToPreempt(schedC, clock.getTime()).getMemory());
     assertEquals(
         1536, scheduler.resToPreempt(schedD, clock.getTime()).getMemory());
+  }
+
+  @Test
+  /**
+   * Tests the various timing of decision to preempt tasks.
+   */
+  public void testPreemptionDecisionWithVariousTimeout() throws Exception {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    MockClock clock = new MockClock();
+    scheduler.setClock(clock);
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"default\">");
+    out.println("<maxResources>0mb,0vcores</maxResources>");
+    out.println("</queue>");
+    out.println("<queue name=\"queueA\">");
+    out.println("<weight>1</weight>");
+    out.println("<minResources>1024mb,0vcores</minResources>");
+    out.println("</queue>");
+    out.println("<queue name=\"queueB\">");
+    out.println("<weight>2</weight>");
+    out.println("<minSharePreemptionTimeout>10</minSharePreemptionTimeout>");
+    out.println("<fairSharePreemptionTimeout>25</fairSharePreemptionTimeout>");
+    out.println("<queue name=\"queueB1\">");
+    out.println("<minResources>1024mb,0vcores</minResources>");
+    out.println("<minSharePreemptionTimeout>5</minSharePreemptionTimeout>");
+    out.println("</queue>");
+    out.println("<queue name=\"queueB2\">");
+    out.println("<minResources>1024mb,0vcores</minResources>");
+    out.println("<fairSharePreemptionTimeout>20</fairSharePreemptionTimeout>");
+    out.println("</queue>");
+    out.println("</queue>");
+    out.println("<queue name=\"queueC\">");
+    out.println("<weight>1</weight>");
+    out.println("<minResources>1024mb,0vcores</minResources>");
+    out.println("</queue>");
+    out.print("<defaultMinSharePreemptionTimeout>15</defaultMinSharePreemptionTimeout>");
+    out.print("<defaultFairSharePreemptionTimeout>30</defaultFairSharePreemptionTimeout>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // Check the min/fair share preemption timeout for each queue
+    QueueManager queueMgr = scheduler.getQueueManager();
+    assertEquals(30000, queueMgr.getQueue("root")
+        .getFairSharePreemptionTimeout());
+    assertEquals(30000, queueMgr.getQueue("default")
+        .getFairSharePreemptionTimeout());
+    assertEquals(30000, queueMgr.getQueue("queueA")
+        .getFairSharePreemptionTimeout());
+    assertEquals(25000, queueMgr.getQueue("queueB")
+        .getFairSharePreemptionTimeout());
+    assertEquals(25000, queueMgr.getQueue("queueB.queueB1")
+        .getFairSharePreemptionTimeout());
+    assertEquals(20000, queueMgr.getQueue("queueB.queueB2")
+        .getFairSharePreemptionTimeout());
+    assertEquals(30000, queueMgr.getQueue("queueC")
+        .getFairSharePreemptionTimeout());
+    assertEquals(15000, queueMgr.getQueue("root")
+        .getMinSharePreemptionTimeout());
+    assertEquals(15000, queueMgr.getQueue("default")
+        .getMinSharePreemptionTimeout());
+    assertEquals(15000, queueMgr.getQueue("queueA")
+        .getMinSharePreemptionTimeout());
+    assertEquals(10000, queueMgr.getQueue("queueB")
+        .getMinSharePreemptionTimeout());
+    assertEquals(5000, queueMgr.getQueue("queueB.queueB1")
+        .getMinSharePreemptionTimeout());
+    assertEquals(10000, queueMgr.getQueue("queueB.queueB2")
+        .getMinSharePreemptionTimeout());
+    assertEquals(15000, queueMgr.getQueue("queueC")
+        .getMinSharePreemptionTimeout());
+
+    // Create one big node
+    RMNode node1 =
+        MockNodes.newNodeInfo(1, Resources.createResource(6 * 1024, 6), 1,
+            "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    // Queue A takes all resources
+    for (int i = 0; i < 6; i ++) {
+      createSchedulingRequest(1 * 1024, "queueA", "user1", 1, 1);
+    }
+
+    scheduler.update();
+
+    // Sufficient node check-ins to fully schedule containers
+    NodeUpdateSchedulerEvent nodeUpdate1 = new NodeUpdateSchedulerEvent(node1);
+    for (int i = 0; i < 6; i++) {
+      scheduler.handle(nodeUpdate1);
+    }
+
+    // Now new requests arrive from queues B1, B2 and C
+    createSchedulingRequest(1 * 1024, "queueB.queueB1", "user1", 1, 1);
+    createSchedulingRequest(1 * 1024, "queueB.queueB1", "user1", 1, 2);
+    createSchedulingRequest(1 * 1024, "queueB.queueB1", "user1", 1, 3);
+    createSchedulingRequest(1 * 1024, "queueB.queueB2", "user1", 1, 1);
+    createSchedulingRequest(1 * 1024, "queueB.queueB2", "user1", 1, 2);
+    createSchedulingRequest(1 * 1024, "queueB.queueB2", "user1", 1, 3);
+    createSchedulingRequest(1 * 1024, "queueC", "user1", 1, 1);
+    createSchedulingRequest(1 * 1024, "queueC", "user1", 1, 2);
+    createSchedulingRequest(1 * 1024, "queueC", "user1", 1, 3);
+
+    scheduler.update();
+
+    FSLeafQueue queueB1 = queueMgr.getLeafQueue("queueB.queueB1", true);
+    FSLeafQueue queueB2 = queueMgr.getLeafQueue("queueB.queueB2", true);
+    FSLeafQueue queueC = queueMgr.getLeafQueue("queueC", true);
+
+    assertTrue(Resources.equals(
+        Resources.none(), scheduler.resToPreempt(queueB1, clock.getTime())));
+    assertTrue(Resources.equals(
+        Resources.none(), scheduler.resToPreempt(queueB2, clock.getTime())));
+    assertTrue(Resources.equals(
+        Resources.none(), scheduler.resToPreempt(queueC, clock.getTime())));
+
+    // After 5 seconds, queueB1 wants to preempt min share
+    scheduler.update();
+    clock.tick(6);
+    assertEquals(
+       1024, scheduler.resToPreempt(queueB1, clock.getTime()).getMemory());
+    assertEquals(
+        0, scheduler.resToPreempt(queueB2, clock.getTime()).getMemory());
+    assertEquals(
+        0, scheduler.resToPreempt(queueC, clock.getTime()).getMemory());
+
+    // After 10 seconds, queueB2 wants to preempt min share
+    scheduler.update();
+    clock.tick(5);
+    assertEquals(
+        1024, scheduler.resToPreempt(queueB1, clock.getTime()).getMemory());
+    assertEquals(
+        1024, scheduler.resToPreempt(queueB2, clock.getTime()).getMemory());
+    assertEquals(
+        0, scheduler.resToPreempt(queueC, clock.getTime()).getMemory());
+
+    // After 15 seconds, queueC wants to preempt min share
+    scheduler.update();
+    clock.tick(5);
+    assertEquals(
+        1024, scheduler.resToPreempt(queueB1, clock.getTime()).getMemory());
+    assertEquals(
+        1024, scheduler.resToPreempt(queueB2, clock.getTime()).getMemory());
+    assertEquals(
+        1024, scheduler.resToPreempt(queueC, clock.getTime()).getMemory());
+
+    // After 20 seconds, queueB2 should want to preempt fair share
+    scheduler.update();
+    clock.tick(5);
+    assertEquals(
+        1024, scheduler.resToPreempt(queueB1, clock.getTime()).getMemory());
+    assertEquals(
+        1536, scheduler.resToPreempt(queueB2, clock.getTime()).getMemory());
+    assertEquals(
+        1024, scheduler.resToPreempt(queueC, clock.getTime()).getMemory());
+
+    // After 25 seconds, queueB1 should want to preempt fair share
+    scheduler.update();
+    clock.tick(5);
+    assertEquals(
+        1536, scheduler.resToPreempt(queueB1, clock.getTime()).getMemory());
+    assertEquals(
+        1536, scheduler.resToPreempt(queueB2, clock.getTime()).getMemory());
+    assertEquals(
+        1024, scheduler.resToPreempt(queueC, clock.getTime()).getMemory());
+
+    // After 30 seconds, queueC should want to preempt fair share
+    scheduler.update();
+    clock.tick(5);
+    assertEquals(
+        1536, scheduler.resToPreempt(queueB1, clock.getTime()).getMemory());
+    assertEquals(
+        1536, scheduler.resToPreempt(queueB2, clock.getTime()).getMemory());
+    assertEquals(
+        1536, scheduler.resToPreempt(queueC, clock.getTime()).getMemory());
+  }
+
+  @Test
+  public void testBackwardsCompatiblePreemptionConfiguration() throws Exception {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    MockClock clock = new MockClock();
+    scheduler.setClock(clock);
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"default\">");
+    out.println("</queue>");
+    out.println("<queue name=\"queueA\">");
+    out.println("</queue>");
+    out.println("<queue name=\"queueB\">");
+    out.println("<queue name=\"queueB1\">");
+    out.println("<minSharePreemptionTimeout>5</minSharePreemptionTimeout>");
+    out.println("</queue>");
+    out.println("<queue name=\"queueB2\">");
+    out.println("</queue>");
+    out.println("</queue>");
+    out.println("<queue name=\"queueC\">");
+    out.println("</queue>");
+    out.print("<defaultMinSharePreemptionTimeout>15</defaultMinSharePreemptionTimeout>");
+    out.print("<defaultFairSharePreemptionTimeout>30</defaultFairSharePreemptionTimeout>");
+    out.print("<fairSharePreemptionTimeout>40</fairSharePreemptionTimeout>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // Check the min/fair share preemption timeout for each queue
+    QueueManager queueMgr = scheduler.getQueueManager();
+    assertEquals(30000, queueMgr.getQueue("root")
+        .getFairSharePreemptionTimeout());
+    assertEquals(30000, queueMgr.getQueue("default")
+        .getFairSharePreemptionTimeout());
+    assertEquals(30000, queueMgr.getQueue("queueA")
+        .getFairSharePreemptionTimeout());
+    assertEquals(30000, queueMgr.getQueue("queueB")
+        .getFairSharePreemptionTimeout());
+    assertEquals(30000, queueMgr.getQueue("queueB.queueB1")
+        .getFairSharePreemptionTimeout());
+    assertEquals(30000, queueMgr.getQueue("queueB.queueB2")
+        .getFairSharePreemptionTimeout());
+    assertEquals(30000, queueMgr.getQueue("queueC")
+        .getFairSharePreemptionTimeout());
+    assertEquals(15000, queueMgr.getQueue("root")
+        .getMinSharePreemptionTimeout());
+    assertEquals(15000, queueMgr.getQueue("default")
+        .getMinSharePreemptionTimeout());
+    assertEquals(15000, queueMgr.getQueue("queueA")
+        .getMinSharePreemptionTimeout());
+    assertEquals(15000, queueMgr.getQueue("queueB")
+        .getMinSharePreemptionTimeout());
+    assertEquals(5000, queueMgr.getQueue("queueB.queueB1")
+        .getMinSharePreemptionTimeout());
+    assertEquals(15000, queueMgr.getQueue("queueB.queueB2")
+        .getMinSharePreemptionTimeout());
+    assertEquals(15000, queueMgr.getQueue("queueC")
+        .getMinSharePreemptionTimeout());
+
+    // If both exist, we take the default one
+    out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"default\">");
+    out.println("</queue>");
+    out.println("<queue name=\"queueA\">");
+    out.println("</queue>");
+    out.println("<queue name=\"queueB\">");
+    out.println("<queue name=\"queueB1\">");
+    out.println("<minSharePreemptionTimeout>5</minSharePreemptionTimeout>");
+    out.println("</queue>");
+    out.println("<queue name=\"queueB2\">");
+    out.println("</queue>");
+    out.println("</queue>");
+    out.println("<queue name=\"queueC\">");
+    out.println("</queue>");
+    out.print("<defaultMinSharePreemptionTimeout>15</defaultMinSharePreemptionTimeout>");
+    out.print("<defaultFairSharePreemptionTimeout>25</defaultFairSharePreemptionTimeout>");
+    out.print("<fairSharePreemptionTimeout>30</fairSharePreemptionTimeout>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    assertEquals(25000, queueMgr.getQueue("root")
+        .getFairSharePreemptionTimeout());
   }
 
   @Test (timeout = 5000)

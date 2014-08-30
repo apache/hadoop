@@ -78,6 +78,15 @@ public class FSParentQueue extends FSQueue {
   }
 
   @Override
+  public void updatePreemptionTimeouts() {
+    super.updatePreemptionTimeouts();
+    // For child queues
+    for (FSQueue childQueue : childQueues) {
+      childQueue.updatePreemptionTimeouts();
+    }
+  }
+
+  @Override
   public Resource getDemand() {
     return demand;
   }
