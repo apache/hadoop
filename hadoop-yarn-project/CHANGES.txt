@@ -143,6 +143,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2406. Move RM recovery related proto to
     yarn_server_resourcemanager_recovery.proto. (Tsuyoshi Ozawa via jianhe)
 
+    YARN-1506. Changed RMNode/SchedulerNode to update resource with event
+    notification. (Junping Du via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES

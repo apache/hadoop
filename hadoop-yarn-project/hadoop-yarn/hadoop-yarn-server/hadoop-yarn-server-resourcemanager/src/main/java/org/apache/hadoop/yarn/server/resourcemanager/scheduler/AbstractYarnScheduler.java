@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -471,6 +472,34 @@ public abstract class AbstractYarnScheduler
           .getDispatcher()
           .getEventHandler()
           .handle(new RMAppEvent(app.getApplicationId(), RMAppEventType.KILL));
+    }
+  }
+  
+  /**
+   * Process resource update on a node.
+   */
+  public synchronized void updateNodeResource(RMNode nm, 
+      ResourceOption resourceOption) {
+  
+    SchedulerNode node = getSchedulerNode(nm.getNodeID());
+    Resource newResource = resourceOption.getResource();
+    Resource oldResource = node.getTotalResource();
+    if(!oldResource.equals(newResource)) {
+      // Log resource change
+      LOG.info("Update resource on node: " + node.getNodeName() 
+          + " from: " + oldResource + ", to: "
+          + newResource);
+
+      // update resource to node
+      node.setTotalResource(newResource);
+    
+      // update resource to clusterResource
+      Resources.subtractFrom(clusterResource, oldResource);
+      Resources.addTo(clusterResource, newResource);
+    } else {
+      // Log resource change
+      LOG.warn("Update resource on node: " + node.getNodeName() 
+          + " with the same resource: " + newResource);
     }
   }
 }

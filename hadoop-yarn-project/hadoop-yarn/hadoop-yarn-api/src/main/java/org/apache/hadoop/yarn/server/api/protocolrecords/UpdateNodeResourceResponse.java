@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.yarn.server.api.protocolrecords;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The response sent by the <code>ResourceManager</code> to Admin client on
@@ -30,8 +31,13 @@ import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
  * @see ResourceManagerAdministrationProtocol#updateNodeResource(
  *      UpdateNodeResourceRequest)
  */
-@Public
+@Private
 @Evolving
-public interface UpdateNodeResourceResponse {
+public abstract class UpdateNodeResourceResponse {
+  public static UpdateNodeResourceResponse newInstance(){
+    UpdateNodeResourceResponse response = 
+        Records.newRecord(UpdateNodeResourceResponse.class);
+    return response;
+  }
 
 }

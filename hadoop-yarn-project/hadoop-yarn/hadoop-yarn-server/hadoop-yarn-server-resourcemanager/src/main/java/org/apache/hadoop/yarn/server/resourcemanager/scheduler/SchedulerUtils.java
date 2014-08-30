@@ -19,7 +19,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.util.List;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
@@ -147,42 +146,6 @@ public class SchedulerUtils {
     ask.setCapability(normalized);
   }
   
-  /**
-   * Update resource in SchedulerNode if any resource change in RMNode.
-   * @param node SchedulerNode with old resource view
-   * @param rmNode RMNode with new resource view
-   * @param clusterResource the cluster's resource that need to update
-   * @param log Scheduler's log for resource change
-   * @return true if the resources have changed
-   */
-  public static boolean updateResourceIfChanged(SchedulerNode node,
-      RMNode rmNode, Resource clusterResource, Log log) {
-    boolean result = false;
-    Resource oldAvailableResource = node.getAvailableResource();
-    Resource newAvailableResource = Resources.subtract(
-        rmNode.getTotalCapability(), node.getUsedResource());
-    
-    if (!newAvailableResource.equals(oldAvailableResource)) {
-      result = true;
-      Resource deltaResource = Resources.subtract(newAvailableResource,
-          oldAvailableResource);
-      // Reflect resource change to scheduler node.
-      node.applyDeltaOnAvailableResource(deltaResource);
-      // Reflect resource change to clusterResource.
-      Resources.addTo(clusterResource, deltaResource);
-      // TODO process resource over-commitment case (allocated containers
-      // > total capacity) in different option by getting value of
-      // overCommitTimeoutMillis.
-      
-      // Log resource change
-      log.info("Resource change on node: " + rmNode.getNodeAddress() 
-          + " with delta: CPU: " + deltaResource.getMemory() + "core, Memory: "
-          + deltaResource.getMemory() +"MB");
-    }
-
-    return result;
-  }
-
   /**
    * Utility method to normalize a list of resource requests, by insuring that
    * the memory for each request is a multiple of minMemory and is not zero.
