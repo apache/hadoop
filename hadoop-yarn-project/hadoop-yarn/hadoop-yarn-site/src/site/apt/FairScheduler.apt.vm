@@ -453,13 +453,19 @@ Monitoring through web UI
   	
  * Max Resources - The configured maximum resources that are allowed to the queue.
  
- * Fair Share - The queue's fair share of resources.  Queues may be allocated
-   resources beyond their fair share when other queues aren't using them.  A
-   queue whose resource consumption lies at or below its fair share will never
-   have its containers preempted.  
+ * Instantaneous Fair Share - The queue's instantaneous fair share of resources.
+   These shares consider only actives queues (those with running applications),
+   and are used for scheduling decisions. Queues may be allocated resources
+   beyond their shares when other queues aren't using them. A queue whose
+   resource consumption lies at or below its instantaneous fair share will never
+   have its containers preempted.
 
-  In addition to the information that the ResourceManager normally displays
-  about each application, the web interface includes the application's fair share.
+ * Steady Fair Share - The queue's steady fair share of resources. These shares
+   consider all the queues irrespective of whether they are active (have
+   running applications) or not. These are computed less frequently and
+   change only when the configuration or capacity changes.They are meant to
+   provide visibility into resources the user can expect, and hence displayed
+   in the Web UI.
 
 Moving applications between queues
 

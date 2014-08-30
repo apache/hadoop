@@ -129,6 +129,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2998. Abstract out scheduler independent PlanFollower components. 
     (Anubhav Dhoot via kasha)
 
+    YARN-2360. Fair Scheduler: Display dynamic fair share for queues on the 
+    scheduler page. (Ashwin Shankar and Wei Yan via kasha)
+
 
   OPTIMIZATIONS
 
@@ -522,6 +525,7 @@ Release 2.6.0 - 2014-11-18
     YARN-2406. Move RM recovery related proto to
     yarn_server_resourcemanager_recovery.proto. (Tsuyoshi Ozawa via jianhe)
 
+<<<<<<< HEAD
     YARN-1506. Changed RMNode/SchedulerNode to update resource with event
     notification. (Junping Du via jianhe)
 
@@ -656,6 +660,7 @@ Release 2.6.0 - 2014-11-18
 
     YARN-2635. TestRM, TestRMRestart, TestClientToAMTokens should run 
     with both CS and FS. (Wei Yan and kasha via kasha)
+
 
   OPTIMIZATIONS
 
