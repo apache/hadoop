@@ -186,9 +186,14 @@ public class TestAllocationFileLoaderService {
     //Make queue F a parent queue without configured leaf queues using the 'type' attribute
     out.println("<queue name=\"queueF\" type=\"parent\" >");
     out.println("</queue>");
-    //Create hierarchical queues G,H
+    // Create hierarchical queues G,H, with different min/fair share preemption
+    // timeouts
     out.println("<queue name=\"queueG\">");
+    out.println("<fairSharePreemptionTimeout>120</fairSharePreemptionTimeout>");
+    out.println("<minSharePreemptionTimeout>50</minSharePreemptionTimeout>");
     out.println("   <queue name=\"queueH\">");
+    out.println("   <fairSharePreemptionTimeout>180</fairSharePreemptionTimeout>");
+    out.println("   <minSharePreemptionTimeout>40</minSharePreemptionTimeout>");
     out.println("   </queue>");
     out.println("</queue>");
     // Set default limit of apps per queue to 15
@@ -204,8 +209,8 @@ public class TestAllocationFileLoaderService {
     // Set default min share preemption timeout to 2 minutes
     out.println("<defaultMinSharePreemptionTimeout>120"
         + "</defaultMinSharePreemptionTimeout>");
-    // Set fair share preemption timeout to 5 minutes
-    out.println("<fairSharePreemptionTimeout>300</fairSharePreemptionTimeout>");
+    // Set default fair share preemption timeout to 5 minutes
+    out.println("<defaultFairSharePreemptionTimeout>300</defaultFairSharePreemptionTimeout>");
     // Set default scheduling policy to DRF
     out.println("<defaultQueueSchedulingPolicy>drf</defaultQueueSchedulingPolicy>");
     out.println("</allocations>");
@@ -270,16 +275,30 @@ public class TestAllocationFileLoaderService {
     assertEquals("alice,bob admins", queueConf.getQueueAcl("root.queueC",
         QueueACL.SUBMIT_APPLICATIONS).getAclString());
 
-    assertEquals(120000, queueConf.getMinSharePreemptionTimeout("root." + 
+    assertEquals(120000, queueConf.getMinSharePreemptionTimeout("root"));
+    assertEquals(-1, queueConf.getMinSharePreemptionTimeout("root." +
         YarnConfiguration.DEFAULT_QUEUE_NAME));
-    assertEquals(120000, queueConf.getMinSharePreemptionTimeout("root.queueA"));
-    assertEquals(120000, queueConf.getMinSharePreemptionTimeout("root.queueB"));
-    assertEquals(120000, queueConf.getMinSharePreemptionTimeout("root.queueC"));
-    assertEquals(120000, queueConf.getMinSharePreemptionTimeout("root.queueD"));
-    assertEquals(120000, queueConf.getMinSharePreemptionTimeout("root.queueA"));
+    assertEquals(-1, queueConf.getMinSharePreemptionTimeout("root.queueA"));
+    assertEquals(-1, queueConf.getMinSharePreemptionTimeout("root.queueB"));
+    assertEquals(-1, queueConf.getMinSharePreemptionTimeout("root.queueC"));
+    assertEquals(-1, queueConf.getMinSharePreemptionTimeout("root.queueD"));
     assertEquals(60000, queueConf.getMinSharePreemptionTimeout("root.queueE"));
-    assertEquals(300000, queueConf.getFairSharePreemptionTimeout());
-    
+    assertEquals(-1, queueConf.getMinSharePreemptionTimeout("root.queueF"));
+    assertEquals(50000, queueConf.getMinSharePreemptionTimeout("root.queueG"));
+    assertEquals(40000, queueConf.getMinSharePreemptionTimeout("root.queueG.queueH"));
+
+    assertEquals(300000, queueConf.getFairSharePreemptionTimeout("root"));
+    assertEquals(-1, queueConf.getFairSharePreemptionTimeout("root." +
+        YarnConfiguration.DEFAULT_QUEUE_NAME));
+    assertEquals(-1, queueConf.getFairSharePreemptionTimeout("root.queueA"));
+    assertEquals(-1, queueConf.getFairSharePreemptionTimeout("root.queueB"));
+    assertEquals(-1, queueConf.getFairSharePreemptionTimeout("root.queueC"));
+    assertEquals(-1, queueConf.getFairSharePreemptionTimeout("root.queueD"));
+    assertEquals(-1, queueConf.getFairSharePreemptionTimeout("root.queueE"));
+    assertEquals(-1, queueConf.getFairSharePreemptionTimeout("root.queueF"));
+    assertEquals(120000, queueConf.getFairSharePreemptionTimeout("root.queueG"));
+    assertEquals(180000, queueConf.getFairSharePreemptionTimeout("root.queueG.queueH"));
+
     assertTrue(queueConf.getConfiguredQueues()
         .get(FSQueueType.PARENT)
         .contains("root.queueF"));
@@ -393,16 +412,23 @@ public class TestAllocationFileLoaderService {
     assertEquals("alice,bob admins", queueConf.getQueueAcl("root.queueC",
         QueueACL.SUBMIT_APPLICATIONS).getAclString());
 
-
-    assertEquals(120000, queueConf.getMinSharePreemptionTimeout("root." +
+    assertEquals(120000, queueConf.getMinSharePreemptionTimeout("root"));
+    assertEquals(-1, queueConf.getMinSharePreemptionTimeout("root." +
         YarnConfiguration.DEFAULT_QUEUE_NAME));
-    assertEquals(120000, queueConf.getMinSharePreemptionTimeout("root.queueA"));
-    assertEquals(120000, queueConf.getMinSharePreemptionTimeout("root.queueB"));
-    assertEquals(120000, queueConf.getMinSharePreemptionTimeout("root.queueC"));
-    assertEquals(120000, queueConf.getMinSharePreemptionTimeout("root.queueD"));
-    assertEquals(120000, queueConf.getMinSharePreemptionTimeout("root.queueA"));
+    assertEquals(-1, queueConf.getMinSharePreemptionTimeout("root.queueA"));
+    assertEquals(-1, queueConf.getMinSharePreemptionTimeout("root.queueB"));
+    assertEquals(-1, queueConf.getMinSharePreemptionTimeout("root.queueC"));
+    assertEquals(-1, queueConf.getMinSharePreemptionTimeout("root.queueD"));
     assertEquals(60000, queueConf.getMinSharePreemptionTimeout("root.queueE"));
-    assertEquals(300000, queueConf.getFairSharePreemptionTimeout());
+
+    assertEquals(300000, queueConf.getFairSharePreemptionTimeout("root"));
+    assertEquals(-1, queueConf.getFairSharePreemptionTimeout("root." +
+        YarnConfiguration.DEFAULT_QUEUE_NAME));
+    assertEquals(-1, queueConf.getFairSharePreemptionTimeout("root.queueA"));
+    assertEquals(-1, queueConf.getFairSharePreemptionTimeout("root.queueB"));
+    assertEquals(-1, queueConf.getFairSharePreemptionTimeout("root.queueC"));
+    assertEquals(-1, queueConf.getFairSharePreemptionTimeout("root.queueD"));
+    assertEquals(-1, queueConf.getFairSharePreemptionTimeout("root.queueE"));
   }
   
   @Test
