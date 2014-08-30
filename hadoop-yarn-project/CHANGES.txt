@@ -163,6 +163,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2406. Move RM recovery related proto to
     yarn_server_resourcemanager_recovery.proto. (Tsuyoshi Ozawa via jianhe)
 
+    YARN-2360. Fair Scheduler: Display dynamic fair share for queues on the 
+    scheduler page. (Ashwin Shankar and Wei Yan via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
