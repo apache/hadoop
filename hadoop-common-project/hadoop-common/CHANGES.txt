@@ -207,6 +207,8 @@ Release 2.6.0 - UNRELEASED
     schedules incoming calls and multiplexes outgoing calls. (Chris Li via
     Arpit Agarwal)
 
+    HADOOP-10833. Remove unused cache in UserProvider. (Benoy Antony)
+
   BUG FIXES
 
     HADOOP-10781. Unportable getgrouplist() usage breaks FreeBSD (Dmitry
