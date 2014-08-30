@@ -457,7 +457,6 @@ public class MockRM extends ResourceManager {
 
   @Override
   protected ResourceTrackerService createResourceTrackerService() {
-    Configuration conf = new Configuration();
 
     RMContainerTokenSecretManager containerTokenSecretManager =
         getRMContext().getContainerTokenSecretManager();
@@ -546,6 +545,10 @@ public class MockRM extends ResourceManager {
 
   public RMAppManager getRMAppManager() {
     return this.rmAppManager;
+  }
+  
+  public AdminService getAdminService() {
+    return this.adminService;
   }
 
   @Override

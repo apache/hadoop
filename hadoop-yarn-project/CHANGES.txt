@@ -166,6 +166,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2360. Fair Scheduler: Display dynamic fair share for queues on the 
     scheduler page. (Ashwin Shankar and Wei Yan via kasha)
 
+    YARN-1506. Changed RMNode/SchedulerNode to update resource with event
+    notification. (Junping Du via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
