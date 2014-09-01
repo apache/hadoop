@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRunningOnNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeResourceUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils.ContainerIdComparator;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
@@ -96,7 +97,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private int httpPort;
   private final String nodeAddress; // The containerManager address
   private String httpAddress;
-  private volatile ResourceOption resourceOption;
+  private volatile Resource totalCapability;
   private final Node node;
 
   private String healthReport;
@@ -129,6 +130,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
      //Transitions from NEW state
      .addTransition(NodeState.NEW, NodeState.RUNNING, 
          RMNodeEventType.STARTED, new AddNodeTransition())
+     .addTransition(NodeState.NEW, NodeState.NEW,
+         RMNodeEventType.RESOURCE_UPDATE, 
+         new UpdateNodeResourceWhenUnusableTransition())
 
      //Transitions from RUNNING state
      .addTransition(NodeState.RUNNING, 
@@ -149,6 +153,23 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
          RMNodeEventType.CLEANUP_CONTAINER, new CleanUpContainerTransition())
      .addTransition(NodeState.RUNNING, NodeState.RUNNING,
          RMNodeEventType.RECONNECTED, new ReconnectNodeTransition())
+     .addTransition(NodeState.RUNNING, NodeState.RUNNING,
+         RMNodeEventType.RESOURCE_UPDATE, new UpdateNodeResourceWhenRunningTransition())
+
+     //Transitions from REBOOTED state
+     .addTransition(NodeState.REBOOTED, NodeState.REBOOTED,
+         RMNodeEventType.RESOURCE_UPDATE, 
+         new UpdateNodeResourceWhenUnusableTransition())
+         
+     //Transitions from DECOMMISSIONED state
+     .addTransition(NodeState.DECOMMISSIONED, NodeState.DECOMMISSIONED,
+         RMNodeEventType.RESOURCE_UPDATE, 
+         new UpdateNodeResourceWhenUnusableTransition())
+         
+     //Transitions from LOST state
+     .addTransition(NodeState.LOST, NodeState.LOST,
+         RMNodeEventType.RESOURCE_UPDATE, 
+         new UpdateNodeResourceWhenUnusableTransition())
 
      //Transitions from UNHEALTHY state
      .addTransition(NodeState.UNHEALTHY, 
@@ -169,6 +190,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
          RMNodeEventType.CLEANUP_APP, new CleanUpAppTransition())
      .addTransition(NodeState.UNHEALTHY, NodeState.UNHEALTHY,
          RMNodeEventType.CLEANUP_CONTAINER, new CleanUpContainerTransition())
+     .addTransition(NodeState.UNHEALTHY, NodeState.UNHEALTHY,
+         RMNodeEventType.RESOURCE_UPDATE, new UpdateNodeResourceWhenUnusableTransition())
          
      // create the topology tables
      .installTopology(); 
@@ -177,13 +200,13 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
                              RMNodeEvent> stateMachine;
 
   public RMNodeImpl(NodeId nodeId, RMContext context, String hostName,
-      int cmPort, int httpPort, Node node, ResourceOption resourceOption, String nodeManagerVersion) {
+      int cmPort, int httpPort, Node node, Resource capability, String nodeManagerVersion) {
     this.nodeId = nodeId;
     this.context = context;
     this.hostName = hostName;
     this.commandPort = cmPort;
     this.httpPort = httpPort;
-    this.resourceOption = resourceOption; 
+    this.totalCapability = capability; 
     this.nodeAddress = hostName + ":" + cmPort;
     this.httpAddress = hostName + ":" + httpPort;
     this.node = node;
@@ -239,17 +262,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
   @Override
   public Resource getTotalCapability() {
-    return this.resourceOption.getResource();
-  }
-  
-  @Override
-  public void setResourceOption(ResourceOption resourceOption) {
-    this.resourceOption = resourceOption;
-  }
-  
-  @Override
-  public ResourceOption getResourceOption(){
-    return this.resourceOption;
+    return this.totalCapability;
   }
 
   @Override
@@ -473,6 +486,13 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     context.getDispatcher().getEventHandler()
         .handle(new RMAppRunningOnNodeEvent(appId, nodeId));
   }
+  
+  private static void updateNodeResourceFromEvent(RMNodeImpl rmNode, 
+     RMNodeResourceUpdateEvent event){
+      ResourceOption resourceOption = event.getResourceOption();
+      // Set resource on RMNode
+      rmNode.totalCapability = resourceOption.getResource();
+  }
 
   public static class AddNodeTransition implements
       SingleArcTransition<RMNodeImpl, RMNodeEvent> {
@@ -526,8 +546,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       rmNode.nodeManagerVersion = newNode.getNodeManagerVersion();
       rmNode.httpPort = newNode.getHttpPort();
       rmNode.httpAddress = newNode.getHttpAddress();
-      rmNode.resourceOption = newNode.getResourceOption();
-
+      rmNode.totalCapability = newNode.getTotalCapability();
+      
       // Reset heartbeat ID since node just restarted.
       rmNode.getLastNodeHeartBeatResponse().setResponseId(0);
 
@@ -540,9 +560,43 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       rmNode.context.getDispatcher().getEventHandler().handle(
           new NodesListManagerEvent(
               NodesListManagerEventType.NODE_USABLE, rmNode));
+      if (rmNode.getState().equals(NodeState.RUNNING)) {
+        // Update scheduler node's capacity for reconnect node.
+        rmNode.context.getDispatcher().getEventHandler().handle(
+            new NodeResourceUpdateSchedulerEvent(rmNode, 
+                ResourceOption.newInstance(rmNode.totalCapability, -1)));
+      }
+      
     }
   }
+  
+  public static class UpdateNodeResourceWhenRunningTransition
+      implements SingleArcTransition<RMNodeImpl, RMNodeEvent> {
 
+    @Override
+    public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
+      RMNodeResourceUpdateEvent updateEvent = (RMNodeResourceUpdateEvent)event;
+      updateNodeResourceFromEvent(rmNode, updateEvent);
+      // Notify new resourceOption to scheduler
+      rmNode.context.getDispatcher().getEventHandler().handle(
+          new NodeResourceUpdateSchedulerEvent(rmNode, updateEvent.getResourceOption()));
+    }
+  }
+  
+  public static class UpdateNodeResourceWhenUnusableTransition
+      implements SingleArcTransition<RMNodeImpl, RMNodeEvent> {
+
+    @Override
+    public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
+      // The node is not usable, only log a warn message
+      LOG.warn("Try to update resource on a "+ rmNode.getState().toString() +
+          " node: "+rmNode.toString());
+      updateNodeResourceFromEvent(rmNode, (RMNodeResourceUpdateEvent)event);
+      // No need to notify scheduler as schedulerNode is not function now
+      // and can sync later from RMnode.
+    }
+  }
+  
   public static class CleanUpAppTransition
     implements SingleArcTransition<RMNodeImpl, RMNodeEvent> {
 

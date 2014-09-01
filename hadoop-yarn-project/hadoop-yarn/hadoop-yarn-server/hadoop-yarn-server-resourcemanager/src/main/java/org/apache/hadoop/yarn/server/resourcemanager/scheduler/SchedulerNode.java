@@ -78,6 +78,16 @@ public abstract class SchedulerNode {
   }
 
   /**
+   * Set total resources on the node.
+   * @param resource total resources on the node.
+   */
+  public synchronized void setTotalResource(Resource resource){
+    this.totalResourceCapability = resource;
+    this.availableResource = Resources.subtract(totalResourceCapability,
+      this.usedResource);
+  }
+  
+  /**
    * Get the ID of the node which contains both its hostname and port.
    * 
    * @return the ID of the node
@@ -158,7 +168,7 @@ public abstract class SchedulerNode {
    * 
    * @return total resources on the node.
    */
-  public Resource getTotalResource() {
+  public synchronized Resource getTotalResource() {
     return this.totalResourceCapability;
   }
 
@@ -258,19 +268,6 @@ public abstract class SchedulerNode {
       setReservedContainer(RMContainer reservedContainer) {
     this.reservedContainer = reservedContainer;
   }
-
-  /**
-   * Apply delta resource on node's available resource.
-   * 
-   * @param deltaResource
-   *          the delta of resource need to apply to node
-   */
-  public synchronized void
-      applyDeltaOnAvailableResource(Resource deltaResource) {
-    // we can only adjust available resource if total resource is changed.
-    Resources.addTo(this.availableResource, deltaResource);
-  }
-
 
   public synchronized void recoverContainer(RMContainer rmContainer) {
     if (rmContainer.getState().equals(RMContainerState.COMPLETED)) {

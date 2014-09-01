@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.resourcetracker;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -47,14 +50,14 @@ public class TestNMReconnect {
   private static final RecordFactory recordFactory = 
       RecordFactoryProvider.getRecordFactory(null);
 
-  private RMNodeEvent rmNodeEvent = null;
+  private List<RMNodeEvent> rmNodeEvents = new ArrayList<RMNodeEvent>();
 
   private class TestRMNodeEventDispatcher implements
       EventHandler<RMNodeEvent> {
 
     @Override
     public void handle(RMNodeEvent event) {
-      rmNodeEvent = event;
+      rmNodeEvents.add(event);
     }
 
   }
@@ -109,16 +112,18 @@ public class TestNMReconnect {
     request1.setResource(capability);
     resourceTrackerService.registerNodeManager(request1);
 
-    Assert.assertEquals(RMNodeEventType.STARTED, rmNodeEvent.getType());
+    Assert.assertEquals(RMNodeEventType.STARTED, rmNodeEvents.get(0).getType());
 
-    rmNodeEvent = null;
+    rmNodeEvents.clear();
     resourceTrackerService.registerNodeManager(request1);
-    Assert.assertEquals(RMNodeEventType.RECONNECTED, rmNodeEvent.getType());
+    Assert.assertEquals(RMNodeEventType.RECONNECTED,
+        rmNodeEvents.get(0).getType());
 
-    rmNodeEvent = null;
+    rmNodeEvents.clear();
     resourceTrackerService.registerNodeManager(request1);
     capability = BuilderUtils.newResource(1024, 2);
     request1.setResource(capability);
-    Assert.assertEquals(RMNodeEventType.RECONNECTED, rmNodeEvent.getType());
+    Assert.assertEquals(RMNodeEventType.RECONNECTED,
+        rmNodeEvents.get(0).getType());
   }
 }

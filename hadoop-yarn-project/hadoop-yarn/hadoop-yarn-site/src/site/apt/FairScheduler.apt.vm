@@ -271,6 +271,11 @@ Allocation file format
 
    * minSharePreemptionTimeout: number of seconds the queue is under its minimum share
      before it will try to preempt containers to take resources from other queues.
+     If not set, the queue will inherit the value from its parent queue.
+
+   * fairSharePreemptionTimeout: number of seconds the queue is under its fair share
+     threshold before it will try to preempt containers to take resources from other
+     queues. If not set, the queue will inherit the value from its parent queue.
 
  * <<User elements>>, which represent settings governing the behavior of individual 
      users. They can contain a single property: maxRunningApps, a limit on the 
@@ -279,14 +284,13 @@ Allocation file format
  * <<A userMaxAppsDefault element>>, which sets the default running app limit 
    for any users whose limit is not otherwise specified.
 
- * <<A fairSharePreemptionTimeout element>>, number of seconds a queue is under
-   its fair share before it will try to preempt containers to take resources from
-   other queues.
+ * <<A defaultFairSharePreemptionTimeout element>>, which sets the fair share
+   preemption timeout for the root queue; overridden by fairSharePreemptionTimeout
+   element in root queue.
 
- * <<A defaultMinSharePreemptionTimeout element>>, which sets the default number
-   of seconds the queue is under its minimum share before it will try to preempt
-   containers to take resources from other queues; overriden by
-   minSharePreemptionTimeout element in each queue if specified.
+ * <<A defaultMinSharePreemptionTimeout element>>, which sets the min share
+   preemption timeout for the root queue; overridden by minSharePreemptionTimeout
+   element in root queue.
 
  * <<A queueMaxAppsDefault element>>, which sets the default running app limit
    for queues; overriden by maxRunningApps element in each queue.
@@ -429,13 +433,19 @@ Monitoring through web UI
   	
  * Max Resources - The configured maximum resources that are allowed to the queue.
  
- * Fair Share - The queue's fair share of resources.  Queues may be allocated
-   resources beyond their fair share when other queues aren't using them.  A
-   queue whose resource consumption lies at or below its fair share will never
-   have its containers preempted.  
+ * Instantaneous Fair Share - The queue's instantaneous fair share of resources.
+   These shares consider only actives queues (those with running applications),
+   and are used for scheduling decisions. Queues may be allocated resources
+   beyond their shares when other queues aren't using them. A queue whose
+   resource consumption lies at or below its instantaneous fair share will never
+   have its containers preempted.
 
-  In addition to the information that the ResourceManager normally displays
-  about each application, the web interface includes the application's fair share.
+ * Steady Fair Share - The queue's steady fair share of resources. These shares
+   consider all the queues irrespective of whether they are active (have
+   running applications) or not. These are computed less frequently and
+   change only when the configuration or capacity changes.They are meant to
+   provide visibility into resources the user can expect, and hence displayed
+   in the Web UI.
 
 Moving applications between queues
 

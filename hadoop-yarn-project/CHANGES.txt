@@ -58,6 +58,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2393. FairScheduler: Add the notion of steady fair share. 
     (Wei Yan via kasha)
 
+    YARN-2395. FairScheduler: Preemption timeout should be configurable per 
+    queue. (Wei Yan via kasha)
+
   IMPROVEMENTS
 
     YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc
@@ -162,6 +165,12 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2406. Move RM recovery related proto to
     yarn_server_resourcemanager_recovery.proto. (Tsuyoshi Ozawa via jianhe)
+
+    YARN-2360. Fair Scheduler: Display dynamic fair share for queues on the 
+    scheduler page. (Ashwin Shankar and Wei Yan via kasha)
+
+    YARN-1506. Changed RMNode/SchedulerNode to update resource with event
+    notification. (Junping Du via jianhe)
 
   OPTIMIZATIONS
 

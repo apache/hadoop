@@ -102,18 +102,6 @@ public interface RMNode {
   public Resource getTotalCapability();
   
   /**
-   * Set resource option with total available resource and overCommitTimoutMillis
-   * @param resourceOption
-   */
-  public void setResourceOption(ResourceOption resourceOption);
-  
-  /**
-   * resource option with total available resource and overCommitTimoutMillis
-   * @return ResourceOption
-   */
-  public ResourceOption getResourceOption();
-  
-  /**
    * The rack name for this node manager.
    * @return the rack name.
    */

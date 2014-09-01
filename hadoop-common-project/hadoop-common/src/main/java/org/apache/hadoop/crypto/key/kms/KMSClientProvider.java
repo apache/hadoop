@@ -283,6 +283,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   }
 
   public KMSClientProvider(URI uri, Configuration conf) throws IOException {
+    super(conf);
     Path path = ProviderUtils.unnestUri(uri);
     URL url = path.toUri().toURL();
     kmsUrl = createServiceURL(url);

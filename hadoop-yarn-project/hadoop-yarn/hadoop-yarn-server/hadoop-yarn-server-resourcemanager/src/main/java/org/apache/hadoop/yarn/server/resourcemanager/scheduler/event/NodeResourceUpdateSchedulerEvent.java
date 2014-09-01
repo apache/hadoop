@@ -15,25 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
 
-public enum SchedulerEventType {
+import org.apache.hadoop.yarn.api.records.ResourceOption;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
-  // Source: Node
-  NODE_ADDED,
-  NODE_REMOVED,
-  NODE_UPDATE,
-  NODE_RESOURCE_UPDATE,
+public class NodeResourceUpdateSchedulerEvent extends SchedulerEvent {
 
-  // Source: RMApp
-  APP_ADDED,
-  APP_REMOVED,
+  private final RMNode rmNode;
+  private final ResourceOption resourceOption;
+  
+  public NodeResourceUpdateSchedulerEvent(RMNode rmNode,
+      ResourceOption resourceOption) {
+    super(SchedulerEventType.NODE_RESOURCE_UPDATE);
+    this.rmNode = rmNode;
+    this.resourceOption = resourceOption;
+  }
 
-  // Source: RMAppAttempt
-  APP_ATTEMPT_ADDED,
-  APP_ATTEMPT_REMOVED,
+  public RMNode getRMNode() {
+    return rmNode;
+  }
 
-  // Source: ContainerAllocationExpirer
-  CONTAINER_EXPIRED
+  public ResourceOption getResourceOption() {
+    return resourceOption;
+  }
+
 }
