@@ -42,6 +42,7 @@
     <module>hadoop-pipes</module>
     <module>hadoop-openstack</module>
     <module>hadoop-sls</module>
+    <module>hadoop-aws</module>
   </modules>
 
   <build>
