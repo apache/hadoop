@@ -37,6 +37,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.junit.AfterClass;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.junit.Assume;
 import org.junit.Before;
@@ -49,20 +50,21 @@ public class NonSortTest {
     Configuration nativeConf = ScenarioConfiguration.getNativeConfiguration();
     nativeConf.addResource(TestConstants.NONSORT_TEST_CONF);
     nativeConf.set(TestConstants.NATIVETASK_MAP_OUTPUT_SORT, "false");
-    String inputpath = nativeConf.get(TestConstants.NONSORT_TEST_INPUTDIR);
-    String outputpath = nativeConf.get(TestConstants.NONSORT_TEST_NATIVE_OUTPUT);
-    final Job nativeNonSort = getJob(nativeConf, "NativeNonSort", inputpath, outputpath);
+    final Job nativeNonSort = getJob(nativeConf, "NativeNonSort",
+      TestConstants.NATIVETASK_NONSORT_TEST_INPUTDIR,
+      TestConstants.NATIVETASK_NONSORT_TEST_NATIVE_OUTPUT);
     nativeNonSort.waitForCompletion(true);
 
     Configuration normalConf = ScenarioConfiguration.getNormalConfiguration();
     normalConf.addResource(TestConstants.NONSORT_TEST_CONF);
-    inputpath = normalConf.get(TestConstants.NONSORT_TEST_INPUTDIR);
-    outputpath = normalConf.get(TestConstants.NONSORT_TEST_NORMAL_OUTPUT);
-    final Job hadoopWithSort = getJob(normalConf, "NormalJob", inputpath, outputpath);
+    final Job hadoopWithSort = getJob(normalConf, "NormalJob",
+      TestConstants.NATIVETASK_NONSORT_TEST_INPUTDIR,
+      TestConstants.NATIVETASK_NONSORT_TEST_NORMAL_OUTPUT);
     hadoopWithSort.waitForCompletion(true);
 
-    final boolean compareRet = ResultVerifier.verify(nativeConf.get(TestConstants.NONSORT_TEST_NATIVE_OUTPUT),
-        normalConf.get(TestConstants.NONSORT_TEST_NORMAL_OUTPUT));
+    final boolean compareRet = ResultVerifier.verify(
+      TestConstants.NATIVETASK_NONSORT_TEST_NATIVE_OUTPUT,
+      TestConstants.NATIVETASK_NONSORT_TEST_NORMAL_OUTPUT);
     assertEquals("file compare result: if they are the same ,then return true", true, compareRet);
   }
 
@@ -73,13 +75,21 @@ public class NonSortTest {
     final ScenarioConfiguration configuration = new ScenarioConfiguration();
     configuration.addNonSortTestConf();
     final FileSystem fs = FileSystem.get(configuration);
-    final Path path = new Path(configuration.get(TestConstants.NONSORT_TEST_INPUTDIR));
+    final Path path = new Path(TestConstants.NATIVETASK_NONSORT_TEST_INPUTDIR);
     if (!fs.exists(path)) {
-      new TestInputFile(configuration.getInt("nativetask.nonsorttest.filesize", 10000000), Text.class.getName(),
+      new TestInputFile(configuration.getInt(TestConstants.NATIVETASK_NONSORTTEST_FILESIZE, 10000000), Text.class.getName(),
           Text.class.getName(), configuration).createSequenceTestFile(path.toString());
     }
     fs.close();
   }
+
+  @AfterClass
+  public static void cleanUp() throws IOException {
+    final FileSystem fs = FileSystem.get(new ScenarioConfiguration());
+    fs.delete(new Path(TestConstants.NATIVETASK_NONSORT_TEST_DIR), true);
+    fs.close();
+  }
+
 
   private Job getJob(Configuration conf, String jobName, String inputpath, String outputpath) throws IOException {
     final FileSystem fs = FileSystem.get(conf);

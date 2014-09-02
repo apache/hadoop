@@ -38,10 +38,13 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.junit.AfterClass;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.io.IOException;
 
 public class CombinerTest {
   private FileSystem fs;
@@ -50,33 +53,25 @@ public class CombinerTest {
   private String hadoopoutputpath;
 
   @Test
-  public void testWordCountCombiner() {
-    try {
+  public void testWordCountCombiner() throws Exception {
+    final Configuration nativeConf = ScenarioConfiguration.getNativeConfiguration();
+    nativeConf.addResource(TestConstants.COMBINER_CONF_PATH);
+    final Job nativejob = getJob("nativewordcount", nativeConf, inputpath, nativeoutputpath);
 
-      final Configuration nativeConf = ScenarioConfiguration.getNativeConfiguration();
-      nativeConf.addResource(TestConstants.COMBINER_CONF_PATH);
-      final Job nativejob = getJob("nativewordcount", nativeConf, inputpath, nativeoutputpath);
+    final Configuration commonConf = ScenarioConfiguration.getNormalConfiguration();
+    commonConf.addResource(TestConstants.COMBINER_CONF_PATH);
+    final Job normaljob = getJob("normalwordcount", commonConf, inputpath, hadoopoutputpath);
 
-      final Configuration commonConf = ScenarioConfiguration.getNormalConfiguration();
-      commonConf.addResource(TestConstants.COMBINER_CONF_PATH);
+    assertTrue(nativejob.waitForCompletion(true));
 
-      final Job normaljob = getJob("normalwordcount", commonConf, inputpath, hadoopoutputpath);
+    Counter nativeReduceGroups = nativejob.getCounters().findCounter(Task.Counter.REDUCE_INPUT_RECORDS);
 
-      assertTrue(nativejob.waitForCompletion(true));
-            
-      Counter nativeReduceGroups = nativejob.getCounters().findCounter(Task.Counter.REDUCE_INPUT_RECORDS);
-      
-      assertTrue(normaljob.waitForCompletion(true));
-      Counter normalReduceGroups = normaljob.getCounters().findCounter(Task.Counter.REDUCE_INPUT_RECORDS);
-       
-      assertEquals(true, ResultVerifier.verify(nativeoutputpath, hadoopoutputpath));
-      assertEquals("Native Reduce reduce group counter should equal orignal reduce group counter", 
-          nativeReduceGroups.getValue(), normalReduceGroups.getValue());
-      
-    } catch (final Exception e) {
-      e.printStackTrace();
-      assertEquals("run exception", true, false);
-    }
+    assertTrue(normaljob.waitForCompletion(true));
+    Counter normalReduceGroups = normaljob.getCounters().findCounter(Task.Counter.REDUCE_INPUT_RECORDS);
+
+    assertEquals(true, ResultVerifier.verify(nativeoutputpath, hadoopoutputpath));
+    assertEquals("Native Reduce reduce group counter should equal orignal reduce group counter",
+      nativeReduceGroups.getValue(), normalReduceGroups.getValue());
   }
 
   @Before
@@ -88,8 +83,7 @@ public class CombinerTest {
 
     this.fs = FileSystem.get(conf);
 
-    this.inputpath = conf.get(TestConstants.NATIVETASK_TEST_COMBINER_INPUTPATH_KEY,
-        TestConstants.NATIVETASK_TEST_COMBINER_INPUTPATH_DEFAULTV) + "/wordcount";
+    this.inputpath = TestConstants.NATIVETASK_COMBINER_TEST_INPUTDIR + "/wordcount";
 
     if (!fs.exists(new Path(inputpath))) {
       new TestInputFile(
@@ -98,10 +92,15 @@ public class CombinerTest {
           Text.class.getName(), conf).createSequenceTestFile(inputpath, 1, (byte)('a'));
     }
 
-    this.nativeoutputpath = conf.get(TestConstants.NATIVETASK_TEST_COMBINER_OUTPUTPATH,
-        TestConstants.NATIVETASK_TEST_COMBINER_OUTPUTPATH_DEFAULTV) + "/nativewordcount";
-    this.hadoopoutputpath = conf.get(TestConstants.NORMAL_TEST_COMBINER_OUTPUTPATH,
-        TestConstants.NORMAL_TEST_COMBINER_OUTPUTPATH_DEFAULTV) + "/normalwordcount";
+    this.nativeoutputpath = TestConstants.NATIVETASK_COMBINER_TEST_NATIVE_OUTPUTDIR + "/nativewordcount";
+    this.hadoopoutputpath = TestConstants.NATIVETASK_COMBINER_TEST_NORMAL_OUTPUTDIR + "/normalwordcount";
+  }
+
+  @AfterClass
+  public static void cleanUp() throws IOException {
+    final FileSystem fs = FileSystem.get(new ScenarioConfiguration());
+    fs.delete(new Path(TestConstants.NATIVETASK_COMBINER_TEST_DIR), true);
+    fs.close();
   }
 
   protected static Job getJob(String jobname, Configuration inputConf, String inputpath, String outputpath)

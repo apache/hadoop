@@ -18,3 +18,4 @@ MAPREDUCE-6035. native-task: sources/test-sources jar distribution (Manu Zhang v
 MAPREDUCE-5977. Fix or suppress native-task gcc warnings (Manu Zhang via todd)
 MAPREDUCE-6054. native-task: Speed up tests (todd)
 MAPREDUCE-6058. native-task: KVTest and LargeKVTest should check mr job is sucessful (Binglin Chang)
+MAPREDUCE-6056. native-task: move system test working dir to target dir and cleanup test config xml files (Manu Zhang via bchang)

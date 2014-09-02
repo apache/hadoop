@@ -35,10 +35,13 @@ import org.apache.hadoop.mapred.nativetask.testutil.ScenarioConfiguration;
 import org.apache.hadoop.mapred.nativetask.testutil.TestConstants;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Job;
+import org.junit.AfterClass;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.io.IOException;
 
 public class LargeKVCombinerTest {
   private static final Log LOG = LogFactory.getLog(LargeKVCombinerTest.class);
@@ -50,61 +53,62 @@ public class LargeKVCombinerTest {
   }
 
   @Test
-  public void testLargeValueCombiner(){
+  public void testLargeValueCombiner() throws Exception {
     final Configuration normalConf = ScenarioConfiguration.getNormalConfiguration();
     final Configuration nativeConf = ScenarioConfiguration.getNativeConfiguration();
     normalConf.addResource(TestConstants.COMBINER_CONF_PATH);
     nativeConf.addResource(TestConstants.COMBINER_CONF_PATH);
     final int deafult_KVSize_Maximum = 1 << 22; // 4M
-    final int KVSize_Maximu = normalConf.getInt(TestConstants.NATIVETASK_KVSIZE_MAX_LARGEKV_TEST,
+    final int KVSize_Maximum = normalConf.getInt(TestConstants.NATIVETASK_KVSIZE_MAX_LARGEKV_TEST,
         deafult_KVSize_Maximum);
-    final String inputPath = normalConf.get(TestConstants.NATIVETASK_TEST_COMBINER_INPUTPATH_KEY,
-        TestConstants.NATIVETASK_TEST_COMBINER_INPUTPATH_DEFAULTV) + "/largeKV";
-    final String nativeOutputPath = normalConf.get(TestConstants.NATIVETASK_TEST_COMBINER_OUTPUTPATH,
-        TestConstants.NATIVETASK_TEST_COMBINER_OUTPUTPATH_DEFAULTV) + "/nativeLargeKV";
-    final String hadoopOutputPath = normalConf.get(TestConstants.NORMAL_TEST_COMBINER_OUTPUTPATH,
-        TestConstants.NORMAL_TEST_COMBINER_OUTPUTPATH_DEFAULTV) + "/normalLargeKV";
-    try {
-      final FileSystem fs = FileSystem.get(normalConf);
-      for (int i = 65536; i <= KVSize_Maximu; i *= 4) {
-        
-        int max = i;
-        int min = Math.max(i / 4, max - 10);
-        
-        LOG.info("===KV Size Test: min size: " + min + ", max size: " + max);
-        
-        normalConf.set(TestConstants.NATIVETASK_KVSIZE_MIN, String.valueOf(min));
-        normalConf.set(TestConstants.NATIVETASK_KVSIZE_MAX, String.valueOf(max));
-        nativeConf.set(TestConstants.NATIVETASK_KVSIZE_MIN, String.valueOf(min));
-        nativeConf.set(TestConstants.NATIVETASK_KVSIZE_MAX, String.valueOf(max));
-        fs.delete(new Path(inputPath), true);
-        new TestInputFile(normalConf.getInt(TestConstants.NATIVETASK_COMBINER_WORDCOUNT_FILESIZE,
-            1000000), IntWritable.class.getName(),
-            Text.class.getName(), normalConf).createSequenceTestFile(inputPath, 1);
-        
-        final Job normaljob = CombinerTest.getJob("normalwordcount", normalConf, inputPath, hadoopOutputPath);
-        final Job nativejob = CombinerTest.getJob("nativewordcount", nativeConf, inputPath, nativeOutputPath);
-        
-        assertTrue(nativejob.waitForCompletion(true));
+    final String inputPath = TestConstants.NATIVETASK_COMBINER_TEST_INPUTDIR + "/largeKV";
+    final String nativeOutputPath = TestConstants.NATIVETASK_COMBINER_TEST_NATIVE_OUTPUTDIR
+      + "/nativeLargeKV";
+    final String hadoopOutputPath = TestConstants.NATIVETASK_COMBINER_TEST_NORMAL_OUTPUTDIR
+      + "/normalLargeKV";
+    final FileSystem fs = FileSystem.get(normalConf);
+    for (int i = 65536; i <= KVSize_Maximum; i *= 4) {
+
+      int max = i;
+      int min = Math.max(i / 4, max - 10);
+
+      LOG.info("===KV Size Test: min size: " + min + ", max size: " + max);
+
+      normalConf.set(TestConstants.NATIVETASK_KVSIZE_MIN, String.valueOf(min));
+      normalConf.set(TestConstants.NATIVETASK_KVSIZE_MAX, String.valueOf(max));
+      nativeConf.set(TestConstants.NATIVETASK_KVSIZE_MIN, String.valueOf(min));
+      nativeConf.set(TestConstants.NATIVETASK_KVSIZE_MAX, String.valueOf(max));
+      fs.delete(new Path(inputPath), true);
+      new TestInputFile(normalConf.getInt(TestConstants.NATIVETASK_COMBINER_WORDCOUNT_FILESIZE,
+        1000000), IntWritable.class.getName(),
+        Text.class.getName(), normalConf).createSequenceTestFile(inputPath, 1);
+
+      final Job normaljob = CombinerTest.getJob("normalwordcount", normalConf, inputPath, hadoopOutputPath);
+      final Job nativejob = CombinerTest.getJob("nativewordcount", nativeConf, inputPath, nativeOutputPath);
+
+      assertTrue(nativejob.waitForCompletion(true));
         Counter nativeReduceGroups = nativejob.getCounters().findCounter(Task.Counter.REDUCE_INPUT_RECORDS);
-        
-        assertTrue(normaljob.waitForCompletion(true));
+
+      assertTrue(normaljob.waitForCompletion(true));
         Counter normalReduceGroups = normaljob.getCounters().findCounter(Task.Counter.REDUCE_INPUT_RECORDS);
-        
-        final boolean compareRet = ResultVerifier.verify(nativeOutputPath, hadoopOutputPath);
-        
-        final String reason = "LargeKVCombinerTest failed with, min size: " + min
-            + ", max size: " + max + ", normal out: " + hadoopOutputPath + ", native Out: " + nativeOutputPath;
-        
-        assertEquals(reason, true, compareRet);
-//        assertEquals("Native Reduce reduce group counter should equal orignal reduce group counter", 
+
+      final boolean compareRet = ResultVerifier.verify(nativeOutputPath, hadoopOutputPath);
+
+      final String reason = "LargeKVCombinerTest failed with, min size: " + min
+        + ", max size: " + max + ", normal out: " + hadoopOutputPath + ", native Out: " + nativeOutputPath;
+
+      assertEquals(reason, true, compareRet);
+//        assertEquals("Native Reduce reduce group counter should equal orignal reduce group counter",
 //            nativeReduceGroups.getValue(), normalReduceGroups.getValue());
-      }
-      fs.close();
-    } catch (final Exception e) {
-      e.printStackTrace();
-      assertEquals("run exception", true, false);
     }
+    fs.close();
+  }
+
+  @AfterClass
+  public static void cleanUp() throws IOException {
+    final FileSystem fs = FileSystem.get(new ScenarioConfiguration());
+    fs.delete(new Path(TestConstants.NATIVETASK_COMBINER_TEST_DIR), true);
+    fs.close();
   }
   
 }

@@ -20,7 +20,31 @@
 
 <configuration>
   <property>
-    <name>io.sort.mb</name>
-    <value>30</value>
+    <name>mapred.output.compress</name>
+    <value>false</value>
+  </property>
+  <property>
+    <name>mapred.output.value.class</name>
+    <value>org.apache.hadoop.io.IntWritable</value>
+  </property>
+  <property>
+    <name>nativetask.compress.filesize</name>
+    <value>100000</value>
+  </property>
+  <property>
+    <name>mapreduce.reduce.class</name>
+    <value>org.apache.hadoop.mapred.nativetask.kvtest.HashSumReducer</value>
+  </property>
+  <property>
+    <name>mapred.compress.map.output</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>mapred.output.compression.type</name>
+    <value>BLOCK</value>
+  </property>
+  <property>
+    <name>hadoop.native.lib</name>
+    <value>true</value>
   </property>
 </configuration>

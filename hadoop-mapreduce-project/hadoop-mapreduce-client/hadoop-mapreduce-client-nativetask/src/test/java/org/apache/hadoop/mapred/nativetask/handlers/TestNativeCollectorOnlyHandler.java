@@ -22,6 +22,9 @@ import java.io.IOException;
 import junit.framework.Assert;
 import junit.framework.TestCase;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.nativetask.Command;
@@ -30,6 +33,7 @@ import org.apache.hadoop.mapred.nativetask.INativeHandler;
 import org.apache.hadoop.mapred.nativetask.TaskContext;
 import org.apache.hadoop.mapred.nativetask.buffer.BufferType;
 import org.apache.hadoop.mapred.nativetask.buffer.InputBuffer;
+import org.apache.hadoop.mapred.nativetask.testutil.TestConstants;
 import org.apache.hadoop.mapred.nativetask.util.OutputUtil;
 import org.apache.hadoop.mapred.nativetask.util.ReadWriteBuffer;
 import org.mockito.Matchers;
@@ -43,7 +47,7 @@ public class TestNativeCollectorOnlyHandler extends TestCase {
   private BufferPusher pusher;
   private ICombineHandler combiner;
   private TaskContext taskContext;
-  private String localDir = "build/test/mapred/local";
+  private static final String LOCAL_DIR = TestConstants.NATIVETASK_TEST_DIR + "/local";
 
   @Override
   public void setUp() throws IOException {
@@ -53,7 +57,7 @@ public class TestNativeCollectorOnlyHandler extends TestCase {
     JobConf jobConf = new JobConf();
     jobConf.set(OutputUtil.NATIVE_TASK_OUTPUT_MANAGER,
         "org.apache.hadoop.mapred.nativetask.util.LocalJobOutputFiles");
-    jobConf.set("mapred.local.dir", localDir);
+    jobConf.set("mapred.local.dir", LOCAL_DIR);
     this.taskContext = new TaskContext(jobConf,
         BytesWritable.class, BytesWritable.class,
         BytesWritable.class,
@@ -63,6 +67,12 @@ public class TestNativeCollectorOnlyHandler extends TestCase {
 
     Mockito.when(nativeHandler.getInputBuffer()).thenReturn(new InputBuffer(BufferType.HEAP_BUFFER, 100));
   }
+
+  @Override
+  public void tearDown() throws IOException {
+    FileSystem.getLocal(new Configuration()).delete(new Path(LOCAL_DIR));
+  }
+
 
   public void testCollect() throws IOException {
     this.handler = new NativeCollectorOnlyHandler(taskContext, nativeHandler, pusher, combiner);
@@ -95,9 +105,9 @@ public class TestNativeCollectorOnlyHandler extends TestCase {
     }
     Assert.assertTrue("exception thrown", thrown);
 
-    final String expectedOutputPath = localDir + "/output/file.out";
-    final String expectedOutputIndexPath = localDir + "/output/file.out.index";
-    final String expectedSpillPath = localDir + "/output/spill0.out";
+    final String expectedOutputPath = LOCAL_DIR + "/output/file.out";
+    final String expectedOutputIndexPath = LOCAL_DIR + "/output/file.out.index";
+    final String expectedSpillPath = LOCAL_DIR + "/output/spill0.out";
 
     final String outputPath = handler.onCall(NativeCollectorOnlyHandler.GET_OUTPUT_PATH, null).readString();
     Assert.assertEquals(expectedOutputPath, outputPath);

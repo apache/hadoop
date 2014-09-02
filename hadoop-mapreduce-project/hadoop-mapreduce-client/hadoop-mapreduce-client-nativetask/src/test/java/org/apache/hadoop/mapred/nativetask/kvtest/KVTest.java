@@ -33,6 +33,7 @@ import org.apache.hadoop.mapred.nativetask.NativeRuntime;
 import org.apache.hadoop.mapred.nativetask.testutil.ResultVerifier;
 import org.apache.hadoop.mapred.nativetask.testutil.ScenarioConfiguration;
 import org.apache.hadoop.mapred.nativetask.testutil.TestConstants;
+import org.junit.AfterClass;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.junit.Assume;
 import org.junit.Before;
@@ -112,70 +113,58 @@ public class KVTest {
   }
 
   @Test
-  public void testKVCompability() {
-    try {
-      final String nativeoutput = this.runNativeTest(
-          "Test:" + keyclass.getSimpleName() + "--" + valueclass.getSimpleName(), keyclass, valueclass);
-      final String normaloutput = this.runNormalTest(
-          "Test:" + keyclass.getSimpleName() + "--" + valueclass.getSimpleName(), keyclass, valueclass);
-      final boolean compareRet = ResultVerifier.verify(normaloutput, nativeoutput);
-      final String input = nativekvtestconf.get(TestConstants.NATIVETASK_KVTEST_INPUTDIR) + "/"
-          + keyclass.getName()
-          + "/" + valueclass.getName();
-      if(compareRet){
-        final FileSystem fs = FileSystem.get(hadoopkvtestconf);
-        fs.delete(new Path(nativeoutput), true);
-        fs.delete(new Path(normaloutput), true);
-        fs.delete(new Path(input), true);
-        fs.close();
-      }
-      assertEquals("file compare result: if they are the same ,then return true", true, compareRet);
-    } catch (final IOException e) {
-      assertEquals("test run exception:", null, e);
-    } catch (final Exception e) {
-      assertEquals("test run exception:", null, e);
+  public void testKVCompability() throws Exception {
+    final String nativeoutput = this.runNativeTest(
+      "Test:" + keyclass.getSimpleName() + "--" + valueclass.getSimpleName(), keyclass, valueclass);
+    final String normaloutput = this.runNormalTest(
+      "Test:" + keyclass.getSimpleName() + "--" + valueclass.getSimpleName(), keyclass, valueclass);
+    final boolean compareRet = ResultVerifier.verify(normaloutput, nativeoutput);
+    final String input = TestConstants.NATIVETASK_KVTEST_INPUTDIR + "/"
+      + keyclass.getName() + "/" + valueclass.getName();
+    if(compareRet){
+      final FileSystem fs = FileSystem.get(hadoopkvtestconf);
+      fs.delete(new Path(nativeoutput), true);
+      fs.delete(new Path(normaloutput), true);
+      fs.delete(new Path(input), true);
+      fs.close();
     }
+    assertEquals("file compare result: if they are the same ,then return true", true, compareRet);
   }
 
-  private String runNativeTest(String jobname, Class<?> keyclass, Class<?> valueclass) throws IOException {
-    final String inputpath = nativekvtestconf.get(TestConstants.NATIVETASK_KVTEST_INPUTDIR) + "/"
-        + keyclass.getName()
-        + "/" + valueclass.getName();
-    final String outputpath = nativekvtestconf.get(TestConstants.NATIVETASK_KVTEST_OUTPUTDIR) + "/"
-        + keyclass.getName() + "/" + valueclass.getName();
+  @AfterClass
+  public static void cleanUp() throws IOException {
+    final FileSystem fs = FileSystem.get(new ScenarioConfiguration());
+    fs.delete(new Path(TestConstants.NATIVETASK_KVTEST_DIR), true);
+    fs.close();
+  }
+
+  private String runNativeTest(String jobname, Class<?> keyclass, Class<?> valueclass) throws Exception {
+    final String inputpath = TestConstants.NATIVETASK_KVTEST_INPUTDIR + "/"
+      + keyclass.getName() + "/" + valueclass.getName();
+    final String outputpath = TestConstants.NATIVETASK_KVTEST_NATIVE_OUTPUTDIR + "/"
+      + keyclass.getName() + "/" + valueclass.getName();
     // if output file exists ,then delete it
     final FileSystem fs = FileSystem.get(nativekvtestconf);
     fs.delete(new Path(outputpath));
     fs.close();
     nativekvtestconf.set(TestConstants.NATIVETASK_KVTEST_CREATEFILE, "true");
-    try {
-      final KVJob keyJob = new KVJob(jobname, nativekvtestconf, keyclass, valueclass, inputpath, outputpath);
-      assertTrue("job should complete successfully", keyJob.runJob());
-    } catch (final Exception e) {
-      return "native testcase run time error.";
-    }
+    final KVJob keyJob = new KVJob(jobname, nativekvtestconf, keyclass, valueclass, inputpath, outputpath);
+    assertTrue("job should complete successfully", keyJob.runJob());
     return outputpath;
   }
 
-  private String runNormalTest(String jobname, Class<?> keyclass, Class<?> valueclass) throws IOException {
-    final String inputpath = hadoopkvtestconf.get(TestConstants.NATIVETASK_KVTEST_INPUTDIR) + "/"
-        + keyclass.getName()
-        + "/" + valueclass.getName();
-    final String outputpath = hadoopkvtestconf
-        .get(TestConstants.NATIVETASK_KVTEST_NORMAL_OUTPUTDIR)
-        + "/"
+  private String runNormalTest(String jobname, Class<?> keyclass, Class<?> valueclass) throws Exception {
+    final String inputpath = TestConstants.NATIVETASK_KVTEST_INPUTDIR + "/"
+        + keyclass.getName() + "/" + valueclass.getName();
+    final String outputpath = TestConstants.NATIVETASK_KVTEST_NORMAL_OUTPUTDIR + "/"
         + keyclass.getName() + "/" + valueclass.getName();
     // if output file exists ,then delete it
     final FileSystem fs = FileSystem.get(hadoopkvtestconf);
     fs.delete(new Path(outputpath));
     fs.close();
     hadoopkvtestconf.set(TestConstants.NATIVETASK_KVTEST_CREATEFILE, "false");
-    try {
-      final KVJob keyJob = new KVJob(jobname, hadoopkvtestconf, keyclass, valueclass, inputpath, outputpath);
-      assertTrue("job should complete successfully", keyJob.runJob());
-    } catch (final Exception e) {
-      return "normal testcase run time error.";
-    }
+    final KVJob keyJob = new KVJob(jobname, hadoopkvtestconf, keyclass, valueclass, inputpath, outputpath);
+    assertTrue("job should complete successfully", keyJob.runJob());
     return outputpath;
   }
 
