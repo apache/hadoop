@@ -423,7 +423,7 @@ class OpenFileCtx {
       if (existantWriteCtx != null) {
         if (!existantWriteCtx.getReplied()) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Repeated write request which hasn't be served: xid="
+            LOG.debug("Repeated write request which hasn't been served: xid="
                 + xid + ", drop it.");
           }
         } else {
@@ -581,7 +581,7 @@ class OpenFileCtx {
    * writing, and there is no other threads writing (i.e., asyncStatus is
    * false), start the writing and set asyncStatus to true.
    * 
-   * @return True if the new write is sequencial and we can start writing
+   * @return True if the new write is sequential and we can start writing
    *         (including the case that there is already a thread writing).
    */
   private synchronized boolean checkAndStartWrite(
@@ -906,7 +906,7 @@ class OpenFileCtx {
       long offset = nextOffset.get();
       if (range.getMin() > offset) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("The next sequencial write has not arrived yet");
+          LOG.debug("The next sequential write has not arrived yet");
         }
         processCommits(nextOffset.get()); // handle race
         this.asyncStatus = false;

@@ -456,7 +456,7 @@ public class TestStartup {
     checkNameSpace(conf);
 
     // read an image compressed in Gzip and store it uncompressed
-    LOG.info("Read an compressed iamge and store it as uncompressed.");
+    LOG.info("Read a compressed image and store it as uncompressed.");
     conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, false);
     checkNameSpace(conf);
 

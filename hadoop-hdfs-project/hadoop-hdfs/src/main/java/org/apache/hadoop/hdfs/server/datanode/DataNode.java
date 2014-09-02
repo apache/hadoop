@@ -1752,7 +1752,7 @@ public class DataNode extends Configured
             + b + " (numBytes=" + b.getNumBytes() + ")"
             + ", stage=" + stage
             + ", clientname=" + clientname
-            + ", targests=" + Arrays.asList(targets));
+            + ", targets=" + Arrays.asList(targets));
       }
       this.targets = targets;
       this.targetStorageTypes = targetStorageTypes;
