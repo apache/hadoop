@@ -16,9 +16,10 @@
  */
 package org.apache.hadoop.util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class PerformanceAdvisory {
-  public static final Log LOG = LogFactory.getLog(PerformanceAdvisory.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(PerformanceAdvisory.class);
 }
