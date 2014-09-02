@@ -60,19 +60,6 @@ public interface INodeDirectoryAttributes extends INodeAttributes {
           && getAclFeature() == other.getAclFeature()
           && getXAttrFeature() == other.getXAttrFeature();
     }
-
-    @Override
-    public byte getStoragePolicyID() {
-      XAttrFeature f = getXAttrFeature();
-      ImmutableList<XAttr> xattrs = f == null ? ImmutableList.<XAttr> of() : f
-          .getXAttrs();
-      for (XAttr xattr : xattrs) {
-        if (BlockStoragePolicy.isStoragePolicyXAttr(xattr)) {
-          return (xattr.getValue())[0];
-        }
-      }
-      return BlockStoragePolicy.ID_UNSPECIFIED;
-    }
   }
 
   public static class CopyWithQuota extends INodeDirectoryAttributes.SnapshotCopy {

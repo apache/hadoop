@@ -1343,6 +1343,11 @@ public class FSDirectory implements Closeable {
     }
   }
 
+  private byte getStoragePolicyID(byte inodePolicy, byte parentPolicy) {
+    return inodePolicy != BlockStoragePolicy.ID_UNSPECIFIED ? inodePolicy :
+        parentPolicy;
+  }
+
   /**
    * Get a partial listing of the indicated directory
    *
@@ -1367,14 +1372,13 @@ public class FSDirectory implements Closeable {
       if (srcs.endsWith(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR)) {
         return getSnapshotsListing(srcs, startAfter);
       }
-      final INodesInPath inodesInPath = getINodesInPath(srcs, true);
+      final INodesInPath inodesInPath = getLastINodeInPath(srcs);
       final int snapshot = inodesInPath.getPathSnapshotId();
-      final INode[] inodes = inodesInPath.getINodes();
-      final INode targetNode = inodes[inodes.length - 1];
-      byte parentStoragePolicy = isSuperUser ? getStoragePolicy(inodes,
-          snapshot) : BlockStoragePolicy.ID_UNSPECIFIED;
+      final INode targetNode = inodesInPath.getLastINode();
       if (targetNode == null)
         return null;
+      byte parentStoragePolicy = isSuperUser ?
+          targetNode.getStoragePolicyID() : BlockStoragePolicy.ID_UNSPECIFIED;
       
       if (!targetNode.isDirectory()) {
         return new DirectoryListing(
@@ -1393,11 +1397,11 @@ public class FSDirectory implements Closeable {
       HdfsFileStatus listing[] = new HdfsFileStatus[numOfListing];
       for (int i=0; i<numOfListing && locationBudget>0; i++) {
         INode cur = contents.get(startChild+i);
-        byte curPolicy = cur.getStoragePolicyID(snapshot);
+        byte curPolicy = isSuperUser ? cur.getLocalStoragePolicyID() :
+            BlockStoragePolicy.ID_UNSPECIFIED;
         listing[i] = createFileStatus(cur.getLocalNameBytes(), cur, needLocation,
-            curPolicy != BlockStoragePolicy.ID_UNSPECIFIED ?
-                curPolicy : parentStoragePolicy,
-            snapshot, isRawPath);
+            getStoragePolicyID(curPolicy, parentStoragePolicy), snapshot,
+            isRawPath);
         listingCnt++;
         if (needLocation) {
             // Once we  hit lsLimit locations, stop.
@@ -2363,16 +2367,6 @@ public class FSDirectory implements Closeable {
         feInfo,
         storagePolicy);
   }
-
-  private byte getStoragePolicy(INode[] inodes, int snapshotId) {
-    for (int i = inodes.length - 1; i >= 0; i--) {
-      byte policy = inodes[i].getStoragePolicyID(snapshotId);
-      if (policy != BlockStoragePolicy.ID_UNSPECIFIED) {
-        return policy;
-      }
-    }
-    return BlockStoragePolicy.ID_UNSPECIFIED;
-  }  
 
   /**
    * Create FileStatus with location info by file INode

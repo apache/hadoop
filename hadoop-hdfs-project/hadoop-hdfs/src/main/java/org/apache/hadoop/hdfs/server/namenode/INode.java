@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
@@ -685,13 +686,19 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   }
 
   /**
-   * @return the storage policy id of the inode
+   * @return the latest block storage policy id of the INode. Specifically,
+   * if a storage policy is directly specified on the INode then return the ID
+   * of that policy. Otherwise follow the latest parental path and return the
+   * ID of the first specified storage policy.
    */
-  public abstract byte getStoragePolicyID(int snapshotId);
+  public abstract byte getStoragePolicyID();
 
-  public byte getStoragePolicyID() {
-    return getStoragePolicyID(Snapshot.CURRENT_STATE_ID);
-  }
+  /**
+   * @return the storage policy directly specified on the INode. Return
+   * {@link BlockStoragePolicy#ID_UNSPECIFIED} if no policy has
+   * been specified.
+   */
+  public abstract byte getLocalStoragePolicyID();
 
   /**
    * Breaks {@code path} into components.

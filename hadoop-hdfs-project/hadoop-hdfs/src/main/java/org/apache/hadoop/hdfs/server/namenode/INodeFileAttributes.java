@@ -38,6 +38,8 @@ public interface INodeFileAttributes extends INodeAttributes {
 
   public boolean metadataEquals(INodeFileAttributes other);
 
+  public byte getLocalStoragePolicyID();
+
   /** A copy of the inode file attributes */
   public static class SnapshotCopy extends INodeAttributes.SnapshotCopy
       implements INodeFileAttributes {
@@ -68,7 +70,7 @@ public interface INodeFileAttributes extends INodeAttributes {
     }
 
     @Override
-    public byte getStoragePolicyID() {
+    public byte getLocalStoragePolicyID() {
       return HeaderFormat.getStoragePolicyID(header);
     }
 

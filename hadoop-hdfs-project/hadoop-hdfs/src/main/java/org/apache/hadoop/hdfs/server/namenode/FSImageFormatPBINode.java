@@ -393,7 +393,7 @@ public final class FSImageFormatPBINode {
           .setPermission(buildPermissionStatus(file, state.getStringMap()))
           .setPreferredBlockSize(file.getPreferredBlockSize())
           .setReplication(file.getFileReplication())
-          .setStoragePolicyID(file.getStoragePolicyID());
+          .setStoragePolicyID(file.getLocalStoragePolicyID());
 
       AclFeature f = file.getAclFeature();
       if (f != null) {

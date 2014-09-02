@@ -278,7 +278,7 @@ public class BlockStoragePolicy {
   }
   
   private static byte parseID(String idString, String element, Configuration conf) {
-    Byte id = null;
+    byte id = 0;
     try {
       id = Byte.parseByte(idString);
     } catch(NumberFormatException nfe) {

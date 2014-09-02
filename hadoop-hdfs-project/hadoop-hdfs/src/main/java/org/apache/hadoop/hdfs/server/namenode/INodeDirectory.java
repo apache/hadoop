@@ -107,10 +107,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
   }
 
   @Override
-  public byte getStoragePolicyID(int snapshotId) {
-    if (snapshotId != Snapshot.CURRENT_STATE_ID) {
-      return getSnapshotINode(snapshotId).getStoragePolicyID();
-    }
+  public byte getLocalStoragePolicyID() {
     XAttrFeature f = getXAttrFeature();
     ImmutableList<XAttr> xattrs = f == null ? ImmutableList.<XAttr> of() : f
         .getXAttrs();
@@ -120,6 +117,17 @@ public class INodeDirectory extends INodeWithAdditionalFields
       }
     }
     return BlockStoragePolicy.ID_UNSPECIFIED;
+  }
+
+  @Override
+  public byte getStoragePolicyID() {
+    byte id = getLocalStoragePolicyID();
+    if (id != BlockStoragePolicy.ID_UNSPECIFIED) {
+      return id;
+    }
+    // if it is unspecified, check its parent
+    return getParent() != null ? getParent().getStoragePolicyID() :
+        BlockStoragePolicy.ID_UNSPECIFIED;
   }
 
   void setQuota(long nsQuota, long dsQuota) {

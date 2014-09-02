@@ -61,9 +61,6 @@ public interface INodeAttributes {
   /** @return the access time. */
   public long getAccessTime();
 
-  /** @return the storage policy ID */
-  public byte getStoragePolicyID();
-
   /** A read-only copy of the inode attributes. */
   public static abstract class SnapshotCopy implements INodeAttributes {
     private final byte[] name;

@@ -147,7 +147,13 @@ public class INodeSymlink extends INodeWithAdditionalFields {
   }
 
   @Override
-  public byte getStoragePolicyID(int snapshotId) {
+  public byte getStoragePolicyID() {
+    throw new UnsupportedOperationException(
+        "Storage policy are not supported on symlinks");
+  }
+
+  @Override
+  public byte getLocalStoragePolicyID() {
     throw new UnsupportedOperationException(
         "Storage policy are not supported on symlinks");
   }

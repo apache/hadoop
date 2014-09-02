@@ -124,7 +124,12 @@ public class INodeMap {
       }
 
       @Override
-      public byte getStoragePolicyID(int snapshotId) {
+      public byte getStoragePolicyID(){
+        return BlockStoragePolicy.ID_UNSPECIFIED;
+      }
+
+      @Override
+      public byte getLocalStoragePolicyID() {
         return BlockStoragePolicy.ID_UNSPECIFIED;
       }
     };

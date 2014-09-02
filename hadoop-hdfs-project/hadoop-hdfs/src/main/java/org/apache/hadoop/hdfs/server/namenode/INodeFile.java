@@ -172,7 +172,6 @@ public class INodeFile extends INodeWithAdditionalFields
     return getFileUnderConstructionFeature() != null;
   }
 
-  /** Convert this file to an {@link INodeFileUnderConstruction}. */
   INodeFile toUnderConstruction(String clientName, String clientMachine) {
     Preconditions.checkState(!isUnderConstruction(),
         "file is already under construction");
@@ -368,16 +367,18 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   @Override
-  public byte getStoragePolicyID(int snapshotId) {
-    if (snapshotId != Snapshot.CURRENT_STATE_ID) {
-      return getSnapshotINode(snapshotId).getStoragePolicyID();
-    }
-    return getStoragePolicyID();
+  public byte getLocalStoragePolicyID() {
+    return HeaderFormat.getStoragePolicyID(header);
   }
 
   @Override
   public byte getStoragePolicyID() {
-    return HeaderFormat.getStoragePolicyID(header);
+    byte id = getLocalStoragePolicyID();
+    if (id == BlockStoragePolicy.ID_UNSPECIFIED) {
+      return this.getParent() != null ?
+          this.getParent().getStoragePolicyID() : id;
+    }
+    return id;
   }
 
   private void setStoragePolicyID(byte storagePolicyId) {

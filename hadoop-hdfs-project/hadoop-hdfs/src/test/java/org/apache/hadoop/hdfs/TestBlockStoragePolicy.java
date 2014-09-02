@@ -26,11 +26,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -45,6 +47,8 @@ public class TestBlockStoragePolicy {
 
   static {
     conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
     POLICY_SUITE = BlockStoragePolicy.readBlockStorageSuite(conf);
     DEFAULT_STORAGE_POLICY = POLICY_SUITE.getDefaultPolicy();
   }
@@ -872,11 +876,12 @@ public class TestBlockStoragePolicy {
           HdfsFileStatus.EMPTY_NAME).getPartialListing();
       checkDirectoryListing(fooList, COLD, WARM);
 
-      // check the policy for /dir/.snapshot/s1/foo/f1
+      // check the policy for /dir/.snapshot/s1/foo/f1. Note we always return
+      // the latest storage policy for a file/directory.
       Path s1f1 = SnapshotTestHelper.getSnapshotPath(dir, "s1", "foo/f1");
       DirectoryListing f1Listing = fs.getClient().listPaths(s1f1.toString(),
           HdfsFileStatus.EMPTY_NAME);
-      checkDirectoryListing(f1Listing.getPartialListing(), WARM);
+      checkDirectoryListing(f1Listing.getPartialListing(), COLD);
 
       // delete f1
       fs.delete(fooFile1, true);
@@ -885,7 +890,7 @@ public class TestBlockStoragePolicy {
       checkDirectoryListing(fooList, WARM);
       // check the policy for /dir/.snapshot/s1/foo/f1 again after the deletion
       checkDirectoryListing(fs.getClient().listPaths(s1f1.toString(),
-          HdfsFileStatus.EMPTY_NAME).getPartialListing(), WARM);
+          HdfsFileStatus.EMPTY_NAME).getPartialListing(), COLD);
 
       // change the storage policy of foo dir
       fs.setStoragePolicy(fooDir, "HOT");
@@ -902,21 +907,126 @@ public class TestBlockStoragePolicy {
       Path s1 = SnapshotTestHelper.getSnapshotRoot(dir, "s1");
       Path s1foo = SnapshotTestHelper.getSnapshotPath(dir, "s1", "foo");
       checkDirectoryListing(fs.getClient().listPaths(s1.toString(),
-          HdfsFileStatus.EMPTY_NAME).getPartialListing(), WARM);
-      // /dir/.snapshot/.s1/foo/f1 and /dir/.snapshot/.s1/foo/f2 are warm 
+          HdfsFileStatus.EMPTY_NAME).getPartialListing(), HOT);
+      // /dir/.snapshot/.s1/foo/f1 and /dir/.snapshot/.s1/foo/f2 should still
+      // follow the latest
       checkDirectoryListing(fs.getClient().listPaths(s1foo.toString(),
-          HdfsFileStatus.EMPTY_NAME).getPartialListing(), WARM, WARM);
+          HdfsFileStatus.EMPTY_NAME).getPartialListing(), COLD, HOT);
 
       // delete foo
       fs.delete(fooDir, true);
       checkDirectoryListing(fs.getClient().listPaths(s1.toString(),
-          HdfsFileStatus.EMPTY_NAME).getPartialListing(), WARM); 
+          HdfsFileStatus.EMPTY_NAME).getPartialListing(), HOT);
       checkDirectoryListing(fs.getClient().listPaths(s1foo.toString(),
-          HdfsFileStatus.EMPTY_NAME).getPartialListing(), WARM, WARM);
+          HdfsFileStatus.EMPTY_NAME).getPartialListing(), COLD, HOT);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
       }
     }
+  }
+
+  private static StorageType[][] genStorageTypes(int numDataNodes) {
+    StorageType[][] types = new StorageType[numDataNodes][];
+    for (int i = 0; i < types.length; i++) {
+      types[i] = new StorageType[]{StorageType.DISK, StorageType.ARCHIVE};
+    }
+    return types;
+  }
+
+  private void checkLocatedBlocks(HdfsLocatedFileStatus status, int blockNum,
+                                  int replicaNum, StorageType... types) {
+    List<StorageType> typeList = Lists.newArrayList();
+    for (StorageType type : types) {
+      typeList.add(type);
+    }
+    LocatedBlocks lbs = status.getBlockLocations();
+    Assert.assertEquals(blockNum, lbs.getLocatedBlocks().size());
+    for (LocatedBlock lb : lbs.getLocatedBlocks()) {
+      Assert.assertEquals(replicaNum, lb.getStorageTypes().length);
+      for (StorageType type : lb.getStorageTypes()) {
+        Assert.assertTrue(typeList.remove(type));
+      }
+    }
+    Assert.assertTrue(typeList.isEmpty());
+  }
+
+  private void testIncreaseFileRep(String policyName, byte policyId,
+                                   StorageType[] before,
+                                   StorageType[] after) throws Exception {
+    final int numDataNodes = 5;
+    final StorageType[][] types = genStorageTypes(numDataNodes);
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(numDataNodes).storageTypes(types).build();
+    cluster.waitActive();
+    final DistributedFileSystem fs = cluster.getFileSystem();
+    try {
+      final Path dir = new Path("/test");
+      fs.mkdirs(dir);
+      fs.setStoragePolicy(dir, policyName);
+
+      final Path foo = new Path(dir, "foo");
+      DFSTestUtil.createFile(fs, foo, FILE_LEN, REPLICATION, 0L);
+
+      // the storage policy of foo should be WARM, and the replicas
+      // should be stored in DISK and ARCHIE
+      HdfsFileStatus[] status = fs.getClient().listPaths(foo.toString(),
+          HdfsFileStatus.EMPTY_NAME, true).getPartialListing();
+      checkDirectoryListing(status, policyId);
+      HdfsLocatedFileStatus fooStatus = (HdfsLocatedFileStatus) status[0];
+      checkLocatedBlocks(fooStatus, 1, 3, before);
+
+      // change the replication factor to 5
+      fs.setReplication(foo, (short) numDataNodes);
+      Thread.sleep(1000);
+      for (DataNode dn : cluster.getDataNodes()) {
+        DataNodeTestUtils.triggerHeartbeat(dn);
+      }
+      Thread.sleep(1000);
+      status = fs.getClient().listPaths(foo.toString(),
+          HdfsFileStatus.EMPTY_NAME, true).getPartialListing();
+      checkDirectoryListing(status, policyId);
+      fooStatus = (HdfsLocatedFileStatus) status[0];
+      checkLocatedBlocks(fooStatus, 1, 5, after);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * Consider a File with Hot storage policy. Increase replication factor of
+   * that file from 3 to 5. Make sure all replications are created in DISKS.
+   */
+  @Test
+  public void testIncreaseHotFileRep() throws Exception {
+    testIncreaseFileRep("HOT", HOT, new StorageType[]{StorageType.DISK,
+            StorageType.DISK, StorageType.DISK},
+        new StorageType[]{StorageType.DISK, StorageType.DISK,
+            StorageType.DISK, StorageType.DISK, StorageType.DISK});
+  }
+
+  /**
+   * Consider a File with Warm temperature. Increase replication factor of
+   * that file from 3 to 5. Make sure all replicas are created in DISKS
+   * and ARCHIVE.
+   */
+  @Test
+  public void testIncreaseWarmRep() throws Exception {
+    testIncreaseFileRep("WARM", WARM, new StorageType[]{StorageType.DISK,
+        StorageType.ARCHIVE, StorageType.ARCHIVE},
+        new StorageType[]{StorageType.DISK, StorageType.ARCHIVE,
+            StorageType.ARCHIVE, StorageType.ARCHIVE, StorageType.ARCHIVE});
+  }
+
+  /**
+   * Consider a File with Cold temperature. Increase replication factor of
+   * that file from 3 to 5. Make sure all replicas are created in ARCHIVE.
+   */
+  @Test
+  public void testIncreaseColdRep() throws Exception {
+    testIncreaseFileRep("COLD", COLD, new StorageType[]{StorageType.ARCHIVE,
+            StorageType.ARCHIVE, StorageType.ARCHIVE},
+        new StorageType[]{StorageType.ARCHIVE, StorageType.ARCHIVE,
+            StorageType.ARCHIVE, StorageType.ARCHIVE, StorageType.ARCHIVE});
   }
 }

@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
-import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
 
 import com.google.common.base.Preconditions;
 
@@ -287,8 +286,13 @@ public abstract class INodeReference extends INode {
   }
 
   @Override
-  public final byte getStoragePolicyID(int snapshotId) {
-    return referred.getStoragePolicyID(snapshotId);
+  public final byte getStoragePolicyID() {
+    return referred.getStoragePolicyID();
+  }
+
+  @Override
+  public final byte getLocalStoragePolicyID() {
+    return referred.getLocalStoragePolicyID();
   }
 
   @Override
