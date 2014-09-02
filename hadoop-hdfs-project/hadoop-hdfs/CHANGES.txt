@@ -432,6 +432,8 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6634. inotify in HDFS. (James Thomas via wang)
 
+    HDFS-4257. The ReplaceDatanodeOnFailure policies could have a forgiving
+    option (szetszwo via cmccabe)
 
   OPTIMIZATIONS
 
