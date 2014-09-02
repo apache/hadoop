@@ -18,6 +18,7 @@
 package org.apache.hadoop.mapred.nativetask.combinertest;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -27,16 +28,26 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.Task;
+import org.apache.hadoop.mapred.nativetask.NativeRuntime;
 import org.apache.hadoop.mapred.nativetask.kvtest.TestInputFile;
 import org.apache.hadoop.mapred.nativetask.testutil.ResultVerifier;
 import org.apache.hadoop.mapred.nativetask.testutil.ScenarioConfiguration;
 import org.apache.hadoop.mapred.nativetask.testutil.TestConstants;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.util.NativeCodeLoader;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 
 public class LargeKVCombinerTest {
   private static final Log LOG = LogFactory.getLog(LargeKVCombinerTest.class);
+
+  @Before
+  public void startUp() throws Exception {
+    Assume.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+    Assume.assumeTrue(NativeRuntime.isNativeLibraryLoaded());
+  }
 
   @Test
   public void testLargeValueCombiner(){
@@ -74,10 +85,10 @@ public class LargeKVCombinerTest {
         final Job normaljob = CombinerTest.getJob("normalwordcount", normalConf, inputPath, hadoopOutputPath);
         final Job nativejob = CombinerTest.getJob("nativewordcount", nativeConf, inputPath, nativeOutputPath);
         
-        nativejob.waitForCompletion(true);
+        assertTrue(nativejob.waitForCompletion(true));
         Counter nativeReduceGroups = nativejob.getCounters().findCounter(Task.Counter.REDUCE_INPUT_RECORDS);
         
-        normaljob.waitForCompletion(true);
+        assertTrue(normaljob.waitForCompletion(true));
         Counter normalReduceGroups = normaljob.getCounters().findCounter(Task.Counter.REDUCE_INPUT_RECORDS);
         
         final boolean compareRet = ResultVerifier.verify(nativeOutputPath, hadoopOutputPath);

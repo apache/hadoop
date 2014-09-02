@@ -32,11 +32,14 @@ import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapred.TextOutputFormat;
+import org.apache.hadoop.mapred.nativetask.NativeRuntime;
 import org.apache.hadoop.mapred.nativetask.kvtest.TestInputFile;
 import org.apache.hadoop.mapred.nativetask.testutil.ResultVerifier;
 import org.apache.hadoop.mapred.nativetask.testutil.ScenarioConfiguration;
 import org.apache.hadoop.mapred.nativetask.testutil.TestConstants;
 import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.util.NativeCodeLoader;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -70,6 +73,8 @@ public class OldAPICombinerTest {
 
   @Before
   public void startUp() throws Exception {
+    Assume.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+    Assume.assumeTrue(NativeRuntime.isNativeLibraryLoaded());
     final ScenarioConfiguration conf = new ScenarioConfiguration();
     conf.addcombinerConf();
     this.fs = FileSystem.get(conf);

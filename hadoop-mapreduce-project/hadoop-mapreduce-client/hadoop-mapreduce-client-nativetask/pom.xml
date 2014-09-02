@@ -83,10 +83,8 @@
             </property>
           </properties>
           <includes>
-            <include>**/TestTaskContext.java</include>
-            <include>**/buffer/Test*.java</include>
-            <include>**/handlers/Test*.java</include>
-            <include>**/serde/Test*.java</include>
+            <include>**/*Test.java</include>
+            <include>**/Test*.java</include>
           </includes>
         </configuration>
       </plugin>
@@ -200,28 +198,6 @@
                 </configuration>
               </execution>
             </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <configuration>
-              <properties>
-                <property>
-                  <name>listener</name>
-                  <value>org.apache.hadoop.test.TimedOutTestsListener</value>
-                </property>
-              </properties>
-              <includes>
-                <include>**/TestTaskContext.java</include>
-                <include>**/buffer/Test*.java</include>
-                <include>**/handlers/Test*.java</include>
-                <include>**/serde/Test*.java</include>
-                <include>**/combinertest/*Test.java</include>
-                <include>**/compresstest/*Test.java</include>
-                <include>**/nonsorttest/*Test.java</include>
-                <include>**/kvtest/*Test.java</include>
-              </includes>
-            </configuration>
           </plugin>
         </plugins>
       </build>

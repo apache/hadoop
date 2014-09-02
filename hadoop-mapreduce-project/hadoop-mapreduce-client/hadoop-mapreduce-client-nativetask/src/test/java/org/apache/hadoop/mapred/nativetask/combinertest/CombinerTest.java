@@ -18,6 +18,7 @@
 package org.apache.hadoop.mapred.nativetask.combinertest;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -25,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.Task;
+import org.apache.hadoop.mapred.nativetask.NativeRuntime;
 import org.apache.hadoop.mapred.nativetask.combinertest.WordCount.IntSumReducer;
 import org.apache.hadoop.mapred.nativetask.combinertest.WordCount.TokenizerMapper;
 import org.apache.hadoop.mapred.nativetask.kvtest.TestInputFile;
@@ -36,6 +38,8 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.NativeCodeLoader;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -58,11 +62,11 @@ public class CombinerTest {
 
       final Job normaljob = getJob("normalwordcount", commonConf, inputpath, hadoopoutputpath);
 
-      nativejob.waitForCompletion(true);
+      assertTrue(nativejob.waitForCompletion(true));
             
       Counter nativeReduceGroups = nativejob.getCounters().findCounter(Task.Counter.REDUCE_INPUT_RECORDS);
       
-      normaljob.waitForCompletion(true);
+      assertTrue(normaljob.waitForCompletion(true));
       Counter normalReduceGroups = normaljob.getCounters().findCounter(Task.Counter.REDUCE_INPUT_RECORDS);
        
       assertEquals(true, ResultVerifier.verify(nativeoutputpath, hadoopoutputpath));
@@ -77,6 +81,8 @@ public class CombinerTest {
 
   @Before
   public void startUp() throws Exception {
+    Assume.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+    Assume.assumeTrue(NativeRuntime.isNativeLibraryLoaded());
     final ScenarioConfiguration conf = new ScenarioConfiguration();
     conf.addcombinerConf();
 

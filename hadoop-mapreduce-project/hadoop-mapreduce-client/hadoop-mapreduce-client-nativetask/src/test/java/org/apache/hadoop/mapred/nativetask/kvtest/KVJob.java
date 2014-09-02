@@ -96,8 +96,7 @@ public class KVJob {
     FileOutputFormat.setOutputPath(job, new Path(outputpath));
   }
 
-  public void runJob() throws Exception {
-
-    job.waitForCompletion(true);
+  public boolean runJob() throws Exception {
+    return job.waitForCompletion(true);
   }
 }

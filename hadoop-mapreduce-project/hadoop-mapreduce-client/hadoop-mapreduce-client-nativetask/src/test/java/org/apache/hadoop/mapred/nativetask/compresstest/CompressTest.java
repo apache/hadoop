@@ -18,16 +18,20 @@
 package org.apache.hadoop.mapred.nativetask.compresstest;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.nativetask.NativeRuntime;
 import org.apache.hadoop.mapred.nativetask.kvtest.TestInputFile;
 import org.apache.hadoop.mapred.nativetask.testutil.ResultVerifier;
 import org.apache.hadoop.mapred.nativetask.testutil.ScenarioConfiguration;
 import org.apache.hadoop.mapred.nativetask.testutil.TestConstants;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.util.NativeCodeLoader;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -38,12 +42,12 @@ public class CompressTest {
     final Configuration conf = ScenarioConfiguration.getNativeConfiguration();
     conf.addResource(TestConstants.SNAPPY_COMPRESS_CONF_PATH);
     final Job job = CompressMapper.getCompressJob("nativesnappy", conf);
-    job.waitForCompletion(true);
+    assertTrue(job.waitForCompletion(true));
 
     final Configuration hadoopconf = ScenarioConfiguration.getNormalConfiguration();
     hadoopconf.addResource(TestConstants.SNAPPY_COMPRESS_CONF_PATH);
     final Job hadoopjob = CompressMapper.getCompressJob("hadoopsnappy", hadoopconf);
-    hadoopjob.waitForCompletion(true);
+    assertTrue(hadoopjob.waitForCompletion(true));
 
     final boolean compareRet = ResultVerifier.verify(CompressMapper.outputFileDir + "nativesnappy",
         CompressMapper.outputFileDir + "hadoopsnappy");
@@ -55,12 +59,12 @@ public class CompressTest {
     final Configuration conf = ScenarioConfiguration.getNativeConfiguration();
     conf.addResource(TestConstants.GZIP_COMPRESS_CONF_PATH);
     final Job job = CompressMapper.getCompressJob("nativegzip", conf);
-    job.waitForCompletion(true);
+    assertTrue(job.waitForCompletion(true));
 
     final Configuration hadoopconf = ScenarioConfiguration.getNormalConfiguration();
     hadoopconf.addResource(TestConstants.GZIP_COMPRESS_CONF_PATH);
     final Job hadoopjob = CompressMapper.getCompressJob("hadoopgzip", hadoopconf);
-    hadoopjob.waitForCompletion(true);
+    assertTrue(hadoopjob.waitForCompletion(true));
 
     final boolean compareRet = ResultVerifier.verify(CompressMapper.outputFileDir + "nativegzip",
         CompressMapper.outputFileDir + "hadoopgzip");
@@ -72,12 +76,12 @@ public class CompressTest {
     final Configuration nativeConf = ScenarioConfiguration.getNativeConfiguration();
     nativeConf.addResource(TestConstants.LZ4_COMPRESS_CONF_PATH);
     final Job nativeJob = CompressMapper.getCompressJob("nativelz4", nativeConf);
-    nativeJob.waitForCompletion(true);
+    assertTrue(nativeJob.waitForCompletion(true));
 
     final Configuration hadoopConf = ScenarioConfiguration.getNormalConfiguration();
     hadoopConf.addResource(TestConstants.LZ4_COMPRESS_CONF_PATH);
     final Job hadoopJob = CompressMapper.getCompressJob("hadooplz4", hadoopConf);
-    hadoopJob.waitForCompletion(true);
+    assertTrue(hadoopJob.waitForCompletion(true));
     final boolean compareRet = ResultVerifier.verify(CompressMapper.outputFileDir + "nativelz4",
         CompressMapper.outputFileDir + "hadooplz4");
     assertEquals("file compare result: if they are the same ,then return true", true, compareRet);
@@ -85,6 +89,8 @@ public class CompressTest {
 
   @Before
   public void startUp() throws Exception {
+    Assume.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+    Assume.assumeTrue(NativeRuntime.isNativeLibraryLoaded());
     final ScenarioConfiguration conf = new ScenarioConfiguration();
     final FileSystem fs = FileSystem.get(conf);
     final Path path = new Path(CompressMapper.inputFile);

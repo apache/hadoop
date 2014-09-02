@@ -18,6 +18,7 @@
 package org.apache.hadoop.mapred.nativetask.kvtest;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
@@ -28,13 +29,23 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.nativetask.NativeRuntime;
 import org.apache.hadoop.mapred.nativetask.testutil.ResultVerifier;
 import org.apache.hadoop.mapred.nativetask.testutil.ScenarioConfiguration;
 import org.apache.hadoop.mapred.nativetask.testutil.TestConstants;
+import org.apache.hadoop.util.NativeCodeLoader;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 
 public class LargeKVTest {
   private static final Log LOG = LogFactory.getLog(LargeKVTest.class);
+
+  @Before
+  public void startUp() throws Exception {
+    Assume.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+    Assume.assumeTrue(NativeRuntime.isNativeLibraryLoaded());
+  }
 
   @Test
   public void testKeySize() {
@@ -104,7 +115,7 @@ public class LargeKVTest {
     fs.close();
     try {
       final KVJob keyJob = new KVJob(jobname, conf, keyclass, valueclass, inputpath, outputpath);
-      keyJob.runJob();
+      assertTrue("job should complete successfully", keyJob.runJob());
     } catch (final Exception e) {
       return "normal testcase run time error.";
     }
@@ -123,7 +134,7 @@ public class LargeKVTest {
     fs.close();
     try {
       final KVJob keyJob = new KVJob(jobname, conf, keyclass, valueclass, inputpath, outputpath);
-      keyJob.runJob();
+      assertTrue("job should complete successfully", keyJob.runJob());
     } catch (final Exception e) {
       return "normal testcase run time error.";
     }

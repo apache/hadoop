@@ -18,6 +18,7 @@
 package org.apache.hadoop.mapred.nativetask.kvtest;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -28,9 +29,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.mapred.nativetask.NativeRuntime;
 import org.apache.hadoop.mapred.nativetask.testutil.ResultVerifier;
 import org.apache.hadoop.mapred.nativetask.testutil.ScenarioConfiguration;
 import org.apache.hadoop.mapred.nativetask.testutil.TestConstants;
+import org.apache.hadoop.util.NativeCodeLoader;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -100,6 +105,12 @@ public class KVTest {
     this.valueclass = valueclass;
   }
 
+  @Before
+  public void startUp() throws Exception {
+    Assume.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+    Assume.assumeTrue(NativeRuntime.isNativeLibraryLoaded());
+  }
+
   @Test
   public void testKVCompability() {
     try {
@@ -139,7 +150,7 @@ public class KVTest {
     nativekvtestconf.set(TestConstants.NATIVETASK_KVTEST_CREATEFILE, "true");
     try {
       final KVJob keyJob = new KVJob(jobname, nativekvtestconf, keyclass, valueclass, inputpath, outputpath);
-      keyJob.runJob();
+      assertTrue("job should complete successfully", keyJob.runJob());
     } catch (final Exception e) {
       return "native testcase run time error.";
     }
@@ -161,7 +172,7 @@ public class KVTest {
     hadoopkvtestconf.set(TestConstants.NATIVETASK_KVTEST_CREATEFILE, "false");
     try {
       final KVJob keyJob = new KVJob(jobname, hadoopkvtestconf, keyclass, valueclass, inputpath, outputpath);
-      keyJob.runJob();
+      assertTrue("job should complete successfully", keyJob.runJob());
     } catch (final Exception e) {
       return "normal testcase run time error.";
     }
