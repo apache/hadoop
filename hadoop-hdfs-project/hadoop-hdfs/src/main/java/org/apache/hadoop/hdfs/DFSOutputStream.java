@@ -1178,7 +1178,17 @@ public class DFSOutputStream extends FSOutputSummer
         // Check if replace-datanode policy is satisfied.
         if (dfsClient.dtpReplaceDatanodeOnFailure.satisfy(blockReplication,
             nodes, isAppend, isHflushed)) {
-          addDatanode2ExistingPipeline();
+          try {
+            addDatanode2ExistingPipeline();
+          } catch(IOException ioe) {
+            if (!dfsClient.dtpReplaceDatanodeOnFailure.isBestEffort()) {
+              throw ioe;
+            }
+            DFSClient.LOG.warn("Failed to replace datanode."
+                + " Continue with the remaining datanodes since "
+                + DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_BEST_EFFORT_KEY
+                + " is set to true.", ioe);
+          }
         }
 
         // get a new generation stamp and an access token

@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
+import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure.Policy;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.log4j.Level;
 import org.junit.Assert;
@@ -55,7 +56,8 @@ public class TestReplaceDatanodeOnFailure {
   /** Test DEFAULT ReplaceDatanodeOnFailure policy. */
   @Test
   public void testDefaultPolicy() throws Exception {
-    final ReplaceDatanodeOnFailure p = ReplaceDatanodeOnFailure.DEFAULT;
+    final Configuration conf = new HdfsConfiguration();
+    final ReplaceDatanodeOnFailure p = ReplaceDatanodeOnFailure.get(conf);
 
     final DatanodeInfo[] infos = new DatanodeInfo[5];
     final DatanodeInfo[][] datanodes = new DatanodeInfo[infos.length + 1][];
@@ -114,7 +116,7 @@ public class TestReplaceDatanodeOnFailure {
     final Configuration conf = new HdfsConfiguration();
     
     //always replace a datanode
-    ReplaceDatanodeOnFailure.ALWAYS.write(conf);
+    ReplaceDatanodeOnFailure.write(Policy.ALWAYS, true, conf);
 
     final String[] racks = new String[REPLICATION];
     Arrays.fill(racks, RACK0);
@@ -240,8 +242,6 @@ public class TestReplaceDatanodeOnFailure {
     final Configuration conf = new HdfsConfiguration();
     final short REPLICATION = (short)3;
     
-    Assert.assertEquals(ReplaceDatanodeOnFailure.DEFAULT, ReplaceDatanodeOnFailure.get(conf));
-
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf
         ).numDataNodes(1).build();
 
@@ -281,6 +281,43 @@ public class TestReplaceDatanodeOnFailure {
         } catch(IOException ioe) {
           LOG.info("This exception is expected", ioe);
         }
+      }
+    } finally {
+      if (cluster != null) {cluster.shutdown();}
+    }
+  }
+
+  @Test
+  public void testBestEffort() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    
+    //always replace a datanode but do not throw exception
+    ReplaceDatanodeOnFailure.write(Policy.ALWAYS, true, conf);
+
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf
+        ).numDataNodes(1).build();
+
+    try {
+      final DistributedFileSystem fs = cluster.getFileSystem();
+      final Path f = new Path(DIR, "testIgnoreReplaceFailure");
+      
+      final byte[] bytes = new byte[1000];
+      {
+        LOG.info("write " + bytes.length + " bytes to " + f);
+        final FSDataOutputStream out = fs.create(f, REPLICATION);
+        out.write(bytes);
+        out.close();
+
+        final FileStatus status = fs.getFileStatus(f);
+        Assert.assertEquals(REPLICATION, status.getReplication());
+        Assert.assertEquals(bytes.length, status.getLen());
+      }
+
+      {
+        LOG.info("append another " + bytes.length + " bytes to " + f);
+        final FSDataOutputStream out = fs.append(f);
+        out.write(bytes);
+        out.close();
       }
     } finally {
       if (cluster != null) {cluster.shutdown();}
