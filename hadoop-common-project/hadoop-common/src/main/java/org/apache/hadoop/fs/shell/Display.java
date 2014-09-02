@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs.shell;
 
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -126,8 +127,17 @@ class Display extends FsCommand {
     protected InputStream getInputStream(PathData item) throws IOException {
       FSDataInputStream i = (FSDataInputStream)super.getInputStream(item);
 
+      // Handle 0 and 1-byte files
+      short leadBytes;
+      try {
+        leadBytes = i.readShort();
+      } catch (EOFException e) {
+        i.seek(0);
+        return i;
+      }
+
       // Check type of stream first
-      switch(i.readShort()) {
+      switch(leadBytes) {
         case 0x1f8b: { // RFC 1952
           // Must be gzip
           i.seek(0);
