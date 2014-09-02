@@ -916,6 +916,10 @@ public class TestEditLog {
     public void setMaxOpSize(int maxOpSize) {
       reader.setMaxOpSize(maxOpSize);
     }
+
+    @Override public boolean isLocalLog() {
+      return true;
+    }
   }
 
   @Test

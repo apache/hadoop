@@ -677,4 +677,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
    public static final String DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY =
      "dfs.datanode.slow.io.warning.threshold.ms";
    public static final long DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_DEFAULT = 300;
+
+  public static final String DFS_NAMENODE_INOTIFY_MAX_EVENTS_PER_RPC_KEY =
+      "dfs.namenode.inotify.max.events.per.rpc";
+  public static final int DFS_NAMENODE_INOTIFY_MAX_EVENTS_PER_RPC_DEFAULT =
+      1000;
+
 }

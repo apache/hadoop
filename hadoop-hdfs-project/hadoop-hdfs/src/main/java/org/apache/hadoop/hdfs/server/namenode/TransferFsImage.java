@@ -63,7 +63,7 @@ import org.apache.http.client.utils.URIBuilder;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
-
+import org.mortbay.jetty.EofException;
 
 /**
  * This class provides fetching a specified file from the NameNode.
@@ -370,6 +370,9 @@ public class TransferFsImage {
           throttler.throttle(num, canceler);
         }
       }
+    } catch (EofException e) {
+      LOG.info("Connection closed by client");
+      out = null; // so we don't close in the finally
     } finally {
       if (out != null) {
         out.close();

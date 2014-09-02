@@ -34,6 +34,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
@@ -66,6 +67,8 @@ import org.apache.hadoop.ha.protocolPB.HAServiceProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
+import org.apache.hadoop.hdfs.inotify.Event;
+import org.apache.hadoop.hdfs.inotify.EventsList;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -1465,6 +1468,117 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override
   public void checkAccess(String path, FsAction mode) throws IOException {
     namesystem.checkAccess(path, mode);
+  }
+
+  @Override // ClientProtocol
+  public long getCurrentEditLogTxid() throws IOException {
+    namesystem.checkOperation(OperationCategory.READ); // only active
+    namesystem.checkSuperuserPrivilege();
+    // if it's not yet open for write, we may be in the process of transitioning
+    // from standby to active and may not yet know what the latest committed
+    // txid is
+    return namesystem.getEditLog().isOpenForWrite() ?
+        namesystem.getEditLog().getLastWrittenTxId() : -1;
+  }
+
+  private static FSEditLogOp readOp(EditLogInputStream elis)
+      throws IOException {
+    try {
+      return elis.readOp();
+      // we can get the below two exceptions if a segment is deleted
+      // (because we have accumulated too many edits) or (for the local journal/
+      // no-QJM case only) if a in-progress segment is finalized under us ...
+      // no need to throw an exception back to the client in this case
+    } catch (FileNotFoundException e) {
+      LOG.debug("Tried to read from deleted or moved edit log segment", e);
+      return null;
+    } catch (TransferFsImage.HttpGetFailedException e) {
+      LOG.debug("Tried to read from deleted edit log segment", e);
+      return null;
+    }
+  }
+
+  @Override // ClientProtocol
+  public EventsList getEditsFromTxid(long txid) throws IOException {
+    namesystem.checkOperation(OperationCategory.READ); // only active
+    namesystem.checkSuperuserPrivilege();
+    int maxEventsPerRPC = nn.conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_INOTIFY_MAX_EVENTS_PER_RPC_KEY,
+        DFSConfigKeys.DFS_NAMENODE_INOTIFY_MAX_EVENTS_PER_RPC_DEFAULT);
+    FSEditLog log = namesystem.getFSImage().getEditLog();
+    long syncTxid = log.getSyncTxId();
+    // If we haven't synced anything yet, we can only read finalized
+    // segments since we can't reliably determine which txns in in-progress
+    // segments have actually been committed (e.g. written to a quorum of JNs).
+    // If we have synced txns, we can definitely read up to syncTxid since
+    // syncTxid is only updated after a transaction is committed to all
+    // journals. (In-progress segments written by old writers are already
+    // discarded for us, so if we read any in-progress segments they are
+    // guaranteed to have been written by this NameNode.)
+    boolean readInProgress = syncTxid > 0;
+
+    List<Event> events = Lists.newArrayList();
+    long maxSeenTxid = -1;
+    long firstSeenTxid = -1;
+
+    if (syncTxid > 0 && txid > syncTxid) {
+      // we can't read past syncTxid, so there's no point in going any further
+      return new EventsList(events, firstSeenTxid, maxSeenTxid, syncTxid);
+    }
+
+    Collection<EditLogInputStream> streams = null;
+    try {
+      streams = log.selectInputStreams(txid, 0, null, readInProgress);
+    } catch (IllegalStateException e) { // can happen if we have
+      // transitioned out of active and haven't yet transitioned to standby
+      // and are using QJM -- the edit log will be closed and this exception
+      // will result
+      LOG.info("NN is transitioning from active to standby and FSEditLog " +
+      "is closed -- could not read edits");
+      return new EventsList(events, firstSeenTxid, maxSeenTxid, syncTxid);
+    }
+
+    boolean breakOuter = false;
+    for (EditLogInputStream elis : streams) {
+      // our assumption in this code is the EditLogInputStreams are ordered by
+      // starting txid
+      try {
+        FSEditLogOp op = null;
+        while ((op = readOp(elis)) != null) {
+          // break out of here in the unlikely event that syncTxid is so
+          // out of date that its segment has already been deleted, so the first
+          // txid we get is greater than syncTxid
+          if (syncTxid > 0 && op.getTransactionId() > syncTxid) {
+            breakOuter = true;
+            break;
+          }
+
+          Event[] eventsFromOp = InotifyFSEditLogOpTranslator.translate(op);
+          if (eventsFromOp != null) {
+            events.addAll(Arrays.asList(eventsFromOp));
+          }
+          if (op.getTransactionId() > maxSeenTxid) {
+            maxSeenTxid = op.getTransactionId();
+          }
+          if (firstSeenTxid == -1) {
+            firstSeenTxid = op.getTransactionId();
+          }
+          if (events.size() >= maxEventsPerRPC || (syncTxid > 0 &&
+              op.getTransactionId() == syncTxid)) {
+            // we're done
+            breakOuter = true;
+            break;
+          }
+        }
+      } finally {
+        elis.close();
+      }
+      if (breakOuter) {
+        break;
+      }
+    }
+
+    return new EventsList(events, firstSeenTxid, maxSeenTxid, syncTxid);
   }
 }
 
