@@ -46,6 +46,8 @@ import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.StorageType;
+import org.apache.hadoop.hdfs.inotify.Event;
+import org.apache.hadoop.hdfs.inotify.EventsList;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -96,6 +98,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheP
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateFlagProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DatanodeReportTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DatanodeStorageReportProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetEditsFromTxidResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsStatsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeActionProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeInfoProto;
@@ -158,6 +161,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypesProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageUuidsProto;
+import org.apache.hadoop.hdfs.protocol.proto.InotifyProtos;
 import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.JournalInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.GetXAttrsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.ListXAttrsResponseProto;
@@ -2333,6 +2337,247 @@ public class PBHelper {
 
   public static ShmId convert(ShortCircuitShmIdProto shmId) {
     return new ShmId(shmId.getHi(), shmId.getLo());
+  }
+
+  private static Event.CreateEvent.INodeType createTypeConvert(InotifyProtos.INodeType
+      type) {
+    switch (type) {
+    case I_TYPE_DIRECTORY:
+      return Event.CreateEvent.INodeType.DIRECTORY;
+    case I_TYPE_FILE:
+      return Event.CreateEvent.INodeType.FILE;
+    case I_TYPE_SYMLINK:
+      return Event.CreateEvent.INodeType.SYMLINK;
+    default:
+      return null;
+    }
+  }
+
+  private static InotifyProtos.MetadataUpdateType metadataUpdateTypeConvert(
+      Event.MetadataUpdateEvent.MetadataType type) {
+    switch (type) {
+    case TIMES:
+      return InotifyProtos.MetadataUpdateType.META_TYPE_TIMES;
+    case REPLICATION:
+      return InotifyProtos.MetadataUpdateType.META_TYPE_REPLICATION;
+    case OWNER:
+      return InotifyProtos.MetadataUpdateType.META_TYPE_OWNER;
+    case PERMS:
+      return InotifyProtos.MetadataUpdateType.META_TYPE_PERMS;
+    case ACLS:
+      return InotifyProtos.MetadataUpdateType.META_TYPE_ACLS;
+    case XATTRS:
+      return InotifyProtos.MetadataUpdateType.META_TYPE_XATTRS;
+    default:
+      return null;
+    }
+  }
+
+  private static Event.MetadataUpdateEvent.MetadataType metadataUpdateTypeConvert(
+      InotifyProtos.MetadataUpdateType type) {
+    switch (type) {
+    case META_TYPE_TIMES:
+      return Event.MetadataUpdateEvent.MetadataType.TIMES;
+    case META_TYPE_REPLICATION:
+      return Event.MetadataUpdateEvent.MetadataType.REPLICATION;
+    case META_TYPE_OWNER:
+      return Event.MetadataUpdateEvent.MetadataType.OWNER;
+    case META_TYPE_PERMS:
+      return Event.MetadataUpdateEvent.MetadataType.PERMS;
+    case META_TYPE_ACLS:
+      return Event.MetadataUpdateEvent.MetadataType.ACLS;
+    case META_TYPE_XATTRS:
+      return Event.MetadataUpdateEvent.MetadataType.XATTRS;
+    default:
+      return null;
+    }
+  }
+
+  private static InotifyProtos.INodeType createTypeConvert(Event.CreateEvent.INodeType
+      type) {
+    switch (type) {
+    case DIRECTORY:
+      return InotifyProtos.INodeType.I_TYPE_DIRECTORY;
+    case FILE:
+      return InotifyProtos.INodeType.I_TYPE_FILE;
+    case SYMLINK:
+      return InotifyProtos.INodeType.I_TYPE_SYMLINK;
+    default:
+      return null;
+    }
+  }
+
+  public static EventsList convert(GetEditsFromTxidResponseProto resp) throws
+    IOException {
+    List<Event> events = Lists.newArrayList();
+    for (InotifyProtos.EventProto p : resp.getEventsList().getEventsList()) {
+      switch(p.getType()) {
+      case EVENT_CLOSE:
+        InotifyProtos.CloseEventProto close =
+            InotifyProtos.CloseEventProto.parseFrom(p.getContents());
+        events.add(new Event.CloseEvent(close.getPath(), close.getFileSize(),
+            close.getTimestamp()));
+        break;
+      case EVENT_CREATE:
+        InotifyProtos.CreateEventProto create =
+            InotifyProtos.CreateEventProto.parseFrom(p.getContents());
+        events.add(new Event.CreateEvent.Builder()
+            .iNodeType(createTypeConvert(create.getType()))
+            .path(create.getPath())
+            .ctime(create.getCtime())
+            .ownerName(create.getOwnerName())
+            .groupName(create.getGroupName())
+            .perms(convert(create.getPerms()))
+            .replication(create.getReplication())
+            .symlinkTarget(create.getSymlinkTarget().isEmpty() ? null :
+            create.getSymlinkTarget()).build());
+        break;
+      case EVENT_METADATA:
+        InotifyProtos.MetadataUpdateEventProto meta =
+            InotifyProtos.MetadataUpdateEventProto.parseFrom(p.getContents());
+        events.add(new Event.MetadataUpdateEvent.Builder()
+            .path(meta.getPath())
+            .metadataType(metadataUpdateTypeConvert(meta.getType()))
+            .mtime(meta.getMtime())
+            .atime(meta.getAtime())
+            .replication(meta.getReplication())
+            .ownerName(
+                meta.getOwnerName().isEmpty() ? null : meta.getOwnerName())
+            .groupName(
+                meta.getGroupName().isEmpty() ? null : meta.getGroupName())
+            .perms(meta.hasPerms() ? convert(meta.getPerms()) : null)
+            .acls(meta.getAclsList().isEmpty() ? null : convertAclEntry(
+                meta.getAclsList()))
+            .xAttrs(meta.getXAttrsList().isEmpty() ? null : convertXAttrs(
+                meta.getXAttrsList()))
+            .xAttrsRemoved(meta.getXAttrsRemoved())
+            .build());
+        break;
+      case EVENT_RENAME:
+        InotifyProtos.RenameEventProto rename =
+            InotifyProtos.RenameEventProto.parseFrom(p.getContents());
+        events.add(new Event.RenameEvent(rename.getSrcPath(), rename.getDestPath(),
+            rename.getTimestamp()));
+        break;
+      case EVENT_APPEND:
+        InotifyProtos.AppendEventProto reopen =
+            InotifyProtos.AppendEventProto.parseFrom(p.getContents());
+        events.add(new Event.AppendEvent(reopen.getPath()));
+        break;
+      case EVENT_UNLINK:
+        InotifyProtos.UnlinkEventProto unlink =
+            InotifyProtos.UnlinkEventProto.parseFrom(p.getContents());
+        events.add(new Event.UnlinkEvent(unlink.getPath(), unlink.getTimestamp()));
+        break;
+      default:
+        throw new RuntimeException("Unexpected inotify event type: " +
+            p.getType());
+      }
+    }
+    return new EventsList(events, resp.getEventsList().getFirstTxid(),
+        resp.getEventsList().getLastTxid(), resp.getEventsList().getSyncTxid());
+  }
+
+  public static GetEditsFromTxidResponseProto convertEditsResponse(EventsList el) {
+    InotifyProtos.EventsListProto.Builder builder =
+        InotifyProtos.EventsListProto.newBuilder();
+    for (Event e : el.getEvents()) {
+      switch(e.getEventType()) {
+      case CLOSE:
+        Event.CloseEvent ce = (Event.CloseEvent) e;
+        builder.addEvents(InotifyProtos.EventProto.newBuilder()
+            .setType(InotifyProtos.EventType.EVENT_CLOSE)
+            .setContents(
+                InotifyProtos.CloseEventProto.newBuilder()
+                    .setPath(ce.getPath())
+                    .setFileSize(ce.getFileSize())
+                    .setTimestamp(ce.getTimestamp()).build().toByteString()
+            ).build());
+        break;
+      case CREATE:
+        Event.CreateEvent ce2 = (Event.CreateEvent) e;
+        builder.addEvents(InotifyProtos.EventProto.newBuilder()
+            .setType(InotifyProtos.EventType.EVENT_CREATE)
+            .setContents(
+                InotifyProtos.CreateEventProto.newBuilder()
+                    .setType(createTypeConvert(ce2.getiNodeType()))
+                    .setPath(ce2.getPath())
+                    .setCtime(ce2.getCtime())
+                    .setOwnerName(ce2.getOwnerName())
+                    .setGroupName(ce2.getGroupName())
+                    .setPerms(convert(ce2.getPerms()))
+                    .setReplication(ce2.getReplication())
+                    .setSymlinkTarget(ce2.getSymlinkTarget() == null ?
+                        "" : ce2.getSymlinkTarget()).build().toByteString()
+            ).build());
+        break;
+      case METADATA:
+        Event.MetadataUpdateEvent me = (Event.MetadataUpdateEvent) e;
+        InotifyProtos.MetadataUpdateEventProto.Builder metaB =
+            InotifyProtos.MetadataUpdateEventProto.newBuilder()
+                .setPath(me.getPath())
+                .setType(metadataUpdateTypeConvert(me.getMetadataType()))
+                .setMtime(me.getMtime())
+                .setAtime(me.getAtime())
+                .setReplication(me.getReplication())
+                .setOwnerName(me.getOwnerName() == null ? "" :
+                    me.getOwnerName())
+                .setGroupName(me.getGroupName() == null ? "" :
+                    me.getGroupName())
+                .addAllAcls(me.getAcls() == null ?
+                    Lists.<AclEntryProto>newArrayList() :
+                    convertAclEntryProto(me.getAcls()))
+                .addAllXAttrs(me.getxAttrs() == null ?
+                    Lists.<XAttrProto>newArrayList() :
+                    convertXAttrProto(me.getxAttrs()))
+                .setXAttrsRemoved(me.isxAttrsRemoved());
+        if (me.getPerms() != null) {
+          metaB.setPerms(convert(me.getPerms()));
+        }
+        builder.addEvents(InotifyProtos.EventProto.newBuilder()
+            .setType(InotifyProtos.EventType.EVENT_METADATA)
+            .setContents(metaB.build().toByteString())
+            .build());
+        break;
+      case RENAME:
+        Event.RenameEvent re = (Event.RenameEvent) e;
+        builder.addEvents(InotifyProtos.EventProto.newBuilder()
+            .setType(InotifyProtos.EventType.EVENT_RENAME)
+            .setContents(
+                InotifyProtos.RenameEventProto.newBuilder()
+                    .setSrcPath(re.getSrcPath())
+                    .setDestPath(re.getDstPath())
+                    .setTimestamp(re.getTimestamp()).build().toByteString()
+            ).build());
+        break;
+      case APPEND:
+        Event.AppendEvent re2 = (Event.AppendEvent) e;
+        builder.addEvents(InotifyProtos.EventProto.newBuilder()
+            .setType(InotifyProtos.EventType.EVENT_APPEND)
+            .setContents(
+                InotifyProtos.AppendEventProto.newBuilder()
+                    .setPath(re2.getPath()).build().toByteString()
+            ).build());
+        break;
+      case UNLINK:
+        Event.UnlinkEvent ue = (Event.UnlinkEvent) e;
+        builder.addEvents(InotifyProtos.EventProto.newBuilder()
+            .setType(InotifyProtos.EventType.EVENT_UNLINK)
+            .setContents(
+                InotifyProtos.UnlinkEventProto.newBuilder()
+                    .setPath(ue.getPath())
+                    .setTimestamp(ue.getTimestamp()).build().toByteString()
+            ).build());
+        break;
+      default:
+        throw new RuntimeException("Unexpected inotify event: " + e);
+      }
+    }
+    builder.setFirstTxid(el.getFirstTxid());
+    builder.setLastTxid(el.getLastTxid());
+    builder.setSyncTxid(el.getSyncTxid());
+    return GetEditsFromTxidResponseProto.newBuilder().setEventsList(
+        builder.build()).build();
   }
 
   public static HdfsProtos.CipherSuite convert(CipherSuite suite) {

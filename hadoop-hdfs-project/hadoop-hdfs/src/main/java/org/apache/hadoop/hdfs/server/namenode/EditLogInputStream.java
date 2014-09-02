@@ -203,4 +203,10 @@ public abstract class EditLogInputStream implements Closeable {
    * Set the maximum opcode size in bytes.
    */
   public abstract void setMaxOpSize(int maxOpSize);
+
+  /**
+   * Returns true if we are currently reading the log from a local disk or an
+   * even faster data source (e.g. a byte buffer).
+   */
+  public abstract boolean isLocalLog();
 }

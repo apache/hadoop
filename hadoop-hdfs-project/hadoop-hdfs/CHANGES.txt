@@ -430,6 +430,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-6774. Make FsDataset and DataStore support removing volumes. (Lei Xu
     via atm)
 
+    HDFS-6634. inotify in HDFS. (James Thomas via wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

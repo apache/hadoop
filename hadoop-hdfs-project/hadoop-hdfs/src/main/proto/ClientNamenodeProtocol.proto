@@ -33,6 +33,7 @@ import "hdfs.proto";
 import "acl.proto";
 import "xattr.proto";
 import "encryption.proto";
+import "inotify.proto";
 
 /**
  * The ClientNamenodeProtocol Service defines the interface between a client 
@@ -664,6 +665,21 @@ message CheckAccessRequestProto {
 message CheckAccessResponseProto { // void response
 }
 
+message GetCurrentEditLogTxidRequestProto {
+}
+
+message GetCurrentEditLogTxidResponseProto {
+  required int64 txid = 1;
+}
+
+message GetEditsFromTxidRequestProto {
+  required int64 txid = 1;
+}
+
+message GetEditsFromTxidResponseProto {
+  required EventsListProto eventsList = 1;
+}
+
 service ClientNamenodeProtocol {
   rpc getBlockLocations(GetBlockLocationsRequestProto)
       returns(GetBlockLocationsResponseProto);
@@ -801,4 +817,8 @@ service ClientNamenodeProtocol {
       returns(ListEncryptionZonesResponseProto);
   rpc getEZForPath(GetEZForPathRequestProto)
       returns(GetEZForPathResponseProto);
+  rpc getCurrentEditLogTxid(GetCurrentEditLogTxidRequestProto)
+      returns(GetCurrentEditLogTxidResponseProto);
+  rpc getEditsFromTxid(GetEditsFromTxidRequestProto)
+      returns(GetEditsFromTxidResponseProto);
 }

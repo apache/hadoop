@@ -651,7 +651,8 @@ public class Journal implements Closeable {
         }
       }
       if (log != null && log.isInProgress()) {
-        logs.add(new RemoteEditLog(log.getStartTxId(), getHighestWrittenTxId()));
+        logs.add(new RemoteEditLog(log.getStartTxId(), getHighestWrittenTxId(),
+            true));
       }
     }
     
