@@ -727,6 +727,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10911. hadoop.auth cookie after HADOOP-10710 still not proper
     according to RFC2109. (gchanan via tucu)
 
+    HADOOP-11036. Add build directory to .gitignore (Tsuyoshi OZAWA via aw)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
