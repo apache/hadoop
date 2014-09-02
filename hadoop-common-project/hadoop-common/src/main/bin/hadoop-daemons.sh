@@ -18,19 +18,34 @@
 
 # Run a Hadoop command on all slave hosts.
 
-usage="Usage: hadoop-daemons.sh [--config confdir] [--hosts hostlistfile] [start|stop] command args..."
+function hadoop_usage
+{
+  echo "Usage: hadoop-daemons.sh [--config confdir] [--hosts hostlistfile] (start|stop|status) <hadoop-command> <args...>"
+}
 
-# if no args specified, show usage
-if [ $# -le 1 ]; then
-  echo $usage
+this="${BASH_SOURCE-$0}"
+bin=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
+
+# let's locate libexec...
+if [[ -n "${HADOOP_PREFIX}" ]]; then
+  DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
+else
+  DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
+fi
+
+HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}"
+# shellcheck disable=SC2034
+HADOOP_NEW_CONFIG=true
+if [[ -f "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh" ]]; then
+  . "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh"
+else
+  echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/hadoop-config.sh." 2>&1
   exit 1
 fi
 
-bin=`dirname "${BASH_SOURCE-$0}"`
-bin=`cd "$bin"; pwd`
+if [[ $# = 0 ]]; then
+  hadoop_exit_with_usage 1
+fi
 
-DEFAULT_LIBEXEC_DIR="$bin"/../libexec
-HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
-. $HADOOP_LIBEXEC_DIR/hadoop-config.sh
-
-exec "$bin/slaves.sh" --config $HADOOP_CONF_DIR cd "$HADOOP_PREFIX" \; "$bin/hadoop-daemon.sh" --config $HADOOP_CONF_DIR "$@"
+hadoop_connect_to_hosts "${bin}/hadoop-daemon.sh" \
+--config "${HADOOP_CONF_DIR}" "$@"

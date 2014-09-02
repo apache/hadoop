@@ -108,6 +108,11 @@ public class TestJobConf {
     JobConf configuration = new JobConf();
     
     configuration.set(JobConf.MAPRED_TASK_MAXVMEM_PROPERTY, "-3");
+    Assert.assertEquals(MRJobConfig.DEFAULT_MAP_MEMORY_MB,
+        configuration.getMemoryForMapTask());
+    Assert.assertEquals(MRJobConfig.DEFAULT_REDUCE_MEMORY_MB,
+        configuration.getMemoryForReduceTask());
+    
     configuration.set(MRJobConfig.MAP_MEMORY_MB, "4");
     configuration.set(MRJobConfig.REDUCE_MEMORY_MB, "5");
     Assert.assertEquals(4, configuration.getMemoryForMapTask());
@@ -116,23 +121,16 @@ public class TestJobConf {
   }
   
   /**
-   * Test that negative values for all memory configuration properties causes
-   * APIs to disable memory limits
+   * Test that negative values for new configuration keys get passed through.
    */
   @Test
   public void testNegativeValuesForMemoryParams() {
     JobConf configuration = new JobConf();
-    
-    configuration.set(JobConf.MAPRED_TASK_MAXVMEM_PROPERTY, "-4");
+        
     configuration.set(MRJobConfig.MAP_MEMORY_MB, "-5");
     configuration.set(MRJobConfig.REDUCE_MEMORY_MB, "-6");
-    
-    Assert.assertEquals(JobConf.DISABLED_MEMORY_LIMIT,
-                        configuration.getMemoryForMapTask());
-    Assert.assertEquals(JobConf.DISABLED_MEMORY_LIMIT,
-                        configuration.getMemoryForReduceTask());
-    Assert.assertEquals(JobConf.DISABLED_MEMORY_LIMIT,
-                        configuration.getMaxVirtualMemoryForTask());
+    Assert.assertEquals(-5, configuration.getMemoryForMapTask());
+    Assert.assertEquals(-6, configuration.getMemoryForReduceTask());
   }
   
   /**

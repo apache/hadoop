@@ -33,6 +33,9 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_A
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYPASSWORD_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_PASSWORD_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_TRUSTSTORE_PASSWORD_KEY;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -68,6 +71,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
+import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -1531,13 +1537,35 @@ public class DFSUtil {
         .needsClientAuth(
             sslConf.getBoolean(DFS_CLIENT_HTTPS_NEED_AUTH_KEY,
                 DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT))
-        .keyPassword(sslConf.get("ssl.server.keystore.keypassword"))
+        .keyPassword(getPassword(sslConf, DFS_SERVER_HTTPS_KEYPASSWORD_KEY))
         .keyStore(sslConf.get("ssl.server.keystore.location"),
-            sslConf.get("ssl.server.keystore.password"),
+            getPassword(sslConf, DFS_SERVER_HTTPS_KEYSTORE_PASSWORD_KEY),
             sslConf.get("ssl.server.keystore.type", "jks"))
         .trustStore(sslConf.get("ssl.server.truststore.location"),
-            sslConf.get("ssl.server.truststore.password"),
+            getPassword(sslConf, DFS_SERVER_HTTPS_TRUSTSTORE_PASSWORD_KEY),
             sslConf.get("ssl.server.truststore.type", "jks"));
+  }
+
+  /**
+   * Leverages the Configuration.getPassword method to attempt to get
+   * passwords from the CredentialProvider API before falling back to
+   * clear text in config - if falling back is allowed.
+   * @param conf Configuration instance
+   * @param alias name of the credential to retreive
+   * @return String credential value or null
+   */
+  static String getPassword(Configuration conf, String alias) {
+    String password = null;
+    try {
+      char[] passchars = conf.getPassword(alias);
+      if (passchars != null) {
+        password = new String(passchars);
+      }
+    }
+    catch (IOException ioe) {
+      password = null;
+    }
+    return password;
   }
 
   /**
@@ -1643,9 +1671,11 @@ public class DFSUtil {
         .setKeytabConfKey(getSpnegoKeytabKey(conf, spnegoKeytabFileKey));
 
     // initialize the webserver for uploading/downloading files.
-    LOG.info("Starting web server as: "
-        + SecurityUtil.getServerPrincipal(conf.get(spnegoUserNameKey),
-            httpAddr.getHostName()));
+    if (UserGroupInformation.isSecurityEnabled()) {
+      LOG.info("Starting web server as: "
+          + SecurityUtil.getServerPrincipal(conf.get(spnegoUserNameKey),
+              httpAddr.getHostName()));
+    }
 
     if (policy.isHttpEnabled()) {
       if (httpAddr.getPort() == 0) {
@@ -1694,5 +1724,40 @@ public class DFSUtil {
           Arrays.toString(resultsArray));
       }
     }
+  }
+
+  /**
+   * Creates a new KeyProviderCryptoExtension by wrapping the
+   * KeyProvider specified in the given Configuration.
+   *
+   * @param conf Configuration specifying a single, non-transient KeyProvider.
+   * @return new KeyProviderCryptoExtension, or null if no provider was found.
+   * @throws IOException if the KeyProvider is improperly specified in
+   *                             the Configuration
+   */
+  public static KeyProviderCryptoExtension createKeyProviderCryptoExtension(
+      final Configuration conf) throws IOException {
+    final List<KeyProvider> providers = KeyProviderFactory.getProviders(conf);
+    if (providers == null || providers.size() == 0) {
+      return null;
+    }
+    if (providers.size() > 1) {
+      StringBuilder builder = new StringBuilder();
+      builder.append("Found multiple KeyProviders but only one is permitted [");
+      String prefix = " ";
+      for (KeyProvider kp: providers) {
+        builder.append(prefix + kp.toString());
+        prefix = ", ";
+      }
+      builder.append("]");
+      throw new IOException(builder.toString());
+    }
+    KeyProviderCryptoExtension provider = KeyProviderCryptoExtension
+        .createKeyProviderCryptoExtension(providers.get(0));
+    if (provider.isTransient()) {
+      throw new IOException("KeyProvider " + provider.toString()
+          + " was found but it is a transient provider.");
+    }
+    return provider;
   }
 }

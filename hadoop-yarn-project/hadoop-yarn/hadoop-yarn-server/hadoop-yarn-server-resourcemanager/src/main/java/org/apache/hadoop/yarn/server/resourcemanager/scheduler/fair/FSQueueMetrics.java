@@ -33,6 +33,8 @@ public class FSQueueMetrics extends QueueMetrics {
 
   @Metric("Fair share of memory in MB") MutableGaugeInt fairShareMB;
   @Metric("Fair share of CPU in vcores") MutableGaugeInt fairShareVCores;
+  @Metric("Steady fair share of memory in MB") MutableGaugeInt steadyFairShareMB;
+  @Metric("Steady fair share of CPU in vcores") MutableGaugeInt steadyFairShareVCores;
   @Metric("Minimum share of memory in MB") MutableGaugeInt minShareMB;
   @Metric("Minimum share of CPU in vcores") MutableGaugeInt minShareVCores;
   @Metric("Maximum share of memory in MB") MutableGaugeInt maxShareMB;
@@ -55,7 +57,20 @@ public class FSQueueMetrics extends QueueMetrics {
   public int getFairShareVirtualCores() {
     return fairShareVCores.value();
   }
-  
+
+  public void setSteadyFairShare(Resource resource) {
+    steadyFairShareMB.set(resource.getMemory());
+    steadyFairShareVCores.set(resource.getVirtualCores());
+  }
+
+  public int getSteadyFairShareMB() {
+    return steadyFairShareMB.value();
+  }
+
+  public int getSteadyFairShareVCores() {
+    return steadyFairShareVCores.value();
+  }
+
   public void setMinShare(Resource resource) {
     minShareMB.set(resource.getMemory());
     minShareVCores.set(resource.getVirtualCores());

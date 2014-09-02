@@ -36,7 +36,6 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -121,6 +120,7 @@ public class ResourceTrackerService extends AbstractService implements
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     resourceTrackerAddress = conf.getSocketAddr(
+        YarnConfiguration.RM_BIND_HOST,
         YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT);
@@ -175,9 +175,11 @@ public class ResourceTrackerService extends AbstractService implements
       }
       refreshServiceAcls(conf, RMPolicyProvider.getInstance());
     }
-
+ 
     this.server.start();
-    conf.updateConnectAddr(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+    conf.updateConnectAddr(YarnConfiguration.RM_BIND_HOST,
+			   YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+			   YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
                            server.getListenerAddress());
   }
 
@@ -296,8 +298,7 @@ public class ResourceTrackerService extends AbstractService implements
         .getCurrentKey());    
 
     RMNode rmNode = new RMNodeImpl(nodeId, rmContext, host, cmPort, httpPort,
-        resolve(host), ResourceOption.newInstance(capability, RMNode.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT),
-        nodeManagerVersion);
+        resolve(host), capability, nodeManagerVersion);
 
     RMNode oldNode = this.rmContext.getRMNodes().putIfAbsent(nodeId, rmNode);
     if (oldNode == null) {
@@ -308,7 +309,8 @@ public class ResourceTrackerService extends AbstractService implements
       LOG.info("Reconnect from the node at: " + host);
       this.nmLivelinessMonitor.unregister(nodeId);
       this.rmContext.getDispatcher().getEventHandler().handle(
-          new RMNodeReconnectEvent(nodeId, rmNode));
+          new RMNodeReconnectEvent(nodeId, rmNode,
+              request.getRunningApplications()));
     }
     // On every node manager register we will be clearing NMToken keys if
     // present for any running application.

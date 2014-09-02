@@ -22,20 +22,24 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -117,6 +121,7 @@ public class JobHistoryUtils {
   public static final String TIMESTAMP_DIR_REGEX = "\\d{4}" + "\\" + Path.SEPARATOR +  "\\d{2}" + "\\" + Path.SEPARATOR + "\\d{2}";
   public static final Pattern TIMESTAMP_DIR_PATTERN = Pattern.compile(TIMESTAMP_DIR_REGEX);
   private static final String TIMESTAMP_DIR_FORMAT = "%04d" + File.separator + "%02d" + File.separator + "%02d";
+  private static final Log LOG = LogFactory.getLog(JobHistoryUtils.class);
 
   private static final PathFilter CONF_FILTER = new PathFilter() {
     @Override
@@ -183,7 +188,7 @@ public class JobHistoryUtils {
     Path stagingPath = MRApps.getStagingAreaDir(conf, user);
     Path path = new Path(stagingPath, jobId);
     String logDir = path.toString();
-    return logDir;
+    return ensurePathInDefaultFileSystem(logDir, conf);
   }
   
   /**
@@ -200,7 +205,7 @@ public class JobHistoryUtils {
           MRJobConfig.DEFAULT_MR_AM_STAGING_DIR)
           + "/history/done_intermediate";
     }
-    return doneDirPrefix;
+    return ensurePathInDefaultFileSystem(doneDirPrefix, conf);
   }
   
   /**
@@ -216,7 +221,69 @@ public class JobHistoryUtils {
           MRJobConfig.DEFAULT_MR_AM_STAGING_DIR)
           + "/history/done";
     }
-    return doneDirPrefix;
+    return ensurePathInDefaultFileSystem(doneDirPrefix, conf);
+  }
+
+  /**
+   * Get default file system URI for the cluster (used to ensure consistency
+   * of history done/staging locations) over different context
+   *
+   * @return Default file context
+   */
+  private static FileContext getDefaultFileContext() {
+    // If FS_DEFAULT_NAME_KEY was set solely by core-default.xml then we ignore
+    // ignore it. This prevents defaulting history paths to file system specified
+    // by core-default.xml which would not make sense in any case. For a test
+    // case to exploit this functionality it should create core-site.xml
+    FileContext fc = null;
+    Configuration defaultConf = new Configuration();
+    String[] sources;
+    sources = defaultConf.getPropertySources(
+        CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY);
+    if (sources != null &&
+        (!Arrays.asList(sources).contains("core-default.xml") ||
+        sources.length > 1)) {
+      try {
+        fc = FileContext.getFileContext(defaultConf);
+        LOG.info("Default file system [" +
+                  fc.getDefaultFileSystem().getUri() + "]");
+      } catch (UnsupportedFileSystemException e) {
+        LOG.error("Unable to create default file context [" +
+            defaultConf.get(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY) +
+            "]",
+            e);
+      }
+    }
+    else {
+      LOG.info("Default file system is set solely " +
+          "by core-default.xml therefore -  ignoring");
+    }
+
+    return fc;
+  }
+
+  /**
+   * Ensure that path belongs to cluster's default file system unless
+   * 1. it is already fully qualified.
+   * 2. current job configuration uses default file system
+   * 3. running from a test case without core-site.xml
+   *
+   * @param sourcePath source path
+   * @param conf the job configuration
+   * @return full qualified path (if necessary) in default file system
+   */
+  private static String ensurePathInDefaultFileSystem(String sourcePath, Configuration conf) {
+    Path path = new Path(sourcePath);
+    FileContext fc = getDefaultFileContext();
+    if (fc == null ||
+        fc.getDefaultFileSystem().getUri().toString().equals(
+            conf.get(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, "")) ||
+        path.toUri().getAuthority() != null ||
+        path.toUri().getScheme()!= null) {
+      return sourcePath;
+    }
+
+    return fc.makeQualified(path).toString();
   }
 
   /**
@@ -225,8 +292,8 @@ public class JobHistoryUtils {
    * @return the intermediate done directory for jobhistory files.
    */
   public static String getHistoryIntermediateDoneDirForUser(Configuration conf) throws IOException {
-    return getConfiguredHistoryIntermediateDoneDirPrefix(conf) + File.separator
-        + UserGroupInformation.getCurrentUser().getShortUserName();
+    return new Path(getConfiguredHistoryIntermediateDoneDirPrefix(conf),
+        UserGroupInformation.getCurrentUser().getShortUserName()).toString();
   }
 
   public static boolean shouldCreateNonUserDirectory(Configuration conf) {

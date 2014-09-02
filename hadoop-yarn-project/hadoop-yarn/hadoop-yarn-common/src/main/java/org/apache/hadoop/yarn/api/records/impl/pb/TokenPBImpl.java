@@ -48,7 +48,7 @@ public class TokenPBImpl extends Token {
   }
 
   public synchronized TokenProto getProto() {
-      mergeLocalToProto();
+    mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;

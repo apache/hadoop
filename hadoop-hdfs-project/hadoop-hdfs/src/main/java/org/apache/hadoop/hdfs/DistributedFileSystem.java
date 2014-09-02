@@ -59,8 +59,8 @@ import org.apache.hadoop.fs.VolumeId;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
-import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -68,6 +68,7 @@ import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
@@ -290,8 +291,9 @@ public class DistributedFileSystem extends FileSystem {
       @Override
       public FSDataInputStream doCall(final Path p)
           throws IOException, UnresolvedLinkException {
-        return new HdfsDataInputStream(
-            dfs.open(getPathName(p), bufferSize, verifyChecksum));
+        final DFSInputStream dfsis =
+          dfs.open(getPathName(p), bufferSize, verifyChecksum);
+        return dfs.createWrappedInputStream(dfsis);
       }
       @Override
       public FSDataInputStream next(final FileSystem fs, final Path p)
@@ -356,7 +358,7 @@ public class DistributedFileSystem extends FileSystem {
                 : EnumSet.of(CreateFlag.CREATE),
             true, replication, blockSize, progress, bufferSize, null,
             favoredNodes);
-        return new HdfsDataOutputStream(out, statistics);
+        return dfs.createWrappedOutputStream(out, statistics);
       }
       @Override
       public HdfsDataOutputStream next(final FileSystem fs, final Path p)
@@ -384,9 +386,10 @@ public class DistributedFileSystem extends FileSystem {
       @Override
       public FSDataOutputStream doCall(final Path p)
           throws IOException, UnresolvedLinkException {
-        return new HdfsDataOutputStream(dfs.create(getPathName(p), permission,
-            cflags, replication, blockSize, progress, bufferSize, checksumOpt),
-            statistics);
+        final DFSOutputStream dfsos = dfs.create(getPathName(p), permission,
+                cflags, replication, blockSize, progress, bufferSize,
+                checksumOpt);
+        return dfs.createWrappedOutputStream(dfsos, statistics);
       }
       @Override
       public FSDataOutputStream next(final FileSystem fs, final Path p)
@@ -403,11 +406,12 @@ public class DistributedFileSystem extends FileSystem {
     short replication, long blockSize, Progressable progress,
     ChecksumOpt checksumOpt) throws IOException {
     statistics.incrementWriteOps(1);
-    return new HdfsDataOutputStream(dfs.primitiveCreate(
-        getPathName(fixRelativePart(f)),
-        absolutePermission, flag, true, replication, blockSize,
-        progress, bufferSize, checksumOpt),statistics);
-   }
+    final DFSOutputStream dfsos = dfs.primitiveCreate(
+      getPathName(fixRelativePart(f)),
+      absolutePermission, flag, true, replication, blockSize,
+      progress, bufferSize, checksumOpt);
+    return dfs.createWrappedOutputStream(dfsos, statistics);
+  }
 
   /**
    * Same as create(), except fails if parent directory doesn't already exist.
@@ -427,9 +431,9 @@ public class DistributedFileSystem extends FileSystem {
       @Override
       public FSDataOutputStream doCall(final Path p) throws IOException,
           UnresolvedLinkException {
-        return new HdfsDataOutputStream(dfs.create(getPathName(p), permission,
-            flag, false, replication, blockSize, progress, bufferSize, null),
-            statistics);
+        final DFSOutputStream dfsos = dfs.create(getPathName(p), permission,
+          flag, false, replication, blockSize, progress, bufferSize, null);
+        return dfs.createWrappedOutputStream(dfsos, statistics);
       }
 
       @Override
@@ -1795,6 +1799,25 @@ public class DistributedFileSystem extends FileSystem {
     }.resolve(this, absF);
   }
   
+  /* HDFS only */
+  public void createEncryptionZone(Path path, String keyName)
+    throws IOException {
+    dfs.createEncryptionZone(getPathName(path), keyName);
+  }
+
+  /* HDFS only */
+  public EncryptionZone getEZForPath(Path path)
+          throws IOException {
+    Preconditions.checkNotNull(path);
+    return dfs.getEZForPath(getPathName(path));
+  }
+
+  /* HDFS only */
+  public RemoteIterator<EncryptionZone> listEncryptionZones()
+      throws IOException {
+    return dfs.listEncryptionZones();
+  }
+
   @Override
   public void setXAttr(Path path, final String name, final byte[] value, 
       final EnumSet<XAttrSetFlag> flag) throws IOException {
@@ -1897,5 +1920,33 @@ public class DistributedFileSystem extends FileSystem {
         return null;
       }
     }.resolve(this, absF);
+  }
+
+  @Override
+  public void access(Path path, final FsAction mode) throws IOException {
+    final Path absF = fixRelativePart(path);
+    new FileSystemLinkResolver<Void>() {
+      @Override
+      public Void doCall(final Path p) throws IOException {
+        dfs.checkAccess(getPathName(p), mode);
+        return null;
+      }
+
+      @Override
+      public Void next(final FileSystem fs, final Path p)
+          throws IOException {
+        fs.access(p, mode);
+        return null;
+      }
+    }.resolve(this, absF);
+  }
+
+  public DFSInotifyEventInputStream getInotifyEventStream() throws IOException {
+    return dfs.getInotifyEventStream();
+  }
+
+  public DFSInotifyEventInputStream getInotifyEventStream(long lastReadTxid)
+      throws IOException {
+    return dfs.getInotifyEventStream(lastReadTxid);
   }
 }

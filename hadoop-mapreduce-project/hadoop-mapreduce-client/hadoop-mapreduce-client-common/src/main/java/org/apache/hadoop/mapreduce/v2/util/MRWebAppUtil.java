@@ -29,6 +29,7 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.ipc.RPCUtil;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -105,11 +106,15 @@ public class MRWebAppUtil {
   
   public static InetSocketAddress getJHSWebBindAddress(Configuration conf) {
     if (httpPolicyInJHS == Policy.HTTPS_ONLY) {
-      return conf.getSocketAddr(JHAdminConfig.MR_HISTORY_WEBAPP_HTTPS_ADDRESS,
+      return conf.getSocketAddr(
+          JHAdminConfig.MR_HISTORY_BIND_HOST,
+          JHAdminConfig.MR_HISTORY_WEBAPP_HTTPS_ADDRESS,
           JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_HTTPS_ADDRESS,
           JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_HTTPS_PORT);
     } else {
-      return conf.getSocketAddr(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
+      return conf.getSocketAddr(
+          JHAdminConfig.MR_HISTORY_BIND_HOST,
+          JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
           JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_ADDRESS,
           JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_PORT);
     }

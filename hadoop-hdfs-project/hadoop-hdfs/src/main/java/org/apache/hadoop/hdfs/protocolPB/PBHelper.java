@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.protocolPB;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos
+    .EncryptionZoneWithIdProto;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -44,6 +46,8 @@ import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.StorageType;
+import org.apache.hadoop.hdfs.inotify.Event;
+import org.apache.hadoop.hdfs.inotify.EventsList;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -51,6 +55,7 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveStats;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolStats;
+import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -58,7 +63,9 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.EncryptionZoneWithId;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdfs.protocol.FsAclPermission;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
@@ -90,6 +97,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheP
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolStatsProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateFlagProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DatanodeReportTypeProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DatanodeStorageReportProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetEditsFromTxidResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsStatsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeActionProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeInfoProto;
@@ -102,14 +111,11 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockIdComma
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeRegistrationProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeStorageProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeStorageProto.StorageState;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.FinalizeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.KeyUpdateCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.NNHAStatusHeartbeatProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReceivedDeletedBlockInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterCommandProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
@@ -125,6 +131,8 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto.AdminState;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeLocalInfoProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeStorageProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeStorageProto.StorageState;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DirectoryListingProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExportedBlockKeysProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
@@ -149,9 +157,11 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshotDiffReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshottableDirectoryListingProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshottableDirectoryStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypesProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageUuidsProto;
+import org.apache.hadoop.hdfs.protocol.proto.InotifyProtos;
 import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.JournalInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.GetXAttrsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.ListXAttrsResponseProto;
@@ -182,6 +192,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.FinalizeCommand;
 import org.apache.hadoop.hdfs.server.protocol.JournalInfo;
 import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
@@ -350,15 +361,19 @@ public class PBHelper {
     return BlockWithLocationsProto.newBuilder()
         .setBlock(convert(blk.getBlock()))
         .addAllDatanodeUuids(Arrays.asList(blk.getDatanodeUuids()))
-        .addAllStorageUuids(Arrays.asList(blk.getStorageIDs())).build();
+        .addAllStorageUuids(Arrays.asList(blk.getStorageIDs()))
+        .addAllStorageTypes(convertStorageTypes(blk.getStorageTypes()))
+        .build();
   }
 
   public static BlockWithLocations convert(BlockWithLocationsProto b) {
     final List<String> datanodeUuids = b.getDatanodeUuidsList();
     final List<String> storageUuids = b.getStorageUuidsList();
+    final List<StorageTypeProto> storageTypes = b.getStorageTypesList();
     return new BlockWithLocations(convert(b.getBlock()),
         datanodeUuids.toArray(new String[datanodeUuids.size()]),
-        storageUuids.toArray(new String[storageUuids.size()]));
+        storageUuids.toArray(new String[storageUuids.size()]),
+        convertStorageTypes(storageTypes, storageUuids.size()));
   }
 
   public static BlocksWithLocationsProto convert(BlocksWithLocations blks) {
@@ -618,6 +633,41 @@ public class PBHelper {
         .setAdminState(PBHelper.convert(info.getAdminState()))
         .build();
     return builder.build();
+  }
+
+  public static DatanodeStorageReportProto convertDatanodeStorageReport(
+      DatanodeStorageReport report) {
+    return DatanodeStorageReportProto.newBuilder()
+        .setDatanodeInfo(convert(report.getDatanodeInfo()))
+        .addAllStorageReports(convertStorageReports(report.getStorageReports()))
+        .build();
+  }
+
+  public static List<DatanodeStorageReportProto> convertDatanodeStorageReports(
+      DatanodeStorageReport[] reports) {
+    final List<DatanodeStorageReportProto> protos
+        = new ArrayList<DatanodeStorageReportProto>(reports.length);
+    for(int i = 0; i < reports.length; i++) {
+      protos.add(convertDatanodeStorageReport(reports[i]));
+    }
+    return protos;
+  }
+
+  public static DatanodeStorageReport convertDatanodeStorageReport(
+      DatanodeStorageReportProto proto) {
+    return new DatanodeStorageReport(
+        convert(proto.getDatanodeInfo()),
+        convertStorageReports(proto.getStorageReportsList()));
+  }
+
+  public static DatanodeStorageReport[] convertDatanodeStorageReports(
+      List<DatanodeStorageReportProto> protos) {
+    final DatanodeStorageReport[] reports
+        = new DatanodeStorageReport[protos.size()];
+    for(int i = 0; i < reports.length; i++) {
+      reports[i] = convertDatanodeStorageReport(protos.get(i));
+    }
+    return reports;
   }
 
   public static AdminStates convert(AdminState adminState) {
@@ -1137,7 +1187,9 @@ public class PBHelper {
         lb.getFileLength(), lb.getUnderConstruction(),
         PBHelper.convertLocatedBlock(lb.getBlocksList()),
         lb.hasLastBlock() ? PBHelper.convert(lb.getLastBlock()) : null,
-        lb.getIsLastBlockComplete());
+        lb.getIsLastBlockComplete(),
+        lb.hasFileEncryptionInfo() ? convert(lb.getFileEncryptionInfo()) :
+            null);
   }
   
   public static LocatedBlocksProto convert(LocatedBlocks lb) {
@@ -1148,6 +1200,9 @@ public class PBHelper {
         LocatedBlocksProto.newBuilder();
     if (lb.getLastLocatedBlock() != null) {
       builder.setLastBlock(PBHelper.convert(lb.getLastLocatedBlock()));
+    }
+    if (lb.getFileEncryptionInfo() != null) {
+      builder.setFileEncryptionInfo(convert(lb.getFileEncryptionInfo()));
     }
     return builder.setFileLength(lb.getFileLength())
         .setUnderConstruction(lb.isUnderConstruction())
@@ -1274,7 +1329,9 @@ public class PBHelper {
         fs.getPath().toByteArray(),
         fs.hasFileId()? fs.getFileId(): INodeId.GRANDFATHER_INODE_ID,
         fs.hasLocations() ? PBHelper.convert(fs.getLocations()) : null,
-        fs.hasChildrenNum() ? fs.getChildrenNum() : -1);
+        fs.hasChildrenNum() ? fs.getChildrenNum() : -1,
+        fs.hasFileEncryptionInfo() ? convert(fs.getFileEncryptionInfo()) :
+            null);
   }
 
   public static SnapshottableDirectoryStatus convert(
@@ -1323,6 +1380,9 @@ public class PBHelper {
       setPath(ByteString.copyFrom(fs.getLocalNameInBytes()));
     if (fs.isSymlink())  {
       builder.setSymlink(ByteString.copyFrom(fs.getSymlinkInBytes()));
+    }
+    if (fs.getFileEncryptionInfo() != null) {
+      builder.setFileEncryptionInfo(convert(fs.getFileEncryptionInfo()));
     }
     if (fs instanceof HdfsLocatedFileStatus) {
       LocatedBlocks locations = ((HdfsLocatedFileStatus)fs).getBlockLocations();
@@ -1713,6 +1773,15 @@ public class PBHelper {
     return report;
   }
 
+  public static List<StorageReportProto> convertStorageReports(StorageReport[] storages) {
+    final List<StorageReportProto> protos = new ArrayList<StorageReportProto>(
+        storages.length);
+    for(int i = 0; i < storages.length; i++) {
+      protos.add(convert(storages[i]));
+    }
+    return protos;
+  }
+
   public static JournalInfo convert(JournalInfoProto info) {
     int lv = info.hasLayoutVersion() ? info.getLayoutVersion() : 0;
     int nsID = info.hasNamespaceID() ? info.getNamespaceID() : 0;
@@ -2061,11 +2130,11 @@ public class PBHelper {
     return castEnum(v, XATTR_NAMESPACE_VALUES);
   }
 
-  private static FsActionProto convert(FsAction v) {
+  public static FsActionProto convert(FsAction v) {
     return FsActionProto.valueOf(v != null ? v.ordinal() : 0);
   }
 
-  private static FsAction convert(FsActionProto v) {
+  public static FsAction convert(FsActionProto v) {
     return castEnum(v, FSACTION_VALUES);
   }
 
@@ -2203,7 +2272,7 @@ public class PBHelper {
     }
     return xAttrs;
   }
-  
+
   public static List<XAttr> convert(GetXAttrsResponseProto a) {
     List<XAttrProto> xAttrs = a.getXAttrsList();
     return convertXAttrs(xAttrs);
@@ -2234,6 +2303,18 @@ public class PBHelper {
     return builder.build();
   }
 
+  public static EncryptionZoneWithIdProto convert(EncryptionZoneWithId zone) {
+    return EncryptionZoneWithIdProto.newBuilder()
+        .setId(zone.getId())
+        .setKeyName(zone.getKeyName())
+        .setPath(zone.getPath()).build();
+  }
+
+  public static EncryptionZoneWithId convert(EncryptionZoneWithIdProto proto) {
+    return new EncryptionZoneWithId(proto.getPath(), proto.getKeyName(),
+        proto.getId());
+  }
+
   public static ShortCircuitShmSlotProto convert(SlotId slotId) {
     return ShortCircuitShmSlotProto.newBuilder().
         setShmId(convert(slotId.getShmId())).
@@ -2257,5 +2338,316 @@ public class PBHelper {
   public static ShmId convert(ShortCircuitShmIdProto shmId) {
     return new ShmId(shmId.getHi(), shmId.getLo());
   }
-}
 
+  private static Event.CreateEvent.INodeType createTypeConvert(InotifyProtos.INodeType
+      type) {
+    switch (type) {
+    case I_TYPE_DIRECTORY:
+      return Event.CreateEvent.INodeType.DIRECTORY;
+    case I_TYPE_FILE:
+      return Event.CreateEvent.INodeType.FILE;
+    case I_TYPE_SYMLINK:
+      return Event.CreateEvent.INodeType.SYMLINK;
+    default:
+      return null;
+    }
+  }
+
+  private static InotifyProtos.MetadataUpdateType metadataUpdateTypeConvert(
+      Event.MetadataUpdateEvent.MetadataType type) {
+    switch (type) {
+    case TIMES:
+      return InotifyProtos.MetadataUpdateType.META_TYPE_TIMES;
+    case REPLICATION:
+      return InotifyProtos.MetadataUpdateType.META_TYPE_REPLICATION;
+    case OWNER:
+      return InotifyProtos.MetadataUpdateType.META_TYPE_OWNER;
+    case PERMS:
+      return InotifyProtos.MetadataUpdateType.META_TYPE_PERMS;
+    case ACLS:
+      return InotifyProtos.MetadataUpdateType.META_TYPE_ACLS;
+    case XATTRS:
+      return InotifyProtos.MetadataUpdateType.META_TYPE_XATTRS;
+    default:
+      return null;
+    }
+  }
+
+  private static Event.MetadataUpdateEvent.MetadataType metadataUpdateTypeConvert(
+      InotifyProtos.MetadataUpdateType type) {
+    switch (type) {
+    case META_TYPE_TIMES:
+      return Event.MetadataUpdateEvent.MetadataType.TIMES;
+    case META_TYPE_REPLICATION:
+      return Event.MetadataUpdateEvent.MetadataType.REPLICATION;
+    case META_TYPE_OWNER:
+      return Event.MetadataUpdateEvent.MetadataType.OWNER;
+    case META_TYPE_PERMS:
+      return Event.MetadataUpdateEvent.MetadataType.PERMS;
+    case META_TYPE_ACLS:
+      return Event.MetadataUpdateEvent.MetadataType.ACLS;
+    case META_TYPE_XATTRS:
+      return Event.MetadataUpdateEvent.MetadataType.XATTRS;
+    default:
+      return null;
+    }
+  }
+
+  private static InotifyProtos.INodeType createTypeConvert(Event.CreateEvent.INodeType
+      type) {
+    switch (type) {
+    case DIRECTORY:
+      return InotifyProtos.INodeType.I_TYPE_DIRECTORY;
+    case FILE:
+      return InotifyProtos.INodeType.I_TYPE_FILE;
+    case SYMLINK:
+      return InotifyProtos.INodeType.I_TYPE_SYMLINK;
+    default:
+      return null;
+    }
+  }
+
+  public static EventsList convert(GetEditsFromTxidResponseProto resp) throws
+    IOException {
+    List<Event> events = Lists.newArrayList();
+    for (InotifyProtos.EventProto p : resp.getEventsList().getEventsList()) {
+      switch(p.getType()) {
+      case EVENT_CLOSE:
+        InotifyProtos.CloseEventProto close =
+            InotifyProtos.CloseEventProto.parseFrom(p.getContents());
+        events.add(new Event.CloseEvent(close.getPath(), close.getFileSize(),
+            close.getTimestamp()));
+        break;
+      case EVENT_CREATE:
+        InotifyProtos.CreateEventProto create =
+            InotifyProtos.CreateEventProto.parseFrom(p.getContents());
+        events.add(new Event.CreateEvent.Builder()
+            .iNodeType(createTypeConvert(create.getType()))
+            .path(create.getPath())
+            .ctime(create.getCtime())
+            .ownerName(create.getOwnerName())
+            .groupName(create.getGroupName())
+            .perms(convert(create.getPerms()))
+            .replication(create.getReplication())
+            .symlinkTarget(create.getSymlinkTarget().isEmpty() ? null :
+            create.getSymlinkTarget()).build());
+        break;
+      case EVENT_METADATA:
+        InotifyProtos.MetadataUpdateEventProto meta =
+            InotifyProtos.MetadataUpdateEventProto.parseFrom(p.getContents());
+        events.add(new Event.MetadataUpdateEvent.Builder()
+            .path(meta.getPath())
+            .metadataType(metadataUpdateTypeConvert(meta.getType()))
+            .mtime(meta.getMtime())
+            .atime(meta.getAtime())
+            .replication(meta.getReplication())
+            .ownerName(
+                meta.getOwnerName().isEmpty() ? null : meta.getOwnerName())
+            .groupName(
+                meta.getGroupName().isEmpty() ? null : meta.getGroupName())
+            .perms(meta.hasPerms() ? convert(meta.getPerms()) : null)
+            .acls(meta.getAclsList().isEmpty() ? null : convertAclEntry(
+                meta.getAclsList()))
+            .xAttrs(meta.getXAttrsList().isEmpty() ? null : convertXAttrs(
+                meta.getXAttrsList()))
+            .xAttrsRemoved(meta.getXAttrsRemoved())
+            .build());
+        break;
+      case EVENT_RENAME:
+        InotifyProtos.RenameEventProto rename =
+            InotifyProtos.RenameEventProto.parseFrom(p.getContents());
+        events.add(new Event.RenameEvent(rename.getSrcPath(), rename.getDestPath(),
+            rename.getTimestamp()));
+        break;
+      case EVENT_APPEND:
+        InotifyProtos.AppendEventProto reopen =
+            InotifyProtos.AppendEventProto.parseFrom(p.getContents());
+        events.add(new Event.AppendEvent(reopen.getPath()));
+        break;
+      case EVENT_UNLINK:
+        InotifyProtos.UnlinkEventProto unlink =
+            InotifyProtos.UnlinkEventProto.parseFrom(p.getContents());
+        events.add(new Event.UnlinkEvent(unlink.getPath(), unlink.getTimestamp()));
+        break;
+      default:
+        throw new RuntimeException("Unexpected inotify event type: " +
+            p.getType());
+      }
+    }
+    return new EventsList(events, resp.getEventsList().getFirstTxid(),
+        resp.getEventsList().getLastTxid(), resp.getEventsList().getSyncTxid());
+  }
+
+  public static GetEditsFromTxidResponseProto convertEditsResponse(EventsList el) {
+    InotifyProtos.EventsListProto.Builder builder =
+        InotifyProtos.EventsListProto.newBuilder();
+    for (Event e : el.getEvents()) {
+      switch(e.getEventType()) {
+      case CLOSE:
+        Event.CloseEvent ce = (Event.CloseEvent) e;
+        builder.addEvents(InotifyProtos.EventProto.newBuilder()
+            .setType(InotifyProtos.EventType.EVENT_CLOSE)
+            .setContents(
+                InotifyProtos.CloseEventProto.newBuilder()
+                    .setPath(ce.getPath())
+                    .setFileSize(ce.getFileSize())
+                    .setTimestamp(ce.getTimestamp()).build().toByteString()
+            ).build());
+        break;
+      case CREATE:
+        Event.CreateEvent ce2 = (Event.CreateEvent) e;
+        builder.addEvents(InotifyProtos.EventProto.newBuilder()
+            .setType(InotifyProtos.EventType.EVENT_CREATE)
+            .setContents(
+                InotifyProtos.CreateEventProto.newBuilder()
+                    .setType(createTypeConvert(ce2.getiNodeType()))
+                    .setPath(ce2.getPath())
+                    .setCtime(ce2.getCtime())
+                    .setOwnerName(ce2.getOwnerName())
+                    .setGroupName(ce2.getGroupName())
+                    .setPerms(convert(ce2.getPerms()))
+                    .setReplication(ce2.getReplication())
+                    .setSymlinkTarget(ce2.getSymlinkTarget() == null ?
+                        "" : ce2.getSymlinkTarget()).build().toByteString()
+            ).build());
+        break;
+      case METADATA:
+        Event.MetadataUpdateEvent me = (Event.MetadataUpdateEvent) e;
+        InotifyProtos.MetadataUpdateEventProto.Builder metaB =
+            InotifyProtos.MetadataUpdateEventProto.newBuilder()
+                .setPath(me.getPath())
+                .setType(metadataUpdateTypeConvert(me.getMetadataType()))
+                .setMtime(me.getMtime())
+                .setAtime(me.getAtime())
+                .setReplication(me.getReplication())
+                .setOwnerName(me.getOwnerName() == null ? "" :
+                    me.getOwnerName())
+                .setGroupName(me.getGroupName() == null ? "" :
+                    me.getGroupName())
+                .addAllAcls(me.getAcls() == null ?
+                    Lists.<AclEntryProto>newArrayList() :
+                    convertAclEntryProto(me.getAcls()))
+                .addAllXAttrs(me.getxAttrs() == null ?
+                    Lists.<XAttrProto>newArrayList() :
+                    convertXAttrProto(me.getxAttrs()))
+                .setXAttrsRemoved(me.isxAttrsRemoved());
+        if (me.getPerms() != null) {
+          metaB.setPerms(convert(me.getPerms()));
+        }
+        builder.addEvents(InotifyProtos.EventProto.newBuilder()
+            .setType(InotifyProtos.EventType.EVENT_METADATA)
+            .setContents(metaB.build().toByteString())
+            .build());
+        break;
+      case RENAME:
+        Event.RenameEvent re = (Event.RenameEvent) e;
+        builder.addEvents(InotifyProtos.EventProto.newBuilder()
+            .setType(InotifyProtos.EventType.EVENT_RENAME)
+            .setContents(
+                InotifyProtos.RenameEventProto.newBuilder()
+                    .setSrcPath(re.getSrcPath())
+                    .setDestPath(re.getDstPath())
+                    .setTimestamp(re.getTimestamp()).build().toByteString()
+            ).build());
+        break;
+      case APPEND:
+        Event.AppendEvent re2 = (Event.AppendEvent) e;
+        builder.addEvents(InotifyProtos.EventProto.newBuilder()
+            .setType(InotifyProtos.EventType.EVENT_APPEND)
+            .setContents(
+                InotifyProtos.AppendEventProto.newBuilder()
+                    .setPath(re2.getPath()).build().toByteString()
+            ).build());
+        break;
+      case UNLINK:
+        Event.UnlinkEvent ue = (Event.UnlinkEvent) e;
+        builder.addEvents(InotifyProtos.EventProto.newBuilder()
+            .setType(InotifyProtos.EventType.EVENT_UNLINK)
+            .setContents(
+                InotifyProtos.UnlinkEventProto.newBuilder()
+                    .setPath(ue.getPath())
+                    .setTimestamp(ue.getTimestamp()).build().toByteString()
+            ).build());
+        break;
+      default:
+        throw new RuntimeException("Unexpected inotify event: " + e);
+      }
+    }
+    builder.setFirstTxid(el.getFirstTxid());
+    builder.setLastTxid(el.getLastTxid());
+    builder.setSyncTxid(el.getSyncTxid());
+    return GetEditsFromTxidResponseProto.newBuilder().setEventsList(
+        builder.build()).build();
+  }
+
+  public static HdfsProtos.CipherSuite convert(CipherSuite suite) {
+    switch (suite) {
+    case UNKNOWN:
+      return HdfsProtos.CipherSuite.UNKNOWN;
+    case AES_CTR_NOPADDING:
+      return HdfsProtos.CipherSuite.AES_CTR_NOPADDING;
+    default:
+      return null;
+    }
+  }
+
+  public static CipherSuite convert(HdfsProtos.CipherSuite proto) {
+    switch (proto) {
+    case AES_CTR_NOPADDING:
+      return CipherSuite.AES_CTR_NOPADDING;
+    default:
+      // Set to UNKNOWN and stash the unknown enum value
+      CipherSuite suite = CipherSuite.UNKNOWN;
+      suite.setUnknownValue(proto.getNumber());
+      return suite;
+    }
+  }
+
+  public static List<HdfsProtos.CipherSuite> convertCipherSuites
+      (List<CipherSuite> suites) {
+    if (suites == null) {
+      return null;
+    }
+    List<HdfsProtos.CipherSuite> protos =
+        Lists.newArrayListWithCapacity(suites.size());
+    for (CipherSuite suite : suites) {
+      protos.add(convert(suite));
+    }
+    return protos;
+  }
+
+  public static List<CipherSuite> convertCipherSuiteProtos(
+      List<HdfsProtos.CipherSuite> protos) {
+    List<CipherSuite> suites = Lists.newArrayListWithCapacity(protos.size());
+    for (HdfsProtos.CipherSuite proto : protos) {
+      suites.add(convert(proto));
+    }
+    return suites;
+  }
+
+  public static HdfsProtos.FileEncryptionInfoProto convert(
+      FileEncryptionInfo info) {
+    if (info == null) {
+      return null;
+    }
+    return HdfsProtos.FileEncryptionInfoProto.newBuilder()
+        .setSuite(convert(info.getCipherSuite()))
+        .setKey(getByteString(info.getEncryptedDataEncryptionKey()))
+        .setIv(getByteString(info.getIV()))
+        .setEzKeyVersionName(info.getEzKeyVersionName())
+        .build();
+  }
+
+  public static FileEncryptionInfo convert(
+      HdfsProtos.FileEncryptionInfoProto proto) {
+    if (proto == null) {
+      return null;
+    }
+    CipherSuite suite = convert(proto.getSuite());
+    byte[] key = proto.getKey().toByteArray();
+    byte[] iv = proto.getIv().toByteArray();
+    String ezKeyVersionName = proto.getEzKeyVersionName();
+    return new FileEncryptionInfo(suite, key, iv, ezKeyVersionName);
+  }
+
+}

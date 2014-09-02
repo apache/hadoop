@@ -113,8 +113,7 @@ public class KMSACLs implements Runnable {
     return conf;
   }
 
-  public boolean hasAccess(Type type, String user) {
-    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
+  public boolean hasAccess(Type type, UserGroupInformation ugi) {
     return acls.get(type).isUserAllowed(ugi);
   }
 

@@ -110,15 +110,23 @@ public class FileSystemApplicationHistoryStore extends AbstractService
     super(FileSystemApplicationHistoryStore.class.getName());
   }
 
+  protected FileSystem getFileSystem(Path path, Configuration conf) throws Exception {
+    return path.getFileSystem(conf);
+  }
+
   @Override
   public void serviceInit(Configuration conf) throws Exception {
     Path fsWorkingPath =
         new Path(conf.get(YarnConfiguration.FS_APPLICATION_HISTORY_STORE_URI));
     rootDirPath = new Path(fsWorkingPath, ROOT_DIR_NAME);
     try {
-      fs = fsWorkingPath.getFileSystem(conf);
-      fs.mkdirs(rootDirPath);
-      fs.setPermission(rootDirPath, ROOT_DIR_UMASK);
+      fs = getFileSystem(fsWorkingPath, conf);
+
+      if (!fs.isDirectory(rootDirPath)) {
+        fs.mkdirs(rootDirPath);
+        fs.setPermission(rootDirPath, ROOT_DIR_UMASK);
+      }
+
     } catch (IOException e) {
       LOG.error("Error when initializing FileSystemHistoryStorage", e);
       throw e;

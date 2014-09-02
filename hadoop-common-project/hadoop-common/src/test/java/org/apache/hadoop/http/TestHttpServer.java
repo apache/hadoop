@@ -414,7 +414,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
         assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(serverURL
             + servlet, user));
       }
-      assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, getHttpStatusCode(
+      assertEquals(HttpURLConnection.HTTP_FORBIDDEN, getHttpStatusCode(
           serverURL + servlet, "userE"));
     }
     myServer.stop();
@@ -474,7 +474,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     response = Mockito.mock(HttpServletResponse.class);
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, true);
     Assert.assertFalse(HttpServer2.hasAdministratorAccess(context, request, response));
-    Mockito.verify(response).sendError(Mockito.eq(HttpServletResponse.SC_UNAUTHORIZED), Mockito.anyString());
+    Mockito.verify(response).sendError(Mockito.eq(HttpServletResponse.SC_FORBIDDEN), Mockito.anyString());
 
     //authorization ON & user NOT NULL & ACLs NULL
     response = Mockito.mock(HttpServletResponse.class);
@@ -487,7 +487,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     Mockito.when(acls.isUserAllowed(Mockito.<UserGroupInformation>any())).thenReturn(false);
     Mockito.when(context.getAttribute(HttpServer2.ADMINS_ACL)).thenReturn(acls);
     Assert.assertFalse(HttpServer2.hasAdministratorAccess(context, request, response));
-    Mockito.verify(response).sendError(Mockito.eq(HttpServletResponse.SC_UNAUTHORIZED), Mockito.anyString());
+    Mockito.verify(response).sendError(Mockito.eq(HttpServletResponse.SC_FORBIDDEN), Mockito.anyString());
 
     //authorization ON & user NOT NULL & ACLs NOT NULL & user in in ACLs
     response = Mockito.mock(HttpServletResponse.class);

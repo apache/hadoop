@@ -21,20 +21,29 @@ package org.apache.hadoop.yarn.server.nodemanager.recovery;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
+import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 
 public class NMMemoryStateStoreService extends NMStateStoreService {
+  private Map<ApplicationId, ContainerManagerApplicationProto> apps;
+  private Set<ApplicationId> finishedApps;
+  private Map<ContainerId, RecoveredContainerState> containerStates;
   private Map<TrackerKey, TrackerState> trackerStates;
   private Map<Integer, DeletionServiceDeleteTaskProto> deleteTasks;
   private RecoveredNMTokensState nmTokenState;
@@ -42,6 +51,130 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
 
   public NMMemoryStateStoreService() {
     super(NMMemoryStateStoreService.class.getName());
+  }
+
+  @Override
+  protected void initStorage(Configuration conf) {
+    apps = new HashMap<ApplicationId, ContainerManagerApplicationProto>();
+    finishedApps = new HashSet<ApplicationId>();
+    containerStates = new HashMap<ContainerId, RecoveredContainerState>();
+    nmTokenState = new RecoveredNMTokensState();
+    nmTokenState.applicationMasterKeys =
+        new HashMap<ApplicationAttemptId, MasterKey>();
+    containerTokenState = new RecoveredContainerTokensState();
+    containerTokenState.activeTokens = new HashMap<ContainerId, Long>();
+    trackerStates = new HashMap<TrackerKey, TrackerState>();
+    deleteTasks = new HashMap<Integer, DeletionServiceDeleteTaskProto>();
+  }
+
+  @Override
+  protected void startStorage() {
+  }
+
+  @Override
+  protected void closeStorage() {
+  }
+
+
+  @Override
+  public RecoveredApplicationsState loadApplicationsState()
+      throws IOException {
+    RecoveredApplicationsState state = new RecoveredApplicationsState();
+    state.applications = new ArrayList<ContainerManagerApplicationProto>(
+        apps.values());
+    state.finishedApplications = new ArrayList<ApplicationId>(finishedApps);
+    return state;
+  }
+
+  @Override
+  public void storeApplication(ApplicationId appId,
+      ContainerManagerApplicationProto proto) throws IOException {
+    ContainerManagerApplicationProto protoCopy =
+        ContainerManagerApplicationProto.parseFrom(proto.toByteString());
+    apps.put(appId, protoCopy);
+  }
+
+  @Override
+  public void storeFinishedApplication(ApplicationId appId) {
+    finishedApps.add(appId);
+  }
+
+  @Override
+  public void removeApplication(ApplicationId appId) throws IOException {
+    apps.remove(appId);
+    finishedApps.remove(appId);
+  }
+
+  @Override
+  public List<RecoveredContainerState> loadContainersState()
+      throws IOException {
+    // return a copy so caller can't modify our state
+    List<RecoveredContainerState> result =
+        new ArrayList<RecoveredContainerState>(containerStates.size());
+    for (RecoveredContainerState rcs : containerStates.values()) {
+      RecoveredContainerState rcsCopy = new RecoveredContainerState();
+      rcsCopy.status = rcs.status;
+      rcsCopy.exitCode = rcs.exitCode;
+      rcsCopy.killed = rcs.killed;
+      rcsCopy.diagnostics = rcs.diagnostics;
+      rcsCopy.startRequest = rcs.startRequest;
+      result.add(rcsCopy);
+    }
+    return new ArrayList<RecoveredContainerState>();
+  }
+
+  @Override
+  public void storeContainer(ContainerId containerId,
+      StartContainerRequest startRequest) throws IOException {
+    RecoveredContainerState rcs = new RecoveredContainerState();
+    rcs.startRequest = startRequest;
+    containerStates.put(containerId, rcs);
+  }
+
+  @Override
+  public void storeContainerDiagnostics(ContainerId containerId,
+      StringBuilder diagnostics) throws IOException {
+    RecoveredContainerState rcs = getRecoveredContainerState(containerId);
+    rcs.diagnostics = diagnostics.toString();
+  }
+
+  @Override
+  public void storeContainerLaunched(ContainerId containerId)
+      throws IOException {
+    RecoveredContainerState rcs = getRecoveredContainerState(containerId);
+    if (rcs.exitCode != ContainerExitStatus.INVALID) {
+      throw new IOException("Container already completed");
+    }
+    rcs.status = RecoveredContainerStatus.LAUNCHED;
+  }
+
+  @Override
+  public void storeContainerKilled(ContainerId containerId)
+      throws IOException {
+    RecoveredContainerState rcs = getRecoveredContainerState(containerId);
+    rcs.killed = true;
+  }
+
+  @Override
+  public void storeContainerCompleted(ContainerId containerId, int exitCode)
+      throws IOException {
+    RecoveredContainerState rcs = getRecoveredContainerState(containerId);
+    rcs.status = RecoveredContainerStatus.COMPLETED;
+    rcs.exitCode = exitCode;
+  }
+
+  @Override
+  public void removeContainer(ContainerId containerId) throws IOException {
+    containerStates.remove(containerId);
+  }
+
+  private RecoveredContainerState getRecoveredContainerState(
+      ContainerId containerId) throws IOException {
+    RecoveredContainerState rcs = containerStates.get(containerId);
+    if (rcs == null) {
+      throw new IOException("No start request for " + containerId);
+    }
+    return rcs;
   }
 
   private LocalResourceTrackerState loadTrackerState(TrackerState ts) {
@@ -115,25 +248,6 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
       ts.inProgressMap.remove(localPath);
       ts.localizedResources.remove(localPath);
     }
-  }
-
-  @Override
-  protected void initStorage(Configuration conf) {
-    nmTokenState = new RecoveredNMTokensState();
-    nmTokenState.applicationMasterKeys =
-        new HashMap<ApplicationAttemptId, MasterKey>();
-    containerTokenState = new RecoveredContainerTokensState();
-    containerTokenState.activeTokens = new HashMap<ContainerId, Long>();
-    trackerStates = new HashMap<TrackerKey, TrackerState>();
-    deleteTasks = new HashMap<Integer, DeletionServiceDeleteTaskProto>();
-  }
-
-  @Override
-  protected void startStorage() {
-  }
-
-  @Override
-  protected void closeStorage() {
   }
 
 

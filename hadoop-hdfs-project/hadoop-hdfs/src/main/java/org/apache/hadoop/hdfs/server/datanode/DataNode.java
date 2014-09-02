@@ -180,6 +180,7 @@ import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.tracing.SpanReceiverHost;
 import org.mortbay.util.ajax.JSON;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -243,10 +244,9 @@ public class DataNode extends Configured
     LogFactory.getLog(DataNode.class.getName() + ".clienttrace");
   
   private static final String USAGE =
-      "Usage: java DataNode [-regular | -rollback | -rollingupgrade rollback]\n" +
+      "Usage: java DataNode [-regular | -rollback]\n" +
       "    -regular                 : Normal DataNode startup (default).\n" +
-      "    -rollback                : Rollback a standard upgrade.\n" +
-      "    -rollingupgrade rollback : Rollback a rolling upgrade operation.\n" +
+      "    -rollback                : Rollback a standard or rolling upgrade.\n" +
       "  Refer to HDFS documentation for the difference between standard\n" +
       "  and rolling upgrades.";
 
@@ -270,6 +270,7 @@ public class DataNode extends Configured
   public final static String EMPTY_DEL_HINT = "";
   final AtomicInteger xmitsInProgress = new AtomicInteger();
   Daemon dataXceiverServer = null;
+  DataXceiverServer xserver = null;
   Daemon localDataXceiverServer = null;
   ShortCircuitRegistry shortCircuitRegistry = null;
   ThreadGroup threadGroup = null;
@@ -324,6 +325,8 @@ public class DataNode extends Configured
   private String supergroup;
   private boolean isPermissionEnabled;
   private String dnUserName = null;
+
+  private SpanReceiverHost spanReceiverHost;
 
   /**
    * Create the DataNode given a configuration, an array of dataDirs,
@@ -649,8 +652,8 @@ public class DataNode extends Configured
     streamingAddr = tcpPeerServer.getStreamingAddr();
     LOG.info("Opened streaming server at " + streamingAddr);
     this.threadGroup = new ThreadGroup("dataXceiverServer");
-    this.dataXceiverServer = new Daemon(threadGroup, 
-        new DataXceiverServer(tcpPeerServer, conf, this));
+    xserver = new DataXceiverServer(tcpPeerServer, conf, this);
+    this.dataXceiverServer = new Daemon(threadGroup, xserver);
     this.threadGroup.setDaemon(true); // auto destroy when empty
 
     if (conf.getBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY,
@@ -822,6 +825,7 @@ public class DataNode extends Configured
     this.dataDirs = dataDirs;
     this.conf = conf;
     this.dnConf = new DNConf(conf);
+    this.spanReceiverHost = SpanReceiverHost.getInstance(conf);
 
     if (dnConf.maxLockedMemory > 0) {
       if (!NativeIO.POSIX.getCacheManipulator().verifyCanMlock()) {
@@ -1075,6 +1079,11 @@ public class DataNode extends Configured
     // In the case that this is the first block pool to connect, initialize
     // the dataset, block scanners, etc.
     initStorage(nsInfo);
+
+    // Exclude failed disks before initializing the block pools to avoid startup
+    // failures.
+    checkDiskError();
+
     initPeriodicScanners(conf);
     
     data.addBlockPool(nsInfo.getBlockPoolID(), conf);
@@ -1130,6 +1139,11 @@ public class DataNode extends Configured
   
   private void registerMXBean() {
     dataNodeInfoBeanName = MBeans.register("DataNode", "DataNodeInfo", this);
+  }
+  
+  @VisibleForTesting
+  public DataXceiverServer getXferServer() {
+    return xserver;  
   }
   
   @VisibleForTesting
@@ -1390,6 +1404,7 @@ public class DataNode extends Configured
     // in order to avoid any further acceptance of requests, but the peers
     // for block writes are not closed until the clients are notified.
     if (dataXceiverServer != null) {
+      xserver.sendOOBToPeers();
       ((DataXceiverServer) this.dataXceiverServer.getRunnable()).kill();
       this.dataXceiverServer.interrupt();
     }
@@ -1498,6 +1513,9 @@ public class DataNode extends Configured
       MBeans.unregister(dataNodeInfoBeanName);
       dataNodeInfoBeanName = null;
     }
+    if (this.spanReceiverHost != null) {
+      this.spanReceiverHost.closeReceivers();
+    }
     if (shortCircuitRegistry != null) shortCircuitRegistry.shutdown();
     LOG.info("Shutdown complete.");
     synchronized(this) {
@@ -1510,9 +1528,9 @@ public class DataNode extends Configured
   
   
   /**
-   *  Check if there is a disk failure and if so, handle the error
+   * Check if there is a disk failure asynchronously and if so, handle the error
    */
-  public void checkDiskError() {
+  public void checkDiskErrorAsync() {
     synchronized(checkDiskErrorMutex) {
       checkDiskErrorFlag = true;
       if(checkDiskErrorThread == null) {
@@ -1821,7 +1839,7 @@ public class DataNode extends Configured
         LOG.warn(bpReg + ":Failed to transfer " + b + " to " +
             targets[0] + " got ", ie);
         // check if there are any disk problem
-        checkDiskError();
+        checkDiskErrorAsync();
       } finally {
         xmitsInProgress.getAndDecrement();
         IOUtils.closeStream(blockSender);
@@ -2759,7 +2777,18 @@ public class DataNode extends Configured
   public ShortCircuitRegistry getShortCircuitRegistry() {
     return shortCircuitRegistry;
   }
-  
+
+  /**
+   * Check the disk error
+   */
+  private void checkDiskError() {
+    try {
+      data.checkDataDir();
+    } catch (DiskErrorException de) {
+      handleDiskError(de.getMessage());
+    }
+  }
+
   /**
    * Starts a new thread which will check for disk error check request 
    * every 5 sec
@@ -2776,9 +2805,7 @@ public class DataNode extends Configured
               }
               if(tempFlag) {
                 try {
-                  data.checkDataDir();
-                } catch (DiskErrorException de) {
-                  handleDiskError(de.getMessage());
+                  checkDiskError();
                 } catch (Exception e) {
                   LOG.warn("Unexpected exception occurred while checking disk error  " + e);
                   checkDiskErrorThread = null;

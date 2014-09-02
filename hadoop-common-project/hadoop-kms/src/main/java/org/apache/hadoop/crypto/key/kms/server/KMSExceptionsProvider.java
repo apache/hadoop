@@ -20,9 +20,12 @@ package org.apache.hadoop.crypto.key.kms.server;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 import com.sun.jersey.api.container.ContainerException;
+
 import org.apache.hadoop.crypto.key.kms.KMSRESTConstants;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,8 +33,8 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
+
 import java.io.IOException;
-import java.security.Principal;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -83,6 +86,10 @@ public class KMSExceptionsProvider implements ExceptionMapper<Exception> {
       status = Response.Status.FORBIDDEN;
       // we don't audit here because we did it already when checking access
       doAudit = false;
+    } else if (throwable instanceof AuthorizationException) {
+      status = Response.Status.UNAUTHORIZED;
+      // we don't audit here because we did it already when checking access
+      doAudit = false;
     } else if (throwable instanceof AccessControlException) {
       status = Response.Status.FORBIDDEN;
     } else if (exception instanceof IOException) {
@@ -95,18 +102,19 @@ public class KMSExceptionsProvider implements ExceptionMapper<Exception> {
       status = Response.Status.INTERNAL_SERVER_ERROR;
     }
     if (doAudit) {
-      KMSAudit.error(KMSMDCFilter.getPrincipal(), KMSMDCFilter.getMethod(),
+      KMSWebApp.getKMSAudit().error(KMSMDCFilter.getUgi(),
+          KMSMDCFilter.getMethod(),
           KMSMDCFilter.getURL(), getOneLineMessage(exception));
     }
     return createResponse(status, throwable);
   }
 
   protected void log(Response.Status status, Throwable ex) {
-    Principal principal = KMSMDCFilter.getPrincipal();
+    UserGroupInformation ugi = KMSMDCFilter.getUgi();
     String method = KMSMDCFilter.getMethod();
     String url = KMSMDCFilter.getURL();
     String msg = getOneLineMessage(ex);
-    LOG.warn("User:{} Method:{} URL:{} Response:{}-{}", principal, method, url,
+    LOG.warn("User:'{}' Method:{} URL:{} Response:{}-{}", ugi, method, url,
         status, msg, ex);
   }
 

@@ -23,12 +23,19 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.lib.StaticUserWebFilter;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.AHSWebApp;
+import org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFilterInitializer;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class TestApplicationHistoryServer {
 
@@ -66,6 +73,40 @@ public class TestApplicationHistoryServer {
       assertEquals(0, e.status);
       ExitUtil.resetFirstExitException();
       fail();
+    }
+  }
+
+  @Test(timeout = 50000)
+  public void testFilteOverrides() throws Exception {
+
+    HashMap<String, String> driver = new HashMap<String, String>();
+    driver.put("", TimelineAuthenticationFilterInitializer.class.getName());
+    driver.put(StaticUserWebFilter.class.getName(),
+      TimelineAuthenticationFilterInitializer.class.getName() + ","
+          + StaticUserWebFilter.class.getName());
+    driver.put(AuthenticationFilterInitializer.class.getName(),
+      TimelineAuthenticationFilterInitializer.class.getName());
+    driver.put(TimelineAuthenticationFilterInitializer.class.getName(),
+      TimelineAuthenticationFilterInitializer.class.getName());
+    driver.put(AuthenticationFilterInitializer.class.getName() + ","
+        + TimelineAuthenticationFilterInitializer.class.getName(),
+      TimelineAuthenticationFilterInitializer.class.getName());
+    driver.put(AuthenticationFilterInitializer.class.getName() + ", "
+        + TimelineAuthenticationFilterInitializer.class.getName(),
+      TimelineAuthenticationFilterInitializer.class.getName());
+
+    for (Map.Entry<String, String> entry : driver.entrySet()) {
+      String filterInitializer = entry.getKey();
+      String expectedValue = entry.getValue();
+      historyServer = new ApplicationHistoryServer();
+      Configuration config = new YarnConfiguration();
+      config.set("hadoop.http.filter.initializers", filterInitializer);
+      historyServer.init(config);
+      historyServer.start();
+      Configuration tmp = historyServer.getConfig();
+      assertEquals(expectedValue, tmp.get("hadoop.http.filter.initializers"));
+      historyServer.stop();
+      AHSWebApp.resetInstance();
     }
   }
 

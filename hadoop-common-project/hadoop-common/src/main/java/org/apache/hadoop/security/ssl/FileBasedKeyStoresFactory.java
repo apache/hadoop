@@ -150,7 +150,7 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
       }
       String passwordProperty =
         resolvePropertyName(mode, SSL_KEYSTORE_PASSWORD_TPL_KEY);
-      String keystorePassword = conf.get(passwordProperty, "");
+      String keystorePassword = getPassword(conf, passwordProperty, "");
       if (keystorePassword.isEmpty()) {
         throw new GeneralSecurityException("The property '" + passwordProperty +
           "' has not been set in the ssl configuration file.");
@@ -160,7 +160,8 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
       // Key password defaults to the same value as store password for
       // compatibility with legacy configurations that did not use a separate
       // configuration property for key password.
-      keystoreKeyPassword = conf.get(keyPasswordProperty, keystorePassword);
+      keystoreKeyPassword = getPassword(
+          conf, keyPasswordProperty, keystorePassword);
       LOG.debug(mode.toString() + " KeyStore: " + keystoreLocation);
 
       InputStream is = new FileInputStream(keystoreLocation);
@@ -191,7 +192,7 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
     if (!truststoreLocation.isEmpty()) {
       String passwordProperty = resolvePropertyName(mode,
           SSL_TRUSTSTORE_PASSWORD_TPL_KEY);
-      String truststorePassword = conf.get(passwordProperty, "");
+      String truststorePassword = getPassword(conf, passwordProperty, "");
       if (truststorePassword.isEmpty()) {
         throw new GeneralSecurityException("The property '" + passwordProperty +
             "' has not been set in the ssl configuration file.");
@@ -215,6 +216,21 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
           "no TrustStore will be loaded");
       trustManagers = null;
     }
+  }
+
+  String getPassword(Configuration conf, String alias, String defaultPass) {
+    String password = defaultPass;
+    try {
+      char[] passchars = conf.getPassword(alias);
+      if (passchars != null) {
+        password = new String(passchars);
+      }
+    }
+    catch (IOException ioe) {
+      LOG.warn("Exception while trying to get password for alias " + alias +
+          ": " + ioe.getMessage());
+    }
+    return password;
   }
 
   /**

@@ -32,7 +32,6 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -45,24 +44,21 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPB
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos;
-import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMFatalEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMFatalEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.AMRMTokenSecretManagerState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppNewSavedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppUpdateSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptNewSavedEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUpdateSavedEvent;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
@@ -85,6 +81,8 @@ public abstract class RMStateStore extends AbstractService {
   protected static final String DELEGATION_TOKEN_PREFIX = "RMDelegationToken_";
   protected static final String DELEGATION_TOKEN_SEQUENCE_NUMBER_PREFIX =
       "RMDTSequenceNumber_";
+  protected static final String AMRMTOKEN_SECRET_MANAGER_ROOT =
+      "AMRMTokenSecretManagerRoot";
   protected static final String VERSION_NODE = "RMVersionNode";
   protected static final String EPOCH_NODE = "EpochNode";
 
@@ -134,7 +132,8 @@ public abstract class RMStateStore extends AbstractService {
       LOG.info("Storing info for app: " + appId);
       try {
         store.storeApplicationStateInternal(appId, appStateData);
-        store.notifyDoneStoringApplication(appId, null);
+        store.notifyApplication(new RMAppEvent(appId,
+               RMAppEventType.APP_NEW_SAVED));
       } catch (Exception e) {
         LOG.error("Error storing app: " + appId, e);
         store.notifyStoreOperationFailed(e);
@@ -158,7 +157,8 @@ public abstract class RMStateStore extends AbstractService {
       LOG.info("Updating info for app: " + appId);
       try {
         store.updateApplicationStateInternal(appId, appStateData);
-        store.notifyDoneUpdatingApplication(appId, null);
+        store.notifyApplication(new RMAppEvent(appId,
+               RMAppEventType.APP_UPDATE_SAVED));
       } catch (Exception e) {
         LOG.error("Error updating app: " + appId, e);
         store.notifyStoreOperationFailed(e);
@@ -207,8 +207,9 @@ public abstract class RMStateStore extends AbstractService {
         }
         store.storeApplicationAttemptStateInternal(attemptState.getAttemptId(),
             attemptStateData);
-        store.notifyDoneStoringApplicationAttempt(attemptState.getAttemptId(),
-            null);
+        store.notifyApplicationAttempt(new RMAppAttemptEvent
+               (attemptState.getAttemptId(),
+               RMAppAttemptEventType.ATTEMPT_NEW_SAVED));
       } catch (Exception e) {
         LOG.error("Error storing appAttempt: " + attemptState.getAttemptId(), e);
         store.notifyStoreOperationFailed(e);
@@ -235,8 +236,9 @@ public abstract class RMStateStore extends AbstractService {
         }
         store.updateApplicationAttemptStateInternal(attemptState.getAttemptId(),
             attemptStateData);
-        store.notifyDoneUpdatingApplicationAttempt(attemptState.getAttemptId(),
-            null);
+        store.notifyApplicationAttempt(new RMAppAttemptEvent
+               (attemptState.getAttemptId(),
+               RMAppAttemptEventType.ATTEMPT_UPDATE_SAVED));
       } catch (Exception e) {
         LOG.error("Error updating appAttempt: " + attemptState.getAttemptId(), e);
         store.notifyStoreOperationFailed(e);
@@ -412,12 +414,18 @@ public abstract class RMStateStore extends AbstractService {
 
     RMDTSecretManagerState rmSecretManagerState = new RMDTSecretManagerState();
 
+    AMRMTokenSecretManagerState amrmTokenSecretManagerState = null;
+
     public Map<ApplicationId, ApplicationState> getApplicationState() {
       return appState;
     }
 
     public RMDTSecretManagerState getRMDTSecretManagerState() {
       return rmSecretManagerState;
+    }
+
+    public AMRMTokenSecretManagerState getAMRMTokenSecretManagerState() {
+      return amrmTokenSecretManagerState;
     }
   }
     
@@ -487,14 +495,14 @@ public abstract class RMStateStore extends AbstractService {
    *    upgrade RM state.
    */
   public void checkVersion() throws Exception {
-    RMStateVersion loadedVersion = loadVersion();
+    Version loadedVersion = loadVersion();
     LOG.info("Loaded RM state version info " + loadedVersion);
     if (loadedVersion != null && loadedVersion.equals(getCurrentVersion())) {
       return;
     }
     // if there is no version info, treat it as 1.0;
     if (loadedVersion == null) {
-      loadedVersion = RMStateVersion.newInstance(1, 0);
+      loadedVersion = Version.newInstance(1, 0);
     }
     if (loadedVersion.isCompatibleTo(getCurrentVersion())) {
       LOG.info("Storing RM state version info " + getCurrentVersion());
@@ -510,7 +518,7 @@ public abstract class RMStateStore extends AbstractService {
    * Derived class use this method to load the version information from state
    * store.
    */
-  protected abstract RMStateVersion loadVersion() throws Exception;
+  protected abstract Version loadVersion() throws Exception;
 
   /**
    * Derived class use this method to store the version information.
@@ -520,7 +528,7 @@ public abstract class RMStateStore extends AbstractService {
   /**
    * Get the current version of the underlying state store.
    */
-  protected abstract RMStateVersion getCurrentVersion();
+  protected abstract Version getCurrentVersion();
 
 
   /**
@@ -714,6 +722,14 @@ public abstract class RMStateStore extends AbstractService {
       throws Exception;
 
   /**
+   * Blocking API Derived classes must implement this method to store or update
+   * the state of AMRMToken Master Key
+   */
+  public abstract void storeOrUpdateAMRMTokenSecretManagerState(
+      AMRMTokenSecretManagerState amrmTokenSecretManagerState,
+      boolean isUpdate);
+
+  /**
    * Non-blocking API
    * ResourceManager services call this to remove an application from the state
    * store
@@ -755,10 +771,7 @@ public abstract class RMStateStore extends AbstractService {
   
   public Credentials getCredentialsFromAppAttempt(RMAppAttempt appAttempt) {
     Credentials credentials = new Credentials();
-    Token<AMRMTokenIdentifier> appToken = appAttempt.getAMRMToken();
-    if(appToken != null){
-      credentials.addToken(AM_RM_TOKEN_SERVICE, appToken);
-    }
+
     SecretKey clientTokenMasterKey =
         appAttempt.getClientTokenMasterKey();
     if(clientTokenMasterKey != null){
@@ -792,47 +805,28 @@ public abstract class RMStateStore extends AbstractService {
     }
     rmDispatcher.getEventHandler().handle(new RMFatalEvent(type, failureCause));
   }
-
+ 
   @SuppressWarnings("unchecked")
   /**
-   * In (@link handleStoreEvent}, this method is called to notify the
-   * application that new application is stored in state store
-   * @param appId id of the application that has been saved
-   * @param storedException the exception that is thrown when storing the
-   * application
+   * This method is called to notify the application that
+   * new application is stored or updated in state store
+   * @param event App event containing the app id and event type
    */
-  private void notifyDoneStoringApplication(ApplicationId appId,
-                                                  Exception storedException) {
-    rmDispatcher.getEventHandler().handle(
-        new RMAppNewSavedEvent(appId, storedException));
+  private void notifyApplication(RMAppEvent event) {
+    rmDispatcher.getEventHandler().handle(event);
   }
-
-  @SuppressWarnings("unchecked")
-  private void notifyDoneUpdatingApplication(ApplicationId appId,
-      Exception storedException) {
-    rmDispatcher.getEventHandler().handle(
-      new RMAppUpdateSavedEvent(appId, storedException));
-  }
-
+  
   @SuppressWarnings("unchecked")
   /**
-   * In (@link handleStoreEvent}, this method is called to notify the
-   * application attempt that new attempt is stored in state store
-   * @param appAttempt attempt that has been saved
+   * This method is called to notify the application attempt
+   * that new attempt is stored or updated in state store
+   * @param event App attempt event containing the app attempt
+   * id and event type
    */
-  private void notifyDoneStoringApplicationAttempt(ApplicationAttemptId attemptId,
-                                                  Exception storedException) {
-    rmDispatcher.getEventHandler().handle(
-        new RMAppAttemptNewSavedEvent(attemptId, storedException));
+  private void notifyApplicationAttempt(RMAppAttemptEvent event) {
+    rmDispatcher.getEventHandler().handle(event);
   }
-
-  @SuppressWarnings("unchecked")
-  private void notifyDoneUpdatingApplicationAttempt(ApplicationAttemptId attemptId,
-      Exception updatedException) {
-    rmDispatcher.getEventHandler().handle(
-      new RMAppAttemptUpdateSavedEvent(attemptId, updatedException));
-  }
-
+  
   /**
    * EventHandler implementation which forward events to the FSRMStateStore
    * This hides the EventHandle methods of the store from its public interface 

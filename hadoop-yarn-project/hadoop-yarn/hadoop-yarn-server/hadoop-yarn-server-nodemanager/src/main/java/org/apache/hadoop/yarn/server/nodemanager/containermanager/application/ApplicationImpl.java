@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.application;
 
+import java.io.IOException;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -428,6 +429,11 @@ public class ApplicationImpl implements Application {
       ApplicationId appId = event.getApplicationID();
       app.context.getApplications().remove(appId);
       app.aclsManager.removeApplication(appId);
+      try {
+        app.context.getNMStateStore().removeApplication(appId);
+      } catch (IOException e) {
+        LOG.error("Unable to remove application from state store", e);
+      }
     }
   }
 

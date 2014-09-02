@@ -56,6 +56,7 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
@@ -92,6 +93,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
   private final boolean verifyChecksum;
   private LocatedBlocks locatedBlocks = null;
   private long lastBlockBeingWrittenLength = 0;
+  private FileEncryptionInfo fileEncryptionInfo = null;
   private DatanodeInfo currentNode = null;
   private LocatedBlock currentLocatedBlock = null;
   private long pos = 0;
@@ -300,6 +302,8 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
         lastBlockBeingWrittenLength = len; 
       }
     }
+
+    fileEncryptionInfo = locatedBlocks.getFileEncryptionInfo();
 
     currentNode = null;
     return lastBlockBeingWrittenLength;
@@ -1523,6 +1527,10 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
    */
   public synchronized ReadStatistics getReadStatistics() {
     return new ReadStatistics(readStatistics);
+  }
+
+  public synchronized FileEncryptionInfo getFileEncryptionInfo() {
+    return fileEncryptionInfo;
   }
 
   private synchronized void closeCurrentBlockReader() {

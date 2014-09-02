@@ -19,14 +19,20 @@
 package org.apache.hadoop.crypto.key;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
+
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import com.google.common.base.Preconditions;
+
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.crypto.CryptoCodec;
+import org.apache.hadoop.crypto.Decryptor;
+import org.apache.hadoop.crypto.Encryptor;
 
 /**
  * A KeyProvider with Cryptographic Extensions specifically for generating
@@ -77,6 +83,30 @@ public class KeyProviderCryptoExtension extends
       this.encryptionKeyVersionName = encryptionKeyVersionName;
       this.encryptedKeyIv = encryptedKeyIv;
       this.encryptedKeyVersion = encryptedKeyVersion;
+    }
+
+    /**
+     * Factory method to create a new EncryptedKeyVersion that can then be
+     * passed into {@link #decryptEncryptedKey}. Note that the fields of the
+     * returned EncryptedKeyVersion will only partially be populated; it is not
+     * necessarily suitable for operations besides decryption.
+     *
+     * @param encryptionKeyVersionName Version name of the encryption key used
+     *                                 to encrypt the encrypted key.
+     * @param encryptedKeyIv           Initialization vector of the encrypted
+     *                                 key. The IV of the encryption key used to
+     *                                 encrypt the encrypted key is derived from
+     *                                 this IV.
+     * @param encryptedKeyMaterial     Key material of the encrypted key.
+     * @return EncryptedKeyVersion suitable for decryption.
+     */
+    public static EncryptedKeyVersion createForDecryption(String
+        encryptionKeyVersionName, byte[] encryptedKeyIv,
+        byte[] encryptedKeyMaterial) {
+      KeyVersion encryptedKeyVersion = new KeyVersion(null, EEK,
+          encryptedKeyMaterial);
+      return new EncryptedKeyVersion(null, encryptionKeyVersionName,
+          encryptedKeyIv, encryptedKeyVersion);
     }
 
     /**
@@ -193,6 +223,13 @@ public class KeyProviderCryptoExtension extends
   private static class DefaultCryptoExtension implements CryptoExtension {
 
     private final KeyProvider keyProvider;
+    private static final ThreadLocal<SecureRandom> RANDOM = 
+        new ThreadLocal<SecureRandom>() {
+      @Override
+      protected SecureRandom initialValue() {
+        return new SecureRandom();
+      }
+    };
 
     private DefaultCryptoExtension(KeyProvider keyProvider) {
       this.keyProvider = keyProvider;
@@ -206,18 +243,25 @@ public class KeyProviderCryptoExtension extends
       Preconditions.checkNotNull(encryptionKey,
           "No KeyVersion exists for key '%s' ", encryptionKeyName);
       // Generate random bytes for new key and IV
-      Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding");
-      SecureRandom random = SecureRandom.getInstance("SHA1PRNG");
+
+      CryptoCodec cc = CryptoCodec.getInstance(keyProvider.getConf());
       final byte[] newKey = new byte[encryptionKey.getMaterial().length];
-      random.nextBytes(newKey);
-      final byte[] iv = random.generateSeed(cipher.getBlockSize());
+      cc.generateSecureRandom(newKey);
+      final byte[] iv = new byte[cc.getCipherSuite().getAlgorithmBlockSize()];
+      cc.generateSecureRandom(iv);
       // Encryption key IV is derived from new key's IV
       final byte[] encryptionIV = EncryptedKeyVersion.deriveIV(iv);
-      // Encrypt the new key
-      cipher.init(Cipher.ENCRYPT_MODE,
-          new SecretKeySpec(encryptionKey.getMaterial(), "AES"),
-          new IvParameterSpec(encryptionIV));
-      final byte[] encryptedKey = cipher.doFinal(newKey);
+      Encryptor encryptor = cc.createEncryptor();
+      encryptor.init(encryptionKey.getMaterial(), encryptionIV);
+      int keyLen = newKey.length;
+      ByteBuffer bbIn = ByteBuffer.allocateDirect(keyLen);
+      ByteBuffer bbOut = ByteBuffer.allocateDirect(keyLen);
+      bbIn.put(newKey);
+      bbIn.flip();
+      encryptor.encrypt(bbIn, bbOut);
+      bbOut.flip();
+      byte[] encryptedKey = new byte[keyLen];
+      bbOut.get(encryptedKey);    
       return new EncryptedKeyVersion(encryptionKeyName,
           encryptionKey.getVersionName(), iv,
           new KeyVersion(encryptionKey.getName(), EEK, encryptedKey));
@@ -234,19 +278,32 @@ public class KeyProviderCryptoExtension extends
           keyProvider.getKeyVersion(encryptionKeyVersionName);
       Preconditions.checkNotNull(encryptionKey,
           "KeyVersion name '%s' does not exist", encryptionKeyVersionName);
-      final byte[] encryptionKeyMaterial = encryptionKey.getMaterial();
+      Preconditions.checkArgument(
+              encryptedKeyVersion.getEncryptedKeyVersion().getVersionName()
+                    .equals(KeyProviderCryptoExtension.EEK),
+                "encryptedKey version name must be '%s', is '%s'",
+                KeyProviderCryptoExtension.EEK,
+                encryptedKeyVersion.getEncryptedKeyVersion().getVersionName()
+            );
+
       // Encryption key IV is determined from encrypted key's IV
       final byte[] encryptionIV =
           EncryptedKeyVersion.deriveIV(encryptedKeyVersion.getEncryptedKeyIv());
-      // Init the cipher with encryption key parameters
-      Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding");
-      cipher.init(Cipher.DECRYPT_MODE,
-          new SecretKeySpec(encryptionKeyMaterial, "AES"),
-          new IvParameterSpec(encryptionIV));
-      // Decrypt the encrypted key
+
+      CryptoCodec cc = CryptoCodec.getInstance(keyProvider.getConf());
+      Decryptor decryptor = cc.createDecryptor();
+      decryptor.init(encryptionKey.getMaterial(), encryptionIV);
       final KeyVersion encryptedKV =
           encryptedKeyVersion.getEncryptedKeyVersion();
-      final byte[] decryptedKey = cipher.doFinal(encryptedKV.getMaterial());
+      int keyLen = encryptedKV.getMaterial().length;
+      ByteBuffer bbIn = ByteBuffer.allocateDirect(keyLen);
+      ByteBuffer bbOut = ByteBuffer.allocateDirect(keyLen);
+      bbIn.put(encryptedKV.getMaterial());
+      bbIn.flip();
+      decryptor.decrypt(bbIn, bbOut);
+      bbOut.flip();
+      byte[] decryptedKey = new byte[keyLen];
+      bbOut.get(decryptedKey);
       return new KeyVersion(encryptionKey.getName(), EK, decryptedKey);
     }
 

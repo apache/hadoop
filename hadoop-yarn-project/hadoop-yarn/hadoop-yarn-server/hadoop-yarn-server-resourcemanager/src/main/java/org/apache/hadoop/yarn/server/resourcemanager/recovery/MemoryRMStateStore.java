@@ -32,9 +32,10 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.records.Version;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.AMRMTokenSecretManagerState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -72,6 +73,10 @@ public class MemoryRMStateStore extends RMStateStore {
       state.rmSecretManagerState.getTokenState());
     returnState.rmSecretManagerState.dtSequenceNumber =
         state.rmSecretManagerState.dtSequenceNumber;
+    returnState.amrmTokenSecretManagerState =
+        state.amrmTokenSecretManagerState == null ? null
+            : AMRMTokenSecretManagerState
+              .newInstance(state.amrmTokenSecretManagerState);
     return returnState;
   }
   
@@ -254,7 +259,7 @@ public class MemoryRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected RMStateVersion loadVersion() throws Exception {
+  protected Version loadVersion() throws Exception {
     return null;
   }
 
@@ -263,8 +268,18 @@ public class MemoryRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected RMStateVersion getCurrentVersion() {
+  protected Version getCurrentVersion() {
     return null;
+  }
+
+  @Override
+  public void storeOrUpdateAMRMTokenSecretManagerState(
+      AMRMTokenSecretManagerState amrmTokenSecretManagerState,
+      boolean isUpdate) {
+    if (amrmTokenSecretManagerState != null) {
+      state.amrmTokenSecretManagerState = AMRMTokenSecretManagerState
+          .newInstance(amrmTokenSecretManagerState);
+    }
   }
 
   @Override

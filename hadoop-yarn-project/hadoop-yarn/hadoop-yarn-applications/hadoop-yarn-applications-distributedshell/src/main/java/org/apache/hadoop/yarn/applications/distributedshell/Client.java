@@ -197,7 +197,7 @@ public class Client {
       }
       result = client.run();
     } catch (Throwable t) {
-      LOG.fatal("Error running CLient", t);
+      LOG.fatal("Error running Client", t);
       System.exit(1);
     }
     if (result) {

@@ -335,7 +335,7 @@ public abstract class RMCommunicator extends AbstractService
   
   public void setSignalled(boolean isSignalled) {
     this.isSignalled = isSignalled;
-    LOG.info("RMCommunicator notified that iSignalled is: " 
+    LOG.info("RMCommunicator notified that isSignalled is: " 
         + isSignalled);
   }
 

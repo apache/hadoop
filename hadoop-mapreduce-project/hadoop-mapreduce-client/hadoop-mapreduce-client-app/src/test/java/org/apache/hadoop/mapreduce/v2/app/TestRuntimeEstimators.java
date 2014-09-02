@@ -879,5 +879,10 @@ public class TestRuntimeEstimators {
       return true;
     }
 
+    @Override
+    public String getNMHostname() {
+      // bogus - Not Required
+      return null;
+    }
   }
 }

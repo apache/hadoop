@@ -87,22 +87,23 @@ public class ContainerLaunch implements Callable<Integer> {
   public static final String FINAL_CONTAINER_TOKENS_FILE = "container_tokens";
 
   private static final String PID_FILE_NAME_FMT = "%s.pid";
+  private static final String EXIT_CODE_FILE_SUFFIX = ".exitcode";
 
-  private final Dispatcher dispatcher;
-  private final ContainerExecutor exec;
+  protected final Dispatcher dispatcher;
+  protected final ContainerExecutor exec;
   private final Application app;
-  private final Container container;
+  protected final Container container;
   private final Configuration conf;
   private final Context context;
   private final ContainerManagerImpl containerManager;
   
-  private volatile AtomicBoolean shouldLaunchContainer = new AtomicBoolean(false);
-  private volatile AtomicBoolean completed = new AtomicBoolean(false);
+  protected AtomicBoolean shouldLaunchContainer = new AtomicBoolean(false);
+  protected AtomicBoolean completed = new AtomicBoolean(false);
 
   private long sleepDelayBeforeSigKill = 250;
   private long maxKillWaitTime = 2000;
 
-  private Path pidFilePath = null;
+  protected Path pidFilePath = null;
 
   private final LocalDirsHandlerService dirsHandler;
 
@@ -223,14 +224,11 @@ public class ContainerLaunch implements Callable<Integer> {
               + Path.SEPARATOR + containerIdStr,
               LocalDirAllocator.SIZE_UNKNOWN, false);
 
-      String pidFileSuffix = String.format(ContainerLaunch.PID_FILE_NAME_FMT,
-          containerIdStr);
+      String pidFileSubpath = getPidFileSubpath(appIdStr, containerIdStr);
 
       // pid file should be in nm private dir so that it is not 
       // accessible by users
-      pidFilePath = dirsHandler.getLocalPathForWrite(
-          ResourceLocalizationService.NM_PRIVATE_DIR + Path.SEPARATOR 
-          + pidFileSuffix);
+      pidFilePath = dirsHandler.getLocalPathForWrite(pidFileSubpath);
       List<String> localDirs = dirsHandler.getLocalDirs();
       List<String> logDirs = dirsHandler.getLogDirs();
 
@@ -288,6 +286,7 @@ public class ContainerLaunch implements Callable<Integer> {
       dispatcher.getEventHandler().handle(new ContainerEvent(
             containerID,
             ContainerEventType.CONTAINER_LAUNCHED));
+      context.getNMStateStore().storeContainerLaunched(containerID);
 
       // Check if the container is signalled to be killed.
       if (!shouldLaunchContainer.compareAndSet(false, true)) {
@@ -310,6 +309,11 @@ public class ContainerLaunch implements Callable<Integer> {
     } finally {
       completed.set(true);
       exec.deactivateContainer(containerID);
+      try {
+        context.getNMStateStore().storeContainerCompleted(containerID, ret);
+      } catch (IOException e) {
+        LOG.error("Unable to set exit code for container " + containerID);
+      }
     }
 
     if (LOG.isDebugEnabled()) {
@@ -342,6 +346,11 @@ public class ContainerLaunch implements Callable<Integer> {
             ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS));
     return 0;
   }
+
+  protected String getPidFileSubpath(String appIdStr, String containerIdStr) {
+    return getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
+        + String.format(ContainerLaunch.PID_FILE_NAME_FMT, containerIdStr);
+  }
   
   /**
    * Cleanup the container.
@@ -356,6 +365,13 @@ public class ContainerLaunch implements Callable<Integer> {
     ContainerId containerId = container.getContainerId();
     String containerIdStr = ConverterUtils.toString(containerId);
     LOG.info("Cleaning up container " + containerIdStr);
+
+    try {
+      context.getNMStateStore().storeContainerKilled(containerId);
+    } catch (IOException e) {
+      LOG.error("Unable to mark container " + containerId
+          + " killed in store", e);
+    }
 
     // launch flag will be set to true if process already launched
     boolean alreadyLaunched = !shouldLaunchContainer.compareAndSet(false, true);
@@ -421,6 +437,7 @@ public class ContainerLaunch implements Callable<Integer> {
       if (pidFilePath != null) {
         FileContext lfs = FileContext.getLocalFSFileContext();
         lfs.delete(pidFilePath, false);
+        lfs.delete(pidFilePath.suffix(EXIT_CODE_FILE_SUFFIX), false);
       }
     }
   }
@@ -477,6 +494,10 @@ public class ContainerLaunch implements Callable<Integer> {
   private String getAppPrivateDir(String appIdStr) {
     return ResourceLocalizationService.NM_PRIVATE_DIR + Path.SEPARATOR
         + appIdStr;
+  }
+
+  Context getContext() {
+    return context;
   }
 
   @VisibleForTesting
@@ -787,4 +808,7 @@ public class ContainerLaunch implements Callable<Integer> {
     }
   }
 
+  public static String getExitCodeFile(String pidFile) {
+    return pidFile + EXIT_CODE_FILE_SUFFIX;
+  }
 }

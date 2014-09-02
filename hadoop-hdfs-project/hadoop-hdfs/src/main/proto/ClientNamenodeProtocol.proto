@@ -32,6 +32,8 @@ import "Security.proto";
 import "hdfs.proto";
 import "acl.proto";
 import "xattr.proto";
+import "encryption.proto";
+import "inotify.proto";
 
 /**
  * The ClientNamenodeProtocol Service defines the interface between a client 
@@ -73,6 +75,7 @@ message CreateRequestProto {
   required bool createParent = 5;
   required uint32 replication = 6; // Short: Only 16 bits used
   required uint64 blockSize = 7;
+  repeated CipherSuite cipherSuites = 8;
 }
 
 message CreateResponseProto {
@@ -279,6 +282,19 @@ message GetDatanodeReportRequestProto {
 
 message GetDatanodeReportResponseProto {
   repeated DatanodeInfoProto di = 1;
+}
+
+message GetDatanodeStorageReportRequestProto {
+  required DatanodeReportTypeProto type = 1;
+}
+
+message DatanodeStorageReportProto {
+  required DatanodeInfoProto datanodeInfo = 1;
+  repeated StorageReportProto storageReports = 2;
+}
+
+message GetDatanodeStorageReportResponseProto {
+  repeated DatanodeStorageReportProto datanodeStorageReports = 1;
 }
 
 message GetPreferredBlockSizeRequestProto {
@@ -641,6 +657,29 @@ message DeleteSnapshotRequestProto {
 message DeleteSnapshotResponseProto { // void response
 }
 
+message CheckAccessRequestProto {
+  required string path = 1;
+  required AclEntryProto.FsActionProto mode = 2;
+}
+
+message CheckAccessResponseProto { // void response
+}
+
+message GetCurrentEditLogTxidRequestProto {
+}
+
+message GetCurrentEditLogTxidResponseProto {
+  required int64 txid = 1;
+}
+
+message GetEditsFromTxidRequestProto {
+  required int64 txid = 1;
+}
+
+message GetEditsFromTxidResponseProto {
+  required EventsListProto eventsList = 1;
+}
+
 service ClientNamenodeProtocol {
   rpc getBlockLocations(GetBlockLocationsRequestProto)
       returns(GetBlockLocationsResponseProto);
@@ -672,6 +711,8 @@ service ClientNamenodeProtocol {
   rpc getFsStats(GetFsStatusRequestProto) returns(GetFsStatsResponseProto);
   rpc getDatanodeReport(GetDatanodeReportRequestProto)
       returns(GetDatanodeReportResponseProto);
+  rpc getDatanodeStorageReport(GetDatanodeStorageReportRequestProto)
+      returns(GetDatanodeStorageReportResponseProto);
   rpc getPreferredBlockSize(GetPreferredBlockSizeRequestProto)
       returns(GetPreferredBlockSizeResponseProto);
   rpc setSafeMode(SetSafeModeRequestProto)
@@ -768,4 +809,16 @@ service ClientNamenodeProtocol {
       returns(ListXAttrsResponseProto);
   rpc removeXAttr(RemoveXAttrRequestProto)
       returns(RemoveXAttrResponseProto);
+  rpc checkAccess(CheckAccessRequestProto)
+      returns(CheckAccessResponseProto);
+  rpc createEncryptionZone(CreateEncryptionZoneRequestProto)
+      returns(CreateEncryptionZoneResponseProto);
+  rpc listEncryptionZones(ListEncryptionZonesRequestProto)
+      returns(ListEncryptionZonesResponseProto);
+  rpc getEZForPath(GetEZForPathRequestProto)
+      returns(GetEZForPathResponseProto);
+  rpc getCurrentEditLogTxid(GetCurrentEditLogTxidRequestProto)
+      returns(GetCurrentEditLogTxidResponseProto);
+  rpc getEditsFromTxid(GetEditsFromTxidRequestProto)
+      returns(GetEditsFromTxidResponseProto);
 }

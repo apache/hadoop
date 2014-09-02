@@ -20,31 +20,48 @@
 # Optinally upgrade or rollback dfs state.
 # Run this on master node.
 
-usage="Usage: start-dfs.sh [-upgrade|-rollback] [other options such as -clusterId]"
+function hadoop_usage
+{
+  echo "Usage: start-dfs.sh [-upgrade|-rollback] [-clusterId]"
+}
 
-bin=`dirname "${BASH_SOURCE-$0}"`
-bin=`cd "$bin"; pwd`
+this="${BASH_SOURCE-$0}"
+bin=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
 
-DEFAULT_LIBEXEC_DIR="$bin"/../libexec
-HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
-. $HADOOP_LIBEXEC_DIR/hdfs-config.sh
+# let's locate libexec...
+if [[ -n "${HADOOP_PREFIX}" ]]; then
+  DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
+else
+  DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
+fi
+
+HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}"
+# shellcheck disable=SC2034
+HADOOP_NEW_CONFIG=true
+if [[ -f "${HADOOP_LIBEXEC_DIR}/hdfs-config.sh" ]]; then
+  . "${HADOOP_LIBEXEC_DIR}/hdfs-config.sh"
+else
+  echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/hdfs-config.sh." 2>&1
+  exit 1
+fi
+
 
 # get arguments
-if [ $# -ge 1 ]; then
-	nameStartOpt="$1"
-	shift
-	case "$nameStartOpt" in
-	  (-upgrade)
-	  	;;
-	  (-rollback) 
-	  	dataStartOpt="$nameStartOpt"
-	  	;;
-	  (*)
-		  echo $usage
-		  exit 1
-	    ;;
-	esac
+if [[ $# -ge 1 ]]; then
+  nameStartOpt="$1"
+  shift
+  case "$nameStartOpt" in
+    -upgrade)
+    ;;
+    -rollback)
+      dataStartOpt="$nameStartOpt"
+    ;;
+    *)
+      hadoop_exit_with_usage 1
+    ;;
+  esac
 fi
+
 
 #Add other possible options
 nameStartOpt="$nameStartOpt $@"
@@ -52,66 +69,79 @@ nameStartOpt="$nameStartOpt $@"
 #---------------------------------------------------------
 # namenodes
 
-NAMENODES=$($HADOOP_PREFIX/bin/hdfs getconf -namenodes)
+NAMENODES=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -namenodes 2>/dev/null)
+
+if [[ -z "${NAMENODES}" ]]; then
+  NAMENODES=$(hostname)
+fi
 
 echo "Starting namenodes on [$NAMENODES]"
 
-"$HADOOP_PREFIX/sbin/hadoop-daemons.sh" \
-  --config "$HADOOP_CONF_DIR" \
-  --hostnames "$NAMENODES" \
-  --script "$bin/hdfs" start namenode $nameStartOpt
+"${bin}/hadoop-daemons.sh" \
+--config "${HADOOP_CONF_DIR}" \
+--hostnames "${NAMENODES}" \
+start namenode ${nameStartOpt}
 
 #---------------------------------------------------------
 # datanodes (using default slaves file)
 
-if [ -n "$HADOOP_SECURE_DN_USER" ]; then
-  echo \
-    "Attempting to start secure cluster, skipping datanodes. " \
-    "Run start-secure-dns.sh as root to complete startup."
+if [[ -n "${HADOOP_SECURE_DN_USER}" ]] &&
+[[ -z "${HADOOP_SECURE_COMMAND}" ]]; then
+  echo "ERROR: Attempting to start secure cluster, skipping datanodes. "
+  echo "Run start-secure-dns.sh as root or configure "
+  echo "\${HADOOP_SECURE_COMMAND} to complete startup."
 else
-  "$HADOOP_PREFIX/sbin/hadoop-daemons.sh" \
-    --config "$HADOOP_CONF_DIR" \
-    --script "$bin/hdfs" start datanode $dataStartOpt
+  
+  echo "Starting datanodes"
+  
+  "${bin}/hadoop-daemons.sh" \
+  --config "${HADOOP_CONF_DIR}" \
+  start datanode ${dataStartOpt}
 fi
 
 #---------------------------------------------------------
 # secondary namenodes (if any)
 
-SECONDARY_NAMENODES=$($HADOOP_PREFIX/bin/hdfs getconf -secondarynamenodes 2>/dev/null)
+SECONDARY_NAMENODES=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -secondarynamenodes 2>/dev/null)
 
-if [ -n "$SECONDARY_NAMENODES" ]; then
-  echo "Starting secondary namenodes [$SECONDARY_NAMENODES]"
+if [[ "${SECONDARY_NAMENODES}" == "0.0.0.0" ]]; then
+  SECONDARY_NAMENODES=$(hostname)
+fi
 
-  "$HADOOP_PREFIX/sbin/hadoop-daemons.sh" \
-      --config "$HADOOP_CONF_DIR" \
-      --hostnames "$SECONDARY_NAMENODES" \
-      --script "$bin/hdfs" start secondarynamenode
+if [[ -n "${SECONDARY_NAMENODES}" ]]; then
+  echo "Starting secondary namenodes [${SECONDARY_NAMENODES}]"
+  
+  "${bin}/hadoop-daemons.sh" \
+  --config "${HADOOP_CONF_DIR}" \
+  --hostnames "${SECONDARY_NAMENODES}" \
+  start secondarynamenode
 fi
 
 #---------------------------------------------------------
 # quorumjournal nodes (if any)
 
-SHARED_EDITS_DIR=$($HADOOP_PREFIX/bin/hdfs getconf -confKey dfs.namenode.shared.edits.dir 2>&-)
+SHARED_EDITS_DIR=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -confKey dfs.namenode.shared.edits.dir 2>&-)
 
-case "$SHARED_EDITS_DIR" in
-qjournal://*)
-  JOURNAL_NODES=$(echo "$SHARED_EDITS_DIR" | sed 's,qjournal://\([^/]*\)/.*,\1,g; s/;/ /g; s/:[0-9]*//g')
-  echo "Starting journal nodes [$JOURNAL_NODES]"
-  "$HADOOP_PREFIX/sbin/hadoop-daemons.sh" \
-      --config "$HADOOP_CONF_DIR" \
-      --hostnames "$JOURNAL_NODES" \
-      --script "$bin/hdfs" start journalnode ;;
+case "${SHARED_EDITS_DIR}" in
+  qjournal://*)
+    JOURNAL_NODES=$(echo "${SHARED_EDITS_DIR}" | sed 's,qjournal://\([^/]*\)/.*,\1,g; s/;/ /g; s/:[0-9]*//g')
+    echo "Starting journal nodes [${JOURNAL_NODES}]"
+    "${bin}/hadoop-daemons.sh" \
+    --config "${HADOOP_CONF_DIR}" \
+    --hostnames "${JOURNAL_NODES}" \
+    start journalnode
+  ;;
 esac
 
 #---------------------------------------------------------
 # ZK Failover controllers, if auto-HA is enabled
-AUTOHA_ENABLED=$($HADOOP_PREFIX/bin/hdfs getconf -confKey dfs.ha.automatic-failover.enabled)
-if [ "$(echo "$AUTOHA_ENABLED" | tr A-Z a-z)" = "true" ]; then
-  echo "Starting ZK Failover Controllers on NN hosts [$NAMENODES]"
-  "$HADOOP_PREFIX/sbin/hadoop-daemons.sh" \
-    --config "$HADOOP_CONF_DIR" \
-    --hostnames "$NAMENODES" \
-    --script "$bin/hdfs" start zkfc
+AUTOHA_ENABLED=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -confKey dfs.ha.automatic-failover.enabled | tr '[:upper:]' '[:lower:]')
+if [[ "${AUTOHA_ENABLED}" = "true" ]]; then
+  echo "Starting ZK Failover Controllers on NN hosts [${NAMENODES}]"
+  "${bin}/hadoop-daemons.sh" \
+  --config "${HADOOP_CONF_DIR}" \
+  --hostnames "${NAMENODES}" \
+  start zkfc
 fi
 
 # eof

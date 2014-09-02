@@ -39,7 +39,9 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 @Private
 @Unstable
-public abstract class FSQueue extends Schedulable implements Queue {
+public abstract class FSQueue implements Queue, Schedulable {
+  private Resource fairShare = Resources.createResource(0, 0);
+  private Resource steadyFairShare = Resources.createResource(0, 0);
   private final String name;
   protected final FairScheduler scheduler;
   private final FSQueueMetrics metrics;
@@ -49,6 +51,9 @@ public abstract class FSQueue extends Schedulable implements Queue {
       RecordFactoryProvider.getRecordFactory(null);
   
   protected SchedulingPolicy policy = SchedulingPolicy.DEFAULT_POLICY;
+
+  private long fairSharePreemptionTimeout = Long.MAX_VALUE;
+  private long minSharePreemptionTimeout = Long.MAX_VALUE;
 
   public FSQueue(String name, FairScheduler scheduler, FSParentQueue parent) {
     this.name = name;
@@ -139,23 +144,72 @@ public abstract class FSQueue extends Schedulable implements Queue {
   public FSQueueMetrics getMetrics() {
     return metrics;
   }
-  
+
+  /** Get the fair share assigned to this Schedulable. */
+  public Resource getFairShare() {
+    return fairShare;
+  }
+
   @Override
   public void setFairShare(Resource fairShare) {
-    super.setFairShare(fairShare);
+    this.fairShare = fairShare;
     metrics.setFairShare(fairShare);
   }
-  
+
+  /** Get the steady fair share assigned to this Schedulable. */
+  public Resource getSteadyFairShare() {
+    return steadyFairShare;
+  }
+
+  public void setSteadyFairShare(Resource steadyFairShare) {
+    this.steadyFairShare = steadyFairShare;
+    metrics.setSteadyFairShare(steadyFairShare);
+  }
+
   public boolean hasAccess(QueueACL acl, UserGroupInformation user) {
     return scheduler.getAllocationConfiguration().hasAccess(name, acl, user);
   }
-  
+
+  public long getFairSharePreemptionTimeout() {
+    return fairSharePreemptionTimeout;
+  }
+
+  public void setFairSharePreemptionTimeout(long fairSharePreemptionTimeout) {
+    this.fairSharePreemptionTimeout = fairSharePreemptionTimeout;
+  }
+
+  public long getMinSharePreemptionTimeout() {
+    return minSharePreemptionTimeout;
+  }
+
+  public void setMinSharePreemptionTimeout(long minSharePreemptionTimeout) {
+    this.minSharePreemptionTimeout = minSharePreemptionTimeout;
+  }
+
   /**
    * Recomputes the shares for all child queues and applications based on this
    * queue's current share
    */
   public abstract void recomputeShares();
-  
+
+  /**
+   * Update the min/fair share preemption timeouts for this queue.
+   */
+  public void updatePreemptionTimeouts() {
+    // For min share
+    minSharePreemptionTimeout = scheduler.getAllocationConfiguration()
+        .getMinSharePreemptionTimeout(getName());
+    if (minSharePreemptionTimeout == -1 && parent != null) {
+      minSharePreemptionTimeout = parent.getMinSharePreemptionTimeout();
+    }
+    // For fair share
+    fairSharePreemptionTimeout = scheduler.getAllocationConfiguration()
+        .getFairSharePreemptionTimeout(getName());
+    if (fairSharePreemptionTimeout == -1 && parent != null) {
+      fairSharePreemptionTimeout = parent.getFairSharePreemptionTimeout();
+    }
+  }
+
   /**
    * Gets the children of this queue, if any.
    */
@@ -189,15 +243,16 @@ public abstract class FSQueue extends Schedulable implements Queue {
   }
 
   /**
-   * Helper method to check if the queue should preempt containers
-   *
-   * @return true if check passes (can preempt) or false otherwise
+   * Returns true if queue has at least one app running.
    */
-  protected boolean preemptContainerPreCheck() {
-    if (this == scheduler.getQueueManager().getRootQueue()) {
-      return true;
-    }
-    return parent.getPolicy()
-        .checkIfUsageOverFairShare(getResourceUsage(), getFairShare());
+  public boolean isActive() {
+    return getNumRunnableApps() > 0;
+  }
+
+  /** Convenient toString implementation for debugging. */
+  @Override
+  public String toString() {
+    return String.format("[%s, demand=%s, running=%s, share=%s, w=%s]",
+        getName(), getDemand(), getResourceUsage(), fairShare, getWeights());
   }
 }

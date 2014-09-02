@@ -36,9 +36,11 @@ public class TestDSFailedAppMaster extends ApplicationMaster {
     if (appAttemptID.getAttemptId() == 2) {
       // should reuse the earlier running container, so numAllocatedContainers
       // should be set to 1. And should ask no more containers, so
-      // numRequestedContainers should be set to 0.
+      // numRequestedContainers should be the same as numTotalContainers.
+      // The only container is the container requested by the AM in the first
+      // attempt.
       if (numAllocatedContainers.get() != 1
-          || numRequestedContainers.get() != 0) {
+          || numRequestedContainers.get() != numTotalContainers) {
         LOG.info("NumAllocatedContainers is " + numAllocatedContainers.get()
             + " and NumRequestedContainers is " + numAllocatedContainers.get()
             + ".Application Master failed. exiting");

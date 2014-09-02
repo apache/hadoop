@@ -88,6 +88,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.eve
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEventType;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -722,6 +723,8 @@ public class TestContainer {
       Context context = mock(Context.class);
       when(context.getApplications()).thenReturn(
           new ConcurrentHashMap<ApplicationId, Application>());
+      NMNullStateStoreService stateStore = new NMNullStateStoreService();
+      when(context.getNMStateStore()).thenReturn(stateStore);
       ContainerExecutor executor = mock(ContainerExecutor.class);
       launcher =
           new ContainersLauncher(context, dispatcher, executor, null, null);
@@ -777,7 +780,8 @@ public class TestContainer {
       }
       when(ctxt.getServiceData()).thenReturn(serviceData);
 
-      c = new ContainerImpl(conf, dispatcher, ctxt, null, metrics, identifier);
+      c = new ContainerImpl(conf, dispatcher, new NMNullStateStoreService(),
+          ctxt, null, metrics, identifier);
       dispatcher.register(ContainerEventType.class,
           new EventHandler<ContainerEvent>() {
             @Override

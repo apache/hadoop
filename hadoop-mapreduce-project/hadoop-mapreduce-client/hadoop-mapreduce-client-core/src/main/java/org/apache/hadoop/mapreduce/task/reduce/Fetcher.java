@@ -19,6 +19,7 @@ package org.apache.hadoop.mapreduce.task.reduce;
 
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -43,6 +44,7 @@ import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
+import org.apache.hadoop.mapreduce.CryptoUtils;
 import org.apache.hadoop.security.ssl.SSLFactory;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -65,6 +67,7 @@ class Fetcher<K,V> extends Thread {
                                     CONNECTION, WRONG_REDUCE}
   
   private final static String SHUFFLE_ERR_GRP_NAME = "Shuffle Errors";
+  private final JobConf jobConf;
   private final Counters.Counter connectionErrs;
   private final Counters.Counter ioErrs;
   private final Counters.Counter wrongLengthErrs;
@@ -104,6 +107,7 @@ class Fetcher<K,V> extends Thread {
                  Reporter reporter, ShuffleClientMetrics metrics,
                  ExceptionReporter exceptionReporter, SecretKey shuffleKey,
                  int id) {
+    this.jobConf = job;
     this.reporter = reporter;
     this.scheduler = scheduler;
     this.merger = merger;
@@ -319,6 +323,7 @@ class Fetcher<K,V> extends Thread {
 
       // If connect did not succeed, just mark all the maps as failed,
       // indirectly penalizing the host
+      scheduler.hostFailed(host.getHostName());
       for(TaskAttemptID left: remaining) {
         scheduler.copyFailed(left, host, false, connectExcpt);
       }
@@ -343,6 +348,7 @@ class Fetcher<K,V> extends Thread {
       
       if(failedTasks != null && failedTasks.length > 0) {
         LOG.warn("copyMapOutput failed for tasks "+Arrays.toString(failedTasks));
+        scheduler.hostFailed(host.getHostName());
         for(TaskAttemptID left: failedTasks) {
           scheduler.copyFailed(left, host, true, false);
         }
@@ -394,7 +400,11 @@ class Fetcher<K,V> extends Thread {
         return remaining.toArray(new TaskAttemptID[remaining.size()]);
       }
 
- 
+      InputStream is = input;
+      is = CryptoUtils.wrapIfNecessary(jobConf, is, compressedLength);
+      compressedLength -= CryptoUtils.cryptoPadding(jobConf);
+      decompressedLength -= CryptoUtils.cryptoPadding(jobConf);
+      
       // Do some basic sanity verification
       if (!verifySanity(compressedLength, decompressedLength, forReduce,
           remaining, mapId)) {
@@ -431,7 +441,7 @@ class Fetcher<K,V> extends Thread {
         LOG.info("fetcher#" + id + " about to shuffle output of map "
             + mapOutput.getMapId() + " decomp: " + decompressedLength
             + " len: " + compressedLength + " to " + mapOutput.getDescription());
-        mapOutput.shuffle(host, input, compressedLength, decompressedLength,
+        mapOutput.shuffle(host, is, compressedLength, decompressedLength,
             metrics, reporter);
       } catch (java.lang.InternalError e) {
         LOG.warn("Failed to shuffle for fetcher#"+id, e);

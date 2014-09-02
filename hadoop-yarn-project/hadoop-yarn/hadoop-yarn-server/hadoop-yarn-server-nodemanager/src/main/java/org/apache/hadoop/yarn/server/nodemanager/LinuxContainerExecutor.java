@@ -57,8 +57,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   private LCEResourcesHandler resourcesHandler;
   private boolean containerSchedPriorityIsSet = false;
   private int containerSchedPriorityAdjustment = 0;
-  
-  
+  private boolean containerLimitUsers;
+
   @Override
   public void setConf(Configuration conf) {
     super.setConf(conf);
@@ -81,6 +81,13 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     nonsecureLocalUserPattern = Pattern.compile(
         conf.get(YarnConfiguration.NM_NONSECURE_MODE_USER_PATTERN_KEY,
             YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_USER_PATTERN));        
+    containerLimitUsers = conf.getBoolean(
+      YarnConfiguration.NM_NONSECURE_MODE_LIMIT_USERS,
+      YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LIMIT_USERS);
+    if (!containerLimitUsers) {
+      LOG.warn(YarnConfiguration.NM_NONSECURE_MODE_LIMIT_USERS +
+          ": impersonation without authentication enabled");
+    }
   }
 
   void verifyUsernamePattern(String user) {
@@ -92,7 +99,12 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   }
 
   String getRunAsUser(String user) {
-    return UserGroupInformation.isSecurityEnabled() ? user : nonsecureLocalUser;
+    if (UserGroupInformation.isSecurityEnabled() ||
+       !containerLimitUsers) {
+      return user;
+    } else {
+      return nonsecureLocalUser;
+    }
   }
 
   /**
@@ -403,6 +415,13 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     }
   }
   
+  @Override
+  public boolean isContainerProcessAlive(String user, String pid)
+      throws IOException {
+    // Send a test signal to the process as the user to see if it's alive
+    return signalContainer(user, pid, Signal.NULL);
+  }
+
   public void mountCgroups(List<String> cgroupKVs, String hierarchy)
          throws IOException {
     List<String> command = new ArrayList<String>(

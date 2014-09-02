@@ -20,6 +20,7 @@ Hadoop Archives Guide
  - [Overview](#Overview)
  - [How to Create an Archive](#How_to_Create_an_Archive)
  - [How to Look Up Files in Archives](#How_to_Look_Up_Files_in_Archives)
+ - [How to Unarchive an Archive](#How_to_Unarchive_an_Archive)
  - [Archives Examples](#Archives_Examples)
      - [Creating an Archive](#Creating_an_Archive)
      - [Looking Up Files](#Looking_Up_Files)
@@ -37,7 +38,7 @@ Overview
 How to Create an Archive
 ------------------------
 
-  `Usage: hadoop archive -archiveName name -p <parent> <src>* <dest>`
+  `Usage: hadoop archive -archiveName name -p <parent> [-r <replication factor>] <src>* <dest>`
 
   -archiveName is the name of the archive you would like to create. An example
   would be foo.har. The name should have a \*.har extension. The parent argument
@@ -51,9 +52,12 @@ How to Create an Archive
   would need a map reduce cluster to run this. For a detailed example the later
   sections.
 
+  -r indicates the desired replication factor; if this optional argument is
+  not specified, a replication factor of 10 will be used.
+
   If you just want to archive a single directory /foo/bar then you can just use
 
-  `hadoop archive -archiveName zoo.har -p /foo/bar /outputdir`
+  `hadoop archive -archiveName zoo.har -p /foo/bar -r 3 /outputdir`
 
 How to Look Up Files in Archives
 --------------------------------
@@ -70,19 +74,34 @@ How to Look Up Files in Archives
 
   `har:///archivepath/fileinarchive`
 
+How to Unarchive an Archive
+---------------------------
+
+  Since all the fs shell commands in the archives work transparently,
+  unarchiving is just a matter of copying.
+
+  To unarchive sequentially:
+
+  `hdfs dfs -cp har:///user/zoo/foo.har/dir1 hdfs:/user/zoo/newdir`
+
+  To unarchive in parallel, use DistCp:
+
+  `hadoop distcp har:///user/zoo/foo.har/dir1 hdfs:/user/zoo/newdir`
+
 Archives Examples
 -----------------
 
 $H3 Creating an Archive
 
-  `hadoop archive -archiveName foo.har -p /user/hadoop dir1 dir2 /user/zoo`
+  `hadoop archive -archiveName foo.har -p /user/hadoop -r 3 dir1 dir2 /user/zoo`
 
   The above example is creating an archive using /user/hadoop as the relative
   archive directory. The directories /user/hadoop/dir1 and /user/hadoop/dir2
   will be archived in the following file system directory -- /user/zoo/foo.har.
   Archiving does not delete the input files. If you want to delete the input
   files after creating the archives (to reduce namespace), you will have to do
-  it on your own. 
+  it on your own. In this example, because `-r 3` is specified, a replication
+  factor of 3 will be used.
 
 $H3 Looking Up Files
 

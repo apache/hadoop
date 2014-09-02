@@ -21,9 +21,7 @@ package org.apache.hadoop.security.alias;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -41,8 +39,6 @@ public class UserProvider extends CredentialProvider {
   public static final String SCHEME_NAME = "user";
   private final UserGroupInformation user;
   private final Credentials credentials;
-  private final Map<String, CredentialEntry> cache = new HashMap<String, 
-      CredentialEntry>();
 
   private UserProvider() throws IOException {
     user = UserGroupInformation.getCurrentUser();
@@ -86,7 +82,6 @@ public class UserProvider extends CredentialProvider {
       throw new IOException("Credential " + name + 
           " does not exist in " + this);
     }
-    cache.remove(name);
   }
 
   @Override

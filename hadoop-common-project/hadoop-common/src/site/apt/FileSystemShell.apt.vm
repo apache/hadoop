@@ -138,7 +138,7 @@ copyToLocal
 
 count
 
-   Usage: <<<hdfs dfs -count [-q] <paths> >>>
+   Usage: <<<hdfs dfs -count [-q] [-h] <paths> >>>
 
    Count the number of directories, files and bytes under the paths that match
    the specified file pattern.  The output columns with -count are: DIR_COUNT,
@@ -147,11 +147,15 @@ count
    The output columns with -count -q are: QUOTA, REMAINING_QUATA, SPACE_QUOTA,
    REMAINING_SPACE_QUOTA, DIR_COUNT, FILE_COUNT, CONTENT_SIZE, FILE_NAME
 
+   The -h option shows sizes in human readable format.
+
    Example:
 
      * <<<hdfs dfs -count hdfs://nn1.example.com/file1 hdfs://nn2.example.com/file2>>>
 
      * <<<hdfs dfs -count -q hdfs://nn1.example.com/file1>>>
+
+     * <<<hdfs dfs -count -q -h hdfs://nn1.example.com/file1>>>
 
    Exit Code:
 
@@ -164,15 +168,22 @@ cp
    Copy files from source to destination. This command allows multiple sources
    as well in which case the destination must be a directory.
 
+   'raw.*' namespace extended attributes are preserved if (1) the source and
+   destination filesystems support them (HDFS only), and (2) all source and
+   destination pathnames are in the /.reserved/raw hierarchy. Determination of
+   whether raw.* namespace xattrs are preserved is independent of the
+   -p (preserve) flag.
+
     Options:
 
       * The -f option will overwrite the destination if it already exists.
       
-      * The -p option will preserve file attributes [topx] (timestamps, 
+      * The -p option will preserve file attributes [topx] (timestamps,
         ownership, permission, ACL, XAttr). If -p is specified with no <arg>,
         then preserves timestamps, ownership, permission. If -pa is specified,
         then preserves permission also because ACL is a super-set of
-        permission.
+        permission. Determination of whether raw namespace extended attributes
+        are preserved is independent of the -p flag.
 
    Example:
 

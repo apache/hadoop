@@ -939,7 +939,7 @@ public class TestQuorumJournalManager {
       public AsyncLogger createLogger(Configuration conf, NamespaceInfo nsInfo,
           String journalId, InetSocketAddress addr) {
         AsyncLogger logger = new IPCLoggerChannel(conf, nsInfo, journalId, addr) {
-          protected ExecutorService createExecutor() {
+          protected ExecutorService createSingleThreadExecutor() {
             // Don't parallelize calls to the quorum in the tests.
             // This makes the tests more deterministic.
             return MoreExecutors.sameThreadExecutor();

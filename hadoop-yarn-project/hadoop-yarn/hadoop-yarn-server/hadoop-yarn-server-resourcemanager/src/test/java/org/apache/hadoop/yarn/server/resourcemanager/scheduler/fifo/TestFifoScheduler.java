@@ -68,6 +68,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeResourceUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
@@ -278,17 +279,16 @@ public class TestFifoScheduler {
         (Map<NodeId, FiCaSchedulerNode>) method.invoke(scheduler);
     assertEquals(schedulerNodes.values().size(), 1);
     
-    // set resource of RMNode to 1024 and verify it works.
-    node0.setResourceOption(ResourceOption.newInstance(
-        Resources.createResource(1024, 4), RMNode.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT));
-    assertEquals(node0.getTotalCapability().getMemory(), 1024);
-    // verify that SchedulerNode's resource hasn't been changed.
-    assertEquals(schedulerNodes.get(node0.getNodeID()).
-        getAvailableResource().getMemory(), 2048);
-    // now, NM heartbeat comes.
-    NodeUpdateSchedulerEvent node0Update = new NodeUpdateSchedulerEvent(node0);
-    scheduler.handle(node0Update);
-    // SchedulerNode's available resource is changed.
+    Resource newResource = Resources.createResource(1024, 4);
+    
+    NodeResourceUpdateSchedulerEvent node0ResourceUpdate = new 
+        NodeResourceUpdateSchedulerEvent(node0, ResourceOption.newInstance(
+            newResource, RMNode.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT));
+    scheduler.handle(node0ResourceUpdate);
+    
+    // SchedulerNode's total resource and available resource are changed.
+    assertEquals(schedulerNodes.get(node0.getNodeID()).getTotalResource()
+        .getMemory(), 1024);
     assertEquals(schedulerNodes.get(node0.getNodeID()).
         getAvailableResource().getMemory(), 1024);
     QueueInfo queueInfo = scheduler.getQueueInfo(null, false, false);
@@ -324,6 +324,7 @@ public class TestFifoScheduler {
     // Before the node update event, there are one local request
     Assert.assertEquals(1, nodeLocal.getNumContainers());
 
+    NodeUpdateSchedulerEvent node0Update = new NodeUpdateSchedulerEvent(node0);
     // Now schedule.
     scheduler.handle(node0Update);
 
@@ -544,7 +545,6 @@ public class TestFifoScheduler {
     LOG.info("--- END: testFifoScheduler ---");
   }
 
-  @SuppressWarnings("resource")
   @Test
   public void testBlackListNodes() throws Exception {
     Configuration conf = new Configuration();

@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.sls.nodemanager;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
@@ -30,12 +32,13 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode
         .UpdatedContainerInfo;
 
+@Private
+@Unstable
 public class NodeInfo {
   private static int NODE_ID = 0;
 
@@ -43,13 +46,15 @@ public class NodeInfo {
     return NodeId.newInstance(host, port);
   }
 
+  @Private
+  @Unstable
   private static class FakeRMNodeImpl implements RMNode {
     private NodeId nodeId;
     private String hostName;
     private String nodeAddr;
     private String httpAddress;
     private int cmdPort;
-    private volatile ResourceOption perNode;
+    private volatile Resource perNode;
     private String rackName;
     private String healthReport;
     private NodeState state;
@@ -57,7 +62,7 @@ public class NodeInfo {
     private List<ApplicationId> toCleanUpApplications;
     
     public FakeRMNodeImpl(NodeId nodeId, String nodeAddr, String httpAddress,
-        ResourceOption perNode, String rackName, String healthReport,
+        Resource perNode, String rackName, String healthReport,
         int cmdPort, String hostName, NodeState state) {
       this.nodeId = nodeId;
       this.nodeAddr = nodeAddr;
@@ -105,10 +110,6 @@ public class NodeInfo {
     }
 
     public Resource getTotalCapability() {
-      return perNode.getResource();
-    }
-    
-    public ResourceOption getResourceOption() {
       return perNode;
     }
 
@@ -153,32 +154,26 @@ public class NodeInfo {
       return list;
     }
 
-	@Override
-	public String getNodeManagerVersion() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
     @Override
-    public void setResourceOption(ResourceOption resourceOption) {
-      perNode = resourceOption;
+    public String getNodeManagerVersion() {
+      return null;
     }
+
   }
-  
+
   public static RMNode newNodeInfo(String rackName, String hostName,
-                              final ResourceOption resourceOption, int port) {
+                              final Resource resource, int port) {
     final NodeId nodeId = newNodeID(hostName, port);
     final String nodeAddr = hostName + ":" + port;
     final String httpAddress = hostName;
     
     return new FakeRMNodeImpl(nodeId, nodeAddr, httpAddress,
-        resourceOption, rackName, "Me good",
+        resource, rackName, "Me good",
         port, hostName, null);
   }
   
   public static RMNode newNodeInfo(String rackName, String hostName,
                               final Resource resource) {
-    return newNodeInfo(rackName, hostName, ResourceOption.newInstance(resource,
-        RMNode.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT), NODE_ID++);
+    return newNodeInfo(rackName, hostName, resource, NODE_ID++);
   }
 }

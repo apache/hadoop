@@ -72,6 +72,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMapp
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -90,7 +91,9 @@ public class AdminService extends CompositeService implements
   private EmbeddedElectorService embeddedElector;
 
   private Server server;
-  private InetSocketAddress masterServiceAddress;
+
+  // Address to use for binding. May be a wildcard address.
+  private InetSocketAddress masterServiceBindAddress;
   private AccessControlList adminAcl;
 
   private final RecordFactory recordFactory = 
@@ -114,10 +117,12 @@ public class AdminService extends CompositeService implements
       }
     }
 
-    masterServiceAddress = conf.getSocketAddr(
+    masterServiceBindAddress = conf.getSocketAddr(
+        YarnConfiguration.RM_BIND_HOST,
         YarnConfiguration.RM_ADMIN_ADDRESS,
         YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS,
         YarnConfiguration.DEFAULT_RM_ADMIN_PORT);
+
     adminAcl = new AccessControlList(conf.get(
         YarnConfiguration.YARN_ADMIN_ACL,
         YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
@@ -141,7 +146,7 @@ public class AdminService extends CompositeService implements
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
     this.server = (Server) rpc.getServer(
-        ResourceManagerAdministrationProtocol.class, this, masterServiceAddress,
+        ResourceManagerAdministrationProtocol.class, this, masterServiceBindAddress,
         conf, null,
         conf.getInt(YarnConfiguration.RM_ADMIN_CLIENT_THREAD_COUNT,
             YarnConfiguration.DEFAULT_RM_ADMIN_CLIENT_THREAD_COUNT));
@@ -170,8 +175,10 @@ public class AdminService extends CompositeService implements
     }
 
     this.server.start();
-    conf.updateConnectAddr(YarnConfiguration.RM_ADMIN_ADDRESS,
-        server.getListenerAddress());
+    conf.updateConnectAddr(YarnConfiguration.RM_BIND_HOST,
+                           YarnConfiguration.RM_ADMIN_ADDRESS,
+                           YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS,
+                           server.getListenerAddress());
   }
 
   protected void stopServer() throws Exception {
@@ -507,9 +514,20 @@ public class AdminService extends CompositeService implements
     return UserGroupInformation.createRemoteUser(user).getGroupNames();
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public UpdateNodeResourceResponse updateNodeResource(
       UpdateNodeResourceRequest request) throws YarnException, IOException {
+    String argName = "updateNodeResource";
+    UserGroupInformation user = checkAcls(argName);
+    
+    if (!isRMActive()) {
+      RMAuditLogger.logFailure(user.getShortUserName(), argName,
+          adminAcl.toString(), "AdminService",
+          "ResourceManager is not active. Can not update node resource.");
+      throwStandbyException();
+    }
+    
     Map<NodeId, ResourceOption> nodeResourceMap = request.getNodeResourceMap();
     Set<NodeId> nodeIds = nodeResourceMap.keySet();
     // verify nodes are all valid first. 
@@ -530,21 +548,31 @@ public class AdminService extends CompositeService implements
     // Notice: it is still possible to have invalid NodeIDs as nodes decommission
     // may happen just at the same time. This time, only log and skip absent
     // nodes without throwing any exceptions.
+    boolean allSuccess = true;
     for (Map.Entry<NodeId, ResourceOption> entry : nodeResourceMap.entrySet()) {
       ResourceOption newResourceOption = entry.getValue();
       NodeId nodeId = entry.getKey();
       RMNode node = this.rmContext.getRMNodes().get(nodeId);
+      
       if (node == null) {
         LOG.warn("Resource update get failed on an unrecognized node: " + nodeId);
+        allSuccess = false;
       } else {
-        node.setResourceOption(newResourceOption);
-        LOG.info("Update resource successfully on node(" + node.getNodeID()
-            +") with resource(" + newResourceOption.toString() + ")");
+        // update resource to RMNode
+        this.rmContext.getDispatcher().getEventHandler()
+          .handle(new RMNodeResourceUpdateEvent(nodeId, newResourceOption));
+        LOG.info("Update resource on node(" + node.getNodeID()
+            + ") with resource(" + newResourceOption.toString() + ")");
+
       }
     }
-    UpdateNodeResourceResponse response = recordFactory.newRecordInstance(
-          UpdateNodeResourceResponse.class);
-      return response;
+    if (allSuccess) {
+      RMAuditLogger.logSuccess(user.getShortUserName(), argName,
+          "AdminService");
+    }
+    UpdateNodeResourceResponse response = 
+        UpdateNodeResourceResponse.newInstance();
+    return response;
   }
 
   private synchronized Configuration getConfiguration(Configuration conf,

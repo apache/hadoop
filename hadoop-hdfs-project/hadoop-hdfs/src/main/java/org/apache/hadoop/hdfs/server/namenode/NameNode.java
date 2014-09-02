@@ -60,6 +60,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
+import org.apache.hadoop.tracing.SpanReceiverHost;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.JvmPauseMonitor;
@@ -278,6 +279,7 @@ public class NameNode implements NameNodeStatusMXBean {
 
   private JvmPauseMonitor pauseMonitor;
   private ObjectName nameNodeStatusBeanName;
+  private SpanReceiverHost spanReceiverHost;
   /**
    * The namenode address that clients will use to access this namenode
    * or the name service. For HA configurations using logical URI, it
@@ -586,6 +588,9 @@ public class NameNode implements NameNodeStatusMXBean {
     if (NamenodeRole.NAMENODE == role) {
       startHttpServer(conf);
     }
+
+    this.spanReceiverHost = SpanReceiverHost.getInstance(conf);
+
     loadNamesystem(conf);
 
     rpcServer = createRpcServer(conf);
@@ -821,6 +826,9 @@ public class NameNode implements NameNodeStatusMXBean {
       if (nameNodeStatusBeanName != null) {
         MBeans.unregister(nameNodeStatusBeanName);
         nameNodeStatusBeanName = null;
+      }
+      if (this.spanReceiverHost != null) {
+        this.spanReceiverHost.closeReceivers();
       }
     }
   }

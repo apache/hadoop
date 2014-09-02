@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.fs;
 
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -31,12 +30,16 @@ import java.util.NoSuchElementException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.CryptoCodec;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.hdfs.CorruptFileBlockIterator;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSInputStream;
+import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
@@ -58,6 +61,7 @@ import org.apache.hadoop.util.Progressable;
 public class Hdfs extends AbstractFileSystem {
 
   DFSClient dfs;
+  final CryptoCodec factory;
   private boolean verifyChecksum = true;
 
   static {
@@ -84,6 +88,7 @@ public class Hdfs extends AbstractFileSystem {
     }
 
     this.dfs = new DFSClient(theUri, conf, getStatistics());
+    this.factory = CryptoCodec.getInstance(conf);
   }
 
   @Override
@@ -96,9 +101,12 @@ public class Hdfs extends AbstractFileSystem {
       EnumSet<CreateFlag> createFlag, FsPermission absolutePermission,
       int bufferSize, short replication, long blockSize, Progressable progress,
       ChecksumOpt checksumOpt, boolean createParent) throws IOException {
-    return new HdfsDataOutputStream(dfs.primitiveCreate(getUriPath(f),
-        absolutePermission, createFlag, createParent, replication, blockSize,
-        progress, bufferSize, checksumOpt), getStatistics());
+
+    final DFSOutputStream dfsos = dfs.primitiveCreate(getUriPath(f),
+      absolutePermission, createFlag, createParent, replication, blockSize,
+      progress, bufferSize, checksumOpt);
+    return dfs.createWrappedOutputStream(dfsos, statistics,
+        dfsos.getInitialLen());
   }
 
   @Override
@@ -307,8 +315,9 @@ public class Hdfs extends AbstractFileSystem {
   @Override
   public HdfsDataInputStream open(Path f, int bufferSize) 
       throws IOException, UnresolvedLinkException {
-    return new DFSClient.DFSDataInputStream(dfs.open(getUriPath(f),
-        bufferSize, verifyChecksum));
+    final DFSInputStream dfsis = dfs.open(getUriPath(f),
+      bufferSize, verifyChecksum);
+    return dfs.createWrappedInputStream(dfsis);
   }
 
   @Override
@@ -446,6 +455,11 @@ public class Hdfs extends AbstractFileSystem {
   @Override
   public void removeXAttr(Path path, String name) throws IOException {
     dfs.removeXAttr(getUriPath(path), name);
+  }
+
+  @Override
+  public void access(Path path, final FsAction mode) throws IOException {
+    dfs.checkAccess(getUriPath(path), mode);
   }
 
   /**

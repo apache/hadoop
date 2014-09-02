@@ -24,6 +24,8 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.crypto.CipherSuite;
+import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -31,22 +33,26 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Options;
-import org.apache.hadoop.fs.XAttr;
-import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.inotify.Event;
+import org.apache.hadoop.hdfs.inotify.EventsList;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.AtMostOnce;
@@ -186,7 +192,8 @@ public interface ClientProtocol {
   @AtMostOnce
   public HdfsFileStatus create(String src, FsPermission masked,
       String clientName, EnumSetWritable<CreateFlag> flag,
-      boolean createParent, short replication, long blockSize)
+      boolean createParent, short replication, long blockSize, 
+      List<CipherSuite> cipherSuites)
       throws AccessControlException, AlreadyBeingCreatedException,
       DSQuotaExceededException, FileAlreadyExistsException,
       FileNotFoundException, NSQuotaExceededException,
@@ -653,6 +660,13 @@ public interface ClientProtocol {
   @Idempotent
   public DatanodeInfo[] getDatanodeReport(HdfsConstants.DatanodeReportType type)
       throws IOException;
+
+  /**
+   * Get a report on the current datanode storages.
+   */
+  @Idempotent
+  public DatanodeStorageReport[] getDatanodeStorageReport(
+      HdfsConstants.DatanodeReportType type) throws IOException;
 
   /**
    * Get the block size for the given file.
@@ -1258,18 +1272,37 @@ public interface ClientProtocol {
   public AclStatus getAclStatus(String src) throws IOException;
   
   /**
+   * Create an encryption zone
+   */
+  @AtMostOnce
+  public void createEncryptionZone(String src, String keyName)
+    throws IOException;
+
+  /**
+   * Get the encryption zone for a path.
+   */
+  @Idempotent
+  public EncryptionZoneWithId getEZForPath(String src)
+    throws IOException;
+
+  /**
+   * Used to implement cursor-based batched listing of {@EncryptionZone}s.
+   *
+   * @param prevId ID of the last item in the previous batch. If there is no
+   *               previous batch, a negative value can be used.
+   * @return Batch of encryption zones.
+   */
+  @Idempotent
+  public BatchedEntries<EncryptionZoneWithId> listEncryptionZones(
+      long prevId) throws IOException;
+
+  /**
    * Set xattr of a file or directory.
-   * A regular user only can set xattr of "user" namespace.
-   * A super user can set xattr of "user" and "trusted" namespace.
-   * XAttr of "security" and "system" namespace is only used/exposed 
-   * internally to the FS impl.
+   * The name must be prefixed with the namespace followed by ".". For example,
+   * "user.attr".
    * <p/>
-   * For xattr of "user" namespace, its access permissions are 
-   * defined by the file or directory permission bits.
-   * XAttr will be set only when login user has correct permissions.
-   * <p/>
-   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
-   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * Refer to the HDFS extended attributes user documentation for details.
+   *
    * @param src file or directory
    * @param xAttr <code>XAttr</code> to set
    * @param flag set flag
@@ -1280,18 +1313,13 @@ public interface ClientProtocol {
       throws IOException;
   
   /**
-   * Get xattrs of file or directory. Values in xAttrs parameter are ignored.
-   * If xattrs is null or empty, equals getting all xattrs of the file or 
-   * directory.
-   * Only xattrs which login user has correct permissions will be returned. 
+   * Get xattrs of a file or directory. Values in xAttrs parameter are ignored.
+   * If xAttrs is null or empty, this is the same as getting all xattrs of the
+   * file or directory.  Only those xattrs for which the logged-in user has
+   * permissions to view are returned.
    * <p/>
-   * A regular user only can get xattr of "user" namespace.
-   * A super user can get xattr of "user" and "trusted" namespace.
-   * XAttr of "security" and "system" namespace is only used/exposed 
-   * internally to the FS impl.
-   * <p/>
-   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
-   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * Refer to the HDFS extended attributes user documentation for details.
+   *
    * @param src file or directory
    * @param xAttrs xAttrs to get
    * @return List<XAttr> <code>XAttr</code> list 
@@ -1306,15 +1334,9 @@ public interface ClientProtocol {
    * Only the xattr names for which the logged in user has the permissions to
    * access will be returned.
    * <p/>
-   * A regular user only can get xattr names from the "user" namespace.
-   * A super user can get xattr names of the "user" and "trusted" namespace.
-   * XAttr names of the "security" and "system" namespaces are only used/exposed
-   * internally by the file system impl.
-   * <p/>
-   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
-   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * Refer to the HDFS extended attributes user documentation for details.
+   *
    * @param src file or directory
-   * @param xAttrs xAttrs to get
    * @return List<XAttr> <code>XAttr</code> list
    * @throws IOException
    */
@@ -1324,19 +1346,48 @@ public interface ClientProtocol {
   
   /**
    * Remove xattr of a file or directory.Value in xAttr parameter is ignored.
-   * Name must be prefixed with user/trusted/security/system.
+   * The name must be prefixed with the namespace followed by ".". For example,
+   * "user.attr".
    * <p/>
-   * A regular user only can remove xattr of "user" namespace.
-   * A super user can remove xattr of "user" and "trusted" namespace.
-   * XAttr of "security" and "system" namespace is only used/exposed 
-   * internally to the FS impl.
-   * <p/>
-   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
-   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   * Refer to the HDFS extended attributes user documentation for details.
+   *
    * @param src file or directory
    * @param xAttr <code>XAttr</code> to remove
    * @throws IOException
    */
   @AtMostOnce
   public void removeXAttr(String src, XAttr xAttr) throws IOException;
+
+  /**
+   * Checks if the user can access a path.  The mode specifies which access
+   * checks to perform.  If the requested permissions are granted, then the
+   * method returns normally.  If access is denied, then the method throws an
+   * {@link AccessControlException}.
+   * In general, applications should avoid using this method, due to the risk of
+   * time-of-check/time-of-use race conditions.  The permissions on a file may
+   * change immediately after the access call returns.
+   *
+   * @param path Path to check
+   * @param mode type of access to check
+   * @throws AccessControlException if access is denied
+   * @throws FileNotFoundException if the path does not exist
+   * @throws IOException see specific implementation
+   */
+  @Idempotent
+  public void checkAccess(String path, FsAction mode) throws IOException;
+
+  /**
+   * Get the highest txid the NameNode knows has been written to the edit
+   * log, or -1 if the NameNode's edit log is not yet open for write. Used as
+   * the starting point for the inotify event stream.
+   */
+  @Idempotent
+  public long getCurrentEditLogTxid() throws IOException;
+
+  /**
+   * Get an ordered list of events corresponding to the edit log transactions
+   * from txid onwards.
+   */
+  @Idempotent
+  public EventsList getEditsFromTxid(long txid) throws IOException;
 }

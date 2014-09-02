@@ -291,7 +291,7 @@ class JobSubmitter {
   /**
    * configure the jobconf of the user with the command line options of 
    * -libjars, -files, -archives.
-   * @param conf
+   * @param job
    * @throws IOException
    */
   private void copyAndConfigureFiles(Job job, Path jobSubmitDir) 
@@ -376,8 +376,13 @@ class JobSubmitter {
       if (TokenCache.getShuffleSecretKey(job.getCredentials()) == null) {
         KeyGenerator keyGen;
         try {
+         
+          int keyLen = CryptoUtils.isShuffleEncrypted(conf) 
+              ? conf.getInt(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA_KEY_SIZE_BITS, 
+                  MRJobConfig.DEFAULT_MR_ENCRYPTED_INTERMEDIATE_DATA_KEY_SIZE_BITS)
+              : SHUFFLE_KEY_LENGTH;
           keyGen = KeyGenerator.getInstance(SHUFFLE_KEYGEN_ALGORITHM);
-          keyGen.init(SHUFFLE_KEY_LENGTH);
+          keyGen.init(keyLen);
         } catch (NoSuchAlgorithmException e) {
           throw new IOException("Error generating shuffle secret key", e);
         }

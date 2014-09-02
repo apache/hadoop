@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
@@ -48,6 +49,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeReconnectEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStartedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStatusEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
@@ -463,8 +465,7 @@ public class TestRMNodeTransitions {
     NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
     Resource capability = Resource.newInstance(4096, 4);
     RMNodeImpl node = new RMNodeImpl(nodeId, rmContext,null, 0, 0,
-        null, ResourceOption.newInstance(capability,
-            RMNode.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT), nmVersion);
+        null, capability, nmVersion);
     node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null));
     Assert.assertEquals(NodeState.RUNNING, node.getState());
     return node;
@@ -484,6 +485,25 @@ public class TestRMNodeTransitions {
   private RMNodeImpl getNewNode() {
     NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
     RMNodeImpl node = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null, null);
+    return node;
+  }
+  
+  private RMNodeImpl getNewNode(Resource capability) {
+    NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
+    RMNodeImpl node = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, 
+        capability, null);
+    return node;
+  }
+  
+  private RMNodeImpl getRebootedNode() {
+    NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
+    Resource capability = Resource.newInstance(4096, 4);
+    RMNodeImpl node = new RMNodeImpl(nodeId, rmContext,null, 0, 0,
+        null, capability, null);
+    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null));
+    Assert.assertEquals(NodeState.RUNNING, node.getState());
+    node.handle(new RMNodeEvent(node.getNodeID(), RMNodeEventType.REBOOTING));
+    Assert.assertEquals(NodeState.REBOOTED, node.getState());
     return node;
   }
 
@@ -520,7 +540,7 @@ public class TestRMNodeTransitions {
     int initialUnhealthy = cm.getUnhealthyNMs();
     int initialDecommissioned = cm.getNumDecommisionedNMs();
     int initialRebooted = cm.getNumRebootedNMs();
-    node.handle(new RMNodeReconnectEvent(node.getNodeID(), node));
+    node.handle(new RMNodeReconnectEvent(node.getNodeID(), node, null));
     Assert.assertEquals("Active Nodes", initialActive, cm.getNumActiveNMs());
     Assert.assertEquals("Lost Nodes", initialLost, cm.getNumLostNMs());
     Assert.assertEquals("Unhealthy Nodes",
@@ -534,6 +554,57 @@ public class TestRMNodeTransitions {
     Assert.assertEquals(NodesListManagerEventType.NODE_USABLE,
         nodesListManagerEvent.getType());
   }
+  
+  @Test
+  public void testResourceUpdateOnRunningNode() {
+    RMNodeImpl node = getRunningNode();
+    Resource oldCapacity = node.getTotalCapability();
+    assertEquals("Memory resource is not match.", oldCapacity.getMemory(), 4096);
+    assertEquals("CPU resource is not match.", oldCapacity.getVirtualCores(), 4);
+    node.handle(new RMNodeResourceUpdateEvent(node.getNodeID(),
+        ResourceOption.newInstance(Resource.newInstance(2048, 2), 
+            RMNode.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT)));
+    Resource newCapacity = node.getTotalCapability();
+    assertEquals("Memory resource is not match.", newCapacity.getMemory(), 2048);
+    assertEquals("CPU resource is not match.", newCapacity.getVirtualCores(), 2);
+    
+    Assert.assertEquals(NodeState.RUNNING, node.getState());
+    Assert.assertNotNull(nodesListManagerEvent);
+    Assert.assertEquals(NodesListManagerEventType.NODE_USABLE,
+        nodesListManagerEvent.getType());
+  }
+  
+  @Test
+  public void testResourceUpdateOnNewNode() {
+    RMNodeImpl node = getNewNode(Resource.newInstance(4096, 4));
+    Resource oldCapacity = node.getTotalCapability();
+    assertEquals("Memory resource is not match.", oldCapacity.getMemory(), 4096);
+    assertEquals("CPU resource is not match.", oldCapacity.getVirtualCores(), 4);
+    node.handle(new RMNodeResourceUpdateEvent(node.getNodeID(),
+        ResourceOption.newInstance(Resource.newInstance(2048, 2), 
+            RMNode.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT)));
+    Resource newCapacity = node.getTotalCapability();
+    assertEquals("Memory resource is not match.", newCapacity.getMemory(), 2048);
+    assertEquals("CPU resource is not match.", newCapacity.getVirtualCores(), 2);
+    
+    Assert.assertEquals(NodeState.NEW, node.getState());
+  }
+  
+  @Test
+  public void testResourceUpdateOnRebootedNode() {
+    RMNodeImpl node = getRebootedNode();
+    Resource oldCapacity = node.getTotalCapability();
+    assertEquals("Memory resource is not match.", oldCapacity.getMemory(), 4096);
+    assertEquals("CPU resource is not match.", oldCapacity.getVirtualCores(), 4);
+    node.handle(new RMNodeResourceUpdateEvent(node.getNodeID(),
+        ResourceOption.newInstance(Resource.newInstance(2048, 2), 
+            RMNode.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT)));
+    Resource newCapacity = node.getTotalCapability();
+    assertEquals("Memory resource is not match.", newCapacity.getMemory(), 2048);
+    assertEquals("CPU resource is not match.", newCapacity.getVirtualCores(), 2);
+    
+    Assert.assertEquals(NodeState.REBOOTED, node.getState());
+  }
 
   @Test
   public void testReconnnectUpdate() {
@@ -542,7 +613,8 @@ public class TestRMNodeTransitions {
     RMNodeImpl node = getRunningNode(nmVersion1);
     Assert.assertEquals(nmVersion1, node.getNodeManagerVersion());
     RMNodeImpl reconnectingNode = getRunningNode(nmVersion2);
-    node.handle(new RMNodeReconnectEvent(node.getNodeID(), reconnectingNode));
+    node.handle(new RMNodeReconnectEvent(node.getNodeID(), reconnectingNode,
+        null));
     Assert.assertEquals(nmVersion2, node.getNodeManagerVersion());
   }
 }

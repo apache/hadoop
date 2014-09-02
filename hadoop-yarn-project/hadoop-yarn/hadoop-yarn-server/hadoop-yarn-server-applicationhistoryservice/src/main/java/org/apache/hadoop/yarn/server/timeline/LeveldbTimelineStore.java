@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.timeline;
 
 import static org.apache.hadoop.yarn.server.timeline.GenericObjectMapper.readReverseOrderedLong;
 import static org.apache.hadoop.yarn.server.timeline.GenericObjectMapper.writeReverseOrderedLong;
+import static org.fusesource.leveldbjni.JniDBFactory.bytes;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -60,8 +61,12 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents.EventsOfOneEnt
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
+import org.apache.hadoop.yarn.server.records.Version;
+import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.DB;
+import org.iq80.leveldb.DBException;
 import org.iq80.leveldb.DBIterator;
 import org.iq80.leveldb.Options;
 import org.iq80.leveldb.ReadOptions;
@@ -141,6 +146,11 @@ public class LeveldbTimelineStore extends AbstractService
       "z".getBytes();
 
   private static final byte[] EMPTY_BYTES = new byte[0];
+  
+  private static final String TIMELINE_STORE_VERSION_KEY = "timeline-store-version";
+  
+  private static final Version CURRENT_VERSION_INFO = Version
+      .newInstance(1, 0);
 
   @Private
   @VisibleForTesting
@@ -193,6 +203,7 @@ public class LeveldbTimelineStore extends AbstractService
     }
     LOG.info("Using leveldb path " + dbPath);
     db = factory.open(new File(dbPath.toString()), options);
+    checkVersion();
     startTimeWriteCache =
         Collections.synchronizedMap(new LRUMap(getStartTimeWriteCacheSize(
             conf)));
@@ -1270,8 +1281,6 @@ public class LeveldbTimelineStore extends AbstractService
             DEFAULT_TIMELINE_SERVICE_LEVELDB_START_TIME_WRITE_CACHE_SIZE);
   }
 
-  // warning is suppressed to prevent eclipse from noting unclosed resource
-  @SuppressWarnings("resource")
   @VisibleForTesting
   List<String> getEntityTypes() throws IOException {
     DBIterator iterator = null;
@@ -1489,4 +1498,65 @@ public class LeveldbTimelineStore extends AbstractService
     readOptions.fillCache(fillCache);
     return db.iterator(readOptions);
   }
+  
+  Version loadVersion() throws IOException {
+    byte[] data = db.get(bytes(TIMELINE_STORE_VERSION_KEY));
+    // if version is not stored previously, treat it as 1.0.
+    if (data == null || data.length == 0) {
+      return Version.newInstance(1, 0);
+    }
+    Version version =
+        new VersionPBImpl(VersionProto.parseFrom(data));
+    return version;
+  }
+  
+  // Only used for test
+  @VisibleForTesting
+  void storeVersion(Version state) throws IOException {
+    dbStoreVersion(state);
+  }
+  
+  private void dbStoreVersion(Version state) throws IOException {
+    String key = TIMELINE_STORE_VERSION_KEY;
+    byte[] data = 
+        ((VersionPBImpl) state).getProto().toByteArray();
+    try {
+      db.put(bytes(key), data);
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  Version getCurrentVersion() {
+    return CURRENT_VERSION_INFO;
+  }
+  
+  /**
+   * 1) Versioning timeline store: major.minor. For e.g. 1.0, 1.1, 1.2...1.25, 2.0 etc.
+   * 2) Any incompatible change of TS-store is a major upgrade, and any
+   *    compatible change of TS-store is a minor upgrade.
+   * 3) Within a minor upgrade, say 1.1 to 1.2:
+   *    overwrite the version info and proceed as normal.
+   * 4) Within a major upgrade, say 1.2 to 2.0:
+   *    throw exception and indicate user to use a separate upgrade tool to
+   *    upgrade timeline store or remove incompatible old state.
+   */
+  private void checkVersion() throws IOException {
+    Version loadedVersion = loadVersion();
+    LOG.info("Loaded timeline store version info " + loadedVersion);
+    if (loadedVersion.equals(getCurrentVersion())) {
+      return;
+    }
+    if (loadedVersion.isCompatibleTo(getCurrentVersion())) {
+      LOG.info("Storing timeline store version info " + getCurrentVersion());
+      dbStoreVersion(CURRENT_VERSION_INFO);
+    } else {
+      String incompatibleMessage = 
+          "Incompatible version for timeline store: expecting version " 
+              + getCurrentVersion() + ", but loading version " + loadedVersion;
+      LOG.fatal(incompatibleMessage);
+      throw new IOException(incompatibleMessage);
+    }
+  }
+  
 }

@@ -95,9 +95,9 @@ public class TestPipeApplication {
               new Counters.Counter(), new Progress());
       FileSystem fs = new RawLocalFileSystem();
       fs.setConf(conf);
-      Writer<IntWritable, Text> wr = new Writer<IntWritable, Text>(conf, fs,
-              new Path(workSpace + File.separator + "outfile"), IntWritable.class,
-              Text.class, null, null);
+      Writer<IntWritable, Text> wr = new Writer<IntWritable, Text>(conf, fs.create(
+              new Path(workSpace + File.separator + "outfile")), IntWritable.class,
+              Text.class, null, null, true);
       output.setWriter(wr);
       // stub for client
       File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeApplicationRunnableStub");
@@ -177,9 +177,9 @@ public class TestPipeApplication {
               new Progress());
       FileSystem fs = new RawLocalFileSystem();
       fs.setConf(conf);
-      Writer<IntWritable, Text> wr = new Writer<IntWritable, Text>(conf, fs,
-              new Path(workSpace.getAbsolutePath() + File.separator + "outfile"),
-              IntWritable.class, Text.class, null, null);
+      Writer<IntWritable, Text> wr = new Writer<IntWritable, Text>(conf, fs.create(
+              new Path(workSpace.getAbsolutePath() + File.separator + "outfile")),
+              IntWritable.class, Text.class, null, null, true);
       output.setWriter(wr);
       conf.set(Submitter.PRESERVE_COMMANDFILE, "true");
 

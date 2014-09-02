@@ -93,9 +93,8 @@ public class INodeMap {
         "", "", new FsPermission((short) 0)), 0, 0) {
       
       @Override
-      INode recordModification(int latestSnapshotId)
+      void recordModification(int latestSnapshotId)
           throws QuotaExceededException {
-        return null;
       }
       
       @Override

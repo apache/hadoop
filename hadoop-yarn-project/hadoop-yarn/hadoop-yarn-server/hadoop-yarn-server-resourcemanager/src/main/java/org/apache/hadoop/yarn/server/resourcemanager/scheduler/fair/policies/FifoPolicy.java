@@ -24,6 +24,7 @@ import java.util.Comparator;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Schedulable;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SchedulingPolicy;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -85,6 +86,13 @@ public class FifoPolicy extends SchedulingPolicy {
       }
     }
     earliest.setFairShare(Resources.clone(totalResources));
+  }
+
+  @Override
+  public void computeSteadyShares(Collection<? extends FSQueue> queues,
+      Resource totalResources) {
+    // Nothing needs to do, as leaf queue doesn't have to calculate steady
+    // fair shares for applications.
   }
 
   @Override

@@ -447,6 +447,15 @@ public class YARNRunner implements ClientProtocol {
     Map<String, String> environment = new HashMap<String, String>();
     MRApps.setClasspath(environment, conf);
 
+    // Shell
+    environment.put(Environment.SHELL.name(),
+        conf.get(MRJobConfig.MAPRED_ADMIN_USER_SHELL,
+            MRJobConfig.DEFAULT_SHELL));
+
+    // Add the container working directory at the front of LD_LIBRARY_PATH
+    MRApps.addToEnvironment(environment, Environment.LD_LIBRARY_PATH.name(),
+        MRApps.crossPlatformifyMREnv(conf, Environment.PWD), conf);
+
     // Setup the environment variables for Admin first
     MRApps.setEnvFromInputString(environment, 
         conf.get(MRJobConfig.MR_AM_ADMIN_USER_ENV), conf);

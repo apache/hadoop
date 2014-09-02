@@ -42,10 +42,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -153,7 +155,8 @@ public class DFSOutputStream extends FSOutputSummer
   private boolean shouldSyncBlock = false; // force blocks to disk upon close
   private final AtomicReference<CachingStrategy> cachingStrategy;
   private boolean failPacket = false;
-  
+  private FileEncryptionInfo fileEncryptionInfo;
+
   private static class Packet {
     private static final long HEART_BEAT_SEQNO = -1L;
     final long seqno; // sequencenumber of buffer in block
@@ -395,7 +398,7 @@ public class DFSOutputStream extends FSOutputSummer
         // one chunk that fills up the partial chunk.
         //
         computePacketChunkSize(0, freeInCksum);
-        resetChecksumChunk(freeInCksum);
+        setChecksumBufSize(freeInCksum);
         appendChunk = true;
       } else {
         // if the remaining space in the block is smaller than 
@@ -1175,7 +1178,17 @@ public class DFSOutputStream extends FSOutputSummer
         // Check if replace-datanode policy is satisfied.
         if (dfsClient.dtpReplaceDatanodeOnFailure.satisfy(blockReplication,
             nodes, isAppend, isHflushed)) {
-          addDatanode2ExistingPipeline();
+          try {
+            addDatanode2ExistingPipeline();
+          } catch(IOException ioe) {
+            if (!dfsClient.dtpReplaceDatanodeOnFailure.isBestEffort()) {
+              throw ioe;
+            }
+            DFSClient.LOG.warn("Failed to replace datanode."
+                + " Continue with the remaining datanodes since "
+                + DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_BEST_EFFORT_KEY
+                + " is set to true.", ioe);
+          }
         }
 
         // get a new generation stamp and an access token
@@ -1339,8 +1352,14 @@ public class DFSOutputStream extends FSOutputSummer
           //
   
           BlockConstructionStage bcs = recoveryFlag? stage.getRecoveryStage(): stage;
+
+          // We cannot change the block length in 'block' as it counts the number
+          // of bytes ack'ed.
+          ExtendedBlock blockCopy = new ExtendedBlock(block);
+          blockCopy.setNumBytes(blockSize);
+
           // send the request
-          new Sender(out).writeBlock(block, nodeStorageTypes[0], accessToken,
+          new Sender(out).writeBlock(blockCopy, nodeStorageTypes[0], accessToken,
               dfsClient.clientName, nodes, nodeStorageTypes, null, bcs, 
               nodes.length, block.getNumBytes(), bytesSent, newGS, checksum,
               cachingStrategy.get());
@@ -1554,12 +1573,13 @@ public class DFSOutputStream extends FSOutputSummer
 
   private DFSOutputStream(DFSClient dfsClient, String src, Progressable progress,
       HdfsFileStatus stat, DataChecksum checksum) throws IOException {
-    super(checksum, checksum.getBytesPerChecksum(), checksum.getChecksumSize());
+    super(checksum);
     this.dfsClient = dfsClient;
     this.src = src;
     this.fileId = stat.getFileId();
     this.blockSize = stat.getBlockSize();
     this.blockReplication = stat.getReplication();
+    this.fileEncryptionInfo = stat.getFileEncryptionInfo();
     this.progress = progress;
     this.cachingStrategy = new AtomicReference<CachingStrategy>(
         dfsClient.getDefaultWriteCachingStrategy());
@@ -1600,12 +1620,13 @@ public class DFSOutputStream extends FSOutputSummer
   static DFSOutputStream newStreamForCreate(DFSClient dfsClient, String src,
       FsPermission masked, EnumSet<CreateFlag> flag, boolean createParent,
       short replication, long blockSize, Progressable progress, int buffersize,
-      DataChecksum checksum, String[] favoredNodes) throws IOException {
+      DataChecksum checksum, String[] favoredNodes,
+      List<CipherSuite> cipherSuites) throws IOException {
     final HdfsFileStatus stat;
     try {
       stat = dfsClient.namenode.create(src, masked, dfsClient.clientName,
           new EnumSetWritable<CreateFlag>(flag), createParent, replication,
-          blockSize);
+          blockSize, cipherSuites);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      DSQuotaExceededException.class,
@@ -1615,20 +1636,13 @@ public class DFSOutputStream extends FSOutputSummer
                                      NSQuotaExceededException.class,
                                      SafeModeException.class,
                                      UnresolvedPathException.class,
-                                     SnapshotAccessControlException.class);
+                                     SnapshotAccessControlException.class,
+                                     UnknownCipherSuiteException.class);
     }
     final DFSOutputStream out = new DFSOutputStream(dfsClient, src, stat,
         flag, progress, checksum, favoredNodes);
     out.start();
     return out;
-  }
-
-  static DFSOutputStream newStreamForCreate(DFSClient dfsClient, String src,
-      FsPermission masked, EnumSet<CreateFlag> flag, boolean createParent,
-      short replication, long blockSize, Progressable progress, int buffersize,
-      DataChecksum checksum) throws IOException {
-    return newStreamForCreate(dfsClient, src, masked, flag, createParent, replication,
-        blockSize, progress, buffersize, checksum, null);
   }
 
   /** Construct a new output stream for append. */
@@ -1648,6 +1662,7 @@ public class DFSOutputStream extends FSOutputSummer
           checksum.getBytesPerChecksum());
       streamer = new DataStreamer();
     }
+    this.fileEncryptionInfo = stat.getFileEncryptionInfo();
   }
 
   static DFSOutputStream newStreamForAppend(DFSClient dfsClient, String src,
@@ -1712,22 +1727,21 @@ public class DFSOutputStream extends FSOutputSummer
 
   // @see FSOutputSummer#writeChunk()
   @Override
-  protected synchronized void writeChunk(byte[] b, int offset, int len, byte[] checksum) 
-                                                        throws IOException {
+  protected synchronized void writeChunk(byte[] b, int offset, int len,
+      byte[] checksum, int ckoff, int cklen) throws IOException {
     dfsClient.checkOpen();
     checkClosed();
 
-    int cklen = checksum.length;
     int bytesPerChecksum = this.checksum.getBytesPerChecksum(); 
     if (len > bytesPerChecksum) {
       throw new IOException("writeChunk() buffer size is " + len +
                             " is larger than supported  bytesPerChecksum " +
                             bytesPerChecksum);
     }
-    if (checksum.length != this.checksum.getChecksumSize()) {
+    if (cklen != this.checksum.getChecksumSize()) {
       throw new IOException("writeChunk() checksum size is supposed to be " +
                             this.checksum.getChecksumSize() + 
-                            " but found to be " + checksum.length);
+                            " but found to be " + cklen);
     }
 
     if (currentPacket == null) {
@@ -1743,7 +1757,7 @@ public class DFSOutputStream extends FSOutputSummer
       }
     }
 
-    currentPacket.writeChecksum(checksum, 0, cklen);
+    currentPacket.writeChecksum(checksum, ckoff, cklen);
     currentPacket.writeData(b, offset, len);
     currentPacket.numChunks++;
     bytesCurBlock += len;
@@ -1767,7 +1781,7 @@ public class DFSOutputStream extends FSOutputSummer
       // crc chunks from now on.
       if (appendChunk && bytesCurBlock%bytesPerChecksum == 0) {
         appendChunk = false;
-        resetChecksumChunk(bytesPerChecksum);
+        resetChecksumBufSize();
       }
 
       if (!appendChunk) {
@@ -1848,20 +1862,13 @@ public class DFSOutputStream extends FSOutputSummer
       long lastBlockLength = -1L;
       boolean updateLength = syncFlags.contains(SyncFlag.UPDATE_LENGTH);
       synchronized (this) {
-        /* Record current blockOffset. This might be changed inside
-         * flushBuffer() where a partial checksum chunk might be flushed.
-         * After the flush, reset the bytesCurBlock back to its previous value,
-         * any partial checksum chunk will be sent now and in next packet.
-         */
-        long saveOffset = bytesCurBlock;
-        Packet oldCurrentPacket = currentPacket;
         // flush checksum buffer, but keep checksum buffer intact
-        flushBuffer(true);
+        int numKept = flushBuffer(true, true);
         // bytesCurBlock potentially incremented if there was buffered data
 
         if (DFSClient.LOG.isDebugEnabled()) {
           DFSClient.LOG.debug(
-            "DFSClient flush() : saveOffset " + saveOffset +  
+            "DFSClient flush() :" +
             " bytesCurBlock " + bytesCurBlock +
             " lastFlushOffset " + lastFlushOffset);
         }
@@ -1878,14 +1885,6 @@ public class DFSOutputStream extends FSOutputSummer
                 bytesCurBlock, currentSeqno++, this.checksum.getChecksumSize());
           }
         } else {
-          // We already flushed up to this offset.
-          // This means that we haven't written anything since the last flush
-          // (or the beginning of the file). Hence, we should not have any
-          // packet queued prior to this call, since the last flush set
-          // currentPacket = null.
-          assert oldCurrentPacket == null :
-            "Empty flush should not occur with a currentPacket";
-
           if (isSync && bytesCurBlock > 0) {
             // Nothing to send right now,
             // and the block was partially written,
@@ -1905,7 +1904,7 @@ public class DFSOutputStream extends FSOutputSummer
         // Restore state of stream. Record the last flush offset 
         // of the last full chunk that was flushed.
         //
-        bytesCurBlock = saveOffset;
+        bytesCurBlock -= numKept;
         toWaitFor = lastQueuedSeqno;
       } // end synchronized
 
@@ -2136,12 +2135,12 @@ public class DFSOutputStream extends FSOutputSummer
             throw new IOException(msg);
         }
         try {
-          Thread.sleep(localTimeout);
           if (retries == 0) {
             throw new IOException("Unable to close file because the last block"
                 + " does not have enough number of replicas.");
           }
           retries--;
+          Thread.sleep(localTimeout);
           localTimeout *= 2;
           if (Time.now() - localstart > 5000) {
             DFSClient.LOG.info("Could not complete " + src + " retrying...");
@@ -2172,8 +2171,15 @@ public class DFSOutputStream extends FSOutputSummer
   /**
    * Returns the size of a file as it was when this stream was opened
    */
-  long getInitialLen() {
+  public long getInitialLen() {
     return initialFileSize;
+  }
+
+  /**
+   * @return the FileEncryptionInfo for this stream, or null if not encrypted.
+   */
+  public FileEncryptionInfo getFileEncryptionInfo() {
+    return fileEncryptionInfo;
   }
 
   /**

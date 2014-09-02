@@ -17,16 +17,18 @@
  */
 package org.apache.hadoop.security.alias;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.alias.CredentialShell.PasswordReader;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -45,7 +47,7 @@ public class TestCredShell {
   @Test
   public void testCredentialSuccessfulLifecycle() throws Exception {
     outContent.reset();
-    String[] args1 = {"create", "credential1", "--value", "p@ssw0rd", "--provider", 
+    String[] args1 = {"create", "credential1", "-value", "p@ssw0rd", "-provider",
         "jceks://file" + tmpDir + "/credstore.jceks"};
     int rc = 0;
     CredentialShell cs = new CredentialShell();
@@ -56,14 +58,14 @@ public class TestCredShell {
     		"created."));
 
     outContent.reset();
-    String[] args2 = {"list", "--provider", 
+    String[] args2 = {"list", "-provider",
         "jceks://file" + tmpDir + "/credstore.jceks"};
     rc = cs.run(args2);
     assertEquals(0, rc);
     assertTrue(outContent.toString().contains("credential1"));
 
     outContent.reset();
-    String[] args4 = {"delete", "credential1", "--provider", 
+    String[] args4 = {"delete", "credential1", "-provider",
         "jceks://file" + tmpDir + "/credstore.jceks"};
     rc = cs.run(args4);
     assertEquals(0, rc);
@@ -71,7 +73,7 @@ public class TestCredShell {
     		"deleted."));
 
     outContent.reset();
-    String[] args5 = {"list", "--provider", 
+    String[] args5 = {"list", "-provider",
         "jceks://file" + tmpDir + "/credstore.jceks"};
     rc = cs.run(args5);
     assertEquals(0, rc);
@@ -80,21 +82,21 @@ public class TestCredShell {
 
   @Test
   public void testInvalidProvider() throws Exception {
-    String[] args1 = {"create", "credential1", "--value", "p@ssw0rd", "--provider", 
+    String[] args1 = {"create", "credential1", "-value", "p@ssw0rd", "-provider",
       "sdff://file/tmp/credstore.jceks"};
     
     int rc = 0;
     CredentialShell cs = new CredentialShell();
     cs.setConf(new Configuration());
     rc = cs.run(args1);
-    assertEquals(-1, rc);
+    assertEquals(1, rc);
     assertTrue(outContent.toString().contains("There are no valid " +
     		"CredentialProviders configured."));
   }
 
   @Test
   public void testTransientProviderWarning() throws Exception {
-    String[] args1 = {"create", "credential1", "--value", "p@ssw0rd", "--provider", 
+    String[] args1 = {"create", "credential1", "-value", "p@ssw0rd", "-provider",
       "user:///"};
     
     int rc = 0;
@@ -105,7 +107,7 @@ public class TestCredShell {
     assertTrue(outContent.toString().contains("WARNING: you are modifying a " +
     		"transient provider."));
 
-    String[] args2 = {"delete", "credential1", "--provider", "user:///"};
+    String[] args2 = {"delete", "credential1", "-provider", "user:///"};
     rc = cs.run(args2);
     assertEquals(outContent.toString(), 0, rc);
     assertTrue(outContent.toString().contains("credential1 has been successfully " +
@@ -122,14 +124,14 @@ public class TestCredShell {
     config.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, "user:///");
     cs.setConf(config);
     rc = cs.run(args1);
-    assertEquals(-1, rc);
+    assertEquals(1, rc);
     assertTrue(outContent.toString().contains("There are no valid " +
     		"CredentialProviders configured."));
   }
   
   @Test
   public void testPromptForCredentialWithEmptyPasswd() throws Exception {
-    String[] args1 = {"create", "credential1", "--provider", 
+    String[] args1 = {"create", "credential1", "-provider",
         "jceks://file" + tmpDir + "/credstore.jceks"};
     ArrayList<String> passwords = new ArrayList<String>();
     passwords.add(null);
@@ -139,13 +141,13 @@ public class TestCredShell {
     shell.setConf(new Configuration());
     shell.setPasswordReader(new MockPasswordReader(passwords));
     rc = shell.run(args1);
-    assertEquals(outContent.toString(), -1, rc);
+    assertEquals(outContent.toString(), 1, rc);
     assertTrue(outContent.toString().contains("Passwords don't match"));
   }
 
   @Test
   public void testPromptForCredential() throws Exception {
-    String[] args1 = {"create", "credential1", "--provider", 
+    String[] args1 = {"create", "credential1", "-provider",
         "jceks://file" + tmpDir + "/credstore.jceks"};
     ArrayList<String> passwords = new ArrayList<String>();
     passwords.add("p@ssw0rd");
@@ -159,7 +161,7 @@ public class TestCredShell {
     assertTrue(outContent.toString().contains("credential1 has been successfully " +
         "created."));
     
-    String[] args2 = {"delete", "credential1", "--provider", 
+    String[] args2 = {"delete", "credential1", "-provider",
         "jceks://file" + tmpDir + "/credstore.jceks"};
     rc = shell.run(args2);
     assertEquals(0, rc);
@@ -184,6 +186,23 @@ public class TestCredShell {
     @Override
     public void format(String message) {
       System.out.println(message);
+    }
+  }
+
+  @Test
+  public void testEmptyArgList() throws Exception {
+    CredentialShell shell = new CredentialShell();
+    shell.setConf(new Configuration());
+    assertEquals(1, shell.init(new String[0]));
+  }
+
+  @Test
+  public void testCommandHelpExitsNormally() throws Exception {
+    for (String cmd : Arrays.asList("create", "list", "delete")) {
+      CredentialShell shell = new CredentialShell();
+      shell.setConf(new Configuration());
+      assertEquals("Expected help argument on " + cmd + " to return 0",
+              0, shell.init(new String[] {cmd, "-help"}));
     }
   }
 }

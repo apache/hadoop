@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.client;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.EnumSet;
@@ -28,12 +29,15 @@ import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.hdfs.DFSInotifyEventInputStream;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 
 /**
@@ -224,5 +228,101 @@ public class HdfsAdmin {
    */
   public RemoteIterator<CachePoolEntry> listCachePools() throws IOException {
     return dfs.listCachePools();
+  }
+
+  /**
+   * Create an encryption zone rooted at an empty existing directory, using the
+   * specified encryption key. An encryption zone has an associated encryption
+   * key used when reading and writing files within the zone.
+   *
+   * @param path    The path of the root of the encryption zone. Must refer to
+   *                an empty, existing directory.
+   * @param keyName Name of key available at the KeyProvider.
+   * @throws IOException            if there was a general IO exception
+   * @throws AccessControlException if the caller does not have access to path
+   * @throws FileNotFoundException  if the path does not exist
+   */
+  public void createEncryptionZone(Path path, String keyName)
+    throws IOException, AccessControlException, FileNotFoundException {
+    dfs.createEncryptionZone(path, keyName);
+  }
+
+  /**
+   * Get the path of the encryption zone for a given file or directory.
+   *
+   * @param path The path to get the ez for.
+   *
+   * @return The EncryptionZone of the ez, or null if path is not in an ez.
+   * @throws IOException            if there was a general IO exception
+   * @throws AccessControlException if the caller does not have access to path
+   * @throws FileNotFoundException  if the path does not exist
+   */
+  public EncryptionZone getEncryptionZoneForPath(Path path)
+    throws IOException, AccessControlException, FileNotFoundException {
+    return dfs.getEZForPath(path);
+  }
+
+  /**
+   * Returns a RemoteIterator which can be used to list the encryption zones
+   * in HDFS. For large numbers of encryption zones, the iterator will fetch
+   * the list of zones in a number of small batches.
+   * <p/>
+   * Since the list is fetched in batches, it does not represent a
+   * consistent snapshot of the entire list of encryption zones.
+   * <p/>
+   * This method can only be called by HDFS superusers.
+   */
+  public RemoteIterator<EncryptionZone> listEncryptionZones()
+      throws IOException {
+    return dfs.listEncryptionZones();
+  }
+
+  /**
+   * Exposes a stream of namesystem events. Only events occurring after the
+   * stream is created are available.
+   * See {@link org.apache.hadoop.hdfs.DFSInotifyEventInputStream}
+   * for information on stream usage.
+   * See {@link org.apache.hadoop.hdfs.inotify.Event}
+   * for information on the available events.
+   * <p/>
+   * Inotify users may want to tune the following HDFS parameters to
+   * ensure that enough extra HDFS edits are saved to support inotify clients
+   * that fall behind the current state of the namespace while reading events.
+   * The default parameter values should generally be reasonable. If edits are
+   * deleted before their corresponding events can be read, clients will see a
+   * {@link org.apache.hadoop.hdfs.inotify.MissingEventsException} on
+   * {@link org.apache.hadoop.hdfs.DFSInotifyEventInputStream} method calls.
+   *
+   * It should generally be sufficient to tune these parameters:
+   * dfs.namenode.num.extra.edits.retained
+   * dfs.namenode.max.extra.edits.segments.retained
+   *
+   * Parameters that affect the number of created segments and the number of
+   * edits that are considered necessary, i.e. do not count towards the
+   * dfs.namenode.num.extra.edits.retained quota):
+   * dfs.namenode.checkpoint.period
+   * dfs.namenode.checkpoint.txns
+   * dfs.namenode.num.checkpoints.retained
+   * dfs.ha.log-roll.period
+   * <p/>
+   * It is recommended that local journaling be configured
+   * (dfs.namenode.edits.dir) for inotify (in addition to a shared journal)
+   * so that edit transfers from the shared journal can be avoided.
+   *
+   * @throws IOException If there was an error obtaining the stream.
+   */
+  public DFSInotifyEventInputStream getInotifyEventStream() throws IOException {
+    return dfs.getInotifyEventStream();
+  }
+
+  /**
+   * A version of {@link HdfsAdmin#getInotifyEventStream()} meant for advanced
+   * users who are aware of HDFS edits up to lastReadTxid (e.g. because they
+   * have access to an FSImage inclusive of lastReadTxid) and only want to read
+   * events after this point.
+   */
+  public DFSInotifyEventInputStream getInotifyEventStream(long lastReadTxid)
+      throws IOException {
+    return dfs.getInotifyEventStream(lastReadTxid);
   }
 }

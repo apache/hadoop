@@ -32,5 +32,5 @@ import org.apache.hadoop.conf.Configurable;
 @Private
 @Unstable
 public interface WeightAdjuster {
-  public double adjustWeight(AppSchedulable app, double curWeight);
+  public double adjustWeight(FSAppAttempt app, double curWeight);
 }

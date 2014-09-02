@@ -100,6 +100,30 @@ message DatanodeInfoProto {
 }
 
 /**
+ * Represents a storage available on the datanode
+ */
+message DatanodeStorageProto {
+  enum StorageState {
+    NORMAL = 0;
+    READ_ONLY_SHARED = 1;
+  }
+
+  required string storageUuid = 1;
+  optional StorageState state = 2 [default = NORMAL];
+  optional StorageTypeProto storageType = 3 [default = DISK];
+}
+
+message StorageReportProto {
+  required string storageUuid = 1 [ deprecated = true ];
+  optional bool failed = 2 [ default = false ];
+  optional uint64 capacity = 3 [ default = 0 ];
+  optional uint64 dfsUsed = 4 [ default = 0 ];
+  optional uint64 remaining = 5 [ default = 0 ];
+  optional uint64 blockPoolUsed = 6 [ default = 0 ];
+  optional DatanodeStorageProto storage = 7; // supersedes StorageUuid
+}
+
+/**
  * Summary of a file or directory
  */
 message ContentSummaryProto {
@@ -176,6 +200,23 @@ message DataEncryptionKeyProto {
   optional string encryptionAlgorithm = 6;
 }
 
+/**
+ * Cipher suite.
+ */
+enum CipherSuite {
+    UNKNOWN = 1;
+    AES_CTR_NOPADDING = 2;
+}
+
+/**
+ * Encryption information for a file.
+ */
+message FileEncryptionInfoProto {
+  required CipherSuite suite = 1;
+  required bytes key = 2;
+  required bytes iv = 3;
+  required string ezKeyVersionName = 4;
+}
 
 /**
  * A set of file blocks and their locations.
@@ -186,8 +227,8 @@ message LocatedBlocksProto {
   required bool underConstruction = 3;
   optional LocatedBlockProto lastBlock = 4;
   required bool isLastBlockComplete = 5;
+  optional FileEncryptionInfoProto fileEncryptionInfo = 6;
 }
-
 
 /**
  * Status of a file, directory or symlink
@@ -219,6 +260,9 @@ message HdfsFileStatusProto {
   // Optional field for fileId
   optional uint64 fileId = 13 [default = 0]; // default as an invalid id
   optional int32 childrenNum = 14 [default = -1];
+
+  // Optional field for file encryption
+  optional FileEncryptionInfoProto fileEncryptionInfo = 15;
 } 
 
 /**
@@ -380,6 +424,7 @@ message BlockWithLocationsProto {
   required BlockProto block = 1;   // Block
   repeated string datanodeUuids = 2; // Datanodes with replicas of the block
   repeated string storageUuids = 3;  // Storages with replicas of the block
+  repeated StorageTypeProto storageTypes = 4;
 }
 
 /**

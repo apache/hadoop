@@ -88,13 +88,13 @@ public class RpcMetrics {
   @Metric("Processsing time") MutableRate rpcProcessingTime;
   MutableQuantiles[] rpcProcessingTimeMillisQuantiles;
   @Metric("Number of authentication failures")
-  MutableCounterInt rpcAuthenticationFailures;
+  MutableCounterLong rpcAuthenticationFailures;
   @Metric("Number of authentication successes")
-  MutableCounterInt rpcAuthenticationSuccesses;
+  MutableCounterLong rpcAuthenticationSuccesses;
   @Metric("Number of authorization failures")
-  MutableCounterInt rpcAuthorizationFailures;
+  MutableCounterLong rpcAuthorizationFailures;
   @Metric("Number of authorization sucesses")
-  MutableCounterInt rpcAuthorizationSuccesses;
+  MutableCounterLong rpcAuthorizationSuccesses;
 
   @Metric("Number of open connections") public int numOpenConnections() {
     return server.getNumOpenConnections();

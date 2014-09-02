@@ -25,9 +25,15 @@ import java.util.concurrent.Delayed;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
+@Private
+@Unstable
 public class TaskRunner {
+  @Private
+  @Unstable
   public abstract static class Task implements Runnable, Delayed {
     private long start;
     private long end;
@@ -93,12 +99,10 @@ public class TaskRunner {
         } else {
           lastStep();
         }
-      } catch (YarnException e) {
+      } catch (Exception e) {
         e.printStackTrace();
-      } catch (IOException e) {
-        e.printStackTrace();
-      } catch (InterruptedException e) {
-        e.printStackTrace();
+        Thread.getDefaultUncaughtExceptionHandler()
+            .uncaughtException(Thread.currentThread(), e);
       }
     }
 
@@ -118,13 +122,11 @@ public class TaskRunner {
     }
 
 
-    public abstract void firstStep()
-            throws YarnException, IOException, InterruptedException;
+    public abstract void firstStep() throws Exception;
 
-    public abstract void middleStep()
-            throws YarnException, InterruptedException, IOException;
+    public abstract void middleStep() throws Exception;
 
-    public abstract void lastStep() throws YarnException;
+    public abstract void lastStep() throws Exception;
 
     public void setEndTime(long et) {
       endTime = et;

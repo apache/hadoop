@@ -97,9 +97,12 @@ public class HadoopArchives implements Tool {
   long partSize = 2 * 1024 * 1024 * 1024l;
   /** size of blocks in hadoop archives **/
   long blockSize = 512 * 1024 * 1024l;
+  /** the desired replication degree; default is 10 **/
+  short repl = 10;
 
   private static final String usage = "archive"
-  + " -archiveName NAME -p <parent path> <src>* <dest>" +
+  + " -archiveName NAME -p <parent path> [-r <replication factor>]" +
+      "<src>* <dest>" +
   "\n";
   
  
@@ -338,7 +341,7 @@ public class HadoopArchives implements Tool {
    * directories to
    * @param paths the source paths provided by the user. They
    * are glob free and have full path (not relative paths)
-   * @param parentPath the parent path that you wnat the archives
+   * @param parentPath the parent path that you want the archives
    * to be relative to. example - /home/user/dir1 can be archived with
    * parent as /home or /home/user.
    * @throws IOException
@@ -542,7 +545,7 @@ public class HadoopArchives implements Tool {
       srcWriter.close();
     }
     //increase the replication of src files
-    jobfs.setReplication(srcFiles, (short) 10);
+    jobfs.setReplication(srcFiles, repl);
     conf.setInt(SRC_COUNT_LABEL, numFiles);
     conf.setLong(TOTAL_SIZE_LABEL, totalSize);
     int numMaps = (int)(totalSize/partSize);
@@ -835,6 +838,11 @@ public class HadoopArchives implements Tool {
       }
 
       i+=2;
+
+      if ("-r".equals(args[i])) {
+        repl = Short.parseShort(args[i+1]);
+        i+=2;
+      }
       //read the rest of the paths
       for (; i < args.length; i++) {
         if (i == (args.length - 1)) {

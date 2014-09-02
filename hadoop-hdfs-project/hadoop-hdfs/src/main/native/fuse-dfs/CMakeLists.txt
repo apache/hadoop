@@ -37,6 +37,10 @@ ELSE (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 ENDIF (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 
 IF(FUSE_FOUND)
+    add_library(posix_util
+        ../util/posix_util.c
+    )
+
     add_executable(fuse_dfs
         fuse_dfs.c
         fuse_options.c 

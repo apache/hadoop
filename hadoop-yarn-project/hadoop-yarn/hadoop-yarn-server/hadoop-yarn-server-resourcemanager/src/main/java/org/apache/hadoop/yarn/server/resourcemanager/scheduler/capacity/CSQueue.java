@@ -238,4 +238,22 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @param apps the collection to add the applications to
    */
   public void collectSchedulerApplications(Collection<ApplicationAttemptId> apps);
+
+  /**
+  * Detach a container from this queue
+  * @param clusterResource the current cluster resource
+  * @param application application to which the container was assigned
+  * @param container the container to detach
+  */
+  public void detachContainer(Resource clusterResource,
+               FiCaSchedulerApp application, RMContainer container);
+
+  /**
+   * Attach a container to this queue
+   * @param clusterResource the current cluster resource
+   * @param application application to which the container was assigned
+   * @param container the container to attach
+   */
+  public void attachContainer(Resource clusterResource,
+               FiCaSchedulerApp application, RMContainer container);
 }

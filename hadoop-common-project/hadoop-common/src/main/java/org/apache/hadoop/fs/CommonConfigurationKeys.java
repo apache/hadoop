@@ -134,6 +134,9 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   HADOOP_SECURITY_SERVICE_AUTHORIZATION_DEFAULT_ACL = 
       "security.service.authorization.default.acl";
   public static final String 
+  HADOOP_SECURITY_SERVICE_AUTHORIZATION_DEFAULT_BLOCKED_ACL =
+      "security.service.authorization.default.acl.blocked";
+  public static final String
   HADOOP_SECURITY_SERVICE_AUTHORIZATION_REFRESH_POLICY = 
       "security.refresh.policy.protocol.acl";
   public static final String 
@@ -280,5 +283,4 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String NFS_EXPORTS_ALLOWED_HOSTS_SEPARATOR = ";";
   public static final String NFS_EXPORTS_ALLOWED_HOSTS_KEY = "nfs.exports.allowed.hosts";
   public static final String NFS_EXPORTS_ALLOWED_HOSTS_KEY_DEFAULT = "* rw";
-
 }

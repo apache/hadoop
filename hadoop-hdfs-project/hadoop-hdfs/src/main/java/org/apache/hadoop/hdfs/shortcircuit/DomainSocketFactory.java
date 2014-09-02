@@ -33,6 +33,7 @@ import org.apache.hadoop.net.unix.DomainSocket;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.util.PerformanceAdvisory;
 
 public class DomainSocketFactory {
   private static final Log LOG = LogFactory.getLog(DomainSocketFactory.class);
@@ -105,7 +106,8 @@ public class DomainSocketFactory {
     }
 
     if (feature == null) {
-      LOG.debug("Both short-circuit local reads and UNIX domain socket are disabled.");
+      PerformanceAdvisory.LOG.debug(
+          "Both short-circuit local reads and UNIX domain socket are disabled.");
     } else {
       if (conf.getDomainSocketPath().isEmpty()) {
         throw new HadoopIllegalArgumentException(feature + " is enabled but "

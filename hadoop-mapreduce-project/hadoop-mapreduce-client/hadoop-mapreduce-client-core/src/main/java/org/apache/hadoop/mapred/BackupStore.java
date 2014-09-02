@@ -31,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
@@ -43,6 +44,7 @@ import org.apache.hadoop.mapred.Merger.Segment;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.CryptoUtils;
 
 /**
  * <code>BackupStore</code> is an utility class that is used to support
@@ -572,7 +574,9 @@ public class BackupStore<K,V> {
 
       file = lDirAlloc.getLocalPathForWrite(tmp.toUri().getPath(), 
           -1, conf);
-      return new Writer<K, V>(conf, fs, file);
+      FSDataOutputStream out = fs.create(file);
+      out = CryptoUtils.wrapIfNecessary(conf, out);
+      return new Writer<K, V>(conf, out, null, null, null, null, true);
     }
   }
 
@@ -603,7 +607,7 @@ public class BackupStore<K,V> {
 
     int reserve(int requestedSize, int minSize) {
       if (availableSize < minSize) {
-        LOG.debug("No Space available. Available: " + availableSize + 
+        LOG.debug("No space available. Available: " + availableSize + 
             " MinSize: " + minSize);
         return 0;
       } else {

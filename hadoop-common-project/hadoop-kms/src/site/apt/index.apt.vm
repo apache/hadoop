@@ -104,6 +104,25 @@ Hadoop Key Management Server (KMS) - Documentation Sets ${project.version}
   </property>
 +---+
 
+** KMS Aggregated Audit logs
+
+  Audit logs are aggregated for API accesses to the GET_KEY_VERSION,
+  GET_CURRENT_KEY, DECRYPT_EEK, GENERATE_EEK operations.
+
+  Entries are grouped by the (user,key,operation) combined key for a
+  configurable aggregation interval after which the number of accesses to the
+  specified end-point by the user for a given key is flushed to the audit log.
+
+  The Aggregation interval is configured via the property :
+
++---+
+  <property>
+    <name>hadoop.kms.aggregation.delay.ms</name>
+    <value>10000</value>
+  </property>
++---+
+ 
+
 ** Start/Stop the KMS
 
   To start/stop KMS use KMS's bin/kms.sh script. For example:
@@ -176,6 +195,46 @@ hadoop-${project.version} $ sbin/kms.sh start
   NOTE: You need to restart the KMS for the configuration changes to take
   effect.
 
+*** KMS Proxyuser Configuration
+
+  Each proxyusers must be configured in <<<etc/hadoop/kms-site.xml>>> using the
+  following properties:
+
++---+
+  <property>
+    <name>hadoop.kms.proxyusers.#USER#.users</name>
+    <value>*</value>
+  </property>
+
+  <property>
+    <name>hadoop.kms.proxyusers.#USER#.groups</name>
+    <value>*</value>
+  </property>
+
+  <property>
+    <name>hadoop.kms.proxyusers.#USER#.hosts</name>
+    <value>*</value>
+  </property>
++---+
+
+  <<<#USER#>>> is the username of the proxyuser to configure.
+
+  The <<<users>>> property indicates the users that can be impersonated.
+
+  The <<<groups>>> property indicates the groups users being impersonated must
+  belong to.
+
+  At least one of the <<<users>>> or <<<groups>>> properties must be defined.
+  If both are specified, then the configured proxyuser will be able to 
+  impersonate and user in the <<<users>>> list and any user belonging to one of 
+  the groups in the <<<groups>>> list.
+
+  The <<<hosts>>> property indicates from which host the proxyuser can make
+  impersonation requests.
+
+  If <<<users>>>, <<<groups>>> or <<<hosts>>> has a <<<*>>>, it means there are
+  no restrictions for the proxyuser regarding users, groups or hosts.
+  
 *** KMS over HTTPS (SSL)
 
   To configure KMS to work over HTTPS the following 2 properties must be
@@ -299,6 +358,46 @@ $ keytool -genkey -alias tomcat -keyalg RSA
   </property>
 </configuration>
 +---+
+
+** KMS Delegation Token Configuration
+
+  KMS delegation token secret manager can be configured with the following
+  properties:
+
+  +---+
+    <property>
+      <name>hadoop.kms.authentication.delegation-token.update-interval.sec</name>
+      <value>86400</value>
+      <description>
+        How often the master key is rotated, in seconds. Default value 1 day.
+      </description>
+    </property>
+
+    <property>
+      <name>hadoop.kms.authentication.delegation-token.max-lifetime.sec</name>
+      <value>604800</value>
+      <description>
+        Maximum lifetime of a delagation token, in seconds. Default value 7 days.
+      </description>
+    </property>
+
+    <property>
+      <name>hadoop.kms.authentication.delegation-token.renew-interval.sec</name>
+      <value>86400</value>
+      <description>
+        Renewal interval of a delagation token, in seconds. Default value 1 day.
+      </description>
+    </property>
+
+    <property>
+      <name>hadoop.kms.authentication.delegation-token.removal-scan-interval.sec</name>
+      <value>3600</value>
+      <description>
+        Scan interval to remove expired delegation tokens.
+      </description>
+    </property>
+  +---+
+
 
 ** KMS HTTP REST API
 

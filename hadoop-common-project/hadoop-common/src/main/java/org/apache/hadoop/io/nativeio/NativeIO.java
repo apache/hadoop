@@ -33,9 +33,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.HardLink;
 import org.apache.hadoop.io.SecureIOUtils.AlreadyExistsException;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.PerformanceAdvisory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -195,7 +197,7 @@ public class NativeIO {
           // This can happen if the user has an older version of libhadoop.so
           // installed - in this case we can continue without native IO
           // after warning
-          LOG.error("Unable to initialize NativeIO libraries", t);
+          PerformanceAdvisory.LOG.debug("Unable to initialize NativeIO libraries", t);
         }
       }
     }
@@ -573,7 +575,7 @@ public class NativeIO {
           // This can happen if the user has an older version of libhadoop.so
           // installed - in this case we can continue without native IO
           // after warning
-          LOG.error("Unable to initialize NativeIO libraries", t);
+          PerformanceAdvisory.LOG.debug("Unable to initialize NativeIO libraries", t);
         }
       }
     }
@@ -592,7 +594,7 @@ public class NativeIO {
         // This can happen if the user has an older version of libhadoop.so
         // installed - in this case we can continue without native IO
         // after warning
-        LOG.error("Unable to initialize NativeIO libraries", t);
+        PerformanceAdvisory.LOG.debug("Unable to initialize NativeIO libraries", t);
       }
     }
   }
@@ -823,6 +825,14 @@ public class NativeIO {
     }
   }
 
+  public static void link(File src, File dst) throws IOException {
+    if (!nativeLoaded) {
+      HardLink.createHardLink(src, dst);
+    } else {
+      link0(src.getAbsolutePath(), dst.getAbsolutePath());
+    }
+  }
+
   /**
    * A version of renameTo that throws a descriptive exception when it fails.
    *
@@ -832,5 +842,8 @@ public class NativeIO {
    * @throws NativeIOException   On failure.
    */
   private static native void renameTo0(String src, String dst)
+      throws NativeIOException;
+
+  private static native void link0(String src, String dst)
       throws NativeIOException;
 }

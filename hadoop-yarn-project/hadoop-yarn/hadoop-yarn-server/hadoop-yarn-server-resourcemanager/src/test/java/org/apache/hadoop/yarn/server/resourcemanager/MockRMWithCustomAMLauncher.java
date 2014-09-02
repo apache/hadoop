@@ -59,8 +59,9 @@ public class MockRMWithCustomAMLauncher extends MockRM {
             return containerManager;
           }
           @Override
-          protected Token<AMRMTokenIdentifier> getAMRMToken() {
-            Token<AMRMTokenIdentifier> amRmToken = super.getAMRMToken();
+          protected Token<AMRMTokenIdentifier> createAndSetAMRMToken() {
+            Token<AMRMTokenIdentifier> amRmToken =
+                super.createAndSetAMRMToken();
             InetSocketAddress serviceAddr =
                 getConfig().getSocketAddr(
                   YarnConfiguration.RM_SCHEDULER_ADDRESS,

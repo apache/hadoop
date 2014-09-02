@@ -590,7 +590,6 @@ public class TestBlockRecovery {
     Configuration conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_DATANODE_XCEIVER_STOP_TIMEOUT_MILLIS_KEY, "1000");
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .nnTopology(MiniDFSNNTopology.simpleSingleNN(8020, 50070))
         .numDataNodes(1).build();
     try {
       cluster.waitClusterUp();

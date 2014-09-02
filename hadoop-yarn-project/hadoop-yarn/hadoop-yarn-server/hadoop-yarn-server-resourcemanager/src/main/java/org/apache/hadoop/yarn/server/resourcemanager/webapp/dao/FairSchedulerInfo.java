@@ -25,12 +25,14 @@ import javax.xml.bind.annotation.XmlTransient;
 import javax.xml.bind.annotation.XmlType;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 
 @XmlRootElement(name = "fairScheduler")
 @XmlType(name = "fairScheduler")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class FairSchedulerInfo extends SchedulerInfo {
+  public static final int INVALID_FAIR_SHARE = -1;
   private FairSchedulerQueueInfo rootQueue;
   
   @XmlTransient
@@ -44,10 +46,18 @@ public class FairSchedulerInfo extends SchedulerInfo {
     rootQueue = new FairSchedulerQueueInfo(scheduler.getQueueManager().
         getRootQueue(), scheduler);
   }
-  
+
+  /**
+   * Get the fair share assigned to the appAttemptId.
+   * @param appAttemptId
+   * @return The fair share assigned to the appAttemptId,
+   * <code>FairSchedulerInfo#INVALID_FAIR_SHARE</code> if the scheduler does
+   * not know about this application attempt.
+   */
   public int getAppFairShare(ApplicationAttemptId appAttemptId) {
-    return scheduler.getSchedulerApp(appAttemptId).
-        getAppSchedulable().getFairShare().getMemory();
+    FSAppAttempt fsAppAttempt = scheduler.getSchedulerApp(appAttemptId);
+    return fsAppAttempt == null ?
+        INVALID_FAIR_SHARE :  fsAppAttempt.getFairShare().getMemory();
   }
   
   public FairSchedulerQueueInfo getRootQueueInfo() {

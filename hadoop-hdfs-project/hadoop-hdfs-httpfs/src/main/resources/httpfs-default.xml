@@ -34,8 +34,6 @@
       org.apache.hadoop.lib.service.instrumentation.InstrumentationService,
       org.apache.hadoop.lib.service.scheduler.SchedulerService,
       org.apache.hadoop.lib.service.security.GroupsService,
-      org.apache.hadoop.lib.service.security.ProxyUserService,
-      org.apache.hadoop.lib.service.security.DelegationTokenManagerService,
       org.apache.hadoop.lib.service.hadoop.FileSystemAccessService
     </value>
     <description>
@@ -119,6 +117,10 @@
   </property>
 
   <!-- HttpFSServer proxy user Configuration -->
+<!--
+
+  The following 2 properties within this comment are provided as an
+  example to facilitate configuring HttpFS proxyusers.
 
   <property>
     <name>httpfs.proxyuser.#USER#.hosts</name>
@@ -153,6 +155,7 @@
       in the property name.
     </description>
   </property>
+-->
 
   <!-- HttpFS Delegation Token configuration -->
 
@@ -223,14 +226,6 @@
     <value>60</value>
     <description>
       Timeout, in seconds, for an idle filesystem to be purged.
-    </description>
-  </property>
-
-  <property>
-    <name>httpfs.user.provider.user.pattern</name>
-    <value>^[A-Za-z_][A-Za-z0-9._-]*[$]?$</value>
-    <description>
-      Valid pattern for user and group names, it must be a valid java regex.
     </description>
   </property>
 

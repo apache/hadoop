@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -39,6 +40,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.Replica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInPipelineInterface;
+import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetFactory;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
@@ -90,6 +92,13 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
 
   /** @return a list of volumes. */
   public List<V> getVolumes();
+
+  /** Add an array of StorageLocation to FsDataset. */
+  public void addVolumes(Collection<StorageLocation> volumes)
+      throws IOException;
+
+  /** Removes a collection of volumes from FsDataset. */
+  public void removeVolumes(Collection<StorageLocation> volumes);
 
   /** @return a storage with the given storage ID */
   public DatanodeStorage getStorage(final String storageUuid);

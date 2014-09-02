@@ -58,6 +58,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
+import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.log4j.Level;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -356,7 +357,8 @@ public class TestPipelinesFailover {
       
       NameNode nn0 = cluster.getNameNode(0);
       ExtendedBlock blk = DFSTestUtil.getFirstBlock(fs, TEST_PATH);
-      DatanodeDescriptor expectedPrimary = getExpectedPrimaryNode(nn0, blk);
+      DatanodeDescriptor expectedPrimary =
+          DFSTestUtil.getExpectedPrimaryNode(nn0, blk);
       LOG.info("Expecting block recovery to be triggered on DN " +
           expectedPrimary);
       
@@ -419,6 +421,33 @@ public class TestPipelinesFailover {
    */
   @Test(timeout=STRESS_RUNTIME*3)
   public void testPipelineRecoveryStress() throws Exception {
+
+    // The following section of code is to help debug HDFS-6694 about
+    // this test that fails from time to time due to "too many open files".
+    //
+    String[] scmd = new String[] {"/bin/sh", "-c", "ulimit -a"};
+    ShellCommandExecutor sce = new ShellCommandExecutor(scmd);
+    sce.execute();
+
+    System.out.println("HDFS-6694 Debug Data BEGIN===");
+    System.out.println("'ulimit -a' output:\n" + sce.getOutput());
+
+    scmd = new String[] {"hostname"};
+    sce = new ShellCommandExecutor(scmd);
+    sce.execute();
+    System.out.println("'hostname' output:\n" + sce.getOutput());
+
+    scmd = new String[] {"ifconfig"};
+    sce = new ShellCommandExecutor(scmd);
+    sce.execute();
+    System.out.println("'ifconfig' output:\n" + sce.getOutput());
+
+    scmd = new String[] {"whoami"};
+    sce = new ShellCommandExecutor(scmd);
+    sce.execute();
+    System.out.println("'whoami' output:\n" + sce.getOutput());
+    System.out.println("===HDFS-6694 Debug Data END");
+
     HAStressTestHarness harness = new HAStressTestHarness();
     // Disable permissions so that another user can recover the lease.
     harness.conf.setBoolean(
@@ -504,37 +533,6 @@ public class TestPipelinesFailover {
     public String toString() {
       return "Pipeline test thread for " + path;
     }
-  }
-
-
-
-  /**
-   * @return the node which is expected to run the recovery of the
-   * given block, which is known to be under construction inside the
-   * given NameNOde.
-   */
-  private DatanodeDescriptor getExpectedPrimaryNode(NameNode nn,
-      ExtendedBlock blk) {
-    BlockManager bm0 = nn.getNamesystem().getBlockManager();
-    BlockInfo storedBlock = bm0.getStoredBlock(blk.getLocalBlock());
-    assertTrue("Block " + blk + " should be under construction, " +
-        "got: " + storedBlock,
-        storedBlock instanceof BlockInfoUnderConstruction);
-    BlockInfoUnderConstruction ucBlock =
-      (BlockInfoUnderConstruction)storedBlock;
-    // We expect that the replica with the most recent heart beat will be
-    // the one to be in charge of the synchronization / recovery protocol.
-    final DatanodeStorageInfo[] storages = ucBlock.getExpectedStorageLocations();
-    DatanodeStorageInfo expectedPrimary = storages[0];
-    long mostRecentLastUpdate = expectedPrimary.getDatanodeDescriptor().getLastUpdate();
-    for (int i = 1; i < storages.length; i++) {
-      final long lastUpdate = storages[i].getDatanodeDescriptor().getLastUpdate();
-      if (lastUpdate > mostRecentLastUpdate) {
-        expectedPrimary = storages[i];
-        mostRecentLastUpdate = lastUpdate;
-      }
-    }
-    return expectedPrimary.getDatanodeDescriptor();
   }
 
   private DistributedFileSystem createFsAsOtherUser(

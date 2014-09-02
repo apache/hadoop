@@ -30,9 +30,11 @@ import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executor;
 
 import javax.management.NotCompliantMBeanException;
@@ -44,6 +46,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -201,6 +204,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   final Map<String, DatanodeStorage> storageMap;
   final FsDatasetAsyncDiskService asyncDiskService;
   final FsDatasetCache cacheManager;
+  private final Configuration conf;
   private final int validVolsRequired;
 
   final ReplicaMap volumeMap;
@@ -215,6 +219,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       ) throws IOException {
     this.datanode = datanode;
     this.dataStorage = storage;
+    this.conf = conf;
     // The number of volumes required for operation is the total number 
     // of volumes minus the number of failed volumes we can tolerate.
     final int volFailuresTolerated =
@@ -241,36 +246,119 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
 
     storageMap = new HashMap<String, DatanodeStorage>();
-    final List<FsVolumeImpl> volArray = new ArrayList<FsVolumeImpl>(
-        storage.getNumStorageDirs());
-    for (int idx = 0; idx < storage.getNumStorageDirs(); idx++) {
-      Storage.StorageDirectory sd = storage.getStorageDir(idx);
-      final File dir = sd.getCurrentDir();
-      final StorageType storageType = getStorageTypeFromLocations(dataLocations, sd.getRoot());
-      volArray.add(new FsVolumeImpl(this, sd.getStorageUuid(), dir, conf,
-          storageType));
-      LOG.info("Added volume - " + dir + ", StorageType: " + storageType);
-      storageMap.put(sd.getStorageUuid(),
-          new DatanodeStorage(sd.getStorageUuid(), DatanodeStorage.State.NORMAL, storageType));
-    }
     volumeMap = new ReplicaMap(this);
-
     @SuppressWarnings("unchecked")
     final VolumeChoosingPolicy<FsVolumeImpl> blockChooserImpl =
         ReflectionUtils.newInstance(conf.getClass(
             DFSConfigKeys.DFS_DATANODE_FSDATASET_VOLUME_CHOOSING_POLICY_KEY,
             RoundRobinVolumeChoosingPolicy.class,
             VolumeChoosingPolicy.class), conf);
-    volumes = new FsVolumeList(volArray, volsFailed, blockChooserImpl);
-    volumes.initializeReplicaMaps(volumeMap);
+    volumes = new FsVolumeList(volsFailed, blockChooserImpl);
+    asyncDiskService = new FsDatasetAsyncDiskService(datanode);
 
-    File[] roots = new File[storage.getNumStorageDirs()];
     for (int idx = 0; idx < storage.getNumStorageDirs(); idx++) {
-      roots[idx] = storage.getStorageDir(idx).getCurrentDir();
+      addVolume(dataLocations, storage.getStorageDir(idx));
     }
-    asyncDiskService = new FsDatasetAsyncDiskService(datanode, roots);
+
     cacheManager = new FsDatasetCache(this);
     registerMBean(datanode.getDatanodeUuid());
+  }
+
+  private void addVolume(Collection<StorageLocation> dataLocations,
+      Storage.StorageDirectory sd) throws IOException {
+    final File dir = sd.getCurrentDir();
+    final StorageType storageType =
+        getStorageTypeFromLocations(dataLocations, sd.getRoot());
+
+    // If IOException raises from FsVolumeImpl() or getVolumeMap(), there is
+    // nothing needed to be rolled back to make various data structures, e.g.,
+    // storageMap and asyncDiskService, consistent.
+    FsVolumeImpl fsVolume = new FsVolumeImpl(
+        this, sd.getStorageUuid(), dir, this.conf, storageType);
+    fsVolume.getVolumeMap(volumeMap);
+
+    volumes.addVolume(fsVolume);
+    storageMap.put(sd.getStorageUuid(),
+        new DatanodeStorage(sd.getStorageUuid(),
+                            DatanodeStorage.State.NORMAL,
+                            storageType));
+    asyncDiskService.addVolume(sd.getCurrentDir());
+
+    LOG.info("Added volume - " + dir + ", StorageType: " + storageType);
+  }
+
+  /**
+   * Add an array of StorageLocation to FsDataset.
+   *
+   * @pre dataStorage must have these volumes.
+   * @param volumes
+   * @throws IOException
+   */
+  @Override
+  public synchronized void addVolumes(Collection<StorageLocation> volumes)
+      throws IOException {
+    final Collection<StorageLocation> dataLocations =
+        DataNode.getStorageLocations(this.conf);
+    Map<String, Storage.StorageDirectory> allStorageDirs =
+        new HashMap<String, Storage.StorageDirectory>();
+    for (int idx = 0; idx < dataStorage.getNumStorageDirs(); idx++) {
+      Storage.StorageDirectory sd = dataStorage.getStorageDir(idx);
+      allStorageDirs.put(sd.getRoot().getAbsolutePath(), sd);
+    }
+
+    for (StorageLocation vol : volumes) {
+      String key = vol.getFile().getAbsolutePath();
+      if (!allStorageDirs.containsKey(key)) {
+        LOG.warn("Attempt to add an invalid volume: " + vol.getFile());
+      } else {
+        addVolume(dataLocations, allStorageDirs.get(key));
+      }
+    }
+  }
+
+  /**
+   * Removes a collection of volumes from FsDataset.
+   * @param volumes the root directories of the volumes.
+   *
+   * DataNode should call this function before calling
+   * {@link DataStorage#removeVolumes(java.util.Collection)}.
+   */
+  @Override
+  public synchronized void removeVolumes(Collection<StorageLocation> volumes) {
+    Set<File> volumeSet = new HashSet<File>();
+    for (StorageLocation sl : volumes) {
+      volumeSet.add(sl.getFile());
+    }
+    for (int idx = 0; idx < dataStorage.getNumStorageDirs(); idx++) {
+      Storage.StorageDirectory sd = dataStorage.getStorageDir(idx);
+      if (volumeSet.contains(sd.getRoot())) {
+        String volume = sd.getRoot().toString();
+        LOG.info("Removing " + volume + " from FsDataset.");
+
+        this.volumes.removeVolume(volume);
+        storageMap.remove(sd.getStorageUuid());
+        asyncDiskService.removeVolume(sd.getCurrentDir());
+
+        // Removed all replica information for the blocks on the volume. Unlike
+        // updating the volumeMap in addVolume(), this operation does not scan
+        // disks.
+        for (String bpid : volumeMap.getBlockPoolList()) {
+          List<Block> blocks = new ArrayList<Block>();
+          for (Iterator<ReplicaInfo> it = volumeMap.replicas(bpid).iterator();
+              it.hasNext(); ) {
+            ReplicaInfo block = it.next();
+            if (block.getVolume().getBasePath().equals(volume)) {
+              invalidate(bpid, block.getBlockId());
+              blocks.add(block);
+              it.remove();
+            }
+          }
+          // Delete blocks from the block scanner in batch.
+          datanode.getBlockScanner().deleteBlocks(bpid,
+              blocks.toArray(new Block[blocks.size()]));
+        }
+      }
+    }
   }
 
   private StorageType getStorageTypeFromLocations(
@@ -1150,7 +1238,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         return f;
    
       // if file is not null, but doesn't exist - possibly disk failed
-      datanode.checkDiskError();
+      datanode.checkDiskErrorAsync();
     }
     
     if (LOG.isDebugEnabled()) {
@@ -1223,17 +1311,17 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
               +  ". Parent not found for file " + f);
           continue;
         }
-        ReplicaState replicaState = info.getState();
-        if (replicaState == ReplicaState.FINALIZED || 
-            (replicaState == ReplicaState.RUR && 
-                ((ReplicaUnderRecovery)info).getOriginalReplica().getState() == 
-                  ReplicaState.FINALIZED)) {
-          v.clearPath(bpid, parent);
-        }
         volumeMap.remove(bpid, invalidBlks[i]);
       }
+
+      // If a DFSClient has the replica in its cache of short-circuit file
+      // descriptors (and the client is using ShortCircuitShm), invalidate it.
+      datanode.getShortCircuitRegistry().processBlockInvalidation(
+                new ExtendedBlockId(invalidBlks[i].getBlockId(), bpid));
+
       // If the block is cached, start uncaching it.
       cacheManager.uncacheBlock(bpid, invalidBlks[i].getBlockId());
+
       // Delete the block asynchronously to make sure we can do it fast enough.
       // It's ok to unlink the block file before the uncache operation
       // finishes.
@@ -1250,6 +1338,28 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         b.append("\n").append(i).append(") ").append(errors.get(i));
       }
       throw new IOException(b.toString());
+    }
+  }
+
+  /**
+   * Invalidate a block but does not delete the actual on-disk block file.
+   *
+   * It should only be used for decommissioning disks.
+   *
+   * @param bpid the block pool ID.
+   * @param blockId the ID of the block.
+   */
+  public void invalidate(String bpid, long blockId) {
+    // If a DFSClient has the replica in its cache of short-circuit file
+    // descriptors (and the client is using ShortCircuitShm), invalidate it.
+    // The short-circuit registry is null in the unit tests, because the
+    // datanode is mock object.
+    if (datanode.getShortCircuitRegistry() != null) {
+      datanode.getShortCircuitRegistry().processBlockInvalidation(
+          new ExtendedBlockId(blockId, bpid));
+
+      // If the block is cached, start uncaching it.
+      cacheManager.uncacheBlock(bpid, blockId);
     }
   }
 

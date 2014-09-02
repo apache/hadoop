@@ -289,7 +289,7 @@ public class TestRMRestart {
     
     // verify old AM is not accepted
     // change running AM to talk to new RM
-    am1.setAMRMProtocol(rm2.getApplicationMasterService());
+    am1.setAMRMProtocol(rm2.getApplicationMasterService(), rm2.getRMContext());
     AllocateResponse allocResponse = am1.allocate(
         new ArrayList<ResourceRequest>(),
         new ArrayList<ContainerId>());
@@ -1208,18 +1208,13 @@ public class TestRMRestart {
     Assert.assertEquals(BuilderUtils.newContainerId(attemptId1, 1),
       attemptState.getMasterContainer().getId());
 
-    // the appToken and clientTokenMasterKey that are generated when
+    // the clientTokenMasterKey that are generated when
     // RMAppAttempt is created,
-    HashSet<Token<?>> tokenSet = new HashSet<Token<?>>();
-    tokenSet.add(attempt1.getAMRMToken());
     byte[] clientTokenMasterKey =
         attempt1.getClientTokenMasterKey().getEncoded();
 
     // assert application credentials are saved
     Credentials savedCredentials = attemptState.getAppAttemptCredentials();
-    HashSet<Token<?>> savedTokens = new HashSet<Token<?>>();
-    savedTokens.addAll(savedCredentials.getAllTokens());
-    Assert.assertEquals(tokenSet, savedTokens);
     Assert.assertArrayEquals("client token master key not saved",
         clientTokenMasterKey, savedCredentials.getSecretKey(
             RMStateStore.AM_CLIENT_TOKEN_MASTER_KEY_NAME));
@@ -1232,11 +1227,8 @@ public class TestRMRestart {
         rm2.getRMContext().getRMApps().get(app1.getApplicationId());
     RMAppAttempt loadedAttempt1 = loadedApp1.getRMAppAttempt(attemptId1);
 
-    // assert loaded attempt recovered attempt tokens
+    // assert loaded attempt recovered
     Assert.assertNotNull(loadedAttempt1);
-    savedTokens.clear();
-    savedTokens.add(loadedAttempt1.getAMRMToken());
-    Assert.assertEquals(tokenSet, savedTokens);
 
     // assert client token master key is recovered back to api-versioned
     // client token master key
@@ -1250,11 +1242,10 @@ public class TestRMRestart {
             .getEncoded());
 
     // assert AMRMTokenSecretManager also knows about the AMRMToken password
-    // TODO: fix this on YARN-2211
-//    Token<AMRMTokenIdentifier> amrmToken = loadedAttempt1.getAMRMToken();
-//    Assert.assertArrayEquals(amrmToken.getPassword(),
-//      rm2.getRMContext().getAMRMTokenSecretManager().retrievePassword(
-//        amrmToken.decodeIdentifier()));
+    Token<AMRMTokenIdentifier> amrmToken = loadedAttempt1.getAMRMToken();
+    Assert.assertArrayEquals(amrmToken.getPassword(),
+      rm2.getRMContext().getAMRMTokenSecretManager().retrievePassword(
+        amrmToken.decodeIdentifier()));
     rm1.stop();
     rm2.stop();
   }
@@ -1672,7 +1663,7 @@ public class TestRMRestart {
     nm1.setResourceTrackerService(rm2.getResourceTrackerService());
     // recover app
     RMApp loadedApp1 = rm2.getRMContext().getRMApps().get(app1.getApplicationId());
-    am1.setAMRMProtocol(rm2.getApplicationMasterService());
+    am1.setAMRMProtocol(rm2.getApplicationMasterService(), rm2.getRMContext());
     am1.allocate(new ArrayList<ResourceRequest>(), new ArrayList<ContainerId>());
     nm1.nodeHeartbeat(true);
     nm1 = new MockNM("127.0.0.1:1234", 15120, rm2.getResourceTrackerService());

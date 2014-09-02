@@ -31,6 +31,8 @@ public abstract class ResourceOption {
       int overCommitTimeout){
     ResourceOption resourceOption = Records.newRecord(ResourceOption.class);
     resourceOption.setResource(resource);
+    resourceOption.setOverCommitTimeout(overCommitTimeout);
+    resourceOption.build();
     return resourceOption;
   }
 
@@ -60,6 +62,8 @@ public abstract class ResourceOption {
   @Evolving
   protected abstract void setOverCommitTimeout(int overCommitTimeout);
   
+  @Private
+  @Evolving
   protected abstract void build();
   
   @Override

@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.yarn.sls.scheduler;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode
@@ -33,6 +34,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode
 import java.util.Collections;
 import java.util.List;
 
+@Private
+@Unstable
 public class RMNodeWrapper implements RMNode {
   private RMNode node;
   private List<UpdatedContainerInfo> updates;
@@ -142,16 +145,6 @@ public class RMNodeWrapper implements RMNode {
   @Override
   public String getNodeManagerVersion() {
     return node.getNodeManagerVersion();
-  }
-
-  @Override
-  public void setResourceOption(ResourceOption resourceOption) {
-    node.setResourceOption(resourceOption);
-  }
-  
-  @Override
-  public ResourceOption getResourceOption() {
-    return node.getResourceOption();
   }
 
 }

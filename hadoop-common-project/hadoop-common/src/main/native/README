@@ -1,10 +1,11 @@
 Package: libhadoop 
-Authors: Arun C Murthy <arunc@yahoo-inc.com> 
 
 MOTIVATION
 
-The libhadoop package contains the native code for any of hadoop (http://hadoop.apache.org/core). 
+The libhadoop package contains the native code for Apache Hadoop (http://hadoop.apache.org/). 
 
 IMPROVEMENTS
 
-Any suggestions for improvements or patched should be sent to core-dev@hadoop.apache.org. Please go through http://wiki.apache.org/hadoop/HowToContribute for more information on how to contribute.
+Any suggestions for improvements or patched should be sent to common-dev@hadoop.apache.org. 
+
+Please see http://wiki.apache.org/hadoop/HowToContribute for more information on how to contribute.

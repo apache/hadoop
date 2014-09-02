@@ -394,4 +394,9 @@ public class JobHistory extends AbstractService implements HistoryContext {
     return true;
   }
 
+  @Override
+  public String getNMHostname() {
+    // bogus - Not Required
+    return null;
+  }
 }

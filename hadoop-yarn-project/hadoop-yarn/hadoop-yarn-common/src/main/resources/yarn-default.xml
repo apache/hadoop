@@ -71,6 +71,17 @@
   </property>
 
   <property>
+    <description>
+      The actual address the server will bind to. If this optional address is
+      set, the RPC and webapp servers will bind to this address and the port specified in
+      yarn.resourcemanager.address and yarn.resourcemanager.webapp.address, respectively. This
+      is most useful for making RM listen to all interfaces by setting to 0.0.0.0.
+    </description>
+    <name>yarn.resourcemanager.bind-host</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>The number of threads used to handle applications manager requests.</description>
     <name>yarn.resourcemanager.client.thread-count</name>
     <value>50</value>
@@ -192,6 +203,15 @@
     <description>The keytab for the resource manager.</description>
     <name>yarn.resourcemanager.keytab</name>
     <value>/etc/krb5.keytab</value>
+  </property>
+
+  <property>
+    <description>Flag to enable override of the default kerberos authentication
+    filter with the RM authentication filter to allow authentication using
+    delegation tokens(fallback to kerberos if the tokens are missing). Only
+    applicable when the http authentication type is kerberos.</description>
+    <name>yarn.resourcemanager.webapp.delegation-token-auth-filter.enabled</name>
+    <value>true</value>
   </property>
 
   <property>
@@ -454,7 +474,7 @@
   <property>
     <description>Name of the cluster. In a HA setting,
       this is used to ensure the RM participates in leader
-      election fo this cluster and ensures it does not affect
+      election for this cluster and ensures it does not affect
       other clusters</description>
     <name>yarn.resourcemanager.cluster-id</name>
     <!--value>yarn-cluster</value-->
@@ -627,6 +647,17 @@
   </property>
 
   <property>
+    <description>
+      The actual address the server will bind to. If this optional address is
+      set, the RPC and webapp servers will bind to this address and the port specified in
+      yarn.nodemanager.address and yarn.nodemanager.webapp.address, respectively. This is
+      most useful for making NM listen to all interfaces by setting to 0.0.0.0.
+    </description>
+    <name>yarn.nodemanager.bind-host</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>Environment variables that should be forwarded from the NodeManager's environment to the container's.</description>
     <name>yarn.nodemanager.admin-env</name>
     <value>MALLOC_ARENA_MAX=$MALLOC_ARENA_MAX</value>
@@ -726,7 +757,10 @@
   </property>
 
   <property>
-    <description>Target size of localizer cache in MB, per local directory.</description>
+    <description>Target size of localizer cache in MB, per nodemanager. It is
+      a target retention size that only includes resources with PUBLIC and 
+      PRIVATE visibility and excludes resources with APPLICATION visibility
+    </description>
     <name>yarn.nodemanager.localizer.cache.target-size-mb</name>
     <value>10240</value>
   </property>
@@ -957,8 +991,22 @@
   </property>
 
   <property>
-    <description>The UNIX user that containers will run as when Linux-container-executor
-    is used in nonsecure mode (a use case for this is using cgroups).</description>
+    <description>This determines which of the two modes that LCE should use on
+      a non-secure cluster.  If this value is set to true, then all containers
+      will be launched as the user specified in
+      yarn.nodemanager.linux-container-executor.nonsecure-mode.local-user.  If
+      this value is set to false, then containers will run as the user who
+      submitted the application.</description>
+    <name>yarn.nodemanager.linux-container-executor.nonsecure-mode.limit-users</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>The UNIX user that containers will run as when
+      Linux-container-executor is used in nonsecure mode (a use case for this
+      is using cgroups) if the
+      yarn.nodemanager.linux-container-executor.nonsecure-mode.limit-users is
+      set to true.</description>
     <name>yarn.nodemanager.linux-container-executor.nonsecure-mode.local-user</name>
     <value>nobody</value>
   </property>
@@ -1161,6 +1209,18 @@
     <description>The https address of the timeline service web application.</description>
     <name>yarn.timeline-service.webapp.https.address</name>
     <value>${yarn.timeline-service.hostname}:8190</value>
+  </property>
+
+  <property>
+    <description>
+      The actual address the server will bind to. If this optional address is
+      set, the RPC and webapp servers will bind to this address and the port specified in
+      yarn.timeline-service.address and yarn.timeline-service.webapp.address, respectively.
+      This is most useful for making the service listen to all interfaces by setting to
+      0.0.0.0.
+    </description>
+    <name>yarn.timeline-service.bind-host</name>
+    <value></value>
   </property>
 
   <property>

@@ -312,15 +312,15 @@ public class LdapGroupsMapping
     useSsl = conf.getBoolean(LDAP_USE_SSL_KEY, LDAP_USE_SSL_DEFAULT);
     keystore = conf.get(LDAP_KEYSTORE_KEY, LDAP_KEYSTORE_DEFAULT);
     
-    keystorePass =
-        conf.get(LDAP_KEYSTORE_PASSWORD_KEY, LDAP_KEYSTORE_PASSWORD_DEFAULT);
+    keystorePass = getPassword(conf, LDAP_KEYSTORE_PASSWORD_KEY,
+        LDAP_KEYSTORE_PASSWORD_DEFAULT);
     if (keystorePass.isEmpty()) {
       keystorePass = extractPassword(conf.get(LDAP_KEYSTORE_PASSWORD_FILE_KEY,
           LDAP_KEYSTORE_PASSWORD_FILE_DEFAULT));
     }
     
     bindUser = conf.get(BIND_USER_KEY, BIND_USER_DEFAULT);
-    bindPassword = conf.get(BIND_PASSWORD_KEY, BIND_PASSWORD_DEFAULT);
+    bindPassword = getPassword(conf, BIND_PASSWORD_KEY, BIND_PASSWORD_DEFAULT);
     if (bindPassword.isEmpty()) {
       bindPassword = extractPassword(
           conf.get(BIND_PASSWORD_FILE_KEY, BIND_PASSWORD_FILE_DEFAULT));
@@ -341,7 +341,25 @@ public class LdapGroupsMapping
 
     this.conf = conf;
   }
-  
+
+  String getPassword(Configuration conf, String alias, String defaultPass) {
+    String password = null;
+    try {
+      char[] passchars = conf.getPassword(alias);
+      if (passchars != null) {
+        password = new String(passchars);
+      }
+      else {
+        password = defaultPass;
+      }
+    }
+    catch (IOException ioe) {
+      LOG.warn("Exception while trying to password for alias " + alias + ": "
+          + ioe.getMessage());
+    }
+    return password;
+  }
+
   String extractPassword(String pwFile) {
     if (pwFile.isEmpty()) {
       // If there is no password file defined, we'll assume that we should do

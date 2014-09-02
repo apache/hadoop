@@ -134,16 +134,16 @@ public class DefaultSpeculator extends AbstractService implements
 
       estimator.contextualize(conf, context);
     } catch (InstantiationException ex) {
-      LOG.error("Can't make a speculation runtime extimator", ex);
+      LOG.error("Can't make a speculation runtime estimator", ex);
       throw new YarnRuntimeException(ex);
     } catch (IllegalAccessException ex) {
-      LOG.error("Can't make a speculation runtime extimator", ex);
+      LOG.error("Can't make a speculation runtime estimator", ex);
       throw new YarnRuntimeException(ex);
     } catch (InvocationTargetException ex) {
-      LOG.error("Can't make a speculation runtime extimator", ex);
+      LOG.error("Can't make a speculation runtime estimator", ex);
       throw new YarnRuntimeException(ex);
     } catch (NoSuchMethodException ex) {
-      LOG.error("Can't make a speculation runtime extimator", ex);
+      LOG.error("Can't make a speculation runtime estimator", ex);
       throw new YarnRuntimeException(ex);
     }
     

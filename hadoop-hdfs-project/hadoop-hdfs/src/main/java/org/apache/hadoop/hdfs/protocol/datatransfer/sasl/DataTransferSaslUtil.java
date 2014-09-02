@@ -162,8 +162,10 @@ public final class DataTransferSaslUtil {
     Configuration saslPropsResolverConf = new Configuration(conf);
     saslPropsResolverConf.set(HADOOP_RPC_PROTECTION, qops);
     Class<? extends SaslPropertiesResolver> resolverClass = conf.getClass(
-      DFS_DATA_TRANSFER_SASL_PROPS_RESOLVER_CLASS_KEY,
+      HADOOP_SECURITY_SASL_PROPS_RESOLVER_CLASS,
       SaslPropertiesResolver.class, SaslPropertiesResolver.class);
+    resolverClass = conf.getClass(DFS_DATA_TRANSFER_SASL_PROPS_RESOLVER_CLASS_KEY,
+      resolverClass, SaslPropertiesResolver.class);
     saslPropsResolverConf.setClass(HADOOP_SECURITY_SASL_PROPS_RESOLVER_CLASS,
       resolverClass, SaslPropertiesResolver.class);
     SaslPropertiesResolver resolver = SaslPropertiesResolver.getInstance(

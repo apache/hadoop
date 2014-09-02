@@ -42,6 +42,8 @@ public class DistCpConstants {
   public static final String CONF_LABEL_LOG_PATH = "distcp.log.path";
   public static final String CONF_LABEL_IGNORE_FAILURES = "distcp.ignore.failures";
   public static final String CONF_LABEL_PRESERVE_STATUS = "distcp.preserve.status";
+  public static final String CONF_LABEL_PRESERVE_RAWXATTRS =
+      "distcp.preserve.rawxattrs";
   public static final String CONF_LABEL_SYNC_FOLDERS = "distcp.sync.folders";
   public static final String CONF_LABEL_DELETE_MISSING = "distcp.delete.missing.source";
   public static final String CONF_LABEL_SSL_CONF = "distcp.keystore.resource";
@@ -128,4 +130,8 @@ public class DistCpConstants {
   public static final int MIN_RECORDS_PER_CHUNK_DEFAULT = 5;
   public static final int SPLIT_RATIO_DEFAULT  = 2;
 
+  /**
+   * Value of reserved raw HDFS directory when copying raw.* xattrs.
+   */
+  static final String HDFS_RESERVED_RAW_DIRECTORY_NAME = "/.reserved/raw";
 }

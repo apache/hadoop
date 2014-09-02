@@ -191,14 +191,19 @@ public class TestFSDirectory {
     existingXAttrs.add(xAttr1);
     existingXAttrs.add(xAttr2);
     
-    // Adding a system namespace xAttr, isn't affected by inode xAttrs limit.
-    XAttr newXAttr = (new XAttr.Builder()).setNameSpace(XAttr.NameSpace.SYSTEM).
+    // Adding system and raw namespace xAttrs aren't affected by inode
+    // xAttrs limit.
+    XAttr newSystemXAttr = (new XAttr.Builder()).
+        setNameSpace(XAttr.NameSpace.SYSTEM).setName("a3").
+        setValue(new byte[]{0x33, 0x33, 0x33}).build();
+    XAttr newRawXAttr = (new XAttr.Builder()).setNameSpace(XAttr.NameSpace.RAW).
         setName("a3").setValue(new byte[]{0x33, 0x33, 0x33}).build();
-    List<XAttr> newXAttrs = Lists.newArrayListWithCapacity(1);
-    newXAttrs.add(newXAttr);
+    List<XAttr> newXAttrs = Lists.newArrayListWithCapacity(2);
+    newXAttrs.add(newSystemXAttr);
+    newXAttrs.add(newRawXAttr);
     List<XAttr> xAttrs = fsdir.setINodeXAttrs(existingXAttrs, newXAttrs,
         EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
-    assertEquals(xAttrs.size(), 3);
+    assertEquals(xAttrs.size(), 4);
     
     // Adding a trusted namespace xAttr, is affected by inode xAttrs limit.
     XAttr newXAttr1 = (new XAttr.Builder()).setNameSpace(

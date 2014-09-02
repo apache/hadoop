@@ -19,6 +19,7 @@ package org.apache.hadoop.nfs.nfs3.request;
 
 import java.io.IOException;
 
+import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.oncrpc.XDR;
 
 /**
@@ -27,12 +28,25 @@ import org.apache.hadoop.oncrpc.XDR;
 public class RMDIR3Request extends RequestWithHandle {
   private final String name;
 
-  public RMDIR3Request(XDR xdr) throws IOException {
-    super(xdr);
-    name = xdr.readString();
+  public static RMDIR3Request deserialize(XDR xdr) throws IOException {
+    FileHandle handle = readHandle(xdr);
+    String name = xdr.readString();
+    return new RMDIR3Request(handle, name);
   }
 
+  public RMDIR3Request(FileHandle handle, String name) {
+    super(handle);
+    this.name = name;
+  }
+  
   public String getName() {
     return this.name;
+  }
+
+  @Override
+  public void serialize(XDR xdr) {
+    handle.serialize(xdr);
+    xdr.writeInt(name.getBytes().length);
+    xdr.writeFixedOpaque(name.getBytes());
   }
 }

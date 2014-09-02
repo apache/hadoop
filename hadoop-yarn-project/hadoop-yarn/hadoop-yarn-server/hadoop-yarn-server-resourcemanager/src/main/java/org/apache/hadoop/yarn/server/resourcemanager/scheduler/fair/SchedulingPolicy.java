@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -28,6 +24,10 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
+
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Public
 @Evolving
@@ -131,14 +131,29 @@ public abstract class SchedulingPolicy {
   public abstract Comparator<Schedulable> getComparator();
 
   /**
-   * Computes and updates the shares of {@link Schedulable}s as per the
-   * {@link SchedulingPolicy}, to be used later at schedule time.
+   * Computes and updates the shares of {@link Schedulable}s as per
+   * the {@link SchedulingPolicy}, to be used later for scheduling decisions.
+   * The shares computed are instantaneous and only consider queues with
+   * running applications.
    * 
    * @param schedulables {@link Schedulable}s whose shares are to be updated
    * @param totalResources Total {@link Resource}s in the cluster
    */
   public abstract void computeShares(
       Collection<? extends Schedulable> schedulables, Resource totalResources);
+
+  /**
+   * Computes and updates the steady shares of {@link FSQueue}s as per the
+   * {@link SchedulingPolicy}. The steady share does not differentiate
+   * between queues with and without running applications under them. The
+   * steady share is not used for scheduling, it is displayed on the Web UI
+   * for better visibility.
+   *
+   * @param queues {@link FSQueue}s whose shares are to be updated
+   * @param totalResources Total {@link Resource}s in the cluster
+   */
+  public abstract void computeSteadyShares(
+      Collection<? extends FSQueue> queues, Resource totalResources);
 
   /**
    * Check if the resource usage is over the fair share under this policy

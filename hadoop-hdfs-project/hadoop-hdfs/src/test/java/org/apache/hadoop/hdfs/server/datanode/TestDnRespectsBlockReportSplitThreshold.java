@@ -130,7 +130,7 @@ public class TestDnRespectsBlockReportSplitThreshold {
     ArgumentCaptor<StorageBlockReport[]> captor =
         ArgumentCaptor.forClass(StorageBlockReport[].class);
 
-    Mockito.verify(nnSpy, times(MiniDFSCluster.DIRS_PER_DATANODE)).blockReport(
+    Mockito.verify(nnSpy, times(cluster.getStoragesPerDatanode())).blockReport(
         any(DatanodeRegistration.class),
         anyString(),
         captor.capture());
@@ -167,7 +167,7 @@ public class TestDnRespectsBlockReportSplitThreshold {
         anyString(),
         captor.capture());
 
-    verifyCapturedArguments(captor, MiniDFSCluster.DIRS_PER_DATANODE, BLOCKS_IN_FILE);
+    verifyCapturedArguments(captor, cluster.getStoragesPerDatanode(), BLOCKS_IN_FILE);
   }
 
   /**
@@ -194,7 +194,7 @@ public class TestDnRespectsBlockReportSplitThreshold {
     ArgumentCaptor<StorageBlockReport[]> captor =
         ArgumentCaptor.forClass(StorageBlockReport[].class);
 
-    Mockito.verify(nnSpy, times(MiniDFSCluster.DIRS_PER_DATANODE)).blockReport(
+    Mockito.verify(nnSpy, times(cluster.getStoragesPerDatanode())).blockReport(
         any(DatanodeRegistration.class),
         anyString(),
         captor.capture());

@@ -65,10 +65,12 @@
       <item name="Service Level Authorization" href="hadoop-project-dist/hadoop-common/ServiceLevelAuth.html"/>
       <item name="HTTP Authentication" href="hadoop-project-dist/hadoop-common/HttpAuthentication.html"/>
       <item name="Hadoop KMS" href="hadoop-kms/index.html"/>
+      <item name="Tracing" href="hadoop-project-dist/hadoop-common/Tracing.html"/>
     </menu>
     
     <menu name="HDFS" inherit="top">
       <item name="HDFS User Guide" href="hadoop-project-dist/hadoop-hdfs/HdfsUserGuide.html"/>
+      <item name="HDFS Commands Reference" href="hadoop-project-dist/hadoop-hdfs/HDFSCommands.html"/>
       <item name="High Availability With QJM" href="hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithQJM.html"/>
       <item name="High Availability With NFS" href="hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithNFS.html"/>
       <item name="Federation" href="hadoop-project-dist/hadoop-hdfs/Federation.html"/>
@@ -89,11 +91,13 @@
       <item name="HDFS NFS Gateway" href="hadoop-project-dist/hadoop-hdfs/HdfsNfsGateway.html"/>
       <item name="HDFS Rolling Upgrade" href="hadoop-project-dist/hadoop-hdfs/HdfsRollingUpgrade.html"/>
       <item name="Extended Attributes" href="hadoop-project-dist/hadoop-hdfs/ExtendedAttributes.html"/>
+      <item name="Transparent Encryption" href="hadoop-project-dist/hadoop-hdfs/TransparentEncryption.html"/>
       <item name="HDFS Support for Multihoming" href="hadoop-project-dist/hadoop-hdfs/HdfsMultihoming.html"/>
     </menu>
 
     <menu name="MapReduce" inherit="top">
       <item name="MapReduce Tutorial" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduceTutorial.html"/>
+      <item name="MapReduce Commands Reference" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapredCommands.html"/>
       <item name="Compatibilty between Hadoop 1.x and Hadoop 2.x" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduce_Compatibility_Hadoop1_Hadoop2.html"/>
       <item name="Encrypted Shuffle" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/EncryptedShuffle.html"/>
       <item name="Pluggable Shuffle/Sort" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/PluggableShuffleAndPluggableSort.html"/>
@@ -140,6 +144,7 @@
       <item name="Common CHANGES.txt" href="hadoop-project-dist/hadoop-common/CHANGES.txt"/>
       <item name="HDFS CHANGES.txt" href="hadoop-project-dist/hadoop-hdfs/CHANGES.txt"/>
       <item name="MapReduce CHANGES.txt" href="hadoop-project-dist/hadoop-mapreduce/CHANGES.txt"/>
+      <item name="YARN CHANGES.txt" href="hadoop-project-dist/hadoop-yarn/CHANGES.txt"/>
       <item name="Metrics" href="hadoop-project-dist/hadoop-common/Metrics.html"/>
     </menu>
     

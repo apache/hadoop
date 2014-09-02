@@ -17,13 +17,30 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.io.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.File;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.Random;
+
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.mapreduce.MRConfig;
 
-import junit.framework.TestCase;
-import java.io.*;
-import java.util.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 
 /**
  * Two different types of comparators can be used in MapReduce. One is used
@@ -37,8 +54,11 @@ import java.util.*;
  * 2. Test the common use case where values are grouped by keys but values 
  * within each key are grouped by a secondary key (a timestamp, for example). 
  */
-public class TestComparators extends TestCase 
-{
+public class TestComparators {
+  private static final File TEST_DIR = new File(
+      System.getProperty("test.build.data",
+          System.getProperty("java.io.tmpdir")), "TestComparators-mapred");
+
   JobConf conf = new JobConf(TestMapOutputType.class);
   JobClient jc;
   static Random rng = new Random();
@@ -292,9 +312,9 @@ public class TestComparators extends TestCase
     }
   }
 
-
+  @Before
   public void configure() throws Exception {
-    Path testdir = new Path("build/test/test.mapred.spill");
+    Path testdir = new Path(TEST_DIR.getAbsolutePath());
     Path inDir = new Path(testdir, "in");
     Path outDir = new Path(testdir, "out");
     FileSystem fs = FileSystem.get(conf);
@@ -334,14 +354,18 @@ public class TestComparators extends TestCase
     
     jc = new JobClient(conf);
   }
-  
+
+  @After
+  public void cleanup() {
+    FileUtil.fullyDelete(TEST_DIR);
+  }
   /**
    * Test the default comparator for Map/Reduce. 
    * Use the identity mapper and see if the keys are sorted at the end
    * @throws Exception
    */
-  public void testDefaultMRComparator() throws Exception { 
-    configure();
+  @Test
+  public void testDefaultMRComparator() throws Exception {
     conf.setMapperClass(IdentityMapper.class);
     conf.setReducerClass(AscendingKeysReducer.class);
     
@@ -361,8 +385,8 @@ public class TestComparators extends TestCase
    * comparator. Keys should be sorted in reverse order in the reducer. 
    * @throws Exception
    */
-  public void testUserMRComparator() throws Exception { 
-    configure();
+  @Test
+  public void testUserMRComparator() throws Exception {
     conf.setMapperClass(IdentityMapper.class);
     conf.setReducerClass(DescendingKeysReducer.class);
     conf.setOutputKeyComparatorClass(DecreasingIntComparator.class);
@@ -384,8 +408,8 @@ public class TestComparators extends TestCase
    * values for a key should be sorted by the 'timestamp'. 
    * @throws Exception
    */
-  public void testUserValueGroupingComparator() throws Exception { 
-    configure();
+  @Test
+  public void testUserValueGroupingComparator() throws Exception {
     conf.setMapperClass(RandomGenMapper.class);
     conf.setReducerClass(AscendingGroupReducer.class);
     conf.setOutputValueGroupingComparator(CompositeIntGroupFn.class);
@@ -409,8 +433,8 @@ public class TestComparators extends TestCase
    * order. This lets us make sure that the right comparators are used. 
    * @throws Exception
    */
-  public void testAllUserComparators() throws Exception { 
-    configure();
+  @Test
+  public void testAllUserComparators() throws Exception {
     conf.setMapperClass(RandomGenMapper.class);
     // use a decreasing comparator so keys are sorted in reverse order
     conf.setOutputKeyComparatorClass(DecreasingIntComparator.class);
@@ -430,6 +454,7 @@ public class TestComparators extends TestCase
    * Test a user comparator that relies on deserializing both arguments
    * for each compare.
    */
+  @Test
   public void testBakedUserComparator() throws Exception {
     MyWritable a = new MyWritable(8, 8);
     MyWritable b = new MyWritable(7, 9);

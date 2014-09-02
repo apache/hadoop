@@ -382,7 +382,7 @@ public class TestQJMWithFaults {
     }
 
     @Override
-    protected ExecutorService createExecutor() {
+    protected ExecutorService createSingleThreadExecutor() {
       return MoreExecutors.sameThreadExecutor();
     }
   }

@@ -106,6 +106,15 @@
        <Field name="metrics" />
        <Bug pattern="IS2_INCONSISTENT_SYNC" />
      </Match>
+    <!--
+     We use a separate lock to protect modifications to journalSet so that
+     FSEditLog#selectInputStreams does not need to be a synchronized method.
+    -->
+    <Match>
+        <Class name="org.apache.hadoop.hdfs.server.namenode.FSEditLog" />
+        <Field name="journalSet" />
+        <Bug pattern="IS2_INCONSISTENT_SYNC" />
+    </Match>
      <!--
       This method isn't performance-critical and is much clearer to write as it's written.
       -->

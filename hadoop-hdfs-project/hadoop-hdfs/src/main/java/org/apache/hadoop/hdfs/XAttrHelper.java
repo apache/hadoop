@@ -49,9 +49,9 @@ public class XAttrHelper {
     Preconditions.checkNotNull(name, "XAttr name cannot be null.");
     
     final int prefixIndex = name.indexOf(".");
-    if (prefixIndex < 4) {// Prefix length is at least 4.
+    if (prefixIndex < 3) {// Prefix length is at least 3.
       throw new HadoopIllegalArgumentException("An XAttr name must be " +
-          "prefixed with user/trusted/security/system, followed by a '.'");
+          "prefixed with user/trusted/security/system/raw, followed by a '.'");
     } else if (prefixIndex == name.length() - 1) {
       throw new HadoopIllegalArgumentException("XAttr name cannot be empty.");
     }
@@ -66,9 +66,11 @@ public class XAttrHelper {
       ns = NameSpace.SYSTEM;
     } else if (prefix.equals(NameSpace.SECURITY.toString().toLowerCase())) {
       ns = NameSpace.SECURITY;
+    } else if (prefix.equals(NameSpace.RAW.toString().toLowerCase())) {
+      ns = NameSpace.RAW;
     } else {
       throw new HadoopIllegalArgumentException("An XAttr name must be " +
-          "prefixed with user/trusted/security/system, followed by a '.'");
+          "prefixed with user/trusted/security/system/raw, followed by a '.'");
     }
     XAttr xAttr = (new XAttr.Builder()).setNameSpace(ns).setName(name.
         substring(prefixIndex + 1)).setValue(value).build();

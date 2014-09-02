@@ -54,7 +54,9 @@ public abstract class KeyProvider {
   public static final String DEFAULT_CIPHER = "AES/CTR/NoPadding";
   public static final String DEFAULT_BITLENGTH_NAME =
       "hadoop.security.key.default.bitlength";
-  public static final int DEFAULT_BITLENGTH = 256;
+  public static final int DEFAULT_BITLENGTH = 128;
+
+  private final Configuration conf;
 
   /**
    * The combination of both the key version name and the key material.
@@ -341,8 +343,36 @@ public abstract class KeyProvider {
     public Map<String, String> getAttributes() {
       return (attributes == null) ? Collections.EMPTY_MAP : attributes;
     }
+
+    @Override
+    public String toString() {
+      return "Options{" +
+          "cipher='" + cipher + '\'' +
+          ", bitLength=" + bitLength +
+          ", description='" + description + '\'' +
+          ", attributes=" + attributes +
+          '}';
+    }
   }
 
+  /**
+   * Constructor.
+   * 
+   * @param conf configuration for the provider
+   */
+  public KeyProvider(Configuration conf) {
+    this.conf = new Configuration(conf);
+  }
+
+  /**
+   * Return the provider configuration.
+   * 
+   * @return the provider configuration
+   */
+  public Configuration getConf() {
+    return conf;
+  }
+  
   /**
    * A helper function to create an options object.
    * @param conf the configuration to use

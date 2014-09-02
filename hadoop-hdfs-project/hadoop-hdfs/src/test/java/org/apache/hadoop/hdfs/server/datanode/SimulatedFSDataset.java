@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -1083,6 +1084,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
+  public void addVolumes(Collection<StorageLocation> volumes) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public DatanodeStorage getStorage(final String storageUuid) {
     return storageUuid.equals(storage.getStorageUuid()) ?
         storage.dnStorage :
@@ -1111,6 +1117,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
   @Override
   public FsVolumeSpi getVolume(ExtendedBlock b) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public synchronized void removeVolumes(Collection<StorageLocation> volumes) {
     throw new UnsupportedOperationException();
   }
 

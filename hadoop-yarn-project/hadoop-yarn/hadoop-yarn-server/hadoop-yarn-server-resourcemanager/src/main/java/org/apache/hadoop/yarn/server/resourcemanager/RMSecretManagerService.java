@@ -60,7 +60,7 @@ public class RMSecretManagerService extends AbstractService {
     clientToAMSecretManager = createClientToAMTokenSecretManager();
     rmContext.setClientToAMTokenSecretManager(clientToAMSecretManager);
 
-    amRmTokenSecretManager = createAMRMTokenSecretManager(conf);
+    amRmTokenSecretManager = createAMRMTokenSecretManager(conf, this.rmContext);
     rmContext.setAMRMTokenSecretManager(amRmTokenSecretManager);
 
     rmDTSecretManager =
@@ -115,8 +115,8 @@ public class RMSecretManagerService extends AbstractService {
   }
 
   protected AMRMTokenSecretManager createAMRMTokenSecretManager(
-      Configuration conf) {
-    return new AMRMTokenSecretManager(conf);
+      Configuration conf, RMContext rmContext) {
+    return new AMRMTokenSecretManager(conf, rmContext);
   }
 
   protected ClientToAMTokenSecretManagerInRM createClientToAMTokenSecretManager() {

@@ -34,9 +34,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -54,6 +56,7 @@ import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.HealthCheckFailedException;
@@ -64,6 +67,8 @@ import org.apache.hadoop.ha.protocolPB.HAServiceProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
+import org.apache.hadoop.hdfs.inotify.Event;
+import org.apache.hadoop.hdfs.inotify.EventsList;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -76,6 +81,7 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.EncryptionZoneWithId;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSLimitException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -115,6 +121,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.FinalizeCommand;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
@@ -533,7 +540,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public HdfsFileStatus create(String src, FsPermission masked,
       String clientName, EnumSetWritable<CreateFlag> flag,
-      boolean createParent, short replication, long blockSize)
+      boolean createParent, short replication, long blockSize, 
+      List<CipherSuite> cipherSuites)
       throws IOException {
     String clientMachine = getClientMachine();
     if (stateChangeLog.isDebugEnabled()) {
@@ -547,7 +555,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     HdfsFileStatus fileStatus = namesystem.startFile(src, new PermissionStatus(
         getRemoteUser().getShortUserName(), null, masked),
         clientName, clientMachine, flag.get(), createParent, replication,
-        blockSize);
+        blockSize, cipherSuites);
     metrics.incrFilesCreated();
     metrics.incrCreateFileOps();
     return fileStatus;
@@ -830,11 +838,23 @@ class NameNodeRpcServer implements NamenodeProtocols {
   throws IOException {
     DatanodeInfo results[] = namesystem.datanodeReport(type);
     if (results == null ) {
-      throw new IOException("Cannot find datanode report");
+      throw new IOException("Failed to get datanode report for " + type
+          + " datanodes.");
     }
     return results;
   }
     
+  @Override // ClientProtocol
+  public DatanodeStorageReport[] getDatanodeStorageReport(
+      DatanodeReportType type) throws IOException {
+    final DatanodeStorageReport[] reports = namesystem.getDatanodeStorageReport(type);
+    if (reports == null ) {
+      throw new IOException("Failed to get datanode storage report for " + type
+          + " datanodes.");
+    }
+    return reports;
+  }
+
   @Override // ClientProtocol
   public boolean setSafeMode(SafeModeAction action, boolean isChecked)
       throws IOException {
@@ -1051,11 +1071,12 @@ class NameNodeRpcServer implements NamenodeProtocols {
       // for the same node and storage, so the value returned by the last
       // call of this loop is the final updated value for noStaleStorage.
       //
-      noStaleStorages = bm.processReport(nodeReg, r.getStorage(), poolId, blocks);
+      noStaleStorages = bm.processReport(nodeReg, r.getStorage(), blocks);
       metrics.incrStorageBlockReportOps();
     }
 
     if (nn.getFSImage().isUpgradeFinalized() &&
+        !namesystem.isRollingUpgrade() &&
         !nn.isStandbyState() &&
         noStaleStorages) {
       return new FinalizeCommand(poolId);
@@ -1087,7 +1108,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
           +" blocks.");
     }
     for(StorageReceivedDeletedBlocks r : receivedAndDeletedBlocks) {
-      namesystem.processIncrementalBlockReport(nodeReg, poolId, r);
+      namesystem.processIncrementalBlockReport(nodeReg, r);
     }
   }
 
@@ -1410,6 +1431,24 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
   
   @Override
+  public void createEncryptionZone(String src, String keyName)
+    throws IOException {
+    namesystem.createEncryptionZone(src, keyName);
+  }
+
+  @Override
+  public EncryptionZoneWithId getEZForPath(String src)
+    throws IOException {
+    return namesystem.getEZForPath(src);
+  }
+
+  @Override
+  public BatchedEntries<EncryptionZoneWithId> listEncryptionZones(
+      long prevId) throws IOException {
+    return namesystem.listEncryptionZones(prevId);
+  }
+
+  @Override
   public void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag)
       throws IOException {
     namesystem.setXAttr(src, xAttr, flag);
@@ -1429,6 +1468,122 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override
   public void removeXAttr(String src, XAttr xAttr) throws IOException {
     namesystem.removeXAttr(src, xAttr);
+  }
+
+  @Override
+  public void checkAccess(String path, FsAction mode) throws IOException {
+    namesystem.checkAccess(path, mode);
+  }
+
+  @Override // ClientProtocol
+  public long getCurrentEditLogTxid() throws IOException {
+    namesystem.checkOperation(OperationCategory.READ); // only active
+    namesystem.checkSuperuserPrivilege();
+    // if it's not yet open for write, we may be in the process of transitioning
+    // from standby to active and may not yet know what the latest committed
+    // txid is
+    return namesystem.getEditLog().isOpenForWrite() ?
+        namesystem.getEditLog().getLastWrittenTxId() : -1;
+  }
+
+  private static FSEditLogOp readOp(EditLogInputStream elis)
+      throws IOException {
+    try {
+      return elis.readOp();
+      // we can get the below two exceptions if a segment is deleted
+      // (because we have accumulated too many edits) or (for the local journal/
+      // no-QJM case only) if a in-progress segment is finalized under us ...
+      // no need to throw an exception back to the client in this case
+    } catch (FileNotFoundException e) {
+      LOG.debug("Tried to read from deleted or moved edit log segment", e);
+      return null;
+    } catch (TransferFsImage.HttpGetFailedException e) {
+      LOG.debug("Tried to read from deleted edit log segment", e);
+      return null;
+    }
+  }
+
+  @Override // ClientProtocol
+  public EventsList getEditsFromTxid(long txid) throws IOException {
+    namesystem.checkOperation(OperationCategory.READ); // only active
+    namesystem.checkSuperuserPrivilege();
+    int maxEventsPerRPC = nn.conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_INOTIFY_MAX_EVENTS_PER_RPC_KEY,
+        DFSConfigKeys.DFS_NAMENODE_INOTIFY_MAX_EVENTS_PER_RPC_DEFAULT);
+    FSEditLog log = namesystem.getFSImage().getEditLog();
+    long syncTxid = log.getSyncTxId();
+    // If we haven't synced anything yet, we can only read finalized
+    // segments since we can't reliably determine which txns in in-progress
+    // segments have actually been committed (e.g. written to a quorum of JNs).
+    // If we have synced txns, we can definitely read up to syncTxid since
+    // syncTxid is only updated after a transaction is committed to all
+    // journals. (In-progress segments written by old writers are already
+    // discarded for us, so if we read any in-progress segments they are
+    // guaranteed to have been written by this NameNode.)
+    boolean readInProgress = syncTxid > 0;
+
+    List<Event> events = Lists.newArrayList();
+    long maxSeenTxid = -1;
+    long firstSeenTxid = -1;
+
+    if (syncTxid > 0 && txid > syncTxid) {
+      // we can't read past syncTxid, so there's no point in going any further
+      return new EventsList(events, firstSeenTxid, maxSeenTxid, syncTxid);
+    }
+
+    Collection<EditLogInputStream> streams = null;
+    try {
+      streams = log.selectInputStreams(txid, 0, null, readInProgress);
+    } catch (IllegalStateException e) { // can happen if we have
+      // transitioned out of active and haven't yet transitioned to standby
+      // and are using QJM -- the edit log will be closed and this exception
+      // will result
+      LOG.info("NN is transitioning from active to standby and FSEditLog " +
+      "is closed -- could not read edits");
+      return new EventsList(events, firstSeenTxid, maxSeenTxid, syncTxid);
+    }
+
+    boolean breakOuter = false;
+    for (EditLogInputStream elis : streams) {
+      // our assumption in this code is the EditLogInputStreams are ordered by
+      // starting txid
+      try {
+        FSEditLogOp op = null;
+        while ((op = readOp(elis)) != null) {
+          // break out of here in the unlikely event that syncTxid is so
+          // out of date that its segment has already been deleted, so the first
+          // txid we get is greater than syncTxid
+          if (syncTxid > 0 && op.getTransactionId() > syncTxid) {
+            breakOuter = true;
+            break;
+          }
+
+          Event[] eventsFromOp = InotifyFSEditLogOpTranslator.translate(op);
+          if (eventsFromOp != null) {
+            events.addAll(Arrays.asList(eventsFromOp));
+          }
+          if (op.getTransactionId() > maxSeenTxid) {
+            maxSeenTxid = op.getTransactionId();
+          }
+          if (firstSeenTxid == -1) {
+            firstSeenTxid = op.getTransactionId();
+          }
+          if (events.size() >= maxEventsPerRPC || (syncTxid > 0 &&
+              op.getTransactionId() == syncTxid)) {
+            // we're done
+            breakOuter = true;
+            break;
+          }
+        }
+      } finally {
+        elis.close();
+      }
+      if (breakOuter) {
+        break;
+      }
+    }
+
+    return new EventsList(events, firstSeenTxid, maxSeenTxid, syncTxid);
   }
 }
 

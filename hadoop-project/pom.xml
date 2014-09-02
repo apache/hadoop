@@ -61,12 +61,17 @@
     <!-- jersey version -->
     <jersey.version>1.9</jersey.version>
 
+    <!-- jackson version -->
+    <jackson.version>1.9.13</jackson.version>
+
     <!-- ProtocolBuffer version, used to verify the protoc version and -->
     <!-- define the protobuf JAR version                               -->
     <protobuf.version>2.5.0</protobuf.version>
     <protoc.path>${env.HADOOP_PROTOC_PATH}</protoc.path>
 
     <zookeeper.version>3.4.6</zookeeper.version>
+
+    <tomcat.version>6.0.41</tomcat.version>
   </properties>
 
   <dependencyManagement>
@@ -101,6 +106,12 @@
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-auth</artifactId>
         <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-auth</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
@@ -393,6 +404,16 @@
         <version>6.1.26</version>
       </dependency>
       <dependency>
+        <groupId>org.apache.tomcat.embed</groupId>
+        <artifactId>tomcat-embed-core</artifactId>
+        <version>7.0.55</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.tomcat.embed</groupId>
+        <artifactId>tomcat-embed-logging-juli</artifactId>
+        <version>7.0.55</version>
+      </dependency>
+      <dependency>
         <groupId>javax.servlet.jsp</groupId>
         <artifactId>jsp-api</artifactId>
         <version>2.1</version>
@@ -552,6 +573,11 @@
         <version>0.9.0</version>
       </dependency>
       <dependency>
+        <groupId>com.amazonaws</groupId>
+        <artifactId>aws-java-sdk</artifactId>
+        <version>1.7.2</version>
+      </dependency>
+      <dependency>
         <groupId>org.apache.mina</groupId>
         <artifactId>mina-core</artifactId>
         <version>2.0.0-M5</version>
@@ -619,22 +645,22 @@
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-mapper-asl</artifactId>
-        <version>1.9.13</version>
+        <version>${jackson.version}</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-core-asl</artifactId>
-        <version>1.9.13</version>
+        <version>${jackson.version}</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-jaxrs</artifactId>
-        <version>1.9.13</version>
+        <version>${jackson.version}</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-xc</artifactId>
-        <version>1.9.13</version>
+        <version>${jackson.version}</version>
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
@@ -670,6 +696,11 @@
         <groupId>com.jcraft</groupId>
         <artifactId>jsch</artifactId>
         <version>0.1.42</version>
+      </dependency>
+      <dependency>
+        <groupId>org.htrace</groupId>
+        <artifactId>htrace-core</artifactId>
+        <version>3.0.4</version>
       </dependency>
       <dependency>
         <groupId>org.jdom</groupId>
@@ -789,7 +820,13 @@
         <groupId>com.microsoft.windowsazure.storage</groupId>
         <artifactId>microsoft-windowsazure-storage-sdk</artifactId>
         <version>0.6.0</version>
-    </dependency>
+     </dependency>
+
+     <dependency>
+       <groupId>xerces</groupId>
+       <artifactId>xercesImpl</artifactId>
+       <version>2.9.1</version>
+     </dependency>
       
     </dependencies>
   </dependencyManagement>
@@ -1036,6 +1073,7 @@
         <!-- attempt to open a file at this path. -->
         <java.security.egd>file:/dev/urandom</java.security.egd>
         <bundle.snappy.in.bin>true</bundle.snappy.in.bin>
+        <bundle.openssl.in.bin>true</bundle.openssl.in.bin>
       </properties>
       <build>
         <plugins>
@@ -1046,6 +1084,7 @@
               <environmentVariables>
                 <!-- Specify where to look for the native DLL on Windows -->
                 <PATH>${env.PATH};${hadoop.common.build.dir}/bin;${snappy.lib}</PATH>
+                <PATH>${env.PATH};${hadoop.common.build.dir}/bin;${openssl.lib}</PATH>
               </environmentVariables>
             </configuration>
           </plugin>

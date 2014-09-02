@@ -85,6 +85,7 @@ message AllocateResponseProto {
   repeated NMTokenProto nm_tokens = 9;
   repeated ContainerResourceIncreaseProto increased_containers = 10;
   repeated ContainerResourceDecreaseProto decreased_containers = 11;
+  optional hadoop.common.TokenProto am_rm_token = 12;
 }
 
 //////////////////////////////////////////////////////

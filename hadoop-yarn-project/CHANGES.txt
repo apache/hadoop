@@ -18,6 +18,8 @@ Trunk - Unreleased
     YARN-2216 TestRMApplicationHistoryWriter sometimes fails in trunk.
     (Zhijie Shen via xgong)
 
+    YARN-2436. [post-HADOOP-9902] yarn application help doesn't work (aw)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -35,7 +37,37 @@ Release 2.6.0 - UNRELEASED
     YARN-2181. Added preemption info to logs and RM web UI. (Wangda Tan via
     jianhe)
 
+    YARN-1354. Recover applications upon nodemanager restart. (Jason Lowe via 
+    junping_du)
+
+    YARN-1337. Recover containers upon nodemanager restart. (Jason Lowe via 
+    junping_du)
+
+    YARN-2277. Added cross-origin support for the timeline server web services.
+    (Jonathan Eagles via zjshen)
+
+    YARN-2378. Added support for moving applications across queues in
+    CapacityScheduler. (Subramaniam Venkatraman Krishnan via jianhe)
+
+    YARN-2411. Support simple user and group mappings to queues. (Ram Venkatesh
+    via jianhe)
+
+    YARN-2174. Enable HTTPs for the writer REST API of TimelineServer.
+    (Zhijie Shen via jianhe)
+
+    YARN-2393. FairScheduler: Add the notion of steady fair share. 
+    (Wei Yan via kasha)
+
+    YARN-2395. FairScheduler: Preemption timeout should be configurable per 
+    queue. (Wei Yan via kasha)
+
   IMPROVEMENTS
+
+    YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc
+      (Akira AJISAKA via aw)
+
+    YARN-1918. Typo in description and error message for
+      'yarn.resourcemanager.cluster-id' (Anandha L Ranganathan via aw)
 
     YARN-2242. Improve exception information on AM launch crashes. (Li Lu 
     via junping_du)
@@ -64,6 +96,81 @@ Release 2.6.0 - UNRELEASED
 
     YARN-1342. Recover container tokens upon nodemanager restart. (Jason Lowe via
     devaraj)
+
+    YARN-2214. FairScheduler: preemptContainerPreCheck() in FSParentQueue delays 
+    convergence towards fairness. (Ashwin Shankar via kasha)
+
+    YARN-2211. Persist AMRMToken master key in RMStateStore for RM recovery.
+    (Xuan Gong via jianhe)
+
+    YARN-2328. FairScheduler: Verify update and continuous scheduling threads are
+    stopped when the scheduler is stopped. (kasha)
+
+    YARN-2347. Consolidated RMStateVersion and NMDBSchemaVersion into Version in
+    yarn-server-common. (Junping Du via zjshen)
+
+    YARN-1994. Expose YARN/MR endpoints on multiple interfaces. (Craig Welch,
+    Milan Potocnik, Arpit Agarwal via xgong)
+
+    YARN-2343. Improve NMToken expire exception message. (Li Lu via jianhe)
+
+    YARN-2370. Fix comment in o.a.h.y.server.resourcemanager.schedulerAppSchedulingInfo 
+    (Wenwu Peng via junping_du)
+
+    YARN-2298. Move TimelineClient to yarn-common project (Zhijie Shen via 
+    junping_du)
+
+    YARN-2288. Made persisted data in LevelDB timeline store be versioned. (Junping Du
+    via zjshen)
+
+    YARN-2352. FairScheduler: Collect metrics on duration of critical methods that 
+    affect performance. (kasha)
+
+    YARN-2212. ApplicationMaster needs to find a way to update the AMRMToken
+    periodically. (xgong)
+
+    YARN-2026. Fair scheduler: Consider only active queues for computing fairshare. 
+    (Ashwin Shankar via kasha)
+
+    YARN-1954. Added waitFor to AMRMClient(Async). (Tsuyoshi Ozawa via zjshen)
+
+    YARN-2302. Refactor TimelineWebServices. (Zhijie Shen via junping_du)
+
+    YARN-2337. ResourceManager sets ClientRMService in RMContext multiple times.
+    (Zhihai Xu via kasha)
+
+    YARN-2138. Cleaned up notifyDone* APIs in RMStateStore. (Varun Saxena via
+    jianhe)
+
+    YARN-2373. Changed WebAppUtils to use Configuration#getPassword for
+    accessing SSL passwords. (Larry McCay via jianhe)
+
+    YARN-2317. Updated the document about how to write YARN applications. (Li Lu via
+    zjshen)
+
+    YARN-2399. FairScheduler: Merge AppSchedulable and FSSchedulerApp into 
+    FSAppAttempt. (kasha)
+
+    YARN-1370. Fair scheduler to re-populate container allocation state. 
+    (Anubhav Dhoot via kasha)
+
+    YARN-2389. Added functionality for schedulers to kill all applications in a
+    queue. (Subramaniam Venkatraman Krishnan via jianhe)
+
+    YARN-1326. RM should log using RMStore at startup time. 
+    (Tsuyoshi Ozawa via kasha)
+
+    YARN-2182. Updated ContainerId#toString() to append RM Epoch number.
+    (Tsuyoshi OZAWA via jianhe)
+
+    YARN-2406. Move RM recovery related proto to
+    yarn_server_resourcemanager_recovery.proto. (Tsuyoshi Ozawa via jianhe)
+
+    YARN-2360. Fair Scheduler: Display dynamic fair share for queues on the 
+    scheduler page. (Ashwin Shankar and Wei Yan via kasha)
+
+    YARN-1506. Changed RMNode/SchedulerNode to update resource with event
+    notification. (Junping Du via jianhe)
 
   OPTIMIZATIONS
 
@@ -100,7 +207,84 @@ Release 2.6.0 - UNRELEASED
     YARN-2147. client lacks delegation token exception details when
     application submit fails (Chen He via jlowe)
 
-Release 2.5.0 - UNRELEASED
+    YARN-1796. container-executor shouldn't require o-r permissions (atm)
+
+    YARN-2354. DistributedShell may allocate more containers than client
+    specified after AM restarts. (Li Lu via jianhe)
+
+    YARN-2051. Fix bug in PBimpls and add more unit tests with reflection. 
+    (Binglin Chang via junping_du)
+
+    YARN-2374. Fixed TestDistributedShell#testDSShell failure due to hostname
+    dismatch. (Varun Vasudev via jianhe)
+
+    YARN-2359. Application hangs when it fails to launch AM container. 
+    (Zhihai Xu via kasha)
+
+    YARN-2388. Fixed TestTimelineWebServices failure due to HADOOP-10791. (zjshen)
+
+    YARN-2008. Fixed CapacityScheduler to calculate headroom based on max available
+    capacity instead of configured max capacity. (Craig Welch via jianhe)
+
+    YARN-2400. Fixed TestAMRestart fails intermittently. (Jian He via xgong)
+
+    YARN-2361. RMAppAttempt state machine entries for KILLED state has duplicate
+    event entries. (Zhihai Xu via kasha)
+
+    YARN-2070. Made DistributedShell publish the short user name to the timeline
+    server. (Robert Kanter via zjshen)
+
+    YARN-2397. Avoided loading two authentication filters for RM and TS web
+    interfaces. (Varun Vasudev via zjshen)
+
+    YARN-2409. RM ActiveToStandBy transition missing stoping previous rmDispatcher.
+    (Rohith via jianhe)
+
+    YARN-2249. Avoided AM release requests being lost on work preserving RM
+    restart. (Jian He via zjshen)
+
+    YARN-2034. Description for yarn.nodemanager.localizer.cache.target-size-mb
+    is incorrect (Chen He via jlowe)
+
+    YARN-1919. Potential NPE in EmbeddedElectorService#stop. 
+    (Tsuyoshi Ozawa via kasha)
+
+    YARN-2424. LCE should support non-cgroups, non-secure mode (Chris Douglas 
+    via aw)
+
+    YARN-2434. RM should not recover containers from previously failed attempt
+    when AM restart is not enabled (Jian He via jlowe)
+
+    YARN-2035. FileSystemApplicationHistoryStore should not make working dir
+    when it already exists. (Jonathan Eagles via zjshen)
+
+    YARN-2405. NPE in FairSchedulerAppsBlock. (Tsuyoshi Ozawa via kasha)
+
+    YARN-2449. Fixed the bug that TimelineAuthenticationFilterInitializer
+    is not automatically added when hadoop.http.filter.initializers is not
+    configured. (Varun Vasudev via zjshen)
+
+    YARN-2450. Fix typos in log messages. (Ray Chiang via hitesh)
+
+    YARN-2447. RM web service app submission doesn't pass secrets correctly.
+    (Varun Vasudev via jianhe)
+
+    YARN-2462. TestNodeManagerResync#testBlockNewContainerRequestsOnStartAndResync
+    should have a test timeout (Eric Payne via jlowe)
+
+Release 2.5.1 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES
 
@@ -138,6 +322,9 @@ Release 2.5.0 - UNRELEASED
 
     YARN-2233. Implemented ResourceManager web-services to create, renew and
     cancel delegation tokens. (Varun Vasudev via vinodkv)
+
+    YARN-2247. Made RM web services authenticate users via kerberos and delegation
+    token. (Varun Vasudev via zjshen)
 
   IMPROVEMENTS
 
@@ -435,6 +622,11 @@ Release 2.5.0 - UNRELEASED
 
     YARN-2319. Made the MiniKdc instance start/close before/after the class of
     TestRMWebServicesDelegationTokens. (Wenwu Peng via zjshen)
+
+    YARN-2335. Annotate all hadoop-sls APIs as @Private. (Wei Yan via kasha)
+
+    YARN-1726. ResourceSchedulerWrapper broken due to AbstractYarnScheduler. 
+    (Wei Yan via kasha)
 
 Release 2.4.1 - 2014-06-23 
 

@@ -27,7 +27,10 @@ import java.util.Collection;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.lib.StaticUserWebFilter;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -39,8 +42,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
+import org.apache.hadoop.yarn.server.security.http.RMAuthenticationFilterInitializer;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -231,6 +236,77 @@ public class TestResourceManager {
       if (!e.getMessage().startsWith("Nodemanager expiry interval should be no"
           + " less than heartbeat interval")) {
         throw e;
+      }
+    }
+  }
+
+  @Test(timeout = 50000)
+  public void testFilterOverrides() throws Exception {
+    String filterInitializerConfKey = "hadoop.http.filter.initializers";
+    String[] filterInitializers =
+        {
+            AuthenticationFilterInitializer.class.getName(),
+            RMAuthenticationFilterInitializer.class.getName(),
+            AuthenticationFilterInitializer.class.getName() + ","
+                + RMAuthenticationFilterInitializer.class.getName(),
+            AuthenticationFilterInitializer.class.getName() + ", "
+                + RMAuthenticationFilterInitializer.class.getName(),
+            AuthenticationFilterInitializer.class.getName() + ", "
+                + this.getClass().getName() };
+    for (String filterInitializer : filterInitializers) {
+      resourceManager = new ResourceManager();
+      Configuration conf = new YarnConfiguration();
+      conf.set(filterInitializerConfKey, filterInitializer);
+      conf.set("hadoop.security.authentication", "kerberos");
+      conf.set("hadoop.http.authentication.type", "kerberos");
+      try {
+        try {
+          UserGroupInformation.setConfiguration(conf);
+        } catch (Exception e) {
+          // ignore we just care about getting true for
+          // isSecurityEnabled()
+          LOG.info("Got expected exception");
+        }
+        resourceManager.init(conf);
+        resourceManager.startWepApp();
+      } catch (RuntimeException e) {
+        // Exceptions are expected because we didn't setup everything
+        // just want to test filter settings
+        String tmp = resourceManager.getConfig().get(filterInitializerConfKey);
+        if (filterInitializer.contains(this.getClass().getName())) {
+          Assert.assertEquals(RMAuthenticationFilterInitializer.class.getName()
+              + "," + this.getClass().getName(), tmp);
+        } else {
+          Assert.assertEquals(
+            RMAuthenticationFilterInitializer.class.getName(), tmp);
+        }
+        resourceManager.stop();
+      }
+    }
+
+    // simple mode overrides
+    String[] simpleFilterInitializers =
+        { "", StaticUserWebFilter.class.getName() };
+    for (String filterInitializer : simpleFilterInitializers) {
+      resourceManager = new ResourceManager();
+      Configuration conf = new YarnConfiguration();
+      conf.set(filterInitializerConfKey, filterInitializer);
+      try {
+        UserGroupInformation.setConfiguration(conf);
+        resourceManager.init(conf);
+        resourceManager.startWepApp();
+      } catch (RuntimeException e) {
+        // Exceptions are expected because we didn't setup everything
+        // just want to test filter settings
+        String tmp = resourceManager.getConfig().get(filterInitializerConfKey);
+        if (filterInitializer.equals(StaticUserWebFilter.class.getName())) {
+          Assert.assertEquals(RMAuthenticationFilterInitializer.class.getName()
+              + "," + StaticUserWebFilter.class.getName(), tmp);
+        } else {
+          Assert.assertEquals(
+            RMAuthenticationFilterInitializer.class.getName(), tmp);
+        }
+        resourceManager.stop();
       }
     }
   }

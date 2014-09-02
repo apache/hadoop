@@ -38,6 +38,10 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.records.MasterKey;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.AMRMTokenSecretManagerState;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -66,6 +70,7 @@ public class AMRMTokenSecretManager extends
   private final Timer timer;
   private final long rollingInterval;
   private final long activationDelay;
+  private RMContext rmContext;
 
   private final Set<ApplicationAttemptId> appAttemptSet =
       new HashSet<ApplicationAttemptId>();
@@ -73,7 +78,8 @@ public class AMRMTokenSecretManager extends
   /**
    * Create an {@link AMRMTokenSecretManager}
    */
-  public AMRMTokenSecretManager(Configuration conf) {
+  public AMRMTokenSecretManager(Configuration conf, RMContext rmContext) {
+    this.rmContext = rmContext;
     this.timer = new Timer();
     this.rollingInterval =
         conf
@@ -98,6 +104,11 @@ public class AMRMTokenSecretManager extends
   public void start() {
     if (this.currentMasterKey == null) {
       this.currentMasterKey = createNewMasterKey();
+      AMRMTokenSecretManagerState state =
+          AMRMTokenSecretManagerState.newInstance(
+            this.currentMasterKey.getMasterKey(), null);
+      rmContext.getStateStore().storeOrUpdateAMRMTokenSecretManagerState(state,
+        false);
     }
     this.timer.scheduleAtFixedRate(new MasterKeyRoller(), rollingInterval,
       rollingInterval);
@@ -130,6 +141,12 @@ public class AMRMTokenSecretManager extends
     try {
       LOG.info("Rolling master-key for amrm-tokens");
       this.nextMasterKey = createNewMasterKey();
+      AMRMTokenSecretManagerState state =
+          AMRMTokenSecretManagerState.newInstance(
+            this.currentMasterKey.getMasterKey(),
+            this.nextMasterKey.getMasterKey());
+      rmContext.getStateStore().storeOrUpdateAMRMTokenSecretManagerState(state,
+        true);
       this.timer.schedule(new NextKeyActivator(), this.activationDelay);
     } finally {
       this.writeLock.unlock();
@@ -150,6 +167,11 @@ public class AMRMTokenSecretManager extends
           + this.nextMasterKey.getMasterKey().getKeyId());
       this.currentMasterKey = this.nextMasterKey;
       this.nextMasterKey = null;
+      AMRMTokenSecretManagerState state =
+          AMRMTokenSecretManagerState.newInstance(
+            this.currentMasterKey.getMasterKey(), null);
+      rmContext.getStateStore().storeOrUpdateAMRMTokenSecretManagerState(state,
+        true);
     } finally {
       this.writeLock.unlock();
     }
@@ -225,8 +247,8 @@ public class AMRMTokenSecretManager extends
         LOG.debug("Trying to retrieve password for " + applicationAttemptId);
       }
       if (!appAttemptSet.contains(applicationAttemptId)) {
-        throw new InvalidToken("Password not found for ApplicationAttempt "
-            + applicationAttemptId);
+        throw new InvalidToken(applicationAttemptId
+            + " not found in AMRMTokenSecretManager.");
       }
       if (identifier.getKeyId() == this.currentMasterKey.getMasterKey()
         .getKeyId()) {
@@ -238,9 +260,7 @@ public class AMRMTokenSecretManager extends
         return createPassword(identifier.getBytes(),
           this.nextMasterKey.getSecretKey());
       }
-      throw new InvalidToken("Given AMRMToken for application : "
-          + applicationAttemptId.toString()
-          + " seems to have been generated illegally.");
+      throw new InvalidToken("Invalid AMRMToken from " + applicationAttemptId);
     } finally {
       this.readLock.unlock();
     }
@@ -289,6 +309,27 @@ public class AMRMTokenSecretManager extends
         .getSecretKey());
     } finally {
       this.readLock.unlock();
+    }
+  }
+
+  public void recover(RMState state) {
+    if (state.getAMRMTokenSecretManagerState() != null) {
+      // recover the current master key
+      MasterKey currentKey =
+          state.getAMRMTokenSecretManagerState().getCurrentMasterKey();
+      this.currentMasterKey =
+          new MasterKeyData(currentKey, createSecretKey(currentKey.getBytes()
+            .array()));
+
+      // recover the next master key if not null
+      MasterKey nextKey =
+          state.getAMRMTokenSecretManagerState().getNextMasterKey();
+      if (nextKey != null) {
+        this.nextMasterKey =
+            new MasterKeyData(nextKey, createSecretKey(nextKey.getBytes()
+              .array()));
+        this.timer.schedule(new NextKeyActivator(), this.activationDelay);
+      }
     }
   }
 }

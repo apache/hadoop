@@ -18,16 +18,19 @@
 
 package org.apache.hadoop.yarn.sls.scheduler;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
-        .AppSchedulable;
+    .FSAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
-        .FairScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 
 import com.codahale.metrics.Gauge;
 import org.apache.hadoop.yarn.sls.SLSRunner;
 
+@Private
+@Unstable
 public class FairSchedulerMetrics extends SchedulerMetrics {
 
   private int totalMemoryMB = Integer.MAX_VALUE;
@@ -62,8 +65,7 @@ public class FairSchedulerMetrics extends SchedulerMetrics {
   public void trackApp(ApplicationAttemptId appAttemptId, String oldAppId) {
     super.trackApp(appAttemptId, oldAppId);
     FairScheduler fair = (FairScheduler) scheduler;
-    final AppSchedulable app = fair.getSchedulerApp(appAttemptId)
-            .getAppSchedulable();
+    final FSAppAttempt app = fair.getSchedulerApp(appAttemptId);
     metrics.register("variable.app." + oldAppId + ".demand.memory",
       new Gauge<Integer>() {
         @Override
