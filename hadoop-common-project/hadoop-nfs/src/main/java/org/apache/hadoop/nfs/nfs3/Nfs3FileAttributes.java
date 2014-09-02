@@ -53,9 +53,19 @@ public class Nfs3FileAttributes {
    * For Hadoop, currently this field is always zero.
    */
   public static class Specdata3 {
-    final static int specdata1 = 0;
-    final static int specdata2 = 0;
+    final int specdata1;
+    final int specdata2;
 
+    public Specdata3() {
+      specdata1 = 0;
+      specdata2 = 0;
+    }
+    
+    public Specdata3(int specdata1, int specdata2) {
+      this.specdata1 = specdata1;
+      this.specdata2 = specdata2;
+    }
+    
     public int getSpecdata1() {
       return specdata1;
     }

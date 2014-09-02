@@ -1423,7 +1423,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         throw io;
       }
       // This happens when startAfter was just deleted
-      LOG.info("Cookie cound't be found: " + new String(startAfter)
+      LOG.info("Cookie couldn't be found: " + new String(startAfter)
           + ", do listing from beginning");
       dlisting = dfsClient
           .listPaths(dirFileIdPath, HdfsFileStatus.EMPTY_NAME);

@@ -279,4 +279,9 @@ class RedundantEditLogInputStream extends EditLogInputStream {
       elis.setMaxOpSize(maxOpSize);
     }
   }
+
+  @Override
+  public boolean isLocalLog() {
+    return streams[curIdx].isLocalLog();
+  }
 }

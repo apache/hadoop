@@ -188,6 +188,13 @@ public class FSEditLog implements LogsPurgeable {
    */
   private final List<URI> sharedEditsDirs;
 
+  /**
+   * Take this lock when adding journals to or closing the JournalSet. Allows
+   * us to ensure that the JournalSet isn't closed or updated underneath us
+   * in selectInputStreams().
+   */
+  private final Object journalSetLock = new Object();
+
   private static class TransactionId {
     public long txid;
 
@@ -252,20 +259,22 @@ public class FSEditLog implements LogsPurgeable {
         DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_MINIMUM_KEY,
         DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_MINIMUM_DEFAULT);
 
-    journalSet = new JournalSet(minimumRedundantJournals);
+    synchronized(journalSetLock) {
+      journalSet = new JournalSet(minimumRedundantJournals);
 
-    for (URI u : dirs) {
-      boolean required = FSNamesystem.getRequiredNamespaceEditsDirs(conf)
-          .contains(u);
-      if (u.getScheme().equals(NNStorage.LOCAL_URI_SCHEME)) {
-        StorageDirectory sd = storage.getStorageDirectory(u);
-        if (sd != null) {
-          journalSet.add(new FileJournalManager(conf, sd, storage),
-              required, sharedEditsDirs.contains(u));
+      for (URI u : dirs) {
+        boolean required = FSNamesystem.getRequiredNamespaceEditsDirs(conf)
+            .contains(u);
+        if (u.getScheme().equals(NNStorage.LOCAL_URI_SCHEME)) {
+          StorageDirectory sd = storage.getStorageDirectory(u);
+          if (sd != null) {
+            journalSet.add(new FileJournalManager(conf, sd, storage),
+                required, sharedEditsDirs.contains(u));
+          }
+        } else {
+          journalSet.add(createJournal(u), required,
+              sharedEditsDirs.contains(u));
         }
-      } else {
-        journalSet.add(createJournal(u), required,
-            sharedEditsDirs.contains(u));
       }
     }
  
@@ -349,7 +358,9 @@ public class FSEditLog implements LogsPurgeable {
     } finally {
       if (journalSet != null && !journalSet.isEmpty()) {
         try {
-          journalSet.close();
+          synchronized(journalSetLock) {
+            journalSet.close();
+          }
         } catch (IOException ioe) {
           LOG.warn("Error closing journalSet", ioe);
         }
@@ -606,7 +617,9 @@ public class FSEditLog implements LogsPurgeable {
                 "due to " + e.getMessage() + ". " +
                 "Unsynced transactions: " + (txid - synctxid);
             LOG.fatal(msg, new Exception());
-            IOUtils.cleanup(LOG, journalSet);
+            synchronized(journalSetLock) {
+              IOUtils.cleanup(LOG, journalSet);
+            }
             terminate(1, msg);
           }
         } finally {
@@ -630,7 +643,9 @@ public class FSEditLog implements LogsPurgeable {
               "Could not sync enough journals to persistent storage. "
               + "Unsynced transactions: " + (txid - synctxid);
           LOG.fatal(msg, new Exception());
-          IOUtils.cleanup(LOG, journalSet);
+          synchronized(journalSetLock) {
+            IOUtils.cleanup(LOG, journalSet);
+          }
           terminate(1, msg);
         }
       }
@@ -1303,9 +1318,8 @@ public class FSEditLog implements LogsPurgeable {
 
   /**
    * Return the txid of the last synced transaction.
-   * For test use only
    */
-  synchronized long getSyncTxId() {
+  public synchronized long getSyncTxId() {
     return synctxid;
   }
 
@@ -1342,7 +1356,9 @@ public class FSEditLog implements LogsPurgeable {
     
     LOG.info("Registering new backup node: " + bnReg);
     BackupJournalManager bjm = new BackupJournalManager(bnReg, nnReg);
-    journalSet.add(bjm, false);
+    synchronized(journalSetLock) {
+      journalSet.add(bjm, false);
+    }
   }
   
   synchronized void releaseBackupStream(NamenodeRegistration registration)
@@ -1350,7 +1366,9 @@ public class FSEditLog implements LogsPurgeable {
     BackupJournalManager bjm = this.findBackupJournal(registration);
     if (bjm != null) {
       LOG.info("Removing backup journal " + bjm);
-      journalSet.remove(bjm);
+      synchronized(journalSetLock) {
+        journalSet.remove(bjm);
+      }
     }
   }
   
@@ -1489,11 +1507,16 @@ public class FSEditLog implements LogsPurgeable {
    * @param recovery recovery context
    * @param inProgressOk set to true if in-progress streams are OK
    */
-  public synchronized Collection<EditLogInputStream> selectInputStreams(
+  public Collection<EditLogInputStream> selectInputStreams(
       long fromTxId, long toAtLeastTxId, MetaRecoveryContext recovery,
       boolean inProgressOk) throws IOException {
+
     List<EditLogInputStream> streams = new ArrayList<EditLogInputStream>();
-    selectInputStreams(streams, fromTxId, inProgressOk);
+    synchronized(journalSetLock) {
+      Preconditions.checkState(journalSet.isOpen(), "Cannot call " +
+          "selectInputStreams() on closed FSEditLog");
+      selectInputStreams(streams, fromTxId, inProgressOk);
+    }
 
     try {
       checkForGaps(streams, fromTxId, toAtLeastTxId, inProgressOk);
