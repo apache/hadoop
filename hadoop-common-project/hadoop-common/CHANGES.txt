@@ -127,6 +127,8 @@ Trunk (Unreleased)
 
     HADOOP-11013. CLASSPATH handling should be consolidated, debuggable (aw)
 
+    HADOOP-11041. VersionInfo specifies subversion (Tsuyoshi OZAWA via aw)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
