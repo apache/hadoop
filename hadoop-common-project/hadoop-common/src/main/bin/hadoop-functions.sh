@@ -517,10 +517,12 @@ function hadoop_os_tricks
   # examples for OS X and Linux. Vendors, replace this with your special sauce.
   case ${HADOOP_OS_TYPE} in
     Darwin)
-      if [[ -x /usr/libexec/java_home ]]; then
-        export JAVA_HOME="$(/usr/libexec/java_home)"
-      else
-        export JAVA_HOME=/Library/Java/Home
+      if [[ -z "${JAVA_HOME}" ]]; then
+        if [[ -x /usr/libexec/java_home ]]; then
+          export JAVA_HOME="$(/usr/libexec/java_home)"
+        else
+          export JAVA_HOME=/Library/Java/Home
+        fi
       fi
     ;;
     Linux)

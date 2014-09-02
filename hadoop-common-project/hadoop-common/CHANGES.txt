@@ -328,6 +328,8 @@ Trunk (Unreleased)
 
     HADOOP-10748. HttpServer2 should not load JspServlet. (wheat9)
 
+    HADOOP-11033. shell scripts ignore JAVA_HOME on OS X. (aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
