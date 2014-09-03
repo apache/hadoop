@@ -131,6 +131,7 @@ public class TestDFSRename {
   
   /**
    * Check the blocks of dst file are cleaned after rename with overwrite
+   * Restart NN to check the rename successfully
    */
   @Test(timeout = 120000)
   public void testRenameWithOverwrite() throws Exception {
@@ -160,6 +161,11 @@ public class TestDFSRename {
       dfs.rename(srcPath, dstPath, Rename.OVERWRITE);
       assertTrue(bm.getStoredBlock(lbs.getLocatedBlocks().get(0).getBlock().
           getLocalBlock()) == null);
+      
+      // Restart NN and check the rename successfully
+      cluster.restartNameNodes();
+      assertFalse(dfs.exists(srcPath));
+      assertTrue(dfs.exists(dstPath));
     } finally {
       if (dfs != null) {
         dfs.close();
