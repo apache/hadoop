@@ -30,3 +30,6 @@
     HDFS-6931. Move lazily persisted replicas to finalized directory on DN
     startup. (Arpit Agarwal)
 
+    HDFS-6950. Add Additional unit tests for HDFS-6581. (Xiaoyu Yao via
+    Arpit Agarwal)
+
