@@ -104,30 +104,23 @@ class LazyWriteReplicaTracker {
 
   /**
    * Queue of replicas that need to be written to disk.
+   * Stale entries are GC'd by dequeueNextReplicaToPersist.
    */
   final Queue<ReplicaState> replicasNotPersisted;
 
   /**
-   * A map of blockId to persist complete time for transient blocks. This allows
-   * us to evict LRU blocks from transient storage. Protected by 'this'
-   * Object lock.
+   * Queue of replicas in the order in which they were persisted.
+   * We'll dequeue them in the same order.
+   * We can improve the eviction scheme later.
+   * Stale entries are GC'd by getNextCandidateForEviction.
    */
-  final Map<ReplicaState, Long> replicasPersisted;
+  final Queue<ReplicaState> replicasPersisted;
 
   LazyWriteReplicaTracker(final FsDatasetImpl fsDataset) {
     this.fsDataset = fsDataset;
     replicaMaps = new HashMap<String, Map<Long, ReplicaState>>();
     replicasNotPersisted = new LinkedList<ReplicaState>();
-    replicasPersisted = new HashMap<ReplicaState, Long>();
-  }
-
-  TreeMultimap<Long, ReplicaState> getLruMap() {
-    // TODO: This can be made more efficient.
-    TreeMultimap<Long, ReplicaState> reversedMap = TreeMultimap.create();
-    for (Map.Entry<ReplicaState, Long> entry : replicasPersisted.entrySet()) {
-      reversedMap.put(entry.getValue(), entry.getKey());
-    }
-    return reversedMap;
+    replicasPersisted = new LinkedList<ReplicaState>();
   }
 
   synchronized void addReplica(String bpid, long blockId,
@@ -171,7 +164,8 @@ class LazyWriteReplicaTracker {
       // one.
       replicasNotPersisted.remove(replicaState);
     }
-    replicasPersisted.put(replicaState, System.currentTimeMillis() / 1000);
+
+    replicasPersisted.add(replicaState);
   }
 
   synchronized ReplicaState dequeueNextReplicaToPersist() {
@@ -188,12 +182,34 @@ class LazyWriteReplicaTracker {
     return null;
   }
 
-  synchronized void reenqueueReplica(final ReplicaState replicaState) {
+  synchronized void reenqueueReplicaNotPersisted(final ReplicaState replicaState) {
     replicasNotPersisted.add(replicaState);
+  }
+
+  synchronized void reenqueueReplicaPersisted(final ReplicaState replicaState) {
+    replicasPersisted.add(replicaState);
   }
 
   synchronized int numReplicasNotPersisted() {
     return replicasNotPersisted.size();
+  }
+
+  synchronized ReplicaState getNextCandidateForEviction() {
+    while (replicasPersisted.size() != 0) {
+      ReplicaState replicaState = replicasPersisted.remove();
+      Map<Long, ReplicaState> replicaMap = replicaMaps.get(replicaState.bpid);
+
+      if (replicaMap != null && replicaMap.get(replicaState.blockId) != null) {
+        return replicaState;
+      }
+
+      // The replica no longer exists, look for the next one.
+    }
+    return null;
+  }
+
+  void discardReplica(ReplicaState replicaState, boolean force) {
+    discardReplica(replicaState.bpid, replicaState.blockId, force);
   }
 
   synchronized void discardReplica(
@@ -221,9 +237,5 @@ class LazyWriteReplicaTracker {
     }
 
     map.remove(blockId);
-    replicasPersisted.remove(replicaState);
-
-    // Leave the replica in replicasNotPersisted if its present.
-    // dequeueNextReplicaToPersist will GC it eventually.
   }
 }

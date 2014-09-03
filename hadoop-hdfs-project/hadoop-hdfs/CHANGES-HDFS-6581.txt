@@ -33,3 +33,5 @@
     HDFS-6950. Add Additional unit tests for HDFS-6581. (Xiaoyu Yao via
     Arpit Agarwal)
 
+    HDFS-6930. Improve replica eviction from RAM disk. (Arpit Agarwal)
+
