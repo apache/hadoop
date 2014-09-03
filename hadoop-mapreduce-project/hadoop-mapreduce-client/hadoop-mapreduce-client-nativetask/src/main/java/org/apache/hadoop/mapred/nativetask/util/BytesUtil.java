@@ -20,7 +20,9 @@ package org.apache.hadoop.mapred.nativetask.util;
 
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import org.apache.hadoop.classification.InterfaceAudience;
 
+@InterfaceAudience.Private
 public class BytesUtil {
 
   private static final char[] HEX_CHARS =

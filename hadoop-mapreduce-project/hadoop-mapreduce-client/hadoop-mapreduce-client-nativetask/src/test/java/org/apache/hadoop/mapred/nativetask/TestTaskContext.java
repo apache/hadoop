@@ -30,13 +30,13 @@ public class TestTaskContext extends TestCase {
     TaskContext context = new TaskContext(null, null, null, null, null, null, null);
     
     context.setInputKeyClass(IntWritable.class);
-    assertEquals(IntWritable.class.getName(), context.getInputKeyClass().getName()); 
+    assertEquals(IntWritable.class.getName(), context.getInputKeyClass().getName());
  
     context.setInputValueClass(Text.class);
     assertEquals(Text.class.getName(), context.getInputValueClass().getName()); 
    
     context.setOutputKeyClass(LongWritable.class);
-    assertEquals(LongWritable.class.getName(), context.getOuputKeyClass().getName()); 
+    assertEquals(LongWritable.class.getName(), context.getOutputKeyClass().getName()); 
 
     context.setOutputValueClass(FloatWritable.class);
     assertEquals(FloatWritable.class.getName(), context.getOutputValueClass().getName()); 

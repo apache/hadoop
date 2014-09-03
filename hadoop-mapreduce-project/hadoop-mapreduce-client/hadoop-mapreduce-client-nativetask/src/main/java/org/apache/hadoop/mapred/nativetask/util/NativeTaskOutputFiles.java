@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred.nativetask.util;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
@@ -33,7 +34,7 @@ import org.apache.hadoop.mapred.TaskID;
  * mapreduce.cluster.local.dir as taskTracker/jobCache/jobId/attemptId This class should not be used
  * from TaskTracker space.
  */
-
+@InterfaceAudience.Private
 public class NativeTaskOutputFiles implements NativeTaskOutput {
 
   static final String TASKTRACKER_OUTPUT = "output";

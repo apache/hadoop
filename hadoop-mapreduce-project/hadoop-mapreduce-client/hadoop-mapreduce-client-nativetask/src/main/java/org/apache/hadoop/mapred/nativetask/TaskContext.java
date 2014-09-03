@@ -17,20 +17,23 @@
  */
 package org.apache.hadoop.mapred.nativetask;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Task.TaskReporter;
 import org.apache.hadoop.mapred.TaskAttemptID;
 
+@InterfaceAudience.Private
 public class TaskContext {
   private final JobConf conf;
-  private Class iKClass;
-  private Class iVClass;
-  private Class oKClass;
-  private Class oVClass;
+  private Class<?> iKClass;
+  private Class<?> iVClass;
+  private Class<?> oKClass;
+  private Class<?> oVClass;
   private final TaskReporter reporter;
   private final TaskAttemptID taskAttemptID;
 
-  public TaskContext(JobConf conf, Class iKClass, Class iVClass, Class oKClass, Class oVClass, TaskReporter reporter,
+  public TaskContext(JobConf conf, Class<?> iKClass, Class<?> iVClass,
+      Class<?> oKClass, Class<?> oVClass, TaskReporter reporter,
       TaskAttemptID id) {
     this.conf = conf;
     this.iKClass = iKClass;
@@ -41,35 +44,35 @@ public class TaskContext {
     this.taskAttemptID = id;
   }
 
-  public Class getInputKeyClass() {
+  public Class<?> getInputKeyClass() {
     return iKClass;
   }
 
-  public void setInputKeyClass(Class klass) {
+  public void setInputKeyClass(Class<?> klass) {
     this.iKClass = klass;
   }
 
-  public Class getInputValueClass() {
+  public Class<?> getInputValueClass() {
     return iVClass;
   }
 
-  public void setInputValueClass(Class klass) {
+  public void setInputValueClass(Class<?> klass) {
     this.iVClass = klass;
   }
 
-  public Class getOuputKeyClass() {
+  public Class<?> getOutputKeyClass() {
     return this.oKClass;
   }
 
-  public void setOutputKeyClass(Class klass) {
+  public void setOutputKeyClass(Class<?> klass) {
     this.oKClass = klass;
   }
 
-  public Class getOutputValueClass() {
+  public Class<?> getOutputValueClass() {
     return this.oVClass;
   }
 
-  public void setOutputValueClass(Class klass) {
+  public void setOutputValueClass(Class<?> klass) {
     this.oVClass = klass;
   }
 

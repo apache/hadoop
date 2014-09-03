@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.mapred.nativetask.handlers;
 
-import static org.apache.hadoop.mapred.Task.Counter.COMBINE_INPUT_RECORDS;
-
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
@@ -37,13 +35,13 @@ import org.apache.hadoop.mapred.nativetask.TaskContext;
 import org.apache.hadoop.mapred.nativetask.serde.SerializationFramework;
 import org.apache.hadoop.mapred.nativetask.util.ReadWriteBuffer;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.TaskCounter;
 
-public class CombinerHandler<K, V> implements ICombineHandler, CommandDispatcher {
-
-  public static String NAME = "NativeTask.CombineHandler";
+class CombinerHandler<K, V> implements ICombineHandler, CommandDispatcher {
+  public static final String NAME = "NativeTask.CombineHandler";
   private static Log LOG = LogFactory.getLog(NativeCollectorOnlyHandler.class);
-  public static Command LOAD = new Command(1, "Load");
-  public static Command COMBINE = new Command(4, "Combine");
+  public static final Command LOAD = new Command(1, "Load");
+  public static final Command COMBINE = new Command(4, "Combine");
   public final CombinerRunner<K, V> combinerRunner;
 
   private final INativeHandler nativeHandler;
@@ -66,13 +64,16 @@ public class CombinerHandler<K, V> implements ICombineHandler, CommandDispatcher
       LOG.info("NativeTask Combiner is enabled, class = " + combinerClazz);
     }
 
-    final Counter combineInputCounter = context.getTaskReporter().getCounter(COMBINE_INPUT_RECORDS);
+    final Counter combineInputCounter = context.getTaskReporter().getCounter(
+        TaskCounter.COMBINE_INPUT_RECORDS);
     
     final CombinerRunner<K, V> combinerRunner = CombinerRunner.create(conf, context.getTaskAttemptId(),
         combineInputCounter, context.getTaskReporter(), null);
 
     final INativeHandler nativeHandler = NativeBatchProcessor.create(NAME, conf, DataChannel.INOUT);
-    final BufferPusher<K, V> pusher = new BufferPusher<K, V>(context.getInputKeyClass(), context.getInputValueClass(),
+    @SuppressWarnings("unchecked")
+    final BufferPusher<K, V> pusher = new BufferPusher<K, V>((Class<K>)context.getInputKeyClass(),
+        (Class<V>)context.getInputValueClass(),
         nativeHandler);
     final BufferPuller puller = new BufferPuller(nativeHandler);
     return new CombinerHandler<K, V>(nativeHandler, combinerRunner, puller, pusher);

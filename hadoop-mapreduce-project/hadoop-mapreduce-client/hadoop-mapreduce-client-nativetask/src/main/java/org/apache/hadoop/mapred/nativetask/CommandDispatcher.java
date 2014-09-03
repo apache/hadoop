@@ -19,20 +19,15 @@
 package org.apache.hadoop.mapred.nativetask;
 
 import java.io.IOException;
+
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.mapred.nativetask.util.ReadWriteBuffer;
 
 /**
  * a CommandDispatcher receives {@link Command} from upstream
  * and performs corresponding operations
  */
+@InterfaceAudience.Private
 public interface CommandDispatcher {
-
-  /**
-   *
-   * @param command
-   * @param parameter
-   * @return
-   * @throws IOException
-   */
   public ReadWriteBuffer onCall(Command command, ReadWriteBuffer parameter) throws IOException;
 }

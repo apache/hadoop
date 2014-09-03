@@ -15,9 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.mapred.nativetask;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
+@InterfaceAudience.Private
 public class Constants {
 
   public static final String MAP_SORT_CLASS = "map.sort.class";
@@ -40,17 +42,17 @@ public class Constants {
   public static final String NATIVE_OUTPUT_FILE_NAME = "native.output.file.name";
 
   public static final String NATIVE_PROCESSOR_BUFFER_KB = "native.processor.buffer.kb";
-  public static int NATIVE_PROCESSOR_BUFFER_KB_DEFAULT = 64;
-  public static int NATIVE_ASYNC_PROCESSOR_BUFFER_KB_DEFAULT = 1024;
+  public static final int NATIVE_PROCESSOR_BUFFER_KB_DEFAULT = 64;
+  public static final int NATIVE_ASYNC_PROCESSOR_BUFFER_KB_DEFAULT = 1024;
 
   public static final String NATIVE_STATUS_UPDATE_INTERVAL = "native.update.interval";
-  public static int NATIVE_STATUS_UPDATE_INTERVAL_DEFVAL = 3000;
+  public static final int NATIVE_STATUS_UPDATE_INTERVAL_DEFVAL = 3000;
 
   public static final String SERIALIZATION_FRAMEWORK = "SerializationFramework";
-  public static int SIZEOF_PARTITION_LENGTH = 4;
-  public static int SIZEOF_KEY_LENGTH = 4;
-  public static int SIZEOF_VALUE_LENGTH = 4;
-  public static int SIZEOF_KV_LENGTH = SIZEOF_KEY_LENGTH + SIZEOF_VALUE_LENGTH;
+  public static final int SIZEOF_PARTITION_LENGTH = 4;
+  public static final int SIZEOF_KEY_LENGTH = 4;
+  public static final int SIZEOF_VALUE_LENGTH = 4;
+  public static final int SIZEOF_KV_LENGTH = SIZEOF_KEY_LENGTH + SIZEOF_VALUE_LENGTH;
   
   public static final String NATIVE_CLASS_LIBRARY = "native.class.library";
   public static final String NATIVE_CLASS_LIBRARY_CUSTOM = "native.class.library.custom";

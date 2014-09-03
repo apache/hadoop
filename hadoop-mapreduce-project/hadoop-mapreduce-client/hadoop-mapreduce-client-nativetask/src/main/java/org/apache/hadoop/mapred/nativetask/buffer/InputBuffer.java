@@ -19,12 +19,14 @@
 package org.apache.hadoop.mapred.nativetask.buffer;
 
 import org.apache.hadoop.util.DirectBufferPool;
+import org.apache.hadoop.classification.InterfaceAudience;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+@InterfaceAudience.Private
 public class InputBuffer implements Closeable {
 
   static DirectBufferPool bufferPool = new DirectBufferPool();

@@ -20,31 +20,27 @@ package org.apache.hadoop.mapred.nativetask;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.mapred.nativetask.buffer.OutputBuffer;
 
 /**
  * NativeDataTarge sends data to downstream
  */
+@InterfaceAudience.Private
 public interface NativeDataTarget {
 
   /**
-   * send a signal to indicate that the data has been stored in output buffer
-   * 
-   * @throws IOException
+   * Sends a signal to indicate that the data has been stored in output buffer
    */
   public void sendData() throws IOException;
 
   /**
-   * Send a signal that there is no more data
-   * 
-   * @throws IOException
+   * Sends a signal that there is no more data
    */
   public void finishSendData() throws IOException;
 
   /**
-   * get the output buffer.
-   * 
-   * @return
+   * Gets the output buffer.
    */
   public OutputBuffer getOutputBuffer();
 

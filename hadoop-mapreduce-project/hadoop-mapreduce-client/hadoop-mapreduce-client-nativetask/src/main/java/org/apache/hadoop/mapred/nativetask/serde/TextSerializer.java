@@ -22,9 +22,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.nativetask.INativeComparable;
 
+@InterfaceAudience.Private
 public class TextSerializer implements INativeSerializer<Text>, INativeComparable {
 
   public TextSerializer() throws SecurityException, NoSuchMethodException {

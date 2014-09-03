@@ -21,17 +21,18 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.mapred.Task.Counter;
 import org.apache.hadoop.mapred.Task.TaskReporter;
+import org.apache.hadoop.mapreduce.TaskCounter;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter;
 
 /**
  * Will periodically check status from native and report to MR framework.
  * 
  */
-public class StatusReportChecker implements Runnable {
+class StatusReportChecker implements Runnable {
 
   private static Log LOG = LogFactory.getLog(StatusReportChecker.class);
-  public static int INTERVAL = 1000; // milli-seconds
+  public static final int INTERVAL = 1000; // milliseconds
 
   private Thread checker;
   private final TaskReporter reporter;
@@ -68,19 +69,19 @@ public class StatusReportChecker implements Runnable {
   }
 
   protected void initUsedCounters() {
-    reporter.getCounter(Counter.MAP_INPUT_RECORDS);
-    reporter.getCounter(Counter.MAP_OUTPUT_RECORDS);
-    reporter.getCounter(Counter.MAP_INPUT_BYTES);
-    reporter.getCounter(Counter.MAP_OUTPUT_BYTES);
-    reporter.getCounter(Counter.MAP_OUTPUT_MATERIALIZED_BYTES);
-    reporter.getCounter(Counter.COMBINE_INPUT_RECORDS);
-    reporter.getCounter(Counter.COMBINE_OUTPUT_RECORDS);
-    reporter.getCounter(Counter.REDUCE_INPUT_RECORDS);
-    reporter.getCounter(Counter.REDUCE_OUTPUT_RECORDS);
-    reporter.getCounter(Counter.REDUCE_INPUT_GROUPS);
-    reporter.getCounter(Counter.SPILLED_RECORDS);
-    reporter.getCounter(Counter.MAP_OUTPUT_BYTES);
-    reporter.getCounter(Counter.MAP_OUTPUT_RECORDS);
+    reporter.getCounter(TaskCounter.MAP_INPUT_RECORDS);
+    reporter.getCounter(TaskCounter.MAP_OUTPUT_RECORDS);
+    reporter.getCounter(FileInputFormatCounter.BYTES_READ);
+    reporter.getCounter(TaskCounter.MAP_OUTPUT_BYTES);
+    reporter.getCounter(TaskCounter.MAP_OUTPUT_MATERIALIZED_BYTES);
+    reporter.getCounter(TaskCounter.COMBINE_INPUT_RECORDS);
+    reporter.getCounter(TaskCounter.COMBINE_OUTPUT_RECORDS);
+    reporter.getCounter(TaskCounter.REDUCE_INPUT_RECORDS);
+    reporter.getCounter(TaskCounter.REDUCE_OUTPUT_RECORDS);
+    reporter.getCounter(TaskCounter.REDUCE_INPUT_GROUPS);
+    reporter.getCounter(TaskCounter.SPILLED_RECORDS);
+    reporter.getCounter(TaskCounter.MAP_OUTPUT_BYTES);
+    reporter.getCounter(TaskCounter.MAP_OUTPUT_RECORDS);
   }
 
   public synchronized void start() {

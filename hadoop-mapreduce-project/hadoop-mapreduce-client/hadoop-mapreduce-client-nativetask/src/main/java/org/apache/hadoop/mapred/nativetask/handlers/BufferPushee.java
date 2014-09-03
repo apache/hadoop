@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.nativetask.Constants;
 import org.apache.hadoop.mapred.nativetask.buffer.BufferType;
@@ -34,6 +35,7 @@ import org.apache.hadoop.mapred.nativetask.util.SizedWritable;
 /**
  * collect data when signaled
  */
+@InterfaceAudience.Private
 public class BufferPushee<OK, OV> implements Closeable {
 
   private static Log LOG = LogFactory.getLog(BufferPushee.class);

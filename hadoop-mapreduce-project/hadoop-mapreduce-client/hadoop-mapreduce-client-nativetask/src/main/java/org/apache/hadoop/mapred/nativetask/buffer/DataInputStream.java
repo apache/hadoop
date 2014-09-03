@@ -19,7 +19,9 @@ package org.apache.hadoop.mapred.nativetask.buffer;
 
 import java.io.DataInput;
 import java.io.InputStream;
+import org.apache.hadoop.classification.InterfaceAudience;
 
+@InterfaceAudience.Private
 public abstract class DataInputStream extends InputStream implements DataInput {
   public abstract boolean hasUnReadData();
 }

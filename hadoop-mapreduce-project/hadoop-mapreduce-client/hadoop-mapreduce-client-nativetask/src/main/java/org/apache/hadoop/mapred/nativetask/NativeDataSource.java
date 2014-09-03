@@ -20,33 +20,27 @@ package org.apache.hadoop.mapred.nativetask;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.mapred.nativetask.buffer.InputBuffer;
-import org.apache.hadoop.mapred.nativetask.util.ReadWriteBuffer;
 
 /**
  * NativeDataSource loads data from upstream
  */
+@InterfaceAudience.Private
 public interface NativeDataSource {
 
   /**
    * get input buffer
-   * 
-   * @return
    */
   public InputBuffer getInputBuffer();
 
   /**
    * set listener. When data from upstream arrives, the listener will be activated.
-   * 
-   * @param handler
    */
   void setDataReceiver(DataReceiver handler);
 
   /**
    * load data from upstream
-   * 
-   * @return
-   * @throws IOException
    */
   public void loadData() throws IOException;
 

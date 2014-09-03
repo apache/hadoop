@@ -20,9 +20,12 @@ package org.apache.hadoop.mapred.nativetask.handlers;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * an IDataLoader loads data on demand
  */
+@InterfaceAudience.Private
 public interface IDataLoader {
 
   /**

@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.mapred.nativetask;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
+@InterfaceAudience.Private
 public enum DataChannel {
   /**
    * We will only read data from this channel

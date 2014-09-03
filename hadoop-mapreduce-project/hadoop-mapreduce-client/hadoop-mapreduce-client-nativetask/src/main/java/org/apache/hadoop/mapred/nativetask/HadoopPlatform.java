@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.ByteWritable;
 import org.apache.hadoop.io.BytesWritable;
@@ -36,6 +37,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.nativetask.serde.*;
 
+@InterfaceAudience.Private
 public class HadoopPlatform extends Platform {
   private static final Log LOG = LogFactory.getLog(HadoopPlatform.class);
 
@@ -61,7 +63,7 @@ public class HadoopPlatform extends Platform {
   }
 
   @Override
-  public boolean support(String keyClassName, INativeSerializer serializer, JobConf job) {
+  public boolean support(String keyClassName, INativeSerializer<?> serializer, JobConf job) {
     if (keyClassNames.contains(keyClassName)
       && serializer instanceof INativeComparable) {
       return true;
@@ -71,7 +73,7 @@ public class HadoopPlatform extends Platform {
   }
 
   @Override
-  public boolean define(Class comparatorClass) {
+  public boolean define(Class<?> comparatorClass) {
     return false;
   }
 

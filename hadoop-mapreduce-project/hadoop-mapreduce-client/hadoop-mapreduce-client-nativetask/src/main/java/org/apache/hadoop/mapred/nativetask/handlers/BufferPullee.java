@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred.nativetask.handlers;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.mapred.RawKeyValueIterator;
 import org.apache.hadoop.mapred.nativetask.Constants;
 import org.apache.hadoop.mapred.nativetask.NativeDataTarget;
@@ -30,9 +31,10 @@ import org.apache.hadoop.mapred.nativetask.util.SizedWritable;
 /**
  * load data into a buffer signaled by a {@link BufferPuller}
  */
+@InterfaceAudience.Private
 public class BufferPullee<IK, IV> implements IDataLoader {
 
-  public static int KV_HEADER_LENGTH = Constants.SIZEOF_KV_LENGTH;
+  public static final int KV_HEADER_LENGTH = Constants.SIZEOF_KV_LENGTH;
 
   private final SizedWritable<IK> tmpInputKey;
   private final SizedWritable<IV> tmpInputValue;

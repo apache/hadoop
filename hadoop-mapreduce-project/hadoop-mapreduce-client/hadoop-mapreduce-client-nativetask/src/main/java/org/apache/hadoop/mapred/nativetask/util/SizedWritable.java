@@ -19,12 +19,14 @@ package org.apache.hadoop.mapred.nativetask.util;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.ReflectionUtils;
 
+@InterfaceAudience.Private
 public class SizedWritable<T> {
-  public static int INVALID_LENGTH = -1;
+  public static final int INVALID_LENGTH = -1;
 
   public int length = INVALID_LENGTH;
   public Writable v;

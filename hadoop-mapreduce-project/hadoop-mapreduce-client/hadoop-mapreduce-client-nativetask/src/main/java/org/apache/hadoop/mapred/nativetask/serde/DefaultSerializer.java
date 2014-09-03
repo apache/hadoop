@@ -24,8 +24,12 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Writable;
 
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class DefaultSerializer implements INativeSerializer<Writable> {
 
   static class ModifiedByteArrayOutputStream extends ByteArrayOutputStream {

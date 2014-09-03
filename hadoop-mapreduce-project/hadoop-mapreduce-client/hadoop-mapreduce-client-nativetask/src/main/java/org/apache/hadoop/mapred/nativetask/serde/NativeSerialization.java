@@ -21,8 +21,10 @@ package org.apache.hadoop.mapred.nativetask.serde;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.Writable;
 
+@InterfaceAudience.Private
 public class NativeSerialization {
 
   private final ConcurrentHashMap<String, Class<?>> map = new ConcurrentHashMap<String, Class<?>>();

@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.mapred.nativetask;
 
-import java.io.File;
 import java.io.IOException;
 
 import com.google.common.base.Charsets;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapred.JobConf;
@@ -34,13 +34,12 @@ import org.apache.hadoop.mapred.nativetask.serde.INativeSerializer;
 import org.apache.hadoop.mapred.nativetask.serde.NativeSerialization;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.util.QuickSort;
-import org.apache.hadoop.util.RunJar;
 
 /**
  * native map output collector wrapped in Java interface
  */
+@InterfaceAudience.Private
 public class NativeMapOutputCollectorDelegator<K, V> implements MapOutputCollector<K, V> {
 
   private static Log LOG = LogFactory.getLog(NativeMapOutputCollectorDelegator.class);
@@ -67,6 +66,7 @@ public class NativeMapOutputCollectorDelegator<K, V> implements MapOutputCollect
     handler.flush();
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public void init(Context context) throws IOException, ClassNotFoundException {
     this.job = context.getJobConf();
@@ -79,7 +79,8 @@ public class NativeMapOutputCollectorDelegator<K, V> implements MapOutputCollect
       throw new InvalidJobConfException(message);
     }
 
-    Class comparatorClass = job.getClass(MRJobConfig.KEY_COMPARATOR, null, RawComparator.class);
+    Class<?> comparatorClass = job.getClass(MRJobConfig.KEY_COMPARATOR, null,
+        RawComparator.class);
     if (comparatorClass != null && !Platforms.define(comparatorClass)) {
       String message = "Native output collector doesn't support customized java comparator "
         + job.get(MRJobConfig.KEY_COMPARATOR);

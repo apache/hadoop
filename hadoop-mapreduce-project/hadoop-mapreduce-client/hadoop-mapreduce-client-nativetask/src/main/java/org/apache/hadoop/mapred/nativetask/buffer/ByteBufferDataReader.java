@@ -17,22 +17,17 @@
  */
 package org.apache.hadoop.mapred.nativetask.buffer;
 
-import com.google.common.base.Charsets;
-
-import java.io.DataInput;
 import java.io.EOFException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.PushbackInputStream;
-import java.io.UTFDataFormatException;
 import java.nio.ByteBuffer;
+import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * read data from a input buffer
  */
+@InterfaceAudience.Private
 public class ByteBufferDataReader extends DataInputStream {
   private ByteBuffer byteBuffer;
-  private char lineCache[];
   private java.io.DataInputStream javaReader;
 
   public ByteBufferDataReader(InputBuffer buffer) {
@@ -130,6 +125,7 @@ public class ByteBufferDataReader extends DataInputStream {
     return byteBuffer.getDouble();
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   public String readLine() throws IOException {
     return javaReader.readLine();

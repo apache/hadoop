@@ -24,7 +24,10 @@ import java.util.Map;
 import com.google.common.base.Charsets;
 import org.apache.hadoop.conf.Configuration;
 
-public class ConfigUtil {
+import org.apache.hadoop.classification.InterfaceAudience;
+
+@InterfaceAudience.Private
+public abstract class ConfigUtil {
   public static byte[][] toBytes(Configuration conf) {
     List<byte[]> nativeConfigs = new ArrayList<byte[]>();
     for (Map.Entry<String, String> e : conf) {

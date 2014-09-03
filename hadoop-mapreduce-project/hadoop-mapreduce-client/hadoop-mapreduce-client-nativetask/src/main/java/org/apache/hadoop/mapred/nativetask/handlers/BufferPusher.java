@@ -22,7 +22,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.nativetask.NativeDataTarget;
 import org.apache.hadoop.mapred.nativetask.buffer.ByteBufferDataWriter;
@@ -33,6 +33,7 @@ import org.apache.hadoop.mapred.nativetask.util.SizedWritable;
 /**
  * actively push data into a buffer and signal a {@link BufferPushee} to collect it
  */
+@InterfaceAudience.Private
 public class BufferPusher<K, V> implements OutputCollector<K, V> {
   
   private static Log LOG = LogFactory.getLog(BufferPusher.class);

@@ -23,6 +23,7 @@ import java.io.IOException;
 import com.google.common.base.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.FloatWritable;
@@ -34,11 +35,12 @@ import org.apache.hadoop.mapred.nativetask.util.ConfigUtil;
 import org.apache.hadoop.util.VersionInfo;
 
 /**
- * This class stands for the native runtime It has three functions: 1. Create native handlers for map, reduce,
- * outputcollector, and etc 2. Configure native task with provided MR configs 3. Provide file system api to native
- * space, so that it can use File system like HDFS.
- * 
+ * This class stands for the native runtime It has three functions:
+ * 1. Create native handlers for map, reduce, outputcollector, etc
+ * 2. Configure native task with provided MR configs
+ * 3. Provide file system api to native space, so that it can use File system like HDFS.
  */
+@InterfaceAudience.Private
 public class NativeRuntime {
   private static Log LOG = LogFactory.getLog(NativeRuntime.class);
   private static boolean nativeLibraryLoaded = false;

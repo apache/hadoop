@@ -15,16 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.mapred.nativetask.util;
 
 import com.google.common.base.Charsets;
+import org.apache.hadoop.classification.InterfaceAudience;
 
+@InterfaceAudience.Private
 public class ReadWriteBuffer {
   private byte[] _buff;
   private int _writePoint;
   private int _readPoint;
-  final int CACHE_LINE_SIZE = 16;
+  final static int CACHE_LINE_SIZE = 16;
 
   public ReadWriteBuffer(int length) {
     if (length > 0) {

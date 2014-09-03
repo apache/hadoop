@@ -20,9 +20,12 @@ package org.apache.hadoop.mapred.nativetask.serde;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.nativetask.INativeComparable;
 
+
+@InterfaceAudience.Private
 public class FloatWritableSerializer extends DefaultSerializer implements
     INativeComparable {
 

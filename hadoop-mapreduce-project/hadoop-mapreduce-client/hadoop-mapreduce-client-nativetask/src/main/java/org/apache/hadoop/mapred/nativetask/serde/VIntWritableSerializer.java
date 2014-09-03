@@ -18,9 +18,10 @@
 
 package org.apache.hadoop.mapred.nativetask.serde;
 
-import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.mapred.nativetask.INativeComparable;
 
+@InterfaceAudience.Private
 public class VIntWritableSerializer extends DefaultSerializer implements
     INativeComparable {
 }

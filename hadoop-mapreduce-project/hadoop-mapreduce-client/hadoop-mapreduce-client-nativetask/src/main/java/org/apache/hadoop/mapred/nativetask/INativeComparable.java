@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.mapred.nativetask;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  *
  * Any key type that is comparable at native side must implement this interface
@@ -45,6 +48,8 @@ package org.apache.hadoop.mapred.nativetask;
  *     return NativeObjectFactory::BytesComparator(src + 4, sl, dest + 4, dl);
  *   }
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public interface INativeComparable {
 
 }
