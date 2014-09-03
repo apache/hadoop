@@ -274,8 +274,13 @@ $ keytool -genkey -alias tomcat -keyalg RSA
   KMS ACLs configuration are defined in the KMS <<<etc/hadoop/kms-acls.xml>>>
   configuration file. This file is hot-reloaded when it changes.
 
-  KMS supports a fine grained access control via a set ACL
-  configuration properties:
+  KMS supports both fine grained access control as well as blacklist for kms
+  operations via a set ACL configuration properties.
+
+  A user accessing KMS is first checked for inclusion in the Access Control
+  List for the requested operation and then checked for exclusion in the
+  Black list for the operation before access is granted.
+
 
 +---+
   <property>
@@ -289,10 +294,28 @@ $ keytool -genkey -alias tomcat -keyalg RSA
   </property>
 
   <property>
+    <name>hadoop.kms.blacklist.CREATE</name>
+    <value>hdfs,foo</value>
+    <description>
+      Blacklist for create-key operations.
+      If the user does is in the Blacklist, the key material is not returned
+      as part of the response.
+    </description>
+  </property>
+
+  <property>
     <name>hadoop.kms.acl.DELETE</name>
     <value>*</value>
     <description>
       ACL for delete-key operations.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.blacklist.DELETE</name>
+    <value>hdfs,foo</value>
+    <description>
+      Blacklist for delete-key operations.
     </description>
   </property>
 
@@ -307,8 +330,24 @@ $ keytool -genkey -alias tomcat -keyalg RSA
   </property>
 
   <property>
+    <name>hadoop.kms.blacklist.ROLLOVER</name>
+    <value>hdfs,foo</value>
+    <description>
+      Blacklist for rollover-key operations.
+    </description>
+  </property>
+
+  <property>
     <name>hadoop.kms.acl.GET</name>
     <value>*</value>
+    <description>
+      ACL for get-key-version and get-current-key operations.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.blacklist.GET</name>
+    <value>hdfs,foo</value>
     <description>
       ACL for get-key-version and get-current-key operations.
     </description>
@@ -323,6 +362,14 @@ $ keytool -genkey -alias tomcat -keyalg RSA
   </property>
 
   <property>
+    <name>hadoop.kms.blacklist.GET_KEYS</name>
+    <value>hdfs,foo</value>
+    <description>
+      Blacklist for get-keys operation.
+    </description>
+  </property>
+
+  <property>
     <name>hadoop.kms.acl.GET_METADATA</name>
     <value>*</value>
     <description>
@@ -331,10 +378,27 @@ $ keytool -genkey -alias tomcat -keyalg RSA
   </property>
 
   <property>
+    <name>hadoop.kms.blacklist.GET_METADATA</name>
+    <value>hdfs,foo</value>
+    <description>
+      Blacklist for get-key-metadata and get-keys-metadata operations.
+    </description>
+  </property>
+
+  <property>
     <name>hadoop.kms.acl.SET_KEY_MATERIAL</name>
     <value>*</value>
     <description>
         Complimentary ACL for CREATE and ROLLOVER operation to allow the client
+        to provide the key material when creating or rolling a key.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.blacklist.SET_KEY_MATERIAL</name>
+    <value>hdfs,foo</value>
+    <description>
+        Complimentary Blacklist for CREATE and ROLLOVER operation to allow the client
         to provide the key material when creating or rolling a key.
     </description>
   </property>
@@ -349,6 +413,15 @@ $ keytool -genkey -alias tomcat -keyalg RSA
   </property>
 
   <property>
+    <name>hadoop.kms.blacklist.GENERATE_EEK</name>
+    <value>hdfs,foo</value>
+    <description>
+      Blacklist for generateEncryptedKey
+      CryptoExtension operations
+    </description>
+  </property>
+
+  <property>
     <name>hadoop.kms.acl.DECRYPT_EEK</name>
     <value>*</value>
     <description>
@@ -357,6 +430,17 @@ $ keytool -genkey -alias tomcat -keyalg RSA
     </description>
   </property>
 </configuration>
+
+  <property>
+    <name>hadoop.kms.blacklist.DECRYPT_EEK</name>
+    <value>hdfs,foo</value>
+    <description>
+      Blacklist for decrypt EncryptedKey
+      CryptoExtension operations
+    </description>
+  </property>
+</configuration>
+
 +---+
 
 ** KMS Delegation Token Configuration

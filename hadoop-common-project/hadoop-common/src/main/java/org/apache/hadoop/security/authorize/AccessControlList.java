@@ -221,7 +221,13 @@ public class AccessControlList implements Writable {
     return groups;
   }
 
-  public boolean isUserAllowed(UserGroupInformation ugi) {
+  /**
+   * Checks if a user represented by the provided {@link UserGroupInformation}
+   * is a member of the Access Control List
+   * @param ugi UserGroupInformation to check if contained in the ACL
+   * @return true if ugi is member of the list
+   */
+  public final boolean isUserInList(UserGroupInformation ugi) {
     if (allAllowed || users.contains(ugi.getShortUserName())) {
       return true;
     } else {
@@ -232,6 +238,10 @@ public class AccessControlList implements Writable {
       }
     }
     return false;
+  }
+
+  public boolean isUserAllowed(UserGroupInformation ugi) {
+    return isUserInList(ugi);
   }
 
   /**
