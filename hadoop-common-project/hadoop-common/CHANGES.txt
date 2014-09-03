@@ -409,6 +409,9 @@ Release 2.5.1 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+  
+    HADOOP-10956. Fix create-release script to include docs and necessary txt
+    files. (kasha)
 
   OPTIMIZATIONS
 

@@ -70,8 +70,10 @@ fi
 
 ARTIFACTS_DIR="target/artifacts"
 
-# Create staging dir for release artifacts
+# mvn clean for sanity
+run ${MVN} clean
 
+# Create staging dir for release artifacts
 run mkdir -p ${ARTIFACTS_DIR}
 
 # Create RAT report
@@ -80,10 +82,17 @@ run ${MVN} apache-rat:check
 # Create SRC and BIN tarballs for release,
 # Using 'install’ goal instead of 'package' so artifacts are available 
 # in the Maven local cache for the site generation
-run ${MVN} install -Pdist,docs,src,native -DskipTests -Dtar
+run ${MVN} install -Pdist,src,native -DskipTests -Dtar
 
 # Create site for release
 run ${MVN} site site:stage -Pdist -Psrc
+run mkdir -p target/staging/hadoop-project/hadoop-project-dist/hadoop-yarn
+run mkdir -p target/staging/hadoop-project/hadoop-project-dist/hadoop-mapreduce
+run cp ./hadoop-common-project/hadoop-common/src/main/docs/releasenotes.html target/staging/hadoop-project/hadoop-project-dist/hadoop-common/
+run cp ./hadoop-common-project/hadoop-common/CHANGES.txt target/staging/hadoop-project/hadoop-project-dist/hadoop-common/
+run cp ./hadoop-hdfs-project/hadoop-hdfs/CHANGES.txt target/staging/hadoop-project/hadoop-project-dist/hadoop-hdfs/
+run cp ./hadoop-yarn-project/CHANGES.txt target/staging/hadoop-project/hadoop-project-dist/hadoop-yarn/
+run cp ./hadoop-mapreduce-project/CHANGES.txt target/staging/hadoop-project/hadoop-project-dist/hadoop-mapreduce/
 run mv target/staging/hadoop-project target/r${HADOOP_VERSION}/
 run cd target/
 run tar czf hadoop-site-${HADOOP_VERSION}.tar.gz r${HADOOP_VERSION}/*
@@ -94,14 +103,19 @@ find . -name rat.txt | xargs -I% cat % > ${ARTIFACTS_DIR}/hadoop-${HADOOP_VERSIO
 
 # Stage CHANGES.txt files
 run cp ./hadoop-common-project/hadoop-common/CHANGES.txt ${ARTIFACTS_DIR}/CHANGES-COMMON-${HADOOP_VERSION}${RC_LABEL}.txt
-run cp ./hadoop-hdfs-project/hadoop-hdfs/CHANGES.txt ${ARTIFACTS_DIR}/CHANGES-HDFS--${HADOOP_VERSION}${RC_LABEL}.txt
+run cp ./hadoop-hdfs-project/hadoop-hdfs/CHANGES.txt ${ARTIFACTS_DIR}/CHANGES-HDFS-${HADOOP_VERSION}${RC_LABEL}.txt
 run cp ./hadoop-mapreduce-project/CHANGES.txt ${ARTIFACTS_DIR}/CHANGES-MAPREDUCE-${HADOOP_VERSION}${RC_LABEL}.txt
 run cp ./hadoop-yarn-project/CHANGES.txt ${ARTIFACTS_DIR}/CHANGES-YARN-${HADOOP_VERSION}${RC_LABEL}.txt
 
-# Stage BIN tarball
+# Prepare and stage BIN tarball
+run cd hadoop-dist/target/
+run tar -xzf hadoop-${HADOOP_VERSION}.tar.gz
+run cp -r ../../target/r${HADOOP_VERSION}/* hadoop-${HADOOP_VERSION}/share/doc/hadoop/
+run tar -czf hadoop-${HADOOP_VERSION}.tar.gz hadoop-${HADOOP_VERSION}
+run cd ../..
 run mv hadoop-dist/target/hadoop-${HADOOP_VERSION}.tar.gz ${ARTIFACTS_DIR}/hadoop-${HADOOP_VERSION}${RC_LABEL}.tar.gz
 
-# State SRC tarball
+# Stage SRC tarball
 run mv hadoop-dist/target/hadoop-${HADOOP_VERSION}-src.tar.gz ${ARTIFACTS_DIR}/hadoop-${HADOOP_VERSION}${RC_LABEL}-src.tar.gz
 
 # Stage SITE tarball

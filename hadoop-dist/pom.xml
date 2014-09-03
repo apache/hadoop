@@ -114,6 +114,9 @@
                       run rm -rf hadoop-${project.version}
                       run mkdir hadoop-${project.version}
                       run cd hadoop-${project.version}
+                      run cp $ROOT/LICENSE.txt .
+                      run cp $ROOT/NOTICE.txt .
+                      run cp $ROOT/README.txt .
                       run cp -r $ROOT/hadoop-common-project/hadoop-common/target/hadoop-common-${project.version}/* .
                       run cp -r $ROOT/hadoop-common-project/hadoop-nfs/target/hadoop-nfs-${project.version}/* .
                       run cp -r $ROOT/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-${project.version}/* .
