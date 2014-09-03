@@ -3665,12 +3665,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     HdfsFileStatus resultingStat = null;
     boolean success = false;
     writeLock();
+    BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot rename " + src);
       src = resolvePath(src, srcComponents);
       dst = resolvePath(dst, dstComponents);
-      renameToInternal(pc, src, dst, cacheEntry != null, options);
+      renameToInternal(pc, src, dst, cacheEntry != null, 
+          collectedBlocks, options);
       resultingStat = getAuditFileInfo(dst, false);
       success = true;
     } finally {
@@ -3678,6 +3680,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       RetryCache.setState(cacheEntry, success);
     }
     getEditLog().logSync();
+    if (!collectedBlocks.getToDeleteList().isEmpty()) {
+      removeBlocks(collectedBlocks);
+      collectedBlocks.clear();
+    }
     if (resultingStat != null) {
       StringBuilder cmd = new StringBuilder("rename options=");
       for (Rename option : options) {
@@ -3687,8 +3693,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
-  private void renameToInternal(FSPermissionChecker pc, String src, String dst,
-      boolean logRetryCache, Options.Rename... options) throws IOException {
+  private void renameToInternal(FSPermissionChecker pc, String src, 
+      String dst, boolean logRetryCache, BlocksMapUpdateInfo collectedBlocks, 
+      Options.Rename... options) throws IOException {
     assert hasWriteLock();
     if (isPermissionEnabled) {
       // Rename does not operates on link targets
@@ -3703,7 +3710,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     waitForLoadingFSImage();
     long mtime = now();
-    dir.renameTo(src, dst, mtime, options);
+    dir.renameTo(src, dst, mtime, collectedBlocks, options);
     getEditLog().logRename(src, dst, mtime, logRetryCache, options);
   }
   

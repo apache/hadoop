@@ -61,6 +61,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2395. FairScheduler: Preemption timeout should be configurable per 
     queue. (Wei Yan via kasha)
 
+    YARN-2394. FairScheduler: Configure fairSharePreemptionThreshold per queue.
+    (Wei Yan via kasha)
+
   IMPROVEMENTS
 
     YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc
