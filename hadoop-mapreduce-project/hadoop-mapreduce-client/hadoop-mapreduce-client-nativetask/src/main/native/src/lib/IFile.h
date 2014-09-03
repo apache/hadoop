@@ -19,11 +19,11 @@
 #ifndef IFILE_H_
 #define IFILE_H_
 
-#include "Checksum.h"
-#include "Buffers.h"
-#include "WritableUtils.h"
-#include "SpillInfo.h"
-#include "MapOutputSpec.h"
+#include "util/Checksum.h"
+#include "lib/Buffers.h"
+#include "util/WritableUtils.h"
+#include "lib/SpillInfo.h"
+#include "lib/MapOutputSpec.h"
 
 namespace NativeTask {
 

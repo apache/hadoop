@@ -20,14 +20,14 @@
 #define PARTITION_BUCKET_ITERATOR_H_
 
 #include "NativeTask.h"
-#include "MemoryPool.h"
-#include "Timer.h"
-#include "Buffers.h"
-#include "MapOutputSpec.h"
-#include "IFile.h"
-#include "SpillInfo.h"
-#include "Combiner.h"
-#include "PartitionBucket.h"
+#include "lib/MemoryPool.h"
+#include "util/Timer.h"
+#include "lib/Buffers.h"
+#include "lib/MapOutputSpec.h"
+#include "lib/IFile.h"
+#include "lib/SpillInfo.h"
+#include "lib/Combiner.h"
+#include "lib/PartitionBucket.h"
 
 namespace NativeTask {
 

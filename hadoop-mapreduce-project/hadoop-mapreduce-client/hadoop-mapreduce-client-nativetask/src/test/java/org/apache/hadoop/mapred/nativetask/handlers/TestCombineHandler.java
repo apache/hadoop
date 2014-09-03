@@ -41,13 +41,13 @@ public class TestCombineHandler extends TestCase {
 
   @Override
   public void setUp() throws IOException {
-    
     this.nativeHandler = Mockito.mock(INativeHandler.class);
     this.pusher = Mockito.mock(BufferPusher.class);
     this.puller =  Mockito.mock(BufferPuller.class);
     this.combinerRunner =  Mockito.mock(CombinerRunner.class);
 
-    Mockito.when(nativeHandler.getInputBuffer()).thenReturn(new InputBuffer(BufferType.HEAP_BUFFER, 100));
+    Mockito.when(nativeHandler.getInputBuffer()).thenReturn(
+      new InputBuffer(BufferType.HEAP_BUFFER, 100));
   }
 
   public void testCommandDispatcherSetting() throws IOException {
@@ -62,7 +62,8 @@ public class TestCombineHandler extends TestCase {
     handler.close();
     handler.close();
 
-    Mockito.verify(combinerRunner, Mockito.times(1)).combine(Matchers.eq(puller), Matchers.eq(pusher));
+    Mockito.verify(combinerRunner, Mockito.times(1))
+      .combine(Matchers.eq(puller), Matchers.eq(pusher));
 
     Mockito.verify(pusher, Mockito.times(1)).close();
     Mockito.verify(puller, Mockito.times(1)).close();

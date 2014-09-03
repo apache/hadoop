@@ -20,14 +20,14 @@
 #include <fcntl.h>
 #include <dirent.h>
 #include <sys/stat.h>
-#include "commons.h"
+#include "lib/commons.h"
 #include "util/StringUtil.h"
-#include "jniutils.h"
+#include "lib/jniutils.h"
 #include "NativeTask.h"
-#include "TaskCounters.h"
-#include "NativeObjectFactory.h"
-#include "Path.h"
-#include "FileSystem.h"
+#include "lib/TaskCounters.h"
+#include "lib/NativeObjectFactory.h"
+#include "lib/Path.h"
+#include "lib/FileSystem.h"
 
 namespace NativeTask {
 
@@ -122,14 +122,15 @@ void FileOutputStream::close() {
 /////////////////////////////////////////////////////////////
 
 class RawFileSystem : public FileSystem {
-protected:
+ protected:
   string getRealPath(const string & path) {
     if (StringUtil::StartsWith(path, "file:")) {
       return path.substr(5);
     }
     return path;
   }
-public:
+
+ public:
   InputStream * open(const string & path) {
     return new FileInputStream(getRealPath(path));
   }
@@ -206,7 +207,7 @@ public:
     struct stat sb;
 
     if (stat(np.c_str(), &sb) == 0) {
-      if (S_ISDIR (sb.st_mode) == 0) {
+      if (S_ISDIR(sb.st_mode) == 0) {
         return 1;
       }
       return 0;
@@ -226,7 +227,7 @@ public:
         if (mkdir(npath, nmode)) {
           return 1;
         }
-      } else if (S_ISDIR (sb.st_mode) == 0) {
+      } else if (S_ISDIR(sb.st_mode) == 0) {
         return 1;
       }
       *p++ = '/'; /* restore slash */
@@ -259,4 +260,4 @@ FileSystem & FileSystem::getLocal() {
   return RawFileSystemInstance;
 }
 
-} // namespace Hadoap
+} // namespace NativeTask

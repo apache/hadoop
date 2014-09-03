@@ -27,7 +27,8 @@ import org.apache.hadoop.io.Writable;
 @InterfaceAudience.Private
 public class NativeSerialization {
 
-  private final ConcurrentHashMap<String, Class<?>> map = new ConcurrentHashMap<String, Class<?>>();
+  private final ConcurrentHashMap<String, Class<?>> map =
+    new ConcurrentHashMap<String, Class<?>>();
 
   public boolean accept(Class<?> c) {
     return Writable.class.isAssignableFrom(c);
@@ -40,7 +41,8 @@ public class NativeSerialization {
       return null;
     }
     if (!Writable.class.isAssignableFrom(c)) {
-      throw new IOException("Cannot serialize type " + c.getName() + ", we only accept subclass of Writable");
+      throw new IOException("Cannot serialize type " + c.getName() +
+                            ", we only accept subclass of Writable");
     }
     final String name = c.getName();
     final Class<?> serializer = map.get(name);
@@ -70,8 +72,9 @@ public class NativeSerialization {
       return;
     } else {
       if (!storedSerializer.getName().equals(serializer.getName())) {
-        throw new IOException("Error! Serializer already registered, exist: " + storedSerializer.getName() + ", new: "
-            + serializer.getName());
+        throw new IOException("Error! Serializer already registered, existing: " +
+                              storedSerializer.getName() + ", new: " +
+                              serializer.getName());
       }
     }
   }

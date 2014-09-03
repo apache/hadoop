@@ -16,19 +16,19 @@
  * limitations under the License.
  */
 
-#include "commons.h"
+#include "lib/commons.h"
 #include "util/Timer.h"
 #include "util/StringUtil.h"
-#include "NativeObjectFactory.h"
-#include "PartitionBucket.h"
-#include "Merge.h"
+#include "lib/NativeObjectFactory.h"
+#include "lib/PartitionBucket.h"
+#include "lib/Merge.h"
 #include "NativeTask.h"
-#include "WritableUtils.h"
+#include "util/WritableUtils.h"
 #include "util/DualPivotQuickSort.h"
-#include "Combiner.h"
-#include "TaskCounters.h"
-#include "MinHeap.h"
-#include "PartitionBucketIterator.h"
+#include "lib/Combiner.h"
+#include "lib/TaskCounters.h"
+#include "lib/MinHeap.h"
+#include "lib/PartitionBucketIterator.h"
 
 namespace NativeTask {
 
@@ -39,7 +39,8 @@ KVIterator * PartitionBucket::getIterator() {
   return new PartitionBucketIterator(this, _keyComparator);
 }
 
-void PartitionBucket::spill(IFileWriter * writer) throw (IOException, UnsupportException) {
+void PartitionBucket::spill(IFileWriter * writer)
+  throw(IOException, UnsupportException) {
   KVIterator * iterator = getIterator();
   if (NULL == iterator || NULL == writer) {
     return;
@@ -71,6 +72,4 @@ void PartitionBucket::sort(SortAlgorithm type) {
   _sorted = true;
 }
 
-}
-;
-// namespace NativeTask
+} // namespace NativeTask

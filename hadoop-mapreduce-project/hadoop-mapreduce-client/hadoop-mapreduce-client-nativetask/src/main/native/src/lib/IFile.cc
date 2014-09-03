@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-#include "commons.h"
+#include "lib/commons.h"
 #include "util/StringUtil.h"
-#include "IFile.h"
-#include "Compressions.h"
+#include "lib/IFile.h"
+#include "lib/Compressions.h"
 #include "lib/FileSystem.h"
 
 namespace NativeTask {

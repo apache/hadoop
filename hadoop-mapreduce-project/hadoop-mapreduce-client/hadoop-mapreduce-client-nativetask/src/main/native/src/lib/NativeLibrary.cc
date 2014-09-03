@@ -18,9 +18,9 @@
 
 #include <dlfcn.h>
 
-#include "commons.h"
-#include "NativeObjectFactory.h"
-#include "NativeLibrary.h"
+#include "lib/commons.h"
+#include "lib/NativeObjectFactory.h"
+#include "lib/NativeLibrary.h"
 
 namespace NativeTask {
 
@@ -30,7 +30,6 @@ namespace NativeTask {
 
 NativeLibrary::NativeLibrary(const string & path, const string & name)
     : _path(path), _name(name), _getObjectCreatorFunc(NULL), _functionGetter(NULL) {
-
 }
 
 bool NativeLibrary::init() {

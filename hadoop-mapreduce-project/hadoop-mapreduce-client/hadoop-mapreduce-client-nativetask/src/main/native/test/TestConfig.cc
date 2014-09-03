@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-#include "commons.h"
-#include "BufferStream.h"
-#include "Buffers.h"
+#include "lib/commons.h"
+#include "lib/BufferStream.h"
+#include "lib/Buffers.h"
 #include "test_commons.h"
 
 float absoute(float v) {

@@ -16,12 +16,10 @@
  * limitations under the License.
  */
 
-#include "commons.h"
+#include "lib/commons.h"
 #include "test_commons.h"
-#include "MapOutputSpec.h"
+#include "lib/MapOutputSpec.h"
 #include "lib/MemoryBlock.h"
-
-using namespace NativeTask;
 
 namespace NativeTask {
 
@@ -46,7 +44,7 @@ TEST(MemoryBlockIterator, test) {
 }
 
 class MemoryBlockFactory {
-public:
+ public:
   static MemoryBlock * create(std::vector<int> & keys) {
     const uint32_t BUFFER_LENGTH = 1000;
     char * bytes = new char[BUFFER_LENGTH];
@@ -65,7 +63,6 @@ public:
     }
     return block1;
   }
-
 };
 
 TEST(MemoryBlockIterator, compare) {
@@ -109,5 +106,5 @@ TEST(MemoryBlockIterator, compare) {
   delete block2;
   delete block1;
 }
-}
+} // namespace NativeTask
 

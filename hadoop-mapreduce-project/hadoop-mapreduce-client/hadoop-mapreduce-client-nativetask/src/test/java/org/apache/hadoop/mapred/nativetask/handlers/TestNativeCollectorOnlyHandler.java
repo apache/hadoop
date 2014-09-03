@@ -65,7 +65,8 @@ public class TestNativeCollectorOnlyHandler extends TestCase {
         null,
         null);
 
-    Mockito.when(nativeHandler.getInputBuffer()).thenReturn(new InputBuffer(BufferType.HEAP_BUFFER, 100));
+    Mockito.when(nativeHandler.getInputBuffer()).thenReturn(
+      new InputBuffer(BufferType.HEAP_BUFFER, 100));
   }
 
   @Override
@@ -91,7 +92,8 @@ public class TestNativeCollectorOnlyHandler extends TestCase {
   public void testGetCombiner() throws IOException {
     this.handler = new NativeCollectorOnlyHandler(taskContext, nativeHandler, pusher, combiner);
     Mockito.when(combiner.getId()).thenReturn(100L);
-    final ReadWriteBuffer result = handler.onCall(NativeCollectorOnlyHandler.GET_COMBINE_HANDLER, null);
+    final ReadWriteBuffer result = handler.onCall(
+      NativeCollectorOnlyHandler.GET_COMBINE_HANDLER, null);
     Assert.assertEquals(100L, result.readLong());
   }
 
@@ -109,13 +111,16 @@ public class TestNativeCollectorOnlyHandler extends TestCase {
     final String expectedOutputIndexPath = LOCAL_DIR + "/output/file.out.index";
     final String expectedSpillPath = LOCAL_DIR + "/output/spill0.out";
 
-    final String outputPath = handler.onCall(NativeCollectorOnlyHandler.GET_OUTPUT_PATH, null).readString();
+    final String outputPath = handler.onCall(
+      NativeCollectorOnlyHandler.GET_OUTPUT_PATH, null).readString();
     Assert.assertEquals(expectedOutputPath, outputPath);
 
-    final String outputIndexPath = handler.onCall(NativeCollectorOnlyHandler.GET_OUTPUT_INDEX_PATH, null).readString();
+    final String outputIndexPath = handler.onCall(
+      NativeCollectorOnlyHandler.GET_OUTPUT_INDEX_PATH, null).readString();
     Assert.assertEquals(expectedOutputIndexPath, outputIndexPath);
 
-    final String spillPath = handler.onCall(NativeCollectorOnlyHandler.GET_SPILL_PATH, null).readString();
+    final String spillPath = handler.onCall(
+      NativeCollectorOnlyHandler.GET_SPILL_PATH, null).readString();
     Assert.assertEquals(expectedSpillPath, spillPath);
   }
 }

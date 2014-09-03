@@ -18,11 +18,11 @@
 
 #include "lz4.h"
 #include "config.h"
-#include "commons.h"
-#include "Path.h"
-#include "BufferStream.h"
-#include "FileSystem.h"
-#include "Compressions.h"
+#include "lib/commons.h"
+#include "lib/Path.h"
+#include "lib/BufferStream.h"
+#include "lib/FileSystem.h"
+#include "lib/Compressions.h"
 #include "test_commons.h"
 
 #if defined HADOOP_SNAPPY_LIBRARY
@@ -144,7 +144,7 @@ TEST(Perf, CompressionUtil) {
 }
 
 class CompressResult {
-public:
+ public:
   uint64_t uncompressedSize;
   uint64_t compressedSize;
   uint64_t compressTime;
@@ -193,10 +193,8 @@ void MeasureSingleFileLz4(const string & path, CompressResult & total, size_t bl
     result.compressTime += endTime - startTime;
     startTime = t.now();
     for (int i = 0; i < times; i++) {
-//      memset(dest, 0, currentblocksize+8);
       int osize = LZ4_uncompress(outputBuffer, dest, currentblocksize);
       ASSERT_EQ(currentblocksize, osize);
-//      printf("%016llx blocksize: %lu\n", bswap64(*(uint64_t*)(dest+currentblocksize)), currentblocksize);
     }
     endTime = t.now();
     result.uncompressTime += endTime - startTime;

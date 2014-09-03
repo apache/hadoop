@@ -38,13 +38,6 @@ using std::pair;
 enum NativeObjectType {
   UnknownObjectType = 0,
   BatchHandlerType = 1,
-  MapperType = 2,
-  ReducerType = 3,
-  PartitionerType = 4,
-  CombinerType = 5,
-  FolderType = 6,
-  RecordReaderType = 7,
-  RecordWriterType = 8
 };
 
 /**
@@ -69,7 +62,6 @@ enum Endium {
 #define INPUT_LINE_KV_SEPERATOR "mapreduce.input.keyvaluelinerecordreader.key.value.separator"
 #define MAPRED_TEXTOUTPUT_FORMAT_SEPERATOR "mapreduce.output.textoutputformat.separator"
 #define MAPRED_WORK_OUT_DIR "mapreduce.task.output.dir"
-#define NATIVE_OUTPUT_FILE_NAME "native.output.file.name"
 #define MAPRED_COMPRESS_OUTPUT "mapreduce.output.fileoutputformat.compress"
 #define MAPRED_OUTPUT_COMPRESSION_CODEC "mapreduce.output.fileoutputformat.compress.codec"
 #define TOTAL_ORDER_PARTITIONER_PATH "total.order.partitioner.path"
@@ -386,32 +378,6 @@ public:
   virtual bool next(Buffer & key, Buffer & value) = 0;
 };
 
-class RecordReader : public KVIterator, public Configurable, public Progress {
-public:
-  virtual NativeObjectType type() {
-    return RecordReaderType;
-  }
-
-  virtual bool next(Buffer & key, Buffer & value) = 0;
-
-  virtual float getProgress() = 0;
-
-  virtual void close() = 0;
-};
-
-class RecordWriter : public Collector, public Configurable {
-public:
-  virtual NativeObjectType type() {
-    return RecordWriterType;
-  }
-
-  virtual void collect(const void * key, uint32_t keyLen, const void * value, uint32_t valueLen) {
-  }
-
-  virtual void close() {
-  }
-
-};
 
 class ProcessorBase : public Configurable {
 protected:
@@ -444,36 +410,6 @@ public:
   }
 };
 
-class Mapper : public ProcessorBase {
-public:
-  virtual NativeObjectType type() {
-    return MapperType;
-  }
-
-  /**
-   * Map interface, default IdenticalMapper
-   */
-  virtual void map(const char * key, uint32_t keyLen, const char * value, uint32_t valueLen) {
-    collect(key, keyLen, value, valueLen);
-  }
-};
-
-class Partitioner : public Configurable {
-public:
-  virtual NativeObjectType type() {
-    return PartitionerType;
-  }
-
-  /**
-   * Partition interface
-   * @param key key buffer
-   * @param keyLen key length, can be modified to smaller value
-   *               to truncate key
-   * @return partition number
-   */
-  virtual uint32_t getPartition(const char * key, uint32_t & keyLen, uint32_t numPartition);
-};
-
 enum KeyGroupIterState {
   SAME_KEY,
   NEW_KEY,
@@ -502,80 +438,7 @@ public:
   virtual const char * nextValue(uint32_t & len) = 0;
 };
 
-class Reducer : public ProcessorBase {
-public:
-  virtual NativeObjectType type() {
-    return ReducerType;
-  }
 
-  /**
-   * Reduce interface, default IdenticalReducer
-   */
-  virtual void reduce(KeyGroupIterator & input) {
-    const char * key;
-    const char * value;
-    uint32_t keyLen;
-    uint32_t valueLen;
-    key = input.getKey(keyLen);
-    while (NULL != (value = input.nextValue(valueLen))) {
-      collect(key, keyLen, value, valueLen);
-    }
-  }
-};
-
-/**
- * Folder API used for hashtable based aggregation
- * Folder will be used in this way:
- * on(key, value):
- *   state = hashtable.get(key)
- *   if state == None:
- *     size = size()
- *     if size == -1:
- *       state = init(null, -1)
- *     elif size > 0:
- *       state = fixallocator.get(key)
- *       init(state, size)
- *   folder(state, value, value.len)
- *
- * final():
- *   for k,state in hashtable:
- *     final(key, key.len, state)
- */
-class Folder : public ProcessorBase {
-public:
-  virtual NativeObjectType type() {
-    return FolderType;
-  }
-
-  /**
-   * Get aggregator state size
-   * @return state storage size
-   *         -1 size not fixed or unknown, default
-   *            e.g. list map tree
-   *         0  don't need to store state
-   *         >0  fixed sized state
-   *            e.g. int32 int64 float.
-   */
-  virtual int32_t size() {
-    return -1;
-  }
-
-  /**
-   * Create and/or init new state
-   */
-  virtual void * init(const char * key, uint32_t keyLen) {
-    return NULL;
-  }
-
-  /**
-   * Aggregation function
-   */
-  virtual void folder(void * dest, const char * value, uint32_t valueLen) {
-  }
-
-  virtual void final(const char * key, uint32_t keyLen, void * dest) {
-  }
-};
 
 enum KeyValueType {
   TextType = 0,

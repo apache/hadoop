@@ -19,11 +19,11 @@
 #ifndef QUICK_BUILD
 #include "org_apache_hadoop_mapred_nativetask_NativeBatchProcessor.h"
 #endif
-#include "commons.h"
+#include "lib/commons.h"
 #include "jni_md.h"
-#include "jniutils.h"
+#include "lib/jniutils.h"
 #include "BatchHandler.h"
-#include "NativeObjectFactory.h"
+#include "lib/NativeObjectFactory.h"
 
 ///////////////////////////////////////////////////////////////
 // NativeBatchProcessor jni util methods
@@ -130,7 +130,8 @@ void BatchHandler::onSetup(Config * config, char * inputBuffer, uint32_t inputBu
     _out.reset(outputBuffer, outputBufferCapacity);
     _out.rewind(0, outputBufferCapacity);
 
-    LOG("[BatchHandler::onSetup] input Capacity %d, output capacity %d", inputBufferCapacity, _out.limit());
+    LOG("[BatchHandler::onSetup] input Capacity %d, output capacity %d",
+        inputBufferCapacity, _out.limit());
   }
   configure(_config);
 }

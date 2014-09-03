@@ -16,84 +16,15 @@
  * limitations under the License.
  */
 
-#include "commons.h"
+#include <string>
+
+#include "lib/commons.h"
 #include "util/StringUtil.h"
 #include "util/WritableUtils.h"
-#include "Buffers.h"
+#include "lib/Buffers.h"
 
 namespace NativeTask {
 
-DynamicBuffer::DynamicBuffer()
-    : _data(NULL), _capacity(0), _size(0), _used(0) {
-}
-
-DynamicBuffer::DynamicBuffer(uint32_t capacity)
-    : _data(NULL), _capacity(0), _size(0), _used(0) {
-  reserve(capacity);
-}
-
-DynamicBuffer::~DynamicBuffer() {
-  release();
-}
-
-void DynamicBuffer::release() {
-  if (_data != NULL) {
-    free(_data);
-    _data = NULL;
-    _capacity = 0;
-    _used = 0;
-  }
-}
-
-void DynamicBuffer::reserve(uint32_t capacity) {
-  if (_data != NULL) {
-    if (capacity > _capacity) {
-      char * newdata = (char*)realloc(_data, capacity);
-      if (newdata == NULL) {
-        THROW_EXCEPTION_EX(OutOfMemoryException, "DynamicBuffer reserve realloc %u failed",
-            capacity);
-      }
-      _data = newdata;
-      _capacity = capacity;
-    }
-    return;
-  }
-  release();
-  char * newdata = (char*)malloc(capacity);
-  if (newdata == NULL) {
-    THROW_EXCEPTION_EX(OutOfMemoryException, "DynamicBuffer reserve new %u failed", capacity);
-  }
-  _data = newdata;
-  _capacity = capacity;
-  _size = 0;
-  _used = 0;
-}
-
-int32_t DynamicBuffer::refill(InputStream * stream) {
-  if (_data == NULL || freeSpace() == 0) {
-    THROW_EXCEPTION(IOException, "refill DynamicBuffer failed, no space left");
-  }
-  int32_t rd = stream->read(_data + _size, freeSpace());
-  if (rd > 0) {
-    _size += rd;
-  }
-  return rd;
-}
-
-void DynamicBuffer::cleanUsed() {
-  if (_used > 0) {
-    uint32_t needToMove = _size - _used;
-    if (needToMove > 0) {
-      memmove(_data, _data + _used, needToMove);
-      _size = needToMove;
-    } else {
-      _size = 0;
-    }
-    _used = 0;
-  }
-}
-
-///////////////////////////////////////////////////////////
 
 ReadBuffer::ReadBuffer()
     : _buff(NULL), _remain(0), _size(0), _capacity(0), _stream(NULL), _source(NULL) {

@@ -79,13 +79,15 @@ public class TestKVSerializer extends TestCase {
     final DataOutputStream dataOut = Mockito.mock(DataOutputStream.class);
 
     Mockito.when(dataOut.hasUnFlushedData()).thenReturn(true);
-    Mockito.when(dataOut.shortOfSpace(key.length + value.length + Constants.SIZEOF_KV_LENGTH)).thenReturn(true);
+    Mockito.when(dataOut.shortOfSpace(key.length + value.length +
+                                      Constants.SIZEOF_KV_LENGTH)).thenReturn(true);
     final int written = serializer.serializeKV(dataOut, key, value);
 
     // flush once, write 4 int, and 2 byte array
     Mockito.verify(dataOut, Mockito.times(1)).flush();
     Mockito.verify(dataOut, Mockito.times(4)).writeInt(Matchers.anyInt());
-    Mockito.verify(dataOut, Mockito.times(2)).write(Matchers.any(byte[].class), Matchers.anyInt(), Matchers.anyInt());
+    Mockito.verify(dataOut, Mockito.times(2)).write(Matchers.any(byte[].class),
+                                                    Matchers.anyInt(), Matchers.anyInt());
 
     Assert.assertEquals(written, key.length + value.length + Constants.SIZEOF_KV_LENGTH);
   }
@@ -101,7 +103,8 @@ public class TestKVSerializer extends TestCase {
     // flush 0, write 4 int, and 2 byte array
     Mockito.verify(dataOut, Mockito.times(0)).flush();
     Mockito.verify(dataOut, Mockito.times(4)).writeInt(Matchers.anyInt());
-    Mockito.verify(dataOut, Mockito.times(2)).write(Matchers.any(byte[].class), Matchers.anyInt(), Matchers.anyInt());
+    Mockito.verify(dataOut, Mockito.times(2)).write(Matchers.any(byte[].class),
+                                                    Matchers.anyInt(), Matchers.anyInt());
 
     Assert.assertEquals(written, key.length + value.length + Constants.SIZEOF_KV_LENGTH);
   }
@@ -112,14 +115,16 @@ public class TestKVSerializer extends TestCase {
     Mockito.when(dataOut.hasUnFlushedData()).thenReturn(true);
     Mockito.when(
         dataOut
-        .shortOfSpace(key.length + value.length + Constants.SIZEOF_KV_LENGTH + Constants.SIZEOF_PARTITION_LENGTH))
+        .shortOfSpace(key.length + value.length +
+                      Constants.SIZEOF_KV_LENGTH + Constants.SIZEOF_PARTITION_LENGTH))
         .thenReturn(true);
     final int written = serializer.serializePartitionKV(dataOut, 100, key, value);
 
     // flush once, write 4 int, and 2 byte array
     Mockito.verify(dataOut, Mockito.times(1)).flush();
     Mockito.verify(dataOut, Mockito.times(5)).writeInt(Matchers.anyInt());
-    Mockito.verify(dataOut, Mockito.times(2)).write(Matchers.any(byte[].class), Matchers.anyInt(), Matchers.anyInt());
+    Mockito.verify(dataOut, Mockito.times(2)).write(Matchers.any(byte[].class),
+                                                    Matchers.anyInt(), Matchers.anyInt());
 
     Assert.assertEquals(written, key.length + value.length + Constants.SIZEOF_KV_LENGTH
         + Constants.SIZEOF_PARTITION_LENGTH);
@@ -137,6 +142,7 @@ public class TestKVSerializer extends TestCase {
     Assert.assertTrue(serializer.deserializeKV(in, key, value) > 0);
 
     Mockito.verify(in, Mockito.times(4)).readInt();
-    Mockito.verify(in, Mockito.times(2)).readFully(Matchers.any(byte[].class), Matchers.anyInt(), Matchers.anyInt());
+    Mockito.verify(in, Mockito.times(2)).readFully(Matchers.any(byte[].class),
+                                                   Matchers.anyInt(), Matchers.anyInt());
   }
 }

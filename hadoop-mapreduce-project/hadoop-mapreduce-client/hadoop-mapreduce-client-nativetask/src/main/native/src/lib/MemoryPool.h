@@ -19,8 +19,8 @@
 #ifndef MEMORYPOOL_H_
 #define MEMORYPOOL_H_
 
-#include "Buffers.h"
-#include "MapOutputSpec.h"
+#include "lib/Buffers.h"
+#include "lib/MapOutputSpec.h"
 #include "NativeTask.h"
 #include "util/StringUtil.h"
 

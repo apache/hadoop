@@ -17,9 +17,9 @@
  */
 
 #include <time.h>
-#include "commons.h"
-#include "StringUtil.h"
-#include "Timer.h"
+#include "lib/commons.h"
+#include "util/StringUtil.h"
+#include "util/Timer.h"
 
 namespace NativeTask {
 
@@ -51,7 +51,6 @@ Timer::Timer() {
 }
 
 Timer::~Timer() {
-
 }
 
 uint64_t Timer::last() {

@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-#include "commons.h"
-#include "Checksum.h"
-#include "Streams.h"
+#include "lib/commons.h"
+#include "util/Checksum.h"
+#include "lib/Streams.h"
 
 namespace NativeTask {
 

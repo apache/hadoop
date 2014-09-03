@@ -16,12 +16,11 @@
  * limitations under the License.
  */
 
-#include "commons.h"
+#include "lib/commons.h"
 #include "test_commons.h"
-#include "MapOutputSpec.h"
+#include "lib/MapOutputSpec.h"
 #include "lib/MemoryBlock.h"
 
-using namespace NativeTask;
 namespace NativeTaskTest {
 
 TEST(MemoryBlock, test) {
@@ -107,5 +106,4 @@ TEST(MemoryBlock, sort) {
   delete [] bytes;
 }
 
-}
-
+} // namespace NativeTask

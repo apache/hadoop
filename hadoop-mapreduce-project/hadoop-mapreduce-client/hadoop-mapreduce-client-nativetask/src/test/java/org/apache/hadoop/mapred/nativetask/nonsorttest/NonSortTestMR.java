@@ -36,7 +36,8 @@ public class NonSortTestMR {
     private final Text word = new Text();
 
     @Override
-    public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
+    public void map(Object key, Text value, Context context)
+      throws IOException, InterruptedException {
       final String line = value.toString();
       final StringTokenizer tokenizer = new StringTokenizer(line);
       while (tokenizer.hasMoreTokens()) {

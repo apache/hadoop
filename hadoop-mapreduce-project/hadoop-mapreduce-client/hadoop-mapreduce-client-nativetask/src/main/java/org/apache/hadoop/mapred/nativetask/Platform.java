@@ -49,8 +49,6 @@ public abstract class Platform {
 
   /**
    * initialize a platform, where we should call registerKey
-   *
-   * @throws IOException
    */
   public abstract void init() throws IOException;
 
@@ -65,7 +63,6 @@ public abstract class Platform {
    *
    * @param keyClassName map out key class name
    * @param key          key serializer class
-   * @throws IOException
    */
   protected void registerKey(String keyClassName, Class<?> key) throws IOException {
     serialization.register(keyClassName, key);
@@ -92,12 +89,12 @@ public abstract class Platform {
   /**
    * whether it's the platform that has defined a custom Java comparator
    *
-   * NativeTask doesn't support custom Java comparator(set with mapreduce.job.output.key.comparator.class)
-   * but a platform (e.g Pig) could also set that conf and implement native comparators so
-   * we shouldn't bail out.
+   * NativeTask doesn't support custom Java comparators
+   * (set with mapreduce.job.output.key.comparator.class)
+   * but a platform (e.g Pig) could also set that conf and implement native
+   * comparators so we shouldn't bail out.
    *
    * @param keyComparator comparator set with mapreduce.job.output.key.comparator.class
-   * @return
    */
   protected abstract boolean define(Class<?> keyComparator);
 }

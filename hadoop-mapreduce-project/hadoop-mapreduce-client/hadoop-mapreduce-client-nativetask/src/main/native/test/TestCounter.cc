@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-#include "commons.h"
-#include "NativeObjectFactory.h"
-#include "BufferStream.h"
-#include "Buffers.h"
+#include "lib/commons.h"
+#include "lib/NativeObjectFactory.h"
+#include "lib/BufferStream.h"
+#include "lib/Buffers.h"
 #include "test_commons.h"
 
 TEST(Counter, Counter) {

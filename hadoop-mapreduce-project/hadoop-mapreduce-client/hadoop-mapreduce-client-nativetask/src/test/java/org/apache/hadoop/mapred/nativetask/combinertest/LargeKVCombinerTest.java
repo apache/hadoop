@@ -84,8 +84,10 @@ public class LargeKVCombinerTest {
         1000000), IntWritable.class.getName(),
         Text.class.getName(), normalConf).createSequenceTestFile(inputPath, 1);
 
-      final Job normaljob = CombinerTest.getJob("normalwordcount", normalConf, inputPath, hadoopOutputPath);
-      final Job nativejob = CombinerTest.getJob("nativewordcount", nativeConf, inputPath, nativeOutputPath);
+      final Job normaljob = CombinerTest.getJob("normalwordcount", normalConf,
+                                                inputPath, hadoopOutputPath);
+      final Job nativejob = CombinerTest.getJob("nativewordcount", nativeConf,
+                                                inputPath, nativeOutputPath);
 
       assertTrue(nativejob.waitForCompletion(true));
 
@@ -93,8 +95,9 @@ public class LargeKVCombinerTest {
 
       final boolean compareRet = ResultVerifier.verify(nativeOutputPath, hadoopOutputPath);
 
-      final String reason = "LargeKVCombinerTest failed with, min size: " + min
-        + ", max size: " + max + ", normal out: " + hadoopOutputPath + ", native Out: " + nativeOutputPath;
+      final String reason = "LargeKVCombinerTest failed with, min size: " + min +
+        ", max size: " + max + ", normal out: " + hadoopOutputPath +
+        ", native Out: " + nativeOutputPath;
 
       assertEquals(reason, true, compareRet);
       ResultVerifier.verifyCounters(normaljob, nativejob, true);

@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-#include "commons.h"
-#include "Streams.h"
-#include "FileSystem.h"
-#include "Buffers.h"
-#include "SpillInfo.h"
+#include "lib/commons.h"
+#include "lib/Streams.h"
+#include "lib/FileSystem.h"
+#include "lib/Buffers.h"
+#include "lib/SpillInfo.h"
 
 namespace NativeTask {
 
@@ -69,5 +69,5 @@ void SingleSpillInfo::writeSpillInfo(const std::string & filepath) {
   delete fout;
 }
 
-}
+} // namespace NativeTask
 

@@ -55,7 +55,8 @@ public class KVSerializer<K, V> implements IKVSerializer {
   }
 
   @Override
-  public int serializeKV(DataOutputStream out, SizedWritable<?> key, SizedWritable<?> value) throws IOException {
+  public int serializeKV(DataOutputStream out, SizedWritable<?> key, SizedWritable<?> value)
+    throws IOException {
     return serializePartitionKV(out, -1, key, value);
   }
 
@@ -64,7 +65,8 @@ public class KVSerializer<K, V> implements IKVSerializer {
       SizedWritable<?> key, SizedWritable<?> value)
       throws IOException {
 
-    if (key.length == SizedWritable.INVALID_LENGTH || value.length == SizedWritable.INVALID_LENGTH) {
+    if (key.length == SizedWritable.INVALID_LENGTH ||
+        value.length == SizedWritable.INVALID_LENGTH) {
       updateLength(key, value);
     }
 

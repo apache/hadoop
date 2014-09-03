@@ -208,7 +208,6 @@ void CombineHandler::write(char * buf, uint32_t length) {
     outputRecordCount++;
     remain -= kv->length();
     pos += kv->length();
-    ;
   }
 
   _combineOutputRecordCount += outputRecordCount;
@@ -242,7 +241,8 @@ void CombineHandler::combine(CombineContext type, KVIterator * kvIterator, IFile
   this->_writer = writer;
   call(COMBINE, NULL);
 
-  LOG("[CombineHandler] input Record Count: %d, input Bytes: %d, output Record Count: %d, output Bytes: %d",
+  LOG("[CombineHandler] input Record Count: %d, input Bytes: %d, "
+      "output Record Count: %d, output Bytes: %d",
       _combineInputRecordCount, _combineInputBytes,
       _combineOutputRecordCount, _combineOutputBytes);
   return;

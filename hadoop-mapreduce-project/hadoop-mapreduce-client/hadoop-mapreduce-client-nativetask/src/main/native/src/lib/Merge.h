@@ -20,10 +20,10 @@
 #define MERGE_H_
 
 #include "NativeTask.h"
-#include "Buffers.h"
-#include "MapOutputCollector.h"
-#include "IFile.h"
-#include "MinHeap.h"
+#include "lib/Buffers.h"
+#include "lib/MapOutputCollector.h"
+#include "lib/IFile.h"
+#include "lib/MinHeap.h"
 
 namespace NativeTask {
 

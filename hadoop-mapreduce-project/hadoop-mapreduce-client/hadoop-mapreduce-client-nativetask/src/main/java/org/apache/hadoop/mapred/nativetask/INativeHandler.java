@@ -45,17 +45,9 @@ public interface INativeHandler extends NativeDataTarget, NativeDataSource {
 
   /**
    * call command to downstream
-   * 
-   * @param command
-   * @param parameter
-   * @return
-   * @throws IOException
    */
   public ReadWriteBuffer call(Command command, ReadWriteBuffer parameter) throws IOException;
 
-  /**
-   * @param handler
-   */
   void setCommandDispatcher(CommandDispatcher handler);
 
 }

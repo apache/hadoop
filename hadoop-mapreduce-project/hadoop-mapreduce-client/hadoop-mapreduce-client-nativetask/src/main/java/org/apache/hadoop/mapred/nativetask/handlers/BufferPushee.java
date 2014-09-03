@@ -51,7 +51,8 @@ public class BufferPushee<OK, OV> implements Closeable {
   private KVSerializer<OK, OV> deserializer;
   private boolean closed = false;
 
-  public BufferPushee(Class<OK> oKClass, Class<OV> oVClass, RecordWriter<OK, OV> writer) throws IOException {
+  public BufferPushee(Class<OK> oKClass, Class<OV> oVClass,
+                      RecordWriter<OK, OV> writer) throws IOException {
     tmpOutputKey = new SizedWritable<OK>(oKClass);
     tmpOutputValue = new SizedWritable<OV>(oVClass);
 
@@ -128,7 +129,8 @@ public class BufferPushee<OK, OV> implements Closeable {
       }
     }
     if (remain != totalRead) {
-      throw new IOException("We expect to read " + remain + ", but we actually read: " + totalRead);
+      throw new IOException("We expect to read " + remain +
+                            ", but we actually read: " + totalRead);
     }
     return true;
   }

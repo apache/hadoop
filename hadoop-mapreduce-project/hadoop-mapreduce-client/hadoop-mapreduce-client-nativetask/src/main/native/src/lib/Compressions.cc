@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-#include "commons.h"
+#include "lib/commons.h"
 #include "config.h"
-#include "SyncUtils.h"
-#include "Compressions.h"
+#include "lib/Compressions.h"
+#include "util/SyncUtils.h"
 #include "codec/GzipCodec.h"
 #include "codec/SnappyCodec.h"
 #include "codec/Lz4Codec.h"

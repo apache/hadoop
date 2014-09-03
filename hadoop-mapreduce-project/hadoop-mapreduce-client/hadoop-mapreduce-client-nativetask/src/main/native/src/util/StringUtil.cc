@@ -17,8 +17,8 @@
  */
 
 #include <stdarg.h>
-#include "commons.h"
-#include "StringUtil.h"
+#include "lib/commons.h"
+#include "util/StringUtil.h"
 
 namespace NativeTask {
 
@@ -201,8 +201,9 @@ bool StringUtil::StartsWith(const string & str, const string & prefix) {
 }
 
 bool StringUtil::EndsWith(const string & str, const string & suffix) {
-  if ((suffix.length() > str.length())
-      || (memcmp(str.data() + str.length() - suffix.length(), suffix.data(), suffix.length()) != 0)) {
+  if ((suffix.length() > str.length()) ||
+      (memcmp(str.data() + str.length() - suffix.length(),
+              suffix.data(), suffix.length()) != 0)) {
     return false;
   }
   return true;

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "TaskCounters.h"
+#include "lib/TaskCounters.h"
 
 namespace NativeTask {
 
@@ -36,6 +36,5 @@ const char * TaskCounters::FILESYSTEM_COUNTER_GROUP = "FileSystemCounters";
 
 DEFINE_COUNTER(FILE_BYTES_READ)
 DEFINE_COUNTER(FILE_BYTES_WRITTEN)
-;
 
 } // namespace NativeTask

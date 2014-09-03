@@ -20,11 +20,11 @@
 #ifndef __CYGWIN__
 #include <execinfo.h>
 #endif
-#include "commons.h"
+#include "lib/commons.h"
 #include "NativeTask.h"
-#include "NativeObjectFactory.h"
-#include "NativeLibrary.h"
-#include "BufferStream.h"
+#include "lib/NativeObjectFactory.h"
+#include "lib/NativeLibrary.h"
+#include "lib/BufferStream.h"
 #include "util/StringUtil.h"
 #include "util/SyncUtils.h"
 #include "util/WritableUtils.h"
@@ -53,19 +53,10 @@ extern "C" void handler(int sig) {
 }
 
 DEFINE_NATIVE_LIBRARY(NativeTask) {
-  //signal(SIGSEGV, handler);
   REGISTER_CLASS(BatchHandler, NativeTask);
   REGISTER_CLASS(CombineHandler, NativeTask);
   REGISTER_CLASS(MCollectorOutputHandler, NativeTask);
-  REGISTER_CLASS(Mapper, NativeTask);
-  REGISTER_CLASS(Reducer, NativeTask);
-  REGISTER_CLASS(Partitioner, NativeTask);
-  REGISTER_CLASS(Folder, NativeTask);
   NativeObjectFactory::SetDefaultClass(BatchHandlerType, "NativeTask.BatchHandler");
-  NativeObjectFactory::SetDefaultClass(MapperType, "NativeTask.Mapper");
-  NativeObjectFactory::SetDefaultClass(ReducerType, "NativeTask.Reducer");
-  NativeObjectFactory::SetDefaultClass(PartitionerType, "NativeTask.Partitioner");
-  NativeObjectFactory::SetDefaultClass(FolderType, "NativeTask.Folder");
 }
 
 namespace NativeTask {
@@ -132,7 +123,7 @@ bool NativeObjectFactory::Init() {
     }
     const char * version = GetConfig().get(NATIVE_HADOOP_VERSION);
     LOG("[NativeObjectLibrary] NativeTask library initialized with hadoop %s",
-        version==NULL?"unkown":version);
+        version == NULL ? "unkown" : version);
   }
   return true;
 }

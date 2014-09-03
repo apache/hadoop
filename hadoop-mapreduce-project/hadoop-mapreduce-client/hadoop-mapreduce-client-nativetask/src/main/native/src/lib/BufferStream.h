@@ -20,48 +20,11 @@
 #define BUFFERSTREAM_H_
 
 #include <string>
-#include "Streams.h"
+#include "lib/Streams.h"
 
 namespace NativeTask {
 
 using std::string;
-
-class BufferedInputStream : public FilterInputStream {
-protected:
-  char * _buff;
-  uint32_t _position;
-  uint32_t _limit;
-  uint32_t _capacity;
-public:
-  BufferedInputStream(InputStream * stream, uint32_t bufferSize = 64 * 1024);
-
-  virtual ~BufferedInputStream();
-
-  virtual void seek(uint64_t position);
-
-  virtual uint64_t tell();
-
-  virtual int32_t read(void * buff, uint32_t length);
-};
-
-class BufferedOutputStream : public FilterOutputStream {
-protected:
-  char * _buff;
-  uint32_t _position;
-  uint32_t _capacity;
-
-public:
-  BufferedOutputStream(InputStream * stream, uint32_t bufferSize = 64 * 1024);
-
-  virtual ~BufferedOutputStream();
-
-  virtual uint64_t tell();
-
-  virtual void write(const void * buff, uint32_t length);
-
-  virtual void flush();
-
-};
 
 class InputBuffer : public InputStream {
 protected:

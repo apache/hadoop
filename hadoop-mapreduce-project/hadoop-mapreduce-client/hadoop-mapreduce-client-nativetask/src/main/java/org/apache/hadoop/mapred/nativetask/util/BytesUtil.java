@@ -97,7 +97,7 @@ public class BytesUtil {
    * Write a printable representation of a byte array.
    *
    * @param b byte array
-   * @return string
+   * @return the printable presentation
    * @see #toStringBinary(byte[], int, int)
    */
   public static String toStringBinary(final byte [] b) {

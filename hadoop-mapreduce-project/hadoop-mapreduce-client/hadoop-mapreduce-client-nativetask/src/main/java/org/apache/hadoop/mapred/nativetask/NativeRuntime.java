@@ -79,9 +79,6 @@ public class NativeRuntime {
 
   /**
    * create native object We use it to create native handlers
-   * 
-   * @param clazz
-   * @return
    */
   public synchronized static long createNativeObject(String clazz) {
     assertNativeLibraryLoaded();
@@ -94,13 +91,11 @@ public class NativeRuntime {
 
   /**
    * Register a customized library
-   * 
-   * @param clazz
-   * @return
    */
   public synchronized static long registerLibrary(String libraryName, String clazz) {
     assertNativeLibraryLoaded();
-    final long ret = JNIRegisterModule(libraryName.getBytes(Charsets.UTF_8), clazz.getBytes(Charsets.UTF_8));
+    final long ret = JNIRegisterModule(libraryName.getBytes(Charsets.UTF_8),
+                                       clazz.getBytes(Charsets.UTF_8));
     if (ret != 0) {
       LOG.warn("Can't create NativeObject for class " + clazz + ", probably not exist.");
     }
@@ -117,9 +112,6 @@ public class NativeRuntime {
 
   /**
    * Get the status report from native space
-   * 
-   * @param reporter
-   * @throws IOException
    */
   public static void reportStatus(TaskReporter reporter) throws IOException {
     assertNativeLibraryLoaded();
@@ -164,40 +156,32 @@ public class NativeRuntime {
 
   /**
    * Config the native runtime with mapreduce job configurations.
-   * 
-   * @param configs
    */
   private native static void JNIConfigure(byte[][] configs);
 
   /**
    * create a native object in native space
-   * 
-   * @param clazz
-   * @return
    */
   private native static long JNICreateNativeObject(byte[] clazz);
 
   /**
    * create the default native object for certain type
-   * 
-   * @param type
-   * @return
    */
   @Deprecated
   private native static long JNICreateDefaultNativeObject(byte[] type);
 
   /**
    * destroy native object in native space
-   * 
-   * @param addr
    */
   private native static void JNIReleaseNativeObject(long addr);
 
   /**
-   * get status update from native side Encoding: progress:float status:Text Counter number: int the count of the
-   * counters Counters: array [group:Text, name:Text, incrCount:Long]
-   * 
-   * @return
+   * Get status update from native side
+   * Encoding:
+   *  progress:float
+   *  status:Text
+   *  number: int the count of the counters
+   *  Counters: array [group:Text, name:Text, incrCount:Long]
    */
   private native static byte[] JNIUpdateStatus();
 

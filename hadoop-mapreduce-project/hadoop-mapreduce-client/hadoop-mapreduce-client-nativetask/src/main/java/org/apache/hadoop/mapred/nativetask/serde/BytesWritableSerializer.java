@@ -27,7 +27,8 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapred.nativetask.INativeComparable;
 
 @InterfaceAudience.Private
-public class BytesWritableSerializer implements INativeComparable, INativeSerializer<BytesWritable> {
+public class BytesWritableSerializer
+  implements INativeComparable, INativeSerializer<BytesWritable> {
 
   @Override
   public int getLength(BytesWritable w) throws IOException {

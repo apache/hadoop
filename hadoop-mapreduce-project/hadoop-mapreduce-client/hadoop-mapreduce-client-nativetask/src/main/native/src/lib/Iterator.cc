@@ -15,8 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "Iterator.h"
-#include "commons.h"
+#include "lib/Iterator.h"
+#include "lib/commons.h"
 
 namespace NativeTask {
 
@@ -88,4 +88,4 @@ bool KeyGroupIteratorImpl::next() {
   return result;
 }
 
-} //namespace NativeTask
+} // namespace NativeTask

@@ -49,7 +49,8 @@ class CombinerHandler<K, V> implements ICombineHandler, CommandDispatcher {
   private final BufferPusher<K, V> kvPusher;
   private boolean closed = false;
 
-  public static <K, V> ICombineHandler create(TaskContext context) throws IOException, ClassNotFoundException {
+  public static <K, V> ICombineHandler create(TaskContext context)
+    throws IOException, ClassNotFoundException {
     final JobConf conf = new JobConf(context.getConf());
     conf.set(Constants.SERIALIZATION_FRAMEWORK,
         String.valueOf(SerializationFramework.WRITABLE_SERIALIZATION.getType()));
@@ -66,11 +67,13 @@ class CombinerHandler<K, V> implements ICombineHandler, CommandDispatcher {
 
     final Counter combineInputCounter = context.getTaskReporter().getCounter(
         TaskCounter.COMBINE_INPUT_RECORDS);
-    
-    final CombinerRunner<K, V> combinerRunner = CombinerRunner.create(conf, context.getTaskAttemptId(),
+
+    final CombinerRunner<K, V> combinerRunner = CombinerRunner.create(
+        conf, context.getTaskAttemptId(),
         combineInputCounter, context.getTaskReporter(), null);
 
-    final INativeHandler nativeHandler = NativeBatchProcessor.create(NAME, conf, DataChannel.INOUT);
+    final INativeHandler nativeHandler = NativeBatchProcessor.create(
+      NAME, conf, DataChannel.INOUT);
     @SuppressWarnings("unchecked")
     final BufferPusher<K, V> pusher = new BufferPusher<K, V>((Class<K>)context.getInputKeyClass(),
         (Class<V>)context.getInputValueClass(),
@@ -79,8 +82,9 @@ class CombinerHandler<K, V> implements ICombineHandler, CommandDispatcher {
     return new CombinerHandler<K, V>(nativeHandler, combinerRunner, puller, pusher);
   }
 
-  public CombinerHandler(INativeHandler nativeHandler, CombinerRunner<K, V> combiner, BufferPuller puller,
-      BufferPusher<K, V> kvPusher) throws IOException {
+  public CombinerHandler(INativeHandler nativeHandler, CombinerRunner<K, V> combiner,
+                         BufferPuller puller, BufferPusher<K, V> kvPusher)
+    throws IOException {
     this.nativeHandler = nativeHandler;
     this.combinerRunner = combiner;
     this.puller = puller;

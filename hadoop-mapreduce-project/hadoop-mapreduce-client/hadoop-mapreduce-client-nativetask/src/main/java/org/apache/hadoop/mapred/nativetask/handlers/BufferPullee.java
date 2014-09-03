@@ -46,7 +46,8 @@ public class BufferPullee<IK, IV> implements IDataLoader {
   private final NativeDataTarget target;
   private boolean closed = false;
   
-  public BufferPullee(Class<IK> iKClass, Class<IV> iVClass, RawKeyValueIterator rIter, NativeDataTarget target)
+  public BufferPullee(Class<IK> iKClass, Class<IV> iVClass,
+                      RawKeyValueIterator rIter, NativeDataTarget target)
       throws IOException {
     this.rIter = rIter;
     tmpInputKey = new SizedWritable<IK>(iKClass);

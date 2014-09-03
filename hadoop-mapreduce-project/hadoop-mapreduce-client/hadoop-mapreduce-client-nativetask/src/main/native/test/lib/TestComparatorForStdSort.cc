@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "commons.h"
+#include "lib/commons.h"
 #include "lib/Combiner.h"
 #include "lib/MemoryBlock.h"
 #include "test_commons.h"

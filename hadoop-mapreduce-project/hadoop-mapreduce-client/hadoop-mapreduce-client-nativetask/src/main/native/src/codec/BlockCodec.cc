@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "commons.h"
+#include "lib/commons.h"
 #include "NativeTask.h"
 #include "BlockCodec.h"
 
@@ -79,9 +79,8 @@ BlockDecompressStream::BlockDecompressStream(InputStream * stream, uint32_t buff
 }
 
 void BlockDecompressStream::init() {
-   _tempBufferSize = maxCompressedLength(_blockMax) + 8;
+  _tempBufferSize = maxCompressedLength(_blockMax) + 8;
   _tempBuffer = (char*)malloc(_tempBufferSize);
-
 }
 
 BlockDecompressStream::~BlockDecompressStream() {

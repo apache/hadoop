@@ -18,11 +18,10 @@
 #ifndef __CYGWIN__
 #include <execinfo.h>
 #endif
-#include "commons.h"
-#include "util/Hash.h"
+#include "lib/commons.h"
 #include "util/StringUtil.h"
 #include "NativeTask.h"
-#include "NativeObjectFactory.h"
+#include "lib/NativeObjectFactory.h"
 
 namespace NativeTask {
 
@@ -34,20 +33,6 @@ const string NativeObjectTypeToString(NativeObjectType type) {
   switch (type) {
   case BatchHandlerType:
     return string("BatchHandlerType");
-  case MapperType:
-    return string("MapperType");
-  case ReducerType:
-    return string("ReducerType");
-  case PartitionerType:
-    return string("PartitionerType");
-  case CombinerType:
-    return string("CombinerType");
-  case FolderType:
-    return string("FolderType");
-  case RecordReaderType:
-    return string("RecordReaderType");
-  case RecordWriterType:
-    return string("RecordWriterType");
   default:
     return string("UnknownObjectType");
   }
@@ -56,20 +41,6 @@ const string NativeObjectTypeToString(NativeObjectType type) {
 NativeObjectType NativeObjectTypeFromString(const string type) {
   if (type == "BatchHandlerType") {
     return BatchHandlerType;
-  } else if (type == "MapperType") {
-    return MapperType;
-  } else if (type == "ReducerType") {
-    return ReducerType;
-  } else if (type == "PartitionerType") {
-    return PartitionerType;
-  } else if (type == "CombinerType") {
-    return CombinerType;
-  } else if (type == "FolderType") {
-    return CombinerType;
-  } else if (type == "RecordReaderType") {
-    return RecordReaderType;
-  } else if (type == "RecordWriterType") {
-    return RecordWriterType;
   }
   return UnknownObjectType;
 }
@@ -96,7 +67,7 @@ HadoopException::HadoopException(const string & what) {
 #ifndef __CYGWIN__
   size = backtrace(array, 64);
   char ** traces = backtrace_symbols(array, size);
-  for (size_t i = 0; i< size;i++) {
+  for (size_t i = 0; i < size; i++) {
     _reason.append("\n\t");
     _reason.append(traces[i]);
   }
@@ -235,13 +206,6 @@ Counter * ProcessorBase::getCounter(const string & group, const string & name) {
   return NULL;
 }
 
-uint32_t Partitioner::getPartition(const char * key, uint32_t & keyLen, uint32_t numPartition) {
-  if (numPartition == 1) {
-    return 0;
-  }
-  return (Hash::BytesHash(key, keyLen) & 0x7fffffff) % numPartition;
-}
-
 ///////////////////////////////////////////////////////////
 
-}
+} // namespace NativeTask

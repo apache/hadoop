@@ -21,3 +21,4 @@ MAPREDUCE-6058. native-task: KVTest and LargeKVTest should check mr job is suces
 MAPREDUCE-6056. native-task: move system test working dir to target dir and cleanup test config xml files (Manu Zhang via bchang)
 MAPREDUCE-6055. native-task: findbugs, interface annotations, and other misc cleanup (todd)
 MAPREDUCE-6067. native-task: fix some counter issues (Binglin Chang)
+MAPREDUCE-6069. native-task: Lint/style fixes and removal of unused code (todd)

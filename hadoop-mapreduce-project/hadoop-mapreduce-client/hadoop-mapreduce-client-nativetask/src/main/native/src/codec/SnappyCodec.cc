@@ -19,7 +19,7 @@
 #include "config.h"
 
 #if defined HADOOP_SNAPPY_LIBRARY
-#include "commons.h"
+#include "lib/commons.h"
 #include "NativeTask.h"
 #include "SnappyCodec.h"
 

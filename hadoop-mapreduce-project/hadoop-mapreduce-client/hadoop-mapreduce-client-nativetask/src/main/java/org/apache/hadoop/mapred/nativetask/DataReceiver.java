@@ -32,9 +32,6 @@ public interface DataReceiver {
   /**
    * Send a signal to the receiver that the data arrives.
    * The data is transferred in another band.
-   * 
-   * @return
-   * @throws IOException
    */
   public boolean receiveData() throws IOException;
 }

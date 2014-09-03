@@ -23,7 +23,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.nativetask.NativeMapOutputCollectorDelegator;
 
-public class EnforceNativeOutputCollectorDelegator<K, V> extends NativeMapOutputCollectorDelegator<K, V> {
+public class EnforceNativeOutputCollectorDelegator<K, V>
+  extends NativeMapOutputCollectorDelegator<K, V> {
   private static final Log LOG = LogFactory.getLog(EnforceNativeOutputCollectorDelegator.class);
   private boolean nativetaskloaded = false;
 

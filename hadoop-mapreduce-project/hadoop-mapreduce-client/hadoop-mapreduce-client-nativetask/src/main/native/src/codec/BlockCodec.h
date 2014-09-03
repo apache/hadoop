@@ -19,7 +19,7 @@
 #ifndef BLOCKCODEC_H_
 #define BLOCKCODEC_H_
 
-#include "Compressions.h"
+#include "lib/Compressions.h"
 
 namespace NativeTask {
 

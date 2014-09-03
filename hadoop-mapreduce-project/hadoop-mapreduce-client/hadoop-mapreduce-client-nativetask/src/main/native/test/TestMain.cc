@@ -23,10 +23,10 @@
 #endif
 
 #include <stdexcept>
-#include "commons.h"
-#include "Buffers.h"
-#include "FileSystem.h"
-#include "NativeObjectFactory.h"
+#include "lib/commons.h"
+#include "lib/Buffers.h"
+#include "lib/FileSystem.h"
+#include "lib/NativeObjectFactory.h"
 #include "test_commons.h"
 
 extern "C" {
@@ -52,11 +52,11 @@ void handler(int sig) {
 }
 }
 
-using namespace NativeTask;
-
 typedef char * CString;
 
-int main(int argc, char ** argv) {
+namespace NativeTask {
+
+int DoMain(int argc, char** argv) {
   signal(SIGSEGV, handler);
   CString * newArgv = new CString[argc + 1];
   memcpy(newArgv, argv, argc * sizeof(CString));
@@ -106,4 +106,11 @@ int main(int argc, char ** argv) {
     NativeObjectFactory::Release();
     return 1;
   }
+}
+
+} // namespace NativeTask
+
+
+int main(int argc, char ** argv) {
+  return NativeTask::DoMain(argc, argv);
 }

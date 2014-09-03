@@ -55,23 +55,28 @@ public class OldAPICombinerTest {
     final Configuration nativeConf = ScenarioConfiguration.getNativeConfiguration();
     nativeConf.addResource(TestConstants.COMBINER_CONF_PATH);
     final String nativeoutput = TestConstants.NATIVETASK_OLDAPI_COMBINER_TEST_NATIVE_OUTPUTPATH;
-    final JobConf nativeJob = getOldAPIJobconf(nativeConf, "nativeCombinerWithOldAPI", inputpath, nativeoutput);
+    final JobConf nativeJob = getOldAPIJobconf(nativeConf, "nativeCombinerWithOldAPI",
+                                               inputpath, nativeoutput);
     RunningJob nativeRunning = JobClient.runJob(nativeJob);
 
-    Counter nativeReduceGroups = nativeRunning.getCounters().findCounter(Task.Counter.REDUCE_INPUT_RECORDS);
+    Counter nativeReduceGroups = nativeRunning.getCounters().findCounter(
+      Task.Counter.REDUCE_INPUT_RECORDS);
 
     final Configuration normalConf = ScenarioConfiguration.getNormalConfiguration();
     normalConf.addResource(TestConstants.COMBINER_CONF_PATH);
     final String normaloutput = TestConstants.NATIVETASK_OLDAPI_COMBINER_TEST_NORMAL_OUTPUTPATH;
-    final JobConf normalJob = getOldAPIJobconf(normalConf, "normalCombinerWithOldAPI", inputpath, normaloutput);
+    final JobConf normalJob = getOldAPIJobconf(normalConf, "normalCombinerWithOldAPI",
+                                               inputpath, normaloutput);
 
     RunningJob normalRunning = JobClient.runJob(normalJob);
-    Counter normalReduceGroups = normalRunning.getCounters().findCounter(Task.Counter.REDUCE_INPUT_RECORDS);
+    Counter normalReduceGroups = normalRunning.getCounters().findCounter(
+      Task.Counter.REDUCE_INPUT_RECORDS);
 
     final boolean compareRet = ResultVerifier.verify(nativeoutput, normaloutput);
     assertEquals("file compare result: if they are the same ,then return true", true, compareRet);
 
-    assertEquals("The input reduce record count must be same", nativeReduceGroups.getValue(), normalReduceGroups.getValue());
+    assertEquals("The input reduce record count must be same",
+                 nativeReduceGroups.getValue(), normalReduceGroups.getValue());
   }
 
   @Before
@@ -84,7 +89,8 @@ public class OldAPICombinerTest {
     this.inputpath = TestConstants.NATIVETASK_COMBINER_TEST_INPUTDIR + "/wordcount";
 
     if (!fs.exists(new Path(inputpath))) {
-      new TestInputFile(conf.getInt(TestConstants.NATIVETASK_COMBINER_WORDCOUNT_FILESIZE, 1000000), Text.class.getName(),
+      new TestInputFile(conf.getInt(TestConstants.NATIVETASK_COMBINER_WORDCOUNT_FILESIZE, 1000000),
+                        Text.class.getName(),
           Text.class.getName(), conf).createSequenceTestFile(inputpath, 1, (byte)('a'));
     }
   }
@@ -96,7 +102,8 @@ public class OldAPICombinerTest {
     fs.close();
   }
 
-  private static JobConf getOldAPIJobconf(Configuration configuration, String name, String input, String output)
+  private static JobConf getOldAPIJobconf(Configuration configuration, String name,
+                                          String input, String output)
       throws Exception {
     final JobConf jobConf = new JobConf(configuration);
     final FileSystem fs = FileSystem.get(configuration);

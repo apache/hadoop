@@ -29,7 +29,6 @@ public interface ICombineHandler {
 
   /**
    * run combiner
-   * @throws IOException
    */
   public void combine() throws IOException;
 
@@ -40,7 +39,6 @@ public interface ICombineHandler {
 
   /**
    * close handlers, buffer pullers and pushers
-   * @throws IOException
    */
   public void close() throws IOException;
 }

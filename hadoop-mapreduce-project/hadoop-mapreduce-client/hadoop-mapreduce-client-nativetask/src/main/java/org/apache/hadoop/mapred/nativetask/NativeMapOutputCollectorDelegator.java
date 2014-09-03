@@ -95,7 +95,8 @@ public class NativeMapOutputCollectorDelegator<K, V> implements MapOutputCollect
 
 
     if (!QuickSort.class.getName().equals(job.get(Constants.MAP_SORT_CLASS))) {
-      String message = "Native-Task doesn't support sort class " + job.get(Constants.MAP_SORT_CLASS);
+      String message = "Native-Task doesn't support sort class " +
+        job.get(Constants.MAP_SORT_CLASS);
       LOG.error(message);
       throw new InvalidJobConfException(message);
     }
@@ -115,8 +116,8 @@ public class NativeMapOutputCollectorDelegator<K, V> implements MapOutputCollect
         LOG.error(message);
         throw new InvalidJobConfException(message);
       } else if (!Platforms.support(keyCls.getName(), serializer, job)) {
-        String message = "Native output collector doesn't support this key, this key is not comparable in native "
-          + keyCls.getName();
+        String message = "Native output collector doesn't support this key, " +
+          "this key is not comparable in native: " + keyCls.getName();
         LOG.error(message);
         throw new InvalidJobConfException(message);
       }
@@ -144,7 +145,8 @@ public class NativeMapOutputCollectorDelegator<K, V> implements MapOutputCollect
       updater.start();
 
     } else {
-      String message = "Nativeruntime cannot be loaded, please check the libnativetask.so is in hadoop library dir";
+      String message = "NativeRuntime cannot be loaded, please check that " +
+        "libnativetask.so is in hadoop library dir";
       LOG.error(message);
       throw new InvalidJobConfException(message);
     }

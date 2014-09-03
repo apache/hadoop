@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-#include "commons.h"
+#include "lib/commons.h"
 #include "util/Timer.h"
 #include "util/StringUtil.h"
-#include "Merge.h"
+#include "lib/Merge.h"
 #include "lib/FileSystem.h"
 
 namespace NativeTask {
@@ -34,7 +34,6 @@ Merger::Merger(IFileWriter * writer, Config * config, ComparatorPtr comparator,
     ICombineRunner * combineRunner)
     : _writer(writer), _config(config), _combineRunner(combineRunner), _first(true),
         _comparator(comparator) {
-
 }
 
 Merger::~Merger() {

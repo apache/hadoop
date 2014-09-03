@@ -35,11 +35,8 @@ public class ResultVerifier {
   /**
    * verify the result
    * 
-   * @param sample
-   *          :nativetask output
-   * @param source
-   *          :yuanwenjian
-   * @throws Exception
+   * @param sample the path to correct results
+   * @param source the path to the results from the native implementation
    */
   public static boolean verify(String sample, String source) throws Exception {
     FSDataInputStream sourcein = null;
@@ -76,8 +73,9 @@ public class ResultVerifier {
         }
       }
       if (samplepath == null) {
-        throw new Exception("cound not found file " + samplepaths[0].getParent() + "/" + sourcepath.getName()
-            + " , as sourcepaths has such file");
+        throw new Exception("cound not find file " +
+                            samplepaths[0].getParent() + "/" + sourcepath.getName()
+                            + " , as sourcepaths has such file");
       }
 
       // compare
@@ -141,7 +139,8 @@ public class ResultVerifier {
     return true;
   }
 
-  public static void verifyCounters(Job normalJob, Job nativeJob, boolean hasCombiner) throws IOException {
+  public static void verifyCounters(Job normalJob, Job nativeJob, boolean hasCombiner)
+      throws IOException {
     Counters normalCounters = normalJob.getCounters();
     Counters nativeCounters = nativeJob.getCounters();
     assertEquals("Counter MAP_OUTPUT_RECORDS should be equal",

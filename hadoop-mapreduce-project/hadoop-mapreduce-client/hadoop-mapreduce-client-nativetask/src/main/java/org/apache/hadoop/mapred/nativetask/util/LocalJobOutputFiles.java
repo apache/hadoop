@@ -45,9 +45,6 @@ public class LocalJobOutputFiles implements NativeTaskOutput {
 
   /**
    * Return the path to local map output file created earlier
-   * 
-   * @return path
-   * @throws IOException
    */
   public Path getOutputFile() throws IOException {
     String path = String.format(OUTPUT_FILE_FORMAT_STRING, TASKTRACKER_OUTPUT);
@@ -57,10 +54,7 @@ public class LocalJobOutputFiles implements NativeTaskOutput {
   /**
    * Create a local map output file name.
    * 
-   * @param size
-   *          the size of the file
-   * @return path
-   * @throws IOException
+   * @param size the size of the file
    */
   public Path getOutputFileForWrite(long size) throws IOException {
     String path = String.format(OUTPUT_FILE_FORMAT_STRING, TASKTRACKER_OUTPUT);
@@ -69,9 +63,6 @@ public class LocalJobOutputFiles implements NativeTaskOutput {
 
   /**
    * Return the path to a local map output index file created earlier
-   * 
-   * @return path
-   * @throws IOException
    */
   public Path getOutputIndexFile() throws IOException {
     String path = String.format(OUTPUT_FILE_INDEX_FORMAT_STRING, TASKTRACKER_OUTPUT);
@@ -81,10 +72,7 @@ public class LocalJobOutputFiles implements NativeTaskOutput {
   /**
    * Create a local map output index file name.
    * 
-   * @param size
-   *          the size of the file
-   * @return path
-   * @throws IOException
+   * @param size the size of the file
    */
   public Path getOutputIndexFileForWrite(long size) throws IOException {
     String path = String.format(OUTPUT_FILE_INDEX_FORMAT_STRING, TASKTRACKER_OUTPUT);
@@ -94,10 +82,7 @@ public class LocalJobOutputFiles implements NativeTaskOutput {
   /**
    * Return a local map spill file created earlier.
    * 
-   * @param spillNumber
-   *          the number
-   * @return path
-   * @throws IOException
+   * @param spillNumber the number
    */
   public Path getSpillFile(int spillNumber) throws IOException {
     String path = String.format(SPILL_FILE_FORMAT_STRING, TASKTRACKER_OUTPUT, spillNumber);
@@ -107,12 +92,8 @@ public class LocalJobOutputFiles implements NativeTaskOutput {
   /**
    * Create a local map spill file name.
    * 
-   * @param spillNumber
-   *          the number
-   * @param size
-   *          the size of the file
-   * @return path
-   * @throws IOException
+   * @param spillNumber the number
+   * @param size the size of the file
    */
   public Path getSpillFileForWrite(int spillNumber, long size) throws IOException {
     String path = String.format(SPILL_FILE_FORMAT_STRING, TASKTRACKER_OUTPUT, spillNumber);
@@ -122,10 +103,7 @@ public class LocalJobOutputFiles implements NativeTaskOutput {
   /**
    * Return a local map spill index file created earlier
    * 
-   * @param spillNumber
-   *          the number
-   * @return path
-   * @throws IOException
+   * @param spillNumber the number
    */
   public Path getSpillIndexFile(int spillNumber) throws IOException {
     String path = String
@@ -136,12 +114,8 @@ public class LocalJobOutputFiles implements NativeTaskOutput {
   /**
    * Create a local map spill index file name.
    * 
-   * @param spillNumber
-   *          the number
-   * @param size
-   *          the size of the file
-   * @return path
-   * @throws IOException
+   * @param spillNumber the number
+   * @param size the size of the file
    */
   public Path getSpillIndexFileForWrite(int spillNumber, long size) throws IOException {
     String path = String
@@ -152,10 +126,7 @@ public class LocalJobOutputFiles implements NativeTaskOutput {
   /**
    * Return a local reduce input file created earlier
    * 
-   * @param mapId
-   *          a map task id
-   * @return path
-   * @throws IOException
+   * @param mapId a map task id
    */
   public Path getInputFile(int mapId) throws IOException {
     return lDirAlloc.getLocalPathToRead(
@@ -166,14 +137,11 @@ public class LocalJobOutputFiles implements NativeTaskOutput {
   /**
    * Create a local reduce input file name.
    * 
-   * @param mapId
-   *          a map task id
-   * @param size
-   *          the size of the file
-   * @return path
-   * @throws IOException
+   * @param mapId a map task id
+   * @param size the size of the file
    */
-  public Path getInputFileForWrite(TaskID mapId, long size, Configuration conf) throws IOException {
+  public Path getInputFileForWrite(TaskID mapId, long size, Configuration conf)
+    throws IOException {
     return lDirAlloc.getLocalPathForWrite(
         String.format(REDUCE_INPUT_FILE_FORMAT_STRING, TASKTRACKER_OUTPUT, mapId.getId()), size,
         conf);

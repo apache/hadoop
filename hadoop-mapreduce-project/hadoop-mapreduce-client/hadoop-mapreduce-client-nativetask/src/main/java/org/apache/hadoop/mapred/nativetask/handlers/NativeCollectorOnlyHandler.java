@@ -63,7 +63,8 @@ public class NativeCollectorOnlyHandler<K, V> implements CommandDispatcher, Clos
   private final INativeHandler nativeHandler;
   private boolean closed = false;
 
-  public static <K, V> NativeCollectorOnlyHandler<K, V> create(TaskContext context) throws IOException {
+  public static <K, V> NativeCollectorOnlyHandler<K, V> create(TaskContext context)
+    throws IOException {
 
     
     ICombineHandler combinerHandler = null;
@@ -81,7 +82,8 @@ public class NativeCollectorOnlyHandler<K, V> implements CommandDispatcher, Clos
       LOG.info("[NativeCollectorOnlyHandler] combiner is not null");
     }
 
-    final INativeHandler nativeHandler = NativeBatchProcessor.create(NAME, context.getConf(), DataChannel.OUT);
+    final INativeHandler nativeHandler = NativeBatchProcessor.create(
+      NAME, context.getConf(), DataChannel.OUT);
     final BufferPusher<K, V> kvPusher = new BufferPusher<K, V>(
         (Class<K>)context.getOutputKeyClass(),
         (Class<V>)context.getOutputValueClass(),

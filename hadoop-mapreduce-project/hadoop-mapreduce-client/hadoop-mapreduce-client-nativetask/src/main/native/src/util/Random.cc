@@ -17,8 +17,8 @@
  */
 
 #include <math.h>
-#include "commons.h"
-#include "Random.h"
+#include "lib/commons.h"
+#include "util/Random.h"
 
 namespace NativeTask {
 

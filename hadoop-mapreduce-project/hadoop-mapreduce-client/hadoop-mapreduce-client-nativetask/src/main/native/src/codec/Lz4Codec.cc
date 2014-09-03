@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "commons.h"
+#include "lib/commons.h"
 #include "lz4.h"
 #include "NativeTask.h"
 #include "Lz4Codec.h"

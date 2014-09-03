@@ -45,13 +45,15 @@ public class KVJob {
 
   public static class ValueMapper<KTYPE, VTYPE> extends Mapper<KTYPE, VTYPE, KTYPE, VTYPE> {
     @Override
-    public void map(KTYPE key, VTYPE value, Context context) throws IOException, InterruptedException {
+    public void map(KTYPE key, VTYPE value, Context context)
+      throws IOException, InterruptedException {
       context.write(key, value);
     }
   }
 
   public static class KVMReducer<KTYPE, VTYPE> extends Reducer<KTYPE, VTYPE, KTYPE, VTYPE> {
-    public void reduce(KTYPE key, VTYPE value, Context context) throws IOException, InterruptedException {
+    public void reduce(KTYPE key, VTYPE value, Context context)
+      throws IOException, InterruptedException {
       context.write(key, value);
     }
   }
@@ -59,7 +61,8 @@ public class KVJob {
   public static class KVReducer<KTYPE, VTYPE> extends Reducer<KTYPE, VTYPE, KTYPE, VTYPE> {
 
     @Override
-    public void reduce(KTYPE key, Iterable<VTYPE> values, Context context) throws IOException, InterruptedException {
+    public void reduce(KTYPE key, Iterable<VTYPE> values, Context context)
+      throws IOException, InterruptedException {
       long resultlong = 0;// 8 bytes match BytesFactory.fromBytes function
       final CRC32 crc32 = new CRC32();
       for (final VTYPE val : values) {
@@ -68,12 +71,14 @@ public class KVJob {
         resultlong += crc32.getValue();
       }
       final VTYPE V = null;
-      context.write(key, (VTYPE) BytesFactory.newObject(Longs.toByteArray(resultlong), V.getClass().getName()));
+      context.write(key, (VTYPE) BytesFactory.newObject(Longs.toByteArray(resultlong),
+                                                        V.getClass().getName()));
     }
   }
 
-  public KVJob(String jobname, Configuration conf, Class<?> keyclass, Class<?> valueclass, String inputpath,
-      String outputpath) throws Exception {
+  public KVJob(String jobname, Configuration conf,
+               Class<?> keyclass, Class<?> valueclass,
+               String inputpath, String outputpath) throws Exception {
     job = new Job(conf, jobname);
     job.setJarByClass(KVJob.class);
     job.setMapperClass(KVJob.ValueMapper.class);

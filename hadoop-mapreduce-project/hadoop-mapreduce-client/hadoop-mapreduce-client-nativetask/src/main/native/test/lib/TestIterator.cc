@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "commons.h"
+#include "lib/commons.h"
 #include "lib/Combiner.h"
 #include "test_commons.h"
 #include <iostream>
@@ -30,7 +30,7 @@ class MockIterator : public KVIterator {
   std::map<int, int> expectkeyCountMap;
   char buffer[8];
 
-public:
+ public:
   MockIterator()
       : index(0) {
     kvs.push_back(std::pair<int, int>(10, 100));

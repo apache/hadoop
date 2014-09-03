@@ -16,18 +16,20 @@
  * limitations under the License.
  */
 
-#include "commons.h"
+#include <algorithm>
+
+#include "lib/commons.h"
 #include "util/Timer.h"
 #include "util/StringUtil.h"
-#include "NativeObjectFactory.h"
-#include "PartitionBucketIterator.h"
-#include "Merge.h"
+#include "lib/NativeObjectFactory.h"
+#include "lib/PartitionBucketIterator.h"
+#include "lib/Merge.h"
 #include "NativeTask.h"
-#include "WritableUtils.h"
+#include "util/WritableUtils.h"
 #include "util/DualPivotQuickSort.h"
-#include "Combiner.h"
-#include "TaskCounters.h"
-#include "MinHeap.h"
+#include "lib/Combiner.h"
+#include "lib/TaskCounters.h"
+#include "lib/MinHeap.h"
 
 namespace NativeTask {
 
@@ -108,7 +110,5 @@ bool PartitionBucketIterator::next(Buffer & key, Buffer & value) {
   }
   return false;
 }
-}
-;
-// namespace NativeTask
+} // namespace NativeTask
 

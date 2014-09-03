@@ -17,11 +17,11 @@
  */
 
 #include <algorithm>
-#include "commons.h"
+#include "lib/commons.h"
 #include "config.h"
-#include "BufferStream.h"
-#include "FileSystem.h"
-#include "IFile.h"
+#include "lib/BufferStream.h"
+#include "lib/FileSystem.h"
+#include "lib/IFile.h"
 #include "test_commons.h"
 
 SingleSpillInfo * writeIFile(int partition, vector<pair<string, string> > & kvs,
@@ -166,8 +166,8 @@ TEST(Perf, IFile) {
   delete[] buff;
 }
 
-// The Glibc has a bug in the file tell api, it will overwrite the file data 
-// unexpected. 
+// The Glibc has a bug in the file tell api, it will overwrite the file data
+// unexpected.
 // Please check https://rhn.redhat.com/errata/RHBA-2013-0279.html
 // This case is to check whether the bug exists.
 // If it exists, it means you need to upgrade the glibc.
@@ -189,12 +189,11 @@ TEST(IFile, TestGlibCBug) {
   uint32_t length = 0;
   reader->nextPartition();
   uint32_t index = 0;
-  while(NULL != (key = reader->nextKey(length))) {
+  while (NULL != (key = reader->nextKey(length))) {
     int32_t realKey = (int32_t)bswap(*(uint32_t *)(key));
     ASSERT_LT(index, 5);
     ASSERT_EQ(expect[index], realKey);
     index++;
   }
   delete reader;
-
 }

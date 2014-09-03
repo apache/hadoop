@@ -44,7 +44,8 @@ public class BufferPusher<K, V> implements OutputCollector<K, V> {
   IKVSerializer serializer;
   private boolean closed = false;
 
-  public BufferPusher(Class<K> iKClass, Class<V> iVClass, NativeDataTarget target) throws IOException {
+  public BufferPusher(Class<K> iKClass, Class<V> iVClass,
+                      NativeDataTarget target) throws IOException {
     tmpInputKey = new SizedWritable<K>(iKClass);
     tmpInputValue = new SizedWritable<V>(iVClass);
 

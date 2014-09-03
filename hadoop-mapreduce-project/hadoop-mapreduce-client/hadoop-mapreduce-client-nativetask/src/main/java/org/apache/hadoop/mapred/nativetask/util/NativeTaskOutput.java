@@ -32,103 +32,70 @@ public interface NativeTaskOutput {
 
   /**
    * Return the path to local map output file created earlier
-   * 
-   * @return path
-   * @throws IOException
    */
   public Path getOutputFile() throws IOException;
 
   /**
    * Create a local map output file name.
    * 
-   * @param size
-   *          the size of the file
-   * @return path
-   * @throws IOException
+   * @param size the size of the file
    */
   public Path getOutputFileForWrite(long size) throws IOException;
 
   /**
    * Return the path to a local map output index file created earlier
-   * 
-   * @return path
-   * @throws IOException
    */
   public Path getOutputIndexFile() throws IOException;
 
   /**
    * Create a local map output index file name.
    * 
-   * @param size
-   *          the size of the file
-   * @return path
-   * @throws IOException
+   * @param size the size of the file
    */
   public Path getOutputIndexFileForWrite(long size) throws IOException;
 
   /**
    * Return a local map spill file created earlier.
    * 
-   * @param spillNumber
-   *          the number
-   * @return path
-   * @throws IOException
+   * @param spillNumber the number
    */
   public Path getSpillFile(int spillNumber) throws IOException;
 
   /**
    * Create a local map spill file name.
    * 
-   * @param spillNumber
-   *          the number
-   * @param size
-   *          the size of the file
-   * @return path
-   * @throws IOException
+   * @param spillNumber the number
+   * @param size the size of the file
    */
   public Path getSpillFileForWrite(int spillNumber, long size) throws IOException;
 
   /**
    * Return a local map spill index file created earlier
    * 
-   * @param spillNumber
-   *          the number
-   * @return path
-   * @throws IOException
+   * @param spillNumber the number
    */
   public Path getSpillIndexFile(int spillNumber) throws IOException;
 
   /**
    * Create a local map spill index file name.
    * 
-   * @param spillNumber
-   *          the number
-   * @param size
-   *          the size of the file
-   * @return path
-   * @throws IOException
+    r* @param spillNumber the number
+   * @param size the size of the file
    */
   public Path getSpillIndexFileForWrite(int spillNumber, long size) throws IOException;
 
   /**
    * Return a local reduce input file created earlier
    * 
-   * @param mapId
-   *          a map task id
-   * @return path
-   * @throws IOException
+   * @param mapId a map task id
    */
   public Path getInputFile(int mapId) throws IOException;
 
   /**
    * Create a local reduce input file name.
    * 
-   * @param mapId
-   *          a map task id
-   * @param size
-   *          the size of the file
-   * @return path
-   * @throws IOException
+   * @param mapId a map task id
+   * @param size the size of the file
    */
   public Path getInputFileForWrite(TaskID mapId, long size, Configuration conf) throws IOException;
 

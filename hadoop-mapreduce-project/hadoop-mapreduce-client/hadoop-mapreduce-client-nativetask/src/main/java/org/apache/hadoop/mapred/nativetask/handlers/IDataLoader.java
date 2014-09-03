@@ -30,7 +30,6 @@ public interface IDataLoader {
 
   /**
    * @return size of data loaded
-   * @throws IOException
    */
   public int load() throws IOException;
 

@@ -15,18 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "NativeTask.h"
-#include "commons.h"
-#include "Timer.h"
-#include "Buffers.h"
-#include "MapOutputSpec.h"
-#include "IFile.h"
-#include "SpillInfo.h"
-#include "Combiner.h"
-#include "MapOutputSpec.h"
 
-#include "MemoryBlock.h"
-#include "MemoryPool.h"
+#include <algorithm>
+
+#include "NativeTask.h"
+#include "lib/commons.h"
+#include "util/Timer.h"
+#include "lib/Buffers.h"
+#include "lib/MapOutputSpec.h"
+#include "lib/IFile.h"
+#include "lib/SpillInfo.h"
+#include "lib/Combiner.h"
+
+#include "lib/MemoryBlock.h"
+#include "lib/MemoryPool.h"
 #include "util/DualPivotQuickSort.h"
 
 namespace NativeTask {
@@ -62,4 +64,4 @@ void MemoryBlock::sort(SortAlgorithm type, ComparatorPtr comparator) {
   }
   _sorted = true;
 }
-} //namespace NativeTask
+} // namespace NativeTask

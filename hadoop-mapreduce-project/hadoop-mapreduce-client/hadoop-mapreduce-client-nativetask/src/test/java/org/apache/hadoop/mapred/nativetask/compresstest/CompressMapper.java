@@ -35,12 +35,14 @@ public class CompressMapper {
   public static class TextCompressMapper extends Mapper<Text, Text, Text, Text> {
 
     @Override
-    protected void map(Text key, Text value, Context context) throws IOException, InterruptedException {
+    protected void map(Text key, Text value, Context context)
+      throws IOException, InterruptedException {
        context.write(key, value);
     }
   }
 
-  public static Job getCompressJob(String jobname, Configuration conf, String inputpath, String outputpath)
+  public static Job getCompressJob(String jobname, Configuration conf,
+                                   String inputpath, String outputpath)
     throws Exception {
     Job job = new Job(conf, jobname + "-CompressMapperJob");
     job.setJarByClass(CompressMapper.class);

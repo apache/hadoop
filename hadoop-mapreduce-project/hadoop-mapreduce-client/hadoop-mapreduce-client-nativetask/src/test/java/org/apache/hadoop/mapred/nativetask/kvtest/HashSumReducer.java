@@ -32,7 +32,8 @@ public class HashSumReducer<KTYPE, VTYPE> extends Reducer<KTYPE, VTYPE, KTYPE, I
   DataOutputStream dos = new DataOutputStream(os);
 
   @Override
-  public void reduce(KTYPE key, Iterable<VTYPE> values, Context context) throws IOException, InterruptedException {
+  public void reduce(KTYPE key, Iterable<VTYPE> values, Context context)
+    throws IOException, InterruptedException {
     int hashSum = 0;
     for (final VTYPE val : values) {
       if (val instanceof Writable) {

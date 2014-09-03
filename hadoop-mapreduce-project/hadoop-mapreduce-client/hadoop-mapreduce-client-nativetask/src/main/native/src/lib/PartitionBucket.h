@@ -20,14 +20,14 @@
 #define PARTITION_BUCKET_H_
 
 #include "NativeTask.h"
-#include "MemoryPool.h"
-#include "MemoryBlock.h"
-#include "Timer.h"
-#include "Buffers.h"
-#include "MapOutputSpec.h"
-#include "IFile.h"
-#include "SpillInfo.h"
-#include "Combiner.h"
+#include "lib/MemoryPool.h"
+#include "lib/MemoryBlock.h"
+#include "util/Timer.h"
+#include "lib/Buffers.h"
+#include "lib/MapOutputSpec.h"
+#include "lib/IFile.h"
+#include "lib/SpillInfo.h"
+#include "lib/Combiner.h"
 
 namespace NativeTask {
 

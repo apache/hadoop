@@ -17,9 +17,9 @@
  */
 
 #include <stdarg.h>
-#include "commons.h"
+#include "lib/commons.h"
 #include "util/Random.h"
-#include "FileSystem.h"
+#include "lib/FileSystem.h"
 #include "test_commons.h"
 
 Config TestConfig = Config();

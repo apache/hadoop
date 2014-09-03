@@ -37,7 +37,9 @@ public class WordCountWithOldAPI {
     private final Text word = new Text();
 
     @Override
-    public void map(Object key, Text value, OutputCollector<Text, IntWritable> output, Reporter reporter)
+    public void map(Object key, Text value,
+                    OutputCollector<Text, IntWritable> output,
+                    Reporter reporter)
         throws IOException {
       final StringTokenizer itr = new StringTokenizer(value.toString());
       while (itr.hasMoreTokens()) {
@@ -52,8 +54,9 @@ public class WordCountWithOldAPI {
     private final IntWritable result = new IntWritable();
 
     @Override
-    public void reduce(Text key, Iterator<IntWritable> values, OutputCollector<Text, IntWritable> output,
-        Reporter reporter) throws IOException {
+    public void reduce(Text key, Iterator<IntWritable> values,
+                       OutputCollector<Text, IntWritable> output,
+                       Reporter reporter) throws IOException {
       int sum = 0;
       while (values.hasNext()) {
         sum += values.next().get();

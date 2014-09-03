@@ -89,7 +89,8 @@ public class TestInputFile {
     map.put(IntWritable.class.getName(), new KVSizeScope(4, 4));
   }
   
-  public TestInputFile(int filesize, String keytype, String valuetype, Configuration conf) throws Exception {
+  public TestInputFile(int filesize, String keytype, String valuetype,
+                       Configuration conf) throws Exception {
     this.filesize = filesize;
     this.databuf = new byte[DATABUFSIZE];
     this.keyClsName = keytype;

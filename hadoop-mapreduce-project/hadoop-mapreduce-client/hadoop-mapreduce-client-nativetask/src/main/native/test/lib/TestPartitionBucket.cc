@@ -16,24 +16,22 @@
  * limitations under the License.
  */
 
-#include "commons.h"
+#include "lib/commons.h"
 #include "test_commons.h"
-#include "PartitionBucket.h"
-#include "PartitionBucketIterator.h"
-#include "MemoryBlock.h"
-#include "IFile.h"
-
-using namespace NativeTask;
+#include "lib/PartitionBucket.h"
+#include "lib/PartitionBucketIterator.h"
+#include "lib/MemoryBlock.h"
+#include "lib/IFile.h"
 
 namespace NativeTask {
 
 class MockIFileWriter : public IFileWriter {
-private:
+ private:
   char * _buff;
   uint32_t _position;
   uint32_t _capacity;
-public:
 
+ public:
   MockIFileWriter(char * buff, uint32_t capacity)
       : IFileWriter(NULL, CHECKSUM_NONE, TextType, TextType, "", NULL), _buff(buff), _position(0),
           _capacity(capacity) {
@@ -55,8 +53,8 @@ public:
 
 TEST(PartitionBucket, general) {
   MemoryPool * pool = new MemoryPool();
-  const uint32_t POOL_SIZE = 1024 * 1024; //1MB
-  const uint32_t BLOCK_SIZE = 1024; //1KB
+  const uint32_t POOL_SIZE = 1024 * 1024; // 1MB
+  const uint32_t BLOCK_SIZE = 1024; // 1KB
   const uint32_t PARTITION_ID = 3;
   pool->init(POOL_SIZE);
   ComparatorPtr comparator = NativeTask::get_comparator(BytesType, NULL);
@@ -74,8 +72,8 @@ TEST(PartitionBucket, general) {
 
 TEST(PartitionBucket, multipleMemoryBlock) {
   MemoryPool * pool = new MemoryPool();
-  const uint32_t POOL_SIZE = 1024 * 1024; //1MB
-  const uint32_t BLOCK_SIZE = 1024; //1KB
+  const uint32_t POOL_SIZE = 1024 * 1024; // 1MB
+  const uint32_t BLOCK_SIZE = 1024; // 1KB
   const uint32_t PARTITION_ID = 3;
   pool->init(POOL_SIZE);
   ComparatorPtr comparator = NativeTask::get_comparator(BytesType, NULL);
@@ -113,8 +111,8 @@ TEST(PartitionBucket, multipleMemoryBlock) {
 
 TEST(PartitionBucket, sort) {
   MemoryPool * pool = new MemoryPool();
-  const uint32_t POOL_SIZE = 1024 * 1024; //1MB
-  const uint32_t BLOCK_SIZE = 1024; //1KB
+  const uint32_t POOL_SIZE = 1024 * 1024; // 1MB
+  const uint32_t BLOCK_SIZE = 1024; // 1KB
   const uint32_t PARTITION_ID = 3;
   pool->init(POOL_SIZE);
   ComparatorPtr comparator = NativeTask::get_comparator(BytesType, NULL);
@@ -165,8 +163,8 @@ TEST(PartitionBucket, sort) {
 
 TEST(PartitionBucket, spill) {
   MemoryPool * pool = new MemoryPool();
-  const uint32_t POOL_SIZE = 1024 * 1024; //1MB
-  const uint32_t BLOCK_SIZE = 1024; //1KB
+  const uint32_t POOL_SIZE = 1024 * 1024; // 1MB
+  const uint32_t BLOCK_SIZE = 1024; // 1KB
   const uint32_t PARTITION_ID = 3;
   pool->init(POOL_SIZE);
   ComparatorPtr comparator = NativeTask::get_comparator(BytesType, NULL);
@@ -201,7 +199,7 @@ TEST(PartitionBucket, spill) {
   MockIFileWriter writer(buff, BUFF_SIZE);
   bucket->spill(&writer);
 
-  //check the result
+  // check the result
   KVBuffer * first = (KVBuffer *)writer.buff();
   ASSERT_EQ(4, first->keyLength);
   ASSERT_EQ(KV_SIZE - KVBuffer::headerLength() - 4, first->valueLength);
@@ -221,4 +219,4 @@ TEST(PartitionBucket, spill) {
   delete bucket;
   delete pool;
 }
-}
+} // namespace NativeTask

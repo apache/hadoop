@@ -18,7 +18,7 @@
 #ifndef COMBINER_H_
 #define COMBINER_H_
 #include "commons.h"
-#include "IFile.h"
+#include "lib/IFile.h"
 
 namespace NativeTask {
 
@@ -64,22 +64,6 @@ public:
 
   virtual ~ICombineRunner() {
   }
-};
-
-class NativeCombineRunner : public ICombineRunner {
-private:
-  Config * _config;
-  ObjectCreatorFunc _combinerCreator;
-  uint32_t _keyGroupCount;
-
-public:
-  NativeCombineRunner(Config * config, ObjectCreatorFunc objectCreator);
-
-public:
-  void combine(CombineContext type, KVIterator * kvIterator, IFileWriter * writer);
-
-private:
-  KeyGroupIterator * createKeyGroupIterator(KVIterator * iter);
 };
 
 } /* namespace NativeTask */

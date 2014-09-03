@@ -41,13 +41,12 @@
 #include <map>
 #include <algorithm>
 
-#include "primitives.h"
-#include "Log.h"
+#include "lib/primitives.h"
+#include "lib/Log.h"
 #include "NativeTask.h"
 
-#include "Constants.h"
+#include "lib/Constants.h"
 
-#include "Iterator.h"
-#include "TrackingCollector.h"
+#include "lib/Iterator.h"
 
 #endif /* COMMONS_H_ */

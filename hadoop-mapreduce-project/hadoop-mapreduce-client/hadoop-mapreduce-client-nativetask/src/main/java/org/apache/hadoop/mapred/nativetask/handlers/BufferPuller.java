@@ -189,8 +189,6 @@ public class BufferPuller implements RawKeyValueIterator, DataReceiver {
   
   /**
    * Closes the iterator so that the underlying streams can be closed.
-   * 
-   * @throws IOException
    */
   @Override
   public void close() throws IOException {

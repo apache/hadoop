@@ -74,13 +74,14 @@ public class NonSortTest {
   public void startUp() throws Exception {
     Assume.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
     Assume.assumeTrue(NativeRuntime.isNativeLibraryLoaded());
-    final ScenarioConfiguration configuration = new ScenarioConfiguration();
-    configuration.addNonSortTestConf();
-    final FileSystem fs = FileSystem.get(configuration);
+    final ScenarioConfiguration conf = new ScenarioConfiguration();
+    conf.addNonSortTestConf();
+    final FileSystem fs = FileSystem.get(conf);
     final Path path = new Path(TestConstants.NATIVETASK_NONSORT_TEST_INPUTDIR);
     if (!fs.exists(path)) {
-      new TestInputFile(configuration.getInt(TestConstants.NATIVETASK_NONSORTTEST_FILESIZE, 10000000), Text.class.getName(),
-          Text.class.getName(), configuration).createSequenceTestFile(path.toString());
+      int filesize = conf.getInt(TestConstants.NATIVETASK_NONSORTTEST_FILESIZE, 10000000);
+      new TestInputFile(filesize, Text.class.getName(),
+          Text.class.getName(), conf).createSequenceTestFile(path.toString());
     }
     fs.close();
   }
@@ -93,7 +94,8 @@ public class NonSortTest {
   }
 
 
-  private Job getJob(Configuration conf, String jobName, String inputpath, String outputpath) throws IOException {
+  private Job getJob(Configuration conf, String jobName,
+                     String inputpath, String outputpath) throws IOException {
     final FileSystem fs = FileSystem.get(conf);
     if (fs.exists(new Path(outputpath))) {
       fs.delete(new Path(outputpath), true);

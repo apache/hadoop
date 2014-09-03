@@ -178,7 +178,6 @@ configure_file(main/native/test.sh test/test.sh)
 
 add_dual_library(nativetask
     ${CMAKE_BINARY_DIR}/lz4.c
-    ${D}/cityhash/city.cc
     ${D}/src/codec/BlockCodec.cc
     ${D}/src/codec/GzipCodec.cc
     ${D}/src/codec/Lz4Codec.cc
@@ -208,10 +207,8 @@ add_dual_library(nativetask
     ${D}/src/lib/SpillInfo.cc
     ${D}/src/lib/Path.cc
     ${D}/src/lib/Streams.cc
-    ${D}/src/lib/Combiner.cc
     ${D}/src/lib/TaskCounters.cc
     ${D}/src/util/Checksum.cc
-    ${D}/src/util/Hash.cc
     ${D}/src/util/Random.cc
     ${D}/src/util/StringUtil.cc
     ${D}/src/util/SyncUtils.cc
@@ -237,11 +234,8 @@ add_executable(nttest
     ${D}/test/lib/TestPartitionBucket.cc
     ${D}/test/lib/TestReadBuffer.cc
     ${D}/test/lib/TestReadWriteBuffer.cc
-    ${D}/test/lib/TestTrackingCollector.cc
     ${D}/test/util/TestChecksum.cc
-    ${D}/test/util/TestHash.cc
     ${D}/test/util/TestStringUtil.cc
-    ${D}/test/util/TestSyncUtils.cc
     ${D}/test/util/TestWritableUtils.cc
     ${D}/test/TestCommand.cc
     ${D}/test/TestConfig.cc

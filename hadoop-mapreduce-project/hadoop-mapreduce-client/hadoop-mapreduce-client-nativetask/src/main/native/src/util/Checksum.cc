@@ -17,7 +17,7 @@
  */
 
 #include <assert.h>
-#include "Checksum.h"
+#include "util/Checksum.h"
 
 namespace NativeTask {
 

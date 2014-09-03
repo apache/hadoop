@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-#include "commons.h"
-#include "BufferStream.h"
-#include "Buffers.h"
+#include "lib/commons.h"
+#include "lib/BufferStream.h"
+#include "lib/Buffers.h"
 #include "test_commons.h"
 #include "NativeTask.h"
 
-using namespace NativeTask;
+namespace NativeTask {
 
 TEST(Command, equals) {
   Command cmd1(100, "hello command");
@@ -36,3 +36,4 @@ TEST(Command, equals) {
   ASSERT_EQ(helloCommand, cmd1.description());
 }
 
+} // namespace NativeTask

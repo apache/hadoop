@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-#include "commons.h"
-#include "Streams.h"
-#include "Buffers.h"
-#include "DualPivotQuickSort.h"
+#include "lib/commons.h"
+#include "lib/Streams.h"
+#include "lib/Buffers.h"
+#include "util/DualPivotQuickSort.h"
 #include "test_commons.h"
 
 string gBuffer;
@@ -82,7 +82,7 @@ static int compare_offset(const void * plh, const void * prh) {
  * dualpivot sort compare function
  */
 class CompareOffset {
-public:
+ public:
   int64_t operator()(uint32_t lhs, uint32_t rhs) {
 
     KVBuffer * lhb = (KVBuffer*)get_position(lhs);
@@ -101,7 +101,7 @@ public:
  * quicksort compare function
  */
 class OffsetLessThan {
-public:
+ public:
   bool operator()(uint32_t lhs, uint32_t rhs) {
     KVBuffer * lhb = (KVBuffer*)get_position(lhs);
     KVBuffer * rhb = (KVBuffer*)get_position(rhs);
@@ -132,7 +132,7 @@ static int compare_offset2(const void * plh, const void * prh) {
  * dualpivot sort compare function
  */
 class CompareOffset2 {
-public:
+ public:
   int64_t operator()(uint32_t lhs, uint32_t rhs) {
 
     KVBuffer * lhb = (KVBuffer*)get_position(lhs);
@@ -151,7 +151,7 @@ public:
  * quicksort compare function
  */
 class OffsetLessThan2 {
-public:
+ public:
   bool operator()(uint32_t lhs, uint32_t rhs) {
 
     KVBuffer * lhb = (KVBuffer*)get_position(lhs);
@@ -162,23 +162,6 @@ public:
     return ret < 0 || (ret == 0 && (lhb->keyLength < rhb->keyLength));
   }
 };
-
-/*
-void makeInput(string & dest, vector<uint32_t> & offsets, uint64_t length) {
-  TeraGen tera = TeraGen(length / 100, 1, 0);
-  dest.reserve(length + 1024);
-  string k, v;
-  while (tera.next(k, v)) {
-    offsets.push_back(dest.length());
-    uint32_t tempLen = k.length();
-    dest.append((const char *)&tempLen, 4);
-    dest.append(k.data(), k.length());
-    tempLen = v.length();
-    dest.append((const char *)&tempLen, 4);
-    dest.append(v.data(), v.length());
-  }
-}
-*/
 
 void makeInputWord(string & dest, vector<uint32_t> & offsets, uint64_t length) {
   Random r;

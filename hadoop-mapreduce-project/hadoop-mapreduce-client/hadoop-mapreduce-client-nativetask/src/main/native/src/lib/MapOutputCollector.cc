@@ -16,19 +16,21 @@
  * limitations under the License.
  */
 
-#include "commons.h"
+#include <string>
+
+#include "lib/commons.h"
 #include "util/Timer.h"
 #include "util/StringUtil.h"
-#include "FileSystem.h"
-#include "NativeObjectFactory.h"
-#include "MapOutputCollector.h"
-#include "Merge.h"
+#include "lib/FileSystem.h"
+#include "lib/NativeObjectFactory.h"
+#include "lib/MapOutputCollector.h"
+#include "lib/Merge.h"
 #include "NativeTask.h"
-#include "WritableUtils.h"
+#include "util/WritableUtils.h"
 #include "util/DualPivotQuickSort.h"
-#include "Combiner.h"
-#include "TaskCounters.h"
-#include "MinHeap.h"
+#include "lib/Combiner.h"
+#include "lib/TaskCounters.h"
+#include "lib/MinHeap.h"
 
 namespace NativeTask {
 
@@ -36,22 +38,18 @@ ICombineRunner * CombineRunnerWrapper::createCombiner() {
 
   ICombineRunner * combineRunner = NULL;
   if (NULL != _config->get(NATIVE_COMBINER)) {
-    const char * combinerClass = _config->get(NATIVE_COMBINER);
-    ObjectCreatorFunc objectCreater = NativeObjectFactory::GetObjectCreator(combinerClass);
-    if (NULL == objectCreater) {
-      THROW_EXCEPTION_EX(UnsupportException, "Combiner not found: %s", combinerClass);
-    } else {
-      LOG("[MapOutputCollector::configure] native combiner is enabled: %s", combinerClass);
-    }
-    combineRunner = new NativeCombineRunner(_config, objectCreater);
+    // Earlier versions of this code supported user-defined
+    // native Combiner implementations. This simplified version
+    // no longer supports it.
+    THROW_EXCEPTION_EX(UnsupportException, "Native Combiners not supported");
+  }
+
+  CombineHandler * javaCombiner = _spillOutput->getJavaCombineHandler();
+  if (NULL != javaCombiner) {
+    _isJavaCombiner = true;
+    combineRunner = (ICombineRunner *)javaCombiner;
   } else {
-    CombineHandler * javaCombiner = _spillOutput->getJavaCombineHandler();
-    if (NULL != javaCombiner) {
-      _isJavaCombiner = true;
-      combineRunner = (ICombineRunner *)javaCombiner;
-    } else {
-      LOG("[MapOutputCollector::getCombiner] cannot get combine handler from java");
-    }
+    LOG("[MapOutputCollector::getCombiner] cannot get combine handler from java");
   }
   return combineRunner;
 }
@@ -118,7 +116,7 @@ void MapOutputCollector::init(uint32_t defaultBlockSize, uint32_t memoryCapacity
 
   _pool->init(memoryCapacity);
 
-  //TODO: add support for customized comparator
+  // TODO: add support for customized comparator
   this->_keyComparator = keyComparator;
 
   _buckets = new PartitionBucket*[_numPartitions];
@@ -160,7 +158,8 @@ void MapOutputCollector::configure(Config * config) {
   uint32_t capacity = config->getInt(MAPRED_IO_SORT_MB, 300) * 1024 * 1024;
 
   uint32_t defaultBlockSize = getDefaultBlockSize(capacity, _numPartitions, maxBlockSize);
-  LOG("Native Total MemoryBlockPool: num_partitions %u, min_block_size %uK, max_block_size %uK, capacity %uM", _numPartitions, defaultBlockSize / 1024,
+  LOG("Native Total MemoryBlockPool: num_partitions %u, min_block_size %uK, "
+      "max_block_size %uK, capacity %uM", _numPartitions, defaultBlockSize / 1024,
       maxBlockSize / 1024, capacity / 1024 / 1024);
 
   ComparatorPtr comparator = getComparator(config, _spec);
@@ -179,7 +178,8 @@ void MapOutputCollector::configure(Config * config) {
 KVBuffer * MapOutputCollector::allocateKVBuffer(uint32_t partitionId, uint32_t kvlength) {
   PartitionBucket * partition = getPartition(partitionId);
   if (NULL == partition) {
-    THROW_EXCEPTION_EX(IOException, "Partition is NULL, partition_id: %d, num_partitions: %d", partitionId, _numPartitions);
+    THROW_EXCEPTION_EX(IOException, "Partition is NULL, partition_id: %d, num_partitions: %d",
+                       partitionId, _numPartitions);
   }
 
   KVBuffer * dest = partition->allocateKVBuffer(kvlength);
@@ -301,7 +301,7 @@ void MapOutputCollector::middleSpill(const std::string & spillOutput,
     info->path = spillOutput;
     uint64_t spillTime = timer.now() - timer.last() - metrics.sortTime;
 
-    const uint64_t M = 1000000; //million
+    const uint64_t M = 1000000; // million
     LOG("%s-spill: { id: %d, collect: %"PRIu64" ms, "
         "in-memory sort: %"PRIu64" ms, in-memory records: %"PRIu64", "
         "merge&spill: %"PRIu64" ms, uncompressed size: %"PRIu64", "
@@ -369,7 +369,7 @@ void MapOutputCollector::finalSpill(const std::string & filepath,
   uint64_t recordCount;
   writer->getStatistics(outputSize, realOutputSize, recordCount);
 
-  const uint64_t M = 1000000; //million
+  const uint64_t M = 1000000; // million
   LOG("Final-merge-spill: { id: %d, in-memory sort: %"PRIu64" ms, "
       "in-memory records: %"PRIu64", merge&spill: %"PRIu64" ms, "
       "records: %"PRIu64", uncompressed size: %"PRIu64", "

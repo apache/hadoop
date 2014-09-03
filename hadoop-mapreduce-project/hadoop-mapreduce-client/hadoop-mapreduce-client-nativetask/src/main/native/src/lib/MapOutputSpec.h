@@ -20,8 +20,8 @@
 #define MAPOUTPUTSPEC_H_
 
 #include <string>
-#include "Checksum.h"
-#include "WritableUtils.h"
+#include "util/Checksum.h"
+#include "util/WritableUtils.h"
 #include "NativeTask.h"
 
 namespace NativeTask {

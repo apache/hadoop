@@ -229,32 +229,21 @@ public class NativeBatchProcessor implements INativeHandler {
 
   /**
    * Let native side to process data in inputBuffer
-   * 
-   * @param handler
-   * @param length
    */
   private native void nativeProcessInput(long handler, int length);
 
   /**
    * Notice native side input is finished
-   * 
-   * @param handler
    */
   private native void nativeFinish(long handler);
 
   /**
    * Send control message to native side
-   * 
-   * @param cmd
-   *          command data
-   * @return return value
    */
   private native byte[] nativeCommand(long handler, int cmd, byte[] parameter);
 
   /**
    * Load data from native
-   * 
-   * @return
    */
   private native void nativeLoadData(long handler);
 

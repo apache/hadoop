@@ -86,8 +86,10 @@ public class CombinerTest {
           Text.class.getName(), conf).createSequenceTestFile(inputpath, 1, (byte)('a'));
     }
 
-    this.nativeoutputpath = TestConstants.NATIVETASK_COMBINER_TEST_NATIVE_OUTPUTDIR + "/nativewordcount";
-    this.hadoopoutputpath = TestConstants.NATIVETASK_COMBINER_TEST_NORMAL_OUTPUTDIR + "/normalwordcount";
+    this.nativeoutputpath = TestConstants.NATIVETASK_COMBINER_TEST_NATIVE_OUTPUTDIR +
+      "/nativewordcount";
+    this.hadoopoutputpath = TestConstants.NATIVETASK_COMBINER_TEST_NORMAL_OUTPUTDIR +
+      "/normalwordcount";
   }
 
   @AfterClass
@@ -97,7 +99,8 @@ public class CombinerTest {
     fs.close();
   }
 
-  protected static Job getJob(String jobname, Configuration inputConf, String inputpath, String outputpath)
+  protected static Job getJob(String jobname, Configuration inputConf,
+                              String inputpath, String outputpath)
       throws Exception {
     final Configuration conf = new Configuration(inputConf);
     conf.set("fileoutputpath", outputpath);

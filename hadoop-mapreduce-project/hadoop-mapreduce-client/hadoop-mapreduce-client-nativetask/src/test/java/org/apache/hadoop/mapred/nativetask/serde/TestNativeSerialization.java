@@ -93,7 +93,8 @@ public class TestNativeSerialization extends TestCase {
   public static class NonWritableValue {
   }
 
-  public static class ComparableKeySerializer implements INativeComparable, INativeSerializer<WritableKey> {
+  public static class ComparableKeySerializer
+    implements INativeComparable, INativeSerializer<WritableKey> {
 
     @Override
     public int getLength(WritableKey w) throws IOException {
