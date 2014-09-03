@@ -277,6 +277,12 @@ Allocation file format
      threshold before it will try to preempt containers to take resources from other
      queues. If not set, the queue will inherit the value from its parent queue.
 
+   * fairSharePreemptionThreshold: the fair share preemption threshold for the
+     queue. If the queue waits fairSharePreemptionTimeout without receiving
+     fairSharePreemptionThreshold*fairShare resources, it is allowed to preempt
+     containers to take resources from other queues. If not set, the queue will
+     inherit the value from its parent queue.
+
  * <<User elements>>, which represent settings governing the behavior of individual 
      users. They can contain a single property: maxRunningApps, a limit on the 
      number of running apps for a particular user.
@@ -290,6 +296,10 @@ Allocation file format
 
  * <<A defaultMinSharePreemptionTimeout element>>, which sets the min share
    preemption timeout for the root queue; overridden by minSharePreemptionTimeout
+   element in root queue.
+
+ * <<A defaultFairSharePreemptionThreshold element>>, which sets the fair share
+   preemption threshold for the root queue; overridden by fairSharePreemptionThreshold
    element in root queue.
 
  * <<A queueMaxAppsDefault element>>, which sets the default running app limit

@@ -181,7 +181,7 @@ public class QueueManager {
         parent.addChildQueue(leafQueue);
         queues.put(leafQueue.getName(), leafQueue);
         leafQueues.add(leafQueue);
-        setPreemptionTimeout(leafQueue, parent, queueConf);
+        leafQueue.updatePreemptionVariables();
         return leafQueue;
       } else {
         FSParentQueue newParent = new FSParentQueue(queueName, scheduler, parent);
@@ -193,35 +193,12 @@ public class QueueManager {
         }
         parent.addChildQueue(newParent);
         queues.put(newParent.getName(), newParent);
-        setPreemptionTimeout(newParent, parent, queueConf);
+        newParent.updatePreemptionVariables();
         parent = newParent;
       }
     }
 
     return parent;
-  }
-
-  /**
-   * Set the min/fair share preemption timeouts for the given queue.
-   * If the timeout is configured in the allocation file, the queue will use
-   * that value; otherwise, the queue inherits the value from its parent queue.
-   */
-  private void setPreemptionTimeout(FSQueue queue,
-      FSParentQueue parentQueue, AllocationConfiguration queueConf) {
-    // For min share
-    long minSharePreemptionTimeout =
-        queueConf.getMinSharePreemptionTimeout(queue.getQueueName());
-    if (minSharePreemptionTimeout == -1) {
-      minSharePreemptionTimeout = parentQueue.getMinSharePreemptionTimeout();
-    }
-    queue.setMinSharePreemptionTimeout(minSharePreemptionTimeout);
-    // For fair share
-    long fairSharePreemptionTimeout =
-        queueConf.getFairSharePreemptionTimeout(queue.getQueueName());
-    if (fairSharePreemptionTimeout == -1) {
-      fairSharePreemptionTimeout = parentQueue.getFairSharePreemptionTimeout();
-    }
-    queue.setFairSharePreemptionTimeout(fairSharePreemptionTimeout);
   }
 
   /**
@@ -409,7 +386,8 @@ public class QueueManager {
 
     // Update steady fair shares for all queues
     rootQueue.recomputeSteadyShares();
-    // Update the fair share preemption timeouts for all queues recursively
-    rootQueue.updatePreemptionTimeouts();
+    // Update the fair share preemption timeouts and preemption for all queues
+    // recursively
+    rootQueue.updatePreemptionVariables();
   }
 }

@@ -1061,9 +1061,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     out.println("  </queue>");
     out.println("  <fairSharePreemptionTimeout>100</fairSharePreemptionTimeout>");
     out.println("  <minSharePreemptionTimeout>120</minSharePreemptionTimeout>");
+    out.println("  <fairSharePreemptionThreshold>.5</fairSharePreemptionThreshold>");
     out.println("</queue>");
     out.println("<defaultFairSharePreemptionTimeout>300</defaultFairSharePreemptionTimeout>");
     out.println("<defaultMinSharePreemptionTimeout>200</defaultMinSharePreemptionTimeout>");
+    out.println("<defaultFairSharePreemptionThreshold>.6</defaultFairSharePreemptionThreshold>");
     out.println("</allocations>");
     out.close();
 
@@ -1080,125 +1082,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     assertEquals(100000, root.getFairSharePreemptionTimeout());
     assertEquals(120000, root.getMinSharePreemptionTimeout());
-  }
-  
-  @Test (timeout = 5000)
-  public void testIsStarvedForMinShare() throws Exception {
-    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"queueA\">");
-    out.println("<minResources>2048mb,0vcores</minResources>");
-    out.println("</queue>");
-    out.println("<queue name=\"queueB\">");
-    out.println("<minResources>2048mb,0vcores</minResources>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
-
-    scheduler.init(conf);
-    scheduler.start();
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
-
-    // Add one big node (only care about aggregate capacity)
-    RMNode node1 =
-        MockNodes.newNodeInfo(1, Resources.createResource(4 * 1024, 4), 1,
-            "127.0.0.1");
-    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
-    scheduler.handle(nodeEvent1);
-
-    // Queue A wants 3 * 1024. Node update gives this all to A
-    createSchedulingRequest(3 * 1024, "queueA", "user1");
-    scheduler.update();
-    NodeUpdateSchedulerEvent nodeEvent2 = new NodeUpdateSchedulerEvent(node1);
-    scheduler.handle(nodeEvent2);
-
-    // Queue B arrives and wants 1 * 1024
-    createSchedulingRequest(1 * 1024, "queueB", "user1");
-    scheduler.update();
-    Collection<FSLeafQueue> queues = scheduler.getQueueManager().getLeafQueues();
-    assertEquals(3, queues.size());
-
-    // Queue A should be above min share, B below.
-    for (FSLeafQueue p : queues) {
-      if (p.getName().equals("root.queueA")) {
-        assertEquals(false, scheduler.isStarvedForMinShare(p));
-      }
-      else if (p.getName().equals("root.queueB")) {
-        assertEquals(true, scheduler.isStarvedForMinShare(p));
-      }
-    }
-
-    // Node checks in again, should allocate for B
-    scheduler.handle(nodeEvent2);
-    // Now B should have min share ( = demand here)
-    for (FSLeafQueue p : queues) {
-      if (p.getName().equals("root.queueB")) {
-        assertEquals(false, scheduler.isStarvedForMinShare(p));
-      }
-    }
-  }
-
-  @Test (timeout = 5000)
-  public void testIsStarvedForFairShare() throws Exception {
-    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"queueA\">");
-    out.println("<weight>.25</weight>");
-    out.println("</queue>");
-    out.println("<queue name=\"queueB\">");
-    out.println("<weight>.75</weight>");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
-
-    scheduler.init(conf);
-    scheduler.start();
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
-
-    // Add one big node (only care about aggregate capacity)
-    RMNode node1 =
-        MockNodes.newNodeInfo(1, Resources.createResource(4 * 1024, 4), 1,
-            "127.0.0.1");
-    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
-    scheduler.handle(nodeEvent1);
-
-    // Queue A wants 3 * 1024. Node update gives this all to A
-    createSchedulingRequest(3 * 1024, "queueA", "user1");
-    scheduler.update();
-    NodeUpdateSchedulerEvent nodeEvent2 = new NodeUpdateSchedulerEvent(node1);
-    scheduler.handle(nodeEvent2);
-
-    // Queue B arrives and wants 1 * 1024
-    createSchedulingRequest(1 * 1024, "queueB", "user1");
-    scheduler.update();
-    Collection<FSLeafQueue> queues = scheduler.getQueueManager().getLeafQueues();
-    assertEquals(3, queues.size());
-
-    // Queue A should be above fair share, B below.
-    for (FSLeafQueue p : queues) {
-      if (p.getName().equals("root.queueA")) {
-        assertEquals(false, scheduler.isStarvedForFairShare(p));
-      }
-      else if (p.getName().equals("root.queueB")) {
-        assertEquals(true, scheduler.isStarvedForFairShare(p));
-      }
-    }
-
-    // Node checks in again, should allocate for B
-    scheduler.handle(nodeEvent2);
-    // B should not be starved for fair share, since entire demand is
-    // satisfied.
-    for (FSLeafQueue p : queues) {
-      if (p.getName().equals("root.queueB")) {
-        assertEquals(false, scheduler.isStarvedForFairShare(p));
-      }
-    }
+    assertEquals(0.5f, root.getFairSharePreemptionThreshold(), 0.01);
   }
 
   @Test (timeout = 5000)
@@ -1385,7 +1269,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     out.println("<queue name=\"queueB\">");
     out.println("<weight>2</weight>");
     out.println("</queue>");
-    out.print("<defaultFairSharePreemptionTimeout>10</defaultFairSharePreemptionTimeout>");
+    out.println("<defaultFairSharePreemptionTimeout>10</defaultFairSharePreemptionTimeout>");
+    out.println("<defaultFairSharePreemptionThreshold>.5</defaultFairSharePreemptionThreshold>");
     out.println("</allocations>");
     out.close();
 
@@ -1468,8 +1353,9 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     out.println("<weight>.25</weight>");
     out.println("<minResources>1024mb,0vcores</minResources>");
     out.println("</queue>");
-    out.print("<defaultMinSharePreemptionTimeout>5</defaultMinSharePreemptionTimeout>");
-    out.print("<defaultFairSharePreemptionTimeout>10</defaultFairSharePreemptionTimeout>");
+    out.println("<defaultMinSharePreemptionTimeout>5</defaultMinSharePreemptionTimeout>");
+    out.println("<defaultFairSharePreemptionTimeout>10</defaultFairSharePreemptionTimeout>");
+    out.println("<defaultFairSharePreemptionThreshold>.5</defaultFairSharePreemptionThreshold>");
     out.println("</allocations>");
     out.close();
 
@@ -1753,8 +1639,6 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   @Test
   public void testBackwardsCompatiblePreemptionConfiguration() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    MockClock clock = new MockClock();
-    scheduler.setClock(clock);
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
@@ -1840,6 +1724,32 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     assertEquals(25000, queueMgr.getQueue("root")
         .getFairSharePreemptionTimeout());
+  }
+
+  @Test
+  public void testPreemptionVariablesForQueueCreatedRuntime() throws Exception {
+    conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "true");
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // Set preemption variables for the root queue
+    FSParentQueue root = scheduler.getQueueManager().getRootQueue();
+    root.setMinSharePreemptionTimeout(10000);
+    root.setFairSharePreemptionTimeout(15000);
+    root.setFairSharePreemptionThreshold(.6f);
+
+    // User1 submits one application
+    ApplicationAttemptId appAttemptId = createAppAttemptId(1, 1);
+    createApplicationWithAMResource(appAttemptId, "default", "user1", null);
+
+    // The user1 queue should inherit the configurations from the root queue
+    FSLeafQueue userQueue =
+        scheduler.getQueueManager().getLeafQueue("user1", true);
+    assertEquals(1, userQueue.getRunnableAppSchedulables().size());
+    assertEquals(10000, userQueue.getMinSharePreemptionTimeout());
+    assertEquals(15000, userQueue.getFairSharePreemptionTimeout());
+    assertEquals(.6f, userQueue.getFairSharePreemptionThreshold(), 0.001);
   }
 
   @Test (timeout = 5000)

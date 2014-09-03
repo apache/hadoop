@@ -70,6 +70,12 @@ public class AllocationConfiguration {
   // allowed to preempt other jobs' tasks.
   private final Map<String, Long> fairSharePreemptionTimeouts;
 
+  // The fair share preemption threshold for each queue. If a queue waits
+  // fairSharePreemptionTimeout without receiving
+  // fairshare * fairSharePreemptionThreshold resources, it is allowed to
+  // preempt other queues' tasks.
+  private final Map<String, Float> fairSharePreemptionThresholds;
+
   private final Map<String, SchedulingPolicy> schedulingPolicies;
   
   private final SchedulingPolicy defaultSchedulingPolicy;
@@ -92,6 +98,7 @@ public class AllocationConfiguration {
       SchedulingPolicy defaultSchedulingPolicy,
       Map<String, Long> minSharePreemptionTimeouts,
       Map<String, Long> fairSharePreemptionTimeouts,
+      Map<String, Float> fairSharePreemptionThresholds,
       Map<String, Map<QueueACL, AccessControlList>> queueAcls,
       QueuePlacementPolicy placementPolicy,
       Map<FSQueueType, Set<String>> configuredQueues) {
@@ -108,6 +115,7 @@ public class AllocationConfiguration {
     this.schedulingPolicies = schedulingPolicies;
     this.minSharePreemptionTimeouts = minSharePreemptionTimeouts;
     this.fairSharePreemptionTimeouts = fairSharePreemptionTimeouts;
+    this.fairSharePreemptionThresholds = fairSharePreemptionThresholds;
     this.queueAcls = queueAcls;
     this.placementPolicy = placementPolicy;
     this.configuredQueues = configuredQueues;
@@ -126,6 +134,7 @@ public class AllocationConfiguration {
     queueAcls = new HashMap<String, Map<QueueACL, AccessControlList>>();
     minSharePreemptionTimeouts = new HashMap<String, Long>();
     fairSharePreemptionTimeouts = new HashMap<String, Long>();
+    fairSharePreemptionThresholds = new HashMap<String, Float>();
     schedulingPolicies = new HashMap<String, SchedulingPolicy>();
     defaultSchedulingPolicy = SchedulingPolicy.DEFAULT_POLICY;
     configuredQueues = new HashMap<FSQueueType, Set<String>>();
@@ -171,7 +180,18 @@ public class AllocationConfiguration {
     return (fairSharePreemptionTimeout == null) ?
         -1 : fairSharePreemptionTimeout;
   }
-  
+
+  /**
+   * Get a queue's fair share preemption threshold in the allocation file.
+   * Return -1f if not set.
+   */
+  public float getFairSharePreemptionThreshold(String queueName) {
+    Float fairSharePreemptionThreshold =
+        fairSharePreemptionThresholds.get(queueName);
+    return (fairSharePreemptionThreshold == null) ?
+        -1f : fairSharePreemptionThreshold;
+  }
+
   public ResourceWeights getQueueWeight(String queue) {
     ResourceWeights weight = queueWeights.get(queue);
     return (weight == null) ? ResourceWeights.NEUTRAL : weight;

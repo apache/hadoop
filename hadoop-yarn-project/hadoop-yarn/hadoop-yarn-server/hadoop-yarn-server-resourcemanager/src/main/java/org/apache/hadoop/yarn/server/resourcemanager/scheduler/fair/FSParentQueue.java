@@ -78,11 +78,11 @@ public class FSParentQueue extends FSQueue {
   }
 
   @Override
-  public void updatePreemptionTimeouts() {
-    super.updatePreemptionTimeouts();
+  public void updatePreemptionVariables() {
+    super.updatePreemptionVariables();
     // For child queues
     for (FSQueue childQueue : childQueues) {
-      childQueue.updatePreemptionTimeouts();
+      childQueue.updatePreemptionVariables();
     }
   }
 
