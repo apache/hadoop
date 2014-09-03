@@ -180,6 +180,7 @@ import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.tracing.SpanReceiverHost;
 import org.mortbay.util.ajax.JSON;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -243,10 +244,9 @@ public class DataNode extends Configured
     LogFactory.getLog(DataNode.class.getName() + ".clienttrace");
   
   private static final String USAGE =
-      "Usage: java DataNode [-regular | -rollback | -rollingupgrade rollback]\n" +
+      "Usage: java DataNode [-regular | -rollback]\n" +
       "    -regular                 : Normal DataNode startup (default).\n" +
-      "    -rollback                : Rollback a standard upgrade.\n" +
-      "    -rollingupgrade rollback : Rollback a rolling upgrade operation.\n" +
+      "    -rollback                : Rollback a standard or rolling upgrade.\n" +
       "  Refer to HDFS documentation for the difference between standard\n" +
       "  and rolling upgrades.";
 
@@ -325,6 +325,8 @@ public class DataNode extends Configured
   private String supergroup;
   private boolean isPermissionEnabled;
   private String dnUserName = null;
+
+  private SpanReceiverHost spanReceiverHost;
 
   /**
    * Create the DataNode given a configuration, an array of dataDirs,
@@ -823,6 +825,7 @@ public class DataNode extends Configured
     this.dataDirs = dataDirs;
     this.conf = conf;
     this.dnConf = new DNConf(conf);
+    this.spanReceiverHost = SpanReceiverHost.getInstance(conf);
 
     if (dnConf.maxLockedMemory > 0) {
       if (!NativeIO.POSIX.getCacheManipulator().verifyCanMlock()) {
@@ -1510,6 +1513,9 @@ public class DataNode extends Configured
       MBeans.unregister(dataNodeInfoBeanName);
       dataNodeInfoBeanName = null;
     }
+    if (this.spanReceiverHost != null) {
+      this.spanReceiverHost.closeReceivers();
+    }
     if (shortCircuitRegistry != null) shortCircuitRegistry.shutdown();
     LOG.info("Shutdown complete.");
     synchronized(this) {
@@ -1738,7 +1744,7 @@ public class DataNode extends Configured
             + b + " (numBytes=" + b.getNumBytes() + ")"
             + ", stage=" + stage
             + ", clientname=" + clientname
-            + ", targests=" + Arrays.asList(targets));
+            + ", targets=" + Arrays.asList(targets));
       }
       this.targets = targets;
       this.targetStorageTypes = targetStorageTypes;

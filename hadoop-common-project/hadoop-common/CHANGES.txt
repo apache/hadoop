@@ -125,6 +125,12 @@ Trunk (Unreleased)
 
     HADOOP-10485. Remove dead classes in hadoop-streaming. (wheat9)
 
+    HADOOP-11013. CLASSPATH handling should be consolidated, debuggable (aw)
+
+    HADOOP-11041. VersionInfo specifies subversion (Tsuyoshi OZAWA via aw)
+
+    HADOOP-10373 create tools/hadoop-amazon for aws/EMR support (stevel)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -232,9 +238,6 @@ Trunk (Unreleased)
     HADOOP-8813. Add InterfaceAudience and InterfaceStability annotations
     to RPC Server and Client classes. (Brandon Li via suresh)
 
-    HADOOP-8815. RandomDatum needs to override hashCode().
-    (Brandon Li via suresh)
-
     HADOOP-8436. NPE In getLocalPathForWrite ( path, conf ) when the
     required context item is not configured
     (Brahma Reddy Battula via harsh)
@@ -323,61 +326,15 @@ Trunk (Unreleased)
 
     HADOOP-10996. Stop violence in the *_HOME (aw)
 
+    HADOOP-10748. HttpServer2 should not load JspServlet. (wheat9)
+
+    HADOOP-11033. shell scripts ignore JAVA_HOME on OS X. (aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
 
     HADOOP-8589. ViewFs tests fail when tests and home dirs are nested (sanjay Radia)
-
-  BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
-
-    HADOOP-10734. Implement high-performance secure random number sources.
-    (Yi Liu via Colin Patrick McCabe)
-
-    HADOOP-10603. Crypto input and output streams implementing Hadoop stream
-    interfaces. (Yi Liu and Charles Lamb)
-
-    HADOOP-10628. Javadoc and few code style improvement for Crypto
-    input and output streams. (Yi Liu via clamb)
-
-    HADOOP-10632. Minor improvements to Crypto input and output streams. 
-    (Yi Liu)
-
-    HADOOP-10635. Add a method to CryptoCodec to generate SRNs for IV. (Yi Liu)
-
-    HADOOP-10653. Add a new constructor for CryptoInputStream that 
-    receives current position of wrapped stream. (Yi Liu)
-
-    HADOOP-10662. NullPointerException in CryptoInputStream while wrapped
-    stream is not ByteBufferReadable. Add tests using normal stream. (Yi Liu)
-
-    HADOOP-10713. Refactor CryptoCodec#generateSecureRandom to take a byte[]. 
-    (wang via yliu)
-
-    HADOOP-10693. Implementation of AES-CTR CryptoCodec using JNI to OpenSSL. 
-    (Yi Liu via cmccabe)
-
-    HADOOP-10803. Update OpensslCipher#getInstance to accept CipherSuite#name
-    format. (Yi Liu)
-
-    HADOOP-10735. Fall back AesCtrCryptoCodec implementation from OpenSSL to
-    JCE if non native support. (Yi Liu)
-
-    HADOOP-10870. Failed to load OpenSSL cipher error logs on systems with old
-    openssl versions (cmccabe)
-
-    HADOOP-10853. Refactor get instance of CryptoCodec and support create via
-    algorithm/mode/padding. (Yi Liu)
-
-    HADOOP-10919. Copy command should preserve raw.* namespace
-    extended attributes. (clamb)
-
-    HDFS-6873. Constants in CommandWithDestination should be static. (clamb)
-
-    HADOOP-10871. incorrect prototype in OpensslSecureRandom.c (cmccabe)
-
-    HADOOP-10886. CryptoCodec#getCodecclasses throws NPE when configurations not 
-    loaded. (umamahesh)
 
 Release 2.6.0 - UNRELEASED
 
@@ -516,6 +473,29 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10998. Fix bash tab completion code to work (Jim Hester via aw)
 
+    HADOOP-10880. Move HTTP delegation tokens out of URL querystring to 
+    a header. (tucu)
+
+    HADOOP-11005. Fix HTTP content type for ReconfigurationServlet.
+    (Lei Xu via wang)
+
+    HADOOP-10814. Update Tomcat version used by HttpFS and KMS to latest
+    6.x version. (rkanter via tucu)
+
+    HADOOP-10994. KeyProviderCryptoExtension should use CryptoCodec for 
+    generation/decryption of keys. (tucu)
+
+    HADOOP-11021. Configurable replication factor in the hadoop archive
+    command. (Zhe Zhang via wang)
+
+    HADOOP-11030. Define a variable jackson.version instead of using constant 
+    at multiple places. (Juan Yu via kasha)
+
+    HADOOP-10990. Add missed NFSv3 request and response classes (brandonli)
+
+    HADOOP-10863. KMS should have a blacklist for decrypting EEKs. 
+    (asuresh via tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
@@ -567,6 +547,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10282. Create a FairCallQueue: a multi-level call queue which
     schedules incoming calls and multiplexes outgoing calls. (Chris Li via
     Arpit Agarwal)
+
+    HADOOP-10833. Remove unused cache in UserProvider. (Benoy Antony)
 
   BUG FIXES
 
@@ -699,6 +681,68 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10989. Work around buggy getgrouplist() implementations on Linux that
     return 0 on failure. (cnauroth)
 
+    HADOOP-8815. RandomDatum needs to override hashCode().
+    (Brandon Li via suresh)
+
+    BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
+  
+      HADOOP-10734. Implement high-performance secure random number sources.
+      (Yi Liu via Colin Patrick McCabe)
+  
+      HADOOP-10603. Crypto input and output streams implementing Hadoop stream
+      interfaces. (Yi Liu and Charles Lamb)
+  
+      HADOOP-10628. Javadoc and few code style improvement for Crypto
+      input and output streams. (Yi Liu via clamb)
+  
+      HADOOP-10632. Minor improvements to Crypto input and output streams. 
+      (Yi Liu)
+  
+      HADOOP-10635. Add a method to CryptoCodec to generate SRNs for IV. (Yi Liu)
+  
+      HADOOP-10653. Add a new constructor for CryptoInputStream that 
+      receives current position of wrapped stream. (Yi Liu)
+  
+      HADOOP-10662. NullPointerException in CryptoInputStream while wrapped
+      stream is not ByteBufferReadable. Add tests using normal stream. (Yi Liu)
+  
+      HADOOP-10713. Refactor CryptoCodec#generateSecureRandom to take a byte[]. 
+      (wang via yliu)
+  
+      HADOOP-10693. Implementation of AES-CTR CryptoCodec using JNI to OpenSSL. 
+      (Yi Liu via cmccabe)
+  
+      HADOOP-10803. Update OpensslCipher#getInstance to accept CipherSuite#name
+      format. (Yi Liu)
+  
+      HADOOP-10735. Fall back AesCtrCryptoCodec implementation from OpenSSL to
+      JCE if non native support. (Yi Liu)
+  
+      HADOOP-10870. Failed to load OpenSSL cipher error logs on systems with old
+      openssl versions (cmccabe)
+  
+      HADOOP-10853. Refactor get instance of CryptoCodec and support create via
+      algorithm/mode/padding. (Yi Liu)
+  
+      HADOOP-10919. Copy command should preserve raw.* namespace
+      extended attributes. (clamb)
+  
+      HDFS-6873. Constants in CommandWithDestination should be static. (clamb)
+  
+      HADOOP-10871. incorrect prototype in OpensslSecureRandom.c (cmccabe)
+  
+      HADOOP-10886. CryptoCodec#getCodecclasses throws NPE when configurations not 
+      loaded. (umamahesh)      
+    --
+
+    HADOOP-10911. hadoop.auth cookie after HADOOP-10710 still not proper
+    according to RFC2109. (gchanan via tucu)
+
+    HADOOP-11036. Add build directory to .gitignore (Tsuyoshi OZAWA via aw)
+
+    HADOOP-11012. hadoop fs -text of zero-length file causes EOFException
+    (Eric Payne via jlowe)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -706,10 +750,15 @@ Release 2.5.1 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+  
+    HADOOP-10956. Fix create-release script to include docs and necessary txt
+    files. (kasha)
 
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HADOOP-11001. Fix test-patch to work with the git repo. (kasha)
 
 Release 2.5.0 - 2014-08-11
 

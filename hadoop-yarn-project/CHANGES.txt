@@ -58,6 +58,12 @@ Release 2.6.0 - UNRELEASED
     YARN-2393. FairScheduler: Add the notion of steady fair share. 
     (Wei Yan via kasha)
 
+    YARN-2395. FairScheduler: Preemption timeout should be configurable per 
+    queue. (Wei Yan via kasha)
+
+    YARN-2394. FairScheduler: Configure fairSharePreemptionThreshold per queue.
+    (Wei Yan via kasha)
+
   IMPROVEMENTS
 
     YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc
@@ -160,6 +166,15 @@ Release 2.6.0 - UNRELEASED
     YARN-2182. Updated ContainerId#toString() to append RM Epoch number.
     (Tsuyoshi OZAWA via jianhe)
 
+    YARN-2406. Move RM recovery related proto to
+    yarn_server_resourcemanager_recovery.proto. (Tsuyoshi Ozawa via jianhe)
+
+    YARN-2360. Fair Scheduler: Display dynamic fair share for queues on the 
+    scheduler page. (Ashwin Shankar and Wei Yan via kasha)
+
+    YARN-1506. Changed RMNode/SchedulerNode to update resource with event
+    notification. (Junping Du via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -245,6 +260,20 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2035. FileSystemApplicationHistoryStore should not make working dir
     when it already exists. (Jonathan Eagles via zjshen)
+
+    YARN-2405. NPE in FairSchedulerAppsBlock. (Tsuyoshi Ozawa via kasha)
+
+    YARN-2449. Fixed the bug that TimelineAuthenticationFilterInitializer
+    is not automatically added when hadoop.http.filter.initializers is not
+    configured. (Varun Vasudev via zjshen)
+
+    YARN-2450. Fix typos in log messages. (Ray Chiang via hitesh)
+
+    YARN-2447. RM web service app submission doesn't pass secrets correctly.
+    (Varun Vasudev via jianhe)
+
+    YARN-2462. TestNodeManagerResync#testBlockNewContainerRequestsOnStartAndResync
+    should have a test timeout (Eric Payne via jlowe)
 
 Release 2.5.1 - UNRELEASED
 

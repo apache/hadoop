@@ -33,12 +33,13 @@ public class WRITE3Request extends RequestWithHandle {
   private final WriteStableHow stableHow;
   private final ByteBuffer data;
 
-  public WRITE3Request(XDR xdr) throws IOException {
-    super(xdr);
-    offset = xdr.readHyper();
-    count = xdr.readInt();
-    stableHow = WriteStableHow.fromValue(xdr.readInt());
-    data = ByteBuffer.wrap(xdr.readFixedOpaque(xdr.readInt()));
+  public static WRITE3Request deserialize(XDR xdr) throws IOException {
+    FileHandle handle = readHandle(xdr);
+    long offset = xdr.readHyper();
+    int count = xdr.readInt();
+    WriteStableHow stableHow = WriteStableHow.fromValue(xdr.readInt());
+    ByteBuffer data = ByteBuffer.wrap(xdr.readFixedOpaque(xdr.readInt()));
+    return new WRITE3Request(handle, offset, count, stableHow, data);
   }
 
   public WRITE3Request(FileHandle handle, final long offset, final int count,

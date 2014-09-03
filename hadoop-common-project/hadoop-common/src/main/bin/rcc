@@ -23,6 +23,7 @@ this="$bin/$script"
 
 DEFAULT_LIBEXEC_DIR="$bin"/../libexec
 HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
+# shellcheck disable=SC2034
 HADOOP_NEW_CONFIG=true
 . "$HADOOP_LIBEXEC_DIR/hadoop-config.sh"
 
@@ -33,10 +34,10 @@ fi
 CLASS='org.apache.hadoop.record.compiler.generated.Rcc'
 
 # Always respect HADOOP_OPTS and HADOOP_CLIENT_OPTS
-HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
+hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
+HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
 
-hadoop_add_param HADOOP_OPTS Xmx "$JAVA_HEAP_MAX"
+hadoop_add_param HADOOP_OPTS Xmx "${JAVA_HEAP_MAX}"
 
 hadoop_finalize
-export CLASSPATH
 hadoop_java_exec rcc "${CLASS}" "$@"

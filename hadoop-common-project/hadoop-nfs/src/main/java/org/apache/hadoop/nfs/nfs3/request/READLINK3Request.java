@@ -19,6 +19,7 @@ package org.apache.hadoop.nfs.nfs3.request;
 
 import java.io.IOException;
 
+import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.oncrpc.XDR;
 
 /**
@@ -26,7 +27,17 @@ import org.apache.hadoop.oncrpc.XDR;
  */
 public class READLINK3Request extends RequestWithHandle {
 
-  public READLINK3Request(XDR xdr) throws IOException {
-    super(xdr);
+  public static READLINK3Request deserialize(XDR xdr) throws IOException {
+    FileHandle handle = readHandle(xdr);
+    return new READLINK3Request(handle);
+  }
+  
+  public READLINK3Request(FileHandle handle) {
+    super(handle);
+  }
+  
+  @Override
+  public void serialize(XDR xdr) {
+    handle.serialize(xdr);   
   }
 }

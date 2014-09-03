@@ -65,13 +65,16 @@ public class AllocationConfiguration {
   // preempt other jobs' tasks.
   private final Map<String, Long> minSharePreemptionTimeouts;
 
-  // Default min share preemption timeout for queues where it is not set
-  // explicitly.
-  private final long defaultMinSharePreemptionTimeout;
+  // Fair share preemption timeout for each queue in seconds. If a job in the
+  // queue waits this long without receiving its fair share threshold, it is
+  // allowed to preempt other jobs' tasks.
+  private final Map<String, Long> fairSharePreemptionTimeouts;
 
-  // Preemption timeout for jobs below fair share in seconds. If a job remains
-  // below half its fair share for this long, it is allowed to preempt tasks.
-  private final long fairSharePreemptionTimeout;
+  // The fair share preemption threshold for each queue. If a queue waits
+  // fairSharePreemptionTimeout without receiving
+  // fairshare * fairSharePreemptionThreshold resources, it is allowed to
+  // preempt other queues' tasks.
+  private final Map<String, Float> fairSharePreemptionThresholds;
 
   private final Map<String, SchedulingPolicy> schedulingPolicies;
   
@@ -94,8 +97,9 @@ public class AllocationConfiguration {
       Map<String, SchedulingPolicy> schedulingPolicies,
       SchedulingPolicy defaultSchedulingPolicy,
       Map<String, Long> minSharePreemptionTimeouts,
+      Map<String, Long> fairSharePreemptionTimeouts,
+      Map<String, Float> fairSharePreemptionThresholds,
       Map<String, Map<QueueACL, AccessControlList>> queueAcls,
-      long fairSharePreemptionTimeout, long defaultMinSharePreemptionTimeout,
       QueuePlacementPolicy placementPolicy,
       Map<FSQueueType, Set<String>> configuredQueues) {
     this.minQueueResources = minQueueResources;
@@ -110,9 +114,9 @@ public class AllocationConfiguration {
     this.defaultSchedulingPolicy = defaultSchedulingPolicy;
     this.schedulingPolicies = schedulingPolicies;
     this.minSharePreemptionTimeouts = minSharePreemptionTimeouts;
+    this.fairSharePreemptionTimeouts = fairSharePreemptionTimeouts;
+    this.fairSharePreemptionThresholds = fairSharePreemptionThresholds;
     this.queueAcls = queueAcls;
-    this.fairSharePreemptionTimeout = fairSharePreemptionTimeout;
-    this.defaultMinSharePreemptionTimeout = defaultMinSharePreemptionTimeout;
     this.placementPolicy = placementPolicy;
     this.configuredQueues = configuredQueues;
   }
@@ -129,8 +133,8 @@ public class AllocationConfiguration {
     queueMaxAMShareDefault = -1.0f;
     queueAcls = new HashMap<String, Map<QueueACL, AccessControlList>>();
     minSharePreemptionTimeouts = new HashMap<String, Long>();
-    defaultMinSharePreemptionTimeout = Long.MAX_VALUE;
-    fairSharePreemptionTimeout = Long.MAX_VALUE;
+    fairSharePreemptionTimeouts = new HashMap<String, Long>();
+    fairSharePreemptionThresholds = new HashMap<String, Float>();
     schedulingPolicies = new HashMap<String, SchedulingPolicy>();
     defaultSchedulingPolicy = SchedulingPolicy.DEFAULT_POLICY;
     configuredQueues = new HashMap<FSQueueType, Set<String>>();
@@ -159,25 +163,35 @@ public class AllocationConfiguration {
   }
   
   /**
-   * Get a queue's min share preemption timeout, in milliseconds. This is the
-   * time after which jobs in the queue may kill other queues' tasks if they
-   * are below their min share.
+   * Get a queue's min share preemption timeout configured in the allocation
+   * file, in milliseconds. Return -1 if not set.
    */
   public long getMinSharePreemptionTimeout(String queueName) {
     Long minSharePreemptionTimeout = minSharePreemptionTimeouts.get(queueName);
-    return (minSharePreemptionTimeout == null) ? defaultMinSharePreemptionTimeout
-        : minSharePreemptionTimeout;
+    return (minSharePreemptionTimeout == null) ? -1 : minSharePreemptionTimeout;
   }
-  
+
   /**
-   * Get the fair share preemption, in milliseconds. This is the time
-   * after which any job may kill other jobs' tasks if it is below half
-   * its fair share.
+   * Get a queue's fair share preemption timeout configured in the allocation
+   * file, in milliseconds. Return -1 if not set.
    */
-  public long getFairSharePreemptionTimeout() {
-    return fairSharePreemptionTimeout;
+  public long getFairSharePreemptionTimeout(String queueName) {
+    Long fairSharePreemptionTimeout = fairSharePreemptionTimeouts.get(queueName);
+    return (fairSharePreemptionTimeout == null) ?
+        -1 : fairSharePreemptionTimeout;
   }
-  
+
+  /**
+   * Get a queue's fair share preemption threshold in the allocation file.
+   * Return -1f if not set.
+   */
+  public float getFairSharePreemptionThreshold(String queueName) {
+    Float fairSharePreemptionThreshold =
+        fairSharePreemptionThresholds.get(queueName);
+    return (fairSharePreemptionThreshold == null) ?
+        -1f : fairSharePreemptionThreshold;
+  }
+
   public ResourceWeights getQueueWeight(String queue) {
     ResourceWeights weight = queueWeights.get(queue);
     return (weight == null) ? ResourceWeights.NEUTRAL : weight;

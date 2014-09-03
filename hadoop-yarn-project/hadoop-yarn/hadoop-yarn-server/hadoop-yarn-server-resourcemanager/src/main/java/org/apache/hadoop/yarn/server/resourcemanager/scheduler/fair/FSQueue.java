@@ -52,6 +52,10 @@ public abstract class FSQueue implements Queue, Schedulable {
   
   protected SchedulingPolicy policy = SchedulingPolicy.DEFAULT_POLICY;
 
+  private long fairSharePreemptionTimeout = Long.MAX_VALUE;
+  private long minSharePreemptionTimeout = Long.MAX_VALUE;
+  private float fairSharePreemptionThreshold = 0.5f;
+
   public FSQueue(String name, FairScheduler scheduler, FSParentQueue parent) {
     this.name = name;
     this.scheduler = scheduler;
@@ -166,12 +170,60 @@ public abstract class FSQueue implements Queue, Schedulable {
   public boolean hasAccess(QueueACL acl, UserGroupInformation user) {
     return scheduler.getAllocationConfiguration().hasAccess(name, acl, user);
   }
-  
+
+  public long getFairSharePreemptionTimeout() {
+    return fairSharePreemptionTimeout;
+  }
+
+  public void setFairSharePreemptionTimeout(long fairSharePreemptionTimeout) {
+    this.fairSharePreemptionTimeout = fairSharePreemptionTimeout;
+  }
+
+  public long getMinSharePreemptionTimeout() {
+    return minSharePreemptionTimeout;
+  }
+
+  public void setMinSharePreemptionTimeout(long minSharePreemptionTimeout) {
+    this.minSharePreemptionTimeout = minSharePreemptionTimeout;
+  }
+
+  public float getFairSharePreemptionThreshold() {
+    return fairSharePreemptionThreshold;
+  }
+
+  public void setFairSharePreemptionThreshold(float fairSharePreemptionThreshold) {
+    this.fairSharePreemptionThreshold = fairSharePreemptionThreshold;
+  }
+
   /**
    * Recomputes the shares for all child queues and applications based on this
    * queue's current share
    */
   public abstract void recomputeShares();
+
+  /**
+   * Update the min/fair share preemption timeouts and threshold for this queue.
+   */
+  public void updatePreemptionVariables() {
+    // For min share timeout
+    minSharePreemptionTimeout = scheduler.getAllocationConfiguration()
+        .getMinSharePreemptionTimeout(getName());
+    if (minSharePreemptionTimeout == -1 && parent != null) {
+      minSharePreemptionTimeout = parent.getMinSharePreemptionTimeout();
+    }
+    // For fair share timeout
+    fairSharePreemptionTimeout = scheduler.getAllocationConfiguration()
+        .getFairSharePreemptionTimeout(getName());
+    if (fairSharePreemptionTimeout == -1 && parent != null) {
+      fairSharePreemptionTimeout = parent.getFairSharePreemptionTimeout();
+    }
+    // For fair share preemption threshold
+    fairSharePreemptionThreshold = scheduler.getAllocationConfiguration()
+        .getFairSharePreemptionThreshold(getName());
+    if (fairSharePreemptionThreshold < 0 && parent != null) {
+      fairSharePreemptionThreshold = parent.getFairSharePreemptionThreshold();
+    }
+  }
 
   /**
    * Gets the children of this queue, if any.

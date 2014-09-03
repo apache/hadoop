@@ -125,7 +125,7 @@ public class TestFileAppend4 {
     while (!recovered && tries-- > 0) {
       try {
         out = fs.append(file1);
-        LOG.info("Successfully opened for appends");
+        LOG.info("Successfully opened for append");
         recovered = true;
       } catch (IOException e) {
         LOG.info("Failed open for append, waiting on lease recovery");

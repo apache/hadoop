@@ -56,7 +56,9 @@ public class MiniQJMHACluster {
     
     public Builder(Configuration conf) {
       this.conf = conf;
-      this.dfsBuilder = new MiniDFSCluster.Builder(conf);
+      // most QJMHACluster tests don't need DataNodes, so we'll make
+      // this the default
+      this.dfsBuilder = new MiniDFSCluster.Builder(conf).numDataNodes(0);
     }
 
     public MiniDFSCluster.Builder getDfsBuilder() {
@@ -102,7 +104,7 @@ public class MiniQJMHACluster {
         cluster = builder.dfsBuilder.nnTopology(topology)
             .manageNameDfsSharedDirs(false).build();
         cluster.waitActive();
-        cluster.shutdown();
+        cluster.shutdownNameNodes();
 
         // initialize the journal nodes
         Configuration confNN0 = cluster.getConfiguration(0);

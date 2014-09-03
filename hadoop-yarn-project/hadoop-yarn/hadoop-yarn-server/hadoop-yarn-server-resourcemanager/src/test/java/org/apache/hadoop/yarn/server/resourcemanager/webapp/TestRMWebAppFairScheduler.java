@@ -22,20 +22,29 @@ import com.google.common.collect.Maps;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -75,12 +84,67 @@ public class TestRMWebAppFairScheduler {
     WebAppTests.flushOutput(injector);
   }
 
+
+  /**
+   *  Testing inconsistent state between AbstractYarnScheduler#applications and
+   *  RMContext#applications
+   */
+  @Test
+  public void testFairSchedulerWebAppPageInInconsistentState() {
+    List<RMAppState> appStates = Arrays.asList(
+        RMAppState.NEW,
+        RMAppState.NEW_SAVING,
+        RMAppState.SUBMITTED,
+        RMAppState.RUNNING,
+        RMAppState.FINAL_SAVING,
+        RMAppState.ACCEPTED,
+        RMAppState.FINISHED
+    );
+    final RMContext rmContext = mockRMContext(appStates);
+    Injector injector = WebAppTests.createMockInjector(RMContext.class,
+        rmContext,
+        new Module() {
+          @Override
+          public void configure(Binder binder) {
+            try {
+              ResourceManager mockRmWithFairScheduler =
+                  mockRmWithApps(rmContext);
+              binder.bind(ResourceManager.class).toInstance
+                  (mockRmWithFairScheduler);
+
+            } catch (IOException e) {
+              throw new IllegalStateException(e);
+            }
+          }
+        });
+    FairSchedulerPage fsViewInstance =
+        injector.getInstance(FairSchedulerPage.class);
+    try {
+      fsViewInstance.render();
+    } catch (Exception e) {
+      Assert.fail("Failed to render FairSchedulerPage: " +
+          StringUtils.stringifyException(e));
+    }
+    WebAppTests.flushOutput(injector);
+  }
+
   private static RMContext mockRMContext(List<RMAppState> states) {
     final ConcurrentMap<ApplicationId, RMApp> applicationsMaps = Maps
         .newConcurrentMap();
     int i = 0;
     for (RMAppState state : states) {
-      MockRMApp app = new MockRMApp(i, i, state);
+      MockRMApp app = new MockRMApp(i, i, state) {
+        @Override
+        public RMAppMetrics getRMAppMetrics() {
+          return new RMAppMetrics(Resource.newInstance(0, 0), 0, 0);
+        }
+        @Override
+        public YarnApplicationState createApplicationState() {
+          return YarnApplicationState.ACCEPTED;
+        }
+      };
+      RMAppAttempt attempt = mock(RMAppAttempt.class);
+      app.setCurrentAppAttempt(attempt);
       applicationsMaps.put(app.getApplicationId(), app);
       i++;
     }
@@ -113,4 +177,34 @@ public class TestRMWebAppFairScheduler {
     fs.init(conf);
     return fs;
   }
+
+  private static ResourceManager mockRmWithApps(RMContext rmContext) throws
+      IOException {
+    ResourceManager rm = mock(ResourceManager.class);
+    ResourceScheduler rs =  mockFairSchedulerWithoutApps(rmContext);
+    when(rm.getResourceScheduler()).thenReturn(rs);
+    when(rm.getRMContext()).thenReturn(rmContext);
+    return rm;
+  }
+
+  private static FairScheduler mockFairSchedulerWithoutApps(RMContext rmContext)
+      throws IOException {
+    FairScheduler fs = new FairScheduler() {
+      @Override
+      public FSAppAttempt getSchedulerApp(ApplicationAttemptId
+          applicationAttemptId) {
+        return null ;
+      }
+      @Override
+      public FSAppAttempt getApplicationAttempt(ApplicationAttemptId
+          applicationAttemptId) {
+        return null;
+      }
+    };
+    FairSchedulerConfiguration conf = new FairSchedulerConfiguration();
+    fs.setRMContext(rmContext);
+    fs.init(conf);
+    return fs;
+  }
+
 }

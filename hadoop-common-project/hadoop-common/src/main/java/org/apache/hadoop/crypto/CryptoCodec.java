@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.PerformanceAdvisory;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +49,7 @@ public abstract class CryptoCodec implements Configurable {
    * 
    * @param conf
    *          the configuration
-   * @param CipherSuite
+   * @param cipherSuite
    *          algorithm/mode/padding
    * @return CryptoCodec the codec object. Null value will be returned if no
    *         crypto codec classes with cipher suite configured.
@@ -66,15 +67,18 @@ public abstract class CryptoCodec implements Configurable {
         CryptoCodec c = ReflectionUtils.newInstance(klass, conf);
         if (c.getCipherSuite().getName().equals(cipherSuite.getName())) {
           if (codec == null) {
-            LOG.debug("Using crypto codec {}.", klass.getName());
+            PerformanceAdvisory.LOG.debug("Using crypto codec {}.",
+                klass.getName());
             codec = c;
           }
         } else {
-          LOG.warn("Crypto codec {} doesn't meet the cipher suite {}.", 
+          PerformanceAdvisory.LOG.debug(
+              "Crypto codec {} doesn't meet the cipher suite {}.",
               klass.getName(), cipherSuite.getName());
         }
       } catch (Exception e) {
-        LOG.warn("Crypto codec {} is not available.", klass.getName());
+        PerformanceAdvisory.LOG.debug("Crypto codec {} is not available.",
+            klass.getName());
       }
     }
     
@@ -108,7 +112,8 @@ public abstract class CryptoCodec implements Configurable {
         cipherSuite.getConfigSuffix();
     String codecString = conf.get(configName);
     if (codecString == null) {
-      LOG.warn("No crypto codec classes with cipher suite configured.");
+      PerformanceAdvisory.LOG.debug(
+          "No crypto codec classes with cipher suite configured.");
       return null;
     }
     for (String c : Splitter.on(',').trimResults().omitEmptyStrings().
@@ -117,9 +122,9 @@ public abstract class CryptoCodec implements Configurable {
         Class<?> cls = conf.getClassByName(c);
         result.add(cls.asSubclass(CryptoCodec.class));
       } catch (ClassCastException e) {
-        LOG.warn("Class " + c + " is not a CryptoCodec.");
+        PerformanceAdvisory.LOG.debug("Class {} is not a CryptoCodec.", c);
       } catch (ClassNotFoundException e) {
-        LOG.warn("Crypto codec " + c + " not found.");
+        PerformanceAdvisory.LOG.debug("Crypto codec {} not found.", c);
       }
     }
     

@@ -125,6 +125,8 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
     }
   }
 
+  private boolean useQueryStringforDelegationToken = false;
+
   /**
    * Creates an <code>DelegationTokenAuthenticatedURL</code>.
    * <p/>
@@ -168,6 +170,34 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
       DelegationTokenAuthenticator authenticator,
       ConnectionConfigurator connConfigurator) {
     super(obtainDelegationTokenAuthenticator(authenticator), connConfigurator);
+  }
+
+  /**
+   * Sets if delegation token should be transmitted in the URL query string.
+   * By default it is transmitted using the
+   * {@link DelegationTokenAuthenticator#DELEGATION_TOKEN_HEADER} HTTP header.
+   * <p/>
+   * This method is provided to enable WebHDFS backwards compatibility.
+   *
+   * @param useQueryString  <code>TRUE</code> if the token is transmitted in the
+   * URL query string, <code>FALSE</code> if the delegation token is transmitted
+   * using the {@link DelegationTokenAuthenticator#DELEGATION_TOKEN_HEADER} HTTP
+   * header.
+   */
+  @Deprecated
+  protected void setUseQueryStringForDelegationToken(boolean useQueryString) {
+    useQueryStringforDelegationToken = useQueryString;
+  }
+
+  /**
+   * Returns if delegation token is transmitted as a HTTP header.
+   *
+   * @return <code>TRUE</code> if the token is transmitted in the URL query
+   * string, <code>FALSE</code> if the delegation token is transmitted using the
+   * {@link DelegationTokenAuthenticator#DELEGATION_TOKEN_HEADER} HTTP header.
+   */
+  public boolean useQueryStringForDelegationToken() {
+    return useQueryStringforDelegationToken;
   }
 
   /**
@@ -235,23 +265,41 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
    * @throws IOException if an IO error occurred.
    * @throws AuthenticationException if an authentication exception occurred.
    */
+  @SuppressWarnings("unchecked")
   public HttpURLConnection openConnection(URL url, Token token, String doAs)
       throws IOException, AuthenticationException {
     Preconditions.checkNotNull(url, "url");
     Preconditions.checkNotNull(token, "token");
     Map<String, String> extraParams = new HashMap<String, String>();
-
-    // delegation token
-    Credentials creds = UserGroupInformation.getCurrentUser().getCredentials();
-    if (!creds.getAllTokens().isEmpty()) {
-      InetSocketAddress serviceAddr = new InetSocketAddress(url.getHost(),
-          url.getPort());
-      Text service = SecurityUtil.buildTokenService(serviceAddr);
-      org.apache.hadoop.security.token.Token<? extends TokenIdentifier> dt =
-          creds.getToken(service);
-      if (dt != null) {
-        extraParams.put(KerberosDelegationTokenAuthenticator.DELEGATION_PARAM,
-            dt.encodeToUrlString());
+    org.apache.hadoop.security.token.Token<? extends TokenIdentifier> dToken
+        = null;
+    // if we have valid auth token, it takes precedence over a delegation token
+    // and we don't even look for one.
+    if (!token.isSet()) {
+      // delegation token
+      Credentials creds = UserGroupInformation.getCurrentUser().
+          getCredentials();
+      if (!creds.getAllTokens().isEmpty()) {
+        InetSocketAddress serviceAddr = new InetSocketAddress(url.getHost(),
+            url.getPort());
+        Text service = SecurityUtil.buildTokenService(serviceAddr);
+        dToken = creds.getToken(service);
+        if (dToken != null) {
+          if (useQueryStringForDelegationToken()) {
+            // delegation token will go in the query string, injecting it
+            extraParams.put(
+                KerberosDelegationTokenAuthenticator.DELEGATION_PARAM,
+                dToken.encodeToUrlString());
+          } else {
+            // delegation token will go as request header, setting it in the
+            // auth-token to ensure no authentication handshake is triggered
+            // (if we have a delegation token, we are authenticated)
+            // the delegation token header is injected in the connection request
+            // at the end of this method.
+            token.delegationToken = (org.apache.hadoop.security.token.Token
+                <AbstractDelegationTokenIdentifier>) dToken;
+          }
+        }
       }
     }
 
@@ -261,7 +309,14 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
     }
 
     url = augmentURL(url, extraParams);
-    return super.openConnection(url, token);
+    HttpURLConnection conn = super.openConnection(url, token);
+    if (!token.isSet() && !useQueryStringForDelegationToken() && dToken != null) {
+      // injecting the delegation token header in the connection request
+      conn.setRequestProperty(
+          DelegationTokenAuthenticator.DELEGATION_TOKEN_HEADER,
+          dToken.encodeToUrlString());
+    }
+    return conn;
   }
 
   /**

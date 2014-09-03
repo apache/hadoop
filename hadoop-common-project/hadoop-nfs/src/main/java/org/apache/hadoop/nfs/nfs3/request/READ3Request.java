@@ -31,10 +31,11 @@ public class READ3Request extends RequestWithHandle {
   private final long offset;
   private final int count;
 
-  public READ3Request(XDR xdr) throws IOException {
-    super(xdr);
-    offset = xdr.readHyper();
-    count = xdr.readInt();
+  public static READ3Request deserialize(XDR xdr) throws IOException {
+    FileHandle handle = readHandle(xdr);
+    long offset = xdr.readHyper();
+    int count = xdr.readInt();
+    return new READ3Request(handle, offset, count);
   }
 
   @VisibleForTesting

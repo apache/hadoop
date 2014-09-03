@@ -29,13 +29,18 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 public class TestKeyProviderDelegationTokenExtension {
   
   public static abstract class MockKeyProvider extends
       KeyProvider implements DelegationTokenExtension {
+
+    public MockKeyProvider() {
+      super(new Configuration(false));
+    }
   }
-  
+
   @Test
   public void testCreateExtension() throws Exception {
     Configuration conf = new Configuration();
@@ -50,9 +55,11 @@ public class TestKeyProviderDelegationTokenExtension {
     Assert.assertNull(kpDTE1.addDelegationTokens("user", credentials));
     
     MockKeyProvider mock = mock(MockKeyProvider.class);
+    Mockito.when(mock.getConf()).thenReturn(new Configuration());
     when(mock.addDelegationTokens("renewer", credentials)).thenReturn(
-        new Token<?>[] { new Token(null, null, new Text("kind"), new Text(
-            "service")) });
+        new Token<?>[]{new Token(null, null, new Text("kind"), new Text(
+            "service"))}
+    );
     KeyProviderDelegationTokenExtension kpDTE2 =
         KeyProviderDelegationTokenExtension
         .createKeyProviderDelegationTokenExtension(mock);

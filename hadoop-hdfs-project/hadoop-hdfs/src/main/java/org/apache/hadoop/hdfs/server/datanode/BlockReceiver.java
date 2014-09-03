@@ -825,15 +825,17 @@ class BlockReceiver implements Closeable {
               LOG.warn("Failed to delete restart meta file: " +
                   restartMeta.getPath());
             }
+            FileWriter out = null;
             try {
-              FileWriter out = new FileWriter(restartMeta);
+              out = new FileWriter(restartMeta);
               // write out the current time.
               out.write(Long.toString(Time.now() + restartBudget));
               out.flush();
-              out.close();
             } catch (IOException ioe) {
               // The worst case is not recovering this RBW replica. 
               // Client will fall back to regular pipeline recovery.
+            } finally {
+              IOUtils.cleanup(LOG, out);
             }
             try {              
               // Even if the connection is closed after the ack packet is

@@ -24,6 +24,7 @@ public enum SchedulerEventType {
   NODE_ADDED,
   NODE_REMOVED,
   NODE_UPDATE,
+  NODE_RESOURCE_UPDATE,
 
   // Source: RMApp
   APP_ADDED,

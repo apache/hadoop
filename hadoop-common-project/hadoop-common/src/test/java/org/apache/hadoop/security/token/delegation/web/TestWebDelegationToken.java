@@ -149,6 +149,15 @@ public class TestWebDelegationToken {
         throws ServletException, IOException {
       resp.setStatus(HttpServletResponse.SC_OK);
       resp.getWriter().write("ping");
+      if (req.getHeader(DelegationTokenAuthenticator.DELEGATION_TOKEN_HEADER)
+          != null) {
+        resp.setHeader("UsingHeader", "true");
+      }
+      if (req.getQueryString() != null &&
+          req.getQueryString().contains(
+              DelegationTokenAuthenticator.DELEGATION_PARAM + "=")) {
+        resp.setHeader("UsingQueryString", "true");
+      }
     }
 
     @Override
@@ -314,7 +323,20 @@ public class TestWebDelegationToken {
   }
 
   @Test
-  public void testDelegationTokenAuthenticatorCalls() throws Exception {
+  public void testDelegationTokenAuthenticatorCallsWithHeader()
+      throws Exception {
+    testDelegationTokenAuthenticatorCalls(false);
+  }
+
+  @Test
+  public void testDelegationTokenAuthenticatorCallsWithQueryString()
+      throws Exception {
+    testDelegationTokenAuthenticatorCalls(true);
+  }
+
+
+  private void testDelegationTokenAuthenticatorCalls(final boolean useQS)
+      throws Exception {
     final Server jetty = createJettyServer();
     Context context = new Context();
     context.setContextPath("/foo");
@@ -324,14 +346,15 @@ public class TestWebDelegationToken {
 
     try {
       jetty.start();
-      URL nonAuthURL = new URL(getJettyURL() + "/foo/bar");
+      final URL nonAuthURL = new URL(getJettyURL() + "/foo/bar");
       URL authURL = new URL(getJettyURL() + "/foo/bar?authenticated=foo");
       URL authURL2 = new URL(getJettyURL() + "/foo/bar?authenticated=bar");
 
       DelegationTokenAuthenticatedURL.Token token =
           new DelegationTokenAuthenticatedURL.Token();
-      DelegationTokenAuthenticatedURL aUrl =
+      final DelegationTokenAuthenticatedURL aUrl =
           new DelegationTokenAuthenticatedURL();
+      aUrl.setUseQueryStringForDelegationToken(useQS);
 
       try {
         aUrl.getDelegationToken(nonAuthURL, token, FOO_USER);
@@ -378,6 +401,27 @@ public class TestWebDelegationToken {
       } catch (Exception ex) {
         Assert.assertTrue(ex.getMessage().contains("401"));
       }
+
+      aUrl.getDelegationToken(authURL, token, "foo");
+
+      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+      ugi.addToken(token.getDelegationToken());
+      ugi.doAs(new PrivilegedExceptionAction<Void>() {
+                 @Override
+                 public Void run() throws Exception {
+                   HttpURLConnection conn = aUrl.openConnection(nonAuthURL, new DelegationTokenAuthenticatedURL.Token());
+                   Assert.assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode());
+                   if (useQS) {
+                     Assert.assertNull(conn.getHeaderField("UsingHeader"));
+                     Assert.assertNotNull(conn.getHeaderField("UsingQueryString"));
+                   } else {
+                     Assert.assertNotNull(conn.getHeaderField("UsingHeader"));
+                     Assert.assertNull(conn.getHeaderField("UsingQueryString"));
+                   }
+                   return null;
+                 }
+               });
+
 
     } finally {
       jetty.stop();

@@ -30,7 +30,9 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -225,15 +227,17 @@ public class TestRefreshUserMappings {
   }
 
   private void addNewConfigResource(String rsrcName, String keyGroup,
-      String groups, String keyHosts, String hosts)  throws FileNotFoundException {
+      String groups, String keyHosts, String hosts)
+          throws FileNotFoundException, UnsupportedEncodingException {
     // location for temp resource should be in CLASSPATH
     Configuration conf = new Configuration();
     URL url = conf.getResource("hdfs-site.xml");
-    Path p = new Path(url.getPath());
+
+    String urlPath = URLDecoder.decode(url.getPath().toString(), "UTF-8");
+    Path p = new Path(urlPath);
     Path dir = p.getParent();
     tempResource = dir.toString() + "/" + rsrcName;
-    
-    
+
     String newResource =
     "<configuration>"+
     "<property><name>" + keyGroup + "</name><value>"+groups+"</value></property>" +

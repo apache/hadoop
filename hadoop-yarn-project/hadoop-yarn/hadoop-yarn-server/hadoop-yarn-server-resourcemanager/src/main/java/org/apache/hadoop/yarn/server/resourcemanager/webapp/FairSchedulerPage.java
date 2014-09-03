@@ -44,10 +44,12 @@ public class FairSchedulerPage extends RmView {
   static final float Q_MAX_WIDTH = 0.8f;
   static final float Q_STATS_POS = Q_MAX_WIDTH + 0.05f;
   static final String Q_END = "left:101%";
-  static final String Q_GIVEN = "left:0%;background:none;border:1px dashed rgba(0,0,0,0.25)";
+  static final String Q_GIVEN = "left:0%;background:none;border:1px solid rgba(0,0,0,1)";
+  static final String Q_INSTANTANEOUS_FS = "left:0%;background:none;border:1px dashed rgba(0,0,0,1)";
   static final String Q_OVER = "background:rgba(255, 140, 0, 0.8)";
   static final String Q_UNDER = "background:rgba(50, 205, 50, 0.8)";
-  
+  static final String STEADY_FAIR_SHARE = "Steady Fair Share";
+  static final String INSTANTANEOUS_FAIR_SHARE = "Instantaneous Fair Share";
   @RequestScoped
   static class FSQInfo {
     FairSchedulerQueueInfo qinfo;
@@ -73,8 +75,8 @@ public class FairSchedulerPage extends RmView {
       if (maxApps < Integer.MAX_VALUE) {
           ri._("Max Running Applications:", qinfo.getMaxApplications());
       }
-      ri._("Fair Share:", qinfo.getFairShare().toString());
-
+      ri._(STEADY_FAIR_SHARE + ":", qinfo.getSteadyFairShare().toString());
+      ri._(INSTANTANEOUS_FAIR_SHARE + ":", qinfo.getFairShare().toString());
       html._(InfoBlock.class);
 
       // clear the info contents so this queue's info doesn't accumulate into another queue's info
@@ -95,16 +97,21 @@ public class FairSchedulerPage extends RmView {
       UL<Hamlet> ul = html.ul("#pq");
       for (FairSchedulerQueueInfo info : subQueues) {
         float capacity = info.getMaxResourcesFraction();
-        float fairShare = info.getFairShareMemoryFraction();
+        float steadyFairShare = info.getSteadyFairShareMemoryFraction();
+        float instantaneousFairShare = info.getFairShareMemoryFraction();
         float used = info.getUsedMemoryFraction();
         LI<UL<Hamlet>> li = ul.
           li().
             a(_Q).$style(width(capacity * Q_MAX_WIDTH)).
-              $title(join("Fair Share:", percent(fairShare))).
-              span().$style(join(Q_GIVEN, ";font-size:1px;", width(fairShare/capacity))).
+              $title(join(join(STEADY_FAIR_SHARE + ":", percent(steadyFairShare)),
+                  join(" " + INSTANTANEOUS_FAIR_SHARE + ":", percent(instantaneousFairShare)))).
+              span().$style(join(Q_GIVEN, ";font-size:1px;", width(steadyFairShare / capacity))).
+                _('.')._().
+              span().$style(join(Q_INSTANTANEOUS_FS, ";font-size:1px;",
+                  width(instantaneousFairShare/capacity))).
                 _('.')._().
               span().$style(join(width(used/capacity),
-                ";font-size:1px;left:0%;", used > fairShare ? Q_OVER : Q_UNDER)).
+                ";font-size:1px;left:0%;", used > instantaneousFairShare ? Q_OVER : Q_UNDER)).
                 _('.')._().
               span(".q", info.getQueueName())._().
             span().$class("qstats").$style(left(Q_STATS_POS)).
@@ -156,7 +163,13 @@ public class FairSchedulerPage extends RmView {
           li().$style("margin-bottom: 1em").
             span().$style("font-weight: bold")._("Legend:")._().
             span().$class("qlegend ui-corner-all").$style(Q_GIVEN).
-              _("Fair Share")._().
+              $title("The steady fair shares consider all queues, " +
+                  "both active (with running applications) and inactive.").
+              _(STEADY_FAIR_SHARE)._().
+            span().$class("qlegend ui-corner-all").$style(Q_INSTANTANEOUS_FS).
+              $title("The instantaneous fair shares consider only active " +
+                  "queues (with running applications).").
+              _(INSTANTANEOUS_FAIR_SHARE)._().
             span().$class("qlegend ui-corner-all").$style(Q_UNDER).
               _("Used")._().
             span().$class("qlegend ui-corner-all").$style(Q_OVER).

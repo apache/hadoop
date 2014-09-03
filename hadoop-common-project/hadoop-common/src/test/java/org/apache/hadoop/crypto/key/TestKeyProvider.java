@@ -159,6 +159,10 @@ public class TestKeyProvider {
     private int size;
     private byte[] material;
 
+    public MyKeyProvider(Configuration conf) {
+      super(conf);
+    }
+
     @Override
     public KeyVersion getKeyVersion(String versionName)
         throws IOException {
@@ -216,7 +220,7 @@ public class TestKeyProvider {
 
   @Test
   public void testMaterialGeneration() throws Exception {
-    MyKeyProvider kp = new MyKeyProvider();
+    MyKeyProvider kp = new MyKeyProvider(new Configuration());
     KeyProvider.Options options = new KeyProvider.Options(new Configuration());
     options.setCipher(CIPHER);
     options.setBitLength(128);
@@ -225,10 +229,19 @@ public class TestKeyProvider {
     Assert.assertEquals(CIPHER, kp.algorithm);
     Assert.assertNotNull(kp.material);
 
-    kp = new MyKeyProvider();
+    kp = new MyKeyProvider(new Configuration());
     kp.rollNewVersion("hello");
     Assert.assertEquals(128, kp.size);
     Assert.assertEquals(CIPHER, kp.algorithm);
     Assert.assertNotNull(kp.material);
   }
+
+  @Test
+  public void testConfiguration() throws Exception {
+    Configuration conf = new Configuration(false);
+    conf.set("a", "A");
+    MyKeyProvider kp = new MyKeyProvider(conf);
+    Assert.assertEquals("A", kp.getConf().get("a"));
+  }
+
 }

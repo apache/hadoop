@@ -118,6 +118,24 @@ class FsDatasetAsyncDiskService {
     }
     addExecutorForVolume(volume);
   }
+
+  /**
+   * Stops AsyncDiskService for a volume.
+   * @param volume the root of the volume.
+   */
+  synchronized void removeVolume(File volume) {
+    if (executors == null) {
+      throw new RuntimeException("AsyncDiskService is already shutdown");
+    }
+    ThreadPoolExecutor executor = executors.get(volume);
+    if (executor == null) {
+      throw new RuntimeException("Can not find volume " + volume
+          + " to remove.");
+    } else {
+      executor.shutdown();
+      executors.remove(volume);
+    }
+  }
   
   synchronized long countPendingDeletions() {
     long count = 0;

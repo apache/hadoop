@@ -110,6 +110,10 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
       String percent = String.format("%.1f", appInfo.getProgress());
       ApplicationAttemptId attemptId = app.getCurrentAppAttempt().getAppAttemptId();
       int fairShare = fsinfo.getAppFairShare(attemptId);
+      if (fairShare == FairSchedulerInfo.INVALID_FAIR_SHARE) {
+        // FairScheduler#applications don't have the entry. Skip it.
+        continue;
+      }
       //AppID numerical value parsed by parseHadoopID in yarn.dt.plugins.js
       appsTableData.append("[\"<a href='")
       .append(url("app", appInfo.getAppId())).append("'>")

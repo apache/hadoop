@@ -19,6 +19,7 @@ package org.apache.hadoop.nfs.nfs3.request;
 
 import java.io.IOException;
 
+import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.oncrpc.XDR;
 
 /**
@@ -29,14 +30,23 @@ public class SYMLINK3Request extends RequestWithHandle {
   private final SetAttr3 symAttr;
   private final String symData;  // It contains the target
   
-  public SYMLINK3Request(XDR xdr) throws IOException {
-    super(xdr);
-    name = xdr.readString();
-    symAttr = new SetAttr3();
+  public static SYMLINK3Request deserialize(XDR xdr) throws IOException {
+    FileHandle handle = readHandle(xdr);
+    String name = xdr.readString();
+    SetAttr3 symAttr = new SetAttr3();
     symAttr.deserialize(xdr);
-    symData = xdr.readString();
+    String symData = xdr.readString();
+    return new SYMLINK3Request(handle, name, symAttr, symData);
   }
 
+  public SYMLINK3Request(FileHandle handle, String name, SetAttr3 symAttr,
+      String symData) {
+    super(handle);
+    this.name = name;
+    this.symAttr = symAttr;
+    this.symData = symData;
+  }
+  
   public String getName() {
     return name;
   }
@@ -47,5 +57,15 @@ public class SYMLINK3Request extends RequestWithHandle {
 
   public String getSymData() {
     return symData;
+  }
+
+  @Override
+  public void serialize(XDR xdr) {
+    handle.serialize(xdr);
+    xdr.writeInt(name.getBytes().length);
+    xdr.writeFixedOpaque(name.getBytes());
+    symAttr.serialize(xdr);
+    xdr.writeInt(symData.getBytes().length);
+    xdr.writeFixedOpaque(symData.getBytes());
   }
 }

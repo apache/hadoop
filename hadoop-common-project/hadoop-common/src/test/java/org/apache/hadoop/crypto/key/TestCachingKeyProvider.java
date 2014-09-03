@@ -19,6 +19,7 @@ package org.apache.hadoop.crypto.key;
 
 import java.util.Date;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
 import org.junit.Assert;
 import org.junit.Test;
@@ -32,6 +33,7 @@ public class TestCachingKeyProvider {
     KeyProvider mockProv = Mockito.mock(KeyProvider.class);
     Mockito.when(mockProv.getCurrentKey(Mockito.eq("k1"))).thenReturn(mockKey);
     Mockito.when(mockProv.getCurrentKey(Mockito.eq("k2"))).thenReturn(null);
+    Mockito.when(mockProv.getConf()).thenReturn(new Configuration());
     KeyProvider cache = new CachingKeyProvider(mockProv, 100, 100);
 
     // asserting caching
@@ -58,6 +60,7 @@ public class TestCachingKeyProvider {
     Mockito.when(mockProv.getKeyVersion(Mockito.eq("k1@0")))
         .thenReturn(mockKey);
     Mockito.when(mockProv.getKeyVersion(Mockito.eq("k2@0"))).thenReturn(null);
+    Mockito.when(mockProv.getConf()).thenReturn(new Configuration());
     KeyProvider cache = new CachingKeyProvider(mockProv, 100, 100);
 
     // asserting caching
@@ -88,6 +91,7 @@ public class TestCachingKeyProvider {
     KeyProvider mockProv = Mockito.mock(KeyProvider.class);
     Mockito.when(mockProv.getMetadata(Mockito.eq("k1"))).thenReturn(mockMeta);
     Mockito.when(mockProv.getMetadata(Mockito.eq("k2"))).thenReturn(null);
+    Mockito.when(mockProv.getConf()).thenReturn(new Configuration());
     KeyProvider cache = new CachingKeyProvider(mockProv, 100, 100);
 
     // asserting caching
@@ -112,6 +116,7 @@ public class TestCachingKeyProvider {
     KeyProvider.KeyVersion mockKey = Mockito.mock(KeyProvider.KeyVersion.class);
     KeyProvider mockProv = Mockito.mock(KeyProvider.class);
     Mockito.when(mockProv.getCurrentKey(Mockito.eq("k1"))).thenReturn(mockKey);
+    Mockito.when(mockProv.getConf()).thenReturn(new Configuration());
     KeyProvider cache = new CachingKeyProvider(mockProv, 100, 100);
     Assert.assertEquals(mockKey, cache.getCurrentKey("k1"));
     Mockito.verify(mockProv, Mockito.times(1)).getCurrentKey(Mockito.eq("k1"));
@@ -134,6 +139,7 @@ public class TestCachingKeyProvider {
         .thenReturn(mockKey);
     Mockito.when(mockProv.getMetadata(Mockito.eq("k1"))).thenReturn(
         new KMSClientProvider.KMSMetadata("c", 0, "l", null, new Date(), 1));
+    Mockito.when(mockProv.getConf()).thenReturn(new Configuration());
     KeyProvider cache = new CachingKeyProvider(mockProv, 100, 100);
     Assert.assertEquals(mockKey, cache.getCurrentKey("k1"));
     Mockito.verify(mockProv, Mockito.times(1)).getCurrentKey(Mockito.eq("k1"));

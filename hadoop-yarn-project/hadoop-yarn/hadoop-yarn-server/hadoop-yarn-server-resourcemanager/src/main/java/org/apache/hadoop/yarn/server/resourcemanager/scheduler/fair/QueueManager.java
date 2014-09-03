@@ -181,6 +181,7 @@ public class QueueManager {
         parent.addChildQueue(leafQueue);
         queues.put(leafQueue.getName(), leafQueue);
         leafQueues.add(leafQueue);
+        leafQueue.updatePreemptionVariables();
         return leafQueue;
       } else {
         FSParentQueue newParent = new FSParentQueue(queueName, scheduler, parent);
@@ -192,6 +193,7 @@ public class QueueManager {
         }
         parent.addChildQueue(newParent);
         queues.put(newParent.getName(), newParent);
+        newParent.updatePreemptionVariables();
         parent = newParent;
       }
     }
@@ -384,5 +386,8 @@ public class QueueManager {
 
     // Update steady fair shares for all queues
     rootQueue.recomputeSteadyShares();
+    // Update the fair share preemption timeouts and preemption for all queues
+    // recursively
+    rootQueue.updatePreemptionVariables();
   }
 }

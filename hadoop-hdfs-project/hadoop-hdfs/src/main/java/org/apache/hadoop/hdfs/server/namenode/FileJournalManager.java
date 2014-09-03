@@ -187,17 +187,27 @@ public class FileJournalManager implements JournalManager {
     List<EditLogFile> allLogFiles = matchEditLogs(currentDir);
     List<RemoteEditLog> ret = Lists.newArrayListWithCapacity(
         allLogFiles.size());
-
     for (EditLogFile elf : allLogFiles) {
       if (elf.hasCorruptHeader() || (!inProgressOk && elf.isInProgress())) {
         continue;
       }
+      if (elf.isInProgress()) {
+        try {
+          elf.validateLog();
+        } catch (IOException e) {
+          LOG.error("got IOException while trying to validate header of " +
+              elf + ".  Skipping.", e);
+          continue;
+        }
+      }
       if (elf.getFirstTxId() >= firstTxId) {
-        ret.add(new RemoteEditLog(elf.firstTxId, elf.lastTxId));
+        ret.add(new RemoteEditLog(elf.firstTxId, elf.lastTxId,
+            elf.isInProgress()));
       } else if (elf.getFirstTxId() < firstTxId && firstTxId <= elf.getLastTxId()) {
         // If the firstTxId is in the middle of an edit log segment. Return this
         // anyway and let the caller figure out whether it wants to use it.
-        ret.add(new RemoteEditLog(elf.firstTxId, elf.lastTxId));
+        ret.add(new RemoteEditLog(elf.firstTxId, elf.lastTxId,
+            elf.isInProgress()));
       }
     }
     

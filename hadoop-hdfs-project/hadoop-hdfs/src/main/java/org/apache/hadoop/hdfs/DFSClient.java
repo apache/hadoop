@@ -606,10 +606,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       cipherSuites.add(codec.getCipherSuite());
     }
     provider = DFSUtil.createKeyProviderCryptoExtension(conf);
-    if (provider == null) {
-      LOG.info("No KeyProvider found.");
-    } else {
-      LOG.info("Found KeyProvider: " + provider.toString());
+    if (LOG.isDebugEnabled()) {
+      if (provider == null) {
+        LOG.debug("No KeyProvider found.");
+      } else {
+        LOG.debug("Found KeyProvider: " + provider.toString());
+      }
     }
     int numResponseToDrop = conf.getInt(
         DFSConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY,
@@ -3007,6 +3009,15 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           FileNotFoundException.class,
           UnresolvedPathException.class);
     }
+  }
+
+  public DFSInotifyEventInputStream getInotifyEventStream() throws IOException {
+    return new DFSInotifyEventInputStream(namenode);
+  }
+
+  public DFSInotifyEventInputStream getInotifyEventStream(long lastReadTxid)
+      throws IOException {
+    return new DFSInotifyEventInputStream(namenode, lastReadTxid);
   }
 
   @Override // RemotePeerFactory

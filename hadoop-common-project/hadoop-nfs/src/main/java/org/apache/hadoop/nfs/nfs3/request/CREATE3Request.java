@@ -29,8 +29,8 @@ import org.apache.hadoop.oncrpc.XDR;
 public class CREATE3Request extends RequestWithHandle {
   private final String name;
   private final int mode;
-  private SetAttr3 objAttr = null;
-  private long verf;
+  private final SetAttr3 objAttr;
+  private long verf = 0;
 
   public CREATE3Request(FileHandle handle, String name, int mode,
       SetAttr3 objAttr, long verf) {
@@ -41,12 +41,12 @@ public class CREATE3Request extends RequestWithHandle {
     this.verf = verf;
   }
   
-  public CREATE3Request(XDR xdr) throws IOException {
-    super(xdr);
-    name = xdr.readString();
-    mode = xdr.readInt();
-
-    objAttr = new SetAttr3();
+  public static CREATE3Request deserialize(XDR xdr) throws IOException {
+    FileHandle handle = readHandle(xdr);
+    String name = xdr.readString();
+    int mode = xdr.readInt();
+    SetAttr3 objAttr = new SetAttr3();
+    long verf = 0;
     if ((mode == Nfs3Constant.CREATE_UNCHECKED)
         || (mode == Nfs3Constant.CREATE_GUARDED)) {
       objAttr.deserialize(xdr);
@@ -55,6 +55,7 @@ public class CREATE3Request extends RequestWithHandle {
     } else {
       throw new IOException("Wrong create mode:" + mode);
     }
+    return new CREATE3Request(handle, name, mode, objAttr, verf);
   }
 
   public String getName() {
@@ -81,4 +82,5 @@ public class CREATE3Request extends RequestWithHandle {
     xdr.writeInt(mode);
     objAttr.serialize(xdr);
   }
+
 }

@@ -17,33 +17,19 @@
  */
 package org.apache.hadoop.nfs.nfs3.request;
 
-import java.io.IOException;
-
 import org.apache.hadoop.nfs.nfs3.FileHandle;
-import org.apache.hadoop.oncrpc.XDR;
 
 /**
  * An NFS request that uses {@link FileHandle} to identify a file.
  */
-public class RequestWithHandle {
+public abstract class RequestWithHandle extends NFS3Request {
   protected final FileHandle handle;
   
   RequestWithHandle(FileHandle handle) {
     this.handle = handle;
   }
-  
-  RequestWithHandle(XDR xdr) throws IOException {
-    handle = new FileHandle();
-    if (!handle.deserialize(xdr)) {
-      throw new IOException("can't deserialize file handle");
-    }
-  }
 
   public FileHandle getHandle() {
     return this.handle;
-  }
-  
-  public void serialize(XDR xdr) {
-    handle.serialize(xdr);
   }
 }

@@ -78,6 +78,15 @@ public class FSParentQueue extends FSQueue {
   }
 
   @Override
+  public void updatePreemptionVariables() {
+    super.updatePreemptionVariables();
+    // For child queues
+    for (FSQueue childQueue : childQueues) {
+      childQueue.updatePreemptionVariables();
+    }
+  }
+
+  @Override
   public Resource getDemand() {
     return demand;
   }

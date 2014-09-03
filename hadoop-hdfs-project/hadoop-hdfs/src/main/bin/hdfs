@@ -80,6 +80,7 @@ shift
 case ${COMMAND} in
   balancer)
     CLASS=org.apache.hadoop.hdfs.server.balancer.Balancer
+    hadoop_debug "Appending HADOOP_BALANCER_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_BALANCER_OPTS}"
   ;;
   cacheadmin)
@@ -105,19 +106,24 @@ case ${COMMAND} in
       HADOOP_SECURE_PID_DIR="${HADOOP_SECURE_PID_DIR:-$HADOOP_SECURE_DN_PID_DIR}"
       HADOOP_SECURE_LOG_DIR="${HADOOP_SECURE_LOG_DIR:-$HADOOP_SECURE_DN_LOG_DIR}"
       
-      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_DN_SECURE_EXTRA_OPTS} ${HADOOP_DATANODE_OPTS}"
+      hadoop_debug "Appending HADOOP_DATANODE_OPTS onto HADOOP_OPTS"
+      hadoop_debug "Appending HADOOP_DN_SECURE_EXTRA_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_DATANODE_OPTS} ${HADOOP_DN_SECURE_EXTRA_OPTS}"
       CLASS="org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter"
     else
+      hadoop_debug "Appending HADOOP_DATANODE_OPTS onto HADOOP_OPTS"
       HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_DATANODE_OPTS}"
       CLASS='org.apache.hadoop.hdfs.server.datanode.DataNode'
     fi
   ;;
   dfs)
     CLASS=org.apache.hadoop.fs.FsShell
+    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;
   dfsadmin)
     CLASS=org.apache.hadoop.hdfs.tools.DFSAdmin
+    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;
   fetchdt)
@@ -125,6 +131,7 @@ case ${COMMAND} in
   ;;
   fsck)
     CLASS=org.apache.hadoop.hdfs.tools.DFSck
+    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;
   getconf)
@@ -135,12 +142,15 @@ case ${COMMAND} in
   ;;
   haadmin)
     CLASS=org.apache.hadoop.hdfs.tools.DFSHAAdmin
-    CLASSPATH="${CLASSPATH}:${TOOL_PATH}"
+    hadoop_debug "Injecting TOOL_PATH into CLASSPATH"
+    hadoop_add_classpath "${TOOL_PATH}"
+    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;
   journalnode)
     daemon="true"
     CLASS='org.apache.hadoop.hdfs.qjournal.server.JournalNode'
+    hadoop_debug "Appending HADOOP_JOURNALNODE_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_JOURNALNODE_OPTS}"
   ;;
   jmxget)
@@ -152,6 +162,7 @@ case ${COMMAND} in
   namenode)
     daemon="true"
     CLASS='org.apache.hadoop.hdfs.server.namenode.NameNode'
+    hadoop_debug "Appending HADOOP_NAMENODE_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_NAMENODE_OPTS}"
   ;;
   nfs3)
@@ -164,9 +175,12 @@ case ${COMMAND} in
       HADOOP_SECURE_PID_DIR="${HADOOP_SECURE_PID_DIR:-$HADOOP_SECURE_NFS3_PID_DIR}"
       HADOOP_SECURE_LOG_DIR="${HADOOP_SECURE_LOG_DIR:-$HADOOP_SECURE_NFS3_LOG_DIR}"
       
-      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_NFS3_SECURE_EXTRA_OPTS} ${HADOOP_NFS3_OPTS}"
+      hadoop_debug "Appending HADOOP_NFS3_OPTS onto HADOOP_OPTS"
+      hadoop_debug "Appending HADOOP_NFS3_SECURE_EXTRA_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_NFS3_OPTS} ${HADOOP_NFS3_SECURE_EXTRA_OPTS}"
       CLASS=org.apache.hadoop.hdfs.nfs.nfs3.PrivilegedNfsGatewayStarter
     else
+      hadoop_debug "Appending HADOOP_NFS3_OPTS onto HADOOP_OPTS"
       HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_NFS3_OPTS}"
       CLASS=org.apache.hadoop.hdfs.nfs.nfs3.Nfs3
     fi
@@ -183,11 +197,13 @@ case ${COMMAND} in
   portmap)
     daemon="true"
     CLASS=org.apache.hadoop.portmap.Portmap
+    hadoop_debug "Appending HADOOP_PORTMAP_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_PORTMAP_OPTS}"
   ;;
   secondarynamenode)
     daemon="true"
     CLASS='org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode'
+    hadoop_debug "Appending HADOOP_SECONDARYNAMENODE_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_SECONDARYNAMENODE_OPTS}"
   ;;
   snapshotDiff)
@@ -196,6 +212,7 @@ case ${COMMAND} in
   zkfc)
     daemon="true"
     CLASS='org.apache.hadoop.hdfs.tools.DFSZKFailoverController'
+    hadoop_debug "Appending HADOOP_ZKFC_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_ZKFC_OPTS}"
   ;;
   -*)
@@ -235,8 +252,6 @@ fi
 
 hadoop_add_param HADOOP_OPTS Xmx "${JAVA_HEAP_MAX}"
 hadoop_finalize
-
-export CLASSPATH
 
 if [[ -n "${daemon}" ]]; then
   if [[ -n "${secure_service}" ]]; then

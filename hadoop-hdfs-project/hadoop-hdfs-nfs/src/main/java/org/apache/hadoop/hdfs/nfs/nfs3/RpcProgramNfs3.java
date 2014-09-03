@@ -268,7 +268,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     GETATTR3Request request = null;
     try {
-      request = new GETATTR3Request(xdr);
+      request = GETATTR3Request.deserialize(xdr);
     } catch (IOException e) {
       LOG.error("Invalid GETATTR request");
       response.setStatus(Nfs3Status.NFS3ERR_INVAL);
@@ -360,7 +360,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     SETATTR3Request request = null;
     try {
-      request = new SETATTR3Request(xdr);
+      request = SETATTR3Request.deserialize(xdr);
     } catch (IOException e) {
       LOG.error("Invalid SETATTR request");
       response.setStatus(Nfs3Status.NFS3ERR_INVAL);
@@ -445,7 +445,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     LOOKUP3Request request = null;
     try {
-      request = new LOOKUP3Request(xdr);
+      request = LOOKUP3Request.deserialize(xdr);
     } catch (IOException e) {
       LOG.error("Invalid LOOKUP request");
       return new LOOKUP3Response(Nfs3Status.NFS3ERR_INVAL);
@@ -513,7 +513,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     ACCESS3Request request = null;
     try {
-      request = new ACCESS3Request(xdr);
+      request = ACCESS3Request.deserialize(xdr);
     } catch (IOException e) {
       LOG.error("Invalid ACCESS request");
       return new ACCESS3Response(Nfs3Status.NFS3ERR_INVAL);
@@ -581,7 +581,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     READLINK3Request request = null;
 
     try {
-      request = new READLINK3Request(xdr);
+      request = READLINK3Request.deserialize(xdr);
     } catch (IOException e) {
       LOG.error("Invalid READLINK request");
       return new READLINK3Response(Nfs3Status.NFS3ERR_INVAL);
@@ -655,7 +655,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     READ3Request request = null;
 
     try {
-      request = new READ3Request(xdr);
+      request = READ3Request.deserialize(xdr);
     } catch (IOException e) {
       LOG.error("Invalid READ request");
       return new READ3Response(Nfs3Status.NFS3ERR_INVAL);
@@ -788,7 +788,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     WRITE3Request request = null;
 
     try {
-      request = new WRITE3Request(xdr);
+      request = WRITE3Request.deserialize(xdr);
     } catch (IOException e) {
       LOG.error("Invalid WRITE request");
       return new WRITE3Response(Nfs3Status.NFS3ERR_INVAL);
@@ -870,7 +870,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     CREATE3Request request = null;
 
     try {
-      request = new CREATE3Request(xdr);
+      request = CREATE3Request.deserialize(xdr);
     } catch (IOException e) {
       LOG.error("Invalid CREATE request");
       return new CREATE3Response(Nfs3Status.NFS3ERR_INVAL);
@@ -1003,7 +1003,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     MKDIR3Request request = null;
 
     try {
-      request = new MKDIR3Request(xdr);
+      request = MKDIR3Request.deserialize(xdr);
     } catch (IOException e) {
       LOG.error("Invalid MKDIR request");
       return new MKDIR3Response(Nfs3Status.NFS3ERR_INVAL);
@@ -1099,7 +1099,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     REMOVE3Request request = null;
     try {
-      request = new REMOVE3Request(xdr);
+      request = REMOVE3Request.deserialize(xdr);
     } catch (IOException e) {
       LOG.error("Invalid REMOVE request");
       return new REMOVE3Response(Nfs3Status.NFS3ERR_INVAL);
@@ -1179,7 +1179,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     RMDIR3Request request = null;
     try {
-      request = new RMDIR3Request(xdr);
+      request = RMDIR3Request.deserialize(xdr);
     } catch (IOException e) {
       LOG.error("Invalid RMDIR request");
       return new RMDIR3Response(Nfs3Status.NFS3ERR_INVAL);
@@ -1264,7 +1264,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     RENAME3Request request = null;
     try {
-      request = new RENAME3Request(xdr);
+      request = RENAME3Request.deserialize(xdr);
     } catch (IOException e) {
       LOG.error("Invalid RENAME request");
       return new RENAME3Response(Nfs3Status.NFS3ERR_INVAL);
@@ -1360,7 +1360,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     SYMLINK3Request request = null;
     try {
-      request = new SYMLINK3Request(xdr);
+      request = SYMLINK3Request.deserialize(xdr);
     } catch (IOException e) {
       LOG.error("Invalid SYMLINK request");
       response.setStatus(Nfs3Status.NFS3ERR_INVAL);
@@ -1423,7 +1423,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         throw io;
       }
       // This happens when startAfter was just deleted
-      LOG.info("Cookie cound't be found: " + new String(startAfter)
+      LOG.info("Cookie couldn't be found: " + new String(startAfter)
           + ", do listing from beginning");
       dlisting = dfsClient
           .listPaths(dirFileIdPath, HdfsFileStatus.EMPTY_NAME);
@@ -1453,7 +1453,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     READDIR3Request request = null;
     try {
-      request = new READDIR3Request(xdr);
+      request = READDIR3Request.deserialize(xdr);
     } catch (IOException e) {
       LOG.error("Invalid READDIR request");
       return new READDIR3Response(Nfs3Status.NFS3ERR_INVAL);
@@ -1611,7 +1611,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     READDIRPLUS3Request request = null;
     try {
-      request = new READDIRPLUS3Request(xdr);
+      request = READDIRPLUS3Request.deserialize(xdr);
     } catch (IOException e) {
       LOG.error("Invalid READDIRPLUS request");
       return new READDIRPLUS3Response(Nfs3Status.NFS3ERR_INVAL);
@@ -1788,7 +1788,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     FSSTAT3Request request = null;
     try {
-      request = new FSSTAT3Request(xdr);
+      request = FSSTAT3Request.deserialize(xdr);
     } catch (IOException e) {
       LOG.error("Invalid FSSTAT request");
       return new FSSTAT3Response(Nfs3Status.NFS3ERR_INVAL);
@@ -1862,7 +1862,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     FSINFO3Request request = null;
     try {
-      request = new FSINFO3Request(xdr);
+      request = FSINFO3Request.deserialize(xdr);
     } catch (IOException e) {
       LOG.error("Invalid FSINFO request");
       return new FSINFO3Response(Nfs3Status.NFS3ERR_INVAL);
@@ -1926,7 +1926,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     PATHCONF3Request request = null;
     try {
-      request = new PATHCONF3Request(xdr);
+      request = PATHCONF3Request.deserialize(xdr);
     } catch (IOException e) {
       LOG.error("Invalid PATHCONF request");
       return new PATHCONF3Response(Nfs3Status.NFS3ERR_INVAL);
@@ -1977,7 +1977,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     COMMIT3Request request = null;
     try {
-      request = new COMMIT3Request(xdr);
+      request = COMMIT3Request.deserialize(xdr);
     } catch (IOException e) {
       LOG.error("Invalid COMMIT request");
       response.setStatus(Nfs3Status.NFS3ERR_INVAL);

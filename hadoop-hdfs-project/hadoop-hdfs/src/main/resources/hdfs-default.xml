@@ -525,6 +525,28 @@
 </property>
 
 <property>
+  <name>dfs.client.block.write.replace-datanode-on-failure.best-effort</name>
+  <value>false</value>
+  <description>
+    This property is used only if the value of
+    dfs.client.block.write.replace-datanode-on-failure.enable is true.
+
+    Best effort means that the client will try to replace a failed datanode
+    in write pipeline (provided that the policy is satisfied), however, it 
+    continues the write operation in case that the datanode replacement also
+    fails.
+
+    Suppose the datanode replacement fails.
+    false: An exception should be thrown so that the write will fail.
+    true : The write should be resumed with the remaining datandoes.
+  
+    Note that setting this property to true allows writing to a pipeline
+    with a smaller number of datanodes.  As a result, it increases the
+    probability of data loss.
+  </description>
+</property>
+
+<property>
   <name>dfs.blockreport.intervalMsec</name>
   <value>21600000</value>
   <description>Determines block reporting interval in milliseconds.</description>
@@ -2064,6 +2086,16 @@
   <description>When listing encryption zones, the maximum number of zones
     that will be returned in a batch. Fetching the list incrementally in
     batches improves namenode performance.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.inotify.max.events.per.rpc</name>
+  <value>1000</value>
+  <description>Maximum number of events that will be sent to an inotify client
+    in a single RPC response. The default value attempts to amortize away
+    the overhead for this RPC while avoiding huge memory requirements for the
+    client and NameNode (1000 events should consume no more than 1 MB.)
   </description>
 </property>
 

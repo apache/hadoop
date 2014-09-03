@@ -129,6 +129,11 @@ while [[ -z "${_hadoop_common_done}" ]]; do
         hadoop_exit_with_usage 1
       fi
     ;;
+    --debug)
+      shift
+      # shellcheck disable=SC2034
+      HADOOP_SHELL_SCRIPT_DEBUG=true
+    ;; 
     --help|-help|-h|help|--h|--\?|-\?|\?)
       hadoop_exit_with_usage 0
     ;;

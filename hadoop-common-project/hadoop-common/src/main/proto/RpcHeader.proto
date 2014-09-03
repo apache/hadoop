@@ -53,6 +53,18 @@ enum RpcKindProto {
 
 
    
+/**
+ * Used to pass through the information necessary to continue
+ * a trace after an RPC is made. All we need is the traceid
+ * (so we know the overarching trace this message is a part of), and
+ * the id of the current span when this message was sent, so we know
+ * what span caused the new span we will create when this message is received.
+ */
+message RPCTraceInfoProto {
+  optional int64 traceId = 1;
+  optional int64 parentId = 2;
+}
+
 message RpcRequestHeaderProto { // the header for the RpcRequest
   enum OperationProto {
     RPC_FINAL_PACKET        = 0; // The final RPC Packet
@@ -67,6 +79,7 @@ message RpcRequestHeaderProto { // the header for the RpcRequest
   // clientId + callId uniquely identifies a request
   // retry count, 1 means this is the first retry
   optional sint32 retryCount = 5 [default = -1];
+  optional RPCTraceInfoProto traceInfo = 6; // tracing info
 }
 
 

@@ -398,7 +398,7 @@ public class DFSOutputStream extends FSOutputSummer
         // one chunk that fills up the partial chunk.
         //
         computePacketChunkSize(0, freeInCksum);
-        resetChecksumChunk(freeInCksum);
+        setChecksumBufSize(freeInCksum);
         appendChunk = true;
       } else {
         // if the remaining space in the block is smaller than 
@@ -1178,7 +1178,17 @@ public class DFSOutputStream extends FSOutputSummer
         // Check if replace-datanode policy is satisfied.
         if (dfsClient.dtpReplaceDatanodeOnFailure.satisfy(blockReplication,
             nodes, isAppend, isHflushed)) {
-          addDatanode2ExistingPipeline();
+          try {
+            addDatanode2ExistingPipeline();
+          } catch(IOException ioe) {
+            if (!dfsClient.dtpReplaceDatanodeOnFailure.isBestEffort()) {
+              throw ioe;
+            }
+            DFSClient.LOG.warn("Failed to replace datanode."
+                + " Continue with the remaining datanodes since "
+                + DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_BEST_EFFORT_KEY
+                + " is set to true.", ioe);
+          }
         }
 
         // get a new generation stamp and an access token
@@ -1563,7 +1573,7 @@ public class DFSOutputStream extends FSOutputSummer
 
   private DFSOutputStream(DFSClient dfsClient, String src, Progressable progress,
       HdfsFileStatus stat, DataChecksum checksum) throws IOException {
-    super(checksum, checksum.getBytesPerChecksum(), checksum.getChecksumSize());
+    super(checksum);
     this.dfsClient = dfsClient;
     this.src = src;
     this.fileId = stat.getFileId();
@@ -1717,22 +1727,21 @@ public class DFSOutputStream extends FSOutputSummer
 
   // @see FSOutputSummer#writeChunk()
   @Override
-  protected synchronized void writeChunk(byte[] b, int offset, int len, byte[] checksum) 
-                                                        throws IOException {
+  protected synchronized void writeChunk(byte[] b, int offset, int len,
+      byte[] checksum, int ckoff, int cklen) throws IOException {
     dfsClient.checkOpen();
     checkClosed();
 
-    int cklen = checksum.length;
     int bytesPerChecksum = this.checksum.getBytesPerChecksum(); 
     if (len > bytesPerChecksum) {
       throw new IOException("writeChunk() buffer size is " + len +
                             " is larger than supported  bytesPerChecksum " +
                             bytesPerChecksum);
     }
-    if (checksum.length != this.checksum.getChecksumSize()) {
+    if (cklen != this.checksum.getChecksumSize()) {
       throw new IOException("writeChunk() checksum size is supposed to be " +
                             this.checksum.getChecksumSize() + 
-                            " but found to be " + checksum.length);
+                            " but found to be " + cklen);
     }
 
     if (currentPacket == null) {
@@ -1748,7 +1757,7 @@ public class DFSOutputStream extends FSOutputSummer
       }
     }
 
-    currentPacket.writeChecksum(checksum, 0, cklen);
+    currentPacket.writeChecksum(checksum, ckoff, cklen);
     currentPacket.writeData(b, offset, len);
     currentPacket.numChunks++;
     bytesCurBlock += len;
@@ -1772,7 +1781,7 @@ public class DFSOutputStream extends FSOutputSummer
       // crc chunks from now on.
       if (appendChunk && bytesCurBlock%bytesPerChecksum == 0) {
         appendChunk = false;
-        resetChecksumChunk(bytesPerChecksum);
+        resetChecksumBufSize();
       }
 
       if (!appendChunk) {
@@ -1853,20 +1862,13 @@ public class DFSOutputStream extends FSOutputSummer
       long lastBlockLength = -1L;
       boolean updateLength = syncFlags.contains(SyncFlag.UPDATE_LENGTH);
       synchronized (this) {
-        /* Record current blockOffset. This might be changed inside
-         * flushBuffer() where a partial checksum chunk might be flushed.
-         * After the flush, reset the bytesCurBlock back to its previous value,
-         * any partial checksum chunk will be sent now and in next packet.
-         */
-        long saveOffset = bytesCurBlock;
-        Packet oldCurrentPacket = currentPacket;
         // flush checksum buffer, but keep checksum buffer intact
-        flushBuffer(true);
+        int numKept = flushBuffer(true, true);
         // bytesCurBlock potentially incremented if there was buffered data
 
         if (DFSClient.LOG.isDebugEnabled()) {
           DFSClient.LOG.debug(
-            "DFSClient flush() : saveOffset " + saveOffset +  
+            "DFSClient flush() :" +
             " bytesCurBlock " + bytesCurBlock +
             " lastFlushOffset " + lastFlushOffset);
         }
@@ -1883,14 +1885,6 @@ public class DFSOutputStream extends FSOutputSummer
                 bytesCurBlock, currentSeqno++, this.checksum.getChecksumSize());
           }
         } else {
-          // We already flushed up to this offset.
-          // This means that we haven't written anything since the last flush
-          // (or the beginning of the file). Hence, we should not have any
-          // packet queued prior to this call, since the last flush set
-          // currentPacket = null.
-          assert oldCurrentPacket == null :
-            "Empty flush should not occur with a currentPacket";
-
           if (isSync && bytesCurBlock > 0) {
             // Nothing to send right now,
             // and the block was partially written,
@@ -1910,7 +1904,7 @@ public class DFSOutputStream extends FSOutputSummer
         // Restore state of stream. Record the last flush offset 
         // of the last full chunk that was flushed.
         //
-        bytesCurBlock = saveOffset;
+        bytesCurBlock -= numKept;
         toWaitFor = lastQueuedSeqno;
       } // end synchronized
 

@@ -181,6 +181,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>xercesImpl</artifactId>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>org.htrace</groupId>
+      <artifactId>htrace-core</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
@@ -305,6 +309,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <include>fsimage.proto</include>
                   <include>hdfs.proto</include>
                   <include>encryption.proto</include>
+                  <include>inotify.proto</include>
                 </includes>
               </source>
               <output>${project.build.directory}/generated-sources/java</output>

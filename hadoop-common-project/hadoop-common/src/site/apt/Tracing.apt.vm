@@ -1,0 +1,169 @@
+~~ Licensed under the Apache License, Version 2.0 (the "License");
+~~ you may not use this file except in compliance with the License.
+~~ You may obtain a copy of the License at
+~~
+~~   http://www.apache.org/licenses/LICENSE-2.0
+~~
+~~ Unless required by applicable law or agreed to in writing, software
+~~ distributed under the License is distributed on an "AS IS" BASIS,
+~~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~~ See the License for the specific language governing permissions and
+~~ limitations under the License. See accompanying LICENSE file.
+
+  ---
+  Hadoop Distributed File System-${project.version} - Enabling Dapper-like Tracing
+  ---
+  ---
+  ${maven.build.timestamp}
+
+Enabling Dapper-like Tracing in HDFS
+
+%{toc|section=1|fromDepth=0}
+
+* {Dapper-like Tracing in HDFS}
+
+** HTrace
+
+  {{{https://issues.apache.org/jira/browse/HDFS-5274}HDFS-5274}}
+  added support for tracing requests through HDFS,
+  using the open source tracing library, {{{https://github.com/cloudera/htrace}HTrace}}.
+  Setting up tracing is quite simple, however it requires some very minor changes to your client code.
+
+** SpanReceivers
+
+  The tracing system works by collecting information in structs called 'Spans'.
+  It is up to you to choose how you want to receive this information
+  by implementing the SpanReceiver interface, which defines one method:
+
++----
+public void receiveSpan(Span span);
++----
+
+  Configure what SpanReceivers you'd like to use
+  by putting a comma separated list of the fully-qualified class name of
+  classes implementing SpanReceiver
+  in <<<hdfs-site.xml>>> property: <<<hadoop.trace.spanreceiver.classes>>>.
+
++----
+  <property>
+    <name>hadoop.trace.spanreceiver.classes</name>
+    <value>org.htrace.impl.LocalFileSpanReceiver</value>
+  </property>
+  <property>
+    <name>hadoop.local-file-span-receiver.path</name>
+    <value>/var/log/hadoop/htrace.out</value>
+  </property>
++----
+
+** Setting up ZipkinSpanReceiver
+
+  Instead of implementing SpanReceiver by yourself,
+  you can use <<<ZipkinSpanReceiver>>> which uses
+  {{{https://github.com/twitter/zipkin}Zipkin}}
+  for collecting and dispalying tracing data.
+
+  In order to use <<<ZipkinSpanReceiver>>>,
+  you need to download and setup {{{https://github.com/twitter/zipkin}Zipkin}} first.
+
+  you also need to add the jar of <<<htrace-zipkin>>> to the classpath of Hadoop on each node.
+  Here is example setup procedure.
+
++----
+  $ git clone https://github.com/cloudera/htrace
+  $ cd htrace/htrace-zipkin
+  $ mvn compile assembly:single
+  $ cp target/htrace-zipkin-*-jar-with-dependencies.jar $HADOOP_HOME/share/hadoop/hdfs/lib/
++----
+
+  The sample configuration for <<<ZipkinSpanReceiver>>> is shown below.
+  By adding these to <<<hdfs-site.xml>>> of NameNode and DataNodes,
+  <<<ZipkinSpanReceiver>>> is initialized on the startup.
+  You also need this configuration on the client node in addition to the servers.
+
++----
+  <property>
+    <name>hadoop.trace.spanreceiver.classes</name>
+    <value>org.htrace.impl.ZipkinSpanReceiver</value>
+  </property>
+  <property>
+    <name>hadoop.zipkin.collector-hostname</name>
+    <value>192.168.1.2</value>
+  </property>
+  <property>
+    <name>hadoop.zipkin.collector-port</name>
+    <value>9410</value>
+  </property>
++----
+
+** Turning on tracing by HTrace API
+
+  In order to turn on Dapper-like tracing,
+  you will need to wrap the traced logic with <<tracing span>> as shown below.
+  When there is running tracing spans,
+  the tracing information is propagated to servers along with RPC requests.
+
+  In addition, you need to initialize <<<SpanReceiver>>> once per process.
+
++----
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.tracing.SpanReceiverHost;
+import org.htrace.Sampler;
+import org.htrace.Trace;
+import org.htrace.TraceScope;
+
+...
+
+    SpanReceiverHost.getInstance(new HdfsConfiguration());
+
+...
+
+    TraceScope ts = Trace.startSpan("Gets", Sampler.ALWAYS);
+    try {
+      ... // traced logic
+    } finally {
+      if (ts != null) ts.close();
+    }
++----
+
+** Sample code for tracing
+
+  The <<<TracingFsShell.java>>> shown below is the wrapper of FsShell
+  which start tracing span before invoking HDFS shell command.
+
++----
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.tracing.SpanReceiverHost;
+import org.apache.hadoop.util.ToolRunner;
+import org.htrace.Sampler;
+import org.htrace.Trace;
+import org.htrace.TraceScope;
+
+public class TracingFsShell {
+  public static void main(String argv[]) throws Exception {
+    Configuration conf = new Configuration();
+    FsShell shell = new FsShell();
+    conf.setQuietMode(false);
+    shell.setConf(conf);
+    int res = 0;
+    SpanReceiverHost.init(new HdfsConfiguration());
+    TraceScope ts = null;
+    try {
+      ts = Trace.startSpan("FsShell", Sampler.ALWAYS);
+      res = ToolRunner.run(shell, argv);
+    } finally {
+      shell.close();
+      if (ts != null) ts.close();
+    }
+    System.exit(res);
+  }
+}
++----
+
+  You can compile and execute this code as shown below.
+
++----
+$ javac -cp `hadoop classpath` TracingFsShell.java
+$ HADOOP_CLASSPATH=. hdfs TracingFsShell -put sample.txt /tmp/
++----

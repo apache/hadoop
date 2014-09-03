@@ -23,6 +23,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.lib.StaticUserWebFilter;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.util.ExitUtil;
@@ -32,6 +33,9 @@ import org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFil
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class TestApplicationHistoryServer {
 
@@ -75,23 +79,32 @@ public class TestApplicationHistoryServer {
   @Test(timeout = 50000)
   public void testFilteOverrides() throws Exception {
 
-    String[] filterInitializers =
-        {
-            AuthenticationFilterInitializer.class.getName(),
-            TimelineAuthenticationFilterInitializer.class.getName(),
-            AuthenticationFilterInitializer.class.getName() + ","
-                + TimelineAuthenticationFilterInitializer.class.getName(),
-            AuthenticationFilterInitializer.class.getName() + ", "
-                + TimelineAuthenticationFilterInitializer.class.getName() };
-    for (String filterInitializer : filterInitializers) {
+    HashMap<String, String> driver = new HashMap<String, String>();
+    driver.put("", TimelineAuthenticationFilterInitializer.class.getName());
+    driver.put(StaticUserWebFilter.class.getName(),
+      TimelineAuthenticationFilterInitializer.class.getName() + ","
+          + StaticUserWebFilter.class.getName());
+    driver.put(AuthenticationFilterInitializer.class.getName(),
+      TimelineAuthenticationFilterInitializer.class.getName());
+    driver.put(TimelineAuthenticationFilterInitializer.class.getName(),
+      TimelineAuthenticationFilterInitializer.class.getName());
+    driver.put(AuthenticationFilterInitializer.class.getName() + ","
+        + TimelineAuthenticationFilterInitializer.class.getName(),
+      TimelineAuthenticationFilterInitializer.class.getName());
+    driver.put(AuthenticationFilterInitializer.class.getName() + ", "
+        + TimelineAuthenticationFilterInitializer.class.getName(),
+      TimelineAuthenticationFilterInitializer.class.getName());
+
+    for (Map.Entry<String, String> entry : driver.entrySet()) {
+      String filterInitializer = entry.getKey();
+      String expectedValue = entry.getValue();
       historyServer = new ApplicationHistoryServer();
       Configuration config = new YarnConfiguration();
       config.set("hadoop.http.filter.initializers", filterInitializer);
       historyServer.init(config);
       historyServer.start();
       Configuration tmp = historyServer.getConfig();
-      assertEquals(TimelineAuthenticationFilterInitializer.class.getName(),
-        tmp.get("hadoop.http.filter.initializers"));
+      assertEquals(expectedValue, tmp.get("hadoop.http.filter.initializers"));
       historyServer.stop();
       AHSWebApp.resetInstance();
     }

@@ -168,6 +168,11 @@ class BookKeeperEditLogInputStream extends EditLogInputStream {
     reader.setMaxOpSize(maxOpSize);
   }
 
+  @Override
+  public boolean isLocalLog() {
+    return false;
+  }
+
   /**
    * Input stream implementation which can be used by 
    * FSEditLogOp.Reader

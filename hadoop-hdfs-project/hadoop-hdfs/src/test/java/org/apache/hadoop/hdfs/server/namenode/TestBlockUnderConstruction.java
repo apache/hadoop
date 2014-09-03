@@ -70,6 +70,9 @@ public class TestBlockUnderConstruction {
     long blocksBefore = stm.getPos() / BLOCK_SIZE;
     
     TestFileCreation.writeFile(stm, BLOCK_SIZE);
+    // need to make sure the full block is completely flushed to the DataNodes
+    // (see FSOutputSummer#flush)
+    stm.flush();
     int blocksAfter = 0;
     // wait until the block is allocated by DataStreamer
     BlockLocation[] locatedBlocks;

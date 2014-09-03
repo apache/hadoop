@@ -32,6 +32,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.util.NativeCodeLoader;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.PerformanceAdvisory;
 
 /**
  * OpenSSL cipher using JNI.
@@ -82,6 +83,7 @@ public final class OpensslCipher {
     String loadingFailure = null;
     try {
       if (!NativeCodeLoader.buildSupportsOpenssl()) {
+        PerformanceAdvisory.LOG.debug("Build does not support openssl");
         loadingFailure = "build does not support openssl.";
       } else {
         initIDs();
