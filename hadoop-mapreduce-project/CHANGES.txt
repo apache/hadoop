@@ -118,6 +118,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5931. Validate SleepJob command line parameters (Gera Shegalov
     via jlowe)
 
+    MAPREDUCE-6063. Correct spill size calculation for spills wrapping the
+    circular buffer. (zhihai xu via cdouglas)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
