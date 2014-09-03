@@ -416,6 +416,9 @@ Release 2.6.0 - UNRELEASED
 
       HDFS-6954. With crypto, no native lib systems are too verbose. (clamb via wang)
 
+      HDFS-2975. Rename with overwrite flag true can make NameNode to stuck in safemode 
+      on NN (crash + restart). (Yi Liu via umamahesh)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

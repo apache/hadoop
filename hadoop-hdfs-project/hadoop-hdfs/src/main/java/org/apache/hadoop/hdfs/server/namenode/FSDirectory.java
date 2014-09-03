@@ -452,7 +452,7 @@ public class FSDirectory implements Closeable {
    * @see #unprotectedRenameTo(String, String, long, Options.Rename...)
    */
   void renameTo(String src, String dst, long mtime,
-      Options.Rename... options)
+      BlocksMapUpdateInfo collectedBlocks, Options.Rename... options)
       throws FileAlreadyExistsException, FileNotFoundException,
       ParentNotDirectoryException, QuotaExceededException,
       UnresolvedLinkException, IOException {
@@ -462,7 +462,7 @@ public class FSDirectory implements Closeable {
     }
     writeLock();
     try {
-      if (unprotectedRenameTo(src, dst, mtime, options)) {
+      if (unprotectedRenameTo(src, dst, mtime, collectedBlocks, options)) {
         namesystem.incrDeletedFileCount(1);
       }
     } finally {
@@ -569,8 +569,9 @@ public class FSDirectory implements Closeable {
 
   /**
    * Rename src to dst.
-   * See {@link DistributedFileSystem#rename(Path, Path, Options.Rename...)}
-   * for details related to rename semantics and exceptions.
+   * <br>
+   * Note: This is to be used by {@link FSEditLog} only.
+   * <br>
    * 
    * @param src source path
    * @param dst destination path
@@ -578,9 +579,34 @@ public class FSDirectory implements Closeable {
    * @param options Rename options
    */
   boolean unprotectedRenameTo(String src, String dst, long timestamp,
-      Options.Rename... options) throws FileAlreadyExistsException,
-      FileNotFoundException, ParentNotDirectoryException,
+      Options.Rename... options) throws FileAlreadyExistsException, 
+      FileNotFoundException, ParentNotDirectoryException, 
       QuotaExceededException, UnresolvedLinkException, IOException {
+    BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
+    boolean ret = unprotectedRenameTo(src, dst, timestamp, 
+        collectedBlocks, options);
+    if (!collectedBlocks.getToDeleteList().isEmpty()) {
+      getFSNamesystem().removeBlocksAndUpdateSafemodeTotal(collectedBlocks);
+    }
+    return ret;
+  }
+  
+  /**
+   * Rename src to dst.
+   * See {@link DistributedFileSystem#rename(Path, Path, Options.Rename...)}
+   * for details related to rename semantics and exceptions.
+   * 
+   * @param src source path
+   * @param dst destination path
+   * @param timestamp modification time
+   * @param collectedBlocks blocks to be removed
+   * @param options Rename options
+   */
+  boolean unprotectedRenameTo(String src, String dst, long timestamp,
+      BlocksMapUpdateInfo collectedBlocks, Options.Rename... options) 
+      throws FileAlreadyExistsException, FileNotFoundException, 
+      ParentNotDirectoryException, QuotaExceededException, 
+      UnresolvedLinkException, IOException {
     assert hasWriteLock();
     boolean overwrite = options != null && Arrays.asList(options).contains
             (Rename.OVERWRITE);
@@ -671,7 +697,6 @@ public class FSDirectory implements Closeable {
         if (removedDst != null) {
           undoRemoveDst = false;
           if (removedNum > 0) {
-            BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
             List<INode> removedINodes = new ChunkedArrayList<INode>();
             if (!removedDst.isInLatestSnapshot(dstIIP.getLatestSnapshotId())) {
               removedDst.destroyAndCollectBlocks(collectedBlocks, removedINodes);
@@ -681,7 +706,7 @@ public class FSDirectory implements Closeable {
                   dstIIP.getLatestSnapshotId(), collectedBlocks, removedINodes,
                   true).get(Quota.NAMESPACE) >= 0;
             }
-            getFSNamesystem().removePathAndBlocks(src, collectedBlocks,
+            getFSNamesystem().removePathAndBlocks(src, null, 
                 removedINodes, false);
           }
         }
