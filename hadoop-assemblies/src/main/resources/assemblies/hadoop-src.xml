@@ -25,6 +25,14 @@
   <fileSets>
     <fileSet>
       <directory>.</directory>
+      <includes>
+        <include>LICENCE.txt</include>
+        <include>README.txt</include>
+        <include>NOTICE.txt</include>
+      </includes>
+    </fileSet>
+    <fileSet>
+      <directory>.</directory>
       <useDefaultExcludes>true</useDefaultExcludes>
       <excludes>
         <exclude>.git/**</exclude>
