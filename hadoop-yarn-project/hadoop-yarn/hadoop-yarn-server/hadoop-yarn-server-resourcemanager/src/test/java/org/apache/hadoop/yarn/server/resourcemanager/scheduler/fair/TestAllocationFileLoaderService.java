@@ -187,13 +187,15 @@ public class TestAllocationFileLoaderService {
     out.println("<queue name=\"queueF\" type=\"parent\" >");
     out.println("</queue>");
     // Create hierarchical queues G,H, with different min/fair share preemption
-    // timeouts
+    // timeouts and preemption thresholds
     out.println("<queue name=\"queueG\">");
     out.println("<fairSharePreemptionTimeout>120</fairSharePreemptionTimeout>");
     out.println("<minSharePreemptionTimeout>50</minSharePreemptionTimeout>");
+    out.println("<fairSharePreemptionThreshold>0.6</fairSharePreemptionThreshold>");
     out.println("   <queue name=\"queueH\">");
     out.println("   <fairSharePreemptionTimeout>180</fairSharePreemptionTimeout>");
     out.println("   <minSharePreemptionTimeout>40</minSharePreemptionTimeout>");
+    out.println("   <fairSharePreemptionThreshold>0.7</fairSharePreemptionThreshold>");
     out.println("   </queue>");
     out.println("</queue>");
     // Set default limit of apps per queue to 15
@@ -211,6 +213,8 @@ public class TestAllocationFileLoaderService {
         + "</defaultMinSharePreemptionTimeout>");
     // Set default fair share preemption timeout to 5 minutes
     out.println("<defaultFairSharePreemptionTimeout>300</defaultFairSharePreemptionTimeout>");
+    // Set default fair share preemption threshold to 0.4
+    out.println("<defaultFairSharePreemptionThreshold>0.4</defaultFairSharePreemptionThreshold>");
     // Set default scheduling policy to DRF
     out.println("<defaultQueueSchedulingPolicy>drf</defaultQueueSchedulingPolicy>");
     out.println("</allocations>");
@@ -299,6 +303,26 @@ public class TestAllocationFileLoaderService {
     assertEquals(120000, queueConf.getFairSharePreemptionTimeout("root.queueG"));
     assertEquals(180000, queueConf.getFairSharePreemptionTimeout("root.queueG.queueH"));
 
+    assertEquals(.4f, queueConf.getFairSharePreemptionThreshold("root"), 0.01);
+    assertEquals(-1, queueConf.getFairSharePreemptionThreshold("root." +
+        YarnConfiguration.DEFAULT_QUEUE_NAME), 0.01);
+    assertEquals(-1,
+        queueConf.getFairSharePreemptionThreshold("root.queueA"), 0.01);
+    assertEquals(-1,
+        queueConf.getFairSharePreemptionThreshold("root.queueB"), 0.01);
+    assertEquals(-1,
+        queueConf.getFairSharePreemptionThreshold("root.queueC"), 0.01);
+    assertEquals(-1,
+        queueConf.getFairSharePreemptionThreshold("root.queueD"), 0.01);
+    assertEquals(-1,
+        queueConf.getFairSharePreemptionThreshold("root.queueE"), 0.01);
+    assertEquals(-1,
+        queueConf.getFairSharePreemptionThreshold("root.queueF"), 0.01);
+    assertEquals(.6f,
+        queueConf.getFairSharePreemptionThreshold("root.queueG"), 0.01);
+    assertEquals(.7f,
+        queueConf.getFairSharePreemptionThreshold("root.queueG.queueH"), 0.01);
+
     assertTrue(queueConf.getConfiguredQueues()
         .get(FSQueueType.PARENT)
         .contains("root.queueF"));
@@ -346,9 +370,10 @@ public class TestAllocationFileLoaderService {
     out.println("<pool name=\"queueD\">");
     out.println("<maxRunningApps>3</maxRunningApps>");
     out.println("</pool>");
-    // Give queue E a preemption timeout of one minute
+    // Give queue E a preemption timeout of one minute and 0.3f threshold
     out.println("<pool name=\"queueE\">");
     out.println("<minSharePreemptionTimeout>60</minSharePreemptionTimeout>");
+    out.println("<fairSharePreemptionThreshold>0.3</fairSharePreemptionThreshold>");
     out.println("</pool>");
     // Set default limit of apps per queue to 15
     out.println("<queueMaxAppsDefault>15</queueMaxAppsDefault>");
@@ -363,6 +388,8 @@ public class TestAllocationFileLoaderService {
         + "</defaultMinSharePreemptionTimeout>");
     // Set fair share preemption timeout to 5 minutes
     out.println("<fairSharePreemptionTimeout>300</fairSharePreemptionTimeout>");
+    // Set default fair share preemption threshold to 0.6f
+    out.println("<defaultFairSharePreemptionThreshold>0.6</defaultFairSharePreemptionThreshold>");
     out.println("</allocations>");
     out.close();
     
@@ -429,6 +456,20 @@ public class TestAllocationFileLoaderService {
     assertEquals(-1, queueConf.getFairSharePreemptionTimeout("root.queueC"));
     assertEquals(-1, queueConf.getFairSharePreemptionTimeout("root.queueD"));
     assertEquals(-1, queueConf.getFairSharePreemptionTimeout("root.queueE"));
+
+    assertEquals(.6f, queueConf.getFairSharePreemptionThreshold("root"), 0.01);
+    assertEquals(-1, queueConf.getFairSharePreemptionThreshold("root."
+        + YarnConfiguration.DEFAULT_QUEUE_NAME), 0.01);
+    assertEquals(-1,
+        queueConf.getFairSharePreemptionThreshold("root.queueA"), 0.01);
+    assertEquals(-1,
+        queueConf.getFairSharePreemptionThreshold("root.queueB"), 0.01);
+    assertEquals(-1,
+        queueConf.getFairSharePreemptionThreshold("root.queueC"), 0.01);
+    assertEquals(-1,
+        queueConf.getFairSharePreemptionThreshold("root.queueD"), 0.01);
+    assertEquals(.3f,
+        queueConf.getFairSharePreemptionThreshold("root.queueE"), 0.01);
   }
   
   @Test

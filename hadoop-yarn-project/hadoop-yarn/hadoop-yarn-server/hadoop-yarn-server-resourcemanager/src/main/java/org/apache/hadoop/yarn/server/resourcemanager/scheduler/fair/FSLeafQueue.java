@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -54,7 +55,7 @@ public class FSLeafQueue extends FSQueue {
   
   // Variables used for preemption
   private long lastTimeAtMinShare;
-  private long lastTimeAtHalfFairShare;
+  private long lastTimeAtFairShareThreshold;
   
   // Track the AM resource usage for this queue
   private Resource amResourceUsage;
@@ -65,7 +66,7 @@ public class FSLeafQueue extends FSQueue {
       FSParentQueue parent) {
     super(name, scheduler, parent);
     this.lastTimeAtMinShare = scheduler.getClock().getTime();
-    this.lastTimeAtHalfFairShare = scheduler.getClock().getTime();
+    this.lastTimeAtFairShareThreshold = scheduler.getClock().getTime();
     activeUsersManager = new ActiveUsersManager(getMetrics());
     amResourceUsage = Resource.newInstance(0, 0);
   }
@@ -275,16 +276,17 @@ public class FSLeafQueue extends FSQueue {
     return lastTimeAtMinShare;
   }
 
-  public void setLastTimeAtMinShare(long lastTimeAtMinShare) {
+  private void setLastTimeAtMinShare(long lastTimeAtMinShare) {
     this.lastTimeAtMinShare = lastTimeAtMinShare;
   }
 
-  public long getLastTimeAtHalfFairShare() {
-    return lastTimeAtHalfFairShare;
+  public long getLastTimeAtFairShareThreshold() {
+    return lastTimeAtFairShareThreshold;
   }
 
-  public void setLastTimeAtHalfFairShare(long lastTimeAtHalfFairShare) {
-    this.lastTimeAtHalfFairShare = lastTimeAtHalfFairShare;
+  private void setLastTimeAtFairShareThreshold(
+      long lastTimeAtFairShareThreshold) {
+    this.lastTimeAtFairShareThreshold = lastTimeAtFairShareThreshold;
   }
 
   @Override
@@ -329,6 +331,20 @@ public class FSLeafQueue extends FSQueue {
   }
 
   /**
+   * Update the preemption fields for the queue, i.e. the times since last was
+   * at its guaranteed share and over its fair share threshold.
+   */
+  public void updateStarvationStats() {
+    long now = scheduler.getClock().getTime();
+    if (!isStarvedForMinShare()) {
+      setLastTimeAtMinShare(now);
+    }
+    if (!isStarvedForFairShare()) {
+      setLastTimeAtFairShareThreshold(now);
+    }
+  }
+
+  /**
    * Helper method to check if the queue should preempt containers
    *
    * @return true if check passes (can preempt) or false otherwise
@@ -336,5 +352,29 @@ public class FSLeafQueue extends FSQueue {
   private boolean preemptContainerPreCheck() {
     return parent.getPolicy().checkIfUsageOverFairShare(getResourceUsage(),
         getFairShare());
+  }
+
+  /**
+   * Is a queue being starved for its min share.
+   */
+  @VisibleForTesting
+  boolean isStarvedForMinShare() {
+    return isStarved(getMinShare());
+  }
+
+  /**
+   * Is a queue being starved for its fair share threshold.
+   */
+  @VisibleForTesting
+  boolean isStarvedForFairShare() {
+    return isStarved(
+        Resources.multiply(getFairShare(), getFairSharePreemptionThreshold()));
+  }
+
+  private boolean isStarved(Resource share) {
+    Resource desiredShare = Resources.min(FairScheduler.getResourceCalculator(),
+        scheduler.getClusterResource(), share, getDemand());
+    return Resources.lessThan(FairScheduler.getResourceCalculator(),
+        scheduler.getClusterResource(), getResourceUsage(), desiredShare);
   }
 }
