@@ -37,7 +37,7 @@ public class TestKMSACLs {
   public void testCustom() {
     Configuration conf = new Configuration(false);
     for (KMSACLs.Type type : KMSACLs.Type.values()) {
-      conf.set(type.getConfigKey(), type.toString() + " ");
+      conf.set(type.getAclConfigKey(), type.toString() + " ");
     }
     KMSACLs acls = new KMSACLs(conf);
     for (KMSACLs.Type type : KMSACLs.Type.values()) {

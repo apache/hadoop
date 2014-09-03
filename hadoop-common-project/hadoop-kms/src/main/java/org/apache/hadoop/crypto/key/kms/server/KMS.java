@@ -26,9 +26,9 @@ import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersi
 import org.apache.hadoop.crypto.key.kms.KMSRESTConstants;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
 import org.apache.hadoop.security.token.delegation.web.HttpUserGroupInformation;
+
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -73,29 +73,14 @@ public class KMS {
     kmsAudit= KMSWebApp.getKMSAudit();
   }
 
-
-  private static final String UNAUTHORIZED_MSG_WITH_KEY =
-      "User:%s not allowed to do '%s' on '%s'";
-
-  private static final String UNAUTHORIZED_MSG_WITHOUT_KEY =
-      "User:%s not allowed to do '%s'";
-
   private void assertAccess(KMSACLs.Type aclType, UserGroupInformation ugi,
       KMSOp operation) throws AccessControlException {
-    assertAccess(aclType, ugi, operation, null);
+    KMSWebApp.getACLs().assertAccess(aclType, ugi, operation, null);
   }
-
-  private void assertAccess(KMSACLs.Type aclType,
-      UserGroupInformation ugi, KMSOp operation, String key)
-      throws AccessControlException {
-    if (!KMSWebApp.getACLs().hasAccess(aclType, ugi)) {
-      KMSWebApp.getUnauthorizedCallsMeter().mark();
-      kmsAudit.unauthorized(ugi, operation, key);
-      throw new AuthorizationException(String.format(
-          (key != null) ? UNAUTHORIZED_MSG_WITH_KEY
-                        : UNAUTHORIZED_MSG_WITHOUT_KEY,
-          ugi.getShortUserName(), operation, key));
-    }
+  
+  private void assertAccess(KMSACLs.Type aclType, UserGroupInformation ugi,
+      KMSOp operation, String key) throws AccessControlException {
+    KMSWebApp.getACLs().assertAccess(aclType, ugi, operation, key);
   }
 
   private static KeyProvider.KeyVersion removeKeyMaterial(
@@ -433,7 +418,7 @@ public class KMS {
     final String keyName = (String) jsonPayload.get(
         KMSRESTConstants.NAME_FIELD);
     String ivStr = (String) jsonPayload.get(KMSRESTConstants.IV_FIELD);
-    String encMaterialStr =
+    String encMaterialStr = 
         (String) jsonPayload.get(KMSRESTConstants.MATERIAL_FIELD);
     Object retJSON;
     if (eekOp.equals(KMSRESTConstants.EEK_DECRYPT)) {

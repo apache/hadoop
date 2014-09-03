@@ -157,6 +157,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10990. Add missed NFSv3 request and response classes (brandonli)
 
+    HADOOP-10863. KMS should have a blacklist for decrypting EEKs. 
+    (asuresh via tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
