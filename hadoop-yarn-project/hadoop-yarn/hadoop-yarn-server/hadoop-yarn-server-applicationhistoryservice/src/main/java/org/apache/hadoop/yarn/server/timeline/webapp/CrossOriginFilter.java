@@ -76,6 +76,7 @@ public class CrossOriginFilter implements Filter {
   private List<String> allowedMethods = new ArrayList<String>();
   private List<String> allowedHeaders = new ArrayList<String>();
   private List<String> allowedOrigins = new ArrayList<String>();
+  private boolean allowAllOrigins = true;
   private String maxAge;
 
   @Override
@@ -171,7 +172,9 @@ public class CrossOriginFilter implements Filter {
     }
     allowedOrigins =
         Arrays.asList(allowedOriginsConfig.trim().split("\\s*,\\s*"));
+    allowAllOrigins = allowedOrigins.contains("*");
     LOG.info("Allowed Origins: " + StringUtils.join(allowedOrigins, ','));
+    LOG.info("Allow All Origins: " + allowAllOrigins);
   }
 
   private void initializeMaxAge(FilterConfig filterConfig) {
@@ -199,8 +202,9 @@ public class CrossOriginFilter implements Filter {
     return origin != null;
   }
 
-  private boolean isOriginAllowed(String origin) {
-    return allowedOrigins.contains(origin);
+  @VisibleForTesting
+  boolean isOriginAllowed(String origin) {
+    return allowAllOrigins || allowedOrigins.contains(origin);
   }
 
   private boolean areHeadersAllowed(String accessControlRequestHeaders) {
@@ -213,7 +217,7 @@ public class CrossOriginFilter implements Filter {
 
   private boolean isMethodAllowed(String accessControlRequestMethod) {
     if (accessControlRequestMethod == null) {
-      return false;
+      return true;
     }
     return allowedMethods.contains(accessControlRequestMethod);
   }

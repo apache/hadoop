@@ -155,6 +155,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2509. Enable Cross Origin Filter for timeline server only and not all
     Yarn servers (Mit Desai via jeagles)
 
+    YARN-2511. Allowed all origins by default when CrossOriginFilter is
+    enabled. (Jonathan Eagles via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
