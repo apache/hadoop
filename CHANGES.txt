@@ -242,6 +242,9 @@ Release 1.3.0 - unreleased
     MAPREDUCE-6012. DBInputSplit creates invalid ranges on Oracle. 
     (Wei Yan via kasha)
 
+    MAPREDUCE-6063. Correct spill size calculation for spills wrapping the
+    circular buffer. (zhihai xu via cdouglas)
+
 Release 1.2.2 - unreleased
 
   INCOMPATIBLE CHANGES

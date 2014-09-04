@@ -1387,7 +1387,7 @@ class MapTask extends Task {
       //buffer + header lengths for the partitions
       long size = (bufend >= bufstart
           ? bufend - bufstart
-          : (bufvoid - bufend) + bufstart) +
+          : (bufvoid - bufstart) + bufend) +
                   partitions * APPROX_HEADER_LENGTH;
       FSDataOutputStream out = null;
       try {
