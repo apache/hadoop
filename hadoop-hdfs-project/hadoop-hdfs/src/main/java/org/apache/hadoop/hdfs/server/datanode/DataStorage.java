@@ -438,7 +438,7 @@ public class DataStorage extends Storage {
     this.clusterID = nsInfo.getClusterID();
     this.namespaceID = nsInfo.getNamespaceID();
     this.cTime = 0;
-    this.datanodeUuid = datanodeUuid;
+    setDatanodeUuid(datanodeUuid);
 
     if (sd.getStorageUuid() == null) {
       // Assign a new Storage UUID.
