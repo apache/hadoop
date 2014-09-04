@@ -63,16 +63,10 @@ public abstract class KeyProviderFactory {
     for(String path: conf.getStringCollection(KEY_PROVIDER_PATH)) {
       try {
         URI uri = new URI(path);
-        boolean found = false;
-        for(KeyProviderFactory factory: serviceLoader) {
-          KeyProvider kp = factory.createProvider(uri, conf);
-          if (kp != null) {
-            result.add(kp);
-            found = true;
-            break;
-          }
-        }
-        if (!found) {
+        KeyProvider kp = get(uri, conf);
+        if (kp != null) {
+          result.add(kp);
+        } else {
           throw new IOException("No KeyProviderFactory for " + uri + " in " +
               KEY_PROVIDER_PATH);
         }
@@ -83,4 +77,26 @@ public abstract class KeyProviderFactory {
     }
     return result;
   }
+
+  /**
+   * Create a KeyProvider based on a provided URI.
+   *
+   * @param uri key provider URI
+   * @param conf configuration to initialize the key provider
+   * @return the key provider for the specified URI, or <code>NULL</code> if
+   *         a provider for the specified URI scheme could not be found.
+   * @throws IOException thrown if the provider failed to initialize.
+   */
+  public static KeyProvider get(URI uri, Configuration conf)
+      throws IOException {
+    KeyProvider kp = null;
+    for (KeyProviderFactory factory : serviceLoader) {
+      kp = factory.createProvider(uri, conf);
+      if (kp != null) {
+        break;
+      }
+    }
+    return kp;
+  }
+
 }
