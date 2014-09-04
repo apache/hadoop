@@ -345,7 +345,10 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-8815. RandomDatum needs to override hashCode().
     (Brandon Li via suresh)
-    
+
+    HADOOP-11056. OsSecureRandom.setConf() might leak file descriptors. (yzhang
+    via cmccabe)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HADOOP-10734. Implement high-performance secure random number sources.
