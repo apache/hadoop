@@ -21,22 +21,19 @@ import org.apache.hadoop.classification.InterfaceAudience;
 
 import com.sun.jersey.api.container.ContainerException;
 
-import org.apache.hadoop.crypto.key.kms.KMSRESTConstants;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.util.HttpExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
 import java.io.IOException;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
  * Jersey provider that converts KMS exceptions into detailed HTTP errors.
@@ -50,12 +47,7 @@ public class KMSExceptionsProvider implements ExceptionMapper<Exception> {
   private static final String ENTER = System.getProperty("line.separator");
 
   protected Response createResponse(Response.Status status, Throwable ex) {
-    Map<String, Object> json = new LinkedHashMap<String, Object>();
-    json.put(KMSRESTConstants.ERROR_EXCEPTION_JSON, ex.getClass().getName());
-    json.put(KMSRESTConstants.ERROR_MESSAGE_JSON, getOneLineMessage(ex));
-    log(status, ex);
-    return Response.status(status).type(MediaType.APPLICATION_JSON).
-        entity(json).build();
+    return HttpExceptionUtils.createJerseyExceptionResponse(status, ex);
   }
 
   protected String getOneLineMessage(Throwable exception) {

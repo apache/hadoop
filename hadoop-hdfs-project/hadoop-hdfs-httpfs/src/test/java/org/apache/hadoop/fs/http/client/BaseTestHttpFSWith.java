@@ -183,6 +183,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
 
   private void testCreate() throws Exception {
     Path path = new Path(getProxiedFSTestDir(), "foo.txt");
+    FileSystem fs = FileSystem.get(getProxiedFSConf());
+    fs.delete(path, true);
     testCreate(path, false);
     testCreate(path, true);
     try {
@@ -190,7 +192,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       Assert.fail("the create should have failed because the file exists " +
                   "and override is FALSE");
     } catch (IOException ex) {
-
+System.out.println("#");
     } catch (Exception ex) {
       Assert.fail(ex.toString());
     }

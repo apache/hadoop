@@ -189,9 +189,8 @@ public class TestHttpFSServerNoACLs extends HTestCase {
       Assert.assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR, resp);
       reader = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
       String res = reader.readLine();
-      Assert.assertTrue(res.contains("RemoteException"));
-      Assert.assertTrue(res.contains("ACL"));
-      Assert.assertTrue(res.contains("rejected"));
+      Assert.assertTrue(res.contains("AclException"));
+      Assert.assertTrue(res.contains("Support for ACLs has been disabled"));
     }
   }
 
@@ -224,9 +223,8 @@ public class TestHttpFSServerNoACLs extends HTestCase {
       BufferedReader reader;
       reader = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
       String err = reader.readLine();
-      Assert.assertTrue(err.contains("RemoteException"));
-      Assert.assertTrue(err.contains("ACL"));
-      Assert.assertTrue(err.contains("rejected"));
+      Assert.assertTrue(err.contains("AclException"));
+      Assert.assertTrue(err.contains("Support for ACLs has been disabled"));
     }
   }
 
