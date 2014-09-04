@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager;
 
 import com.google.common.base.Optional;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -337,6 +338,16 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       logOutput(shExec.getOutput());
     }
     return 0;
+  }
+
+  @Override
+  public int reacquireContainer(String user, ContainerId containerId)
+      throws IOException {
+    try {
+      return super.reacquireContainer(user, containerId);
+    } finally {
+      resourcesHandler.postExecute(containerId);
+    }
   }
 
   @Override

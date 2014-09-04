@@ -255,6 +255,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2462. TestNodeManagerResync#testBlockNewContainerRequestsOnStartAndResync
     should have a test timeout (Eric Payne via jlowe)
 
+    YARN-2431. NM restart: cgroup is not removed for reacquired containers
+    (jlowe)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

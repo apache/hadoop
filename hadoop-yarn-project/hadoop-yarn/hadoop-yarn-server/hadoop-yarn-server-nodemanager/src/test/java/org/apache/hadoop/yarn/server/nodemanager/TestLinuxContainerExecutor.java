@@ -30,6 +30,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.junit.Assert;
 import org.apache.commons.logging.Log;
@@ -42,11 +44,15 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.util.LCEResourcesHandler;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -353,4 +359,58 @@ public class TestLinuxContainerExecutor {
     }
   }
 
+  @Test(timeout=10000)
+  public void testPostExecuteAfterReacquisition() throws Exception {
+    // make up some bogus container ID
+    ApplicationId appId = ApplicationId.newInstance(12345, 67890);
+    ApplicationAttemptId attemptId =
+        ApplicationAttemptId.newInstance(appId, 54321);
+    ContainerId cid = ContainerId.newInstance(attemptId, 9876);
+
+    Configuration conf = new YarnConfiguration();
+    conf.setClass(YarnConfiguration.NM_LINUX_CONTAINER_RESOURCES_HANDLER,
+        TestResourceHandler.class, LCEResourcesHandler.class);
+    LinuxContainerExecutor lce = new LinuxContainerExecutor();
+    lce.setConf(conf);
+    try {
+      lce.init();
+    } catch (IOException e) {
+      // expected if LCE isn't setup right, but not necessary for this test
+    }
+    lce.reacquireContainer("foouser", cid);
+    Assert.assertTrue("postExec not called after reacquisition",
+        TestResourceHandler.postExecContainers.contains(cid));
+  }
+
+  private static class TestResourceHandler implements LCEResourcesHandler {
+    static Set<ContainerId> postExecContainers = new HashSet<ContainerId>();
+
+    @Override
+    public void setConf(Configuration conf) {
+    }
+
+    @Override
+    public Configuration getConf() {
+      return null;
+    }
+
+    @Override
+    public void init(LinuxContainerExecutor lce) throws IOException {
+    }
+
+    @Override
+    public void preExecute(ContainerId containerId, Resource containerResource)
+        throws IOException {
+    }
+
+    @Override
+    public void postExecute(ContainerId containerId) {
+      postExecContainers.add(containerId);
+    }
+
+    @Override
+    public String getResourcesOption(ContainerId containerId) {
+      return null;
+    }
+  }
 }
