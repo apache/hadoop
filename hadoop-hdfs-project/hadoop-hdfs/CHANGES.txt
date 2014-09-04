@@ -329,8 +329,11 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6942. Fix typos in log messages. (Ray Chiang via wheat9)
 
-      HDFS-6848. Lack of synchronization on access to datanodeUuid in
-      DataStorage#format(). (Xiaoyu Yao via Arpit Agarwal)
+    HDFS-6848. Lack of synchronization on access to datanodeUuid in
+    DataStorage#format(). (Xiaoyu Yao via Arpit Agarwal)
+
+    HDFS-6996. SnapshotDiff report can hit IndexOutOfBoundsException when there
+    are nested renamed directory/file. (jing9)
 
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
