@@ -176,6 +176,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-4257. The ReplaceDatanodeOnFailure policies could have a forgiving
     option (szetszwo via cmccabe)
 
+    HDFS-6959. Make the HDFS home directory location customizable. (yzhang via
+    cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

@@ -2090,4 +2090,12 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.user.home.dir.prefix</name>
+  <value>/user</value>
+  <description>The directory to prepend to user name to get the user's
+    home direcotry.
+  </description>
+</property>
+
 </configuration>
