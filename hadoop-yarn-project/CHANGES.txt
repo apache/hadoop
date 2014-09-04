@@ -152,6 +152,9 @@ Release 2.6.0 - UNRELEASED
     YARN-1506. Changed RMNode/SchedulerNode to update resource with event
     notification. (Junping Du via jianhe)
 
+    YARN-2509. Enable Cross Origin Filter for timeline server only and not all
+    Yarn servers (Mit Desai via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES
