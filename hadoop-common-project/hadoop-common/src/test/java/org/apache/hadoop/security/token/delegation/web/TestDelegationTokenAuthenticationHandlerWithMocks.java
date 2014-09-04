@@ -25,6 +25,7 @@ import org.apache.hadoop.security.authentication.server.AuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.AuthenticationToken;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.HttpExceptionUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.After;
 import org.junit.Assert;
@@ -224,7 +225,8 @@ public class TestDelegationTokenAuthenticationHandlerWithMocks {
     Mockito.when(request.getQueryString()).thenReturn(
         DelegationTokenAuthenticator.OP_PARAM + "=" + op.toString() + "&" +
             DelegationTokenAuthenticator.TOKEN_PARAM + "=" +
-            token.encodeToUrlString());
+            token.encodeToUrlString()
+    );
     Assert.assertFalse(handler.managementOperation(null, request, response));
     Mockito.verify(response).setStatus(HttpServletResponse.SC_OK);
     try {
@@ -273,8 +275,8 @@ public class TestDelegationTokenAuthenticationHandlerWithMocks {
             UserGroupInformation.getCurrentUser(), "user");
     Mockito.when(request.getQueryString()).
         thenReturn(DelegationTokenAuthenticator.OP_PARAM + "=" + op.toString() +
-        "&" + DelegationTokenAuthenticator.TOKEN_PARAM + "=" +
-        dToken.encodeToUrlString());
+            "&" + DelegationTokenAuthenticator.TOKEN_PARAM + "=" +
+            dToken.encodeToUrlString());
     Assert.assertFalse(handler.managementOperation(token, request, response));
     Mockito.verify(response).setStatus(HttpServletResponse.SC_OK);
     pwriter.close();
@@ -333,15 +335,11 @@ public class TestDelegationTokenAuthenticationHandlerWithMocks {
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
     Mockito.when(request.getQueryString()).thenReturn(
         DelegationTokenAuthenticator.DELEGATION_PARAM + "=invalid");
-
-    try {
-      handler.authenticate(request, response);
-      Assert.fail();
-    } catch (AuthenticationException ex) {
-      //NOP
-    } catch (Exception ex) {
-      Assert.fail();
-    }
+    StringWriter writer = new StringWriter();
+    Mockito.when(response.getWriter()).thenReturn(new PrintWriter(writer));
+    Assert.assertNull(handler.authenticate(request, response));
+    Mockito.verify(response).setStatus(HttpServletResponse.SC_FORBIDDEN);
+    Assert.assertTrue(writer.toString().contains("AuthenticationException"));
   }
 
   private void testInvalidDelegationTokenHeader() throws Exception {
@@ -350,15 +348,10 @@ public class TestDelegationTokenAuthenticationHandlerWithMocks {
     Mockito.when(request.getHeader(Mockito.eq(
         DelegationTokenAuthenticator.DELEGATION_TOKEN_HEADER))).thenReturn(
         "invalid");
-
-    try {
-      handler.authenticate(request, response);
-      Assert.fail();
-    } catch (AuthenticationException ex) {
-      //NOP
-    } catch (Exception ex) {
-      Assert.fail();
-    }
+    StringWriter writer = new StringWriter();
+    Mockito.when(response.getWriter()).thenReturn(new PrintWriter(writer));
+    Assert.assertNull(handler.authenticate(request, response));
+    Assert.assertTrue(writer.toString().contains("AuthenticationException"));
   }
 
 }

@@ -385,7 +385,7 @@
      </Match>
 
   <Match>
-    <Class name="org.apache.hadoop.crypto.key.kms.KMSClientProvider"/>
+    <Class name="org.apache.hadoop.util.HttpExceptionUtils"/>
     <Method name="validateResponse"/>
     <Bug pattern="REC_CATCH_EXCEPTION"/>
   </Match>

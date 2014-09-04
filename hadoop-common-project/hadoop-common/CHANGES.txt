@@ -162,6 +162,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11054. Add a KeyProvider instantiation based on a URI. (tucu)
 
+    HADOOP-11015. Http server/client utils to propagate and recreate 
+    Exceptions from server to client. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)

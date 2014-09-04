@@ -40,13 +40,12 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.lib.wsrs.EnumSetParam;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticator;
 import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticator;
+import org.apache.hadoop.util.HttpExceptionUtils;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -179,11 +178,6 @@ public class HttpFSFileSystem extends FileSystem
   public static final String ACL_ENTRIES_JSON = "entries";
   public static final String ACL_BIT_JSON = "aclBit";
 
-  public static final String ERROR_JSON = "RemoteException";
-  public static final String ERROR_EXCEPTION_JSON = "exception";
-  public static final String ERROR_CLASSNAME_JSON = "javaClassName";
-  public static final String ERROR_MESSAGE_JSON = "message";
-
   public static final int HTTP_TEMPORARY_REDIRECT = 307;
 
   private static final String HTTP_GET = "GET";
@@ -223,7 +217,6 @@ public class HttpFSFileSystem extends FileSystem
   private URI uri;
   private Path workingDir;
   private UserGroupInformation realUser;
-  private String doAs;
 
 
 
@@ -336,7 +329,6 @@ public class HttpFSFileSystem extends FileSystem
     if (realUser == null) {
       realUser = UserGroupInformation.getLoginUser();
     }
-    doAs = ugi.getShortUserName();
     super.initialize(name, conf);
     try {
       uri = new URI(name.getScheme() + "://" + name.getAuthority());
@@ -436,7 +428,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(OP_PARAM, Operation.OPEN.toString());
     HttpURLConnection conn = getConnection(Operation.OPEN.getMethod(), params,
                                            f, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     return new FSDataInputStream(
       new HttpFSDataInputStream(conn.getInputStream(), bufferSize));
   }
@@ -463,7 +455,7 @@ public class HttpFSFileSystem extends FileSystem
       try {
         super.close();
       } finally {
-        HttpFSUtils.validateResponse(conn, closeStatus);
+        HttpExceptionUtils.validateResponse(conn, closeStatus);
       }
     }
 
@@ -499,11 +491,11 @@ public class HttpFSFileSystem extends FileSystem
             OutputStream os = new BufferedOutputStream(conn.getOutputStream(), bufferSize);
             return new HttpFSDataOutputStream(conn, os, expectedStatus, statistics);
           } catch (IOException ex) {
-            HttpFSUtils.validateResponse(conn, expectedStatus);
+            HttpExceptionUtils.validateResponse(conn, expectedStatus);
             throw ex;
           }
         } else {
-          HttpFSUtils.validateResponse(conn, HTTP_TEMPORARY_REDIRECT);
+          HttpExceptionUtils.validateResponse(conn, HTTP_TEMPORARY_REDIRECT);
           throw new IOException("Missing HTTP 'Location' header for [" + conn.getURL() + "]");
         }
       } else {
@@ -515,7 +507,7 @@ public class HttpFSFileSystem extends FileSystem
       if (exceptionAlreadyHandled) {
         throw ex;
       } else {
-        HttpFSUtils.validateResponse(conn, HTTP_TEMPORARY_REDIRECT);
+        HttpExceptionUtils.validateResponse(conn, HTTP_TEMPORARY_REDIRECT);
         throw ex;
       }
     }
@@ -596,7 +588,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(SOURCES_PARAM, srcs);
     HttpURLConnection conn = getConnection(Operation.CONCAT.getMethod(),
         params, f, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
 
   /**
@@ -610,7 +602,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(DESTINATION_PARAM, dst.toString());
     HttpURLConnection conn = getConnection(Operation.RENAME.getMethod(),
                                            params, src, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     return (Boolean) json.get(RENAME_JSON);
   }
@@ -645,7 +637,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(RECURSIVE_PARAM, Boolean.toString(recursive));
     HttpURLConnection conn = getConnection(Operation.DELETE.getMethod(),
                                            params, f, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     return (Boolean) json.get(DELETE_JSON);
   }
@@ -666,7 +658,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(OP_PARAM, Operation.LISTSTATUS.toString());
     HttpURLConnection conn = getConnection(Operation.LISTSTATUS.getMethod(),
                                            params, f, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     json = (JSONObject) json.get(FILE_STATUSES_JSON);
     JSONArray jsonArray = (JSONArray) json.get(FILE_STATUS_JSON);
@@ -714,7 +706,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(PERMISSION_PARAM, permissionToString(permission));
     HttpURLConnection conn = getConnection(Operation.MKDIRS.getMethod(),
                                            params, f, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     return (Boolean) json.get(MKDIRS_JSON);
   }
@@ -735,7 +727,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(OP_PARAM, Operation.GETFILESTATUS.toString());
     HttpURLConnection conn = getConnection(Operation.GETFILESTATUS.getMethod(),
                                            params, f, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     json = (JSONObject) json.get(FILE_STATUS_JSON);
     f = makeQualified(f);
@@ -754,7 +746,7 @@ public class HttpFSFileSystem extends FileSystem
       HttpURLConnection conn =
         getConnection(Operation.GETHOMEDIRECTORY.getMethod(), params,
                       new Path(getUri().toString(), "/"), false);
-      HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+      HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
       JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
       return new Path((String) json.get(HOME_DIR_JSON));
     } catch (IOException ex) {
@@ -779,7 +771,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(GROUP_PARAM, groupname);
     HttpURLConnection conn = getConnection(Operation.SETOWNER.getMethod(),
                                            params, p, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
 
   /**
@@ -794,7 +786,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(OP_PARAM, Operation.SETPERMISSION.toString());
     params.put(PERMISSION_PARAM, permissionToString(permission));
     HttpURLConnection conn = getConnection(Operation.SETPERMISSION.getMethod(), params, p, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
 
   /**
@@ -816,7 +808,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(ACCESS_TIME_PARAM, Long.toString(atime));
     HttpURLConnection conn = getConnection(Operation.SETTIMES.getMethod(),
                                            params, p, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
 
   /**
@@ -838,7 +830,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(REPLICATION_PARAM, Short.toString(replication));
     HttpURLConnection conn =
       getConnection(Operation.SETREPLICATION.getMethod(), params, src, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     return (Boolean) json.get(SET_REPLICATION_JSON);
   }
@@ -858,7 +850,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(ACLSPEC_PARAM, AclEntry.aclSpecToString(aclSpec));
     HttpURLConnection conn = getConnection(
             Operation.MODIFYACLENTRIES.getMethod(), params, path, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
 
   /**
@@ -875,7 +867,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(ACLSPEC_PARAM, AclEntry.aclSpecToString(aclSpec));
     HttpURLConnection conn = getConnection(
             Operation.REMOVEACLENTRIES.getMethod(), params, path, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
 
   /**
@@ -889,7 +881,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(OP_PARAM, Operation.REMOVEDEFAULTACL.toString());
     HttpURLConnection conn = getConnection(
             Operation.REMOVEDEFAULTACL.getMethod(), params, path, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
 
   /**
@@ -903,7 +895,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(OP_PARAM, Operation.REMOVEACL.toString());
     HttpURLConnection conn = getConnection(Operation.REMOVEACL.getMethod(),
             params, path, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
 
   /**
@@ -921,7 +913,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(ACLSPEC_PARAM, AclEntry.aclSpecToString(aclSpec));
     HttpURLConnection conn = getConnection(Operation.SETACL.getMethod(),
                                            params, path, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
 
   /**
@@ -936,7 +928,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(OP_PARAM, Operation.GETACLSTATUS.toString());
     HttpURLConnection conn = getConnection(Operation.GETACLSTATUS.getMethod(),
             params, path, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     json = (JSONObject) json.get(ACL_STATUS_JSON);
     return createAclStatus(json);
@@ -997,7 +989,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(OP_PARAM, Operation.GETCONTENTSUMMARY.toString());
     HttpURLConnection conn =
       getConnection(Operation.GETCONTENTSUMMARY.getMethod(), params, f, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) ((JSONObject)
       HttpFSUtils.jsonParse(conn)).get(CONTENT_SUMMARY_JSON);
     return new ContentSummary((Long) json.get(CONTENT_SUMMARY_LENGTH_JSON),
@@ -1015,7 +1007,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(OP_PARAM, Operation.GETFILECHECKSUM.toString());
     HttpURLConnection conn =
       getConnection(Operation.GETFILECHECKSUM.getMethod(), params, f, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     final JSONObject json = (JSONObject) ((JSONObject)
       HttpFSUtils.jsonParse(conn)).get(FILE_CHECKSUM_JSON);
     return new FileChecksum() {
@@ -1116,7 +1108,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(XATTR_SET_FLAG_PARAM, EnumSetParam.toString(flag));
     HttpURLConnection conn = getConnection(Operation.SETXATTR.getMethod(),
         params, f, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
 
   @Override
@@ -1126,7 +1118,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(XATTR_NAME_PARAM, name);
     HttpURLConnection conn = getConnection(Operation.GETXATTRS.getMethod(),
         params, f, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     Map<String, byte[]> xAttrs = createXAttrMap(
         (JSONArray) json.get(XATTRS_JSON));
@@ -1170,7 +1162,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(OP_PARAM, Operation.GETXATTRS.toString());
     HttpURLConnection conn = getConnection(Operation.GETXATTRS.getMethod(),
         params, f, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     return createXAttrMap((JSONArray) json.get(XATTRS_JSON));
   }
@@ -1186,7 +1178,7 @@ public class HttpFSFileSystem extends FileSystem
     multiValuedParams.put(XATTR_NAME_PARAM, names);
     HttpURLConnection conn = getConnection(Operation.GETXATTRS.getMethod(),
         params, multiValuedParams, f, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     return createXAttrMap((JSONArray) json.get(XATTRS_JSON));
   }
@@ -1197,7 +1189,7 @@ public class HttpFSFileSystem extends FileSystem
     params.put(OP_PARAM, Operation.LISTXATTRS.toString());
     HttpURLConnection conn = getConnection(Operation.LISTXATTRS.getMethod(),
         params, f, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     return createXAttrNames((String) json.get(XATTRNAMES_JSON));
   }
@@ -1209,6 +1201,6 @@ public class HttpFSFileSystem extends FileSystem
     params.put(XATTR_NAME_PARAM, name);
     HttpURLConnection conn = getConnection(Operation.REMOVEXATTR.getMethod(),
         params, f, true);
-    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
 }
