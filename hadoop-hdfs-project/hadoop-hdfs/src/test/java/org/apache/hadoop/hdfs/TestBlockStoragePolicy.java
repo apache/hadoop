@@ -19,23 +19,26 @@ package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.BlockStoragePolicy.ID_UNSPECIFIED;
 
+import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.server.blockmanagement.*;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.net.Node;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -838,9 +841,7 @@ public class TestBlockStoragePolicy {
       checkDirectoryListing(dirList, WARM, COLD); // bar is warm, foo is cold
       checkDirectoryListing(barList, WARM, HOT);
     } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
+      cluster.shutdown();
     }
   }
 
@@ -920,9 +921,7 @@ public class TestBlockStoragePolicy {
       checkDirectoryListing(fs.getClient().listPaths(s1foo.toString(),
           HdfsFileStatus.EMPTY_NAME).getPartialListing(), COLD, HOT);
     } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
+      cluster.shutdown();
     }
   }
 
@@ -937,9 +936,7 @@ public class TestBlockStoragePolicy {
   private void checkLocatedBlocks(HdfsLocatedFileStatus status, int blockNum,
                                   int replicaNum, StorageType... types) {
     List<StorageType> typeList = Lists.newArrayList();
-    for (StorageType type : types) {
-      typeList.add(type);
-    }
+    Collections.addAll(typeList, types);
     LocatedBlocks lbs = status.getBlockLocations();
     Assert.assertEquals(blockNum, lbs.getLocatedBlocks().size());
     for (LocatedBlock lb : lbs.getLocatedBlocks()) {
@@ -1028,5 +1025,51 @@ public class TestBlockStoragePolicy {
             StorageType.ARCHIVE, StorageType.ARCHIVE},
         new StorageType[]{StorageType.ARCHIVE, StorageType.ARCHIVE,
             StorageType.ARCHIVE, StorageType.ARCHIVE, StorageType.ARCHIVE});
+  }
+
+  @Test
+  public void testChooseTargetWithTopology() throws Exception {
+    BlockStoragePolicy policy1 = new BlockStoragePolicy((byte) 9, "TEST1",
+        new StorageType[]{StorageType.SSD, StorageType.DISK,
+            StorageType.ARCHIVE}, new StorageType[]{}, new StorageType[]{});
+    BlockStoragePolicy policy2 = new BlockStoragePolicy((byte) 11, "TEST2",
+        new StorageType[]{StorageType.DISK, StorageType.SSD,
+            StorageType.ARCHIVE}, new StorageType[]{}, new StorageType[]{});
+
+    final String[] racks = {"/d1/r1", "/d1/r2", "/d1/r2"};
+    final String[] hosts = {"host1", "host2", "host3"};
+    final StorageType[] types = {StorageType.DISK, StorageType.SSD,
+        StorageType.ARCHIVE};
+
+    final DatanodeStorageInfo[] storages = DFSTestUtil
+        .createDatanodeStorageInfos(3, racks, hosts, types);
+    final DatanodeDescriptor[] dataNodes = DFSTestUtil
+        .toDatanodeDescriptor(storages);
+
+    FileSystem.setDefaultUri(conf, "hdfs://localhost:0");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
+    File baseDir = PathUtils.getTestDir(TestReplicationPolicy.class);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+        new File(baseDir, "name").getPath());
+    DFSTestUtil.formatNameNode(conf);
+    NameNode namenode = new NameNode(conf);
+
+    final BlockManager bm = namenode.getNamesystem().getBlockManager();
+    BlockPlacementPolicy replicator = bm.getBlockPlacementPolicy();
+    NetworkTopology cluster = bm.getDatanodeManager().getNetworkTopology();
+    for (DatanodeDescriptor datanode : dataNodes) {
+      cluster.add(datanode);
+    }
+
+    DatanodeStorageInfo[] targets = replicator.chooseTarget("/foo", 3,
+        dataNodes[0], Collections.<DatanodeStorageInfo>emptyList(), false,
+        new HashSet<Node>(), 0, policy1);
+    System.out.println(Arrays.asList(targets));
+    Assert.assertEquals(3, targets.length);
+    targets = replicator.chooseTarget("/foo", 3,
+        dataNodes[0], Collections.<DatanodeStorageInfo>emptyList(), false,
+        new HashSet<Node>(), 0, policy2);
+    System.out.println(Arrays.asList(targets));
+    Assert.assertEquals(3, targets.length);
   }
 }

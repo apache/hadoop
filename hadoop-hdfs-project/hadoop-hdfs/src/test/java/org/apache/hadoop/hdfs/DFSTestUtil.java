@@ -951,9 +951,14 @@ public class DFSTestUtil {
   public static DatanodeStorageInfo[] createDatanodeStorageInfos(int n) {
     return createDatanodeStorageInfos(n, null, null);
   }
-    
+
   public static DatanodeStorageInfo[] createDatanodeStorageInfos(
       int n, String[] racks, String[] hostnames) {
+    return createDatanodeStorageInfos(n, racks, hostnames, null);
+  }
+
+  public static DatanodeStorageInfo[] createDatanodeStorageInfos(
+      int n, String[] racks, String[] hostnames, StorageType[] types) {
     DatanodeStorageInfo[] storages = new DatanodeStorageInfo[n];
     for(int i = storages.length; i > 0; ) {
       final String storageID = "s" + i;
@@ -961,16 +966,30 @@ public class DFSTestUtil {
       i--;
       final String rack = (racks!=null && i < racks.length)? racks[i]: "defaultRack";
       final String hostname = (hostnames!=null && i < hostnames.length)? hostnames[i]: "host";
-      storages[i] = createDatanodeStorageInfo(storageID, ip, rack, hostname);
+      final StorageType type = (types != null && i < types.length) ? types[i]
+          : StorageType.DEFAULT;
+      storages[i] = createDatanodeStorageInfo(storageID, ip, rack, hostname,
+          type);
     }
     return storages;
   }
+
   public static DatanodeStorageInfo createDatanodeStorageInfo(
       String storageID, String ip, String rack, String hostname) {
-    final DatanodeStorage storage = new DatanodeStorage(storageID);
-    final DatanodeDescriptor dn = BlockManagerTestUtil.getDatanodeDescriptor(ip, rack, storage, hostname);
+    return createDatanodeStorageInfo(storageID, ip, rack, hostname,
+        StorageType.DEFAULT);
+  }
+
+  public static DatanodeStorageInfo createDatanodeStorageInfo(
+      String storageID, String ip, String rack, String hostname,
+      StorageType type) {
+    final DatanodeStorage storage = new DatanodeStorage(storageID,
+        DatanodeStorage.State.NORMAL, type);
+    final DatanodeDescriptor dn = BlockManagerTestUtil.getDatanodeDescriptor(
+        ip, rack, storage, hostname);
     return BlockManagerTestUtil.newDatanodeStorageInfo(dn, storage);
   }
+
   public static DatanodeDescriptor[] toDatanodeDescriptor(
       DatanodeStorageInfo[] storages) {
     DatanodeDescriptor[] datanodes = new DatanodeDescriptor[storages.length];

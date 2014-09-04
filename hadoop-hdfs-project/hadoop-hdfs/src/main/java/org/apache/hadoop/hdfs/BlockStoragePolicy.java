@@ -23,6 +23,7 @@ import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -99,7 +100,8 @@ public class BlockStoragePolicy {
   /** The fallback storage type for replication. */
   private final StorageType[] replicationFallbacks;
 
-  BlockStoragePolicy(byte id, String name, StorageType[] storageTypes,
+  @VisibleForTesting
+  public BlockStoragePolicy(byte id, String name, StorageType[] storageTypes,
       StorageType[] creationFallbacks, StorageType[] replicationFallbacks) {
     this.id = id;
     this.name = name;

@@ -453,7 +453,7 @@ public class BlockManager {
   }
 
   @VisibleForTesting
-  BlockPlacementPolicy getBlockPlacementPolicy() {
+  public BlockPlacementPolicy getBlockPlacementPolicy() {
     return blockplacement;
   }
 
