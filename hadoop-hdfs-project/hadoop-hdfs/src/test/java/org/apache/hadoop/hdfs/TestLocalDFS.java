@@ -90,13 +90,40 @@ public class TestLocalDFS {
 
       // test home directory
       Path home = 
-        fileSys.makeQualified(new Path("/user/" + getUserName(fileSys))); 
+        fileSys.makeQualified(
+            new Path(DFSConfigKeys.DFS_USER_HOME_DIR_PREFIX_DEFAULT
+                + "/" + getUserName(fileSys))); 
       Path fsHome = fileSys.getHomeDirectory();
       assertEquals(home, fsHome);
 
     } finally {
       fileSys.close();
       cluster.shutdown();
+    }
+  }
+  
+  /**
+   * Tests get/set working directory in DFS.
+   */
+  @Test(timeout=30000)
+  public void testHomeDirectory() throws IOException {
+    final String[] homeBases = new String[] {"/home", "/home/user"};
+    Configuration conf = new HdfsConfiguration();
+    for (final String homeBase : homeBases) {
+      conf.set(DFSConfigKeys.DFS_USER_HOME_DIR_PREFIX_KEY, homeBase);
+      MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+      FileSystem fileSys = cluster.getFileSystem();
+      try {    
+        // test home directory
+        Path home = 
+            fileSys.makeQualified(
+                new Path(homeBase + "/" + getUserName(fileSys))); 
+        Path fsHome = fileSys.getHomeDirectory();
+        assertEquals(home, fsHome);
+      } finally {
+        fileSys.close();
+        cluster.shutdown();
+      }
     }
   }
 }
