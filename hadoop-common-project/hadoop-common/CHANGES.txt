@@ -416,6 +416,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11012. hadoop fs -text of zero-length file causes EOFException
     (Eric Payne via jlowe)
 
+    HADOOP-11063. KMS cannot deploy on Windows, because class names are too long.
+    (cnauroth)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
