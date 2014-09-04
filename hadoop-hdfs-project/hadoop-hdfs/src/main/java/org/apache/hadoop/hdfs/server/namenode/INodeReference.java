@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
-import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
 
 import com.google.common.base.Preconditions;
 
@@ -450,7 +449,8 @@ public abstract class INodeReference extends INode {
           end = mid;
         }
       }
-      if (withNameList.get(start).lastSnapshotId >= snapshotId) {
+      if (start < withNameList.size() &&
+          withNameList.get(start).lastSnapshotId >= snapshotId) {
         return withNameList.get(start);
       } else {
         return this.getParentReference();
