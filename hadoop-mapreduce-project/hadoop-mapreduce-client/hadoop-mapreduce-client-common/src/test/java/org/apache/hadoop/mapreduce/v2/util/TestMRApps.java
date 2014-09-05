@@ -515,7 +515,7 @@ public class TestMRApps {
   public void testSystemClasses() {
     final List<String> systemClasses =
         Arrays.asList(StringUtils.getTrimmedStrings(
-        ApplicationClassLoader.DEFAULT_SYSTEM_CLASSES));
+        ApplicationClassLoader.SYSTEM_CLASSES_DEFAULT));
     for (String defaultXml : DEFAULT_XMLS) {
       assertTrue(defaultXml + " must be system resource",
           ApplicationClassLoader.isSystemClass(defaultXml, systemClasses));

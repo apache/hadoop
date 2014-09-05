@@ -131,7 +131,7 @@ public class TestRunJar extends TestCase {
     String thirdCls = ClassLoaderCheckThird.class.getName();
     String systemClasses = "-" + mainCls + "," +
         "-" + thirdCls + "," +
-        ApplicationClassLoader.DEFAULT_SYSTEM_CLASSES;
+        ApplicationClassLoader.SYSTEM_CLASSES_DEFAULT;
     when(runJar.getSystemClasses()).thenReturn(systemClasses);
 
     // create the test jar
