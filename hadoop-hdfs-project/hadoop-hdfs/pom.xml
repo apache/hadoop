@@ -558,11 +558,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                     </exec>
                     <exec executable="msbuild" dir="${project.build.directory}/native"
                         failonerror="true">
-                      <arg line="ALL_BUILD.vcxproj /nologo /p:Configuration=Release"/>
+                      <arg line="ALL_BUILD.vcxproj /nologo /p:Configuration=RelWithDebInfo /p:LinkIncremental=false"/>
                     </exec>
                     <!-- Copy for inclusion in distribution. -->
                     <copy todir="${project.build.directory}/bin">
-                      <fileset dir="${project.build.directory}/native/target/bin/Release"/>
+                      <fileset dir="${project.build.directory}/native/target/bin/RelWithDebInfo"/>
                     </copy>
                   </target>
                 </configuration>
@@ -580,7 +580,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                       <attribute name="test"/>
                       <sequential>
                         <echo message="Running @{test}"/>
-                        <exec executable="${project.build.directory}/native/Release/@{test}" failonerror="true" dir="${project.build.directory}/native/">
+                        <exec executable="${project.build.directory}/native/RelWithDebInfo/@{test}" failonerror="true" dir="${project.build.directory}/native/">
                           <env key="CLASSPATH" value="${test_classpath}:${compile_classpath}"/>
                           <!-- HADOOP_HOME required to find winutils. -->
                           <env key="HADOOP_HOME" value="${hadoop.common.build.dir}"/>
