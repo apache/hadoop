@@ -644,9 +644,9 @@ function hadoop_verify_secure_prereq
   # this.
   
   # ${EUID} comes from the shell itself!
-  if [[ "${EUID}" -ne 0 ]] || [[ -n "${HADOOP_SECURE_COMMAND}" ]]; then
+  if [[ "${EUID}" -ne 0 ]] && [[ -z "${HADOOP_SECURE_COMMAND}" ]]; then
     hadoop_error "ERROR: You must be a privileged in order to run a secure serice."
-    return 1
+    exit 1
   else
     return 0
   fi
