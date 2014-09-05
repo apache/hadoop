@@ -1157,7 +1157,7 @@ public class TestKMS {
         final URI uri = createKMSUri(getKMSUrl());
 
         // proxyuser client using kerberos credentials
-        UserGroupInformation clientUgi = UserGroupInformation.
+        final UserGroupInformation clientUgi = UserGroupInformation.
             loginUserFromKeytabAndReturnUGI("client", keytab.getAbsolutePath());
         clientUgi.doAs(new PrivilegedExceptionAction<Void>() {
           @Override
@@ -1167,7 +1167,7 @@ public class TestKMS {
 
             // authorized proxyuser
             UserGroupInformation fooUgi =
-                UserGroupInformation.createRemoteUser("foo");
+                UserGroupInformation.createProxyUser("foo", clientUgi);
             fooUgi.doAs(new PrivilegedExceptionAction<Void>() {
               @Override
               public Void run() throws Exception {
@@ -1179,7 +1179,7 @@ public class TestKMS {
 
             // unauthorized proxyuser
             UserGroupInformation foo1Ugi =
-                UserGroupInformation.createRemoteUser("foo1");
+                UserGroupInformation.createProxyUser("foo1", clientUgi);
             foo1Ugi.doAs(new PrivilegedExceptionAction<Void>() {
               @Override
               public Void run() throws Exception {
