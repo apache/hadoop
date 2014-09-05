@@ -17,14 +17,6 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.UnknownHostException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -38,6 +30,14 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.test.PathUtils;
 import org.junit.Test;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.UnknownHostException;
+
+import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * This test checks correctness of port usage by hdfs components:
@@ -245,7 +245,7 @@ public class TestHDFSServerPorts {
     return true;
   }
 
-  @Test
+  @Test(timeout = 300000)
   public void testNameNodePorts() throws Exception {
     runTestNameNodePorts(false);
     runTestNameNodePorts(true);
@@ -296,7 +296,7 @@ public class TestHDFSServerPorts {
   /**
    * Verify datanode port usage.
    */
-  @Test
+  @Test(timeout = 300000)
   public void testDataNodePorts() throws Exception {
     NameNode nn = null;
     try {
@@ -332,7 +332,7 @@ public class TestHDFSServerPorts {
   /**
    * Verify secondary namenode port usage.
    */
-  @Test
+  @Test(timeout = 300000)
   public void testSecondaryNodePorts() throws Exception {
     NameNode nn = null;
     try {
@@ -361,7 +361,7 @@ public class TestHDFSServerPorts {
     /**
      * Verify BackupNode port usage.
      */
-  @Test
+    @Test(timeout = 300000)
     public void testBackupNodePorts() throws Exception {
       NameNode nn = null;
       try {
