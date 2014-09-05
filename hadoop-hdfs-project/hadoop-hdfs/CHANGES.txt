@@ -438,6 +438,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6959. Make the HDFS home directory location customizable. (yzhang via
     cmccabe)
 
+    HDFS-6886. Use single editlog record for creating file + overwrite. (Yi Liu
+    via jing9)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

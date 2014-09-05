@@ -147,12 +147,7 @@ public class TestDFSInotifyEventInputStream {
       Assert.assertTrue(re2.getSrcPath().equals("/file4"));
       Assert.assertTrue(re.getTimestamp() > 0);
 
-      // DeleteOp
-      next = waitForNextEvent(eis);
-      Assert.assertTrue(next.getEventType() == Event.EventType.UNLINK);
-      Assert.assertTrue(((Event.UnlinkEvent) next).getPath().equals("/file2"));
-
-      // AddOp
+      // AddOp with overwrite
       next = waitForNextEvent(eis);
       Assert.assertTrue(next.getEventType() == Event.EventType.CREATE);
       Event.CreateEvent ce = (Event.CreateEvent) next;
@@ -161,6 +156,7 @@ public class TestDFSInotifyEventInputStream {
       Assert.assertTrue(ce.getCtime() > 0);
       Assert.assertTrue(ce.getReplication() > 0);
       Assert.assertTrue(ce.getSymlinkTarget() == null);
+      Assert.assertTrue(ce.getOverwrite());
 
       // CloseOp
       next = waitForNextEvent(eis);

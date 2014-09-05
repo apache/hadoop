@@ -99,7 +99,7 @@ public class CreateEditsLog {
       INodeFile fileUc = new INodeFile(inodeId.nextValue(), null,
           p, 0L, 0L, BlockInfo.EMPTY_ARRAY, replication, blockSize);
       fileUc.toUnderConstruction("", "");
-      editLog.logOpenFile(filePath, fileUc, false);
+      editLog.logOpenFile(filePath, fileUc, false, false);
       editLog.logCloseFile(filePath, inode);
 
       if (currentBlockId - bidAtSync >= 2000) { // sync every 2K blocks
