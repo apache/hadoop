@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.Ref
 import org.apache.hadoop.hdfs.util.XMLUtils;
 import org.apache.hadoop.hdfs.util.XMLUtils.InvalidXmlException;
 import org.apache.hadoop.hdfs.util.XMLUtils.Stanza;
+import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.ShortWritable;
@@ -88,6 +89,7 @@ public class FSImageSerialization {
     final IntWritable U_INT = new IntWritable();
     final LongWritable U_LONG = new LongWritable();
     final FsPermission FILE_PERM = new FsPermission((short) 0);
+    final BooleanWritable U_BOOLEAN = new BooleanWritable();
   }
 
   private static void writePermissionStatus(INodeAttributes inode,
@@ -364,6 +366,21 @@ public class FSImageSerialization {
     LongWritable uLong = TL_DATA.get().U_LONG;
     uLong.set(value);
     uLong.write(out);
+  }
+  
+  /** read the boolean value */
+  static boolean readBoolean(DataInput in) throws IOException {
+    BooleanWritable uBoolean = TL_DATA.get().U_BOOLEAN;
+    uBoolean.readFields(in);
+    return uBoolean.get();
+  }
+  
+  /** write the boolean value */
+  static void writeBoolean(boolean value, DataOutputStream out) 
+      throws IOException {
+    BooleanWritable uBoolean = TL_DATA.get().U_BOOLEAN;
+    uBoolean.set(value);
+    uBoolean.write(out);
   }
   
   /** read the int value */

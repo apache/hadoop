@@ -18,11 +18,13 @@
 package org.apache.hadoop.hdfs.tools;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_INTERNAL_NAMESERVICES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICES;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -121,13 +123,13 @@ public class TestGetConf {
       TestType type, HdfsConfiguration conf) throws IOException {
     switch (type) {
     case NAMENODE:
-      return DFSUtil.getNNServiceRpcAddresses(conf);
+      return DFSUtil.getNNServiceRpcAddressesForCluster(conf);
     case BACKUP:
       return DFSUtil.getBackupNodeAddresses(conf);
     case SECONDARY:
       return DFSUtil.getSecondaryNameNodeAddresses(conf);
     case NNRPCADDRESSES:
-      return DFSUtil.getNNServiceRpcAddresses(conf);
+      return DFSUtil.getNNServiceRpcAddressesForCluster(conf);
     }
     return null;
   }
@@ -226,7 +228,7 @@ public class TestGetConf {
     String[] actual = toStringArray(list);
     Arrays.sort(actual);
     Arrays.sort(expected);
-    assertTrue(Arrays.equals(expected, actual));
+    assertArrayEquals(expected, actual);
 
     // Test GetConf returned addresses
     getAddressListFromTool(type, conf, checkPort, list);
@@ -425,7 +427,23 @@ public class TestGetConf {
     assertEquals(hostsFile.toUri().getPath(),ret.trim());
     cleanupFile(localFileSys, excludeFile.getParent());
   }
-  
+
+  @Test
+  public void testIncludeInternalNameServices() throws Exception {
+    final int nsCount = 10;
+    final int remoteNsCount = 4;
+    HdfsConfiguration conf = new HdfsConfiguration();
+    setupNameServices(conf, nsCount);
+    setupAddress(conf, DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, nsCount, 1000);
+    setupAddress(conf, DFS_NAMENODE_RPC_ADDRESS_KEY, nsCount, 1500);
+    conf.set(DFS_INTERNAL_NAMESERVICES_KEY, "ns1");
+    setupStaticHostResolution(nsCount);
+
+    String[] includedNN = new String[] {"nn1:1001"};
+    verifyAddresses(conf, TestType.NAMENODE, false, includedNN);
+    verifyAddresses(conf, TestType.NNRPCADDRESSES, true, includedNN);
+  }
+
   private void writeConfigFile(Path name, ArrayList<String> nodes) 
       throws IOException {
       // delete if it already exists

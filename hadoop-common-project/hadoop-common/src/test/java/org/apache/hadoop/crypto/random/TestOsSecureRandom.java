@@ -22,6 +22,7 @@ import java.util.Arrays;
 
 import org.apache.commons.lang.SystemUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -135,5 +136,19 @@ public class TestOsSecureRandom {
       random.nextLong();
     }
     random.close();
+  }
+  
+  @Test(timeout=120000)
+  public void testOsSecureRandomSetConf() throws IOException {
+    Assume.assumeTrue(SystemUtils.IS_OS_LINUX);
+    OsSecureRandom random = new OsSecureRandom();
+    for(int n = 0; n < 10; ++n) {
+      random.setConf(new Configuration());
+      String[] scmd = new String[] {"/bin/sh", "-c", "lsof | wc -l"};
+      ShellCommandExecutor sce = new ShellCommandExecutor(scmd);
+      sce.execute(); 
+      System.out.println("==lsof result " + n + ":");
+      System.out.println(sce.getOutput());
+    }
   }
 }

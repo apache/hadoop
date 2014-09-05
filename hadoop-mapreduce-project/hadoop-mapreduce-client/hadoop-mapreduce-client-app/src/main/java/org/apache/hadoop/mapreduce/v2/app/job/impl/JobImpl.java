@@ -1285,6 +1285,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         msg.append(" too many reduces;");
       if (!smallInput)
         msg.append(" too much input;");
+      if (!smallCpu)
+        msg.append(" too much CPU;");
       if (!smallMemory)
         msg.append(" too much RAM;");
       if (!notChainJob)

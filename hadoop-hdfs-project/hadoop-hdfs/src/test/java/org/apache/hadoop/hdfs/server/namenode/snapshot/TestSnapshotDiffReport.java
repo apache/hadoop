@@ -492,4 +492,40 @@ public class TestSnapshotDiffReport {
         new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("foo"),
             DFSUtil.string2Bytes("bar")));
   }
+
+  /**
+   * Nested renamed dir/file and the withNameList in the WithCount node of the
+   * parental directory is empty due to snapshot deletion. See HDFS-6996 for
+   * details.
+   */
+  @Test
+  public void testDiffReportWithRenameAndSnapshotDeletion() throws Exception {
+    final Path root = new Path("/");
+    final Path foo = new Path(root, "foo");
+    final Path bar = new Path(foo, "bar");
+    DFSTestUtil.createFile(hdfs, bar, BLOCKSIZE, REPLICATION, seed);
+
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s0");
+    // rename /foo to /foo2
+    final Path foo2 = new Path(root, "foo2");
+    hdfs.rename(foo, foo2);
+    // now /foo/bar becomes /foo2/bar
+    final Path bar2 = new Path(foo2, "bar");
+
+    // delete snapshot s0 so that the withNameList inside of the WithCount node
+    // of foo becomes empty
+    hdfs.deleteSnapshot(root, "s0");
+
+    // create snapshot s1 and rename bar again
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s1");
+    final Path bar3 = new Path(foo2, "bar-new");
+    hdfs.rename(bar2, bar3);
+
+    // we always put modification on the file before rename
+    verifyDiffReport(root, "s1", "",
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("foo2")),
+        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("foo2/bar"),
+            DFSUtil.string2Bytes("foo2/bar-new")));
+  }
 }

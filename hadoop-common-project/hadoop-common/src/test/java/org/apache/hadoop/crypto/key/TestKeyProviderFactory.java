@@ -357,4 +357,17 @@ public class TestKeyProviderFactory {
     }
   }
 
+  @Test
+  public void testGetProviderViaURI() throws Exception {
+    Configuration conf = new Configuration(false);
+    URI uri = new URI(JavaKeyStoreProvider.SCHEME_NAME + "://file" + tmpDir +
+        "/test.jks");
+    KeyProvider kp = KeyProviderFactory.get(uri, conf);
+    Assert.assertNotNull(kp);
+    Assert.assertEquals(JavaKeyStoreProvider.class, kp.getClass());
+    uri = new URI("foo://bar");
+    kp = KeyProviderFactory.get(uri, conf);
+    Assert.assertNull(kp);
+
+  }
 }

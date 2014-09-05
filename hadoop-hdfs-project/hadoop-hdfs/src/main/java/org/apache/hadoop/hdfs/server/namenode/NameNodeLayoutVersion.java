@@ -66,7 +66,9 @@ public class NameNodeLayoutVersion {
     ROLLING_UPGRADE(-55, -53, "Support rolling upgrade", false),
     EDITLOG_LENGTH(-56, "Add length field to every edit log op"),
     XATTRS(-57, "Extended attributes"),
-    BLOCK_STORAGE_POLICY(-58, "Block Storage policy");
+    CREATE_OVERWRITE(-58, "Use single editlog record for " +
+        "creating file with overwrite"),
+    BLOCK_STORAGE_POLICY(-59, "Block Storage policy");
     
     private final FeatureInfo info;
 

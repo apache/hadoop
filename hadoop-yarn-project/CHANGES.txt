@@ -175,6 +175,12 @@ Release 2.6.0 - UNRELEASED
     YARN-1506. Changed RMNode/SchedulerNode to update resource with event
     notification. (Junping Du via jianhe)
 
+    YARN-2509. Enable Cross Origin Filter for timeline server only and not all
+    Yarn servers (Mit Desai via jeagles)
+
+    YARN-2511. Allowed all origins by default when CrossOriginFilter is
+    enabled. (Jonathan Eagles via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -274,6 +280,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2462. TestNodeManagerResync#testBlockNewContainerRequestsOnStartAndResync
     should have a test timeout (Eric Payne via jlowe)
+
+    YARN-2431. NM restart: cgroup is not removed for reacquired containers
+    (jlowe)
 
 Release 2.5.1 - UNRELEASED
 

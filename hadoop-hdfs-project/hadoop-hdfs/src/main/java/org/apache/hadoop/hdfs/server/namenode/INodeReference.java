@@ -459,7 +459,8 @@ public abstract class INodeReference extends INode {
           end = mid;
         }
       }
-      if (withNameList.get(start).lastSnapshotId >= snapshotId) {
+      if (start < withNameList.size() &&
+          withNameList.get(start).lastSnapshotId >= snapshotId) {
         return withNameList.get(start);
       } else {
         return this.getParentReference();

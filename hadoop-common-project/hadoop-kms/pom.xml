@@ -243,6 +243,7 @@
               <goal>war</goal>
             </goals>
             <configuration>
+              <archiveClasses>true</archiveClasses>
               <warName>kms</warName>
               <webappDirectory>${project.build.directory}/kms
               </webappDirectory>

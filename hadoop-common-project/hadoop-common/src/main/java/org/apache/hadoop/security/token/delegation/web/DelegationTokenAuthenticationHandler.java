@@ -29,6 +29,7 @@ import org.apache.hadoop.security.authentication.server.AuthenticationToken;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
+import org.apache.hadoop.util.HttpExceptionUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import javax.servlet.ServletException;
@@ -346,8 +347,9 @@ public abstract class DelegationTokenAuthenticationHandler
         token.setExpires(0);
         request.setAttribute(DELEGATION_TOKEN_UGI_ATTRIBUTE, ugi);
       } catch (Throwable ex) {
-        throw new AuthenticationException("Could not verify DelegationToken, " +
-            ex.toString(), ex);
+        token = null;
+        HttpExceptionUtils.createServletExceptionResponse(response,
+            HttpServletResponse.SC_FORBIDDEN, new AuthenticationException(ex));
       }
     } else {
       token = authHandler.authenticate(request, response);

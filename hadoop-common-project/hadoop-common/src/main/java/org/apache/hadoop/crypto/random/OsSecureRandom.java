@@ -23,6 +23,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Random;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -37,6 +39,8 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY
  */
 @InterfaceAudience.Private
 public class OsSecureRandom extends Random implements Closeable, Configurable {
+  public static final Log LOG = LogFactory.getLog(OsSecureRandom.class);
+  
   private static final long serialVersionUID = 6391500337172057900L;
 
   private transient Configuration conf;
@@ -72,11 +76,19 @@ public class OsSecureRandom extends Random implements Closeable, Configurable {
         HADOOP_SECURITY_SECURE_RANDOM_DEVICE_FILE_PATH_KEY,
         HADOOP_SECURITY_SECURE_RANDOM_DEVICE_FILE_PATH_DEFAULT);
     File randomDevFile = new File(randomDevPath);
+
     try {
+      close();
       this.stream = new FileInputStream(randomDevFile);
-      fillReservoir(0);
     } catch (IOException e) {
       throw new RuntimeException(e);
+    }
+
+    try {
+      fillReservoir(0);
+    } catch (RuntimeException e) {
+      close();
+      throw e;
     }
   }
 
@@ -109,7 +121,10 @@ public class OsSecureRandom extends Random implements Closeable, Configurable {
   }
 
   @Override
-  synchronized public void close() throws IOException {
-    stream.close();
+  synchronized public void close() {
+    if (stream != null) {
+      IOUtils.cleanup(LOG, stream);
+      stream = null;
+    }
   }
 }

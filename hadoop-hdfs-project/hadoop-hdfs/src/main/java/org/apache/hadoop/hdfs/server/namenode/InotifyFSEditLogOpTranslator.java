@@ -50,6 +50,7 @@ public class InotifyFSEditLogOpTranslator {
             .ownerName(addOp.permissions.getUserName())
             .groupName(addOp.permissions.getGroupName())
             .perms(addOp.permissions.getPermission())
+            .overwrite(addOp.overwrite)
             .iNodeType(Event.CreateEvent.INodeType.FILE).build() };
       } else {
         return new Event[] { new Event.AppendEvent(addOp.path) };

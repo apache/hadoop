@@ -90,7 +90,7 @@ public class TestTools {
       fail("testDFSAdminHelp error" + e);
     }
 
-    String pattern = "Usage: java DFSAdmin";
+    String pattern = "Usage: hdfs dfsadmin";
     checkOutput(new String[] { "-cancel", "-renew" }, pattern, System.err,
         DFSAdmin.class);
   }
