@@ -330,6 +330,9 @@ Trunk (Unreleased)
 
     HADOOP-11033. shell scripts ignore JAVA_HOME on OS X. (aw)
 
+    HADOOP-11052. hadoop_verify_secure_prereq's results aren't checked 
+    in bin/hdfs (aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
