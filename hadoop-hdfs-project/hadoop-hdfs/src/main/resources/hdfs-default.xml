@@ -1116,6 +1116,16 @@
 </property>
 
 <property>
+  <name>dfs.internal.nameservices</name>
+  <value></value>
+  <description>
+    Comma-separated list of nameservices that belong to this cluster.
+    Datanode will report to all the nameservices in this list. By default
+    this is set to the value of dfs.nameservices.
+  </description>
+</property>
+
+<property>
   <name>dfs.ha.namenodes.EXAMPLENAMESERVICE</name>
   <value></value>
   <description>
@@ -2095,6 +2105,14 @@
     in a single RPC response. The default value attempts to amortize away
     the overhead for this RPC while avoiding huge memory requirements for the
     client and NameNode (1000 events should consume no more than 1 MB.)
+  </description>
+</property>
+
+<property>
+  <name>dfs.user.home.dir.prefix</name>
+  <value>/user</value>
+  <description>The directory to prepend to user name to get the user's
+    home direcotry.
   </description>
 </property>
 

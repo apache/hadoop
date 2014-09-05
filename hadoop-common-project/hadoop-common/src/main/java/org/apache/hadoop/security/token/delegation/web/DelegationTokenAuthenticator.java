@@ -26,6 +26,7 @@ import org.apache.hadoop.security.authentication.client.Authenticator;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
+import org.apache.hadoop.util.HttpExceptionUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -217,7 +218,7 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
     AuthenticatedURL aUrl = new AuthenticatedURL(this);
     HttpURLConnection conn = aUrl.openConnection(url, token);
     conn.setRequestMethod(operation.getHttpMethod());
-    validateResponse(conn, HttpURLConnection.HTTP_OK);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     if (hasResponse) {
       String contentType = conn.getHeaderField(CONTENT_TYPE);
       contentType = (contentType != null) ? contentType.toLowerCase()
@@ -239,23 +240,6 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
       }
     }
     return ret;
-  }
-
-  @SuppressWarnings("unchecked")
-  private static void validateResponse(HttpURLConnection conn, int expected)
-      throws IOException {
-    int status = conn.getResponseCode();
-    if (status != expected) {
-      try {
-        conn.getInputStream().close();
-      } catch (IOException ex) {
-        //NOP
-      }
-      String msg = String.format("HTTP status, expected [%d], got [%d]: %s", 
-          expected, status, conn.getResponseMessage());
-      LOG.debug(msg);
-      throw new IOException(msg);
-    }
   }
 
 }

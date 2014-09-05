@@ -268,6 +268,8 @@ public class TestKMS {
     List<String> principals = new ArrayList<String>();
     principals.add("HTTP/localhost");
     principals.add("client");
+    principals.add("hdfs");
+    principals.add("otheradmin");
     principals.add("client/host");
     principals.add("client1");
     for (KMSACLs.Type type : KMSACLs.Type.values()) {
@@ -621,12 +623,12 @@ public class TestKMS {
     conf.set("hadoop.kms.authentication.kerberos.name.rules", "DEFAULT");
 
     for (KMSACLs.Type type : KMSACLs.Type.values()) {
-      conf.set(type.getConfigKey(), type.toString());
+      conf.set(type.getAclConfigKey(), type.toString());
     }
-    conf.set(KMSACLs.Type.CREATE.getConfigKey(),
+    conf.set(KMSACLs.Type.CREATE.getAclConfigKey(),
         KMSACLs.Type.CREATE.toString() + ",SET_KEY_MATERIAL");
 
-    conf.set(KMSACLs.Type.ROLLOVER.getConfigKey(),
+    conf.set(KMSACLs.Type.ROLLOVER.getAclConfigKey(),
         KMSACLs.Type.ROLLOVER.toString() + ",SET_KEY_MATERIAL");
 
     writeConf(testDir, conf);
@@ -884,7 +886,7 @@ public class TestKMS {
 
         // test ACL reloading
         Thread.sleep(10); // to ensure the ACLs file modifiedTime is newer
-        conf.set(KMSACLs.Type.CREATE.getConfigKey(), "foo");
+        conf.set(KMSACLs.Type.CREATE.getAclConfigKey(), "foo");
         writeConf(testDir, conf);
         Thread.sleep(1000);
 
@@ -915,6 +917,92 @@ public class TestKMS {
   }
 
   @Test
+  public void testKMSBlackList() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set("hadoop.security.authentication", "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+    File testDir = getTestDir();
+    conf = createBaseKMSConf(testDir);
+    conf.set("hadoop.kms.authentication.type", "kerberos");
+    conf.set("hadoop.kms.authentication.kerberos.keytab",
+        keytab.getAbsolutePath());
+    conf.set("hadoop.kms.authentication.kerberos.principal", "HTTP/localhost");
+    conf.set("hadoop.kms.authentication.kerberos.name.rules", "DEFAULT");
+    for (KMSACLs.Type type : KMSACLs.Type.values()) {
+      conf.set(type.getAclConfigKey(), " ");
+    }
+    conf.set(KMSACLs.Type.CREATE.getAclConfigKey(), "client,hdfs,otheradmin");
+    conf.set(KMSACLs.Type.GENERATE_EEK.getAclConfigKey(), "client,hdfs,otheradmin");
+    conf.set(KMSACLs.Type.DECRYPT_EEK.getAclConfigKey(), "client,hdfs,otheradmin");
+    conf.set(KMSACLs.Type.DECRYPT_EEK.getBlacklistConfigKey(), "hdfs,otheradmin");
+
+    writeConf(testDir, conf);
+
+    runServer(null, null, testDir, new KMSCallable() {
+      @Override
+      public Void call() throws Exception {
+        final Configuration conf = new Configuration();
+        conf.setInt(KeyProvider.DEFAULT_BITLENGTH_NAME, 128);
+        final URI uri = createKMSUri(getKMSUrl());
+
+        doAs("client", new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            try {
+              KMSClientProvider kp = new KMSClientProvider(uri, conf);
+              KeyProvider.KeyVersion kv = kp.createKey("ck0",
+                  new KeyProvider.Options(conf));
+              EncryptedKeyVersion eek =
+                  kp.generateEncryptedKey("ck0");
+              kp.decryptEncryptedKey(eek);
+              Assert.assertNull(kv.getMaterial());
+            } catch (Exception ex) {
+              Assert.fail(ex.getMessage());
+            }
+            return null;
+          }
+        });
+
+        doAs("hdfs", new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            try {
+              KMSClientProvider kp = new KMSClientProvider(uri, conf);
+              KeyProvider.KeyVersion kv = kp.createKey("ck1",
+                  new KeyProvider.Options(conf));
+              EncryptedKeyVersion eek =
+                  kp.generateEncryptedKey("ck1");
+              kp.decryptEncryptedKey(eek);
+              Assert.fail("admin user must not be allowed to decrypt !!");
+            } catch (Exception ex) {
+            }
+            return null;
+          }
+        });
+
+        doAs("otheradmin", new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            try {
+              KMSClientProvider kp = new KMSClientProvider(uri, conf);
+              KeyProvider.KeyVersion kv = kp.createKey("ck2",
+                  new KeyProvider.Options(conf));
+              EncryptedKeyVersion eek =
+                  kp.generateEncryptedKey("ck2");
+              kp.decryptEncryptedKey(eek);
+              Assert.fail("admin user must not be allowed to decrypt !!");
+            } catch (Exception ex) {
+            }
+            return null;
+          }
+        });
+
+        return null;
+      }
+    });
+  }
+
+  @Test
   public void testServicePrincipalACLs() throws Exception {
     Configuration conf = new Configuration();
     conf.set("hadoop.security.authentication", "kerberos");
@@ -927,9 +1015,9 @@ public class TestKMS {
     conf.set("hadoop.kms.authentication.kerberos.principal", "HTTP/localhost");
     conf.set("hadoop.kms.authentication.kerberos.name.rules", "DEFAULT");
     for (KMSACLs.Type type : KMSACLs.Type.values()) {
-      conf.set(type.getConfigKey(), " ");
+      conf.set(type.getAclConfigKey(), " ");
     }
-    conf.set(KMSACLs.Type.CREATE.getConfigKey(), "client");
+    conf.set(KMSACLs.Type.CREATE.getAclConfigKey(), "client");
 
     writeConf(testDir, conf);
 

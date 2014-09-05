@@ -19,15 +19,12 @@
 package org.apache.hadoop.lib.wsrs;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
+import org.apache.hadoop.util.HttpExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 @InterfaceAudience.Private
 public class ExceptionProvider implements ExceptionMapper<Throwable> {
@@ -36,14 +33,7 @@ public class ExceptionProvider implements ExceptionMapper<Throwable> {
   private static final String ENTER = System.getProperty("line.separator");
 
   protected Response createResponse(Response.Status status, Throwable throwable) {
-    Map<String, Object> json = new LinkedHashMap<String, Object>();
-    json.put(HttpFSFileSystem.ERROR_MESSAGE_JSON, getOneLineMessage(throwable));
-    json.put(HttpFSFileSystem.ERROR_EXCEPTION_JSON, throwable.getClass().getSimpleName());
-    json.put(HttpFSFileSystem.ERROR_CLASSNAME_JSON, throwable.getClass().getName());
-    Map<String, Object> response = new LinkedHashMap<String, Object>();
-    response.put(HttpFSFileSystem.ERROR_JSON, json);
-    log(status, throwable);
-    return Response.status(status).type(MediaType.APPLICATION_JSON).entity(response).build();
+    return HttpExceptionUtils.createJerseyExceptionResponse(status, throwable);
   }
 
   protected String getOneLineMessage(Throwable throwable) {

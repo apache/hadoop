@@ -23,15 +23,18 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.internal.util.reflection.Whitebox;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -128,6 +131,25 @@ public class TestBlockPoolManager {
     assertEquals(
         "create #3\n" +
         "refresh #2\n", log.toString());
+  }
+
+  @Test
+  public void testInternalNameService() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(DFSConfigKeys.DFS_NAMESERVICES, "ns1,ns2,ns3");
+    addNN(conf, "ns1", "mock1:8020");
+    addNN(conf, "ns2", "mock1:8020");
+    addNN(conf, "ns3", "mock1:8020");
+    conf.set(DFSConfigKeys.DFS_INTERNAL_NAMESERVICES_KEY, "ns1");
+    bpm.refreshNamenodes(conf);
+    assertEquals("create #1\n", log.toString());
+    @SuppressWarnings("unchecked")
+    Map<String, BPOfferService> map = (Map<String, BPOfferService>) Whitebox
+            .getInternalState(bpm, "bpByNameserviceId");
+    Assert.assertFalse(map.containsKey("ns2"));
+    Assert.assertFalse(map.containsKey("ns3"));
+    Assert.assertTrue(map.containsKey("ns1"));
+    log.setLength(0);
   }
 
   private static void addNN(Configuration conf, String ns, String addr) {

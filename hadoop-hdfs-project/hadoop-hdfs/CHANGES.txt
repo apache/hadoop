@@ -435,6 +435,15 @@ Release 2.6.0 - UNRELEASED
     HDFS-4257. The ReplaceDatanodeOnFailure policies could have a forgiving
     option (szetszwo via cmccabe)
 
+    HDFS-6959. Make the HDFS home directory location customizable. (yzhang via
+    cmccabe)
+
+    HDFS-6886. Use single editlog record for creating file + overwrite. (Yi Liu
+    via jing9)
+
+    HDFS-6376. Distcp data between two HA clusters requires another configuration.
+    (Dave Marion and Haohui Mai via jing9)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -585,6 +594,14 @@ Release 2.6.0 - UNRELEASED
     HDFS-6972. TestRefreshUserMappings.testRefreshSuperUserGroupsConfiguration
     doesn't decode url correctly. (Yongjun Zhang via wang)
 
+    HDFS-6942. Fix typos in log messages. (Ray Chiang via wheat9)
+
+    HDFS-6848. Lack of synchronization on access to datanodeUuid in
+    DataStorage#format(). (Xiaoyu Yao via Arpit Agarwal)
+
+    HDFS-6996. SnapshotDiff report can hit IndexOutOfBoundsException when there
+    are nested renamed directory/file. (jing9)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
@@ -677,6 +694,14 @@ Release 2.6.0 - UNRELEASED
       HDFS-6839. Fix TestCLI to expect new output. (clamb)
 
       HDFS-6954. With crypto, no native lib systems are too verbose. (clamb via wang)
+
+      HDFS-2975. Rename with overwrite flag true can make NameNode to stuck in safemode 
+      on NN (crash + restart). (Yi Liu via umamahesh)
+
+      HDFS-6905. fs-encryption merge triggered release audit failures. (clamb via tucu)
+
+      HDFS-6714. TestBlocksScheduledCounter#testBlocksScheduledCounter should
+      shutdown cluster (vinayakumarb)
 
 Release 2.5.1 - UNRELEASED
 

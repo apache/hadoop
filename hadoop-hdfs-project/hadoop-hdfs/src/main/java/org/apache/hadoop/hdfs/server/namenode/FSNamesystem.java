@@ -2448,6 +2448,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * A special RetryStartFileException is used to indicate that we should
      * retry creation of a FileEncryptionInfo.
      */
+    BlocksMapUpdateInfo toRemoveBlocks = null;
     try {
       boolean shouldContinue = true;
       int iters = 0;
@@ -2496,9 +2497,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           checkOperation(OperationCategory.WRITE);
           checkNameNodeSafeMode("Cannot create file" + src);
           src = resolvePath(src, pathComponents);
-          startFileInternal(pc, src, permissions, holder, clientMachine, create,
-              overwrite, createParent, replication, blockSize, suite, edek,
-              logRetryCache);
+          toRemoveBlocks = startFileInternal(pc, src, permissions, holder, 
+              clientMachine, create, overwrite, createParent, replication, 
+              blockSize, suite, edek, logRetryCache);
           stat = dir.getFileInfo(src, false,
               FSDirectory.isReservedRawName(srcArg));
         } catch (StandbyException se) {
@@ -2519,6 +2520,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       // They need to be sync'ed even when an exception was thrown.
       if (!skipSync) {
         getEditLog().logSync();
+        if (toRemoveBlocks != null) {
+          removeBlocks(toRemoveBlocks);
+          toRemoveBlocks.clear();
+        }
       }
     }
 
@@ -2535,11 +2540,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * For description of parameters and exceptions thrown see
    * {@link ClientProtocol#create}
    */
-  private void startFileInternal(FSPermissionChecker pc, String src,
-      PermissionStatus permissions, String holder, String clientMachine,
-      boolean create, boolean overwrite, boolean createParent,
-      short replication, long blockSize, CipherSuite suite,
-      EncryptedKeyVersion edek, boolean logRetryEntry)
+  private BlocksMapUpdateInfo startFileInternal(FSPermissionChecker pc, 
+      String src, PermissionStatus permissions, String holder, 
+      String clientMachine, boolean create, boolean overwrite, 
+      boolean createParent, short replication, long blockSize, 
+      CipherSuite suite, EncryptedKeyVersion edek, boolean logRetryEntry)
       throws FileAlreadyExistsException, AccessControlException,
       UnresolvedLinkException, FileNotFoundException,
       ParentNotDirectoryException, RetryStartFileException, IOException {
@@ -2575,9 +2580,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (isPermissionEnabled) {
       if (overwrite && myFile != null) {
         checkPathAccess(pc, src, FsAction.WRITE);
-      } else {
-        checkAncestorAccess(pc, src, FsAction.WRITE);
       }
+      /*
+       * To overwrite existing file, need to check 'w' permission 
+       * of parent (equals to ancestor in this case)
+       */
+      checkAncestorAccess(pc, src, FsAction.WRITE);
     }
 
     if (!createParent) {
@@ -2585,6 +2593,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     try {
+      BlocksMapUpdateInfo toRemoveBlocks = null;
       if (myFile == null) {
         if (!create) {
           throw new FileNotFoundException("Can't overwrite non-existent " +
@@ -2592,11 +2601,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
       } else {
         if (overwrite) {
-          try {
-            deleteInt(src, true, false); // File exists - delete if overwrite
-          } catch (AccessControlException e) {
-            logAuditEvent(false, "delete", src);
-            throw e;
+          toRemoveBlocks = new BlocksMapUpdateInfo();
+          List<INode> toRemoveINodes = new ChunkedArrayList<INode>();
+          long ret = dir.delete(src, toRemoveBlocks, toRemoveINodes, now());
+          if (ret >= 0) {
+            incrDeletedFileCount(ret);
+            removePathAndBlocks(src, null, toRemoveINodes, true);
           }
         } else {
           // If lease soft limit time is expired, recover the lease
@@ -2630,11 +2640,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
 
       // record file record in log, record new generation stamp
-      getEditLog().logOpenFile(src, newNode, logRetryEntry);
+      getEditLog().logOpenFile(src, newNode, overwrite, logRetryEntry);
       if (NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: added " +
             src + " inode " + newNode.getId() + " " + holder);
       }
+      return toRemoveBlocks;
     } catch (IOException ie) {
       NameNode.stateChangeLog.warn("DIR* NameSystem.startFile: " + src + " " +
           ie.getMessage());
@@ -2737,7 +2748,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     if (writeToEditLog) {
-      getEditLog().logOpenFile(src, cons, logRetryCache);
+      getEditLog().logOpenFile(src, cons, false, logRetryCache);
     }
     return ret;
   }
@@ -3627,12 +3638,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     HdfsFileStatus resultingStat = null;
     boolean success = false;
     writeLock();
+    BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot rename " + src);
       src = resolvePath(src, srcComponents);
       dst = resolvePath(dst, dstComponents);
-      renameToInternal(pc, src, dst, cacheEntry != null, options);
+      renameToInternal(pc, src, dst, cacheEntry != null, 
+          collectedBlocks, options);
       resultingStat = getAuditFileInfo(dst, false);
       success = true;
     } finally {
@@ -3640,6 +3653,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       RetryCache.setState(cacheEntry, success);
     }
     getEditLog().logSync();
+    if (!collectedBlocks.getToDeleteList().isEmpty()) {
+      removeBlocks(collectedBlocks);
+      collectedBlocks.clear();
+    }
     if (resultingStat != null) {
       StringBuilder cmd = new StringBuilder("rename options=");
       for (Rename option : options) {
@@ -3649,8 +3666,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
-  private void renameToInternal(FSPermissionChecker pc, String src, String dst,
-      boolean logRetryCache, Options.Rename... options) throws IOException {
+  private void renameToInternal(FSPermissionChecker pc, String src, 
+      String dst, boolean logRetryCache, BlocksMapUpdateInfo collectedBlocks, 
+      Options.Rename... options) throws IOException {
     assert hasWriteLock();
     if (isPermissionEnabled) {
       // Rename does not operates on link targets
@@ -3665,7 +3683,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     waitForLoadingFSImage();
     long mtime = now();
-    dir.renameTo(src, dst, mtime, options);
+    dir.renameTo(src, dst, mtime, collectedBlocks, options);
     getEditLog().logRename(src, dst, mtime, logRetryCache, options);
   }
   

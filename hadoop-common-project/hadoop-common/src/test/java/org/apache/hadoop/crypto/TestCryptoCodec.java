@@ -52,35 +52,40 @@ public class TestCryptoCodec {
   private Configuration conf = new Configuration();
   private int count = 10000;
   private int seed = new Random().nextInt();
+  private final String jceCodecClass = 
+      "org.apache.hadoop.crypto.JceAesCtrCryptoCodec";
+  private final String opensslCodecClass = 
+      "org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec";
   
   @Test(timeout=120000)
   public void testJceAesCtrCryptoCodec() throws Exception {
-    cryptoCodecTest(conf, seed, 0, 
-        "org.apache.hadoop.crypto.JceAesCtrCryptoCodec");
-    cryptoCodecTest(conf, seed, count, 
-        "org.apache.hadoop.crypto.JceAesCtrCryptoCodec");
+    Assume.assumeTrue(NativeCodeLoader.buildSupportsOpenssl());
+    Assert.assertEquals(null, OpensslCipher.getLoadingFailureReason());
+    cryptoCodecTest(conf, seed, 0, jceCodecClass, jceCodecClass);
+    cryptoCodecTest(conf, seed, count, jceCodecClass, jceCodecClass);
+    cryptoCodecTest(conf, seed, count, jceCodecClass, opensslCodecClass);
   }
   
-  @Test(timeout=1200000)
+  @Test(timeout=120000)
   public void testOpensslAesCtrCryptoCodec() throws Exception {
     Assume.assumeTrue(NativeCodeLoader.buildSupportsOpenssl());
     Assert.assertEquals(null, OpensslCipher.getLoadingFailureReason());
-    cryptoCodecTest(conf, seed, 0, 
-        "org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec");
-    cryptoCodecTest(conf, seed, count, 
-        "org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec");
+    cryptoCodecTest(conf, seed, 0, opensslCodecClass, opensslCodecClass);
+    cryptoCodecTest(conf, seed, count, opensslCodecClass, opensslCodecClass);
+    cryptoCodecTest(conf, seed, count, opensslCodecClass, jceCodecClass);
   }
   
   private void cryptoCodecTest(Configuration conf, int seed, int count, 
-      String codecClass) throws IOException, GeneralSecurityException {
-    CryptoCodec codec = null;
+      String encCodecClass, String decCodecClass) throws IOException, 
+      GeneralSecurityException {
+    CryptoCodec encCodec = null;
     try {
-      codec = (CryptoCodec)ReflectionUtils.newInstance(
-          conf.getClassByName(codecClass), conf);
+      encCodec = (CryptoCodec)ReflectionUtils.newInstance(
+          conf.getClassByName(encCodecClass), conf);
     } catch (ClassNotFoundException cnfe) {
       throw new IOException("Illegal crypto codec!");
     }
-    LOG.info("Created a Codec object of type: " + codecClass);
+    LOG.info("Created a Codec object of type: " + encCodecClass);
     
     // Generate data
     DataOutputBuffer data = new DataOutputBuffer();
@@ -98,18 +103,27 @@ public class TestCryptoCodec {
     // Encrypt data
     DataOutputBuffer encryptedDataBuffer = new DataOutputBuffer();
     CryptoOutputStream out = new CryptoOutputStream(encryptedDataBuffer, 
-        codec, bufferSize, key, iv);
+        encCodec, bufferSize, key, iv);
     out.write(data.getData(), 0, data.getLength());
     out.flush();
     out.close();
     LOG.info("Finished encrypting data");
+    
+    CryptoCodec decCodec = null;
+    try {
+      decCodec = (CryptoCodec)ReflectionUtils.newInstance(
+          conf.getClassByName(decCodecClass), conf);
+    } catch (ClassNotFoundException cnfe) {
+      throw new IOException("Illegal crypto codec!");
+    }
+    LOG.info("Created a Codec object of type: " + decCodecClass);
     
     // Decrypt data
     DataInputBuffer decryptedDataBuffer = new DataInputBuffer();
     decryptedDataBuffer.reset(encryptedDataBuffer.getData(), 0, 
         encryptedDataBuffer.getLength());
     CryptoInputStream in = new CryptoInputStream(decryptedDataBuffer, 
-        codec, bufferSize, key, iv);
+        decCodec, bufferSize, key, iv);
     DataInputStream dataIn = new DataInputStream(new BufferedInputStream(in));
     
     // Check
@@ -146,7 +160,7 @@ public class TestCryptoCodec {
     decryptedDataBuffer.reset(encryptedDataBuffer.getData(), 0, 
         encryptedDataBuffer.getLength());
     in = new CryptoInputStream(decryptedDataBuffer, 
-        codec, bufferSize, key, iv);
+        decCodec, bufferSize, key, iv);
 
     // Check
     originalIn = new DataInputStream(new BufferedInputStream(originalData));
@@ -156,11 +170,30 @@ public class TestCryptoCodec {
       assertEquals("Decrypted stream read by byte does not match",
         expected, in.read());
     } while (expected != -1);
+    
+    // Seek to a certain position and decrypt
+    originalData.reset(data.getData(), 0, data.getLength());
+    decryptedDataBuffer.reset(encryptedDataBuffer.getData(), 0,
+        encryptedDataBuffer.getLength());
+    in = new CryptoInputStream(new TestCryptoStreams.FakeInputStream(
+        decryptedDataBuffer), decCodec, bufferSize, key, iv);
+    int seekPos = data.getLength() / 3;
+    in.seek(seekPos);
+    
+    // Check
+    TestCryptoStreams.FakeInputStream originalInput = 
+        new TestCryptoStreams.FakeInputStream(originalData);
+    originalInput.seek(seekPos);
+    do {
+      expected = originalInput.read();
+      assertEquals("Decrypted stream read by byte does not match",
+        expected, in.read());
+    } while (expected != -1);
 
     LOG.info("SUCCESS! Completed checking " + count + " records");
     
     // Check secure random generator
-    testSecureRandom(codec);
+    testSecureRandom(encCodec);
   }
   
   /** Test secure random generator */

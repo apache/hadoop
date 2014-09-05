@@ -1239,6 +1239,14 @@ public class YarnConfiguration extends Configuration {
   public static final String TIMELINE_SERVICE_KEYTAB =
       TIMELINE_SERVICE_PREFIX + "keytab";
 
+  /** Enables cross origin support for timeline server.*/
+  public static final String TIMELINE_SERVICE_HTTP_CROSS_ORIGIN_ENABLED =
+      TIMELINE_SERVICE_PREFIX + "http-cross-origin.enabled";
+
+  /** Default value for cross origin support for timeline server.*/
+  public static final boolean
+      TIMELINE_SERVICE_HTTP_CROSS_ORIGIN_ENABLED_DEFAULT = false;
+
   ////////////////////////////////
   // Other Configs
   ////////////////////////////////

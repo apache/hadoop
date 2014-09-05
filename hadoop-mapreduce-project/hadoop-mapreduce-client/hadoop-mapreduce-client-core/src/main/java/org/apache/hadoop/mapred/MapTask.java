@@ -1575,9 +1575,7 @@ public class MapTask extends Task {
                                        InterruptedException {
       //approximate the length of the output file to be the length of the
       //buffer + header lengths for the partitions
-      final long size = (bufend >= bufstart
-          ? bufend - bufstart
-          : (bufvoid - bufend) + bufstart) +
+      final long size = distanceTo(bufstart, bufend, bufvoid) +
                   partitions * APPROX_HEADER_LENGTH;
       FSDataOutputStream out = null;
       try {
