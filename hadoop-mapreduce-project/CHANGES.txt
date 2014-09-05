@@ -121,6 +121,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6063. Correct spill size calculation for spills wrapping the
     circular buffer. (zhihai xu via cdouglas)
 
+    MAPREDUCE-6071. JobImpl#makeUberDecision doesn't log that Uber mode is
+    disabled because of too much CPUs (Tsuyoshi OZAWA via jlowe)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
