@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
+import org.junit.After;
 import org.junit.Test;
 
 /**
@@ -35,14 +36,25 @@ import org.junit.Test;
  * scheduled to a datanode.
  */
 public class TestBlocksScheduledCounter {
+  MiniDFSCluster cluster = null;
+  FileSystem fs = null;
+
+  @After
+  public void tearDown() throws IOException {
+    if (fs != null) {
+      fs.close();
+    }
+    if(cluster!=null){
+      cluster.shutdown();
+    }
+  }
 
   @Test
   public void testBlocksScheduledCounter() throws IOException {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration())
-                                               .build();
+    cluster = new MiniDFSCluster.Builder(new HdfsConfiguration()).build();
 
     cluster.waitActive();
-    FileSystem fs = cluster.getFileSystem();
+    fs = cluster.getFileSystem();
     
     //open a file an write a few bytes:
     FSDataOutputStream out = fs.create(new Path("/testBlockScheduledCounter"));
