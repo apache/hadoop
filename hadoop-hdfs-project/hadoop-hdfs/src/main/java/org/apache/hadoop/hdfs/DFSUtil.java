@@ -60,6 +60,7 @@ import java.util.Set;
 
 import javax.net.SocketFactory;
 
+import com.google.common.collect.Sets;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.Option;
@@ -613,7 +614,7 @@ public class DFSUtil {
     String keySuffix = concatSuffixes(suffixes);
     return addSuffix(key, keySuffix);
   }
-  
+
   /**
    * Returns the configured address for all NameNodes in the cluster.
    * @param conf configuration
@@ -622,14 +623,25 @@ public class DFSUtil {
    * @return a map(nameserviceId to map(namenodeId to InetSocketAddress))
    */
   private static Map<String, Map<String, InetSocketAddress>>
-    getAddresses(Configuration conf,
-      String defaultAddress, String... keys) {
+    getAddresses(Configuration conf, String defaultAddress, String... keys) {
     Collection<String> nameserviceIds = getNameServiceIds(conf);
-    
+    return getAddressesForNsIds(conf, nameserviceIds, defaultAddress, keys);
+  }
+
+  /**
+   * Returns the configured address for all NameNodes in the cluster.
+   * @param conf configuration
+   * @param nsIds
+   *@param defaultAddress default address to return in case key is not found.
+   * @param keys Set of keys to look for in the order of preference   @return a map(nameserviceId to map(namenodeId to InetSocketAddress))
+   */
+  private static Map<String, Map<String, InetSocketAddress>>
+    getAddressesForNsIds(Configuration conf, Collection<String> nsIds,
+                         String defaultAddress, String... keys) {
     // Look for configurations of the form <key>[.<nameserviceId>][.<namenodeId>]
     // across all of the configured nameservices and namenodes.
     Map<String, Map<String, InetSocketAddress>> ret = Maps.newLinkedHashMap();
-    for (String nsId : emptyAsSingletonNull(nameserviceIds)) {
+    for (String nsId : emptyAsSingletonNull(nsIds)) {
       Map<String, InetSocketAddress> isas =
         getAddressesForNameserviceId(conf, nsId, defaultAddress, keys);
       if (!isas.isEmpty()) {
@@ -774,8 +786,7 @@ public class DFSUtil {
 
   /**
    * Returns list of InetSocketAddresses corresponding to namenodes from the
-   * configuration. Note this is to be used by datanodes to get the list of
-   * namenode addresses to talk to.
+   * configuration.
    * 
    * Returns namenode address specifically configured for datanodes (using
    * service ports), if found. If not, regular RPC address configured for other
@@ -806,7 +817,60 @@ public class DFSUtil {
     }
     return addressList;
   }
-  
+
+  /**
+   * Returns list of InetSocketAddresses corresponding to the namenode
+   * that manages this cluster. Note this is to be used by datanodes to get
+   * the list of namenode addresses to talk to.
+   *
+   * Returns namenode address specifically configured for datanodes (using
+   * service ports), if found. If not, regular RPC address configured for other
+   * clients is returned.
+   *
+   * @param conf configuration
+   * @return list of InetSocketAddress
+   * @throws IOException on error
+   */
+  public static Map<String, Map<String, InetSocketAddress>>
+    getNNServiceRpcAddressesForCluster(Configuration conf) throws IOException {
+    // Use default address as fall back
+    String defaultAddress;
+    try {
+      defaultAddress = NetUtils.getHostPortString(NameNode.getAddress(conf));
+    } catch (IllegalArgumentException e) {
+      defaultAddress = null;
+    }
+
+    Collection<String> parentNameServices = conf.getTrimmedStringCollection
+            (DFSConfigKeys.DFS_INTERNAL_NAMESERVICES_KEY);
+
+    if (parentNameServices.isEmpty()) {
+      parentNameServices = conf.getTrimmedStringCollection
+              (DFSConfigKeys.DFS_NAMESERVICES);
+    } else {
+      // Ensure that the internal service is ineed in the list of all available
+      // nameservices.
+      Set<String> availableNameServices = Sets.newHashSet(conf
+              .getTrimmedStringCollection(DFSConfigKeys.DFS_NAMESERVICES));
+      for (String nsId : parentNameServices) {
+        if (!availableNameServices.contains(nsId)) {
+          throw new IOException("Unknown nameservice: " + nsId);
+        }
+      }
+    }
+
+    Map<String, Map<String, InetSocketAddress>> addressList =
+            getAddressesForNsIds(conf, parentNameServices, defaultAddress,
+                    DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, DFS_NAMENODE_RPC_ADDRESS_KEY);
+    if (addressList.isEmpty()) {
+      throw new IOException("Incorrect configuration: namenode address "
+              + DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY + " or "
+              + DFS_NAMENODE_RPC_ADDRESS_KEY
+              + " is not configured.");
+    }
+    return addressList;
+  }
+
   /**
    * Flatten the given map, as returned by other functions in this class,
    * into a flat list of {@link ConfiguredNNAddress} instances.
