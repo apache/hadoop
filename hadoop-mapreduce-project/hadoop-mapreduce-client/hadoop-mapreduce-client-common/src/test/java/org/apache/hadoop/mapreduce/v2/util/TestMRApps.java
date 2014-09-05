@@ -498,7 +498,7 @@ public class TestMRApps {
 
   private static final String[] SYS_CLASSES = new String[] {
       "/java/fake/Klass",
-      "/javax/fake/Klass",
+      "/javax/management/fake/Klass",
       "/org/apache/commons/logging/fake/Klass",
       "/org/apache/log4j/fake/Klass",
       "/org/apache/hadoop/fake/Klass"
