@@ -19,13 +19,15 @@ package org.apache.hadoop.mapred.nativetask.utils;
 
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import junit.framework.Assert;
-import junit.framework.TestCase;
+
+import org.junit.Assert;
+import org.junit.Test;
 
 import org.apache.hadoop.mapred.nativetask.util.BytesUtil;
 
-@SuppressWarnings({ "deprecation" })
-public class TestBytesUtil extends TestCase {
+public class TestBytesUtil {
+
+  @Test
   public void testBytesIntConversion() {
     final int a = 1000;
     final byte[] intBytes = Ints.toByteArray(a);
@@ -33,6 +35,7 @@ public class TestBytesUtil extends TestCase {
     Assert.assertEquals(a, BytesUtil.toInt(intBytes, 0));
   }
 
+  @Test
   public void testBytesLongConversion() {
     final long l = 1000000L;
     final byte[] longBytes = Longs.toByteArray(l);
@@ -40,20 +43,23 @@ public class TestBytesUtil extends TestCase {
     Assert.assertEquals(l, BytesUtil.toLong(longBytes, 0));
   }
 
+  @Test
   public void testBytesFloatConversion() {
     final float f = 3.14f;
     final byte[] floatBytes = BytesUtil.toBytes(f);
 
-    Assert.assertEquals(f, BytesUtil.toFloat(floatBytes));
+    Assert.assertEquals(f, BytesUtil.toFloat(floatBytes), 0.0f);
   }
 
+  @Test
   public void testBytesDoubleConversion() {
     final double d = 3.14;
     final byte[] doubleBytes = BytesUtil.toBytes(d);
 
-    Assert.assertEquals(d, BytesUtil.toDouble(doubleBytes));
+    Assert.assertEquals(d, BytesUtil.toDouble(doubleBytes), 0.0);
   }
-  
+
+  @Test
   public void testToStringBinary() {
     Assert.assertEquals("\\x01\\x02ABC",
         BytesUtil.toStringBinary(new byte[] { 1, 2, 65, 66, 67 }));

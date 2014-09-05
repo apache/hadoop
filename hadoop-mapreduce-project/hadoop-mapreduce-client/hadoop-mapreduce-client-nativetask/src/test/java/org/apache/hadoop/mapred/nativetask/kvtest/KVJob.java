@@ -61,6 +61,7 @@ public class KVJob {
   public static class KVReducer<KTYPE, VTYPE> extends Reducer<KTYPE, VTYPE, KTYPE, VTYPE> {
 
     @Override
+    @SuppressWarnings({"unchecked"})
     public void reduce(KTYPE key, Iterable<VTYPE> values, Context context)
       throws IOException, InterruptedException {
       long resultlong = 0;// 8 bytes match BytesFactory.fromBytes function
@@ -79,7 +80,7 @@ public class KVJob {
   public KVJob(String jobname, Configuration conf,
                Class<?> keyclass, Class<?> valueclass,
                String inputpath, String outputpath) throws Exception {
-    job = new Job(conf, jobname);
+    job = Job.getInstance(conf, jobname);
     job.setJarByClass(KVJob.class);
     job.setMapperClass(KVJob.ValueMapper.class);
     job.setOutputKeyClass(keyclass);

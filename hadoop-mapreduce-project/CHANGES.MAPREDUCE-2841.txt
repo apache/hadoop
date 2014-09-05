@@ -22,3 +22,4 @@ MAPREDUCE-6056. native-task: move system test working dir to target dir and clea
 MAPREDUCE-6055. native-task: findbugs, interface annotations, and other misc cleanup (todd)
 MAPREDUCE-6067. native-task: fix some counter issues (Binglin Chang)
 MAPREDUCE-6069. native-task: Lint/style fixes and removal of unused code (todd)
+MAPREDUCE-6074. native-task: fix release audit, javadoc, javac warnings (todd)

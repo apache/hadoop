@@ -44,7 +44,7 @@ public class CompressMapper {
   public static Job getCompressJob(String jobname, Configuration conf,
                                    String inputpath, String outputpath)
     throws Exception {
-    Job job = new Job(conf, jobname + "-CompressMapperJob");
+    Job job = Job.getInstance(conf, jobname + "-CompressMapperJob");
     job.setJarByClass(CompressMapper.class);
     job.setMapperClass(TextCompressMapper.class);
     job.setOutputKeyClass(Text.class);
@@ -52,7 +52,7 @@ public class CompressMapper {
     // if output file exists ,delete it
     final FileSystem hdfs = FileSystem.get(new ScenarioConfiguration());
     if (hdfs.exists(new Path(outputpath))) {
-      hdfs.delete(new Path(outputpath));
+      hdfs.delete(new Path(outputpath), true);
     }
     hdfs.close();
     job.setInputFormatClass(SequenceFileInputFormat.class);

@@ -141,8 +141,11 @@ public class TestInputFile {
     try {
       final Path outputfilepath = new Path(filepath);
       final ScenarioConfiguration conf= new ScenarioConfiguration();
-      final FileSystem hdfs = outputfilepath.getFileSystem(conf);
-      writer = new SequenceFile.Writer(hdfs, conf, outputfilepath, tmpkeycls, tmpvaluecls);
+      writer = SequenceFile.createWriter(
+        conf,
+        SequenceFile.Writer.file(outputfilepath),
+        SequenceFile.Writer.keyClass(tmpkeycls),
+        SequenceFile.Writer.valueClass(tmpvaluecls));
     } catch (final Exception e) {
       e.printStackTrace();
     }

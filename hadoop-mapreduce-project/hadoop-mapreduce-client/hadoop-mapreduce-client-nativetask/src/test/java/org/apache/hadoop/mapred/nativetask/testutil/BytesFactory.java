@@ -37,7 +37,7 @@ import org.apache.hadoop.io.VLongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.nativetask.util.BytesUtil;
 
-
+@SuppressWarnings("deprecation")
 public class BytesFactory {
   public static Random r = new Random();
 

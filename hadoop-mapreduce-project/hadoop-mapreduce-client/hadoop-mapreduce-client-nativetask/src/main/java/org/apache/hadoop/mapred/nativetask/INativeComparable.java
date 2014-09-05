@@ -22,34 +22,33 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
+ * Any key type that is comparable at native side must implement this interface.
  *
- * Any key type that is comparable at native side must implement this interface
- *
- * a native comparator function should have the ComparatorPtr type
- *
+ * A native comparator function should have the ComparatorPtr type:
+ * <code>
  *   typedef int (*ComparatorPtr)(const char * src, uint32_t srcLength,
  *   const char * dest,  uint32_t destLength);
- *
- * keys are in serialized format at native side. The function has passed in
+ * </code>
+ * Keys are in serialized format at native side. The function has passed in
  * the keys' locations and lengths such that we can compare them in the same
- * logic as their Java comparator
+ * logic as their Java comparator.
  *
+ * For example, a HiveKey serialized as an int field (containing the length of
+ * raw bytes) + raw bytes.
+ * When comparing two HiveKeys, we first read the length field and then
+ * compare the raw bytes by invoking the BytesComparator provided by our library.
+ * We pass the location and length of raw bytes into BytesComparator.
  *
- * For example, a HiveKey {@see HiveKey#write} is serialized as
- * int field (containing the length of raw bytes) + raw bytes
- * When comparing two HiveKeys, we firstly read the length field and then
- * comparing the raw bytes invoking the BytesComparator provided by our library.
- * We pass the location and length of raw bytes into BytesComparator
- *
+ * <code>
  *   int HivePlatform::HiveKeyComparator(const char * src, uint32_t srcLength,
  *   const char * dest, uint32_t destLength) {
  *     uint32_t sl = bswap(*(uint32_t*)src);
  *     uint32_t dl = bswap(*(uint32_t*)dest);
  *     return NativeObjectFactory::BytesComparator(src + 4, sl, dest + 4, dl);
  *   }
+ * </code>
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public interface INativeComparable {
-
 }

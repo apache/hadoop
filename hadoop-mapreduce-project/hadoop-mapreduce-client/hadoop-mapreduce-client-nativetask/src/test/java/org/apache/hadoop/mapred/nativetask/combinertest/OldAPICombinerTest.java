@@ -38,6 +38,7 @@ import org.apache.hadoop.mapred.nativetask.testutil.ResultVerifier;
 import org.apache.hadoop.mapred.nativetask.testutil.ScenarioConfiguration;
 import org.apache.hadoop.mapred.nativetask.testutil.TestConstants;
 import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.mapreduce.TaskCounter;
 import org.junit.AfterClass;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.junit.Assume;
@@ -60,7 +61,7 @@ public class OldAPICombinerTest {
     RunningJob nativeRunning = JobClient.runJob(nativeJob);
 
     Counter nativeReduceGroups = nativeRunning.getCounters().findCounter(
-      Task.Counter.REDUCE_INPUT_RECORDS);
+      TaskCounter.REDUCE_INPUT_RECORDS);
 
     final Configuration normalConf = ScenarioConfiguration.getNormalConfiguration();
     normalConf.addResource(TestConstants.COMBINER_CONF_PATH);
@@ -70,7 +71,7 @@ public class OldAPICombinerTest {
 
     RunningJob normalRunning = JobClient.runJob(normalJob);
     Counter normalReduceGroups = normalRunning.getCounters().findCounter(
-      Task.Counter.REDUCE_INPUT_RECORDS);
+      TaskCounter.REDUCE_INPUT_RECORDS);
 
     final boolean compareRet = ResultVerifier.verify(nativeoutput, normaloutput);
     assertEquals("file compare result: if they are the same ,then return true", true, compareRet);

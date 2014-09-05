@@ -124,7 +124,7 @@ public class CompressTest {
     final ScenarioConfiguration conf = new ScenarioConfiguration();
     final FileSystem fs = FileSystem.get(conf);
     final Path path = new Path(TestConstants.NATIVETASK_COMPRESS_TEST_INPUTDIR);
-    fs.delete(path);
+    fs.delete(path, true);
     if (!fs.exists(path)) {
       new TestInputFile(hadoopConf.getInt(
           TestConstants.NATIVETASK_COMPRESS_FILESIZE, 100000),

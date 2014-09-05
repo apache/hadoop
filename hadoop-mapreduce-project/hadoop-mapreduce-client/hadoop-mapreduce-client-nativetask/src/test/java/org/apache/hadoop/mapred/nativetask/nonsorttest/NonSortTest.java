@@ -101,7 +101,7 @@ public class NonSortTest {
       fs.delete(new Path(outputpath), true);
     }
     fs.close();
-    final Job job = new Job(conf, jobName);
+    final Job job = Job.getInstance(conf, jobName);
     job.setJarByClass(NonSortTestMR.class);
     job.setMapperClass(NonSortTestMR.Map.class);
     job.setReducerClass(NonSortTestMR.KeyHashSumReduce.class);

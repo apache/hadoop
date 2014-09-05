@@ -32,7 +32,6 @@
     <mr.basedir>${project.parent.basedir}/../</mr.basedir>
   </properties>
 
-
   <dependencies>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -86,6 +85,17 @@
             <include>**/*Test.java</include>
             <include>**/Test*.java</include>
           </includes>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.rat</groupId>
+        <artifactId>apache-rat-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>src/main/native/testData/*</exclude>
+            <!-- gtest has a compatible license -->
+            <exclude>src/main/native/gtest/**/*</exclude>
+          </excludes>
         </configuration>
       </plugin>
     </plugins>

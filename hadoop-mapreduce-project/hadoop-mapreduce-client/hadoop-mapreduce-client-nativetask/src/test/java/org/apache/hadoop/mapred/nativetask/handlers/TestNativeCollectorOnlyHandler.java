@@ -19,9 +19,6 @@ package org.apache.hadoop.mapred.nativetask.handlers;
 
 import java.io.IOException;
 
-import junit.framework.Assert;
-import junit.framework.TestCase;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,11 +33,15 @@ import org.apache.hadoop.mapred.nativetask.buffer.InputBuffer;
 import org.apache.hadoop.mapred.nativetask.testutil.TestConstants;
 import org.apache.hadoop.mapred.nativetask.util.OutputUtil;
 import org.apache.hadoop.mapred.nativetask.util.ReadWriteBuffer;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
 
 @SuppressWarnings({ "rawtypes", "unchecked", "deprecation" })
-public class TestNativeCollectorOnlyHandler extends TestCase {
+public class TestNativeCollectorOnlyHandler {
 
   private NativeCollectorOnlyHandler handler;
   private INativeHandler nativeHandler;
@@ -49,7 +50,7 @@ public class TestNativeCollectorOnlyHandler extends TestCase {
   private TaskContext taskContext;
   private static final String LOCAL_DIR = TestConstants.NATIVETASK_TEST_DIR + "/local";
 
-  @Override
+  @Before
   public void setUp() throws IOException {
     this.nativeHandler = Mockito.mock(INativeHandler.class);
     this.pusher = Mockito.mock(BufferPusher.class);
@@ -69,12 +70,12 @@ public class TestNativeCollectorOnlyHandler extends TestCase {
       new InputBuffer(BufferType.HEAP_BUFFER, 100));
   }
 
-  @Override
+  @After
   public void tearDown() throws IOException {
     FileSystem.getLocal(new Configuration()).delete(new Path(LOCAL_DIR));
   }
 
-
+  @Test
   public void testCollect() throws IOException {
     this.handler = new NativeCollectorOnlyHandler(taskContext, nativeHandler, pusher, combiner);
     handler.collect(new BytesWritable(), new BytesWritable(), 100);
@@ -89,6 +90,7 @@ public class TestNativeCollectorOnlyHandler extends TestCase {
     Mockito.verify(nativeHandler, Mockito.times(1)).close();
   }
 
+  @Test
   public void testGetCombiner() throws IOException {
     this.handler = new NativeCollectorOnlyHandler(taskContext, nativeHandler, pusher, combiner);
     Mockito.when(combiner.getId()).thenReturn(100L);
@@ -97,6 +99,7 @@ public class TestNativeCollectorOnlyHandler extends TestCase {
     Assert.assertEquals(100L, result.readLong());
   }
 
+  @Test
   public void testOnCall() throws IOException {
     this.handler = new NativeCollectorOnlyHandler(taskContext, nativeHandler, pusher, combiner);
     boolean thrown = false;

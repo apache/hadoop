@@ -106,10 +106,10 @@ public class CombinerTest {
     conf.set("fileoutputpath", outputpath);
     final FileSystem fs = FileSystem.get(conf);
     if (fs.exists(new Path(outputpath))) {
-      fs.delete(new Path(outputpath));
+      fs.delete(new Path(outputpath), true);
     }
     fs.close();
-    final Job job = new Job(conf, jobname);
+    final Job job = Job.getInstance(conf, jobname);
     job.setJarByClass(WordCount.class);
     job.setMapperClass(TokenizerMapper.class);
     job.setCombinerClass(IntSumReducer.class);

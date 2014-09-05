@@ -194,7 +194,7 @@
         <configuration>
           <excludes>
             <exclude>.eclipse.templates/</exclude>
-            <exclude>CHANGES.txt</exclude>
+            <exclude>CHANGES.*txt</exclude>
             <exclude>lib/jdiff/**</exclude>
           </excludes>
         </configuration>
