@@ -628,7 +628,7 @@ Release 2.6.0 - UNRELEASED
     HDFS-6831. Inconsistency between 'hdfs dfsadmin' and 'hdfs dfsadmin -help'.
     (Xiaoyu Yao via Arpit Agarwal)
 
-    HDFS-6979. hdfs.dll not produce .pdb files. (cnauroth)
+    HDFS-6979. hdfs.dll does not produce .pdb files. (cnauroth)
 
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
