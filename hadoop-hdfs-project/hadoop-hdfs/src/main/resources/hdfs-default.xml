@@ -1116,6 +1116,16 @@
 </property>
 
 <property>
+  <name>dfs.internal.nameservices</name>
+  <value></value>
+  <description>
+    Comma-separated list of nameservices that belong to this cluster.
+    Datanode will report to all the nameservices in this list. By default
+    this is set to the value of dfs.nameservices.
+  </description>
+</property>
+
+<property>
   <name>dfs.ha.namenodes.EXAMPLENAMESERVICE</name>
   <value></value>
   <description>

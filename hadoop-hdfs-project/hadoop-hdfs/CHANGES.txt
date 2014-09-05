@@ -441,6 +441,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6886. Use single editlog record for creating file + overwrite. (Yi Liu
     via jing9)
 
+    HDFS-6376. Distcp data between two HA clusters requires another configuration.
+    (Dave Marion and Haohui Mai via jing9)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
