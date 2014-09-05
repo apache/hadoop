@@ -610,9 +610,6 @@ Release 2.6.0 - UNRELEASED
     HDFS-6862. Add missing timeout annotations to tests. (Xiaoyu Yao via
     Arpit Agarwal)
 
-    HDFS-6998. warning message 'ssl.client.truststore.location has not been
-    set' gets printed for hftp command. (Xiaoyu Yao via Arpit Agarwal)
-
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
