@@ -385,9 +385,9 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       // if current UGI is different from UGI at constructor time, behave as
       // proxyuser
       UserGroupInformation currentUgi = UserGroupInformation.getCurrentUser();
-      final String doAsUser =
-          (loginUgi.getShortUserName().equals(currentUgi.getShortUserName()))
-          ? null : currentUgi.getShortUserName();
+      final String doAsUser = (currentUgi.getAuthenticationMethod() ==
+          UserGroupInformation.AuthenticationMethod.PROXY)
+                              ? currentUgi.getShortUserName() : null;
 
       // creating the HTTP connection using the current UGI at constructor time
       conn = loginUgi.doAs(new PrivilegedExceptionAction<HttpURLConnection>() {
