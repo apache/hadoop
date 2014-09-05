@@ -69,6 +69,7 @@ public class CompressTest {
 
     final boolean compareRet = ResultVerifier.verify(nativeOutputPath, hadoopOutputPath);
     assertEquals("file compare result: if they are the same ,then return true", true, compareRet);
+    ResultVerifier.verifyCounters(hadoopjob, job);
   }
 
   @Test
@@ -91,6 +92,7 @@ public class CompressTest {
 
     final boolean compareRet = ResultVerifier.verify(nativeOutputPath, hadoopOutputPath);
     assertEquals("file compare result: if they are the same ,then return true", true, compareRet);
+    ResultVerifier.verifyCounters(hadoopjob, job);
   }
 
   @Test
@@ -112,6 +114,7 @@ public class CompressTest {
     assertTrue(hadoopJob.waitForCompletion(true));
     final boolean compareRet = ResultVerifier.verify(nativeOutputPath, hadoopOutputPath);
     assertEquals("file compare result: if they are the same ,then return true", true, compareRet);
+    ResultVerifier.verifyCounters(hadoopJob, nativeJob);
   }
 
   @Before

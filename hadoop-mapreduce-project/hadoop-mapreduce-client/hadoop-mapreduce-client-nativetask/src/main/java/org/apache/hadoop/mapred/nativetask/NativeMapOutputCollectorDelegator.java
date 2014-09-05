@@ -34,6 +34,7 @@ import org.apache.hadoop.mapred.nativetask.serde.INativeSerializer;
 import org.apache.hadoop.mapred.nativetask.serde.NativeSerialization;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.util.QuickSort;
 
 /**
@@ -46,6 +47,7 @@ public class NativeMapOutputCollectorDelegator<K, V> implements MapOutputCollect
   private JobConf job;
   private NativeCollectorOnlyHandler<K, V> handler;
 
+  private Context context;
   private StatusReportChecker updater;
 
   @Override
@@ -58,6 +60,7 @@ public class NativeMapOutputCollectorDelegator<K, V> implements MapOutputCollect
     handler.close();
     if (null != updater) {
       updater.stop();
+      NativeRuntime.reportStatus(context.getReporter());
     }
   }
 
@@ -69,6 +72,7 @@ public class NativeMapOutputCollectorDelegator<K, V> implements MapOutputCollect
   @SuppressWarnings("unchecked")
   @Override
   public void init(Context context) throws IOException, ClassNotFoundException {
+    this.context = context;
     this.job = context.getJobConf();
 
     Platforms.init(job);

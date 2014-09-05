@@ -63,15 +63,9 @@ public class CombinerTest {
     final Job normaljob = getJob("normalwordcount", commonConf, inputpath, hadoopoutputpath);
 
     assertTrue(nativejob.waitForCompletion(true));
-
-    Counter nativeReduceGroups = nativejob.getCounters().findCounter(Task.Counter.REDUCE_INPUT_RECORDS);
-
     assertTrue(normaljob.waitForCompletion(true));
-    Counter normalReduceGroups = normaljob.getCounters().findCounter(Task.Counter.REDUCE_INPUT_RECORDS);
-
     assertEquals(true, ResultVerifier.verify(nativeoutputpath, hadoopoutputpath));
-    assertEquals("Native Reduce reduce group counter should equal orignal reduce group counter",
-      nativeReduceGroups.getValue(), normalReduceGroups.getValue());
+    ResultVerifier.verifyCounters(normaljob, nativejob, true);
   }
 
   @Before

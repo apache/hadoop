@@ -117,8 +117,6 @@ public:
         memBlock = new MemoryBlock(buff, allocated);
         _memBlocks.push_back(memBlock);
         return memBlock->allocateKVBuffer(kvLength);
-      } else {
-        LOG("MemoryPool is full, fail to allocate new MemBlock, block size: %d, kv length: %d", expect, kvLength);
       }
     }
     return NULL;

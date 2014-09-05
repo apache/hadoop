@@ -129,6 +129,7 @@ protected:
   AppendBuffer _appendBuffer;
   vector<IFileSegment> _spillFileSegments;
   Counter * _recordCounter;
+  uint64_t _recordCount;
 
   bool _deleteTargetStream;
 
@@ -153,7 +154,7 @@ public:
 
   SingleSpillInfo * getSpillInfo();
 
-  void getStatistics(uint64_t & offset, uint64_t & realOffset);
+  void getStatistics(uint64_t & offset, uint64_t & realOffset, uint64_t & recordCount);
 
   virtual void collect(const void * key, uint32_t keyLen, const void * value, uint32_t valueLen) {
     write((const char*)key, keyLen, (const char*)value, valueLen);

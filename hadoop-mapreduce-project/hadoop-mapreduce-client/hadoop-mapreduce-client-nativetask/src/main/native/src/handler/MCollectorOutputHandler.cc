@@ -18,6 +18,7 @@
 
 #include "commons.h"
 #include "util/StringUtil.h"
+#include "lib/TaskCounters.h"
 #include "MCollectorOutputHandler.h"
 #include "NativeObjectFactory.h"
 #include "MapOutputCollector.h"
@@ -94,4 +95,4 @@ KVBuffer * MCollectorOutputHandler::allocateKVBuffer(uint32_t partitionId, uint3
   return dest;
 }
 
-}      //namespace
+} // namespace NativeTask

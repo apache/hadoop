@@ -78,11 +78,13 @@ public class LargeKVTest {
     if (!keyClass.equals(Text.class) && !valueClass.equals(Text.class)) {
       return;
     }
-    final int deafult_KVSize_Maximum = 1 << 22; // 4M
-    final int KVSize_Maximu = normalConf.getInt(TestConstants.NATIVETASK_KVSIZE_MAX_LARGEKV_TEST,
-        deafult_KVSize_Maximum);
+    final int deafultKVSizeMaximum = 1 << 22; // 4M
+    final int kvSizeMaximum = normalConf.getInt(
+        TestConstants.NATIVETASK_KVSIZE_MAX_LARGEKV_TEST,
+        deafultKVSizeMaximum);
+    final FileSystem fs = FileSystem.get(normalConf);
 
-    for (int i = 65536; i <= KVSize_Maximu; i *= 4) {
+    for (int i = 65536; i <= kvSizeMaximum; i *= 4) {
       int min = i / 4;
       int max = i;
       nativeConf.set(TestConstants.NATIVETASK_KVSIZE_MIN, String.valueOf(min));
@@ -90,48 +92,40 @@ public class LargeKVTest {
       normalConf.set(TestConstants.NATIVETASK_KVSIZE_MIN, String.valueOf(min));
       normalConf.set(TestConstants.NATIVETASK_KVSIZE_MAX, String.valueOf(max));
 
-      LOG.info("===KV Size Test: min size: " + min + ", max size: " + max + ", keyClass: "
-        + keyClass.getName() + ", valueClass: " + valueClass.getName());
+      LOG.info("===KV Size Test: min size: " + min + ", max size: " + max
+          + ", keyClass: " + keyClass.getName() + ", valueClass: "
+          + valueClass.getName());
 
-      final String nativeOutPut = runNativeLargeKVTest("Test Large Value Size:" + String.valueOf(i), keyClass,
-        valueClass, nativeConf);
-      final String normalOutPut = this.runNormalLargeKVTest("Test Large Key Size:" + String.valueOf(i), keyClass,
-        valueClass, normalConf);
-      final boolean compareRet = ResultVerifier.verify(normalOutPut, nativeOutPut);
-      final String reason = "keytype: " + keyClass.getName() + ", valuetype: " + valueClass.getName()
-        + ", failed with " + (keyClass.equals(Text.class) ? "key" : "value") + ", min size: " + min
-        + ", max size: " + max + ", normal out: " + normalOutPut + ", native Out: " + nativeOutPut;
+      final String inputPath = TestConstants.NATIVETASK_KVTEST_INPUTDIR
+          + "/LargeKV/" + keyClass.getName() + "/" + valueClass.getName();
+
+      final String nativeOutputPath = TestConstants.NATIVETASK_KVTEST_NATIVE_OUTPUTDIR
+          + "/LargeKV/" + keyClass.getName() + "/" + valueClass.getName();
+      // if output file exists ,then delete it
+      fs.delete(new Path(nativeOutputPath), true);
+      final KVJob nativeJob = new KVJob("Test Large Value Size:"
+          + String.valueOf(i), nativeConf, keyClass, valueClass, inputPath,
+          nativeOutputPath);
+      assertTrue("job should complete successfully", nativeJob.runJob());
+
+      final String normalOutputPath = TestConstants.NATIVETASK_KVTEST_NORMAL_OUTPUTDIR
+          + "/LargeKV/" + keyClass.getName() + "/" + valueClass.getName();
+      // if output file exists ,then delete it
+      fs.delete(new Path(normalOutputPath), true);
+      final KVJob normalJob = new KVJob("Test Large Key Size:" + String.valueOf(i),
+          normalConf, keyClass, valueClass, inputPath, normalOutputPath);
+      assertTrue("job should complete successfully", normalJob.runJob());
+
+      final boolean compareRet = ResultVerifier.verify(normalOutputPath,
+          nativeOutputPath);
+      final String reason = "keytype: " + keyClass.getName() + ", valuetype: "
+          + valueClass.getName() + ", failed with "
+          + (keyClass.equals(Text.class) ? "key" : "value") + ", min size: " + min
+          + ", max size: " + max + ", normal out: " + normalOutputPath
+          + ", native Out: " + nativeOutputPath;
       assertEquals(reason, true, compareRet);
+      ResultVerifier.verifyCounters(normalJob.job, nativeJob.job);
     }
-  }
-
-  private String runNativeLargeKVTest(String jobname, Class<?> keyclass, Class<?> valueclass, Configuration conf)
-      throws Exception {
-    final String inputpath = TestConstants.NATIVETASK_KVTEST_INPUTDIR + "/LargeKV/"
-      + keyclass.getName() + "/" + valueclass.getName();
-    final String outputpath = TestConstants.NATIVETASK_KVTEST_NATIVE_OUTPUTDIR + "/LargeKV/"
-      + keyclass.getName() + "/" + valueclass.getName();
-    // if output file exists ,then delete it
-    final FileSystem fs = FileSystem.get(conf);
-    fs.delete(new Path(outputpath), true);
     fs.close();
-    final KVJob keyJob = new KVJob(jobname, conf, keyclass, valueclass, inputpath, outputpath);
-    assertTrue("job should complete successfully", keyJob.runJob());
-    return outputpath;
-  }
-
-  private String runNormalLargeKVTest(String jobname, Class<?> keyclass, Class<?> valueclass, Configuration conf)
-      throws Exception {
-    final String inputpath = TestConstants.NATIVETASK_KVTEST_INPUTDIR + "/LargeKV/"
-      + keyclass.getName() + "/" + valueclass.getName();
-    final String outputpath = TestConstants.NATIVETASK_KVTEST_NORMAL_OUTPUTDIR + "/LargeKV/"
-      + keyclass.getName() + "/" + valueclass.getName();
-    // if output file exists ,then delete it
-    final FileSystem fs = FileSystem.get(conf);
-    fs.delete(new Path(outputpath), true);
-    fs.close();
-    final KVJob keyJob = new KVJob(jobname, conf, keyclass, valueclass, inputpath, outputpath);
-    assertTrue("job should complete successfully", keyJob.runJob());
-    return outputpath;
   }
 }

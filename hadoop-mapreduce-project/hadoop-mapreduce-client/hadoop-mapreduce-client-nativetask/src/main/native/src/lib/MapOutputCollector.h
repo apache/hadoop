@@ -85,7 +85,11 @@ private:
 
   ICombineRunner * _combineRunner;
 
+  Counter * _mapOutputRecords;
+  Counter * _mapOutputBytes;
+  Counter * _mapOutputMaterializedBytes;
   Counter * _spilledRecords;
+
   SpillOutputService * _spillOutput;
 
   uint32_t _defaultBlockSize;
@@ -118,7 +122,7 @@ public:
 
 private:
   void init(uint32_t maxBlockSize, uint32_t memory_capacity, ComparatorPtr keyComparator,
-      Counter * spilledRecord, ICombineRunner * combiner);
+      ICombineRunner * combiner);
 
   void reset();
 
@@ -149,7 +153,7 @@ private:
    * normal spill use options in _config
    * @param filepaths: spill file path
    */
-  void middleSpill(const std::string & spillOutput, const std::string & indexFilePath);
+  void middleSpill(const std::string & spillOutput, const std::string & indexFilePath, bool final);
 
   /**
    * final merge and/or spill use options in _config, and

@@ -114,21 +114,34 @@ public class KVTest {
 
   @Test
   public void testKVCompability() throws Exception {
-    final String nativeoutput = this.runNativeTest(
-      "Test:" + keyclass.getSimpleName() + "--" + valueclass.getSimpleName(), keyclass, valueclass);
-    final String normaloutput = this.runNormalTest(
-      "Test:" + keyclass.getSimpleName() + "--" + valueclass.getSimpleName(), keyclass, valueclass);
-    final boolean compareRet = ResultVerifier.verify(normaloutput, nativeoutput);
-    final String input = TestConstants.NATIVETASK_KVTEST_INPUTDIR + "/"
-      + keyclass.getName() + "/" + valueclass.getName();
-    if(compareRet){
-      final FileSystem fs = FileSystem.get(hadoopkvtestconf);
-      fs.delete(new Path(nativeoutput), true);
-      fs.delete(new Path(normaloutput), true);
-      fs.delete(new Path(input), true);
-      fs.close();
-    }
-    assertEquals("file compare result: if they are the same ,then return true", true, compareRet);
+    final FileSystem fs = FileSystem.get(nativekvtestconf);
+    final String jobName = "Test:" + keyclass.getSimpleName() + "--"
+        + valueclass.getSimpleName();
+    final String inputPath = TestConstants.NATIVETASK_KVTEST_INPUTDIR + "/"
+        + keyclass.getName() + "/" + valueclass.getName();
+    final String nativeOutputPath = TestConstants.NATIVETASK_KVTEST_NATIVE_OUTPUTDIR
+        + "/" + keyclass.getName() + "/" + valueclass.getName();
+    // if output file exists ,then delete it
+    fs.delete(new Path(nativeOutputPath), true);
+    nativekvtestconf.set(TestConstants.NATIVETASK_KVTEST_CREATEFILE, "true");
+    final KVJob nativeJob = new KVJob(jobName, nativekvtestconf, keyclass,
+        valueclass, inputPath, nativeOutputPath);
+    assertTrue("job should complete successfully", nativeJob.runJob());
+
+    final String normalOutputPath = TestConstants.NATIVETASK_KVTEST_NORMAL_OUTPUTDIR
+        + "/" + keyclass.getName() + "/" + valueclass.getName();
+    // if output file exists ,then delete it
+    fs.delete(new Path(normalOutputPath), true);
+    hadoopkvtestconf.set(TestConstants.NATIVETASK_KVTEST_CREATEFILE, "false");
+    final KVJob normalJob = new KVJob(jobName, hadoopkvtestconf, keyclass,
+        valueclass, inputPath, normalOutputPath);
+    assertTrue("job should complete successfully", normalJob.runJob());
+
+    final boolean compareRet = ResultVerifier.verify(normalOutputPath,
+        nativeOutputPath);
+    assertEquals("job output not the same", true, compareRet);
+    ResultVerifier.verifyCounters(normalJob.job, nativeJob.job);
+    fs.close();
   }
 
   @AfterClass
@@ -137,35 +150,4 @@ public class KVTest {
     fs.delete(new Path(TestConstants.NATIVETASK_KVTEST_DIR), true);
     fs.close();
   }
-
-  private String runNativeTest(String jobname, Class<?> keyclass, Class<?> valueclass) throws Exception {
-    final String inputpath = TestConstants.NATIVETASK_KVTEST_INPUTDIR + "/"
-      + keyclass.getName() + "/" + valueclass.getName();
-    final String outputpath = TestConstants.NATIVETASK_KVTEST_NATIVE_OUTPUTDIR + "/"
-      + keyclass.getName() + "/" + valueclass.getName();
-    // if output file exists ,then delete it
-    final FileSystem fs = FileSystem.get(nativekvtestconf);
-    fs.delete(new Path(outputpath));
-    fs.close();
-    nativekvtestconf.set(TestConstants.NATIVETASK_KVTEST_CREATEFILE, "true");
-    final KVJob keyJob = new KVJob(jobname, nativekvtestconf, keyclass, valueclass, inputpath, outputpath);
-    assertTrue("job should complete successfully", keyJob.runJob());
-    return outputpath;
-  }
-
-  private String runNormalTest(String jobname, Class<?> keyclass, Class<?> valueclass) throws Exception {
-    final String inputpath = TestConstants.NATIVETASK_KVTEST_INPUTDIR + "/"
-        + keyclass.getName() + "/" + valueclass.getName();
-    final String outputpath = TestConstants.NATIVETASK_KVTEST_NORMAL_OUTPUTDIR + "/"
-        + keyclass.getName() + "/" + valueclass.getName();
-    // if output file exists ,then delete it
-    final FileSystem fs = FileSystem.get(hadoopkvtestconf);
-    fs.delete(new Path(outputpath));
-    fs.close();
-    hadoopkvtestconf.set(TestConstants.NATIVETASK_KVTEST_CREATEFILE, "false");
-    final KVJob keyJob = new KVJob(jobname, hadoopkvtestconf, keyclass, valueclass, inputpath, outputpath);
-    assertTrue("job should complete successfully", keyJob.runJob());
-    return outputpath;
-  }
-
 }

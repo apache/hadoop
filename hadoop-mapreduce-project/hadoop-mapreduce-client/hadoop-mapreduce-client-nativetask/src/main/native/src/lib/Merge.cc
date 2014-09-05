@@ -131,7 +131,6 @@ bool Merger::next(Buffer & key, Buffer & value) {
 }
 
 void Merger::merge() {
-  Timer timer;
   uint64_t total_record = 0;
   _heap.reserve(_entries.size());
   MergeEntryPtr * base = &(_heap[0]);
@@ -152,29 +151,6 @@ void Merger::merge() {
       _combineRunner->combine(CombineContext(UNKNOWN), this, _writer);
     }
     endPartition();
-  }
-
-  uint64_t interval = (timer.now() - timer.last());
-  uint64_t M = 1000000; //1 million
-
-  uint64_t output_size;
-  uint64_t real_output_size;
-  _writer->getStatistics(output_size, real_output_size);
-
-  if (total_record != 0) {
-    LOG("[Merge] Merged segment#: %lu, record#: %"PRIu64", avg record size: %"PRIu64", uncompressed total bytes: %"PRIu64", compressed total bytes: %"PRIu64", time: %"PRIu64" ms",
-        _entries.size(),
-        total_record,
-        output_size / (total_record),
-        output_size,
-        real_output_size,
-        interval / M);
-  } else {
-    LOG("[Merge] Merged segments#, %lu, uncompressed total bytes: %"PRIu64", compressed total bytes: %"PRIu64", time: %"PRIu64" ms",
-        _entries.size(),
-        output_size,
-        real_output_size,
-        interval / M);
   }
 }
 

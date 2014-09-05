@@ -35,6 +35,7 @@ import org.apache.hadoop.mapred.nativetask.testutil.ScenarioConfiguration;
 import org.apache.hadoop.mapred.nativetask.testutil.TestConstants;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.TaskCounter;
 import org.junit.AfterClass;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.junit.Assume;
@@ -87,10 +88,8 @@ public class LargeKVCombinerTest {
       final Job nativejob = CombinerTest.getJob("nativewordcount", nativeConf, inputPath, nativeOutputPath);
 
       assertTrue(nativejob.waitForCompletion(true));
-        Counter nativeReduceGroups = nativejob.getCounters().findCounter(Task.Counter.REDUCE_INPUT_RECORDS);
 
       assertTrue(normaljob.waitForCompletion(true));
-        Counter normalReduceGroups = normaljob.getCounters().findCounter(Task.Counter.REDUCE_INPUT_RECORDS);
 
       final boolean compareRet = ResultVerifier.verify(nativeOutputPath, hadoopOutputPath);
 
@@ -98,8 +97,7 @@ public class LargeKVCombinerTest {
         + ", max size: " + max + ", normal out: " + hadoopOutputPath + ", native Out: " + nativeOutputPath;
 
       assertEquals(reason, true, compareRet);
-//        assertEquals("Native Reduce reduce group counter should equal orignal reduce group counter",
-//            nativeReduceGroups.getValue(), normalReduceGroups.getValue());
+      ResultVerifier.verifyCounters(normaljob, nativejob, true);
     }
     fs.close();
   }

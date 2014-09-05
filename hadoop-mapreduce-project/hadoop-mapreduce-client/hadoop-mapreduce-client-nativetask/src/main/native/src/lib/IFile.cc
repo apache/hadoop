@@ -98,7 +98,7 @@ IFileWriter * IFileWriter::create(const std::string & filepath, const MapOutputS
 IFileWriter::IFileWriter(OutputStream * stream, ChecksumType checksumType, KeyValueType ktype,
     KeyValueType vtype, const string & codec, Counter * counter, bool deleteTargetStream)
     : _stream(stream), _dest(NULL), _checksumType(checksumType), _kType(ktype), _vType(vtype),
-        _codec(codec), _recordCounter(counter), _deleteTargetStream(deleteTargetStream) {
+        _codec(codec), _recordCounter(counter), _recordCount(0), _deleteTargetStream(deleteTargetStream) {
   _dest = new ChecksumOutputStream(_stream, _checksumType);
   _appendBuffer.init(128 * 1024, _dest, _codec);
 }
@@ -184,6 +184,7 @@ void IFileWriter::write(const char * key, uint32_t keyLen, const char * value, u
   if (NULL != _recordCounter) {
     _recordCounter->increase();
   }
+  _recordCount++;
 
   switch (_vType) {
   case TextType:
@@ -214,7 +215,7 @@ SingleSpillInfo * IFileWriter::getSpillInfo() {
       _codec);
 }
 
-void IFileWriter::getStatistics(uint64_t & offset, uint64_t & realOffset) {
+void IFileWriter::getStatistics(uint64_t & offset, uint64_t & realOffset, uint64_t & recordCount) {
   if (_spillFileSegments.size() > 0) {
     offset = _spillFileSegments[_spillFileSegments.size() - 1].uncompressedEndOffset;
     realOffset = _spillFileSegments[_spillFileSegments.size() - 1].realEndOffset;
@@ -222,6 +223,7 @@ void IFileWriter::getStatistics(uint64_t & offset, uint64_t & realOffset) {
     offset = 0;
     realOffset = 0;
   }
+  recordCount = _recordCount;
 }
 
 } // namespace NativeTask

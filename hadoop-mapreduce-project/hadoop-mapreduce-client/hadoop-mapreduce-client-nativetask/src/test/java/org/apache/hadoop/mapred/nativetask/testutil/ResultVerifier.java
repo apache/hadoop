@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.mapred.nativetask.testutil;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.util.zip.CRC32;
 
@@ -25,6 +27,9 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.Counters;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.TaskCounter;
 
 public class ResultVerifier {
   /**
@@ -136,6 +141,23 @@ public class ResultVerifier {
     return true;
   }
 
-  public static void main(String[] args) {
+  public static void verifyCounters(Job normalJob, Job nativeJob, boolean hasCombiner) throws IOException {
+    Counters normalCounters = normalJob.getCounters();
+    Counters nativeCounters = nativeJob.getCounters();
+    assertEquals("Counter MAP_OUTPUT_RECORDS should be equal",
+        normalCounters.findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getValue(),
+        nativeCounters.findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getValue());
+    assertEquals("Counter REDUCE_INPUT_GROUPS should be equal",
+        normalCounters.findCounter(TaskCounter.REDUCE_INPUT_GROUPS).getValue(),
+        nativeCounters.findCounter(TaskCounter.REDUCE_INPUT_GROUPS).getValue());
+    if (!hasCombiner) {
+      assertEquals("Counter REDUCE_INPUT_RECORDS should be equal",
+          normalCounters.findCounter(TaskCounter.REDUCE_INPUT_RECORDS).getValue(),
+          nativeCounters.findCounter(TaskCounter.REDUCE_INPUT_RECORDS).getValue());
+    }
+  }
+
+  public static void verifyCounters(Job normalJob, Job nativeJob) throws IOException {
+    verifyCounters(normalJob, nativeJob, false);
   }
 }
