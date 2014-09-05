@@ -353,6 +353,40 @@ public class DFSAdmin extends FsShell {
   }
 
   /**
+   * Common usage summary shared between "hdfs dfsadmin -help" and
+   * "hdfs dfsadmin"
+   */
+  private static final String commonUsageSummary =
+    "\t[-report [-live] [-dead] [-decommissioning]]\n" +
+    "\t[-safemode <enter | leave | get | wait>]\n" +
+    "\t[-saveNamespace]\n" +
+    "\t[-rollEdits]\n" +
+    "\t[-restoreFailedStorage true|false|check]\n" +
+    "\t[-refreshNodes]\n" +
+    "\t[" + SetQuotaCommand.USAGE + "]\n" +
+    "\t[" + ClearQuotaCommand.USAGE +"]\n" +
+    "\t[" + SetSpaceQuotaCommand.USAGE + "]\n" +
+    "\t[" + ClearSpaceQuotaCommand.USAGE +"]\n" +
+    "\t[-finalizeUpgrade]\n" +
+    "\t[" + RollingUpgradeCommand.USAGE +"]\n" +
+    "\t[-refreshServiceAcl]\n" +
+    "\t[-refreshUserToGroupsMappings]\n" +
+    "\t[-refreshSuperUserGroupsConfiguration]\n" +
+    "\t[-refreshCallQueue]\n" +
+    "\t[-refresh <host:ipc_port> <key> [arg1..argn]\n" +
+    "\t[-printTopology]\n" +
+    "\t[-refreshNamenodes datanode_host:ipc_port]\n"+
+    "\t[-deleteBlockPool datanode_host:ipc_port blockpoolId [force]]\n"+
+    "\t[-setBalancerBandwidth <bandwidth in bytes per second>]\n" +
+    "\t[-fetchImage <local directory>]\n" +
+    "\t[-allowSnapshot <snapshotDir>]\n" +
+    "\t[-disallowSnapshot <snapshotDir>]\n" +
+    "\t[-shutdownDatanode <datanode_host:ipc_port> [upgrade]]\n" +
+    "\t[-getDatanodeInfo <datanode_host:ipc_port>]\n" +
+    "\t[-metasave filename]\n" +
+    "\t[-help [cmd]]\n";
+
+  /**
    * Construct a DFSAdmin object.
    */
   public DFSAdmin() {
@@ -589,7 +623,7 @@ public class DFSAdmin extends FsShell {
   
   /**
    * Command to ask the namenode to save the namespace.
-   * Usage: java DFSAdmin -saveNamespace
+   * Usage: hdfs dfsadmin -saveNamespace
    * @exception IOException 
    * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#saveNamespace()
    */
@@ -630,7 +664,7 @@ public class DFSAdmin extends FsShell {
   
   /**
    * Command to enable/disable/check restoring of failed storage replicas in the namenode.
-   * Usage: java DFSAdmin -restoreFailedStorage true|false|check
+   * Usage: hdfs dfsadmin -restoreFailedStorage true|false|check
    * @exception IOException 
    * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#restoreFailedStorage(String arg)
    */
@@ -668,7 +702,7 @@ public class DFSAdmin extends FsShell {
   /**
    * Command to ask the namenode to reread the hosts and excluded hosts 
    * file.
-   * Usage: java DFSAdmin -refreshNodes
+   * Usage: hdfs dfsadmin -refreshNodes
    * @exception IOException 
    */
   public int refreshNodes() throws IOException {
@@ -701,7 +735,7 @@ public class DFSAdmin extends FsShell {
   /**
    * Command to ask the namenode to set the balancer bandwidth for all of the
    * datanodes.
-   * Usage: java DFSAdmin -setBalancerBandwidth bandwidth
+   * Usage: hdfs dfsadmin -setBalancerBandwidth bandwidth
    * @param argv List of of command line parameters.
    * @param idx The index of the command that is being processed.
    * @exception IOException 
@@ -714,7 +748,7 @@ public class DFSAdmin extends FsShell {
       bandwidth = Long.parseLong(argv[idx]);
     } catch (NumberFormatException nfe) {
       System.err.println("NumberFormatException: " + nfe.getMessage());
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
                   + " [-setBalancerBandwidth <bandwidth in bytes per second>]");
       return exitCode;
     }
@@ -777,36 +811,11 @@ public class DFSAdmin extends FsShell {
   }
 
   private void printHelp(String cmd) {
-    String summary = "hadoop dfsadmin performs DFS administrative commands.\n" +
+    String summary = "hdfs dfsadmin performs DFS administrative commands.\n" +
+      "Note: Administrative commands can only be run with superuser permission.\n" +
       "The full syntax is: \n\n" +
-      "hadoop dfsadmin\n" +
-      "\t[-report [-live] [-dead] [-decommissioning]]\n" +
-      "\t[-safemode <enter | leave | get | wait>]\n" +
-      "\t[-saveNamespace]\n" +
-      "\t[-rollEdits]\n" +
-      "\t[-restoreFailedStorage true|false|check]\n" +
-      "\t[-refreshNodes]\n" +
-      "\t[" + SetQuotaCommand.USAGE + "]\n" +
-      "\t[" + ClearQuotaCommand.USAGE +"]\n" +
-      "\t[" + SetSpaceQuotaCommand.USAGE + "]\n" +
-      "\t[" + ClearSpaceQuotaCommand.USAGE +"]\n" +
-      "\t[-finalizeUpgrade]\n" +
-      "\t[" + RollingUpgradeCommand.USAGE +"]\n" +
-      "\t[-refreshServiceAcl]\n" +
-      "\t[-refreshUserToGroupsMappings]\n" +
-      "\t[-refreshSuperUserGroupsConfiguration]\n" +
-      "\t[-refreshCallQueue]\n" +
-      "\t[-refresh <host:ipc_port> <key> [arg1..argn]\n" +
-      "\t[-printTopology]\n" +
-      "\t[-refreshNamenodes datanodehost:port]\n"+
-      "\t[-deleteBlockPool datanodehost:port blockpoolId [force]]\n"+
-      "\t[-setBalancerBandwidth <bandwidth>]\n" +
-      "\t[-fetchImage <local directory>]\n" +
-      "\t[-allowSnapshot <snapshotDir>]\n" +
-      "\t[-disallowSnapshot <snapshotDir>]\n" +
-      "\t[-shutdownDatanode <datanode_host:ipc_port> [upgrade]]\n" +
-      "\t[-getDatanodeInfo <datanode_host:ipc_port>\n" +
-      "\t[-help [cmd]]\n";
+      "hdfs dfsadmin\n" +
+      commonUsageSummary;
 
     String report ="-report [-live] [-dead] [-decommissioning]:\n" +
       "\tReports basic filesystem information and statistics.\n" +
@@ -825,15 +834,13 @@ public class DFSAdmin extends FsShell {
 
     String saveNamespace = "-saveNamespace:\t" +
     "Save current namespace into storage directories and reset edits log.\n" +
-    "\t\tRequires superuser permissions and safe mode.\n";
+    "\t\tRequires safe mode.\n";
 
     String rollEdits = "-rollEdits:\t" +
-    "Rolls the edit log.\n" +
-    "\t\tRequires superuser permissions.\n";
+    "Rolls the edit log.\n";
     
     String restoreFailedStorage = "-restoreFailedStorage:\t" +
-    "Set/Unset/Check flag to attempt restore of failed storage replicas if they become available.\n" +
-    "\t\tRequires superuser permissions.\n";
+    "Set/Unset/Check flag to attempt restore of failed storage replicas if they become available.\n";
     
     String refreshNodes = "-refreshNodes: \tUpdates the namenode with the " +
       "set of datanodes allowed to connect to the namenode.\n\n" +
@@ -1021,7 +1028,7 @@ public class DFSAdmin extends FsShell {
 
   /**
    * Command to ask the namenode to finalize previously performed upgrade.
-   * Usage: java DFSAdmin -finalizeUpgrade
+   * Usage: hdfs dfsadmin -finalizeUpgrade
    * @exception IOException 
    */
   public int finalizeUpgrade() throws IOException {
@@ -1058,7 +1065,7 @@ public class DFSAdmin extends FsShell {
 
   /**
    * Dumps DFS data structures into specified file.
-   * Usage: java DFSAdmin -metasave filename
+   * Usage: hdfs dfsadmin -metasave filename
    * @param argv List of of command line parameters.
    * @param idx The index of the command that is being processed.
    * @exception IOException if an error occurred while accessing
@@ -1366,118 +1373,90 @@ public class DFSAdmin extends FsShell {
    */
   private static void printUsage(String cmd) {
     if ("-report".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
           + " [-report] [-live] [-dead] [-decommissioning]");
     } else if ("-safemode".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
           + " [-safemode enter | leave | get | wait]");
     } else if ("-allowSnapshot".equalsIgnoreCase(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
           + " [-allowSnapshot <snapshotDir>]");
     } else if ("-disallowSnapshot".equalsIgnoreCase(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
           + " [-disallowSnapshot <snapshotDir>]");
     } else if ("-saveNamespace".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
                          + " [-saveNamespace]");
     } else if ("-rollEdits".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
                          + " [-rollEdits]");
     } else if ("-restoreFailedStorage".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
           + " [-restoreFailedStorage true|false|check ]");
     } else if ("-refreshNodes".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
                          + " [-refreshNodes]");
     } else if ("-finalizeUpgrade".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
                          + " [-finalizeUpgrade]");
     } else if (RollingUpgradeCommand.matches(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
           + " [" + RollingUpgradeCommand.USAGE+"]");
     } else if ("-metasave".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
           + " [-metasave filename]");
     } else if (SetQuotaCommand.matches(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
                          + " [" + SetQuotaCommand.USAGE+"]");
     } else if (ClearQuotaCommand.matches(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
                          + " ["+ClearQuotaCommand.USAGE+"]");
     } else if (SetSpaceQuotaCommand.matches(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
                          + " [" + SetSpaceQuotaCommand.USAGE+"]");
     } else if (ClearSpaceQuotaCommand.matches(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
                          + " ["+ClearSpaceQuotaCommand.USAGE+"]");
     } else if ("-refreshServiceAcl".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
                          + " [-refreshServiceAcl]");
     } else if ("-refreshUserToGroupsMappings".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
                          + " [-refreshUserToGroupsMappings]");
     } else if ("-refreshSuperUserGroupsConfiguration".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
                          + " [-refreshSuperUserGroupsConfiguration]");
     } else if ("-refreshCallQueue".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
                          + " [-refreshCallQueue]");
     } else if ("-refresh".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
                          + " [-refresh <hostname:port> <resource_identifier> [arg1..argn]");
     } else if ("-printTopology".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
                          + " [-printTopology]");
     } else if ("-refreshNamenodes".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
                          + " [-refreshNamenodes datanode-host:port]");
     } else if ("-deleteBlockPool".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
           + " [-deleteBlockPool datanode-host:port blockpoolId [force]]");
     } else if ("-setBalancerBandwidth".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
                   + " [-setBalancerBandwidth <bandwidth in bytes per second>]");
     } else if ("-fetchImage".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
           + " [-fetchImage <local directory>]");
     } else if ("-shutdownDatanode".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
           + " [-shutdownDatanode <datanode_host:ipc_port> [upgrade]]");
     } else if ("-getDatanodeInfo".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
           + " [-getDatanodeInfo <datanode_host:ipc_port>]");
     } else {
-      System.err.println("Usage: java DFSAdmin");
+      System.err.println("Usage: hdfs dfsadmin");
       System.err.println("Note: Administrative commands can only be run as the HDFS superuser.");
-      System.err.println("           [-report]");
-      System.err.println("           [-safemode enter | leave | get | wait]"); 
-      System.err.println("           [-allowSnapshot <snapshotDir>]");
-      System.err.println("           [-disallowSnapshot <snapshotDir>]");
-      System.err.println("           [-saveNamespace]");
-      System.err.println("           [-rollEdits]");
-      System.err.println("           [-restoreFailedStorage true|false|check]");
-      System.err.println("           [-refreshNodes]");
-      System.err.println("           [-finalizeUpgrade]");
-      System.err.println("           ["+RollingUpgradeCommand.USAGE+"]");
-      System.err.println("           [-metasave filename]");
-      System.err.println("           [-refreshServiceAcl]");
-      System.err.println("           [-refreshUserToGroupsMappings]");
-      System.err.println("           [-refreshSuperUserGroupsConfiguration]");
-      System.err.println("           [-refreshCallQueue]");
-      System.err.println("           [-refresh]");
-      System.err.println("           [-printTopology]");
-      System.err.println("           [-refreshNamenodes datanodehost:port]");
-      System.err.println("           [-deleteBlockPool datanode-host:port blockpoolId [force]]");
-      System.err.println("           ["+SetQuotaCommand.USAGE+"]");
-      System.err.println("           ["+ClearQuotaCommand.USAGE+"]");
-      System.err.println("           ["+SetSpaceQuotaCommand.USAGE+"]");
-      System.err.println("           ["+ClearSpaceQuotaCommand.USAGE+"]");      
-      System.err.println("           [-setBalancerBandwidth <bandwidth in bytes per second>]");
-      System.err.println("           [-fetchImage <local directory>]");
-      System.err.println("           [-shutdownDatanode <datanode_host:ipc_port> [upgrade]]");
-      System.err.println("           [-getDatanodeInfo <datanode_host:ipc_port>]");
-      System.err.println("           [-help [cmd]]");
-      System.err.println();
+      System.err.println(commonUsageSummary);
       ToolRunner.printGenericCommandUsage(System.err);
     }
   }
