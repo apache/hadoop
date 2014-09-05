@@ -346,6 +346,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6979. hdfs.dll does not produce .pdb files. (cnauroth)
 
+    HDFS-6862. Add missing timeout annotations to tests. (Xiaoyu Yao via
+    Arpit Agarwal)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
