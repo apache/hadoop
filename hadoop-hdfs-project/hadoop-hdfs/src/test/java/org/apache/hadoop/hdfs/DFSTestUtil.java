@@ -64,6 +64,7 @@ import org.apache.hadoop.hdfs.server.namenode.ha
         .ConfiguredFailoverProxyProvider;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.net.NetUtils;
@@ -73,6 +74,8 @@ import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.VersionInfo;
 import org.junit.Assume;
 
@@ -1418,5 +1421,56 @@ public class DFSTestUtil {
       }
     }
     return expectedPrimary.getDatanodeDescriptor();
+  }
+
+  public static void toolRun(Tool tool, String cmd, int retcode, String contain)
+      throws Exception {
+    String [] cmds = StringUtils.split(cmd, ' ');
+    System.out.flush();
+    System.err.flush();
+    PrintStream origOut = System.out;
+    PrintStream origErr = System.err;
+    String output = null;
+    int ret = 0;
+    try {
+      ByteArrayOutputStream bs = new ByteArrayOutputStream(1024);
+      PrintStream out = new PrintStream(bs);
+      System.setOut(out);
+      System.setErr(out);
+      ret = tool.run(cmds);
+      System.out.flush();
+      System.err.flush();
+      out.close();
+      output = bs.toString();
+    } finally {
+      System.setOut(origOut);
+      System.setErr(origErr);
+    }
+    System.out.println("Output for command: " + cmd + " retcode: " + ret);
+    if (output != null) {
+      System.out.println(output);
+    }
+    assertEquals(retcode, ret);
+    if (contain != null) {
+      assertTrue("The real output is: " + output + ".\n It should contain: "
+          + contain, output.contains(contain));
+    }
+  }
+
+  public static void FsShellRun(String cmd, int retcode, String contain,
+      Configuration conf) throws Exception {
+    FsShell shell = new FsShell(new Configuration(conf));
+    toolRun(shell, cmd, retcode, contain);
+  }  
+
+  public static void DFSAdminRun(String cmd, int retcode, String contain,
+      Configuration conf) throws Exception {
+    DFSAdmin admin = new DFSAdmin(new Configuration(conf));
+    toolRun(admin, cmd, retcode, contain);
+  }
+
+  public static void FsShellRun(String cmd, Configuration conf)
+      throws Exception {
+    FsShellRun(cmd, 0, null, conf);
   }
 }

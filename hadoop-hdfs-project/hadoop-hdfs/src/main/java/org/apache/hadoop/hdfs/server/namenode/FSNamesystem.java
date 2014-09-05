@@ -334,7 +334,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private HdfsFileStatus getAuditFileInfo(String path, boolean resolveSymlink)
       throws IOException {
     return (isAuditEnabled() && isExternalInvocation())
-        ? dir.getFileInfo(path, resolveSymlink, false) : null;
+        ? dir.getFileInfo(path, resolveSymlink, false, false) : null;
   }
   
   private void logAuditEvent(boolean succeeded, String cmd, String src)
@@ -2546,7 +2546,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               overwrite, createParent, replication, blockSize, suite, edek,
               logRetryCache);
           stat = dir.getFileInfo(src, false,
-              FSDirectory.isReservedRawName(srcArg));
+              FSDirectory.isReservedRawName(srcArg), false);
         } catch (StandbyException se) {
           skipSync = true;
           throw se;
@@ -3970,12 +3970,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     try {
       checkOperation(OperationCategory.READ);
       src = resolvePath(src, pathComponents);
+      boolean isSuperUser = true;
       if (isPermissionEnabled) {
         checkPermission(pc, src, false, null, null, null, null, false,
             resolveLink);
+        isSuperUser = pc.isSuperUser();
       }
       stat = dir.getFileInfo(src, resolveLink,
-          FSDirectory.isReservedRawName(srcArg));
+          FSDirectory.isReservedRawName(srcArg), isSuperUser);
     } catch (AccessControlException e) {
       logAuditEvent(false, "getfileinfo", srcArg);
       throw e;

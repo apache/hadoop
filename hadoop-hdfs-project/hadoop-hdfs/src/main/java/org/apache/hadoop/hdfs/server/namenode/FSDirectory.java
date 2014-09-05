@@ -1487,10 +1487,12 @@ public class FSDirectory implements Closeable {
    * @param src The string representation of the path to the file
    * @param resolveLink whether to throw UnresolvedLinkException
    * @param isRawPath true if a /.reserved/raw pathname was passed by the user
+   * @param includeStoragePolicy whether to include storage policy
    * @return object containing information regarding the file
    *         or null if file not found
    */
-  HdfsFileStatus getFileInfo(String src, boolean resolveLink, boolean isRawPath)
+  HdfsFileStatus getFileInfo(String src, boolean resolveLink,
+      boolean isRawPath, boolean includeStoragePolicy)
     throws IOException {
     String srcs = normalizePath(src);
     readLock();
@@ -1500,9 +1502,10 @@ public class FSDirectory implements Closeable {
       }
       final INodesInPath inodesInPath = getLastINodeInPath(srcs, resolveLink);
       final INode i = inodesInPath.getINode(0);
+      byte policyId = includeStoragePolicy && i != null ?
+          i.getStoragePolicyID() : BlockStoragePolicy.ID_UNSPECIFIED;
       return i == null ? null : createFileStatus(HdfsFileStatus.EMPTY_NAME, i,
-          BlockStoragePolicy.ID_UNSPECIFIED, inodesInPath.getPathSnapshotId(),
-          isRawPath);
+          policyId, inodesInPath.getPathSnapshotId(), isRawPath);
     } finally {
       readUnlock();
     }
