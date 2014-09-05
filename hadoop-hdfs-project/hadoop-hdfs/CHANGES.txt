@@ -436,6 +436,9 @@ Release 2.6.0 - UNRELEASED
 
       HDFS-6905. fs-encryption merge triggered release audit failures. (clamb via tucu)
 
+      HDFS-6714. TestBlocksScheduledCounter#testBlocksScheduledCounter should
+      shutdown cluster (vinayakumarb)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
