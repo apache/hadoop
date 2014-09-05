@@ -341,6 +341,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6996. SnapshotDiff report can hit IndexOutOfBoundsException when there
     are nested renamed directory/file. (jing9)
 
+    HDFS-6831. Inconsistency between 'hdfs dfsadmin' and 'hdfs dfsadmin -help'.
+    (Xiaoyu Yao via Arpit Agarwal)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
