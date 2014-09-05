@@ -100,6 +100,7 @@ public abstract class Event {
     private String groupName;
     private FsPermission perms;
     private String symlinkTarget;
+    private boolean overwrite;
 
     public static class Builder {
       private INodeType iNodeType;
@@ -110,6 +111,7 @@ public abstract class Event {
       private String groupName;
       private FsPermission perms;
       private String symlinkTarget;
+      private boolean overwrite;
 
       public Builder iNodeType(INodeType type) {
         this.iNodeType = type;
@@ -150,6 +152,11 @@ public abstract class Event {
         this.symlinkTarget = symlinkTarget;
         return this;
       }
+      
+      public Builder overwrite(boolean overwrite) {
+        this.overwrite = overwrite;
+        return this;
+      }
 
       public CreateEvent build() {
         return new CreateEvent(this);
@@ -166,6 +173,7 @@ public abstract class Event {
       this.groupName = b.groupName;
       this.perms = b.perms;
       this.symlinkTarget = b.symlinkTarget;
+      this.overwrite = b.overwrite;
     }
 
     public INodeType getiNodeType() {
@@ -207,6 +215,10 @@ public abstract class Event {
      */
     public String getSymlinkTarget() {
       return symlinkTarget;
+    }
+    
+    public boolean getOverwrite() {
+      return overwrite;
     }
   }
 

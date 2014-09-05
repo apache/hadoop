@@ -702,7 +702,8 @@ public class FSEditLog implements LogsPurgeable {
    * Add open lease record to edit log. 
    * Records the block locations of the last block.
    */
-  public void logOpenFile(String path, INodeFile newNode, boolean toLogRpcIds) {
+  public void logOpenFile(String path, INodeFile newNode, boolean overwrite,
+      boolean toLogRpcIds) {
     Preconditions.checkArgument(newNode.isUnderConstruction());
     PermissionStatus permissions = newNode.getPermissionStatus();
     AddOp op = AddOp.getInstance(cache.get())
@@ -716,7 +717,8 @@ public class FSEditLog implements LogsPurgeable {
       .setPermissionStatus(permissions)
       .setClientName(newNode.getFileUnderConstructionFeature().getClientName())
       .setClientMachine(
-          newNode.getFileUnderConstructionFeature().getClientMachine());
+          newNode.getFileUnderConstructionFeature().getClientMachine())
+      .setOverwrite(overwrite);
 
     AclFeature f = newNode.getAclFeature();
     if (f != null) {

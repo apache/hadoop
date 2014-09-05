@@ -409,6 +409,7 @@ public abstract class FSEditLogOp {
     List<XAttr> xAttrs;
     String clientName;
     String clientMachine;
+    boolean overwrite;
     
     private AddCloseOp(FSEditLogOpCodes opCode) {
       super(opCode);
@@ -488,6 +489,11 @@ public abstract class FSEditLogOp {
       this.clientMachine = clientMachine;
       return (T)this;
     }
+    
+    <T extends AddCloseOp> T setOverwrite(boolean overwrite) {
+      this.overwrite = overwrite;
+      return (T)this;
+    }
 
     @Override
     public void writeFields(DataOutputStream out) throws IOException {
@@ -507,6 +513,7 @@ public abstract class FSEditLogOp {
         b.build().writeDelimitedTo(out);
         FSImageSerialization.writeString(clientName,out);
         FSImageSerialization.writeString(clientMachine,out);
+        FSImageSerialization.writeBoolean(overwrite, out);
         // write clientId and callId
         writeRpcIds(rpcClientId, rpcCallId, out);
       }
@@ -572,6 +579,12 @@ public abstract class FSEditLogOp {
         this.xAttrs = readXAttrsFromEditLog(in, logVersion);
         this.clientName = FSImageSerialization.readString(in);
         this.clientMachine = FSImageSerialization.readString(in);
+        if (NameNodeLayoutVersion.supports(
+            NameNodeLayoutVersion.Feature.CREATE_OVERWRITE, logVersion)) {
+          this.overwrite = FSImageSerialization.readBoolean(in);
+        } else {
+          this.overwrite = false;
+        }
         // read clientId and callId
         readRpcIds(in, logVersion);
       } else {
@@ -627,6 +640,8 @@ public abstract class FSEditLogOp {
       builder.append(clientName);
       builder.append(", clientMachine=");
       builder.append(clientMachine);
+      builder.append(", overwrite=");
+      builder.append(overwrite);
       if (this.opCode == OP_ADD) {
         appendRpcIdsToString(builder, rpcClientId, rpcCallId);
       }
@@ -655,6 +670,8 @@ public abstract class FSEditLogOp {
           Long.toString(blockSize));
       XMLUtils.addSaxString(contentHandler, "CLIENT_NAME", clientName);
       XMLUtils.addSaxString(contentHandler, "CLIENT_MACHINE", clientMachine);
+      XMLUtils.addSaxString(contentHandler, "OVERWRITE", 
+          Boolean.toString(overwrite));
       for (Block b : blocks) {
         FSEditLogOp.blockToXml(contentHandler, b);
       }
@@ -678,6 +695,7 @@ public abstract class FSEditLogOp {
       this.blockSize = Long.parseLong(st.getValue("BLOCKSIZE"));
       this.clientName = st.getValue("CLIENT_NAME");
       this.clientMachine = st.getValue("CLIENT_MACHINE");
+      this.overwrite = Boolean.parseBoolean(st.getValueOrNull("OVERWRITE"));
       if (st.hasChildren("BLOCK")) {
         List<Stanza> blocks = st.getChildren("BLOCK");
         this.blocks = new Block[blocks.size()];

@@ -197,7 +197,7 @@ public class TestEditLog {
             p, 0L, 0L, BlockInfo.EMPTY_ARRAY, replication, blockSize);
         inode.toUnderConstruction("", "");
 
-        editLog.logOpenFile("/filename" + (startIndex + i), inode, false);
+        editLog.logOpenFile("/filename" + (startIndex + i), inode, false, false);
         editLog.logCloseFile("/filename" + (startIndex + i), inode);
         editLog.logSync();
       }

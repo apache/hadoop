@@ -2429,7 +2429,8 @@ public class PBHelper {
             .perms(convert(create.getPerms()))
             .replication(create.getReplication())
             .symlinkTarget(create.getSymlinkTarget().isEmpty() ? null :
-            create.getSymlinkTarget()).build());
+            create.getSymlinkTarget())
+            .overwrite(create.getOverwrite()).build());
         break;
       case EVENT_METADATA:
         InotifyProtos.MetadataUpdateEventProto meta =
@@ -2507,7 +2508,8 @@ public class PBHelper {
                     .setPerms(convert(ce2.getPerms()))
                     .setReplication(ce2.getReplication())
                     .setSymlinkTarget(ce2.getSymlinkTarget() == null ?
-                        "" : ce2.getSymlinkTarget()).build().toByteString()
+                        "" : ce2.getSymlinkTarget())
+                    .setOverwrite(ce2.getOverwrite()).build().toByteString()
             ).build());
         break;
       case METADATA:

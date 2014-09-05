@@ -38,6 +38,7 @@ import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -70,6 +71,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
@@ -78,6 +80,8 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
@@ -86,6 +90,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
@@ -1210,4 +1215,118 @@ public class TestFileCreation {
     }
   }
 
+  /**
+   * 1. Check the blocks of old file are cleaned after creating with overwrite
+   * 2. Restart NN, check the file
+   * 3. Save new checkpoint and restart NN, check the file
+   */
+  @Test(timeout = 120000)
+  public void testFileCreationWithOverwrite() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setInt("dfs.blocksize", blockSize);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).
+        numDataNodes(3).build();
+    DistributedFileSystem dfs = cluster.getFileSystem();
+    try {
+      dfs.mkdirs(new Path("/foo/dir"));
+      String file = "/foo/dir/file";
+      Path filePath = new Path(file);
+      
+      // Case 1: Create file with overwrite, check the blocks of old file
+      // are cleaned after creating with overwrite
+      NameNode nn = cluster.getNameNode();
+      FSNamesystem fsn = NameNodeAdapter.getNamesystem(nn);
+      BlockManager bm = fsn.getBlockManager();
+      
+      FSDataOutputStream out = dfs.create(filePath);
+      byte[] oldData = AppendTestUtil.randomBytes(seed, fileSize);
+      try {
+        out.write(oldData);
+      } finally {
+        out.close();
+      }
+      
+      LocatedBlocks oldBlocks = NameNodeAdapter.getBlockLocations(
+          nn, file, 0, fileSize);
+      assertBlocks(bm, oldBlocks, true);
+      
+      out = dfs.create(filePath, true);
+      byte[] newData = AppendTestUtil.randomBytes(seed, fileSize);
+      try {
+        out.write(newData);
+      } finally {
+        out.close();
+      }
+      dfs.deleteOnExit(filePath);
+      
+      LocatedBlocks newBlocks = NameNodeAdapter.getBlockLocations(
+          nn, file, 0, fileSize);
+      assertBlocks(bm, newBlocks, true);
+      assertBlocks(bm, oldBlocks, false);
+      
+      FSDataInputStream in = dfs.open(filePath);
+      byte[] result = null;
+      try {
+        result = readAll(in);
+      } finally {
+        in.close();
+      }
+      Assert.assertArrayEquals(newData, result);
+      
+      // Case 2: Restart NN, check the file
+      cluster.restartNameNode();
+      nn = cluster.getNameNode();
+      in = dfs.open(filePath);
+      try {
+        result = readAll(in);
+      } finally {
+        in.close();
+      }
+      Assert.assertArrayEquals(newData, result);
+      
+      // Case 3: Save new checkpoint and restart NN, check the file
+      NameNodeAdapter.enterSafeMode(nn, false);
+      NameNodeAdapter.saveNamespace(nn);
+      cluster.restartNameNode();
+      nn = cluster.getNameNode();
+      
+      in = dfs.open(filePath);
+      try {
+        result = readAll(in);
+      } finally {
+        in.close();
+      }
+      Assert.assertArrayEquals(newData, result);
+    } finally {
+      if (dfs != null) {
+        dfs.close();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+  
+  private void assertBlocks(BlockManager bm, LocatedBlocks lbs, 
+      boolean exist) {
+    for (LocatedBlock locatedBlock : lbs.getLocatedBlocks()) {
+      if (exist) {
+        assertTrue(bm.getStoredBlock(locatedBlock.getBlock().
+            getLocalBlock()) != null);
+      } else {
+        assertTrue(bm.getStoredBlock(locatedBlock.getBlock().
+            getLocalBlock()) == null);
+      }
+    }
+  }
+  
+  private byte[] readAll(FSDataInputStream in) throws IOException {
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    byte[] buffer = new byte[1024];
+    int n = 0;
+    while((n = in.read(buffer)) > -1) {
+      out.write(buffer, 0, n);
+    }
+    return out.toByteArray();
+  }
 }
