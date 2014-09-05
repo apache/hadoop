@@ -419,6 +419,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11063. KMS cannot deploy on Windows, because class names are too long.
     (cnauroth)
 
+    HADOOP-11067. warning message 'ssl.client.truststore.location has not
+    been set' gets printed for hftp command. (Xiaoyu Yao via Arpit Agarwal)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
