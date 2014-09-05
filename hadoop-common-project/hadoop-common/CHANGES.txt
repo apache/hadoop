@@ -507,6 +507,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11060. Create a CryptoCodec test that verifies interoperability 
     between the JCE and OpenSSL implementations. (hitliuyi via tucu)
 
+    HADOOP-11070. Create MiniKMS for testing. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
