@@ -439,6 +439,8 @@ Release 2.5.1 - UNRELEASED
 
     HADOOP-11001. Fix test-patch to work with the git repo. (kasha)
 
+    HADOOP-11065. Rat check should exclude "**/build/**". (kasha)
+
 Release 2.5.0 - 2014-08-11
 
   INCOMPATIBLE CHANGES
