@@ -42,11 +42,8 @@ public class TestCrossOriginFilterInitializer {
         CrossOriginFilterInitializer.getFilterParameters(conf);
 
     // retrieve values
-    String rootvalue =
-        filterParameters.get(CrossOriginFilterInitializer.PREFIX + "rootparam");
-    String nestedvalue =
-        filterParameters.get(CrossOriginFilterInitializer.PREFIX
-            + "nested.param");
+    String rootvalue = filterParameters.get("rootparam");
+    String nestedvalue = filterParameters.get("nested.param");
     String outofscopeparam = filterParameters.get("outofscopeparam");
 
     // verify expected values are in place

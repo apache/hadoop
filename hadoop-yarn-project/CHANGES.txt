@@ -158,6 +158,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2511. Allowed all origins by default when CrossOriginFilter is
     enabled. (Jonathan Eagles via zjshen)
 
+    YARN-2508. Cross Origin configuration parameters prefix are not honored
+    (Mit Desai via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES
