@@ -283,7 +283,7 @@ public class DatanodeStorageInfo {
   /** Increment the number of blocks scheduled for each given storage */ 
   public static void incrementBlocksScheduled(DatanodeStorageInfo... storages) {
     for (DatanodeStorageInfo s : storages) {
-      s.getDatanodeDescriptor().incrementBlocksScheduled();
+      s.getDatanodeDescriptor().incrementBlocksScheduled(s.getStorageType());
     }
   }
 

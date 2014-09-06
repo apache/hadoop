@@ -2930,7 +2930,7 @@ public class BlockManager {
     // Decrement number of blocks scheduled to this datanode.
     // for a retry request (of DatanodeProtocol#blockReceivedAndDeleted with 
     // RECEIVED_BLOCK), we currently also decrease the approximate number. 
-    node.decrementBlocksScheduled();
+    node.decrementBlocksScheduled(storageInfo.getStorageType());
 
     // get the deletion hint node
     DatanodeDescriptor delHintNode = null;
