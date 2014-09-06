@@ -507,6 +507,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11060. Create a CryptoCodec test that verifies interoperability 
     between the JCE and OpenSSL implementations. (hitliuyi via tucu)
 
+    HADOOP-11070. Create MiniKMS for testing. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
@@ -762,6 +764,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11067. warning message 'ssl.client.truststore.location has not
     been set' gets printed for hftp command. (Xiaoyu Yao via Arpit Agarwal)
+
+    HADOOP-11069. KMSClientProvider should use getAuthenticationMethod() to
+    determine if in proxyuser mode or not. (tucu)
 
 Release 2.5.1 - UNRELEASED
 

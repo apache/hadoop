@@ -223,7 +223,7 @@ public class NameNodeAdapter {
    * if safemode is not running.
    */
   public static int getSafeModeSafeBlocks(NameNode nn) {
-    SafeModeInfo smi = nn.getNamesystem().getSafeModeInfoForTests();
+    SafeModeInfo smi = nn.getNamesystem().getSafeModeInfo();
     if (smi == null) {
       return -1;
     }
