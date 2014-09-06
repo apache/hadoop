@@ -1052,7 +1052,7 @@ public class DatanodeManager {
    * 3. Added to exclude --> start decommission.
    * 4. Removed from exclude --> stop decommission.
    */
-  private void refreshDatanodes() {
+  void refreshDatanodes() {
     for(DatanodeDescriptor node : datanodeMap.values()) {
       // Check if not include.
       if (!hostFileManager.isIncluded(node)) {
@@ -1584,6 +1584,10 @@ public class DatanodeManager {
 
   public void setShouldSendCachingCommands(boolean shouldSendCachingCommands) {
     this.shouldSendCachingCommands = shouldSendCachingCommands;
+  }
+
+  public HostFileManager getHostFileManager() {
+    return this.hostFileManager;
   }
 }
 
