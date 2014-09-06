@@ -1,1 +1,0 @@
-This project is depend on hadoop and hadoop-nativetask, so in order to complete the build, you have to specify the hadoop dir first.
