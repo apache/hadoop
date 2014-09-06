@@ -430,7 +430,8 @@ public class FSDirectory implements Closeable {
   /**
    * @throws SnapshotAccessControlException 
    * @see #unprotectedRenameTo(String, String, long)
-   * @deprecated Use {@link #renameTo(String, String, boolean, Rename...)}
+   * @deprecated Use {@link #renameTo(String, String, long,
+   *                                  BlocksMapUpdateInfo, Rename...)}
    */
   @Deprecated
   boolean renameTo(String src, String dst, long mtime)
@@ -481,7 +482,7 @@ public class FSDirectory implements Closeable {
    * @throws QuotaExceededException if the operation violates any quota limit
    * @throws FileAlreadyExistsException if the src is a symlink that points to dst
    * @throws SnapshotAccessControlException if path is in RO snapshot
-   * @deprecated See {@link #renameTo(String, String, boolean, Rename...)}
+   * @deprecated See {@link #renameTo(String, String, long, BlocksMapUpdateInfo, Rename...)}
    */
   @Deprecated
   boolean unprotectedRenameTo(String src, String dst, long timestamp)

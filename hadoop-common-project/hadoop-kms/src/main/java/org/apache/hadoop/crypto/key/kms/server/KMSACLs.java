@@ -19,8 +19,11 @@ package org.apache.hadoop.crypto.key.kms.server;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.kms.server.KMS.KMSOp;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,13 +42,22 @@ import java.util.concurrent.TimeUnit;
 public class KMSACLs implements Runnable {
   private static final Logger LOG = LoggerFactory.getLogger(KMSACLs.class);
 
+  private static final String UNAUTHORIZED_MSG_WITH_KEY =
+      "User:%s not allowed to do '%s' on '%s'";
+
+  private static final String UNAUTHORIZED_MSG_WITHOUT_KEY =
+      "User:%s not allowed to do '%s'";
 
   public enum Type {
     CREATE, DELETE, ROLLOVER, GET, GET_KEYS, GET_METADATA,
     SET_KEY_MATERIAL, GENERATE_EEK, DECRYPT_EEK;
 
-    public String getConfigKey() {
+    public String getAclConfigKey() {
       return KMSConfiguration.CONFIG_PREFIX + "acl." + this.toString();
+    }
+
+    public String getBlacklistConfigKey() {
+      return KMSConfiguration.CONFIG_PREFIX + "blacklist." + this.toString();
     }
   }
 
@@ -54,6 +66,7 @@ public class KMSACLs implements Runnable {
   public static final int RELOADER_SLEEP_MILLIS = 1000;
 
   private volatile Map<Type, AccessControlList> acls;
+  private volatile Map<Type, AccessControlList> blacklistedAcls;
   private ScheduledExecutorService executorService;
   private long lastReload;
 
@@ -70,12 +83,20 @@ public class KMSACLs implements Runnable {
 
   private void setACLs(Configuration conf) {
     Map<Type, AccessControlList> tempAcls = new HashMap<Type, AccessControlList>();
+    Map<Type, AccessControlList> tempBlacklist = new HashMap<Type, AccessControlList>();
     for (Type aclType : Type.values()) {
-      String aclStr = conf.get(aclType.getConfigKey(), ACL_DEFAULT);
+      String aclStr = conf.get(aclType.getAclConfigKey(), ACL_DEFAULT);
       tempAcls.put(aclType, new AccessControlList(aclStr));
+      String blacklistStr = conf.get(aclType.getBlacklistConfigKey());
+      if (blacklistStr != null) {
+        // Only add if blacklist is present
+        tempBlacklist.put(aclType, new AccessControlList(blacklistStr));
+        LOG.info("'{}' Blacklist '{}'", aclType, blacklistStr);
+      }
       LOG.info("'{}' ACL '{}'", aclType, aclStr);
     }
     acls = tempAcls;
+    blacklistedAcls = tempBlacklist;
   }
 
   @Override
@@ -109,12 +130,38 @@ public class KMSACLs implements Runnable {
     lastReload = System.currentTimeMillis();
     Configuration conf = KMSConfiguration.getACLsConf();
     // triggering the resource loading.
-    conf.get(Type.CREATE.getConfigKey());
+    conf.get(Type.CREATE.getAclConfigKey());
     return conf;
   }
 
+  /**
+   * First Check if user is in ACL for the KMS operation, if yes, then
+   * return true if user is not present in any configured blacklist for
+   * the operation
+   * @param type KMS Operation
+   * @param ugi UserGroupInformation of user
+   * @return true is user has access
+   */
   public boolean hasAccess(Type type, UserGroupInformation ugi) {
-    return acls.get(type).isUserAllowed(ugi);
+    boolean access = acls.get(type).isUserAllowed(ugi);
+    if (access) {
+      AccessControlList blacklist = blacklistedAcls.get(type);
+      access = (blacklist == null) || !blacklist.isUserInList(ugi);
+    }
+    return access;
+  }
+
+  public void assertAccess(KMSACLs.Type aclType,
+      UserGroupInformation ugi, KMSOp operation, String key)
+      throws AccessControlException {
+    if (!KMSWebApp.getACLs().hasAccess(aclType, ugi)) {
+      KMSWebApp.getUnauthorizedCallsMeter().mark();
+      KMSWebApp.getKMSAudit().unauthorized(ugi, operation, key);
+      throw new AuthorizationException(String.format(
+          (key != null) ? UNAUTHORIZED_MSG_WITH_KEY
+                        : UNAUTHORIZED_MSG_WITHOUT_KEY,
+          ugi.getShortUserName(), operation, key));
+    }
   }
 
 }

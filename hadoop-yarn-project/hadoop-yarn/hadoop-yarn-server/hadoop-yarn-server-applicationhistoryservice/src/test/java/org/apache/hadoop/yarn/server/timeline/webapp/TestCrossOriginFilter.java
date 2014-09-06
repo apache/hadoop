@@ -31,6 +31,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import static org.mockito.Mockito.when;
@@ -63,6 +64,20 @@ public class TestCrossOriginFilter {
 
     verifyZeroInteractions(mockRes);
     verify(mockChain).doFilter(mockReq, mockRes);
+  }
+
+  @Test
+  public void testAllowAllOrigins() throws ServletException, IOException {
+
+    // Setup the configuration settings of the server
+    Map<String, String> conf = new HashMap<String, String>();
+    conf.put(CrossOriginFilter.ALLOWED_ORIGINS, "*");
+    FilterConfig filterConfig = new FilterConfigTest(conf);
+
+    // Object under test
+    CrossOriginFilter filter = new CrossOriginFilter();
+    filter.init(filterConfig);
+    Assert.assertTrue(filter.isOriginAllowed("example.org"));
   }
 
   @Test

@@ -31,6 +31,7 @@ import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHand
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
+import org.apache.hadoop.util.HttpExceptionUtils;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -221,18 +222,8 @@ public class DelegationTokenAuthenticationFilter
           try {
             ProxyUsers.authorize(ugi, request.getRemoteHost());
           } catch (AuthorizationException ex) {
-            String msg = String.format(
-                "User '%s' from host '%s' not allowed to impersonate user '%s'",
-                realUser, request.getRemoteHost(), doAsUser);
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            response.setContentType(APPLICATION_JSON_MIME);
-            Map<String, String> json = new HashMap<String, String>();
-            json.put(ERROR_EXCEPTION_JSON,
-                AuthorizationException.class.getName());
-            json.put(ERROR_MESSAGE_JSON, msg);
-            Writer writer = response.getWriter();
-            ObjectMapper jsonMapper = new ObjectMapper();
-            jsonMapper.writeValue(writer, json);
+            HttpExceptionUtils.createServletExceptionResponse(response,
+                HttpServletResponse.SC_FORBIDDEN, ex);
             requestCompleted = true;
           }
         }

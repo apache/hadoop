@@ -34,6 +34,7 @@ import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
+import org.apache.hadoop.util.HttpExceptionUtils;
 import org.apache.http.client.utils.URIBuilder;
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -44,7 +45,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.lang.reflect.Constructor;
 import java.net.HttpURLConnection;
 import java.net.SocketTimeoutException;
 import java.net.URI;
@@ -54,7 +54,6 @@ import java.net.URLEncoder;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -413,58 +412,6 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     return conn;
   }
 
-  // trick, riding on generics to throw an undeclared exception
-
-  private static void throwEx(Throwable ex) {
-    KMSClientProvider.<RuntimeException>throwException(ex);
-  }
-
-  @SuppressWarnings("unchecked")
-  private static <E extends Throwable> void throwException(Throwable ex)
-      throws E {
-    throw (E) ex;
-  }
-
-  @SuppressWarnings("unchecked")
-  private static void validateResponse(HttpURLConnection conn, int expected)
-      throws IOException {
-    int status = conn.getResponseCode();
-    if (status != expected) {
-      InputStream es = null;
-      try {
-        Exception toThrow;
-        String contentType = conn.getHeaderField(CONTENT_TYPE);
-        if (contentType != null &&
-            contentType.toLowerCase().startsWith(APPLICATION_JSON_MIME)) {
-          es = conn.getErrorStream();
-          ObjectMapper mapper = new ObjectMapper();
-          Map json = mapper.readValue(es, Map.class);
-          String exClass = (String) json.get(
-              KMSRESTConstants.ERROR_EXCEPTION_JSON);
-          String exMsg = (String)
-              json.get(KMSRESTConstants.ERROR_MESSAGE_JSON);
-          try {
-            ClassLoader cl = KMSClientProvider.class.getClassLoader();
-            Class klass = cl.loadClass(exClass);
-            Constructor constr = klass.getConstructor(String.class);
-            toThrow = (Exception) constr.newInstance(exMsg);
-          } catch (Exception ex) {
-            toThrow = new IOException(MessageFormat.format(
-                "HTTP status [{0}], {1}", status, conn.getResponseMessage()));
-          }
-        } else {
-          toThrow = new IOException(MessageFormat.format(
-              "HTTP status [{0}], {1}", status, conn.getResponseMessage()));
-        }
-        throwEx(toThrow);
-      } finally {
-        if (es != null) {
-          es.close();
-        }
-      }
-    }
-  }
-
   private static <T> T call(HttpURLConnection conn, Map jsonOutput,
       int expectedResponse, Class<T> klass)
       throws IOException {
@@ -477,7 +424,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       conn.getInputStream().close();
       throw ex;
     }
-    validateResponse(conn, expectedResponse);
+    HttpExceptionUtils.validateResponse(conn, expectedResponse);
     if (APPLICATION_JSON_MIME.equalsIgnoreCase(conn.getContentType())
         && klass != null) {
       ObjectMapper mapper = new ObjectMapper();

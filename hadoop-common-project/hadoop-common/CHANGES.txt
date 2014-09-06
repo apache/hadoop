@@ -330,6 +330,9 @@ Trunk (Unreleased)
 
     HADOOP-11033. shell scripts ignore JAVA_HOME on OS X. (aw)
 
+    HADOOP-11052. hadoop_verify_secure_prereq's results aren't checked 
+    in bin/hdfs (aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -492,6 +495,17 @@ Release 2.6.0 - UNRELEASED
     at multiple places. (Juan Yu via kasha)
 
     HADOOP-10990. Add missed NFSv3 request and response classes (brandonli)
+
+    HADOOP-10863. KMS should have a blacklist for decrypting EEKs. 
+    (asuresh via tucu)
+
+    HADOOP-11054. Add a KeyProvider instantiation based on a URI. (tucu)
+
+    HADOOP-11015. Http server/client utils to propagate and recreate 
+    Exceptions from server to client. (tucu)
+
+    HADOOP-11060. Create a CryptoCodec test that verifies interoperability 
+    between the JCE and OpenSSL implementations. (hitliuyi via tucu)
 
   OPTIMIZATIONS
 
@@ -681,6 +695,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-8815. RandomDatum needs to override hashCode().
     (Brandon Li via suresh)
 
+    HADOOP-11056. OsSecureRandom.setConf() might leak file descriptors (yzhang
+    via cmccabe)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HADOOP-10734. Implement high-performance secure random number sources.
@@ -740,6 +757,12 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11012. hadoop fs -text of zero-length file causes EOFException
     (Eric Payne via jlowe)
 
+    HADOOP-11063. KMS cannot deploy on Windows, because class names are too long.
+    (cnauroth)
+
+    HADOOP-11067. warning message 'ssl.client.truststore.location has not
+    been set' gets printed for hftp command. (Xiaoyu Yao via Arpit Agarwal)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -756,6 +779,8 @@ Release 2.5.1 - UNRELEASED
   BUG FIXES
 
     HADOOP-11001. Fix test-patch to work with the git repo. (kasha)
+
+    HADOOP-11065. Rat check should exclude "**/build/**". (kasha)
 
 Release 2.5.0 - 2014-08-11
 

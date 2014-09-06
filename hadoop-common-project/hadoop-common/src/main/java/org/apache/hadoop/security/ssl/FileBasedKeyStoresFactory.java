@@ -212,7 +212,7 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
       LOG.debug(mode.toString() + " Loaded TrustStore: " + truststoreLocation);
       trustManagers = new TrustManager[]{trustManager};
     } else {
-      LOG.warn("The property '" + locationProperty + "' has not been set, " +
+      LOG.debug("The property '" + locationProperty + "' has not been set, " +
           "no TrustStore will be loaded");
       trustManagers = null;
     }

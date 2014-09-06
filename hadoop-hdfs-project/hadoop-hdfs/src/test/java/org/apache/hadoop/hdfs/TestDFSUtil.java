@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_INTERNAL_NAMESERVICES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
@@ -864,5 +865,30 @@ public class TestDFSUtil {
 
     // let's make sure that a password that doesn't exist returns null
     Assert.assertEquals(null, DFSUtil.getPassword(conf,"invalid-alias"));
+  }
+
+  @Test
+  public void testGetNNServiceRpcAddressesForNsIds() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    conf.set(DFS_NAMESERVICES, "nn1,nn2");
+    conf.set(DFS_INTERNAL_NAMESERVICES_KEY, "nn1");
+    // Test - configured list of namenodes are returned
+    final String NN1_ADDRESS = "localhost:9000";
+    final String NN2_ADDRESS = "localhost:9001";
+    conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY, "nn1"),
+            NN1_ADDRESS);
+    conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY, "nn2"),
+            NN2_ADDRESS);
+
+    Map<String, Map<String, InetSocketAddress>> nnMap = DFSUtil
+            .getNNServiceRpcAddressesForCluster(conf);
+    assertEquals(1, nnMap.size());
+    assertTrue(nnMap.containsKey("nn1"));
+    conf.set(DFS_INTERNAL_NAMESERVICES_KEY, "nn3");
+    try {
+      DFSUtil.getNNServiceRpcAddressesForCluster(conf);
+      fail("Should fail for misconfiguration");
+    } catch (IOException ignored) {
+    }
   }
 }

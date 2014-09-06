@@ -17,11 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.BindException;
-import java.util.Random;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -32,6 +27,11 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Test;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.BindException;
+import java.util.Random;
 
 /**
  * This class tests the validation of the configuration object when passed 
@@ -49,7 +49,7 @@ public class TestValidateConfigurationSettings {
    * an exception
    * is thrown when trying to re-use the same port
    */
-  @Test(expected = BindException.class)
+  @Test(expected = BindException.class, timeout = 300000)
   public void testThatMatchingRPCandHttpPortsThrowException() 
       throws IOException {
 
@@ -79,7 +79,7 @@ public class TestValidateConfigurationSettings {
    * Tests setting the rpc port to a different as the web port that an 
    * exception is NOT thrown 
    */
-  @Test
+  @Test(timeout = 300000)
   public void testThatDifferentRPCandHttpPortsAreOK() 
       throws IOException {
 
@@ -117,7 +117,7 @@ public class TestValidateConfigurationSettings {
    * HDFS-3013: NameNode format command doesn't pick up
    * dfs.namenode.name.dir.NameServiceId configuration.
    */
-  @Test
+  @Test(timeout = 300000)
   public void testGenericKeysForNameNodeFormat()
       throws IOException {
     Configuration conf = new HdfsConfiguration();

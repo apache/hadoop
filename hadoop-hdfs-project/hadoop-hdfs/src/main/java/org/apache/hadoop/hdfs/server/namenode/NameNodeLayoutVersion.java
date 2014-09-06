@@ -66,8 +66,11 @@ public class NameNodeLayoutVersion {
     ROLLING_UPGRADE(-55, -53, "Support rolling upgrade", false),
     EDITLOG_LENGTH(-56, "Add length field to every edit log op"),
     XATTRS(-57, "Extended attributes"),
-    LAZY_PERSIST_FILES(-58, "Support for optional lazy persistence of "
+    CREATE_OVERWRITE(-58, "Use single editlog record for " +
+        "creating file with overwrite"),
+    LAZY_PERSIST_FILES(-59, "Support for optional lazy persistence of "
         + " files with reduced durability guarantees");
+
     
     private final FeatureInfo info;
 

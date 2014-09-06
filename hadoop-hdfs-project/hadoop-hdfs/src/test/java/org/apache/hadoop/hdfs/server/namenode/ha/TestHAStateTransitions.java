@@ -17,20 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.net.URI;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-
+import com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -40,13 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.HAUtil;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.*;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
@@ -66,7 +47,16 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.util.concurrent.Uninterruptibles;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.net.URI;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import static org.junit.Assert.*;
 
 /**
  * Tests state transition from active->standby, and manual failover
@@ -92,7 +82,7 @@ public class TestHAStateTransitions {
    * active and standby mode, making sure it doesn't
    * double-play any edits.
    */
-  @Test
+  @Test(timeout = 300000)
   public void testTransitionActiveToStandby() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
@@ -148,7 +138,7 @@ public class TestHAStateTransitions {
    * Test that transitioning a service to the state that it is already
    * in is a nop, specifically, an exception is not thrown.
    */
-  @Test
+  @Test(timeout = 300000)
   public void testTransitionToCurrentStateIsANop() throws Exception {
     Configuration conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS, 1L);
@@ -220,7 +210,7 @@ public class TestHAStateTransitions {
   /**
    * Tests manual failover back and forth between two NameNodes.
    */
-  @Test
+  @Test(timeout = 300000)
   public void testManualFailoverAndFailback() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
@@ -346,7 +336,7 @@ public class TestHAStateTransitions {
   /**
    * Test that delegation tokens continue to work after the failover.
    */
-  @Test
+  @Test(timeout = 300000)
   public void testDelegationTokensAfterFailover() throws IOException {
     Configuration conf = new Configuration();
     conf.setBoolean(
@@ -383,7 +373,7 @@ public class TestHAStateTransitions {
    * Tests manual failover back and forth between two NameNodes
    * for federation cluster with two namespaces.
    */
-  @Test
+  @Test(timeout = 300000)
   public void testManualFailoverFailbackFederationHA() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
@@ -403,12 +393,12 @@ public class TestHAStateTransitions {
     }
   }
 
-  @Test
+  @Test(timeout = 300000)
   public void testFailoverWithEmptyInProgressEditLog() throws Exception {
     testFailoverAfterCrashDuringLogRoll(false);
   }
-  
-  @Test
+
+  @Test(timeout = 300000)
   public void testFailoverWithEmptyInProgressEditLogWithHeader()
       throws Exception {
     testFailoverAfterCrashDuringLogRoll(true);
@@ -570,7 +560,7 @@ public class TestHAStateTransitions {
    * by virtue of the fact that it wouldn't work properly if the proxies
    * returned were not for the correct NNs.
    */
-  @Test
+  @Test(timeout = 300000)
   public void testIsAtLeastOneActive() throws Exception {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration())
         .nnTopology(MiniDFSNNTopology.simpleHATopology())
