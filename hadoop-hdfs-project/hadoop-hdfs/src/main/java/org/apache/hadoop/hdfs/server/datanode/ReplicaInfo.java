@@ -240,6 +240,13 @@ abstract public class ReplicaInfo extends Block implements Replica {
   public void setUnlinked() {
     // no need to be unlinked
   }
+
+  /**
+   * Number of bytes reserved for this replica on disk.
+   */
+  public long getBytesReserved() {
+    return 0;
+  }
   
    /**
    * Copy specified file into a temporary file. Then rename the

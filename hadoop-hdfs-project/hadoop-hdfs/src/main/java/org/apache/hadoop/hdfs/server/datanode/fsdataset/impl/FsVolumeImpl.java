@@ -28,6 +28,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -61,6 +62,9 @@ public class FsVolumeImpl implements FsVolumeSpi {
   private final DF usage;           
   private final long reserved;
 
+  // Disk space reserved for open blocks.
+  private AtomicLong reservedForRbw;
+
   // Capacity configured. This is useful when we want to
   // limit the visible capacity for tests. If negative, then we just
   // query from the filesystem.
@@ -81,6 +85,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
     this.reserved = conf.getLong(
         DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY,
         DFSConfigKeys.DFS_DATANODE_DU_RESERVED_DEFAULT);
+    this.reservedForRbw = new AtomicLong(0L);
     this.currentDir = currentDir; 
     File parent = currentDir.getParentFile();
     this.usage = new DF(parent, conf);
@@ -165,12 +170,17 @@ public class FsVolumeImpl implements FsVolumeSpi {
 
   @Override
   public long getAvailable() throws IOException {
-    long remaining = getCapacity()-getDfsUsed();
+    long remaining = getCapacity() - getDfsUsed() - reservedForRbw.get();
     long available = usage.getAvailable();
     if (remaining > available) {
       remaining = available;
     }
     return (remaining > 0) ? remaining : 0;
+  }
+
+  @VisibleForTesting
+  public long getReservedForRbw() {
+    return reservedForRbw.get();
   }
     
   long getReserved(){
@@ -216,15 +226,57 @@ public class FsVolumeImpl implements FsVolumeSpi {
     return getBlockPoolSlice(bpid).createTmpFile(b);
   }
 
+  @Override
+  public void reserveSpaceForRbw(long bytesToReserve) {
+    if (bytesToReserve != 0) {
+      if (FsDatasetImpl.LOG.isDebugEnabled()) {
+        FsDatasetImpl.LOG.debug("Reserving " + bytesToReserve + " on volume " + getBasePath());
+      }
+      reservedForRbw.addAndGet(bytesToReserve);
+    }
+  }
+
+  @Override
+  public void releaseReservedSpace(long bytesToRelease) {
+    if (bytesToRelease != 0) {
+      if (FsDatasetImpl.LOG.isDebugEnabled()) {
+        FsDatasetImpl.LOG.debug("Releasing " + bytesToRelease + " on volume " + getBasePath());
+      }
+
+      long oldReservation, newReservation;
+      do {
+        oldReservation = reservedForRbw.get();
+        newReservation = oldReservation - bytesToRelease;
+        if (newReservation < 0) {
+          // Failsafe, this should never occur in practice, but if it does we don't
+          // want to start advertising more space than we have available.
+          newReservation = 0;
+        }
+      } while (!reservedForRbw.compareAndSet(oldReservation, newReservation));
+    }
+  }
+
   /**
    * RBW files. They get moved to the finalized block directory when
    * the block is finalized.
    */
   File createRbwFile(String bpid, Block b) throws IOException {
+    reserveSpaceForRbw(b.getNumBytes());
     return getBlockPoolSlice(bpid).createRbwFile(b);
   }
 
-  File addBlock(String bpid, Block b, File f) throws IOException {
+  /**
+   *
+   * @param bytesReservedForRbw Space that was reserved during
+   *     block creation. Now that the block is being finalized we
+   *     can free up this space.
+   * @return
+   * @throws IOException
+   */
+  File addFinalizedBlock(String bpid, Block b,
+                         File f, long bytesReservedForRbw)
+      throws IOException {
+    releaseReservedSpace(bytesReservedForRbw);
     return getBlockPoolSlice(bpid).addBlock(b, f);
   }
 

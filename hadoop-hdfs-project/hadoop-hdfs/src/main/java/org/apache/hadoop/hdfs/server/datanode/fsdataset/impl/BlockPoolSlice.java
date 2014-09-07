@@ -296,9 +296,11 @@ class BlockPoolSlice {
           // The restart meta file exists
           if (sc.hasNextLong() && (sc.nextLong() > Time.now())) {
             // It didn't expire. Load the replica as a RBW.
+            // We don't know the expected block length, so just use 0
+            // and don't reserve any more space for writes.
             newReplica = new ReplicaBeingWritten(blockId,
                 validateIntegrityAndSetLength(blockFile, genStamp), 
-                genStamp, volume, blockFile.getParentFile(), null);
+                genStamp, volume, blockFile.getParentFile(), null, 0);
             loadRwr = false;
           }
           sc.close();

@@ -351,6 +351,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6862. Add missing timeout annotations to tests. (Xiaoyu Yao via
     Arpit Agarwal)
 
+    HDFS-6898. DN must reserve space for a full block when an RBW block is
+    created. (Arpit Agarwal)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an

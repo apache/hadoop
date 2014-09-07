@@ -593,7 +593,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           + " from " + srcfile + " to " + dstfile.getAbsolutePath(), e);
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("addBlock: Moved " + srcmeta + " to " + dstmeta
+      LOG.debug("addFinalizedBlock: Moved " + srcmeta + " to " + dstmeta
           + " and " + srcfile + " to " + dstfile);
     }
     return dstfile;
@@ -712,7 +712,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     File oldmeta = replicaInfo.getMetaFile();
     ReplicaBeingWritten newReplicaInfo = new ReplicaBeingWritten(
         replicaInfo.getBlockId(), replicaInfo.getNumBytes(), newGS,
-        v, newBlkFile.getParentFile(), Thread.currentThread());
+        v, newBlkFile.getParentFile(), Thread.currentThread(), estimateBlockLen);
     File newmeta = newReplicaInfo.getMetaFile();
 
     // rename meta file to rbw directory
@@ -748,7 +748,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     
     // Replace finalized replica by a RBW replica in replicas map
     volumeMap.add(bpid, newReplicaInfo);
-    
+    v.reserveSpaceForRbw(estimateBlockLen - replicaInfo.getNumBytes());
     return newReplicaInfo;
   }
 
@@ -876,7 +876,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     // create a rbw file to hold block in the designated volume
     File f = v.createRbwFile(b.getBlockPoolId(), b.getLocalBlock());
     ReplicaBeingWritten newReplicaInfo = new ReplicaBeingWritten(b.getBlockId(), 
-        b.getGenerationStamp(), v, f.getParentFile());
+        b.getGenerationStamp(), v, f.getParentFile(), b.getNumBytes());
     volumeMap.add(b.getBlockPoolId(), newReplicaInfo);
     return newReplicaInfo;
   }
@@ -992,7 +992,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     // create RBW
     final ReplicaBeingWritten rbw = new ReplicaBeingWritten(
         blockId, numBytes, expectedGs,
-        v, dest.getParentFile(), Thread.currentThread());
+        v, dest.getParentFile(), Thread.currentThread(), 0);
     rbw.setBytesAcked(visible);
     // overwrite the RBW in the volume map
     volumeMap.add(b.getBlockPoolId(), rbw);
@@ -1013,7 +1013,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     // create a temporary file to hold block in the designated volume
     File f = v.createTmpFile(b.getBlockPoolId(), b.getLocalBlock());
     ReplicaInPipeline newReplicaInfo = new ReplicaInPipeline(b.getBlockId(), 
-        b.getGenerationStamp(), v, f.getParentFile());
+        b.getGenerationStamp(), v, f.getParentFile(), 0);
     volumeMap.add(b.getBlockPoolId(), newReplicaInfo);
     
     return newReplicaInfo;
@@ -1079,7 +1079,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             " for block " + replicaInfo);
       }
 
-      File dest = v.addBlock(bpid, replicaInfo, f);
+      File dest = v.addFinalizedBlock(
+          bpid, replicaInfo, f, replicaInfo.getBytesReserved());
       newReplicaInfo = new FinalizedReplica(replicaInfo, v, dest.getParentFile());
     }
     volumeMap.add(bpid, newReplicaInfo);

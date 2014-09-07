@@ -45,4 +45,15 @@ public interface FsVolumeSpi {
   public File getFinalizedDir(String bpid) throws IOException;
   
   public StorageType getStorageType();
+
+  /**
+   * Reserve disk space for an RBW block so a writer does not run out of
+   * space before the block is full.
+   */
+  public void reserveSpaceForRbw(long bytesToReserve);
+
+  /**
+   * Release disk space previously reserved for RBW block.
+   */
+  public void releaseReservedSpace(long bytesToRelease);
 }
