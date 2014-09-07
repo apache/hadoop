@@ -17,27 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
-
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.security.PrivilegedExceptionAction;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Map;
-
-import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.Response;
-
+import com.google.common.base.Joiner;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -45,11 +25,7 @@ import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.HAUtil;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.*;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
@@ -75,7 +51,20 @@ import org.junit.Test;
 import org.mockito.internal.util.reflection.Whitebox;
 import org.mortbay.util.ajax.JSON;
 
-import com.google.common.base.Joiner;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.Response;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.security.PrivilegedExceptionAction;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Map;
+
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
 
 /**
  * Test case for client support of delegation tokens in an HA cluster.
@@ -128,8 +117,8 @@ public class TestDelegationTokensWithHA {
       cluster.shutdown();
     }
   }
-  
-  @Test
+
+  @Test(timeout = 300000)
   public void testDelegationTokenDFSApi() throws Exception {
     final Token<DelegationTokenIdentifier> token =
         getDelegationToken(fs, "JobTracker");
@@ -192,7 +181,7 @@ public class TestDelegationTokensWithHA {
    * Test if correct exception (StandbyException or RetriableException) can be
    * thrown during the NN failover. 
    */
-  @Test
+  @Test(timeout = 300000)
   public void testDelegationTokenDuringNNFailover() throws Exception {
     EditLogTailer editLogTailer = nn1.getNamesystem().getEditLogTailer();
     // stop the editLogTailer of nn1
@@ -260,7 +249,7 @@ public class TestDelegationTokensWithHA {
     doRenewOrCancel(token, clientConf, TokenTestAction.CANCEL);
   }
 
-  @Test
+  @Test(timeout = 300000)
   public void testDelegationTokenWithDoAs() throws Exception {
     final Token<DelegationTokenIdentifier> token =
         getDelegationToken(fs, "JobTracker");
@@ -291,8 +280,8 @@ public class TestDelegationTokensWithHA {
       }
     });
   }
-  
-  @Test
+
+  @Test(timeout = 300000)
   public void testHAUtilClonesDelegationTokens() throws Exception {
     final Token<DelegationTokenIdentifier> token =
         getDelegationToken(fs, "JobTracker");
@@ -354,7 +343,7 @@ public class TestDelegationTokensWithHA {
    * exception if the URI is a logical URI. This bug fails the combination of
    * ha + mapred + security.
    */
-  @Test
+  @Test(timeout = 300000)
   public void testDFSGetCanonicalServiceName() throws Exception {
     URI hAUri = HATestUtil.getLogicalUri(cluster);
     String haService = HAUtil.buildTokenServiceForLogicalUri(hAUri,
@@ -368,8 +357,8 @@ public class TestDelegationTokensWithHA {
     token.renew(dfs.getConf());
     token.cancel(dfs.getConf());
   }
-  
-  @Test
+
+  @Test(timeout = 300000)
   public void testHdfsGetCanonicalServiceName() throws Exception {
     Configuration conf = dfs.getConf();
     URI haUri = HATestUtil.getLogicalUri(cluster);
@@ -390,7 +379,7 @@ public class TestDelegationTokensWithHA {
    * password. (HDFS-6475). With StandbyException, the client can failover to try
    * activeNN.
    */
-  @Test
+  @Test(timeout = 300000)
   public void testDelegationTokenStandbyNNAppearFirst() throws Exception {
     // make nn0 the standby NN, and nn1 the active NN
     cluster.transitionToStandby(0);

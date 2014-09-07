@@ -24,6 +24,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.File;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.http.HttpServer2.Builder;
 import org.apache.hadoop.security.alias.CredentialProvider;
@@ -74,8 +75,9 @@ public class TestWebAppUtils {
         "target/test-dir"));
 
     Configuration conf = new Configuration();
+    final Path jksPath = new Path(testDir.toString(), "test.jks");
     final String ourUrl =
-    JavaKeyStoreProvider.SCHEME_NAME + "://file/" + testDir + "/test.jks";
+    JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri();
 
     File file = new File(testDir, "test.jks");
     file.delete();

@@ -444,6 +444,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-6376. Distcp data between two HA clusters requires another configuration.
     (Dave Marion and Haohui Mai via jing9)
 
+    HDFS-6940. Refactoring to allow ConsensusNode implementation. (shv)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -602,6 +604,17 @@ Release 2.6.0 - UNRELEASED
     HDFS-6996. SnapshotDiff report can hit IndexOutOfBoundsException when there
     are nested renamed directory/file. (jing9)
 
+    HDFS-6831. Inconsistency between 'hdfs dfsadmin' and 'hdfs dfsadmin -help'.
+    (Xiaoyu Yao via Arpit Agarwal)
+
+    HDFS-6979. hdfs.dll does not produce .pdb files. (cnauroth)
+
+    HDFS-6862. Add missing timeout annotations to tests. (Xiaoyu Yao via
+    Arpit Agarwal)
+
+    HDFS-6898. DN must reserve space for a full block when an RBW block is
+    created. (Arpit Agarwal)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
@@ -702,6 +715,9 @@ Release 2.6.0 - UNRELEASED
 
       HDFS-6714. TestBlocksScheduledCounter#testBlocksScheduledCounter should
       shutdown cluster (vinayakumarb)
+
+      HDFS-6986. DistributedFileSystem must get delegation tokens from configured 
+      KeyProvider. (zhz via tucu)
 
 Release 2.5.1 - UNRELEASED
 

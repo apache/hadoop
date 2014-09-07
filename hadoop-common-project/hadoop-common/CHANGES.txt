@@ -330,6 +330,9 @@ Trunk (Unreleased)
 
     HADOOP-11033. shell scripts ignore JAVA_HOME on OS X. (aw)
 
+    HADOOP-11052. hadoop_verify_secure_prereq's results aren't checked 
+    in bin/hdfs (aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -503,6 +506,8 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11060. Create a CryptoCodec test that verifies interoperability 
     between the JCE and OpenSSL implementations. (hitliuyi via tucu)
+
+    HADOOP-11070. Create MiniKMS for testing. (tucu)
 
   OPTIMIZATIONS
 
@@ -757,6 +762,12 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11063. KMS cannot deploy on Windows, because class names are too long.
     (cnauroth)
 
+    HADOOP-11067. warning message 'ssl.client.truststore.location has not
+    been set' gets printed for hftp command. (Xiaoyu Yao via Arpit Agarwal)
+
+    HADOOP-11069. KMSClientProvider should use getAuthenticationMethod() to
+    determine if in proxyuser mode or not. (tucu)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -773,6 +784,8 @@ Release 2.5.1 - UNRELEASED
   BUG FIXES
 
     HADOOP-11001. Fix test-patch to work with the git repo. (kasha)
+
+    HADOOP-11065. Rat check should exclude "**/build/**". (kasha)
 
 Release 2.5.0 - 2014-08-11
 

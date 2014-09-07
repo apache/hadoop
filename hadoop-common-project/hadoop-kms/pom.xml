@@ -222,9 +222,9 @@
             </goals>
             <configuration>
               <target>
-                <mkdir dir="${project.build.directory}/test-classes/webapp"/>
+                <mkdir dir="${project.build.directory}/test-classes/kms-webapp"/>
 
-                <copy todir="${project.build.directory}/test-classes/webapp">
+                <copy todir="${project.build.directory}/test-classes/kms-webapp">
                   <fileset dir="${basedir}/src/main/webapp"/>
                 </copy>
               </target>

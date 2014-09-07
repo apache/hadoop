@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.timeline.webapp;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -37,6 +38,15 @@ public class CrossOriginFilterInitializer extends FilterInitializer {
   }
 
   static Map<String, String> getFilterParameters(Configuration conf) {
-    return conf.getValByRegex(PREFIX);
+    Map<String, String> filterParams =
+        new HashMap<String, String>();
+    for (Map.Entry<String, String> entry : conf.getValByRegex(PREFIX)
+        .entrySet()) {
+      String name = entry.getKey();
+      String value = entry.getValue();
+      name = name.substring(PREFIX.length());
+      filterParams.put(name, value);
+    }
+    return filterParams;
   }
 }

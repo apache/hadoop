@@ -36,10 +36,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.mortbay.jetty.Connector;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.security.SslSocketConnector;
-import org.mortbay.jetty.webapp.WebAppContext;
 
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
@@ -52,7 +48,6 @@ import java.io.IOException;
 import java.io.Writer;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.MalformedURLException;
 import java.net.ServerSocket;
 import java.net.SocketTimeoutException;
 import java.net.URI;
@@ -91,49 +86,6 @@ public class TestKMS {
     return file;
   }
 
-  public static Server createJettyServer(String keyStore, String password) {
-    try {
-      boolean ssl = keyStore != null;
-      InetAddress localhost = InetAddress.getByName("localhost");
-      String host = "localhost";
-      ServerSocket ss = new ServerSocket(0, 50, localhost);
-      int port = ss.getLocalPort();
-      ss.close();
-      Server server = new Server(0);
-      if (!ssl) {
-        server.getConnectors()[0].setHost(host);
-        server.getConnectors()[0].setPort(port);
-      } else {
-        SslSocketConnector c = new SslSocketConnector();
-        c.setHost(host);
-        c.setPort(port);
-        c.setNeedClientAuth(false);
-        c.setKeystore(keyStore);
-        c.setKeystoreType("jks");
-        c.setKeyPassword(password);
-        server.setConnectors(new Connector[]{c});
-      }
-      return server;
-    } catch (Exception ex) {
-      throw new RuntimeException("Could not start embedded servlet container, "
-          + ex.getMessage(), ex);
-    }
-  }
-
-  public static URL getJettyURL(Server server) {
-    boolean ssl = server.getConnectors()[0].getClass()
-        == SslSocketConnector.class;
-    try {
-      String scheme = (ssl) ? "https" : "http";
-      return new URL(scheme + "://" +
-          server.getConnectors()[0].getHost() + ":" +
-          server.getConnectors()[0].getPort());
-    } catch (MalformedURLException ex) {
-      throw new RuntimeException("It should never happen, " + ex.getMessage(),
-          ex);
-    }
-  }
-
   public static abstract class KMSCallable implements Callable<Void> {
     private URL kmsUrl;
 
@@ -144,33 +96,19 @@ public class TestKMS {
 
   protected void runServer(String keystore, String password, File confDir,
       KMSCallable callable) throws Exception {
-    System.setProperty(KMSConfiguration.KMS_CONFIG_DIR,
-        confDir.getAbsolutePath());
-    System.setProperty("log4j.configuration", "log4j.properties");
-    Server jetty = createJettyServer(keystore, password);
+    MiniKMS.Builder miniKMSBuilder = new MiniKMS.Builder().setKmsConfDir(confDir)
+        .setLog4jConfFile("log4j.properties");
+    if (keystore != null) {
+      miniKMSBuilder.setSslConf(new File(keystore), password);
+    }
+    MiniKMS miniKMS = miniKMSBuilder.build();
+    miniKMS.start();
     try {
-      ClassLoader cl = Thread.currentThread().getContextClassLoader();
-      URL url = cl.getResource("webapp");
-      if (url == null) {
-        throw new RuntimeException(
-            "Could not find webapp/ dir in test classpath");
-      }
-      WebAppContext context = new WebAppContext(url.getPath(), "/kms");
-      jetty.addHandler(context);
-      jetty.start();
-      url = new URL(getJettyURL(jetty), "kms");
-      System.out.println("Test KMS running at: " + url);
-      callable.kmsUrl = url;
+      System.out.println("Test KMS running at: " + miniKMS.getKMSUrl());
+      callable.kmsUrl = miniKMS.getKMSUrl();
       callable.call();
     } finally {
-      if (jetty != null && jetty.isRunning()) {
-        try {
-          jetty.stop();
-        } catch (Exception ex) {
-          throw new RuntimeException("Could not stop embedded Jetty, " +
-              ex.getMessage(), ex);
-        }
-      }
+      miniKMS.stop();
     }
   }
 
@@ -1219,7 +1157,7 @@ public class TestKMS {
         final URI uri = createKMSUri(getKMSUrl());
 
         // proxyuser client using kerberos credentials
-        UserGroupInformation clientUgi = UserGroupInformation.
+        final UserGroupInformation clientUgi = UserGroupInformation.
             loginUserFromKeytabAndReturnUGI("client", keytab.getAbsolutePath());
         clientUgi.doAs(new PrivilegedExceptionAction<Void>() {
           @Override
@@ -1229,7 +1167,7 @@ public class TestKMS {
 
             // authorized proxyuser
             UserGroupInformation fooUgi =
-                UserGroupInformation.createRemoteUser("foo");
+                UserGroupInformation.createProxyUser("foo", clientUgi);
             fooUgi.doAs(new PrivilegedExceptionAction<Void>() {
               @Override
               public Void run() throws Exception {
@@ -1241,7 +1179,7 @@ public class TestKMS {
 
             // unauthorized proxyuser
             UserGroupInformation foo1Ugi =
-                UserGroupInformation.createRemoteUser("foo1");
+                UserGroupInformation.createProxyUser("foo1", clientUgi);
             foo1Ugi.doAs(new PrivilegedExceptionAction<Void>() {
               @Override
               public Void run() throws Exception {
