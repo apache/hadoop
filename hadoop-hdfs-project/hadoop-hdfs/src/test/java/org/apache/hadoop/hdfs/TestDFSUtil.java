@@ -59,6 +59,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -809,8 +810,9 @@ public class TestDFSUtil {
         "target/test-dir"));
 
     Configuration conf = new Configuration();
+    final Path jksPath = new Path(testDir.toString(), "test.jks");
     final String ourUrl =
-    JavaKeyStoreProvider.SCHEME_NAME + "://file/" + testDir + "/test.jks";
+    JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri();
 
     File file = new File(testDir, "test.jks");
     file.delete();
