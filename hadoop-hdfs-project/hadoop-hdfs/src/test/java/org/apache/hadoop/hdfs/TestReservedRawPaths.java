@@ -69,8 +69,9 @@ public class TestReservedRawPaths {
     // Set up java key store
     String testRoot = fsHelper.getTestRootDir();
     File testRootDir = new File(testRoot).getAbsoluteFile();
+    final Path jksPath = new Path(testRootDir.toString(), "test.jks");
     conf.set(KeyProviderFactory.KEY_PROVIDER_PATH,
-        JavaKeyStoreProvider.SCHEME_NAME + "://file" + testRootDir + "/test.jks"
+        JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri()
     );
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     Logger.getLogger(EncryptionZoneManager.class).setLevel(Level.TRACE);

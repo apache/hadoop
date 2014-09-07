@@ -99,8 +99,9 @@ public class TestEncryptionZones {
     // Set up java key store
     String testRoot = fsHelper.getTestRootDir();
     testRootDir = new File(testRoot).getAbsoluteFile();
+    final Path jksPath = new Path(testRootDir.toString(), "test.jks");
     conf.set(KeyProviderFactory.KEY_PROVIDER_PATH,
-        JavaKeyStoreProvider.SCHEME_NAME + "://file" + testRootDir + "/test.jks"
+        JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri()
     );
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
     // Lower the batch size for testing
@@ -324,7 +325,7 @@ public class TestEncryptionZones {
     final UserGroupInformation user = UserGroupInformation.
         createUserForTesting("user", new String[] { "mygroup" });
 
-    final Path testRoot = new Path(fsHelper.getTestRootDir());
+    final Path testRoot = new Path("/tmp/TestEncryptionZones");
     final Path superPath = new Path(testRoot, "superuseronly");
     final Path allPath = new Path(testRoot, "accessall");
 
@@ -358,7 +359,7 @@ public class TestEncryptionZones {
     final UserGroupInformation user = UserGroupInformation.
             createUserForTesting("user", new String[] { "mygroup" });
 
-    final Path testRoot = new Path(fsHelper.getTestRootDir());
+    final Path testRoot = new Path("/tmp/TestEncryptionZones");
     final Path superPath = new Path(testRoot, "superuseronly");
     final Path superPathFile = new Path(superPath, "file1");
     final Path allPath = new Path(testRoot, "accessall");
@@ -451,7 +452,7 @@ public class TestEncryptionZones {
    * Test success of Rename EZ on a directory which is already an EZ.
    */
   private void doRenameEncryptionZone(FSTestWrapper wrapper) throws Exception {
-    final Path testRoot = new Path(fsHelper.getTestRootDir());
+    final Path testRoot = new Path("/tmp/TestEncryptionZones");
     final Path pathFoo = new Path(testRoot, "foo");
     final Path pathFooBaz = new Path(pathFoo, "baz");
     wrapper.mkdir(pathFoo, FsPermission.getDirDefault(), true);
@@ -598,8 +599,9 @@ public class TestEncryptionZones {
     } catch (IOException e) {
       assertExceptionContains("since no key provider is available", e);
     }
+    final Path jksPath = new Path(testRootDir.toString(), "test.jks");
     clusterConf.set(KeyProviderFactory.KEY_PROVIDER_PATH,
-        JavaKeyStoreProvider.SCHEME_NAME + "://file" + testRootDir + "/test.jks"
+        JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri()
     );
     // Try listing EZs as well
     assertNumZones(0);

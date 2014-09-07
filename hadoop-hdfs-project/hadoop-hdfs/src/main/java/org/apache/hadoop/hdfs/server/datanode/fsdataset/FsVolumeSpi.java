@@ -48,4 +48,15 @@ public interface FsVolumeSpi {
 
   /** Returns true if the volume is NOT backed by persistent storage. */
   public boolean isTransientStorage();
+
+  /**
+   * Reserve disk space for an RBW block so a writer does not run out of
+   * space before the block is full.
+   */
+  public void reserveSpaceForRbw(long bytesToReserve);
+
+  /**
+   * Release disk space previously reserved for RBW block.
+   */
+  public void releaseReservedSpace(long bytesToRelease);
 }
