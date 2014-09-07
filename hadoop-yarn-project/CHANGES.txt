@@ -264,6 +264,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2431. NM restart: cgroup is not removed for reacquired containers
     (jlowe)
 
+    YARN-2519. Credential Provider related unit tests failed on Windows.
+    (Xiaoyu Yao via cnauroth)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
