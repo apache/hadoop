@@ -1343,6 +1343,7 @@ public class MiniDFSCluster {
     }
 
     int curDatanodesNum = dataNodes.size();
+    final int curDatanodesNumSaved = curDatanodesNum;
     // for mincluster's the default initialDelay for BRs is 0
     if (conf.get(DFS_BLOCKREPORT_INITIAL_DELAY_KEY) == null) {
       conf.setLong(DFS_BLOCKREPORT_INITIAL_DELAY_KEY, 0);
@@ -1481,7 +1482,7 @@ public class MiniDFSCluster {
     waitActive();
     
     if (storageCapacities != null) {
-      for (int i = curDatanodesNum; i < curDatanodesNum+numDataNodes; ++i) {
+      for (int i = curDatanodesNumSaved; i < curDatanodesNumSaved+numDataNodes; ++i) {
         final int index = i - curDatanodesNum;
         List<? extends FsVolumeSpi> volumes = dns[index].getFSDataset().getVolumes();
         assert storageCapacities[index].length == storagesPerDatanode;
