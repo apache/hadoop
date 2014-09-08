@@ -427,6 +427,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11069. KMSClientProvider should use getAuthenticationMethod() to
     determine if in proxyuser mode or not. (tucu)
 
+    HADOOP-11073. Credential Provider related Unit Tests Failure on Windows.
+    (Xiaoyu Yao via cnauroth)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

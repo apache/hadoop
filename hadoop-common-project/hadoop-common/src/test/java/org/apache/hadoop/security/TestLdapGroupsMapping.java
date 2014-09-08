@@ -40,6 +40,7 @@ import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
@@ -165,8 +166,9 @@ public class TestLdapGroupsMapping {
     File testDir = new File(System.getProperty("test.build.data",
                                                "target/test-dir"));
     Configuration conf = new Configuration();
+    final Path jksPath = new Path(testDir.toString(), "test.jks");
     final String ourUrl =
-        JavaKeyStoreProvider.SCHEME_NAME + "://file/" + testDir + "/test.jks";
+        JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri();
 
     File file = new File(testDir, "test.jks");
     file.delete();
