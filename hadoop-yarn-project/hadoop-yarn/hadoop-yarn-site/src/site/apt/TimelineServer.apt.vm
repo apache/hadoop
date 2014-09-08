@@ -102,6 +102,43 @@ YARN Timeline Server
   <name>yarn.timeline-service.handler-thread-count</name>
   <value>10</value>
 </property>
+
+<property>
+  <description>Enables cross-origin support (CORS) for web services where
+  cross-origin web response headers are needed. For example, javascript making
+  a web services request to the timeline server.</description>
+  <name>yarn.timeline-service.http-cross-origin.enabled</name>
+  <value>false</value>
+</property>
+
+<property>
+  <description>Comma separated list of origins that are allowed for web
+  services needing cross-origin (CORS) support. Wildcards (*) and patterns
+  allowed</description>
+  <name>yarn.timeline-service.http-cross-origin.allowed-origins</name>
+  <value>*</value>
+</property>
+
+<property>
+  <description>Comma separated list of methods that are allowed for web
+  services needing cross-origin (CORS) support.</description>
+  <name>yarn.timeline-service.http-cross-origin.allowed-methods</name>
+  <value>GET,POST,HEAD</value>
+</property>
+
+<property>
+  <description>Comma separated list of headers that are allowed for web
+  services needing cross-origin (CORS) support.</description>
+  <name>yarn.timeline-service.http-cross-origin.allowed-headers</name>
+  <value>X-Requested-With,Content-Type,Accept,Origin</value>
+</property>
+
+<property>
+  <description>The number of seconds a pre-flighted request can be cached
+  for web services needing cross-origin (CORS) support.</description>
+  <name>yarn.timeline-service.http-cross-origin.max-age</name>
+  <value>1800</value>
+</property>
 +---+
 
 * Generic-data related Configuration

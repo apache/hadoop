@@ -164,6 +164,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2512. Allowed pattern matching for origins in CrossOriginFilter.
     (Jonathan Eagles via zjshen)
 
+    YARN-2507. Documented CrossOriginFilter configurations for the timeline
+    server. (Jonathan Eagles via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
