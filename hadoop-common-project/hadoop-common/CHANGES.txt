@@ -430,6 +430,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11073. Credential Provider related Unit Tests Failure on Windows.
     (Xiaoyu Yao via cnauroth)
 
+    HADOOP-11071. KMSClientProvider should drain the local generated EEK cache
+    on key rollover. (tucu)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
