@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.yarn.api.records;
 
-import java.text.NumberFormat;
+import com.google.common.base.Splitter;
 
+import java.text.NumberFormat;
+import java.util.Iterator;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
@@ -33,6 +35,8 @@ import org.apache.hadoop.yarn.util.Records;
 @Public
 @Stable
 public abstract class ContainerId implements Comparable<ContainerId>{
+  private static final Splitter _SPLITTER = Splitter.on('_').trimResults();
+  private static final String CONTAINER_PREFIX = "container";
 
   @Private
   @Unstable
@@ -161,6 +165,39 @@ public abstract class ContainerId implements Comparable<ContainerId>{
       sb.append("_").append(appAttemptIdAndEpochFormat.get().format(epoch));
     }
     return sb.toString();
+  }
+
+  @Public
+  @Unstable
+  public static ContainerId fromString(String containerIdStr) {
+    Iterator<String> it = _SPLITTER.split(containerIdStr).iterator();
+    if (!it.next().equals(CONTAINER_PREFIX)) {
+      throw new IllegalArgumentException("Invalid ContainerId prefix: "
+          + containerIdStr);
+    }
+    try {
+      ApplicationAttemptId appAttemptID = toApplicationAttemptId(it);
+      int id = Integer.parseInt(it.next());
+      int epoch = 0;
+      if (it.hasNext()) {
+        epoch = Integer.parseInt(it.next());
+      }
+      int cid = (epoch << 22) | id;
+      ContainerId containerId = ContainerId.newInstance(appAttemptID, cid);
+      return containerId;
+    } catch (NumberFormatException n) {
+      throw new IllegalArgumentException("Invalid ContainerId: "
+          + containerIdStr, n);
+    }
+  }
+
+  private static ApplicationAttemptId toApplicationAttemptId(
+      Iterator<String> it) throws NumberFormatException {
+    ApplicationId appId = ApplicationId.newInstance(Long.parseLong(it.next()),
+        Integer.parseInt(it.next()));
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, Integer.parseInt(it.next()));
+    return appAttemptId;
   }
 
   protected abstract void build();

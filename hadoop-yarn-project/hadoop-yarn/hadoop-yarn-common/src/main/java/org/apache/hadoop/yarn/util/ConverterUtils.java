@@ -168,20 +168,7 @@ public class ConverterUtils {
   }
 
   public static ContainerId toContainerId(String containerIdStr) {
-    Iterator<String> it = _split(containerIdStr).iterator();
-    if (!it.next().equals(CONTAINER_PREFIX)) {
-      throw new IllegalArgumentException("Invalid ContainerId prefix: "
-          + containerIdStr);
-    }
-    try {
-      ApplicationAttemptId appAttemptID = toApplicationAttemptId(it);
-      ContainerId containerId =
-          ContainerId.newInstance(appAttemptID, Integer.parseInt(it.next()));
-      return containerId;
-    } catch (NumberFormatException n) {
-      throw new IllegalArgumentException("Invalid ContainerId: "
-          + containerIdStr, n);
-    }
+    return ContainerId.fromString(containerIdStr);
   }
 
   public static ApplicationAttemptId toApplicationAttemptId(
