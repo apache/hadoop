@@ -89,7 +89,7 @@ public class TestFsDatasetCache {
   private static final Log LOG = LogFactory.getLog(TestFsDatasetCache.class);
 
   // Most Linux installs allow a default of 64KB locked memory
-  private static final long CACHE_CAPACITY = 64 * 1024;
+  static final long CACHE_CAPACITY = 64 * 1024;
   // mlock always locks the entire page. So we don't need to deal with this
   // rounding, use the OS page size for the block size.
   private static final long PAGE_SIZE =

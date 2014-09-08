@@ -193,6 +193,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6943. Improve NN allocateBlock log to include replicas' datanode IPs.
     (Ming Ma via wheat9)
 
+    HDFS-6036. Forcibly timeout misbehaving DFSClients that try to do
+    no-checksum reads that extend too long (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

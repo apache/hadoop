@@ -2108,4 +2108,25 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.datanode.cache.revocation.timeout.ms</name>
+  <value>900000</value>
+  <description>When the DFSClient reads from a block file which the DataNode is
+    caching, the DFSClient can skip verifying checksums.  The DataNode will
+    keep the block file in cache until the client is done.  If the client takes
+    an unusually long time, though, the DataNode may need to evict the block
+    file from the cache anyway.  This value controls how long the DataNode will
+    wait for the client to release a replica that it is reading without
+    checksums.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.cache.revocation.polling.ms</name>
+  <value>500</value>
+  <description>How often the DataNode should poll to see if the clients have
+    stopped using a replica that the DataNode wants to uncache.
+  </description>
+</property>
+
 </configuration>
