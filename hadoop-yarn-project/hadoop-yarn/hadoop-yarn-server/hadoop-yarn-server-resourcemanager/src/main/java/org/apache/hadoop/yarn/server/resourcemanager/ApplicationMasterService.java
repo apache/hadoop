@@ -22,11 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -329,6 +325,10 @@ public class ApplicationMasterService extends AbstractService implements
             + transferredContainers.size() + " containers from previous"
             + " attempts and " + nmTokens.size() + " NM tokens.");
       }
+
+      response.setSchedulerResourceTypes(rScheduler
+        .getSchedulingResourceTypes());
+
       return response;
     }
   }
