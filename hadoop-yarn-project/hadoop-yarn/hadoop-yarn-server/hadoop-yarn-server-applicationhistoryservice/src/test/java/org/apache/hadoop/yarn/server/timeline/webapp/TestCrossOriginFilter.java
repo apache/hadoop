@@ -77,7 +77,26 @@ public class TestCrossOriginFilter {
     // Object under test
     CrossOriginFilter filter = new CrossOriginFilter();
     filter.init(filterConfig);
-    Assert.assertTrue(filter.isOriginAllowed("example.org"));
+    Assert.assertTrue(filter.isOriginAllowed("example.com"));
+  }
+
+  @Test
+  public void testPatternMatchingOrigins() throws ServletException, IOException {
+
+    // Setup the configuration settings of the server
+    Map<String, String> conf = new HashMap<String, String>();
+    conf.put(CrossOriginFilter.ALLOWED_ORIGINS, "*.example.com");
+    FilterConfig filterConfig = new FilterConfigTest(conf);
+
+    // Object under test
+    CrossOriginFilter filter = new CrossOriginFilter();
+    filter.init(filterConfig);
+
+    // match multiple sub-domains
+    Assert.assertFalse(filter.isOriginAllowed("example.com"));
+    Assert.assertFalse(filter.isOriginAllowed("foo:example.com"));
+    Assert.assertTrue(filter.isOriginAllowed("foo.example.com"));
+    Assert.assertTrue(filter.isOriginAllowed("foo.bar.example.com"));
   }
 
   @Test
