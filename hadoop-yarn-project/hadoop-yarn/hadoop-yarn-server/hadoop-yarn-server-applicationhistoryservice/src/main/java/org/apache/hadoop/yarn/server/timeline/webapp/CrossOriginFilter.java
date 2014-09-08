@@ -24,6 +24,8 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -204,7 +206,23 @@ public class CrossOriginFilter implements Filter {
 
   @VisibleForTesting
   boolean isOriginAllowed(String origin) {
-    return allowAllOrigins || allowedOrigins.contains(origin);
+    if (allowAllOrigins) {
+      return true;
+    }
+
+    for (String allowedOrigin : allowedOrigins) {
+      if (allowedOrigin.contains("*")) {
+        String regex = allowedOrigin.replace(".", "\\.").replace("*", ".*");
+        Pattern p = Pattern.compile(regex);
+        Matcher m = p.matcher(origin);
+        if (m.matches()) {
+          return true;
+        }
+      } else if (allowedOrigin.equals(origin)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private boolean areHeadersAllowed(String accessControlRequestHeaders) {

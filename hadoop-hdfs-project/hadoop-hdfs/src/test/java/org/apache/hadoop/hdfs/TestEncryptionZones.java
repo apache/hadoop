@@ -34,6 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
 import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.FSTestWrapper;
 import org.apache.hadoop.fs.FileContext;
@@ -51,12 +52,22 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.namenode.EncryptionFaultInjector;
 import org.apache.hadoop.hdfs.server.namenode.EncryptionZoneManager;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension.DelegationTokenExtension;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
+import org.apache.hadoop.io.Text;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
+import static org.mockito.Mockito.withSettings;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyString;
 
 import static org.apache.hadoop.hdfs.DFSTestUtil.verifyFilesEqual;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
@@ -88,9 +99,11 @@ public class TestEncryptionZones {
     // Set up java key store
     String testRoot = fsHelper.getTestRootDir();
     testRootDir = new File(testRoot).getAbsoluteFile();
+    final Path jksPath = new Path(testRootDir.toString(), "test.jks");
     conf.set(KeyProviderFactory.KEY_PROVIDER_PATH,
-        JavaKeyStoreProvider.SCHEME_NAME + "://file" + testRootDir + "/test.jks"
+        JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri()
     );
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
     // Lower the batch size for testing
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_ENCRYPTION_ZONES_NUM_RESPONSES,
         2);
@@ -312,7 +325,7 @@ public class TestEncryptionZones {
     final UserGroupInformation user = UserGroupInformation.
         createUserForTesting("user", new String[] { "mygroup" });
 
-    final Path testRoot = new Path(fsHelper.getTestRootDir());
+    final Path testRoot = new Path("/tmp/TestEncryptionZones");
     final Path superPath = new Path(testRoot, "superuseronly");
     final Path allPath = new Path(testRoot, "accessall");
 
@@ -346,7 +359,7 @@ public class TestEncryptionZones {
     final UserGroupInformation user = UserGroupInformation.
             createUserForTesting("user", new String[] { "mygroup" });
 
-    final Path testRoot = new Path(fsHelper.getTestRootDir());
+    final Path testRoot = new Path("/tmp/TestEncryptionZones");
     final Path superPath = new Path(testRoot, "superuseronly");
     final Path superPathFile = new Path(superPath, "file1");
     final Path allPath = new Path(testRoot, "accessall");
@@ -439,7 +452,7 @@ public class TestEncryptionZones {
    * Test success of Rename EZ on a directory which is already an EZ.
    */
   private void doRenameEncryptionZone(FSTestWrapper wrapper) throws Exception {
-    final Path testRoot = new Path(fsHelper.getTestRootDir());
+    final Path testRoot = new Path("/tmp/TestEncryptionZones");
     final Path pathFoo = new Path(testRoot, "foo");
     final Path pathFooBaz = new Path(pathFoo, "baz");
     wrapper.mkdir(pathFoo, FsPermission.getDirDefault(), true);
@@ -586,8 +599,9 @@ public class TestEncryptionZones {
     } catch (IOException e) {
       assertExceptionContains("since no key provider is available", e);
     }
+    final Path jksPath = new Path(testRootDir.toString(), "test.jks");
     clusterConf.set(KeyProviderFactory.KEY_PROVIDER_PATH,
-        JavaKeyStoreProvider.SCHEME_NAME + "://file" + testRootDir + "/test.jks"
+        JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri()
     );
     // Try listing EZs as well
     assertNumZones(0);
@@ -752,5 +766,36 @@ public class TestEncryptionZones {
           "Too many retries because of encryption zone operations",
           e.getCause());
     }
+  }
+
+  /**
+   * Tests obtaining delegation token from stored key
+   */
+  @Test(timeout = 120000)
+  public void testDelegationToken() throws Exception {
+    UserGroupInformation.createRemoteUser("JobTracker");
+    DistributedFileSystem dfs = cluster.getFileSystem();
+    KeyProviderCryptoExtension keyProvider = Mockito.mock(KeyProviderCryptoExtension.class,
+        withSettings().extraInterfaces(
+            DelegationTokenExtension.class,
+            CryptoExtension.class));
+    Mockito.when(keyProvider.getConf()).thenReturn(conf);
+    byte[] testIdentifier = "Test identifier for delegation token".getBytes();
+
+    Token<?> testToken = new Token(testIdentifier, new byte[0],
+        new Text(), new Text());
+    Mockito.when(((DelegationTokenExtension)keyProvider).
+        addDelegationTokens(anyString(), (Credentials)any())).
+        thenReturn(new Token<?>[] { testToken });
+
+    dfs.getClient().provider = keyProvider;
+
+    Credentials creds = new Credentials();
+    final Token<?> tokens[] = dfs.addDelegationTokens("JobTracker", creds);
+    DistributedFileSystem.LOG.debug("Delegation tokens: " +
+        Arrays.asList(tokens));
+    Assert.assertEquals(2, tokens.length);
+    Assert.assertEquals(tokens[1], testToken);
+    Assert.assertEquals(1, creds.numberOfTokens());
   }
 }

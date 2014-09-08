@@ -240,7 +240,7 @@ class BlockPoolSlice {
     return DatanodeUtil.createTmpFile(b, f);
   }
 
-  File addBlock(Block b, File f) throws IOException {
+  File addFinalizedBlock(Block b, File f) throws IOException {
     File blockDir = DatanodeUtil.idToBlockDir(finalizedDir, b.getBlockId());
     if (!blockDir.exists()) {
       if (!blockDir.mkdirs()) {
@@ -334,9 +334,11 @@ class BlockPoolSlice {
           // The restart meta file exists
           if (sc.hasNextLong() && (sc.nextLong() > Time.now())) {
             // It didn't expire. Load the replica as a RBW.
+            // We don't know the expected block length, so just use 0
+            // and don't reserve any more space for writes.
             newReplica = new ReplicaBeingWritten(blockId,
                 validateIntegrityAndSetLength(file, genStamp),
-                genStamp, volume, file.getParentFile(), null);
+                genStamp, volume, file.getParentFile(), null, 0);
             loadRwr = false;
           }
           sc.close();
