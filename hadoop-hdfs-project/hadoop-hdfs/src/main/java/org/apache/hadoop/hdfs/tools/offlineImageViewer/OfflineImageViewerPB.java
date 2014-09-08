@@ -39,7 +39,7 @@ import org.apache.hadoop.net.NetUtils;
 /**
  * OfflineImageViewerPB to dump the contents of an Hadoop image file to XML or
  * the console. Main entry point into utility, either via the command line or
- * programatically.
+ * programmatically.
  */
 @InterfaceAudience.Private
 public class OfflineImageViewerPB {

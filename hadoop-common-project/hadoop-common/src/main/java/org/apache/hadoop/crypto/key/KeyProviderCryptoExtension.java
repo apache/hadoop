@@ -179,6 +179,13 @@ public class KeyProviderCryptoExtension extends
         throws IOException;
 
     /**
+     * Drains the Queue for the provided key.
+     *
+     * @param keyName the key to drain the Queue for
+     */
+    public void drain(String keyName);
+
+    /**
      * Generates a key material and encrypts it using the given key version name
      * and initialization vector. The generated key material is of the same
      * length as the <code>KeyVersion</code> material of the latest key version
@@ -313,6 +320,10 @@ public class KeyProviderCryptoExtension extends
       // NO-OP since the default version does not cache any keys
     }
 
+    @Override
+    public void drain(String keyName) {
+      // NO-OP since the default version does not cache any keys
+    }
   }
 
   /**

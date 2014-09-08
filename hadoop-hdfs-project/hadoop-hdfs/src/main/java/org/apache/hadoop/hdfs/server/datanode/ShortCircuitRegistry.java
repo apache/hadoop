@@ -26,6 +26,7 @@ import java.io.Closeable;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -43,6 +44,7 @@ import org.apache.hadoop.io.nativeio.SharedFileDescriptorFactory;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.DomainSocketWatcher;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
 
@@ -83,11 +85,13 @@ public class ShortCircuitRegistry {
 
   private static class RegisteredShm extends ShortCircuitShm
       implements DomainSocketWatcher.Handler {
+    private final String clientName;
     private final ShortCircuitRegistry registry;
 
-    RegisteredShm(ShmId shmId, FileInputStream stream,
+    RegisteredShm(String clientName, ShmId shmId, FileInputStream stream,
         ShortCircuitRegistry registry) throws IOException {
       super(shmId, stream);
+      this.clientName = clientName;
       this.registry = registry;
     }
 
@@ -99,6 +103,10 @@ public class ShortCircuitRegistry {
         }
       }
       return true;
+    }
+
+    String getClientName() {
+      return clientName;
     }
   }
 
@@ -243,6 +251,16 @@ public class ShortCircuitRegistry {
     }
   }
 
+  public synchronized String getClientNames(ExtendedBlockId blockId) {
+    if (!enabled) return "";
+    final HashSet<String> clientNames = new HashSet<String>();
+    final Set<Slot> affectedSlots = slots.get(blockId);
+    for (Slot slot : affectedSlots) {
+      clientNames.add(((RegisteredShm)slot.getShm()).getClientName());
+    }
+    return Joiner.on(",").join(clientNames);
+  }
+
   public static class NewShmInfo implements Closeable {
     public final ShmId shmId;
     public final FileInputStream stream;
@@ -290,7 +308,7 @@ public class ShortCircuitRegistry {
           shmId = ShmId.createRandom();
         } while (segments.containsKey(shmId));
         fis = shmFactory.createDescriptor(clientName, SHM_LENGTH);
-        shm = new RegisteredShm(shmId, fis, this);
+        shm = new RegisteredShm(clientName, shmId, fis, this);
       } finally {
         if (shm == null) {
           IOUtils.closeQuietly(fis);

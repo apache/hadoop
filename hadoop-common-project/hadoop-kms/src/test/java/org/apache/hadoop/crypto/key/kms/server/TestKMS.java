@@ -531,6 +531,7 @@ public class TestKMS {
         Assert.assertEquals("d", meta.getDescription());
         Assert.assertEquals(attributes, meta.getAttributes());
 
+        // test delegation token retrieval
         KeyProviderDelegationTokenExtension kpdte =
             KeyProviderDelegationTokenExtension.
                 createKeyProviderDelegationTokenExtension(kp);
@@ -542,6 +543,22 @@ public class TestKMS {
 
         Assert.assertEquals(new Text("kms-dt"), credentials.getToken(
             SecurityUtil.buildTokenService(kmsAddr)).getKind());
+
+
+        // test rollover draining
+        KeyProviderCryptoExtension kpce = KeyProviderCryptoExtension.
+            createKeyProviderCryptoExtension(kp);
+        options = new KeyProvider.Options(conf);
+        options.setCipher("AES/CTR/NoPadding");
+        options.setBitLength(128);
+        kpce.createKey("k6", options);
+
+        EncryptedKeyVersion ekv1 = kpce.generateEncryptedKey("k6");
+        kpce.rollNewVersion("k6");
+        EncryptedKeyVersion ekv2 = kpce.generateEncryptedKey("k6");
+        Assert.assertNotEquals(ekv1.getEncryptionKeyVersionName(),
+            ekv2.getEncryptionKeyVersionName());
+
         return null;
       }
     });
