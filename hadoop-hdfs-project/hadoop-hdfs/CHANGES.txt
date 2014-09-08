@@ -360,6 +360,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-7025. HDFS Credential Provider related Unit Test Failure.
     (Xiaoyu Yao via cnauroth)
 
+    HDFS-7005. DFS input streams do not timeout.
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an

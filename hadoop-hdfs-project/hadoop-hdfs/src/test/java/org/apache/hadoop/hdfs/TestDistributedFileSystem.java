@@ -31,6 +31,9 @@ import static org.mockito.Mockito.mock;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -60,6 +63,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.VolumeId;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
+import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.web.HftpFileSystem;
@@ -70,6 +74,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
+import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
@@ -987,6 +992,38 @@ public class TestDistributedFileSystem {
         retVal.add(iter.next());
       }
       System.out.println("retVal = " + retVal);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+  
+  
+  @Test(timeout=10000)
+  public void testDFSClientPeerTimeout() throws IOException {
+    final int timeout = 1000;
+    final Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, timeout);
+    
+    // only need cluster to create a dfs client to get a peer
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    try {
+      cluster.waitActive();     
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      // use a dummy socket to ensure the read timesout
+      ServerSocket socket = new ServerSocket(0);
+      Peer peer = dfs.getClient().newConnectedPeer(
+          (InetSocketAddress) socket.getLocalSocketAddress(), null, null);
+      long start = Time.now();
+      try {
+        peer.getInputStream().read();
+        Assert.fail("should timeout");
+      } catch (SocketTimeoutException ste) {
+        long delta = Time.now() - start;
+        Assert.assertTrue("timedout too soon", delta >= timeout*0.9);
+        Assert.assertTrue("timedout too late", delta <= timeout*1.1);
+      } catch (Throwable t) {
+        Assert.fail("wrong exception:"+t);
+      }
     } finally {
       cluster.shutdown();
     }
