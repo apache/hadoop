@@ -56,6 +56,15 @@ public class TestConverterUtils {
   }
 
   @Test
+  public void testContainerIdWithEpoch() throws URISyntaxException {
+    ContainerId id = TestContainerId.newContainerId(0, 0, 0, 25645811);
+    String cid = ConverterUtils.toString(id);
+    assertEquals("container_0_0000_00_479987_06", cid);
+    ContainerId gen = ConverterUtils.toContainerId(cid);
+    assertEquals(gen.toString(), id.toString());
+  }
+
+  @Test
   public void testContainerIdNull() throws URISyntaxException {
     assertNull(ConverterUtils.toString((ContainerId)null));
   }  

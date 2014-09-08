@@ -167,6 +167,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2507. Documented CrossOriginFilter configurations for the timeline
     server. (Jonathan Eagles via zjshen)
 
+    YARN-2515. Updated ConverterUtils#toContainerId to parse epoch.
+    (Tsuyoshi OZAWA via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
