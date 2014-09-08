@@ -190,6 +190,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6940. Refactoring to allow ConsensusNode implementation. (shv)
 
+    HDFS-6943. Improve NN allocateBlock log to include replicas' datanode IPs.
+    (Ming Ma via wheat9)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
