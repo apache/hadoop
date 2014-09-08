@@ -19,6 +19,9 @@ package org.apache.hadoop.hdfs.server.mover;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import org.apache.commons.cli.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -43,6 +46,8 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.net.URI;
 import java.text.DateFormat;
@@ -93,6 +98,7 @@ public class Mover {
 
   private final Dispatcher dispatcher;
   private final StorageMap storages;
+  private final List<Path> targetPaths;
 
   private final BlockStoragePolicy.Suite blockStoragePolicies;
 
@@ -112,6 +118,7 @@ public class Mover {
         maxConcurrentMovesPerNode, conf);
     this.storages = new StorageMap();
     this.blockStoragePolicies = BlockStoragePolicy.readBlockStorageSuite(conf);
+    this.targetPaths = nnc.getTargetPaths();
   }
 
   void init() throws IOException {
@@ -232,7 +239,10 @@ public class Mover {
       getSnapshottableDirs();
       boolean hasRemaining = true;
       try {
-        hasRemaining = processDirRecursively("", dfs.getFileInfo("/"));
+        for (Path target : targetPaths) {
+          hasRemaining = processDirRecursively("", dfs.getFileInfo(target
+              .toUri().getPath()));
+        }
       } catch (IOException e) {
         LOG.warn("Failed to get root directory status. Ignore and continue.", e);
       }
@@ -441,7 +451,7 @@ public class Mover {
     }
   }
 
-  static int run(Collection<URI> namenodes, Configuration conf)
+  static int run(Map<URI, List<Path>> namenodes, Configuration conf)
       throws IOException, InterruptedException {
     final long sleeptime = 2000 * conf.getLong(
         DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
@@ -452,7 +462,7 @@ public class Mover {
     try {
       connectors = NameNodeConnector.newNameNodeConnectors(namenodes,
             Mover.class.getSimpleName(), MOVER_ID_PATH, conf);
-    
+
       while (connectors.size() > 0) {
         Collections.shuffle(connectors);
         Iterator<NameNodeConnector> iter = connectors.iterator();
@@ -480,7 +490,103 @@ public class Mover {
 
   static class Cli extends Configured implements Tool {
     private static final String USAGE = "Usage: java "
-        + Mover.class.getSimpleName();
+        + Mover.class.getSimpleName()
+        + " [-p <space separated files/dirs> specify a list of files/dirs to migrate]"
+        + " [-f <local file name>            specify a local file containing files/dirs to migrate]";
+
+    private static Options buildCliOptions() {
+      Options opts = new Options();
+      Option file = OptionBuilder.withArgName("pathsFile").hasArg()
+          .withDescription("a local file containing files/dirs to migrate")
+          .create("f");
+      Option paths = OptionBuilder.withArgName("paths").hasArgs()
+          .withDescription("specify space separated files/dirs to migrate")
+          .create("p");
+      OptionGroup group = new OptionGroup();
+      group.addOption(file);
+      group.addOption(paths);
+      opts.addOptionGroup(group);
+      return opts;
+    }
+
+    private static String[] readPathFile(String file) throws IOException {
+      List<String> list = Lists.newArrayList();
+      BufferedReader reader = new BufferedReader(new FileReader(file));
+      try {
+        String line;
+        while ((line = reader.readLine()) != null) {
+          if (!line.trim().isEmpty()) {
+            list.add(line);
+          }
+        }
+      } finally {
+        IOUtils.cleanup(LOG, reader);
+      }
+      return list.toArray(new String[list.size()]);
+    }
+
+    private static Map<URI, List<Path>> getNameNodePaths(CommandLine line,
+        Configuration conf) throws Exception {
+      Map<URI, List<Path>> map = Maps.newHashMap();
+      String[] paths = null;
+      if (line.hasOption("f")) {
+        paths = readPathFile(line.getOptionValue("f"));
+      } else if (line.hasOption("p")) {
+        paths = line.getOptionValues("p");
+      }
+      Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
+      if (paths == null || paths.length == 0) {
+        for (URI namenode : namenodes) {
+          map.put(namenode, null);
+        }
+        return map;
+      }
+      final URI singleNs = namenodes.size() == 1 ?
+          namenodes.iterator().next() : null;
+      for (String path : paths) {
+        Path target = new Path(path);
+        if (!target.isUriPathAbsolute()) {
+          throw new IllegalArgumentException("The path " + target
+              + " is not absolute");
+        }
+        URI targetUri = target.toUri();
+        if ((targetUri.getAuthority() == null || targetUri.getScheme() ==
+            null) && singleNs == null) {
+          // each path must contains both scheme and authority information
+          // unless there is only one name service specified in the
+          // configuration
+          throw new IllegalArgumentException("The path " + target
+              + " does not contain scheme and authority thus cannot identify"
+              + " its name service");
+        }
+        URI key = singleNs;
+        if (singleNs == null) {
+          key = new URI(targetUri.getScheme(), targetUri.getAuthority(),
+              null, null, null);
+          if (!namenodes.contains(key)) {
+            throw new IllegalArgumentException("Cannot resolve the path " +
+                target + ". The namenode services specified in the " +
+                "configuration: " + namenodes);
+          }
+        }
+        List<Path> targets = map.get(key);
+        if (targets == null) {
+          targets = Lists.newArrayList();
+          map.put(key, targets);
+        }
+        targets.add(Path.getPathWithoutSchemeAndAuthority(target));
+      }
+      return map;
+    }
+
+    @VisibleForTesting
+    static Map<URI, List<Path>> getNameNodePathsToMove(Configuration conf,
+        String... args) throws Exception {
+      final Options opts = buildCliOptions();
+      CommandLineParser parser = new GnuParser();
+      CommandLine commandLine = parser.parse(opts, args, true);
+      return getNameNodePaths(commandLine, conf);
+    }
 
     @Override
     public int run(String[] args) throws Exception {
@@ -488,14 +594,20 @@ public class Mover {
       final Configuration conf = getConf();
 
       try {
-        final Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
-        return Mover.run(namenodes, conf);
+        final Map<URI, List<Path>> map = getNameNodePathsToMove(conf, args);
+        return Mover.run(map, conf);
       } catch (IOException e) {
         System.out.println(e + ".  Exiting ...");
         return ExitStatus.IO_EXCEPTION.getExitCode();
       } catch (InterruptedException e) {
         System.out.println(e + ".  Exiting ...");
         return ExitStatus.INTERRUPTED.getExitCode();
+      } catch (ParseException e) {
+        System.out.println(e + ".  Exiting ...");
+        return ExitStatus.ILLEGAL_ARGUMENTS.getExitCode();
+      } catch (IllegalArgumentException e) {
+        System.out.println(e + ".  Exiting ...");
+        return ExitStatus.ILLEGAL_ARGUMENTS.getExitCode();
       } finally {
         System.out.format("%-24s ", DateFormat.getDateTimeInstance().format(new Date()));
         System.out.println("Mover took " + StringUtils.formatTime(Time.monotonicNow()-startTime));

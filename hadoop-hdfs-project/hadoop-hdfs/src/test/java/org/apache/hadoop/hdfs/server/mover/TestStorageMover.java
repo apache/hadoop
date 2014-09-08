@@ -252,7 +252,11 @@ public class TestStorageMover {
 
     private void runMover() throws Exception {
       Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
-      int result = Mover.run(namenodes, conf);
+      Map<URI, List<Path>> nnMap = Maps.newHashMap();
+      for (URI nn : namenodes) {
+        nnMap.put(nn, null);
+      }
+      int result = Mover.run(nnMap, conf);
       Assert.assertEquals(ExitStatus.SUCCESS.getExitCode(), result);
     }
 

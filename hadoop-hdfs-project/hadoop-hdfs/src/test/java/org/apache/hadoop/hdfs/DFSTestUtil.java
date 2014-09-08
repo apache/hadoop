@@ -20,9 +20,12 @@ package org.apache.hadoop.hdfs;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -87,8 +90,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.*;
 import java.util.concurrent.TimeoutException;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -870,6 +872,37 @@ public class DFSTestUtil {
     }
     conf.set(DFSConfigKeys.DFS_NAMESERVICES, Joiner.on(",")
         .join(nameservices));
+  }
+
+  public static void setFederatedHAConfiguration(MiniDFSCluster cluster,
+      Configuration conf) {
+    Map<String, List<String>> nameservices = Maps.newHashMap();
+    for (NameNodeInfo info : cluster.getNameNodeInfos()) {
+      Preconditions.checkState(info.nameserviceId != null);
+      List<String> nns = nameservices.get(info.nameserviceId);
+      if (nns == null) {
+        nns = Lists.newArrayList();
+        nameservices.put(info.nameserviceId, nns);
+      }
+      nns.add(info.nnId);
+
+      conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY,
+          info.nameserviceId, info.nnId),
+          DFSUtil.createUri(HdfsConstants.HDFS_URI_SCHEME,
+          info.nameNode.getNameNodeAddress()).toString());
+      conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+          info.nameserviceId, info.nnId),
+          DFSUtil.createUri(HdfsConstants.HDFS_URI_SCHEME,
+          info.nameNode.getNameNodeAddress()).toString());
+    }
+    for (Map.Entry<String, List<String>> entry : nameservices.entrySet()) {
+      conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY_PREFIX,
+          entry.getKey()), Joiner.on(",").join(entry.getValue()));
+      conf.set(DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "." + entry
+          .getKey(), ConfiguredFailoverProxyProvider.class.getName());
+    }
+    conf.set(DFSConfigKeys.DFS_NAMESERVICES, Joiner.on(",")
+        .join(nameservices.keySet()));
   }
   
   private static DatanodeID getDatanodeID(String ipAddr) {
