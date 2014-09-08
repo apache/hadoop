@@ -83,7 +83,12 @@ public final class FSImageFormatPBINode {
   private static final int XATTR_NAMESPACE_OFFSET = 30;
   private static final int XATTR_NAME_MASK = (1 << 24) - 1;
   private static final int XATTR_NAME_OFFSET = 6;
-  private static final XAttr.NameSpace[] XATTR_NAMESPACE_VALUES = 
+
+  /* See the comments in fsimage.proto for an explanation of the following. */
+  private static final int XATTR_NAMESPACE_EXT_OFFSET = 5;
+  private static final int XATTR_NAMESPACE_EXT_MASK = 1;
+
+  private static final XAttr.NameSpace[] XATTR_NAMESPACE_VALUES =
       XAttr.NameSpace.values();
   
 
@@ -121,6 +126,8 @@ public final class FSImageFormatPBINode {
         int v = xAttrCompactProto.getName();
         int nid = (v >> XATTR_NAME_OFFSET) & XATTR_NAME_MASK;
         int ns = (v >> XATTR_NAMESPACE_OFFSET) & XATTR_NAMESPACE_MASK;
+        ns |=
+            ((v >> XATTR_NAMESPACE_EXT_OFFSET) & XATTR_NAMESPACE_EXT_MASK) << 2;
         String name = stringTable[nid];
         byte[] value = null;
         if (xAttrCompactProto.getValue() != null) {
@@ -367,10 +374,13 @@ public final class FSImageFormatPBINode {
       for (XAttr a : f.getXAttrs()) {
         XAttrCompactProto.Builder xAttrCompactBuilder = XAttrCompactProto.
             newBuilder();
-        int v = ((a.getNameSpace().ordinal() & XATTR_NAMESPACE_MASK) << 
-            XATTR_NAMESPACE_OFFSET) 
-            | ((stringMap.getId(a.getName()) & XATTR_NAME_MASK) << 
+        int nsOrd = a.getNameSpace().ordinal();
+        Preconditions.checkArgument(nsOrd < 8, "Too many namespaces.");
+        int v = ((nsOrd & XATTR_NAMESPACE_MASK) << XATTR_NAMESPACE_OFFSET)
+            | ((stringMap.getId(a.getName()) & XATTR_NAME_MASK) <<
                 XATTR_NAME_OFFSET);
+        v |= (((nsOrd >> 2) & XATTR_NAMESPACE_EXT_MASK) <<
+            XATTR_NAMESPACE_EXT_OFFSET);
         xAttrCompactBuilder.setName(v);
         if (a.getValue() != null) {
           xAttrCompactBuilder.setValue(PBHelper.getByteString(a.getValue()));

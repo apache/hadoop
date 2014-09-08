@@ -111,6 +111,18 @@ public class EncryptionZoneManager {
    */
   void addEncryptionZone(Long inodeId, String keyName) {
     assert dir.hasWriteLock();
+    unprotectedAddEncryptionZone(inodeId, keyName);
+  }
+
+  /**
+   * Add a new encryption zone.
+   * <p/>
+   * Does not assume that the FSDirectory lock is held.
+   *
+   * @param inodeId of the encryption zone
+   * @param keyName encryption zone key name
+   */
+  void unprotectedAddEncryptionZone(Long inodeId, String keyName) {
     final EncryptionZoneInt ez = new EncryptionZoneInt(inodeId, keyName);
     encryptionZones.put(inodeId, ez);
   }
