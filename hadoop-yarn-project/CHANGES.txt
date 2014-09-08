@@ -161,6 +161,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2508. Cross Origin configuration parameters prefix are not honored
     (Mit Desai via jeagles)
 
+    YARN-2512. Allowed pattern matching for origins in CrossOriginFilter.
+    (Jonathan Eagles via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
