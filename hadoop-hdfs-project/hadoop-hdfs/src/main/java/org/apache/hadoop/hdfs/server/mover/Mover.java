@@ -329,7 +329,7 @@ public class Mover {
             hasRemaining |= (diff.existing.size() > 1 &&
                 diff.expected.size() > 1);
           } else {
-            hasRemaining = true;
+            hasRemaining = false; // not able to schedule any move
           }
         }
       }
