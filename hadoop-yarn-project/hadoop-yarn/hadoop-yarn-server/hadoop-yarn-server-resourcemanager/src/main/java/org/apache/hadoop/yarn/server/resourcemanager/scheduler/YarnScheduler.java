@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
@@ -41,6 +42,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 
 /**
  * This interface is used by the components to talk to the
@@ -220,4 +222,12 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * @throws YarnException
    */
   void killAllAppsInQueue(String queueName) throws YarnException;
+
+  /**
+   * Return a collection of the resource types that are considered when
+   * scheduling
+   *
+   * @return an EnumSet containing the resource types
+   */
+  public EnumSet<SchedulerResourceTypes> getSchedulingResourceTypes();
 }

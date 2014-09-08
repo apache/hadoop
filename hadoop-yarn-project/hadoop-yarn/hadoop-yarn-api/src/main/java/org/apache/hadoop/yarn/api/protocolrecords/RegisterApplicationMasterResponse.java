@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.api.protocolrecords;
 
 import java.nio.ByteBuffer;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
@@ -31,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -180,4 +182,25 @@ public abstract class RegisterApplicationMasterResponse {
   @Private
   @Unstable
   public abstract void setNMTokensFromPreviousAttempts(List<NMToken> nmTokens);
+
+  /**
+   * Get a set of the resource types considered by the scheduler.
+   *
+   * @return a Map of RM settings
+   */
+  @Public
+  @Unstable
+  public abstract EnumSet<SchedulerResourceTypes> getSchedulerResourceTypes();
+
+  /**
+   * Set the resource types used by the scheduler.
+   *
+   * @param types
+   *          a set of the resource types that the scheduler considers during
+   *          scheduling
+   */
+  @Private
+  @Unstable
+  public abstract void setSchedulerResourceTypes(
+      EnumSet<SchedulerResourceTypes> types);
 }

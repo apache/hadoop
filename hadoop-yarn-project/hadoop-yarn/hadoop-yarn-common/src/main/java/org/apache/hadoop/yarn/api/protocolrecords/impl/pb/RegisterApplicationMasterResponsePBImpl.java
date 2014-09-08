@@ -20,11 +20,7 @@ package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -43,6 +39,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.NMTokenProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterResponseProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.TextFormat;
@@ -61,6 +58,7 @@ public class RegisterApplicationMasterResponsePBImpl extends
   private Map<ApplicationAccessType, String> applicationACLS = null;
   private List<Container> containersFromPreviousAttempts = null;
   private List<NMToken> nmTokens = null;
+  private EnumSet<SchedulerResourceTypes> schedulerResourceTypes = null;
 
   public RegisterApplicationMasterResponsePBImpl() {
     builder = RegisterApplicationMasterResponseProto.newBuilder();
@@ -121,6 +119,9 @@ public class RegisterApplicationMasterResponsePBImpl extends
       builder.clearNmTokensFromPreviousAttempts();
       Iterable<NMTokenProto> iterable = getTokenProtoIterable(nmTokens);
       builder.addAllNmTokensFromPreviousAttempts(iterable);
+    }
+    if(schedulerResourceTypes != null) {
+      addSchedulerResourceTypes();
     }
   }
 
@@ -362,6 +363,73 @@ public class RegisterApplicationMasterResponsePBImpl extends
         };
       }
     };
+  }
+
+  @Override
+  public EnumSet<SchedulerResourceTypes> getSchedulerResourceTypes() {
+    initSchedulerResourceTypes();
+    return this.schedulerResourceTypes;
+  }
+
+  private void initSchedulerResourceTypes() {
+    if (this.schedulerResourceTypes != null) {
+      return;
+    }
+    RegisterApplicationMasterResponseProtoOrBuilder p =
+        viaProto ? proto : builder;
+
+    List<SchedulerResourceTypes> list = p.getSchedulerResourceTypesList();
+    if (list.isEmpty()) {
+      this.schedulerResourceTypes =
+          EnumSet.noneOf(SchedulerResourceTypes.class);
+    } else {
+      this.schedulerResourceTypes = EnumSet.copyOf(list);
+    }
+  }
+
+  private void addSchedulerResourceTypes() {
+    maybeInitBuilder();
+    builder.clearSchedulerResourceTypes();
+    if (schedulerResourceTypes == null) {
+      return;
+    }
+    Iterable<? extends SchedulerResourceTypes> values =
+        new Iterable<SchedulerResourceTypes>() {
+
+          @Override
+          public Iterator<SchedulerResourceTypes> iterator() {
+            return new Iterator<SchedulerResourceTypes>() {
+              Iterator<SchedulerResourceTypes> settingsIterator =
+                  schedulerResourceTypes.iterator();
+
+              @Override
+              public boolean hasNext() {
+                return settingsIterator.hasNext();
+              }
+
+              @Override
+              public SchedulerResourceTypes next() {
+                return settingsIterator.next();
+              }
+
+              @Override
+              public void remove() {
+                throw new UnsupportedOperationException();
+              }
+            };
+          }
+        };
+    this.builder.addAllSchedulerResourceTypes(values);
+  }
+
+  @Override
+  public void setSchedulerResourceTypes(EnumSet<SchedulerResourceTypes> types) {
+    if (types == null) {
+      return;
+    }
+    initSchedulerResourceTypes();
+    this.schedulerResourceTypes.clear();
+    this.schedulerResourceTypes.addAll(types);
   }
 
   private Resource convertFromProtoFormat(ResourceProto resource) {

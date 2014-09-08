@@ -170,6 +170,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2515. Updated ConverterUtils#toContainerId to parse epoch.
     (Tsuyoshi OZAWA via jianhe)
 
+    YARN-2448. Changed ApplicationMasterProtocol to expose RM-recognized resource
+    types to the AMs. (Varun Vasudev via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

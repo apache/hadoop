@@ -18,6 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
+import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.junit.Assert;
 
 import org.apache.commons.logging.Log;
@@ -40,8 +47,7 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 import static java.lang.Thread.sleep;
 import static org.mockito.Matchers.any;
@@ -257,6 +263,49 @@ public class TestApplicationMasterService {
       if (rm != null) {
         rm.stop();
       }
+    }
+  }
+
+  @Test(timeout = 3000000)
+  public void testResourceTypes() throws Exception {
+    HashMap<YarnConfiguration, EnumSet<SchedulerResourceTypes>> driver =
+        new HashMap<YarnConfiguration, EnumSet<SchedulerResourceTypes>>();
+
+    CapacitySchedulerConfiguration csconf =
+        new CapacitySchedulerConfiguration();
+    csconf.setResourceComparator(DominantResourceCalculator.class);
+    YarnConfiguration testCapacityDRConf = new YarnConfiguration(csconf);
+    testCapacityDRConf.setClass(YarnConfiguration.RM_SCHEDULER,
+      CapacityScheduler.class, ResourceScheduler.class);
+    YarnConfiguration testCapacityDefConf = new YarnConfiguration();
+    testCapacityDefConf.setClass(YarnConfiguration.RM_SCHEDULER,
+      CapacityScheduler.class, ResourceScheduler.class);
+    YarnConfiguration testFairDefConf = new YarnConfiguration();
+    testFairDefConf.setClass(YarnConfiguration.RM_SCHEDULER,
+      FairScheduler.class, ResourceScheduler.class);
+
+    driver.put(conf, EnumSet.of(SchedulerResourceTypes.MEMORY));
+    driver.put(testCapacityDRConf,
+      EnumSet.of(SchedulerResourceTypes.CPU, SchedulerResourceTypes.MEMORY));
+    driver.put(testCapacityDefConf, EnumSet.of(SchedulerResourceTypes.MEMORY));
+    driver.put(testFairDefConf,
+      EnumSet.of(SchedulerResourceTypes.MEMORY, SchedulerResourceTypes.CPU));
+
+    for (Map.Entry<YarnConfiguration, EnumSet<SchedulerResourceTypes>> entry : driver
+      .entrySet()) {
+      EnumSet<SchedulerResourceTypes> expectedValue = entry.getValue();
+      MockRM rm = new MockRM(entry.getKey());
+      rm.start();
+      MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
+      RMApp app1 = rm.submitApp(2048);
+      nm1.nodeHeartbeat(true);
+      RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
+      MockAM am1 = rm.sendAMLaunched(attempt1.getAppAttemptId());
+      RegisterApplicationMasterResponse resp = am1.registerAppAttempt();
+      EnumSet<SchedulerResourceTypes> types = resp.getSchedulerResourceTypes();
+      LOG.info("types = " + types.toString());
+      Assert.assertEquals(expectedValue, types);
+      rm.stop();
     }
   }
 }
