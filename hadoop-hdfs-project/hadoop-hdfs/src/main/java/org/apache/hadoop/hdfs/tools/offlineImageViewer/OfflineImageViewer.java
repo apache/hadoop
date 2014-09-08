@@ -40,7 +40,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.PositionTrackingIn
 /**
  * OfflineImageViewer to dump the contents of an Hadoop image file to XML
  * or the console.  Main entry point into utility, either via the
- * command line or programatically.
+ * command line or programmatically.
  */
 @InterfaceAudience.Private
 public class OfflineImageViewer {

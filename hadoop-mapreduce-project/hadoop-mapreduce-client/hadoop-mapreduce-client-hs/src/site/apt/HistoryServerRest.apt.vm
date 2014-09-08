@@ -1311,7 +1311,7 @@ MapReduce History Server REST API's.
          {
             "value" : "org.apache.hadoop.yarn.server.webproxy.amfilter.AmFilterInitializer",
             "name" : "hadoop.http.filter.initializers"
-            "source" : ["programatically", "job.xml"]
+            "source" : ["programmatically", "job.xml"]
          },
          {
             "value" : "/home/hadoop/tmp",
@@ -1357,7 +1357,7 @@ MapReduce History Server REST API's.
   <property>
     <name>hadoop.http.filter.initializers</name>
     <value>org.apache.hadoop.yarn.server.webproxy.amfilter.AmFilterInitializer</value>
-    <source>programatically</source>
+    <source>programmatically</source>
     <source>job.xml</source>
   </property>
   <property>
