@@ -52,19 +52,19 @@ public class TestCredentialProviderFactory {
   @Test
   public void testFactory() throws Exception {
     Configuration conf = new Configuration();
+    final String userUri = UserProvider.SCHEME_NAME + ":///";
+    final Path jksPath = new Path(tmpDir.toString(), "test.jks");
+    final String jksUri = JavaKeyStoreProvider.SCHEME_NAME +
+        "://file" + jksPath.toUri();
     conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH,
-        UserProvider.SCHEME_NAME + ":///," +
-            JavaKeyStoreProvider.SCHEME_NAME + "://file" + tmpDir + "/test.jks");
+        userUri + "," + jksUri);
     List<CredentialProvider> providers = 
         CredentialProviderFactory.getProviders(conf);
     assertEquals(2, providers.size());
     assertEquals(UserProvider.class, providers.get(0).getClass());
     assertEquals(JavaKeyStoreProvider.class, providers.get(1).getClass());
-    assertEquals(UserProvider.SCHEME_NAME +
-        ":///", providers.get(0).toString());
-    assertEquals(JavaKeyStoreProvider.SCHEME_NAME +
-        "://file" + tmpDir + "/test.jks",
-        providers.get(1).toString());
+    assertEquals(userUri, providers.get(0).toString());
+    assertEquals(jksUri, providers.get(1).toString());
   }
 
   @Test
@@ -188,8 +188,9 @@ public class TestCredentialProviderFactory {
   @Test
   public void testJksProvider() throws Exception {
     Configuration conf = new Configuration();
+    final Path jksPath = new Path(tmpDir.toString(), "test.jks");
     final String ourUrl =
-        JavaKeyStoreProvider.SCHEME_NAME + "://file" + tmpDir + "/test.jks";
+        JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri();
 
     File file = new File(tmpDir, "test.jks");
     file.delete();
