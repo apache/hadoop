@@ -620,10 +620,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
   /**
    * Copy the block and meta files for the given block from the given
-   * @return the new meta file.
+   * @return the new meta and block files.
    * @throws IOException
    */
-  static File copyBlockFiles(ReplicaInfo replicaInfo, File destRoot)
+  static File[] copyBlockFiles(ReplicaInfo replicaInfo, File destRoot)
       throws IOException {
     final File destDir = DatanodeUtil.idToBlockDir(destRoot, replicaInfo.getBlockId());
     final File dstFile = new File(destDir, replicaInfo.getBlockName());
@@ -644,7 +644,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       LOG.debug("addBlock: Moved " + srcMeta + " to " + dstMeta);
       LOG.debug("addBlock: Moved " + srcFile + " to " + dstFile);
     }
-    return dstMeta;
+    return new File[] {dstMeta, dstFile};
   }
 
   static private void truncateBlock(File blockFile, File metaFile,
@@ -2224,13 +2224,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         }
 
         lazyWriteReplicaTracker.recordStartLazyPersist(bpid, blockId, targetVolume);
-        File savedBlockFile = targetVolume.getBlockPoolSlice(bpid)
-                                          .lazyPersistReplica(replicaInfo);
-        lazyWriteReplicaTracker.recordEndLazyPersist(bpid, blockId, savedBlockFile);
+        File[] savedFiles = targetVolume.getBlockPoolSlice(bpid)
+                                        .lazyPersistReplica(replicaInfo);
+        lazyWriteReplicaTracker.recordEndLazyPersist(
+            bpid, blockId, savedFiles[0], savedFiles[1]);
 
         if (LOG.isDebugEnabled()) {
           LOG.debug("LazyWriter finished saving blockId=" + blockId + "; bpid=" + bpid +
-                        " to file " + savedBlockFile);
+                        " to file " + savedFiles[1]);
         }
       }
     }

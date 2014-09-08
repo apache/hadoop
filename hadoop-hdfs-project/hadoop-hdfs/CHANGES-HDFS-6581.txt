@@ -35,3 +35,7 @@
 
     HDFS-6930. Improve replica eviction from RAM disk. (Arpit Agarwal)
 
+    HDFS-6977. Delete all copies when a block is deleted from the block space.
+    (Arpit Agarwal)
+
+

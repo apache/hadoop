@@ -48,6 +48,7 @@ class LazyWriteReplicaTracker {
      * Persistent volume that holds or will hold the saved replica.
      */
     FsVolumeImpl lazyPersistVolume;
+    File savedMetaFile;
     File savedBlockFile;
 
     ReplicaState(final String bpid, final long blockId, FsVolumeSpi transientVolume) {
@@ -56,7 +57,24 @@ class LazyWriteReplicaTracker {
       this.transientVolume = transientVolume;
       state = State.IN_MEMORY;
       lazyPersistVolume = null;
+      savedMetaFile = null;
       savedBlockFile = null;
+    }
+
+    void deleteSavedFiles() {
+      try {
+        if (savedBlockFile != null) {
+          savedBlockFile.delete();
+          savedBlockFile = null;
+        }
+
+        if (savedMetaFile != null) {
+          savedMetaFile.delete();
+          savedMetaFile = null;
+        }
+      } catch (Throwable t) {
+        // Ignore any exceptions.
+      }
     }
 
     @Override
@@ -144,7 +162,8 @@ class LazyWriteReplicaTracker {
   }
 
   synchronized void recordEndLazyPersist(
-      final String bpid, final long blockId, File savedBlockFile) {
+      final String bpid, final long blockId,
+      final File savedMetaFile, final File savedBlockFile) {
     Map<Long, ReplicaState> map = replicaMaps.get(bpid);
     ReplicaState replicaState = map.get(blockId);
 
@@ -153,6 +172,7 @@ class LazyWriteReplicaTracker {
           bpid + "; blockId=" + blockId);
     }
     replicaState.state = State.LAZY_PERSIST_COMPLETE;
+    replicaState.savedMetaFile = savedMetaFile;
     replicaState.savedBlockFile = savedBlockFile;
 
     if (replicasNotPersisted.peek() == replicaState) {
@@ -208,12 +228,22 @@ class LazyWriteReplicaTracker {
     return null;
   }
 
-  void discardReplica(ReplicaState replicaState, boolean force) {
-    discardReplica(replicaState.bpid, replicaState.blockId, force);
+  void discardReplica(ReplicaState replicaState, boolean deleteSavedCopies) {
+    discardReplica(replicaState.bpid, replicaState.blockId, deleteSavedCopies);
   }
 
+  /**
+   * Discard any state we are tracking for the given replica. This could mean
+   * the block is either deleted from the block space or the replica is no longer
+   * on transient storage.
+   *
+   * @param deleteSavedCopies true if we should delete the saved copies on
+   *                          persistent storage. This should be set by the
+   *                          caller when the block is no longer needed.
+   */
   synchronized void discardReplica(
-      final String bpid, final long blockId, boolean force) {
+      final String bpid, final long blockId,
+      boolean deleteSavedCopies) {
     Map<Long, ReplicaState> map = replicaMaps.get(bpid);
 
     if (map == null) {
@@ -223,19 +253,12 @@ class LazyWriteReplicaTracker {
     ReplicaState replicaState = map.get(blockId);
 
     if (replicaState == null) {
-      if (force) {
-        return;
-      }
-      throw new IllegalStateException("Unknown replica bpid=" +
-          bpid + "; blockId=" + blockId);
+      return;
     }
 
-    if (replicaState.state != State.LAZY_PERSIST_COMPLETE && !force) {
-      throw new IllegalStateException("Discarding replica without " +
-          "saving it to disk bpid=" + bpid + "; blockId=" + blockId);
-
+    if (deleteSavedCopies) {
+      replicaState.deleteSavedFiles();
     }
-
     map.remove(blockId);
   }
 }
