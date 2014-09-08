@@ -55,6 +55,17 @@ public class BlockStoragePolicy {
   public static final int ID_MAX = (1 << ID_BIT_LENGTH) - 1;
   public static final byte ID_UNSPECIFIED = 0;
 
+  private static final Suite DEFAULT_SUITE = createDefaultSuite();
+
+  private static Suite createDefaultSuite() {
+    final BlockStoragePolicy[] policies = new BlockStoragePolicy[1 << ID_BIT_LENGTH];
+    final StorageType[] storageTypes = {StorageType.DISK};
+    final byte defaultPolicyId = 12;
+    policies[defaultPolicyId] = new BlockStoragePolicy(defaultPolicyId, "HOT",
+        storageTypes, StorageType.EMPTY_ARRAY, StorageType.EMPTY_ARRAY);
+    return new Suite(defaultPolicyId, policies);
+  }
+
   /** A block storage policy suite. */
   public static class Suite {
     private final byte defaultPolicyID;
@@ -342,6 +353,10 @@ public class BlockStoragePolicy {
   public static Suite readBlockStorageSuite(Configuration conf) {
     final BlockStoragePolicy[] policies = new BlockStoragePolicy[1 << ID_BIT_LENGTH];
     final String[] values = conf.getStrings(DFS_BLOCK_STORAGE_POLICIES_KEY);
+    if (values == null) {
+      // conf property is missing, use default suite.
+      return DEFAULT_SUITE;
+    }
     byte firstID = -1;
     for(String v : values) {
       v = v.trim();
