@@ -20,6 +20,7 @@ package org.apache.hadoop.crypto.key.kms.server;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.security.NoSuchAlgorithmException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
@@ -27,6 +28,7 @@ import java.util.concurrent.ExecutionException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.kms.ValueQueue;
 import org.apache.hadoop.crypto.key.kms.ValueQueue.SyncGenerationPolicy;
@@ -113,6 +115,11 @@ public class EagerKeyGeneratorKeyProviderCryptoExtension
     }
 
     @Override
+    public void drain(String keyName) {
+      encKeyVersionQueue.drain(keyName);
+    }
+
+    @Override
     public EncryptedKeyVersion generateEncryptedKey(String encryptionKeyName)
         throws IOException, GeneralSecurityException {
       try {
@@ -146,4 +153,19 @@ public class EagerKeyGeneratorKeyProviderCryptoExtension
         new CryptoExtension(conf, keyProviderCryptoExtension));
   }
 
+  @Override
+  public KeyVersion rollNewVersion(String name)
+      throws NoSuchAlgorithmException, IOException {
+    KeyVersion keyVersion = super.rollNewVersion(name);
+    getExtension().drain(name);
+    return keyVersion;
+  }
+
+  @Override
+  public KeyVersion rollNewVersion(String name, byte[] material)
+      throws IOException {
+    KeyVersion keyVersion = super.rollNewVersion(name, material);
+    getExtension().drain(name);
+    return keyVersion;
+  }
 }

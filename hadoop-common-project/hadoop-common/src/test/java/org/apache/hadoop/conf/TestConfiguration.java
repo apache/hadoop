@@ -821,8 +821,8 @@ public class TestConfiguration extends TestCase {
         fileResource,
         new Path(sources[0]));
     assertArrayEquals("Resource string returned for a set() property must be " +
-    		"\"programatically\"",
-        new String[]{"programatically"},
+        "\"programmatically\"",
+        new String[]{"programmatically"},
         conf.getPropertySources("fs.defaultFS"));
     assertEquals("Resource string returned for an unset property must be null",
         null, conf.getPropertySources("fs.defaultFoo"));
@@ -1101,7 +1101,7 @@ public class TestConfiguration extends TestCase {
       confDump.put(prop.getKey(), prop);
     }
     assertEquals("value5",confDump.get("test.key6").getValue());
-    assertEquals("programatically", confDump.get("test.key4").getResource());
+    assertEquals("programmatically", confDump.get("test.key4").getResource());
     outWriter.close();
   }
   

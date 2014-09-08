@@ -282,6 +282,9 @@ Trunk (Unreleased)
     intermittently with various symptoms - debugging patch. (Yongjun Zhang via
     Arpit Agarwal)
 
+    HDFS-6893. crypto subcommand is not sorted properly in hdfs's hadoop_usage
+    (David Luo via aw)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -469,6 +472,12 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6940. Refactoring to allow ConsensusNode implementation. (shv)
 
+    HDFS-6943. Improve NN allocateBlock log to include replicas' datanode IPs.
+    (Ming Ma via wheat9)
+
+    HDFS-6036. Forcibly timeout misbehaving DFSClients that try to do
+    no-checksum reads that extend too long (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -640,6 +649,8 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7025. HDFS Credential Provider related Unit Test Failure.
     (Xiaoyu Yao via cnauroth)
+
+    HDFS-7005. DFS input streams do not timeout.
 
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   

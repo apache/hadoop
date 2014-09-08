@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
@@ -305,8 +306,9 @@ public class TestSSLFactory {
       if (useCredProvider) {
         File testDir = new File(System.getProperty("test.build.data",
             "target/test-dir"));
+        final Path jksPath = new Path(testDir.toString(), "test.jks");
         final String ourUrl =
-            JavaKeyStoreProvider.SCHEME_NAME + "://file/" + testDir + "/test.jks";
+            JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri();
         sslConf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, ourUrl);
       }
     } else {
