@@ -394,7 +394,7 @@ public class TestLazyPersistFiles {
   public void testRamDiskEviction()
       throws IOException, InterruptedException {
     startUpCluster(REPL_FACTOR,
-        new StorageType[] {RAM_DISK, DEFAULT },
+        new StorageType[] { RAM_DISK, DEFAULT },
         (2 * BLOCK_SIZE - 1));     // 1 replica + delta.
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path1 = new Path("/" + METHOD_NAME + ".01.dat");
@@ -415,7 +415,7 @@ public class TestLazyPersistFiles {
 
     // Make sure that the second file's block replica is on RAM_DISK, whereas
     // the original file's block replica is now on disk.
-//    ensureFileReplicasOnStorageType(path2, RAM_DISK);
+    ensureFileReplicasOnStorageType(path2, RAM_DISK);
     ensureFileReplicasOnStorageType(path1, DEFAULT);
   }
 
