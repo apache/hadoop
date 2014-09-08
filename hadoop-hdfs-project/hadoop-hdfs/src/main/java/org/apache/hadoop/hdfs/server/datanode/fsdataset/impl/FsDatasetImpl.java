@@ -42,7 +42,6 @@ import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.TreeMultimap;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -276,9 +275,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     cacheManager = new FsDatasetCache(this);
 
     // Start the lazy writer once we have built the replica maps.
-    lazyWriter = new Daemon(new LazyWriter(
-        conf.getInt(DFSConfigKeys.DFS_DATANODE_LAZY_WRITER_INTERVAL_SEC,
-                    DFSConfigKeys.DFS_DATANODE_LAZY_WRITER_INTERVAL_DEFAULT_SEC)));
+    lazyWriter = new Daemon(new LazyWriter(conf));
     lazyWriter.start();
     registerMBean(datanode.getDatanodeUuid());
   }
@@ -2186,16 +2183,23 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     private volatile boolean shouldRun = true;
     final int checkpointerInterval;
     final long estimateBlockSize;
+    final int lowWatermarkFreeSpacePercentage;
+    final int lowWatermarkFreeSpaceReplicas;
 
-    public static final int LOW_WATERMARK_FREE_SPACE_PERCENT = 10;
-    public static final int LOW_WATERMARK_FREE_SPACE_REPLICAS = 3;
 
-
-    public LazyWriter(final int checkpointerInterval) {
-      this.checkpointerInterval = checkpointerInterval;
+    public LazyWriter(Configuration conf) {
+      this.checkpointerInterval = conf.getInt(
+          DFSConfigKeys.DFS_DATANODE_LAZY_WRITER_INTERVAL_SEC,
+          DFSConfigKeys.DFS_DATANODE_LAZY_WRITER_INTERVAL_DEFAULT_SEC);
       this.estimateBlockSize = conf.getLongBytes(
           DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
           DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT);
+      this.lowWatermarkFreeSpacePercentage = conf.getInt(
+          DFSConfigKeys.DFS_DATANODE_RAM_DISK_LOW_WATERMARK_PERCENT,
+          DFSConfigKeys.DFS_DATANODE_RAM_DISK_LOW_WATERMARK_PERCENT_DEFAULT);
+      this.lowWatermarkFreeSpaceReplicas = conf.getInt(
+          DFSConfigKeys.DFS_DATANODE_RAM_DISK_LOW_WATERMARK_REPLICAS,
+          DFSConfigKeys.DFS_DATANODE_RAM_DISK_LOW_WATERMARK_REPLICAS_DEFAULT);
     }
 
     private void moveReplicaToNewVolume(String bpid, long blockId)
@@ -2282,49 +2286,63 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       }
 
       int percentFree = (int) (free * 100 / capacity);
-      return percentFree < LOW_WATERMARK_FREE_SPACE_PERCENT ||
-             free < (estimateBlockSize * LOW_WATERMARK_FREE_SPACE_REPLICAS);
+      return percentFree < lowWatermarkFreeSpacePercentage ||
+             free < (estimateBlockSize * lowWatermarkFreeSpaceReplicas);
     }
 
     /**
      * Attempt to evict one or more transient block replicas we have at least
      * spaceNeeded bytes free.
      */
-    private synchronized void evictBlocks() throws IOException {
+    private void evictBlocks() throws IOException {
       int iterations = 0;
 
-      LazyWriteReplicaTracker.ReplicaState replicaState =
-          lazyWriteReplicaTracker.getNextCandidateForEviction();
-
-      while (replicaState != null &&
-             iterations++ < MAX_BLOCK_EVICTIONS_PER_ITERATION &
+      while (iterations++ < MAX_BLOCK_EVICTIONS_PER_ITERATION &&
              transientFreeSpaceBelowThreshold()) {
+        LazyWriteReplicaTracker.ReplicaState replicaState =
+            lazyWriteReplicaTracker.getNextCandidateForEviction();
+
         if (LOG.isDebugEnabled()) {
-          LOG.info("Evicting block " + replicaState);
+          LOG.debug("Evicting block " + replicaState);
         }
-        ReplicaInfo replicaInfo = getReplicaInfo(replicaState.bpid, replicaState.blockId);
-        Preconditions.checkState(replicaInfo.getVolume().isTransientStorage());
-        File blockFile = replicaInfo.getBlockFile();
-        File metaFile = replicaInfo.getMetaFile();
-        long blockFileUsed = blockFile.length();
-        long metaFileUsed = metaFile.length();
-        lazyWriteReplicaTracker.discardReplica(replicaState, false);
 
-        // Move the replica from lazyPersist/ to finalized/ on target volume
-        BlockPoolSlice bpSlice =
-            replicaState.lazyPersistVolume.getBlockPoolSlice(replicaState.bpid);
-        File newBlockFile = bpSlice.activateSavedReplica(
-            replicaInfo, replicaState.savedBlockFile);
+        ReplicaInfo replicaInfo, newReplicaInfo;
+        File blockFile, metaFile;
+        long blockFileUsed, metaFileUsed;
 
-        ReplicaInfo newReplicaInfo =
-            new FinalizedReplica(replicaInfo.getBlockId(),
-                                 replicaInfo.getBytesOnDisk(),
-                                 replicaInfo.getGenerationStamp(),
-                                 replicaState.lazyPersistVolume,
-                                 newBlockFile.getParentFile());
+        synchronized (FsDatasetImpl.this) {
+          replicaInfo = getReplicaInfo(replicaState.bpid, replicaState.blockId);
+          Preconditions.checkState(replicaInfo.getVolume().isTransientStorage());
+          blockFile = replicaInfo.getBlockFile();
+          metaFile = replicaInfo.getMetaFile();
+          blockFileUsed = blockFile.length();
+          metaFileUsed = metaFile.length();
+          lazyWriteReplicaTracker.discardReplica(replicaState, false);
 
-        // Update the volumeMap entry. This removes the old entry.
-        volumeMap.add(replicaState.bpid, newReplicaInfo);
+          // Move the replica from lazyPersist/ to finalized/ on target volume
+          BlockPoolSlice bpSlice =
+              replicaState.lazyPersistVolume.getBlockPoolSlice(replicaState.bpid);
+          File newBlockFile = bpSlice.activateSavedReplica(
+              replicaInfo, replicaState.savedBlockFile);
+
+          newReplicaInfo =
+              new FinalizedReplica(replicaInfo.getBlockId(),
+                                   replicaInfo.getBytesOnDisk(),
+                                   replicaInfo.getGenerationStamp(),
+                                   replicaState.lazyPersistVolume,
+                                   newBlockFile.getParentFile());
+
+          // Update the volumeMap entry.
+          volumeMap.add(replicaState.bpid, newReplicaInfo);
+        }
+
+        // Before deleting the files from transient storage we must notify the
+        // NN that the files are on the new storage. Else a blockReport from
+        // the transient storage might cause the NN to think the blocks are lost.
+        ExtendedBlock extendedBlock =
+            new ExtendedBlock(replicaState.bpid, newReplicaInfo);
+        datanode.notifyNamenodeReceivedBlock(
+            extendedBlock, null, newReplicaInfo.getStorageUuid());
 
         // Remove the old replicas from transient storage.
         if (blockFile.delete() || !blockFile.exists()) {
@@ -2336,7 +2354,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
         // If deletion failed then the directory scanner will cleanup the blocks
         // eventually.
-        replicaState = lazyWriteReplicaTracker.getNextCandidateForEviction();
       }
     }
 

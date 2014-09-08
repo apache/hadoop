@@ -38,4 +38,6 @@
     HDFS-6977. Delete all copies when a block is deleted from the block space.
     (Arpit Agarwal)
 
+    HDFS-6991. Notify NN of evicted block before deleting it from RAM disk.
+    (Arpit Agarwal)
 
