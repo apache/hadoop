@@ -590,7 +590,9 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     conn.setRequestProperty(CONTENT_TYPE, APPLICATION_JSON_MIME);
     Map response = call(conn, jsonMaterial,
         HttpURLConnection.HTTP_OK, Map.class);
-    return parseJSONKeyVersion(response);
+    KeyVersion keyVersion = parseJSONKeyVersion(response);
+    encKeyVersionQueue.drain(name);
+    return keyVersion;
   }
 
 
@@ -710,6 +712,11 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     } catch (ExecutionException e) {
       throw new IOException(e);
     }
+  }
+
+  @Override
+  public void drain(String keyName) {
+    encKeyVersionQueue.drain(keyName);
   }
 
   @Override

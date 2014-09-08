@@ -228,6 +228,19 @@ public class ValueQueue <E> {
   }
 
   /**
+   * Drains the Queue for the provided key.
+   *
+   * @param keyName the key to drain the Queue for
+   */
+  public void drain(String keyName ) {
+    try {
+      keyQueues.get(keyName).clear();
+    } catch (ExecutionException ex) {
+      //NOP
+    }
+  }
+
+  /**
    * This removes the "num" values currently at the head of the Queue for the
    * provided key. Will immediately fire the Queue filler function if key
    * does not exist

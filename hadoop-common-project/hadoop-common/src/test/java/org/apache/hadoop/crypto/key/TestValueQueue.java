@@ -187,4 +187,18 @@ public class TestValueQueue {
     Assert.assertEquals(10, filler.getTop().num);
     vq.shutdown();
   }
+
+  @Test
+  public void testDrain() throws Exception {
+    MockFiller filler = new MockFiller();
+    ValueQueue<String> vq =
+        new ValueQueue<String>(10, 0.1f, 300, 1,
+            SyncGenerationPolicy.ALL, filler);
+    Assert.assertEquals("test", vq.getNext("k1"));
+    Assert.assertEquals(1, filler.getTop().num);
+    vq.drain("k1");
+    Assert.assertNull(filler.getTop());
+    vq.shutdown();
+  }
+
 }
