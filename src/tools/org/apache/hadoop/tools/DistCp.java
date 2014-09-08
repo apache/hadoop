@@ -1096,9 +1096,11 @@ public class DistCp implements Tool {
     final FileStatus jobDirStat = jobfs.getFileStatus(jobDirectory);
     try {
       for(Iterator<Path> srcItr = args.srcs.iterator(); srcItr.hasNext(); ) {
-        final Path src = srcItr.next();
+        Path src = srcItr.next();
         FileSystem srcfs = src.getFileSystem(conf);
         FileStatus srcfilestat = srcfs.getFileStatus(src);
+        // change src to full path to match child.getPath().
+        src = srcfilestat.getPath();
         Path root = special && srcfilestat.isDir()? src: src.getParent();
         final boolean needToFilterJobDir = srcfs.equals(jobfs);
 
@@ -1116,7 +1118,7 @@ public class DistCp implements Tool {
           FileStatus[] children = srcfs.listStatus(cur.getPath());
           for(int i = 0; i < children.length; i++) {
             boolean skipfile = false;
-            final FileStatus child = children[i]; 
+            final FileStatus child = children[i];
             final String dst = makeRelative(root, child.getPath());
 
             if (child.isDir()) {

@@ -49,7 +49,6 @@ import org.apache.log4j.Level;
  * A JUnit test for copying files recursively.
  */
 public class TestCopyFiles extends TestCase {
-  
   private static final String JT_STAGING_AREA_ROOT = "mapreduce.jobtracker.staging.root.dir";
   private static final String JT_STAGING_AREA_ROOT_DEFAULT = "/tmp/hadoop/mapred/staging";
   private static final String FS_TRASH_INTERVAL_KEY = "fs.trash.interval";
@@ -271,7 +270,44 @@ public class TestCopyFiles extends TestCase {
     deldir(localfs, TEST_ROOT_DIR+"/destdat");
     deldir(localfs, TEST_ROOT_DIR+"/srcdat");
   }
-  
+
+  /** copy files from local file system to local file system
+   *  using relative short path name to verify
+   *  DistCp supports relative short path name */
+  public void testCopyFromLocalToLocalUsingRelativePathName() throws Exception {
+    Configuration conf = new Configuration();
+    FileSystem localfs = FileSystem.get(LOCAL_FS_URI, conf);
+    MyFile[] files = createFiles(LOCAL_FS_URI, TEST_ROOT_DIR+"/srcdat");
+
+    // get DistCp source and destination relative path
+    Path src = new Path(TEST_ROOT_DIR+"/srcdat");
+    Path srcRoot = new Path(".");
+    FileStatus srcfilestat = localfs.getFileStatus(src);
+    FileStatus srcRootfilestat = localfs.getFileStatus(srcRoot);
+    // srcStr is file:/{hadoop-src-root}/build/test/data/srcdat
+    String srcStr = srcfilestat.getPath().toString();
+    // srcRootStr is file:/{hadoop-src-root}
+    String srcRootStr = srcRootfilestat.getPath().toString();
+    // +1 to remove /, srcRelativePath is build/test/data/srcdat
+    String srcRelativePath = srcStr.substring(srcRootStr.length() + 1);
+    // replace "srcdat" with "destdat" to get destRelativePath,
+    // destRelativePath is build/test/data/destdat
+    String destRelativePath = srcRelativePath.substring(0,
+        srcRelativePath.length() - "srcdat".length()) + "destdat";
+
+    // run DistCp with relative path source and destination parameters
+    ToolRunner.run(new DistCp(new Configuration()),
+        new String[] {srcRelativePath, destRelativePath});
+
+    // check result
+    assertTrue("Source and destination directories do not match.",
+               checkFiles(localfs, TEST_ROOT_DIR+"/destdat", files));
+
+    // clean up
+    deldir(localfs, TEST_ROOT_DIR+"/destdat");
+    deldir(localfs, TEST_ROOT_DIR+"/srcdat");
+  }
+
   /** copy files from dfs file system to dfs file system */
   public void testCopyFromDfsToDfs() throws Exception {
     String namenode = null;
