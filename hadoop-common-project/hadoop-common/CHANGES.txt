@@ -436,6 +436,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11071. KMSClientProvider should drain the local generated EEK cache
     on key rollover. (tucu)
 
+    HADOOP-10925. Compilation fails in native link0 function on Windows.
+    (cnauroth)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
