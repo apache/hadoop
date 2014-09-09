@@ -125,7 +125,7 @@ static int test_hconf_xml(void)
     EXPECT_NULL(hconf_builder_alloc(&bld));
     EXPECT_NONNULL(bld);
     EXPECT_NO_HADOOP_ERR(hconf_builder_load_xmls(bld, TEST_XML_NAMES,
-            HCONF_XML_TEST_PATH ":" HCONF_XML_TEST_PATH "/.."));
+            HCONF_XML_TEST_PATH "/..:" HCONF_XML_TEST_PATH));
     EXPECT_NO_HADOOP_ERR(hconf_build(bld, &conf));
     EXPECT_NONNULL(conf);
     EXPECT_NULL(hconf_get(conf, "foo.empty"));

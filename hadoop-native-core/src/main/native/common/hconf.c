@@ -761,12 +761,12 @@ struct hadoop_err *hconf_builder_load_xmls(struct hconf_builder *bld,
     int ret, i;
     FILE *fp = NULL;
 
-    npathlist = strdup(pathlist);
-    if (!npathlist)
-        goto oom;
     // We need to read XML files in a certain order.  For example,
     // core-site.xml must be read in before hdfs-site.xml in libhdfs.
     for (i = 0; XMLS[i]; i++) {
+        npathlist = strdup(pathlist);
+        if (!npathlist)
+            goto oom;
         for (dir = strtok_r(npathlist, ":", &ptr); dir;
                     dir = strtok_r(NULL, ":", &ptr)) {
             if (asprintf(&path, "%s/%s", dir, XMLS[i]) < 0) {
@@ -790,6 +790,8 @@ struct hadoop_err *hconf_builder_load_xmls(struct hconf_builder *bld,
             free(path);
             path = NULL;
         }
+        free(npathlist);
+        npathlist = NULL;
     }
     err = NULL;
     goto done;
