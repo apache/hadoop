@@ -2154,6 +2154,16 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   @Override
+  public void setRollingUpgradeMarker(String bpid) throws IOException {
+    dataStorage.setRollingUpgradeMarker(bpid);
+  }
+
+  @Override
+  public void clearRollingUpgradeMarker(String bpid) throws IOException {
+    dataStorage.clearRollingUpgradeMarker(bpid);
+  }
+
+  @Override
   public RollingLogs createRollingLogs(String bpid, String prefix
       ) throws IOException {
     String dir = null;

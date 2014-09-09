@@ -68,10 +68,10 @@ public class NameNodeLayoutVersion {
     XATTRS(-57, "Extended attributes"),
     CREATE_OVERWRITE(-58, "Use single editlog record for " +
         "creating file with overwrite"),
-    LAZY_PERSIST_FILES(-59, "Support for optional lazy persistence of "
-        + " files with reduced durability guarantees");
+    XATTRS_NAMESPACE_EXT(-59, "Increase number of xattr namespaces"),
+    LAZY_PERSIST_FILES(-60, "Support for optional lazy persistence of " + 
+        " files with reduced durability guarantees");
 
-    
     private final FeatureInfo info;
 
     /**

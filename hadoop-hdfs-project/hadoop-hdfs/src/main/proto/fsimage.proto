@@ -113,8 +113,12 @@ message INodeSection {
      * 
      * [0:2) -- the namespace of XAttr (XAttrNamespaceProto)
      * [2:26) -- the name of the entry, which is an ID that points to a
-     * string in the StringTableSection. 
-     * [26:32) -- reserved for future uses.
+     * string in the StringTableSection.
+     * [26:27) -- namespace extension. Originally there were only 4 namespaces
+     * so only 2 bits were needed. At that time, this bit was reserved. When a
+     * 5th namespace was created (raw) this bit became used as a 3rd namespace
+     * bit.
+     * [27:32) -- reserved for future uses.
      */
     required fixed32 name = 1;
     optional bytes value = 2;
