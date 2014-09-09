@@ -376,6 +376,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6981. Fix DN upgrade with layout version change. (Arpit Agarwal)
 
+    HDFS-6506. Newly moved block replica been invalidated and deleted in
+    TestBalancer. (Binglin Chang via cnauroth)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an

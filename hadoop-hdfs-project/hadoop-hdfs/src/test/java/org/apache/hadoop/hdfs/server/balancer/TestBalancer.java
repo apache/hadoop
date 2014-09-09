@@ -72,7 +72,7 @@ public class TestBalancer {
     ((Log4JLogger)Balancer.LOG).getLogger().setLevel(Level.ALL);
   }
 
-  final static long CAPACITY = 500L;
+  final static long CAPACITY = 5000L;
   final static String RACK0 = "/rack0";
   final static String RACK1 = "/rack1";
   final static String RACK2 = "/rack2";
@@ -85,7 +85,7 @@ public class TestBalancer {
   static final long TIMEOUT = 40000L; //msec
   static final double CAPACITY_ALLOWED_VARIANCE = 0.005;  // 0.5%
   static final double BALANCE_ALLOWED_VARIANCE = 0.11;    // 10%+delta
-  static final int DEFAULT_BLOCK_SIZE = 10;
+  static final int DEFAULT_BLOCK_SIZE = 100;
   private static final Random r = new Random();
 
   static {
@@ -96,6 +96,7 @@ public class TestBalancer {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, DEFAULT_BLOCK_SIZE);
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1L);
     SimulatedFSDataset.setFactory(conf);
     conf.setLong(DFSConfigKeys.DFS_BALANCER_MOVEDWINWIDTH_KEY, 2000L);
   }

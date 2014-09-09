@@ -538,9 +538,11 @@ public class Balancer {
    */
   static int run(Collection<URI> namenodes, final Parameters p,
       Configuration conf) throws IOException, InterruptedException {
-    final long sleeptime = 2000*conf.getLong(
-        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
-        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT);
+    final long sleeptime =
+        conf.getLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
+            DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT) * 2000 +
+        conf.getLong(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY,
+            DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_DEFAULT) * 1000;
     LOG.info("namenodes  = " + namenodes);
     LOG.info("parameters = " + p);
     
