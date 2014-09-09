@@ -1073,6 +1073,14 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
+  public void setRollingUpgradeMarker(String bpid) {
+  }
+
+  @Override
+  public void clearRollingUpgradeMarker(String bpid) {
+  }
+
+  @Override
   public void checkAndUpdate(String bpid, long blockId, File diskFile,
       File diskMetaFile, FsVolumeSpi vol) {
     throw new UnsupportedOperationException();

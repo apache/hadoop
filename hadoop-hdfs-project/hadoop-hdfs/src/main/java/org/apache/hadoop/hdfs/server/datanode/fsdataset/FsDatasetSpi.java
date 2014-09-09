@@ -444,6 +444,17 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   public boolean trashEnabled(String bpid);
 
   /**
+   * Create a marker file indicating that a rolling upgrade is in progress.
+   */
+  public void setRollingUpgradeMarker(String bpid) throws IOException;
+
+  /**
+   * Delete the rolling upgrade marker file if it exists.
+   * @param bpid
+   */
+  public void clearRollingUpgradeMarker(String bpid) throws IOException;
+
+  /**
    * submit a sync_file_range request to AsyncDiskService
    */
   public void submitBackgroundSyncFileRangeRequest(final ExtendedBlock block,

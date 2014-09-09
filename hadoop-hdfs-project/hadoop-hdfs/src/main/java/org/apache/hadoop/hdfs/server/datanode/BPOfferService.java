@@ -475,11 +475,14 @@ class BPOfferService {
    * Signal the current rolling upgrade status as indicated by the NN.
    * @param inProgress true if a rolling upgrade is in progress
    */
-  void signalRollingUpgrade(boolean inProgress) {
+  void signalRollingUpgrade(boolean inProgress) throws IOException {
+    String bpid = getBlockPoolId();
     if (inProgress) {
-      dn.getFSDataset().enableTrash(getBlockPoolId());
+      dn.getFSDataset().enableTrash(bpid);
+      dn.getFSDataset().setRollingUpgradeMarker(bpid);
     } else {
-      dn.getFSDataset().restoreTrash(getBlockPoolId());
+      dn.getFSDataset().restoreTrash(bpid);
+      dn.getFSDataset().clearRollingUpgradeMarker(bpid);
     }
   }
 

@@ -70,11 +70,17 @@ public class DataStorage extends Storage {
   public final static String STORAGE_DIR_FINALIZED = "finalized";
   public final static String STORAGE_DIR_TMP = "tmp";
 
-  // Set of bpids for which 'trash' is currently enabled.
-  // When trash is enabled block files are moved under a separate
-  // 'trash' folder instead of being deleted right away. This can
-  // be useful during rolling upgrades, for example.
-  // The set is backed by a concurrent HashMap.
+  /**
+   * Set of bpids for which 'trash' is currently enabled.
+   * When trash is enabled block files are moved under a separate
+   * 'trash' folder instead of being deleted right away. This can
+   * be useful during rolling upgrades, for example.
+   * The set is backed by a concurrent HashMap.
+   *
+   * Even if trash is enabled, it is not used if a layout upgrade
+   * is in progress for a storage directory i.e. if the previous
+   * directory exists.
+   */
   private Set<String> trashEnabledBpids;
 
   /**
@@ -123,7 +129,9 @@ public class DataStorage extends Storage {
   }
 
   /**
-   * Enable trash for the specified block pool storage.
+   * Enable trash for the specified block pool storage. Even if trash is
+   * enabled by the caller, it is superseded by the 'previous' directory
+   * if a layout upgrade is in progress.
    */
   public void enableTrash(String bpid) {
     if (trashEnabledBpids.add(bpid)) {
@@ -141,6 +149,14 @@ public class DataStorage extends Storage {
 
   public boolean trashEnabled(String bpid) {
     return trashEnabledBpids.contains(bpid);
+  }
+
+  public void setRollingUpgradeMarker(String bpid) throws IOException {
+    getBPStorage(bpid).setRollingUpgradeMarkers(storageDirs);
+  }
+
+  public void clearRollingUpgradeMarker(String bpid) throws IOException {
+    getBPStorage(bpid).clearRollingUpgradeMarkers(storageDirs);
   }
 
   /**
@@ -675,7 +691,8 @@ public class DataStorage extends Storage {
     if (DataNodeLayoutVersion.supports(
         LayoutVersion.Feature.FEDERATION, layoutVersion)) {
       // The VERSION file is already read in. Override the layoutVersion 
-      // field and overwrite the file.
+      // field and overwrite the file. The upgrade work is handled by
+      // {@link BlockPoolSliceStorage#doUpgrade}
       LOG.info("Updating layout version from " + layoutVersion + " to "
           + HdfsConstants.DATANODE_LAYOUT_VERSION + " for storage "
           + sd.getRoot());

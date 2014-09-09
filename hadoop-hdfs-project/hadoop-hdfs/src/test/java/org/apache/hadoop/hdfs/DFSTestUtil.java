@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
@@ -56,6 +57,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.datanode.TestTransferRbw;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -77,6 +79,8 @@ import org.apache.hadoop.util.VersionInfo;
 import org.junit.Assume;
 
 import java.io.*;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.security.NoSuchAlgorithmException;
@@ -1419,5 +1423,39 @@ public class DFSTestUtil {
       }
     }
     return expectedPrimary.getDatanodeDescriptor();
+  }
+
+  public static void addDataNodeLayoutVersion(final int lv, final String description)
+      throws NoSuchFieldException, IllegalAccessException {
+    Preconditions.checkState(lv < DataNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+
+    // Override {@link DataNodeLayoutVersion#CURRENT_LAYOUT_VERSION} via reflection.
+    Field modifiersField = Field.class.getDeclaredField("modifiers");
+    modifiersField.setAccessible(true);
+    Field field = DataNodeLayoutVersion.class.getField("CURRENT_LAYOUT_VERSION");
+    field.setAccessible(true);
+    modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+    field.setInt(null, lv);
+
+    // Override {@link HdfsConstants#DATANODE_LAYOUT_VERSION}
+    field = HdfsConstants.class.getField("DATANODE_LAYOUT_VERSION");
+    field.setAccessible(true);
+    modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+    field.setInt(null, lv);
+
+    // Inject the feature into the FEATURES map.
+    final LayoutVersion.FeatureInfo featureInfo =
+        new LayoutVersion.FeatureInfo(lv, lv + 1, description, false);
+    final LayoutVersion.LayoutFeature feature =
+        new LayoutVersion.LayoutFeature() {
+      @Override
+      public LayoutVersion.FeatureInfo getInfo() {
+        return featureInfo;
+      }
+    };
+
+    // Update the FEATURES map with the new layout version.
+    LayoutVersion.updateMap(DataNodeLayoutVersion.FEATURES,
+                            new LayoutVersion.LayoutFeature[] { feature });
   }
 }
