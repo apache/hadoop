@@ -526,8 +526,26 @@ public class TestRMAppTransitions {
     rmDispatcher.await();
     sendAppUpdateSavedEvent(application);
     assertFailed(application, rejectedText);
-    assertAppFinalStateNotSaved(application);
+    assertAppFinalStateSaved(application);
     verifyApplicationFinished(RMAppState.FAILED);
+  }
+
+  @Test (timeout = 30000)
+  public void testAppNewRejectAddToStore() throws IOException {
+    LOG.info("--- START: testAppNewRejectAddToStore ---");
+
+    RMApp application = createNewTestApp(null);
+    // NEW => FAILED event RMAppEventType.APP_REJECTED
+    String rejectedText = "Test Application Rejected";
+    RMAppEvent event =
+        new RMAppRejectedEvent(application.getApplicationId(), rejectedText);
+    application.handle(event);
+    rmDispatcher.await();
+    sendAppUpdateSavedEvent(application);
+    assertFailed(application, rejectedText);
+    assertAppFinalStateSaved(application);
+    verifyApplicationFinished(RMAppState.FAILED);
+    rmContext.getStateStore().removeApplication(application);
   }
 
   @Test (timeout = 30000)

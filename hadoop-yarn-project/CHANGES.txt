@@ -285,6 +285,9 @@ Release 2.6.0 - UNRELEASED
     YARN-1458. FairScheduler: Zero weight can lead to livelock. 
     (Zhihai Xu via kasha)
 
+    YARN-2459. RM crashes if App gets rejected for any reason
+    and HA is enabled. (Jian He via xgong)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

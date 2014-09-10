@@ -65,6 +65,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -92,6 +93,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.Level;
@@ -1604,6 +1607,53 @@ public class TestRMRestart {
     rm1.waitForState(app1.getApplicationId(), RMAppState.KILLED);
     Assert.assertEquals(1, ((TestMemoryRMStateStore) memStore).updateAttempt);
     Assert.assertEquals(2, ((TestMemoryRMStateStore) memStore).updateApp);
+  }
+
+  // Test Application that fails on submission is saved in state store.
+  @Test (timeout = 20000)
+  public void testAppFailedOnSubmissionSavedInStateStore() throws Exception {
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+      "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+
+    MockRM rm1 = new TestSecurityMockRM(conf, memStore) {
+      @Override
+      protected RMAppManager createRMAppManager() {
+        return new TestRMAppManager(this.rmContext, this.scheduler,
+          this.masterService, this.applicationACLsManager, conf);
+      }
+
+      class TestRMAppManager extends RMAppManager {
+
+        public TestRMAppManager(RMContext context, YarnScheduler scheduler,
+            ApplicationMasterService masterService,
+            ApplicationACLsManager applicationACLsManager, Configuration conf) {
+          super(context, scheduler, masterService, applicationACLsManager, conf);
+        }
+
+        @Override
+        protected Credentials parseCredentials(
+            ApplicationSubmissionContext application) throws IOException {
+          throw new IOException("Parsing credential error.");
+        }
+      }
+    };
+    rm1.start();
+    RMApp app1 =
+        rm1.submitApp(200, "name", "user",
+          new HashMap<ApplicationAccessType, String>(), false, "default", -1,
+          null, "MAPREDUCE", false);
+    rm1.waitForState(app1.getApplicationId(), RMAppState.FAILED);
+    // Check app staet is saved in state store.
+    Assert.assertEquals(RMAppState.FAILED, memStore.getState()
+      .getApplicationState().get(app1.getApplicationId()).getState());
+
+    MockRM rm2 = new TestSecurityMockRM(conf, memStore);
+    rm2.start();
+    // Restarted RM has the failed app info too.
+    rm2.waitForState(app1.getApplicationId(), RMAppState.FAILED);
   }
 
   @SuppressWarnings("resource")

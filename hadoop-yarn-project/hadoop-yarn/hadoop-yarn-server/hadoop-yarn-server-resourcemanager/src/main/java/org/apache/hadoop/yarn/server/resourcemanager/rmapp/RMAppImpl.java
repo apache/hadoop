@@ -150,8 +150,10 @@ public class RMAppImpl implements RMApp, Recoverable {
         RMAppEventType.RECOVER, new RMAppRecoveredTransition())
     .addTransition(RMAppState.NEW, RMAppState.KILLED, RMAppEventType.KILL,
         new AppKilledTransition())
-    .addTransition(RMAppState.NEW, RMAppState.FAILED,
-        RMAppEventType.APP_REJECTED, new AppRejectedTransition())
+    .addTransition(RMAppState.NEW, RMAppState.FINAL_SAVING,
+        RMAppEventType.APP_REJECTED,
+        new FinalSavingTransition(new AppRejectedTransition(),
+          RMAppState.FAILED))
 
     // Transitions from NEW_SAVING state
     .addTransition(RMAppState.NEW_SAVING, RMAppState.NEW_SAVING,
