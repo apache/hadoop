@@ -180,6 +180,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10373 create tools/hadoop-amazon for aws/EMR support (stevel)
 
+    HADOOP-11074. Move s3-related FS connector code to hadoop-aws (David S.
+    Wang via Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
