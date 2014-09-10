@@ -15,6 +15,9 @@ Trunk - Unreleased
     YARN-524 TestYarnVersionInfo failing if generated properties doesn't
     include an SVN URL. (stevel)
 
+    YARN-1471. The SLS simulator is not running the preemption policy 
+    for CapacityScheduler (Carlo Curino via cdouglas)
+
     YARN-2216 TestRMApplicationHistoryWriter sometimes fails in trunk.
     (Zhijie Shen via xgong)
 
@@ -298,6 +301,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2519. Credential Provider related unit tests failed on Windows.
     (Xiaoyu Yao via cnauroth)
+
+    YARN-2526. SLS can deadlock when all the threads are taken by AMSimulators. 
+    (Wei Yan via kasha)
 
 Release 2.5.1 - UNRELEASED
 
