@@ -982,7 +982,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return Collections.unmodifiableList(auditLoggers);
   }
 
-  protected void loadFSImage(StartupOption startOpt) throws IOException {
+  private void loadFSImage(StartupOption startOpt) throws IOException {
     final FSImage fsImage = getFSImage();
 
     // format before starting up if requested
@@ -1030,7 +1030,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     imageLoadComplete();
   }
 
-  protected void startSecretManager() {
+  private void startSecretManager() {
     if (dtSecretManager != null) {
       try {
         dtSecretManager.startThreads();
@@ -1042,7 +1042,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
   
-  protected void startSecretManagerIfNecessary() {
+  private void startSecretManagerIfNecessary() {
     boolean shouldRun = shouldUseDelegationTokens() &&
       !isInSafeMode() && getEditLog().isOpenForWrite();
     boolean running = dtSecretManager.isRunning();
@@ -1192,7 +1192,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return haEnabled && inActiveState() && startingActiveService;
   }
 
-  protected boolean shouldUseDelegationTokens() {
+  private boolean shouldUseDelegationTokens() {
     return UserGroupInformation.isSecurityEnabled() ||
       alwaysUseDelegationTokensForTests;
   }
@@ -2736,7 +2736,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws UnresolvedLinkException
    * @throws IOException
    */
-  protected
   LocatedBlock prepareFileForWrite(String src, INodeFile file,
                                    String leaseHolder, String clientMachine,
                                    boolean writeToEditLog,
@@ -3199,7 +3198,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return new FileState(pendingFile, src);
   }
 
-  protected
   LocatedBlock makeLocatedBlock(Block blk, DatanodeStorageInfo[] locs,
                                         long offset) throws IOException {
     LocatedBlock lBlk = new LocatedBlock(
@@ -3317,8 +3315,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return true;
   }
 
-  protected INodeFile checkLease(String src, String holder, INode inode,
-                                 long fileId)
+  private INodeFile checkLease(String src, String holder, INode inode,
+                               long fileId)
       throws LeaseExpiredException, FileNotFoundException {
     assert hasReadLock();
     final String ident = src + " (inode " + fileId + ")";
@@ -4435,7 +4433,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return leaseManager.reassignLease(lease, src, newHolder);
   }
 
-  protected void commitOrCompleteLastBlock(final INodeFile fileINode,
+  private void commitOrCompleteLastBlock(final INodeFile fileINode,
       final Block commitBlock) throws IOException {
     assert hasWriteLock();
     Preconditions.checkArgument(fileINode.isUnderConstruction());
@@ -4831,7 +4829,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @return an array of datanode commands 
    * @throws IOException
    */
-  protected
   HeartbeatResponse handleHeartbeat(DatanodeRegistration nodeReg,
       StorageReport[] reports, long cacheCapacity, long cacheUsed,
       int xceiverCount, int xmitsInProgress, int failedVolumes)
@@ -4881,8 +4878,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @param file
    * @param logRetryCache
    */
-  protected void persistBlocks(String path, INodeFile file,
-                               boolean logRetryCache) {
+  private void persistBlocks(String path, INodeFile file,
+                             boolean logRetryCache) {
     assert hasWriteLock();
     Preconditions.checkArgument(file.isUnderConstruction());
     getEditLog().logUpdateBlocks(path, file, logRetryCache);
@@ -5313,7 +5310,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @param path
    * @param file
    */
-  protected void persistNewBlock(String path, INodeFile file) {
+  private void persistNewBlock(String path, INodeFile file) {
     Preconditions.checkArgument(file.isUnderConstruction());
     getEditLog().logAddBlock(path, file);
     if (NameNode.stateChangeLog.isDebugEnabled()) {
@@ -7191,7 +7188,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * 
    * @return true if delegation token operation is allowed
    */
-  protected boolean isAllowedDelegationTokenOp() throws IOException {
+  private boolean isAllowedDelegationTokenOp() throws IOException {
     AuthenticationMethod authMethod = getConnectionAuthenticationMethod();
     if (UserGroupInformation.isSecurityEnabled()
         && (authMethod != AuthenticationMethod.KERBEROS)
@@ -7358,13 +7355,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
     blockManager.getDatanodeManager().fetchDatanodes(live, null, true);
     for (DatanodeDescriptor node : live) {
-      info.put(node.getHostName(), getLiveNodeInfo(node));
-    }
-    return JSON.toString(info);
-  }
-
-  protected Map<String, Object> getLiveNodeInfo(DatanodeDescriptor node) {
-    return ImmutableMap.<String, Object>builder()
+      Map<String, Object> innerinfo = ImmutableMap.<String, Object>builder()
           .put("infoAddr", node.getInfoAddr())
           .put("infoSecureAddr", node.getInfoSecureAddr())
           .put("xferaddr", node.getXferAddr())
@@ -7382,6 +7373,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           .put("blockPoolUsedPercent", node.getBlockPoolUsedPercent())
           .put("volfails", node.getVolumeFailures())
           .build();
+
+      info.put(node.getHostName(), innerinfo);
+    }
+    return JSON.toString(info);
   }
 
   /**
@@ -7666,14 +7661,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public ReentrantLock getLongReadLockForTests() {
     return fsLock.longReadLock;
   }
+
+  @VisibleForTesting
+  public SafeModeInfo getSafeModeInfoForTests() {
+    return safeMode;
+  }
   
   @VisibleForTesting
   public void setNNResourceChecker(NameNodeResourceChecker nnResourceChecker) {
     this.nnResourceChecker = nnResourceChecker;
-  }
-
-  public SafeModeInfo getSafeModeInfo() {
-    return safeMode;
   }
 
   @Override
