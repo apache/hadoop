@@ -170,6 +170,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11070. Create MiniKMS for testing. (tucu)
 
+    HADOOP-11057. checknative command to probe for winutils.exe on windows.
+    (Xiaoyu Yao via cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
