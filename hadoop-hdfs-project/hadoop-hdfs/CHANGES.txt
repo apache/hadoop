@@ -153,9 +153,6 @@ Trunk (Unreleased)
     HDFS-6609. Use DirectorySnapshottableFeature to represent a snapshottable
     directory. (Jing Zhao via wheat9)
 
-    HDFS-6482. Use block ID-based block layout on datanodes (James Thomas via
-    Colin Patrick McCabe)
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -284,6 +281,8 @@ Trunk (Unreleased)
 
     HDFS-6893. crypto subcommand is not sorted properly in hdfs's hadoop_usage
     (David Luo via aw)
+
+    HDFS-6981. Fix DN upgrade with layout version change. (Arpit Agarwal)
 
 Release 2.6.0 - UNRELEASED
 
@@ -470,13 +469,14 @@ Release 2.6.0 - UNRELEASED
     HDFS-6376. Distcp data between two HA clusters requires another configuration.
     (Dave Marion and Haohui Mai via jing9)
 
-    HDFS-6940. Refactoring to allow ConsensusNode implementation. (shv)
-
     HDFS-6943. Improve NN allocateBlock log to include replicas' datanode IPs.
     (Ming Ma via wheat9)
 
     HDFS-6036. Forcibly timeout misbehaving DFSClients that try to do
     no-checksum reads that extend too long (cmccabe)
+
+    HDFS-6482. Use block ID-based block layout on datanodes (James Thomas via
+    Colin Patrick McCabe)
 
   OPTIMIZATIONS
 
@@ -651,6 +651,12 @@ Release 2.6.0 - UNRELEASED
     (Xiaoyu Yao via cnauroth)
 
     HDFS-7005. DFS input streams do not timeout.
+
+    HDFS-6951. Correctly persist raw namespace xattrs to edit log and fsimage.
+    (clamb via wang)
+
+    HDFS-6506. Newly moved block replica been invalidated and deleted in
+    TestBalancer. (Binglin Chang via cnauroth)
 
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   

@@ -129,10 +129,6 @@ class HostFileManager {
   void refresh(String includeFile, String excludeFile) throws IOException {
     HostSet newIncludes = readFile("included", includeFile);
     HostSet newExcludes = readFile("excluded", excludeFile);
-    setHosts(newIncludes, newExcludes);
-  }
-
-  void setHosts(HostSet newIncludes, HostSet newExcludes) {
     synchronized (this) {
       includes = newIncludes;
       excludes = newExcludes;

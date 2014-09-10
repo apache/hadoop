@@ -56,6 +56,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 /**
  * Tests NameNode interaction for all XAttr APIs.
@@ -129,51 +130,73 @@ public class FSXAttrBaseTest {
    */
   @Test(timeout = 120000)
   public void testCreateXAttr() throws Exception {
-    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
-    fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
+    Map<String, byte[]> expectedXAttrs = Maps.newHashMap();
+    expectedXAttrs.put(name1, value1);
+    expectedXAttrs.put(name2, null);
+    doTestCreateXAttr(path, expectedXAttrs);
+    expectedXAttrs.put(raw1, value1);
+    doTestCreateXAttr(rawPath, expectedXAttrs);
+  }
+
+  private void doTestCreateXAttr(Path usePath, Map<String,
+      byte[]> expectedXAttrs) throws Exception {
+    FileSystem.mkdirs(fs, usePath, FsPermission.createImmutable((short)0750));
+    fs.setXAttr(usePath, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
     
-    Map<String, byte[]> xattrs = fs.getXAttrs(path);
+    Map<String, byte[]> xattrs = fs.getXAttrs(usePath);
     Assert.assertEquals(xattrs.size(), 1);
     Assert.assertArrayEquals(value1, xattrs.get(name1));
     
-    fs.removeXAttr(path, name1);
+    fs.removeXAttr(usePath, name1);
     
-    xattrs = fs.getXAttrs(path);
+    xattrs = fs.getXAttrs(usePath);
     Assert.assertEquals(xattrs.size(), 0);
     
     // Create xattr which already exists.
-    fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
+    fs.setXAttr(usePath, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
     try {
-      fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
+      fs.setXAttr(usePath, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
       Assert.fail("Creating xattr which already exists should fail.");
     } catch (IOException e) {
     }
-    fs.removeXAttr(path, name1);
+    fs.removeXAttr(usePath, name1);
     
-    // Create two xattrs
-    fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
-    fs.setXAttr(path, name2, null, EnumSet.of(XAttrSetFlag.CREATE));
-    xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 2);
-    Assert.assertArrayEquals(value1, xattrs.get(name1));
-    Assert.assertArrayEquals(new byte[0], xattrs.get(name2));
+    // Create the xattrs
+    for (Map.Entry<String, byte[]> ent : expectedXAttrs.entrySet()) {
+      fs.setXAttr(usePath, ent.getKey(), ent.getValue(),
+          EnumSet.of(XAttrSetFlag.CREATE));
+    }
+    xattrs = fs.getXAttrs(usePath);
+    Assert.assertEquals(xattrs.size(), expectedXAttrs.size());
+    for (Map.Entry<String, byte[]> ent : expectedXAttrs.entrySet()) {
+      final byte[] val =
+          (ent.getValue() == null) ? new byte[0] : ent.getValue();
+      Assert.assertArrayEquals(val, xattrs.get(ent.getKey()));
+    }
     
     restart(false);
     initFileSystem();
-    xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 2);
-    Assert.assertArrayEquals(value1, xattrs.get(name1));
-    Assert.assertArrayEquals(new byte[0], xattrs.get(name2));
+    xattrs = fs.getXAttrs(usePath);
+    Assert.assertEquals(xattrs.size(), expectedXAttrs.size());
+    for (Map.Entry<String, byte[]> ent : expectedXAttrs.entrySet()) {
+      final byte[] val =
+          (ent.getValue() == null) ? new byte[0] : ent.getValue();
+      Assert.assertArrayEquals(val, xattrs.get(ent.getKey()));
+    }
     
     restart(true);
     initFileSystem();
-    xattrs = fs.getXAttrs(path);
-    Assert.assertEquals(xattrs.size(), 2);
-    Assert.assertArrayEquals(value1, xattrs.get(name1));
-    Assert.assertArrayEquals(new byte[0], xattrs.get(name2));
-    
-    fs.removeXAttr(path, name1);
-    fs.removeXAttr(path, name2);
+    xattrs = fs.getXAttrs(usePath);
+    Assert.assertEquals(xattrs.size(), expectedXAttrs.size());
+    for (Map.Entry<String, byte[]> ent : expectedXAttrs.entrySet()) {
+      final byte[] val =
+          (ent.getValue() == null) ? new byte[0] : ent.getValue();
+      Assert.assertArrayEquals(val, xattrs.get(ent.getKey()));
+    }
+
+    for (Map.Entry<String, byte[]> ent : expectedXAttrs.entrySet()) {
+      fs.removeXAttr(usePath, ent.getKey());
+    }
   }
   
   /**

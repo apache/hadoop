@@ -165,7 +165,7 @@ public class BlockManager {
   final BlocksMap blocksMap;
 
   /** Replication thread. */
-  Daemon replicationThread;
+  final Daemon replicationThread = new Daemon(new ReplicationMonitor());
   
   /** Store blocks -> datanodedescriptor(s) map of corrupt replicas */
   final CorruptReplicasMap corruptReplicas = new CorruptReplicasMap();
@@ -265,7 +265,6 @@ public class BlockManager {
     this.namesystem = namesystem;
     datanodeManager = new DatanodeManager(this, namesystem, conf);
     heartbeatManager = datanodeManager.getHeartbeatManager();
-    setReplicationMonitor(new ReplicationMonitor());
 
     final long pendingPeriod = conf.getLong(
         DFSConfigKeys.DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_KEY,
@@ -401,22 +400,6 @@ public class BlockManager {
 
   public BlockStoragePolicy getStoragePolicy(final String policyName) {
     return storagePolicySuite.getPolicy(policyName);
-  }
-
-  public long getReplicationRecheckInterval() {
-    return replicationRecheckInterval;
-  }
-
-  public AtomicLong excessBlocksCount() {
-    return excessBlocksCount;
-  }
-
-  public void clearInvalidateBlocks() {
-    invalidateBlocks.clear();
-  }
-
-  void setReplicationMonitor(Runnable replicationMonitor) {
-    replicationThread = new Daemon(replicationMonitor);
   }
 
   public void setBlockPoolId(String blockPoolId) {
@@ -1664,7 +1647,7 @@ public class BlockManager {
    * If there were any replication requests that timed out, reap them
    * and put them back into the neededReplication queue
    */
-  void processPendingReplications() {
+  private void processPendingReplications() {
     Block[] timedOutItems = pendingReplications.getTimedOutBlocks();
     if (timedOutItems != null) {
       namesystem.writeLock();

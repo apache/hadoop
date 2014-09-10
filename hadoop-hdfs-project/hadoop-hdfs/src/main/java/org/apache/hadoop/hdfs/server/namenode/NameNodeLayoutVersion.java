@@ -67,8 +67,9 @@ public class NameNodeLayoutVersion {
     EDITLOG_LENGTH(-56, "Add length field to every edit log op"),
     XATTRS(-57, "Extended attributes"),
     CREATE_OVERWRITE(-58, "Use single editlog record for " +
-        "creating file with overwrite"),
-    BLOCK_STORAGE_POLICY(-59, "Block Storage policy");
+      "creating file with overwrite"),
+    XATTRS_NAMESPACE_EXT(-59, "Increase number of xattr namespaces"),
+    BLOCK_STORAGE_POLICY(-60, "Block Storage policy");
     
     private final FeatureInfo info;
 

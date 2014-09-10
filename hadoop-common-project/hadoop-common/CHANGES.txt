@@ -319,9 +319,6 @@ Trunk (Unreleased)
     HADOOP-10840. Fix OutOfMemoryError caused by metrics system in Azure File
     System. (Shanyu Zhao via cnauroth)
 
-    HADOOP-10925. Compilation fails in native link0 function on Windows.
-    (cnauroth)
-
     HADOOP-11002. shell escapes are incompatible with previous releases (aw)
 
     HADOOP-10996. Stop violence in the *_HOME (aw)
@@ -508,6 +505,9 @@ Release 2.6.0 - UNRELEASED
     between the JCE and OpenSSL implementations. (hitliuyi via tucu)
 
     HADOOP-11070. Create MiniKMS for testing. (tucu)
+
+    HADOOP-11057. checknative command to probe for winutils.exe on windows.
+    (Xiaoyu Yao via cnauroth)
 
   OPTIMIZATIONS
 
@@ -773,6 +773,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11071. KMSClientProvider should drain the local generated EEK cache
     on key rollover. (tucu)
+
+    HADOOP-10925. Compilation fails in native link0 function on Windows.
+    (cnauroth)
 
 Release 2.5.1 - UNRELEASED
 

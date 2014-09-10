@@ -2158,7 +2158,7 @@ public class FSDirectory implements Closeable {
           for (XAttr xattr : xattrs) {
             final String xaName = XAttrHelper.getPrefixName(xattr);
             if (CRYPTO_XATTR_ENCRYPTION_ZONE.equals(xaName)) {
-              ezManager.addEncryptionZone(inode.getId(),
+              ezManager.unprotectedAddEncryptionZone(inode.getId(),
                   new String(xattr.getValue()));
             }
           }
