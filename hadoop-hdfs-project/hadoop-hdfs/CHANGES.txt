@@ -481,6 +481,9 @@ Release 2.6.0 - UNRELEASED
       HDFS-6986. DistributedFileSystem must get delegation tokens from configured 
       KeyProvider. (zhz via tucu)
 
+    HDFS-6776. Using distcp to copy data between insecure and secure cluster via webdhfs 
+    doesn't work. (yzhangal via tucu)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -41,6 +41,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.DelegationTokenRenewer;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -102,6 +103,11 @@ public class WebHdfsFileSystem extends FileSystem
 
   /** Delegation token kind */
   public static final Text TOKEN_KIND = new Text("WEBHDFS delegation");
+
+  @VisibleForTesting
+  public static final String CANT_FALLBACK_TO_INSECURE_MSG =
+      "The client is configured to only allow connecting to secure cluster";
+
   private boolean canRefreshDelegationToken;
 
   private UserGroupInformation ugi;
@@ -112,6 +118,7 @@ public class WebHdfsFileSystem extends FileSystem
   private Path workingDir;
   private InetSocketAddress nnAddrs[];
   private int currentNNAddrIndex;
+  private boolean disallowFallbackToInsecureCluster;
 
   /**
    * Return the protocol scheme for the FileSystem.
@@ -193,6 +200,9 @@ public class WebHdfsFileSystem extends FileSystem
 
     this.workingDir = getHomeDirectory();
     this.canRefreshDelegationToken = UserGroupInformation.isSecurityEnabled();
+    this.disallowFallbackToInsecureCluster = !conf.getBoolean(
+        CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
+        CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT);
     this.delegationToken = null;
   }
 
@@ -1294,7 +1304,13 @@ public class WebHdfsFileSystem extends FileSystem
         return JsonUtil.toDelegationToken(json);
       }
     }.run();
-    token.setService(tokenServiceName);
+    if (token != null) {
+      token.setService(tokenServiceName);
+    } else {
+      if (disallowFallbackToInsecureCluster) {
+        throw new AccessControlException(CANT_FALLBACK_TO_INSECURE_MSG);
+      }
+    }
     return token;
   }
 
