@@ -189,6 +189,8 @@ public class HistoryServerFileSystemStateStoreService
     DataOutputStream dataStream = new DataOutputStream(memStream);
     try {
       key.write(dataStream);
+      dataStream.close();
+      dataStream = null;
     } finally {
       IOUtils.cleanup(LOG, dataStream);
     }
@@ -260,6 +262,8 @@ public class HistoryServerFileSystemStateStoreService
     try {
       try {
         out.write(data);
+        out.close();
+        out = null;
       } finally {
         IOUtils.cleanup(LOG, out);
       }
@@ -299,6 +303,8 @@ public class HistoryServerFileSystemStateStoreService
     try {
       tokenId.write(dataStream);
       dataStream.writeLong(renewDate);
+      dataStream.close();
+      dataStream = null;
     } finally {
       IOUtils.cleanup(LOG, dataStream);
     }
