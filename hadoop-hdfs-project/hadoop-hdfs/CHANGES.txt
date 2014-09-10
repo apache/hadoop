@@ -130,9 +130,6 @@ Trunk (Unreleased)
     HDFS-6609. Use DirectorySnapshottableFeature to represent a snapshottable
     directory. (Jing Zhao via wheat9)
 
-    HDFS-6482. Use block ID-based block layout on datanodes (James Thomas via
-    Colin Patrick McCabe)
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -454,6 +451,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6036. Forcibly timeout misbehaving DFSClients that try to do
     no-checksum reads that extend too long (cmccabe)
+
+    HDFS-6482. Use block ID-based block layout on datanodes (James Thomas via
+    Colin Patrick McCabe)
 
   OPTIMIZATIONS
 
