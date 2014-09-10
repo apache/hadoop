@@ -402,8 +402,7 @@ public class DelegationTokenSecretManager
     final Token<DelegationTokenIdentifier> token = namenode.getRpcServer(
         ).getDelegationToken(new Text(renewer));
     if (token == null) {
-      throw new IOException("Failed to get the token for " + renewer
-          + ", user=" + ugi.getShortUserName());
+      return null;
     }
 
     final InetSocketAddress addr = namenode.getNameNodeAddress();
