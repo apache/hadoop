@@ -1423,8 +1423,8 @@ public class FSDirectory implements Closeable {
       HdfsFileStatus listing[] = new HdfsFileStatus[numOfListing];
       for (int i=0; i<numOfListing && locationBudget>0; i++) {
         INode cur = contents.get(startChild+i);
-        byte curPolicy = isSuperUser ? cur.getLocalStoragePolicyID() :
-            BlockStoragePolicy.ID_UNSPECIFIED;
+        byte curPolicy = isSuperUser && !cur.isSymlink()?
+            cur.getLocalStoragePolicyID(): BlockStoragePolicy.ID_UNSPECIFIED;
         listing[i] = createFileStatus(cur.getLocalNameBytes(), cur, needLocation,
             getStoragePolicyID(curPolicy, parentStoragePolicy), snapshot,
             isRawPath);
@@ -1503,7 +1503,7 @@ public class FSDirectory implements Closeable {
       }
       final INodesInPath inodesInPath = getLastINodeInPath(srcs, resolveLink);
       final INode i = inodesInPath.getINode(0);
-      byte policyId = includeStoragePolicy && i != null ?
+      byte policyId = includeStoragePolicy && i != null && !i.isSymlink() ?
           i.getStoragePolicyID() : BlockStoragePolicy.ID_UNSPECIFIED;
       return i == null ? null : createFileStatus(HdfsFileStatus.EMPTY_NAME, i,
           policyId, inodesInPath.getPathSnapshotId(), isRawPath);
