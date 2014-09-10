@@ -123,7 +123,7 @@ public class DefaultImpersonationProvider implements ImpersonationProvider {
     MachineList MachineList = proxyHosts.get(
         getProxySuperuserIpConfKey(realUser.getShortUserName()));
 
-    if(!MachineList.includes(remoteAddress)) {
+    if(MachineList == null || !MachineList.includes(remoteAddress)) {
       throw new AuthorizationException("Unauthorized connection for super-user: "
           + realUser.getUserName() + " from IP " + remoteAddress);
     }
