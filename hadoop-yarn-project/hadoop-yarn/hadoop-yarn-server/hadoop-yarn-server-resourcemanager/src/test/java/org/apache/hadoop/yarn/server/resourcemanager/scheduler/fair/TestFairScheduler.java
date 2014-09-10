@@ -307,7 +307,150 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       assertEquals(3414, p.getMetrics().getSteadyFairShareMB());
     }
   }
-  
+
+  @Test
+  public void testFairShareWithZeroWeight() throws IOException {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    // set queueA and queueB weight zero.
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"queueA\">");
+    out.println("<weight>0.0</weight>");
+    out.println("</queue>");
+    out.println("<queue name=\"queueB\">");
+    out.println("<weight>0.0</weight>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // Add one big node (only care about aggregate capacity)
+    RMNode node1 =
+        MockNodes.newNodeInfo(1, Resources.createResource(8 * 1024, 8), 1,
+            "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    // Queue A wants 2 * 1024.
+    createSchedulingRequest(2 * 1024, "queueA", "user1");
+    // Queue B wants 6 * 1024
+    createSchedulingRequest(6 * 1024, "queueB", "user1");
+
+    scheduler.update();
+
+    FSLeafQueue queue = scheduler.getQueueManager().getLeafQueue(
+        "queueA", false);
+    // queueA's weight is 0.0, so its fair share should be 0.
+    assertEquals(0, queue.getFairShare().getMemory());
+    // queueB's weight is 0.0, so its fair share should be 0.
+    queue = scheduler.getQueueManager().getLeafQueue(
+        "queueB", false);
+    assertEquals(0, queue.getFairShare().getMemory());
+  }
+
+  @Test
+  public void testFairShareWithZeroWeightNoneZeroMinRes() throws IOException {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    // set queueA and queueB weight zero.
+    // set queueA and queueB minResources 1.
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"queueA\">");
+    out.println("<minResources>1 mb 1 vcores</minResources>");
+    out.println("<weight>0.0</weight>");
+    out.println("</queue>");
+    out.println("<queue name=\"queueB\">");
+    out.println("<minResources>1 mb 1 vcores</minResources>");
+    out.println("<weight>0.0</weight>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // Add one big node (only care about aggregate capacity)
+    RMNode node1 =
+        MockNodes.newNodeInfo(1, Resources.createResource(8 * 1024, 8), 1,
+            "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    // Queue A wants 2 * 1024.
+    createSchedulingRequest(2 * 1024, "queueA", "user1");
+    // Queue B wants 6 * 1024
+    createSchedulingRequest(6 * 1024, "queueB", "user1");
+
+    scheduler.update();
+
+    FSLeafQueue queue = scheduler.getQueueManager().getLeafQueue(
+        "queueA", false);
+    // queueA's weight is 0.0 and minResources is 1,
+    // so its fair share should be 1 (minShare).
+    assertEquals(1, queue.getFairShare().getMemory());
+    // queueB's weight is 0.0 and minResources is 1,
+    // so its fair share should be 1 (minShare).
+    queue = scheduler.getQueueManager().getLeafQueue(
+        "queueB", false);
+    assertEquals(1, queue.getFairShare().getMemory());
+  }
+
+  @Test
+  public void testFairShareWithNoneZeroWeightNoneZeroMinRes()
+      throws IOException {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    // set queueA and queueB weight 0.5.
+    // set queueA and queueB minResources 1024.
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"queueA\">");
+    out.println("<minResources>1024 mb 1 vcores</minResources>");
+    out.println("<weight>0.5</weight>");
+    out.println("</queue>");
+    out.println("<queue name=\"queueB\">");
+    out.println("<minResources>1024 mb 1 vcores</minResources>");
+    out.println("<weight>0.5</weight>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // Add one big node (only care about aggregate capacity)
+    RMNode node1 =
+        MockNodes.newNodeInfo(1, Resources.createResource(8 * 1024, 8), 1,
+            "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    // Queue A wants 4 * 1024.
+    createSchedulingRequest(4 * 1024, "queueA", "user1");
+    // Queue B wants 4 * 1024
+    createSchedulingRequest(4 * 1024, "queueB", "user1");
+
+    scheduler.update();
+
+    FSLeafQueue queue = scheduler.getQueueManager().getLeafQueue(
+        "queueA", false);
+    // queueA's weight is 0.5 and minResources is 1024,
+    // so its fair share should be 4096.
+    assertEquals(4096, queue.getFairShare().getMemory());
+    // queueB's weight is 0.5 and minResources is 1024,
+    // so its fair share should be 4096.
+    queue = scheduler.getQueueManager().getLeafQueue(
+        "queueB", false);
+    assertEquals(4096, queue.getFairShare().getMemory());
+  }
+
   @Test
   public void testSimpleHierarchicalFairShareCalculation() throws IOException {
     scheduler.init(conf);

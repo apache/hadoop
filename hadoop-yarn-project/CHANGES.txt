@@ -279,6 +279,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2526. SLS can deadlock when all the threads are taken by AMSimulators. 
     (Wei Yan via kasha)
 
+    YARN-1458. FairScheduler: Zero weight can lead to livelock. 
+    (Zhihai Xu via kasha)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
