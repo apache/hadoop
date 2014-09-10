@@ -442,6 +442,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10925. Compilation fails in native link0 function on Windows.
     (cnauroth)
 
+    HADOOP-11077. NPE if hosts not specified in ProxyUsers. (gchanan via tucu)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

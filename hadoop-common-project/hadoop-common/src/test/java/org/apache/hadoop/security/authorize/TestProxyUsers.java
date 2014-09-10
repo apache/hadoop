@@ -478,6 +478,21 @@ public class TestProxyUsers {
     assertNotAuthorized(proxyUserUgi, "1.2.3.5");
   }
 
+  @Test
+  public void testNoHostsForUsers() throws Exception {
+    Configuration conf = new Configuration(false);
+    conf.set("y." + REAL_USER_NAME + ".users",
+      StringUtils.join(",", Arrays.asList(AUTHORIZED_PROXY_USER_NAME)));
+    ProxyUsers.refreshSuperUserGroupsConfiguration(conf, "y");
+
+    UserGroupInformation realUserUgi = UserGroupInformation
+      .createRemoteUser(REAL_USER_NAME);
+    UserGroupInformation proxyUserUgi = UserGroupInformation.createProxyUserForTesting(
+      AUTHORIZED_PROXY_USER_NAME, realUserUgi, GROUP_NAMES);
+
+    // IP doesn't matter
+    assertNotAuthorized(proxyUserUgi, "1.2.3.4");
+  }
 
   private void assertNotAuthorized(UserGroupInformation proxyUgi, String host) {
     try {
