@@ -332,7 +332,7 @@ public class GenericOptionsParser {
       }
       UserGroupInformation.getCurrentUser().addCredentials(
           Credentials.readTokenStorageFile(p, conf));
-      conf.set("mapreduce.job.credentials.json", p.toString(),
+      conf.set("mapreduce.job.credentials.binary", p.toString(),
                "from -tokenCacheFile command line option");
 
     }
