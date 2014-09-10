@@ -36,6 +36,9 @@ public class KMSConfiguration {
 
   public static final String CONFIG_PREFIX = "hadoop.kms.";
 
+  public static final String KEY_ACL_PREFIX = "key.acl.";
+  public static final String DEFAULT_KEY_ACL_PREFIX = "default.key.acl.";
+
   // Property to Enable/Disable Caching
   public static final String KEY_CACHE_ENABLE = CONFIG_PREFIX +
       "cache.enable";
@@ -56,6 +59,12 @@ public class KMSConfiguration {
   public static final long CURR_KEY_CACHE_TIMEOUT_DEFAULT = 30 * 1000;
   // 10 secs
   public static final long KMS_AUDIT_AGGREGATION_DELAY_DEFAULT = 10000;
+
+  // Property to Enable/Disable per Key authorization
+  public static final String KEY_AUTHORIZATION_ENABLE = CONFIG_PREFIX +
+      "key.authorization.enable"; 
+
+  public static final boolean KEY_AUTHORIZATION_ENABLE_DEFAULT = true;
 
   static Configuration getConfiguration(boolean loadHadoopDefaults,
       String ... resources) {

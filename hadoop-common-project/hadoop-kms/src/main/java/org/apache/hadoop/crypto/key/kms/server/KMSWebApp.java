@@ -68,7 +68,7 @@ public class KMSWebApp implements ServletContextListener {
 
   private JmxReporter jmxReporter;
   private static Configuration kmsConf;
-  private static KMSACLs acls;
+  private static KMSACLs kmsAcls;
   private static Meter adminCallsMeter;
   private static Meter keyCallsMeter;
   private static Meter unauthorizedCallsMeter;
@@ -126,8 +126,8 @@ public class KMSWebApp implements ServletContextListener {
       LOG.info("  KMS Hadoop Version: " + VersionInfo.getVersion());
       LOG.info("-------------------------------------------------------------");
 
-      acls = new KMSACLs();
-      acls.startReloader();
+      kmsAcls = new KMSACLs();
+      kmsAcls.startReloader();
 
       metricRegistry = new MetricRegistry();
       jmxReporter = JmxReporter.forRegistry(metricRegistry).build();
@@ -188,6 +188,13 @@ public class KMSWebApp implements ServletContextListener {
       keyProviderCryptoExtension =
           new EagerKeyGeneratorKeyProviderCryptoExtension(kmsConf,
               keyProviderCryptoExtension);
+      if (kmsConf.getBoolean(KMSConfiguration.KEY_AUTHORIZATION_ENABLE,
+          KMSConfiguration.KEY_AUTHORIZATION_ENABLE_DEFAULT)) {
+        keyProviderCryptoExtension =
+            new KeyAuthorizationKeyProvider(
+                keyProviderCryptoExtension, kmsAcls);
+      }
+        
       LOG.info("Initialized KeyProviderCryptoExtension "
           + keyProviderCryptoExtension);
       final int defaultBitlength = kmsConf
@@ -213,7 +220,7 @@ public class KMSWebApp implements ServletContextListener {
   @Override
   public void contextDestroyed(ServletContextEvent sce) {
     kmsAudit.shutdown();
-    acls.stopReloader();
+    kmsAcls.stopReloader();
     jmxReporter.stop();
     jmxReporter.close();
     metricRegistry = null;
@@ -225,7 +232,7 @@ public class KMSWebApp implements ServletContextListener {
   }
 
   public static KMSACLs getACLs() {
-    return acls;
+    return kmsAcls;
   }
 
   public static Meter getAdminCallsMeter() {
