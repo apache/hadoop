@@ -401,7 +401,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     }
   }
   
-  private Credentials parseCredentials(ApplicationSubmissionContext application) 
+  protected Credentials parseCredentials(ApplicationSubmissionContext application)
       throws IOException {
     Credentials credentials = new Credentials();
     DataInputByteBuffer dibb = new DataInputByteBuffer();
