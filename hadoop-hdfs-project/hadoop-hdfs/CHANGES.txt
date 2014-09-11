@@ -380,6 +380,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6966. Add additional unit tests for encryption zones.
     (Stephen Chu via wang)
 
+    HDFS-6621. Hadoop Balancer prematurely exits iterations.
+    (Rafal Wojdyla and Benjamin Bowman via wang)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
