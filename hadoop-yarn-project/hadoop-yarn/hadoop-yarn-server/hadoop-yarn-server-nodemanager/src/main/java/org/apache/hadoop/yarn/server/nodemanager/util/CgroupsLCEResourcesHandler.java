@@ -33,6 +33,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -42,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor;
 import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.SystemClock;
 
 public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
@@ -59,7 +61,11 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
   private final String MTAB_FILE = "/proc/mounts";
   private final String CGROUPS_FSTYPE = "cgroup";
   private final String CONTROLLER_CPU = "cpu";
+  private final String CPU_PERIOD_US = "cfs_period_us";
+  private final String CPU_QUOTA_US = "cfs_quota_us";
   private final int CPU_DEFAULT_WEIGHT = 1024; // set by kernel
+  private final int MAX_QUOTA_US = 1000 * 1000;
+  private final int MIN_PERIOD_US = 1000;
   private final Map<String, String> controllerPaths; // Controller -> path
 
   private long deleteCgroupTimeout;
@@ -106,8 +112,15 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
   }
   
   public void init(LinuxContainerExecutor lce) throws IOException {
+    this.init(lce,
+        ResourceCalculatorPlugin.getResourceCalculatorPlugin(null, conf));
+  }
+
+  @VisibleForTesting
+  void init(LinuxContainerExecutor lce, ResourceCalculatorPlugin plugin)
+      throws IOException {
     initConfig();
-    
+
     // mount cgroups if requested
     if (cgroupMount && cgroupMountPath != null) {
       ArrayList<String> cgroupKVs = new ArrayList<String>();
@@ -117,8 +130,74 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     }
 
     initializeControllerPaths();
+
+    // cap overall usage to the number of cores allocated to YARN
+    float yarnProcessors =
+        NodeManagerHardwareUtils.getContainersCores(plugin, conf);
+    int systemProcessors = plugin.getNumProcessors();
+    if (systemProcessors != (int) yarnProcessors) {
+      LOG.info("YARN containers restricted to " + yarnProcessors + " cores");
+      int[] limits = getOverallLimits(yarnProcessors);
+      updateCgroup(CONTROLLER_CPU, "", CPU_PERIOD_US, String.valueOf(limits[0]));
+      updateCgroup(CONTROLLER_CPU, "", CPU_QUOTA_US, String.valueOf(limits[1]));
+    } else if (cpuLimitsExist()) {
+      LOG.info("Removing CPU constraints for YARN containers.");
+      updateCgroup(CONTROLLER_CPU, "", CPU_QUOTA_US, String.valueOf(-1));
+    }
   }
 
+  boolean cpuLimitsExist() throws IOException {
+    String path = pathForCgroup(CONTROLLER_CPU, "");
+    File quotaFile = new File(path, CONTROLLER_CPU + "." + CPU_QUOTA_US);
+    if (quotaFile.exists()) {
+      String contents = FileUtils.readFileToString(quotaFile, "UTF-8");
+      int quotaUS = Integer.parseInt(contents.trim());
+      if (quotaUS != -1) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @VisibleForTesting
+  int[] getOverallLimits(float yarnProcessors) {
+
+    int[] ret = new int[2];
+
+    if (yarnProcessors < 0.01f) {
+      throw new IllegalArgumentException("Number of processors can't be <= 0.");
+    }
+
+    int quotaUS = MAX_QUOTA_US;
+    int periodUS = (int) (MAX_QUOTA_US / yarnProcessors);
+    if (yarnProcessors < 1.0f) {
+      periodUS = MAX_QUOTA_US;
+      quotaUS = (int) (periodUS * yarnProcessors);
+      if (quotaUS < MIN_PERIOD_US) {
+        LOG
+          .warn("The quota calculated for the cgroup was too low. The minimum value is "
+              + MIN_PERIOD_US + ", calculated value is " + quotaUS
+              + ". Setting quota to minimum value.");
+        quotaUS = MIN_PERIOD_US;
+      }
+    }
+
+    // cfs_period_us can't be less than 1000 microseconds
+    // if the value of periodUS is less than 1000, we can't really use cgroups
+    // to limit cpu
+    if (periodUS < MIN_PERIOD_US) {
+      LOG
+        .warn("The period calculated for the cgroup was too low. The minimum value is "
+            + MIN_PERIOD_US + ", calculated value is " + periodUS
+            + ". Using all available CPU.");
+      periodUS = MAX_QUOTA_US;
+      quotaUS = -1;
+    }
+
+    ret[0] = periodUS;
+    ret[1] = quotaUS;
+    return ret;
+  }
 
   boolean isCpuWeightEnabled() {
     return this.cpuWeightEnabled;
@@ -274,7 +353,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     BufferedReader in = null;
 
     try {
-      in = new BufferedReader(new FileReader(new File(MTAB_FILE)));
+      in = new BufferedReader(new FileReader(new File(getMtabFileName())));
 
       for (String str = in.readLine(); str != null;
           str = in.readLine()) {
@@ -292,13 +371,13 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
         }
       }
     } catch (IOException e) {
-      throw new IOException("Error while reading " + MTAB_FILE, e);
+      throw new IOException("Error while reading " + getMtabFileName(), e);
     } finally {
       // Close the streams
       try {
         in.close();
       } catch (IOException e2) {
-        LOG.warn("Error closing the stream: " + MTAB_FILE, e2);
+        LOG.warn("Error closing the stream: " + getMtabFileName(), e2);
       }
     }
 
@@ -334,7 +413,12 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
       }
     } else {
       throw new IOException("Not able to enforce cpu weights; cannot find "
-          + "cgroup for cpu controller in " + MTAB_FILE);
+          + "cgroup for cpu controller in " + getMtabFileName());
     }
+  }
+
+  @VisibleForTesting
+  String getMtabFileName() {
+    return MTAB_FILE;
   }
 }
