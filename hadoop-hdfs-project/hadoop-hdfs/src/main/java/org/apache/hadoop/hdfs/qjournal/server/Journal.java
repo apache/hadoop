@@ -994,6 +994,9 @@ public class Journal implements Closeable {
   }
 
   public synchronized void doPreUpgrade() throws IOException {
+    // Do not hold file lock on committedTxnId, because the containing
+    // directory will be renamed.  It will be reopened lazily on next access.
+    committedTxnId.close();
     storage.getJournalManager().doPreUpgrade();
   }
 
@@ -1043,7 +1046,10 @@ public class Journal implements Closeable {
         targetLayoutVersion);
   }
 
-  public void doRollback() throws IOException {
+  public synchronized void doRollback() throws IOException {
+    // Do not hold file lock on committedTxnId, because the containing
+    // directory will be renamed.  It will be reopened lazily on next access.
+    committedTxnId.close();
     storage.getJournalManager().doRollback();
   }
 
