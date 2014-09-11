@@ -126,8 +126,6 @@ Trunk (Unreleased)
 
     HADOOP-11041. VersionInfo specifies subversion (Tsuyoshi OZAWA via aw)
 
-    HADOOP-10373 create tools/hadoop-amazon for aws/EMR support (stevel)
-
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -510,6 +508,8 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-9540. Expose the InMemoryS3 and S3N FilesystemStores implementations
     for Unit testing. (Hari via stevel)
+
+    HADOOP-10373 create tools/hadoop-amazon for aws/EMR support (stevel)
 
   OPTIMIZATIONS
 
