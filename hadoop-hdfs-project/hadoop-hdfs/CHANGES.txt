@@ -641,6 +641,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6621. Hadoop Balancer prematurely exits iterations.
     (Rafal Wojdyla and Benjamin Bowman via wang)
 
+    HDFS-7045. Fix NameNode deadlock when opening file under /.reserved path.
+    (Yi Liu via wang)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
