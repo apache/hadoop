@@ -965,9 +965,6 @@ public class Dispatcher {
     if (target.storageType != targetStorageType) {
       return false;
     }
-    if (!target.hasSpaceForScheduling(block.getNumBytes())) {
-      return false;
-    }
     // check if the block is moved or not
     if (movedBlocks.contains(block.getBlock())) {
       return false;
