@@ -49,6 +49,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.StorageType;
@@ -88,7 +89,11 @@ public class Dispatcher {
   private static final long MAX_BLOCKS_SIZE_TO_FETCH = 2 * GB;
 
   private static final int MAX_NO_PENDING_MOVE_ITERATIONS = 5;
-  private static final long DELAY_AFTER_ERROR = 10 * 1000L; // 10 seconds
+  /**
+   * the period of time to delay the usage of a DataNode after hitting
+   * errors when using it for migrating data
+   */
+  private static long delayAfterErrors = 10 * 1000;
 
   private final NameNodeConnector nnc;
   private final SaslDataTransferClient saslClient;
@@ -112,6 +117,7 @@ public class Dispatcher {
 
   private final ExecutorService moveExecutor;
   private final ExecutorService dispatchExecutor;
+
   /** The maximum number of concurrent blocks moves at a datanode */
   private final int maxConcurrentMovesPerNode;
 
@@ -187,10 +193,12 @@ public class Dispatcher {
 
     @Override
     public String toString() {
-      final Block b = block.getBlock();
-      return b + " with size=" + b.getNumBytes() + " from "
-          + source.getDisplayName() + " to " + target.getDisplayName()
-          + " through " + proxySource.datanode;
+      final Block b = block != null ? block.getBlock() : null;
+      String bStr = b != null ? (b + " with size=" + b.getNumBytes() + " ")
+          : " ";
+      return bStr + "from " + source.getDisplayName() + " to " + target
+          .getDisplayName() + " through " + (proxySource != null ? proxySource
+          .datanode : "");
     }
 
     /**
@@ -316,8 +324,8 @@ public class Dispatcher {
         // further in order to avoid a potential storm of "threads quota
         // exceeded" warnings when the dispatcher gets out of sync with work
         // going on in datanodes.
-        proxySource.activateDelay(DELAY_AFTER_ERROR);
-        target.getDDatanode().activateDelay(DELAY_AFTER_ERROR);
+        proxySource.activateDelay(delayAfterErrors);
+        target.getDDatanode().activateDelay(delayAfterErrors);
       } finally {
         IOUtils.closeStream(out);
         IOUtils.closeStream(in);
@@ -1041,6 +1049,11 @@ public class Dispatcher {
   @VisibleForTesting
   public static void setBlockMoveWaitTime(long time) {
     blockMoveWaitTime = time;
+  }
+
+  @VisibleForTesting
+  public static void setDelayAfterErrors(long time) {
+    delayAfterErrors = time;
   }
 
   /** shutdown thread pools */

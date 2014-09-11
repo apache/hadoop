@@ -256,7 +256,7 @@ public class TestBlockStoragePolicy {
 
     final short replication = 3;
     {
-      final List<StorageType> chosen = Arrays.asList(); 
+      final List<StorageType> chosen = Lists.newArrayList();
       method.checkChooseStorageTypes(hot, replication, chosen,
           StorageType.DISK, StorageType.DISK, StorageType.DISK);
       method.checkChooseStorageTypes(warm, replication, chosen,
@@ -393,7 +393,7 @@ public class TestBlockStoragePolicy {
     final EnumSet<StorageType> unavailables = disk;
     final boolean isNewBlock = true;
     {
-      final List<StorageType> chosen = Arrays.asList(); 
+      final List<StorageType> chosen = Lists.newArrayList();
       checkChooseStorageTypes(hot, replication, chosen, unavailables, isNewBlock);
       checkChooseStorageTypes(warm, replication, chosen, unavailables, isNewBlock,
           StorageType.ARCHIVE, StorageType.ARCHIVE, StorageType.ARCHIVE);
@@ -500,7 +500,7 @@ public class TestBlockStoragePolicy {
 
     final short replication = 3;
     {
-      final List<StorageType> chosen = Arrays.asList(); 
+      final List<StorageType> chosen = Lists.newArrayList();
       method.checkChooseStorageTypes(hot, replication, chosen,
           StorageType.DISK, StorageType.DISK, StorageType.DISK);
       method.checkChooseStorageTypes(warm, replication, chosen,
@@ -603,7 +603,7 @@ public class TestBlockStoragePolicy {
     final EnumSet<StorageType> unavailables = disk;
     final boolean isNewBlock = false;
     {
-      final List<StorageType> chosen = Arrays.asList(); 
+      final List<StorageType> chosen = Lists.newArrayList();
       checkChooseStorageTypes(hot, replication, chosen, unavailables, isNewBlock,
           StorageType.ARCHIVE, StorageType.ARCHIVE, StorageType.ARCHIVE);
       checkChooseStorageTypes(warm, replication, chosen, unavailables, isNewBlock,

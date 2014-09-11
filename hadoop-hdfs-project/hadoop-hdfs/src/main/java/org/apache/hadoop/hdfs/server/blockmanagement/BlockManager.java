@@ -1502,7 +1502,7 @@ public class BlockManager {
    * @throws IOException
    *           if the number of targets < minimum replication.
    * @see BlockPlacementPolicy#chooseTarget(String, int, Node,
-   *      List, boolean, Set, long, StorageType)
+   *      Set, long, List, BlockStoragePolicy)
    */
   public DatanodeStorageInfo[] chooseTarget4NewBlock(final String src,
       final int numOfReplicas, final DatanodeDescriptor client,
@@ -2811,7 +2811,7 @@ public class BlockManager {
       return false; // only consider delHint for the first case
     } else if (delHint == null) {
       return false; // no delHint
-    } else if (!excessTypes.remove(delHint.getStorageType())) {
+    } else if (!excessTypes.contains(delHint.getStorageType())) {
       return false; // delHint storage type is not an excess type
     } else {
       // check if removing delHint reduces the number of racks
