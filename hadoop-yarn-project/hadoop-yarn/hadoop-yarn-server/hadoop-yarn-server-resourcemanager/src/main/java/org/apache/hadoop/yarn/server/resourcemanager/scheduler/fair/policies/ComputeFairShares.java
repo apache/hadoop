@@ -124,11 +124,10 @@ public class ComputeFairShares {
     int totalMaxShare = 0;
     for (Schedulable sched : schedulables) {
       int maxShare = getResourceValue(sched.getMaxShare(), type);
-      if (maxShare == Integer.MAX_VALUE) {
-        totalMaxShare = Integer.MAX_VALUE;
+      totalMaxShare = (int) Math.min((long)maxShare + (long)totalMaxShare,
+          Integer.MAX_VALUE);
+      if (totalMaxShare == Integer.MAX_VALUE) {
         break;
-      } else {
-        totalMaxShare += maxShare;
       }
     }
 

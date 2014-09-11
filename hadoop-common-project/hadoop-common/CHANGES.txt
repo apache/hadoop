@@ -102,9 +102,6 @@ Trunk (Unreleased)
     HADOOP-9486. Promoted Windows and Shell related utils from YARN to Hadoop
     Common. (Chris Nauroth via vinodkv)
 
-    HADOOP-9540. Expose the InMemoryS3 and S3N FilesystemStores implementations
-    for Unit testing. (Hari via stevel)
-
     HADOOP-8844. Add a plaintext fs -text test-case.
     (Akira AJISAKA via harsh)
 
@@ -128,8 +125,6 @@ Trunk (Unreleased)
     HADOOP-11013. CLASSPATH handling should be consolidated, debuggable (aw)
 
     HADOOP-11041. VersionInfo specifies subversion (Tsuyoshi OZAWA via aw)
-
-    HADOOP-10373 create tools/hadoop-amazon for aws/EMR support (stevel)
 
   BUG FIXES
 
@@ -511,6 +506,11 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10758. KMS: add ACLs on per key basis. (tucu)
 
+    HADOOP-9540. Expose the InMemoryS3 and S3N FilesystemStores implementations
+    for Unit testing. (Hari via stevel)
+
+    HADOOP-10373 create tools/hadoop-amazon for aws/EMR support (stevel)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
@@ -783,6 +783,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-9989. Bug introduced in HADOOP-9374, which parses the -tokenCacheFile 
     as binary file but set it to the configuration as JSON file. (zxu via tucu)
+
+    HADOOP-11085. Excessive logging by org.apache.hadoop.util.Progress when
+    value is NaN (Mit Desai via jlowe)
 
 Release 2.5.1 - UNRELEASED
 

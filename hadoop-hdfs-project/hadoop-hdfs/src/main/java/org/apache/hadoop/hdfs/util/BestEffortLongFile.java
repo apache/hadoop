@@ -112,6 +112,7 @@ public class BestEffortLongFile implements Closeable {
   public void close() throws IOException {
     if (ch != null) {
       ch.close();
+      ch = null;
     }
   }
 }

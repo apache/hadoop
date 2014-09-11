@@ -725,6 +725,8 @@ public class Dispatcher {
           && (!srcBlocks.isEmpty() || blocksToReceive > 0)) {
         final PendingMove p = chooseNextMove();
         if (p != null) {
+          // Reset no pending move counter
+          noPendingMoveIteration=0;
           executePendingMove(p);
           continue;
         }

@@ -1415,7 +1415,8 @@ public class DFSTestUtil {
   }
 
   /**
-   * Helper function to create a key in the Key Provider.
+   * Helper function to create a key in the Key Provider. Defaults
+   * to the first indexed NameNode's Key Provider.
    *
    * @param keyName The name of the key to create
    * @param cluster The cluster to create it in
@@ -1424,7 +1425,22 @@ public class DFSTestUtil {
   public static void createKey(String keyName, MiniDFSCluster cluster,
                                 Configuration conf)
           throws NoSuchAlgorithmException, IOException {
-    KeyProvider provider = cluster.getNameNode().getNamesystem().getProvider();
+    createKey(keyName, cluster, 0, conf);
+  }
+
+  /**
+   * Helper function to create a key in the Key Provider.
+   *
+   * @param keyName The name of the key to create
+   * @param cluster The cluster to create it in
+   * @param idx The NameNode index
+   * @param conf Configuration to use
+   */
+  public static void createKey(String keyName, MiniDFSCluster cluster,
+                               int idx, Configuration conf)
+      throws NoSuchAlgorithmException, IOException {
+    NameNode nn = cluster.getNameNode(idx);
+    KeyProvider provider = nn.getNamesystem().getProvider();
     final KeyProvider.Options options = KeyProvider.options(conf);
     options.setDescription(keyName);
     options.setBitLength(128);
