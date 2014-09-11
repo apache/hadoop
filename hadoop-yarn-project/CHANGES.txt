@@ -67,6 +67,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2394. FairScheduler: Configure fairSharePreemptionThreshold per queue.
     (Wei Yan via kasha)
 
+    YARN-415. Capture aggregate memory allocation at the app-level for chargeback.
+    (Eric Payne & Andrey Klochkov via jianhe)
+
   IMPROVEMENTS
 
     YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc

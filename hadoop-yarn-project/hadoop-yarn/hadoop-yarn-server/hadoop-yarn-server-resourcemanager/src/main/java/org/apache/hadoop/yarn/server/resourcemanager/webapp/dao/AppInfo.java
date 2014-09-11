@@ -79,6 +79,8 @@ public class AppInfo {
   protected int allocatedMB;
   protected int allocatedVCores;
   protected int runningContainers;
+  protected long memorySeconds;
+  protected long vcoreSeconds;
   
   // preemption info fields
   protected int preemptedResourceMB;
@@ -165,6 +167,8 @@ public class AppInfo {
           appMetrics.getNumNonAMContainersPreempted();
       preemptedResourceVCores =
           appMetrics.getResourcePreempted().getVirtualCores();
+      memorySeconds = appMetrics.getMemorySeconds();
+      vcoreSeconds = appMetrics.getVcoreSeconds();
     }
   }
 
@@ -286,5 +290,13 @@ public class AppInfo {
   
   public int getNumAMContainersPreempted() {
     return numAMContainerPreempted;
+  }
+ 
+  public long getMemorySeconds() {
+    return memorySeconds;
+  }
+
+  public long getVcoreSeconds() {
+    return vcoreSeconds;
   }
 }

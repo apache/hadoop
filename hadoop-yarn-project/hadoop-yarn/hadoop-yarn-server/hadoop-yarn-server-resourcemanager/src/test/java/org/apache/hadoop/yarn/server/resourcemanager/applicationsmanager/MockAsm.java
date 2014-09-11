@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -170,7 +171,7 @@ public abstract class MockAsm extends MockApps {
 
     @Override
     public RMAppMetrics getRMAppMetrics() {
-      return new RMAppMetrics(Resource.newInstance(0, 0), 0, 0);
+      return new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, 0, 0);
     }
   }
 
@@ -259,6 +260,22 @@ public abstract class MockAsm extends MockApps {
       public Set<String> getApplicationTags() {
         return null;
       }
+
+      @Override
+      public ApplicationReport createAndGetApplicationReport(
+          String clientUserName, boolean allowAccess) {
+        ApplicationResourceUsageReport usageReport =
+            ApplicationResourceUsageReport.newInstance(0, 0, null, null, null, 
+            0, 0);
+        ApplicationReport report = ApplicationReport.newInstance(
+            getApplicationId(), appAttemptId, getUser(), getQueue(), 
+            getName(), null, 0, null, null, getDiagnostics().toString(), 
+            getTrackingUrl(), getStartTime(), getFinishTime(), 
+            getFinalApplicationStatus(), usageReport , null, getProgress(),
+            type, null);
+        return report;
+      }
+
     };
   }
 

@@ -1197,7 +1197,9 @@ ResourceManager REST API's.
           "queue" : "default",
           "allocatedMB" : 0,
           "allocatedVCores" : 0,
-          "runningContainers" : 0
+          "runningContainers" : 0,
+          "memorySeconds" : 151730,
+          "vcoreSeconds" : 103
        },
        {
           "finishedTime" : 1326815789546,
@@ -1218,7 +1220,9 @@ ResourceManager REST API's.
           "queue" : "default",
           "allocatedMB" : 0,
           "allocatedVCores" : 0,
-          "runningContainers" : 1
+          "runningContainers" : 1,
+          "memorySeconds" : 640064,
+          "vcoreSeconds" : 442
        } 
     ]
   }
@@ -1271,6 +1275,8 @@ _01_000001</amContainerLogs>
     <allocatedMB>0</allocatedMB>
     <allocatedVCores>0</allocatedVCores>
     <runningContainers>0</runningContainers>
+    <memorySeconds>151730</memorySeconds>
+    <vcoreSeconds>103</vcoreSeconds>
   </app>
   <app>
     <id>application_1326815542473_0002</id>
@@ -1293,6 +1299,8 @@ _01_000001</amContainerLogs>
     <allocatedMB>0</allocatedMB>
     <allocatedVCores>0</allocatedVCores>
     <runningContainers>0</runningContainers>
+    <memorySeconds>640064</memorySeconds>
+    <vcoreSeconds>442</vcoreSeconds>
   </app>
 </apps>
 +---+
@@ -1491,6 +1499,10 @@ _01_000001</amContainerLogs>
 +---------------------------------------------------------------+
 | runningContainers | int | The number of containers currently running for the application |
 +---------------------------------------------------------------+
+| memorySeconds | long | The amount of memory the application has allocated (megabyte-seconds) |
+*---------------+--------------+--------------------------------+
+| vcoreSeconds | long | The amount of CPU resources the application has allocated (virtual core-seconds) |
+*---------------+--------------+--------------------------------+
 
 ** Response Examples
 
@@ -1532,7 +1544,9 @@ _01_000001</amContainerLogs>
       "elapsedTime" : 446748,
       "diagnostics" : "",
       "trackingUrl" : "http://host.domain.com:8088/proxy/application_1326821518301_0005/jobhistory/job/job_1326821518301_5_5",
-      "queue" : "a1"
+      "queue" : "a1",
+      "memorySeconds" : 151730,
+      "vcoreSeconds" : 103
    }
 }
 +---+
@@ -1576,6 +1590,8 @@ _01_000001</amContainerLogs>
   <elapsedTime>446748</elapsedTime>
   <amContainerLogs>http://host.domain.com:8042/node/containerlogs/container_1326821518301_0005_01_000001</amContainerLogs>
   <amHostHttpAddress>host.domain.com:8042</amHostHttpAddress>
+  <memorySeconds>151730</memorySeconds>
+  <vcoreSeconds>103</vcoreSeconds>
 </app>
 +---+
 

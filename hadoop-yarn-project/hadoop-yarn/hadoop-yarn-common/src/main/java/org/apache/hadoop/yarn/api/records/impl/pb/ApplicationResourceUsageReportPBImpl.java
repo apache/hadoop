@@ -200,6 +200,30 @@ extends ApplicationResourceUsageReport {
     this.neededResources = reserved_resources;
   }
 
+  @Override
+  public synchronized void setMemorySeconds(long memory_seconds) {
+    maybeInitBuilder();
+    builder.setMemorySeconds(memory_seconds);
+  }
+  
+  @Override
+  public synchronized long getMemorySeconds() {
+    ApplicationResourceUsageReportProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getMemorySeconds();
+  }
+
+  @Override
+  public synchronized void setVcoreSeconds(long vcore_seconds) {
+    maybeInitBuilder();
+    builder.setVcoreSeconds(vcore_seconds);
+  }
+
+  @Override
+  public synchronized long getVcoreSeconds() {
+    ApplicationResourceUsageReportProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.getVcoreSeconds());
+  }
+  
   private ResourcePBImpl convertFromProtoFormat(ResourceProto p) {
     return new ResourcePBImpl(p);
   }
