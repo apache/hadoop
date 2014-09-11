@@ -47,6 +47,9 @@ Release 2.6.0 - UNRELEASED
     YARN-415. Capture aggregate memory allocation at the app-level for chargeback.
     (Eric Payne & Andrey Klochkov via jianhe)
 
+    YARN-2440. Enabled Nodemanagers to limit the aggregate cpu usage across all
+    containers to a preconfigured limit. (Varun Vasudev via vinodkv)
+
   IMPROVEMENTS
 
     YARN-2242. Improve exception information on AM launch crashes. (Li Lu 

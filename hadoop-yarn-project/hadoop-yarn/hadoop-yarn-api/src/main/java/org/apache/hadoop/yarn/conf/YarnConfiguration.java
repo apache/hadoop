@@ -723,6 +723,12 @@ public class YarnConfiguration extends Configuration {
   /** Number of Virtual CPU Cores which can be allocated for containers.*/
   public static final String NM_VCORES = NM_PREFIX + "resource.cpu-vcores";
   public static final int DEFAULT_NM_VCORES = 8;
+
+  /** Percentage of overall CPU which can be allocated for containers. */
+  public static final String NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT =
+      NM_PREFIX + "resource.percentage-physical-cpu-limit";
+  public static final int DEFAULT_NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT =
+      100;
   
   /** NM Webapp address.**/
   public static final String NM_WEBAPP_ADDRESS = NM_PREFIX + "webapp.address";
