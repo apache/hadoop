@@ -297,6 +297,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2158. Fixed TestRMWebServicesAppsModification#testSingleAppKill test
     failure. (Varun Vasudev via jianhe)
 
+    YARN-2534. FairScheduler: Potential integer overflow calculating totalMaxShare. 
+    (Zhihai Xu via kasha)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

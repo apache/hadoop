@@ -309,6 +309,54 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   }
 
   @Test
+  public void testFairShareWithMaxResources() throws IOException {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    // set queueA and queueB maxResources,
+    // the sum of queueA and queueB maxResources is more than
+    // Integer.MAX_VALUE.
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"queueA\">");
+    out.println("<maxResources>1073741824 mb 1000 vcores</maxResources>");
+    out.println("<weight>.25</weight>");
+    out.println("</queue>");
+    out.println("<queue name=\"queueB\">");
+    out.println("<maxResources>1073741824 mb 1000 vcores</maxResources>");
+    out.println("<weight>.75</weight>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // Add one big node (only care about aggregate capacity)
+    RMNode node1 =
+        MockNodes.newNodeInfo(1, Resources.createResource(8 * 1024, 8), 1,
+            "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    // Queue A wants 1 * 1024.
+    createSchedulingRequest(1 * 1024, "queueA", "user1");
+    // Queue B wants 6 * 1024
+    createSchedulingRequest(6 * 1024, "queueB", "user1");
+
+    scheduler.update();
+
+    FSLeafQueue queue = scheduler.getQueueManager().getLeafQueue(
+        "queueA", false);
+    // queueA's weight is 0.25, so its fair share should be 2 * 1024.
+    assertEquals(2 * 1024, queue.getFairShare().getMemory());
+    // queueB's weight is 0.75, so its fair share should be 6 * 1024.
+    queue = scheduler.getQueueManager().getLeafQueue(
+        "queueB", false);
+    assertEquals(6 * 1024, queue.getFairShare().getMemory());
+  }
+
+  @Test
   public void testFairShareWithZeroWeight() throws IOException {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     // set queueA and queueB weight zero.
