@@ -46,15 +46,6 @@ public abstract class S3FileSystemContractBaseTest
     super.tearDown();
   }
   
-  public void testBlockSize() throws Exception {
-    Path file = path("/test/hadoop/file");
-    long newBlockSize = fs.getDefaultBlockSize(file) * 2;
-    fs.getConf().setLong("fs.s3.block.size", newBlockSize);
-    createFile(file);
-    assertEquals("Double default block size", newBlockSize,
-	fs.getFileStatus(file).getBlockSize());
-  }
-
   public void testCanonicalName() throws Exception {
     assertNull("s3 doesn't support security token and shouldn't have canonical name",
                fs.getCanonicalServiceName());

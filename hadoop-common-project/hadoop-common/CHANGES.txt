@@ -509,6 +509,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11057. checknative command to probe for winutils.exe on windows.
     (Xiaoyu Yao via cnauroth)
 
+    HADOOP-10758. KMS: add ACLs on per key basis. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
@@ -776,6 +778,11 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10925. Compilation fails in native link0 function on Windows.
     (cnauroth)
+
+    HADOOP-11077. NPE if hosts not specified in ProxyUsers. (gchanan via tucu)
+
+    HADOOP-9989. Bug introduced in HADOOP-9374, which parses the -tokenCacheFile 
+    as binary file but set it to the configuration as JSON file. (zxu via tucu)
 
 Release 2.5.1 - UNRELEASED
 

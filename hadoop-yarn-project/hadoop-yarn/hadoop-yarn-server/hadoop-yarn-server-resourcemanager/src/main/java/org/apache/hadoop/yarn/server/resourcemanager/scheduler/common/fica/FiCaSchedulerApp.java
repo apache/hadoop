@@ -106,6 +106,9 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     queue.getMetrics().releaseResources(getUser(), 1, containerResource);
     Resources.subtractFrom(currentConsumption, containerResource);
 
+    // Clear resource utilization metrics cache.
+    lastMemoryAggregateAllocationUpdateTime = -1;
+
     return true;
   }
 

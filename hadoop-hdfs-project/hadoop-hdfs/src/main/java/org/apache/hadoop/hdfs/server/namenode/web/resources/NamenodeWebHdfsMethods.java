@@ -279,6 +279,9 @@ public class NamenodeWebHdfsMethods {
       final String renewer) throws IOException {
     final Credentials c = DelegationTokenSecretManager.createCredentials(
         namenode, ugi, renewer != null? renewer: ugi.getShortUserName());
+    if (c == null) {
+      return null;
+    }
     final Token<? extends TokenIdentifier> t = c.getAllTokens().iterator().next();
     Text kind = request.getScheme().equals("http") ? WebHdfsFileSystem.TOKEN_KIND
         : SWebHdfsFileSystem.TOKEN_KIND;

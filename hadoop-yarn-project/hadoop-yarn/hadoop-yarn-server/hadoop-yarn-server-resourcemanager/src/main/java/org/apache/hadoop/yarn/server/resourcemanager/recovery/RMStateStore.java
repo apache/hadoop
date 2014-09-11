@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AggregateAppResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
@@ -265,19 +266,21 @@ public abstract class RMStateStore extends AbstractService {
     String diagnostics;
     int exitStatus = ContainerExitStatus.INVALID;
     FinalApplicationStatus amUnregisteredFinalStatus;
+    long memorySeconds;
+    long vcoreSeconds;
 
     public ApplicationAttemptState(ApplicationAttemptId attemptId,
         Container masterContainer, Credentials appAttemptCredentials,
-        long startTime) {
+        long startTime, long memorySeconds, long vcoreSeconds) {
       this(attemptId, masterContainer, appAttemptCredentials, startTime, null,
-        null, "", null, ContainerExitStatus.INVALID);
+        null, "", null, ContainerExitStatus.INVALID, memorySeconds, vcoreSeconds);
     }
 
     public ApplicationAttemptState(ApplicationAttemptId attemptId,
         Container masterContainer, Credentials appAttemptCredentials,
         long startTime, RMAppAttemptState state, String finalTrackingUrl,
         String diagnostics, FinalApplicationStatus amUnregisteredFinalStatus,
-        int exitStatus) {
+        int exitStatus, long memorySeconds, long vcoreSeconds) {
       this.attemptId = attemptId;
       this.masterContainer = masterContainer;
       this.appAttemptCredentials = appAttemptCredentials;
@@ -287,6 +290,8 @@ public abstract class RMStateStore extends AbstractService {
       this.diagnostics = diagnostics == null ? "" : diagnostics;
       this.amUnregisteredFinalStatus = amUnregisteredFinalStatus;
       this.exitStatus = exitStatus;
+      this.memorySeconds = memorySeconds;
+      this.vcoreSeconds = vcoreSeconds;
     }
 
     public Container getMasterContainer() {
@@ -315,6 +320,12 @@ public abstract class RMStateStore extends AbstractService {
     }
     public int getAMContainerExitStatus(){
       return this.exitStatus;
+    }
+    public long getMemorySeconds() {
+      return memorySeconds;
+    }
+    public long getVcoreSeconds() {
+      return vcoreSeconds;
     }
   }
   
@@ -587,10 +598,13 @@ public abstract class RMStateStore extends AbstractService {
   public synchronized void storeNewApplicationAttempt(RMAppAttempt appAttempt) {
     Credentials credentials = getCredentialsFromAppAttempt(appAttempt);
 
+    AggregateAppResourceUsage resUsage =
+        appAttempt.getRMAppAttemptMetrics().getAggregateAppResourceUsage();
     ApplicationAttemptState attemptState =
         new ApplicationAttemptState(appAttempt.getAppAttemptId(),
           appAttempt.getMasterContainer(), credentials,
-          appAttempt.getStartTime());
+          appAttempt.getStartTime(), resUsage.getMemorySeconds(),
+          resUsage.getVcoreSeconds());
 
     dispatcher.getEventHandler().handle(
       new RMStateStoreAppAttemptEvent(attemptState));
@@ -746,7 +760,7 @@ public abstract class RMStateStore extends AbstractService {
       ApplicationAttemptState attemptState =
           new ApplicationAttemptState(appAttempt.getAppAttemptId(),
             appAttempt.getMasterContainer(), credentials,
-            appAttempt.getStartTime());
+            appAttempt.getStartTime(), 0, 0);
       appState.attempts.put(attemptState.getAttemptId(), attemptState);
     }
     

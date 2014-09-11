@@ -1322,7 +1322,7 @@ public class TestRMWebServicesApps extends JerseyTest {
       Exception {
 
     // 28 because trackingUrl not assigned yet
-    assertEquals("incorrect number of elements", 24, info.length());
+    assertEquals("incorrect number of elements", 26, info.length());
 
     verifyAppInfoGeneric(app, info.getString("id"), info.getString("user"),
         info.getString("name"), info.getString("applicationType"),

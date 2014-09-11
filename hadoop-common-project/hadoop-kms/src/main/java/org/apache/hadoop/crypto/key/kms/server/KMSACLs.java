@@ -20,6 +20,8 @@ package org.apache.hadoop.crypto.key.kms.server;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.kms.server.KMS.KMSOp;
+import org.apache.hadoop.crypto.key.kms.server.KeyAuthorizationKeyProvider.KeyACLs;
+import org.apache.hadoop.crypto.key.kms.server.KeyAuthorizationKeyProvider.KeyOpType;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -32,6 +34,7 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 /**
  * Provides access to the <code>AccessControlList</code>s used by KMS,
@@ -39,7 +42,7 @@ import java.util.concurrent.TimeUnit;
  * are defined has been updated.
  */
 @InterfaceAudience.Private
-public class KMSACLs implements Runnable {
+public class KMSACLs implements Runnable, KeyACLs {
   private static final Logger LOG = LoggerFactory.getLogger(KMSACLs.class);
 
   private static final String UNAUTHORIZED_MSG_WITH_KEY =
@@ -67,6 +70,9 @@ public class KMSACLs implements Runnable {
 
   private volatile Map<Type, AccessControlList> acls;
   private volatile Map<Type, AccessControlList> blacklistedAcls;
+  private volatile Map<String, HashMap<KeyOpType, AccessControlList>> keyAcls;
+  private final Map<KeyOpType, AccessControlList> defaultKeyAcls =
+      new HashMap<KeyOpType, AccessControlList>();
   private ScheduledExecutorService executorService;
   private long lastReload;
 
@@ -74,14 +80,15 @@ public class KMSACLs implements Runnable {
     if (conf == null) {
       conf = loadACLs();
     }
-    setACLs(conf);
+    setKMSACLs(conf);
+    setKeyACLs(conf);
   }
 
   public KMSACLs() {
     this(null);
   }
 
-  private void setACLs(Configuration conf) {
+  private void setKMSACLs(Configuration conf) {
     Map<Type, AccessControlList> tempAcls = new HashMap<Type, AccessControlList>();
     Map<Type, AccessControlList> tempBlacklist = new HashMap<Type, AccessControlList>();
     for (Type aclType : Type.values()) {
@@ -99,14 +106,69 @@ public class KMSACLs implements Runnable {
     blacklistedAcls = tempBlacklist;
   }
 
+  private void setKeyACLs(Configuration conf) {
+    Map<String, HashMap<KeyOpType, AccessControlList>> tempKeyAcls =
+        new HashMap<String, HashMap<KeyOpType,AccessControlList>>();
+    Map<String, String> allKeyACLS =
+        conf.getValByRegex(Pattern.quote(KMSConfiguration.KEY_ACL_PREFIX));
+    for (Map.Entry<String, String> keyAcl : allKeyACLS.entrySet()) {
+      String k = keyAcl.getKey();
+      // this should be of type "key.acl.<KEY_NAME>.<OP_TYPE>"
+      int keyNameStarts = KMSConfiguration.KEY_ACL_PREFIX.length();
+      int keyNameEnds = k.lastIndexOf(".");
+      if (keyNameStarts >= keyNameEnds) {
+        LOG.warn("Invalid key name '{}'", k);
+      } else {
+        String aclStr = keyAcl.getValue();
+        String keyName = k.substring(keyNameStarts, keyNameEnds);
+        String keyOp = k.substring(keyNameEnds + 1);
+        KeyOpType aclType = null;
+        try {
+          aclType = KeyOpType.valueOf(keyOp);
+        } catch (IllegalArgumentException e) {
+          LOG.warn("Invalid key Operation '{}'", keyOp);
+        }
+        if (aclType != null) {
+          // On the assumption this will be single threaded.. else we need to
+          // ConcurrentHashMap
+          HashMap<KeyOpType,AccessControlList> aclMap =
+              tempKeyAcls.get(keyName);
+          if (aclMap == null) {
+            aclMap = new HashMap<KeyOpType, AccessControlList>();
+            tempKeyAcls.put(keyName, aclMap);
+          }
+          aclMap.put(aclType, new AccessControlList(aclStr));
+          LOG.info("KEY_NAME '{}' KEY_OP '{}' ACL '{}'",
+              keyName, aclType, aclStr);
+        }
+      }
+    }
+
+    keyAcls = tempKeyAcls;
+    for (KeyOpType keyOp : KeyOpType.values()) {
+      if (!defaultKeyAcls.containsKey(keyOp)) {
+        String confKey = KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + keyOp;
+        String aclStr = conf.get(confKey);
+        if (aclStr != null) {
+          if (aclStr.equals("*")) {
+            LOG.info("Default Key ACL for  KEY_OP '{}' is set to '*'", keyOp);
+          }
+          defaultKeyAcls.put(keyOp, new AccessControlList(aclStr));
+        }
+      }
+    }
+  }
+
   @Override
   public void run() {
     try {
       if (KMSConfiguration.isACLsFileNewer(lastReload)) {
-        setACLs(loadACLs());
+        setKMSACLs(loadACLs());
+        setKeyACLs(loadACLs());
       }
     } catch (Exception ex) {
-      LOG.warn("Could not reload ACLs file: " + ex.toString(), ex);
+      LOG.warn(
+          String.format("Could not reload ACLs file: '%s'", ex.toString()), ex);
     }
   }
 
@@ -162,6 +224,31 @@ public class KMSACLs implements Runnable {
                         : UNAUTHORIZED_MSG_WITHOUT_KEY,
           ugi.getShortUserName(), operation, key));
     }
+  }
+
+  @Override
+  public boolean hasAccessToKey(String keyName, UserGroupInformation ugi,
+      KeyOpType opType) {
+    Map<KeyOpType, AccessControlList> keyAcl = keyAcls.get(keyName);
+    if (keyAcl == null) {
+      // Get KeyAcl map of DEFAULT KEY.
+      keyAcl = defaultKeyAcls;
+    }
+    // If No key acl defined for this key, check to see if
+    // there are key defaults configured for this operation
+    AccessControlList acl = keyAcl.get(opType);
+    if (acl == null) {
+      // If no acl is specified for this operation,
+      // deny access
+      return false;
+    } else {
+      return acl.isUserAllowed(ugi);
+    }
+  }
+
+  @Override
+  public boolean isACLPresent(String keyName, KeyOpType opType) {
+    return (keyAcls.containsKey(keyName) || defaultKeyAcls.containsKey(opType));
   }
 
 }

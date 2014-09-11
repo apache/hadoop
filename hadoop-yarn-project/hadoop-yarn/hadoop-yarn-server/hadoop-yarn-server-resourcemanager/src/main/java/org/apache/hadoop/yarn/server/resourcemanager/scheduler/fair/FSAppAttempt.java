@@ -146,6 +146,9 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
     // remove from preemption map if it is completed
     preemptionMap.remove(rmContainer);
+
+    // Clear resource utilization metrics cache.
+    lastMemoryAggregateAllocationUpdateTime = -1;
   }
 
   private synchronized void unreserveInternal(

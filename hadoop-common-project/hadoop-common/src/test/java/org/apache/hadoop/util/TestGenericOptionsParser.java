@@ -249,7 +249,7 @@ public class TestGenericOptionsParser extends TestCase {
     creds.writeTokenStorageFile(tmpPath, conf);
 
     new GenericOptionsParser(conf, args);
-    String fileName = conf.get("mapreduce.job.credentials.json");
+    String fileName = conf.get("mapreduce.job.credentials.binary");
     assertNotNull("files is null", fileName);
     assertEquals("files option does not match", tmpPath.toString(), fileName);
     

@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -43,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AggregateAppResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEvent;
@@ -68,6 +70,11 @@ public class SchedulerApplicationAttempt {
   
   private static final Log LOG = LogFactory
     .getLog(SchedulerApplicationAttempt.class);
+
+  private static final long MEM_AGGREGATE_ALLOCATION_CACHE_MSECS = 3000;
+  protected long lastMemoryAggregateAllocationUpdateTime = 0;
+  private long lastMemorySeconds = 0;
+  private long lastVcoreSeconds = 0;
 
   protected final AppSchedulingInfo appSchedulingInfo;
   
@@ -505,12 +512,38 @@ public class SchedulerApplicationAttempt {
     lastScheduledContainer.put(priority, currentTimeMs);
     schedulingOpportunities.setCount(priority, 0);
   }
-  
+
+  synchronized AggregateAppResourceUsage getRunningAggregateAppResourceUsage() {
+    long currentTimeMillis = System.currentTimeMillis();
+    // Don't walk the whole container list if the resources were computed
+    // recently.
+    if ((currentTimeMillis - lastMemoryAggregateAllocationUpdateTime)
+        > MEM_AGGREGATE_ALLOCATION_CACHE_MSECS) {
+      long memorySeconds = 0;
+      long vcoreSeconds = 0;
+      for (RMContainer rmContainer : this.liveContainers.values()) {
+        long usedMillis = currentTimeMillis - rmContainer.getCreationTime();
+        Resource resource = rmContainer.getContainer().getResource();
+        memorySeconds += resource.getMemory() * usedMillis /  
+            DateUtils.MILLIS_PER_SECOND;
+        vcoreSeconds += resource.getVirtualCores() * usedMillis  
+            / DateUtils.MILLIS_PER_SECOND;
+      }
+
+      lastMemoryAggregateAllocationUpdateTime = currentTimeMillis;
+      lastMemorySeconds = memorySeconds;
+      lastVcoreSeconds = vcoreSeconds;
+    }
+    return new AggregateAppResourceUsage(lastMemorySeconds, lastVcoreSeconds);
+  }
+
   public synchronized ApplicationResourceUsageReport getResourceUsageReport() {
+    AggregateAppResourceUsage resUsage = getRunningAggregateAppResourceUsage();
     return ApplicationResourceUsageReport.newInstance(liveContainers.size(),
-        reservedContainers.size(), Resources.clone(currentConsumption),
-        Resources.clone(currentReservation),
-        Resources.add(currentConsumption, currentReservation));
+               reservedContainers.size(), Resources.clone(currentConsumption),
+               Resources.clone(currentReservation),
+               Resources.add(currentConsumption, currentReservation),
+               resUsage.getMemorySeconds(), resUsage.getVcoreSeconds());
   }
 
   public synchronized Map<ContainerId, RMContainer> getLiveContainersMap() {

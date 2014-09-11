@@ -47,6 +47,7 @@ message RegisterApplicationMasterResponseProto {
   repeated ContainerProto containers_from_previous_attempts = 4;
   optional string queue = 5;
   repeated NMTokenProto nm_tokens_from_previous_attempts = 6;
+  repeated SchedulerResourceTypes scheduler_resource_types = 7;
 }
 
 message FinishApplicationMasterRequestProto {
@@ -86,6 +87,11 @@ message AllocateResponseProto {
   repeated ContainerResourceIncreaseProto increased_containers = 10;
   repeated ContainerResourceDecreaseProto decreased_containers = 11;
   optional hadoop.common.TokenProto am_rm_token = 12;
+}
+
+enum SchedulerResourceTypes {
+  MEMORY = 0;
+  CPU = 1;
 }
 
 //////////////////////////////////////////////////////
