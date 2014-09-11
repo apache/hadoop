@@ -454,6 +454,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-9989. Bug introduced in HADOOP-9374, which parses the -tokenCacheFile 
     as binary file but set it to the configuration as JSON file. (zxu via tucu)
 
+    HADOOP-11085. Excessive logging by org.apache.hadoop.util.Progress when
+    value is NaN (Mit Desai via jlowe)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
