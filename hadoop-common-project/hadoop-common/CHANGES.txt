@@ -457,6 +457,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11085. Excessive logging by org.apache.hadoop.util.Progress when
     value is NaN (Mit Desai via jlowe)
 
+    HADOOP-11083. After refactoring of HTTP proxyuser to common, doAs param is 
+    case sensitive. (tucu)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -795,6 +795,23 @@ public class TestWebDelegationToken {
       jetty.start();
       final URL url = new URL(getJettyURL() + "/foo/bar");
 
+      // proxyuser using raw HTTP, verifying doAs is case insensitive
+      String strUrl = String.format("%s?user.name=%s&doas=%s", 
+          url.toExternalForm(), FOO_USER, OK_USER);
+      HttpURLConnection conn = 
+          (HttpURLConnection) new URL(strUrl).openConnection();
+      Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      List<String> ret = IOUtils.readLines(conn.getInputStream());
+      Assert.assertEquals(1, ret.size());
+      Assert.assertEquals(OK_USER, ret.get(0));
+      strUrl = String.format("%s?user.name=%s&DOAS=%s", url.toExternalForm(), 
+          FOO_USER, OK_USER);
+      conn = (HttpURLConnection) new URL(strUrl).openConnection();
+      Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      ret = IOUtils.readLines(conn.getInputStream());
+      Assert.assertEquals(1, ret.size());
+      Assert.assertEquals(OK_USER, ret.get(0));
+
       UserGroupInformation ugi = UserGroupInformation.createRemoteUser(FOO_USER);
       ugi.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
