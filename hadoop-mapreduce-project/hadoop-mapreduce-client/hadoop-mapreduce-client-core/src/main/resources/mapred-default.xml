@@ -773,7 +773,12 @@
   <description>Whether to enable the small-jobs "ubertask" optimization,
   which runs "sufficiently small" jobs sequentially within a single JVM.
   "Small" is defined by the following maxmaps, maxreduces, and maxbytes
-  settings.  Users may override this value.
+  settings. Note that configurations for application masters also affect
+  the "Small" definition - yarn.app.mapreduce.am.resource.mb must be
+  larger than both mapreduce.map.memory.mb and mapreduce.reduce.memory.mb,
+  and yarn.app.mapreduce.am.resource.cpu-vcores must be larger than
+  both mapreduce.map.cpu.vcores and mapreduce.reduce.cpu.vcores to enable
+  ubertask. Users may override this value.
   </description>
 </property>
 
