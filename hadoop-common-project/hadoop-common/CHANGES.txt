@@ -102,9 +102,6 @@ Trunk (Unreleased)
     HADOOP-9486. Promoted Windows and Shell related utils from YARN to Hadoop
     Common. (Chris Nauroth via vinodkv)
 
-    HADOOP-9540. Expose the InMemoryS3 and S3N FilesystemStores implementations
-    for Unit testing. (Hari via stevel)
-
     HADOOP-8844. Add a plaintext fs -text test-case.
     (Akira AJISAKA via harsh)
 
@@ -510,6 +507,9 @@ Release 2.6.0 - UNRELEASED
     (Xiaoyu Yao via cnauroth)
 
     HADOOP-10758. KMS: add ACLs on per key basis. (tucu)
+
+    HADOOP-9540. Expose the InMemoryS3 and S3N FilesystemStores implementations
+    for Unit testing. (Hari via stevel)
 
   OPTIMIZATIONS
 
