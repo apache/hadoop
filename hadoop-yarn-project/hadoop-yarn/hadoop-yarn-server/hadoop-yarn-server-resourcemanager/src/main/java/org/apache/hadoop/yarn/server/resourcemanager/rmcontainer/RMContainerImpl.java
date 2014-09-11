@@ -24,6 +24,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
+import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -40,6 +41,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRunningOnNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAllocatedEvent;
@@ -488,7 +490,7 @@ public class RMContainerImpl implements RMContainer {
       // Inform AppAttempt
       // container.getContainer() can return null when a RMContainer is a
       // reserved container
-      updateMetricsIfPreempted(container);
+      updateAttemptMetrics(container);
 
       container.eventHandler.handle(new RMAppAttemptContainerFinishedEvent(
         container.appAttemptId, finishedEvent.getRemoteContainerStatus()));
@@ -497,18 +499,26 @@ public class RMContainerImpl implements RMContainer {
         container);
     }
 
-    private static void updateMetricsIfPreempted(RMContainerImpl container) {
+    private static void updateAttemptMetrics(RMContainerImpl container) {
       // If this is a preempted container, update preemption metrics
+      Resource resource = container.getContainer().getResource();
+      RMAppAttempt rmAttempt = container.rmContext.getRMApps()
+          .get(container.getApplicationAttemptId().getApplicationId())
+          .getCurrentAppAttempt();
       if (ContainerExitStatus.PREEMPTED == container.finishedStatus
         .getExitStatus()) {
-
-        Resource resource = container.getContainer().getResource();
-        RMAppAttempt rmAttempt =
-            container.rmContext.getRMApps()
-              .get(container.getApplicationAttemptId().getApplicationId())
-              .getCurrentAppAttempt();
         rmAttempt.getRMAppAttemptMetrics().updatePreemptionInfo(resource,
           container);
+      }
+
+      if (rmAttempt != null) {
+        long usedMillis = container.finishTime - container.creationTime;
+        long memorySeconds = resource.getMemory()
+                              * usedMillis / DateUtils.MILLIS_PER_SECOND;
+        long vcoreSeconds = resource.getVirtualCores()
+                             * usedMillis / DateUtils.MILLIS_PER_SECOND;
+        rmAttempt.getRMAppAttemptMetrics()
+                  .updateAggregateAppResourceUsage(memorySeconds,vcoreSeconds);
       }
     }
   }

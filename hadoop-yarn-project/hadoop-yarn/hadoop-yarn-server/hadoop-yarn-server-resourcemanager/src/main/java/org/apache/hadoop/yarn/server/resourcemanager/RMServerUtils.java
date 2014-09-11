@@ -236,5 +236,5 @@ public class RMServerUtils {
     DUMMY_APPLICATION_RESOURCE_USAGE_REPORT =
       BuilderUtils.newApplicationResourceUsageReport(-1, -1,
           Resources.createResource(-1, -1), Resources.createResource(-1, -1),
-          Resources.createResource(-1, -1));
+          Resources.createResource(-1, -1), 0, 0);
 }

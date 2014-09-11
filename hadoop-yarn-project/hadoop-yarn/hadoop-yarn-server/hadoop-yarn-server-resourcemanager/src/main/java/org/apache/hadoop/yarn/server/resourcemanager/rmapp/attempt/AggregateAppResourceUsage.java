@@ -16,44 +16,45 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
+package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 
-import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 
-public class RMAppMetrics {
-  final Resource resourcePreempted;
-  final int numNonAMContainersPreempted;
-  final int numAMContainersPreempted;
-  final long memorySeconds;
-  final long vcoreSeconds;
+@Private
+public class AggregateAppResourceUsage {
+  long memorySeconds;
+  long vcoreSeconds;
 
-  public RMAppMetrics(Resource resourcePreempted,
-      int numNonAMContainersPreempted, int numAMContainersPreempted,
-      long memorySeconds, long vcoreSeconds) {
-    this.resourcePreempted = resourcePreempted;
-    this.numNonAMContainersPreempted = numNonAMContainersPreempted;
-    this.numAMContainersPreempted = numAMContainersPreempted;
+  public AggregateAppResourceUsage(long memorySeconds, long vcoreSeconds) {
     this.memorySeconds = memorySeconds;
     this.vcoreSeconds = vcoreSeconds;
   }
 
-  public Resource getResourcePreempted() {
-    return resourcePreempted;
-  }
-
-  public int getNumNonAMContainersPreempted() {
-    return numNonAMContainersPreempted;
-  }
-
-  public int getNumAMContainersPreempted() {
-    return numAMContainersPreempted;
-  }
-
+  /**
+   * @return the memorySeconds
+   */
   public long getMemorySeconds() {
     return memorySeconds;
   }
 
+  /**
+   * @param memorySeconds the memorySeconds to set
+   */
+  public void setMemorySeconds(long memorySeconds) {
+    this.memorySeconds = memorySeconds;
+  }
+
+  /**
+   * @return the vcoreSeconds
+   */
   public long getVcoreSeconds() {
     return vcoreSeconds;
+  }
+
+  /**
+   * @param vcoreSeconds the vcoreSeconds to set
+   */
+  public void setVcoreSeconds(long vcoreSeconds) {
+    this.vcoreSeconds = vcoreSeconds;
   }
 }
