@@ -19,6 +19,7 @@ package org.apache.hadoop.crypto.key.kms.server;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.security.SslSocketConnector;
@@ -158,7 +159,7 @@ public class MiniKMS {
     if (!kmsFile.exists()) {
       Configuration kms = new Configuration(false);
       kms.set("hadoop.security.key.provider.path",
-          "jceks://file@" + kmsConfDir + "/kms.keystore");
+          "jceks://file@" + new Path(kmsConfDir, "kms.keystore").toUri());
       kms.set("hadoop.kms.authentication.type", "simple");
       Writer writer = new FileWriter(kmsFile);
       kms.writeXml(writer);
