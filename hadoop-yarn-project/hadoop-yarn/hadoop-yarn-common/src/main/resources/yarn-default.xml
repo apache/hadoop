@@ -616,21 +616,29 @@
   </property>
 
   <property>
-    <description>Number of worker threads that write the history data.</description>
-    <name>yarn.resourcemanager.history-writer.multi-threaded-dispatcher.pool-size</name>
-    <value>10</value>
-  </property>
-
-  <property>
     <description>The class to use as the configuration provider.
     If org.apache.hadoop.yarn.LocalConfigurationProvider is used,
     the local configuration will be loaded.
     If org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider is used,
     the configuration which will be loaded should be uploaded to remote File system first.
-    </description>>
+    </description>
     <name>yarn.resourcemanager.configuration.provider-class</name>
     <value>org.apache.hadoop.yarn.LocalConfigurationProvider</value>
     <!-- <value>org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider</value> -->
+  </property>
+
+  <property>
+    <description>The setting that controls whether yarn system metrics is
+    published on the timeline server or not by RM.</description>
+    <name>yarn.resourcemanager.system-metrics-publisher.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>Number of worker threads that send the yarn system metrics
+    data.</description>
+    <name>yarn.resourcemanager.system-metrics-publisher.dispatcher.pool-size</name>
+    <value>10</value>
   </property>
 
   <!-- Node Manager Configs -->
@@ -1316,38 +1324,6 @@
     <description>The Kerberos keytab for the timeline server.</description>
     <name>yarn.timeline-service.keytab</name>
     <value>/etc/krb5.keytab</value>
-  </property>
-
-  <property>
-    <description>Indicate to ResourceManager as well as clients whether
-    history-service is enabled or not. If enabled, ResourceManager starts
-    recording historical data that ApplicationHistory service can consume.
-    Similarly, clients can redirect to the history service when applications
-    finish if this is enabled.</description>
-    <name>yarn.timeline-service.generic-application-history.enabled</name>
-    <value>false</value>
-  </property>
-
-  <property>
-    <description>URI pointing to the location of the FileSystem path where
-    the history will be persisted. This must be supplied when using
-    org.apache.hadoop.yarn.server.applicationhistoryservice.FileSystemApplicationHistoryStore
-    as the value for yarn.timeline-service.generic-application-history.store-class</description>
-    <name>yarn.timeline-service.generic-application-history.fs-history-store.uri</name>
-    <value>${hadoop.tmp.dir}/yarn/timeline/generic-history</value>
-  </property>
-
-  <property>
-    <description>T-file compression types used to compress history data.</description>
-    <name>yarn.timeline-service.generic-application-history.fs-history-store.compression-type</name>
-    <value>none</value>
-  </property>
-  
-  <property>
-	<description>Store class name for history store, defaulting to file
-	system store </description>
-	<name>yarn.timeline-service.generic-application-history.store-class</name>
-	<value>org.apache.hadoop.yarn.server.applicationhistoryservice.FileSystemApplicationHistoryStore</value>
   </property>
 
   <!-- Other configuration -->

@@ -33,6 +33,7 @@ public class AppAttemptInfo {
   protected String host;
   protected int rpcPort;
   protected String trackingUrl;
+  protected String originalTrackingUrl;
   protected String diagnosticsInfo;
   protected YarnApplicationAttemptState appAttemptState;
   protected String amContainerId;
@@ -46,6 +47,7 @@ public class AppAttemptInfo {
     host = appAttempt.getHost();
     rpcPort = appAttempt.getRpcPort();
     trackingUrl = appAttempt.getTrackingUrl();
+    originalTrackingUrl = appAttempt.getOriginalTrackingUrl();
     diagnosticsInfo = appAttempt.getDiagnostics();
     appAttemptState = appAttempt.getYarnApplicationAttemptState();
     if (appAttempt.getAMContainerId() != null) {
@@ -67,6 +69,10 @@ public class AppAttemptInfo {
 
   public String getTrackingUrl() {
     return trackingUrl;
+  }
+
+  public String getOriginalTrackingUrl() {
+    return originalTrackingUrl;
   }
 
   public String getDiagnosticsInfo() {

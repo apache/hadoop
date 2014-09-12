@@ -170,7 +170,16 @@ public class ApplicationHistoryServer extends CompositeService {
 
   private ApplicationHistoryManager createApplicationHistoryManager(
       Configuration conf) {
-    return new ApplicationHistoryManagerImpl();
+    // Backward compatibility:
+    // APPLICATION_HISTORY_STORE is neither null nor empty, it means that the
+    // user has enabled it explicitly.
+    if (conf.get(YarnConfiguration.APPLICATION_HISTORY_STORE) == null ||
+        conf.get(YarnConfiguration.APPLICATION_HISTORY_STORE).length() == 0) {
+      return new ApplicationHistoryManagerOnTimelineStore(timelineDataManager);
+    } else {
+      LOG.warn("The filesystem based application history store is deprecated.");
+      return new ApplicationHistoryManagerImpl();
+    }
   }
 
   private TimelineStore createTimelineStore(

@@ -51,14 +51,15 @@ public abstract class ApplicationAttemptReport {
   @Unstable
   public static ApplicationAttemptReport newInstance(
       ApplicationAttemptId applicationAttemptId, String host, int rpcPort,
-      String url, String diagnostics, YarnApplicationAttemptState state,
-      ContainerId amContainerId) {
+      String url, String oUrl, String diagnostics,
+      YarnApplicationAttemptState state, ContainerId amContainerId) {
     ApplicationAttemptReport report =
         Records.newRecord(ApplicationAttemptReport.class);
     report.setApplicationAttemptId(applicationAttemptId);
     report.setHost(host);
     report.setRpcPort(rpcPort);
     report.setTrackingUrl(url);
+    report.setOriginalTrackingUrl(oUrl);
     report.setDiagnostics(diagnostics);
     report.setYarnApplicationAttemptState(state);
     report.setAMContainerId(amContainerId);
@@ -134,6 +135,19 @@ public abstract class ApplicationAttemptReport {
   @Private
   @Unstable
   public abstract void setTrackingUrl(String url);
+
+  /**
+   * Get the <em>original tracking url</em> for the application attempt.
+   * 
+   * @return <em>original tracking url</em> for the application attempt
+   */
+  @Public
+  @Unstable
+  public abstract String getOriginalTrackingUrl();
+
+  @Private
+  @Unstable
+  public abstract void setOriginalTrackingUrl(String oUrl);
 
   /**
    * Get the <code>ApplicationAttemptId</code> of this attempt of the

@@ -133,7 +133,7 @@ public class TestYarnCLI {
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         applicationId, 1);
     ApplicationAttemptReport attemptReport = ApplicationAttemptReport
-        .newInstance(attemptId, "host", 124, "url", "diagnostics",
+        .newInstance(attemptId, "host", 124, "url", "oUrl", "diagnostics",
             YarnApplicationAttemptState.FINISHED, ContainerId.newInstance(
                 attemptId, 1));
     when(
@@ -169,11 +169,11 @@ public class TestYarnCLI {
     ApplicationAttemptId attemptId1 = ApplicationAttemptId.newInstance(
         applicationId, 2);
     ApplicationAttemptReport attemptReport = ApplicationAttemptReport
-        .newInstance(attemptId, "host", 124, "url", "diagnostics",
+        .newInstance(attemptId, "host", 124, "url", "oUrl", "diagnostics",
             YarnApplicationAttemptState.FINISHED, ContainerId.newInstance(
                 attemptId, 1));
     ApplicationAttemptReport attemptReport1 = ApplicationAttemptReport
-        .newInstance(attemptId1, "host", 124, "url", "diagnostics",
+        .newInstance(attemptId1, "host", 124, "url", "oUrl", "diagnostics",
             YarnApplicationAttemptState.FINISHED, ContainerId.newInstance(
                 attemptId1, 1));
     List<ApplicationAttemptReport> reports = new ArrayList<ApplicationAttemptReport>();

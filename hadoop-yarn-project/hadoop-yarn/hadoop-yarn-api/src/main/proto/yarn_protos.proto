@@ -202,6 +202,7 @@ message ApplicationAttemptReportProto {
   optional string diagnostics = 5 [default = "N/A"];
   optional YarnApplicationAttemptStateProto yarn_application_attempt_state = 6;
   optional ContainerIdProto am_container_id = 7;
+  optional string original_tracking_url = 8;
 }
 
 enum NodeStateProto {

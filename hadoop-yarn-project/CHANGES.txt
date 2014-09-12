@@ -50,6 +50,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2440. Enabled Nodemanagers to limit the aggregate cpu usage across all
     containers to a preconfigured limit. (Varun Vasudev via vinodkv)
 
+    YARN-2033. YARN-2033. Merging generic-history into the Timeline Store 
+    (Zhijie Shen via junping_du)
+
   IMPROVEMENTS
 
     YARN-2242. Improve exception information on AM launch crashes. (Li Lu 
