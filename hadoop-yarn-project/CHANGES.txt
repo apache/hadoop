@@ -182,6 +182,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2448. Changed ApplicationMasterProtocol to expose RM-recognized resource
     types to the AMs. (Varun Vasudev via vinodkv)
 
+    YARN-2538. Added logs when RM sends roll-overed AMRMToken to AM. (Xuan Gong
+    via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES

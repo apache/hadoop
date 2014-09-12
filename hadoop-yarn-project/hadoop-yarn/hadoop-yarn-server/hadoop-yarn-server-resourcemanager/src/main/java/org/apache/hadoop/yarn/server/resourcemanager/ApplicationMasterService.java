@@ -581,6 +581,8 @@ public class ApplicationMasterService extends AbstractService implements
           .newInstance(amrmToken.getIdentifier(), amrmToken.getKind()
             .toString(), amrmToken.getPassword(), amrmToken.getService()
             .toString()));
+        LOG.info("The AMRMToken has been rolled-over. Send new AMRMToken back"
+            + " to application: " + appAttemptId.getApplicationId());
       }
 
       /*
