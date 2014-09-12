@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -41,6 +42,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 
@@ -222,6 +224,46 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * @throws YarnException
    */
   void killAllAppsInQueue(String queueName) throws YarnException;
+
+  /**
+   * Remove an existing queue. Implementations might limit when a queue could be
+   * removed (e.g., must have zero entitlement, and no applications running, or
+   * must be a leaf, etc..).
+   *
+   * @param queueName name of the queue to remove
+   * @throws YarnException
+   */
+  void removeQueue(String queueName) throws YarnException;
+
+  /**
+   * Add to the scheduler a new Queue. Implementations might limit what type of
+   * queues can be dynamically added (e.g., Queue must be a leaf, must be
+   * attached to existing parent, must have zero entitlement).
+   *
+   * @param newQueue the queue being added.
+   * @throws YarnException
+   */
+  void addQueue(Queue newQueue) throws YarnException;
+
+  /**
+   * This method increase the entitlement for current queue (must respect
+   * invariants, e.g., no overcommit of parents, non negative, etc.).
+   * Entitlement is a general term for weights in FairScheduler, capacity for
+   * the CapacityScheduler, etc.
+   *
+   * @param queue the queue for which we change entitlement
+   * @param entitlement the new entitlement for the queue (capacity,
+   *              maxCapacity, etc..)
+   * @throws YarnException
+   */
+  void setEntitlement(String queue, QueueEntitlement entitlement)
+      throws YarnException;
+
+  /**
+   * Gets the list of names for queues managed by the Reservation System
+   * @return the list of queues which support reservations
+   */
+  public Set<String> getPlanQueues() throws YarnException;  
 
   /**
    * Return a collection of the resource types that are considered when
