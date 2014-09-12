@@ -138,12 +138,12 @@ public class BuilderUtils {
   }
 
   public static ContainerId newContainerId(ApplicationAttemptId appAttemptId,
-      int containerId) {
+      long containerId) {
     return ContainerId.newInstance(appAttemptId, containerId);
   }
 
   public static ContainerId newContainerId(int appId, int appAttemptId,
-      long timestamp, int id) {
+      long timestamp, long id) {
     ApplicationId applicationId = newApplicationId(timestamp, appId);
     ApplicationAttemptId applicationAttemptId = newApplicationAttemptId(
         applicationId, appAttemptId);

@@ -185,6 +185,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2538. Added logs when RM sends roll-overed AMRMToken to AM. (Xuan Gong
     via zjshen)
 
+    YARN-2229. Changed the integer field of ContainerId to be long type.
+    (Tsuyoshi OZAWA via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
