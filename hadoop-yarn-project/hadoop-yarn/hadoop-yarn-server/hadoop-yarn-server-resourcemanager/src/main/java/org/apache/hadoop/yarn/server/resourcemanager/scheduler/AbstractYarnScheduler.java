@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMoveEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
@@ -218,6 +219,24 @@ public abstract class AbstractYarnScheduler
       throws YarnException {
     throw new YarnException(getClass().getSimpleName()
         + " does not support moving apps between queues");
+  }
+
+  public void removeQueue(String queueName) throws YarnException {
+    throw new YarnException(getClass().getSimpleName()
+        + " does not support removing queues");
+  }
+
+  @Override
+  public void addQueue(Queue newQueue) throws YarnException {
+    throw new YarnException(getClass().getSimpleName()
+        + " does not support this operation");
+  }
+
+  @Override
+  public void setEntitlement(String queue, QueueEntitlement entitlement)
+      throws YarnException {
+    throw new YarnException(getClass().getSimpleName()
+        + " does not support this operation");
   }
 
   private void killOrphanContainerOnNode(RMNode node,
@@ -502,5 +521,11 @@ public abstract class AbstractYarnScheduler
   @Override
   public EnumSet<SchedulerResourceTypes> getSchedulingResourceTypes() {
     return EnumSet.of(SchedulerResourceTypes.MEMORY);
+  }
+
+  @Override
+  public Set<String> getPlanQueues() throws YarnException {
+    throw new YarnException(getClass().getSimpleName()
+        + " does not support reservations");
   }
 }
