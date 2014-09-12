@@ -217,6 +217,55 @@ public class TestCrossOriginFilter {
     verify(mockChain).doFilter(mockReq, mockRes);
   }
 
+  @Test
+  public void testCrossOriginFilterAfterRestart() throws ServletException {
+
+    // Setup the configuration settings of the server
+    Map<String, String> conf = new HashMap<String, String>();
+    conf.put(CrossOriginFilter.ALLOWED_ORIGINS, "example.com");
+    conf.put(CrossOriginFilter.ALLOWED_HEADERS, "X-Requested-With,Accept");
+    conf.put(CrossOriginFilter.ALLOWED_METHODS, "GET,POST");
+    FilterConfig filterConfig = new FilterConfigTest(conf);
+
+    // Object under test
+    CrossOriginFilter filter = new CrossOriginFilter();
+    filter.init(filterConfig);
+
+    //verify filter values
+    Assert.assertTrue("Allowed headers do not match",
+        filter.getAllowedHeadersHeader()
+        .compareTo("X-Requested-With,Accept") == 0);
+    Assert.assertTrue("Allowed methods do not match",
+        filter.getAllowedMethodsHeader()
+        .compareTo("GET,POST") == 0);
+    Assert.assertTrue(filter.isOriginAllowed("example.com"));
+
+    //destroy filter values and clear conf
+    filter.destroy();
+    conf.clear();
+
+    // Setup the configuration settings of the server
+    conf.put(CrossOriginFilter.ALLOWED_ORIGINS, "newexample.com");
+    conf.put(CrossOriginFilter.ALLOWED_HEADERS, "Content-Type,Origin");
+    conf.put(CrossOriginFilter.ALLOWED_METHODS, "GET,HEAD");
+    filterConfig = new FilterConfigTest(conf);
+
+    //initialize filter
+    filter.init(filterConfig);
+
+    //verify filter values
+    Assert.assertTrue("Allowed headers do not match",
+        filter.getAllowedHeadersHeader()
+        .compareTo("Content-Type,Origin") == 0);
+    Assert.assertTrue("Allowed methods do not match",
+        filter.getAllowedMethodsHeader()
+        .compareTo("GET,HEAD") == 0);
+    Assert.assertTrue(filter.isOriginAllowed("newexample.com"));
+
+    //destroy filter values
+    filter.destroy();
+  }
+
   private static class FilterConfigTest implements FilterConfig {
 
     final Map<String, String> map;

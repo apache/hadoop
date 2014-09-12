@@ -150,8 +150,8 @@ public class CrossOriginFilter implements Filter {
     if (allowedMethodsConfig == null) {
       allowedMethodsConfig = ALLOWED_METHODS_DEFAULT;
     }
-    allowedMethods =
-        Arrays.asList(allowedMethodsConfig.trim().split("\\s*,\\s*"));
+    allowedMethods.addAll(
+        Arrays.asList(allowedMethodsConfig.trim().split("\\s*,\\s*")));
     LOG.info("Allowed Methods: " + getAllowedMethodsHeader());
   }
 
@@ -161,8 +161,8 @@ public class CrossOriginFilter implements Filter {
     if (allowedHeadersConfig == null) {
       allowedHeadersConfig = ALLOWED_HEADERS_DEFAULT;
     }
-    allowedHeaders =
-        Arrays.asList(allowedHeadersConfig.trim().split("\\s*,\\s*"));
+    allowedHeaders.addAll(
+        Arrays.asList(allowedHeadersConfig.trim().split("\\s*,\\s*")));
     LOG.info("Allowed Headers: " + getAllowedHeadersHeader());
   }
 
@@ -172,8 +172,8 @@ public class CrossOriginFilter implements Filter {
     if (allowedOriginsConfig == null) {
       allowedOriginsConfig = ALLOWED_ORIGINS_DEFAULT;
     }
-    allowedOrigins =
-        Arrays.asList(allowedOriginsConfig.trim().split("\\s*,\\s*"));
+    allowedOrigins.addAll(
+        Arrays.asList(allowedOriginsConfig.trim().split("\\s*,\\s*")));
     allowAllOrigins = allowedOrigins.contains("*");
     LOG.info("Allowed Origins: " + StringUtils.join(allowedOrigins, ','));
     LOG.info("Allow All Origins: " + allowAllOrigins);
