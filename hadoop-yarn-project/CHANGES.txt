@@ -23,6 +23,8 @@ Trunk - Unreleased
 
     YARN-2436. [post-HADOOP-9902] yarn application help doesn't work (aw)
 
+    YARN-2525. yarn logs command gives error on trunk (Akira AJISAKA via aw)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
