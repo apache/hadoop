@@ -117,6 +117,10 @@ public abstract class MockAsm extends MockApps {
       throw new UnsupportedOperationException("Not supported yet.");
     }
     @Override
+    public String getOriginalTrackingUrl() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+    @Override
     public int getMaxAppAttempts() {
       throw new UnsupportedOperationException("Not supported yet.");
     }

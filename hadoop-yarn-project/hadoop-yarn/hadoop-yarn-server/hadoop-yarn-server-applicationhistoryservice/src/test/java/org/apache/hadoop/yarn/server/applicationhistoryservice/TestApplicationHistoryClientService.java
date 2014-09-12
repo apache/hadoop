@@ -64,6 +64,7 @@ public class TestApplicationHistoryClientService extends
         WebAppUtils.getAHSWebAppURLWithoutScheme(config) +
         "/applicationhistory/logs/localhost:0/container_0_0001_01_000001/" +
         "container_0_0001_01_000001/test user";
+    config.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED, true);
     config.setClass(YarnConfiguration.APPLICATION_HISTORY_STORE,
       MemoryApplicationHistoryStore.class, ApplicationHistoryStore.class);
     historyServer.init(config);

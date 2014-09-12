@@ -23,11 +23,12 @@ import static org.apache.hadoop.yarn.webapp.YarnWebParams.APP_STATE;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR_VALUE;
 
-import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.HashSet;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.api.ApplicationContext;
@@ -70,10 +71,21 @@ public class AppsBlock extends HtmlBlock {
       }
     }
 
+    UserGroupInformation callerUGI = getCallerUGI();
     Collection<ApplicationReport> appReports;
     try {
-      appReports = appContext.getAllApplications().values();
-    } catch (IOException e) {
+      if (callerUGI == null) {
+        appReports = appContext.getAllApplications().values();
+      } else {
+        appReports = callerUGI.doAs(
+            new PrivilegedExceptionAction<Collection<ApplicationReport>> () {
+          @Override
+          public Collection<ApplicationReport> run() throws Exception {
+            return appContext.getAllApplications().values();
+          }
+        });
+      }
+    } catch (Exception e) {
       String message = "Failed to read the applications.";
       LOG.error(message, e);
       html.p()._(message)._();
@@ -86,7 +98,7 @@ public class AppsBlock extends HtmlBlock {
         continue;
       }
       AppInfo app = new AppInfo(appReport);
-      String percent = String.format("%.1f", app.getProgress());
+      String percent = String.format("%.1f", app.getProgress() * 100.0F);
       // AppID numerical value parsed by parseHadoopID in yarn.dt.plugins.js
       appsTableData
         .append("[\"<a href='")

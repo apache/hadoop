@@ -23,7 +23,6 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.util.Times;
@@ -50,8 +49,6 @@ public class AppInfo {
   protected long startedTime;
   protected long finishedTime;
   protected long elapsedTime;
-  protected int allocatedMB;
-  protected int allocatedVCores;
 
   public AppInfo() {
     // JAXB needs this
@@ -77,12 +74,6 @@ public class AppInfo {
     finishedTime = app.getFinishTime();
     elapsedTime = Times.elapsed(startedTime, finishedTime);
     finalAppStatus = app.getFinalApplicationStatus();
-    ApplicationResourceUsageReport usage =
-        app.getApplicationResourceUsageReport();
-    if (usage != null) {
-      allocatedMB = usage.getUsedResources().getMemory();
-      allocatedVCores = usage.getUsedResources().getVirtualCores();
-    }
     progress = app.getProgress();
   }
 
@@ -156,14 +147,6 @@ public class AppInfo {
 
   public long getElapsedTime() {
     return elapsedTime;
-  }
-
-  public int getAllocatedMB() {
-    return allocatedMB;
-  }
-
-  public int getAllocatedVCores() {
-    return allocatedVCores;
   }
 
 }

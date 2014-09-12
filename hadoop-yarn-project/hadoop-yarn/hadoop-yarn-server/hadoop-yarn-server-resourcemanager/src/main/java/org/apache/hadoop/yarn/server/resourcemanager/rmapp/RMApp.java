@@ -172,6 +172,12 @@ public interface RMApp extends EventHandler<RMAppEvent> {
   String getTrackingUrl();
 
   /**
+   * The original tracking url for the application master.
+   * @return the original tracking url for the application master.
+   */
+  String getOriginalTrackingUrl();
+
+  /**
    * the diagnostics information for the application master.
    * @return the diagnostics information for the application master.
    */

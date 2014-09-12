@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.Task;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
+import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
@@ -145,6 +146,8 @@ public class TestFifoScheduler {
     RMApplicationHistoryWriter writer = mock(RMApplicationHistoryWriter.class);
     RMContext rmContext = new RMContextImpl(dispatcher, null,
         null, null, null, null, null, null, null, writer);
+    ((RMContextImpl) rmContext).setSystemMetricsPublisher(
+        mock(SystemMetricsPublisher.class));
 
     FifoScheduler scheduler = new FifoScheduler();
     Configuration conf = new Configuration();
@@ -188,6 +191,8 @@ public class TestFifoScheduler {
     RMApplicationHistoryWriter writer = mock(RMApplicationHistoryWriter.class);
     RMContext rmContext = new RMContextImpl(dispatcher, null, null, null, null,
         null, containerTokenSecretManager, nmTokenSecretManager, null, writer);
+    ((RMContextImpl) rmContext).setSystemMetricsPublisher(
+        mock(SystemMetricsPublisher.class));
 
     FifoScheduler scheduler = new FifoScheduler();
     scheduler.setRMContext(rmContext);
@@ -257,6 +262,8 @@ public class TestFifoScheduler {
     RMApplicationHistoryWriter writer = mock(RMApplicationHistoryWriter.class);
     RMContext rmContext = new RMContextImpl(dispatcher, null, null, null, null,
         null, containerTokenSecretManager, nmTokenSecretManager, null, writer);
+    ((RMContextImpl) rmContext).setSystemMetricsPublisher(
+        mock(SystemMetricsPublisher.class));
 
     FifoScheduler scheduler = new FifoScheduler(){
       @SuppressWarnings("unused")

@@ -25,6 +25,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -72,6 +73,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWri
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
+import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
@@ -134,6 +136,7 @@ public class TestRMAppAttemptTransitions {
   private AMLivelinessMonitor amLivelinessMonitor;
   private AMLivelinessMonitor amFinishingMonitor;
   private RMApplicationHistoryWriter writer;
+  private SystemMetricsPublisher publisher;
 
   private RMStateStore store;
 
@@ -246,6 +249,8 @@ public class TestRMAppAttemptTransitions {
     
     store = mock(RMStateStore.class);
     ((RMContextImpl) rmContext).setStateStore(store);
+    publisher = mock(SystemMetricsPublisher.class);
+    ((RMContextImpl) rmContext).setSystemMetricsPublisher(publisher);
     
     scheduler = mock(YarnScheduler.class);
     masterService = mock(ApplicationMasterService.class);
@@ -1376,6 +1381,11 @@ public class TestRMAppAttemptTransitions {
         ArgumentCaptor.forClass(RMAppAttemptState.class);
     verify(writer).applicationAttemptFinished(
         any(RMAppAttempt.class), finalState.capture());
+    Assert.assertEquals(state, finalState.getValue());
+    finalState =
+        ArgumentCaptor.forClass(RMAppAttemptState.class);
+    verify(publisher).appAttemptFinished(any(RMAppAttempt.class), finalState.capture(),
+        anyLong());
     Assert.assertEquals(state, finalState.getValue());
   }
 

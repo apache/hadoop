@@ -21,10 +21,11 @@ package org.apache.hadoop.yarn.server.webapp;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.APPLICATION_ID;
 
-import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -70,10 +71,22 @@ public class AppBlock extends HtmlBlock {
       return;
     }
 
+    final ApplicationId appIDFinal = appID;
+    UserGroupInformation callerUGI = getCallerUGI();
     ApplicationReport appReport;
     try {
-      appReport = appContext.getApplication(appID);
-    } catch (IOException e) {
+      if (callerUGI == null) {
+        appReport = appContext.getApplication(appID);
+      } else {
+        appReport = callerUGI.doAs(
+            new PrivilegedExceptionAction<ApplicationReport> () {
+          @Override
+          public ApplicationReport run() throws Exception {
+            return appContext.getApplication(appIDFinal);
+          }
+        });
+      }
+    } catch (Exception e) {
       String message = "Failed to read the application " + appID + ".";
       LOG.error(message, e);
       html.p()._(message)._();
@@ -106,8 +119,18 @@ public class AppBlock extends HtmlBlock {
 
     Collection<ApplicationAttemptReport> attempts;
     try {
-      attempts = appContext.getApplicationAttempts(appID).values();
-    } catch (IOException e) {
+      if (callerUGI == null) {
+        attempts = appContext.getApplicationAttempts(appID).values();
+      } else {
+        attempts = callerUGI.doAs(
+            new PrivilegedExceptionAction<Collection<ApplicationAttemptReport>> () {
+          @Override
+          public Collection<ApplicationAttemptReport> run() throws Exception {
+            return appContext.getApplicationAttempts(appIDFinal).values();
+          }
+        });
+      }
+    } catch (Exception e) {
       String message =
           "Failed to read the attempts of the application " + appID + ".";
       LOG.error(message, e);
@@ -122,14 +145,24 @@ public class AppBlock extends HtmlBlock {
           ._()._().tbody();
 
     StringBuilder attemptsTableData = new StringBuilder("[\n");
-    for (ApplicationAttemptReport appAttemptReport : attempts) {
+    for (final ApplicationAttemptReport appAttemptReport : attempts) {
       AppAttemptInfo appAttempt = new AppAttemptInfo(appAttemptReport);
       ContainerReport containerReport;
       try {
-        containerReport =
-            appContext.getAMContainer(appAttemptReport
+        if (callerUGI == null) {
+          containerReport = appContext.getAMContainer(appAttemptReport
               .getApplicationAttemptId());
-      } catch (IOException e) {
+        } else {
+          containerReport = callerUGI.doAs(
+              new PrivilegedExceptionAction<ContainerReport> () {
+            @Override
+            public ContainerReport run() throws Exception {
+              return appContext.getAMContainer(appAttemptReport
+                  .getApplicationAttemptId());
+            }
+          });
+        }
+      } catch (Exception e) {
         String message =
             "Failed to read the AM container of the application attempt "
                 + appAttemptReport.getApplicationAttemptId() + ".";

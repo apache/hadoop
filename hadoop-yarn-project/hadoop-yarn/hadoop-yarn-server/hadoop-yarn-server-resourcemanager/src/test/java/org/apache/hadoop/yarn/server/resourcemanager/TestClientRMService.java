@@ -104,6 +104,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
+import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -1081,6 +1082,8 @@ public class TestClientRMService {
         .thenThrow(new IOException("queue does not exist"));
     RMApplicationHistoryWriter writer = mock(RMApplicationHistoryWriter.class);
     when(rmContext.getRMApplicationHistoryWriter()).thenReturn(writer);
+    SystemMetricsPublisher publisher = mock(SystemMetricsPublisher.class);
+    when(rmContext.getSystemMetricsPublisher()).thenReturn(publisher);
     ConcurrentHashMap<ApplicationId, RMApp> apps = getRMApps(rmContext,
         yarnScheduler);
     when(rmContext.getRMApps()).thenReturn(apps);

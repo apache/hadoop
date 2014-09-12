@@ -365,6 +365,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     this.stateMachine = stateMachineFactory.make(this);
 
     rmContext.getRMApplicationHistoryWriter().applicationStarted(this);
+    rmContext.getSystemMetricsPublisher().appCreated(this, startTime);
   }
 
   @Override
@@ -620,6 +621,20 @@ public class RMAppImpl implements RMApp, Recoverable {
     try {
       if (this.currentAttempt != null) {
         return this.currentAttempt.getTrackingUrl();
+      }
+      return null;
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  @Override
+  public String getOriginalTrackingUrl() {
+    this.readLock.lock();
+    
+    try {
+      if (this.currentAttempt != null) {
+        return this.currentAttempt.getOriginalTrackingUrl();
       }
       return null;
     } finally {
@@ -1096,6 +1111,8 @@ public class RMAppImpl implements RMApp, Recoverable {
 
       app.rmContext.getRMApplicationHistoryWriter()
           .applicationFinished(app, finalState);
+      app.rmContext.getSystemMetricsPublisher()
+          .appFinished(app, finalState, app.finishTime);
     };
   }
 

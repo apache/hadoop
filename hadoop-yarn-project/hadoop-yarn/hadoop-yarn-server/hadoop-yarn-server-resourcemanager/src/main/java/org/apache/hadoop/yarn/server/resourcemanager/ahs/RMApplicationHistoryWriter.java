@@ -85,13 +85,17 @@ public class RMApplicationHistoryWriter extends CompositeService {
         conf.getBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
           YarnConfiguration.DEFAULT_APPLICATION_HISTORY_ENABLED);
 
-    writer = createApplicationHistoryStore(conf);
-    addIfService(writer);
-
-    dispatcher = createDispatcher(conf);
-    dispatcher.register(WritingHistoryEventType.class,
-      new ForwardingEventHandler());
-    addIfService(dispatcher);
+    // Only create the services when the history service is enabled, preventing
+    // wasting the system resources.
+    if (historyServiceEnabled) {
+      writer = createApplicationHistoryStore(conf);
+      addIfService(writer);
+  
+      dispatcher = createDispatcher(conf);
+      dispatcher.register(WritingHistoryEventType.class,
+        new ForwardingEventHandler());
+      addIfService(dispatcher);
+    }
     super.serviceInit(conf);
   }
 
