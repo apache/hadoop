@@ -300,7 +300,7 @@ Release 2.6.0 - UNRELEASED
     YARN-2534. FairScheduler: Potential integer overflow calculating totalMaxShare. 
     (Zhihai Xu via kasha)
 
-Release 2.5.1 - UNRELEASED
+Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
 

@@ -496,7 +496,7 @@ Release 2.6.0 - UNRELEASED
     HDFS-7042. Upgrade fails for Windows HA cluster due to file locks held during
     rename in JournalNode. (cnauroth)
 
-Release 2.5.1 - UNRELEASED
+Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
 
