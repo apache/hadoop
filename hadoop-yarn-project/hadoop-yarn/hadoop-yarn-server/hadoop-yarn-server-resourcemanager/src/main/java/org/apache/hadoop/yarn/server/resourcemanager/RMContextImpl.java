@@ -84,7 +84,7 @@ public class RMContextImpl implements RMContext {
   private RMApplicationHistoryWriter rmApplicationHistoryWriter;
   private SystemMetricsPublisher systemMetricsPublisher;
   private ConfigurationProvider configurationProvider;
-  private int epoch;
+  private long epoch;
 
   /**
    * Default constructor. To be used in conjunction with setter methods for
@@ -375,11 +375,11 @@ public class RMContextImpl implements RMContext {
   }
 
   @Override
-  public int getEpoch() {
+  public long getEpoch() {
     return this.epoch;
   }
 
- void setEpoch(int epoch) {
+ void setEpoch(long epoch) {
     this.epoch = epoch;
   }
 }

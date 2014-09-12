@@ -63,7 +63,7 @@ public class TestMaxRunningAppsEnforcer {
     maxAppsEnforcer = new MaxRunningAppsEnforcer(scheduler);
     appNum = 0;
     rmContext = mock(RMContext.class);
-    when(rmContext.getEpoch()).thenReturn(0);
+    when(rmContext.getEpoch()).thenReturn(0L);
   }
   
   private FSAppAttempt addApp(FSLeafQueue queue, String user) {

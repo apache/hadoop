@@ -32,15 +32,15 @@ import org.apache.hadoop.yarn.util.Records;
 @Unstable
 public abstract class Epoch {
 
-  public static Epoch newInstance(int sequenceNumber) {
+  public static Epoch newInstance(long sequenceNumber) {
     Epoch epoch = Records.newRecord(Epoch.class);
     epoch.setEpoch(sequenceNumber);
     return epoch;
   }
 
-  public abstract int getEpoch();
+  public abstract long getEpoch();
 
-  public abstract void setEpoch(int sequenceNumber);
+  public abstract void setEpoch(long sequenceNumber);
 
   public abstract EpochProto getProto();
 
@@ -50,10 +50,7 @@ public abstract class Epoch {
 
   @Override
   public int hashCode() {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + getEpoch();
-    return result;
+    return (int) (getEpoch() ^ (getEpoch() >>> 32));
   }
 
   @Override

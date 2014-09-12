@@ -508,13 +508,13 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     RMStateStore store = stateStoreHelper.getRMStateStore();
     store.setRMDispatcher(new TestDispatcher());
     
-    int firstTimeEpoch = store.getAndIncrementEpoch();
+    long firstTimeEpoch = store.getAndIncrementEpoch();
     Assert.assertEquals(0, firstTimeEpoch);
     
-    int secondTimeEpoch = store.getAndIncrementEpoch();
+    long secondTimeEpoch = store.getAndIncrementEpoch();
     Assert.assertEquals(1, secondTimeEpoch);
     
-    int thirdTimeEpoch = store.getAndIncrementEpoch();
+    long thirdTimeEpoch = store.getAndIncrementEpoch();
     Assert.assertEquals(2, thirdTimeEpoch);
   }
 

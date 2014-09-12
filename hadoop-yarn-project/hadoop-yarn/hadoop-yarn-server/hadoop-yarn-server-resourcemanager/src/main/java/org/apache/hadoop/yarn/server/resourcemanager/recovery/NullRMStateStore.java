@@ -49,8 +49,8 @@ public class NullRMStateStore extends RMStateStore {
   }
 
   @Override
-  public synchronized int getAndIncrementEpoch() throws Exception {
-    return 0;
+  public synchronized long getAndIncrementEpoch() throws Exception {
+    return 0L;
   }
 
   @Override

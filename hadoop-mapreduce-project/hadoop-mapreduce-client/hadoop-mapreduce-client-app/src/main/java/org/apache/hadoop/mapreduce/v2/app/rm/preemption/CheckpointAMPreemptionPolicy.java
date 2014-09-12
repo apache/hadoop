@@ -194,7 +194,7 @@ public class CheckpointAMPreemptionPolicy implements AMPreemptionPolicy {
           Collections.sort(listOfCont, new Comparator<Container>() {
             @Override
             public int compare(final Container o1, final Container o2) {
-              return o2.getId().getId() - o1.getId().getId();
+              return o2.getId().compareTo(o1.getId());
             }
           });
 

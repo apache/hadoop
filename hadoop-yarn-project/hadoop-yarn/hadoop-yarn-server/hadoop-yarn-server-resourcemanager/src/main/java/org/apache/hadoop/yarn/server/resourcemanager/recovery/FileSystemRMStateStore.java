@@ -165,9 +165,9 @@ public class FileSystemRMStateStore extends RMStateStore {
   }
   
   @Override
-  public synchronized int getAndIncrementEpoch() throws Exception {
+  public synchronized long getAndIncrementEpoch() throws Exception {
     Path epochNodePath = getNodePath(rootDirPath, EPOCH_NODE);
-    int currentEpoch = 0;
+    long currentEpoch = 0;
     if (fs.exists(epochNodePath)) {
       // load current epoch
       FileStatus status = fs.getFileStatus(epochNodePath);

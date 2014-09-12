@@ -53,13 +53,13 @@ public class EpochPBImpl extends Epoch {
   }
 
   @Override
-  public int getEpoch() {
+  public long getEpoch() {
     EpochProtoOrBuilder p = viaProto ? proto : builder;
-    return (int) (p.getEpoch() & 0xffffffff);
+    return p.getEpoch();
   }
 
   @Override
-  public void setEpoch(int sequentialNumber) {
+  public void setEpoch(long sequentialNumber) {
     maybeInitBuilder();
     builder.setEpoch(sequentialNumber);
   }

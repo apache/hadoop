@@ -54,18 +54,26 @@ public class TestContainerId {
     long ts = System.currentTimeMillis();
     ContainerId c6 = newContainerId(36473, 4365472, ts, 25645811);
     Assert.assertEquals("container_10_0001_01_000001", c1.toString());
-    Assert.assertEquals(c1,
-        ContainerId.fromString("container_10_0001_01_000001"));
-    Assert.assertEquals(479987, 0x003fffff & c6.getId());
-    Assert.assertEquals(6, c6.getId() >> 22);
-    Assert.assertEquals("container_" + ts + "_36473_4365472_479987_06",
+    Assert.assertEquals(25645811, 0xffffffffffL & c6.getContainerId());
+    Assert.assertEquals(0, c6.getContainerId() >> 40);
+    Assert.assertEquals("container_" + ts + "_36473_4365472_25645811",
         c6.toString());
-    Assert.assertEquals(c6,
-        ContainerId.fromString("container_" + ts + "_36473_4365472_479987_06"));
+
+    ContainerId c7 = newContainerId(36473, 4365472, ts, 4298334883325L);
+    Assert.assertEquals(999799999997L, 0xffffffffffL & c7.getContainerId());
+    Assert.assertEquals(3, c7.getContainerId() >> 40);
+    Assert.assertEquals(
+        "container_" + ts + "_36473_4365472_999799999997_03", c7.toString());
+
+    ContainerId c8 = newContainerId(36473, 4365472, ts, 844424930131965L);
+    Assert.assertEquals(1099511627773L, 0xffffffffffL & c8.getContainerId());
+    Assert.assertEquals(767, c8.getContainerId() >> 40);
+    Assert.assertEquals(
+        "container_" + ts + "_36473_4365472_1099511627773_767", c8.toString());
   }
 
   public static ContainerId newContainerId(int appId, int appAttemptId,
-      long timestamp, int containerId) {
+      long timestamp, long containerId) {
     ApplicationId applicationId = ApplicationId.newInstance(timestamp, appId);
     ApplicationAttemptId applicationAttemptId =
         ApplicationAttemptId.newInstance(applicationId, appAttemptId);

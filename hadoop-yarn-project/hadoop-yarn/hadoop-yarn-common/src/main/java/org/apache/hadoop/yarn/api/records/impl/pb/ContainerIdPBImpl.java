@@ -50,11 +50,17 @@ public class ContainerIdPBImpl extends ContainerId {
   @Override
   public int getId() {
     Preconditions.checkNotNull(proto);
+    return (int) proto.getId();
+  }
+
+  @Override
+  public long getContainerId() {
+    Preconditions.checkNotNull(proto);
     return proto.getId();
   }
 
   @Override
-  protected void setId(int id) {
+  protected void setContainerId(long id) {
     Preconditions.checkNotNull(builder);
     builder.setId((id));
   }
