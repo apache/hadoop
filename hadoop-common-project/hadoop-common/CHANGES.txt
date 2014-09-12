@@ -463,6 +463,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11083. After refactoring of HTTP proxyuser to common, doAs param is 
     case sensitive. (tucu)
 
+    HADOOP-11088. Unittest TestKeyShell, TestCredShell and TestKMS assume UNIX
+    path separator for JECKS key store path. (Xiaoyu Yao via cnauroth)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

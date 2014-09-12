@@ -24,6 +24,7 @@ import java.io.PrintStream;
 import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -51,7 +52,8 @@ public class TestKeyShell {
     if (!tmpDir.mkdirs()) {
       throw new IOException("Unable to create " + tmpDir);
     }
-    jceksProvider = "jceks://file" + tmpDir + "/keystore.jceks";
+    final Path jksPath = new Path(tmpDir.toString(), "keystore.jceks");
+    jceksProvider = "jceks://file" + jksPath.toUri();
     initialStdOut = System.out;
     initialStdErr = System.err;
     System.setOut(new PrintStream(outContent));
