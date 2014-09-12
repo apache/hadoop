@@ -50,6 +50,7 @@ public class MockRMApp implements RMApp {
   int failCount = 0;
   ApplicationId id;
   String url = null;
+  String oUrl = null;
   StringBuilder diagnostics = new StringBuilder();
   RMAppAttempt attempt;
   int maxAppAttempts = 1;
@@ -181,6 +182,15 @@ public class MockRMApp implements RMApp {
 
   public void setTrackingUrl(String url) {
     this.url = url;
+  }
+
+  @Override
+  public String getOriginalTrackingUrl() {
+    return oUrl;
+  }
+
+  public void setOriginalTrackingUrl(String oUrl) {
+    this.oUrl = oUrl;
   }
 
   @Override

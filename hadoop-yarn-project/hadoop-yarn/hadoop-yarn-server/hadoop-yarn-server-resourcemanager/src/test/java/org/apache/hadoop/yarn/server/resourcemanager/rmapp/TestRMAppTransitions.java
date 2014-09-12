@@ -19,8 +19,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -38,6 +41,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.yarn.MockApps;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -53,6 +57,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
+import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
@@ -61,6 +66,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
@@ -74,6 +80,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Matchers;
 
 
 @RunWith(value = Parameterized.class)
@@ -89,6 +96,7 @@ public class TestRMAppTransitions {
   private DrainDispatcher rmDispatcher;
   private RMStateStore store;
   private RMApplicationHistoryWriter writer;
+  private SystemMetricsPublisher publisher;
   private YarnScheduler scheduler;
   private TestSchedulerEventDispatcher schedulerDispatcher;
 
@@ -189,7 +197,7 @@ public class TestRMAppTransitions {
     AMLivelinessMonitor amFinishingMonitor = mock(AMLivelinessMonitor.class);
     store = mock(RMStateStore.class);
     writer = mock(RMApplicationHistoryWriter.class);
-    this.rmContext =
+    RMContext realRMContext = 
         new RMContextImpl(rmDispatcher,
           containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
           null, new AMRMTokenSecretManager(conf, this.rmContext),
@@ -197,7 +205,16 @@ public class TestRMAppTransitions {
           new NMTokenSecretManagerInRM(conf),
           new ClientToAMTokenSecretManagerInRM(),
           writer);
-    ((RMContextImpl)rmContext).setStateStore(store);
+    ((RMContextImpl)realRMContext).setStateStore(store);
+    publisher = mock(SystemMetricsPublisher.class);
+    ((RMContextImpl)realRMContext).setSystemMetricsPublisher(publisher);
+
+    this.rmContext = spy(realRMContext);
+
+    ResourceScheduler resourceScheduler = mock(ResourceScheduler.class);
+    doReturn(null).when(resourceScheduler)
+              .getAppResourceUsageReport((ApplicationAttemptId)Matchers.any());
+    doReturn(resourceScheduler).when(rmContext).getScheduler();
 
     rmDispatcher.register(RMAppAttemptEventType.class,
         new TestApplicationAttemptEventDispatcher(this.rmContext));
@@ -342,6 +359,7 @@ public class TestRMAppTransitions {
       ApplicationSubmissionContext submissionContext) throws IOException {
   RMApp application = createNewTestApp(submissionContext);
     verify(writer).applicationStarted(any(RMApp.class));
+    verify(publisher).appCreated(any(RMApp.class), anyLong());
     // NEW => NEW_SAVING event RMAppEventType.START
     RMAppEvent event = 
         new RMAppEvent(application.getApplicationId(), RMAppEventType.START);
@@ -465,6 +483,7 @@ public class TestRMAppTransitions {
 
     // reset the counter of Mockito.verify
     reset(writer);
+    reset(publisher);
 
     // test app fails after 1 app attempt failure
     LOG.info("--- START: testUnmanagedAppFailPath ---");
@@ -526,8 +545,26 @@ public class TestRMAppTransitions {
     rmDispatcher.await();
     sendAppUpdateSavedEvent(application);
     assertFailed(application, rejectedText);
-    assertAppFinalStateNotSaved(application);
+    assertAppFinalStateSaved(application);
     verifyApplicationFinished(RMAppState.FAILED);
+  }
+
+  @Test (timeout = 30000)
+  public void testAppNewRejectAddToStore() throws IOException {
+    LOG.info("--- START: testAppNewRejectAddToStore ---");
+
+    RMApp application = createNewTestApp(null);
+    // NEW => FAILED event RMAppEventType.APP_REJECTED
+    String rejectedText = "Test Application Rejected";
+    RMAppEvent event =
+        new RMAppRejectedEvent(application.getApplicationId(), rejectedText);
+    application.handle(event);
+    rmDispatcher.await();
+    sendAppUpdateSavedEvent(application);
+    assertFailed(application, rejectedText);
+    assertAppFinalStateSaved(application);
+    verifyApplicationFinished(RMAppState.FAILED);
+    rmContext.getStateStore().removeApplication(application);
   }
 
   @Test (timeout = 30000)
@@ -930,6 +967,10 @@ public class TestRMAppTransitions {
     ArgumentCaptor<RMAppState> finalState =
         ArgumentCaptor.forClass(RMAppState.class);
     verify(writer).applicationFinished(any(RMApp.class), finalState.capture());
+    Assert.assertEquals(state, finalState.getValue());
+    finalState = ArgumentCaptor.forClass(RMAppState.class);
+    verify(publisher).appFinished(any(RMApp.class), finalState.capture(),
+        anyLong());
     Assert.assertEquals(state, finalState.getValue());
   }
   

@@ -64,6 +64,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
+import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingEditPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
@@ -306,6 +307,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
     return new RMApplicationHistoryWriter();
   }
 
+  protected SystemMetricsPublisher createSystemMetricsPublisher() {
+    return new SystemMetricsPublisher(); 
+  }
+
   // sanity check for configurations
   protected static void validateConfigs(Configuration conf) {
     // validate max-attempts
@@ -408,6 +413,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
           createRMApplicationHistoryWriter();
       addService(rmApplicationHistoryWriter);
       rmContext.setRMApplicationHistoryWriter(rmApplicationHistoryWriter);
+
+      SystemMetricsPublisher systemMetricsPublisher = createSystemMetricsPublisher();
+      addService(systemMetricsPublisher);
+      rmContext.setSystemMetricsPublisher(systemMetricsPublisher);
 
       // Register event handler for NodesListManager
       nodesListManager = new NodesListManager(rmContext);

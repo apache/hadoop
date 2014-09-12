@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.util;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+
 import junit.framework.TestCase;
 
 import org.apache.hadoop.util.ExitUtil.ExitException;
@@ -51,4 +54,30 @@ public class TestNativeLibraryChecker extends TestCase {
     }
   }
 
+  @Test
+  public void testNativeLibraryCheckerOutput(){
+    expectOutput(new String[]{"-a"});
+    // no argument
+    expectOutput(new String[0]);
+  }
+
+  private void expectOutput(String [] args) {
+    ExitUtil.disableSystemExit();
+    ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+    PrintStream originalPs = System.out;
+    System.setOut(new PrintStream(outContent));
+    try {
+      NativeLibraryChecker.main(args);
+    } catch (ExitException e) {
+      ExitUtil.resetFirstExitException();
+    } finally {
+      if (Shell.WINDOWS) {
+        assertEquals(outContent.toString().indexOf("winutils: true") != -1, true);
+      }
+      if (NativeCodeLoader.isNativeCodeLoaded()) {
+        assertEquals(outContent.toString().indexOf("hadoop:  true") != -1, true);
+      }
+      System.setOut(originalPs);
+    }
+  }
 }

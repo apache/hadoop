@@ -316,6 +316,19 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_HISTORY_WRITER_MULTI_THREADED_DISPATCHER_POOL_SIZE =
       10;
 
+  /**
+   *  The setting that controls whether yarn system metrics is published on the
+   *  timeline server or not by RM.
+   */
+  public static final String RM_SYSTEM_METRICS_PUBLISHER_ENABLED =
+      RM_PREFIX + "system-metrics-publisher.enabled";
+  public static final boolean DEFAULT_RM_SYSTEM_METRICS_PUBLISHER_ENABLED = false;
+
+  public static final String RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE =
+      RM_PREFIX + "system-metrics-publisher.dispatcher.pool-size";
+  public static final int DEFAULT_RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE =
+      10;
+
   //Delegation token related keys
   public static final String  DELEGATION_KEY_UPDATE_INTERVAL_KEY = 
     RM_PREFIX + "delegation.key.update-interval";
@@ -723,6 +736,12 @@ public class YarnConfiguration extends Configuration {
   /** Number of Virtual CPU Cores which can be allocated for containers.*/
   public static final String NM_VCORES = NM_PREFIX + "resource.cpu-vcores";
   public static final int DEFAULT_NM_VCORES = 8;
+
+  /** Percentage of overall CPU which can be allocated for containers. */
+  public static final String NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT =
+      NM_PREFIX + "resource.percentage-physical-cpu-limit";
+  public static final int DEFAULT_NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT =
+      100;
   
   /** NM Webapp address.**/
   public static final String NM_WEBAPP_ADDRESS = NM_PREFIX + "webapp.address";

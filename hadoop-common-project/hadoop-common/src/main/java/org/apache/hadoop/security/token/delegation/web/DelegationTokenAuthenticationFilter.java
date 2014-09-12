@@ -188,7 +188,8 @@ public class DelegationTokenAuthenticationFilter
         UTF8_CHARSET);
     if (list != null) {
       for (NameValuePair nv : list) {
-        if (DelegationTokenAuthenticatedURL.DO_AS.equals(nv.getName())) {
+        if (DelegationTokenAuthenticatedURL.DO_AS.
+            equalsIgnoreCase(nv.getName())) {
           return nv.getValue();
         }
       }

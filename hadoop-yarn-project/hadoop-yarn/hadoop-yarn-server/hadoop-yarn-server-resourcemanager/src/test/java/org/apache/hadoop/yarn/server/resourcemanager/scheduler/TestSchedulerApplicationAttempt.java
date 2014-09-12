@@ -63,13 +63,13 @@ public class TestSchedulerApplicationAttempt {
 
     ApplicationAttemptId appAttId = createAppAttemptId(0, 0);
     RMContext rmContext = mock(RMContext.class);
-    when(rmContext.getEpoch()).thenReturn(3);
+    when(rmContext.getEpoch()).thenReturn(3L);
     SchedulerApplicationAttempt app = new SchedulerApplicationAttempt(appAttId,
         user, oldQueue, oldQueue.getActiveUsersManager(), rmContext);
     oldMetrics.submitApp(user);
     
     // confirm that containerId is calculated based on epoch.
-    assertEquals(app.getNewContainerId(), 0x00c00001);
+    assertEquals(0x30000000001L, app.getNewContainerId());
     
     // Resource request
     Resource requestedResource = Resource.newInstance(1536, 2);

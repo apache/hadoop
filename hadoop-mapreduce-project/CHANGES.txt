@@ -276,7 +276,13 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6071. JobImpl#makeUberDecision doesn't log that Uber mode is
     disabled because of too much CPUs (Tsuyoshi OZAWA via jlowe)
 
-Release 2.5.1 - UNRELEASED
+    MAPREDUCE-6075. HistoryServerFileSystemStateStore can create zero-length
+    files (jlowe)
+
+    MAPREDUCE-6070. yarn.app.am.resource.mb/cpu-vcores affects uber mode but
+    is not documented (Tsuyoshi OZAWA via jlowe)
+
+Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
 

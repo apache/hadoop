@@ -138,12 +138,12 @@ public class BuilderUtils {
   }
 
   public static ContainerId newContainerId(ApplicationAttemptId appAttemptId,
-      int containerId) {
+      long containerId) {
     return ContainerId.newInstance(appAttemptId, containerId);
   }
 
   public static ContainerId newContainerId(int appId, int appAttemptId,
-      long timestamp, int id) {
+      long timestamp, long id) {
     ApplicationId applicationId = newApplicationId(timestamp, appId);
     ApplicationAttemptId applicationAttemptId = newApplicationAttemptId(
         applicationId, appAttemptId);
@@ -370,7 +370,8 @@ public class BuilderUtils {
   
   public static ApplicationResourceUsageReport newApplicationResourceUsageReport(
       int numUsedContainers, int numReservedContainers, Resource usedResources,
-      Resource reservedResources, Resource neededResources) {
+      Resource reservedResources, Resource neededResources, long memorySeconds, 
+      long vcoreSeconds) {
     ApplicationResourceUsageReport report =
         recordFactory.newRecordInstance(ApplicationResourceUsageReport.class);
     report.setNumUsedContainers(numUsedContainers);
@@ -378,6 +379,8 @@ public class BuilderUtils {
     report.setUsedResources(usedResources);
     report.setReservedResources(reservedResources);
     report.setNeededResources(neededResources);
+    report.setMemorySeconds(memorySeconds);
+    report.setVcoreSeconds(vcoreSeconds);
     return report;
   }
 

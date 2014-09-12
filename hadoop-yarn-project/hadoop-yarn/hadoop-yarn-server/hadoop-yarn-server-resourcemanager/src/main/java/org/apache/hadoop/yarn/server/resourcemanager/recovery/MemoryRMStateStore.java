@@ -44,7 +44,7 @@ import com.google.common.annotations.VisibleForTesting;
 public class MemoryRMStateStore extends RMStateStore {
   
   RMState state = new RMState();
-  private int epoch = 0;
+  private long epoch = 0L;
   
   @VisibleForTesting
   public RMState getState() {
@@ -56,8 +56,8 @@ public class MemoryRMStateStore extends RMStateStore {
   }
 
   @Override
-  public synchronized int getAndIncrementEpoch() throws Exception {
-    int currentEpoch = epoch;
+  public synchronized long getAndIncrementEpoch() throws Exception {
+    long currentEpoch = epoch;
     epoch = epoch + 1;
     return currentEpoch;
   }
@@ -138,7 +138,10 @@ public class MemoryRMStateStore extends RMStateStore {
     ApplicationAttemptState attemptState =
         new ApplicationAttemptState(appAttemptId,
           attemptStateData.getMasterContainer(), credentials,
-          attemptStateData.getStartTime());
+          attemptStateData.getStartTime(),
+          attemptStateData.getMemorySeconds(),
+          attemptStateData.getVcoreSeconds());
+
 
     ApplicationState appState = state.getApplicationState().get(
         attemptState.getAttemptId().getApplicationId());
@@ -167,7 +170,9 @@ public class MemoryRMStateStore extends RMStateStore {
           attemptStateData.getFinalTrackingUrl(),
           attemptStateData.getDiagnostics(),
           attemptStateData.getFinalApplicationStatus(),
-          attemptStateData.getAMContainerExitStatus());
+          attemptStateData.getAMContainerExitStatus(),
+          attemptStateData.getMemorySeconds(),
+          attemptStateData.getVcoreSeconds());
 
     ApplicationState appState =
         state.getApplicationState().get(

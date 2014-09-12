@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -79,5 +80,26 @@ public class TestRead {
     testEOF(cluster, 14);
     testEOF(cluster, 10000);   
     cluster.shutdown();
+  }
+
+  /**
+   * Regression test for HDFS-7045.
+   * If deadlock happen, the test will time out.
+   * @throws Exception
+   */
+  @Test(timeout=60000)
+  public void testReadReservedPath() throws Exception {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).
+        numDataNodes(1).format(true).build();
+    try {
+      FileSystem fs = cluster.getFileSystem();
+      fs.open(new Path("/.reserved/.inodes/file"));
+      Assert.fail("Open a non existing file should fail.");
+    } catch (FileNotFoundException e) {
+      // Expected
+    } finally {
+      cluster.shutdown();
+    }
   }
 }

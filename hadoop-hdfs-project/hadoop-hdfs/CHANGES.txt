@@ -635,6 +635,15 @@ Release 2.6.0 - UNRELEASED
     HDFS-6506. Newly moved block replica been invalidated and deleted in
     TestBalancer. (Binglin Chang via cnauroth)
 
+    HDFS-6966. Add additional unit tests for encryption zones.
+    (Stephen Chu via wang)
+
+    HDFS-6621. Hadoop Balancer prematurely exits iterations.
+    (Rafal Wojdyla and Benjamin Bowman via wang)
+
+    HDFS-7045. Fix NameNode deadlock when opening file under /.reserved path.
+    (Yi Liu via wang)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
@@ -739,7 +748,16 @@ Release 2.6.0 - UNRELEASED
       HDFS-6986. DistributedFileSystem must get delegation tokens from configured 
       KeyProvider. (zhz via tucu)
 
-Release 2.5.1 - UNRELEASED
+    HDFS-6776. Using distcp to copy data between insecure and secure cluster via webdhfs 
+    doesn't work. (yzhangal via tucu)
+
+    HDFS-7042. Upgrade fails for Windows HA cluster due to file locks held during
+    rename in JournalNode. (cnauroth)
+
+    HDFS-7051. TestDataNodeRollingUpgrade#isBlockFileInPrevious assumes Unix file
+    path separator. (cnauroth)
+
+Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
 

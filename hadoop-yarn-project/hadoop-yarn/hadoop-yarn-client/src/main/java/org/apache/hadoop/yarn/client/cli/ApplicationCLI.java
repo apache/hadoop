@@ -38,6 +38,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
@@ -460,6 +461,11 @@ public class ApplicationCLI extends YarnCLI {
       appReportStr.println(appReport.getRpcPort());
       appReportStr.print("\tAM Host : ");
       appReportStr.println(appReport.getHost());
+      appReportStr.print("\tAggregate Resource Allocation : ");
+
+      ApplicationResourceUsageReport usageReport = appReport.getApplicationResourceUsageReport();
+      appReportStr.print(usageReport.getMemorySeconds() + " MB-seconds, ");
+      appReportStr.println(usageReport.getVcoreSeconds() + " vcore-seconds");
       appReportStr.print("\tDiagnostics : ");
       appReportStr.print(appReport.getDiagnostics());
     } else {

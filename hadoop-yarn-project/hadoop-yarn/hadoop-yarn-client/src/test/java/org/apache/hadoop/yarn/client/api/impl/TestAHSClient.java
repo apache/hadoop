@@ -346,6 +346,7 @@ public class TestAHSClient {
             "host",
             124,
             "url",
+            "oUrl",
             "diagnostics",
             YarnApplicationAttemptState.FINISHED,
             ContainerId.newInstance(
@@ -357,6 +358,7 @@ public class TestAHSClient {
             "host",
             124,
             "url",
+            "oUrl",
             "diagnostics",
             YarnApplicationAttemptState.FINISHED,
             ContainerId.newInstance(

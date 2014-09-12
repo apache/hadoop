@@ -412,9 +412,9 @@ public class ZKRMStateStore extends RMStateStore {
   }
 
   @Override
-  public synchronized int getAndIncrementEpoch() throws Exception {
+  public synchronized long getAndIncrementEpoch() throws Exception {
     String epochNodePath = getNodePath(zkRootNodePath, EPOCH_NODE);
-    int currentEpoch = 0;
+    long currentEpoch = 0;
     if (existsWithRetries(epochNodePath, true) != null) {
       // load current epoch
       byte[] data = getDataWithRetries(epochNodePath, true);
@@ -603,7 +603,9 @@ public class ZKRMStateStore extends RMStateStore {
               attemptStateData.getFinalTrackingUrl(),
               attemptStateData.getDiagnostics(),
               attemptStateData.getFinalApplicationStatus(),
-              attemptStateData.getAMContainerExitStatus());
+              attemptStateData.getAMContainerExitStatus(),
+              attemptStateData.getMemorySeconds(),
+              attemptStateData.getVcoreSeconds());
 
         appState.attempts.put(attemptState.getAttemptId(), attemptState);
       }

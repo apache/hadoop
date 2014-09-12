@@ -50,7 +50,7 @@ message ApplicationAttemptIdProto {
 message ContainerIdProto {
   optional ApplicationIdProto app_id = 1;
   optional ApplicationAttemptIdProto app_attempt_id = 2;
-  optional int32 id = 3;
+  optional int64 id = 3;
 }
 
 message ResourceProto {
@@ -167,6 +167,8 @@ message ApplicationResourceUsageReportProto {
   optional ResourceProto used_resources = 3;
   optional ResourceProto reserved_resources = 4;
   optional ResourceProto needed_resources = 5;
+  optional int64 memory_seconds = 6;
+  optional int64 vcore_seconds = 7;
 }
 
 message ApplicationReportProto {
@@ -200,6 +202,7 @@ message ApplicationAttemptReportProto {
   optional string diagnostics = 5 [default = "N/A"];
   optional YarnApplicationAttemptStateProto yarn_application_attempt_state = 6;
   optional ContainerIdProto am_container_id = 7;
+  optional string original_tracking_url = 8;
 }
 
 enum NodeStateProto {

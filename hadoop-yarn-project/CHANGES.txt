@@ -67,6 +67,15 @@ Release 2.6.0 - UNRELEASED
     YARN-2394. FairScheduler: Configure fairSharePreemptionThreshold per queue.
     (Wei Yan via kasha)
 
+    YARN-415. Capture aggregate memory allocation at the app-level for chargeback.
+    (Eric Payne & Andrey Klochkov via jianhe)
+
+    YARN-2440. Enabled Nodemanagers to limit the aggregate cpu usage across all
+    containers to a preconfigured limit. (Varun Vasudev via vinodkv)
+
+    YARN-2033. YARN-2033. Merging generic-history into the Timeline Store 
+    (Zhijie Shen via junping_du)
+
   IMPROVEMENTS
 
     YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc
@@ -196,6 +205,15 @@ Release 2.6.0 - UNRELEASED
     YARN-2515. Updated ConverterUtils#toContainerId to parse epoch.
     (Tsuyoshi OZAWA via jianhe)
 
+    YARN-2448. Changed ApplicationMasterProtocol to expose RM-recognized resource
+    types to the AMs. (Varun Vasudev via vinodkv)
+
+    YARN-2538. Added logs when RM sends roll-overed AMRMToken to AM. (Xuan Gong
+    via zjshen)
+
+    YARN-2229. Changed the integer field of ContainerId to be long type.
+    (Tsuyoshi OZAWA via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -305,7 +323,24 @@ Release 2.6.0 - UNRELEASED
     YARN-2526. SLS can deadlock when all the threads are taken by AMSimulators. 
     (Wei Yan via kasha)
 
-Release 2.5.1 - UNRELEASED
+    YARN-1458. FairScheduler: Zero weight can lead to livelock. 
+    (Zhihai Xu via kasha)
+
+    YARN-2459. RM crashes if App gets rejected for any reason 
+    and HA is enabled. (Jian He and Mayank Bansal via xgong)
+
+    YARN-2158. Fixed TestRMWebServicesAppsModification#testSingleAppKill test
+    failure. (Varun Vasudev via jianhe)
+
+    YARN-2534. FairScheduler: Potential integer overflow calculating totalMaxShare. 
+    (Zhihai Xu via kasha)
+
+    YARN-2541. Fixed ResourceManagerRest.apt.vm table syntax error. (jianhe)
+
+    YARN-2484. FileSystemRMStateStore#readFile/writeFile should close
+    FSData(In|Out)putStream in final block (Tsuyoshi OZAWA via jlowe)
+
+Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
 

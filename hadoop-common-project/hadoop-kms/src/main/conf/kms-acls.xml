@@ -94,4 +94,42 @@
       ACL for decrypt EncryptedKey CryptoExtension operations
     </description>
   </property>
+
+  <property>
+    <name>default.key.acl.MANAGEMENT</name>
+    <value>*</value>
+    <description>
+      default ACL for MANAGEMENT operations for all key acls that are not
+      explicitly defined.
+    </description>
+  </property>
+
+  <property>
+    <name>default.key.acl.GENERATE_EEK</name>
+    <value>*</value>
+    <description>
+      default ACL for GENERATE_EEK operations for all key acls that are not
+      explicitly defined.
+    </description>
+  </property>
+
+  <property>
+    <name>default.key.acl.DECRYPT_EEK</name>
+    <value>*</value>
+    <description>
+      default ACL for DECRYPT_EEK operations for all key acls that are not
+      explicitly defined.
+    </description>
+  </property>
+
+  <property>
+    <name>default.key.acl.READ</name>
+    <value>*</value>
+    <description>
+      default ACL for READ operations for all key acls that are not
+      explicitly defined.
+    </description>
+  </property>
+
+
 </configuration>

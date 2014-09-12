@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -87,11 +88,15 @@ public class TestYarnCLI {
   public void testGetApplicationReport() throws Exception {
     ApplicationCLI cli = createAndGetAppCLI();
     ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+    ApplicationResourceUsageReport usageReport = 
+        ApplicationResourceUsageReport.newInstance(
+            2, 0, null, null, null, 123456, 4567);
     ApplicationReport newApplicationReport = ApplicationReport.newInstance(
         applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
         "user", "queue", "appname", "host", 124, null,
         YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
-        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
+        FinalApplicationStatus.SUCCEEDED, usageReport, "N/A", 0.53789f, "YARN",
+        null);
     when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
         newApplicationReport);
     int result = cli.run(new String[] { "application", "-status", applicationId.toString() });
@@ -113,6 +118,7 @@ public class TestYarnCLI {
     pw.println("\tTracking-URL : N/A");
     pw.println("\tRPC Port : 124");
     pw.println("\tAM Host : host");
+    pw.println("\tAggregate Resource Allocation : 123456 MB-seconds, 4567 vcore-seconds");
     pw.println("\tDiagnostics : diagnostics");
     pw.close();
     String appReportStr = baos.toString("UTF-8");
@@ -127,7 +133,7 @@ public class TestYarnCLI {
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         applicationId, 1);
     ApplicationAttemptReport attemptReport = ApplicationAttemptReport
-        .newInstance(attemptId, "host", 124, "url", "diagnostics",
+        .newInstance(attemptId, "host", 124, "url", "oUrl", "diagnostics",
             YarnApplicationAttemptState.FINISHED, ContainerId.newInstance(
                 attemptId, 1));
     when(
@@ -163,11 +169,11 @@ public class TestYarnCLI {
     ApplicationAttemptId attemptId1 = ApplicationAttemptId.newInstance(
         applicationId, 2);
     ApplicationAttemptReport attemptReport = ApplicationAttemptReport
-        .newInstance(attemptId, "host", 124, "url", "diagnostics",
+        .newInstance(attemptId, "host", 124, "url", "oUrl", "diagnostics",
             YarnApplicationAttemptState.FINISHED, ContainerId.newInstance(
                 attemptId, 1));
     ApplicationAttemptReport attemptReport1 = ApplicationAttemptReport
-        .newInstance(attemptId1, "host", 124, "url", "diagnostics",
+        .newInstance(attemptId1, "host", 124, "url", "oUrl", "diagnostics",
             YarnApplicationAttemptState.FINISHED, ContainerId.newInstance(
                 attemptId1, 1));
     List<ApplicationAttemptReport> reports = new ArrayList<ApplicationAttemptReport>();

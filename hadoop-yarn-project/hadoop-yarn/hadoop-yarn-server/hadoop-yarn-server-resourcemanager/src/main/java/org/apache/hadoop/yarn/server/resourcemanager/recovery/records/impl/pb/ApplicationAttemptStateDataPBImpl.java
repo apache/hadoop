@@ -229,6 +229,30 @@ public class ApplicationAttemptStateDataPBImpl extends
   }
 
   @Override
+  public long getMemorySeconds() {
+    ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getMemorySeconds();
+  }
+ 
+  @Override
+  public long getVcoreSeconds() {
+    ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getVcoreSeconds();
+  }
+
+  @Override
+  public void setMemorySeconds(long memorySeconds) {
+    maybeInitBuilder();
+    builder.setMemorySeconds(memorySeconds);
+  }
+ 
+  @Override
+  public void setVcoreSeconds(long vcoreSeconds) {
+    maybeInitBuilder();
+    builder.setVcoreSeconds(vcoreSeconds);
+  }
+
+  @Override
   public FinalApplicationStatus getFinalApplicationStatus() {
     ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasFinalApplicationStatus()) {

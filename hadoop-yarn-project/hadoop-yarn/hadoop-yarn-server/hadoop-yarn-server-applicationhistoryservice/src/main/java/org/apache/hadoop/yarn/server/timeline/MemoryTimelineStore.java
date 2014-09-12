@@ -49,6 +49,8 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelineP
  * they may encounter reading and writing history data in different memory
  * store.
  * 
+ * The methods are synchronized to avoid concurrent modification on the memory.
+ * 
  */
 @Private
 @Unstable
@@ -65,7 +67,7 @@ public class MemoryTimelineStore
   }
 
   @Override
-  public TimelineEntities getEntities(String entityType, Long limit,
+  public synchronized TimelineEntities getEntities(String entityType, Long limit,
       Long windowStart, Long windowEnd, String fromId, Long fromTs,
       NameValuePair primaryFilter, Collection<NameValuePair> secondaryFilters,
       EnumSet<Field> fields) {
@@ -148,7 +150,7 @@ public class MemoryTimelineStore
   }
 
   @Override
-  public TimelineEntity getEntity(String entityId, String entityType,
+  public synchronized TimelineEntity getEntity(String entityId, String entityType,
       EnumSet<Field> fieldsToRetrieve) {
     if (fieldsToRetrieve == null) {
       fieldsToRetrieve = EnumSet.allOf(Field.class);
@@ -162,7 +164,7 @@ public class MemoryTimelineStore
   }
 
   @Override
-  public TimelineEvents getEntityTimelines(String entityType,
+  public synchronized TimelineEvents getEntityTimelines(String entityType,
       SortedSet<String> entityIds, Long limit, Long windowStart,
       Long windowEnd,
       Set<String> eventTypes) {
@@ -209,7 +211,7 @@ public class MemoryTimelineStore
   }
 
   @Override
-  public TimelinePutResponse put(TimelineEntities data) {
+  public synchronized TimelinePutResponse put(TimelineEntities data) {
     TimelinePutResponse response = new TimelinePutResponse();
     for (TimelineEntity entity : data.getEntities()) {
       EntityIdentifier entityId =
