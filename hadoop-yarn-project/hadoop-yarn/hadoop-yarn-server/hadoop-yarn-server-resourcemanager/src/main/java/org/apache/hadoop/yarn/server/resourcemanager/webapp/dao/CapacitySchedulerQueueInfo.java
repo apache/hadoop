@@ -25,6 +25,7 @@ import javax.xml.bind.annotation.XmlTransient;
 
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlanQueue;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -48,6 +49,7 @@ public class CapacitySchedulerQueueInfo {
   protected QueueState state;
   protected CapacitySchedulerQueueInfoList queues;
   protected ResourceInfo resourcesUsed;
+  private boolean hideReservationQueues = true;
 
   CapacitySchedulerQueueInfo() {
   };
@@ -69,6 +71,10 @@ public class CapacitySchedulerQueueInfo {
     queueName = q.getQueueName();
     state = q.getState();
     resourcesUsed = new ResourceInfo(q.getUsedResources());
+    if(q instanceof PlanQueue &&
+       ((PlanQueue)q).showReservationsAsQueues()) {
+      hideReservationQueues = false;
+    }
   }
 
   public float getCapacity() {
@@ -112,6 +118,9 @@ public class CapacitySchedulerQueueInfo {
   }
 
   public CapacitySchedulerQueueInfoList getQueues() {
+    if(hideReservationQueues) {
+      return new CapacitySchedulerQueueInfoList();
+    }
     return this.queues;
   }
 
