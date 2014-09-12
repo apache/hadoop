@@ -85,8 +85,8 @@ public class LeafQueue implements CSQueue {
   private int userLimit;
   private float userLimitFactor;
 
-  private int maxApplications;
-  private int maxApplicationsPerUser;
+  protected int maxApplications;
+  protected int maxApplicationsPerUser;
   
   private float maxAMResourcePerQueuePercent;
   private int maxActiveApplications; // Based on absolute max capacity
@@ -150,8 +150,7 @@ public class LeafQueue implements CSQueue {
             Resources.subtract(maximumAllocation, minimumAllocation), 
             maximumAllocation);
 
-    float capacity = 
-      (float)cs.getConfiguration().getCapacity(getQueuePath()) / 100;
+    float capacity = getCapacityFromConf();
     float absoluteCapacity = parent.getAbsoluteCapacity() * capacity;
 
     float maximumCapacity = 
@@ -215,6 +214,11 @@ public class LeafQueue implements CSQueue {
     this.pendingApplications = 
         new TreeSet<FiCaSchedulerApp>(applicationComparator);
     this.activeApplications = new TreeSet<FiCaSchedulerApp>(applicationComparator);
+  }
+
+  // externalizing in method, to allow overriding
+  protected float getCapacityFromConf() {
+    return (float)scheduler.getConfiguration().getCapacity(getQueuePath()) / 100;
   }
 
   private synchronized void setupQueueConfigs(
@@ -475,7 +479,7 @@ public class LeafQueue implements CSQueue {
    * Set user limit factor - used only for testing.
    * @param userLimitFactor new user limit factor
    */
-  synchronized void setUserLimitFactor(int userLimitFactor) {
+  synchronized void setUserLimitFactor(float userLimitFactor) {
     this.userLimitFactor = userLimitFactor;
   }
 
@@ -817,7 +821,7 @@ public class LeafQueue implements CSQueue {
           getApplication(reservedContainer.getApplicationAttemptId());
       synchronized (application) {
         return assignReservedContainer(application, node, reservedContainer,
-          clusterResource);
+            clusterResource);
       }
     }
     
@@ -1660,5 +1664,17 @@ public class LeafQueue implements CSQueue {
       // Inform the parent queue
       getParent().detachContainer(clusterResource, application, rmContainer);
     }
+  }
+
+  public void setCapacity(float capacity) {
+    this.capacity = capacity;
+  }
+
+  public void setAbsoluteCapacity(float absoluteCapacity) {
+    this.absoluteCapacity = absoluteCapacity;
+  }
+
+  public void setMaxApplications(int maxApplications) {
+    this.maxApplications = maxApplications;
   }
 }
