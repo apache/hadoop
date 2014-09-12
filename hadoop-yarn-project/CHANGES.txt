@@ -308,6 +308,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2541. Fixed ResourceManagerRest.apt.vm table syntax error. (jianhe)
 
+    YARN-2484. FileSystemRMStateStore#readFile/writeFile should close
+    FSData(In|Out)putStream in final block (Tsuyoshi OZAWA via jlowe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
