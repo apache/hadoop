@@ -410,7 +410,7 @@ public class TestCapacityScheduler {
     cs.stop();
   }
 
-  private void checkQueueCapacities(CapacityScheduler cs,
+  void checkQueueCapacities(CapacityScheduler cs,
       float capacityA, float capacityB) {
     CSQueue rootQueue = cs.getRootQueue();
     CSQueue queueA = findQueue(rootQueue, A);

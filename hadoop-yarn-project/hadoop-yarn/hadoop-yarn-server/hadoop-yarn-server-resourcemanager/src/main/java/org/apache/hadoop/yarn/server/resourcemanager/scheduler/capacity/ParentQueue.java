@@ -75,7 +75,7 @@ public class ParentQueue implements CSQueue {
 
   private float usedCapacity = 0.0f;
 
-  private final Set<CSQueue> childQueues;
+  protected final Set<CSQueue> childQueues;
   private final Comparator<CSQueue> queueComparator;
   
   private Resource usedResources = Resources.createResource(0, 0);
@@ -159,7 +159,7 @@ public class ParentQueue implements CSQueue {
         ", fullname=" + getQueuePath()); 
   }
 
-  private synchronized void setupQueueConfigs(
+  protected synchronized void setupQueueConfigs(
       Resource clusterResource,
       float capacity, float absoluteCapacity, 
       float maximumCapacity, float absoluteMaxCapacity,
@@ -880,5 +880,9 @@ public class ParentQueue implements CSQueue {
         parent.detachContainer(clusterResource, application, rmContainer);
       }
     }
+  }
+
+  public Map<QueueACL, AccessControlList> getACLs() {
+    return acls;
   }
 }
