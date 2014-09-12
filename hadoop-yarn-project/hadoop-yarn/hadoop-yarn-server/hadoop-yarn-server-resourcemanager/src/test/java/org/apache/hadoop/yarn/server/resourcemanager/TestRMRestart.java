@@ -19,9 +19,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.mockito.Matchers.isA;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -1654,6 +1656,47 @@ public class TestRMRestart {
     rm2.start();
     // Restarted RM has the failed app info too.
     rm2.waitForState(app1.getApplicationId(), RMAppState.FAILED);
+  }
+
+  @Test (timeout = 20000)
+  public void testAppRecoveredInOrderOnRMRestart() throws Exception {
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+
+    for (int i = 10; i > 0; i--) {
+      ApplicationState appState = mock(ApplicationState.class);
+      when(appState.getAppId()).thenReturn(ApplicationId.newInstance(1234, i));
+      memStore.getState().getApplicationState()
+        .put(appState.getAppId(), appState);
+    }
+
+    MockRM rm1 = new MockRM(conf, memStore) {
+      @Override
+      protected RMAppManager createRMAppManager() {
+        return new TestRMAppManager(this.rmContext, this.scheduler,
+          this.masterService, this.applicationACLsManager, conf);
+      }
+
+      class TestRMAppManager extends RMAppManager {
+        ApplicationId prevId = ApplicationId.newInstance(1234, 0);
+
+        public TestRMAppManager(RMContext context, YarnScheduler scheduler,
+            ApplicationMasterService masterService,
+            ApplicationACLsManager applicationACLsManager, Configuration conf) {
+          super(context, scheduler, masterService, applicationACLsManager, conf);
+        }
+
+        @Override
+        protected void recoverApplication(ApplicationState appState,
+            RMState rmState) throws Exception {
+          // check application is recovered in order.
+          Assert.assertTrue(rmState.getApplicationState().size() > 0);
+          Assert.assertTrue(appState.getAppId().compareTo(prevId) > 0);
+          prevId = appState.getAppId();
+        }
+      }
+    };
+    rm1.start();
   }
 
   @SuppressWarnings("resource")

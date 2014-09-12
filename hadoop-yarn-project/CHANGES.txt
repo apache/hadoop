@@ -317,6 +317,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2484. FileSystemRMStateStore#readFile/writeFile should close
     FSData(In|Out)putStream in final block (Tsuyoshi OZAWA via jlowe)
 
+    YARN-2456. Possible livelock in CapacityScheduler when RM is recovering apps.
+    (Jian He via xgong)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
