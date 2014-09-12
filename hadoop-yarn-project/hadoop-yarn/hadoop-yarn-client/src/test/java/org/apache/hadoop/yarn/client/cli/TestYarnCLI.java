@@ -86,44 +86,48 @@ public class TestYarnCLI {
   
   @Test
   public void testGetApplicationReport() throws Exception {
-    ApplicationCLI cli = createAndGetAppCLI();
-    ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
-    ApplicationResourceUsageReport usageReport = 
-        ApplicationResourceUsageReport.newInstance(
-            2, 0, null, null, null, 123456, 4567);
-    ApplicationReport newApplicationReport = ApplicationReport.newInstance(
-        applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
-        "user", "queue", "appname", "host", 124, null,
-        YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
-        FinalApplicationStatus.SUCCEEDED, usageReport, "N/A", 0.53789f, "YARN",
-        null);
-    when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
-        newApplicationReport);
-    int result = cli.run(new String[] { "application", "-status", applicationId.toString() });
-    assertEquals(0, result);
-    verify(client).getApplicationReport(applicationId);
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    PrintWriter pw = new PrintWriter(baos);
-    pw.println("Application Report : ");
-    pw.println("\tApplication-Id : application_1234_0005");
-    pw.println("\tApplication-Name : appname");
-    pw.println("\tApplication-Type : YARN");
-    pw.println("\tUser : user");
-    pw.println("\tQueue : queue");
-    pw.println("\tStart-Time : 0");
-    pw.println("\tFinish-Time : 0");
-    pw.println("\tProgress : 53.79%");
-    pw.println("\tState : FINISHED");
-    pw.println("\tFinal-State : SUCCEEDED");
-    pw.println("\tTracking-URL : N/A");
-    pw.println("\tRPC Port : 124");
-    pw.println("\tAM Host : host");
-    pw.println("\tAggregate Resource Allocation : 123456 MB-seconds, 4567 vcore-seconds");
-    pw.println("\tDiagnostics : diagnostics");
-    pw.close();
-    String appReportStr = baos.toString("UTF-8");
-    Assert.assertEquals(appReportStr, sysOutStream.toString());
-    verify(sysOut, times(1)).println(isA(String.class));
+    for (int i = 0; i < 2; ++i) {
+      ApplicationCLI cli = createAndGetAppCLI();
+      ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+      ApplicationResourceUsageReport usageReport = i == 0 ? null :
+          ApplicationResourceUsageReport.newInstance(
+              2, 0, null, null, null, 123456, 4567);
+      ApplicationReport newApplicationReport = ApplicationReport.newInstance(
+          applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
+          "user", "queue", "appname", "host", 124, null,
+          YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
+          FinalApplicationStatus.SUCCEEDED, usageReport, "N/A", 0.53789f, "YARN",
+          null);
+      when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
+          newApplicationReport);
+      int result = cli.run(new String[] { "application", "-status", applicationId.toString() });
+      assertEquals(0, result);
+      verify(client, times(1 + i)).getApplicationReport(applicationId);
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      PrintWriter pw = new PrintWriter(baos);
+      pw.println("Application Report : ");
+      pw.println("\tApplication-Id : application_1234_0005");
+      pw.println("\tApplication-Name : appname");
+      pw.println("\tApplication-Type : YARN");
+      pw.println("\tUser : user");
+      pw.println("\tQueue : queue");
+      pw.println("\tStart-Time : 0");
+      pw.println("\tFinish-Time : 0");
+      pw.println("\tProgress : 53.79%");
+      pw.println("\tState : FINISHED");
+      pw.println("\tFinal-State : SUCCEEDED");
+      pw.println("\tTracking-URL : N/A");
+      pw.println("\tRPC Port : 124");
+      pw.println("\tAM Host : host");
+      pw.println("\tAggregate Resource Allocation : " +
+          (i == 0 ? "N/A" : "123456 MB-seconds, 4567 vcore-seconds"));
+      pw.println("\tDiagnostics : diagnostics");
+      pw.close();
+      String appReportStr = baos.toString("UTF-8");
+      Assert.assertEquals(appReportStr, sysOutStream.toString());
+      sysOutStream.reset();
+      verify(sysOut, times(1 + i)).println(isA(String.class));
+    }
   }
 
   @Test
