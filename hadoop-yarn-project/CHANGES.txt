@@ -303,6 +303,8 @@ Release 2.6.0 - UNRELEASED
     YARN-2534. FairScheduler: Potential integer overflow calculating totalMaxShare. 
     (Zhihai Xu via kasha)
 
+    YARN-2541. Fixed ResourceManagerRest.apt.vm table syntax error. (jianhe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
