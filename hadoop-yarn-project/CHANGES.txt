@@ -188,6 +188,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2229. Changed the integer field of ContainerId to be long type.
     (Tsuyoshi OZAWA via jianhe)
 
+    YARN-2547. Cross Origin Filter throws UnsupportedOperationException upon
+    destroy (Mit Desai via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES
