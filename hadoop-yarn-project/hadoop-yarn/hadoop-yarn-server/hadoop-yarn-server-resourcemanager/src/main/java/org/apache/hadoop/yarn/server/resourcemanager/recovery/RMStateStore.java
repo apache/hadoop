@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 import javax.crypto.SecretKey;
 
@@ -421,7 +422,7 @@ public abstract class RMStateStore extends AbstractService {
    */
   public static class RMState {
     Map<ApplicationId, ApplicationState> appState =
-        new HashMap<ApplicationId, ApplicationState>();
+        new TreeMap<ApplicationId, ApplicationState>();
 
     RMDTSecretManagerState rmSecretManagerState = new RMDTSecretManagerState();
 
