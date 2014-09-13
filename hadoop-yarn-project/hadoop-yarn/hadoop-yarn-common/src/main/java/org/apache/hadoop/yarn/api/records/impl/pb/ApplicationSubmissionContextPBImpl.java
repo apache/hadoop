@@ -120,6 +120,9 @@ extends ApplicationSubmissionContext {
     if (this.reservationId != null) {
       builder.setReservationId(convertToProtoFormat(this.reservationId));
     }
+    if (this.reservationId != null) {
+      builder.setReservationId(convertToProtoFormat(this.reservationId));
+    }
   }
 
   private void mergeLocalToProto() {
