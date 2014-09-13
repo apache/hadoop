@@ -57,6 +57,7 @@ extends ApplicationSubmissionContext {
   private Resource resource = null;
   private Set<String> applicationTags = null;
   private LogAggregationContext logAggregationContext = null;
+  private ReservationId reservationId = null;
 
   public ApplicationSubmissionContextPBImpl() {
     builder = ApplicationSubmissionContextProto.newBuilder();
@@ -113,10 +114,6 @@ extends ApplicationSubmissionContext {
     if (this.applicationTags != null && !this.applicationTags.isEmpty()) {
       builder.clearApplicationTags();
       builder.addAllApplicationTags(this.applicationTags);
-    }
-    if (this.logAggregationContext != null) {
-      builder.setLogAggregationContext(
-          convertToProtoFormat(this.logAggregationContext));
     }
   }
 
@@ -366,6 +363,29 @@ extends ApplicationSubmissionContext {
   }
 
   @Override
+  public ReservationId getReservationID() {
+    ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
+    if (reservationId != null) {
+      return reservationId;
+    }
+    if (!p.hasReservationId()) {
+      return null;
+    }
+    reservationId = convertFromProtoFormat(p.getReservationId());
+    return reservationId;
+  }
+
+  @Override
+  public void setReservationID(ReservationId reservationID) {
+    maybeInitBuilder();
+    if (reservationID == null) {
+      builder.clearReservationId();
+      return;
+    }
+    this.reservationId = reservationID;
+  }
+
+  @Override
   public void
       setKeepContainersAcrossApplicationAttempts(boolean keepContainers) {
     maybeInitBuilder();
@@ -454,5 +474,13 @@ extends ApplicationSubmissionContext {
     if (logAggregationContext == null)
       builder.clearLogAggregationContext();
     this.logAggregationContext = logAggregationContext;
+  }
+
+  private ReservationIdPBImpl convertFromProtoFormat(ReservationIdProto p) {
+    return new ReservationIdPBImpl(p);
+  }
+
+  private ReservationIdProto convertToProtoFormat(ReservationId t) {
+    return ((ReservationIdPBImpl) t).getProto();
   }
 }  
