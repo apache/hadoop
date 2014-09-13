@@ -136,6 +136,13 @@
       </includes>
     </fileSet>
     <fileSet>
+      <directory>hadoop-mapreduce-client/hadoop-mapreduce-client-nativetask/target</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>
+      <includes>
+        <include>*-sources.jar</include>
+      </includes>
+    </fileSet>
+    <fileSet>
       <directory>hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/target</directory>
       <outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>
       <includes>

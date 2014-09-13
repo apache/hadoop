@@ -1,0 +1,26 @@
+Changes for Hadoop Native Map Output Collector
+------------------------------------------------
+
+MAPREDUCE-5985. native-task: Fix build on macosx. Contributed by Binglin Chang
+MAPREDUCE-5994. Simplify ByteUtils and fix failing test. (todd)
+MAPREDUCE-5996. native-task: Rename system tests into standard directory layout (todd)
+MAPREDUCE-5997. native-task: Use DirectBufferPool from Hadoop Common (todd)
+MAPREDUCE-6000. native-task: Simplify ByteBufferDataReader/Writer (todd)
+MAPREDUCE-5991. native-task should not run unit tests if native profile is not enabled. (Binglin Chang)
+MAPREDUCE-5995. native-task: Revert changes to Text internals (todd)
+MAPREDUCE-6005. native-task: Fix some valgrind errors (Binglin Chang)
+MAPREDUCE-5984. native-task: Reuse lz4 sources in hadoop-common (Binglin Chang)
+MAPREDUCE-5976. native-task: should not fail to build if snappy is missing (Manu Zhang)
+MAPREDUCE-5978. native-task: remove test case for not supported codec Bzip2Codec and DefaultCodec (Manu Zhang)
+MAPREDUCE-6006. native-task: add native tests to maven and fix bug in pom.xml (Binglin Chang via todd)
+MAPREDUCE-6026. native-task: fix logging (Manu Zhang via todd)
+MAPREDUCE-6035. native-task: sources/test-sources jar distribution (Manu Zhang via todd)
+MAPREDUCE-5977. Fix or suppress native-task gcc warnings (Manu Zhang via todd)
+MAPREDUCE-6054. native-task: Speed up tests (todd)
+MAPREDUCE-6058. native-task: KVTest and LargeKVTest should check mr job is sucessful (Binglin Chang)
+MAPREDUCE-6056. native-task: move system test working dir to target dir and cleanup test config xml files (Manu Zhang via bchang)
+MAPREDUCE-6055. native-task: findbugs, interface annotations, and other misc cleanup (todd)
+MAPREDUCE-6067. native-task: fix some counter issues (Binglin Chang)
+MAPREDUCE-6069. native-task: Lint/style fixes and removal of unused code (todd)
+MAPREDUCE-6074. native-task: fix release audit, javadoc, javac warnings (todd)
+MAPREDUCE-6077. native-task: Remove CustomModule examples in nativetask (seanzhong)
