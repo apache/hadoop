@@ -99,7 +99,7 @@ case "${COMMAND}" in
     CLASS='org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer'
   ;;
   logs)
-    CLASS=org.apache.hadoop.yarn.logaggregation.LogDumper
+    CLASS=org.apache.hadoop.yarn.client.cli.LogsCLI
     hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
   ;;
