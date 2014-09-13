@@ -292,3 +292,31 @@ message GetContainersRequestProto {
 message GetContainersResponseProto {
   repeated ContainerReportProto containers = 1;
 }
+
+//////////////////////////////////////////////////////
+//  reservation_protocol
+//////////////////////////////////////////////////////
+
+message ReservationSubmissionRequestProto {
+  optional string queue = 1;
+  optional ReservationDefinitionProto reservation_definition = 2;
+}
+
+message ReservationSubmissionResponseProto {
+    optional ReservationIdProto reservation_id = 1;
+}
+
+message ReservationUpdateRequestProto {
+  optional ReservationDefinitionProto reservation_definition = 1;
+  optional ReservationIdProto reservation_id = 2;
+}
+
+message ReservationUpdateResponseProto {   
+}
+
+message ReservationDeleteRequestProto {
+  optional ReservationIdProto reservation_id = 1;
+}
+
+message ReservationDeleteResponseProto {
+}

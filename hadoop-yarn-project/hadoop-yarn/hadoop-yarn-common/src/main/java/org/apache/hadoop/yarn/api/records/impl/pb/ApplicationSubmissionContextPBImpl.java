@@ -19,12 +19,14 @@
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
 import com.google.common.base.CharMatcher;
+
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
@@ -32,6 +34,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationSubmissionContextProto
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationSubmissionContextProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerLaunchContextProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ReservationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 
 import com.google.protobuf.TextFormat;
@@ -53,6 +56,7 @@ extends ApplicationSubmissionContext {
   private ContainerLaunchContext amContainer = null;
   private Resource resource = null;
   private Set<String> applicationTags = null;
+  private ReservationId reservationId;
 
   public ApplicationSubmissionContextPBImpl() {
     builder = ApplicationSubmissionContextProto.newBuilder();
@@ -109,6 +113,9 @@ extends ApplicationSubmissionContext {
     if (this.applicationTags != null && !this.applicationTags.isEmpty()) {
       builder.clearApplicationTags();
       builder.addAllApplicationTags(this.applicationTags);
+    }
+    if (this.reservationId != null) {
+      builder.setReservationId(convertToProtoFormat(this.reservationId));
     }
   }
 
@@ -358,6 +365,29 @@ extends ApplicationSubmissionContext {
   }
 
   @Override
+  public ReservationId getReservationID() {
+    ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
+    if (reservationId != null) {
+      return reservationId;
+    }
+    if (!p.hasReservationId()) {
+      return null;
+    }
+    reservationId = convertFromProtoFormat(p.getReservationId());
+    return reservationId;
+  }
+
+  @Override
+  public void setReservationID(ReservationId reservationID) {
+    maybeInitBuilder();
+    if (reservationID == null) {
+      builder.clearReservationId();
+      return;
+    }
+    this.reservationId = reservationID;
+  }
+
+  @Override
   public void
       setKeepContainersAcrossApplicationAttempts(boolean keepContainers) {
     maybeInitBuilder();
@@ -414,5 +444,13 @@ extends ApplicationSubmissionContext {
       long attemptFailuresValidityInterval) {
     maybeInitBuilder();
     builder.setAttemptFailuresValidityInterval(attemptFailuresValidityInterval);
+  }
+  
+  private ReservationIdPBImpl convertFromProtoFormat(ReservationIdProto p) {
+    return new ReservationIdPBImpl(p);
+  }
+
+  private ReservationIdProto convertToProtoFormat(ReservationId t) {
+    return ((ReservationIdPBImpl) t).getProto();
   }
 }  
