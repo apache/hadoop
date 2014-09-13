@@ -19,8 +19,6 @@
 package org.apache.hadoop.yarn.server.timeline.webapp;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -106,12 +104,12 @@ public class CrossOriginFilter implements Filter {
 
   private void doCrossFilter(HttpServletRequest req, HttpServletResponse res) {
 
-    String origin = encodeHeader(req.getHeader(ORIGIN));
-    if (!isCrossOrigin(origin)) {
+    String originsList = encodeHeader(req.getHeader(ORIGIN));
+    if (!isCrossOrigin(originsList)) {
       return;
     }
 
-    if (!isOriginAllowed(origin)) {
+    if (!areOriginsAllowed(originsList)) {
       return;
     }
 
@@ -127,7 +125,7 @@ public class CrossOriginFilter implements Filter {
       return;
     }
 
-    res.setHeader(ACCESS_CONTROL_ALLOW_ORIGIN, origin);
+    res.setHeader(ACCESS_CONTROL_ALLOW_ORIGIN, originsList);
     res.setHeader(ACCESS_CONTROL_ALLOW_CREDENTIALS, Boolean.TRUE.toString());
     res.setHeader(ACCESS_CONTROL_ALLOW_METHODS, getAllowedMethodsHeader());
     res.setHeader(ACCESS_CONTROL_ALLOW_HEADERS, getAllowedHeadersHeader());
@@ -191,35 +189,36 @@ public class CrossOriginFilter implements Filter {
     if (header == null) {
       return null;
     }
-    try {
-      // Protect against HTTP response splitting vulnerability
-      // since value is written as part of the response header
-      return URLEncoder.encode(header, "ASCII");
-    } catch (UnsupportedEncodingException e) {
-      return null;
-    }
+    // Protect against HTTP response splitting vulnerability
+    // since value is written as part of the response header
+    // Ensure this header only has one header by removing
+    // CRs and LFs
+    return header.split("\n|\r")[0].trim();
   }
 
-  static boolean isCrossOrigin(String origin) {
-    return origin != null;
+  static boolean isCrossOrigin(String originsList) {
+    return originsList != null;
   }
 
   @VisibleForTesting
-  boolean isOriginAllowed(String origin) {
+  boolean areOriginsAllowed(String originsList) {
     if (allowAllOrigins) {
       return true;
     }
 
-    for (String allowedOrigin : allowedOrigins) {
-      if (allowedOrigin.contains("*")) {
-        String regex = allowedOrigin.replace(".", "\\.").replace("*", ".*");
-        Pattern p = Pattern.compile(regex);
-        Matcher m = p.matcher(origin);
-        if (m.matches()) {
+    String[] origins = originsList.trim().split("\\s+");
+    for (String origin : origins) {
+      for (String allowedOrigin : allowedOrigins) {
+        if (allowedOrigin.contains("*")) {
+          String regex = allowedOrigin.replace(".", "\\.").replace("*", ".*");
+          Pattern p = Pattern.compile(regex);
+          Matcher m = p.matcher(origin);
+          if (m.matches()) {
+            return true;
+          }
+        } else if (allowedOrigin.equals(origin)) {
           return true;
         }
-      } else if (allowedOrigin.equals(origin)) {
-        return true;
       }
     }
     return false;

@@ -323,6 +323,10 @@ Release 2.6.0 - UNRELEASED
     YARN-2542. Fixed NPE when retrieving ApplicationReport from TimeLineServer.
     (Zhijie Shen via jianhe)
 
+    YARN-2528. Relaxed http response split vulnerability protection for the origins
+    header and made it accept multiple origins in CrossOriginFilter. (Jonathan
+    Eagles via zjshen)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
