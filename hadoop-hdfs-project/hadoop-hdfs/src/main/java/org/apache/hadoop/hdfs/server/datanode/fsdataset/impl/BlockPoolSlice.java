@@ -269,15 +269,16 @@ class BlockPoolSlice {
   /**
    * Save the given replica to persistent storage.
    *
-   * @param replicaInfo
    * @return The saved meta and block files, in that order.
    * @throws IOException
    */
-  File[] lazyPersistReplica(ReplicaInfo replicaInfo) throws IOException {
+  File[] lazyPersistReplica(long blockId, long genStamp,
+                            File srcMeta, File srcFile) throws IOException {
     if (!lazypersistDir.exists() && !lazypersistDir.mkdirs()) {
       FsDatasetImpl.LOG.warn("Failed to create " + lazypersistDir);
     }
-    File targetFiles[] = FsDatasetImpl.copyBlockFiles(replicaInfo, lazypersistDir);
+    File targetFiles[] = FsDatasetImpl.copyBlockFiles(
+        blockId, genStamp, srcMeta, srcFile, lazypersistDir);
     dfsUsage.incDfsUsed(targetFiles[0].length() + targetFiles[1].length());
     return targetFiles;
   }
@@ -510,7 +511,7 @@ class BlockPoolSlice {
    * @return the replica that is retained.
    * @throws IOException
    */
-  private ReplicaInfo resolveDuplicateReplicas(
+  ReplicaInfo resolveDuplicateReplicas(
       final ReplicaInfo replica1, final ReplicaInfo replica2,
       final ReplicaMap volumeMap) throws IOException {
 
