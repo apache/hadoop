@@ -616,17 +616,16 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   /**
-   * Copy the block and meta files for the given block from the given
+   * Copy the block and meta files for the given block to the given destination.
    * @return the new meta and block files.
    * @throws IOException
    */
-  static File[] copyBlockFiles(ReplicaInfo replicaInfo, File destRoot)
+  static File[] copyBlockFiles(long blockId, long genStamp,
+                               File srcMeta, File srcFile, File destRoot)
       throws IOException {
-    final File destDir = DatanodeUtil.idToBlockDir(destRoot, replicaInfo.getBlockId());
-    final File dstFile = new File(destDir, replicaInfo.getBlockName());
-    final File dstMeta = FsDatasetUtil.getMetaFile(dstFile, replicaInfo.getGenerationStamp());
-    final File srcMeta = replicaInfo.getMetaFile();
-    final File srcFile = replicaInfo.getBlockFile();
+    final File destDir = DatanodeUtil.idToBlockDir(destRoot, blockId);
+    final File dstFile = new File(destDir, srcFile.getName());
+    final File dstMeta = FsDatasetUtil.getMetaFile(dstFile, genStamp);
     try {
       FileUtils.copyFile(srcMeta, dstMeta);
     } catch (IOException e) {
@@ -1749,10 +1748,20 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       File memFile = memBlockInfo.getBlockFile();
       if (memFile.exists()) {
         if (memFile.compareTo(diskFile) != 0) {
-          LOG.warn("Block file " + memFile.getAbsolutePath()
-              + " does not match file found by scan "
-              + diskFile.getAbsolutePath());
-          // TODO: Should the diskFile be deleted?
+          if (diskMetaFile.exists()) {
+            if (memBlockInfo.getMetaFile().exists()) {
+              // We have two sets of block+meta files. Decide which one to
+              // keep.
+              ReplicaInfo diskBlockInfo = new FinalizedReplica(
+                  blockId, diskFile.length(), diskGS, vol, diskFile.getParentFile());
+              ((FsVolumeImpl) vol).getBlockPoolSlice(bpid).resolveDuplicateReplicas(
+                  memBlockInfo, diskBlockInfo, volumeMap);
+            }
+          } else {
+            if (!diskFile.delete()) {
+              LOG.warn("Failed to delete " + diskFile + ". Will retry on next scan");
+            }
+          }
         }
       } else {
         // Block refers to a block file that does not exist.
@@ -2217,6 +2226,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
       FsVolumeImpl targetVolume;
       ReplicaInfo replicaInfo;
+      BlockPoolSlice bpSlice;
+      File srcFile, srcMeta;
+      long genStamp;
 
       synchronized (FsDatasetImpl.this) {
         replicaInfo = volumeMap.get(bpid, blockId);
@@ -2238,10 +2250,18 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         }
 
         lazyWriteReplicaTracker.recordStartLazyPersist(bpid, blockId, targetVolume);
-        File[] savedFiles = targetVolume.getBlockPoolSlice(bpid)
-                                        .lazyPersistReplica(replicaInfo);
-        lazyWriteReplicaTracker.recordEndLazyPersist(
-            bpid, blockId, savedFiles[0], savedFiles[1]);
+        bpSlice = targetVolume.getBlockPoolSlice(bpid);
+        srcMeta = replicaInfo.getMetaFile();
+        srcFile = replicaInfo.getBlockFile();
+        genStamp = replicaInfo.getGenerationStamp();
+      }
+
+      // Drop the FsDatasetImpl lock for the file copy.
+      File[] savedFiles =
+          bpSlice.lazyPersistReplica(blockId, genStamp, srcMeta, srcFile);
+
+      synchronized (FsDatasetImpl.this) {
+        lazyWriteReplicaTracker.recordEndLazyPersist(bpid, blockId, savedFiles);
 
         if (LOG.isDebugEnabled()) {
           LOG.debug("LazyWriter finished saving blockId=" + blockId + "; bpid=" + bpid +
@@ -2262,7 +2282,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       try {
         replicaState = lazyWriteReplicaTracker.dequeueNextReplicaToPersist();
         if (replicaState != null) {
-          // Move the replica outside the lock.
           moveReplicaToNewVolume(replicaState.bpid, replicaState.blockId);
         }
         succeeded = true;
@@ -2357,9 +2376,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         // Remove the old replicas from transient storage.
         if (blockFile.delete() || !blockFile.exists()) {
           ((FsVolumeImpl) replicaInfo.getVolume()).decDfsUsed(replicaState.bpid, blockFileUsed);
-        }
-        if (metaFile.delete() || !metaFile.exists()) {
-          ((FsVolumeImpl) replicaInfo.getVolume()).decDfsUsed(replicaState.bpid, metaFileUsed);
+          if (metaFile.delete() || !metaFile.exists()) {
+            ((FsVolumeImpl) replicaInfo.getVolume()).decDfsUsed(replicaState.bpid, metaFileUsed);
+          }
         }
 
         // If deletion failed then the directory scanner will cleanup the blocks

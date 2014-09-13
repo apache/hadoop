@@ -41,3 +41,6 @@
     HDFS-6991. Notify NN of evicted block before deleting it from RAM disk.
     (Arpit Agarwal)
 
+    HDFS-6978. Directory scanner should correctly reconcile blocks on RAM
+    disk. (Arpit Agarwal)
+

@@ -368,6 +368,8 @@ public class TestLazyPersistFiles {
           // Found a persisted copy for this block!
           boolean added = persistedBlockIds.add(lb.getBlock().getBlockId());
           assertThat(added, is(true));
+        } else {
+          LOG.error(blockFile + " not found");
         }
       }
     }
@@ -423,7 +425,7 @@ public class TestLazyPersistFiles {
     final int SEED = 0XFADED;
 
     // Stop lazy writer to ensure block for path1 is not persisted to disk.
-    stopLazyWriter(cluster.getDataNodes().get(0));
+    FsDatasetTestUtil.stopLazyWriter(cluster.getDataNodes().get(0));
 
     makeRandomTestFile(path1, BLOCK_SIZE, true, SEED);
     ensureFileReplicasOnStorageType(path1, RAM_DISK);
@@ -488,7 +490,7 @@ public class TestLazyPersistFiles {
     throws IOException, InterruptedException {
     startUpCluster(true, -1);
     final String METHOD_NAME = GenericTestUtils.getMethodName();
-    stopLazyWriter(cluster.getDataNodes().get(0));
+    FsDatasetTestUtil.stopLazyWriter(cluster.getDataNodes().get(0));
 
     Path path = new Path("/" + METHOD_NAME + ".dat");
     makeTestFile(path, BLOCK_SIZE, true);
@@ -682,7 +684,7 @@ public class TestLazyPersistFiles {
       throws IOException, InterruptedException {
 
     startUpCluster(true, 1);
-    stopLazyWriter(cluster.getDataNodes().get(0));
+    FsDatasetTestUtil.stopLazyWriter(cluster.getDataNodes().get(0));
 
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path1 = new Path("/" + METHOD_NAME + ".01.dat");
@@ -792,12 +794,6 @@ public class TestLazyPersistFiles {
       assertThat(locatedBlock.getStorageTypes()[0], is(storageType));
     }
     return locatedBlocks;
-  }
-
-  private void stopLazyWriter(DataNode dn) {
-    // Stop the lazyWriter daemon.
-    FsDatasetImpl fsDataset = ((FsDatasetImpl) dn.getFSDataset());
-    ((FsDatasetImpl.LazyWriter) fsDataset.lazyWriter.getRunnable()).stop();
   }
 
   private void makeRandomTestFile(Path path, long length, final boolean isLazyPersist,
