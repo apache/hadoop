@@ -129,21 +129,6 @@ public abstract class ApplicationSubmissionContext {
     return context;
   }
 
-  @Public
-  @Stable
-  public static ApplicationSubmissionContext newInstance(
-      ApplicationId applicationId, String applicationName, String queue,
-      Priority priority, ContainerLaunchContext amContainer,
-      boolean isUnmanagedAM, boolean cancelTokensWhenComplete,
-      int maxAppAttempts, Resource resource, String applicationType,
-      boolean keepContainers, LogAggregationContext logAggregationContext) {
-    ApplicationSubmissionContext context =
-        newInstance(applicationId, applicationName, queue, priority,
-          amContainer, isUnmanagedAM, cancelTokensWhenComplete, maxAppAttempts,
-          resource, applicationType, keepContainers);
-    context.setLogAggregationContext(logAggregationContext);
-    return context;
-  }
   /**
    * Get the <code>ApplicationId</code> of the submitted application.
    * @return <code>ApplicationId</code> of the submitted application
