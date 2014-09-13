@@ -417,4 +417,26 @@ public abstract class ApplicationSubmissionContext {
   @Stable
   public abstract void setLogAggregationContext(
       LogAggregationContext logAggregationContext);
+
+  /**
+   * Get the reservation id, that corresponds to a valid resource allocation in
+   * the scheduler (between start and end time of the corresponding reservation)
+   * 
+   * @return the reservation id representing the unique id of the corresponding
+   *         reserved resource allocation in the scheduler
+   */
+  @Public
+  @Unstable
+  public abstract ReservationId getReservationID();
+
+  /**
+   * Set the reservation id, that correspond to a valid resource allocation in
+   * the scheduler (between start and end time of the corresponding reservation)
+   * 
+   * @param reservationId representing the unique id of the
+   *          corresponding reserved resource allocation in the scheduler
+   */
+  @Public
+  @Unstable
+  public abstract void setReservationID(ReservationId reservationID);
 }
