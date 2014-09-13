@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
+import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.proto.YarnProtos.AMCommandProto;
@@ -47,10 +48,12 @@ import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueACLProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueStateProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ReservationRequestInterpreterProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationAttemptStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
 
 import com.google.protobuf.ByteString;
+
 import org.apache.hadoop.yarn.proto.YarnServiceProtos;
 
 @Private
@@ -237,4 +240,18 @@ public class ProtoUtils {
     return ApplicationAccessType.valueOf(e.name().replace(
         APP_ACCESS_TYPE_PREFIX, ""));
   }
+  
+  /*
+   * Reservation Request interpreter type
+   */
+  public static ReservationRequestInterpreterProto convertToProtoFormat(
+      ReservationRequestInterpreter e) {
+    return ReservationRequestInterpreterProto.valueOf(e.name());
+  }
+
+  public static ReservationRequestInterpreter convertFromProtoFormat(
+      ReservationRequestInterpreterProto e) {
+    return ReservationRequestInterpreter.valueOf(e.name());
+  }
+
 }
