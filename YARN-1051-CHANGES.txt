@@ -5,3 +5,6 @@ YARN-2475. Logic for responding to capacity drops for the
 ReservationSystem. (Carlo Curino and Subru Krishnan via curino)
 
 YARN-1708. Public YARN APIs for creating/updating/deleting reservations. (subru)
+
+YARN-1709. In-memory data structures used to track resources over time to
+enable reservations. (subru)
