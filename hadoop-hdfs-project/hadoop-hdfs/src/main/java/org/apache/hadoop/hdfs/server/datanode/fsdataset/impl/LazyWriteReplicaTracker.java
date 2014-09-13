@@ -161,9 +161,13 @@ class LazyWriteReplicaTracker {
     replicaState.lazyPersistVolume = checkpointVolume;
   }
 
+  /**
+   * @param bpid
+   * @param blockId
+   * @param savedFiles The saved meta and block files, in that order.
+   */
   synchronized void recordEndLazyPersist(
-      final String bpid, final long blockId,
-      final File savedMetaFile, final File savedBlockFile) {
+      final String bpid, final long blockId, final File[] savedFiles) {
     Map<Long, ReplicaState> map = replicaMaps.get(bpid);
     ReplicaState replicaState = map.get(blockId);
 
@@ -172,8 +176,8 @@ class LazyWriteReplicaTracker {
           bpid + "; blockId=" + blockId);
     }
     replicaState.state = State.LAZY_PERSIST_COMPLETE;
-    replicaState.savedMetaFile = savedMetaFile;
-    replicaState.savedBlockFile = savedBlockFile;
+    replicaState.savedMetaFile = savedFiles[0];
+    replicaState.savedBlockFile = savedFiles[1];
 
     if (replicasNotPersisted.peek() == replicaState) {
       // Common case.
