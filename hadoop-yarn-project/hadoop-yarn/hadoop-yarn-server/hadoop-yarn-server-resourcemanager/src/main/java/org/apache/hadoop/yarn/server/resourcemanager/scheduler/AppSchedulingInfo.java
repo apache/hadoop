@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -58,9 +58,8 @@ public class AppSchedulingInfo {
   Queue queue;
   final String user;
   // TODO making containerIdCounter long
-  private final AtomicInteger containerIdCounter;
-  private final int EPOCH_BIT_MASK = 0x3ff;
-  private final int EPOCH_BIT_SHIFT = 22;
+  private final AtomicLong containerIdCounter;
+  private final int EPOCH_BIT_SHIFT = 40;
 
   final Set<Priority> priorities = new TreeSet<Priority>(
       new org.apache.hadoop.yarn.server.resourcemanager.resource.Priority.Comparator());
@@ -77,15 +76,14 @@ public class AppSchedulingInfo {
  
   public AppSchedulingInfo(ApplicationAttemptId appAttemptId,
       String user, Queue queue, ActiveUsersManager activeUsersManager,
-      int epoch) {
+      long epoch) {
     this.applicationAttemptId = appAttemptId;
     this.applicationId = appAttemptId.getApplicationId();
     this.queue = queue;
     this.queueName = queue.getQueueName();
     this.user = user;
     this.activeUsersManager = activeUsersManager;
-    this.containerIdCounter = new AtomicInteger(
-        (epoch & EPOCH_BIT_MASK) << EPOCH_BIT_SHIFT);
+    this.containerIdCounter = new AtomicLong(epoch << EPOCH_BIT_SHIFT);
   }
 
   public ApplicationId getApplicationId() {
@@ -117,7 +115,7 @@ public class AppSchedulingInfo {
     LOG.info("Application " + applicationId + " requests cleared");
   }
 
-  public int getNewContainerId() {
+  public long getNewContainerId() {
     return this.containerIdCounter.incrementAndGet();
   }
 

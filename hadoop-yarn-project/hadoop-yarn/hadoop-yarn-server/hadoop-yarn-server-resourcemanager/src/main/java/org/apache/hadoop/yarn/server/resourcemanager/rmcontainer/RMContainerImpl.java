@@ -192,6 +192,8 @@ public class RMContainerImpl implements RMContainer {
     this.writeLock = lock.writeLock();
 
     rmContext.getRMApplicationHistoryWriter().containerStarted(this);
+    rmContext.getSystemMetricsPublisher().containerCreated(
+        this, this.creationTime);
   }
 
   @Override
@@ -497,6 +499,8 @@ public class RMContainerImpl implements RMContainer {
 
       container.rmContext.getRMApplicationHistoryWriter().containerFinished(
         container);
+      container.rmContext.getSystemMetricsPublisher().containerFinished(
+          container, container.finishTime);
     }
 
     private static void updateAttemptMetrics(RMContainerImpl container) {

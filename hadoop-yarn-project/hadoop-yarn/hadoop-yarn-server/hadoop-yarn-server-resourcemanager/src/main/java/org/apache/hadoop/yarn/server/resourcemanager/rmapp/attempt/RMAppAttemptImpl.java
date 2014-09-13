@@ -1156,6 +1156,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
       appAttempt.rmContext.getRMApplicationHistoryWriter()
           .applicationAttemptFinished(appAttempt, finalAttemptState);
+      appAttempt.rmContext.getSystemMetricsPublisher()
+          .appAttemptFinished(
+              appAttempt, finalAttemptState, System.currentTimeMillis());
     }
   }
 
@@ -1269,6 +1272,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
       appAttempt.rmContext.getRMApplicationHistoryWriter()
           .applicationAttemptStarted(appAttempt);
+      appAttempt.rmContext.getSystemMetricsPublisher()
+          .appAttemptRegistered(appAttempt, System.currentTimeMillis());
     }
   }
 
@@ -1723,8 +1728,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           masterContainer == null ? null : masterContainer.getId();
       attemptReport = ApplicationAttemptReport.newInstance(this
           .getAppAttemptId(), this.getHost(), this.getRpcPort(), this
-          .getTrackingUrl(), this.getDiagnostics(), YarnApplicationAttemptState
-          .valueOf(this.getState().toString()), amId);
+          .getTrackingUrl(), this.getOriginalTrackingUrl(), this.getDiagnostics(),
+          YarnApplicationAttemptState .valueOf(this.getState().toString()), amId);
     } finally {
       this.readLock.unlock();
     }

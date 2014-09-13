@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -56,6 +57,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
+import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
@@ -94,6 +96,7 @@ public class TestRMAppTransitions {
   private DrainDispatcher rmDispatcher;
   private RMStateStore store;
   private RMApplicationHistoryWriter writer;
+  private SystemMetricsPublisher publisher;
   private YarnScheduler scheduler;
   private TestSchedulerEventDispatcher schedulerDispatcher;
 
@@ -203,6 +206,8 @@ public class TestRMAppTransitions {
           new ClientToAMTokenSecretManagerInRM(),
           writer);
     ((RMContextImpl)realRMContext).setStateStore(store);
+    publisher = mock(SystemMetricsPublisher.class);
+    ((RMContextImpl)realRMContext).setSystemMetricsPublisher(publisher);
 
     this.rmContext = spy(realRMContext);
 
@@ -354,6 +359,7 @@ public class TestRMAppTransitions {
       ApplicationSubmissionContext submissionContext) throws IOException {
   RMApp application = createNewTestApp(submissionContext);
     verify(writer).applicationStarted(any(RMApp.class));
+    verify(publisher).appCreated(any(RMApp.class), anyLong());
     // NEW => NEW_SAVING event RMAppEventType.START
     RMAppEvent event = 
         new RMAppEvent(application.getApplicationId(), RMAppEventType.START);
@@ -477,6 +483,7 @@ public class TestRMAppTransitions {
 
     // reset the counter of Mockito.verify
     reset(writer);
+    reset(publisher);
 
     // test app fails after 1 app attempt failure
     LOG.info("--- START: testUnmanagedAppFailPath ---");
@@ -960,6 +967,10 @@ public class TestRMAppTransitions {
     ArgumentCaptor<RMAppState> finalState =
         ArgumentCaptor.forClass(RMAppState.class);
     verify(writer).applicationFinished(any(RMApp.class), finalState.capture());
+    Assert.assertEquals(state, finalState.getValue());
+    finalState = ArgumentCaptor.forClass(RMAppState.class);
+    verify(publisher).appFinished(any(RMApp.class), finalState.capture(),
+        anyLong());
     Assert.assertEquals(state, finalState.getValue());
   }
   

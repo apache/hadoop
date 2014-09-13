@@ -182,7 +182,7 @@ public class SchedulerApplicationAttempt {
     return this.pendingRelease;
   }
 
-  public int getNewContainerId() {
+  public long getNewContainerId() {
     return appSchedulingInfo.getNewContainerId();
   }
 

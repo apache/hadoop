@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.webapp;
 
-import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
@@ -28,6 +28,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.WebApplicationException;
 
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -60,6 +61,7 @@ public class WebServices {
       String userQuery, String queueQuery, String count, String startedBegin,
       String startedEnd, String finishBegin, String finishEnd,
       Set<String> applicationTypes) {
+    UserGroupInformation callerUGI = getUser(req);
     long num = 0;
     boolean checkCount = false;
     boolean checkStart = false;
@@ -137,8 +139,18 @@ public class WebServices {
     AppsInfo allApps = new AppsInfo();
     Collection<ApplicationReport> appReports = null;
     try {
-      appReports = appContext.getAllApplications().values();
-    } catch (IOException e) {
+      if (callerUGI == null) {
+        appReports = appContext.getAllApplications().values();
+      } else {
+        appReports = callerUGI.doAs(
+            new PrivilegedExceptionAction<Collection<ApplicationReport>> () {
+          @Override
+          public Collection<ApplicationReport> run() throws Exception {
+            return appContext.getAllApplications().values();
+          }
+        });
+      }
+    } catch (Exception e) {
       throw new WebApplicationException(e);
     }
     for (ApplicationReport appReport : appReports) {
@@ -193,11 +205,22 @@ public class WebServices {
 
   public AppInfo getApp(HttpServletRequest req, HttpServletResponse res,
       String appId) {
-    ApplicationId id = parseApplicationId(appId);
+    UserGroupInformation callerUGI = getUser(req);
+    final ApplicationId id = parseApplicationId(appId);
     ApplicationReport app = null;
     try {
-      app = appContext.getApplication(id);
-    } catch (IOException e) {
+      if (callerUGI == null) {
+        app = appContext.getApplication(id);
+      } else {
+        app = callerUGI.doAs(
+            new PrivilegedExceptionAction<ApplicationReport> () {
+          @Override
+          public ApplicationReport run() throws Exception {
+            return appContext.getApplication(id);
+          }
+        });
+      }
+    } catch (Exception e) {
       throw new WebApplicationException(e);
     }
     if (app == null) {
@@ -208,11 +231,22 @@ public class WebServices {
 
   public AppAttemptsInfo getAppAttempts(HttpServletRequest req,
       HttpServletResponse res, String appId) {
-    ApplicationId id = parseApplicationId(appId);
+    UserGroupInformation callerUGI = getUser(req);
+    final ApplicationId id = parseApplicationId(appId);
     Collection<ApplicationAttemptReport> appAttemptReports = null;
     try {
-      appAttemptReports = appContext.getApplicationAttempts(id).values();
-    } catch (IOException e) {
+      if (callerUGI == null) {
+        appAttemptReports = appContext.getApplicationAttempts(id).values();
+      } else {
+        appAttemptReports = callerUGI.doAs(
+            new PrivilegedExceptionAction<Collection<ApplicationAttemptReport>> () {
+          @Override
+          public Collection<ApplicationAttemptReport> run() throws Exception {
+            return appContext.getApplicationAttempts(id).values();
+          }
+        });
+      }
+    } catch (Exception e) {
       throw new WebApplicationException(e);
     }
     AppAttemptsInfo appAttemptsInfo = new AppAttemptsInfo();
@@ -226,13 +260,24 @@ public class WebServices {
 
   public AppAttemptInfo getAppAttempt(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId) {
+    UserGroupInformation callerUGI = getUser(req);
     ApplicationId aid = parseApplicationId(appId);
-    ApplicationAttemptId aaid = parseApplicationAttemptId(appAttemptId);
+    final ApplicationAttemptId aaid = parseApplicationAttemptId(appAttemptId);
     validateIds(aid, aaid, null);
     ApplicationAttemptReport appAttempt = null;
     try {
-      appAttempt = appContext.getApplicationAttempt(aaid);
-    } catch (IOException e) {
+      if (callerUGI == null) {
+        appAttempt = appContext.getApplicationAttempt(aaid);
+      } else {
+        appAttempt = callerUGI.doAs(
+            new PrivilegedExceptionAction<ApplicationAttemptReport> () {
+          @Override
+          public ApplicationAttemptReport run() throws Exception {
+            return appContext.getApplicationAttempt(aaid);
+          }
+        });
+      }
+    } catch (Exception e) {
       throw new WebApplicationException(e);
     }
     if (appAttempt == null) {
@@ -244,13 +289,24 @@ public class WebServices {
 
   public ContainersInfo getContainers(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId) {
+    UserGroupInformation callerUGI = getUser(req);
     ApplicationId aid = parseApplicationId(appId);
-    ApplicationAttemptId aaid = parseApplicationAttemptId(appAttemptId);
+    final ApplicationAttemptId aaid = parseApplicationAttemptId(appAttemptId);
     validateIds(aid, aaid, null);
     Collection<ContainerReport> containerReports = null;
     try {
-      containerReports = appContext.getContainers(aaid).values();
-    } catch (IOException e) {
+      if (callerUGI == null) {
+        containerReports = appContext.getContainers(aaid).values();
+      } else {
+        containerReports = callerUGI.doAs(
+            new PrivilegedExceptionAction<Collection<ContainerReport>> () {
+          @Override
+          public Collection<ContainerReport> run() throws Exception {
+            return appContext.getContainers(aaid).values();
+          }
+        });
+      }
+    } catch (Exception e) {
       throw new WebApplicationException(e);
     }
     ContainersInfo containersInfo = new ContainersInfo();
@@ -264,14 +320,25 @@ public class WebServices {
   public ContainerInfo getContainer(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId,
       String containerId) {
+    UserGroupInformation callerUGI = getUser(req);
     ApplicationId aid = parseApplicationId(appId);
     ApplicationAttemptId aaid = parseApplicationAttemptId(appAttemptId);
-    ContainerId cid = parseContainerId(containerId);
+    final ContainerId cid = parseContainerId(containerId);
     validateIds(aid, aaid, cid);
     ContainerReport container = null;
     try {
-      container = appContext.getContainer(cid);
-    } catch (IOException e) {
+      if (callerUGI == null) {
+        container = appContext.getContainer(cid);
+      } else {
+        container = callerUGI.doAs(
+            new PrivilegedExceptionAction<ContainerReport> () {
+          @Override
+          public ContainerReport run() throws Exception {
+            return appContext.getContainer(cid);
+          }
+        });
+      }
+    } catch (Exception e) {
       throw new WebApplicationException(e);
     }
     if (container == null) {
@@ -364,4 +431,14 @@ public class WebServices {
       throw new NotFoundException("appAttemptId and containerId don't match");
     }
   }
+
+  protected static UserGroupInformation getUser(HttpServletRequest req) {
+    String remoteUser = req.getRemoteUser();
+    UserGroupInformation callerUGI = null;
+    if (remoteUser != null) {
+      callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
+    }
+    return callerUGI;
+  }
+
 }

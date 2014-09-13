@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.conf.ConfigurationProvider;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
+import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -81,8 +82,9 @@ public class RMContextImpl implements RMContext {
   private ResourceTrackerService resourceTrackerService;
   private ApplicationMasterService applicationMasterService;
   private RMApplicationHistoryWriter rmApplicationHistoryWriter;
+  private SystemMetricsPublisher systemMetricsPublisher;
   private ConfigurationProvider configurationProvider;
-  private int epoch;
+  private long epoch;
 
   /**
    * Default constructor. To be used in conjunction with setter methods for
@@ -346,6 +348,17 @@ public class RMContextImpl implements RMContext {
   }
 
   @Override
+  public void setSystemMetricsPublisher(
+      SystemMetricsPublisher systemMetricsPublisher) {
+    this.systemMetricsPublisher = systemMetricsPublisher;
+  }
+
+  @Override
+  public SystemMetricsPublisher getSystemMetricsPublisher() {
+    return systemMetricsPublisher;
+  }
+
+  @Override
   public void setRMApplicationHistoryWriter(
       RMApplicationHistoryWriter rmApplicationHistoryWriter) {
     this.rmApplicationHistoryWriter = rmApplicationHistoryWriter;
@@ -362,11 +375,11 @@ public class RMContextImpl implements RMContext {
   }
 
   @Override
-  public int getEpoch() {
+  public long getEpoch() {
     return this.epoch;
   }
 
- void setEpoch(int epoch) {
+ void setEpoch(long epoch) {
     this.epoch = epoch;
   }
 }

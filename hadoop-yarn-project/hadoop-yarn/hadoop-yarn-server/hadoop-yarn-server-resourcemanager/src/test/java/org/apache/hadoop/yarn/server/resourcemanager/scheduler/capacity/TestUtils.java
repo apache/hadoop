@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
+import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
@@ -92,6 +93,7 @@ public class TestUtils {
           new RMContainerTokenSecretManager(conf),
           new NMTokenSecretManagerInRM(conf),
           new ClientToAMTokenSecretManagerInRM(), writer);
+    rmContext.setSystemMetricsPublisher(mock(SystemMetricsPublisher.class));
     return rmContext;
   }
   
@@ -170,7 +172,9 @@ public class TestUtils {
     ContainerId containerId = mock(ContainerId.class);
     doReturn(application.getApplicationAttemptId()).
     when(containerId).getApplicationAttemptId();
-    doReturn(application.getNewContainerId()).when(containerId).getId();
+    long id = application.getNewContainerId();
+    doReturn((int)id).when(containerId).getId();
+    doReturn(id).when(containerId).getContainerId();
     return containerId;
   }
   

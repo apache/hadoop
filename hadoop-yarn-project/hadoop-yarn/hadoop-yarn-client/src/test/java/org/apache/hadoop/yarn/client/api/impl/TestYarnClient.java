@@ -457,6 +457,7 @@ public class TestYarnClient {
           "host",
           124,
           "url",
+          "oUrl",
           "diagnostics",
           YarnApplicationAttemptState.FINISHED,
           ContainerId.newInstance(
@@ -467,6 +468,7 @@ public class TestYarnClient {
           "host",
           124,
           "url",
+          "oUrl",
           "diagnostics",
           YarnApplicationAttemptState.FINISHED,
           ContainerId.newInstance(

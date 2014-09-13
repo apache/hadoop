@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.webapp.view;
 import java.io.PrintWriter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.webapp.MimeType;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.WebAppException;
@@ -81,4 +82,15 @@ public abstract class HtmlBlock extends TextView implements SubView {
    * @param html the block to render
    */
   protected abstract void render(Block html);
+
+  protected UserGroupInformation getCallerUGI() {
+    // Check for the authorization.
+    String remoteUser = request().getRemoteUser();
+    UserGroupInformation callerUGI = null;
+    if (remoteUser != null) {
+      callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
+    }
+    return callerUGI;
+  }
+
 }

@@ -20,12 +20,13 @@ package org.apache.hadoop.yarn.server.webapp;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.APPLICATION_ATTEMPT_ID;
 
-import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
@@ -67,10 +68,22 @@ public class AppAttemptBlock extends HtmlBlock {
       return;
     }
 
+    final ApplicationAttemptId appAttemptIdFinal = appAttemptId;
+    UserGroupInformation callerUGI = getCallerUGI();
     ApplicationAttemptReport appAttemptReport;
     try {
-      appAttemptReport = appContext.getApplicationAttempt(appAttemptId);
-    } catch (IOException e) {
+      if (callerUGI == null) {
+        appAttemptReport = appContext.getApplicationAttempt(appAttemptId);
+      } else {
+        appAttemptReport = callerUGI.doAs(
+            new PrivilegedExceptionAction<ApplicationAttemptReport> () {
+          @Override
+          public ApplicationAttemptReport run() throws Exception {
+            return appContext.getApplicationAttempt(appAttemptIdFinal);
+          }
+        });
+      }
+    } catch (Exception e) {
       String message =
           "Failed to read the application attempt " + appAttemptId + ".";
       LOG.error(message, e);
@@ -108,8 +121,26 @@ public class AppAttemptBlock extends HtmlBlock {
 
     Collection<ContainerReport> containers;
     try {
-      containers = appContext.getContainers(appAttemptId).values();
-    } catch (IOException e) {
+      if (callerUGI == null) {
+        containers = appContext.getContainers(appAttemptId).values();
+      } else {
+        containers = callerUGI.doAs(
+            new PrivilegedExceptionAction<Collection<ContainerReport>> () {
+          @Override
+          public Collection<ContainerReport> run() throws Exception {
+            return  appContext.getContainers(appAttemptIdFinal).values();
+          }
+        });
+      }
+    } catch (RuntimeException e) {
+      // have this block to suppress the findbugs warning
+      html
+      .p()
+      ._(
+        "Sorry, Failed to get containers for application attempt" + attemptid
+            + ".")._();
+      return;
+    } catch (Exception e) {
       html
         .p()
         ._(

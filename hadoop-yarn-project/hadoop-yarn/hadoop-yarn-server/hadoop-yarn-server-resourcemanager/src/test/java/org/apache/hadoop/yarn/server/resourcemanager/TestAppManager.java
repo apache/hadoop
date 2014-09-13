@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.mock;
@@ -119,6 +120,8 @@ public class TestAppManager{
       }
     };
     ((RMContextImpl)context).setStateStore(mock(RMStateStore.class));
+    ((RMContextImpl)context).setSystemMetricsPublisher(
+        mock(SystemMetricsPublisher.class));
     return context;
   }
 

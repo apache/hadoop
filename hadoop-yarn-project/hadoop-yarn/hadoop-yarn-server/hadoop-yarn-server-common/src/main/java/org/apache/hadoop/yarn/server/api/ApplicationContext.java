@@ -21,17 +21,14 @@ package org.apache.hadoop.yarn.server.api;
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 
-@Public
-@Unstable
 public interface ApplicationContext {
   /**
    * This method returns Application {@link ApplicationReport} for the specified
@@ -40,21 +37,21 @@ public interface ApplicationContext {
    * @param appId
    * 
    * @return {@link ApplicationReport} for the ApplicationId.
+   * @throws YarnException
    * @throws IOException
    */
-  @Public
-  @Unstable
-  ApplicationReport getApplication(ApplicationId appId) throws IOException;
+  ApplicationReport getApplication(ApplicationId appId)
+      throws YarnException, IOException;
 
   /**
    * This method returns all Application {@link ApplicationReport}s
    * 
    * @return map of {@link ApplicationId} to {@link ApplicationReport}s.
+   * @throws YarnException
    * @throws IOException
    */
-  @Public
-  @Unstable
-  Map<ApplicationId, ApplicationReport> getAllApplications() throws IOException;
+  Map<ApplicationId, ApplicationReport> getAllApplications()
+      throws YarnException, IOException;
 
   /**
    * Application can have multiple application attempts
@@ -64,12 +61,11 @@ public interface ApplicationContext {
    * @param appId
    * 
    * @return all {@link ApplicationAttemptReport}s for the Application.
+   * @throws YarnException
    * @throws IOException
    */
-  @Public
-  @Unstable
   Map<ApplicationAttemptId, ApplicationAttemptReport> getApplicationAttempts(
-      ApplicationId appId) throws IOException;
+      ApplicationId appId) throws YarnException, IOException;
 
   /**
    * This method returns {@link ApplicationAttemptReport} for specified
@@ -78,12 +74,11 @@ public interface ApplicationContext {
    * @param appAttemptId
    *          {@link ApplicationAttemptId}
    * @return {@link ApplicationAttemptReport} for ApplicationAttemptId
+   * @throws YarnException
    * @throws IOException
    */
-  @Public
-  @Unstable
   ApplicationAttemptReport getApplicationAttempt(
-      ApplicationAttemptId appAttemptId) throws IOException;
+      ApplicationAttemptId appAttemptId) throws YarnException, IOException;
 
   /**
    * This method returns {@link ContainerReport} for specified
@@ -92,11 +87,11 @@ public interface ApplicationContext {
    * @param containerId
    *          {@link ContainerId}
    * @return {@link ContainerReport} for ContainerId
+   * @throws YarnException
    * @throws IOException
    */
-  @Public
-  @Unstable
-  ContainerReport getContainer(ContainerId containerId) throws IOException;
+  ContainerReport getContainer(ContainerId containerId)
+      throws YarnException, IOException;
 
   /**
    * This method returns {@link ContainerReport} for specified
@@ -105,12 +100,11 @@ public interface ApplicationContext {
    * @param appAttemptId
    *          {@link ApplicationAttemptId}
    * @return {@link ContainerReport} for ApplicationAttemptId
+   * @throws YarnException
    * @throws IOException
    */
-  @Public
-  @Unstable
   ContainerReport getAMContainer(ApplicationAttemptId appAttemptId)
-      throws IOException;
+      throws YarnException, IOException;
 
   /**
    * This method returns Map of {@link ContainerId} to {@link ContainerReport}
@@ -120,10 +114,9 @@ public interface ApplicationContext {
    *          {@link ApplicationAttemptId}
    * @return Map of {@link ContainerId} to {@link ContainerReport} for
    *         ApplicationAttemptId
+   * @throws YarnException
    * @throws IOException
    */
-  @Public
-  @Unstable
   Map<ContainerId, ContainerReport> getContainers(
-      ApplicationAttemptId appAttemptId) throws IOException;
+      ApplicationAttemptId appAttemptId) throws YarnException, IOException;
 }

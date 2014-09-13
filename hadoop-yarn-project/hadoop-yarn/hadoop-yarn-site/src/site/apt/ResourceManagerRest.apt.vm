@@ -1494,11 +1494,11 @@ _01_000001</amContainerLogs>
 | amHostHttpAddress | string | The nodes http address of the application master |
 *---------------+--------------+--------------------------------+
 | allocatedMB | int | The sum of memory in MB allocated to the application's running containers |
-*---------------------------------------------------------------+
+*---------------+--------------+--------------------------------+
 | allocatedVCores | int | The sum of virtual cores allocated to the application's running containers |
-+---------------------------------------------------------------+
+*---------------+--------------+--------------------------------+
 | runningContainers | int | The number of containers currently running for the application |
-+---------------------------------------------------------------+
+*---------------+--------------+--------------------------------+
 | memorySeconds | long | The amount of memory the application has allocated (megabyte-seconds) |
 *---------------+--------------+--------------------------------+
 | vcoreSeconds | long | The amount of CPU resources the application has allocated (virtual core-seconds) |

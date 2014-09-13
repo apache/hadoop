@@ -117,7 +117,8 @@ public class FileSystemApplicationHistoryStore extends AbstractService
   @Override
   public void serviceInit(Configuration conf) throws Exception {
     Path fsWorkingPath =
-        new Path(conf.get(YarnConfiguration.FS_APPLICATION_HISTORY_STORE_URI));
+        new Path(conf.get(YarnConfiguration.FS_APPLICATION_HISTORY_STORE_URI,
+            conf.get("hadoop.tmp.dir") + "/yarn/timeline/generic-history"));
     rootDirPath = new Path(fsWorkingPath, ROOT_DIR_NAME);
     try {
       fs = getFileSystem(fsWorkingPath, conf);

@@ -88,6 +88,15 @@ public class ApplicationAttemptReportPBImpl extends ApplicationAttemptReport {
   }
 
   @Override
+  public String getOriginalTrackingUrl() {
+    ApplicationAttemptReportProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasOriginalTrackingUrl()) {
+      return null;
+    }
+    return p.getOriginalTrackingUrl();
+  }
+
+  @Override
   public String getDiagnostics() {
     ApplicationAttemptReportProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasDiagnostics()) {
@@ -158,6 +167,16 @@ public class ApplicationAttemptReportPBImpl extends ApplicationAttemptReport {
       return;
     }
     builder.setTrackingUrl(url);
+  }
+
+  @Override
+  public void setOriginalTrackingUrl(String oUrl) {
+    maybeInitBuilder();
+    if (oUrl == null) {
+      builder.clearOriginalTrackingUrl();
+      return;
+    }
+    builder.setOriginalTrackingUrl(oUrl);
   }
 
   @Override

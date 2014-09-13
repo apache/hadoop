@@ -20,10 +20,11 @@ package org.apache.hadoop.yarn.server.webapp;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.CONTAINER_ID;
 
-import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
@@ -63,10 +64,22 @@ public class ContainerBlock extends HtmlBlock {
       return;
     }
 
+    final ContainerId containerIdFinal = containerId;
+    UserGroupInformation callerUGI = getCallerUGI();
     ContainerReport containerReport;
     try {
-      containerReport = appContext.getContainer(containerId);
-    } catch (IOException e) {
+      if (callerUGI == null) {
+        containerReport = appContext.getContainer(containerId);
+      } else {
+        containerReport = callerUGI.doAs(
+            new PrivilegedExceptionAction<ContainerReport> () {
+          @Override
+          public ContainerReport run() throws Exception {
+            return appContext.getContainer(containerIdFinal);
+          }
+        });
+      }
+    } catch (Exception e) {
       String message = "Failed to read the container " + containerid + ".";
       LOG.error(message, e);
       html.p()._(message)._();

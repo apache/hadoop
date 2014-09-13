@@ -602,8 +602,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
         if (priorityComp != 0) {
           return priorityComp;
         }
-        return b.getContainerId().getId() -
-               a.getContainerId().getId();
+        return b.getContainerId().compareTo(a.getContainerId());
       }
     });
   }

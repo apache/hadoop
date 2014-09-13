@@ -157,7 +157,9 @@ public class TestDataNodeRollingUpgrade {
   }
 
   private boolean isBlockFileInPrevious(File blockFile) {
-    Pattern blockFilePattern = Pattern.compile("^(.*/current/.*/)(current)(/.*)$");
+    Pattern blockFilePattern = Pattern.compile(String.format(
+      "^(.*%1$scurrent%1$s.*%1$s)(current)(%1$s.*)$",
+      Pattern.quote(File.separator)));
     Matcher matcher = blockFilePattern.matcher(blockFile.toString());
     String previousFileName = matcher.replaceFirst("$1" + "previous" + "$3");
     return ((new File(previousFileName)).exists());
@@ -355,7 +357,7 @@ public class TestDataNodeRollingUpgrade {
       assertTrue(isBlockFileInPrevious(blockFiles[1]));
       assertFalse(isTrashRootPresent());
 
-      // Rollback and ensure that neither block file exists in trash or previous.
+      // Finalize and ensure that neither block file exists in trash or previous.
       finalizeRollingUpgrade();
       assertFalse(isTrashRootPresent());
       assertFalse(isBlockFileInPrevious(blockFiles[0]));
