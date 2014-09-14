@@ -15,9 +15,8 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
-package org.apache.hadoop.mapreduce.v2.app;
+package org.apache.hadoop.yarn.util;
 
-import org.apache.hadoop.yarn.util.Clock;
 
 public class ControlledClock implements Clock {
   private long time = -1;

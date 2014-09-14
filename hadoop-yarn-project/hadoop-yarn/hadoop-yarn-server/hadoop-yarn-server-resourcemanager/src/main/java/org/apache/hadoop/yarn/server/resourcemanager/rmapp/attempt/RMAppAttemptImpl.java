@@ -42,7 +42,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -85,7 +84,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
@@ -142,6 +140,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private String originalTrackingUrl = "N/A";
   private String proxiedTrackingUrl = "N/A";
   private long startTime = 0;
+  private long finishTime = 0;
 
   // Set to null initially. Will eventually get set 
   // if an RMAppAttemptUnregistrationEvent occurs
@@ -739,6 +738,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     this.proxiedTrackingUrl = generateProxyUriWithScheme(originalTrackingUrl);
     this.finalStatus = attemptState.getFinalApplicationStatus();
     this.startTime = attemptState.getStartTime();
+    this.finishTime = attemptState.getFinishTime();
     this.attemptMetrics.updateAggregateAppResourceUsage(
         attemptState.getMemorySeconds(),attemptState.getVcoreSeconds());
   }
@@ -1028,11 +1028,13 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     AggregateAppResourceUsage resUsage =
         this.attemptMetrics.getAggregateAppResourceUsage();
     RMStateStore rmStore = rmContext.getStateStore();
+    setFinishTime(System.currentTimeMillis());
     ApplicationAttemptState attemptState =
         new ApplicationAttemptState(applicationAttemptId, getMasterContainer(),
           rmStore.getCredentialsFromAppAttempt(this), startTime,
           stateToBeStored, finalTrackingUrl, diags, finalStatus, exitStatus,
-          resUsage.getMemorySeconds(), resUsage.getVcoreSeconds());
+          getFinishTime(), resUsage.getMemorySeconds(),
+          resUsage.getVcoreSeconds());
     LOG.info("Updating application attempt " + applicationAttemptId
         + " with final state: " + targetedFinalState + ", and exit status: "
         + exitStatus);
@@ -1746,5 +1748,24 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     // didn't use read/write lock here because RMAppAttemptMetrics has its own
     // lock
     return attemptMetrics;
+  }
+
+  @Override
+  public long getFinishTime() {
+    try {
+      this.readLock.lock();
+      return this.finishTime;
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  private void setFinishTime(long finishTime) {
+    try {
+      this.writeLock.lock();
+      this.finishTime = finishTime;
+    } finally {
+      this.writeLock.unlock();
+    }
   }
 }

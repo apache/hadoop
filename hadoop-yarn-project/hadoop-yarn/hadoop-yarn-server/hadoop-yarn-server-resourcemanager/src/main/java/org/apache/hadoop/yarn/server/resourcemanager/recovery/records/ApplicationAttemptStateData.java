@@ -44,7 +44,7 @@ public abstract class ApplicationAttemptStateData {
       ByteBuffer attemptTokens, long startTime, RMAppAttemptState finalState,
       String finalTrackingUrl, String diagnostics,
       FinalApplicationStatus amUnregisteredFinalStatus, int exitStatus,
-      long memorySeconds, long vcoreSeconds) {
+      long finishTime, long memorySeconds, long vcoreSeconds) {
     ApplicationAttemptStateData attemptStateData =
         Records.newRecord(ApplicationAttemptStateData.class);
     attemptStateData.setAttemptId(attemptId);
@@ -56,6 +56,7 @@ public abstract class ApplicationAttemptStateData {
     attemptStateData.setStartTime(startTime);
     attemptStateData.setFinalApplicationStatus(amUnregisteredFinalStatus);
     attemptStateData.setAMContainerExitStatus(exitStatus);
+    attemptStateData.setFinishTime(finishTime);
     attemptStateData.setMemorySeconds(memorySeconds);
     attemptStateData.setVcoreSeconds(vcoreSeconds);
     return attemptStateData;
@@ -75,7 +76,7 @@ public abstract class ApplicationAttemptStateData {
       attemptState.getStartTime(), attemptState.getState(),
       attemptState.getFinalTrackingUrl(), attemptState.getDiagnostics(),
       attemptState.getFinalApplicationStatus(),
-      attemptState.getAMContainerExitStatus(),
+      attemptState.getAMContainerExitStatus(), attemptState.getFinishTime(),
       attemptState.getMemorySeconds(), attemptState.getVcoreSeconds());
   }
 
@@ -163,7 +164,15 @@ public abstract class ApplicationAttemptStateData {
   public abstract void setAMContainerExitStatus(int exitStatus);
 
   /**
-   * Get the <em>memory seconds</em> (in MB seconds) of the application.
+   * Get the <em>finish time</em> of the application attempt.
+   * @return <em>finish time</em> of the application attempt
+   */
+  public abstract long getFinishTime();
+
+  public abstract void setFinishTime(long finishTime);
+
+  /**
+  * Get the <em>memory seconds</em> (in MB seconds) of the application.
    * @return <em>memory seconds</em> (in MB seconds) of the application
    */
   @Public
