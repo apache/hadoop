@@ -45,6 +45,15 @@ import java.util.Set;
  *       {@link ContainerLaunchContext} of the container in which the 
  *       <code>ApplicationMaster</code> is executed.
  *     </li>
+ *     <li>maxAppAttempts. The maximum number of application attempts.
+ *     It should be no larger than the global number of max attempts in the
+ *     Yarn configuration.</li>
+ *     <li>attemptFailuresValidityInterval. The default value is -1.
+ *     when attemptFailuresValidityInterval in milliseconds is set to > 0,
+ *     the failure number will no take failures which happen out of the
+ *     validityInterval into failure count. If failure count reaches to
+ *     maxAppAttempts, the application will be failed.
+ *     </li>
  *   </ul>
  * </p>
  * 
@@ -101,6 +110,22 @@ public abstract class ApplicationSubmissionContext {
     return newInstance(applicationId, applicationName, queue, priority,
       amContainer, isUnmanagedAM, cancelTokensWhenComplete, maxAppAttempts,
       resource, null);
+  }
+
+  @Public
+  @Stable
+  public static ApplicationSubmissionContext newInstance(
+      ApplicationId applicationId, String applicationName, String queue,
+      Priority priority, ContainerLaunchContext amContainer,
+      boolean isUnmanagedAM, boolean cancelTokensWhenComplete,
+      int maxAppAttempts, Resource resource, String applicationType,
+      boolean keepContainers, long attemptFailuresValidityInterval) {
+    ApplicationSubmissionContext context =
+        newInstance(applicationId, applicationName, queue, priority,
+          amContainer, isUnmanagedAM, cancelTokensWhenComplete, maxAppAttempts,
+          resource, applicationType, keepContainers);
+    context.setAttemptFailuresValidityInterval(attemptFailuresValidityInterval);
+    return context;
   }
 
   /**
@@ -338,4 +363,22 @@ public abstract class ApplicationSubmissionContext {
   @Public
   @Stable
   public abstract void setApplicationTags(Set<String> tags);
+
+  /**
+   * Get the attemptFailuresValidityInterval in milliseconds for the application
+   *
+   * @return the attemptFailuresValidityInterval
+   */
+  @Public
+  @Stable
+  public abstract long getAttemptFailuresValidityInterval();
+
+  /**
+   * Set the attemptFailuresValidityInterval in milliseconds for the application
+   * @param attemptFailuresValidityInterval
+   */
+  @Public
+  @Stable
+  public abstract void setAttemptFailuresValidityInterval(
+      long attemptFailuresValidityInterval);
 }

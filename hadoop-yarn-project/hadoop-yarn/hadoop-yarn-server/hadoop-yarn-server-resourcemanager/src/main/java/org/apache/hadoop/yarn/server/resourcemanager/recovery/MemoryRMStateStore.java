@@ -171,6 +171,7 @@ public class MemoryRMStateStore extends RMStateStore {
           attemptStateData.getDiagnostics(),
           attemptStateData.getFinalApplicationStatus(),
           attemptStateData.getAMContainerExitStatus(),
+          attemptStateData.getFinishTime(),
           attemptStateData.getMemorySeconds(),
           attemptStateData.getVcoreSeconds());
 
