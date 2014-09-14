@@ -318,4 +318,16 @@ public class ApplicationAttemptStateDataPBImpl extends
   private FinalApplicationStatus convertFromProtoFormat(FinalApplicationStatusProto s) {
     return ProtoUtils.convertFromProtoFormat(s);
   }
+
+  @Override
+  public long getFinishTime() {
+    ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getFinishTime();
+  }
+
+  @Override
+  public void setFinishTime(long finishTime) {
+    maybeInitBuilder();
+    builder.setFinishTime(finishTime);
+  }
 }

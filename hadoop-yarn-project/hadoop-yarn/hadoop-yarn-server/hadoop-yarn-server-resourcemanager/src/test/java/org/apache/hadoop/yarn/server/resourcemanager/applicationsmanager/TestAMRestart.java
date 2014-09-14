@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
@@ -53,7 +54,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnSched
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -581,6 +584,130 @@ public class TestAMRestart {
       appState.getAttempt(am2.getApplicationAttemptId())
         .getAMContainerExitStatus());
 
+    rm1.stop();
+    rm2.stop();
+  }
+
+  @Test (timeout = 50000)
+  public void testRMAppAttemptFailuresValidityInterval() throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+      ResourceScheduler.class);
+    conf.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
+    conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
+    // explicitly set max-am-retry count as 2.
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+
+    MockRM rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 8000, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    // set window size to a larger number : 20s
+    // we will verify the app should be failed if
+    // two continuous attempts failed in 20s.
+    RMApp app = rm1.submitApp(200, 20000);
+    
+    MockAM am = MockRM.launchAM(app, rm1, nm1);
+    // Fail current attempt normally
+    nm1.nodeHeartbeat(am.getApplicationAttemptId(),
+      1, ContainerState.COMPLETE);
+    am.waitForState(RMAppAttemptState.FAILED);
+    // launch the second attempt
+    rm1.waitForState(app.getApplicationId(), RMAppState.ACCEPTED);
+    Assert.assertEquals(2, app.getAppAttempts().size());
+    Assert.assertTrue(((RMAppAttemptImpl) app.getCurrentAppAttempt())
+      .mayBeLastAttempt());
+    MockAM am_2 = MockRM.launchAndRegisterAM(app, rm1, nm1);
+    am_2.waitForState(RMAppAttemptState.RUNNING);
+    nm1.nodeHeartbeat(am_2.getApplicationAttemptId(),
+      1, ContainerState.COMPLETE);
+    am_2.waitForState(RMAppAttemptState.FAILED);
+    // current app should be failed.
+    rm1.waitForState(app.getApplicationId(), RMAppState.FAILED);
+
+    ControlledClock clock = new ControlledClock(new SystemClock());
+    // set window size to 6s
+    RMAppImpl app1 = (RMAppImpl)rm1.submitApp(200, 6000);;
+    app1.setSystemClock(clock);
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+    // Fail attempt1 normally
+    nm1.nodeHeartbeat(am1.getApplicationAttemptId(),
+      1, ContainerState.COMPLETE);
+    am1.waitForState(RMAppAttemptState.FAILED);
+
+    // launch the second attempt
+    rm1.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
+    Assert.assertEquals(2, app1.getAppAttempts().size());
+
+    RMAppAttempt attempt2 = app1.getCurrentAppAttempt();
+    Assert.assertTrue(((RMAppAttemptImpl) attempt2).mayBeLastAttempt());
+    MockAM am2 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+    am2.waitForState(RMAppAttemptState.RUNNING);
+
+    // wait for 6 seconds
+    clock.setTime(System.currentTimeMillis() + 6*1000);
+    // Fail attempt2 normally
+    nm1.nodeHeartbeat(am2.getApplicationAttemptId(),
+      1, ContainerState.COMPLETE);
+    am2.waitForState(RMAppAttemptState.FAILED);
+
+    // can launch the third attempt successfully
+    rm1.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
+    Assert.assertEquals(3, app1.getAppAttempts().size());
+    RMAppAttempt attempt3 = app1.getCurrentAppAttempt();
+    clock.reset();
+    MockAM am3 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+    am3.waitForState(RMAppAttemptState.RUNNING);
+
+    // Restart rm.
+    @SuppressWarnings("resource")
+    MockRM rm2 = new MockRM(conf, memStore);
+    rm2.start();
+
+    // re-register the NM
+    nm1.setResourceTrackerService(rm2.getResourceTrackerService());
+    NMContainerStatus status = Records.newRecord(NMContainerStatus.class);
+    status
+      .setContainerExitStatus(ContainerExitStatus.KILLED_BY_RESOURCEMANAGER);
+    status.setContainerId(attempt3.getMasterContainer().getId());
+    status.setContainerState(ContainerState.COMPLETE);
+    status.setDiagnostics("");
+    nm1.registerNode(Collections.singletonList(status), null);
+
+    rm2.waitForState(attempt3.getAppAttemptId(), RMAppAttemptState.FAILED);
+
+    rm2.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
+
+    // Lauch Attempt 4
+    MockAM am4 =
+        rm2.waitForNewAMToLaunchAndRegister(app1.getApplicationId(), 4, nm1);
+
+    // wait for 6 seconds
+    clock.setTime(System.currentTimeMillis() + 6*1000);
+    // Fail attempt4 normally
+    nm1
+      .nodeHeartbeat(am4.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
+    am4.waitForState(RMAppAttemptState.FAILED);
+
+    // can launch the 5th attempt successfully
+    rm2.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
+
+    MockAM am5 =
+        rm2.waitForNewAMToLaunchAndRegister(app1.getApplicationId(), 5, nm1);
+    clock.reset();
+    am5.waitForState(RMAppAttemptState.RUNNING);
+
+    // Fail attempt5 normally
+    nm1
+      .nodeHeartbeat(am5.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
+    am5.waitForState(RMAppAttemptState.FAILED);
+
+    rm2.waitForState(app1.getApplicationId(), RMAppState.FAILED);
     rm1.stop();
     rm2.stop();
   }

@@ -318,7 +318,8 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
           oldAttemptState.getAppAttemptCredentials(),
           oldAttemptState.getStartTime(), RMAppAttemptState.FINISHED,
           "myTrackingUrl", "attemptDiagnostics",
-          FinalApplicationStatus.SUCCEEDED, 100, 0, 0);
+          FinalApplicationStatus.SUCCEEDED, 100,
+          oldAttemptState.getFinishTime(), 0, 0);
     store.updateApplicationAttemptState(newAttemptState);
 
     // test updating the state of an app/attempt whose initial state was not
@@ -341,7 +342,8 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
           oldAttemptState.getAppAttemptCredentials(),
           oldAttemptState.getStartTime(), RMAppAttemptState.FINISHED,
           "myTrackingUrl", "attemptDiagnostics",
-          FinalApplicationStatus.SUCCEEDED, 111, 0, 0);
+          FinalApplicationStatus.SUCCEEDED, 111,
+          oldAttemptState.getFinishTime(), 0, 0);
     store.updateApplicationAttemptState(dummyAttempt);
 
     // let things settle down

@@ -261,6 +261,7 @@ public abstract class RMStateStore extends AbstractService {
     final Container masterContainer;
     final Credentials appAttemptCredentials;
     long startTime = 0;
+    long finishTime = 0;
     // fields set when attempt completes
     RMAppAttemptState state;
     String finalTrackingUrl = "N/A";
@@ -274,14 +275,15 @@ public abstract class RMStateStore extends AbstractService {
         Container masterContainer, Credentials appAttemptCredentials,
         long startTime, long memorySeconds, long vcoreSeconds) {
       this(attemptId, masterContainer, appAttemptCredentials, startTime, null,
-        null, "", null, ContainerExitStatus.INVALID, memorySeconds, vcoreSeconds);
+        null, "", null, ContainerExitStatus.INVALID, 0, memorySeconds, vcoreSeconds);
     }
 
     public ApplicationAttemptState(ApplicationAttemptId attemptId,
         Container masterContainer, Credentials appAttemptCredentials,
         long startTime, RMAppAttemptState state, String finalTrackingUrl,
         String diagnostics, FinalApplicationStatus amUnregisteredFinalStatus,
-        int exitStatus, long memorySeconds, long vcoreSeconds) {
+        int exitStatus, long finishTime, long memorySeconds,
+        long vcoreSeconds) {
       this.attemptId = attemptId;
       this.masterContainer = masterContainer;
       this.appAttemptCredentials = appAttemptCredentials;
@@ -291,6 +293,7 @@ public abstract class RMStateStore extends AbstractService {
       this.diagnostics = diagnostics == null ? "" : diagnostics;
       this.amUnregisteredFinalStatus = amUnregisteredFinalStatus;
       this.exitStatus = exitStatus;
+      this.finishTime = finishTime;
       this.memorySeconds = memorySeconds;
       this.vcoreSeconds = vcoreSeconds;
     }
@@ -327,6 +330,9 @@ public abstract class RMStateStore extends AbstractService {
     }
     public long getVcoreSeconds() {
       return vcoreSeconds;
+    }
+    public long getFinishTime() {
+      return this.finishTime;
     }
   }
   

@@ -213,4 +213,10 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
    * @return metrics
    */
   RMAppAttemptMetrics getRMAppAttemptMetrics();
+
+  /**
+   * the finish time of the application attempt.
+   * @return the finish time of the application attempt.
+   */
+  long getFinishTime();
 }
