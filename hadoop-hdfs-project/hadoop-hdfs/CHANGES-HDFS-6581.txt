@@ -44,3 +44,6 @@
     HDFS-6978. Directory scanner should correctly reconcile blocks on RAM
     disk. (Arpit Agarwal)
 
+    HDFS-7066. LazyWriter#evictBlocks misses a null check for replicaState.
+    (Xiaoyu Yao via Arpit Agarwal)
+
