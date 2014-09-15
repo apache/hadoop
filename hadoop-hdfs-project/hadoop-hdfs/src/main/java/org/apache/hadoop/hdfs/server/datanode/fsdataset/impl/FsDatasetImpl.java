@@ -2410,6 +2410,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         LazyWriteReplicaTracker.ReplicaState replicaState =
             lazyWriteReplicaTracker.getNextCandidateForEviction();
 
+        if (replicaState == null) {
+          break;
+        }
+
         if (LOG.isDebugEnabled()) {
           LOG.debug("Evicting block " + replicaState);
         }
