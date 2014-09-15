@@ -338,6 +338,16 @@ public class TestEncryptionZones {
     cluster.restartNameNode(true);
     assertNumZones(numZones);
     assertZonePresent(null, zone1.toString());
+
+    // Verify newly added ez is present after restarting the NameNode
+    // without persisting the namespace.
+    Path nonpersistZone = new Path("/nonpersistZone");
+    fsWrapper.mkdir(nonpersistZone, FsPermission.getDirDefault(), false);
+    dfsAdmin.createEncryptionZone(nonpersistZone, TEST_KEY);
+    numZones++;
+    cluster.restartNameNode(true);
+    assertNumZones(numZones);
+    assertZonePresent(null, nonpersistZone.toString());
   }
 
   /**
