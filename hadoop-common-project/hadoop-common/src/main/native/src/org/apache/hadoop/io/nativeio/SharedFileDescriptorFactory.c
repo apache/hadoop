@@ -37,6 +37,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#define ZERO_FULLY_BUF_SIZE 8192
+
 static pthread_mutex_t g_rand_lock = PTHREAD_MUTEX_INITIALIZER;
 
 JNIEXPORT void JNICALL
@@ -81,6 +83,24 @@ done:
   if (path) {
     (*env)->ReleaseStringUTFChars(env, jpath, path);
   }
+}
+
+static int zero_fully(int fd, jint length)
+{
+  char buf[ZERO_FULLY_BUF_SIZE];
+  int res;
+
+  memset(buf, 0, sizeof(buf));
+  while (length > 0) {
+    res = write(fd, buf,
+      (length > ZERO_FULLY_BUF_SIZE) ? ZERO_FULLY_BUF_SIZE : length);
+    if (res < 0) {
+      if (errno == EINTR) continue;
+      return errno;
+    }
+    length -= res;
+  }
+  return 0;
 }
 
 JNIEXPORT jobject JNICALL
@@ -136,9 +156,17 @@ Java_org_apache_hadoop_io_nativeio_SharedFileDescriptorFactory_createDescriptor0
     (*env)->Throw(env, jthr);
     goto done;
   }
-  if (ftruncate(fd, length) < 0) {
-    jthr = newIOException(env, "ftruncate(%s, %d) failed: error %d (%s)",
+  ret = zero_fully(fd, length);
+  if (ret) {
+    jthr = newIOException(env, "zero_fully(%s, %d) failed: error %d (%s)",
                           path, length, ret, terror(ret));
+    (*env)->Throw(env, jthr);
+    goto done;
+  }
+  if (lseek(fd, 0, SEEK_SET) < 0) {
+    ret = errno;
+    jthr = newIOException(env, "lseek(%s, 0, SEEK_SET) failed: error %d (%s)",
+                          path, ret, terror(ret));
     (*env)->Throw(env, jthr);
     goto done;
   }
