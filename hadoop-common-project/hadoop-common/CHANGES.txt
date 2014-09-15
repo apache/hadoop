@@ -378,6 +378,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11056. OsSecureRandom.setConf() might leak file descriptors. (yzhang
     via cmccabe)
 
+    HDFS-6912. SharedFileDescriptorFactory should not allocate sparse files
+    (cmccabe)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HADOOP-10734. Implement high-performance secure random number sources.
