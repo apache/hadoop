@@ -200,6 +200,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7061. Add test to verify encryption zone creation after NameNode
     restart without saving namespace. (Stephen Chu via wang)
 
+    HDFS-7059. HAadmin transtionToActive with forceActive option can show
+    confusing message.
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
