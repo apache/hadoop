@@ -463,9 +463,15 @@ public class ApplicationCLI extends YarnCLI {
       appReportStr.println(appReport.getHost());
       appReportStr.print("\tAggregate Resource Allocation : ");
 
-      ApplicationResourceUsageReport usageReport = appReport.getApplicationResourceUsageReport();
-      appReportStr.print(usageReport.getMemorySeconds() + " MB-seconds, ");
-      appReportStr.println(usageReport.getVcoreSeconds() + " vcore-seconds");
+      ApplicationResourceUsageReport usageReport =
+          appReport.getApplicationResourceUsageReport();
+      if (usageReport != null) {
+        //completed app report in the timeline server doesn't have usage report
+        appReportStr.print(usageReport.getMemorySeconds() + " MB-seconds, ");
+        appReportStr.println(usageReport.getVcoreSeconds() + " vcore-seconds");
+      } else {
+        appReportStr.println("N/A");
+      }
       appReportStr.print("\tDiagnostics : ");
       appReportStr.print(appReport.getDiagnostics());
     } else {

@@ -80,6 +80,7 @@ message ApplicationAttemptStateDataProto {
     optional int32 am_container_exit_status = 9 [default = -1000];
     optional int64 memory_seconds = 10;
     optional int64 vcore_seconds = 11;
+    optional int64 finish_time = 12;
 }
 
 message EpochProto {

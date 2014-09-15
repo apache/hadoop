@@ -78,6 +78,11 @@
   </property>
 
   <property>
+    <name>fs.contract.supports-seek-on-closed-file</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <name>fs.contract.rejects-seek-past-eof</name>
     <value>true</value>
   </property>

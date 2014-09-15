@@ -278,7 +278,16 @@ public class MockRM extends ResourceManager {
       boolean waitForAccepted, boolean keepContainers) throws Exception {
     return submitApp(masterMemory, name, user, acls, unmanaged, queue,
         maxAppAttempts, ts, appType, waitForAccepted, keepContainers,
-        false, null);
+        false, null, 0);
+  }
+
+  public RMApp submitApp(int masterMemory, long attemptFailuresValidityInterval)
+      throws Exception {
+    return submitApp(masterMemory, "", UserGroupInformation.getCurrentUser()
+      .getShortUserName(), null, false, null,
+      super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+      YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null, true, false,
+      false, null, attemptFailuresValidityInterval);
   }
 
   public RMApp submitApp(int masterMemory, String name, String user,
@@ -286,6 +295,17 @@ public class MockRM extends ResourceManager {
       int maxAppAttempts, Credentials ts, String appType,
       boolean waitForAccepted, boolean keepContainers, boolean isAppIdProvided,
       ApplicationId applicationId) throws Exception {
+    return submitApp(masterMemory, name, user, acls, unmanaged, queue,
+      maxAppAttempts, ts, appType, waitForAccepted, keepContainers,
+      isAppIdProvided, applicationId, 0);
+  }
+
+  public RMApp submitApp(int masterMemory, String name, String user,
+      Map<ApplicationAccessType, String> acls, boolean unmanaged, String queue,
+      int maxAppAttempts, Credentials ts, String appType,
+      boolean waitForAccepted, boolean keepContainers, boolean isAppIdProvided,
+      ApplicationId applicationId, long attemptFailuresValidityInterval)
+      throws Exception {
     ApplicationId appId = isAppIdProvided ? applicationId : null;
     ApplicationClientProtocol client = getClientRMService();
     if (! isAppIdProvided) {
@@ -321,6 +341,7 @@ public class MockRM extends ResourceManager {
       clc.setTokens(securityTokens);
     }
     sub.setAMContainerSpec(clc);
+    sub.setAttemptFailuresValidityInterval(attemptFailuresValidityInterval);
     req.setApplicationSubmissionContext(sub);
     UserGroupInformation fakeUser =
       UserGroupInformation.createUserForTesting(user, new String[] {"someGroup"});

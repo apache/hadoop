@@ -690,6 +690,92 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
+  <name>fs.s3a.access.key</name>
+  <description>AWS access key ID. Omit for Role-based authentication.</description>
+</property>
+
+<property>
+  <name>fs.s3a.secret.key</name>
+  <description>AWS secret key. Omit for Role-based authentication.</description>
+</property>
+
+<property>
+  <name>fs.s3a.connection.maximum</name>
+  <value>15</value>
+  <description>Controls the maximum number of simultaneous connections to S3.</description>
+</property>
+
+<property>
+  <name>fs.s3a.connection.ssl.enabled</name>
+  <value>true</value>
+  <description>Enables or disables SSL connections to S3.</description>
+</property>
+
+<property>
+  <name>fs.s3a.attempts.maximum</name>
+  <value>10</value>
+  <description>How many times we should retry commands on transient errors.</description>
+</property>
+
+<property>
+  <name>fs.s3a.connection.timeout</name>
+  <value>5000</value>
+  <description>Socket connection timeout in seconds.</description>
+</property>
+
+<property>
+  <name>fs.s3a.paging.maximum</name>
+  <value>5000</value>
+  <description>How many keys to request from S3 when doing 
+     directory listings at a time.</description>
+</property>
+
+<property>
+  <name>fs.s3a.multipart.size</name>
+  <value>104857600</value>
+  <description>How big (in bytes) to split upload or copy operations up into.</description>
+</property>
+
+<property>
+  <name>fs.s3a.multipart.threshold</name>
+  <value>2147483647</value>
+  <description>Threshold before uploads or copies use parallel multipart operations.</description>
+</property>
+
+<property>
+  <name>fs.s3a.acl.default</name>
+  <description>Set a canned ACL for newly created and copied objects. Value may be private, 
+     public-read, public-read-write, authenticated-read, log-delivery-write, 
+     bucket-owner-read, or bucket-owner-full-control.</description>
+</property>
+
+<property>
+  <name>fs.s3a.multipart.purge</name>
+  <value>false</value>
+  <description>True if you want to purge existing multipart uploads that may not have been
+     completed/aborted correctly</description>
+</property>
+
+<property>
+  <name>fs.s3a.multipart.purge.age</name>
+  <value>86400</value>
+  <description>Minimum age in seconds of multipart uploads to purge</description>
+</property>
+
+<property>
+  <name>fs.s3a.buffer.dir</name>
+  <value>${hadoop.tmp.dir}/s3a</value>
+  <description>Comma separated list of directories that will be used to buffer file 
+    uploads to.</description>
+</property>
+
+<property>
+  <name>fs.s3a.impl</name>
+  <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
+  <description>The implementation class of the S3A Filesystem</description>
+</property>
+
+<property>
   <name>io.seqfile.compress.blocksize</name>
   <value>1000000</value>
   <description>The minimum block size for compression in block compressed 

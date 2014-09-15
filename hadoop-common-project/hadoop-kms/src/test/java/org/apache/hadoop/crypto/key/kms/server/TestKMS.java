@@ -26,6 +26,7 @@ import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
 import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.Credentials;
@@ -117,7 +118,7 @@ public class TestKMS {
   protected Configuration createBaseKMSConf(File keyStoreDir) throws Exception {
     Configuration conf = new Configuration(false);
     conf.set("hadoop.security.key.provider.path",
-        "jceks://file@/" + keyStoreDir.getAbsolutePath() + "/kms.keystore");
+        "jceks://file@" + new Path(keyStoreDir.getAbsolutePath(), "kms.keystore").toUri());
     conf.set("hadoop.kms.authentication.type", "simple");
     return conf;
   }

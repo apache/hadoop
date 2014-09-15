@@ -19,6 +19,7 @@ package org.apache.hadoop.crypto.key.kms.server;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 
 import java.io.File;
 import java.net.MalformedURLException;
@@ -72,15 +73,13 @@ public class KMSConfiguration {
     String confDir = System.getProperty(KMS_CONFIG_DIR);
     if (confDir != null) {
       try {
-        if (!confDir.startsWith("/")) {
+        Path confPath = new Path(confDir);
+        if (!confPath.isUriPathAbsolute()) {
           throw new RuntimeException("System property '" + KMS_CONFIG_DIR +
               "' must be an absolute path: " + confDir);
         }
-        if (!confDir.endsWith("/")) {
-          confDir += "/";
-        }
         for (String resource : resources) {
-          conf.addResource(new URL("file://" + confDir + resource));
+          conf.addResource(new URL("file://" + new Path(confDir, resource).toUri()));
         }
       } catch (MalformedURLException ex) {
         throw new RuntimeException(ex);
@@ -105,12 +104,10 @@ public class KMSConfiguration {
     boolean newer = false;
     String confDir = System.getProperty(KMS_CONFIG_DIR);
     if (confDir != null) {
-      if (!confDir.startsWith("/")) {
+      Path confPath = new Path(confDir);
+      if (!confPath.isUriPathAbsolute()) {
         throw new RuntimeException("System property '" + KMS_CONFIG_DIR +
             "' must be an absolute path: " + confDir);
-      }
-      if (!confDir.endsWith("/")) {
-        confDir += "/";
       }
       File f = new File(confDir, KMS_ACLS_XML);
       // at least 100ms newer than time, we do this to ensure the file

@@ -23,6 +23,8 @@ Trunk - Unreleased
 
     YARN-2436. [post-HADOOP-9902] yarn application help doesn't work (aw)
 
+    YARN-2525. yarn logs command gives error on trunk (Akira AJISAKA via aw)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -73,8 +75,12 @@ Release 2.6.0 - UNRELEASED
     YARN-2440. Enabled Nodemanagers to limit the aggregate cpu usage across all
     containers to a preconfigured limit. (Varun Vasudev via vinodkv)
 
-    YARN-2033. YARN-2033. Merging generic-history into the Timeline Store 
+    YARN-2033. Merging generic-history into the Timeline Store 
     (Zhijie Shen via junping_du)
+
+    YARN-611. Added an API to let apps specify an interval beyond which AM
+    failures should be ignored towards counting max-attempts. (Xuan Gong via
+    vinodkv)
 
   IMPROVEMENTS
 
@@ -214,6 +220,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2229. Changed the integer field of ContainerId to be long type.
     (Tsuyoshi OZAWA via jianhe)
 
+    YARN-2547. Cross Origin Filter throws UnsupportedOperationException upon
+    destroy (Mit Desai via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -339,6 +348,16 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2484. FileSystemRMStateStore#readFile/writeFile should close
     FSData(In|Out)putStream in final block (Tsuyoshi OZAWA via jlowe)
+
+    YARN-2456. Possible livelock in CapacityScheduler when RM is recovering apps.
+    (Jian He via xgong)
+
+    YARN-2542. Fixed NPE when retrieving ApplicationReport from TimeLineServer.
+    (Zhijie Shen via jianhe)
+
+    YARN-2528. Relaxed http response split vulnerability protection for the origins
+    header and made it accept multiple origins in CrossOriginFilter. (Jonathan
+    Eagles via zjshen)
 
 Release 2.5.1 - 2014-09-05
 
