@@ -42,6 +42,7 @@ import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSTestWrapper;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileContextTestWrapper;
@@ -62,6 +63,8 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
 import org.apache.hadoop.hdfs.tools.DFSck;
 import org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -568,6 +571,55 @@ public class TestEncryptionZones {
         feInfo1.getEzKeyVersionName(), feInfo2.getEzKeyVersionName());
     // Contents still equal
     verifyFilesEqual(fs, encFile1, encFile2, len);
+  }
+
+  @Test(timeout = 120000)
+  public void testReadWriteUsingWebHdfs() throws Exception {
+    final HdfsAdmin dfsAdmin =
+        new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
+    final FileSystem webHdfsFs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+        WebHdfsFileSystem.SCHEME);
+
+    final Path zone = new Path("/zone");
+    fs.mkdirs(zone);
+    dfsAdmin.createEncryptionZone(zone, TEST_KEY);
+
+    /* Create an unencrypted file for comparison purposes. */
+    final Path unencFile = new Path("/unenc");
+    final int len = 8192;
+    DFSTestUtil.createFile(webHdfsFs, unencFile, len, (short) 1, 0xFEED);
+
+    /*
+     * Create the same file via webhdfs, but this time encrypted. Compare it
+     * using both webhdfs and DFS.
+     */
+    final Path encFile1 = new Path(zone, "myfile");
+    DFSTestUtil.createFile(webHdfsFs, encFile1, len, (short) 1, 0xFEED);
+    verifyFilesEqual(webHdfsFs, unencFile, encFile1, len);
+    verifyFilesEqual(fs, unencFile, encFile1, len);
+
+    /*
+     * Same thing except this time create the encrypted file using DFS.
+     */
+    final Path encFile2 = new Path(zone, "myfile2");
+    DFSTestUtil.createFile(fs, encFile2, len, (short) 1, 0xFEED);
+    verifyFilesEqual(webHdfsFs, unencFile, encFile2, len);
+    verifyFilesEqual(fs, unencFile, encFile2, len);
+
+    /* Verify appending to files works correctly. */
+    appendOneByte(fs, unencFile);
+    appendOneByte(webHdfsFs, encFile1);
+    appendOneByte(fs, encFile2);
+    verifyFilesEqual(webHdfsFs, unencFile, encFile1, len);
+    verifyFilesEqual(fs, unencFile, encFile1, len);
+    verifyFilesEqual(webHdfsFs, unencFile, encFile2, len);
+    verifyFilesEqual(fs, unencFile, encFile2, len);
+  }
+
+  private void appendOneByte(FileSystem fs, Path p) throws IOException {
+    final FSDataOutputStream out = fs.append(p);
+    out.write((byte) 0x123);
+    out.close();
   }
 
   @Test(timeout = 60000)
