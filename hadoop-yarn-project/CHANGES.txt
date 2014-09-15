@@ -8,6 +8,8 @@ Trunk - Unreleased
 
   IMPROVEMENTS
 
+    YARN-2438. yarn-env.sh cleanup (aw)
+
   OPTIMIZATIONS
 
   BUG FIXES

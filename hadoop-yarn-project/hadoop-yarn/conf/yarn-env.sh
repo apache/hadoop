@@ -1,3 +1,4 @@
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -25,27 +26,21 @@
 ##
 
 ###
-# Generic settings for YARN
+# YARN-specific overrides for generic settings
 ###
 
-# User for YARN daemons
-export HADOOP_YARN_USER=${HADOOP_YARN_USER:-yarn}
+# By default, YARN will use HADOOP_LOG_DIR for YARN logging.  Specify a custom
+# log directory for YARN things here:
+# export YARN_LOG_DIR="${HADOOP_LOG_DIR}"
 
-#
-# By default, YARN will use HADOOP_CONF_DIR. Specify a custom
-# YARN_CONF_DIR here
-# export YARN_CONF_DIR="${YARN_CONF_DIR:-$HADOOP_YARN_HOME/conf}"
-#
+# By default, YARN will use the value of HADOOP_LOGFILE as the 'fallback' log
+# file # when log4j settings are not defined.  Specify a custom YARN log file
+# here:
+# export YARN_LOGFILE=${HADOOP_LOGFILE}
 
-# Override Hadoop's log directory & file
-# export YARN_LOG_DIR="$HADOOP_YARN_HOME/logs"
-# export YARN_LOGFILE='yarn.log'
-
-# Need a custom-to-YARN service-level authorization policy file?
-# export YARN_POLICYFILE="yarn-policy.xml"
-
-#Override the log4j settings for all YARN apps
-# export YARN_ROOT_LOGGER="INFO,console"
+#Override the log4j settings for all YARN apps By default, YARN will use
+# HADOOP_ROOT_LOGGER.
+# export YARN_ROOT_LOGGER=${HADOOP_ROOT_LOGGER}
 
 ###
 # Resource Manager specific parameters
@@ -124,4 +119,27 @@ export HADOOP_YARN_USER=${HADOOP_YARN_USER:-yarn}
 # See ResourceManager for some examples
 #
 #export YARN_TIMELINESERVER_OPTS=
+
+###
+# Web App Proxy Server specifc parameters
+###
+
+# Specify the max Heapsize for the proxy server using a numerical value
+# in the scale of MB. For example, to specify an jvm option of -Xmx1000m, set
+# the value to 1000.
+# This value will be overridden by an Xmx setting specified in either YARN_OPTS,
+# HADOOP_OPTS, and/or YARN_PROXYSERVER_OPTS.
+# If not specified, the default value will be picked from either YARN_HEAPMAX
+# or JAVA_HEAP_MAX with YARN_HEAPMAX as the preferred option of the two.
+#
+#export YARN_PROXYSERVER_HEAPSIZE=1000
+
+# Specify the JVM options to be used when starting the proxy server.
+# These options will be appended to the options specified as YARN_OPTS
+# and therefore may override any similar flags set in YARN_OPTS
+#
+# See ResourceManager for some examples
+#
+#export YARN_PROXYSERVER_OPTS=
+
 
