@@ -197,6 +197,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6482. Use block ID-based block layout on datanodes (James Thomas via
     Colin Patrick McCabe)
 
+    HDFS-7061. Add test to verify encryption zone creation after NameNode
+    restart without saving namespace. (Stephen Chu via wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
