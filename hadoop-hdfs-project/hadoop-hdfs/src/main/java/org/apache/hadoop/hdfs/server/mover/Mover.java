@@ -321,7 +321,14 @@ public class Mover {
 
       final LocatedBlocks locatedBlocks = status.getBlockLocations();
       boolean hasRemaining = false;
-      for(LocatedBlock lb : locatedBlocks.getLocatedBlocks()) {
+      final boolean lastBlkComplete = locatedBlocks.isLastBlockComplete();
+      List<LocatedBlock> lbs = locatedBlocks.getLocatedBlocks();
+      for(int i = 0; i < lbs.size(); i++) {
+        if (i == lbs.size() - 1 && !lastBlkComplete) {
+          // last block is incomplete, skip it
+          continue;
+        }
+        LocatedBlock lb = lbs.get(i);
         final StorageTypeDiff diff = new StorageTypeDiff(types,
             lb.getStorageTypes());
         if (!diff.removeOverlap()) {
@@ -472,6 +479,7 @@ public class Mover {
           final ExitStatus r = m.run();
 
           if (r == ExitStatus.SUCCESS) {
+            IOUtils.cleanup(LOG, nnc);
             iter.remove();
           } else if (r != ExitStatus.IN_PROGRESS) {
             // must be an error statue, return
