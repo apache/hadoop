@@ -455,6 +455,12 @@ Release 2.6.0 - UNRELEASED
     HDFS-6482. Use block ID-based block layout on datanodes (James Thomas via
     Colin Patrick McCabe)
 
+    HDFS-7061. Add test to verify encryption zone creation after NameNode
+    restart without saving namespace. (Stephen Chu via wang)
+
+    HDFS-7059. HAadmin transtionToActive with forceActive option can show
+    confusing message.
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -643,6 +649,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7045. Fix NameNode deadlock when opening file under /.reserved path.
     (Yi Liu via wang)
+
+    HDFS-7032. Add WebHDFS support for reading and writing to encryption zones.
+    (clamb via wang)
 
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   

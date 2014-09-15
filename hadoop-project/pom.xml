@@ -61,8 +61,9 @@
     <!-- jersey version -->
     <jersey.version>1.9</jersey.version>
 
-    <!-- jackson version -->
+    <!-- jackson versions -->
     <jackson.version>1.9.13</jackson.version>
+    <jackson2.version>2.2.3</jackson2.version>
 
     <!-- ProtocolBuffer version, used to verify the protoc version and -->
     <!-- define the protobuf JAR version                               -->
@@ -581,13 +582,7 @@
       <dependency>
         <groupId>com.amazonaws</groupId>
         <artifactId>aws-java-sdk</artifactId>
-        <version>1.7.2</version>
-        <exclusions>
-          <exclusion>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-          </exclusion>
-        </exclusions>
+        <version>1.7.4</version>
       </dependency>
       <dependency>
         <groupId>org.apache.mina</groupId>
@@ -673,6 +668,21 @@
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-xc</artifactId>
         <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-core</artifactId>
+        <version>${jackson2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${jackson2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-annotations</artifactId>
+        <version>${jackson2.version}</version>
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>

@@ -342,6 +342,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10893. isolated classloader on the client side (Sangjin Lee via
     jlowe)
 
+    HADOOP-10400. Incorporate new S3A FileSystem implementation. (Jordan
+    Mendelson and Dave Wang via atm)
+
   IMPROVEMENTS
 
     HADOOP-10808. Remove unused native code for munlock. (cnauroth)
@@ -704,6 +707,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11056. OsSecureRandom.setConf() might leak file descriptors (yzhang
     via cmccabe)
+
+    HDFS-6912. SharedFileDescriptorFactory should not allocate sparse files
+    (cmccabe)
 
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   

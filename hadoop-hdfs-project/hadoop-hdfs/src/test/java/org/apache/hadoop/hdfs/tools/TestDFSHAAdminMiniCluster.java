@@ -232,26 +232,6 @@ public class TestDFSHAAdminMiniCluster {
     assertFalse("Both namenodes cannot be active", nn1.isActiveState() 
         && nn2.isActiveState());
    
-    /*  This test case doesn't allow nn2 to transition to Active even with
-        forceActive switch since nn1 is already active  */
-    if(nn1.getState() != null && !nn1.getState().
-        equals(HAServiceState.STANDBY.name()) ) {
-      cluster.transitionToStandby(0);
-    }
-    if(nn2.getState() != null && !nn2.getState().
-        equals(HAServiceState.STANDBY.name()) ) {
-      cluster.transitionToStandby(1);
-    }
-    //Making sure both the namenode are in standby state
-    assertTrue(nn1.isStandbyState());
-    assertTrue(nn2.isStandbyState());
-    
-    runTool("-transitionToActive", "nn1");
-    runTool("-transitionToActive", "nn2","--forceactive");
-    
-    assertFalse("Both namenodes cannot be active even though with forceActive",
-        nn1.isActiveState() && nn2.isActiveState());
-
     /*  In this test case, we have deliberately shut down nn1 and this will
         cause HAAAdmin#isOtherTargetNodeActive to throw an Exception 
         and transitionToActive for nn2 with  forceActive switch will succeed 

@@ -8,6 +8,8 @@ Trunk - Unreleased
 
   IMPROVEMENTS
 
+    YARN-2438. yarn-env.sh cleanup (aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -358,6 +360,12 @@ Release 2.6.0 - UNRELEASED
     YARN-2528. Relaxed http response split vulnerability protection for the origins
     header and made it accept multiple origins in CrossOriginFilter. (Jonathan
     Eagles via zjshen)
+
+    YARN-2549. TestContainerLaunch fails due to classpath problem with hamcrest
+    classes. (cnauroth)
+
+    YARN-2529. Generic history service RPC interface doesn't work when service
+    authorization is enabled. (Zhijie Shen via jianhe)
 
 Release 2.5.1 - 2014-09-05
 
