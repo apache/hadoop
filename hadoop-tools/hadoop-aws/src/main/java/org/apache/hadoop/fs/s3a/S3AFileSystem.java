@@ -95,8 +95,8 @@ public class S3AFileSystem extends FileSystem {
         this.getWorkingDirectory());
 
     // Try to get our credentials or just connect anonymously
-    String accessKey = conf.get(NEW_ACCESS_KEY, conf.get(OLD_ACCESS_KEY, null));
-    String secretKey = conf.get(NEW_SECRET_KEY, conf.get(OLD_SECRET_KEY, null));
+    String accessKey = conf.get(ACCESS_KEY, null);
+    String secretKey = conf.get(SECRET_KEY, null);
 
     String userInfo = name.getUserInfo();
     if (userInfo != null) {
@@ -118,37 +118,33 @@ public class S3AFileSystem extends FileSystem {
     bucket = name.getHost();
 
     ClientConfiguration awsConf = new ClientConfiguration();
-    awsConf.setMaxConnections(conf.getInt(NEW_MAXIMUM_CONNECTIONS, 
-      conf.getInt(OLD_MAXIMUM_CONNECTIONS, DEFAULT_MAXIMUM_CONNECTIONS)));
-    awsConf.setProtocol(conf.getBoolean(NEW_SECURE_CONNECTIONS, 
-      conf.getBoolean(OLD_SECURE_CONNECTIONS, DEFAULT_SECURE_CONNECTIONS)) ? 
-        Protocol.HTTPS : Protocol.HTTP);
-    awsConf.setMaxErrorRetry(conf.getInt(NEW_MAX_ERROR_RETRIES, 
-      conf.getInt(OLD_MAX_ERROR_RETRIES, DEFAULT_MAX_ERROR_RETRIES)));
-    awsConf.setSocketTimeout(conf.getInt(NEW_SOCKET_TIMEOUT, 
-      conf.getInt(OLD_SOCKET_TIMEOUT, DEFAULT_SOCKET_TIMEOUT)));
+    awsConf.setMaxConnections(conf.getInt(MAXIMUM_CONNECTIONS, 
+      DEFAULT_MAXIMUM_CONNECTIONS));
+    awsConf.setProtocol(conf.getBoolean(SECURE_CONNECTIONS, 
+      DEFAULT_SECURE_CONNECTIONS) ?  Protocol.HTTPS : Protocol.HTTP);
+    awsConf.setMaxErrorRetry(conf.getInt(MAX_ERROR_RETRIES, 
+      DEFAULT_MAX_ERROR_RETRIES));
+    awsConf.setSocketTimeout(conf.getInt(SOCKET_TIMEOUT, 
+      DEFAULT_SOCKET_TIMEOUT));
 
     s3 = new AmazonS3Client(credentials, awsConf);
 
-    maxKeys = conf.getInt(NEW_MAX_PAGING_KEYS, 
-      conf.getInt(OLD_MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS));
-    partSize = conf.getLong(NEW_MULTIPART_SIZE, 
-      conf.getLong(OLD_MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE));
-    partSizeThreshold = conf.getInt(NEW_MIN_MULTIPART_THRESHOLD, 
-      conf.getInt(OLD_MIN_MULTIPART_THRESHOLD, DEFAULT_MIN_MULTIPART_THRESHOLD));
+    maxKeys = conf.getInt(MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS);
+    partSize = conf.getLong(MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
+    partSizeThreshold = conf.getInt(MIN_MULTIPART_THRESHOLD, 
+      DEFAULT_MIN_MULTIPART_THRESHOLD);
 
     if (partSize < 5 * 1024 * 1024) {
-      LOG.error(NEW_MULTIPART_SIZE + " must be at least 5 MB");
+      LOG.error(MULTIPART_SIZE + " must be at least 5 MB");
       partSize = 5 * 1024 * 1024;
     }
 
     if (partSizeThreshold < 5 * 1024 * 1024) {
-      LOG.error(NEW_MIN_MULTIPART_THRESHOLD + " must be at least 5 MB");
+      LOG.error(MIN_MULTIPART_THRESHOLD + " must be at least 5 MB");
       partSizeThreshold = 5 * 1024 * 1024;
     }
 
-    String cannedACLName = conf.get(NEW_CANNED_ACL, 
-      conf.get(OLD_CANNED_ACL, DEFAULT_CANNED_ACL));
+    String cannedACLName = conf.get(CANNED_ACL, DEFAULT_CANNED_ACL);
     if (!cannedACLName.isEmpty()) {
       cannedACL = CannedAccessControlList.valueOf(cannedACLName);
     } else {
@@ -159,10 +155,10 @@ public class S3AFileSystem extends FileSystem {
       throw new IOException("Bucket " + bucket + " does not exist");
     }
 
-    boolean purgeExistingMultipart = conf.getBoolean(NEW_PURGE_EXISTING_MULTIPART, 
-      conf.getBoolean(OLD_PURGE_EXISTING_MULTIPART, DEFAULT_PURGE_EXISTING_MULTIPART));
-    long purgeExistingMultipartAge = conf.getLong(NEW_PURGE_EXISTING_MULTIPART_AGE, 
-      conf.getLong(OLD_PURGE_EXISTING_MULTIPART_AGE, DEFAULT_PURGE_EXISTING_MULTIPART_AGE));
+    boolean purgeExistingMultipart = conf.getBoolean(PURGE_EXISTING_MULTIPART, 
+      DEFAULT_PURGE_EXISTING_MULTIPART);
+    long purgeExistingMultipartAge = conf.getLong(PURGE_EXISTING_MULTIPART_AGE, 
+      DEFAULT_PURGE_EXISTING_MULTIPART_AGE);
 
     if (purgeExistingMultipart) {
       TransferManager transferManager = new TransferManager(s3);
