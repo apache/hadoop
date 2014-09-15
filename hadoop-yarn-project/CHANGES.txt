@@ -331,6 +331,9 @@ Release 2.6.0 - UNRELEASED
     header and made it accept multiple origins in CrossOriginFilter. (Jonathan
     Eagles via zjshen)
 
+    YARN-2549. TestContainerLaunch fails due to classpath problem with hamcrest
+    classes. (cnauroth)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
