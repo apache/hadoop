@@ -11,6 +11,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10893. isolated classloader on the client side (Sangjin Lee via
     jlowe)
 
+    HADOOP-10400. Incorporate new S3A FileSystem implementation. (Jordan
+    Mendelson and Dave Wang via atm)
+
   IMPROVEMENTS
 
     HADOOP-10808. Remove unused native code for munlock. (cnauroth)

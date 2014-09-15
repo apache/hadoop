@@ -147,6 +147,10 @@
           <artifactId>jets3t</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>com.amazonaws</groupId>
+          <artifactId>aws-java-sdk</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>org.eclipse.jdt</groupId>
           <artifactId>core</artifactId>
         </exclusion>
@@ -208,6 +212,10 @@
         <exclusion>
           <groupId>net.java.dev.jets3t</groupId>
           <artifactId>jets3t</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.amazonaws</groupId>
+          <artifactId>aws-java-sdk</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.eclipse.jdt</groupId>

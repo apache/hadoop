@@ -18,7 +18,7 @@
 
 <configuration>
   <!--
-  S3N is a blobstore, with very different behavior than a
+  S3A is a blobstore, with very different behavior than a
   classic filesystem.
   -->
 
@@ -95,6 +95,11 @@
   <property>
     <name>fs.contract.supports-unix-permissions</name>
     <value>false</value>
+  </property>
+
+  <property>
+    <name>fs.contract.rename-overwrites-dest</name>
+    <value>true</value>
   </property>
 
 </configuration>
