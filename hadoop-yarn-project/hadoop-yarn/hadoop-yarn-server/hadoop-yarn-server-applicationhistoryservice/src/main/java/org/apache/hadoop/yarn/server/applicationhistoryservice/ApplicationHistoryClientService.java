@@ -26,7 +26,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.ApplicationHistoryProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
@@ -56,8 +58,8 @@ import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.server.timeline.security.authorize.TimelinePolicyProvider;
 
 public class ApplicationHistoryClientService extends AbstractService {
   private static final Log LOG = LogFactory
@@ -88,6 +90,12 @@ public class ApplicationHistoryClientService extends AbstractService {
             YarnConfiguration.TIMELINE_SERVICE_HANDLER_THREAD_COUNT,
             YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_THREAD_COUNT));
 
+    // Enable service authorization?
+    if (conf.getBoolean(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, false)) {
+      refreshServiceAcls(conf, new TimelinePolicyProvider());
+    }
+
     server.start();
     this.bindAddress =
         conf.updateConnectAddr(YarnConfiguration.TIMELINE_SERVICE_BIND_HOST,
@@ -116,6 +124,11 @@ public class ApplicationHistoryClientService extends AbstractService {
   @Private
   public InetSocketAddress getBindAddress() {
     return this.bindAddress;
+  }
+
+  private void refreshServiceAcls(Configuration configuration,
+      PolicyProvider policyProvider) {
+    this.server.refreshServiceAcl(configuration, policyProvider);
   }
 
   private class ApplicationHSClientProtocolHandler implements

@@ -991,6 +991,10 @@ public class YarnConfiguration extends Configuration {
   YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCE_LOCALIZER =
       "security.resourcelocalizer.protocol.acl";
 
+  public static final String
+  YARN_SECURITY_SERVICE_AUTHORIZATION_APPLICATIONHISTORY_PROTOCOL =
+      "security.applicationhistory.protocol.acl";
+
   /** No. of milliseconds to wait between sending a SIGTERM and SIGKILL
    * to a running container */
   public static final String NM_SLEEP_DELAY_BEFORE_SIGKILL_MS =

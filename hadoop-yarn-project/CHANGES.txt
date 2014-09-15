@@ -334,6 +334,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2549. TestContainerLaunch fails due to classpath problem with hamcrest
     classes. (cnauroth)
 
+    YARN-2529. Generic history service RPC interface doesn't work when service
+    authorization is enabled. (Zhijie Shen via jianhe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
