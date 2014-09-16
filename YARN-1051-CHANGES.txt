@@ -5,10 +5,10 @@ YARN-2475. Logic for responding to capacity drops for the
 ReservationSystem. (Carlo Curino and Subru Krishnan via curino)
 
 YARN-1708. Public YARN APIs for creating/updating/deleting 
-reservations. (Carlo Curino and Subru Krishnan via subru)
+reservations. (Subru Krishnan and Carlo Curino  via subru)
 
 YARN-1709. In-memory data structures used to track resources over
-time to enable reservations. (Carlo Curino and Subru Krishnan via 
+time to enable reservations. (Subru Krishnan and Carlo Curino via 
 subru)
 
 YARN-1710. Logic to find allocations within a Plan that satisfy 
@@ -17,3 +17,6 @@ curino)
 
 YARN-1711. Policy to enforce instantaneous and over-time quotas 
 on user reservations. (Carlo Curino and Subru Krishnan via curino)
+
+YARN-1712. Plan follower that synchronizes the current state of reservation
+subsystem with the scheduler. (Subru Krishnan and Carlo Curino  via subru)
