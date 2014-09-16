@@ -229,6 +229,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2547. Cross Origin Filter throws UnsupportedOperationException upon
     destroy (Mit Desai via jeagles)
 
+    YARN-2557. Add a parameter "attempt_Failures_Validity_Interval" into
+    DistributedShell (xgong)
+
   OPTIMIZATIONS
 
   BUG FIXES

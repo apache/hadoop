@@ -308,6 +308,82 @@ public class TestDistributedShell {
       Assert.assertTrue(result);
     }
 
+  /*
+   * The sleeping period in TestDSSleepingAppMaster is set as 5 seconds.
+   * Set attempt_failures_validity_interval as 2.5 seconds. It will check
+   * how many attempt failures for previous 2.5 seconds.
+   * The application is expected to be successful.
+   */
+  @Test(timeout=90000)
+  public void testDSAttemptFailuresValidityIntervalSucess() throws Exception {
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "1",
+        "--shell_command",
+        "sleep 8",
+        "--master_memory",
+        "512",
+        "--container_memory",
+        "128",
+        "--attempt_failures_validity_interval",
+        "2500"
+      };
+
+      LOG.info("Initializing DS Client");
+      Configuration conf = yarnCluster.getConfig();
+      conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
+      Client client = new Client(TestDSSleepingAppMaster.class.getName(),
+        new Configuration(conf));
+
+      client.init(args);
+      LOG.info("Running DS Client");
+      boolean result = client.run();
+
+      LOG.info("Client run completed. Result=" + result);
+      // application should succeed
+      Assert.assertTrue(result);
+    }
+
+  /*
+   * The sleeping period in TestDSSleepingAppMaster is set as 5 seconds.
+   * Set attempt_failures_validity_interval as 15 seconds. It will check
+   * how many attempt failure for previous 15 seconds.
+   * The application is expected to be fail.
+   */
+  @Test(timeout=90000)
+  public void testDSAttemptFailuresValidityIntervalFailed() throws Exception {
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "1",
+        "--shell_command",
+        "sleep 8",
+        "--master_memory",
+        "512",
+        "--container_memory",
+        "128",
+        "--attempt_failures_validity_interval",
+        "15000"
+      };
+
+      LOG.info("Initializing DS Client");
+      Configuration conf = yarnCluster.getConfig();
+      conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
+      Client client = new Client(TestDSSleepingAppMaster.class.getName(),
+        new Configuration(conf));
+
+      client.init(args);
+      LOG.info("Running DS Client");
+      boolean result = client.run();
+
+      LOG.info("Client run completed. Result=" + result);
+      // application should be failed
+      Assert.assertFalse(result);
+    }
+
   @Test(timeout=90000)
   public void testDSShellWithCustomLogPropertyFile() throws Exception {
     final File basedir =
