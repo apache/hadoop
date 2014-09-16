@@ -238,7 +238,7 @@
         <executions>
           <execution>
             <id>default-war</id>
-            <phase>package</phase>
+            <phase>prepare-package</phase>
             <goals>
               <goal>war</goal>
             </goals>
@@ -248,6 +248,29 @@
               <webappDirectory>${project.build.directory}/kms
               </webappDirectory>
             </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>prepare-jar</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>classes</classifier>
+            </configuration>
+          </execution>
+          <execution>
+            <id>prepare-test-jar</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>test-jar</goal>
+            </goals>
           </execution>
         </executions>
       </plugin>

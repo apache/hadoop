@@ -18,7 +18,9 @@
 package org.apache.hadoop.crypto.key.kms.server;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.kms.KMSRESTConstants;
 import org.apache.hadoop.fs.Path;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Server;
@@ -26,7 +28,10 @@ import org.mortbay.jetty.security.SslSocketConnector;
 import org.mortbay.jetty.webapp.WebAppContext;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.Writer;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
@@ -34,6 +39,7 @@ import java.net.ServerSocket;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.UUID;
 
 public class MiniKMS {
 
@@ -140,13 +146,15 @@ public class MiniKMS {
   }
 
   public void start() throws Exception {
+    ClassLoader cl = Thread.currentThread().getContextClassLoader();
     System.setProperty(KMSConfiguration.KMS_CONFIG_DIR, kmsConfDir);
     File aclsFile = new File(kmsConfDir, "kms-acls.xml");
     if (!aclsFile.exists()) {
-      Configuration acls = new Configuration(false);
-      Writer writer = new FileWriter(aclsFile);
-      acls.writeXml(writer);
-      writer.close();
+      InputStream is = cl.getResourceAsStream("mini-kms-acls-default.xml");
+      OutputStream os = new FileOutputStream(aclsFile);
+      IOUtils.copy(is, os);
+      is.close();
+      os.close();
     }
     File coreFile = new File(kmsConfDir, "core-site.xml");
     if (!coreFile.exists()) {
@@ -161,19 +169,42 @@ public class MiniKMS {
       kms.set("hadoop.security.key.provider.path",
           "jceks://file@" + new Path(kmsConfDir, "kms.keystore").toUri());
       kms.set("hadoop.kms.authentication.type", "simple");
+      kms.setBoolean(KMSConfiguration.KEY_AUTHORIZATION_ENABLE, false);
       Writer writer = new FileWriter(kmsFile);
       kms.writeXml(writer);
       writer.close();
     }
     System.setProperty("log4j.configuration", log4jConfFile);
     jetty = createJettyServer(keyStore, keyStorePassword);
-    ClassLoader cl = Thread.currentThread().getContextClassLoader();
-    URL url = cl.getResource("kms-webapp");
-    if (url == null) {
+
+    // we need to do a special handling for MiniKMS to work when in a dir and
+    // when in a JAR in the classpath thanks to Jetty way of handling of webapps
+    // when they are in the a DIR, WAR or JAR.
+    URL webXmlUrl = cl.getResource("kms-webapp/WEB-INF/web.xml");
+    if (webXmlUrl == null) {
       throw new RuntimeException(
           "Could not find kms-webapp/ dir in test classpath");
     }
-    WebAppContext context = new WebAppContext(url.getPath(), "/kms");
+    boolean webXmlInJar = webXmlUrl.getPath().contains(".jar!/");
+    String webappPath;
+    if (webXmlInJar) {
+      File webInf = new File("target/" + UUID.randomUUID().toString() +
+          "/kms-webapp/WEB-INF");
+      webInf.mkdirs();
+      new File(webInf, "web.xml").delete();
+      InputStream is = cl.getResourceAsStream("kms-webapp/WEB-INF/web.xml");
+      OutputStream os = new FileOutputStream(new File(webInf, "web.xml"));
+      IOUtils.copy(is, os);
+      is.close();
+      os.close();
+      webappPath = webInf.getParentFile().getAbsolutePath();
+    } else {
+      webappPath = cl.getResource("kms-webapp").getPath();
+    }
+    WebAppContext context = new WebAppContext(webappPath, "/kms");
+    if (webXmlInJar) {
+      context.setClassLoader(cl);
+    }
     jetty.addHandler(context);
     jetty.start();
     kmsURL = new URL(getJettyURL(jetty), "kms");
