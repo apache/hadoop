@@ -47,3 +47,7 @@
     HDFS-7066. LazyWriter#evictBlocks misses a null check for replicaState.
     (Xiaoyu Yao via Arpit Agarwal)
 
+    HDFS-7064. Fix unit test failures in HDFS-6581 branch. (Xiaoyu Yao via
+    Arpit Agarwal)
+
+
