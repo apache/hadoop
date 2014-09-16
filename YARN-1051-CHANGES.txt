@@ -14,3 +14,6 @@ subru)
 YARN-1710. Logic to find allocations within a Plan that satisfy 
 user ReservationRequest(s). (Carlo Curino and Subru Krishnan via 
 curino) 
+
+YARN-1711. Policy to enforce instantaneous and over-time quotas 
+on user reservations. (Carlo Curino and Subru Krishnan via curino)
