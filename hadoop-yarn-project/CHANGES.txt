@@ -57,6 +57,10 @@ Release 2.6.0 - UNRELEASED
     failures should be ignored towards counting max-attempts. (Xuan Gong via
     vinodkv)
 
+    YARN-2531. Added a configuration for admins to be able to override app-configs
+    and enforce/not-enforce strict control of per-container cpu usage. (Varun
+    Vasudev via vinodkv)
+
   IMPROVEMENTS
 
     YARN-2242. Improve exception information on AM launch crashes. (Li Lu 
