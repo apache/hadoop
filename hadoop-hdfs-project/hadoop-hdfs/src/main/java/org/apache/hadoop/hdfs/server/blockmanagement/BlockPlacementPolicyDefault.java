@@ -635,7 +635,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     
     final long requiredSize = blockSize * HdfsConstants.MIN_BLOCKS_FOR_WRITE;
     final long scheduledSize = blockSize * node.getBlocksScheduled();
-    if (requiredSize > node.getRemaining() - scheduledSize) {
+    if (requiredSize > storage.getRemaining() - scheduledSize) {
       logNodeIsNotChosen(storage, "the node does not have enough space ");
       return false;
     }

@@ -395,6 +395,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7032. Add WebHDFS support for reading and writing to encryption zones.
     (clamb via wang)
 
+    HDFS-6965. NN continues to issue block locations for DNs with full disks.
+    (Rushabh Shah via kihwal)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
