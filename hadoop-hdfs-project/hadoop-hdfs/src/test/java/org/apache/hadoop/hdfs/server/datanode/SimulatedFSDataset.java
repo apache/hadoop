@@ -482,9 +482,10 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override // FsDatasetSpi
-  public synchronized void unfinalizeBlock(ExtendedBlock b) {
+  public synchronized void unfinalizeBlock(ExtendedBlock b) throws IOException{
     if (isValidRbw(b)) {
-      blockMap.remove(b.getLocalBlock());
+      final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
+      map.remove(b.getLocalBlock());
     }
   }
 
@@ -624,7 +625,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
         continue;
       }
       storage.free(bpid, binfo.getNumBytes());
-      blockMap.remove(b);
+      map.remove(b);
     }
     if (error) {
       throw new IOException("Invalidate: Missing blocks.");
