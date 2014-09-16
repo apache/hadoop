@@ -17,6 +17,7 @@ import java.util.Properties;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import javax.servlet.ServletContext;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.slf4j.Logger;
@@ -57,12 +58,14 @@ public abstract class RolloverSignerSecretProvider
    * Initialize the SignerSecretProvider.  It initializes the current secret
    * and starts the scheduler for the rollover to run at an interval of
    * tokenValidity.
-   * @param config filter configuration
+   * @param config configuration properties
+   * @param servletContext servlet context
    * @param tokenValidity The amount of time a token is valid for
    * @throws Exception
    */
   @Override
-  public void init(Properties config, long tokenValidity) throws Exception {
+  public void init(Properties config, ServletContext servletContext,
+          long tokenValidity) throws Exception {
     initSecrets(generateNewSecret(), null);
     startScheduler(tokenValidity, tokenValidity);
   }

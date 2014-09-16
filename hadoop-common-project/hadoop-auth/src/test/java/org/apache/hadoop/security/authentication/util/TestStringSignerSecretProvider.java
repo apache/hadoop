@@ -13,6 +13,8 @@
  */
 package org.apache.hadoop.security.authentication.util;
 
+import java.util.Properties;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -22,8 +24,11 @@ public class TestStringSignerSecretProvider {
   public void testGetSecrets() throws Exception {
     String secretStr = "secret";
     StringSignerSecretProvider secretProvider
-        = new StringSignerSecretProvider(secretStr);
-    secretProvider.init(null, -1);
+            = new StringSignerSecretProvider();
+    Properties secretProviderProps = new Properties();
+    secretProviderProps.setProperty(
+            AuthenticationFilter.SIGNATURE_SECRET, "secret");
+    secretProvider.init(secretProviderProps, null, -1);
     byte[] secretBytes = secretStr.getBytes();
     Assert.assertArrayEquals(secretBytes, secretProvider.getCurrentSecret());
     byte[][] allSecrets = secretProvider.getAllSecrets();

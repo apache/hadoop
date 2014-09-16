@@ -31,7 +31,7 @@ public class TestRandomSignerSecretProvider {
     RandomSignerSecretProvider secretProvider =
         new RandomSignerSecretProvider(seed);
     try {
-      secretProvider.init(null, rolloverFrequency);
+      secretProvider.init(null, null, rolloverFrequency);
 
       byte[] currentSecret = secretProvider.getCurrentSecret();
       byte[][] allSecrets = secretProvider.getAllSecrets();

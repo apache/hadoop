@@ -14,6 +14,7 @@
 package org.apache.hadoop.security.authentication.util;
 
 import java.util.Properties;
+import javax.servlet.ServletContext;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -30,13 +31,13 @@ public abstract class SignerSecretProvider {
 
   /**
    * Initialize the SignerSecretProvider
-   * @param config filter configuration
+   * @param config configuration properties
+   * @param servletContext servlet context
    * @param tokenValidity The amount of time a token is valid for
    * @throws Exception
    */
-  public abstract void init(Properties config, long tokenValidity)
-      throws Exception;
-
+  public abstract void init(Properties config, ServletContext servletContext,
+          long tokenValidity) throws Exception;
   /**
    * Will be called on shutdown; subclasses should perform any cleanup here.
    */
