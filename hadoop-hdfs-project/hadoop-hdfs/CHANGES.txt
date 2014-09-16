@@ -461,6 +461,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7059. HAadmin transtionToActive with forceActive option can show
     confusing message.
 
+    HDFS-6880. Adding tracing to DataNode data transfer protocol. (iwasakims
+    via cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -652,6 +655,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7032. Add WebHDFS support for reading and writing to encryption zones.
     (clamb via wang)
+
+    HDFS-6965. NN continues to issue block locations for DNs with full disks.
+    (Rushabh Shah via kihwal)
 
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   

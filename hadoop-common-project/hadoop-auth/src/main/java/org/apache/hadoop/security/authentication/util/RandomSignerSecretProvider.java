@@ -13,12 +13,13 @@
  */
 package org.apache.hadoop.security.authentication.util;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.util.Random;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * A SignerSecretProvider that uses a random number as it's secret.  It rolls
+ * A SignerSecretProvider that uses a random number as its secret.  It rolls
  * the secret at a regular interval.
  */
 @InterfaceStability.Unstable
@@ -37,6 +38,7 @@ public class RandomSignerSecretProvider extends RolloverSignerSecretProvider {
    * is meant for testing.
    * @param seed the seed for the random number generator
    */
+  @VisibleForTesting
   public RandomSignerSecretProvider(long seed) {
     super();
     rand = new Random(seed);

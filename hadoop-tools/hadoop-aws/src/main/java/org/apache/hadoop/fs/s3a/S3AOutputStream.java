@@ -75,10 +75,8 @@ public class S3AOutputStream extends OutputStream {
     this.statistics = statistics;
     this.serverSideEncryptionAlgorithm = serverSideEncryptionAlgorithm;
 
-    partSize = conf.getLong(NEW_MULTIPART_SIZE, 
-      conf.getLong(OLD_MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE));
-    partSizeThreshold = conf.getInt(NEW_MIN_MULTIPART_THRESHOLD, 
-      conf.getInt(OLD_MIN_MULTIPART_THRESHOLD, DEFAULT_MIN_MULTIPART_THRESHOLD));
+    partSize = conf.getLong(MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
+    partSizeThreshold = conf.getInt(MIN_MULTIPART_THRESHOLD, DEFAULT_MIN_MULTIPART_THRESHOLD);
 
     if (conf.get(BUFFER_DIR, null) != null) {
       lDirAlloc = new LocalDirAllocator(BUFFER_DIR);

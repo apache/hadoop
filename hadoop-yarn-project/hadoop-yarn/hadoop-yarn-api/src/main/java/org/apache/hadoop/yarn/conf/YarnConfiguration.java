@@ -902,6 +902,16 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH =
     NM_PREFIX + "linux-container-executor.cgroups.mount-path";
 
+  /**
+   * Whether the apps should run in strict resource usage mode(not allowed to
+   * use spare CPU)
+   */
+  public static final String NM_LINUX_CONTAINER_CGROUPS_STRICT_RESOURCE_USAGE =
+      NM_PREFIX + "linux-container-executor.cgroups.strict-resource-usage";
+  public static final boolean DEFAULT_NM_LINUX_CONTAINER_CGROUPS_STRICT_RESOURCE_USAGE =
+      false;
+
+
 
   /**
    * Interval of time the linux container executor should try cleaning up
