@@ -104,6 +104,15 @@ function hadoop_exec_hadoopenv
   fi
 }
 
+function hadoop_exec_userfuncs
+{
+  # NOTE: This function is not user replaceable.
+
+  if [[ -e "${HADOOP_CONF_DIR}/hadoop-user-functions.sh" ]]; then
+    . "${HADOOP_CONF_DIR}/hadoop-user-functions.sh"
+  fi
+}
+
 function hadoop_basic_init
 {
   # Some of these are also set in hadoop-env.sh.

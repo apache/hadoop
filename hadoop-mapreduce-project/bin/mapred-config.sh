@@ -20,8 +20,11 @@
 
 function hadoop_subproject_init
 {
-  if [[ -e "${HADOOP_CONF_DIR}/mapred-env.sh" ]]; then
-    . "${HADOOP_CONF_DIR}/mapred-env.sh"
+  if [[ -z "${HADOOP_MAPRED_ENV_PROCESSED}" ]]; then
+    if [[ -e "${HADOOP_CONF_DIR}/mapred-env.sh" ]]; then
+      . "${HADOOP_CONF_DIR}/mapred-env.sh"
+      export HADOOP_MAPRED_ENV_PROCESSED=true
+    fi
   fi
   
   # at some point in time, someone thought it would be a good idea to
