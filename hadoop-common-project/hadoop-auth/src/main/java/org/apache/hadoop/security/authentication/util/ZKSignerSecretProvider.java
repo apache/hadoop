@@ -139,6 +139,9 @@ public class ZKSignerSecretProvider extends RolloverSignerSecretProvider {
       ZOOKEEPER_SIGNER_SECRET_PROVIDER_CURATOR_CLIENT_ATTRIBUTE =
       CONFIG_PREFIX + "curator.client";
 
+  private static final String JAAS_LOGIN_ENTRY_NAME =
+          "ZKSignerSecretProviderClient";
+
   private static Logger LOG = LoggerFactory.getLogger(
           ZKSignerSecretProvider.class);
   private String path;
@@ -384,7 +387,7 @@ public class ZKSignerSecretProvider extends RolloverSignerSecretProvider {
               + "and using 'sasl' ACLs");
       String principal = setJaasConfiguration(config);
       System.setProperty(ZooKeeperSaslClient.LOGIN_CONTEXT_NAME_KEY,
-              "ZKSignerSecretProviderClient");
+              JAAS_LOGIN_ENTRY_NAME);
       System.setProperty("zookeeper.authProvider.1",
               "org.apache.zookeeper.server.auth.SASLAuthenticationProvider");
       aclProvider = new SASLOwnerACLProvider(principal);
@@ -417,7 +420,7 @@ public class ZKSignerSecretProvider extends RolloverSignerSecretProvider {
     // This is equivalent to writing a jaas.conf file and setting the system
     // property, "java.security.auth.login.config", to point to it
     JaasConfiguration jConf =
-            new JaasConfiguration("Client", principal, keytabFile);
+            new JaasConfiguration(JAAS_LOGIN_ENTRY_NAME, principal, keytabFile);
     Configuration.setConfiguration(jConf);
     return principal.split("[/@]")[0];
   }
