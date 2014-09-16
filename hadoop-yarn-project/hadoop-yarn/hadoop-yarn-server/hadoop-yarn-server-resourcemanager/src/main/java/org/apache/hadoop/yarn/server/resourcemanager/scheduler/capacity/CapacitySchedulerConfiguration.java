@@ -190,6 +190,63 @@ public class CapacitySchedulerConfiguration extends Configuration {
     }
   }
   
+  @Private
+  public static final String AVERAGE_CAPACITY = "average-capacity";
+
+  @Private
+  public static final String IS_RESERVABLE = "reservable";
+
+  @Private
+  public static final String RESERVATION_WINDOW = "reservation-window";
+
+  @Private
+  public static final String INSTANTANEOUS_MAX_CAPACITY =
+      "instantaneous-max-capacity";
+
+  @Private
+  public static final long DEFAULT_RESERVATION_WINDOW = 0L;
+
+  @Private
+  public static final String RESERVATION_ADMISSION_POLICY =
+      "reservation-policy";
+
+  @Private
+  public static final String RESERVATION_AGENT_NAME = "reservation-agent";
+
+  @Private
+  public static final String RESERVATION_SHOW_RESERVATION_AS_QUEUE =
+      "show-reservations-as-queues";
+
+  @Private
+  public static final String DEFAULT_RESERVATION_ADMISSION_POLICY =
+      "org.apache.hadoop.yarn.server.resourcemanager.reservation.CapacityOverTimePolicy";
+
+  @Private
+  public static final String DEFAULT_RESERVATION_AGENT_NAME =
+      "org.apache.hadoop.yarn.server.resourcemanager.reservation.GreedyReservationAgent";
+
+  @Private
+  public static final String RESERVATION_PLANNER_NAME = "reservation-planner";
+
+  @Private
+  public static final String DEFAULT_RESERVATION_PLANNER_NAME =
+      "org.apache.hadoop.yarn.server.resourcemanager.reservation.SimpleCapacityReplanner";
+
+  @Private
+  public static final String RESERVATION_MOVE_ON_EXPIRY =
+      "reservation-move-on-expiry";
+
+  @Private
+  public static final boolean DEFAULT_RESERVATION_MOVE_ON_EXPIRY = true;
+
+  @Private
+  public static final String RESERVATION_ENFORCEMENT_WINDOW =
+      "reservation-enforcement-window";
+
+  // default to 1h lookahead enforcement
+  @Private
+  public static final long DEFAULT_RESERVATION_ENFORCEMENT_WINDOW = 3600000;
+
   public CapacitySchedulerConfiguration() {
     this(new Configuration());
   }
@@ -510,5 +567,102 @@ public class CapacitySchedulerConfiguration extends Configuration {
     }
 
     return mappings;
+  }
+
+  public boolean isReservable(String queue) {
+    boolean isReservable =
+        getBoolean(getQueuePrefix(queue) + IS_RESERVABLE, false);
+    return isReservable;
+  }
+
+  public void setReservable(String queue, boolean isReservable) {
+    setBoolean(getQueuePrefix(queue) + IS_RESERVABLE, isReservable);
+    LOG.debug("here setReservableQueue: queuePrefix=" + getQueuePrefix(queue)
+        + ", isReservableQueue=" + isReservable(queue));
+  }
+
+  public long getReservationWindow(String queue) {
+    long reservationWindow =
+        getLong(getQueuePrefix(queue) + RESERVATION_WINDOW,
+            DEFAULT_RESERVATION_WINDOW);
+    return reservationWindow;
+  }
+
+  public float getAverageCapacity(String queue) {
+    float avgCapacity =
+        getFloat(getQueuePrefix(queue) + AVERAGE_CAPACITY,
+            MAXIMUM_CAPACITY_VALUE);
+    return avgCapacity;
+  }
+
+  public float getInstantaneousMaxCapacity(String queue) {
+    float instMaxCapacity =
+        getFloat(getQueuePrefix(queue) + INSTANTANEOUS_MAX_CAPACITY,
+            MAXIMUM_CAPACITY_VALUE);
+    return instMaxCapacity;
+  }
+
+  public void setInstantaneousMaxCapacity(String queue, float instMaxCapacity) {
+    setFloat(getQueuePrefix(queue) + INSTANTANEOUS_MAX_CAPACITY,
+        instMaxCapacity);
+  }
+
+  public void setReservationWindow(String queue, long reservationWindow) {
+    setLong(getQueuePrefix(queue) + RESERVATION_WINDOW, reservationWindow);
+  }
+
+  public void setAverageCapacity(String queue, float avgCapacity) {
+    setFloat(getQueuePrefix(queue) + AVERAGE_CAPACITY, avgCapacity);
+  }
+
+  public String getReservationAdmissionPolicy(String queue) {
+    String reservationPolicy =
+        get(getQueuePrefix(queue) + RESERVATION_ADMISSION_POLICY,
+            DEFAULT_RESERVATION_ADMISSION_POLICY);
+    return reservationPolicy;
+  }
+
+  public void setReservationAdmissionPolicy(String queue,
+      String reservationPolicy) {
+    set(getQueuePrefix(queue) + RESERVATION_ADMISSION_POLICY, reservationPolicy);
+  }
+
+  public String getReservationAgent(String queue) {
+    String reservationAgent =
+        get(getQueuePrefix(queue) + RESERVATION_AGENT_NAME,
+            DEFAULT_RESERVATION_AGENT_NAME);
+    return reservationAgent;
+  }
+
+  public void setReservationAgent(String queue, String reservationPolicy) {
+    set(getQueuePrefix(queue) + RESERVATION_AGENT_NAME, reservationPolicy);
+  }
+
+  public boolean getShowReservationAsQueues(String queuePath) {
+    boolean showReservationAsQueues =
+        getBoolean(getQueuePrefix(queuePath)
+            + RESERVATION_SHOW_RESERVATION_AS_QUEUE, false);
+    return showReservationAsQueues;
+  }
+
+  public String getReplanner(String queue) {
+    String replanner =
+        get(getQueuePrefix(queue) + RESERVATION_PLANNER_NAME,
+            DEFAULT_RESERVATION_PLANNER_NAME);
+    return replanner;
+  }
+
+  public boolean getMoveOnExpiry(String queue) {
+    boolean killOnExpiry =
+        getBoolean(getQueuePrefix(queue) + RESERVATION_MOVE_ON_EXPIRY,
+            DEFAULT_RESERVATION_MOVE_ON_EXPIRY);
+    return killOnExpiry;
+  }
+
+  public long getEnforcementWindow(String queue) {
+    long enforcementWindow =
+        getLong(getQueuePrefix(queue) + RESERVATION_ENFORCEMENT_WINDOW,
+            DEFAULT_RESERVATION_ENFORCEMENT_WINDOW);
+    return enforcementWindow;
   }
 }
