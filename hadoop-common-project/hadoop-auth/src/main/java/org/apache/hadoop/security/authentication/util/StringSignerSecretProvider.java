@@ -14,8 +14,10 @@
 package org.apache.hadoop.security.authentication.util;
 
 import java.util.Properties;
+import javax.servlet.ServletContext;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 
 /**
  * A SignerSecretProvider that simply creates a secret based on a given String.
@@ -27,14 +29,15 @@ public class StringSignerSecretProvider extends SignerSecretProvider {
   private byte[] secret;
   private byte[][] secrets;
 
-  public StringSignerSecretProvider(String secretStr) {
-    secret = secretStr.getBytes();
-    secrets = new byte[][]{secret};
-  }
+  public StringSignerSecretProvider() {}
 
   @Override
-  public void init(Properties config, long tokenValidity) throws Exception {
-    // do nothing
+  public void init(Properties config, ServletContext servletContext,
+          long tokenValidity) throws Exception {
+    String signatureSecret = config.getProperty(
+            AuthenticationFilter.SIGNATURE_SECRET, null);
+    secret = signatureSecret.getBytes();
+    secrets = new byte[][]{secret};
   }
 
   @Override
