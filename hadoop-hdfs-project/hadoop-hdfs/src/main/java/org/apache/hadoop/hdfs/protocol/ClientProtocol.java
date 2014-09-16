@@ -1282,7 +1282,7 @@ public interface ClientProtocol {
    * Get the encryption zone for a path.
    */
   @Idempotent
-  public EncryptionZoneWithId getEZForPath(String src)
+  public EncryptionZone getEZForPath(String src)
     throws IOException;
 
   /**
@@ -1293,7 +1293,7 @@ public interface ClientProtocol {
    * @return Batch of encryption zones.
    */
   @Idempotent
-  public BatchedEntries<EncryptionZoneWithId> listEncryptionZones(
+  public BatchedEntries<EncryptionZone> listEncryptionZones(
       long prevId) throws IOException;
 
   /**

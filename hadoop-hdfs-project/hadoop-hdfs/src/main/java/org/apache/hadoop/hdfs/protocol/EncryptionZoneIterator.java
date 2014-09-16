@@ -22,7 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.BatchedRemoteIterator;
 
 /**
  * EncryptionZoneIterator is a remote iterator that iterates over encryption
@@ -30,22 +30,24 @@ import org.apache.hadoop.fs.RemoteIterator;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class EncryptionZoneIterator implements RemoteIterator<EncryptionZone> {
+public class EncryptionZoneIterator
+    extends BatchedRemoteIterator<Long, EncryptionZone> {
 
-  private final EncryptionZoneWithIdIterator iterator;
+  private final ClientProtocol namenode;
 
   public EncryptionZoneIterator(ClientProtocol namenode) {
-    iterator = new EncryptionZoneWithIdIterator(namenode);
+    super(Long.valueOf(0));
+    this.namenode = namenode;
   }
 
   @Override
-  public boolean hasNext() throws IOException {
-    return iterator.hasNext();
+  public BatchedEntries<EncryptionZone> makeRequest(Long prevId)
+      throws IOException {
+    return namenode.listEncryptionZones(prevId);
   }
 
   @Override
-  public EncryptionZone next() throws IOException {
-    EncryptionZoneWithId ezwi = iterator.next();
-    return ezwi.toEncryptionZone();
+  public Long elementToPrevKey(EncryptionZone entry) {
+    return entry.getId();
   }
 }
