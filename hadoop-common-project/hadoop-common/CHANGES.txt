@@ -325,6 +325,8 @@ Trunk (Unreleased)
     HADOOP-11052. hadoop_verify_secure_prereq's results aren't checked 
     in bin/hdfs (aw)
 
+    HADOOP-11055. non-daemon pid files are missing (aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
