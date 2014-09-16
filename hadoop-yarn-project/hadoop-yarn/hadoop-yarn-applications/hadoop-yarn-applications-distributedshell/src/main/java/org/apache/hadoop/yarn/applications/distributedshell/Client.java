@@ -75,7 +75,6 @@ import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.apache.hadoop.yarn.util.Records;
 
 /**
  * Client for Distributed Shell application submission to YARN.
@@ -163,6 +162,8 @@ public class Client {
   // flag to indicate whether to keep containers across application attempts.
   private boolean keepContainers = false;
 
+  private long attemptFailuresValidityInterval = -1;
+
   // Debug flag
   boolean debugFlag = false;	
 
@@ -248,6 +249,12 @@ public class Client {
       " If the flag is true, running containers will not be killed when" +
       " application attempt fails and these containers will be retrieved by" +
       " the new application attempt ");
+    opts.addOption("attempt_failures_validity_interval", true,
+      "when attempt_failures_validity_interval in milliseconds is set to > 0," +
+      "the failure number will not take failures which happen out of " +
+      "the validityInterval into failure count. " +
+      "If failure count reaches to maxAppAttempts, " +
+      "the application will be failed.");
     opts.addOption("debug", false, "Dump out debug information");
     opts.addOption("help", false, "Print usage");
 
@@ -372,6 +379,10 @@ public class Client {
 
     clientTimeout = Integer.parseInt(cliParser.getOptionValue("timeout", "600000"));
 
+    attemptFailuresValidityInterval =
+        Long.parseLong(cliParser.getOptionValue(
+          "attempt_failures_validity_interval", "-1"));
+
     log4jPropFile = cliParser.getOptionValue("log_properties", "");
 
     return true;
@@ -455,6 +466,11 @@ public class Client {
 
     appContext.setKeepContainersAcrossApplicationAttempts(keepContainers);
     appContext.setApplicationName(appName);
+
+    if (attemptFailuresValidityInterval >= 0) {
+      appContext
+        .setAttemptFailuresValidityInterval(attemptFailuresValidityInterval);
+    }
 
     // set local resources for the application master
     // local files or archives as needed

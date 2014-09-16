@@ -341,6 +341,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2529. Generic history service RPC interface doesn't work when service
     authorization is enabled. (Zhijie Shen via jianhe)
 
+    YARN-2557. Add a parameter "attempt_Failures_Validity_Interval" into
+    DistributedShell. (xgong)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
