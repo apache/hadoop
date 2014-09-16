@@ -478,7 +478,8 @@ abstract class CommandWithDestination extends FsCommand {
           createFlags.add(LAZY_PERSIST);
         }
         return create(item.path,
-                      null,
+                      FsPermission.getFileDefault().applyUMask(
+                          FsPermission.getUMask(getConf())),
                       createFlags,
                       getConf().getInt("io.file.buffer.size", 4096),
                       lazyPersist ? 1 : getDefaultReplication(item.path),
