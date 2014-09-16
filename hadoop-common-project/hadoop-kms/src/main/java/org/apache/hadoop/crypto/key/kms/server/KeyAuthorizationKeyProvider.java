@@ -192,9 +192,21 @@ public class KeyAuthorizationKeyProvider extends KeyProviderCryptoExtension {
     return provider.generateEncryptedKey(encryptionKeyName);
   }
 
+  private void verifyKeyVersionBelongsToKey(EncryptedKeyVersion ekv)
+      throws IOException {
+    String kn = ekv.getEncryptionKeyName();
+    String kvn = ekv.getEncryptionKeyVersionName();
+    KeyVersion kv = provider.getKeyVersion(kvn);
+    if (!kv.getName().equals(kn)) {
+      throw new IllegalArgumentException(String.format(
+          "KeyVersion '%s' does not belong to the key '%s'", kvn, kn));
+    }
+  }
+
   @Override
   public KeyVersion decryptEncryptedKey(EncryptedKeyVersion encryptedKeyVersion)
           throws IOException, GeneralSecurityException {
+    verifyKeyVersionBelongsToKey(encryptedKeyVersion);
     doAccessCheck(
         encryptedKeyVersion.getEncryptionKeyName(), KeyOpType.DECRYPT_EEK);
     return provider.decryptEncryptedKey(encryptedKeyVersion);
