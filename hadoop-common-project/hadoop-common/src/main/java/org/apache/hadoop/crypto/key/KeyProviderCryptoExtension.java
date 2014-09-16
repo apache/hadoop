@@ -91,6 +91,8 @@ public class KeyProviderCryptoExtension extends
      * returned EncryptedKeyVersion will only partially be populated; it is not
      * necessarily suitable for operations besides decryption.
      *
+     * @param keyName Key name of the encryption key use to encrypt the
+     *                encrypted key.
      * @param encryptionKeyVersionName Version name of the encryption key used
      *                                 to encrypt the encrypted key.
      * @param encryptedKeyIv           Initialization vector of the encrypted
@@ -100,12 +102,12 @@ public class KeyProviderCryptoExtension extends
      * @param encryptedKeyMaterial     Key material of the encrypted key.
      * @return EncryptedKeyVersion suitable for decryption.
      */
-    public static EncryptedKeyVersion createForDecryption(String
-        encryptionKeyVersionName, byte[] encryptedKeyIv,
+    public static EncryptedKeyVersion createForDecryption(String keyName,
+        String encryptionKeyVersionName, byte[] encryptedKeyIv,
         byte[] encryptedKeyMaterial) {
       KeyVersion encryptedKeyVersion = new KeyVersion(null, EEK,
           encryptedKeyMaterial);
-      return new EncryptedKeyVersion(null, encryptionKeyVersionName,
+      return new EncryptedKeyVersion(keyName, encryptionKeyVersionName,
           encryptedKeyIv, encryptedKeyVersion);
     }
 
