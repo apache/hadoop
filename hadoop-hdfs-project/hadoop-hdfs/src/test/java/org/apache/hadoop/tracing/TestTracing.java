@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.htrace.HTraceConfiguration;
 import org.htrace.Sampler;
 import org.htrace.Span;
@@ -39,11 +40,13 @@ import org.junit.Test;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeoutException;
+
+import com.google.common.base.Supplier;
 
 public class TestTracing {
 
@@ -81,7 +84,12 @@ public class TestTracing {
       "org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol.BlockingInterface.create",
       "org.apache.hadoop.hdfs.protocol.ClientProtocol.fsync",
       "org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol.BlockingInterface.fsync",
-      "org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol.BlockingInterface.complete"
+      "org.apache.hadoop.hdfs.protocol.ClientProtocol.complete",
+      "org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol.BlockingInterface.complete",
+      "DFSOutputStream",
+      "OpWriteBlockProto",
+      "org.apache.hadoop.hdfs.protocol.ClientProtocol.addBlock",
+      "org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol.BlockingInterface.addBlock"
     };
     assertSpanNamesFound(expectedSpanNames);
 
@@ -96,7 +104,7 @@ public class TestTracing {
 
     // There should only be one trace id as it should all be homed in the
     // top trace.
-    for (Span span : SetSpanReceiver.SetHolder.spans) {
+    for (Span span : SetSpanReceiver.SetHolder.spans.values()) {
       Assert.assertEquals(ts.getSpan().getTraceId(), span.getTraceId());
     }
   }
@@ -152,7 +160,8 @@ public class TestTracing {
     String[] expectedSpanNames = {
       "testReadTraceHooks",
       "org.apache.hadoop.hdfs.protocol.ClientProtocol.getBlockLocations",
-      "org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol.BlockingInterface.getBlockLocations"
+      "org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol.BlockingInterface.getBlockLocations",
+      "OpReadBlockProto"
     };
     assertSpanNamesFound(expectedSpanNames);
 
@@ -168,7 +177,7 @@ public class TestTracing {
 
     // There should only be one trace id as it should all be homed in the
     // top trace.
-    for (Span span : SetSpanReceiver.SetHolder.spans) {
+    for (Span span : SetSpanReceiver.SetHolder.spans.values()) {
       Assert.assertEquals(ts.getSpan().getTraceId(), span.getTraceId());
     }
   }
@@ -228,10 +237,24 @@ public class TestTracing {
     cluster.shutdown();
   }
 
-  private void assertSpanNamesFound(String[] expectedSpanNames) {
-    Map<String, List<Span>> map = SetSpanReceiver.SetHolder.getMap();
-    for (String spanName : expectedSpanNames) {
-      Assert.assertTrue("Should find a span with name " + spanName, map.get(spanName) != null);
+  static void assertSpanNamesFound(final String[] expectedSpanNames) {
+    try {
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          Map<String, List<Span>> map = SetSpanReceiver.SetHolder.getMap();
+          for (String spanName : expectedSpanNames) {
+            if (!map.containsKey(spanName)) {
+              return false;
+            }
+          }
+          return true;
+        }
+      }, 100, 1000);
+    } catch (TimeoutException e) {
+      Assert.fail("timed out to get expected spans: " + e.getMessage());
+    } catch (InterruptedException e) {
+      Assert.fail("interrupted while waiting spans: " + e.getMessage());
     }
   }
 
@@ -249,15 +272,16 @@ public class TestTracing {
     }
 
     public void receiveSpan(Span span) {
-      SetHolder.spans.add(span);
+      SetHolder.spans.put(span.getSpanId(), span);
     }
 
     public void close() {
     }
 
     public static class SetHolder {
-      public static Set<Span> spans = new HashSet<Span>();
-
+      public static ConcurrentHashMap<Long, Span> spans = 
+          new ConcurrentHashMap<Long, Span>();
+          
       public static int size() {
         return spans.size();
       }
@@ -265,7 +289,7 @@ public class TestTracing {
       public static Map<String, List<Span>> getMap() {
         Map<String, List<Span>> map = new HashMap<String, List<Span>>();
 
-        for (Span s : spans) {
+        for (Span s : spans.values()) {
           List<Span> l = map.get(s.getDescription());
           if (l == null) {
             l = new LinkedList<Span>();
