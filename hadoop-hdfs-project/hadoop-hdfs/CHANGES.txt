@@ -203,6 +203,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7059. HAadmin transtionToActive with forceActive option can show
     confusing message.
 
+    HDFS-6880. Adding tracing to DataNode data transfer protocol. (iwasakims
+    via cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
