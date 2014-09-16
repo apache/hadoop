@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.protocolPB;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos
-    .EncryptionZoneWithIdProto;
+    .EncryptionZoneProto;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -62,7 +62,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.EncryptionZoneWithId;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdfs.protocol.FsAclPermission;
@@ -2302,15 +2302,15 @@ public class PBHelper {
     return builder.build();
   }
 
-  public static EncryptionZoneWithIdProto convert(EncryptionZoneWithId zone) {
-    return EncryptionZoneWithIdProto.newBuilder()
+  public static EncryptionZoneProto convert(EncryptionZone zone) {
+    return EncryptionZoneProto.newBuilder()
         .setId(zone.getId())
         .setKeyName(zone.getKeyName())
         .setPath(zone.getPath()).build();
   }
 
-  public static EncryptionZoneWithId convert(EncryptionZoneWithIdProto proto) {
-    return new EncryptionZoneWithId(proto.getPath(), proto.getKeyName(),
+  public static EncryptionZone convert(EncryptionZoneProto proto) {
+    return new EncryptionZone(proto.getPath(), proto.getKeyName(),
         proto.getId());
   }
 

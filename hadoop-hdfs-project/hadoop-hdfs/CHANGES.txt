@@ -208,6 +208,8 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7006. Test encryption zones with KMS. (Anthony Young-Garner and tucu)
 
+    HDFS-6851. Refactor EncryptionZoneWithId and EncryptionZone. (clamb via wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
