@@ -381,8 +381,9 @@ public class FsVolumeImpl implements FsVolumeSpi {
           !FileUtil.fullyDelete(finalizedDir)) {
         throw new IOException("Failed to delete " + finalizedDir);
       }
-      if (!DatanodeUtil.dirNoFilesRecursive(lazypersistDir) ||
-          !FileUtil.fullyDelete(lazypersistDir)) {
+      if (lazypersistDir.exists() &&
+        ((!DatanodeUtil.dirNoFilesRecursive(lazypersistDir) ||
+          !FileUtil.fullyDelete(lazypersistDir)))) {
         throw new IOException("Failed to delete " + lazypersistDir);
       }
       FileUtil.fullyDelete(tmpDir);
