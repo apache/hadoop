@@ -59,7 +59,14 @@ public class TestCryptoCodec {
   
   @Test(timeout=120000)
   public void testJceAesCtrCryptoCodec() throws Exception {
-    Assume.assumeTrue(NativeCodeLoader.buildSupportsOpenssl());
+    if (!"true".equalsIgnoreCase(System.getProperty("runningWithNative"))) {
+      LOG.warn("Skipping since test was not run with -Pnative flag");
+      Assume.assumeTrue(false);
+    }
+    if (!NativeCodeLoader.buildSupportsOpenssl()) {
+      LOG.warn("Skipping test since openSSL library not loaded");
+      Assume.assumeTrue(false);
+    }
     Assert.assertEquals(null, OpensslCipher.getLoadingFailureReason());
     cryptoCodecTest(conf, seed, 0, jceCodecClass, jceCodecClass);
     cryptoCodecTest(conf, seed, count, jceCodecClass, jceCodecClass);
@@ -68,7 +75,14 @@ public class TestCryptoCodec {
   
   @Test(timeout=120000)
   public void testOpensslAesCtrCryptoCodec() throws Exception {
-    Assume.assumeTrue(NativeCodeLoader.buildSupportsOpenssl());
+    if (!"true".equalsIgnoreCase(System.getProperty("runningWithNative"))) {
+      LOG.warn("Skipping since test was not run with -Pnative flag");
+      Assume.assumeTrue(false);
+    }
+    if (!NativeCodeLoader.buildSupportsOpenssl()) {
+      LOG.warn("Skipping test since openSSL library not loaded");
+      Assume.assumeTrue(false);
+    }
     Assert.assertEquals(null, OpensslCipher.getLoadingFailureReason());
     cryptoCodecTest(conf, seed, 0, opensslCodecClass, opensslCodecClass);
     cryptoCodecTest(conf, seed, count, opensslCodecClass, opensslCodecClass);
