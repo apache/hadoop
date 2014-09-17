@@ -71,6 +71,8 @@ HDFS-6584: Archival Storage
 
     HDFS-7072. Fix TestBlockManager and TestStorageMover.  (jing9 via szetszwo)
 
+    HDFS-6864. Archival Storage: add user documentation. (szetszwo via jing9)
+
 Trunk (Unreleased)
 
   INCOMPATIBLE CHANGES

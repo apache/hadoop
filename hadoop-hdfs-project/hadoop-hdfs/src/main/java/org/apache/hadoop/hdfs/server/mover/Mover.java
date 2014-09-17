@@ -498,9 +498,9 @@ public class Mover {
 
   static class Cli extends Configured implements Tool {
     private static final String USAGE = "Usage: java "
-        + Mover.class.getSimpleName()
-        + " [-p <space separated files/dirs> specify a list of files/dirs to migrate]"
-        + " [-f <local file name>            specify a local file containing files/dirs to migrate]";
+        + Mover.class.getSimpleName() + " [-p <files/dirs> | -f <local file>]"
+        + "\n\t-p <files/dirs>\ta space separated list of HDFS files/dirs to migrate."
+        + "\n\t-f <local file>\ta local file containing a list of HDFS files/dirs to migrate.";
 
     private static Options buildCliOptions() {
       Options opts = new Options();
