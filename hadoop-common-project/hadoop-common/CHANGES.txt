@@ -194,6 +194,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10922. User documentation for CredentialShell. (Larry McCay via wang)
 
+    HADOOP-11016. KMS should support signing cookies with zookeeper secret
+    manager. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
