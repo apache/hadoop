@@ -248,6 +248,8 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10833. Remove unused cache in UserProvider. (Benoy Antony)
 
+    HDFS-6843. Create FileStatus isEncrypted() method (clamb via cmccabe)
+
   BUG FIXES
 
     HADOOP-10781. Unportable getgrouplist() usage breaks FreeBSD (Dmitry
