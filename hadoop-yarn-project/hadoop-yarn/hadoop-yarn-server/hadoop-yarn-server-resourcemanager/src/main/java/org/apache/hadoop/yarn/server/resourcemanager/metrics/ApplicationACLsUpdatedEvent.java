@@ -18,18 +18,28 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.metrics;
 
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 
-public enum SystemMetricsEventType {
-  // app events
-  APP_CREATED,
-  APP_FINISHED,
-  APP_ACLS_UPDATED,
 
-  // app attempt events
-  APP_ATTEMPT_REGISTERED,
-  APP_ATTEMPT_FINISHED,
+public class ApplicationACLsUpdatedEvent extends SystemMetricsEvent {
 
-  // container events
-  CONTAINER_CREATED,
-  CONTAINER_FINISHED
+  private ApplicationId appId;
+  private String viewAppACLs;
+
+  public ApplicationACLsUpdatedEvent(ApplicationId appId,
+      String viewAppACLs,
+      long updatedTime) {
+    super(SystemMetricsEventType.APP_ACLS_UPDATED, updatedTime);
+    this.appId = appId;
+    this.viewAppACLs = viewAppACLs;
+  }
+
+  public ApplicationId getApplicationId() {
+    return appId;
+  }
+
+  public String getViewAppACLs() {
+    return viewAppACLs;
+  }
+
 }
