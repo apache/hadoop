@@ -405,6 +405,10 @@ Release 2.6.0 - UNRELEASED
     HDFS-6965. NN continues to issue block locations for DNs with full disks.
     (Rushabh Shah via kihwal)
 
+    HDFS-6789. TestDFSClientFailover.testFileContextDoesntDnsResolveLogicalURI
+    and TestDFSClientFailover.testDoesntDnsResolveLogicalURI failing on jdk7.
+    (Akira Ajisaka via wang)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
