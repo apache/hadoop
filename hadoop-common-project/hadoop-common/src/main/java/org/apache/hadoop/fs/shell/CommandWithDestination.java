@@ -473,19 +473,20 @@ abstract class CommandWithDestination extends FsCommand {
     FSDataOutputStream create(PathData item, boolean lazyPersist)
         throws IOException {
       try {
-        EnumSet<CreateFlag> createFlags = EnumSet.of(CREATE);
         if (lazyPersist) {
-          createFlags.add(LAZY_PERSIST);
+          EnumSet<CreateFlag> createFlags = EnumSet.of(CREATE, LAZY_PERSIST);
+          return create(item.path,
+                        FsPermission.getFileDefault().applyUMask(
+                            FsPermission.getUMask(getConf())),
+                        createFlags,
+                        getConf().getInt("io.file.buffer.size", 4096),
+                        lazyPersist ? 1 : getDefaultReplication(item.path),
+                        getDefaultBlockSize(),
+                        null,
+                        null);
+        } else {
+          return create(item.path, true);
         }
-        return create(item.path,
-                      FsPermission.getFileDefault().applyUMask(
-                          FsPermission.getUMask(getConf())),
-                      createFlags,
-                      getConf().getInt("io.file.buffer.size", 4096),
-                      lazyPersist ? 1 : getDefaultReplication(item.path),
-                      getDefaultBlockSize(),
-                      null,
-                      null);
       } finally { // might have been created but stream was interrupted
         deleteOnExit(item.path);
       }
