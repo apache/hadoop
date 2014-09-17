@@ -489,6 +489,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11062. CryptoCodec testcases requiring OpenSSL should be run 
     only if -Pnative is used. (asuresh via tucu)
 
+    HADOOP-11099. KMS return HTTP UNAUTHORIZED 401 on ACL failure. (tucu)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
