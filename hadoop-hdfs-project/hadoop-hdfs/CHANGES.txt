@@ -210,6 +210,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6851. Refactor EncryptionZoneWithId and EncryptionZone. (clamb via wang)
 
+    HDFS-6705. Create an XAttr that disallows the HDFS admin from accessing a
+    file. (clamb via wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

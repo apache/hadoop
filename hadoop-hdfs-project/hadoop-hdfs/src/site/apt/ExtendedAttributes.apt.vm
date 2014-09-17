@@ -40,7 +40,7 @@ Extended Attributes in HDFS
 
   The <<<system>>> namespace is reserved for internal HDFS use. This namespace is not accessible through userspace methods, and is reserved for implementing internal HDFS features.
 
-  The <<<security>>> namespace is reserved for internal HDFS use. This namespace is not accessible through userspace methods. It is currently unused.
+  The <<<security>>> namespace is reserved for internal HDFS use. This namespace is generally not accessible through userspace methods. One particular use of <<<security>>> is the <<<security.hdfs.unreadable.by.superuser>>> extended attribute. This xattr can only be set on files, and it will prevent the superuser from reading the file's contents. The superuser can still read and modify file metadata, such as the owner, permissions, etc. This xattr can be set and accessed by any user, assuming normal filesystem permissions. This xattr is also write-once, and cannot be removed once set. This xattr does not allow a value to be set.
 
  The <<<raw>>> namespace is reserved for internal system attributes that sometimes need to be exposed. Like <<<system>>> namespace attributes they are not visible to the user except when <<<getXAttr>>>/<<<getXAttrs>>> is called on a file or directory in the <<</.reserved/raw>>> HDFS directory hierarchy. These attributes can only be accessed by the superuser. An example of where <<<raw>>> namespace extended attributes are used is the <<<distcp>>> utility. Encryption zone meta data is stored in <<<raw.*>>> extended attributes, so as long as the administrator uses <<</.reserved/raw>>> pathnames in source and target, the encrypted files in the encryption zones are transparently copied.
 
@@ -83,7 +83,6 @@ Extended Attributes in HDFS
 *--+--+
 
 * {Configuration options}
-
 
   HDFS supports extended attributes out of the box, without additional configuration. Administrators could potentially be interested in the options limiting the number of xattrs per inode and the size of xattrs, since xattrs increase the on-disk and in-memory space consumption of an inode.
 

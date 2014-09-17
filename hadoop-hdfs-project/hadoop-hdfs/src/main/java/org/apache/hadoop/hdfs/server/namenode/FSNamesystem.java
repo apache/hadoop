@@ -92,7 +92,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SUPPORT_APPEND_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SUPPORT_APPEND_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RANDOMIZE_BLOCK_LOCATIONS_PER_BLOCK;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RANDOMIZE_BLOCK_LOCATIONS_PER_BLOCK_DEFAULT;
-
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_XATTR_UNREADABLE_BY_SUPERUSER;
 import static org.apache.hadoop.util.Time.now;
 
 import java.io.BufferedWriter;
@@ -176,6 +176,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.StorageType;
+import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.UnknownCipherSuiteException;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
@@ -1841,6 +1842,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
         final INodesInPath iip = dir.getLastINodeInPath(src);
         final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
+        if (isPermissionEnabled) {
+          checkUnreadableBySuperuser(pc, inode, iip.getPathSnapshotId());
+        }
         if (!iip.isSnapshot() //snapshots are readonly, so don't update atime.
             && doAccessTime && isAccessTimeSupported()) {
           final long now = now();
@@ -6159,6 +6163,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     checkPermission(pc, path, false, null, null, access, null);
   }
 
+  private void checkUnreadableBySuperuser(FSPermissionChecker pc,
+      INode inode, int snapshotId)
+      throws IOException {
+    for (XAttr xattr : dir.getXAttrs(inode, snapshotId)) {
+      if (XAttrHelper.getPrefixName(xattr).
+          equals(SECURITY_XATTR_UNREADABLE_BY_SUPERUSER)) {
+        if (pc.isSuperUser()) {
+          throw new AccessControlException("Access is denied for " +
+              pc.getUser() + " since the superuser is not allowed to " +
+              "perform this operation.");
+        }
+      }
+    }
+  }
+
   private void checkParentAccess(FSPermissionChecker pc,
       String path, FsAction access) throws AccessControlException,
       UnresolvedLinkException {
@@ -8922,7 +8941,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       AccessControlException {
     if (isPermissionEnabled && xAttr.getNameSpace() == XAttr.NameSpace.USER) {
       final INode inode = dir.getINode(src);
-      if (inode.isDirectory() && inode.getFsPermission().getStickyBit()) {
+      if (inode != null &&
+          inode.isDirectory() &&
+          inode.getFsPermission().getStickyBit()) {
         if (!pc.isSuperUser()) {
           checkOwner(pc, src);
         }
