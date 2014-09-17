@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.FSTestWrapper;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileContextTestWrapper;
 import org.apache.hadoop.fs.FileEncryptionInfo;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FileSystemTestWrapper;
@@ -710,6 +711,93 @@ public class TestEncryptionZones {
     );
     // Try listing EZs as well
     assertNumZones(0);
+  }
+
+  @Test(timeout = 120000)
+  public void testIsEncryptedMethod() throws Exception {
+    doTestIsEncryptedMethod(new Path("/"));
+    doTestIsEncryptedMethod(new Path("/.reserved/raw"));
+  }
+
+  private void doTestIsEncryptedMethod(Path prefix) throws Exception {
+    try {
+      dTIEM(prefix);
+    } finally {
+      for (FileStatus s : fsWrapper.listStatus(prefix)) {
+        fsWrapper.delete(s.getPath(), true);
+      }
+    }
+  }
+
+  private void dTIEM(Path prefix) throws Exception {
+    final HdfsAdmin dfsAdmin =
+      new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
+    // Create an unencrypted file to check isEncrypted returns false
+    final Path baseFile = new Path(prefix, "base");
+    fsWrapper.createFile(baseFile);
+    FileStatus stat = fsWrapper.getFileStatus(baseFile);
+    assertFalse("Expected isEncrypted to return false for " + baseFile,
+        stat.isEncrypted());
+
+    // Create an encrypted file to check isEncrypted returns true
+    final Path zone = new Path(prefix, "zone");
+    fsWrapper.mkdir(zone, FsPermission.getDirDefault(), true);
+    dfsAdmin.createEncryptionZone(zone, TEST_KEY);
+    final Path encFile = new Path(zone, "encfile");
+    fsWrapper.createFile(encFile);
+    stat = fsWrapper.getFileStatus(encFile);
+    assertTrue("Expected isEncrypted to return true for enc file" + encFile,
+        stat.isEncrypted());
+
+    // check that it returns true for an ez root
+    stat = fsWrapper.getFileStatus(zone);
+    assertTrue("Expected isEncrypted to return true for ezroot",
+        stat.isEncrypted());
+
+    // check that it returns true for a dir in the ez
+    final Path zoneSubdir = new Path(zone, "subdir");
+    fsWrapper.mkdir(zoneSubdir, FsPermission.getDirDefault(), true);
+    stat = fsWrapper.getFileStatus(zoneSubdir);
+    assertTrue(
+        "Expected isEncrypted to return true for ez subdir " + zoneSubdir,
+        stat.isEncrypted());
+
+    // check that it returns false for a non ez dir
+    final Path nonEzDirPath = new Path(prefix, "nonzone");
+    fsWrapper.mkdir(nonEzDirPath, FsPermission.getDirDefault(), true);
+    stat = fsWrapper.getFileStatus(nonEzDirPath);
+    assertFalse(
+        "Expected isEncrypted to return false for directory " + nonEzDirPath,
+        stat.isEncrypted());
+
+    // check that it returns true for listings within an ez
+    FileStatus[] statuses = fsWrapper.listStatus(zone);
+    for (FileStatus s : statuses) {
+      assertTrue("Expected isEncrypted to return true for ez stat " + zone,
+          s.isEncrypted());
+    }
+
+    statuses = fsWrapper.listStatus(encFile);
+    for (FileStatus s : statuses) {
+      assertTrue(
+          "Expected isEncrypted to return true for ez file stat " + encFile,
+          s.isEncrypted());
+    }
+
+    // check that it returns false for listings outside an ez
+    statuses = fsWrapper.listStatus(nonEzDirPath);
+    for (FileStatus s : statuses) {
+      assertFalse(
+          "Expected isEncrypted to return false for nonez stat " + nonEzDirPath,
+          s.isEncrypted());
+    }
+
+    statuses = fsWrapper.listStatus(baseFile);
+    for (FileStatus s : statuses) {
+      assertFalse(
+          "Expected isEncrypted to return false for non ez stat " + baseFile,
+          s.isEncrypted());
+    }
   }
 
   private class MyInjector extends EncryptionFaultInjector {
