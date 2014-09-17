@@ -32,6 +32,7 @@ import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.junit.AfterClass;
@@ -209,6 +210,7 @@ public class TestKMS {
     keytab = new File(kdcDir, "keytab");
     List<String> principals = new ArrayList<String>();
     principals.add("HTTP/localhost");
+    principals.add("HTTP/127.0.0.1");
     principals.add("client");
     principals.add("hdfs");
     principals.add("otheradmin");
@@ -251,8 +253,8 @@ public class TestKMS {
     }
   }
 
-  public void testStartStop(final boolean ssl, final boolean kerberos)
-      throws Exception {
+  public void testStartStop(final boolean ssl, final boolean kerberos,
+      final boolean multipleServerPrincipals) throws Exception {
     Configuration conf = new Configuration();
     if (kerberos) {
       conf.set("hadoop.security.authentication", "kerberos");
@@ -278,7 +280,12 @@ public class TestKMS {
       conf.set("hadoop.kms.authentication.type", "kerberos");
       conf.set("hadoop.kms.authentication.kerberos.keytab",
           keytab.getAbsolutePath());
-      conf.set("hadoop.kms.authentication.kerberos.principal", "HTTP/localhost");
+      if (multipleServerPrincipals) {
+        conf.set("hadoop.kms.authentication.kerberos.principal", "*");
+      } else {
+        conf.set("hadoop.kms.authentication.kerberos.principal",
+            "HTTP/localhost");
+      }
       conf.set("hadoop.kms.authentication.kerberos.name.rules", "DEFAULT");
     }
 
@@ -291,21 +298,42 @@ public class TestKMS {
         URL url = getKMSUrl();
         Assert.assertEquals(keystore != null,
             url.getProtocol().equals("https"));
-        final URI uri = createKMSUri(getKMSUrl());
 
         if (kerberos) {
           for (String user : new String[]{"client", "client/host"}) {
             doAs(user, new PrivilegedExceptionAction<Void>() {
               @Override
               public Void run() throws Exception {
-                final KeyProvider kp = new KMSClientProvider(uri, conf);
+                URI uri = createKMSUri(getKMSUrl());
+                KeyProvider kp = new KMSClientProvider(uri, conf);
                 // getKeys() empty
                 Assert.assertTrue(kp.getKeys().isEmpty());
+
+                if (!ssl) {
+                  String url = getKMSUrl().toString();
+                  url = url.replace("localhost", "127.0.0.1");
+                  uri = createKMSUri(new URL(url));
+                  if (multipleServerPrincipals) {
+                    kp = new KMSClientProvider(uri, conf);
+                    // getKeys() empty
+                    Assert.assertTrue(kp.getKeys().isEmpty());
+                  } else {
+                    kp = new KMSClientProvider(uri, conf);
+                    try {
+                      kp.getKeys().isEmpty();
+                      Assert.fail();
+                    } catch (IOException ex) {
+                      Assert.assertEquals(AuthenticationException.class,
+                          ex.getCause().getClass());
+                    }
+                  }
+                }
                 return null;
               }
             });
           }
         } else {
+          URI uri = createKMSUri(getKMSUrl());
           KeyProvider kp = new KMSClientProvider(uri, conf);
           // getKeys() empty
           Assert.assertTrue(kp.getKeys().isEmpty());
@@ -317,22 +345,27 @@ public class TestKMS {
 
   @Test
   public void testStartStopHttpPseudo() throws Exception {
-    testStartStop(false, false);
+    testStartStop(false, false, false);
   }
 
   @Test
   public void testStartStopHttpsPseudo() throws Exception {
-    testStartStop(true, false);
+    testStartStop(true, false, false);
   }
 
   @Test
   public void testStartStopHttpKerberos() throws Exception {
-    testStartStop(false, true);
+    testStartStop(false, true, false);
   }
 
   @Test
   public void testStartStopHttpsKerberos() throws Exception {
-    testStartStop(true, true);
+    testStartStop(true, true, false);
+  }
+
+  @Test
+  public void testStartStopHttpsKerberosMultiplePrincipals() throws Exception {
+    testStartStop(false, true, true);
   }
 
   @Test
@@ -1340,7 +1373,8 @@ public class TestKMS {
           KeyProvider kp = new KMSClientProvider(uri, conf);
           kp.createKey("kA", new KeyProvider.Options(conf));
         } catch (IOException ex) {
-          System.out.println(ex.getMessage());
+          Assert.assertEquals(AuthenticationException.class,
+              ex.getCause().getClass());
         }
 
         doAs("client", new PrivilegedExceptionAction<Void>() {
