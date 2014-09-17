@@ -121,7 +121,7 @@ public class TestKeyProviderCryptoExtension {
 
     // Test the createForDecryption factory method
     EncryptedKeyVersion eek2 =
-        EncryptedKeyVersion.createForDecryption(
+        EncryptedKeyVersion.createForDecryption(eek.getEncryptionKeyName(),
             eek.getEncryptionKeyVersionName(), eek.getEncryptedKeyIv(),
             eek.getEncryptedKeyVersion().getMaterial());
 

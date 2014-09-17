@@ -215,4 +215,57 @@ public class TestKeyAuthorizationKeyProvider {
     return options;
   }
 
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testDecryptWithKeyVersionNameKeyMismatch() throws Exception {
+    final Configuration conf = new Configuration();
+    KeyProvider kp =
+        new UserProvider.Factory().createProvider(new URI("user:///"), conf);
+    KeyACLs mock = mock(KeyACLs.class);
+    when(mock.isACLPresent("testKey", KeyOpType.MANAGEMENT)).thenReturn(true);
+    when(mock.isACLPresent("testKey", KeyOpType.GENERATE_EEK)).thenReturn(true);
+    when(mock.isACLPresent("testKey", KeyOpType.DECRYPT_EEK)).thenReturn(true);
+    when(mock.isACLPresent("testKey", KeyOpType.ALL)).thenReturn(true);
+    UserGroupInformation u1 = UserGroupInformation.createRemoteUser("u1");
+    UserGroupInformation u2 = UserGroupInformation.createRemoteUser("u2");
+    UserGroupInformation u3 = UserGroupInformation.createRemoteUser("u3");
+    UserGroupInformation sudo = UserGroupInformation.createRemoteUser("sudo");
+    when(mock.hasAccessToKey("testKey", u1,
+        KeyOpType.MANAGEMENT)).thenReturn(true);
+    when(mock.hasAccessToKey("testKey", u2,
+        KeyOpType.GENERATE_EEK)).thenReturn(true);
+    when(mock.hasAccessToKey("testKey", u3,
+        KeyOpType.DECRYPT_EEK)).thenReturn(true);
+    when(mock.hasAccessToKey("testKey", sudo,
+        KeyOpType.ALL)).thenReturn(true);
+    final KeyProviderCryptoExtension kpExt =
+        new KeyAuthorizationKeyProvider(
+            KeyProviderCryptoExtension.createKeyProviderCryptoExtension(kp),
+            mock);
+
+    sudo.doAs(
+        new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            Options opt = newOptions(conf);
+            Map<String, String> m = new HashMap<String, String>();
+            m.put("key.acl.name", "testKey");
+            opt.setAttributes(m);
+            KeyVersion kv =
+                kpExt.createKey("foo", SecureRandom.getSeed(16), opt);
+            kpExt.rollNewVersion(kv.getName());
+            kpExt.rollNewVersion(kv.getName(), SecureRandom.getSeed(16));
+            EncryptedKeyVersion ekv = kpExt.generateEncryptedKey(kv.getName());
+            ekv = EncryptedKeyVersion.createForDecryption(
+                ekv.getEncryptionKeyName() + "x",
+                ekv.getEncryptionKeyVersionName(),
+                ekv.getEncryptedKeyIv(),
+                ekv.getEncryptedKeyVersion().getMaterial());
+            kpExt.decryptEncryptedKey(ekv);
+            return null;
+          }
+        }
+    );
+  }
+
 }

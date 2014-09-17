@@ -209,6 +209,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
           <systemPropertyVariables>
             <startKdc>${startKdc}</startKdc>
             <kdc.resource.dir>${kdc.resource.dir}</kdc.resource.dir>
+            <runningWithNative>${runningWithNative}</runningWithNative>
           </systemPropertyVariables>
           <properties>
             <property>
@@ -386,6 +387,9 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
           <family>windows</family>
         </os>
       </activation>
+      <properties>
+        <runningWithNative>true</runningWithNative>
+      </properties>
       <build>
         <plugins>
           <plugin>
@@ -476,6 +480,9 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <activation>
         <activeByDefault>false</activeByDefault>
       </activation>
+      <properties>
+        <runningWithNative>true</runningWithNative>
+      </properties>
       <build>
         <plugins>
           <plugin>
