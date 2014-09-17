@@ -532,6 +532,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6843. Create FileStatus isEncrypted() method (clamb via cmccabe)
 
+    HADOOP-11016. KMS should support signing cookies with zookeeper secret
+    manager. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)

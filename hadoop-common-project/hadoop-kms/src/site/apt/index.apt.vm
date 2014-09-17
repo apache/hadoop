@@ -448,16 +448,16 @@ $ keytool -genkey -alias tomcat -keyalg RSA
   KMS supports access control for all non-read operations at the Key level.
   All Key Access operations are classified as :
 
-  * MANAGEMENT - createKey, deleteKey, rolloverNewVersion
+    * MANAGEMENT - createKey, deleteKey, rolloverNewVersion
 
-  * GENERATE_EEK - generateEncryptedKey, warmUpEncryptedKeys
+    * GENERATE_EEK - generateEncryptedKey, warmUpEncryptedKeys
 
-  * DECRYPT_EEK - decryptEncryptedKey;
+    * DECRYPT_EEK - decryptEncryptedKey
 
-  * READ - getKeyVersion, getKeyVersions, getMetadata, getKeysMetadata,
-           getCurrentKey;
+    * READ - getKeyVersion, getKeyVersions, getMetadata, getKeysMetadata,
+             getCurrentKey
 
-  * ALL - all of the above;
+    * ALL - all of the above
 
   These can be defined in the KMS <<<etc/hadoop/kms-acls.xml>>> as follows
 
@@ -554,40 +554,123 @@ $ keytool -genkey -alias tomcat -keyalg RSA
   KMS delegation token secret manager can be configured with the following
   properties:
 
-  +---+
-    <property>
-      <name>hadoop.kms.authentication.delegation-token.update-interval.sec</name>
-      <value>86400</value>
-      <description>
-        How often the master key is rotated, in seconds. Default value 1 day.
-      </description>
-    </property>
++---+
+  <property>
+    <name>hadoop.kms.authentication.delegation-token.update-interval.sec</name>
+    <value>86400</value>
+    <description>
+      How often the master key is rotated, in seconds. Default value 1 day.
+    </description>
+  </property>
 
-    <property>
-      <name>hadoop.kms.authentication.delegation-token.max-lifetime.sec</name>
-      <value>604800</value>
-      <description>
-        Maximum lifetime of a delagation token, in seconds. Default value 7 days.
-      </description>
-    </property>
+  <property>
+    <name>hadoop.kms.authentication.delegation-token.max-lifetime.sec</name>
+    <value>604800</value>
+    <description>
+      Maximum lifetime of a delagation token, in seconds. Default value 7 days.
+    </description>
+  </property>
 
-    <property>
-      <name>hadoop.kms.authentication.delegation-token.renew-interval.sec</name>
-      <value>86400</value>
-      <description>
-        Renewal interval of a delagation token, in seconds. Default value 1 day.
-      </description>
-    </property>
+  <property>
+    <name>hadoop.kms.authentication.delegation-token.renew-interval.sec</name>
+    <value>86400</value>
+    <description>
+      Renewal interval of a delagation token, in seconds. Default value 1 day.
+    </description>
+  </property>
 
-    <property>
-      <name>hadoop.kms.authentication.delegation-token.removal-scan-interval.sec</name>
-      <value>3600</value>
-      <description>
-        Scan interval to remove expired delegation tokens.
-      </description>
-    </property>
-  +---+
+  <property>
+    <name>hadoop.kms.authentication.delegation-token.removal-scan-interval.sec</name>
+    <value>3600</value>
+    <description>
+      Scan interval to remove expired delegation tokens.
+    </description>
+  </property>
++---+
 
+
+** Using Multiple Instances of KMS Behind a Load-Balancer or VIP
+
+  KMS supports multiple KMS instances behind a load-balancer or VIP for
+  scalability and for HA purposes.
+
+  When using multiple KMS instances behind a load-balancer or VIP, requests from
+  the same user may be handled by different KMS instances.
+
+  KMS instances behind a load-balancer or VIP must be specially configured to
+  work properly as a single logical service.
+
+*** HTTP Kerberos Principals Configuration
+
+  TBD
+
+*** HTTP Authentication Signature
+
+  KMS uses Hadoop Authentication for HTTP authentication. Hadoop Authentication
+  issues a signed HTTP Cookie once the client has authenticated successfully.
+  This HTTP Cookie has an expiration time, after which it will trigger a new
+  authentication sequence. This is done to avoid triggering the authentication
+  on every HTTP request of a client.
+
+  A KMS instance must verify the HTTP Cookie signatures signed by other KMS
+  instances. To do this all KMS instances must share the signing secret.
+
+  This secret sharing can be done using a Zookeeper service which is configured
+  in KMS with the following properties in the <<<kms-site.xml>>>:
+
++---+
+  <property>
+    <name>hadoop.kms.authentication.signer.secret.provider</name>
+    <value>zookeeper</value>
+    <description>
+      Indicates how the secret to sign the authentication cookies will be
+      stored. Options are 'random' (default), 'string' and 'zookeeper'.
+      If using a setup with multiple KMS instances, 'zookeeper' should be used.
+    </description>
+  </property>
+  <property>
+    <name>hadoop.kms.authentication.signer.secret.provider.zookeeper.path</name>
+    <value>/hadoop-kms/hadoop-auth-signature-secret</value>
+    <description>
+      The Zookeeper ZNode path where the KMS instances will store and retrieve
+      the secret from.
+    </description>
+  </property>
+  <property>
+    <name>hadoop.kms.authentication.signer.secret.provider.zookeeper.connection.string</name>
+    <value>#HOSTNAME#:#PORT#,...</value>
+    <description>
+      The Zookeeper connection string, a list of hostnames and port comma
+      separated.
+    </description>
+  </property>
+  <property>
+    <name>hadoop.kms.authentication.signer.secret.provider.zookeeper.auth.type</name>
+    <value>kerberos</value>
+    <description>
+      The Zookeeper authentication type, 'none' or 'sasl' (Kerberos).
+    </description>
+  </property>
+  <property>
+    <name>hadoop.kms.authentication.signer.secret.provider.zookeeper.kerberos.keytab</name>
+    <value>/etc/hadoop/conf/kms.keytab</value>
+    <description>
+      The absolute path for the Kerberos keytab with the credentials to
+      connect to Zookeeper.
+    </description>
+  </property>
+  <property>
+    <name>hadoop.kms.authentication.signer.secret.provider.zookeeper.kerberos.principal</name>
+    <value>kms/#HOSTNAME#</value>
+    <description>
+      The Kerberos service principal used to connect to Zookeeper.
+    </description>
+  </property>
++---+
+
+*** Delegation Tokens
+
+  TBD
 
 ** KMS HTTP REST API
 
