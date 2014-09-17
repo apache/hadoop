@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.AHSWebApp;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.timeline.LeveldbTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
@@ -64,6 +65,7 @@ public class ApplicationHistoryServer extends CompositeService {
     .getLog(ApplicationHistoryServer.class);
 
   private ApplicationHistoryClientService ahsClientService;
+  private ApplicationACLsManager aclsManager;
   private ApplicationHistoryManager historyManager;
   private TimelineStore timelineStore;
   private TimelineDelegationTokenSecretManagerService secretManagerService;
@@ -84,6 +86,7 @@ public class ApplicationHistoryServer extends CompositeService {
     timelineDataManager = createTimelineDataManager(conf);
 
     // init generic history service afterwards
+    aclsManager = createApplicationACLsManager(conf);
     historyManager = createApplicationHistoryManager(conf);
     ahsClientService = createApplicationHistoryClientService(historyManager);
     addService(ahsClientService);
@@ -168,6 +171,11 @@ public class ApplicationHistoryServer extends CompositeService {
     return new ApplicationHistoryClientService(historyManager);
   }
 
+  private ApplicationACLsManager createApplicationACLsManager(
+      Configuration conf) {
+    return new ApplicationACLsManager(conf);
+  }
+
   private ApplicationHistoryManager createApplicationHistoryManager(
       Configuration conf) {
     // Backward compatibility:
@@ -175,7 +183,8 @@ public class ApplicationHistoryServer extends CompositeService {
     // user has enabled it explicitly.
     if (conf.get(YarnConfiguration.APPLICATION_HISTORY_STORE) == null ||
         conf.get(YarnConfiguration.APPLICATION_HISTORY_STORE).length() == 0) {
-      return new ApplicationHistoryManagerOnTimelineStore(timelineDataManager);
+      return new ApplicationHistoryManagerOnTimelineStore(
+          timelineDataManager, aclsManager);
     } else {
       LOG.warn("The filesystem based application history store is deprecated.");
       return new ApplicationHistoryManagerImpl();

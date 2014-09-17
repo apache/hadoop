@@ -54,6 +54,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
+/**
+ * The class that helps RM publish metrics to the timeline server. RM will
+ * always invoke the methods of this class regardless the service is enabled or
+ * not. If it is disabled, publishing requests will be ignored silently.
+ */
 @Private
 @Unstable
 public class SystemMetricsPublisher extends CompositeService {
@@ -122,6 +127,18 @@ public class SystemMetricsPublisher extends CompositeService {
               app.getCurrentAppAttempt() == null ?
                   null : app.getCurrentAppAttempt().getAppAttemptId(),
               finishedTime));
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  public void appACLsUpdated(RMApp app, String appViewACLs,
+      long updatedTime) {
+    if (publishSystemMetrics) {
+      dispatcher.getEventHandler().handle(
+          new ApplicationACLsUpdatedEvent(
+              app.getApplicationId(),
+              appViewACLs,
+              updatedTime));
     }
   }
 
@@ -202,6 +219,9 @@ public class SystemMetricsPublisher extends CompositeService {
       case APP_FINISHED:
         publishApplicationFinishedEvent((ApplicationFinishedEvent) event);
         break;
+      case APP_ACLS_UPDATED:
+        publishApplicationACLsUpdatedEvent((ApplicationACLsUpdatedEvent) event);
+        break;
       case APP_ATTEMPT_REGISTERED:
         publishAppAttemptRegisteredEvent((AppAttemptRegisteredEvent) event);
         break;
@@ -261,6 +281,22 @@ public class SystemMetricsPublisher extends CompositeService {
           event.getLatestApplicationAttemptId().toString());
     }
     tEvent.setEventInfo(eventInfo);
+    entity.addEvent(tEvent);
+    putEntity(entity);
+  }
+
+  private void publishApplicationACLsUpdatedEvent(
+      ApplicationACLsUpdatedEvent event) {
+    TimelineEntity entity =
+        createApplicationEntity(event.getApplicationId());
+    TimelineEvent tEvent = new TimelineEvent();
+    Map<String, Object> entityInfo = new HashMap<String, Object>();
+    entityInfo.put(ApplicationMetricsConstants.APP_VIEW_ACLS_ENTITY_INFO,
+        event.getViewAppACLs());
+    entity.setOtherInfo(entityInfo);
+    tEvent.setEventType(
+        ApplicationMetricsConstants.ACLS_UPDATED_EVENT_TYPE);
+    tEvent.setTimestamp(event.getTimestamp());
     entity.addEvent(tEvent);
     putEntity(entity);
   }
