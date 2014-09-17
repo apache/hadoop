@@ -621,24 +621,24 @@ public class Mover {
         System.out.println("Mover took " + StringUtils.formatTime(Time.monotonicNow()-startTime));
       }
     }
+  }
 
-    /**
-     * Run a Mover in command line.
-     * 
-     * @param args Command line arguments
-     */
-    public static void main(String[] args) {
-      if (DFSUtil.parseHelpArgument(args, USAGE, System.out, true)) {
-        System.exit(0);
-      }
+  /**
+   * Run a Mover in command line.
+   *
+   * @param args Command line arguments
+   */
+  public static void main(String[] args) {
+    if (DFSUtil.parseHelpArgument(args, Cli.USAGE, System.out, true)) {
+      System.exit(0);
+    }
 
-      try {
-        System.exit(ToolRunner.run(new HdfsConfiguration(), new Cli(), args));
-      } catch (Throwable e) {
-        LOG.error("Exiting " + Mover.class.getSimpleName()
-            + " due to an exception", e);
-        System.exit(-1);
-      }
+    try {
+      System.exit(ToolRunner.run(new HdfsConfiguration(), new Cli(), args));
+    } catch (Throwable e) {
+      LOG.error("Exiting " + Mover.class.getSimpleName()
+          + " due to an exception", e);
+      System.exit(-1);
     }
   }
 }
