@@ -24,6 +24,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import static org.mockito.Matchers.isA;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -97,7 +99,7 @@ public class TestAppManager{
     return list;
   }
 
-  public static RMContext mockRMContext(int n, long time) {
+  public RMContext mockRMContext(int n, long time) {
     final List<RMApp> apps = newRMApps(n, time, RMAppState.FINISHED);
     final ConcurrentMap<ApplicationId, RMApp> map = Maps.newConcurrentMap();
     for (RMApp app : apps) {
@@ -120,8 +122,8 @@ public class TestAppManager{
       }
     };
     ((RMContextImpl)context).setStateStore(mock(RMStateStore.class));
-    ((RMContextImpl)context).setSystemMetricsPublisher(
-        mock(SystemMetricsPublisher.class));
+    metricsPublisher = mock(SystemMetricsPublisher.class);
+    ((RMContextImpl)context).setSystemMetricsPublisher(metricsPublisher);
     return context;
   }
 
@@ -200,6 +202,7 @@ public class TestAppManager{
   }
 
   private RMContext rmContext;
+  private SystemMetricsPublisher metricsPublisher;
   private TestRMAppManager appMonitor;
   private ApplicationSubmissionContext asContext;
   private ApplicationId appId;
@@ -460,6 +463,8 @@ public class TestAppManager{
     Assert.assertNotNull("app is null", app);
     Assert.assertEquals("app id doesn't match", appId, app.getApplicationId());
     Assert.assertEquals("app state doesn't match", RMAppState.NEW, app.getState());
+    verify(metricsPublisher).appACLsUpdated(
+        any(RMApp.class), any(String.class), anyLong());
 
     // wait for event to be processed
     int timeoutSecs = 0;

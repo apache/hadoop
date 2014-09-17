@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.XAttrHelper;
-import org.apache.hadoop.hdfs.protocol.EncryptionZoneWithId;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,8 +53,8 @@ public class EncryptionZoneManager {
   public static Logger LOG = LoggerFactory.getLogger(EncryptionZoneManager
       .class);
 
-  private static final EncryptionZoneWithId NULL_EZ =
-      new EncryptionZoneWithId("", "", -1);
+  private static final EncryptionZone NULL_EZ =
+      new EncryptionZone("", "", -1);
 
   /**
    * EncryptionZoneInt is the internal representation of an encryption zone. The
@@ -196,18 +196,18 @@ public class EncryptionZoneManager {
   }
 
   /**
-   * Returns an EncryptionZoneWithId representing the ez for a given path.
-   * Returns an empty marker EncryptionZoneWithId if path is not in an ez.
+   * Returns an EncryptionZone representing the ez for a given path.
+   * Returns an empty marker EncryptionZone if path is not in an ez.
    *
    * @param iip The INodesInPath of the path to check
-   * @return the EncryptionZoneWithId representing the ez for the path.
+   * @return the EncryptionZone representing the ez for the path.
    */
-  EncryptionZoneWithId getEZINodeForPath(INodesInPath iip) {
+  EncryptionZone getEZINodeForPath(INodesInPath iip) {
     final EncryptionZoneInt ezi = getEncryptionZoneForPath(iip);
     if (ezi == null) {
       return NULL_EZ;
     } else {
-      return new EncryptionZoneWithId(getFullPathName(ezi), ezi.getKeyName(),
+      return new EncryptionZone(getFullPathName(ezi), ezi.getKeyName(),
           ezi.getINodeId());
     }
   }
@@ -300,19 +300,19 @@ public class EncryptionZoneManager {
    * <p/>
    * Called while holding the FSDirectory lock.
    */
-  BatchedListEntries<EncryptionZoneWithId> listEncryptionZones(long prevId)
+  BatchedListEntries<EncryptionZone> listEncryptionZones(long prevId)
       throws IOException {
     assert dir.hasReadLock();
     NavigableMap<Long, EncryptionZoneInt> tailMap = encryptionZones.tailMap
         (prevId, false);
     final int numResponses = Math.min(maxListEncryptionZonesResponses,
         tailMap.size());
-    final List<EncryptionZoneWithId> zones =
+    final List<EncryptionZone> zones =
         Lists.newArrayListWithExpectedSize(numResponses);
 
     int count = 0;
     for (EncryptionZoneInt ezi : tailMap.values()) {
-      zones.add(new EncryptionZoneWithId(getFullPathName(ezi),
+      zones.add(new EncryptionZone(getFullPathName(ezi),
           ezi.getKeyName(), ezi.getINodeId()));
       count++;
       if (count >= numResponses) {
@@ -320,6 +320,6 @@ public class EncryptionZoneManager {
       }
     }
     final boolean hasMore = (numResponses < tailMap.size());
-    return new BatchedListEntries<EncryptionZoneWithId>(zones, hasMore);
+    return new BatchedListEntries<EncryptionZone>(zones, hasMore);
   }
 }

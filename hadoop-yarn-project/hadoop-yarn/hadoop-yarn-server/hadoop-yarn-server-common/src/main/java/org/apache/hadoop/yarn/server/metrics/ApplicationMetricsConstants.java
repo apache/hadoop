@@ -34,6 +34,9 @@ public class ApplicationMetricsConstants {
   public static final String FINISHED_EVENT_TYPE =
       "YARN_APPLICATION_FINISHED";
 
+  public static final String ACLS_UPDATED_EVENT_TYPE =
+      "YARN_APPLICATION_ACLS_UPDATED";
+
   public static final String NAME_ENTITY_INFO =
       "YARN_APPLICATION_NAME";
 
@@ -48,6 +51,9 @@ public class ApplicationMetricsConstants {
 
   public static final String SUBMITTED_TIME_ENTITY_INFO =
       "YARN_APPLICATION_SUBMITTED_TIME";
+
+  public static final String APP_VIEW_ACLS_ENTITY_INFO =
+      "YARN_APPLICATION_VIEW_ACLS";
 
   public static final String DIAGNOSTICS_INFO_EVENT_INFO =
       "YARN_APPLICATION_DIAGNOSTICS_INFO";

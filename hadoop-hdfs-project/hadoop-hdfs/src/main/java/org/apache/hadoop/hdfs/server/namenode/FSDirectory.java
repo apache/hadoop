@@ -59,7 +59,7 @@ import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.EncryptionZoneWithId;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
 import org.apache.hadoop.hdfs.protocol.FsAclPermission;
@@ -2677,7 +2677,7 @@ public class FSDirectory implements Closeable {
     }
   }
 
-  EncryptionZoneWithId getEZForPath(INodesInPath iip) {
+  EncryptionZone getEZForPath(INodesInPath iip) {
     readLock();
     try {
       return ezManager.getEZINodeForPath(iip);
@@ -2686,7 +2686,7 @@ public class FSDirectory implements Closeable {
     }
   }
 
-  BatchedListEntries<EncryptionZoneWithId> listEncryptionZones(long prevId)
+  BatchedListEntries<EncryptionZone> listEncryptionZones(long prevId)
       throws IOException {
     readLock();
     try {

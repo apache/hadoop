@@ -99,14 +99,15 @@ public class TestSystemMetricsPublisher {
     RMApp app = createRMApp(appId);
     metricsPublisher.appCreated(app, app.getStartTime());
     metricsPublisher.appFinished(app, RMAppState.FINISHED, app.getFinishTime());
+    metricsPublisher.appACLsUpdated(app, "uers1,user2", 4L);
     TimelineEntity entity = null;
     do {
       entity =
           store.getEntity(appId.toString(),
               ApplicationMetricsConstants.ENTITY_TYPE,
               EnumSet.allOf(Field.class));
-      // ensure two events are both published before leaving the loop
-    } while (entity == null || entity.getEvents().size() < 2);
+      // ensure three events are both published before leaving the loop
+    } while (entity == null || entity.getEvents().size() < 3);
     // verify all the fields
     Assert.assertEquals(ApplicationMetricsConstants.ENTITY_TYPE,
         entity.getEntityType());
@@ -133,8 +134,12 @@ public class TestSystemMetricsPublisher {
     Assert.assertEquals(app.getSubmitTime(),
         entity.getOtherInfo().get(
             ApplicationMetricsConstants.SUBMITTED_TIME_ENTITY_INFO));
+    Assert.assertEquals("uers1,user2",
+        entity.getOtherInfo().get(
+            ApplicationMetricsConstants.APP_VIEW_ACLS_ENTITY_INFO));
     boolean hasCreatedEvent = false;
     boolean hasFinishedEvent = false;
+    boolean hasACLsUpdatedEvent = false;
     for (TimelineEvent event : entity.getEvents()) {
       if (event.getEventType().equals(
           ApplicationMetricsConstants.CREATED_EVENT_TYPE)) {
@@ -154,9 +159,13 @@ public class TestSystemMetricsPublisher {
                 ApplicationMetricsConstants.FINAL_STATUS_EVENT_INFO));
         Assert.assertEquals(YarnApplicationState.FINISHED.toString(), event
             .getEventInfo().get(ApplicationMetricsConstants.STATE_EVENT_INFO));
+      } else if (event.getEventType().equals(
+          ApplicationMetricsConstants.ACLS_UPDATED_EVENT_TYPE)) {
+        hasACLsUpdatedEvent = true;
+        Assert.assertEquals(4L, event.getTimestamp());
       }
     }
-    Assert.assertTrue(hasCreatedEvent && hasFinishedEvent);
+    Assert.assertTrue(hasCreatedEvent && hasFinishedEvent && hasACLsUpdatedEvent);
   }
 
   @Test(timeout = 10000)
