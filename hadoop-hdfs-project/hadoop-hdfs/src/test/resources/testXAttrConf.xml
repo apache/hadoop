@@ -124,6 +124,79 @@
         </comparator>
       </comparators>
     </test>
+
+    <test>
+        <description>setfattr : Add the unreadable by superuser xattr to security namespace</description>
+        <test-commands>
+            <command>-fs NAMENODE -touchz /file1</command>
+            <command>-fs NAMENODE -setfattr -n security.hdfs.unreadable.by.superuser /file1</command>
+            <command>-fs NAMENODE -getfattr -d /file1</command>
+        </test-commands>
+        <cleanup-commands>
+            <command>-fs NAMENODE -rm /file1</command>
+        </cleanup-commands>
+        <comparators>
+            <comparator>
+                <type>SubstringComparator</type>
+                <expected-output>security.hdfs.unreadable.by.superuser</expected-output>
+            </comparator>
+        </comparators>
+    </test>
+
+    <test>
+        <description>setfattr : Try to delete the unreadable by superuser xattr from security namespace</description>
+        <test-commands>
+            <command>-fs NAMENODE -touchz /file1</command>
+            <command>-fs NAMENODE -setfattr -n security.hdfs.unreadable.by.superuser /file1</command>
+            <command>-fs NAMENODE -setfattr -x security.hdfs.unreadable.by.superuser /file1</command>
+        </test-commands>
+        <cleanup-commands>
+            <command>-fs NAMENODE -rm /file1</command>
+        </cleanup-commands>
+        <comparators>
+            <comparator>
+                <type>SubstringComparator</type>
+                <expected-output>can not be deleted</expected-output>
+            </comparator>
+        </comparators>
+    </test>
+
+    <test>
+        <description>setfattr : Try to read a file protected by the unreadable by superuser xattr</description>
+        <test-commands>
+            <command>-fs NAMENODE -touchz /file1</command>
+            <command>-fs NAMENODE -setfattr -n security.hdfs.unreadable.by.superuser /file1</command>
+            <command>-fs NAMENODE -get /file1 /tmp/file1</command>
+        </test-commands>
+        <cleanup-commands>
+            <command>-fs NAMENODE -rm /file1</command>
+            <command>rm /tmp/file1</command>
+        </cleanup-commands>
+        <comparators>
+            <comparator>
+                <type>SubstringComparator</type>
+                <expected-output>Access is denied</expected-output>
+            </comparator>
+        </comparators>
+    </test>
+
+    <test>
+        <description>setfattr : Try to add a value to the unreadable by superuser xattr</description>
+        <test-commands>
+            <command>-fs NAMENODE -touchz /file1</command>
+            <command>-fs NAMENODE -setfattr -n security.hdfs.unreadable.by.superuser /file1</command>
+            <command>-fs NAMENODE -setfattr -n security.hdfs.unreadable.by.superuser -v 1234 /file1</command>
+        </test-commands>
+        <cleanup-commands>
+            <command>-fs NAMENODE -rm /file1</command>
+        </cleanup-commands>
+        <comparators>
+            <comparator>
+                <type>SubstringComparator</type>
+                <expected-output>Values are not allowed</expected-output>
+            </comparator>
+        </comparators>
+    </test>
     
     <test>
       <description>setfattr : Add an xattr of raw namespace</description>

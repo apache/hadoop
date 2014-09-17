@@ -299,5 +299,6 @@ public final class HdfsServerConstants {
       "raw.hdfs.crypto.encryption.zone";
   public static final String CRYPTO_XATTR_FILE_ENCRYPTION_INFO =
       "raw.hdfs.crypto.file.encryption.info";
+  public static final String SECURITY_XATTR_UNREADABLE_BY_SUPERUSER =
+      "security.hdfs.unreadable.by.superuser";
 }
-
