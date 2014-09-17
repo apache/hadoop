@@ -28,6 +28,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.LinkedList;
+import com.google.common.io.ByteArrayDataInput;
+import com.google.common.io.ByteStreams;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -151,6 +154,25 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     } catch (Exception e) {
       e.printStackTrace();
       throw e;
+    } finally {
+      if (yarnCluster != null) {
+        yarnCluster.stop();
+        yarnCluster = null;
+      }
+    }
+  }
+
+  @Test (timeout = 500000)
+  public void testContainerManagerWithEpoch() throws Exception {
+    try {
+      yarnCluster = new MiniYARNCluster(TestContainerManagerSecurity.class
+          .getName(), 1, 1, 1);
+      yarnCluster.init(conf);
+      yarnCluster.start();
+
+      // Testing for container token tampering
+      testContainerTokenWithEpoch(conf);
+
     } finally {
       if (yarnCluster != null) {
         yarnCluster.stop();
@@ -602,5 +624,75 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     sb.append(" seems to have an illegally generated token.");
     Assert.assertTrue(testStartContainer(rpc, appAttemptId, nodeId,
         containerToken, nmToken, true).contains(sb.toString()));
+  }
+
+  /**
+   * This tests whether a containerId is serialized/deserialized with epoch.
+   *
+   * @throws IOException
+   * @throws InterruptedException
+   * @throws YarnException
+   */
+  private void testContainerTokenWithEpoch(Configuration conf)
+      throws IOException, InterruptedException, YarnException {
+
+    LOG.info("Running test for serializing/deserializing containerIds");
+
+    NMTokenSecretManagerInRM nmTokenSecretManagerInRM =
+        yarnCluster.getResourceManager().getRMContext()
+            .getNMTokenSecretManager();
+    ApplicationId appId = ApplicationId.newInstance(1, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 0);
+    ContainerId cId = ContainerId.newInstance(appAttemptId, (5L << 40) | 3L);
+    NodeManager nm = yarnCluster.getNodeManager(0);
+    NMTokenSecretManagerInNM nmTokenSecretManagerInNM =
+        nm.getNMContext().getNMTokenSecretManager();
+    String user = "test";
+
+    waitForNMToReceiveNMTokenKey(nmTokenSecretManagerInNM, nm);
+
+    NodeId nodeId = nm.getNMContext().getNodeId();
+
+    // Both id should be equal.
+    Assert.assertEquals(nmTokenSecretManagerInNM.getCurrentKey().getKeyId(),
+        nmTokenSecretManagerInRM.getCurrentKey().getKeyId());
+
+    // Creating a normal Container Token
+    RMContainerTokenSecretManager containerTokenSecretManager =
+        yarnCluster.getResourceManager().getRMContext().
+            getContainerTokenSecretManager();
+    Resource r = Resource.newInstance(1230, 2);
+    Token containerToken =
+        containerTokenSecretManager.createContainerToken(cId, nodeId, user, r,
+            Priority.newInstance(0), 0);
+
+    ByteArrayDataInput input = ByteStreams.newDataInput(
+        containerToken.getIdentifier().array());
+    ContainerTokenIdentifier containerTokenIdentifier =
+        new ContainerTokenIdentifier();
+    containerTokenIdentifier.readFields(input);
+    Assert.assertEquals(cId, containerTokenIdentifier.getContainerID());
+    Assert.assertEquals(
+        cId.toString(), containerTokenIdentifier.getContainerID().toString());
+
+    Token nmToken =
+        nmTokenSecretManagerInRM.createNMToken(appAttemptId, nodeId, user);
+
+    YarnRPC rpc = YarnRPC.create(conf);
+    testStartContainer(rpc, appAttemptId, nodeId, containerToken, nmToken,
+        false);
+
+    List<ContainerId> containerIds = new LinkedList<ContainerId>();
+    containerIds.add(cId);
+    ContainerManagementProtocol proxy
+        = getContainerManagementProtocolProxy(rpc, nmToken, nodeId, user);
+    GetContainerStatusesResponse res = proxy.getContainerStatuses(
+        GetContainerStatusesRequest.newInstance(containerIds));
+    Assert.assertNotNull(res.getContainerStatuses().get(0));
+    Assert.assertEquals(
+        cId, res.getContainerStatuses().get(0).getContainerId());
+    Assert.assertEquals(cId.toString(),
+        res.getContainerStatuses().get(0).getContainerId().toString());
   }
 }
