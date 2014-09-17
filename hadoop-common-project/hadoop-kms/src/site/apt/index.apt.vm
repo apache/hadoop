@@ -197,22 +197,22 @@ hadoop-${project.version} $ sbin/kms.sh start
 
 *** KMS Proxyuser Configuration
 
-  Each proxyusers must be configured in <<<etc/hadoop/kms-site.xml>>> using the
+  Each proxyuser must be configured in <<<etc/hadoop/kms-site.xml>>> using the
   following properties:
 
 +---+
   <property>
-    <name>hadoop.kms.proxyusers.#USER#.users</name>
+    <name>hadoop.kms.proxyuser.#USER#.users</name>
     <value>*</value>
   </property>
 
   <property>
-    <name>hadoop.kms.proxyusers.#USER#.groups</name>
+    <name>hadoop.kms.proxyuser.#USER#.groups</name>
     <value>*</value>
   </property>
 
   <property>
-    <name>hadoop.kms.proxyusers.#USER#.hosts</name>
+    <name>hadoop.kms.proxyuser.#USER#.hosts</name>
     <value>*</value>
   </property>
 +---+
