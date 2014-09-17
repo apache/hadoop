@@ -79,7 +79,7 @@ public class KMSExceptionsProvider implements ExceptionMapper<Exception> {
       // we don't audit here because we did it already when checking access
       doAudit = false;
     } else if (throwable instanceof AuthorizationException) {
-      status = Response.Status.UNAUTHORIZED;
+      status = Response.Status.FORBIDDEN;
       // we don't audit here because we did it already when checking access
       doAudit = false;
     } else if (throwable instanceof AccessControlException) {

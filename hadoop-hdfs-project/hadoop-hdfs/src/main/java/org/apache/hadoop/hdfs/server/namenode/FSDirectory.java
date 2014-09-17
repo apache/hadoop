@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_FILE_ENCRYPTION_INFO;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_XATTR_UNREADABLE_BY_SUPERUSER;
 import static org.apache.hadoop.util.Time.now;
 
 import java.io.Closeable;
@@ -91,6 +92,7 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import org.apache.hadoop.security.AccessControlException;
 
 /**
  * Both FSDirectory and FSNamesystem manage the state of the namespace.
@@ -129,6 +131,8 @@ public class FSDirectory implements Closeable {
       DFSUtil.string2Bytes(DOT_INODES_STRING);
   private final XAttr KEYID_XATTR =
       XAttrHelper.buildXAttr(CRYPTO_XATTR_ENCRYPTION_ZONE, null);
+  private final XAttr UNREADABLE_BY_SUPERUSER_XATTR =
+      XAttrHelper.buildXAttr(SECURITY_XATTR_UNREADABLE_BY_SUPERUSER, null);
 
   INodeDirectory rootDir;
   private final FSNamesystem namesystem;
@@ -2670,7 +2674,8 @@ public class FSDirectory implements Closeable {
    */
   @VisibleForTesting
   List<XAttr> filterINodeXAttrs(final List<XAttr> existingXAttrs,
-      final List<XAttr> toFilter, final List<XAttr> filtered) {
+      final List<XAttr> toFilter, final List<XAttr> filtered)
+    throws AccessControlException {
     if (existingXAttrs == null || existingXAttrs.isEmpty() ||
         toFilter == null || toFilter.isEmpty()) {
       return existingXAttrs;
@@ -2686,6 +2691,10 @@ public class FSDirectory implements Closeable {
         XAttr filter = it.next();
         Preconditions.checkArgument(!KEYID_XATTR.equalsIgnoreValue(filter),
             "The encryption zone xattr should never be deleted.");
+        if (UNREADABLE_BY_SUPERUSER_XATTR.equalsIgnoreValue(filter)) {
+          throw new AccessControlException("The xattr '" +
+              SECURITY_XATTR_UNREADABLE_BY_SUPERUSER + "' can not be deleted.");
+        }
         if (a.equalsIgnoreValue(filter)) {
           add = false;
           it.remove();
@@ -2824,15 +2833,22 @@ public class FSDirectory implements Closeable {
     int snapshotId = iip.getLatestSnapshotId();
     List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
     List<XAttr> newXAttrs = setINodeXAttrs(existingXAttrs, xAttrs, flag);
+    final boolean isFile = inode.isFile();
 
-    /*
-     * If we're adding the encryption zone xattr, then add src to the list
-     * of encryption zones.
-     */
     for (XAttr xattr : newXAttrs) {
       final String xaName = XAttrHelper.getPrefixName(xattr);
+
+      /*
+       * If we're adding the encryption zone xattr, then add src to the list
+       * of encryption zones.
+       */
       if (CRYPTO_XATTR_ENCRYPTION_ZONE.equals(xaName)) {
         ezManager.addEncryptionZone(inode.getId(), new String(xattr.getValue()));
+      }
+
+      if (!isFile && SECURITY_XATTR_UNREADABLE_BY_SUPERUSER.equals(xaName)) {
+        throw new IOException("Can only set '" +
+            SECURITY_XATTR_UNREADABLE_BY_SUPERUSER + "' on a file.");
       }
     }
 
@@ -2924,10 +2940,24 @@ public class FSDirectory implements Closeable {
       INodesInPath iip = getLastINodeInPath(srcs, true);
       INode inode = resolveLastINode(src, iip);
       int snapshotId = iip.getPathSnapshotId();
-      return XAttrStorage.readINodeXAttrs(inode, snapshotId);
+      return unprotectedGetXAttrs(inode, snapshotId);
     } finally {
       readUnlock();
     }
+  }
+
+  List<XAttr> getXAttrs(INode inode, int snapshotId) throws IOException {
+    readLock();
+    try {
+      return unprotectedGetXAttrs(inode, snapshotId);
+    } finally {
+      readUnlock();
+    }
+  }
+
+  private List<XAttr> unprotectedGetXAttrs(INode inode, int snapshotId)
+      throws IOException {
+    return XAttrStorage.readINodeXAttrs(inode, snapshotId);
   }
 
   private static INode resolveLastINode(String src, INodesInPath iip)

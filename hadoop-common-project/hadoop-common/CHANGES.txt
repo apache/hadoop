@@ -815,6 +815,17 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11088. Unittest TestKeyShell, TestCredShell and TestKMS assume UNIX
     path separator for JECKS key store path. (Xiaoyu Yao via cnauroth)
 
+    HADOOP-11096. KMS: KeyAuthorizationKeyProvider should verify the keyversion
+    belongs to the keyname on decrypt. (tucu)
+
+    HADOOP-11097. kms docs say proxyusers, not proxyuser for config params.
+    (clamb via tucu)
+
+    HADOOP-11062. CryptoCodec testcases requiring OpenSSL should be run 
+    only if -Pnative is used. (asuresh via tucu)
+
+    HADOOP-11099. KMS return HTTP UNAUTHORIZED 401 on ACL failure. (tucu)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
