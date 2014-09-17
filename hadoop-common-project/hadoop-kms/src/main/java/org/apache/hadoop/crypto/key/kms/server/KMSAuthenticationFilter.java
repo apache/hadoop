@@ -46,8 +46,7 @@ import java.util.Properties;
 @InterfaceAudience.Private
 public class KMSAuthenticationFilter
     extends DelegationTokenAuthenticationFilter {
-
-  public static final String CONFIG_PREFIX = KMSConfiguration.CONFIG_PREFIX +
+  private static final String CONF_PREFIX = KMSConfiguration.CONFIG_PREFIX +
       "authentication.";
 
   @Override
@@ -57,9 +56,9 @@ public class KMSAuthenticationFilter
     Configuration conf = KMSWebApp.getConfiguration();
     for (Map.Entry<String, String> entry : conf) {
       String name = entry.getKey();
-      if (name.startsWith(CONFIG_PREFIX)) {
+      if (name.startsWith(CONF_PREFIX)) {
         String value = conf.get(name);
-        name = name.substring(CONFIG_PREFIX.length());
+        name = name.substring(CONF_PREFIX.length());
         props.setProperty(name, value);
       }
     }

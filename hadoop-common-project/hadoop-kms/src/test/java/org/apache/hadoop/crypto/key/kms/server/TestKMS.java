@@ -123,8 +123,7 @@ public class TestKMS {
     return conf;
   }
 
-  public static void writeConf(File confDir, Configuration conf)
-      throws Exception {
+  protected void writeConf(File confDir, Configuration conf) throws Exception {
     Writer writer = new FileWriter(new File(confDir,
         KMSConfiguration.KMS_SITE_XML));
     conf.writeXml(writer);
@@ -140,7 +139,7 @@ public class TestKMS {
     writer.close();
   }
 
-  public static URI createKMSUri(URL kmsUrl) throws Exception {
+  protected URI createKMSUri(URL kmsUrl) throws Exception {
     String str = kmsUrl.toString();
     str = str.replaceFirst("://", "@");
     return new URI("kms://" + str);
