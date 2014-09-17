@@ -202,6 +202,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2547. Cross Origin Filter throws UnsupportedOperationException upon
     destroy (Mit Desai via jeagles)
 
+    YARN-2557. Add a parameter "attempt_Failures_Validity_Interval" into
+    DistributedShell. (xgong)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -344,8 +347,8 @@ Release 2.6.0 - UNRELEASED
     YARN-2529. Generic history service RPC interface doesn't work when service
     authorization is enabled. (Zhijie Shen via jianhe)
 
-    YARN-2557. Add a parameter "attempt_Failures_Validity_Interval" into
-    DistributedShell. (xgong)
+    YARN-2558. Updated ContainerTokenIdentifier#read/write to use
+    ContainerId#getContainerId. (Tsuyoshi OZAWA via jianhe)
 
 Release 2.5.1 - 2014-09-05
 
