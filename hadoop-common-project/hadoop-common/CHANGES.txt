@@ -192,6 +192,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10868. AuthenticationFilter should support externalizing the 
     secret for signing and provide rotation support. (rkanter via tucu)
 
+    HADOOP-10922. User documentation for CredentialShell. (Larry McCay via wang)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)

@@ -85,6 +85,59 @@ User Commands
    {{{../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/HadoopArchives.html}
    Hadoop Archives Guide}}.
 
+* <<<credential>>>
+
+   Command to manage credentials, passwords and secrets within credential providers.
+
+   The CredentialProvider API in Hadoop allows for the separation of applications
+   and how they store their required passwords/secrets. In order to indicate
+   a particular provider type and location, the user must provide the
+   <hadoop.security.credential.provider.path> configuration element in core-site.xml
+   or use the command line option <<<-provider>>> on each of the following commands.
+   This provider path is a comma-separated list of URLs that indicates the type and
+   location of a list of providers that should be consulted.
+   For example, the following path:
+
+   <<<user:///,jceks://file/tmp/test.jceks,jceks://hdfs@nn1.example.com/my/path/test.jceks>>>
+
+   indicates that the current user's credentials file should be consulted through
+   the User Provider, that the local file located at <<</tmp/test.jceks>>> is a Java Keystore
+   Provider and that the file located within HDFS at <<<nn1.example.com/my/path/test.jceks>>>
+   is also a store for a Java Keystore Provider.
+
+   When utilizing the credential command it will often be for provisioning a password
+   or secret to a particular credential store provider. In order to explicitly
+   indicate which provider store to use the <<<-provider>>> option should be used. Otherwise,
+   given a path of multiple providers, the first non-transient provider will be used.
+   This may or may not be the one that you intended.
+
+   Example: <<<-provider jceks://file/tmp/test.jceks>>>
+
+   Usage: <<<hadoop credential <subcommand> [options]>>>
+
+*-------------------+-------------------------------------------------------+
+||COMMAND_OPTION    ||                   Description
+*-------------------+-------------------------------------------------------+
+| create <alias> [-v <value>][-provider <provider-path>]| Prompts the user for
+                    | a credential to be stored as the given alias when a value
+                    | is not provided via <<<-v>>>. The
+                    | <hadoop.security.credential.provider.path> within the
+                    | core-site.xml file will be used unless a <<<-provider>>> is
+                    | indicated.
+*-------------------+-------------------------------------------------------+
+| delete <alias> [-i][-provider <provider-path>] | Deletes the credential with
+                    | the provided alias and optionally warns the user when
+                    | <<<--interactive>>> is used.
+                    | The <hadoop.security.credential.provider.path> within the
+                    | core-site.xml file will be used unless a <<<-provider>>> is
+                    | indicated.
+*-------------------+-------------------------------------------------------+
+| list [-provider <provider-path>] | Lists all of the credential aliases
+                    | The <hadoop.security.credential.provider.path> within the
+                    | core-site.xml file will be used unless a <<<-provider>>> is
+                    | indicated.
+*-------------------+-------------------------------------------------------+
+
 * <<<distcp>>>
 
    Copy file or directories recursively. More information can be found at
