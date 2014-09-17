@@ -23,6 +23,9 @@ HDFS-6584: Archival Storage
     HDFS-6847. Support storage policy on directories and include storage policy 
     in HdfsFileStatus.  (Jing Zhao via szetszwo)
 
+    HDFS-7072. Fix TestBlockManager and TestStorageMover.  (Jing Zhao
+    via szetszwo)
+
 Trunk (Unreleased)
 
   INCOMPATIBLE CHANGES

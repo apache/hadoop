@@ -588,6 +588,20 @@ public class TestStorageMover {
     }
   }
 
+  private void waitForAllReplicas(int expectedReplicaNum, Path file,
+      DistributedFileSystem dfs) throws Exception {
+    for (int i = 0; i < 5; i++) {
+      LocatedBlocks lbs = dfs.getClient().getLocatedBlocks(file.toString(), 0,
+          BLOCK_SIZE);
+      LocatedBlock lb = lbs.get(0);
+      if (lb.getLocations().length >= expectedReplicaNum) {
+        return;
+      } else {
+        Thread.sleep(1000);
+      }
+    }
+  }
+
   /**
    * Test DISK is running out of spaces.
    */
@@ -618,6 +632,7 @@ public class TestStorageMover {
           for (; ; hotFileCount++) {
             final Path p = new Path(pathPolicyMap.hot, "file" + hotFileCount);
             DFSTestUtil.createFile(test.dfs, p, BLOCK_SIZE, replication, 0L);
+            waitForAllReplicas(replication, p, test.dfs);
           }
         } catch (IOException e) {
           LOG.info("Expected: hotFileCount=" + hotFileCount, e);
@@ -632,6 +647,7 @@ public class TestStorageMover {
           for (; ; hotFileCount_r1++) {
             final Path p = new Path(pathPolicyMap.hot, "file_r1_" + hotFileCount_r1);
             DFSTestUtil.createFile(test.dfs, p, BLOCK_SIZE, (short) 1, 0L);
+            waitForAllReplicas(1, p, test.dfs);
           }
         } catch (IOException e) {
           LOG.info("Expected: hotFileCount_r1=" + hotFileCount_r1, e);
@@ -699,6 +715,7 @@ public class TestStorageMover {
           for (; ; coldFileCount++) {
             final Path p = new Path(pathPolicyMap.cold, "file" + coldFileCount);
             DFSTestUtil.createFile(test.dfs, p, BLOCK_SIZE, replication, 0L);
+            waitForAllReplicas(replication, p, test.dfs);
           }
         } catch (IOException e) {
           LOG.info("Expected: coldFileCount=" + coldFileCount, e);
@@ -713,6 +730,7 @@ public class TestStorageMover {
           for (; ; coldFileCount_r1++) {
             final Path p = new Path(pathPolicyMap.cold, "file_r1_" + coldFileCount_r1);
             DFSTestUtil.createFile(test.dfs, p, BLOCK_SIZE, (short) 1, 0L);
+            waitForAllReplicas(1, p, test.dfs);
           }
         } catch (IOException e) {
           LOG.info("Expected: coldFileCount_r1=" + coldFileCount_r1, e);

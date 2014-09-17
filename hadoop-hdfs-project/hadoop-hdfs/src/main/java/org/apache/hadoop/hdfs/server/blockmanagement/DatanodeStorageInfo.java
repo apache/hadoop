@@ -109,7 +109,7 @@ public class DatanodeStorageInfo {
 
   private long capacity;
   private long dfsUsed;
-  private long remaining;
+  private volatile long remaining;
   private long blockPoolUsed;
 
   private volatile BlockInfo blockList = null;

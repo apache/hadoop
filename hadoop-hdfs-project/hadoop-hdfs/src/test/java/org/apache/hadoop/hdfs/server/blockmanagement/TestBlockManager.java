@@ -666,6 +666,7 @@ public class TestBlockManager {
     excessTypes.add(StorageType.DEFAULT);
     Assert.assertTrue(BlockManager.useDelHint(true, delHint, null,
         moreThan1Racks, excessTypes));
+    excessTypes.remove(0);
     excessTypes.add(StorageType.SSD);
     Assert.assertFalse(BlockManager.useDelHint(true, delHint, null,
         moreThan1Racks, excessTypes));
