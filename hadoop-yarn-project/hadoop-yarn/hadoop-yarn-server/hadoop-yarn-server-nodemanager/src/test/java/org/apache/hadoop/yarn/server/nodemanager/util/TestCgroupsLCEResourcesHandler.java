@@ -18,6 +18,8 @@
 package org.apache.hadoop.yarn.server.nodemanager.util;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.junit.Assert;
@@ -86,9 +88,13 @@ public class TestCgroupsLCEResourcesHandler {
 
     String mtabFile;
     int[] limits = new int[2];
+    boolean generateLimitsMode = false;
 
     @Override
     int[] getOverallLimits(float x) {
+      if (generateLimitsMode == true) {
+        return super.getOverallLimits(x);
+      }
       return limits;
     }
 
@@ -116,32 +122,11 @@ public class TestCgroupsLCEResourcesHandler {
     handler.initConfig();
 
     // create mock cgroup
-    File cgroupDir = new File("target", UUID.randomUUID().toString());
-    if (!cgroupDir.mkdir()) {
-      String message = "Could not create dir " + cgroupDir.getAbsolutePath();
-      throw new IOException(message);
-    }
-    File cgroupMountDir = new File(cgroupDir.getAbsolutePath(), "hadoop-yarn");
-    if (!cgroupMountDir.mkdir()) {
-      String message =
-          "Could not create dir " + cgroupMountDir.getAbsolutePath();
-      throw new IOException(message);
-    }
+    File cgroupDir = createMockCgroup();
+    File cgroupMountDir = createMockCgroupMount(cgroupDir);
 
     // create mock mtab
-    String mtabContent =
-        "none " + cgroupDir.getAbsolutePath() + " cgroup rw,relatime,cpu 0 0";
-    File mockMtab = new File("target", UUID.randomUUID().toString());
-    if (!mockMtab.exists()) {
-      if (!mockMtab.createNewFile()) {
-        String message = "Could not create file " + mockMtab.getAbsolutePath();
-        throw new IOException(message);
-      }
-    }
-    FileWriter mtabWriter = new FileWriter(mockMtab.getAbsoluteFile());
-    mtabWriter.write(mtabContent);
-    mtabWriter.close();
-    mockMtab.deleteOnExit();
+    File mockMtab = createMockMTab(cgroupDir);
 
     // setup our handler and call init()
     handler.setMtabFile(mockMtab.getAbsolutePath());
@@ -156,7 +141,8 @@ public class TestCgroupsLCEResourcesHandler {
     Assert.assertFalse(quotaFile.exists());
 
     // subset of cpu being used, files should be created
-    conf.setInt(YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT, 75);
+    conf
+      .setInt(YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT, 75);
     handler.limits[0] = 100 * 1000;
     handler.limits[1] = 1000 * 1000;
     handler.init(mockLCE, plugin);
@@ -166,7 +152,8 @@ public class TestCgroupsLCEResourcesHandler {
     Assert.assertEquals(1000 * 1000, quota);
 
     // set cpu back to 100, quota should be -1
-    conf.setInt(YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT, 100);
+    conf.setInt(YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT,
+      100);
     handler.limits[0] = 100 * 1000;
     handler.limits[1] = 1000 * 1000;
     handler.init(mockLCE, plugin);
@@ -213,4 +200,130 @@ public class TestCgroupsLCEResourcesHandler {
     Assert.assertEquals(1000 * 1000, ret[0]);
     Assert.assertEquals(-1, ret[1]);
   }
+
+  private File createMockCgroup() throws IOException {
+    File cgroupDir = new File("target", UUID.randomUUID().toString());
+    if (!cgroupDir.mkdir()) {
+      String message = "Could not create dir " + cgroupDir.getAbsolutePath();
+      throw new IOException(message);
+    }
+    return cgroupDir;
+  }
+
+  private File createMockCgroupMount(File cgroupDir) throws IOException {
+    File cgroupMountDir = new File(cgroupDir.getAbsolutePath(), "hadoop-yarn");
+    if (!cgroupMountDir.mkdir()) {
+      String message =
+          "Could not create dir " + cgroupMountDir.getAbsolutePath();
+      throw new IOException(message);
+    }
+    return cgroupMountDir;
+  }
+
+  private File createMockMTab(File cgroupDir) throws IOException {
+    String mtabContent =
+        "none " + cgroupDir.getAbsolutePath() + " cgroup rw,relatime,cpu 0 0";
+    File mockMtab = new File("target", UUID.randomUUID().toString());
+    if (!mockMtab.exists()) {
+      if (!mockMtab.createNewFile()) {
+        String message = "Could not create file " + mockMtab.getAbsolutePath();
+        throw new IOException(message);
+      }
+    }
+    FileWriter mtabWriter = new FileWriter(mockMtab.getAbsoluteFile());
+    mtabWriter.write(mtabContent);
+    mtabWriter.close();
+    mockMtab.deleteOnExit();
+    return mockMtab;
+  }
+
+  @Test
+  public void testContainerLimits() throws IOException {
+    LinuxContainerExecutor mockLCE = new MockLinuxContainerExecutor();
+    CustomCgroupsLCEResourceHandler handler =
+        new CustomCgroupsLCEResourceHandler();
+    handler.generateLimitsMode = true;
+    YarnConfiguration conf = new YarnConfiguration();
+    final int numProcessors = 4;
+    ResourceCalculatorPlugin plugin =
+        Mockito.mock(ResourceCalculatorPlugin.class);
+    Mockito.doReturn(numProcessors).when(plugin).getNumProcessors();
+    handler.setConf(conf);
+    handler.initConfig();
+
+    // create mock cgroup
+    File cgroupDir = createMockCgroup();
+    File cgroupMountDir = createMockCgroupMount(cgroupDir);
+
+    // create mock mtab
+    File mockMtab = createMockMTab(cgroupDir);
+
+    // setup our handler and call init()
+    handler.setMtabFile(mockMtab.getAbsolutePath());
+    handler.init(mockLCE, plugin);
+
+    // check values
+    // default case - files shouldn't exist, strict mode off by default
+    ContainerId id = ContainerId.fromString("container_1_1_1_1");
+    handler.preExecute(id, Resource.newInstance(1024, 1));
+    File containerDir = new File(cgroupMountDir, id.toString());
+    Assert.assertTrue(containerDir.exists());
+    Assert.assertTrue(containerDir.isDirectory());
+    File periodFile = new File(containerDir, "cpu.cfs_period_us");
+    File quotaFile = new File(containerDir, "cpu.cfs_quota_us");
+    Assert.assertFalse(periodFile.exists());
+    Assert.assertFalse(quotaFile.exists());
+
+    // no files created because we're using all cpu
+    FileUtils.deleteQuietly(containerDir);
+    conf.setBoolean(
+      YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_STRICT_RESOURCE_USAGE, true);
+    handler.initConfig();
+    handler.preExecute(id,
+      Resource.newInstance(1024, YarnConfiguration.DEFAULT_NM_VCORES));
+    Assert.assertTrue(containerDir.exists());
+    Assert.assertTrue(containerDir.isDirectory());
+    periodFile = new File(containerDir, "cpu.cfs_period_us");
+    quotaFile = new File(containerDir, "cpu.cfs_quota_us");
+    Assert.assertFalse(periodFile.exists());
+    Assert.assertFalse(quotaFile.exists());
+
+    // 50% of CPU
+    FileUtils.deleteQuietly(containerDir);
+    conf.setBoolean(
+      YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_STRICT_RESOURCE_USAGE, true);
+    handler.initConfig();
+    handler.preExecute(id,
+      Resource.newInstance(1024, YarnConfiguration.DEFAULT_NM_VCORES / 2));
+    Assert.assertTrue(containerDir.exists());
+    Assert.assertTrue(containerDir.isDirectory());
+    periodFile = new File(containerDir, "cpu.cfs_period_us");
+    quotaFile = new File(containerDir, "cpu.cfs_quota_us");
+    Assert.assertTrue(periodFile.exists());
+    Assert.assertTrue(quotaFile.exists());
+    Assert.assertEquals(500 * 1000, readIntFromFile(periodFile));
+    Assert.assertEquals(1000 * 1000, readIntFromFile(quotaFile));
+
+    // CGroups set to 50% of CPU, container set to 50% of YARN CPU
+    FileUtils.deleteQuietly(containerDir);
+    conf.setBoolean(
+      YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_STRICT_RESOURCE_USAGE, true);
+    conf
+      .setInt(YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT, 50);
+    handler.initConfig();
+    handler.init(mockLCE, plugin);
+    handler.preExecute(id,
+      Resource.newInstance(1024, YarnConfiguration.DEFAULT_NM_VCORES / 2));
+    Assert.assertTrue(containerDir.exists());
+    Assert.assertTrue(containerDir.isDirectory());
+    periodFile = new File(containerDir, "cpu.cfs_period_us");
+    quotaFile = new File(containerDir, "cpu.cfs_quota_us");
+    Assert.assertTrue(periodFile.exists());
+    Assert.assertTrue(quotaFile.exists());
+    Assert.assertEquals(1000 * 1000, readIntFromFile(periodFile));
+    Assert.assertEquals(1000 * 1000, readIntFromFile(quotaFile));
+
+    FileUtils.deleteQuietly(cgroupDir);
+  }
+
 }

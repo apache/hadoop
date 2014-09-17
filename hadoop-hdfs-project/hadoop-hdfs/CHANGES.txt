@@ -481,6 +481,16 @@ Release 2.6.0 - UNRELEASED
     HDFS-7061. Add test to verify encryption zone creation after NameNode
     restart without saving namespace. (Stephen Chu via wang)
 
+    HDFS-7059. HAadmin transtionToActive with forceActive option can show
+    confusing message.
+
+    HDFS-6880. Adding tracing to DataNode data transfer protocol. (iwasakims
+    via cmccabe)
+
+    HDFS-7006. Test encryption zones with KMS. (Anthony Young-Garner and tucu)
+
+    HDFS-6851. Refactor EncryptionZoneWithId and EncryptionZone. (clamb via wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -669,6 +679,16 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7045. Fix NameNode deadlock when opening file under /.reserved path.
     (Yi Liu via wang)
+
+    HDFS-7032. Add WebHDFS support for reading and writing to encryption zones.
+    (clamb via wang)
+
+    HDFS-6965. NN continues to issue block locations for DNs with full disks.
+    (Rushabh Shah via kihwal)
+
+    HDFS-6789. TestDFSClientFailover.testFileContextDoesntDnsResolveLogicalURI
+    and TestDFSClientFailover.testDoesntDnsResolveLogicalURI failing on jdk7.
+    (Akira Ajisaka via wang)
 
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   

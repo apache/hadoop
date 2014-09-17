@@ -8,6 +8,8 @@ Trunk - Unreleased
 
   IMPROVEMENTS
 
+    YARN-2438. yarn-env.sh cleanup (aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -81,6 +83,10 @@ Release 2.6.0 - UNRELEASED
     YARN-611. Added an API to let apps specify an interval beyond which AM
     failures should be ignored towards counting max-attempts. (Xuan Gong via
     vinodkv)
+
+    YARN-2531. Added a configuration for admins to be able to override app-configs
+    and enforce/not-enforce strict control of per-container cpu usage. (Varun
+    Vasudev via vinodkv)
 
   IMPROVEMENTS
 
@@ -223,6 +229,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2547. Cross Origin Filter throws UnsupportedOperationException upon
     destroy (Mit Desai via jeagles)
 
+    YARN-2557. Add a parameter "attempt_Failures_Validity_Interval" into
+    DistributedShell (xgong)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -358,6 +367,12 @@ Release 2.6.0 - UNRELEASED
     YARN-2528. Relaxed http response split vulnerability protection for the origins
     header and made it accept multiple origins in CrossOriginFilter. (Jonathan
     Eagles via zjshen)
+
+    YARN-2549. TestContainerLaunch fails due to classpath problem with hamcrest
+    classes. (cnauroth)
+
+    YARN-2529. Generic history service RPC interface doesn't work when service
+    authorization is enabled. (Zhijie Shen via jianhe)
 
 Release 2.5.1 - 2014-09-05
 

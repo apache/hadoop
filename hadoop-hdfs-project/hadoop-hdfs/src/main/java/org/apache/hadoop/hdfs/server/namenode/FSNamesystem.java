@@ -178,7 +178,7 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.EncryptionZoneWithId;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -8677,7 +8677,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws AccessControlException  if the caller is not the superuser.
    * @throws UnresolvedLinkException if the path can't be resolved.
    */
-  EncryptionZoneWithId getEZForPath(final String srcArg)
+  EncryptionZone getEZForPath(final String srcArg)
     throws AccessControlException, UnresolvedLinkException, IOException {
     String src = srcArg;
     HdfsFileStatus resultingStat = null;
@@ -8694,7 +8694,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       checkOperation(OperationCategory.READ);
       src = resolvePath(src, pathComponents);
       final INodesInPath iip = dir.getINodesInPath(src, true);
-      final EncryptionZoneWithId ret = dir.getEZForPath(iip);
+      final EncryptionZone ret = dir.getEZForPath(iip);
       resultingStat = getAuditFileInfo(src, false);
       success = true;
       return ret;
@@ -8704,7 +8704,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
-  BatchedListEntries<EncryptionZoneWithId> listEncryptionZones(long prevId)
+  BatchedListEntries<EncryptionZone> listEncryptionZones(long prevId)
       throws IOException {
     boolean success = false;
     checkSuperuserPrivilege();
@@ -8713,7 +8713,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     try {
       checkSuperuserPrivilege();
       checkOperation(OperationCategory.READ);
-      final BatchedListEntries<EncryptionZoneWithId> ret =
+      final BatchedListEntries<EncryptionZone> ret =
           dir.listEncryptionZones(prevId);
       success = true;
       return ret;

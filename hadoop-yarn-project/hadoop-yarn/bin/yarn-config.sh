@@ -24,10 +24,13 @@ function hadoop_subproject_init
   # ...
   # this should get deprecated at some point.
   
-  if [[ -e "${YARN_CONF_DIR}/yarn-env.sh" ]]; then
-    . "${YARN_CONF_DIR}/yarn-env.sh"
-  elif [[ -e "${HADOOP_CONF_DIR}/yarn-env.sh" ]]; then
-    . "${HADOOP_CONF_DIR}/yarn-env.sh"
+  if [[ -z "${HADOOP_YARN_ENV_PROCESSED}" ]]; then
+    if [[ -e "${YARN_CONF_DIR}/yarn-env.sh" ]]; then
+      . "${YARN_CONF_DIR}/yarn-env.sh"
+    elif [[ -e "${HADOOP_CONF_DIR}/yarn-env.sh" ]]; then
+      . "${HADOOP_CONF_DIR}/yarn-env.sh"
+    fi
+    export HADOOP_YARN_ENV_PROCESSED=true
   fi
   
   if [[ -n "${YARN_CONF_DIR}" ]]; then

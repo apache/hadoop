@@ -335,6 +335,20 @@
       </dependency>
 
       <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-kms</artifactId>
+        <version>${project.version}</version>
+        <classifier>classes</classifier>
+        <type>jar</type>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-kms</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+      </dependency>
+
+      <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
         <version>11.0.2</version>
@@ -848,6 +862,17 @@
        <groupId>xerces</groupId>
        <artifactId>xercesImpl</artifactId>
        <version>2.9.1</version>
+     </dependency>
+
+     <dependency>
+       <groupId>org.apache.curator</groupId>
+       <artifactId>curator-framework</artifactId>
+       <version>2.6.0</version>
+     </dependency>
+     <dependency>
+       <groupId>org.apache.curator</groupId>
+       <artifactId>curator-test</artifactId>
+       <version>2.6.0</version>
      </dependency>
       
     </dependencies>

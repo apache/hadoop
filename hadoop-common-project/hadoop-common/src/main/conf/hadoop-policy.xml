@@ -214,4 +214,13 @@
     A special value of "*" means all users are allowed.</description>
   </property>
 
+  <property>
+    <name>security.applicationhistory.protocol.acl</name>
+    <value>*</value>
+    <description>ACL for ApplicationHistoryProtocol, used by the timeline
+    server and the generic history service client to communicate with each other.
+    The ACL is a comma-separated list of user and group names. The user and
+    group list is separated by a blank. For e.g. "alice,bob users,wheel".
+    A special value of "*" means all users are allowed.</description>
+  </property>
 </configuration>

@@ -156,6 +156,7 @@ done
 
 hadoop_find_confdir
 hadoop_exec_hadoopenv
+hadoop_exec_userfuncs
 
 #
 # IMPORTANT! User provided code is now available!

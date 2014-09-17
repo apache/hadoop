@@ -35,19 +35,26 @@ import java.util.List;
 import java.util.Map.Entry;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.StorageType;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetworkTopology;
 import org.junit.Assert;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -600,6 +607,53 @@ public class TestBlockManager {
     bm.processReport(node, new DatanodeStorage(ds.getStorageID()),
         new BlockListAsLongs(null, null));
     assertEquals(1, ds.getBlockReportCount());
+  }
+  
+  /**
+   * Tests that a namenode doesn't choose a datanode with full disks to 
+   * store blocks.
+   * @throws Exception
+   */
+  @Test
+  public void testStorageWithRemainingCapacity() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    FileSystem fs = FileSystem.get(conf);
+    Path file1 = null;
+    try {
+      cluster.waitActive();
+      final FSNamesystem namesystem = cluster.getNamesystem();
+      final String poolId = namesystem.getBlockPoolId();
+      final DatanodeRegistration nodeReg =
+        DataNodeTestUtils.getDNRegistrationForBP(cluster.getDataNodes().
+        		get(0), poolId);
+      final DatanodeDescriptor dd = NameNodeAdapter.getDatanode(namesystem,
+    		  nodeReg);
+      // By default, MiniDFSCluster will create 1 datanode with 2 storages.
+      // Assigning 64k for remaining storage capacity and will 
+      //create a file with 100k.
+      for(DatanodeStorageInfo storage:  dd.getStorageInfos()) { 
+    	  storage.setUtilizationForTesting(65536, 0, 65536, 0);
+      }
+      //sum of the remaining capacity of both the storages
+      dd.setRemaining(131072);
+      file1 = new Path("testRemainingStorage.dat");
+      try {
+        DFSTestUtil.createFile(fs, file1, 102400, 102400, 102400, (short)1,
+        		0x1BAD5EED);
+      }
+      catch (RemoteException re) {
+    	  GenericTestUtils.assertExceptionContains("nodes instead of "
+    	  		+ "minReplication", re);
+      }
+    }
+    finally {
+      // Clean up
+      assertTrue(fs.exists(file1));
+      fs.delete(file1, true);
+      assertTrue(!fs.exists(file1));
+      cluster.shutdown();
+    }
   }
 
   @Test

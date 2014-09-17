@@ -32,7 +32,7 @@ import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.EncryptionZoneWithId;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -1335,7 +1335,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     try {
       GetEZForPathResponseProto.Builder builder =
           GetEZForPathResponseProto.newBuilder();
-      final EncryptionZoneWithId ret = server.getEZForPath(req.getSrc());
+      final EncryptionZone ret = server.getEZForPath(req.getSrc());
       builder.setZone(PBHelper.convert(ret));
       return builder.build();
     } catch (IOException e) {
@@ -1348,7 +1348,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     RpcController controller, ListEncryptionZonesRequestProto req)
     throws ServiceException {
     try {
-      BatchedEntries<EncryptionZoneWithId> entries = server
+      BatchedEntries<EncryptionZone> entries = server
           .listEncryptionZones(req.getId());
       ListEncryptionZonesResponseProto.Builder builder =
           ListEncryptionZonesResponseProto.newBuilder();

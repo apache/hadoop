@@ -22,6 +22,7 @@ import org.apache.hadoop.security.authentication.util.SignerException;
 import org.apache.hadoop.security.authentication.util.RandomSignerSecretProvider;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
 import org.apache.hadoop.security.authentication.util.StringSignerSecretProvider;
+import org.apache.hadoop.security.authentication.util.ZKSignerSecretProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +43,7 @@ import java.util.*;
 
 /**
  * The {@link AuthenticationFilter} enables protecting web application resources with different (pluggable)
- * authentication mechanisms.
+ * authentication mechanisms and signer secret providers.
  * <p/>
  * Out of the box it provides 2 authentication mechanisms: Pseudo and Kerberos SPNEGO.
  * <p/>
@@ -60,10 +61,13 @@ import java.util.*;
  * <li>[#PREFIX#.]type: simple|kerberos|#CLASS#, 'simple' is short for the
  * {@link PseudoAuthenticationHandler}, 'kerberos' is short for {@link KerberosAuthenticationHandler}, otherwise
  * the full class name of the {@link AuthenticationHandler} must be specified.</li>
- * <li>[#PREFIX#.]signature.secret: the secret used to sign the HTTP cookie value. The default value is a random
- * value. Unless multiple webapp instances need to share the secret the random value is adequate.</li>
- * <li>[#PREFIX#.]token.validity: time -in seconds- that the generated token is valid before a
- * new authentication is triggered, default value is <code>3600</code> seconds.</li>
+ * <li>[#PREFIX#.]signature.secret: when signer.secret.provider is set to
+ * "string" or not specified, this is the value for the secret used to sign the
+ * HTTP cookie.</li>
+ * <li>[#PREFIX#.]token.validity: time -in seconds- that the generated token is
+ * valid before a new authentication is triggered, default value is
+ * <code>3600</code> seconds. This is also used for the rollover interval for
+ * the "random" and "zookeeper" SignerSecretProviders.</li>
  * <li>[#PREFIX#.]cookie.domain: domain to use for the HTTP cookie that stores the authentication token.</li>
  * <li>[#PREFIX#.]cookie.path: path to use for the HTTP cookie that stores the authentication token.</li>
  * </ul>
@@ -72,6 +76,49 @@ import java.util.*;
  * {@link AuthenticationFilter} will take all the properties that start with the prefix #PREFIX#, it will remove
  * the prefix from it and it will pass them to the the authentication handler for initialization. Properties that do
  * not start with the prefix will not be passed to the authentication handler initialization.
+ * <p/>
+ * Out of the box it provides 3 signer secret provider implementations:
+ * "string", "random", and "zookeeper"
+ * <p/>
+ * Additional signer secret providers are supported via the
+ * {@link SignerSecretProvider} class.
+ * <p/>
+ * For the HTTP cookies mentioned above, the SignerSecretProvider is used to
+ * determine the secret to use for signing the cookies. Different
+ * implementations can have different behaviors.  The "string" implementation
+ * simply uses the string set in the [#PREFIX#.]signature.secret property
+ * mentioned above.  The "random" implementation uses a randomly generated
+ * secret that rolls over at the interval specified by the
+ * [#PREFIX#.]token.validity mentioned above.  The "zookeeper" implementation
+ * is like the "random" one, except that it synchronizes the random secret
+ * and rollovers between multiple servers; it's meant for HA services.
+ * <p/>
+ * The relevant configuration properties are:
+ * <ul>
+ * <li>signer.secret.provider: indicates the name of the SignerSecretProvider
+ * class to use. Possible values are: "string", "random", "zookeeper", or a
+ * classname. If not specified, the "string" implementation will be used with
+ * [#PREFIX#.]signature.secret; and if that's not specified, the "random"
+ * implementation will be used.</li>
+ * <li>[#PREFIX#.]signature.secret: When the "string" implementation is
+ * specified, this value is used as the secret.</li>
+ * <li>[#PREFIX#.]token.validity: When the "random" or "zookeeper"
+ * implementations are specified, this value is used as the rollover
+ * interval.</li>
+ * </ul>
+ * <p/>
+ * The "zookeeper" implementation has additional configuration properties that
+ * must be specified; see {@link ZKSignerSecretProvider} for details.
+ * <p/>
+ * For subclasses of AuthenticationFilter that want additional control over the
+ * SignerSecretProvider, they can use the following attribute set in the
+ * ServletContext:
+ * <ul>
+ * <li>signer.secret.provider.object: A SignerSecretProvider implementation can
+ * be passed here that will be used instead of the signer.secret.provider
+ * configuration property. Note that the class should already be
+ * initialized.</li>
+ * </ul>
  */
 
 @InterfaceAudience.Private
@@ -112,20 +159,23 @@ public class AuthenticationFilter implements Filter {
 
   /**
    * Constant for the configuration property that indicates the name of the
-   * SignerSecretProvider class to use.  If not specified, SIGNATURE_SECRET
-   * will be used or a random secret.
+   * SignerSecretProvider class to use.
+   * Possible values are: "string", "random", "zookeeper", or a classname.
+   * If not specified, the "string" implementation will be used with
+   * SIGNATURE_SECRET; and if that's not specified, the "random" implementation
+   * will be used.
    */
-  public static final String SIGNER_SECRET_PROVIDER_CLASS =
+  public static final String SIGNER_SECRET_PROVIDER =
           "signer.secret.provider";
 
   /**
-   * Constant for the attribute that can be used for providing a custom
-   * object that subclasses the SignerSecretProvider.  Note that this should be
-   * set in the ServletContext and the class should already be initialized.  
-   * If not specified, SIGNER_SECRET_PROVIDER_CLASS will be used.
+   * Constant for the ServletContext attribute that can be used for providing a
+   * custom implementation of the SignerSecretProvider. Note that the class
+   * should already be initialized. If not specified, SIGNER_SECRET_PROVIDER
+   * will be used.
    */
-  public static final String SIGNATURE_PROVIDER_ATTRIBUTE =
-      "org.apache.hadoop.security.authentication.util.SignerSecretProvider";
+  public static final String SIGNER_SECRET_PROVIDER_ATTRIBUTE =
+      "signer.secret.provider.object";
 
   private Properties config;
   private Signer signer;
@@ -138,7 +188,7 @@ public class AuthenticationFilter implements Filter {
   private String cookiePath;
 
   /**
-   * Initializes the authentication filter.
+   * Initializes the authentication filter and signer secret provider.
    * <p/>
    * It instantiates and initializes the specified {@link AuthenticationHandler}.
    * <p/>
@@ -184,35 +234,19 @@ public class AuthenticationFilter implements Filter {
     validity = Long.parseLong(config.getProperty(AUTH_TOKEN_VALIDITY, "36000"))
         * 1000; //10 hours
     secretProvider = (SignerSecretProvider) filterConfig.getServletContext().
-        getAttribute(SIGNATURE_PROVIDER_ATTRIBUTE);
+        getAttribute(SIGNER_SECRET_PROVIDER_ATTRIBUTE);
     if (secretProvider == null) {
-      String signerSecretProviderClassName =
-          config.getProperty(configPrefix + SIGNER_SECRET_PROVIDER_CLASS, null);
-      if (signerSecretProviderClassName == null) {
-        String signatureSecret =
-            config.getProperty(configPrefix + SIGNATURE_SECRET, null);
-        if (signatureSecret != null) {
-          secretProvider = new StringSignerSecretProvider(signatureSecret);
-        } else {
-          secretProvider = new RandomSignerSecretProvider();
-          randomSecret = true;
-        }
-      } else {
-        try {
-          Class<?> klass = Thread.currentThread().getContextClassLoader().
-              loadClass(signerSecretProviderClassName);
-          secretProvider = (SignerSecretProvider) klass.newInstance();
-          customSecretProvider = true;
-        } catch (ClassNotFoundException ex) {
-          throw new ServletException(ex);
-        } catch (InstantiationException ex) {
-          throw new ServletException(ex);
-        } catch (IllegalAccessException ex) {
-          throw new ServletException(ex);
-        }
+      Class<? extends SignerSecretProvider> providerClass
+              = getProviderClass(config);
+      try {
+        secretProvider = providerClass.newInstance();
+      } catch (InstantiationException ex) {
+        throw new ServletException(ex);
+      } catch (IllegalAccessException ex) {
+        throw new ServletException(ex);
       }
       try {
-        secretProvider.init(config, validity);
+        secretProvider.init(config, filterConfig.getServletContext(), validity);
       } catch (Exception ex) {
         throw new ServletException(ex);
       }
@@ -223,6 +257,42 @@ public class AuthenticationFilter implements Filter {
 
     cookieDomain = config.getProperty(COOKIE_DOMAIN, null);
     cookiePath = config.getProperty(COOKIE_PATH, null);
+  }
+
+  @SuppressWarnings("unchecked")
+  private Class<? extends SignerSecretProvider> getProviderClass(Properties config)
+          throws ServletException {
+    String providerClassName;
+    String signerSecretProviderName
+            = config.getProperty(SIGNER_SECRET_PROVIDER, null);
+    // fallback to old behavior
+    if (signerSecretProviderName == null) {
+      String signatureSecret = config.getProperty(SIGNATURE_SECRET, null);
+      if (signatureSecret != null) {
+        providerClassName = StringSignerSecretProvider.class.getName();
+      } else {
+        providerClassName = RandomSignerSecretProvider.class.getName();
+        randomSecret = true;
+      }
+    } else {
+      if ("random".equals(signerSecretProviderName)) {
+        providerClassName = RandomSignerSecretProvider.class.getName();
+        randomSecret = true;
+      } else if ("string".equals(signerSecretProviderName)) {
+        providerClassName = StringSignerSecretProvider.class.getName();
+      } else if ("zookeeper".equals(signerSecretProviderName)) {
+        providerClassName = ZKSignerSecretProvider.class.getName();
+      } else {
+        providerClassName = signerSecretProviderName;
+        customSecretProvider = true;
+      }
+    }
+    try {
+      return (Class<? extends SignerSecretProvider>) Thread.currentThread().
+              getContextClassLoader().loadClass(providerClassName);
+    } catch (ClassNotFoundException ex) {
+      throw new ServletException(ex);
+    }
   }
 
   /**

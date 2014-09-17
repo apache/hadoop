@@ -1,0 +1,94 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#######
+# Advanced Users Only
+######
+
+# You can do things like replace parts of the shell underbelly.
+# Most of this code is in hadoop-functions.sh.
+#
+#
+# For example, if you want to add compression to the rotation
+# menthod for the .out files that daemons generate, you can do
+# that by redefining the hadoop_rotate_log function by
+# uncommenting this code block:
+
+#function hadoop_rotate_log
+#{
+#  local log=$1;
+#  local num=${2:-5};
+#
+#  if [[ -f "${log}" ]]; then
+#    while [[ ${num} -gt 1 ]]; do
+#      #shellcheck disable=SC2086
+#      let prev=${num}-1
+#      if [[ -f "${log}.${prev}.gz" ]]; then
+#        mv "${log}.${prev}.gz" "${log}.${num}.gz"
+#      fi
+#      num=${prev}
+#    done
+#    mv "${log}" "${log}.${num}"
+#    gzip -9 "${log}.${num}"
+#  fi
+#}
+#
+#
+
+#
+# Another example:  finding java
+#
+# By default, Hadoop assumes that $JAVA_HOME is always defined
+# outside of its configuration. Eons ago, Apple standardized
+# on a helper program called java_home to find it for you.
+#
+#function hadoop_java_setup
+#{
+#
+#  if [[ -z "${JAVA_HOME}" ]]; then
+#     case $HADOOP_OS_TYPE in
+#       Darwin*)
+#          JAVA_HOME=$(/usr/libexec/java_home)
+#          ;;
+#     esac
+#  fi
+#
+#  # Bail if we did not detect it
+#  if [[ -z "${JAVA_HOME}" ]]; then
+#    echo "ERROR: JAVA_HOME is not set and could not be found." 1>&2
+#    exit 1
+#  fi
+#
+#  if [[ ! -d "${JAVA_HOME}" ]]; then
+#     echo "ERROR: JAVA_HOME (${JAVA_HOME}) does not exist." 1>&2
+#     exit 1
+#  fi
+#
+#  JAVA="${JAVA_HOME}/bin/java"
+#
+#  if [[ ! -x ${JAVA} ]]; then
+#    echo "ERROR: ${JAVA} is not executable." 1>&2
+#    exit 1
+#  fi
+#  JAVA_HEAP_MAX=-Xmx1g
+#  HADOOP_HEAPSIZE=${HADOOP_HEAPSIZE:-128}
+#
+#  # check envvars which might override default args
+#  if [[ -n "$HADOOP_HEAPSIZE" ]]; then
+#    JAVA_HEAP_MAX="-Xmx${HADOOP_HEAPSIZE}m"
+#  fi
+#}

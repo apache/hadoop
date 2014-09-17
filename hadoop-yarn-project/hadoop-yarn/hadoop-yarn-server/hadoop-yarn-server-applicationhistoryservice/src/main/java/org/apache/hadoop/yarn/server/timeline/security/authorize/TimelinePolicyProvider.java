@@ -16,38 +16,29 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.protocol;
-
-import java.io.IOException;
+package org.apache.hadoop.yarn.server.timeline.security.authorize;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.BatchedRemoteIterator;
+import org.apache.hadoop.security.authorize.PolicyProvider;
+import org.apache.hadoop.security.authorize.Service;
+import org.apache.hadoop.yarn.api.ApplicationHistoryProtocolPB;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 /**
- * Used on the client-side to iterate over the list of encryption zones
- * stored on the namenode.
+ * {@link PolicyProvider} for YARN timeline server protocols.
  */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
-public class EncryptionZoneWithIdIterator
-    extends BatchedRemoteIterator<Long, EncryptionZoneWithId> {
-
-  private final ClientProtocol namenode;
-
-  EncryptionZoneWithIdIterator(ClientProtocol namenode) {
-    super(Long.valueOf(0));
-    this.namenode = namenode;
-  }
+@InterfaceStability.Unstable
+public class TimelinePolicyProvider extends PolicyProvider {
 
   @Override
-  public BatchedEntries<EncryptionZoneWithId> makeRequest(Long prevId)
-      throws IOException {
-    return namenode.listEncryptionZones(prevId);
+  public Service[] getServices() {
+    return new Service[] {
+        new Service(
+            YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_APPLICATIONHISTORY_PROTOCOL,
+            ApplicationHistoryProtocolPB.class)
+    };
   }
 
-  @Override
-  public Long elementToPrevKey(EncryptionZoneWithId entry) {
-    return entry.getId();
-  }
 }

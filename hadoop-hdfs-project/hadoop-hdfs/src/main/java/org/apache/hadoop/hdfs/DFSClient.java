@@ -154,7 +154,6 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.EncryptionZoneIterator;
-import org.apache.hadoop.hdfs.protocol.EncryptionZoneWithId;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -2906,8 +2905,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           throws IOException {
     checkOpen();
     try {
-      final EncryptionZoneWithId ezi = namenode.getEZForPath(src);
-      return (ezi.getId() < 0) ? null : ezi;
+      final EncryptionZone ez = namenode.getEZForPath(src);
+      return (ez.getId() < 0) ? null : ez;
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      UnresolvedPathException.class);

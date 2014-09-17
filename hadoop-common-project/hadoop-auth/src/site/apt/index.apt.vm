@@ -44,6 +44,11 @@ Hadoop Auth, Java HTTP SPNEGO ${project.version}
   Subsequent HTTP client requests presenting the signed HTTP Cookie have access
   to the protected resources until the HTTP Cookie expires.
 
+  The secret used to sign the HTTP Cookie has multiple implementations that
+  provide different behaviors, including a hardcoded secret string, a rolling
+  randomly generated secret, and a rolling randomly generated secret
+  synchronized between multiple servers using ZooKeeper.
+
 * User Documentation
 
   * {{{./Examples.html}Examples}}

@@ -231,11 +231,13 @@ public class DatanodeWebHdfsMethods {
       DFSClient dfsclient = newDfsClient(nnId, conf);
       FSDataOutputStream out = null;
       try {
-        out = new FSDataOutputStream(dfsclient.create(
+        out = dfsclient.createWrappedOutputStream(dfsclient.create(
             fullpath, permission.getFsPermission(), 
-            overwrite.getValue() ? EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)
-                : EnumSet.of(CreateFlag.CREATE),
-            replication.getValue(conf), blockSize.getValue(conf), null, b, null), null);
+            overwrite.getValue() ?
+                EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE) :
+                EnumSet.of(CreateFlag.CREATE),
+            replication.getValue(conf), blockSize.getValue(conf), null,
+            b, null), null);
         IOUtils.copyBytes(in, out, b);
         out.close();
         out = null;
@@ -418,7 +420,8 @@ public class DatanodeWebHdfsMethods {
       final DFSClient dfsclient = newDfsClient(nnId, conf);
       HdfsDataInputStream in = null;
       try {
-        in = new HdfsDataInputStream(dfsclient.open(fullpath, b, true));
+        in = dfsclient.createWrappedInputStream(
+            dfsclient.open(fullpath, b, true));
         in.seek(offset.getValue());
       } catch(IOException ioe) {
         IOUtils.cleanup(LOG, in);

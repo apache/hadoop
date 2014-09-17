@@ -55,7 +55,7 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.EncryptionZoneWithId;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
@@ -189,7 +189,7 @@ import com.google.protobuf.ServiceException;
 
 import static org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import static org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos
-    .EncryptionZoneWithIdProto;
+    .EncryptionZoneProto;
 
 /**
  * This class forwards NN's ClientProtocol calls as RPC calls to the NN server
@@ -1334,7 +1334,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public EncryptionZoneWithId getEZForPath(String src)
+  public EncryptionZone getEZForPath(String src)
       throws IOException {
     final GetEZForPathRequestProto.Builder builder =
         GetEZForPathRequestProto.newBuilder();
@@ -1350,7 +1350,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public BatchedEntries<EncryptionZoneWithId> listEncryptionZones(long id)
+  public BatchedEntries<EncryptionZone> listEncryptionZones(long id)
       throws IOException {
     final ListEncryptionZonesRequestProto req =
       ListEncryptionZonesRequestProto.newBuilder()
@@ -1359,12 +1359,12 @@ public class ClientNamenodeProtocolTranslatorPB implements
     try {
       EncryptionZonesProtos.ListEncryptionZonesResponseProto response =
           rpcProxy.listEncryptionZones(null, req);
-      List<EncryptionZoneWithId> elements =
+      List<EncryptionZone> elements =
           Lists.newArrayListWithCapacity(response.getZonesCount());
-      for (EncryptionZoneWithIdProto p : response.getZonesList()) {
+      for (EncryptionZoneProto p : response.getZonesList()) {
         elements.add(PBHelper.convert(p));
       }
-      return new BatchedListEntries<EncryptionZoneWithId>(elements,
+      return new BatchedListEntries<EncryptionZone>(elements,
           response.getHasMore());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);

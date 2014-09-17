@@ -143,8 +143,10 @@ public abstract class HAAdmin extends Configured implements Tool {
     }
     /*  returns true if other target node is active or some exception occurred 
         and forceActive was not set  */
-    if(isOtherTargetNodeActive(argv[0], cmd.hasOption(FORCEACTIVE))) {
-      return -1;
+    if(!cmd.hasOption(FORCEACTIVE)) {
+      if(isOtherTargetNodeActive(argv[0], cmd.hasOption(FORCEACTIVE))) {
+        return -1;
+      }
     }
     HAServiceTarget target = resolveTarget(argv[0]);
     if (!checkManualStateManagementOK(target)) {

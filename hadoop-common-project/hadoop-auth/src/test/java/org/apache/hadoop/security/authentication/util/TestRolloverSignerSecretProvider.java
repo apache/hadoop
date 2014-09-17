@@ -28,7 +28,7 @@ public class TestRolloverSignerSecretProvider {
         new TRolloverSignerSecretProvider(
             new byte[][]{secret1, secret2, secret3});
     try {
-      secretProvider.init(null, rolloverFrequency);
+      secretProvider.init(null, null, rolloverFrequency);
 
       byte[] currentSecret = secretProvider.getCurrentSecret();
       byte[][] allSecrets = secretProvider.getAllSecrets();

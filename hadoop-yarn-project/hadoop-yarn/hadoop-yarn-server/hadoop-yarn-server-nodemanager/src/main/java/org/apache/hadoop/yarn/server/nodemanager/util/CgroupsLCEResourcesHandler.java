@@ -57,6 +57,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
   private String cgroupMountPath;
 
   private boolean cpuWeightEnabled = true;
+  private boolean strictResourceUsageMode = false;
 
   private final String MTAB_FILE = "/proc/mounts";
   private final String CGROUPS_FSTYPE = "cgroup";
@@ -71,6 +72,8 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
   private long deleteCgroupTimeout;
   // package private for testing purposes
   Clock clock;
+
+  private float yarnProcessors;
   
   public CgroupsLCEResourcesHandler() {
     this.controllerPaths = new HashMap<String, String>();
@@ -105,6 +108,12 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
       cgroupPrefix = cgroupPrefix.substring(1);
     }
 
+    this.strictResourceUsageMode =
+        conf
+          .getBoolean(
+            YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_STRICT_RESOURCE_USAGE,
+            YarnConfiguration.DEFAULT_NM_LINUX_CONTAINER_CGROUPS_STRICT_RESOURCE_USAGE);
+
     int len = cgroupPrefix.length();
     if (cgroupPrefix.charAt(len - 1) == '/') {
       cgroupPrefix = cgroupPrefix.substring(0, len - 1);
@@ -132,8 +141,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     initializeControllerPaths();
 
     // cap overall usage to the number of cores allocated to YARN
-    float yarnProcessors =
-        NodeManagerHardwareUtils.getContainersCores(plugin, conf);
+    yarnProcessors = NodeManagerHardwareUtils.getContainersCores(plugin, conf);
     int systemProcessors = plugin.getNumProcessors();
     if (systemProcessors != (int) yarnProcessors) {
       LOG.info("YARN containers restricted to " + yarnProcessors + " cores");
@@ -290,10 +298,25 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     String containerName = containerId.toString();
 
     if (isCpuWeightEnabled()) {
+      int containerVCores = containerResource.getVirtualCores();
       createCgroup(CONTROLLER_CPU, containerName);
-      int cpuShares = CPU_DEFAULT_WEIGHT * containerResource.getVirtualCores();
+      int cpuShares = CPU_DEFAULT_WEIGHT * containerVCores;
       updateCgroup(CONTROLLER_CPU, containerName, "shares",
           String.valueOf(cpuShares));
+      if (strictResourceUsageMode) {
+        int nodeVCores =
+            conf.getInt(YarnConfiguration.NM_VCORES,
+              YarnConfiguration.DEFAULT_NM_VCORES);
+        if (nodeVCores != containerVCores) {
+          float containerCPU =
+              (containerVCores * yarnProcessors) / (float) nodeVCores;
+          int[] limits = getOverallLimits(containerCPU);
+          updateCgroup(CONTROLLER_CPU, containerName, CPU_PERIOD_US,
+            String.valueOf(limits[0]));
+          updateCgroup(CONTROLLER_CPU, containerName, CPU_QUOTA_US,
+            String.valueOf(limits[1]));
+        }
+      }
     }
   }
 

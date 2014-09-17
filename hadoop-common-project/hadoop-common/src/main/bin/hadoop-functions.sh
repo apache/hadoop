@@ -104,6 +104,15 @@ function hadoop_exec_hadoopenv
   fi
 }
 
+function hadoop_exec_userfuncs
+{
+  # NOTE: This function is not user replaceable.
+
+  if [[ -e "${HADOOP_CONF_DIR}/hadoop-user-functions.sh" ]]; then
+    . "${HADOOP_CONF_DIR}/hadoop-user-functions.sh"
+  fi
+}
+
 function hadoop_basic_init
 {
   # Some of these are also set in hadoop-env.sh.
@@ -645,7 +654,7 @@ function hadoop_verify_secure_prereq
   
   # ${EUID} comes from the shell itself!
   if [[ "${EUID}" -ne 0 ]] && [[ -z "${HADOOP_SECURE_COMMAND}" ]]; then
-    hadoop_error "ERROR: You must be a privileged in order to run a secure serice."
+    hadoop_error "ERROR: You must be a privileged user in order to run a secure service."
     exit 1
   else
     return 0
@@ -704,7 +713,8 @@ function hadoop_verify_logdir
   rm "${HADOOP_LOG_DIR}/$$" >/dev/null 2>&1
 }
 
-function hadoop_status_daemon() {
+function hadoop_status_daemon() 
+{
   #
   # LSB 4.1.0 compatible status command (1)
   #
@@ -760,10 +770,18 @@ function hadoop_start_daemon
   # so complex! so wow! much java!
   local command=$1
   local class=$2
-  shift 2
+  local pidfile=$3
+  shift 3
 
   hadoop_debug "Final CLASSPATH: ${CLASSPATH}"
   hadoop_debug "Final HADOOP_OPTS: ${HADOOP_OPTS}"
+
+  # this is for the non-daemon pid creation
+  #shellcheck disable=SC2086
+  echo $$ > "${pidfile}" 2>/dev/null
+  if [[ $? -gt 0 ]]; then
+    hadoop_error "ERROR:  Cannot write ${command} pid ${pidfile}."
+  fi
 
   export CLASSPATH
   #shellcheck disable=SC2086
@@ -779,27 +797,42 @@ function hadoop_start_daemon_wrapper
   local pidfile=$3
   local outfile=$4
   shift 4
-  
+
+  local counter
+
   hadoop_rotate_log "${outfile}"
   
   hadoop_start_daemon "${daemonname}" \
-  "$class" "$@" >> "${outfile}" 2>&1 < /dev/null &
+    "$class" \
+    "${pidfile}" \
+    "$@" >> "${outfile}" 2>&1 < /dev/null &
+
+  # we need to avoid a race condition here
+  # so let's wait for the fork to finish 
+  # before overriding with the daemonized pid
+  (( counter=0 ))
+  while [[ ! -f ${pidfile} && ${counter} -le 5 ]]; do
+    sleep 1
+    (( counter++ ))
+  done
+
+  # this is for daemon pid creation
   #shellcheck disable=SC2086
   echo $! > "${pidfile}" 2>/dev/null
   if [[ $? -gt 0 ]]; then
-    hadoop_error "ERROR:  Cannot write pid ${pidfile}."
+    hadoop_error "ERROR:  Cannot write ${daemonname} pid ${pidfile}."
   fi
   
   # shellcheck disable=SC2086
   renice "${HADOOP_NICENESS}" $! >/dev/null 2>&1
   if [[ $? -gt 0 ]]; then
-    hadoop_error "ERROR: Cannot set priority of process $!"
+    hadoop_error "ERROR: Cannot set priority of ${daemoname} process $!"
   fi
   
   # shellcheck disable=SC2086
-  disown $! 2>&1
+  disown %+ >/dev/null 2>&1
   if [[ $? -gt 0 ]]; then
-    hadoop_error "ERROR: Cannot disconnect process $!"
+    hadoop_error "ERROR: Cannot disconnect ${daemoname} process $!"
   fi
   sleep 1
   
@@ -829,7 +862,8 @@ function hadoop_start_secure_daemon
   
   # where to send stderr.  same thing, except &2 = stderr
   local daemonerrfile=$5
-  shift 5
+  local privpidfile=$6
+  shift 6
  
   hadoop_rotate_log "${daemonoutfile}"
   hadoop_rotate_log "${daemonerrfile}"
@@ -849,17 +883,23 @@ function hadoop_start_secure_daemon
 
   hadoop_debug "Final CLASSPATH: ${CLASSPATH}"
   hadoop_debug "Final HADOOP_OPTS: ${HADOOP_OPTS}"
+
+  #shellcheck disable=SC2086
+  echo $$ > "${privpidfile}" 2>/dev/null
+  if [[ $? -gt 0 ]]; then
+    hadoop_error "ERROR:  Cannot write ${daemoname} pid ${privpidfile}."
+  fi
   
   exec "${jsvc}" \
-  "-Dproc_${daemonname}" \
-  -outfile "${daemonoutfile}" \
-  -errfile "${daemonerrfile}" \
-  -pidfile "${daemonpidfile}" \
-  -nodetach \
-  -user "${HADOOP_SECURE_USER}" \
-  -cp "${CLASSPATH}" \
-  ${HADOOP_OPTS} \
-  "${class}" "$@"
+    "-Dproc_${daemonname}" \
+    -outfile "${daemonoutfile}" \
+    -errfile "${daemonerrfile}" \
+    -pidfile "${daemonpidfile}" \
+    -nodetach \
+    -user "${HADOOP_SECURE_USER}" \
+    -cp "${CLASSPATH}" \
+    ${HADOOP_OPTS} \
+    "${class}" "$@"
 }
 
 function hadoop_start_secure_daemon_wrapper
@@ -886,39 +926,52 @@ function hadoop_start_secure_daemon_wrapper
   
   local daemonerrfile=$7
   shift 7
+
+  local counter
   
   hadoop_rotate_log "${jsvcoutfile}"
   
   hadoop_start_secure_daemon \
-  "${daemonname}" \
-  "${class}" \
-  "${daemonpidfile}" \
-  "${daemonoutfile}" \
-  "${daemonerrfile}" "$@" >> "${jsvcoutfile}" 2>&1 < /dev/null &
-  
-  # This wrapper should only have one child.  Unlike Shawty Lo.
+    "${daemonname}" \
+    "${class}" \
+    "${daemonpidfile}" \
+    "${daemonoutfile}" \
+    "${daemonerrfile}" \
+    "${jsvcpidfile}"  "$@" >> "${jsvcoutfile}" 2>&1 < /dev/null &
+
+  # we need to avoid a race condition here
+  # so let's wait for the fork to finish 
+  # before overriding with the daemonized pid
+  (( counter=0 ))
+  while [[ ! -f ${pidfile} && ${counter} -le 5 ]]; do
+    sleep 1
+    (( counter++ ))
+  done
+
+  # this is for the daemon pid creation
   #shellcheck disable=SC2086
   echo $! > "${jsvcpidfile}" 2>/dev/null
   if [[ $? -gt 0 ]]; then
-    hadoop_error "ERROR:  Cannot write pid ${pidfile}."
+    hadoop_error "ERROR:  Cannot write ${daemonname} pid ${pidfile}."
   fi
+  
   sleep 1
   #shellcheck disable=SC2086
   renice "${HADOOP_NICENESS}" $! >/dev/null 2>&1
   if [[ $? -gt 0 ]]; then
-    hadoop_error "ERROR: Cannot set priority of process $!"
+    hadoop_error "ERROR: Cannot set priority of ${daemonname} process $!"
   fi
   if [[ -f "${daemonpidfile}" ]]; then
     #shellcheck disable=SC2046
-    renice "${HADOOP_NICENESS}" $(cat "${daemonpidfile}") >/dev/null 2>&1
+    renice "${HADOOP_NICENESS}" $(cat "${daemonpidfile}" 2>/dev/null) >/dev/null 2>&1
     if [[ $? -gt 0 ]]; then
-      hadoop_error "ERROR: Cannot set priority of process $(cat "${daemonpidfile}")"
+      hadoop_error "ERROR: Cannot set priority of ${daemonname} process $(cat "${daemonpidfile}" 2>/dev/null)"
     fi
   fi
-  #shellcheck disable=SC2086
-  disown $! 2>&1
+  #shellcheck disable=SC2046
+  disown %+ >/dev/null 2>&1
   if [[ $? -gt 0 ]]; then
-    hadoop_error "ERROR: Cannot disconnect process $!"
+    hadoop_error "ERROR: Cannot disconnect ${daemonname} process $!"
   fi
   # capture the ulimit output
   su "${HADOOP_SECURE_USER}" -c 'bash -c "ulimit -a"' >> "${jsvcoutfile}" 2>&1
@@ -994,7 +1047,7 @@ function hadoop_daemon_handler
       hadoop_verify_logdir
       hadoop_status_daemon "${daemon_pidfile}"
       if [[ $? == 0  ]]; then
-        hadoop_error "${daemonname} running as process $(cat "${daemon_pidfile}").  Stop it first."
+        hadoop_error "${daemonname} is running as process $(cat "${daemon_pidfile}").  Stop it first."
         exit 1
       else
         # stale pid file, so just remove it and continue on
@@ -1003,7 +1056,7 @@ function hadoop_daemon_handler
       ##COMPAT  - differenticate between --daemon start and nothing
       # "nothing" shouldn't detach
       if [[ "$daemonmode" = "default" ]]; then
-        hadoop_start_daemon "${daemonname}" "${class}" "$@"
+        hadoop_start_daemon "${daemonname}" "${class}" "${daemon_pidfile}" "$@"
       else
         hadoop_start_daemon_wrapper "${daemonname}" \
         "${class}" "${daemon_pidfile}" "${daemon_outfile}" "$@"
@@ -1042,7 +1095,7 @@ function hadoop_secure_daemon_handler
       hadoop_verify_logdir
       hadoop_status_daemon "${daemon_pidfile}"
       if [[ $? == 0  ]]; then
-        hadoop_error "${daemonname} running as process $(cat "${daemon_pidfile}").  Stop it first."
+        hadoop_error "${daemonname} is running as process $(cat "${daemon_pidfile}").  Stop it first."
         exit 1
       else
         # stale pid file, so just remove it and continue on
@@ -1054,7 +1107,7 @@ function hadoop_secure_daemon_handler
       if [[ "${daemonmode}" = "default" ]]; then
         hadoop_start_secure_daemon "${daemonname}" "${classname}" \
         "${daemon_pidfile}" "${daemon_outfile}" \
-        "${priv_errfile}"  "$@"
+        "${priv_errfile}" "${priv_pidfile}" "$@"
       else
         hadoop_start_secure_daemon_wrapper "${daemonname}" "${classname}" \
         "${daemon_pidfile}" "${daemon_outfile}" \
