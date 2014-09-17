@@ -61,6 +61,9 @@ Release 2.6.0 - UNRELEASED
     and enforce/not-enforce strict control of per-container cpu usage. (Varun
     Vasudev via vinodkv)
 
+    YARN-1250. Generic history service should support application-acls. (Zhijie Shen
+    via junping_du)
+
   IMPROVEMENTS
 
     YARN-2242. Improve exception information on AM launch crashes. (Li Lu 
