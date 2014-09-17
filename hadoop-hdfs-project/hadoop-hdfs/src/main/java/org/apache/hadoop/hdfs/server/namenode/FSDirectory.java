@@ -63,7 +63,7 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
-import org.apache.hadoop.hdfs.protocol.FsAclPermission;
+import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
@@ -2316,18 +2316,25 @@ public class FSDirectory implements Closeable {
      short replication = 0;
      long blocksize = 0;
      boolean isLazyPersist = false;
+     final boolean isEncrypted;
+
+     final FileEncryptionInfo feInfo = isRawPath ? null :
+         getFileEncryptionInfo(node, snapshot);
+
      if (node.isFile()) {
        final INodeFile fileNode = node.asFile();
        size = fileNode.computeFileSize(snapshot);
        replication = fileNode.getFileReplication(snapshot);
        blocksize = fileNode.getPreferredBlockSize();
        isLazyPersist = fileNode.getLazyPersistFlag();
+       isEncrypted = (feInfo != null) ||
+           (isRawPath && isInAnEZ(INodesInPath.fromINode(node)));
+     } else {
+       isEncrypted = isInAnEZ(INodesInPath.fromINode(node));
      }
+
      int childrenNum = node.isDirectory() ? 
          node.asDirectory().getChildrenNum(snapshot) : 0;
-
-     FileEncryptionInfo feInfo = isRawPath ? null :
-         getFileEncryptionInfo(node, snapshot);
 
      return new HdfsFileStatus(
         size, 
@@ -2337,7 +2344,7 @@ public class FSDirectory implements Closeable {
         isLazyPersist,
         node.getModificationTime(snapshot),
         node.getAccessTime(snapshot),
-        getPermissionForFileStatus(node, snapshot),
+        getPermissionForFileStatus(node, snapshot, isEncrypted),
         node.getUserName(snapshot),
         node.getGroupName(snapshot),
         node.isSymlink() ? node.asSymlink().getSymlink() : null,
@@ -2358,6 +2365,7 @@ public class FSDirectory implements Closeable {
     long blocksize = 0;
     boolean isLazyPersist = false;
     LocatedBlocks loc = null;
+    final boolean isEncrypted;
     final FileEncryptionInfo feInfo = isRawPath ? null :
         getFileEncryptionInfo(node, snapshot);
     if (node.isFile()) {
@@ -2377,6 +2385,10 @@ public class FSDirectory implements Closeable {
       if (loc == null) {
         loc = new LocatedBlocks();
       }
+      isEncrypted = (feInfo != null) ||
+          (isRawPath && isInAnEZ(INodesInPath.fromINode(node)));
+    } else {
+      isEncrypted = isInAnEZ(INodesInPath.fromINode(node));
     }
     int childrenNum = node.isDirectory() ? 
         node.asDirectory().getChildrenNum(snapshot) : 0;
@@ -2385,7 +2397,7 @@ public class FSDirectory implements Closeable {
         new HdfsLocatedFileStatus(size, node.isDirectory(), replication,
           blocksize, isLazyPersist, node.getModificationTime(snapshot),
           node.getAccessTime(snapshot),
-          getPermissionForFileStatus(node, snapshot),
+          getPermissionForFileStatus(node, snapshot, isEncrypted),
           node.getUserName(snapshot), node.getGroupName(snapshot),
           node.isSymlink() ? node.asSymlink().getSymlink() : null, path,
           node.getId(), loc, childrenNum, feInfo);
@@ -2401,17 +2413,21 @@ public class FSDirectory implements Closeable {
 
   /**
    * Returns an inode's FsPermission for use in an outbound FileStatus.  If the
-   * inode has an ACL, then this method will convert to a FsAclPermission.
+   * inode has an ACL or is for an encrypted file/dir, then this method will
+   * return an FsPermissionExtension.
    *
    * @param node INode to check
    * @param snapshot int snapshot ID
+   * @param isEncrypted boolean true if the file/dir is encrypted
    * @return FsPermission from inode, with ACL bit on if the inode has an ACL
+   * and encrypted bit on if it represents an encrypted file/dir.
    */
   private static FsPermission getPermissionForFileStatus(INode node,
-      int snapshot) {
+      int snapshot, boolean isEncrypted) {
     FsPermission perm = node.getFsPermission(snapshot);
-    if (node.getAclFeature(snapshot) != null) {
-      perm = new FsAclPermission(perm);
+    boolean hasAcl = node.getAclFeature(snapshot) != null;
+    if (hasAcl || isEncrypted) {
+      perm = new FsPermissionExtension(perm, hasAcl, isEncrypted);
     }
     return perm;
   }
