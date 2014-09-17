@@ -50,4 +50,6 @@
     HDFS-7064. Fix unit test failures in HDFS-6581 branch. (Xiaoyu Yao via
     Arpit Agarwal)
 
+    HDFS-6581. Few more unit test fixes for HDFS-6581. (Arpit Agarwal)
+
 
