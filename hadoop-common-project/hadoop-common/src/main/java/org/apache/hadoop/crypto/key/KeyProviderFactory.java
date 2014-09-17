@@ -46,7 +46,8 @@ public abstract class KeyProviderFactory {
                                              ) throws IOException;
 
   private static final ServiceLoader<KeyProviderFactory> serviceLoader =
-      ServiceLoader.load(KeyProviderFactory.class);
+      ServiceLoader.load(KeyProviderFactory.class,
+          KeyProviderFactory.class.getClassLoader());
 
   // Iterate through the serviceLoader to avoid lazy loading.
   // Lazy loading would require synchronization in concurrent use cases.
