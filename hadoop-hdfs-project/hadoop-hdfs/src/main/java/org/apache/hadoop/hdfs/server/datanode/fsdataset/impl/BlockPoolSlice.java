@@ -68,6 +68,7 @@ class BlockPoolSlice {
   private static final String DU_CACHE_FILE = "dfsUsed";
   private volatile boolean dfsUsedSaved = false;
   private static final int SHUTDOWN_HOOK_PRIORITY = 30;
+  private final boolean deleteDuplicateReplicas;
   
   // TODO:FEDERATION scalability issue - a thread per DU is needed
   private final DU dfsUsage;
@@ -93,6 +94,10 @@ class BlockPoolSlice {
         throw new IOException("Failed to mkdirs " + this.finalizedDir);
       }
     }
+
+    this.deleteDuplicateReplicas = conf.getBoolean(
+        DFSConfigKeys.DFS_DATANODE_DUPLICATE_REPLICA_DELETION,
+        DFSConfigKeys.DFS_DATANODE_DUPLICATE_REPLICA_DELETION_DEFAULT);
 
     // Files that were being written when the datanode was last shutdown
     // are now moved back to the data directory. It is possible that
@@ -508,6 +513,11 @@ class BlockPoolSlice {
   ReplicaInfo resolveDuplicateReplicas(
       final ReplicaInfo replica1, final ReplicaInfo replica2,
       final ReplicaMap volumeMap) throws IOException {
+
+    if (!deleteDuplicateReplicas) {
+      // Leave both block replicas in place.
+      return replica1;
+    }
 
     ReplicaInfo replicaToKeep;
     ReplicaInfo replicaToDelete;

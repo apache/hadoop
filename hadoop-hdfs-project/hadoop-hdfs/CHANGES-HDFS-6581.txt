@@ -52,4 +52,6 @@
 
     HDFS-6581. Few more unit test fixes for HDFS-6581. (Arpit Agarwal)
 
+    HDFS-7080. Fix finalize and upgrade unit test failures. (Arpit Agarwal)
+
 
