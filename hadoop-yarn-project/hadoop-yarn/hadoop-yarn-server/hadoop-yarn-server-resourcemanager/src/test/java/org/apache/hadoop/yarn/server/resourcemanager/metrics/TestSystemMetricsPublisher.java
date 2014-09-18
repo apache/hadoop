@@ -174,7 +174,9 @@ public class TestSystemMetricsPublisher {
         ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1);
     RMAppAttempt appAttempt = createRMAppAttempt(appAttemptId);
     metricsPublisher.appAttemptRegistered(appAttempt, Integer.MAX_VALUE + 1L);
-    metricsPublisher.appAttemptFinished(appAttempt, RMAppAttemptState.FINISHED,
+    RMApp app = mock(RMApp.class);
+    when(app.getFinalApplicationStatus()).thenReturn(FinalApplicationStatus.UNDEFINED);
+    metricsPublisher.appAttemptFinished(appAttempt, RMAppAttemptState.FINISHED, app,
         Integer.MAX_VALUE + 2L);
     TimelineEntity entity = null;
     do {
@@ -222,7 +224,7 @@ public class TestSystemMetricsPublisher {
             event.getEventInfo().get(
                 AppAttemptMetricsConstants.ORIGINAL_TRACKING_URL_EVENT_INFO));
         Assert.assertEquals(
-            appAttempt.getFinalApplicationStatus().toString(),
+            FinalApplicationStatus.UNDEFINED.toString(),
             event.getEventInfo().get(
                 AppAttemptMetricsConstants.FINAL_STATUS_EVENT_INFO));
         Assert.assertEquals(
@@ -340,8 +342,6 @@ public class TestSystemMetricsPublisher {
     when(appAttempt.getTrackingUrl()).thenReturn("test tracking url");
     when(appAttempt.getOriginalTrackingUrl()).thenReturn(
         "test original tracking url");
-    when(appAttempt.getFinalApplicationStatus()).thenReturn(
-        FinalApplicationStatus.UNDEFINED);
     return appAttempt;
   }
 

@@ -160,7 +160,7 @@ public class SystemMetricsPublisher extends CompositeService {
 
   @SuppressWarnings("unchecked")
   public void appAttemptFinished(RMAppAttempt appAttempt,
-      RMAppAttemptState state, long finishedTime) {
+      RMAppAttemptState appAttemtpState, RMApp app, long finishedTime) {
     if (publishSystemMetrics) {
       dispatcher.getEventHandler().handle(
           new AppAttemptFinishedEvent(
@@ -168,8 +168,10 @@ public class SystemMetricsPublisher extends CompositeService {
               appAttempt.getTrackingUrl(),
               appAttempt.getOriginalTrackingUrl(),
               appAttempt.getDiagnostics(),
-              appAttempt.getFinalApplicationStatus(),
-              RMServerUtils.createApplicationAttemptState(state),
+              // app will get the final status from app attempt, or create one
+              // based on app state if it doesn't exist
+              app.getFinalApplicationStatus(),
+              RMServerUtils.createApplicationAttemptState(appAttemtpState),
               finishedTime));
     }
   }
