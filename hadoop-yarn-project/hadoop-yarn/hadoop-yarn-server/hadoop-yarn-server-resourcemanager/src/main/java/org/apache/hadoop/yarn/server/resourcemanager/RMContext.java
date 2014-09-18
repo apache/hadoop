@@ -108,4 +108,6 @@ public interface RMContext {
   boolean isWorkPreservingRecoveryEnabled();
   
   long getEpoch();
+
+  boolean isSchedulerReadyForAllocatingContainers();
 }

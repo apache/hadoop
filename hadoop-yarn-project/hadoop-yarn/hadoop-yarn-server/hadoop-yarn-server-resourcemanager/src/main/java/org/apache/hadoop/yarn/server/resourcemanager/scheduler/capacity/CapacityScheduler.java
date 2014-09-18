@@ -902,6 +902,10 @@ public class CapacityScheduler extends
   }
 
   private synchronized void allocateContainersToNode(FiCaSchedulerNode node) {
+    if (rmContext.isWorkPreservingRecoveryEnabled()
+        && !rmContext.isSchedulerReadyForAllocatingContainers()) {
+      return;
+    }
 
     // Assign new containers...
     // 1. Check for reserved applications

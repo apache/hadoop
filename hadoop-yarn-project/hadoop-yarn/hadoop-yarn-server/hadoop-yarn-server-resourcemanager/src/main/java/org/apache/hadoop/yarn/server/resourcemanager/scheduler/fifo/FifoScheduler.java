@@ -702,6 +702,12 @@ public class FifoScheduler extends
           completedContainer, RMContainerEventType.FINISHED);
     }
 
+
+    if (rmContext.isWorkPreservingRecoveryEnabled()
+        && !rmContext.isSchedulerReadyForAllocatingContainers()) {
+      return;
+    }
+
     if (Resources.greaterThanOrEqual(resourceCalculator, clusterResource,
             node.getAvailableResource(),minimumAllocation)) {
       LOG.debug("Node heartbeat " + rmNode.getNodeID() + 

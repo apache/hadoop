@@ -298,6 +298,16 @@
   </property>
 
   <property>
+    <description>Set the amount of time RM waits before allocating new
+    containers on work-preserving-recovery. Such wait period gives RM a chance
+    to settle down resyncing with NMs in the cluster on recovery, before assigning
+    new containers to applications.
+    </description>
+    <name>yarn.resourcemanager.work-preserving-recovery.scheduling-wait-ms</name>
+    <value>10000</value>
+  </property>
+
+  <property>
     <description>The class to use as the persistent store.
 
       If org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
