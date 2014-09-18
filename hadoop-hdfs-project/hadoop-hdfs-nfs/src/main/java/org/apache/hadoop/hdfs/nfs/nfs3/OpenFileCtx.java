@@ -680,7 +680,7 @@ class OpenFileCtx {
     }
     
     try {
-      fis = new FSDataInputStream(dfsClient.open(path));
+      fis = dfsClient.createWrappedInputStream(dfsClient.open(path));
       readCount = fis.read(offset, readbuffer, 0, count);
       if (readCount < count) {
         LOG.error("Can't read back " + count + " bytes, partial read size:"

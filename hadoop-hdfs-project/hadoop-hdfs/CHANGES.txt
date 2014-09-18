@@ -219,6 +219,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7047. Expose FileStatus#isEncrypted in libhdfs (cmccabe)
 
+    HDFS-7003. Add NFS Gateway support for reading and writing to
+    encryption zones. (clamb via wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

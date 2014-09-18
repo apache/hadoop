@@ -241,7 +241,7 @@ class DFSClientCache {
       public FSDataInputStream load(DFSInputStreamCaheKey key) throws Exception {
         DFSClient client = getDfsClient(key.userId);
         DFSInputStream dis = client.open(key.inodePath);
-        return new FSDataInputStream(dis);
+        return client.createWrappedInputStream(dis);
       }
     };
   }
