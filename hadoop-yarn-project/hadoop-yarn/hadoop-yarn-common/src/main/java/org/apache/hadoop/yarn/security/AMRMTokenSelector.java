@@ -48,11 +48,18 @@ public class AMRMTokenSelector implements
       LOG.debug("Token kind is " + token.getKind().toString()
           + " and the token's service name is " + token.getService());
       if (AMRMTokenIdentifier.KIND_NAME.equals(token.getKind())
-          && service.equals(token.getService())) {
+          && checkService(service, token)) {
         return (Token<AMRMTokenIdentifier>) token;
       }
     }
     return null;
   }
 
+  private boolean checkService(Text service,
+      Token<? extends TokenIdentifier> token) {
+    if (service == null || token.getService() == null) {
+      return false;
+    }
+    return token.getService().toString().contains(service.toString());
+  }
 }
