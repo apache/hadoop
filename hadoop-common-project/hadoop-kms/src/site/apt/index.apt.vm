@@ -602,7 +602,31 @@ $ keytool -genkey -alias tomcat -keyalg RSA
 
 *** HTTP Kerberos Principals Configuration
 
-  TBD
+  When KMS instances are behind a load-balancer or VIP, clients will use the
+  hostname of the VIP. For Kerberos SPNEGO authentication, the hostname of the
+  URL is used to construct the Kerberos service name of the server,
+  <<<HTTP/#HOSTNAME#>>>. This means that all KMS instances must have a Kerberos
+  service name with the load-balancer or VIP hostname.
+
+  In order to be able to access directly a specific KMS instance, the KMS
+  instance must also have Keberos service name with its own hostname. This is
+  required for monitoring and admin purposes.
+
+  Both Kerberos service principal credentials (for the load-balancer/VIP
+  hostname and for the actual KMS instance hostname) must be in the keytab file
+  configured for authentication. And the principal name specified in the
+  configuration must be '*'. For example:
+
++---+
+  <property>
+    <name>hadoop.kms.authentication.kerberos.principal</name>
+    <value>*</value>
+  </property>
++---+
+
+  <<NOTE:>> If using HTTPS, the SSL certificate used by the KMS instance must
+  be configured to support multiple hostnames (see Java 7
+  <<<keytool>> SAN extension support for details on how to do this).
 
 *** HTTP Authentication Signature
 
