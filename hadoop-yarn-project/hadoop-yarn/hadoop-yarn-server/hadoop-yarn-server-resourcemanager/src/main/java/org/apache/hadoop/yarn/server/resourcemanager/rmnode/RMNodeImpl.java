@@ -544,12 +544,47 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       RMNodeReconnectEvent reconnectEvent = (RMNodeReconnectEvent) event;
       RMNode newNode = reconnectEvent.getReconnectedNode();
       rmNode.nodeManagerVersion = newNode.getNodeManagerVersion();
-      rmNode.httpPort = newNode.getHttpPort();
-      rmNode.httpAddress = newNode.getHttpAddress();
-      rmNode.totalCapability = newNode.getTotalCapability();
+      List<ApplicationId> runningApps = reconnectEvent.getRunningApplications();
+      boolean noRunningApps = 
+          (runningApps == null) || (runningApps.size() == 0);
       
-      // Reset heartbeat ID since node just restarted.
-      rmNode.getLastNodeHeartBeatResponse().setResponseId(0);
+      // No application running on the node, so send node-removal event with 
+      // cleaning up old container info.
+      if (noRunningApps) {
+        rmNode.nodeUpdateQueue.clear();
+        rmNode.context.getDispatcher().getEventHandler().handle(
+            new NodeRemovedSchedulerEvent(rmNode));
+        
+        if (rmNode.getHttpPort() == newNode.getHttpPort()) {
+          // Reset heartbeat ID since node just restarted.
+          rmNode.getLastNodeHeartBeatResponse().setResponseId(0);
+          if (rmNode.getState() != NodeState.UNHEALTHY) {
+            // Only add new node if old state is not UNHEALTHY
+            rmNode.context.getDispatcher().getEventHandler().handle(
+                new NodeAddedSchedulerEvent(newNode));
+          }
+        } else {
+          // Reconnected node differs, so replace old node and start new node
+          switch (rmNode.getState()) {
+            case RUNNING:
+              ClusterMetrics.getMetrics().decrNumActiveNodes();
+              break;
+            case UNHEALTHY:
+              ClusterMetrics.getMetrics().decrNumUnhealthyNMs();
+              break;
+            }
+            rmNode.context.getRMNodes().put(newNode.getNodeID(), newNode);
+            rmNode.context.getDispatcher().getEventHandler().handle(
+                new RMNodeStartedEvent(newNode.getNodeID(), null, null));
+        }
+      } else {
+        rmNode.httpPort = newNode.getHttpPort();
+        rmNode.httpAddress = newNode.getHttpAddress();
+        rmNode.totalCapability = newNode.getTotalCapability();
+      
+        // Reset heartbeat ID since node just restarted.
+        rmNode.getLastNodeHeartBeatResponse().setResponseId(0);
+      }
 
       if (null != reconnectEvent.getRunningApplications()) {
         for (ApplicationId appId : reconnectEvent.getRunningApplications()) {
@@ -564,7 +599,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         // Update scheduler node's capacity for reconnect node.
         rmNode.context.getDispatcher().getEventHandler().handle(
             new NodeResourceUpdateSchedulerEvent(rmNode, 
-                ResourceOption.newInstance(rmNode.totalCapability, -1)));
+                ResourceOption.newInstance(newNode.getTotalCapability(), -1)));
       }
       
     }
