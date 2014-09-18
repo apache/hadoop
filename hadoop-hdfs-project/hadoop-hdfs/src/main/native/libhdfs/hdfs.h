@@ -592,6 +592,14 @@ extern  "C" {
      */
     void hdfsFreeFileInfo(hdfsFileInfo *hdfsFileInfo, int numEntries);
 
+    /**
+     * hdfsFileIsEncrypted: determine if a file is encrypted based on its
+     * hdfsFileInfo.
+     * @return -1 if there was an error (errno will be set), 0 if the file is
+     *         not encrypted, 1 if the file is encrypted.
+     */
+    int hdfsFileIsEncrypted(hdfsFileInfo *hdfsFileInfo);
+
 
     /** 
      * hdfsGetHosts - Get hostnames where a particular block (determined by
