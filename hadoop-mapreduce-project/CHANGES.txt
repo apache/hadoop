@@ -251,6 +251,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5130. Add missing job config options to mapred-default.xml
     (Ray Chiang via Sandy Ryza)
 
+    MAPREDUCE-5891. Improved shuffle error handling across NM restarts
+    (Junping Du via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -346,6 +349,12 @@ Release 2.6.0 - UNRELEASED
 
     MAPREDUCE-6070. yarn.app.am.resource.mb/cpu-vcores affects uber mode but
     is not documented (Tsuyoshi OZAWA via jlowe)
+
+    MAPREDUCE-6090. mapred hsadmin getGroups fails to connect in some cases
+    (Robert Kanter via jlowe)
+
+    MAPREDUCE-6086. mapreduce.job.credentials.binary should allow all URIs. 
+    (Zhihai Xu via kasha)
 
 Release 2.5.1 - 2014-09-05
 

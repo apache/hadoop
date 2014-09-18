@@ -150,30 +150,15 @@ public class TestBinaryTokenFile {
     // Credentials in the job will not have delegation tokens
     // because security is disabled. Fetch delegation tokens
     // and store in binary token file.
-      try {
-        Credentials cred1 = new Credentials();
-        Credentials cred2 = new Credentials();
-        TokenCache.obtainTokensForNamenodesInternal(cred1, new Path[] { p1 },
-            job.getConfiguration());
-        for (Token<? extends TokenIdentifier> t : cred1.getAllTokens()) {
-          cred2.addToken(new Text(DELEGATION_TOKEN_KEY), t);
-        }
-        DataOutputStream os = new DataOutputStream(new FileOutputStream(
-            binaryTokenFileName.toString()));
-        try {
-          cred2.writeTokenStorageToStream(os);
-        } finally {
-          os.close();
-        }
-        job.getConfiguration().set(MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY,
-            binaryTokenFileName.toString());
-        // NB: the MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY key now gets deleted from config, 
-        // so it's not accessible in the job's config. So, we use another key to pass the file name into the job configuration:  
-        job.getConfiguration().set(KEY_SECURITY_TOKEN_FILE_NAME, 
-            binaryTokenFileName.toString());
-      } catch (IOException e) {
-        Assert.fail("Exception " + e);
-      }
+      createBinaryTokenFile(job.getConfiguration());
+      job.getConfiguration().set(MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY,
+          binaryTokenFileName.toString());
+      // NB: the MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY
+      // key now gets deleted from config,
+      // so it's not accessible in the job's config. So,
+      // we use another key to pass the file name into the job configuration:
+      job.getConfiguration().set(KEY_SECURITY_TOKEN_FILE_NAME,
+          binaryTokenFileName.toString());
     }
   }
   
@@ -225,7 +210,29 @@ public class TestBinaryTokenFile {
       dfsCluster = null;
     }
   }
-  
+
+  private static void createBinaryTokenFile(Configuration conf) {
+    // Fetch delegation tokens and store in binary token file.
+    try {
+      Credentials cred1 = new Credentials();
+      Credentials cred2 = new Credentials();
+      TokenCache.obtainTokensForNamenodesInternal(cred1, new Path[] { p1 },
+          conf);
+      for (Token<? extends TokenIdentifier> t : cred1.getAllTokens()) {
+        cred2.addToken(new Text(DELEGATION_TOKEN_KEY), t);
+      }
+      DataOutputStream os = new DataOutputStream(new FileOutputStream(
+          binaryTokenFileName.toString()));
+      try {
+        cred2.writeTokenStorageToStream(os);
+      } finally {
+        os.close();
+      }
+    } catch (IOException e) {
+      Assert.fail("Exception " + e);
+    }
+  }
+
   /**
    * run a distributed job and verify that TokenCache is available
    * @throws IOException
@@ -245,6 +252,35 @@ public class TestBinaryTokenFile {
     int res = -1;
     try {
       res = ToolRunner.run(conf, new MySleepJob(), args);
+    } catch (Exception e) {
+      System.out.println("Job failed with " + e.getLocalizedMessage());
+      e.printStackTrace(System.out);
+      fail("Job failed");
+    }
+    assertEquals("dist job res is not 0:", 0, res);
+  }
+
+  /**
+   * run a distributed job with -tokenCacheFile option parameter and
+   * verify that no exception happens.
+   * @throws IOException
+  */
+  @Test
+  public void testTokenCacheFile() throws IOException {
+    Configuration conf = mrCluster.getConfig();
+    createBinaryTokenFile(conf);
+    // provide namenodes names for the job to get the delegation tokens for
+    final String nnUri = dfsCluster.getURI(0).toString();
+    conf.set(MRJobConfig.JOB_NAMENODES, nnUri + "," + nnUri);
+
+    // using argument to pass the file name
+    final String[] args = {
+        "-tokenCacheFile", binaryTokenFileName.toString(),
+        "-m", "1", "-r", "1", "-mt", "1", "-rt", "1"
+        };
+    int res = -1;
+    try {
+      res = ToolRunner.run(conf, new SleepJob(), args);
     } catch (Exception e) {
       System.out.println("Job failed with " + e.getLocalizedMessage());
       e.printStackTrace(System.out);

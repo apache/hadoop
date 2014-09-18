@@ -3089,4 +3089,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public KeyProviderCryptoExtension getKeyProvider() {
     return provider;
   }
+
+  @VisibleForTesting
+  public void setKeyProvider(KeyProviderCryptoExtension provider) {
+    this.provider = provider;
+  }
 }

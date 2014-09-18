@@ -134,7 +134,9 @@ public class TokenCache {
       Credentials binary;
       try {
         binary = Credentials.readTokenStorageFile(
-            new Path("file:///" +  binaryTokenFilename), conf);
+            FileSystem.getLocal(conf).makeQualified(
+                new Path(binaryTokenFilename)),
+            conf);
       } catch (IOException e) {
         throw new RuntimeException(e);
       }

@@ -25,6 +25,7 @@ import java.util.Arrays;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.v2.hs.HSProxies;
 import org.apache.hadoop.mapreduce.v2.hs.protocol.HSAdminRefreshProtocol;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
@@ -41,7 +42,7 @@ public class HSAdmin extends Configured implements Tool {
     super();
   }
 
-  public HSAdmin(Configuration conf) {
+  public HSAdmin(JobConf conf) {
     super(conf);
   }
 
@@ -331,7 +332,8 @@ public class HSAdmin extends Configured implements Tool {
   }
 
   public static void main(String[] args) throws Exception {
-    int result = ToolRunner.run(new HSAdmin(), args);
+    JobConf conf = new JobConf();
+    int result = ToolRunner.run(new HSAdmin(conf), args);
     System.exit(result);
   }
 }

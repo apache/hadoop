@@ -110,7 +110,8 @@ public class YarnClientImpl extends YarnClient {
   private AHSClient historyClient;
   private boolean historyServiceEnabled;
   protected TimelineClient timelineClient;
-  protected Text timelineService;
+  @VisibleForTesting
+  Text timelineService;
   protected boolean timelineServiceEnabled;
 
   private static final String ROOT = "root";
@@ -272,12 +273,6 @@ public class YarnClientImpl extends YarnClient {
 
   private void addTimelineDelegationToken(
       ContainerLaunchContext clc) throws YarnException, IOException {
-    org.apache.hadoop.security.token.Token<TimelineDelegationTokenIdentifier> timelineDelegationToken =
-        timelineClient.getDelegationToken(
-            UserGroupInformation.getCurrentUser().getUserName());
-    if (timelineDelegationToken == null) {
-      return;
-    }
     Credentials credentials = new Credentials();
     DataInputByteBuffer dibb = new DataInputByteBuffer();
     ByteBuffer tokens = clc.getTokens();
@@ -290,10 +285,14 @@ public class YarnClientImpl extends YarnClient {
     // one more
     for (org.apache.hadoop.security.token.Token<? extends TokenIdentifier> token : credentials
         .getAllTokens()) {
-      TokenIdentifier tokenIdentifier = token.decodeIdentifier();
-      if (tokenIdentifier instanceof TimelineDelegationTokenIdentifier) {
+      if (token.getKind().equals(TimelineDelegationTokenIdentifier.KIND_NAME)) {
         return;
       }
+    }
+    org.apache.hadoop.security.token.Token<TimelineDelegationTokenIdentifier>
+        timelineDelegationToken = getTimelineDelegationToken();
+    if (timelineDelegationToken == null) {
+      return;
     }
     credentials.addToken(timelineService, timelineDelegationToken);
     if (LOG.isDebugEnabled()) {
@@ -304,6 +303,13 @@ public class YarnClientImpl extends YarnClient {
     credentials.writeTokenStorageToStream(dob);
     tokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
     clc.setTokens(tokens);
+  }
+
+  @VisibleForTesting
+  org.apache.hadoop.security.token.Token<TimelineDelegationTokenIdentifier>
+      getTimelineDelegationToken() throws IOException, YarnException {
+    return timelineClient.getDelegationToken(
+            UserGroupInformation.getCurrentUser().getUserName());
   }
 
   @Private
