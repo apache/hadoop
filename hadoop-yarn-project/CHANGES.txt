@@ -353,6 +353,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2559. Fixed NPE in SystemMetricsPublisher when retrieving
     FinalApplicationStatus. (Zhijie Shen via jianhe)
 
+    YARN-1779. Fixed AMRMClient to handle AMRMTokens correctly across
+    ResourceManager work-preserving-restart or failover. (Jian He via vinodkv)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

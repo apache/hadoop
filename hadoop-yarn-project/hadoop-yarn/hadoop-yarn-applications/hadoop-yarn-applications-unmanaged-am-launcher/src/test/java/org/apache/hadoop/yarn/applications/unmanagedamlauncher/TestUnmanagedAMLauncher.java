@@ -53,7 +53,7 @@ public class TestUnmanagedAMLauncher {
       .getLog(TestUnmanagedAMLauncher.class);
 
   protected static MiniYARNCluster yarnCluster = null;
-  protected static Configuration conf = new Configuration();
+  protected static Configuration conf = new YarnConfiguration();
 
   @BeforeClass
   public static void setup() throws InterruptedException, IOException {

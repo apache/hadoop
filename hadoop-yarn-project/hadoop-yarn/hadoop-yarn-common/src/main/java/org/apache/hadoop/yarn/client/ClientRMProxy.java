@@ -22,11 +22,12 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 
-import com.google.common.base.Joiner;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.SecurityUtil;
@@ -40,6 +41,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 
 @InterfaceAudience.Public
@@ -70,23 +72,17 @@ public class ClientRMProxy<T> extends RMProxy<T>  {
     return createRMProxy(configuration, protocol, INSTANCE);
   }
 
-  private static void setupTokens(InetSocketAddress resourceManagerAddress)
+  private static void setAMRMTokenService(final Configuration conf)
       throws IOException {
-    // It is assumed for now that the only AMRMToken in AM's UGI is for this
-    // cluster/RM. TODO: Fix later when we have some kind of cluster-ID as
-    // default service-address, see YARN-1779.
     for (Token<? extends TokenIdentifier> token : UserGroupInformation
       .getCurrentUser().getTokens()) {
       if (token.getKind().equals(AMRMTokenIdentifier.KIND_NAME)) {
-        // This token needs to be directly provided to the AMs, so set the
-        // appropriate service-name. We'll need more infrastructure when we
-        // need to set it in HA case.
-        SecurityUtil.setTokenService(token, resourceManagerAddress);
+        token.setService(getAMRMTokenService(conf));
       }
     }
   }
 
-  @InterfaceAudience.Private
+  @Private
   @Override
   protected InetSocketAddress getRMAddress(YarnConfiguration conf,
       Class<?> protocol) throws IOException {
@@ -100,12 +96,10 @@ public class ClientRMProxy<T> extends RMProxy<T>  {
           YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS,
           YarnConfiguration.DEFAULT_RM_ADMIN_PORT);
     } else if (protocol == ApplicationMasterProtocol.class) {
-      InetSocketAddress serviceAddr =
-          conf.getSocketAddr(YarnConfiguration.RM_SCHEDULER_ADDRESS,
-            YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
-            YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
-      setupTokens(serviceAddr);
-      return serviceAddr;
+      setAMRMTokenService(conf);
+      return conf.getSocketAddr(YarnConfiguration.RM_SCHEDULER_ADDRESS,
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
     } else {
       String message = "Unsupported protocol found when creating the proxy " +
           "connection to ResourceManager: " +
@@ -115,7 +109,7 @@ public class ClientRMProxy<T> extends RMProxy<T>  {
     }
   }
 
-  @InterfaceAudience.Private
+  @Private
   @Override
   protected void checkAllowedProtocols(Class<?> protocol) {
     Preconditions.checkArgument(
@@ -132,8 +126,23 @@ public class ClientRMProxy<T> extends RMProxy<T>  {
    *             RMDelegationToken for
    * @return - Service name for RMDelegationToken
    */
-  @InterfaceStability.Unstable
+  @Unstable
   public static Text getRMDelegationTokenService(Configuration conf) {
+    return getTokenService(conf, YarnConfiguration.RM_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_PORT);
+  }
+
+  @Unstable
+  public static Text getAMRMTokenService(Configuration conf) {
+    return getTokenService(conf, YarnConfiguration.RM_SCHEDULER_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
+  }
+
+  @Unstable
+  public static Text getTokenService(Configuration conf, String address,
+      String defaultAddr, int defaultPort) {
     if (HAUtil.isHAEnabled(conf)) {
       // Build a list of service addresses to form the service name
       ArrayList<String> services = new ArrayList<String>();
@@ -142,17 +151,14 @@ public class ClientRMProxy<T> extends RMProxy<T>  {
         // Set RM_ID to get the corresponding RM_ADDRESS
         yarnConf.set(YarnConfiguration.RM_HA_ID, rmId);
         services.add(SecurityUtil.buildTokenService(
-            yarnConf.getSocketAddr(YarnConfiguration.RM_ADDRESS,
-                YarnConfiguration.DEFAULT_RM_ADDRESS,
-                YarnConfiguration.DEFAULT_RM_PORT)).toString());
+            yarnConf.getSocketAddr(address, defaultAddr, defaultPort))
+            .toString());
       }
       return new Text(Joiner.on(',').join(services));
     }
 
     // Non-HA case - no need to set RM_ID
-    return SecurityUtil.buildTokenService(
-        conf.getSocketAddr(YarnConfiguration.RM_ADDRESS,
-            YarnConfiguration.DEFAULT_RM_ADDRESS,
-            YarnConfiguration.DEFAULT_RM_PORT));
+    return SecurityUtil.buildTokenService(conf.getSocketAddr(address,
+      defaultAddr, defaultPort));
   }
 }
