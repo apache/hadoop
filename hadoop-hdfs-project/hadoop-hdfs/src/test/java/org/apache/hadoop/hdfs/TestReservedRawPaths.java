@@ -24,7 +24,6 @@ import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
-import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileContextTestWrapper;
 import org.apache.hadoop.fs.FileStatus;
@@ -70,7 +69,7 @@ public class TestReservedRawPaths {
     String testRoot = fsHelper.getTestRootDir();
     File testRootDir = new File(testRoot).getAbsoluteFile();
     final Path jksPath = new Path(testRootDir.toString(), "test.jks");
-    conf.set(KeyProviderFactory.KEY_PROVIDER_PATH,
+    conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI,
         JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri()
     );
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();

@@ -39,6 +39,7 @@ import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 
 import java.io.File;
+import java.net.URI;
 import java.net.URL;
 import java.util.List;
 
@@ -159,17 +160,12 @@ public class KMSWebApp implements ServletContextListener {
           new AccessControlList(AccessControlList.WILDCARD_ACL_VALUE));
 
       // intializing the KeyProvider
-
-      List<KeyProvider> providers = KeyProviderFactory.getProviders(kmsConf);
-      if (providers.isEmpty()) {
+      String providerString = kmsConf.get(KMSConfiguration.KEY_PROVIDER_URI);
+      if (providerString == null) {
         throw new IllegalStateException("No KeyProvider has been defined");
       }
-      if (providers.size() > 1) {
-        LOG.warn("There is more than one KeyProvider configured '{}', using " +
-            "the first provider",
-            kmsConf.get(KeyProviderFactory.KEY_PROVIDER_PATH));
-      }
-      KeyProvider keyProvider = providers.get(0);
+      KeyProvider keyProvider =
+          KeyProviderFactory.get(new URI(providerString), kmsConf);
       if (kmsConf.getBoolean(KMSConfiguration.KEY_CACHE_ENABLE,
           KMSConfiguration.KEY_CACHE_ENABLE_DEFAULT)) {
         long keyTimeOutMillis =

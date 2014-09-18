@@ -166,7 +166,7 @@ public class MiniKMS {
     File kmsFile = new File(kmsConfDir, "kms-site.xml");
     if (!kmsFile.exists()) {
       Configuration kms = new Configuration(false);
-      kms.set("hadoop.security.key.provider.path",
+      kms.set(KMSConfiguration.KEY_PROVIDER_URI,
           "jceks://file@" + new Path(kmsConfDir, "kms.keystore").toUri());
       kms.set("hadoop.kms.authentication.type", "simple");
       kms.setBoolean(KMSConfiguration.KEY_AUTHORIZATION_ENABLE, false);
