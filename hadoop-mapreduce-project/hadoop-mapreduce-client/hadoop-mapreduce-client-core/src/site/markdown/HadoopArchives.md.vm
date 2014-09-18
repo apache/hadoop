@@ -59,6 +59,11 @@ How to Create an Archive
 
   `hadoop archive -archiveName zoo.har -p /foo/bar -r 3 /outputdir`
 
+  If you specify source files that are in an encryption zone, they will be
+  decrypted and written into the archive. If the har file is not located in an
+  encryption zone, then they will be stored in clear (decrypted) form. If the
+  har file is located in an encryption zone they will stored in encrypted form.
+
 How to Look Up Files in Archives
 --------------------------------
 
