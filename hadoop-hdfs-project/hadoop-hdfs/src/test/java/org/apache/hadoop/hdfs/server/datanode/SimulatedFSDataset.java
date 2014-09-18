@@ -1093,7 +1093,8 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
-  public void addVolumes(Collection<StorageLocation> volumes) {
+  public List<StorageLocation> addVolumes(List<StorageLocation> volumes,
+      final Collection<String> bpids) {
     throw new UnsupportedOperationException();
   }
 
