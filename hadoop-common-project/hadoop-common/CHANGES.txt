@@ -251,8 +251,6 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10833. Remove unused cache in UserProvider. (Benoy Antony)
 
-    HDFS-6843. Create FileStatus isEncrypted() method (clamb via cmccabe)
-
   BUG FIXES
 
     HADOOP-10781. Unportable getgrouplist() usage breaks FreeBSD (Dmitry
@@ -390,12 +388,6 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11056. OsSecureRandom.setConf() might leak file descriptors. (yzhang
     via cmccabe)
-
-    HDFS-6912. SharedFileDescriptorFactory should not allocate sparse files
-    (cmccabe)
-
-    HDFS-7075. hadoop-fuse-dfs fails because it cannot find
-    JavaKeyStoreProvider$Factory (cmccabe)
 
     HADOOP-11040. Return value of read(ByteBuffer buf) in CryptoInputStream is
     incorrect in some cases. (Yi Liu via wang)
