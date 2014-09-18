@@ -63,12 +63,25 @@ public class TestTokenCache {
 
   @Test
   @SuppressWarnings("deprecation")
-  public void testBinaryCredentials() throws Exception {
+  public void testBinaryCredentialsWithoutScheme() throws Exception {
+    testBinaryCredentials(false);
+  }
+
+  @Test
+  @SuppressWarnings("deprecation")
+  public void testBinaryCredentialsWithScheme() throws Exception {
+    testBinaryCredentials(true);
+  }
+
+  private void testBinaryCredentials(boolean hasScheme) throws Exception {
     Path TEST_ROOT_DIR =
         new Path(System.getProperty("test.build.data","test/build/data"));
     // ick, but need fq path minus file:/
-    String binaryTokenFile = FileSystem.getLocal(conf).makeQualified(
-        new Path(TEST_ROOT_DIR, "tokenFile")).toUri().getPath();
+    String binaryTokenFile = hasScheme
+        ? FileSystem.getLocal(conf).makeQualified(
+            new Path(TEST_ROOT_DIR, "tokenFile")).toString()
+        : FileSystem.getLocal(conf).makeQualified(
+            new Path(TEST_ROOT_DIR, "tokenFile")).toUri().getPath();
 
     MockFileSystem fs1 = createFileSystemForServiceName("service1");
     MockFileSystem fs2 = createFileSystemForServiceName("service2");
