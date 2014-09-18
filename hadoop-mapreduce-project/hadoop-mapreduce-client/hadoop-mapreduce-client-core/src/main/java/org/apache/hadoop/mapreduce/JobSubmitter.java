@@ -578,7 +578,9 @@ class JobSubmitter {
       conf.get("mapreduce.job.credentials.binary");
     if (binaryTokenFilename != null) {
       Credentials binary = Credentials.readTokenStorageFile(
-          new Path("file:///" + binaryTokenFilename), conf);
+          FileSystem.getLocal(conf).makeQualified(
+              new Path(binaryTokenFilename)),
+          conf);
       credentials.addAll(binary);
     }
     // add secret keys coming from a json file
