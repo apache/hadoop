@@ -235,6 +235,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2557. Add a parameter "attempt_Failures_Validity_Interval" into
     DistributedShell (xgong)
 
+    YARN-2001. Added a time threshold for RM to wait before starting container
+    allocations after restart/failover. (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -379,6 +382,12 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2558. Updated ContainerTokenIdentifier#read/write to use
     ContainerId#getContainerId. (Tsuyoshi OZAWA via jianhe)
+
+    YARN-2559. Fixed NPE in SystemMetricsPublisher when retrieving
+    FinalApplicationStatus. (Zhijie Shen via jianhe)
+
+    YARN-1779. Fixed AMRMClient to handle AMRMTokens correctly across
+    ResourceManager work-preserving-restart or failover. (Jian He via vinodkv)
 
 Release 2.5.1 - 2014-09-05
 

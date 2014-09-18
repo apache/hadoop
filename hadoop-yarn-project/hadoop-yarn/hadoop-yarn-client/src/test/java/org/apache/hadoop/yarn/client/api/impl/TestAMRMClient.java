@@ -70,6 +70,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.NMTokenCache;
@@ -196,6 +197,7 @@ public class TestAMRMClient {
     // of testing.
     UserGroupInformation.setLoginUser(UserGroupInformation
       .createRemoteUser(UserGroupInformation.getCurrentUser().getUserName()));
+    appAttempt.getAMRMToken().setService(ClientRMProxy.getAMRMTokenService(conf));
     UserGroupInformation.getCurrentUser().addToken(appAttempt.getAMRMToken());
   }
   

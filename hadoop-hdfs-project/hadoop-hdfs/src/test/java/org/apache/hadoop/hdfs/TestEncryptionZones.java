@@ -25,7 +25,9 @@ import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.net.URI;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -125,7 +127,7 @@ public class TestEncryptionZones {
     // Set up java key store
     String testRoot = fsHelper.getTestRootDir();
     testRootDir = new File(testRoot).getAbsoluteFile();
-    conf.set(KeyProviderFactory.KEY_PROVIDER_PATH, getKeyProviderURI());
+    conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, getKeyProviderURI());
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
     // Lower the batch size for testing
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_ENCRYPTION_ZONES_NUM_RESPONSES,
@@ -670,7 +672,8 @@ public class TestEncryptionZones {
     // Check KeyProvider state
     // Flushing the KP on the NN, since it caches, and init a test one
     cluster.getNamesystem().getProvider().flush();
-    KeyProvider provider = KeyProviderFactory.getProviders(conf).get(0);
+    KeyProvider provider = KeyProviderFactory
+        .get(new URI(conf.get(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI)), conf);
     List<String> keys = provider.getKeys();
     assertEquals("Expected NN to have created one key per zone", 1,
         keys.size());
@@ -694,7 +697,7 @@ public class TestEncryptionZones {
   public void testCreateEZWithNoProvider() throws Exception {
     // Unset the key provider and make sure EZ ops don't work
     final Configuration clusterConf = cluster.getConfiguration(0);
-    clusterConf.set(KeyProviderFactory.KEY_PROVIDER_PATH, "");
+    clusterConf.unset(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI);
     cluster.restartNameNode(true);
     cluster.waitActive();
     final Path zone1 = new Path("/zone1");
@@ -706,7 +709,7 @@ public class TestEncryptionZones {
       assertExceptionContains("since no key provider is available", e);
     }
     final Path jksPath = new Path(testRootDir.toString(), "test.jks");
-    clusterConf.set(KeyProviderFactory.KEY_PROVIDER_PATH,
+    clusterConf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI,
         JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri()
     );
     // Try listing EZs as well
@@ -1028,6 +1031,9 @@ public class TestEncryptionZones {
    */
   @Test(timeout = 60000)
   public void testSnapshotsOnEncryptionZones() throws Exception {
+    final String TEST_KEY2 = "testkey2";
+    DFSTestUtil.createKey(TEST_KEY2, cluster, conf);
+
     final int len = 8196;
     final Path zoneParent = new Path("/zones");
     final Path zone = new Path(zoneParent, "zone");
@@ -1042,7 +1048,8 @@ public class TestEncryptionZones {
     assertEquals("Got unexpected ez path", zone.toString(),
         dfsAdmin.getEncryptionZoneForPath(snap1Zone).getPath().toString());
 
-    // Now delete the encryption zone, recreate the dir, and take another snapshot
+    // Now delete the encryption zone, recreate the dir, and take another
+    // snapshot
     fsWrapper.delete(zone, true);
     fsWrapper.mkdir(zone, FsPermission.getDirDefault(), true);
     final Path snap2 = fs.createSnapshot(zoneParent);
@@ -1051,11 +1058,35 @@ public class TestEncryptionZones {
         dfsAdmin.getEncryptionZoneForPath(snap2Zone));
 
     // Create the encryption zone again
-    dfsAdmin.createEncryptionZone(zone, TEST_KEY);
+    dfsAdmin.createEncryptionZone(zone, TEST_KEY2);
     final Path snap3 = fs.createSnapshot(zoneParent);
     final Path snap3Zone = new Path(snap3, zone.getName());
+    // Check that snap3's EZ has the correct settings
+    EncryptionZone ezSnap3 = dfsAdmin.getEncryptionZoneForPath(snap3Zone);
     assertEquals("Got unexpected ez path", zone.toString(),
-        dfsAdmin.getEncryptionZoneForPath(snap3Zone).getPath().toString());
+        ezSnap3.getPath().toString());
+    assertEquals("Unexpected ez key", TEST_KEY2, ezSnap3.getKeyName());
+    // Check that older snapshots still have the old EZ settings
+    EncryptionZone ezSnap1 = dfsAdmin.getEncryptionZoneForPath(snap1Zone);
+    assertEquals("Got unexpected ez path", zone.toString(),
+        ezSnap1.getPath().toString());
+    assertEquals("Unexpected ez key", TEST_KEY, ezSnap1.getKeyName());
+
+    // Check that listEZs only shows the current filesystem state
+    ArrayList<EncryptionZone> listZones = Lists.newArrayList();
+    RemoteIterator<EncryptionZone> it = dfsAdmin.listEncryptionZones();
+    while (it.hasNext()) {
+      listZones.add(it.next());
+    }
+    for (EncryptionZone z: listZones) {
+      System.out.println(z);
+    }
+    assertEquals("Did not expect additional encryption zones!", 1,
+        listZones.size());
+    EncryptionZone listZone = listZones.get(0);
+    assertEquals("Got unexpected ez path", zone.toString(),
+        listZone.getPath().toString());
+    assertEquals("Unexpected ez key", TEST_KEY2, listZone.getKeyName());
 
     // Verify contents of the snapshotted file
     final Path snapshottedZoneFile = new Path(
@@ -1063,7 +1094,8 @@ public class TestEncryptionZones {
     assertEquals("Contents of snapshotted file have changed unexpectedly",
         contents, DFSTestUtil.readFile(fs, snapshottedZoneFile));
 
-    // Now delete the snapshots out of order and verify the zones are still correct
+    // Now delete the snapshots out of order and verify the zones are still
+    // correct
     fs.deleteSnapshot(zoneParent, snap2.getName());
     assertEquals("Got unexpected ez path", zone.toString(),
         dfsAdmin.getEncryptionZoneForPath(snap1Zone).getPath().toString());

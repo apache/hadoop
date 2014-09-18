@@ -1131,6 +1131,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     // recover applications
     rmAppManager.recover(state);
+
+    setSchedulerRecoveryStartAndWaitTime(state, conf);
   }
 
   public static void main(String argv[]) {
@@ -1176,6 +1178,16 @@ public class ResourceManager extends CompositeService implements Recoverable {
     rmDispatcher = dispatcher;
     addIfService(rmDispatcher);
     rmContext.setDispatcher(rmDispatcher);
+  }
+
+  private void setSchedulerRecoveryStartAndWaitTime(RMState state,
+      Configuration conf) {
+    if (!state.getApplicationState().isEmpty()) {
+      long waitTime =
+          conf.getLong(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_SCHEDULING_WAIT_MS,
+            YarnConfiguration.DEFAULT_RM_WORK_PRESERVING_RECOVERY_SCHEDULING_WAIT_MS);
+      rmContext.setSchedulerRecoveryStartAndWaitTime(waitTime);
+    }
   }
 
   /**

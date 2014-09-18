@@ -312,7 +312,22 @@ public class EncryptionZoneManager {
 
     int count = 0;
     for (EncryptionZoneInt ezi : tailMap.values()) {
-      zones.add(new EncryptionZone(getFullPathName(ezi),
+      /*
+       Skip EZs that are only present in snapshots. Re-resolve the path to 
+       see if the path's current inode ID matches EZ map's INode ID.
+       
+       INode#getFullPathName simply calls getParent recursively, so will return
+       the INode's parents at the time it was snapshotted. It will not 
+       contain a reference INode.
+      */
+      final String pathName = getFullPathName(ezi);
+      INodesInPath iip = dir.getINodesInPath(pathName, false);
+      INode lastINode = iip.getLastINode();
+      if (lastINode == null || lastINode.getId() != ezi.getINodeId()) {
+        continue;
+      }
+      // Add the EZ to the result list
+      zones.add(new EncryptionZone(pathName,
           ezi.getKeyName(), ezi.getINodeId()));
       count++;
       if (count >= numResponses) {
