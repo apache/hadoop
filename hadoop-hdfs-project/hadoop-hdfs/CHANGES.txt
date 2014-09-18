@@ -73,6 +73,9 @@ HDFS-6584: Archival Storage
 
     HDFS-6864. Archival Storage: add user documentation. (szetszwo via jing9)
 
+    HDFS-7088. Archival Storage: fix TestBalancer and
+    TestBalancerWithMultipleNameNodes. (szetszwo via jing9)
+
 Trunk (Unreleased)
 
   INCOMPATIBLE CHANGES

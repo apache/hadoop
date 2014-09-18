@@ -18,14 +18,16 @@
 package org.apache.hadoop.hdfs.server.balancer;
 
 import java.io.Closeable;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.URI;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -34,7 +36,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
@@ -48,6 +49,8 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * The class provides utilities for accessing a NameNode.
  */
@@ -56,7 +59,7 @@ public class NameNodeConnector implements Closeable {
   private static final Log LOG = LogFactory.getLog(NameNodeConnector.class);
 
   private static final int MAX_NOT_CHANGED_ITERATIONS = 5;
-  private static boolean createIdFile = true;
+  private static boolean write2IdFile = true;
   
   /** Create {@link NameNodeConnector} for the given namenodes. */
   public static List<NameNodeConnector> newNameNodeConnectors(
@@ -88,8 +91,8 @@ public class NameNodeConnector implements Closeable {
   }
 
   @VisibleForTesting
-  public static void setCreateIdFile(boolean create) {
-    createIdFile = create;
+  public static void setWrite2IdFile(boolean write2IdFile) {
+    NameNodeConnector.write2IdFile = write2IdFile;
   }
 
   private final URI nameNodeUri;
@@ -127,8 +130,8 @@ public class NameNodeConnector implements Closeable {
     this.keyManager = new KeyManager(blockpoolID, namenode,
         defaults.getEncryptDataTransfer(), conf);
     // if it is for test, we do not create the id file
-    out = createIdFile ? checkAndMarkRunning() : null;
-    if (createIdFile && out == null) {
+    out = checkAndMarkRunning();
+    if (out == null) {
       // Exit if there is another one running.
       throw new IOException("Another " + name + " is running.");
     }
@@ -199,8 +202,10 @@ public class NameNodeConnector implements Closeable {
   private OutputStream checkAndMarkRunning() throws IOException {
     try {
       final FSDataOutputStream out = fs.create(idPath);
-      out.writeBytes(InetAddress.getLocalHost().getHostName());
-      out.hflush();
+      if (write2IdFile) {
+        out.writeBytes(InetAddress.getLocalHost().getHostName());
+        out.hflush();
+      }
       return out;
     } catch(RemoteException e) {
       if(AlreadyBeingCreatedException.class.getName().equals(e.getClassName())){
