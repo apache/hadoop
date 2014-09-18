@@ -350,6 +350,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2558. Updated ContainerTokenIdentifier#read/write to use
     ContainerId#getContainerId. (Tsuyoshi OZAWA via jianhe)
 
+    YARN-2559. Fixed NPE in SystemMetricsPublisher when retrieving
+    FinalApplicationStatus. (Zhijie Shen via jianhe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

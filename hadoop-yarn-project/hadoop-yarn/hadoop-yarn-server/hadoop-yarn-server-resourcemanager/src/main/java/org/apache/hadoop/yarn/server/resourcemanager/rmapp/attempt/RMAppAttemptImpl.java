@@ -1159,8 +1159,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       appAttempt.rmContext.getRMApplicationHistoryWriter()
           .applicationAttemptFinished(appAttempt, finalAttemptState);
       appAttempt.rmContext.getSystemMetricsPublisher()
-          .appAttemptFinished(
-              appAttempt, finalAttemptState, System.currentTimeMillis());
+          .appAttemptFinished(appAttempt, finalAttemptState,
+              appAttempt.rmContext.getRMApps().get(
+                  appAttempt.applicationAttemptId.getApplicationId()),
+              System.currentTimeMillis());
     }
   }
 
