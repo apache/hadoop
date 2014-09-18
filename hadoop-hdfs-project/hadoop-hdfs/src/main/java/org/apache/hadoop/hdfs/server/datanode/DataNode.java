@@ -70,8 +70,10 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -80,11 +82,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.management.ObjectName;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.conf.ReconfigurableBase;
+import org.apache.hadoop.conf.ReconfigurationException;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -138,6 +142,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter.SecureResources;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
@@ -223,7 +228,7 @@ import com.google.protobuf.BlockingService;
  *
  **********************************************************/
 @InterfaceAudience.Private
-public class DataNode extends Configured 
+public class DataNode extends ReconfigurableBase
     implements InterDatanodeProtocol, ClientDatanodeProtocol,
     DataNodeMXBean {
   public static final Log LOG = LogFactory.getLog(DataNode.class);
@@ -308,6 +313,7 @@ public class DataNode extends Configured
   private JvmPauseMonitor pauseMonitor;
 
   private SecureResources secureResources = null;
+  // dataDirs must be accessed while holding the DataNode lock.
   private List<StorageLocation> dataDirs;
   private Configuration conf;
   private final String confVersion;
@@ -386,6 +392,149 @@ public class DataNode extends Configured
     } catch (IOException ie) {
       shutdown();
       throw ie;
+    }
+  }
+
+  @Override
+  public void reconfigurePropertyImpl(String property, String newVal)
+      throws ReconfigurationException {
+    if (property.equals(DFS_DATANODE_DATA_DIR_KEY)) {
+      try {
+        LOG.info("Reconfiguring " + property + " to " + newVal);
+        this.refreshVolumes(newVal);
+      } catch (Exception e) {
+        throw new ReconfigurationException(property, newVal,
+            getConf().get(property), e);
+      }
+    } else {
+      throw new ReconfigurationException(
+          property, newVal, getConf().get(property));
+    }
+  }
+
+  /**
+   * Get a list of the keys of the re-configurable properties in configuration.
+   */
+  @Override
+  public Collection<String> getReconfigurableProperties() {
+    List<String> reconfigurable =
+        Collections.unmodifiableList(Arrays.asList(DFS_DATANODE_DATA_DIR_KEY));
+    return reconfigurable;
+  }
+
+  /**
+   * Contains the StorageLocations for changed data volumes.
+   */
+  @VisibleForTesting
+  static class ChangedVolumes {
+    List<StorageLocation> newLocations = Lists.newArrayList();
+    List<StorageLocation> deactivateLocations = Lists.newArrayList();
+  }
+
+  /**
+   * Parse the new DFS_DATANODE_DATA_DIR value in the configuration to detect
+   * changed volumes.
+   * @return changed volumes.
+   * @throws IOException if none of the directories are specified in the
+   * configuration.
+   */
+  @VisibleForTesting
+  ChangedVolumes parseChangedVolumes() throws IOException {
+    List<StorageLocation> locations = getStorageLocations(getConf());
+
+    if (locations.isEmpty()) {
+      throw new IOException("No directory is specified.");
+    }
+
+    ChangedVolumes results = new ChangedVolumes();
+    results.newLocations.addAll(locations);
+
+    for (Iterator<Storage.StorageDirectory> it = storage.dirIterator();
+         it.hasNext(); ) {
+      Storage.StorageDirectory dir = it.next();
+      boolean found = false;
+      for (Iterator<StorageLocation> sl = results.newLocations.iterator();
+           sl.hasNext(); ) {
+        if (sl.next().getFile().getCanonicalPath().equals(
+            dir.getRoot().getCanonicalPath())) {
+          sl.remove();
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) {
+        results.deactivateLocations.add(
+            StorageLocation.parse(dir.getRoot().toString()));
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Attempts to reload data volumes with new configuration.
+   * @param newVolumes a comma separated string that specifies the data volumes.
+   * @throws Exception
+   */
+  private synchronized void refreshVolumes(String newVolumes) throws Exception {
+    Configuration conf = getConf();
+    String oldVolumes = conf.get(DFS_DATANODE_DATA_DIR_KEY);
+    conf.set(DFS_DATANODE_DATA_DIR_KEY, newVolumes);
+    List<StorageLocation> locations = getStorageLocations(conf);
+
+    final int numOldDataDirs = dataDirs.size();
+    dataDirs = locations;
+    ChangedVolumes changedVolumes = parseChangedVolumes();
+
+    try {
+      if (numOldDataDirs + changedVolumes.newLocations.size() -
+          changedVolumes.deactivateLocations.size() <= 0) {
+        throw new IOException("Attempt to remove all volumes.");
+      }
+      if (!changedVolumes.newLocations.isEmpty()) {
+        LOG.info("Adding new volumes: " +
+            Joiner.on(",").join(changedVolumes.newLocations));
+
+        // Add volumes for each Namespace
+        for (BPOfferService bpos : blockPoolManager.getAllNamenodeThreads()) {
+          NamespaceInfo nsInfo = bpos.getNamespaceInfo();
+          LOG.info("Loading volumes for namesapce: " + nsInfo.getNamespaceID());
+          storage.addStorageLocations(
+              this, nsInfo, changedVolumes.newLocations, StartupOption.HOTSWAP);
+        }
+        List<String> bpids = Lists.newArrayList();
+        for (BPOfferService bpos : blockPoolManager.getAllNamenodeThreads()) {
+          bpids.add(bpos.getBlockPoolId());
+        }
+        List<StorageLocation> succeedVolumes =
+            data.addVolumes(changedVolumes.newLocations, bpids);
+
+        if (succeedVolumes.size() < changedVolumes.newLocations.size()) {
+          List<StorageLocation> failedVolumes = Lists.newArrayList();
+          // Clean all failed volumes.
+          for (StorageLocation location : changedVolumes.newLocations) {
+            if (!succeedVolumes.contains(location)) {
+              failedVolumes.add(location);
+            }
+          }
+          storage.removeVolumes(failedVolumes);
+          data.removeVolumes(failedVolumes);
+        }
+      }
+
+      if (!changedVolumes.deactivateLocations.isEmpty()) {
+        LOG.info("Deactivating volumes: " +
+            Joiner.on(",").join(changedVolumes.deactivateLocations));
+
+        data.removeVolumes(changedVolumes.deactivateLocations);
+        storage.removeVolumes(changedVolumes.deactivateLocations);
+      }
+    } catch (IOException e) {
+      LOG.warn("There is IOException when refreshing volumes! "
+          + "Recover configurations: " + DFS_DATANODE_DATA_DIR_KEY
+          + " = " + oldVolumes, e);
+      throw e;
     }
   }
 
@@ -829,7 +978,9 @@ public class DataNode extends Configured
 
     // settings global for all BPs in the Data Node
     this.secureResources = resources;
-    this.dataDirs = dataDirs;
+    synchronized (this) {
+      this.dataDirs = dataDirs;
+    }
     this.conf = conf;
     this.dnConf = new DNConf(conf);
     this.spanReceiverHost = SpanReceiverHost.getInstance(conf);
@@ -1119,7 +1270,9 @@ public class DataNode extends Configured
       }
       final String bpid = nsInfo.getBlockPoolID();
       //read storage info, lock data dirs and transition fs state if necessary
-      storage.recoverTransitionRead(this, bpid, nsInfo, dataDirs, startOpt);
+      synchronized (this) {
+        storage.recoverTransitionRead(this, bpid, nsInfo, dataDirs, startOpt);
+      }
       final StorageInfo bpStorage = storage.getBPStorage(bpid);
       LOG.info("Setting up storage: nsid=" + bpStorage.getNamespaceID()
           + ";bpid=" + bpid + ";lv=" + storage.getLayoutVersion()

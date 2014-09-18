@@ -222,6 +222,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7003. Add NFS Gateway support for reading and writing to
     encryption zones. (clamb via wang)
 
+    HDFS-6727. Refresh data volumes on DataNode based on configuration changes
+    (Lei Xu via cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
