@@ -422,6 +422,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-7075. hadoop-fuse-dfs fails because it cannot find
     JavaKeyStoreProvider$Factory (cmccabe)
 
+    HDFS-7078. Fix listEZs to work correctly with snapshots. (wang)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
