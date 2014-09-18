@@ -580,7 +580,13 @@ class NameNodeRpcServer implements NamenodeProtocols {
     throws IOException {  
     return namesystem.setReplication(src, replication);
   }
-    
+
+  @Override
+  public void setStoragePolicy(String src, String policyName)
+      throws IOException {
+    namesystem.setStoragePolicy(src, policyName);
+  }
+
   @Override // ClientProtocol
   public void setPermission(String src, FsPermission permissions)
       throws IOException {

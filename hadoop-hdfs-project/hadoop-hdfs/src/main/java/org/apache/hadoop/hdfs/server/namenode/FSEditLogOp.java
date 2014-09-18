@@ -61,6 +61,7 @@ import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SYMLINK
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_TIMES;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_UPDATE_BLOCKS;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_UPDATE_MASTER_KEY;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_STORAGE_POLICY;
 
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -195,6 +196,7 @@ public abstract class FSEditLogOp {
           OP_ROLLING_UPGRADE_FINALIZE, "finalize"));
       inst.put(OP_SET_XATTR, new SetXAttrOp());
       inst.put(OP_REMOVE_XATTR, new RemoveXAttrOp());
+      inst.put(OP_SET_STORAGE_POLICY, new SetStoragePolicyOp());
     }
     
     public FSEditLogOp get(FSEditLogOpCodes opcode) {
@@ -3799,6 +3801,71 @@ public abstract class FSEditLogOp {
       private static final long serialVersionUID = 1L;
     }
   }
+
+  /** {@literal @Idempotent} for {@link ClientProtocol#setStoragePolicy} */
+  static class SetStoragePolicyOp extends FSEditLogOp {
+    String path;
+    byte policyId;
+
+    private SetStoragePolicyOp() {
+      super(OP_SET_STORAGE_POLICY);
+    }
+
+    static SetStoragePolicyOp getInstance(OpInstanceCache cache) {
+      return (SetStoragePolicyOp) cache.get(OP_SET_STORAGE_POLICY);
+    }
+
+    SetStoragePolicyOp setPath(String path) {
+      this.path = path;
+      return this;
+    }
+
+    SetStoragePolicyOp setPolicyId(byte policyId) {
+      this.policyId = policyId;
+      return this;
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeString(path, out);
+      out.writeByte(policyId);
+    }
+
+    @Override
+    void readFields(DataInputStream in, int logVersion)
+        throws IOException {
+      this.path = FSImageSerialization.readString(in);
+      this.policyId = in.readByte();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      builder.append("SetStoragePolicyOp [path=");
+      builder.append(path);
+      builder.append(", policyId=");
+      builder.append(policyId);
+      builder.append(", opCode=");
+      builder.append(opCode);
+      builder.append(", txid=");
+      builder.append(txid);
+      builder.append("]");
+      return builder.toString();
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "PATH", path);
+      XMLUtils.addSaxString(contentHandler, "POLICYID",
+          Byte.valueOf(policyId).toString());
+    }
+
+    @Override
+    void fromXml(Stanza st) throws InvalidXmlException {
+      this.path = st.getValue("PATH");
+      this.policyId = Byte.valueOf(st.getValue("POLICYID"));
+    }
+  }  
 
   /**
    * Class for writing editlog ops

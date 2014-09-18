@@ -24,6 +24,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -66,6 +68,7 @@ import org.apache.hadoop.hdfs.server.namenode.ha
         .ConfiguredFailoverProxyProvider;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.net.NetUtils;
@@ -75,6 +78,8 @@ import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.VersionInfo;
 import org.junit.Assume;
 
@@ -88,8 +93,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.*;
 import java.util.concurrent.TimeoutException;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -892,6 +896,37 @@ public class DFSTestUtil {
     conf.set(DFSConfigKeys.DFS_NAMESERVICES, Joiner.on(",")
         .join(nameservices));
   }
+
+  public static void setFederatedHAConfiguration(MiniDFSCluster cluster,
+      Configuration conf) {
+    Map<String, List<String>> nameservices = Maps.newHashMap();
+    for (NameNodeInfo info : cluster.getNameNodeInfos()) {
+      Preconditions.checkState(info.nameserviceId != null);
+      List<String> nns = nameservices.get(info.nameserviceId);
+      if (nns == null) {
+        nns = Lists.newArrayList();
+        nameservices.put(info.nameserviceId, nns);
+      }
+      nns.add(info.nnId);
+
+      conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY,
+          info.nameserviceId, info.nnId),
+          DFSUtil.createUri(HdfsConstants.HDFS_URI_SCHEME,
+          info.nameNode.getNameNodeAddress()).toString());
+      conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+          info.nameserviceId, info.nnId),
+          DFSUtil.createUri(HdfsConstants.HDFS_URI_SCHEME,
+          info.nameNode.getNameNodeAddress()).toString());
+    }
+    for (Map.Entry<String, List<String>> entry : nameservices.entrySet()) {
+      conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY_PREFIX,
+          entry.getKey()), Joiner.on(",").join(entry.getValue()));
+      conf.set(DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "." + entry
+          .getKey(), ConfiguredFailoverProxyProvider.class.getName());
+    }
+    conf.set(DFSConfigKeys.DFS_NAMESERVICES, Joiner.on(",")
+        .join(nameservices.keySet()));
+  }
   
   private static DatanodeID getDatanodeID(String ipAddr) {
     return new DatanodeID(ipAddr, "localhost",
@@ -975,9 +1010,14 @@ public class DFSTestUtil {
   public static DatanodeStorageInfo[] createDatanodeStorageInfos(int n) {
     return createDatanodeStorageInfos(n, null, null);
   }
-    
+
   public static DatanodeStorageInfo[] createDatanodeStorageInfos(
       int n, String[] racks, String[] hostnames) {
+    return createDatanodeStorageInfos(n, racks, hostnames, null);
+  }
+
+  public static DatanodeStorageInfo[] createDatanodeStorageInfos(
+      int n, String[] racks, String[] hostnames, StorageType[] types) {
     DatanodeStorageInfo[] storages = new DatanodeStorageInfo[n];
     for(int i = storages.length; i > 0; ) {
       final String storageID = "s" + i;
@@ -985,16 +1025,30 @@ public class DFSTestUtil {
       i--;
       final String rack = (racks!=null && i < racks.length)? racks[i]: "defaultRack";
       final String hostname = (hostnames!=null && i < hostnames.length)? hostnames[i]: "host";
-      storages[i] = createDatanodeStorageInfo(storageID, ip, rack, hostname);
+      final StorageType type = (types != null && i < types.length) ? types[i]
+          : StorageType.DEFAULT;
+      storages[i] = createDatanodeStorageInfo(storageID, ip, rack, hostname,
+          type);
     }
     return storages;
   }
+
   public static DatanodeStorageInfo createDatanodeStorageInfo(
       String storageID, String ip, String rack, String hostname) {
-    final DatanodeStorage storage = new DatanodeStorage(storageID);
-    final DatanodeDescriptor dn = BlockManagerTestUtil.getDatanodeDescriptor(ip, rack, storage, hostname);
+    return createDatanodeStorageInfo(storageID, ip, rack, hostname,
+        StorageType.DEFAULT);
+  }
+
+  public static DatanodeStorageInfo createDatanodeStorageInfo(
+      String storageID, String ip, String rack, String hostname,
+      StorageType type) {
+    final DatanodeStorage storage = new DatanodeStorage(storageID,
+        DatanodeStorage.State.NORMAL, type);
+    final DatanodeDescriptor dn = BlockManagerTestUtil.getDatanodeDescriptor(
+        ip, rack, storage, hostname);
     return BlockManagerTestUtil.newDatanodeStorageInfo(dn, storage);
   }
+
   public static DatanodeDescriptor[] toDatanodeDescriptor(
       DatanodeStorageInfo[] storages) {
     DatanodeDescriptor[] datanodes = new DatanodeDescriptor[storages.length];
@@ -1081,6 +1135,8 @@ public class DFSTestUtil {
     FSDataOutputStream s = filesystem.create(pathFileCreate);
     // OP_CLOSE 9
     s.close();
+    // OP_SET_STORAGE_POLICY 45
+    filesystem.setStoragePolicy(pathFileCreate, "HOT");
     // OP_RENAME_OLD 1
     final Path pathFileMoved = new Path("/file_moved");
     filesystem.rename(pathFileCreate, pathFileMoved);
@@ -1439,6 +1495,57 @@ public class DFSTestUtil {
       }
     }
     return expectedPrimary.getDatanodeDescriptor();
+  }
+
+  public static void toolRun(Tool tool, String cmd, int retcode, String contain)
+      throws Exception {
+    String [] cmds = StringUtils.split(cmd, ' ');
+    System.out.flush();
+    System.err.flush();
+    PrintStream origOut = System.out;
+    PrintStream origErr = System.err;
+    String output = null;
+    int ret = 0;
+    try {
+      ByteArrayOutputStream bs = new ByteArrayOutputStream(1024);
+      PrintStream out = new PrintStream(bs);
+      System.setOut(out);
+      System.setErr(out);
+      ret = tool.run(cmds);
+      System.out.flush();
+      System.err.flush();
+      out.close();
+      output = bs.toString();
+    } finally {
+      System.setOut(origOut);
+      System.setErr(origErr);
+    }
+    System.out.println("Output for command: " + cmd + " retcode: " + ret);
+    if (output != null) {
+      System.out.println(output);
+    }
+    assertEquals(retcode, ret);
+    if (contain != null) {
+      assertTrue("The real output is: " + output + ".\n It should contain: "
+          + contain, output.contains(contain));
+    }
+  }
+
+  public static void FsShellRun(String cmd, int retcode, String contain,
+      Configuration conf) throws Exception {
+    FsShell shell = new FsShell(new Configuration(conf));
+    toolRun(shell, cmd, retcode, contain);
+  }  
+
+  public static void DFSAdminRun(String cmd, int retcode, String contain,
+      Configuration conf) throws Exception {
+    DFSAdmin admin = new DFSAdmin(new Configuration(conf));
+    toolRun(admin, cmd, retcode, contain);
+  }
+
+  public static void FsShellRun(String cmd, Configuration conf)
+      throws Exception {
+    FsShellRun(cmd, 0, null, conf);
   }
 
   public static void addDataNodeLayoutVersion(final int lv, final String description)

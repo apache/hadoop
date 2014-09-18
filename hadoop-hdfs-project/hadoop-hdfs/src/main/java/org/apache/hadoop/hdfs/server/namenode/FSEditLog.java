@@ -83,6 +83,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetOwnerOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetPermissionsOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetQuotaOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetReplicationOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetStoragePolicyOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetXAttrOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
@@ -829,7 +830,16 @@ public class FSEditLog implements LogsPurgeable {
       .setReplication(replication);
     logEdit(op);
   }
-  
+
+  /** 
+   * Add set storage policy id record to edit log
+   */
+  void logSetStoragePolicy(String src, byte policyId) {
+    SetStoragePolicyOp op = SetStoragePolicyOp.getInstance(cache.get())
+        .setPath(src).setPolicyId(policyId);
+    logEdit(op);
+  }
+
   /** Add set namespace quota record to edit log
    * 
    * @param src the string representation of the path to a directory

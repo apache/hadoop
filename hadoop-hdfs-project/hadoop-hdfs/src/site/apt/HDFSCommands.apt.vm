@@ -143,18 +143,19 @@ HDFS Commands Guide
 *-----------------+-----------------------------------------------------------+
 | -regular        | Normal datanode startup (default).
 *-----------------+-----------------------------------------------------------+
-| -rollback       | Rollsback the datanode to the previous version. This should
+| -rollback       | Rollback the datanode to the previous version. This should
 |                 | be used after stopping the datanode and distributing the
 |                 | old hadoop version.
 *-----------------+-----------------------------------------------------------+
-| -rollingupgrade rollback | Rollsback a rolling upgrade operation.
+| -rollingupgrade rollback | Rollback a rolling upgrade operation.
 *-----------------+-----------------------------------------------------------+
 
 ** <<<dfsadmin>>>
 
    Runs a HDFS dfsadmin client.
 
-   Usage: <<<hdfs dfsadmin [GENERIC_OPTIONS]
++------------------------------------------+
+   Usage: hdfs dfsadmin [GENERIC_OPTIONS]
           [-report [-live] [-dead] [-decommissioning]]
           [-safemode enter | leave | get | wait]
           [-saveNamespace]
@@ -165,6 +166,8 @@ HDFS Commands Guide
           [-clrQuota <dirname>...<dirname>]
           [-setSpaceQuota <quota> <dirname>...<dirname>]
           [-clrSpaceQuota <dirname>...<dirname>]
+          [-setStoragePolicy <path> <policyName>]
+          [-getStoragePolicy <path>]
           [-finalizeUpgrade]
           [-rollingUpgrade [<query>|<prepare>|<finalize>]]
           [-metasave filename]
@@ -182,7 +185,8 @@ HDFS Commands Guide
           [-fetchImage <local directory>]
           [-shutdownDatanode <datanode_host:ipc_port> [upgrade]]
           [-getDatanodeInfo <datanode_host:ipc_port>]
-          [-help [cmd]]>>>
+          [-help [cmd]]
++------------------------------------------+
 
 *-----------------+-----------------------------------------------------------+
 || COMMAND_OPTION || Description
@@ -232,6 +236,10 @@ HDFS Commands Guide
                   | {{{../hadoop-hdfs/HdfsQuotaAdminGuide.html#Administrative_Commands}HDFS Quotas Guide}}
                   | for the detail.
 *-----------------+-----------------------------------------------------------+
+| -setStoragePolicy \<path\> \<policyName\> | Set a storage policy to a file or a directory.
+*-----------------+-----------------------------------------------------------+
+| -getStoragePolicy \<path\> | Get the storage policy of a file or a directory.
+*-----------------+-----------------------------------------------------------+
 | -finalizeUpgrade| Finalize upgrade of HDFS. Datanodes delete their previous
                   | version working directories, followed by Namenode doing the
                   | same. This completes the upgrade process.
@@ -246,7 +254,7 @@ HDFS Commands Guide
                   | <filename> will contain one line for each of the following\
                   | 1. Datanodes heart beating with Namenode\
                   | 2. Blocks waiting to be replicated\
-                  | 3. Blocks currrently being replicated\
+                  | 3. Blocks currently being replicated\
                   | 4. Blocks waiting to be deleted
 *-----------------+-----------------------------------------------------------+
 | -refreshServiceAcl | Reload the service-level authorization policy file.
@@ -308,12 +316,30 @@ HDFS Commands Guide
                   | is specified.
 *-----------------+-----------------------------------------------------------+
 
+** <<<mover>>>
+
+   Runs the data migration utility.
+   See {{{./ArchivalStorage.html#Mover_-_A_New_Data_Migration_Tool}Mover}} for more details.
+
+   Usage: <<<hdfs mover [-p <files/dirs> | -f <local file name>]>>>
+
+*--------------------+--------------------------------------------------------+
+|| COMMAND_OPTION    || Description
+*--------------------+--------------------------------------------------------+
+| -p \<files/dirs\>  | Specify a space separated list of HDFS files/dirs to migrate.
+*--------------------+--------------------------------------------------------+
+| -f \<local file\>  | Specify a local file containing a list of HDFS files/dirs to migrate.
+*--------------------+--------------------------------------------------------+
+
+  Note that, when both -p and -f options are omitted, the default path is the root directory.
+
 ** <<<namenode>>>
 
    Runs the namenode. More info about the upgrade, rollback and finalize is at
    {{{./HdfsUserGuide.html#Upgrade_and_Rollback}Upgrade Rollback}}.
 
-   Usage: <<<hdfs namenode [-backup] |
++------------------------------------------+
+   Usage: hdfs namenode [-backup] |
           [-checkpoint] |
           [-format [-clusterid cid ] [-force] [-nonInteractive] ] |
           [-upgrade [-clusterid cid] [-renameReserved<k-v pairs>] ] |
@@ -325,7 +351,8 @@ HDFS Commands Guide
           [-initializeSharedEdits] |
           [-bootstrapStandby] |
           [-recover [-force] ] |
-          [-metadataVersion ]>>>
+          [-metadataVersion ]
++------------------------------------------+
 
 *--------------------+--------------------------------------------------------+
 || COMMAND_OPTION    || Description
@@ -347,7 +374,7 @@ HDFS Commands Guide
 | -upgradeOnly [-clusterid cid] [-renameReserved\<k-v pairs\>] | Upgrade the
                      | specified NameNode and then shutdown it.
 *--------------------+--------------------------------------------------------+
-| -rollback          | Rollsback the NameNode to the previous version. This
+| -rollback          | Rollback the NameNode to the previous version. This
                      | should be used after stopping the cluster and
                      | distributing the old Hadoop version.
 *--------------------+--------------------------------------------------------+

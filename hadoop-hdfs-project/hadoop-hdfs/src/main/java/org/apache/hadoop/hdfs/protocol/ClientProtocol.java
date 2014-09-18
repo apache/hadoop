@@ -260,6 +260,20 @@ public interface ClientProtocol {
       SnapshotAccessControlException, IOException;
 
   /**
+   * Set the storage policy for a file/directory
+   * @param src Path of an existing file/directory. 
+   * @param policyName The name of the storage policy
+   * @throws SnapshotAccessControlException If access is denied
+   * @throws UnresolvedLinkException if <code>src</code> contains a symlink
+   * @throws FileNotFoundException If file/dir <code>src</code> is not found
+   * @throws QuotaExceededException If changes violate the quota restriction
+   */
+  @Idempotent
+  public void setStoragePolicy(String src, String policyName)
+      throws SnapshotAccessControlException, UnresolvedLinkException,
+      FileNotFoundException, QuotaExceededException, IOException;
+
+  /**
    * Set permissions for an existing file/directory.
    * 
    * @throws AccessControlException If access is denied

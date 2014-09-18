@@ -31,6 +31,11 @@ public interface Matcher {
     public boolean match(NetworkTopology cluster, Node left, Node right) {
       return cluster.isOnSameNodeGroup(left, right);
     }
+
+    @Override
+    public String toString() {
+      return "SAME_NODE_GROUP";
+    }
   };
 
   /** Match datanodes in the same rack. */
@@ -39,6 +44,11 @@ public interface Matcher {
     public boolean match(NetworkTopology cluster, Node left, Node right) {
       return cluster.isOnSameRack(left, right);
     }
+
+    @Override
+    public String toString() {
+      return "SAME_RACK";
+    }
   };
 
   /** Match any datanode with any other datanode. */
@@ -46,6 +56,11 @@ public interface Matcher {
     @Override
     public boolean match(NetworkTopology cluster, Node left, Node right) {
       return left != right;
+    }
+
+    @Override
+    public String toString() {
+      return "ANY_OTHER";
     }
   };
 }

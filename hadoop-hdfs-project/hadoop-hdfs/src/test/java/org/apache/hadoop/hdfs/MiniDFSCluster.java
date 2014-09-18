@@ -1477,19 +1477,21 @@ public class MiniDFSCluster {
           secureResources, dn.getIpcPort()));
       dns[i - curDatanodesNum] = dn;
     }
-    curDatanodesNum += numDataNodes;
     this.numDataNodes += numDataNodes;
     waitActive();
-
+    
     if (storageCapacities != null) {
       for (int i = curDatanodesNum; i < curDatanodesNum+numDataNodes; ++i) {
-        List<? extends FsVolumeSpi> volumes = dns[i].getFSDataset().getVolumes();
-        assert storageCapacities[i].length == storagesPerDatanode;
+        final int index = i - curDatanodesNum;
+        List<? extends FsVolumeSpi> volumes = dns[index].getFSDataset().getVolumes();
+        assert storageCapacities[index].length == storagesPerDatanode;
         assert volumes.size() == storagesPerDatanode;
 
         for (int j = 0; j < volumes.size(); ++j) {
           FsVolumeImpl volume = (FsVolumeImpl) volumes.get(j);
-          volume.setCapacityForTesting(storageCapacities[i][j]);
+          LOG.info("setCapacityForTesting "  + storageCapacities[index][j]
+              + " for [" + volume.getStorageType() + "]" + volume.getStorageID());
+          volume.setCapacityForTesting(storageCapacities[index][j]);
         }
       }
     }

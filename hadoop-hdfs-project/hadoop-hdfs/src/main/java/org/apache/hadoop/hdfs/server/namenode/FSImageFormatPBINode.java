@@ -289,7 +289,8 @@ public final class FSImageFormatPBINode {
 
       final INodeFile file = new INodeFile(n.getId(),
           n.getName().toByteArray(), permissions, f.getModificationTime(),
-          f.getAccessTime(), blocks, replication, f.getPreferredBlockSize());
+          f.getAccessTime(), blocks, replication, f.getPreferredBlockSize(),
+          (byte)f.getStoragePolicyID());
 
       if (f.hasAcl()) {
         file.addAclFeature(new AclFeature(loadAclEntries(f.getAcl(),
@@ -398,7 +399,8 @@ public final class FSImageFormatPBINode {
           .setModificationTime(file.getModificationTime())
           .setPermission(buildPermissionStatus(file, state.getStringMap()))
           .setPreferredBlockSize(file.getPreferredBlockSize())
-          .setReplication(file.getFileReplication());
+          .setReplication(file.getFileReplication())
+          .setStoragePolicyID(file.getLocalStoragePolicyID());
 
       AclFeature f = file.getAclFeature();
       if (f != null) {

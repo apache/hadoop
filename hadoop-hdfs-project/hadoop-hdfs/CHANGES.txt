@@ -1,5 +1,81 @@
 Hadoop HDFS Change Log
 
+HDFS-6584: Archival Storage
+
+    HDFS-6677. Change INodeFile and FSImage to support storage policy ID.
+    (szetszwo)
+
+    HDFS-6670. Add block storage policy support with default HOT, WARM and COLD
+    policies.  (szetszwo)
+
+    HDFS-6671. Change BlockPlacementPolicy to consider block storage policy
+    in replicaiton.  (szetszwo)
+
+    HDFS-6710. Change BlockPlacementPolicy to consider block storage policy
+    in replica deletion.  (szetszwo)
+
+    HDFS-6679. Bump NameNodeLayoutVersion and update editsStored test files.
+    (vinayakumarb via szetszwo)
+
+    HDFS-6686. Change BlockPlacementPolicy to use fallback when some storage
+    types are unavailable.  (szetszwo)
+
+    HDFS-6835. Add a new API to set storage policy.  (jing9) 
+
+    HDFS-6847. Support storage policy on directories and include storage policy 
+    in HdfsFileStatus.  (Jing Zhao via szetszwo)
+
+    HDFS-6801. Add a new data migration tool, Mover, for archiving data.
+    (szetszwo via jing9)
+
+    HDFS-6863. Support migration for snapshot paths. (jing9)
+
+    HDFS-6906. Add more tests for BlockStoragePolicy.  (szetszwo via jing9)
+
+    HDFS-6911. check if a block is already scheduled in Mover. 
+    (szetszwo via jing9)
+
+    HDFS-6920. Check the storage type of delNodeHintStorage when deleting
+    a replica.  (szetszwo via jing9)
+
+    HDFS-6944. Add retry and termination logic for Mover. (jing9)
+
+    HDFS-6969. INode#getStoragePolicyID should always return the latest
+    storage policy.  (jing9)
+
+    HDFS-6961. BlockPlacementPolicy#chooseTarget should check each valid
+    storage type in each choosing round.  (jing9)
+
+    HDFS-6876. support set/get storage policy in DFSAdmin. (jing9)
+
+    HDFS-6997. Add more tests for data migration and replicaion. (szetszwo)
+
+    HDFS-6875. Support migration for a list of specified paths. (jing9)
+
+    HDFS-7027. Mover does not terminate when some storage type is out of space.
+    (szetszwo via jing9)
+
+    HDFS-7029. Fix TestDFSInotifyEventInputStream and TestDistributedFileSystem.
+    (szetszwo via jing9)
+
+    HDFS-7028. FSDirectory should not get storage policy id from symlinks.
+    (szetszwo)
+
+    HDFS-7034. Fix TestBlockPlacement and TestStorageMover. (jing9)
+
+    HDFS-7039. Fix Balancer tests.  (szetszwo via jing9)
+
+    HDFS-7062. Skip under construction block for migration. (jing9)
+
+    HDFS-7052. Add Mover into hdfs script. (jing9)
+
+    HDFS-7072. Fix TestBlockManager and TestStorageMover.  (jing9 via szetszwo)
+
+    HDFS-6864. Archival Storage: add user documentation. (szetszwo via jing9)
+
+    HDFS-7088. Archival Storage: fix TestBalancer and
+    TestBalancerWithMultipleNameNodes. (szetszwo via jing9)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

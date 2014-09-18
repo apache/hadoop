@@ -105,6 +105,15 @@ public class EnumCounters<E extends Enum<E>> {
       this.counters[i] -= that.counters[i];
     }
   }
+  
+  /** @return the sum of all counters. */
+  public final long sum() {
+    long sum = 0;
+    for(int i = 0; i < counters.length; i++) {
+      sum += counters[i];
+    }
+    return sum;
+  }
 
   @Override
   public boolean equals(Object obj) {

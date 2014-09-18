@@ -73,7 +73,7 @@ public class TestBalancerWithMultipleNameNodes {
   private static final Random RANDOM = new Random();
 
   static {
-    Dispatcher.setBlockMoveWaitTime(1000L) ;
+    TestBalancer.initTestSetup();
   }
 
   /** Common objects used in various methods. */

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.tools;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
@@ -48,6 +49,7 @@ import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFormat;
+import org.apache.hadoop.hdfs.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -63,23 +65,24 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
-import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
-import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
 import org.apache.hadoop.ipc.GenericRefreshProtocol;
+import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
 import org.apache.hadoop.ipc.RefreshResponse;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolClientSideTranslatorPB;
+import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolPB;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
-import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolClientSideTranslatorPB;
-import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolPB;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -390,6 +393,8 @@ public class DFSAdmin extends FsShell {
     "\t[-shutdownDatanode <datanode_host:ipc_port> [upgrade]]\n" +
     "\t[-getDatanodeInfo <datanode_host:ipc_port>]\n" +
     "\t[-metasave filename]\n" +
+    "\t[-setStoragePolicy path policyName]\n" +
+    "\t[-getStoragePolicy path]\n" +
     "\t[-help [cmd]]\n";
 
   /**
@@ -593,6 +598,32 @@ public class DFSAdmin extends FsShell {
       inSafeMode = nn.setSafeMode(SafeModeAction.SAFEMODE_GET, false);
     }
     return inSafeMode;
+  }
+
+  public int setStoragePolicy(String[] argv) throws IOException {
+    DistributedFileSystem dfs = getDFS();
+    dfs.setStoragePolicy(new Path(argv[1]), argv[2]);
+    System.out.println("Set storage policy " + argv[2] + " on " + argv[1]);
+    return 0;
+  }
+
+  public int getStoragePolicy(String[] argv) throws IOException {
+    DistributedFileSystem dfs = getDFS();
+    HdfsFileStatus status = dfs.getClient().getFileInfo(argv[1]);
+    if (status == null) {
+      throw new FileNotFoundException("File/Directory does not exist: "
+          + argv[1]);
+    }
+    byte storagePolicyId = status.getStoragePolicy();
+    BlockStoragePolicy.Suite suite = BlockStoragePolicy
+        .readBlockStorageSuite(getConf());
+    BlockStoragePolicy policy = suite.getPolicy(storagePolicyId);
+    if (policy != null) {
+      System.out.println("The storage policy of " + argv[1] + ":\n" + policy);
+      return 0;
+    } else {
+      throw new IOException("Cannot identify the storage policy for " + argv[1]);
+    }
   }
 
   /**
@@ -941,7 +972,13 @@ public class DFSAdmin extends FsShell {
     String getDatanodeInfo = "-getDatanodeInfo <datanode_host:ipc_port>\n"
         + "\tGet the information about the given datanode. This command can\n"
         + "\tbe used for checking if a datanode is alive.\n";
-    
+
+    String setStoragePolicy = "-setStoragePolicy path policyName\n"
+        + "\tSet the storage policy for a file/directory.\n";
+
+    String getStoragePolicy = "-getStoragePolicy path\n"
+        + "\tGet the storage policy for a file/directory.\n";
+
     String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
       "\t\tis specified.\n";
 
@@ -1001,6 +1038,10 @@ public class DFSAdmin extends FsShell {
       System.out.println(shutdownDatanode);
     } else if ("getDatanodeInfo".equalsIgnoreCase(cmd)) {
       System.out.println(getDatanodeInfo);
+    } else if ("setStoragePolicy".equalsIgnoreCase(cmd))  {
+      System.out.println(setStoragePolicy);
+    } else if ("getStoragePolicy".equalsIgnoreCase(cmd))  {
+      System.out.println(getStoragePolicy);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -1033,6 +1074,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(disallowSnapshot);
       System.out.println(shutdownDatanode);
       System.out.println(getDatanodeInfo);
+      System.out.println(setStoragePolicy);
+      System.out.println(getStoragePolicy);
       System.out.println(help);
       System.out.println();
       ToolRunner.printGenericCommandUsage(System.out);
@@ -1461,6 +1504,12 @@ public class DFSAdmin extends FsShell {
     } else if ("-safemode".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-safemode enter | leave | get | wait]");
+    } else if ("-setStoragePolicy".equals(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+          + " [-setStoragePolicy path policyName]");
+    } else if ("-getStoragePolicy".equals(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+          + " [-getStoragePolicy path]");
     } else if ("-allowSnapshot".equalsIgnoreCase(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-allowSnapshot <snapshotDir>]");
@@ -1677,6 +1726,16 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+    } else if ("-setStoragePolicy".equals(cmd)) {
+      if (argv.length != 3) {
+        printUsage(cmd);
+        return exitCode;
+      }
+    } else if ("-getStoragePolicy".equals(cmd)) {
+      if (argv.length != 2) {
+        printUsage(cmd);
+        return exitCode;
+      }
     }
     
     // initialize DFSAdmin
@@ -1750,6 +1809,10 @@ public class DFSAdmin extends FsShell {
         exitCode = getDatanodeInfo(argv, i);
       } else if ("-reconfig".equals(cmd)) {
         exitCode = reconfig(argv, i);
+      } else if ("-setStoragePolicy".equals(cmd)) {
+        exitCode = setStoragePolicy(argv);
+      } else if ("-getStoragePolicy".equals(cmd)) {
+        exitCode = getStoragePolicy(argv);
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);

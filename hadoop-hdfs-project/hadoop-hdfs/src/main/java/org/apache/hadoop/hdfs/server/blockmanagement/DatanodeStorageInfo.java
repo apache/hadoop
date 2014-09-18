@@ -109,7 +109,7 @@ public class DatanodeStorageInfo {
 
   private long capacity;
   private long dfsUsed;
-  private long remaining;
+  private volatile long remaining;
   private long blockPoolUsed;
 
   private volatile BlockInfo blockList = null;
@@ -283,7 +283,7 @@ public class DatanodeStorageInfo {
   /** Increment the number of blocks scheduled for each given storage */ 
   public static void incrementBlocksScheduled(DatanodeStorageInfo... storages) {
     for (DatanodeStorageInfo s : storages) {
-      s.getDatanodeDescriptor().incrementBlocksScheduled();
+      s.getDatanodeDescriptor().incrementBlocksScheduled(s.getStorageType());
     }
   }
 
@@ -312,6 +312,26 @@ public class DatanodeStorageInfo {
     return new StorageReport(
         new DatanodeStorage(storageID, state, storageType),
         false, capacity, dfsUsed, remaining, blockPoolUsed);
+  }
+
+  static Iterable<StorageType> toStorageTypes(
+      final Iterable<DatanodeStorageInfo> infos) {
+    return new Iterable<StorageType>() {
+        @Override
+        public Iterator<StorageType> iterator() {
+          return new Iterator<StorageType>() {
+            final Iterator<DatanodeStorageInfo> i = infos.iterator();
+            @Override
+            public boolean hasNext() {return i.hasNext();}
+            @Override
+            public StorageType next() {return i.next().getStorageType();}
+            @Override
+            public void remove() {
+              throw new UnsupportedOperationException();
+            }
+          };
+        }
+      };
   }
 
   /** @return the first {@link DatanodeStorageInfo} corresponding to
