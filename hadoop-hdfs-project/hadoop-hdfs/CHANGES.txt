@@ -215,6 +215,8 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6843. Create FileStatus isEncrypted() method (clamb via cmccabe)
 
+    HDFS-7004. Update KeyProvider instantiation to create by URI. (wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

@@ -51,7 +51,7 @@ Hadoop Key Management Server (KMS) - Documentation Sets ${project.version}
 
 +---+
   <property>
-    <name>hadoop.security.key.provider.path</name>
+    <name>hadoop.kms.key.provider.uri</name>
     <value>jceks://file@/${user.home}/kms.keystore</value>
   </property>
 

@@ -40,6 +40,10 @@ public class KMSConfiguration {
   public static final String KEY_ACL_PREFIX = "key.acl.";
   public static final String DEFAULT_KEY_ACL_PREFIX = "default.key.acl.";
 
+  // Property to set the backing KeyProvider
+  public static final String KEY_PROVIDER_URI = CONFIG_PREFIX +
+      "key.provider.uri";
+
   // Property to Enable/Disable Caching
   public static final String KEY_CACHE_ENABLE = CONFIG_PREFIX +
       "cache.enable";

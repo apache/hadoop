@@ -1828,34 +1828,37 @@ public class DFSUtil {
    * Creates a new KeyProviderCryptoExtension by wrapping the
    * KeyProvider specified in the given Configuration.
    *
-   * @param conf Configuration specifying a single, non-transient KeyProvider.
+   * @param conf Configuration
    * @return new KeyProviderCryptoExtension, or null if no provider was found.
    * @throws IOException if the KeyProvider is improperly specified in
    *                             the Configuration
    */
   public static KeyProviderCryptoExtension createKeyProviderCryptoExtension(
       final Configuration conf) throws IOException {
-    final List<KeyProvider> providers = KeyProviderFactory.getProviders(conf);
-    if (providers == null || providers.size() == 0) {
+    final String providerUriStr =
+        conf.get(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, null);
+    // No provider set in conf
+    if (providerUriStr == null) {
       return null;
     }
-    if (providers.size() > 1) {
-      StringBuilder builder = new StringBuilder();
-      builder.append("Found multiple KeyProviders but only one is permitted [");
-      String prefix = " ";
-      for (KeyProvider kp: providers) {
-        builder.append(prefix + kp.toString());
-        prefix = ", ";
-      }
-      builder.append("]");
-      throw new IOException(builder.toString());
+    final URI providerUri;
+    try {
+      providerUri = new URI(providerUriStr);
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
     }
-    KeyProviderCryptoExtension provider = KeyProviderCryptoExtension
-        .createKeyProviderCryptoExtension(providers.get(0));
-    if (provider.isTransient()) {
-      throw new IOException("KeyProvider " + provider.toString()
+    KeyProvider keyProvider = KeyProviderFactory.get(providerUri, conf);
+    if (keyProvider == null) {
+      throw new IOException("Could not instantiate KeyProvider from " + 
+          DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI + " setting of '" + 
+          providerUriStr +"'");
+    }
+    if (keyProvider.isTransient()) {
+      throw new IOException("KeyProvider " + keyProvider.toString()
           + " was found but it is a transient provider.");
     }
-    return provider;
+    KeyProviderCryptoExtension cryptoProvider = KeyProviderCryptoExtension
+        .createKeyProviderCryptoExtension(keyProvider);
+    return cryptoProvider;
   }
 }
