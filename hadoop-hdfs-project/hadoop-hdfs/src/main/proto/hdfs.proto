@@ -158,6 +158,7 @@ message FsPermissionProto {
 enum StorageTypeProto {
   DISK = 1;
   SSD = 2;
+  ARCHIVE = 3;
 }
 
 /**
@@ -263,6 +264,8 @@ message HdfsFileStatusProto {
 
   // Optional field for file encryption
   optional FileEncryptionInfoProto fileEncryptionInfo = 15;
+
+  optional uint32 storagePolicy = 16 [default = 0]; // block storage policy id
 } 
 
 /**

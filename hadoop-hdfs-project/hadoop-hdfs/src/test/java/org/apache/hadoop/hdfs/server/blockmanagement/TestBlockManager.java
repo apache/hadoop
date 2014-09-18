@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -52,6 +53,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetworkTopology;
+import org.junit.Assert;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -607,7 +609,6 @@ public class TestBlockManager {
     assertEquals(1, ds.getBlockReportCount());
   }
   
-  
   /**
    * Tests that a namenode doesn't choose a datanode with full disks to 
    * store blocks.
@@ -654,5 +655,20 @@ public class TestBlockManager {
       cluster.shutdown();
     }
   }
-}
 
+  @Test
+  public void testUseDelHint() {
+    DatanodeStorageInfo delHint = new DatanodeStorageInfo(
+        DFSTestUtil.getLocalDatanodeDescriptor(), new DatanodeStorage("id"));
+    List<DatanodeStorageInfo> moreThan1Racks = Arrays.asList(delHint);
+    List<StorageType> excessTypes = new ArrayList<StorageType>();
+
+    excessTypes.add(StorageType.DEFAULT);
+    Assert.assertTrue(BlockManager.useDelHint(true, delHint, null,
+        moreThan1Racks, excessTypes));
+    excessTypes.remove(0);
+    excessTypes.add(StorageType.SSD);
+    Assert.assertFalse(BlockManager.useDelHint(true, delHint, null,
+        moreThan1Racks, excessTypes));
+  }
+}

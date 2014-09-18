@@ -1015,10 +1015,11 @@ public class TestFsck {
     path = DFSUtil.string2Bytes(pathString);
     long fileId = 312321L;
     int numChildren = 1;
+    byte storagePolicy = 0;
 
     HdfsFileStatus file = new HdfsFileStatus(length, isDir, blockReplication,
         blockSize, modTime, accessTime, perms, owner, group, symlink, path,
-        fileId, numChildren, null);
+        fileId, numChildren, null, storagePolicy);
     Result res = new Result(conf);
 
     try {

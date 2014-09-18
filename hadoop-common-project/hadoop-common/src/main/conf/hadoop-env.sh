@@ -329,6 +329,15 @@ esac
 # export HADOOP_BALANCER_OPTS=""
 
 ###
+# HDFS Mover specific parameters
+###
+# Specify the JVM options to be used when starting the HDFS Mover.
+# These options will be appended to the options specified as HADOOP_OPTS
+# and therefore may override any similar flags set in HADOOP_OPTS
+#
+# export HADOOP_MOVER_OPTS=""
+
+###
 # Advanced Users Only!
 ###
 

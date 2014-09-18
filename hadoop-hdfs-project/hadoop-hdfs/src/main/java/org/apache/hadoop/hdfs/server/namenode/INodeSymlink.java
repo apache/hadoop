@@ -145,4 +145,16 @@ public class INodeSymlink extends INodeWithAdditionalFields {
   public void addXAttrFeature(XAttrFeature f) {
     throw new UnsupportedOperationException("XAttrs are not supported on symlinks");
   }
+
+  @Override
+  public byte getStoragePolicyID() {
+    throw new UnsupportedOperationException(
+        "Storage policy are not supported on symlinks");
+  }
+
+  @Override
+  public byte getLocalStoragePolicyID() {
+    throw new UnsupportedOperationException(
+        "Storage policy are not supported on symlinks");
+  }
 }

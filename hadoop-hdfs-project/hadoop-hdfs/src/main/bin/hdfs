@@ -36,6 +36,8 @@ function hadoop_usage
   echo "  journalnode          run the DFS journalnode"
   echo "  lsSnapshottableDir   list all snapshottable dirs owned by the current user"
   echo "                               Use -help to see options"
+  echo "  mover                run a utility to move block replicas across"
+  echo "                       storage types"
   echo "  namenode             run the DFS namenode"
   echo "                               Use -format to initialize the DFS filesystem"
   echo "  nfs3                 run an NFS version 3 gateway"
@@ -158,6 +160,11 @@ case ${COMMAND} in
   ;;
   lsSnapshottableDir)
     CLASS=org.apache.hadoop.hdfs.tools.snapshot.LsSnapshottableDir
+  ;;
+  mover)
+    CLASS=org.apache.hadoop.hdfs.server.mover.Mover
+    hadoop_debug "Appending HADOOP_MOVER_OPTS onto HADOOP_OPTS"
+    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_MOVER_OPTS}"
   ;;
   namenode)
     daemon="true"

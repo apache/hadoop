@@ -89,7 +89,14 @@ public class TestBalancer {
   private static final Random r = new Random();
 
   static {
+    initTestSetup();
+  }
+
+  public static void initTestSetup() {
     Dispatcher.setBlockMoveWaitTime(1000L) ;
+
+    // do not create id file since it occupies the disk space
+    NameNodeConnector.setWrite2IdFile(false);
   }
 
   static void initConf(Configuration conf) {

@@ -21,6 +21,7 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.*;
@@ -230,6 +231,7 @@ public class JsonUtil {
     m.put("replication", status.getReplication());
     m.put("fileId", status.getFileId());
     m.put("childrenNum", status.getChildrenNum());
+    m.put("storagePolicy", status.getStoragePolicy());
     return includeType ? toJsonString(FileStatus.class, m): JSON.toString(m);
   }
 
@@ -260,10 +262,12 @@ public class JsonUtil {
     Long childrenNumLong = (Long) m.get("childrenNum");
     final int childrenNum = (childrenNumLong == null) ? -1
             : childrenNumLong.intValue();
+    final byte storagePolicy = m.containsKey("storagePolicy") ?
+        (byte) (long) (Long) m.get("storagePolicy") :
+          BlockStoragePolicy.ID_UNSPECIFIED;
     return new HdfsFileStatus(len, type == PathType.DIRECTORY, replication,
-        blockSize, mTime, aTime, permission, owner, group,
-        symlink, DFSUtil.string2Bytes(localName), fileId, childrenNum,
-        null);
+        blockSize, mTime, aTime, permission, owner, group, symlink,
+        DFSUtil.string2Bytes(localName), fileId, childrenNum, null, storagePolicy);
   }
 
   /** Convert an ExtendedBlock to a Json map. */

@@ -75,7 +75,7 @@ public class TestBalancerWithNodeGroup {
   static final int DEFAULT_BLOCK_SIZE = 100;
 
   static {
-    Dispatcher.setBlockMoveWaitTime(1000L) ;
+    TestBalancer.initTestSetup();
   }
 
   static Configuration createConf() {
