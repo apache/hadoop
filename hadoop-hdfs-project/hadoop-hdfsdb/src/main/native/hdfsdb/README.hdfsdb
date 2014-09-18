@@ -1,0 +1,6 @@
+HDFSDB is a key-value store derived from Google's LevelDB in order to
+meet the specific needs of persisting the namespace of HDFS.
+
+HDFS is released under the same license of the LevelDB (i.e., the
+3-clause BSD license). Please see the original LICENSE for more
+details.
