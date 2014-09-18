@@ -20,3 +20,6 @@ on user reservations. (Carlo Curino and Subru Krishnan via curino)
 
 YARN-1712. Plan follower that synchronizes the current state of reservation
 subsystem with the scheduler. (Subru Krishnan and Carlo Curino  via subru)
+
+YARN-2080. Integrating reservation system with ResourceManager and 
+client-RM protocol. (Subru Krishnan and Carlo Curino  via subru)

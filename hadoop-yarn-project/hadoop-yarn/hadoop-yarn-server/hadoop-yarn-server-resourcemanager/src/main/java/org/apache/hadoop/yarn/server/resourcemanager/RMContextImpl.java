@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
@@ -77,6 +78,7 @@ public class RMContextImpl implements RMContext {
   private ClientRMService clientRMService;
   private RMDelegationTokenSecretManager rmDelegationTokenSecretManager;
   private ResourceScheduler scheduler;
+  private ReservationSystem reservationSystem;
   private NodesListManager nodesListManager;
   private ResourceTrackerService resourceTrackerService;
   private ApplicationMasterService applicationMasterService;
@@ -195,6 +197,11 @@ public class RMContextImpl implements RMContext {
   }
 
   @Override
+  public ReservationSystem getReservationSystem() {
+    return this.reservationSystem;
+  }
+  
+  @Override
   public NodesListManager getNodesListManager() {
     return this.nodesListManager;
   }
@@ -288,6 +295,10 @@ public class RMContextImpl implements RMContext {
 
   void setScheduler(ResourceScheduler scheduler) {
     this.scheduler = scheduler;
+  }
+  
+  void setReservationSystem(ReservationSystem reservationSystem) {
+    this.reservationSystem = reservationSystem;
   }
 
   void setDelegationTokenRenewer(
