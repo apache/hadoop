@@ -64,6 +64,33 @@ all operations on a valid FileSystem MUST result in a new FileSystem that is als
 
     def isSymlink(FS, p) = p in symlinks(FS)
 
+### 'boolean inEncryptionZone(Path p)'
+
+Return True if the data for p is encrypted. The nature of the encryption and the
+mechanism for creating an encryption zone are implementation details not covered
+in this specification. No guarantees are made about the quality of the
+encryption. The metadata is not encrypted.
+
+#### Preconditions
+
+    if not exists(FS, p) : raise FileNotFoundException
+
+#### Postconditions
+
+#### Invariants
+
+All files and directories under a directory in an encryption zone are also in an
+encryption zone
+
+    forall d in directories(FS): inEncyptionZone(FS, d) implies
+      forall c in children(FS, d) where (isFile(FS, c) or isDir(FS, c)) :
+        inEncyptionZone(FS, c)
+
+For all files in an encrypted zone, the data is encrypted, but the encryption
+type and specification are not defined.
+
+      forall f in files(FS) where  inEncyptionZone(FS, c):
+        isEncrypted(data(f))
 
 ### `FileStatus getFileStatus(Path p)`
 
@@ -88,6 +115,10 @@ Get the status of a path
             stat.length = 0
             stat.isdir = False
             stat.symlink = FS.Symlinks[p]
+        if inEncryptionZone(FS, p) :
+            stat.isEncrypted = True
+        else
+            stat.isEncrypted = False
 
 ### `Path getHomeDirectory()`
 

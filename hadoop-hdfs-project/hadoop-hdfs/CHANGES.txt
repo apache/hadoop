@@ -544,6 +544,10 @@ Release 2.6.0 - UNRELEASED
     HDFS-6705. Create an XAttr that disallows the HDFS admin from accessing a
     file. (clamb via wang)
 
+    HDFS-6843. Create FileStatus isEncrypted() method (clamb via cmccabe)
+
+    HDFS-7004. Update KeyProvider instantiation to create by URI. (wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -742,6 +746,14 @@ Release 2.6.0 - UNRELEASED
     HDFS-6789. TestDFSClientFailover.testFileContextDoesntDnsResolveLogicalURI
     and TestDFSClientFailover.testDoesntDnsResolveLogicalURI failing on jdk7.
     (Akira Ajisaka via wang)
+
+    HDFS-6912. SharedFileDescriptorFactory should not allocate sparse files
+    (cmccabe)
+
+    HDFS-7075. hadoop-fuse-dfs fails because it cannot find
+    JavaKeyStoreProvider$Factory (cmccabe)
+
+    HDFS-7078. Fix listEZs to work correctly with snapshots. (wang)
 
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   

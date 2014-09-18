@@ -469,6 +469,7 @@ public abstract class CryptoStreamsTestBase {
       int bufPos) throws Exception {
     buf.position(bufPos);
     int n = ((ByteBufferReadable) in).read(buf);
+    Assert.assertEquals(bufPos + n, buf.position());
     byte[] readData = new byte[n];
     buf.rewind();
     buf.position(bufPos);
@@ -568,6 +569,7 @@ public abstract class CryptoStreamsTestBase {
     // Read forward len1
     ByteBuffer buf = ByteBuffer.allocate(len1);
     int nRead = ((ByteBufferReadable) in).read(buf);
+    Assert.assertEquals(nRead, buf.position());
     readData = new byte[nRead];
     buf.rewind();
     buf.get(readData);
@@ -575,9 +577,10 @@ public abstract class CryptoStreamsTestBase {
     System.arraycopy(data, (int)pos, expectedData, 0, nRead);
     Assert.assertArrayEquals(readData, expectedData);
     
-    // Pos should be len1 + 2 * len2 + nRead
+    long lastPos = pos;
+    // Pos should be lastPos + nRead
     pos = ((Seekable) in).getPos();
-    Assert.assertEquals(len1 + 2 * len2 + nRead, pos);
+    Assert.assertEquals(lastPos + nRead, pos);
     
     // Pos: 1/3 dataLen
     positionedReadCheck(in , dataLen / 3);
@@ -589,19 +592,26 @@ public abstract class CryptoStreamsTestBase {
     System.arraycopy(data, (int)pos, expectedData, 0, len1);
     Assert.assertArrayEquals(readData, expectedData);
     
-    // Pos should be 2 * len1 + 2 * len2 + nRead
+    lastPos = pos;
+    // Pos should be lastPos + len1
     pos = ((Seekable) in).getPos();
-    Assert.assertEquals(2 * len1 + 2 * len2 + nRead, pos);
+    Assert.assertEquals(lastPos + len1, pos);
     
     // Read forward len1
     buf = ByteBuffer.allocate(len1);
     nRead = ((ByteBufferReadable) in).read(buf);
+    Assert.assertEquals(nRead, buf.position());
     readData = new byte[nRead];
     buf.rewind();
     buf.get(readData);
     expectedData = new byte[nRead];
     System.arraycopy(data, (int)pos, expectedData, 0, nRead);
     Assert.assertArrayEquals(readData, expectedData);
+    
+    lastPos = pos;
+    // Pos should be lastPos + nRead
+    pos = ((Seekable) in).getPos();
+    Assert.assertEquals(lastPos + nRead, pos);
     
     // ByteBuffer read after EOF
     ((Seekable) in).seek(dataLen);
