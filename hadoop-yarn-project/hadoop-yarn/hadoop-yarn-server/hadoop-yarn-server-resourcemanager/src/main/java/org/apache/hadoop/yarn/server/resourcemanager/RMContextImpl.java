@@ -21,6 +21,9 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.yarn.LocalConfigurationProvider;
@@ -44,6 +47,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRen
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
+import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.util.SystemClock;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -85,6 +90,13 @@ public class RMContextImpl implements RMContext {
   private SystemMetricsPublisher systemMetricsPublisher;
   private ConfigurationProvider configurationProvider;
   private long epoch;
+  private Clock systemClock = new SystemClock();
+  private long schedulerRecoveryStartTime = 0;
+  private long schedulerRecoveryWaitTime = 0;
+  private boolean printLog = true;
+  private boolean isSchedulerReady = false;
+
+  private static final Log LOG = LogFactory.getLog(RMContextImpl.class);
 
   /**
    * Default constructor. To be used in conjunction with setter methods for
@@ -379,7 +391,34 @@ public class RMContextImpl implements RMContext {
     return this.epoch;
   }
 
- void setEpoch(long epoch) {
+  void setEpoch(long epoch) {
     this.epoch = epoch;
+  }
+
+  public void setSchedulerRecoveryStartAndWaitTime(long waitTime) {
+    this.schedulerRecoveryStartTime = systemClock.getTime();
+    this.schedulerRecoveryWaitTime = waitTime;
+  }
+
+  public boolean isSchedulerReadyForAllocatingContainers() {
+    if (isSchedulerReady) {
+      return isSchedulerReady;
+    }
+    isSchedulerReady = (systemClock.getTime() - schedulerRecoveryStartTime)
+        > schedulerRecoveryWaitTime;
+    if (!isSchedulerReady && printLog) {
+      LOG.info("Skip allocating containers. Scheduler is waiting for recovery.");
+      printLog = false;
+    }
+    if (isSchedulerReady) {
+      LOG.info("Scheduler recovery is done. Start allocating new containers.");
+    }
+    return isSchedulerReady;
+  }
+
+  @Private
+  @VisibleForTesting
+  public void setSystemClock(Clock clock) {
+    this.systemClock = clock;
   }
 }

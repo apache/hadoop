@@ -353,6 +353,11 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_RM_WORK_PRESERVING_RECOVERY_ENABLED =
       false;
 
+  public static final String RM_WORK_PRESERVING_RECOVERY_SCHEDULING_WAIT_MS =
+      RM_PREFIX + "work-preserving-recovery.scheduling-wait-ms";
+  public static final long DEFAULT_RM_WORK_PRESERVING_RECOVERY_SCHEDULING_WAIT_MS =
+      10000;
+
   /** Zookeeper interaction configs */
   public static final String RM_ZK_PREFIX = RM_PREFIX + "zk-";
 
