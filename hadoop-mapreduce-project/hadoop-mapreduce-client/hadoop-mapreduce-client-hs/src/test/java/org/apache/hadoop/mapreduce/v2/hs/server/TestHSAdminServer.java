@@ -28,6 +28,7 @@ import java.util.List;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.v2.hs.JobHistory;
 import org.apache.hadoop.mapreduce.v2.hs.client.HSAdmin;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
@@ -48,7 +49,7 @@ import org.apache.hadoop.yarn.logaggregation.AggregatedLogDeletionService;
 public class TestHSAdminServer {
   private HSAdminServer hsAdminServer = null;
   private HSAdmin hsAdminClient = null;
-  Configuration conf = null;
+  JobConf conf = null;
   private static long groupRefreshTimeoutSec = 1;
   JobHistory jobHistoryService = null;
   AggregatedLogDeletionService alds = null;
@@ -81,7 +82,7 @@ public class TestHSAdminServer {
 
   @Before
   public void init() throws HadoopIllegalArgumentException, IOException {
-    conf = new Configuration();
+    conf = new JobConf();
     conf.set(JHAdminConfig.JHS_ADMIN_ADDRESS, "0.0.0.0:0");
     conf.setClass("hadoop.security.group.mapping", MockUnixGroupsMapping.class,
         GroupMappingServiceProvider.class);

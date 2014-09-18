@@ -130,6 +130,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6070. yarn.app.am.resource.mb/cpu-vcores affects uber mode but
     is not documented (Tsuyoshi OZAWA via jlowe)
 
+    MAPREDUCE-6090. mapred hsadmin getGroups fails to connect in some cases
+    (Robert Kanter via jlowe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
