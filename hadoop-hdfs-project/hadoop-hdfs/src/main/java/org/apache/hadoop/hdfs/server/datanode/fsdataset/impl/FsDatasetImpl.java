@@ -724,8 +724,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       throw new IOException("Failed to copy " + srcFile + " to " + dstFile, e);
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("addBlock: Moved " + srcMeta + " to " + dstMeta);
-      LOG.debug("addBlock: Moved " + srcFile + " to " + dstFile);
+      LOG.debug("Copied " + srcMeta + " to " + dstMeta);
+      LOG.debug("Copied " + srcFile + " to " + dstFile);
     }
     return new File[] {dstMeta, dstFile};
   }
