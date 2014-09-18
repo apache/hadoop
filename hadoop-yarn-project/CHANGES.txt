@@ -359,6 +359,8 @@ Release 2.6.0 - UNRELEASED
     YARN-1779. Fixed AMRMClient to handle AMRMTokens correctly across
     ResourceManager work-preserving-restart or failover. (Jian He via vinodkv)
 
+    YARN-2363. Submitted applications occasionally lack a tracking URL (jlowe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
