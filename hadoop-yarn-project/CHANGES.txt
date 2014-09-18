@@ -361,6 +361,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2363. Submitted applications occasionally lack a tracking URL (jlowe)
 
+    YARN-2561. MR job client cannot reconnect to AM after NM restart. (Junping
+    Du via jlowe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

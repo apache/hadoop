@@ -26,6 +26,7 @@ import static org.mockito.Mockito.verify;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -599,6 +600,16 @@ public class TestResourceTrackerService {
     dispatcher.await();
     Assert.assertTrue(NodeAction.NORMAL.equals(response.getNodeAction()));
     Assert.assertEquals(5120 + 10240, metrics.getAvailableMB());
+    
+    // reconnect of node with changed capability and running applications
+    List<ApplicationId> runningApps = new ArrayList<ApplicationId>();
+    runningApps.add(ApplicationId.newInstance(1, 0));
+    nm1 = rm.registerNode("host2:5678", 15360, 2, runningApps);
+    dispatcher.await();
+    response = nm1.nodeHeartbeat(true);
+    dispatcher.await();
+    Assert.assertTrue(NodeAction.NORMAL.equals(response.getNodeAction()));
+    Assert.assertEquals(5120 + 15360, metrics.getAvailableMB());
   }
 
   private void writeToHostsFile(String... hosts) throws IOException {
