@@ -110,10 +110,7 @@ public interface RMContext {
   
   long getEpoch();
 
-  ReservationSystem getReservationSystem();
-
   boolean isSchedulerReadyForAllocatingContainers();
 
   ReservationSystem getReservationSystem();
-
 }
