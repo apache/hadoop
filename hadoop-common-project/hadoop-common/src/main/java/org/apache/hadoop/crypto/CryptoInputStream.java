@@ -471,7 +471,16 @@ public class CryptoInputStream extends FilterInputStream implements
         streamOffset += n; // Read n bytes
         decrypt(buf, n, pos);
       }
-      return n;
+      
+      if (n >= 0) {
+        return unread + n;
+      } else {
+        if (unread == 0) {
+          return -1;
+        } else {
+          return unread;
+        }
+      }
     }
 
     throw new UnsupportedOperationException("ByteBuffer read unsupported " +

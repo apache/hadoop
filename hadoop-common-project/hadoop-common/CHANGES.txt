@@ -397,6 +397,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7075. hadoop-fuse-dfs fails because it cannot find
     JavaKeyStoreProvider$Factory (cmccabe)
 
+    HADOOP-11040. Return value of read(ByteBuffer buf) in CryptoInputStream is
+    incorrect in some cases. (Yi Liu via wang)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HADOOP-10734. Implement high-performance secure random number sources.
