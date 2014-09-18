@@ -79,6 +79,15 @@ struct hdfsFile_internal {
     int flags;
 };
 
+#define HDFS_EXTENDED_FILE_INFO_ENCRYPTED 0x1
+
+/**
+ * Extended file information.
+ */
+struct hdfsExtendedFileInfo {
+    int flags;
+};
+
 int hdfsFileIsOpenForRead(hdfsFile file)
 {
     return (file->type == HDFS_STREAM_INPUT);
@@ -2836,9 +2845,39 @@ tOffset hdfsGetUsed(hdfsFS fs)
     }
     return jVal.j;
 }
-
-
  
+/**
+ * We cannot add new fields to the hdfsFileInfo structure because it would break
+ * binary compatibility.  The reason is because we return an array
+ * of hdfsFileInfo structures from hdfsListDirectory.  So changing the size of
+ * those structures would break all programs that relied on finding the second
+ * element in the array at <base_offset> + sizeof(struct hdfsFileInfo).
+ *
+ * So instead, we add the new fields to the hdfsExtendedFileInfo structure.
+ * This structure is contained in the mOwner string found inside the
+ * hdfsFileInfo.  Specifically, the format of mOwner is:
+ *
+ * [owner-string] [null byte] [padding] [hdfsExtendedFileInfo structure]
+ *
+ * The padding is added so that the hdfsExtendedFileInfo structure starts on an
+ * 8-byte boundary.
+ *
+ * @param str           The string to locate the extended info in.
+ * @return              The offset of the hdfsExtendedFileInfo structure.
+ */
+static size_t getExtendedFileInfoOffset(const char *str)
+{
+    int num_64_bit_words = ((strlen(str) + 1) + 7) / 8;
+    return num_64_bit_words * 8;
+}
+
+static struct hdfsExtendedFileInfo *getExtendedFileInfo(hdfsFileInfo *fileInfo)
+{
+    char *owner = fileInfo->mOwner;
+    return (struct hdfsExtendedFileInfo *)(owner +
+                getExtendedFileInfoOffset(owner));
+}
+
 static jthrowable
 getFileInfoFromStat(JNIEnv *env, jobject jStat, hdfsFileInfo *fileInfo)
 {
@@ -2852,6 +2891,8 @@ getFileInfoFromStat(JNIEnv *env, jobject jStat, hdfsFileInfo *fileInfo)
     const char *cPathName;
     const char *cUserName;
     const char *cGroupName;
+    struct hdfsExtendedFileInfo *extInfo;
+    size_t extOffset;
 
     jthr = invokeMethod(env, &jVal, INSTANCE, jStat,
                      HADOOP_STAT, "isDir", "()Z");
@@ -2926,9 +2967,24 @@ getFileInfoFromStat(JNIEnv *env, jobject jStat, hdfsFileInfo *fileInfo)
         jthr = getPendingExceptionAndClear(env);
         goto done;
     }
-    fileInfo->mOwner = strdup(cUserName);
+    extOffset = getExtendedFileInfoOffset(cUserName);
+    fileInfo->mOwner = malloc(extOffset + sizeof(struct hdfsExtendedFileInfo));
+    if (!fileInfo->mOwner) {
+        jthr = newRuntimeError(env, "getFileInfo: OOM allocating mOwner");
+        goto done;
+    }
+    strcpy(fileInfo->mOwner, cUserName);
     (*env)->ReleaseStringUTFChars(env, jUserName, cUserName);
-
+    extInfo = getExtendedFileInfo(fileInfo);
+    memset(extInfo, 0, sizeof(*extInfo));
+    jthr = invokeMethod(env, &jVal, INSTANCE, jStat,
+                    HADOOP_STAT, "isEncrypted", "()Z");
+    if (jthr) {
+        goto done;
+    }
+    if (jVal.z == JNI_TRUE) {
+        extInfo->flags |= HDFS_EXTENDED_FILE_INFO_ENCRYPTED;
+    }
     jthr = invokeMethod(env, &jVal, INSTANCE, jStat, HADOOP_STAT,
                     "getGroup", "()Ljava/lang/String;");
     if (jthr)
@@ -3174,6 +3230,13 @@ void hdfsFreeFileInfo(hdfsFileInfo *hdfsFileInfo, int numEntries)
     free(hdfsFileInfo);
 }
 
+int hdfsFileIsEncrypted(hdfsFileInfo *fileInfo)
+{
+    struct hdfsExtendedFileInfo *extInfo;
+
+    extInfo = getExtendedFileInfo(fileInfo);
+    return !!(extInfo->flags & HDFS_EXTENDED_FILE_INFO_ENCRYPTED);
+}
 
 
 
