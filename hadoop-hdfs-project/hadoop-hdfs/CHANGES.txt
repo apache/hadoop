@@ -18,8 +18,8 @@ Trunk (Unreleased)
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
 
-    HDFS-6584. Support archival storage; see the detail subtasks in the
-    breakdown section.  (szetszwo)
+    HDFS-6584. Support archival storage.  (See breakdown of tasks below for
+    features and contributors)
 
   IMPROVEMENTS
 
