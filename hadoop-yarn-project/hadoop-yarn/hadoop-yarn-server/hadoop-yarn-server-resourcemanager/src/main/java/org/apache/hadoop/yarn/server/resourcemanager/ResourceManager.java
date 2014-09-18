@@ -72,6 +72,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.AbstractReservationSystem;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -147,6 +149,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected RMSecretManagerService rmSecretManagerService;
 
   protected ResourceScheduler scheduler;
+  protected ReservationSystem reservationSystem;
   private ClientRMService clientRM;
   protected ApplicationMasterService masterService;
   protected NMLivelinessMonitor nmLivelinessMonitor;
@@ -278,6 +281,29 @@ public class ResourceManager extends CompositeService implements Recoverable {
     } catch (ClassNotFoundException e) {
       throw new YarnRuntimeException("Could not instantiate Scheduler: "
           + schedulerClassName, e);
+    }
+  }
+
+  protected ReservationSystem createReservationSystem() {
+    String reservationClassName =
+        conf.get(YarnConfiguration.RM_RESERVATION_SYSTEM_CLASS,
+            AbstractReservationSystem.getDefaultReservationSystem(scheduler));
+    if (reservationClassName == null) {
+      return null;
+    }
+    LOG.info("Using ReservationSystem: " + reservationClassName);
+    try {
+      Class<?> reservationClazz = Class.forName(reservationClassName);
+      if (ReservationSystem.class.isAssignableFrom(reservationClazz)) {
+        return (ReservationSystem) ReflectionUtils.newInstance(
+            reservationClazz, this.conf);
+      } else {
+        throw new YarnRuntimeException("Class: " + reservationClassName
+            + " not instance of " + ReservationSystem.class.getCanonicalName());
+      }
+    } catch (ClassNotFoundException e) {
+      throw new YarnRuntimeException(
+          "Could not instantiate ReservationSystem: " + reservationClassName, e);
     }
   }
 
@@ -455,6 +481,18 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
       DefaultMetricsSystem.initialize("ResourceManager");
       JvmMetrics.initSingleton("ResourceManager", null);
+
+      // Initialize the Reservation system
+      if (conf.getBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE,
+          YarnConfiguration.DEFAULT_RM_RESERVATION_SYSTEM_ENABLE)) {
+        reservationSystem = createReservationSystem();
+        if (reservationSystem != null) {
+          reservationSystem.setRMContext(rmContext);
+          addIfService(reservationSystem);
+          rmContext.setReservationSystem(reservationSystem);
+          LOG.info("Initialized Reservation system");
+        }
+      }
 
       // creating monitors that handle preemption
       createPolicyMonitors();

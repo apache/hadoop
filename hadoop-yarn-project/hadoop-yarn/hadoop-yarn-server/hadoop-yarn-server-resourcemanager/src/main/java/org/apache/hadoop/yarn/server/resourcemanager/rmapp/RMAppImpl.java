@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -1292,5 +1293,10 @@ public class RMAppImpl implements RMApp, Recoverable {
   @VisibleForTesting
   public void setSystemClock(Clock clock) {
     this.systemClock = clock;
+  }
+
+  @Override
+  public ReservationId getReservationId() {
+    return submissionContext.getReservationID();
   }
 }
