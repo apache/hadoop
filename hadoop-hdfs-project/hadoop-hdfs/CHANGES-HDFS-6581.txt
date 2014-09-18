@@ -54,4 +54,6 @@
 
     HDFS-7080. Fix finalize and upgrade unit test failures. (Arpit Agarwal)
 
+    HDFS-7084. FsDatasetImpl#copyBlockFiles debug log can be improved.
+    (Xiaoyu Yao via Arpit Agarwal)
 
