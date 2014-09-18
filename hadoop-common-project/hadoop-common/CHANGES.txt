@@ -197,6 +197,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11016. KMS should support signing cookies with zookeeper secret
     manager. (tucu)
 
+    HADOOP-11106. Document considerations of HAR and Encryption. (clamb via wang)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
