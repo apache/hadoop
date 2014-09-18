@@ -340,6 +340,27 @@
 </property>
 
 <property>
+  <name>mapreduce.reduce.shuffle.fetch.retry.enabled</name>
+  <value>${yarn.nodemanager.recovery.enabled}</value>
+  <description>Set to enable fetch retry during host restart.</description>
+</property>
+
+<property>
+  <name>mapreduce.reduce.shuffle.fetch.retry.interval-ms</name>
+  <value>1000</value>
+  <description>Time of interval that fetcher retry to fetch again when some 
+  non-fatal failure happens because of some events like NM restart.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.reduce.shuffle.fetch.retry.timeout-ms</name>
+  <value>30000</value>
+  <description>Timeout value for fetcher to retry to fetch again when some 
+  non-fatal failure happens because of some events like NM restart.</description>
+</property>
+
+<property>
   <name>mapreduce.reduce.shuffle.retry-delay.max.ms</name>
   <value>60000</value>
   <description>The maximum number of ms the reducer will delay before retrying

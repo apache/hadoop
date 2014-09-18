@@ -27,6 +27,7 @@ import java.net.HttpURLConnection;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.MapOutputFile;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskID;
 
 import org.junit.After;
@@ -60,6 +61,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.hadoop.util.Time;
 import org.junit.Test;
 
 import org.mockito.invocation.InvocationOnMock;
@@ -71,6 +73,7 @@ import org.mockito.stubbing.Answer;
 public class TestFetcher {
   private static final Log LOG = LogFactory.getLog(TestFetcher.class);
   JobConf job = null;
+  JobConf jobWithRetry = null;
   TaskAttemptID id = null;
   ShuffleSchedulerImpl<Text, Text> ss = null;
   MergeManagerImpl<Text, Text> mm = null;
@@ -93,6 +96,9 @@ public class TestFetcher {
   public void setup() {
     LOG.info(">>>> " + name.getMethodName());
     job = new JobConf();
+    job.setBoolean(MRJobConfig.SHUFFLE_FETCH_RETRY_ENABLED, false);
+    jobWithRetry = new JobConf();
+    jobWithRetry.setBoolean(MRJobConfig.SHUFFLE_FETCH_RETRY_ENABLED, true);
     id = TaskAttemptID.forName("attempt_0_1_r_1_1");
     ss = mock(ShuffleSchedulerImpl.class);
     mm = mock(MergeManagerImpl.class);
@@ -228,6 +234,38 @@ public class TestFetcher {
     verify(ss, times(3)).putBackKnownMapOutput(any(MapHost.class), eq(map1ID));
     verify(ss, times(3)).putBackKnownMapOutput(any(MapHost.class), eq(map2ID));
   }
+  
+  @Test
+  public void testCopyFromHostIncompatibleShuffleVersionWithRetry()
+      throws Exception {
+    String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
+    
+    when(connection.getResponseCode()).thenReturn(200);
+    when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_NAME))
+        .thenReturn("mapreduce").thenReturn("other").thenReturn("other");
+    when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_VERSION))
+        .thenReturn("1.0.1").thenReturn("1.0.0").thenReturn("1.0.1");
+    when(connection.getHeaderField(
+        SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH)).thenReturn(replyHash);
+    ByteArrayInputStream in = new ByteArrayInputStream(new byte[0]);
+    when(connection.getInputStream()).thenReturn(in);
+
+    for (int i = 0; i < 3; ++i) {
+      Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(jobWithRetry, 
+          id, ss, mm, r, metrics, except, key, connection);
+      underTest.copyFromHost(host);
+    }
+    
+    verify(connection, times(3)).addRequestProperty(
+        SecureShuffleUtils.HTTP_HEADER_URL_HASH, encHash);
+    
+    verify(allErrs, times(3)).increment(1);
+    verify(ss, times(3)).copyFailed(map1ID, host, false, false);
+    verify(ss, times(3)).copyFailed(map2ID, host, false, false);
+    
+    verify(ss, times(3)).putBackKnownMapOutput(any(MapHost.class), eq(map1ID));
+    verify(ss, times(3)).putBackKnownMapOutput(any(MapHost.class), eq(map2ID));
+  }
 
   @Test
   public void testCopyFromHostWait() throws Exception {
@@ -300,6 +338,48 @@ public class TestFetcher {
         .addRequestProperty(SecureShuffleUtils.HTTP_HEADER_URL_HASH, 
           encHash);
     verify(ss, times(1)).copyFailed(map1ID, host, true, false);
+  }
+  
+  @SuppressWarnings("unchecked")
+  @Test(timeout=10000) 
+  public void testCopyFromHostWithRetry() throws Exception {
+    InMemoryMapOutput<Text, Text> immo = mock(InMemoryMapOutput.class);
+    ss = mock(ShuffleSchedulerImpl.class);
+    Fetcher<Text,Text> underTest = new FakeFetcher<Text,Text>(jobWithRetry, 
+        id, ss, mm, r, metrics, except, key, connection, true);
+
+    String replyHash = SecureShuffleUtils.generateHash(encHash.getBytes(), key);
+    
+    when(connection.getResponseCode()).thenReturn(200);
+    when(connection.getHeaderField(SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH))
+        .thenReturn(replyHash);
+    ShuffleHeader header = new ShuffleHeader(map1ID.toString(), 10, 10, 1);
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    header.write(new DataOutputStream(bout));
+    ByteArrayInputStream in = new ByteArrayInputStream(bout.toByteArray());
+    when(connection.getInputStream()).thenReturn(in);
+    when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_NAME))
+        .thenReturn(ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
+    when(connection.getHeaderField(ShuffleHeader.HTTP_HEADER_VERSION))
+        .thenReturn(ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
+    when(mm.reserve(any(TaskAttemptID.class), anyLong(), anyInt()))
+        .thenReturn(immo);
+    
+    final long retryTime = Time.monotonicNow();
+    doAnswer(new Answer<Void>() {
+      public Void answer(InvocationOnMock ignore) throws IOException {
+        // Emulate host down for 3 seconds.
+        if ((Time.monotonicNow() - retryTime) <= 3000) {
+          throw new java.lang.InternalError();
+        }
+        return null;
+      }
+    }).when(immo).shuffle(any(MapHost.class), any(InputStream.class), anyLong(), 
+        anyLong(), any(ShuffleClientMetrics.class), any(Reporter.class));
+
+    underTest.copyFromHost(host);
+    verify(ss, never()).copyFailed(any(TaskAttemptID.class),any(MapHost.class),
+                                   anyBoolean(), anyBoolean());
   }
 
   @Test
@@ -447,6 +527,9 @@ public class TestFetcher {
 
   public static class FakeFetcher<K,V> extends Fetcher<K,V> {
 
+    // If connection need to be reopen.
+    private boolean renewConnection = false;
+    
     public FakeFetcher(JobConf job, TaskAttemptID reduceId,
         ShuffleSchedulerImpl<K,V> scheduler, MergeManagerImpl<K,V> merger,
         Reporter reporter, ShuffleClientMetrics metrics,
@@ -455,6 +538,17 @@ public class TestFetcher {
       super(job, reduceId, scheduler, merger, reporter, metrics,
           exceptionReporter, jobTokenSecret);
       this.connection = connection;
+    }
+    
+    public FakeFetcher(JobConf job, TaskAttemptID reduceId,
+        ShuffleSchedulerImpl<K,V> scheduler, MergeManagerImpl<K,V> merger,
+        Reporter reporter, ShuffleClientMetrics metrics,
+        ExceptionReporter exceptionReporter, SecretKey jobTokenSecret,
+        HttpURLConnection connection, boolean renewConnection) {
+      super(job, reduceId, scheduler, merger, reporter, metrics,
+          exceptionReporter, jobTokenSecret);
+      this.connection = connection;
+      this.renewConnection = renewConnection;
     }
 
     public FakeFetcher(JobConf job, TaskAttemptID reduceId,
@@ -469,7 +563,7 @@ public class TestFetcher {
 
     @Override
     protected void openConnection(URL url) throws IOException {
-      if (null == connection) {
+      if (null == connection || renewConnection) {
         super.openConnection(url);
       }
       // already 'opened' the mocked connection

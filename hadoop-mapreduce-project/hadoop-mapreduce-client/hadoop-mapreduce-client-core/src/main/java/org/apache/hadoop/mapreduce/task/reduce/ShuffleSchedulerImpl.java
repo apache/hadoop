@@ -48,6 +48,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.task.reduce.MapHost.State;
 import org.apache.hadoop.util.Progress;
+import org.apache.hadoop.util.Time;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -121,7 +122,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
     this.shuffledMapsCounter = shuffledMapsCounter;
     this.reduceShuffleBytes = reduceShuffleBytes;
     this.failedShuffleCounter = failedShuffleCounter;
-    this.startTime = System.currentTimeMillis();
+    this.startTime = Time.monotonicNow();
     lastProgressTime = startTime;
     referee.start();
     this.maxFailedUniqueFetches = Math.min(totalMaps, 5);
@@ -198,7 +199,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
       totalBytesShuffledTillNow += bytes;
       updateStatus();
       reduceShuffleBytes.increment(bytes);
-      lastProgressTime = System.currentTimeMillis();
+      lastProgressTime = Time.monotonicNow();
       LOG.debug("map " + mapId + " done " + status.getStateString());
     }
   }
@@ -206,7 +207,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
   private void updateStatus() {
     float mbs = (float) totalBytesShuffledTillNow / (1024 * 1024);
     int mapsDone = totalMaps - remainingMaps;
-    long secsSinceStart = (System.currentTimeMillis() - startTime) / 1000 + 1;
+    long secsSinceStart = (Time.monotonicNow() - startTime) / 1000 + 1;
 
     float transferRate = mbs / secsSinceStart;
     progress.set((float) mapsDone / totalMaps);
@@ -307,7 +308,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
     // check if the reducer is stalled for a long time
     // duration for which the reducer is stalled
     int stallDuration =
-      (int)(System.currentTimeMillis() - lastProgressTime);
+      (int)(Time.monotonicNow() - lastProgressTime);
 
     // duration for which the reducer ran with progress
     int shuffleProgressDuration =
@@ -389,7 +390,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
 
       LOG.info("Assigning " + host + " with " + host.getNumKnownMapOutputs() +
                " to " + Thread.currentThread().getName());
-      shuffleStart.set(System.currentTimeMillis());
+      shuffleStart.set(Time.monotonicNow());
 
       return host;
   }
@@ -430,7 +431,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
       }
     }
     LOG.info(host + " freed by " + Thread.currentThread().getName() + " in " +
-             (System.currentTimeMillis()-shuffleStart.get()) + "ms");
+             (Time.monotonicNow()-shuffleStart.get()) + "ms");
   }
 
   public synchronized void resetKnownMaps() {
@@ -464,12 +465,12 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
 
     Penalty(MapHost host, long delay) {
       this.host = host;
-      this.endTime = System.currentTimeMillis() + delay;
+      this.endTime = Time.monotonicNow() + delay;
     }
 
     @Override
     public long getDelay(TimeUnit unit) {
-      long remainingTime = endTime - System.currentTimeMillis();
+      long remainingTime = endTime - Time.monotonicNow();
       return unit.convert(remainingTime, TimeUnit.MILLISECONDS);
     }
 

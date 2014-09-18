@@ -293,6 +293,14 @@ public interface MRJobConfig {
   
   public static final String MAX_FETCH_FAILURES_NOTIFICATIONS = "mapreduce.reduce.shuffle.max-fetch-failures-notifications";
   public static final int DEFAULT_MAX_FETCH_FAILURES_NOTIFICATIONS = 3;
+  
+  public static final String SHUFFLE_FETCH_RETRY_INTERVAL_MS = "mapreduce.reduce.shuffle.fetch.retry.interval-ms";
+  /** Default interval that fetcher retry to fetch during NM restart.*/
+  public final static int DEFAULT_SHUFFLE_FETCH_RETRY_INTERVAL_MS = 1000;
+  
+  public static final String SHUFFLE_FETCH_RETRY_TIMEOUT_MS = "mapreduce.reduce.shuffle.fetch.retry.timeout-ms";
+  
+  public static final String SHUFFLE_FETCH_RETRY_ENABLED = "mapreduce.reduce.shuffle.fetch.retry.enabled";
 
   public static final String SHUFFLE_NOTIFY_READERROR = "mapreduce.reduce.shuffle.notify.readerror";
   

@@ -34,6 +34,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5130. Add missing job config options to mapred-default.xml
     (Ray Chiang via Sandy Ryza)
 
+    MAPREDUCE-5891. Improved shuffle error handling across NM restarts
+    (Junping Du via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES
