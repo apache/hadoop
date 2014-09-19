@@ -246,7 +246,8 @@ public class TestTokenCache {
   @Test
   public void testLocalJobTokenCache() throws NoSuchAlgorithmException, IOException {
     // this is local job
-    String[] args = {"-m", "1", "-r", "1", "-mt", "1", "-rt", "1"}; 
+    jConf = mrCluster.createJobConf();
+    String[] args = {"-m", "1", "-r", "1", "-mt", "1", "-rt", "1"};
     jConf.set("mapreduce.job.credentials.json", tokenFileName.toString());
 
     int res = -1;
