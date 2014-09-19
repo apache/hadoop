@@ -103,9 +103,17 @@ public class KMSAudit {
 
   private static Logger AUDIT_LOG = LoggerFactory.getLogger(KMS_LOGGER_NAME);
 
-  KMSAudit(long delay) {
+  /**
+   * Create a new KMSAudit.
+   *
+   * @param windowMs Duplicate events within the aggregation window are quashed
+   *                 to reduce log traffic. A single message for aggregated
+   *                 events is printed at the end of the window, along with a
+   *                 count of the number of aggregated events.
+   */
+  KMSAudit(long windowMs) {
     cache = CacheBuilder.newBuilder()
-        .expireAfterWrite(delay, TimeUnit.MILLISECONDS)
+        .expireAfterWrite(windowMs, TimeUnit.MILLISECONDS)
         .removalListener(
             new RemovalListener<String, AuditEvent>() {
               @Override
@@ -126,7 +134,7 @@ public class KMSAudit {
       public void run() {
         cache.cleanUp();
       }
-    }, delay / 10, delay / 10, TimeUnit.MILLISECONDS);
+    }, windowMs / 10, windowMs / 10, TimeUnit.MILLISECONDS);
   }
 
   private void logEvent(AuditEvent event) {

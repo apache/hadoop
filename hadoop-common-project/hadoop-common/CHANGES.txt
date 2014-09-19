@@ -199,6 +199,8 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11106. Document considerations of HAR and Encryption. (clamb via wang)
 
+    HADOOP-10970. Cleanup KMS configuration keys. (wang)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
