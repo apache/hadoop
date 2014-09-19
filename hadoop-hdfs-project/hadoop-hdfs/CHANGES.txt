@@ -442,6 +442,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7065. Pipeline close recovery race can cause block corruption (kihwal)
 
+    HDFS-7096. Fix TestRpcProgramNfs3 to use DFS_ENCRYPTION_KEY_PROVIDER_URI
+    (clamb via cmccabe)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
