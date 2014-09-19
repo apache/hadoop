@@ -367,6 +367,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2563. Fixed YarnClient to call getTimeLineDelegationToken only if the
     Token is not present. (Zhijie Shen via jianhe)
 
+    YARN-2568. Fixed the potential test failures due to race conditions when RM
+    work-preserving recovery is enabled. (Jian He via zjshen)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

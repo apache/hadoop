@@ -102,6 +102,7 @@ public class TestWorkPreservingRMRestart {
     conf.setClass(YarnConfiguration.RM_SCHEDULER, schedulerClass,
       ResourceScheduler.class);
     conf.setBoolean(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED, true);
+    conf.setLong(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_SCHEDULING_WAIT_MS, 0);
     DefaultMetricsSystem.setMiniClusterMode(true);
   }
 
