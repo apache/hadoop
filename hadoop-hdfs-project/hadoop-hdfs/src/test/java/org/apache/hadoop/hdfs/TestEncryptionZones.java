@@ -940,7 +940,7 @@ public class TestEncryptionZones {
     Future<?> future = executor.submit(new CreateFileTask(fsWrapper, file));
 
     // Flip-flop between two EZs to repeatedly fail
-    for (int i=0; i<10; i++) {
+    for (int i=0; i<DFSOutputStream.CREATE_RETRY_COUNT+1; i++) {
       injector.ready.await();
       fsWrapper.delete(zone1, true);
       fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
