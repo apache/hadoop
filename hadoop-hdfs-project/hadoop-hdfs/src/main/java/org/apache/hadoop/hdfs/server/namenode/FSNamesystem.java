@@ -1156,8 +1156,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       cacheManager.startMonitorThread();
       blockManager.getDatanodeManager().setShouldSendCachingCommands(true);
     } finally {
-      writeUnlock();
       startingActiveService = false;
+      checkSafeMode();
+      writeUnlock();
     }
   }
 
@@ -5570,6 +5571,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       // Have to have write-lock since leaving safemode initializes
       // repl queues, which requires write lock
       assert hasWriteLock();
+      if (inTransitionToActive()) {
+        return;
+      }
       // if smmthread is already running, the block threshold must have been 
       // reached before, there is no need to enter the safe mode again
       if (smmthread == null && needEnter()) {
