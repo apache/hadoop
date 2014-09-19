@@ -31,19 +31,8 @@
   </property>
 
   <property>
-    <description>Type of serialization to use.</description>
-    <name>yarn.ipc.serializer.type</name>
-    <value>protocolbuffers</value>
-  </property>
-
-  <property>
     <description>Factory to create server IPC classes.</description>
     <name>yarn.ipc.server.factory.class</name>
-  </property>
-
-  <property>
-    <description>Factory to create IPC exceptions.</description>
-    <name>yarn.ipc.exception.factory.class</name>
   </property>
 
   <property>
@@ -163,12 +152,6 @@
   </property>
 
   <property>
-    <description>How often should the RM check that the AM is still alive.</description>
-    <name>yarn.resourcemanager.amliveliness-monitor.interval-ms</name>
-    <value>1000</value>
-  </property>
-
-  <property>
     <description>Maximum time to wait to establish connection to
     ResourceManager.</description>
     <name>yarn.resourcemanager.connect.max-wait.ms</name>
@@ -218,12 +201,6 @@
     <description>How long to wait until a node manager is considered dead.</description>
     <name>yarn.nm.liveness-monitor.expiry-interval-ms</name>
     <value>600000</value>
-  </property>
-
-  <property>
-    <description>How often to check that node managers are still alive.</description>
-    <name>yarn.resourcemanager.nm.liveness-monitor.interval-ms</name>
-    <value>1000</value>
   </property>
 
   <property>
@@ -580,7 +557,7 @@
     <description>Interval for the roll over for the master key used to generate
         application tokens
     </description>
-    <name>yarn.resourcemanager.application-tokens.master-key-rolling-interval-secs</name>
+    <name>yarn.resourcemanager.am-rm-tokens.master-key-rolling-interval-secs</name>
     <value>86400</value>
   </property>
 
@@ -1087,20 +1064,6 @@
     <description>Max time to wait for a process to come up when trying to cleanup a container</description>
     <name>yarn.nodemanager.process-kill-wait.ms</name>
     <value>2000</value>
-  </property>
-
-  <property>
-    <description>Max time, in seconds, to wait to establish a connection to RM when NM starts.
-    The NM will shutdown if it cannot connect to RM within the specified max time period.
-    If the value is set as -1, then NM will retry forever.</description>
-    <name>yarn.nodemanager.resourcemanager.connect.wait.secs</name>
-    <value>900</value>
-  </property>
-
-  <property>
-    <description>Time interval, in seconds, between each NM attempt to connect to RM.</description>
-    <name>yarn.nodemanager.resourcemanager.connect.retry_interval.secs</name>
-    <value>30</value>
   </property>
 
   <property>

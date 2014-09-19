@@ -373,6 +373,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2565. Fixed RM to not use FileSystemApplicationHistoryStore unless
     explicitly set. (Zhijie Shen via jianhe)
 
+    YARN-2460. Remove obsolete entries from yarn-default.xml (Ray Chiang via
+    aw)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
