@@ -23,7 +23,7 @@
     <value>*</value>
     <description>
       ACL for create-key operations.
-      If the user does is not in the GET ACL, the key material is not returned
+      If the user is not in the GET ACL, the key material is not returned
       as part of the response.
     </description>
   </property>
@@ -58,7 +58,7 @@
     <name>hadoop.kms.acl.GET_KEYS</name>
     <value>*</value>
     <description>
-      ACL for get-keys operation.
+      ACL for get-keys operations.
     </description>
   </property>
 
@@ -66,7 +66,7 @@
     <name>hadoop.kms.acl.GET_METADATA</name>
     <value>*</value>
     <description>
-      ACL for get-key-metadata an get-keys-metadata operations.
+      ACL for get-key-metadata and get-keys-metadata operations.
     </description>
   </property>
 
@@ -74,7 +74,7 @@
     <name>hadoop.kms.acl.SET_KEY_MATERIAL</name>
     <value>*</value>
     <description>
-      Complimentary ACL for CREATE and ROLLOVER operation to allow the client
+      Complementary ACL for CREATE and ROLLOVER operations to allow the client
       to provide the key material when creating or rolling a key.
     </description>
   </property>
@@ -83,7 +83,7 @@
     <name>hadoop.kms.acl.GENERATE_EEK</name>
     <value>*</value>
     <description>
-      ACL for generateEncryptedKey CryptoExtension operations
+      ACL for generateEncryptedKey CryptoExtension operations.
     </description>
   </property>
 
@@ -91,7 +91,7 @@
     <name>hadoop.kms.acl.DECRYPT_EEK</name>
     <value>*</value>
     <description>
-      ACL for decrypt EncryptedKey CryptoExtension operations
+      ACL for decryptEncryptedKey CryptoExtension operations.
     </description>
   </property>
 
