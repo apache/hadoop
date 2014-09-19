@@ -78,6 +78,8 @@ public class TestRMApplicationHistoryWriter {
     store = new MemoryApplicationHistoryStore();
     Configuration conf = new Configuration();
     conf.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED, true);
+    conf.setClass(YarnConfiguration.APPLICATION_HISTORY_STORE,
+        MemoryApplicationHistoryStore.class, ApplicationHistoryStore.class);
     writer = new RMApplicationHistoryWriter() {
 
       @Override
@@ -172,6 +174,22 @@ public class TestRMApplicationHistoryWriter {
     when(container.getContainerExitStatus()).thenReturn(-1);
     when(container.getContainerState()).thenReturn(ContainerState.COMPLETE);
     return container;
+  }
+
+  @Test
+  public void testDefaultStoreSetup() throws Exception {
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED, true);
+    RMApplicationHistoryWriter writer = new RMApplicationHistoryWriter();
+    writer.init(conf);
+    writer.start();
+    try {
+      Assert.assertFalse(writer.historyServiceEnabled);
+      Assert.assertNull(writer.writer);
+    } finally {
+      writer.stop();
+      writer.close();
+    }
   }
 
   @Test

@@ -52,6 +52,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * <p>
  * {@link ResourceManager} uses this class to write the information of
@@ -71,8 +73,10 @@ public class RMApplicationHistoryWriter extends CompositeService {
     .getLog(RMApplicationHistoryWriter.class);
 
   private Dispatcher dispatcher;
-  private ApplicationHistoryWriter writer;
-  private boolean historyServiceEnabled;
+  @VisibleForTesting
+  ApplicationHistoryWriter writer;
+  @VisibleForTesting
+  boolean historyServiceEnabled;
 
   public RMApplicationHistoryWriter() {
     super(RMApplicationHistoryWriter.class.getName());
@@ -80,13 +84,18 @@ public class RMApplicationHistoryWriter extends CompositeService {
 
   @Override
   protected synchronized void serviceInit(Configuration conf) throws Exception {
-
     historyServiceEnabled =
         conf.getBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
           YarnConfiguration.DEFAULT_APPLICATION_HISTORY_ENABLED);
+    if (conf.get(YarnConfiguration.APPLICATION_HISTORY_STORE) == null ||
+        conf.get(YarnConfiguration.APPLICATION_HISTORY_STORE).length() == 0 ||
+        conf.get(YarnConfiguration.APPLICATION_HISTORY_STORE).equals(
+            NullApplicationHistoryStore.class.getName())) {
+      historyServiceEnabled = false;
+    }
 
-    // Only create the services when the history service is enabled, preventing
-    // wasting the system resources.
+    // Only create the services when the history service is enabled and not
+    // using the null store, preventing wasting the system resources.
     if (historyServiceEnabled) {
       writer = createApplicationHistoryStore(conf);
       addIfService(writer);
@@ -112,25 +121,19 @@ public class RMApplicationHistoryWriter extends CompositeService {
 
   protected ApplicationHistoryStore createApplicationHistoryStore(
       Configuration conf) {
-    // If the history writer is not enabled, a dummy store will be used to
-    // write nothing
-    if (historyServiceEnabled) {
-      try {
-        Class<? extends ApplicationHistoryStore> storeClass =
-            conf.getClass(YarnConfiguration.APPLICATION_HISTORY_STORE,
-              FileSystemApplicationHistoryStore.class,
+    try {
+      Class<? extends ApplicationHistoryStore> storeClass =
+          conf.getClass(YarnConfiguration.APPLICATION_HISTORY_STORE,
+              NullApplicationHistoryStore.class,
               ApplicationHistoryStore.class);
-        return storeClass.newInstance();
-      } catch (Exception e) {
-        String msg =
-            "Could not instantiate ApplicationHistoryWriter: "
-                + conf.get(YarnConfiguration.APPLICATION_HISTORY_STORE,
-                  FileSystemApplicationHistoryStore.class.getName());
-        LOG.error(msg, e);
-        throw new YarnRuntimeException(msg, e);
-      }
-    } else {
-      return new NullApplicationHistoryStore();
+      return storeClass.newInstance();
+    } catch (Exception e) {
+      String msg =
+          "Could not instantiate ApplicationHistoryWriter: "
+              + conf.get(YarnConfiguration.APPLICATION_HISTORY_STORE,
+                  NullApplicationHistoryStore.class.getName());
+      LOG.error(msg, e);
+      throw new YarnRuntimeException(msg, e);
     }
   }
 

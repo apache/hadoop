@@ -370,6 +370,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2568. Fixed the potential test failures due to race conditions when RM
     work-preserving recovery is enabled. (Jian He via zjshen)
 
+    YARN-2565. Fixed RM to not use FileSystemApplicationHistoryStore unless
+    explicitly set. (Zhijie Shen via jianhe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
