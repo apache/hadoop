@@ -789,7 +789,7 @@ public class FSImageFormat {
       // Images in the old format will not have the lazyPersist flag so it is
       // safe to pass false always.
       final INodeFile file = new INodeFile(inodeId, localName, permissions,
-          modificationTime, atime, blocks, replication, blockSize, (byte)0, false);
+          modificationTime, atime, blocks, replication, blockSize, (byte)0);
       if (underConstruction) {
         file.toUnderConstruction(clientName, clientMachine);
       }
