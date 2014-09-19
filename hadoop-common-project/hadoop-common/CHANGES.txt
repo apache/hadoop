@@ -244,6 +244,8 @@ Release 2.7.0 - UNRELEASED
     NativeAzureFileSystem#NativeAzureFsInputStream#close().
     (Chen He via cnauroth)
 
+    HADOOP-10946. Fix a bunch of typos in log messages (Ray Chiang via aw)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
