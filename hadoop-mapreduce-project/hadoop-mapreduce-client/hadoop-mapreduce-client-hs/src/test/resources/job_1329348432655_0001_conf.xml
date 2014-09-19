@@ -152,7 +152,6 @@
 <property><!--Loaded from job.xml--><name>mapreduce.map.speculative</name><value>false</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.job.acl-view-job</name><value> </value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.map.output.key.class</name><value>org.apache.hadoop.io.IntWritable</value></property>
-<property><!--Loaded from job.xml--><name>yarn.ipc.serializer.type</name><value>protocolbuffers</value></property>
 <property><!--Loaded from mapred-default.xml--><name>mapreduce.job.end-notification.max.retry.interval</name><value>5</value></property>
 <property><!--Loaded from job.xml--><name>ftp.blocksize</name><value>67108864</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.tasktracker.http.threads</name><value>40</value></property>
