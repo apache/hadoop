@@ -685,7 +685,7 @@ public class Gridmix extends Configured implements Tool {
           } catch (IOException e) {
             LOG.warn("Failure killing " + job.getJobName(), e);
           } catch (Exception e) {
-            LOG.error("Unexcpected exception", e);
+            LOG.error("Unexpected exception", e);
           }
         }
         LOG.info("Done.");

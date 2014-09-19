@@ -503,6 +503,8 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11109. Site build is broken. (Jian He via atm)
 
+    HADOOP-10946. Fix a bunch of typos in log messages (Ray Chiang via aw)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
