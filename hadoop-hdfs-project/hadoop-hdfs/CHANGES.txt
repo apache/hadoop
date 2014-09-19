@@ -227,6 +227,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6970. Move startFile EDEK retries to the DFSClient. (wang)
 
+    HDFS-6948. DN rejects blocks if it has older UC block
+    (Eric Payne via kihwal)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
