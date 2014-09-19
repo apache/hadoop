@@ -434,6 +434,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7078. Fix listEZs to work correctly with snapshots. (wang)
 
+    HDFS-6840. Clients are always sent to the same datanode when read
+    is off rack. (wang)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
