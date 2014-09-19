@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 2.8)
-PROJECT(hdfsdb)
+project(hdfsdb)
 
-ENABLE_TESTING()
+include(CheckIncludeFiles)
+
+enable_testing()
 
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 15)
@@ -23,12 +25,30 @@ set(HDFSDBSRCS db/builder.cc db/db_impl.cc db/db_iter.cc db/dbformat.cc
   util/logging.cc util/options.cc util/status.cc
 )
 
+add_definitions(-DSNAPPY)
+include_directories(../snappy)
+set(SNAPPY_SRCS ../snappy/snappy.cc ../snappy/snappy-sinksource.cc ../snappy/snappy-stubs-internal.cc)
+
+check_include_files("sys/uio.h" HAVE_SYS_UIO_H)
+if (HAVE_SET_UIO_H)
+add_definition(-DHAVE_SYS_UIO_H)
+endif()
+
+if(APPLE)
+add_definitions(-DOS_MACOSX -DLEVELDB_PLATFORM_POSIX)
+set(PORT_SRCS port/port_posix.cc util/env_posix.cc)
+elseif("${CMAKE_SYSTEM}" MATCHES "Linux")
+add_definitions(-DOS_LINUX -DLEVELDB_PLATFORM_POSIX)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-builtin-memcmp -pthread -fPIC")
+set(PORT_SRCS port/port_posix.cc util/env_posix.cc)
+endif()
+
 if(APPLE)
 add_definitions(-DOS_MACOSX -DLEVELDB_PLATFORM_POSIX)
 set(PORT_SRCS port/port_posix.cc util/env_posix.cc)
 endif()
 
-add_library(hdfsdb STATIC ${HDFSDBSRCS} ${PORT_SRCS})
+add_library(hdfsdb STATIC ${HDFSDBSRCS} ${PORT_SRCS} ${SNAPPY_SRCS})
 
 set(TESTHARNESS_SRCS util/testutil.cc util/testharness.cc)
 add_library(hdfsdb-test-harness ${TESTHARNESS_SRCS})
