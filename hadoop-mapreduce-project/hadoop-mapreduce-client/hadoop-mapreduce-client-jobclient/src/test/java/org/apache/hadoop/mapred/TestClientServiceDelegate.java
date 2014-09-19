@@ -31,8 +31,6 @@ import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.junit.Assert;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobStatus;
@@ -56,8 +54,10 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Records;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -488,7 +488,9 @@ public class TestClientServiceDelegate {
   private ResourceMgrDelegate getRMDelegate() throws IOException {
     ResourceMgrDelegate rm = mock(ResourceMgrDelegate.class);
     try {
-      when(rm.getApplicationReport(jobId.getAppId())).thenReturn(null);
+      ApplicationId appId = jobId.getAppId();
+      when(rm.getApplicationReport(appId)).
+          thenThrow(new ApplicationNotFoundException(appId + " not found"));
     } catch (YarnException e) {
       throw new IOException(e);
     }
