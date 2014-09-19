@@ -57,3 +57,7 @@
     HDFS-7084. FsDatasetImpl#copyBlockFiles debug log can be improved.
     (Xiaoyu Yao via Arpit Agarwal)
 
+    HDFS-7091. Add forwarding constructor for INodeFile for existing callers.
+    (Arpit Agarwal)
+
+
