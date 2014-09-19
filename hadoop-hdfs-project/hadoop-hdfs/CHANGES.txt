@@ -445,6 +445,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-7096. Fix TestRpcProgramNfs3 to use DFS_ENCRYPTION_KEY_PROVIDER_URI
     (clamb via cmccabe)
 
+    HDFS-7046. HA NN can NPE upon transition to active. (kihwal)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
