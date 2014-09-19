@@ -440,6 +440,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-6840. Clients are always sent to the same datanode when read
     is off rack. (wang)
 
+    HDFS-7065. Pipeline close recovery race can cause block corruption (kihwal)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
