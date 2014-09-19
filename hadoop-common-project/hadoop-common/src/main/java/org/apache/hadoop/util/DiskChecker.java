@@ -102,7 +102,7 @@ public class DiskChecker {
    */
   public static void checkDir(File dir) throws DiskErrorException {
     if (!mkdirsWithExistsCheck(dir)) {
-      throw new DiskErrorException("Can not create directory: "
+      throw new DiskErrorException("Cannot create directory: "
                                    + dir.toString());
     }
     checkDirAccess(dir);

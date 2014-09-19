@@ -1016,7 +1016,7 @@ public class StreamJob implements Tool {
       if (background_) {
         LOG.info("Job is running in background.");
       } else if (!jc_.monitorAndPrintJob(jobConf_, running_)) {
-        LOG.error("Job not Successful!");
+        LOG.error("Job not successful!");
         return 1;
       }
       LOG.info("Output directory: " + output_);
