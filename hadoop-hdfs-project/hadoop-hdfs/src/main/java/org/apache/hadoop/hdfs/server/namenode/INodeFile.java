@@ -120,6 +120,13 @@ public class INodeFile extends INodeWithAdditionalFields
   private BlockInfo[] blocks;
 
   INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime,
+            long atime, BlockInfo[] blklist, short replication,
+            long preferredBlockSize) {
+    this(id, name, permissions, mtime, atime, blklist, replication,
+         preferredBlockSize, false);
+  }
+
+  INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime,
       long atime, BlockInfo[] blklist, short replication,
       long preferredBlockSize, byte storagePolicyID, boolean isLazyPersist) {
     super(id, name, permissions, mtime, atime);

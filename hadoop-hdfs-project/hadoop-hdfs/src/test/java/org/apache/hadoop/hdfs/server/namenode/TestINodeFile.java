@@ -85,7 +85,7 @@ public class TestINodeFile {
 
   INodeFile createINodeFile(short replication, long preferredBlockSize) {
     return new INodeFile(INodeId.GRANDFATHER_INODE_ID, null, perm, 0L, 0L,
-        null, replication, preferredBlockSize, (byte)0, false);
+        null, replication, preferredBlockSize, (byte)0);
   }
 
   private static INodeFile createINodeFile(byte storagePolicyID) {
@@ -286,7 +286,7 @@ public class TestINodeFile {
     INodeFile[] iNodes = new INodeFile[nCount];
     for (int i = 0; i < nCount; i++) {
       iNodes[i] = new INodeFile(i, null, perm, 0L, 0L, null, replication,
-          preferredBlockSize, (byte)0, false);
+          preferredBlockSize, (byte)0);
       iNodes[i].setLocalName(DFSUtil.string2Bytes(fileNamePrefix + i));
       BlockInfo newblock = new BlockInfo(replication);
       iNodes[i].addBlock(newblock);
@@ -344,7 +344,7 @@ public class TestINodeFile {
     {//cast from INodeFileUnderConstruction
       final INode from = new INodeFile(
           INodeId.GRANDFATHER_INODE_ID, null, perm, 0L, 0L, null, replication,
-          1024L, (byte)0, false);
+          1024L, (byte)0);
       from.asFile().toUnderConstruction("client", "machine");
     
       //cast to INodeFile, should success
@@ -1068,7 +1068,7 @@ public class TestINodeFile {
   public void testFileUnderConstruction() {
     replication = 3;
     final INodeFile file = new INodeFile(INodeId.GRANDFATHER_INODE_ID, null,
-        perm, 0L, 0L, null, replication, 1024L, (byte)0, false);
+        perm, 0L, 0L, null, replication, 1024L, (byte)0);
     assertFalse(file.isUnderConstruction());
 
     final String clientName = "client";
