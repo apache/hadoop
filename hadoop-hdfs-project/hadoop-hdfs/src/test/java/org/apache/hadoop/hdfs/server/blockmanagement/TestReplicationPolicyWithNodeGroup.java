@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.StorageType;
+import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.NetworkTopology;
@@ -258,7 +259,7 @@ public class TestReplicationPolicyWithNodeGroup {
       List<DatanodeStorageInfo> chosenNodes,
       Set<Node> excludedNodes) {
     return replicator.chooseTarget(filename, numOfReplicas, writer, chosenNodes,
-        false, excludedNodes, BLOCK_SIZE, StorageType.DEFAULT);
+        false, excludedNodes, BLOCK_SIZE, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY);
   }
 
   /**
@@ -340,7 +341,7 @@ public class TestReplicationPolicyWithNodeGroup {
     Set<Node> excludedNodes = new HashSet<Node>();
     excludedNodes.add(dataNodes[1]); 
     targets = repl.chooseTarget(filename, 4, dataNodes[0], chosenNodes, false, 
-        excludedNodes, BLOCK_SIZE, StorageType.DEFAULT);
+        excludedNodes, BLOCK_SIZE, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY);
     assertEquals(targets.length, 4);
     assertEquals(storages[0], targets[0]);
 
@@ -358,7 +359,7 @@ public class TestReplicationPolicyWithNodeGroup {
     excludedNodes.add(dataNodes[1]); 
     chosenNodes.add(storages[2]);
     targets = repl.chooseTarget(filename, 1, dataNodes[0], chosenNodes, true,
-        excludedNodes, BLOCK_SIZE, StorageType.DEFAULT);
+        excludedNodes, BLOCK_SIZE, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY);
     System.out.println("targets=" + Arrays.asList(targets));
     assertEquals(2, targets.length);
     //make sure that the chosen node is in the target.
@@ -612,8 +613,10 @@ public class TestReplicationPolicyWithNodeGroup {
         replicaList, rackMap, first, second);
     assertEquals(3, first.size());
     assertEquals(1, second.size());
+    List<StorageType> excessTypes = new ArrayList<StorageType>();
+    excessTypes.add(StorageType.DEFAULT);
     DatanodeStorageInfo chosen = replicator.chooseReplicaToDelete(
-        null, null, (short)3, first, second);
+        null, null, (short)3, first, second, excessTypes);
     // Within first set {dataNodes[0], dataNodes[1], dataNodes[2]}, 
     // dataNodes[0] and dataNodes[1] are in the same nodegroup, 
     // but dataNodes[1] is chosen as less free space
@@ -624,16 +627,18 @@ public class TestReplicationPolicyWithNodeGroup {
     assertEquals(1, second.size());
     // Within first set {dataNodes[0], dataNodes[2]}, dataNodes[2] is chosen
     // as less free space
+    excessTypes.add(StorageType.DEFAULT);
     chosen = replicator.chooseReplicaToDelete(
-        null, null, (short)2, first, second);
+        null, null, (short)2, first, second, excessTypes);
     assertEquals(chosen, storages[2]);
 
     replicator.adjustSetsWithChosenReplica(rackMap, first, second, chosen);
     assertEquals(0, first.size());
     assertEquals(2, second.size());
     // Within second set, dataNodes[5] with less free space
+    excessTypes.add(StorageType.DEFAULT);
     chosen = replicator.chooseReplicaToDelete(
-        null, null, (short)1, first, second);
+        null, null, (short)1, first, second, excessTypes);
     assertEquals(chosen, storages[5]);
   }
   

@@ -464,17 +464,20 @@ public abstract class Storage extends StorageInfo {
     public StorageState analyzeStorage(StartupOption startOpt, Storage storage)
         throws IOException {
       assert root != null : "root is null";
+      boolean hadMkdirs = false;
       String rootPath = root.getCanonicalPath();
       try { // check that storage exists
         if (!root.exists()) {
           // storage directory does not exist
-          if (startOpt != StartupOption.FORMAT) {
+          if (startOpt != StartupOption.FORMAT &&
+              startOpt != StartupOption.HOTSWAP) {
             LOG.warn("Storage directory " + rootPath + " does not exist");
             return StorageState.NON_EXISTENT;
           }
           LOG.info(rootPath + " does not exist. Creating ...");
           if (!root.mkdirs())
             throw new IOException("Cannot create directory " + rootPath);
+          hadMkdirs = true;
         }
         // or is inaccessible
         if (!root.isDirectory()) {
@@ -492,7 +495,10 @@ public abstract class Storage extends StorageInfo {
 
       this.lock(); // lock storage if it exists
 
-      if (startOpt == HdfsServerConstants.StartupOption.FORMAT)
+      // If startOpt is HOTSWAP, it returns NOT_FORMATTED for empty directory,
+      // while it also checks the layout version.
+      if (startOpt == HdfsServerConstants.StartupOption.FORMAT ||
+          (startOpt == StartupOption.HOTSWAP && hadMkdirs))
         return StorageState.NOT_FORMATTED;
 
       if (startOpt != HdfsServerConstants.StartupOption.IMPORT) {

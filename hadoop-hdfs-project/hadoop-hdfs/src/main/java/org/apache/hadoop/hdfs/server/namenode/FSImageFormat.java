@@ -890,7 +890,7 @@ public class FSImageFormat {
       // LazyPersist flag will not be present in old image formats and hence
       // can be safely set to false always.
       return new INodeFileAttributes.SnapshotCopy(name, permissions, null, modificationTime,
-          accessTime, replication, preferredBlockSize, false, null);
+          accessTime, replication, preferredBlockSize, false, (byte) 0, null);
     }
 
     public INodeDirectoryAttributes loadINodeDirectoryAttributes(DataInput in)

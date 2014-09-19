@@ -158,7 +158,8 @@ message FsPermissionProto {
 enum StorageTypeProto {
   DISK = 1;
   SSD = 2;
-  RAM_DISK = 3;
+  ARCHIVE = 3;
+  RAM_DISK = 4;
 }
 
 /**
@@ -263,7 +264,9 @@ message HdfsFileStatusProto {
   optional int32 childrenNum = 14 [default = -1];
   // Optional field for file encryption
   optional FileEncryptionInfoProto fileEncryptionInfo = 15;
-  optional bool isLazyPersist = 16 [default = false];
+
+  optional uint32 storagePolicy = 16 [default = 0]; // block storage policy id
+  optional bool isLazyPersist = 17 [default = false];
 } 
 
 /**

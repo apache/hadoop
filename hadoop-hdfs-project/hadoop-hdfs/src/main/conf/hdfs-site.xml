@@ -16,6 +16,7 @@
 
 <!-- Put site-specific property overrides in this file. -->
 
-<configuration>
+<configuration xmlns:xi="http://www.w3.org/2001/XInclude"> 
+  <xi:include href="blockStoragePolicy-site.xml" />
 
 </configuration>

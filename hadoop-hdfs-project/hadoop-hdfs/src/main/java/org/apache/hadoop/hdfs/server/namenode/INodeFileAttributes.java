@@ -39,6 +39,8 @@ public interface INodeFileAttributes extends INodeAttributes {
 
   public boolean metadataEquals(INodeFileAttributes other);
 
+  public byte getLocalStoragePolicyID();
+
   /** A copy of the inode file attributes */
   public static class SnapshotCopy extends INodeAttributes.SnapshotCopy
       implements INodeFileAttributes {
@@ -46,11 +48,12 @@ public interface INodeFileAttributes extends INodeAttributes {
 
     public SnapshotCopy(byte[] name, PermissionStatus permissions,
         AclFeature aclFeature, long modificationTime, long accessTime,
-        short replication, long preferredBlockSize,
-        boolean isTransient, XAttrFeature xAttrsFeature) {
+        short replication, long preferredBlockSize, boolean isLazyPersist,
+        byte storagePolicyID, XAttrFeature xAttrsFeature) {
       super(name, permissions, aclFeature, modificationTime, accessTime, 
           xAttrsFeature);
-      header = HeaderFormat.toLong(preferredBlockSize, replication, isTransient);
+      header = HeaderFormat.toLong(preferredBlockSize, replication,
+          isLazyPersist, storagePolicyID);
     }
 
     public SnapshotCopy(INodeFile file) {
@@ -70,6 +73,11 @@ public interface INodeFileAttributes extends INodeAttributes {
 
     @Override
     public boolean getLazyPersistFlag() { return HeaderFormat.getLazyPersistFlag(header); }
+
+    @Override
+    public byte getLocalStoragePolicyID() {
+      return HeaderFormat.getStoragePolicyID(header);
+    }
 
     @Override
     public long getHeaderLong() {

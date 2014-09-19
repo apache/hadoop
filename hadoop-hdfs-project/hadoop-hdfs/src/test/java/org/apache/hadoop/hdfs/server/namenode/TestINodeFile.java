@@ -75,7 +75,7 @@ public class TestINodeFile {
   static final short BLOCKBITS = 48;
   static final long BLKSIZE_MAXVALUE = ~(0xffffL << BLOCKBITS);
 
-  private final PermissionStatus perm = new PermissionStatus(
+  private static final PermissionStatus perm = new PermissionStatus(
       "userName", null, FsPermission.getDefault());
   private short replication;
   private long preferredBlockSize = 1024;
@@ -84,6 +84,30 @@ public class TestINodeFile {
     return new INodeFile(INodeId.GRANDFATHER_INODE_ID, null, perm, 0L, 0L,
         null, replication, preferredBlockSize);
   }
+
+  private static INodeFile createINodeFile(byte storagePolicyID) {
+    return new INodeFile(INodeId.GRANDFATHER_INODE_ID, null, perm, 0L, 0L,
+        null, (short)3, 1024L, false, storagePolicyID);
+  }
+
+  @Test
+  public void testStoragePolicyID () {
+    for(byte i = 0; i < 16; i++) {
+      final INodeFile f = createINodeFile(i);
+      assertEquals(i, f.getStoragePolicyID());
+    }
+  }
+
+  @Test(expected=IllegalArgumentException.class)
+  public void testStoragePolicyIdBelowLowerBound () throws IllegalArgumentException {
+    createINodeFile((byte)-1);
+  }
+
+  @Test(expected=IllegalArgumentException.class)
+  public void testStoragePolicyIdAboveUpperBound () throws IllegalArgumentException {
+    createINodeFile((byte)16);
+  }
+
   /**
    * Test for the Replication value. Sets a value and checks if it was set
    * correct.
@@ -316,7 +340,8 @@ public class TestINodeFile {
 
     {//cast from INodeFileUnderConstruction
       final INode from = new INodeFile(
-          INodeId.GRANDFATHER_INODE_ID, null, perm, 0L, 0L, null, replication, 1024L);
+          INodeId.GRANDFATHER_INODE_ID, null, perm, 0L, 0L, null, replication,
+          1024L);
       from.asFile().toUnderConstruction("client", "machine");
     
       //cast to INodeFile, should success

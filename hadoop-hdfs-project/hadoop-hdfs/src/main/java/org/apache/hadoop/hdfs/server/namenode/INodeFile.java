@@ -28,6 +28,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
@@ -71,12 +72,15 @@ public class INodeFile extends INodeWithAdditionalFields
     return inode.asFile();
   }
 
-  /** Format: [16 bits for replication][48 bits for PreferredBlockSize] */
+  /** 
+   * Bit format:
+   * [4-bit storagePolicyID][12-bit replication][48-bit preferredBlockSize]
+   */
   static enum HeaderFormat {
     PREFERRED_BLOCK_SIZE(null, 48, 1),
-    REPLICATION(PREFERRED_BLOCK_SIZE.BITS, 12, 1),
-    LAZY_PERSIST(REPLICATION.BITS, 4, 0);
-
+    REPLICATION(PREFERRED_BLOCK_SIZE.BITS, 11, 1),
+    STORAGE_POLICY_ID(REPLICATION.BITS, BlockStoragePolicy.ID_BIT_LENGTH, 0),
+    LAZY_PERSIST(STORAGE_POLICY_ID.BITS, 1, 0);
 
     private final LongBitFormat BITS;
 
@@ -96,10 +100,16 @@ public class INodeFile extends INodeWithAdditionalFields
       return LAZY_PERSIST.BITS.retrieve(header) == 0 ? false : true;
     }
 
-    static long toLong(long preferredBlockSize, short replication, boolean isLazyPersist) {
+    static byte getStoragePolicyID(long header) {
+      return (byte)STORAGE_POLICY_ID.BITS.retrieve(header);
+    }
+
+    static long toLong(long preferredBlockSize, short replication,
+        boolean isLazyPersist, byte storagePolicyID) {
       long h = 0;
       h = PREFERRED_BLOCK_SIZE.BITS.combine(preferredBlockSize, h);
       h = REPLICATION.BITS.combine(replication, h);
+      h = STORAGE_POLICY_ID.BITS.combine(storagePolicyID, h);
       h = LAZY_PERSIST.BITS.combine(isLazyPersist ? 1 : 0, h);
       return h;
     }
@@ -114,14 +124,15 @@ public class INodeFile extends INodeWithAdditionalFields
             long atime, BlockInfo[] blklist, short replication,
             long preferredBlockSize) {
     this(id, name, permissions, mtime, atime, blklist, replication,
-         preferredBlockSize, false);
+         preferredBlockSize, false, (byte) 0);
   }
 
   INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime,
       long atime, BlockInfo[] blklist, short replication,
-      long preferredBlockSize, boolean isLazyPersist) {
+      long preferredBlockSize, boolean isLazyPersist, byte storagePolicyID) {
     super(id, name, permissions, mtime, atime);
-    header = HeaderFormat.toLong(preferredBlockSize, replication, isLazyPersist);
+    header = HeaderFormat.toLong(preferredBlockSize, replication,
+        isLazyPersist, storagePolicyID);
     this.blocks = blklist;
   }
   
@@ -372,6 +383,32 @@ public class INodeFile extends INodeWithAdditionalFields
   @Override
   public boolean getLazyPersistFlag() {
     return HeaderFormat.getLazyPersistFlag(header);
+  }
+
+  @Override
+  public byte getLocalStoragePolicyID() {
+    return HeaderFormat.getStoragePolicyID(header);
+  }
+
+  @Override
+  public byte getStoragePolicyID() {
+    byte id = getLocalStoragePolicyID();
+    if (id == BlockStoragePolicy.ID_UNSPECIFIED) {
+      return this.getParent() != null ?
+          this.getParent().getStoragePolicyID() : id;
+    }
+    return id;
+  }
+
+  private void setStoragePolicyID(byte storagePolicyId) {
+    header = HeaderFormat.STORAGE_POLICY_ID.BITS.combine(storagePolicyId,
+        header);
+  }
+
+  public final void setStoragePolicyID(byte storagePolicyId,
+      int latestSnapshotId) throws QuotaExceededException {
+    recordModification(latestSnapshotId);
+    setStoragePolicyID(storagePolicyId);
   }
 
   @Override

@@ -26,7 +26,6 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -223,11 +222,8 @@ public class NamenodeWebHdfsMethods {
       final DatanodeDescriptor clientNode = bm.getDatanodeManager(
           ).getDatanodeByHost(getRemoteAddress());
       if (clientNode != null) {
-        final DatanodeStorageInfo[] storages = bm.getBlockPlacementPolicy()
-            .chooseTarget(path, 1, clientNode,
-                new ArrayList<DatanodeStorageInfo>(), false, excludes, blocksize,
-                // TODO: get storage type from the file
-                StorageType.DEFAULT);
+        final DatanodeStorageInfo[] storages = bm.chooseTarget4WebHDFS(
+            path, clientNode, excludes, blocksize);
         if (storages.length > 0) {
           return storages[0].getDatanodeDescriptor();
         }

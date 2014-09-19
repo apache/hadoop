@@ -286,6 +286,16 @@ public abstract class INodeReference extends INode {
   }
 
   @Override
+  public final byte getStoragePolicyID() {
+    return referred.getStoragePolicyID();
+  }
+
+  @Override
+  public final byte getLocalStoragePolicyID() {
+    return referred.getLocalStoragePolicyID();
+  }
+
+  @Override
   final void recordModification(int latestSnapshotId)
       throws QuotaExceededException {
     referred.recordModification(latestSnapshotId);

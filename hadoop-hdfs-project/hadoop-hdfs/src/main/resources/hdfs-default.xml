@@ -22,7 +22,8 @@
 <!-- wish to modify from this file into hdfs-site.xml and change them -->
 <!-- there.  If hdfs-site.xml does not already exist, create it.      -->
 
-<configuration>
+<configuration xmlns:xi="http://www.w3.org/2001/XInclude"> 
+  <xi:include href="blockStoragePolicy-default.xml" />
 
 <property>
   <name>hadoop.hdfs.configuration.version</name>
@@ -2075,19 +2076,6 @@
     deleted, suggested delay is one hour to give the administrator enough time
     to notice large number of pending deletion blocks and take corrective
     action.
-  </description>
-</property>
-
-<property>
-  <name>dfs.namenode.randomize-block-locations-per-block</name>
-  <value>false</value>
-  <description>When fetching replica locations of a block, the replicas
-   are sorted based on network distance. This configuration parameter
-   determines whether the replicas at the same network distance are randomly
-   shuffled. By default, this is false, such that repeated requests for a block's
-   replicas always result in the same order. This potentially improves page cache
-   behavior. However, for some network topologies, it is desirable to shuffle this
-   order for better load balancing.
   </description>
 </property>
 

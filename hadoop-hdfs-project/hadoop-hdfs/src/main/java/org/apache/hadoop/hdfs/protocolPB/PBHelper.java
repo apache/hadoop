@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos;
+import org.apache.hadoop.hdfs.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.inotify.Event;
@@ -176,6 +177,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
@@ -893,9 +895,25 @@ public class PBHelper {
     }
     builder.addAllTargets(convert(cmd.getTargets()))
            .addAllTargetStorageUuids(convert(cmd.getTargetStorageIDs()));
+    StorageType[][] types = cmd.getTargetStorageTypes();
+    if (types != null) {
+      builder.addAllTargetStorageTypes(convert(types));
+    }
     return builder.build();
   }
-  
+
+  private static List<StorageTypesProto> convert(StorageType[][] types) {
+    List<StorageTypesProto> list = Lists.newArrayList();
+    if (types != null) {
+      for (StorageType[] ts : types) {
+        StorageTypesProto.Builder builder = StorageTypesProto.newBuilder();
+        builder.addAllStorageTypes(convertStorageTypes(ts));
+        list.add(builder.build());
+      }
+    }
+    return list;
+  }
+
   public static BlockIdCommandProto convert(BlockIdCommand cmd) {
     BlockIdCommandProto.Builder builder = BlockIdCommandProto.newBuilder()
         .setBlockPoolId(cmd.getBlockPoolId());
@@ -1024,7 +1042,7 @@ public class PBHelper {
     } else {
       for(int i = 0; i < targetStorageTypes.length; i++) {
         List<StorageTypeProto> p = targetStorageTypesList.get(i).getStorageTypesList();
-        targetStorageTypes[i] = p.toArray(new StorageType[p.size()]);
+        targetStorageTypes[i] = convertStorageTypes(p, targets[i].length);
       }
     }
 
@@ -1338,8 +1356,9 @@ public class PBHelper {
         fs.hasFileId()? fs.getFileId(): INodeId.GRANDFATHER_INODE_ID,
         fs.hasLocations() ? PBHelper.convert(fs.getLocations()) : null,
         fs.hasChildrenNum() ? fs.getChildrenNum() : -1,
-        fs.hasFileEncryptionInfo() ? convert(fs.getFileEncryptionInfo()) :
-            null);
+        fs.hasFileEncryptionInfo() ? convert(fs.getFileEncryptionInfo()) : null,
+        fs.hasStoragePolicy() ? (byte) fs.getStoragePolicy()
+            : BlockStoragePolicy.ID_UNSPECIFIED);
   }
 
   public static SnapshottableDirectoryStatus convert(
@@ -1386,7 +1405,8 @@ public class PBHelper {
       setGroup(fs.getGroup()).
       setFileId(fs.getFileId()).
       setChildrenNum(fs.getChildrenNum()).
-      setPath(ByteString.copyFrom(fs.getLocalNameInBytes()));
+      setPath(ByteString.copyFrom(fs.getLocalNameInBytes())).
+      setStoragePolicy(fs.getStoragePolicy());
     if (fs.isSymlink())  {
       builder.setSymlink(ByteString.copyFrom(fs.getSymlinkInBytes()));
     }
@@ -1394,7 +1414,8 @@ public class PBHelper {
       builder.setFileEncryptionInfo(convert(fs.getFileEncryptionInfo()));
     }
     if (fs instanceof HdfsLocatedFileStatus) {
-      LocatedBlocks locations = ((HdfsLocatedFileStatus)fs).getBlockLocations();
+      final HdfsLocatedFileStatus lfs = (HdfsLocatedFileStatus) fs;
+      LocatedBlocks locations = lfs.getBlockLocations();
       if (locations != null) {
         builder.setLocations(PBHelper.convert(locations));
       }
@@ -1707,6 +1728,8 @@ public class PBHelper {
       return StorageTypeProto.DISK;
     case SSD:
       return StorageTypeProto.SSD;
+    case ARCHIVE:
+      return StorageTypeProto.ARCHIVE;
     case RAM_DISK:
       return StorageTypeProto.RAM_DISK;
     default:
@@ -1737,6 +1760,8 @@ public class PBHelper {
         return StorageType.DISK;
       case SSD:
         return StorageType.SSD;
+      case ARCHIVE:
+        return StorageType.ARCHIVE;
       case RAM_DISK:
         return StorageType.RAM_DISK;
       default:

@@ -94,7 +94,12 @@ public final class HdfsServerConstants {
     NONINTERACTIVE("-nonInteractive"),
     RENAMERESERVED("-renameReserved"),
     METADATAVERSION("-metadataVersion"),
-    UPGRADEONLY("-upgradeOnly");
+    UPGRADEONLY("-upgradeOnly"),
+    // The -hotswap constant should not be used as a startup option, it is
+    // only used for StorageDirectory.analyzeStorage() in hot swap drive scenario.
+    // TODO refactor StorageDirectory.analyzeStorage() so that we can do away with
+    // this in StartupOption.
+    HOTSWAP("-hotswap");
 
     private static final Pattern ENUM_WITH_ROLLING_UPGRADE_OPTION = Pattern.compile(
         "(\\w+)\\((\\w+)\\)");

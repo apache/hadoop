@@ -42,6 +42,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
@@ -254,6 +255,7 @@ public class BlockManager {
 
   /** for block replicas placement */
   private BlockPlacementPolicy blockplacement;
+  private final BlockStoragePolicy.Suite storagePolicySuite;
 
   /** Check whether name system is running before terminating */
   private boolean checkNSRunning = true;
@@ -276,6 +278,7 @@ public class BlockManager {
     blockplacement = BlockPlacementPolicy.getInstance(
         conf, stats, datanodeManager.getNetworkTopology(), 
         datanodeManager.getHost2DatanodeMap());
+    storagePolicySuite = BlockStoragePolicy.readBlockStorageSuite(conf);
     pendingReplications = new PendingReplicationBlocks(conf.getInt(
       DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY,
       DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_DEFAULT) * 1000L);
@@ -394,7 +397,11 @@ public class BlockManager {
           lifetimeMin*60*1000L, 0, null, encryptionAlgorithm);
     }
   }
-  
+
+  public BlockStoragePolicy getStoragePolicy(final String policyName) {
+    return storagePolicySuite.getPolicy(policyName);
+  }
+
   public void setBlockPoolId(String blockPoolId) {
     if (isBlockTokenEnabled()) {
       blockTokenSecretManager.setBlockPoolId(blockPoolId);
@@ -445,7 +452,7 @@ public class BlockManager {
     return datanodeManager;
   }
 
-  /** @return the BlockPlacementPolicy */
+  @VisibleForTesting
   public BlockPlacementPolicy getBlockPlacementPolicy() {
     return blockplacement;
   }
@@ -1366,7 +1373,7 @@ public class BlockManager {
       // choose replication targets: NOT HOLDING THE GLOBAL LOCK
       // It is costly to extract the filename for which chooseTargets is called,
       // so for now we pass in the block collection itself.
-      rw.chooseTargets(blockplacement, excludedNodes);
+      rw.chooseTargets(blockplacement, storagePolicySuite, excludedNodes);
     }
 
     namesystem.writeLock();
@@ -1467,24 +1474,48 @@ public class BlockManager {
     return scheduledWork;
   }
 
+  /** Choose target for WebHDFS redirection. */
+  public DatanodeStorageInfo[] chooseTarget4WebHDFS(String src,
+      DatanodeDescriptor clientnode, Set<Node> excludes, long blocksize) {
+    return blockplacement.chooseTarget(src, 1, clientnode,
+        Collections.<DatanodeStorageInfo>emptyList(), false, excludes,
+        blocksize, storagePolicySuite.getDefaultPolicy());
+  }
+
+  /** Choose target for getting additional datanodes for an existing pipeline. */
+  public DatanodeStorageInfo[] chooseTarget4AdditionalDatanode(String src,
+      int numAdditionalNodes,
+      DatanodeDescriptor clientnode,
+      List<DatanodeStorageInfo> chosen,
+      Set<Node> excludes,
+      long blocksize,
+      byte storagePolicyID) {
+    
+    final BlockStoragePolicy storagePolicy = storagePolicySuite.getPolicy(storagePolicyID);
+    return blockplacement.chooseTarget(src, numAdditionalNodes, clientnode,
+        chosen, true, excludes, blocksize, storagePolicy);
+  }
+
   /**
-   * Choose target datanodes according to the replication policy.
+   * Choose target datanodes for creating a new block.
    * 
    * @throws IOException
    *           if the number of targets < minimum replication.
    * @see BlockPlacementPolicy#chooseTarget(String, int, Node,
-   *      List, boolean, Set, long, StorageType)
+   *      Set, long, List, BlockStoragePolicy)
    */
-  public DatanodeStorageInfo[] chooseTarget(final String src,
+  public DatanodeStorageInfo[] chooseTarget4NewBlock(final String src,
       final int numOfReplicas, final DatanodeDescriptor client,
       final Set<Node> excludedNodes,
-      final long blocksize, List<String> favoredNodes) throws IOException {
+      final long blocksize,
+      final List<String> favoredNodes,
+      final byte storagePolicyID) throws IOException {
     List<DatanodeDescriptor> favoredDatanodeDescriptors = 
         getDatanodeDescriptors(favoredNodes);
+    final BlockStoragePolicy storagePolicy = storagePolicySuite.getPolicy(storagePolicyID);
     final DatanodeStorageInfo[] targets = blockplacement.chooseTarget(src,
         numOfReplicas, client, excludedNodes, blocksize, 
-        // TODO: get storage type from file
-        favoredDatanodeDescriptors, StorageType.DEFAULT);
+        favoredDatanodeDescriptors, storagePolicy);
     if (targets.length < minReplication) {
       throw new IOException("File " + src + " could only be replicated to "
           + targets.length + " nodes instead of minReplication (="
@@ -2716,6 +2747,10 @@ public class BlockManager {
     assert namesystem.hasWriteLock();
     // first form a rack to datanodes map and
     BlockCollection bc = getBlockCollection(b);
+    final BlockStoragePolicy storagePolicy = storagePolicySuite.getPolicy(bc.getStoragePolicyID());
+    final List<StorageType> excessTypes = storagePolicy.chooseExcess(
+        replication, DatanodeStorageInfo.toStorageTypes(nonExcess));
+
 
     final Map<String, List<DatanodeStorageInfo>> rackMap
         = new HashMap<String, List<DatanodeStorageInfo>>();
@@ -2736,16 +2771,13 @@ public class BlockManager {
     final DatanodeStorageInfo addedNodeStorage
         = DatanodeStorageInfo.getDatanodeStorageInfo(nonExcess, addedNode);
     while (nonExcess.size() - replication > 0) {
-      // check if we can delete delNodeHint
       final DatanodeStorageInfo cur;
-      if (firstOne && delNodeHintStorage != null
-          && (moreThanOne.contains(delNodeHintStorage)
-              || (addedNodeStorage != null
-                  && !moreThanOne.contains(addedNodeStorage)))) {
+      if (useDelHint(firstOne, delNodeHintStorage, addedNodeStorage,
+          moreThanOne, excessTypes)) {
         cur = delNodeHintStorage;
       } else { // regular excessive replica removal
         cur = replicator.chooseReplicaToDelete(bc, b, replication,
-        		moreThanOne, exactlyOne);
+            moreThanOne, exactlyOne, excessTypes);
       }
       firstOne = false;
 
@@ -2768,6 +2800,27 @@ public class BlockManager {
       addToInvalidates(b, cur.getDatanodeDescriptor());
       blockLog.info("BLOCK* chooseExcessReplicates: "
                 +"("+cur+", "+b+") is added to invalidated blocks set");
+    }
+  }
+
+  /** Check if we can use delHint */
+  static boolean useDelHint(boolean isFirst, DatanodeStorageInfo delHint,
+      DatanodeStorageInfo added, List<DatanodeStorageInfo> moreThan1Racks,
+      List<StorageType> excessTypes) {
+    if (!isFirst) {
+      return false; // only consider delHint for the first case
+    } else if (delHint == null) {
+      return false; // no delHint
+    } else if (!excessTypes.contains(delHint.getStorageType())) {
+      return false; // delHint storage type is not an excess type
+    } else {
+      // check if removing delHint reduces the number of racks
+      if (moreThan1Racks.contains(delHint)) {
+        return true; // delHint and some other nodes are under the same rack 
+      } else if (added != null && !moreThan1Racks.contains(added)) {
+        return true; // the added node adds a new rack
+      }
+      return false; // removing delHint reduces the number of racks;
     }
   }
 
@@ -2877,7 +2930,7 @@ public class BlockManager {
     // Decrement number of blocks scheduled to this datanode.
     // for a retry request (of DatanodeProtocol#blockReceivedAndDeleted with 
     // RECEIVED_BLOCK), we currently also decrease the approximate number. 
-    node.decrementBlocksScheduled();
+    node.decrementBlocksScheduled(storageInfo.getStorageType());
 
     // get the deletion hint node
     DatanodeDescriptor delHintNode = null;
@@ -3546,10 +3599,12 @@ public class BlockManager {
     }
     
     private void chooseTargets(BlockPlacementPolicy blockplacement,
+        BlockStoragePolicy.Suite storagePolicySuite,
         Set<Node> excludedNodes) {
       targets = blockplacement.chooseTarget(bc.getName(),
           additionalReplRequired, srcNode, liveReplicaStorages, false,
-          excludedNodes, block.getNumBytes(), StorageType.DEFAULT);
+          excludedNodes, block.getNumBytes(),
+          storagePolicySuite.getPolicy(bc.getStoragePolicyID()));
     }
   }
 
