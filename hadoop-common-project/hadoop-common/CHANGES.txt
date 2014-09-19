@@ -499,7 +499,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11105. MetricsSystemImpl could leak memory in registered callbacks.
     (Chuan Liu via cnauroth)
 
-    KMS: Support for multiple Kerberos principals. (tucu)
+    HADOOP-10982. KMS: Support for multiple Kerberos principals. (tucu)
+
+    HADOOP-11109. Site build is broken. (Jian He via atm)
 
 Release 2.5.1 - 2014-09-05
 

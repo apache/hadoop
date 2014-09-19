@@ -626,7 +626,7 @@ $ keytool -genkey -alias tomcat -keyalg RSA
 
   <<NOTE:>> If using HTTPS, the SSL certificate used by the KMS instance must
   be configured to support multiple hostnames (see Java 7
-  <<<keytool>> SAN extension support for details on how to do this).
+  <<<keytool>>> SAN extension support for details on how to do this).
 
 *** HTTP Authentication Signature
 
