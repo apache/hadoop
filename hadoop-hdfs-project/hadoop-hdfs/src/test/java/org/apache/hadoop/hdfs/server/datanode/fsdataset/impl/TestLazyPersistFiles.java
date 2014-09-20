@@ -71,7 +71,7 @@ public class TestLazyPersistFiles {
   private static final int THREADPOOL_SIZE = 10;
 
   private static final short REPL_FACTOR = 1;
-  private static final int BLOCK_SIZE = 10485760;   // 10 MB
+  private static final int BLOCK_SIZE = 5 * 1024 * 1024;
   private static final int LAZY_WRITE_FILE_SCRUBBER_INTERVAL_SEC = 3;
   private static final long HEARTBEAT_INTERVAL_SEC = 1;
   private static final int HEARTBEAT_RECHECK_INTERVAL_MSEC = 500;
@@ -449,34 +449,51 @@ public class TestLazyPersistFiles {
    * @throws InterruptedException
    */
   @Test (timeout=300000)
-  public void testRamDiskEvictionLRU()
+  public void testRamDiskEvictionIsLru()
     throws IOException, InterruptedException {
-    startUpCluster(true, 3);
+    final int NUM_PATHS = 5;
+    startUpCluster(true, NUM_PATHS + EVICTION_LOW_WATERMARK);
     final String METHOD_NAME = GenericTestUtils.getMethodName();
-    final int NUM_PATHS = 6;
-    Path paths[] = new Path[NUM_PATHS];
+    Path paths[] = new Path[NUM_PATHS * 2];
 
-    for (int i = 0; i < NUM_PATHS; i++) {
+    for (int i = 0; i < paths.length; i++) {
       paths[i] = new Path("/" + METHOD_NAME + "." + i +".dat");
     }
 
-    // No eviction for the first half of files
-    for (int i = 0; i < NUM_PATHS/2; i++) {
+    for (int i = 0; i < NUM_PATHS; i++) {
       makeTestFile(paths[i], BLOCK_SIZE, true);
+    }
+
+    // Sleep for a short time to allow the lazy writer thread to do its job.
+    Thread.sleep(3 * LAZY_WRITER_INTERVAL_SEC * 1000);
+
+    for (int i = 0; i < NUM_PATHS; ++i) {
       ensureFileReplicasOnStorageType(paths[i], RAM_DISK);
     }
 
-    // Lazy persist writer persists the first half of files
-    Thread.sleep(3 * LAZY_WRITER_INTERVAL_SEC * 1000);
+    // Open the files for read in a random order.
+    ArrayList<Integer> indexes = new ArrayList<Integer>(NUM_PATHS);
+    for (int i = 0; i < NUM_PATHS; ++i) {
+      indexes.add(i);
+    }
+    Collections.shuffle(indexes);
 
-    // Create the second half of files with eviction upon each create.
-    for (int i = NUM_PATHS/2; i < NUM_PATHS; i++) {
-      makeTestFile(paths[i], BLOCK_SIZE, true);
-      ensureFileReplicasOnStorageType(paths[i], RAM_DISK);
+    for (int i = 0; i < NUM_PATHS; ++i) {
+      LOG.info("Touching file " + paths[indexes.get(i)]);
+      DFSTestUtil.readFile(fs, paths[indexes.get(i)]);
+    }
 
-      // path[i-NUM_PATHS/2] is expected to be evicted by LRU
+    // Create an equal number of new files ensuring that the previous
+    // files are evicted in the same order they were read.
+    for (int i = 0; i < NUM_PATHS; ++i) {
+      makeTestFile(paths[i + NUM_PATHS], BLOCK_SIZE, true);
       triggerBlockReport();
-      ensureFileReplicasOnStorageType(paths[i - NUM_PATHS / 2], DEFAULT);
+      Thread.sleep(3000);
+      ensureFileReplicasOnStorageType(paths[i + NUM_PATHS], RAM_DISK);
+      ensureFileReplicasOnStorageType(paths[indexes.get(i)], DEFAULT);
+      for (int j = i + 1; j < NUM_PATHS; ++j) {
+        ensureFileReplicasOnStorageType(paths[indexes.get(j)], RAM_DISK);
+      }
     }
   }
 

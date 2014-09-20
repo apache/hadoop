@@ -235,9 +235,6 @@ public class FsVolumeImpl implements FsVolumeSpi {
   @Override
   public void reserveSpaceForRbw(long bytesToReserve) {
     if (bytesToReserve != 0) {
-      if (FsDatasetImpl.LOG.isDebugEnabled()) {
-        FsDatasetImpl.LOG.debug("Reserving " + bytesToReserve + " on volume " + getBasePath());
-      }
       reservedForRbw.addAndGet(bytesToReserve);
     }
   }
@@ -245,9 +242,6 @@ public class FsVolumeImpl implements FsVolumeSpi {
   @Override
   public void releaseReservedSpace(long bytesToRelease) {
     if (bytesToRelease != 0) {
-      if (FsDatasetImpl.LOG.isDebugEnabled()) {
-        FsDatasetImpl.LOG.debug("Releasing " + bytesToRelease + " on volume " + getBasePath());
-      }
 
       long oldReservation, newReservation;
       do {
@@ -298,17 +292,17 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
     
   void getVolumeMap(ReplicaMap volumeMap,
-                    final LazyWriteReplicaTracker lazyWriteReplicaMap)
+                    final RamDiskReplicaTracker ramDiskReplicaMap)
       throws IOException {
     for(BlockPoolSlice s : bpSlices.values()) {
-      s.getVolumeMap(volumeMap, lazyWriteReplicaMap);
+      s.getVolumeMap(volumeMap, ramDiskReplicaMap);
     }
   }
   
   void getVolumeMap(String bpid, ReplicaMap volumeMap,
-                    final LazyWriteReplicaTracker lazyWriteReplicaMap)
+                    final RamDiskReplicaTracker ramDiskReplicaMap)
       throws IOException {
-    getBlockPoolSlice(bpid).getVolumeMap(volumeMap, lazyWriteReplicaMap);
+    getBlockPoolSlice(bpid).getVolumeMap(volumeMap, ramDiskReplicaMap);
   }
   
   @Override
