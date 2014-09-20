@@ -698,6 +698,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-7088. Archival Storage: fix TestBalancer and
     TestBalancerWithMultipleNameNodes. (szetszwo via jing9)
 
+    HDFS-7095. TestStorageMover often fails in Jenkins. (jing9)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

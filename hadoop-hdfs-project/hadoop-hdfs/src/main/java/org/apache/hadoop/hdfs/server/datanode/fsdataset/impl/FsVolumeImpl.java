@@ -69,7 +69,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   // Capacity configured. This is useful when we want to
   // limit the visible capacity for tests. If negative, then we just
   // query from the filesystem.
-  protected long configuredCapacity;
+  protected volatile long configuredCapacity;
 
   /**
    * Per-volume worker pool that processes new blocks to cache.
@@ -129,7 +129,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
       }
     }
   }
-  
+
   long getDfsUsed() throws IOException {
     long dfsUsed = 0;
     synchronized(dataset) {
