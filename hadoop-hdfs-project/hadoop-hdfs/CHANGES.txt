@@ -560,6 +560,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7051. TestDataNodeRollingUpgrade#isBlockFileInPrevious assumes Unix file
     path separator. (cnauroth)
 
+    HDFS-7105. Fix TestJournalNode#testFailToStartWithBadConfig to match log
+    output change. (Ray Chiang via cnauroth)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

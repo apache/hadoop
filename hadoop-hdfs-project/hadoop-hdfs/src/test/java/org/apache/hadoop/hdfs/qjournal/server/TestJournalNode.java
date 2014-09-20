@@ -292,7 +292,7 @@ public class TestJournalNode {
     // Directory which cannot be created
     conf.set(DFSConfigKeys.DFS_JOURNALNODE_EDITS_DIR_KEY,
         Shell.WINDOWS ? "\\\\cannotBeCreated" : "/proc/does-not-exist");
-    assertJNFailsToStart(conf, "Can not create directory");
+    assertJNFailsToStart(conf, "Cannot create directory");
   }
 
   private static void assertJNFailsToStart(Configuration conf,
