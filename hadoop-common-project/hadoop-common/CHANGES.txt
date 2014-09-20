@@ -255,6 +255,8 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10833. Remove unused cache in UserProvider. (Benoy Antony)
 
+    HADOOP-11112. TestKMSWithZK does not use KEY_PROVIDER_URI. (tucu via wang)
+
   BUG FIXES
 
     HADOOP-10781. Unportable getgrouplist() usage breaks FreeBSD (Dmitry

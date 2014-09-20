@@ -76,7 +76,7 @@ public class TestKMSWithZK {
 
   protected Configuration createBaseKMSConf(File keyStoreDir) throws Exception {
     Configuration conf = new Configuration(false);
-    conf.set("hadoop.security.key.provider.path",
+    conf.set(KMSConfiguration.KEY_PROVIDER_URI,
         "jceks://file@" + new Path(keyStoreDir.getAbsolutePath(),
             "kms.keystore").toUri());
     conf.set("hadoop.kms.authentication.type", "simple");
