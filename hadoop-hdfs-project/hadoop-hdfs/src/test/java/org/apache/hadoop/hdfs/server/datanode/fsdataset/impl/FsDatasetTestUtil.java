@@ -30,7 +30,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 public class FsDatasetTestUtil {
 
   public static File getFile(FsDatasetSpi<?> fsd, String bpid, long bid) {
-    return ((FsDatasetImpl)fsd).getFile(bpid, bid);
+    return ((FsDatasetImpl)fsd).getFile(bpid, bid, false);
   }
 
   public static File getBlockFile(FsDatasetSpi<?> fsd, String bpid, Block b

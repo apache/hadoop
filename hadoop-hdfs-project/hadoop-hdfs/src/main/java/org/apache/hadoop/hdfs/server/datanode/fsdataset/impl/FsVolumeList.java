@@ -121,7 +121,7 @@ class FsVolumeList {
   
   void getAllVolumesMap(final String bpid,
                         final ReplicaMap volumeMap,
-                        final LazyWriteReplicaTracker lazyWriteReplicaMap)
+                        final RamDiskReplicaTracker ramDiskReplicaMap)
       throws IOException {
     long totalStartTime = Time.monotonicNow();
     final List<IOException> exceptions = Collections.synchronizedList(
@@ -134,7 +134,7 @@ class FsVolumeList {
             FsDatasetImpl.LOG.info("Adding replicas to map for block pool " +
                 bpid + " on volume " + v + "...");
             long startTime = Time.monotonicNow();
-            v.getVolumeMap(bpid, volumeMap, lazyWriteReplicaMap);
+            v.getVolumeMap(bpid, volumeMap, ramDiskReplicaMap);
             long timeTaken = Time.monotonicNow() - startTime;
             FsDatasetImpl.LOG.info("Time to add replicas to map for block pool"
                 + " " + bpid + " on volume " + v + ": " + timeTaken + "ms");
