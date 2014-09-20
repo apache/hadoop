@@ -112,11 +112,29 @@ public class SaslDataTransferServer {
         "SASL server skipping handshake in unsecured configuration for "
         + "peer = {}, datanodeId = {}", peer, datanodeId);
       return new IOStreamPair(underlyingIn, underlyingOut);
-    } else {
+    } else if (dnConf.getSaslPropsResolver() != null) {
       LOG.debug(
         "SASL server doing general handshake for peer = {}, datanodeId = {}",
         peer, datanodeId);
       return getSaslStreams(peer, underlyingOut, underlyingIn, datanodeId);
+    } else if (dnConf.getIgnoreSecurePortsForTesting()) {
+      // It's a secured cluster using non-privileged ports, but no SASL.  The
+      // only way this can happen is if the DataNode has
+      // ignore.secure.ports.for.testing configured, so this is a rare edge case.
+      LOG.debug(
+        "SASL server skipping handshake in secured configuration with no SASL "
+        + "protection configured for peer = {}, datanodeId = {}",
+        peer, datanodeId);
+      return new IOStreamPair(underlyingIn, underlyingOut);
+    } else {
+      // The error message here intentionally does not mention
+      // ignore.secure.ports.for.testing.  That's intended for dev use only.
+      // This code path is not expected to execute ever, because DataNode startup
+      // checks for invalid configuration and aborts.
+      throw new IOException(String.format("Cannot create a secured " +
+        "connection if DataNode listens on unprivileged port (%d) and no " +
+        "protection is defined in configuration property %s.",
+        datanodeId.getXferPort(), DFS_DATA_TRANSFER_PROTECTION_KEY));
     }
   }
 
@@ -257,12 +275,6 @@ public class SaslDataTransferServer {
   private IOStreamPair getSaslStreams(Peer peer, OutputStream underlyingOut,
       InputStream underlyingIn, final DatanodeID datanodeId) throws IOException {
     SaslPropertiesResolver saslPropsResolver = dnConf.getSaslPropsResolver();
-    if (saslPropsResolver == null) {
-      throw new IOException(String.format("Cannot create a secured " +
-        "connection if DataNode listens on unprivileged port (%d) and no " +
-        "protection is defined in configuration property %s.",
-        datanodeId.getXferPort(), DFS_DATA_TRANSFER_PROTECTION_KEY));
-    }
     Map<String, String> saslProps = saslPropsResolver.getServerProperties(
       getPeerAddress(peer));
 

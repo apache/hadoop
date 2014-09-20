@@ -563,6 +563,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7105. Fix TestJournalNode#testFailToStartWithBadConfig to match log
     output change. (Ray Chiang via cnauroth)
 
+    HDFS-7105. Allow falling back to a non-SASL connection on
+    DataTransferProtocol in several edge cases. (cnauroth)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

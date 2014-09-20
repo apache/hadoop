@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT;
-import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY;
@@ -46,9 +44,12 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PLUGINS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_STARTUP_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATA_TRANSFER_PROTECTION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.IGNORE_SECURE_PORTS_FOR_TESTING_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.IGNORE_SECURE_PORTS_FOR_TESTING_KEY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import java.io.BufferedOutputStream;
@@ -173,6 +174,7 @@ import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.SaslPropertiesResolver;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -974,8 +976,6 @@ public class DataNode extends ReconfigurableBase
                      SecureResources resources
                      ) throws IOException {
 
-    checkSecureConfig(conf, resources);
-
     // settings global for all BPs in the Data Node
     this.secureResources = resources;
     synchronized (this) {
@@ -983,6 +983,8 @@ public class DataNode extends ReconfigurableBase
     }
     this.conf = conf;
     this.dnConf = new DNConf(conf);
+    checkSecureConfig(dnConf, conf, resources);
+
     this.spanReceiverHost = SpanReceiverHost.getInstance(conf);
 
     if (dnConf.maxLockedMemory > 0) {
@@ -1038,10 +1040,7 @@ public class DataNode extends ReconfigurableBase
     // exit without having to explicitly shutdown its thread pool.
     readaheadPool = ReadaheadPool.getInstance();
     saslClient = new SaslDataTransferClient(dnConf.saslPropsResolver,
-      dnConf.trustedChannelResolver,
-      conf.getBoolean(
-        IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
-        IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT));
+      dnConf.trustedChannelResolver);
     saslServer = new SaslDataTransferServer(dnConf, blockPoolTokenSecretManager);
   }
 
@@ -1061,23 +1060,24 @@ public class DataNode extends ReconfigurableBase
    * must check if the target port is a privileged port, and if so, skip the
    * SASL handshake.
    *
+   * @param dnConf DNConf to check
    * @param conf Configuration to check
    * @param resources SecuredResources obtained for DataNode
    * @throws RuntimeException if security enabled, but configuration is insecure
    */
-  private static void checkSecureConfig(Configuration conf,
+  private static void checkSecureConfig(DNConf dnConf, Configuration conf,
       SecureResources resources) throws RuntimeException {
     if (!UserGroupInformation.isSecurityEnabled()) {
       return;
     }
-    String dataTransferProtection = conf.get(DFS_DATA_TRANSFER_PROTECTION_KEY);
-    if (resources != null && dataTransferProtection == null) {
+    SaslPropertiesResolver saslPropsResolver = dnConf.getSaslPropsResolver();
+    if (resources != null && saslPropsResolver == null) {
       return;
     }
-    if (conf.getBoolean("ignore.secure.ports.for.testing", false)) {
+    if (dnConf.getIgnoreSecurePortsForTesting()) {
       return;
     }
-    if (dataTransferProtection != null &&
+    if (saslPropsResolver != null &&
         DFSUtil.getHttpPolicy(conf) == HttpConfig.Policy.HTTPS_ONLY &&
         resources == null) {
       return;

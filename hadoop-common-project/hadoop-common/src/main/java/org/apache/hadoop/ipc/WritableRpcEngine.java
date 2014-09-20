@@ -24,6 +24,7 @@ import java.lang.reflect.InvocationTargetException;
 
 import java.net.InetSocketAddress;
 import java.io.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.SocketFactory;
 
@@ -212,14 +213,17 @@ public class WritableRpcEngine implements RpcEngine {
     private Client.ConnectionId remoteId;
     private Client client;
     private boolean isClosed = false;
+    private final AtomicBoolean fallbackToSimpleAuth;
 
     public Invoker(Class<?> protocol,
                    InetSocketAddress address, UserGroupInformation ticket,
                    Configuration conf, SocketFactory factory,
-                   int rpcTimeout) throws IOException {
+                   int rpcTimeout, AtomicBoolean fallbackToSimpleAuth)
+        throws IOException {
       this.remoteId = Client.ConnectionId.getConnectionId(address, protocol,
           ticket, rpcTimeout, conf);
       this.client = CLIENTS.getClient(conf, factory);
+      this.fallbackToSimpleAuth = fallbackToSimpleAuth;
     }
 
     @Override
@@ -238,7 +242,8 @@ public class WritableRpcEngine implements RpcEngine {
       ObjectWritable value;
       try {
         value = (ObjectWritable)
-          client.call(RPC.RpcKind.RPC_WRITABLE, new Invocation(method, args), remoteId);
+          client.call(RPC.RpcKind.RPC_WRITABLE, new Invocation(method, args),
+            remoteId, fallbackToSimpleAuth);
       } finally {
         if (traceScope != null) traceScope.close();
       }
@@ -275,11 +280,25 @@ public class WritableRpcEngine implements RpcEngine {
    * talking to a server at the named address. 
    * @param <T>*/
   @Override
-  @SuppressWarnings("unchecked")
   public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
                          InetSocketAddress addr, UserGroupInformation ticket,
                          Configuration conf, SocketFactory factory,
                          int rpcTimeout, RetryPolicy connectionRetryPolicy)
+    throws IOException {
+    return getProxy(protocol, clientVersion, addr, ticket, conf, factory,
+      rpcTimeout, connectionRetryPolicy, null);
+  }
+
+  /** Construct a client-side proxy object that implements the named protocol,
+   * talking to a server at the named address. 
+   * @param <T>*/
+  @Override
+  @SuppressWarnings("unchecked")
+  public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
+                         InetSocketAddress addr, UserGroupInformation ticket,
+                         Configuration conf, SocketFactory factory,
+                         int rpcTimeout, RetryPolicy connectionRetryPolicy,
+                         AtomicBoolean fallbackToSimpleAuth)
     throws IOException {    
 
     if (connectionRetryPolicy != null) {
@@ -289,7 +308,7 @@ public class WritableRpcEngine implements RpcEngine {
 
     T proxy = (T) Proxy.newProxyInstance(protocol.getClassLoader(),
         new Class[] { protocol }, new Invoker(protocol, addr, ticket, conf,
-            factory, rpcTimeout));
+            factory, rpcTimeout, fallbackToSimpleAuth));
     return new ProtocolProxy<T>(protocol, proxy, true);
   }
   

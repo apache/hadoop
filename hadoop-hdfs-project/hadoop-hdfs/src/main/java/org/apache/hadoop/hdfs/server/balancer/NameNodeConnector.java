@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.URI;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -58,6 +60,7 @@ public class NameNodeConnector implements Closeable {
   private final NamenodeProtocol namenode;
   private final ClientProtocol client;
   private final KeyManager keyManager;
+  final AtomicBoolean fallbackToSimpleAuth = new AtomicBoolean(false);
 
   private final FileSystem fs;
   private final Path idPath;
@@ -73,8 +76,8 @@ public class NameNodeConnector implements Closeable {
     this.namenode = NameNodeProxies.createProxy(conf, nameNodeUri,
         NamenodeProtocol.class).getProxy();
     this.client = NameNodeProxies.createProxy(conf, nameNodeUri,
-        ClientProtocol.class).getProxy();
-    this.fs = FileSystem.get(nameNodeUri, conf);
+        ClientProtocol.class, fallbackToSimpleAuth).getProxy();
+    this.fs = (DistributedFileSystem)FileSystem.get(nameNodeUri, conf);
 
     final NamespaceInfo namespaceinfo = namenode.versionRequest();
     this.blockpoolID = namespaceinfo.getBlockPoolID();

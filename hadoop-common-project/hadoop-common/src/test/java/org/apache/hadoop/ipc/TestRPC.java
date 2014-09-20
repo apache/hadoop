@@ -276,11 +276,21 @@ public class TestRPC {
    */
   private static class StoppedRpcEngine implements RpcEngine {
 
-    @SuppressWarnings("unchecked")
     @Override
     public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
         InetSocketAddress addr, UserGroupInformation ticket, Configuration conf,
         SocketFactory factory, int rpcTimeout, RetryPolicy connectionRetryPolicy
+        ) throws IOException {
+      return getProxy(protocol, clientVersion, addr, ticket, conf, factory,
+        rpcTimeout, connectionRetryPolicy, null);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
+        InetSocketAddress addr, UserGroupInformation ticket, Configuration conf,
+        SocketFactory factory, int rpcTimeout,
+        RetryPolicy connectionRetryPolicy, AtomicBoolean fallbackToSimpleAuth
         ) throws IOException {
       T proxy = (T) Proxy.newProxyInstance(protocol.getClassLoader(),
               new Class[] { protocol }, new StoppedInvocationHandler());

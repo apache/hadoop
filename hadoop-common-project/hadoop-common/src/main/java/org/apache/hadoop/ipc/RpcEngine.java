@@ -20,6 +20,7 @@ package org.apache.hadoop.ipc;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.SocketFactory;
 
@@ -42,6 +43,14 @@ public interface RpcEngine {
                   UserGroupInformation ticket, Configuration conf,
                   SocketFactory factory, int rpcTimeout,
                   RetryPolicy connectionRetryPolicy) throws IOException;
+
+  /** Construct a client-side proxy object. */
+  <T> ProtocolProxy<T> getProxy(Class<T> protocol,
+                  long clientVersion, InetSocketAddress addr,
+                  UserGroupInformation ticket, Configuration conf,
+                  SocketFactory factory, int rpcTimeout,
+                  RetryPolicy connectionRetryPolicy,
+                  AtomicBoolean fallbackToSimpleAuth) throws IOException;
 
   /** 
    * Construct a server for a protocol implementation instance.
