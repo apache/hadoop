@@ -64,4 +64,8 @@
 
     HDFS-7108. Fix unit test failures in SimulatedFsDataset. (Arpit Agarwal)
 
+    HDFS-7071. Updated editsStored and editsStored.xml to bump layout
+    version and add LazyPersist flag. (Xiaoyu Yao and Arpit Agarwal via
+    Arpit Agarwal)
+    
 
