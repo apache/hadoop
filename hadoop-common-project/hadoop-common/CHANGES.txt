@@ -201,6 +201,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10970. Cleanup KMS configuration keys. (wang)
 
+    HADOOP-11017. KMS delegation token secret manager should be able to use 
+    zookeeper as store. (asuresh via tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)

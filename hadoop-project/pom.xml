@@ -892,6 +892,27 @@
         <version>2.6.0</version>
       </dependency>
 
+     <dependency>
+       <groupId>org.apache.curator</groupId>
+       <artifactId>curator-recipes</artifactId>
+       <version>2.6.0</version>
+     </dependency>
+     <dependency>
+       <groupId>org.apache.curator</groupId>
+       <artifactId>curator-client</artifactId>
+       <version>2.6.0</version>
+     </dependency>
+     <dependency>
+       <groupId>org.apache.curator</groupId>
+       <artifactId>curator-framework</artifactId>
+       <version>2.6.0</version>
+     </dependency>
+     <dependency>
+       <groupId>org.apache.curator</groupId>
+       <artifactId>curator-test</artifactId>
+       <version>2.6.0</version>
+     </dependency>
+      
     </dependencies>
   </dependencyManagement>
 
