@@ -197,6 +197,8 @@ public class ZKSignerSecretProvider extends RolloverSignerSecretProvider {
       client = (CuratorFramework) curatorClientObj;
     } else {
       client = createCuratorClient(config);
+      servletContext.setAttribute(
+          ZOOKEEPER_SIGNER_SECRET_PROVIDER_CURATOR_CLIENT_ATTRIBUTE, client);
     }
     this.tokenValidity = tokenValidity;
     shouldDisconnect = Boolean.parseBoolean(

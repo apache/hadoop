@@ -78,19 +78,6 @@ public abstract class DelegationTokenAuthenticationHandler
 
   public static final String TOKEN_KIND = PREFIX + "token-kind";
 
-  public static final String UPDATE_INTERVAL = PREFIX + "update-interval.sec";
-  public static final long UPDATE_INTERVAL_DEFAULT = 24 * 60 * 60;
-
-  public static final String MAX_LIFETIME = PREFIX + "max-lifetime.sec";
-  public static final long MAX_LIFETIME_DEFAULT = 7 * 24 * 60 * 60;
-
-  public static final String RENEW_INTERVAL = PREFIX + "renew-interval.sec";
-  public static final long RENEW_INTERVAL_DEFAULT = 24 * 60 * 60;
-
-  public static final String REMOVAL_SCAN_INTERVAL = PREFIX +
-      "removal-scan-interval.sec";
-  public static final long REMOVAL_SCAN_INTERVAL_DEFAULT = 60 * 60;
-
   private static final Set<String> DELEGATION_TOKEN_OPS = new HashSet<String>();
 
   static final String DELEGATION_TOKEN_UGI_ATTRIBUTE =
@@ -142,7 +129,6 @@ public abstract class DelegationTokenAuthenticationHandler
   @VisibleForTesting
   @SuppressWarnings("unchecked")
   public void initTokenManager(Properties config) {
-    String configPrefix = authHandler.getType() + ".";
     Configuration conf = new Configuration(false);
     for (Map.Entry entry : config.entrySet()) {
       conf.set((String) entry.getKey(), (String) entry.getValue());
@@ -153,17 +139,7 @@ public abstract class DelegationTokenAuthenticationHandler
           "The configuration does not define the token kind");
     }
     tokenKind = tokenKind.trim();
-    long updateInterval = conf.getLong(configPrefix + UPDATE_INTERVAL,
-        UPDATE_INTERVAL_DEFAULT);
-    long maxLifeTime = conf.getLong(configPrefix + MAX_LIFETIME,
-        MAX_LIFETIME_DEFAULT);
-    long renewInterval = conf.getLong(configPrefix + RENEW_INTERVAL,
-        RENEW_INTERVAL_DEFAULT);
-    long removalScanInterval = conf.getLong(
-        configPrefix + REMOVAL_SCAN_INTERVAL, REMOVAL_SCAN_INTERVAL_DEFAULT);
-    tokenManager = new DelegationTokenManager(new Text(tokenKind),
-        updateInterval * 1000, maxLifeTime * 1000, renewInterval * 1000,
-        removalScanInterval * 1000);
+    tokenManager = new DelegationTokenManager(conf, new Text(tokenKind));
     tokenManager.init();
   }
 
