@@ -62,4 +62,6 @@
 
     HDFS-7100. Make eviction scheme pluggable. (Arpit Agarwal)
 
+    HDFS-7108. Fix unit test failures in SimulatedFsDataset. (Arpit Agarwal)
+
 
