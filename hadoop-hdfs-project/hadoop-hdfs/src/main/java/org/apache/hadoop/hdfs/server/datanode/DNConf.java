@@ -48,6 +48,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_DEF
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATA_ENCRYPTION_ALGORITHM_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_RESTART_REPLICA_EXPIRY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_RESTART_REPLICA_EXPIRY_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.IGNORE_SECURE_PORTS_FOR_TESTING_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.IGNORE_SECURE_PORTS_FOR_TESTING_DEFAULT;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -90,6 +92,7 @@ public class DNConf {
   final String encryptionAlgorithm;
   final SaslPropertiesResolver saslPropsResolver;
   final TrustedChannelResolver trustedChannelResolver;
+  private final boolean ignoreSecurePortsForTesting;
   
   final long xceiverStopTimeout;
   final long restartReplicaExpiry;
@@ -173,6 +176,9 @@ public class DNConf {
     this.trustedChannelResolver = TrustedChannelResolver.getInstance(conf);
     this.saslPropsResolver = DataTransferSaslUtil.getSaslPropertiesResolver(
       conf);
+    this.ignoreSecurePortsForTesting = conf.getBoolean(
+        IGNORE_SECURE_PORTS_FOR_TESTING_KEY,
+        IGNORE_SECURE_PORTS_FOR_TESTING_DEFAULT);
     
     this.xceiverStopTimeout = conf.getLong(
         DFS_DATANODE_XCEIVER_STOP_TIMEOUT_MILLIS_KEY,
@@ -237,5 +243,16 @@ public class DNConf {
    */
   public TrustedChannelResolver getTrustedChannelResolver() {
     return trustedChannelResolver;
+  }
+
+  /**
+   * Returns true if configuration is set to skip checking for proper
+   * port configuration in a secured cluster.  This is only intended for use in
+   * dev testing.
+   *
+   * @return true if configured to skip checking secured port configuration
+   */
+  public boolean getIgnoreSecurePortsForTesting() {
+    return ignoreSecurePortsForTesting;
   }
 }

@@ -48,8 +48,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.StorageType;
@@ -787,12 +785,9 @@ public class Dispatcher {
         : Executors.newFixedThreadPool(dispatcherThreads);
     this.maxConcurrentMovesPerNode = maxConcurrentMovesPerNode;
 
-    final boolean fallbackToSimpleAuthAllowed = conf.getBoolean(
-        CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
-        CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT);
     this.saslClient = new SaslDataTransferClient(
         DataTransferSaslUtil.getSaslPropertiesResolver(conf),
-        TrustedChannelResolver.getInstance(conf), fallbackToSimpleAuthAllowed);
+        TrustedChannelResolver.getInstance(conf), nnc.fallbackToSimpleAuth);
   }
 
   public DistributedFileSystem getDistributedFileSystem() {
