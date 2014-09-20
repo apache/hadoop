@@ -2041,7 +2041,8 @@ public class DataNode extends ReconfigurableBase
       LOG.warn("Cannot find BPOfferService for reporting block received for bpid="
           + block.getBlockPoolId());
     }
-    if (blockScanner != null) {
+    FsVolumeSpi volume = getFSDataset().getVolume(block);
+    if (blockScanner != null && !volume.isTransientStorage()) {
       blockScanner.addBlock(block);
     }
   }

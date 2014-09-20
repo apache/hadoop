@@ -60,4 +60,6 @@
     HDFS-7091. Add forwarding constructor for INodeFile for existing callers.
     (Arpit Agarwal)
 
+    HDFS-7100. Make eviction scheme pluggable. (Arpit Agarwal)
+
 

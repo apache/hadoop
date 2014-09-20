@@ -286,9 +286,9 @@ class BlockPoolSlice {
    * Move a persisted replica from lazypersist directory to a subdirectory
    * under finalized.
    */
-  File activateSavedReplica(Block b, File blockFile) throws IOException {
+  File activateSavedReplica(Block b, File metaFile, File blockFile)
+      throws IOException {
     final File blockDir = DatanodeUtil.idToBlockDir(finalizedDir, b.getBlockId());
-    final File metaFile = FsDatasetUtil.getMetaFile(blockFile, b.getGenerationStamp());
     final File targetBlockFile = new File(blockDir, blockFile.getName());
     final File targetMetaFile = new File(blockDir, metaFile.getName());
     FileUtils.moveFile(blockFile, targetBlockFile);
@@ -307,7 +307,7 @@ class BlockPoolSlice {
 
     
   void getVolumeMap(ReplicaMap volumeMap,
-                    final LazyWriteReplicaTracker lazyWriteReplicaMap)
+                    final RamDiskReplicaTracker lazyWriteReplicaMap)
       throws IOException {
     // Recover lazy persist replicas, they will be added to the volumeMap
     // when we scan the finalized directory.
@@ -404,7 +404,7 @@ class BlockPoolSlice {
    *                    false if the directory has rbw replicas
    */
   void addToReplicasMap(ReplicaMap volumeMap, File dir,
-                        final LazyWriteReplicaTracker lazyWriteReplicaMap,
+                        final RamDiskReplicaTracker lazyWriteReplicaMap,
                         boolean isFinalized)
       throws IOException {
     File files[] = FileUtil.listFiles(dir);
@@ -481,7 +481,8 @@ class BlockPoolSlice {
       // it is in the lazyWriteReplicaMap so it can be persisted
       // eventually.
       if (newReplica.getVolume().isTransientStorage()) {
-        lazyWriteReplicaMap.addReplica(bpid, blockId, newReplica.getVolume());
+        lazyWriteReplicaMap.addReplica(bpid, blockId,
+                                       (FsVolumeImpl) newReplica.getVolume());
       } else {
         lazyWriteReplicaMap.discardReplica(bpid, blockId, false);
       }
