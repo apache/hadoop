@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -101,6 +102,7 @@ public class NameNodeConnector implements Closeable {
   private final NamenodeProtocol namenode;
   private final ClientProtocol client;
   private final KeyManager keyManager;
+  final AtomicBoolean fallbackToSimpleAuth = new AtomicBoolean(false);
 
   private final DistributedFileSystem fs;
   private final Path idPath;
@@ -120,7 +122,7 @@ public class NameNodeConnector implements Closeable {
     this.namenode = NameNodeProxies.createProxy(conf, nameNodeUri,
         NamenodeProtocol.class).getProxy();
     this.client = NameNodeProxies.createProxy(conf, nameNodeUri,
-        ClientProtocol.class).getProxy();
+        ClientProtocol.class, fallbackToSimpleAuth).getProxy();
     this.fs = (DistributedFileSystem)FileSystem.get(nameNodeUri, conf);
 
     final NamespaceInfo namespaceinfo = namenode.versionRequest();

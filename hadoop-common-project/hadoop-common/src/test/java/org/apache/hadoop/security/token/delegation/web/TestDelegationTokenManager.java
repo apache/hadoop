@@ -17,18 +17,14 @@
  */
 package org.apache.hadoop.security.token.delegation.web;
 
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.util.Arrays;
 
 public class TestDelegationTokenManager {
 
@@ -36,8 +32,13 @@ public class TestDelegationTokenManager {
 
   @Test
   public void testDTManager() throws Exception {
-    DelegationTokenManager tm = new DelegationTokenManager(new Text("foo"),
-        DAY_IN_SECS, DAY_IN_SECS, DAY_IN_SECS, DAY_IN_SECS);
+    Configuration conf = new Configuration(false);
+    conf.setLong(DelegationTokenManager.UPDATE_INTERVAL, DAY_IN_SECS);
+    conf.setLong(DelegationTokenManager.MAX_LIFETIME, DAY_IN_SECS);
+    conf.setLong(DelegationTokenManager.RENEW_INTERVAL, DAY_IN_SECS);
+    conf.setLong(DelegationTokenManager.REMOVAL_SCAN_INTERVAL, DAY_IN_SECS);
+    DelegationTokenManager tm =
+        new DelegationTokenManager(conf, new Text("foo"));
     tm.init();
     Token<DelegationTokenIdentifier> token =
         tm.createToken(UserGroupInformation.getCurrentUser(), "foo");

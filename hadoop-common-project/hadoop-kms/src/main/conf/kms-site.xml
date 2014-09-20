@@ -15,10 +15,12 @@
 <configuration>
 
   <!-- KMS Backend KeyProvider -->
+
   <property>
     <name>hadoop.kms.key.provider.uri</name>
     <value>jceks://file@/${user.home}/kms.keystore</value>
     <description>
+      URI of the backing KeyProvider for the KMS.
     </description>
   </property>
 
@@ -26,14 +28,52 @@
     <name>hadoop.security.keystore.JavaKeyStoreProvider.password</name>
     <value>none</value>
     <description>
+      If using the JavaKeyStoreProvider, the password for the keystore file.
     </description>
   </property>
 
   <!-- KMS Cache -->
+
+  <property>
+    <name>hadoop.kms.cache.enable</name>
+    <value>true</value>
+    <description>
+      Whether the KMS will act as a cache for the backing KeyProvider.
+      When the cache is enabled, operations like getKeyVersion, getMetadata,
+      and getCurrentKey will sometimes return cached data without consulting
+      the backing KeyProvider. Cached values are flushed when keys are deleted
+      or modified.
+    </description>
+  </property>
+
   <property>
     <name>hadoop.kms.cache.timeout.ms</name>
+    <value>600000</value>
+    <description>
+      Expiry time for the KMS key version and key metadata cache, in
+      milliseconds. This affects getKeyVersion and getMetadata.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.current.key.cache.timeout.ms</name>
+    <value>30000</value>
+    <description>
+      Expiry time for the KMS current key cache, in milliseconds. This
+      affects getCurrentKey operations.
+    </description>
+  </property>
+
+  <!-- KMS Audit -->
+
+  <property>
+    <name>hadoop.kms.audit.aggregation.window.ms</name>
     <value>10000</value>
     <description>
+      Duplicate audit log events within the aggregation window (specified in
+      ms) are quashed to reduce log traffic. A single message for aggregated
+      events is printed at the end of the window, along with a count of the
+      number of aggregated events.
     </description>
   </property>
 
@@ -43,7 +83,8 @@
     <name>hadoop.kms.authentication.type</name>
     <value>simple</value>
     <description>
-      simple or kerberos
+      Authentication type for the KMS. Can be either &quot;simple&quot;
+      or &quot;kerberos&quot;.
     </description>
   </property>
 
@@ -51,6 +92,7 @@
     <name>hadoop.kms.authentication.kerberos.keytab</name>
     <value>${user.home}/kms.keytab</value>
     <description>
+      Path to the keytab with credentials for the configured Kerberos principal.
     </description>
   </property>
 
@@ -58,6 +100,8 @@
     <name>hadoop.kms.authentication.kerberos.principal</name>
     <value>HTTP/localhost</value>
     <description>
+      The Kerberos principal to use for the HTTP endpoint.
+      The principal must start with 'HTTP/' as per the Kerberos HTTP SPNEGO specification.
     </description>
   </property>
 
@@ -65,6 +109,7 @@
     <name>hadoop.kms.authentication.kerberos.name.rules</name>
     <value>DEFAULT</value>
     <description>
+      Rules used to resolve Kerberos principal names.
     </description>
   </property>
 

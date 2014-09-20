@@ -782,6 +782,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-7096. Fix TestRpcProgramNfs3 to use DFS_ENCRYPTION_KEY_PROVIDER_URI
     (clamb via cmccabe)
 
+    HDFS-7046. HA NN can NPE upon transition to active. (kihwal)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
@@ -894,6 +896,12 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7051. TestDataNodeRollingUpgrade#isBlockFileInPrevious assumes Unix file
     path separator. (cnauroth)
+
+    HDFS-7105. Fix TestJournalNode#testFailToStartWithBadConfig to match log
+    output change. (Ray Chiang via cnauroth)
+
+    HDFS-7105. Allow falling back to a non-SASL connection on
+    DataTransferProtocol in several edge cases. (cnauroth)
 
 Release 2.5.1 - 2014-09-05
 

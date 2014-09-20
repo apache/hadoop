@@ -244,7 +244,7 @@ public class HAUtil {
     // Create the proxy provider. Actual proxy is not created.
     AbstractNNFailoverProxyProvider<ClientProtocol> provider = NameNodeProxies
         .createFailoverProxyProvider(conf, nameNodeUri, ClientProtocol.class,
-        false);
+        false, null);
 
     // No need to use logical URI since failover is not configured.
     if (provider == null) {

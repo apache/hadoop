@@ -18,6 +18,7 @@
 package org.apache.hadoop.security.token.delegation.web;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.curator.framework.CuratorFramework;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -28,9 +29,11 @@ import org.apache.hadoop.security.authentication.server.AuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.AuthenticationToken;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
+import org.apache.hadoop.security.authentication.util.ZKSignerSecretProvider;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
+import org.apache.hadoop.security.token.delegation.ZKDelegationTokenSecretManager;
 import org.apache.hadoop.util.HttpExceptionUtils;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
@@ -153,7 +156,14 @@ public class DelegationTokenAuthenticationFilter
 
   @Override
   public void init(FilterConfig filterConfig) throws ServletException {
+    // A single CuratorFramework should be used for a ZK cluster.
+    // If the ZKSignerSecretProvider has already created it, it has to
+    // be set here... to be used by the ZKDelegationTokenSecretManager
+    ZKDelegationTokenSecretManager.setCurator((CuratorFramework)
+        filterConfig.getServletContext().getAttribute(ZKSignerSecretProvider.
+            ZOOKEEPER_SIGNER_SECRET_PROVIDER_CURATOR_CLIENT_ATTRIBUTE));
     super.init(filterConfig);
+    ZKDelegationTokenSecretManager.setCurator(null);
     AuthenticationHandler handler = getAuthenticationHandler();
     AbstractDelegationTokenSecretManager dtSecretManager =
         (AbstractDelegationTokenSecretManager) filterConfig.getServletContext().

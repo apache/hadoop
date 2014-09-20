@@ -535,6 +535,11 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11106. Document considerations of HAR and Encryption. (clamb via wang)
 
+    HADOOP-10970. Cleanup KMS configuration keys. (wang)
+
+    HADOOP-11017. KMS delegation token secret manager should be able to use 
+    zookeeper as store. (asuresh via tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
@@ -588,6 +593,8 @@ Release 2.6.0 - UNRELEASED
     Arpit Agarwal)
 
     HADOOP-10833. Remove unused cache in UserProvider. (Benoy Antony)
+
+    HADOOP-11112. TestKMSWithZK does not use KEY_PROVIDER_URI. (tucu via wang)
 
   BUG FIXES
 
@@ -837,6 +844,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10982. KMS: Support for multiple Kerberos principals. (tucu)
 
     HADOOP-11109. Site build is broken. (Jian He via atm)
+
+    HADOOP-10946. Fix a bunch of typos in log messages (Ray Chiang via aw)
 
 Release 2.5.1 - 2014-09-05
 

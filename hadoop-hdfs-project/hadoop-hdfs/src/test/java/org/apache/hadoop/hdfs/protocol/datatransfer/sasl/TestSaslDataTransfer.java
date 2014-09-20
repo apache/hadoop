@@ -18,6 +18,9 @@
 package org.apache.hadoop.hdfs.protocol.datatransfer.sasl;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HTTP_POLICY_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.IGNORE_SECURE_PORTS_FOR_TESTING_KEY;
+
 import static org.junit.Assert.*;
 
 import java.io.IOException;
@@ -29,11 +32,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.rules.Timeout;
 
 public class TestSaslDataTransfer extends SaslDataTransferTestCase {
 
@@ -48,6 +53,9 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
+
+  @Rule
+  public Timeout timeout = new Timeout(60000);
 
   @After
   public void shutdown() {
@@ -99,17 +107,6 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
   }
 
   @Test
-  public void testClientSaslNoServerSasl() throws Exception {
-    HdfsConfiguration clusterConf = createSecureConfig("");
-    startCluster(clusterConf);
-    HdfsConfiguration clientConf = new HdfsConfiguration(clusterConf);
-    clientConf.set(DFS_DATA_TRANSFER_PROTECTION_KEY, "authentication");
-    exception.expect(IOException.class);
-    exception.expectMessage("could only be replicated to 0 nodes");
-    doTest(clientConf);
-  }
-
-  @Test
   public void testServerSaslNoClientSasl() throws Exception {
     HdfsConfiguration clusterConf = createSecureConfig(
       "authentication,integrity,privacy");
@@ -119,6 +116,32 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
     exception.expect(IOException.class);
     exception.expectMessage("could only be replicated to 0 nodes");
     doTest(clientConf);
+  }
+
+  @Test
+  public void testDataNodeAbortsIfNoSasl() throws Exception {
+    HdfsConfiguration clusterConf = createSecureConfig("");
+    exception.expect(RuntimeException.class);
+    exception.expectMessage("Cannot start secure DataNode");
+    startCluster(clusterConf);
+  }
+
+  @Test
+  public void testDataNodeAbortsIfNotHttpsOnly() throws Exception {
+    HdfsConfiguration clusterConf = createSecureConfig("authentication");
+    clusterConf.set(DFS_HTTP_POLICY_KEY,
+      HttpConfig.Policy.HTTP_AND_HTTPS.name());
+    exception.expect(RuntimeException.class);
+    exception.expectMessage("Cannot start secure DataNode");
+    startCluster(clusterConf);
+  }
+
+  @Test
+  public void testNoSaslAndSecurePortsIgnored() throws Exception {
+    HdfsConfiguration clusterConf = createSecureConfig("");
+    clusterConf.setBoolean(IGNORE_SECURE_PORTS_FOR_TESTING_KEY, true);
+    startCluster(clusterConf);
+    doTest(clusterConf);
   }
 
   /**

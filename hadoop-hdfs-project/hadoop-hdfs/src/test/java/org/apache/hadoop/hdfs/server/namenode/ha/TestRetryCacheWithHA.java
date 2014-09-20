@@ -194,7 +194,7 @@ public class TestRetryCacheWithHA {
     URI nnUri = dfs.getUri();
     FailoverProxyProvider<ClientProtocol> failoverProxyProvider = 
         NameNodeProxies.createFailoverProxyProvider(conf, 
-            nnUri, ClientProtocol.class, true);
+            nnUri, ClientProtocol.class, true, null);
     InvocationHandler dummyHandler = new DummyRetryInvocationHandler(
         failoverProxyProvider, RetryPolicies
         .failoverOnNetworkException(RetryPolicies.TRY_ONCE_THEN_FAIL,

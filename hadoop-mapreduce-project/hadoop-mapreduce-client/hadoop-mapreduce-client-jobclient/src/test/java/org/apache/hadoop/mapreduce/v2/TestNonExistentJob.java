@@ -90,13 +90,8 @@ public class TestNonExistentJob extends TestCase {
   }
 
   public void testGetInvalidJob() throws Exception {
-    try {
-      RunningJob runJob = new JobClient(getJobConf()).getJob(JobID.forName("job_0_0"));
-      fail("Exception is expected to thrown ahead!");
-    } catch (Exception e) {
-      assertTrue(e instanceof IOException);
-      assertTrue(e.getMessage().contains("ApplicationNotFoundException"));
-    }
+    RunningJob runJob = new JobClient(getJobConf()).getJob(JobID.forName("job_0_0"));
+    assertNull(runJob);
   }
 
 }

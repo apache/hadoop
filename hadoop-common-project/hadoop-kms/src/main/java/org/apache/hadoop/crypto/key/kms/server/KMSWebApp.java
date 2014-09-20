@@ -148,8 +148,8 @@ public class KMSWebApp implements ServletContextListener {
 
       kmsAudit =
           new KMSAudit(kmsConf.getLong(
-              KMSConfiguration.KMS_AUDIT_AGGREGATION_DELAY,
-              KMSConfiguration.KMS_AUDIT_AGGREGATION_DELAY_DEFAULT));
+              KMSConfiguration.KMS_AUDIT_AGGREGATION_WINDOW,
+              KMSConfiguration.KMS_AUDIT_AGGREGATION_WINDOW_DEFAULT));
 
       // this is required for the the JMXJsonServlet to work properly.
       // the JMXJsonServlet is behind the authentication filter,
