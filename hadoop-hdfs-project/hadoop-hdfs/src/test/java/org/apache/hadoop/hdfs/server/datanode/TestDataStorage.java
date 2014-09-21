@@ -63,6 +63,7 @@ public class TestDataStorage {
 
   @After
   public void tearDown() throws IOException {
+    storage.unlockAll();
     FileUtil.fullyDelete(TEST_DIR);
   }
 

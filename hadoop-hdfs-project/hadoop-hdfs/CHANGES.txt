@@ -569,6 +569,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7107. Avoid Findbugs warning for synchronization on
     AbstractNNFailoverProxyProvider#fallbackToSimpleAuth. (cnauroth)
 
+    HDFS-7109. TestDataStorage does not release file locks between tests.
+    (cnauroth)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
