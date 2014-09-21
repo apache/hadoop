@@ -376,6 +376,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2460. Remove obsolete entries from yarn-default.xml (Ray Chiang via
     aw)
 
+    YARN-2452. TestRMApplicationHistoryWriter fails with FairScheduler. 
+    (Zhihai Xu via kasha)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
