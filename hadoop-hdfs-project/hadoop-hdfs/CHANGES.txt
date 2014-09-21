@@ -566,6 +566,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7105. Allow falling back to a non-SASL connection on
     DataTransferProtocol in several edge cases. (cnauroth)
 
+    HDFS-7107. Avoid Findbugs warning for synchronization on
+    AbstractNNFailoverProxyProvider#fallbackToSimpleAuth. (cnauroth)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
