@@ -807,6 +807,7 @@ public class MRAppMaster extends CompositeService {
     @Override
     protected void serviceStart() throws Exception {
       if (job.isUber()) {
+        MRApps.setupDistributedCacheLocal(getConfig());
         this.containerAllocator = new LocalContainerAllocator(
             this.clientService, this.context, nmHost, nmPort, nmHttpPort
             , containerID);

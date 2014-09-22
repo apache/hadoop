@@ -143,6 +143,9 @@ Release 2.6.0 - UNRELEASED
     ApplicationNotFoundException if the job rolled off the RM view (Sangjin
     Lee via jlowe)
 
+    MAPREDUCE-6095. Enable DistributedCache for uber-mode Jobs (Gera Shegalov
+    via jlowe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
