@@ -783,25 +783,35 @@ public class NetworkTopology {
       scope=scope.substring(1);
     }
     scope = NodeBase.normalize(scope);
-    int count=0; // the number of nodes in both scope & excludedNodes
+    int excludedCountInScope = 0; // the number of nodes in both scope & excludedNodes
+    int excludedCountOffScope = 0; // the number of nodes outside scope & excludedNodes
     netlock.readLock().lock();
     try {
-      for(Node node:excludedNodes) {
-        if ((NodeBase.getPath(node)+NodeBase.PATH_SEPARATOR_STR).
-            startsWith(scope+NodeBase.PATH_SEPARATOR_STR)) {
-          count++;
+      for (Node node : excludedNodes) {
+        node = getNode(NodeBase.getPath(node));
+        if (node == null) {
+          continue;
+        }
+        if ((NodeBase.getPath(node) + NodeBase.PATH_SEPARATOR_STR)
+            .startsWith(scope + NodeBase.PATH_SEPARATOR_STR)) {
+          excludedCountInScope++;
+        } else {
+          excludedCountOffScope++;
         }
       }
-      Node n=getNode(scope);
-      int scopeNodeCount=1;
+      Node n = getNode(scope);
+      int scopeNodeCount = 0;
+      if (n != null) {
+        scopeNodeCount++;
+      }
       if (n instanceof InnerNode) {
         scopeNodeCount=((InnerNode)n).getNumOfLeaves();
       }
       if (isExcluded) {
-        return clusterMap.getNumOfLeaves()-
-          scopeNodeCount-excludedNodes.size()+count;
+        return clusterMap.getNumOfLeaves() - scopeNodeCount
+            - excludedCountOffScope;
       } else {
-        return scopeNodeCount-count;
+        return scopeNodeCount - excludedCountInScope;
       }
     } finally {
       netlock.readLock().unlock();

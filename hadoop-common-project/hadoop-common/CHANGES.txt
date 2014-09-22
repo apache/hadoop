@@ -512,6 +512,10 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-10946. Fix a bunch of typos in log messages (Ray Chiang via aw)
 
+    HADOOP-10131. NetWorkTopology#countNumOfAvailableNodes() is returning
+    wrong value if excluded nodes passed are not part of the cluster tree
+    (vinayakumarb)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
