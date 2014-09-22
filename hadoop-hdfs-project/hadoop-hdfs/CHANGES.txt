@@ -575,6 +575,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7110. Skip tests related to short-circuit read on platforms that do not
     currently implement short-circuit read. (cnauroth)
 
+    HDFS-7115. TestEncryptionZones assumes Unix path separator for KMS key store
+    path. (Xiaoyu Yao via cnauroth)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

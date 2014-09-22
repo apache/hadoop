@@ -116,8 +116,8 @@ public class TestEncryptionZones {
   protected FileContextTestWrapper fcWrapper;
 
   protected String getKeyProviderURI() {
-    return JavaKeyStoreProvider.SCHEME_NAME + "://file" + testRootDir +
-        "/test.jks";
+    return JavaKeyStoreProvider.SCHEME_NAME + "://file" +
+      new Path(testRootDir.toString(), "test.jks").toUri();
   }
 
   @Before
@@ -1043,7 +1043,7 @@ public class TestEncryptionZones {
     dfsAdmin.createEncryptionZone(zone, TEST_KEY);
     DFSTestUtil.createFile(fs, zoneFile, len, (short) 1, 0xFEED);
     String contents = DFSTestUtil.readFile(fs, zoneFile);
-    final Path snap1 = fs.createSnapshot(zoneParent);
+    final Path snap1 = fs.createSnapshot(zoneParent, "snap1");
     final Path snap1Zone = new Path(snap1, zone.getName());
     assertEquals("Got unexpected ez path", zone.toString(),
         dfsAdmin.getEncryptionZoneForPath(snap1Zone).getPath().toString());
@@ -1052,14 +1052,14 @@ public class TestEncryptionZones {
     // snapshot
     fsWrapper.delete(zone, true);
     fsWrapper.mkdir(zone, FsPermission.getDirDefault(), true);
-    final Path snap2 = fs.createSnapshot(zoneParent);
+    final Path snap2 = fs.createSnapshot(zoneParent, "snap2");
     final Path snap2Zone = new Path(snap2, zone.getName());
     assertNull("Expected null ez path",
         dfsAdmin.getEncryptionZoneForPath(snap2Zone));
 
     // Create the encryption zone again
     dfsAdmin.createEncryptionZone(zone, TEST_KEY2);
-    final Path snap3 = fs.createSnapshot(zoneParent);
+    final Path snap3 = fs.createSnapshot(zoneParent, "snap3");
     final Path snap3Zone = new Path(snap3, zone.getName());
     // Check that snap3's EZ has the correct settings
     EncryptionZone ezSnap3 = dfsAdmin.getEncryptionZoneForPath(snap3Zone);
