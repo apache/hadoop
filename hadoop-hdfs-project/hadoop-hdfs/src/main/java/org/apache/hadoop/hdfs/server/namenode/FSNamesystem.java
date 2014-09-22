@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
 import static org.apache.hadoop.crypto.key.KeyProviderCryptoExtension
     .EncryptedKeyVersion;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
@@ -134,6 +133,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherSuite;
+import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import org.apache.hadoop.fs.CacheFlag;
@@ -165,7 +165,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.UnknownCipherSuiteException;
 import org.apache.hadoop.hdfs.protocol.AclException;
@@ -1833,8 +1832,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           doAccessTime = false;
         }
 
-        final INodesInPath iip = dir.getLastINodeInPath(src);
-        final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
+        final INodesInPath iip = dir.getINodesInPath(src, true);
+        final INode[] inodes = iip.getINodes();
+        final INodeFile inode = INodeFile.valueOf(
+            inodes[inodes.length - 1], src);
         if (isPermissionEnabled) {
           checkUnreadableBySuperuser(pc, inode, iip.getPathSnapshotId());
         }
@@ -1867,7 +1868,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
         final FileEncryptionInfo feInfo =
           FSDirectory.isReservedRawName(srcArg) ?
-          null : dir.getFileEncryptionInfo(inode, iip.getPathSnapshotId());
+          null : dir.getFileEncryptionInfo(inode, iip.getPathSnapshotId(),
+              iip);
 
         final LocatedBlocks blocks =
           blockManager.createLocatedBlocks(inode.getBlocks(), fileSize,
@@ -2599,7 +2601,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       feInfo = new FileEncryptionInfo(suite,
           edek.getEncryptedKeyVersion().getMaterial(),
           edek.getEncryptedKeyIv(),
-          edek.getEncryptionKeyVersionName());
+          ezKeyName, edek.getEncryptionKeyVersionName());
       Preconditions.checkNotNull(feInfo);
     }
 
@@ -8619,8 +8621,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new IOException("Must specify a key name when creating an " +
             "encryption zone");
       }
-      KeyVersion keyVersion = provider.getCurrentKey(keyName);
-      if (keyVersion == null) {
+      KeyProvider.Metadata metadata = provider.getMetadata(keyName);
+      if (metadata == null) {
         /*
          * It would be nice if we threw something more specific than
          * IOException when the key is not found, but the KeyProvider API
@@ -8631,7 +8633,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
          */
         throw new IOException("Key " + keyName + " doesn't exist.");
       }
-      createEncryptionZoneInt(src, keyName, cacheEntry != null);
+      createEncryptionZoneInt(src, metadata.getCipher(),
+          keyName, cacheEntry != null);
       success = true;
     } catch (AccessControlException e) {
       logAuditEvent(false, "createEncryptionZone", src);
@@ -8641,8 +8644,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
-  private void createEncryptionZoneInt(final String srcArg, String keyName,
-      final boolean logRetryCache) throws IOException {
+  private void createEncryptionZoneInt(final String srcArg, String cipher,
+      String keyName, final boolean logRetryCache) throws IOException {
     String src = srcArg;
     HdfsFileStatus resultingStat = null;
     checkSuperuserPrivilege();
@@ -8656,7 +8659,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       checkNameNodeSafeMode("Cannot create encryption zone on " + src);
       src = resolvePath(src, pathComponents);
 
-      final XAttr ezXAttr = dir.createEncryptionZone(src, keyName);
+      final CipherSuite suite = CipherSuite.convert(cipher);
+      final XAttr ezXAttr = dir.createEncryptionZone(src, suite, keyName);
       List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
       xAttrs.add(ezXAttr);
       getEditLog().logSetXAttrs(src, xAttrs, logRetryCache);

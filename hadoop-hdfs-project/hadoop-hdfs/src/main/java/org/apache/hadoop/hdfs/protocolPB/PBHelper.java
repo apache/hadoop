@@ -177,7 +177,6 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
-import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
@@ -2332,12 +2331,14 @@ public class PBHelper {
     return EncryptionZoneProto.newBuilder()
         .setId(zone.getId())
         .setKeyName(zone.getKeyName())
-        .setPath(zone.getPath()).build();
+        .setPath(zone.getPath())
+        .setSuite(convert(zone.getSuite()))
+        .build();
   }
 
   public static EncryptionZone convert(EncryptionZoneProto proto) {
-    return new EncryptionZone(proto.getPath(), proto.getKeyName(),
-        proto.getId());
+    return new EncryptionZone(proto.getId(), proto.getPath(),
+        convert(proto.getSuite()), proto.getKeyName());
   }
 
   public static ShortCircuitShmSlotProto convert(SlotId slotId) {
@@ -2662,6 +2663,30 @@ public class PBHelper {
         .setKey(getByteString(info.getEncryptedDataEncryptionKey()))
         .setIv(getByteString(info.getIV()))
         .setEzKeyVersionName(info.getEzKeyVersionName())
+        .setKeyName(info.getKeyName())
+        .build();
+  }
+
+  public static HdfsProtos.PerFileEncryptionInfoProto convertPerFileEncInfo(
+      FileEncryptionInfo info) {
+    if (info == null) {
+      return null;
+    }
+    return HdfsProtos.PerFileEncryptionInfoProto.newBuilder()
+        .setKey(getByteString(info.getEncryptedDataEncryptionKey()))
+        .setIv(getByteString(info.getIV()))
+        .setEzKeyVersionName(info.getEzKeyVersionName())
+        .build();
+  }
+
+  public static HdfsProtos.ZoneEncryptionInfoProto convert(
+      CipherSuite suite, String keyName) {
+    if (suite == null || keyName == null) {
+      return null;
+    }
+    return HdfsProtos.ZoneEncryptionInfoProto.newBuilder()
+        .setSuite(convert(suite))
+        .setKeyName(keyName)
         .build();
   }
 
@@ -2674,7 +2699,20 @@ public class PBHelper {
     byte[] key = proto.getKey().toByteArray();
     byte[] iv = proto.getIv().toByteArray();
     String ezKeyVersionName = proto.getEzKeyVersionName();
-    return new FileEncryptionInfo(suite, key, iv, ezKeyVersionName);
+    String keyName = proto.getKeyName();
+    return new FileEncryptionInfo(suite, key, iv, keyName, ezKeyVersionName);
+  }
+
+  public static FileEncryptionInfo convert(
+      HdfsProtos.PerFileEncryptionInfoProto fileProto,
+      CipherSuite suite, String keyName) {
+    if (fileProto == null || suite == null || keyName == null) {
+      return null;
+    }
+    byte[] key = fileProto.getKey().toByteArray();
+    byte[] iv = fileProto.getIv().toByteArray();
+    String ezKeyVersionName = fileProto.getEzKeyVersionName();
+    return new FileEncryptionInfo(suite, key, iv, keyName, ezKeyVersionName);
   }
 
 }
