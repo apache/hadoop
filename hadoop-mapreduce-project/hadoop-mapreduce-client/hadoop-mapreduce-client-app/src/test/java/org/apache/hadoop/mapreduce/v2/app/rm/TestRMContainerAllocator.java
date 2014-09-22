@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app.rm;
 
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyFloat;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.isA;
@@ -30,19 +31,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.ClusterInfo;
 import org.apache.hadoop.mapreduce.v2.app.MRApp;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -457,8 +453,8 @@ public class TestRMContainerAllocator {
             0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
     MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
         appAttemptId, mockJob, new SystemClock());
-    allocator.setMapResourceRequest(1024);
-    allocator.setReduceResourceRequest(1024);
+    allocator.setMapResourceRequest(BuilderUtils.newResource(1024, 1));
+    allocator.setReduceResourceRequest(BuilderUtils.newResource(1024, 1));
     RMContainerAllocator.AssignedRequests assignedRequests =
         allocator.getAssignedRequests();
     RMContainerAllocator.ScheduledRequests scheduledRequests =
@@ -477,7 +473,7 @@ public class TestRMContainerAllocator {
 
   @Test(timeout = 30000)
   public void testNonAggressivelyPreemptReducers() throws Exception {
-    LOG.info("Running testPreemptReducers");
+    LOG.info("Running testNonAggressivelyPreemptReducers");
 
     final int preemptThreshold = 2; //sec
     Configuration conf = new Configuration();
@@ -512,8 +508,8 @@ public class TestRMContainerAllocator {
     clock.setTime(1);
     MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
         appAttemptId, mockJob, clock);
-    allocator.setMapResourceRequest(1024);
-    allocator.setReduceResourceRequest(1024);
+    allocator.setMapResourceRequest(BuilderUtils.newResource(1024, 1));
+    allocator.setReduceResourceRequest(BuilderUtils.newResource(1024, 1));
     RMContainerAllocator.AssignedRequests assignedRequests =
         allocator.getAssignedRequests();
     RMContainerAllocator.ScheduledRequests scheduledRequests =
@@ -1771,17 +1767,19 @@ public class TestRMContainerAllocator {
     int scheduledReduces = 0;
     int assignedMaps = 2;
     int assignedReduces = 0;
-    int mapResourceReqt = 1024;
-    int reduceResourceReqt = 2*1024;
+    Resource mapResourceReqt = BuilderUtils.newResource(1024, 1);
+    Resource reduceResourceReqt = BuilderUtils.newResource(2 * 1024, 1);
     int numPendingReduces = 4;
     float maxReduceRampupLimit = 0.5f;
     float reduceSlowStart = 0.2f;
     
     RMContainerAllocator allocator = mock(RMContainerAllocator.class);
-    doCallRealMethod().when(allocator).
-        scheduleReduces(anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), 
-            anyInt(), anyInt(), anyInt(), anyInt(), anyFloat(), anyFloat());
-    
+    doCallRealMethod().when(allocator).scheduleReduces(anyInt(), anyInt(),
+        anyInt(), anyInt(), anyInt(), anyInt(), any(Resource.class),
+        any(Resource.class), anyInt(), anyFloat(), anyFloat());
+    doReturn(EnumSet.of(SchedulerResourceTypes.MEMORY)).when(allocator)
+      .getSchedulerResourceTypes();
+
     // Test slow-start
     allocator.scheduleReduces(
         totalMaps, succeededMaps, 
@@ -1805,6 +1803,7 @@ public class TestRMContainerAllocator {
     verify(allocator, never()).scheduleAllReduces();
 
     succeededMaps = 3;
+    doReturn(BuilderUtils.newResource(0, 0)).when(allocator).getResourceLimit();
     allocator.scheduleReduces(
         totalMaps, succeededMaps, 
         scheduledMaps, scheduledReduces, 
@@ -1815,7 +1814,8 @@ public class TestRMContainerAllocator {
     verify(allocator, times(1)).setIsReduceStarted(true);
     
     // Test reduce ramp-up
-    doReturn(100 * 1024).when(allocator).getMemLimit();
+    doReturn(BuilderUtils.newResource(100 * 1024, 100 * 1)).when(allocator)
+      .getResourceLimit();
     allocator.scheduleReduces(
         totalMaps, succeededMaps, 
         scheduledMaps, scheduledReduces, 
@@ -1828,13 +1828,14 @@ public class TestRMContainerAllocator {
 
     // Test reduce ramp-down
     scheduledReduces = 3;
-    doReturn(10 * 1024).when(allocator).getMemLimit();
+    doReturn(BuilderUtils.newResource(10 * 1024, 10 * 1)).when(allocator)
+      .getResourceLimit();
     allocator.scheduleReduces(
-        totalMaps, succeededMaps, 
-        scheduledMaps, scheduledReduces, 
-        assignedMaps, assignedReduces, 
-        mapResourceReqt, reduceResourceReqt, 
-        numPendingReduces, 
+        totalMaps, succeededMaps,
+        scheduledMaps, scheduledReduces,
+        assignedMaps, assignedReduces,
+        mapResourceReqt, reduceResourceReqt,
+        numPendingReduces,
         maxReduceRampupLimit, reduceSlowStart);
     verify(allocator).rampDownReduces(anyInt());
 
@@ -1843,7 +1844,8 @@ public class TestRMContainerAllocator {
     // should be invoked twice.
     scheduledMaps = 2;
     assignedReduces = 2;
-    doReturn(10 * 1024).when(allocator).getMemLimit();
+    doReturn(BuilderUtils.newResource(10 * 1024, 10 * 1)).when(allocator)
+      .getResourceLimit();
     allocator.scheduleReduces(
         totalMaps, succeededMaps, 
         scheduledMaps, scheduledReduces, 
@@ -1852,6 +1854,30 @@ public class TestRMContainerAllocator {
         numPendingReduces, 
         maxReduceRampupLimit, reduceSlowStart);
     verify(allocator, times(2)).rampDownReduces(anyInt());
+
+    doReturn(
+        EnumSet.of(SchedulerResourceTypes.MEMORY, SchedulerResourceTypes.CPU))
+        .when(allocator).getSchedulerResourceTypes();
+
+    // Test ramp-down when enough memory but not enough cpu resource
+    scheduledMaps = 10;
+    assignedReduces = 0;
+    doReturn(BuilderUtils.newResource(100 * 1024, 5 * 1)).when(allocator)
+        .getResourceLimit();
+    allocator.scheduleReduces(totalMaps, succeededMaps, scheduledMaps,
+        scheduledReduces, assignedMaps, assignedReduces, mapResourceReqt,
+        reduceResourceReqt, numPendingReduces, maxReduceRampupLimit,
+        reduceSlowStart);
+    verify(allocator, times(3)).rampDownReduces(anyInt());
+
+    // Test ramp-down when enough cpu but not enough memory resource
+    doReturn(BuilderUtils.newResource(10 * 1024, 100 * 1)).when(allocator)
+        .getResourceLimit();
+    allocator.scheduleReduces(totalMaps, succeededMaps, scheduledMaps,
+        scheduledReduces, assignedMaps, assignedReduces, mapResourceReqt,
+        reduceResourceReqt, numPendingReduces, maxReduceRampupLimit,
+        reduceSlowStart);
+    verify(allocator, times(4)).rampDownReduces(anyInt());
   }
 
   private static class RecalculateContainerAllocator extends MyContainerAllocator {
@@ -1865,7 +1891,7 @@ public class TestRMContainerAllocator {
     @Override
     public void scheduleReduces(int totalMaps, int completedMaps,
         int scheduledMaps, int scheduledReduces, int assignedMaps,
-        int assignedReduces, int mapResourceReqt, int reduceResourceReqt,
+        int assignedReduces, Resource mapResourceReqt, Resource reduceResourceReqt,
         int numPendingReduces, float maxReduceRampupLimit, float reduceSlowStart) {
       recalculatedReduceSchedule = true;
     }

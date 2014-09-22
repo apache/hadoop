@@ -37,6 +37,10 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5891. Improved shuffle error handling across NM restarts
     (Junping Du via jlowe)
 
+    MAPREDUCE-5279. Made MR headroom calculation honor cpu dimension when YARN
+    scheduler resource type is memory plus cpu. (Peng Zhang and Varun Vasudev
+    via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES

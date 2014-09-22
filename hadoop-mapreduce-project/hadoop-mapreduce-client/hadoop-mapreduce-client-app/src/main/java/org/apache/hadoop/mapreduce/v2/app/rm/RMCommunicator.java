@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.v2.app.rm;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.EnumSet;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -59,6 +60,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 
 /**
  * Registers/unregisters to RM and sends heartbeats to RM.
@@ -90,6 +92,8 @@ public abstract class RMCommunicator extends AbstractService
   private volatile boolean shouldUnregister = true;
   private boolean isApplicationMasterRegistered = false;
 
+  private EnumSet<SchedulerResourceTypes> schedulerResourceTypes;
+
   public RMCommunicator(ClientService clientService, AppContext context) {
     super("RMCommunicator");
     this.clientService = clientService;
@@ -98,6 +102,7 @@ public abstract class RMCommunicator extends AbstractService
     this.applicationId = context.getApplicationID();
     this.stopped = new AtomicBoolean(false);
     this.heartbeatCallbacks = new ConcurrentLinkedQueue<Runnable>();
+    this.schedulerResourceTypes = EnumSet.of(SchedulerResourceTypes.MEMORY);
   }
 
   @Override
@@ -163,10 +168,11 @@ public abstract class RMCommunicator extends AbstractService
         setClientToAMToken(response.getClientToAMTokenMasterKey());        
       }
       this.applicationACLs = response.getApplicationACLs();
-      LOG.info("maxContainerCapability: " + maxContainerCapability.getMemory());
+      LOG.info("maxContainerCapability: " + maxContainerCapability);
       String queue = response.getQueue();
       LOG.info("queue: " + queue);
       job.setQueueName(queue);
+      this.schedulerResourceTypes.addAll(response.getSchedulerResourceTypes());
     } catch (Exception are) {
       LOG.error("Exception while registering", are);
       throw new YarnRuntimeException(are);
@@ -342,5 +348,9 @@ public abstract class RMCommunicator extends AbstractService
   @VisibleForTesting
   protected boolean isApplicationMasterRegistered() {
     return isApplicationMasterRegistered;
+  }
+
+  public EnumSet<SchedulerResourceTypes> getSchedulerResourceTypes() {
+    return schedulerResourceTypes;
   }
 }
