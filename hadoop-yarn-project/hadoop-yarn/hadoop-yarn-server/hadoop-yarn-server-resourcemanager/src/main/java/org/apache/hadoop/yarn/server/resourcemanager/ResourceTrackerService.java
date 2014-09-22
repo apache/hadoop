@@ -198,7 +198,7 @@ public class ResourceTrackerService extends AbstractService implements
    */
   @SuppressWarnings("unchecked")
   @VisibleForTesting
-  void handleNMContainerStatus(NMContainerStatus containerStatus) {
+  void handleNMContainerStatus(NMContainerStatus containerStatus, NodeId nodeId) {
     ApplicationAttemptId appAttemptId =
         containerStatus.getContainerId().getApplicationAttemptId();
     RMApp rmApp =
@@ -229,7 +229,8 @@ public class ResourceTrackerService extends AbstractService implements
             containerStatus.getContainerExitStatus());
       // sending master container finished event.
       RMAppAttemptContainerFinishedEvent evt =
-          new RMAppAttemptContainerFinishedEvent(appAttemptId, status);
+          new RMAppAttemptContainerFinishedEvent(appAttemptId, status,
+              nodeId);
       rmContext.getDispatcher().getEventHandler().handle(evt);
     }
   }
@@ -324,7 +325,7 @@ public class ResourceTrackerService extends AbstractService implements
         LOG.info("received container statuses on node manager register :"
             + request.getNMContainerStatuses());
         for (NMContainerStatus status : request.getNMContainerStatuses()) {
-          handleNMContainerStatus(status);
+          handleNMContainerStatus(status, nodeId);
         }
       }
     }

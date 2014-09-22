@@ -104,11 +104,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   // Duration for which to track recently stopped container.
   private long durationToTrackStoppedContainers;
 
-  // This is used to track the current completed containers when nodeheartBeat
-  // is called. These completed containers will be removed from NM context after
-  // nodeHeartBeat succeeds and the response from the nodeHeartBeat is
-  // processed.
-  private final Set<ContainerId> previousCompletedContainers;
   private final NodeHealthCheckerService healthChecker;
   private final NodeManagerMetrics metrics;
 
@@ -125,7 +120,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     this.metrics = metrics;
     this.recentlyStoppedContainers =
         new LinkedHashMap<ContainerId, Long>();
-    this.previousCompletedContainers = new HashSet<ContainerId>();
   }
 
   @Override
@@ -331,7 +325,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     return appList;
   }
 
-  private NodeStatus getNodeStatus(int responseId) {
+  private NodeStatus getNodeStatus(int responseId) throws IOException {
 
     NodeHealthStatus nodeHealthStatus = this.context.getNodeHealthStatus();
     nodeHealthStatus.setHealthReport(healthChecker.getHealthReport());
@@ -352,11 +346,18 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
   // Iterate through the NMContext and clone and get all the containers'
   // statuses. If it's a completed container, add into the
-  // recentlyStoppedContainers and previousCompletedContainers collections.
+  // recentlyStoppedContainers collections.
   @VisibleForTesting
-  protected List<ContainerStatus> getContainerStatuses() {
+  protected List<ContainerStatus> getContainerStatuses() throws IOException {
     List<ContainerStatus> containerStatuses = new ArrayList<ContainerStatus>();
     for (Container container : this.context.getContainers().values()) {
+      ContainerId containerId = container.getContainerId();
+      ApplicationId applicationId = container.getContainerId()
+          .getApplicationAttemptId().getApplicationId();
+      if (!this.context.getApplications().containsKey(applicationId)) {
+        context.getContainers().remove(containerId);
+        continue;
+      }
       org.apache.hadoop.yarn.api.records.ContainerStatus containerStatus =
           container.cloneAndGetContainerStatus();
       containerStatuses.add(containerStatus);
@@ -381,10 +382,17 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   }
 
   // These NMContainerStatus are sent on NM registration and used by YARN only.
-  private List<NMContainerStatus> getNMContainerStatuses() {
+  private List<NMContainerStatus> getNMContainerStatuses() throws IOException {
     List<NMContainerStatus> containerStatuses =
         new ArrayList<NMContainerStatus>();
     for (Container container : this.context.getContainers().values()) {
+      ContainerId containerId = container.getContainerId();
+      ApplicationId applicationId = container.getContainerId()
+          .getApplicationAttemptId().getApplicationId();
+      if (!this.context.getApplications().containsKey(applicationId)) {
+        context.getContainers().remove(containerId);
+        continue;
+      }
       NMContainerStatus status =
           container.getNMContainerStatus();
       containerStatuses.add(status);
@@ -402,26 +410,30 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
   @Override
   public void addCompletedContainer(ContainerId containerId) {
-    synchronized (previousCompletedContainers) {
-      previousCompletedContainers.add(containerId);
-    }
     synchronized (recentlyStoppedContainers) {
       removeVeryOldStoppedContainersFromCache();
-      recentlyStoppedContainers.put(containerId,
-        System.currentTimeMillis() + durationToTrackStoppedContainers);
+      if (!recentlyStoppedContainers.containsKey(containerId)) {
+        recentlyStoppedContainers.put(containerId,
+            System.currentTimeMillis() + durationToTrackStoppedContainers);
+      }
     }
   }
 
-  private void removeCompletedContainersFromContext() {
-    synchronized (previousCompletedContainers) {
-      if (!previousCompletedContainers.isEmpty()) {
-        for (ContainerId containerId : previousCompletedContainers) {
-          this.context.getContainers().remove(containerId);
-        }
-        LOG.info("Removed completed containers from NM context: "
-            + previousCompletedContainers);
-        previousCompletedContainers.clear();
-      }
+  @VisibleForTesting
+  @Private
+  public void removeCompletedContainersFromContext(
+      List<ContainerId>containerIds) throws IOException {
+    Set<ContainerId> removedContainers = new HashSet<ContainerId>();
+
+    // If the AM has pulled the completedContainer it can be removed
+    for (ContainerId containerId : containerIds) {
+      context.getContainers().remove(containerId);
+      removedContainers.add(containerId);
+    }
+
+    if (!removedContainers.isEmpty()) {
+      LOG.info("Removed completed containers from NM context: " +
+          removedContainers);
     }
   }
 
@@ -454,7 +466,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       return recentlyStoppedContainers.containsKey(containerId);
     }
   }
-  
+
   @Override
   public void clearFinishedContainersFromCache() {
     synchronized (recentlyStoppedContainers) {
@@ -472,11 +484,13 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       while (i.hasNext()) {
         ContainerId cid = i.next();
         if (recentlyStoppedContainers.get(cid) < currentTime) {
-          i.remove();
-          try {
-            context.getNMStateStore().removeContainer(cid);
-          } catch (IOException e) {
-            LOG.error("Unable to remove container " + cid + " in store", e);
+          if (!context.getContainers().containsKey(cid)) {
+            i.remove();
+            try {
+              context.getNMStateStore().removeContainer(cid);
+            } catch (IOException e) {
+              LOG.error("Unable to remove container " + cid + " in store", e);
+            }
           }
         } else {
           break;
@@ -542,7 +556,9 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             // don't want to remove the completed containers before resync
             // because these completed containers will be reported back to RM
             // when NM re-registers with RM.
-            removeCompletedContainersFromContext();
+            // Only remove the cleanedup containers that are acked
+            removeCompletedContainersFromContext(response
+                  .getFinishedContainersPulledByAM());
 
             lastHeartBeatID = response.getResponseId();
             List<ContainerId> containersToCleanup = response

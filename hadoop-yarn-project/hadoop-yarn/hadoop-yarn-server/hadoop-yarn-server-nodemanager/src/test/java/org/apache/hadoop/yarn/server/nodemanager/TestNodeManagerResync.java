@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
@@ -247,6 +248,10 @@ public class TestNodeManagerResync {
                   // put the completed container into the context
                   getNMContext().getContainers().put(
                     testCompleteContainer.getContainerId(), container);
+                  getNMContext().getApplications().put(
+                      testCompleteContainer.getContainerId()
+                          .getApplicationAttemptId().getApplicationId(),
+                      mock(Application.class));
                 } else {
                   // second register contains the completed container info.
                   List<NMContainerStatus> statuses =
@@ -382,9 +387,17 @@ public class TestNodeManagerResync {
             if (containersShouldBePreserved) {
               Assert.assertFalse(containers.isEmpty());
               Assert.assertTrue(containers.containsKey(existingCid));
+              Assert.assertEquals(ContainerState.RUNNING,
+                  containers.get(existingCid)
+                  .cloneAndGetContainerStatus().getState());
             } else {
-              // ensure that containers are empty before restart nodeStatusUpdater
-              Assert.assertTrue(containers.isEmpty());
+              // ensure that containers are empty or are completed before
+              // restart nodeStatusUpdater
+              if (!containers.isEmpty()) {
+                Assert.assertEquals(ContainerState.COMPLETE,
+                    containers.get(existingCid)
+                        .cloneAndGetContainerStatus().getState());
+              }
             }
             super.rebootNodeStatusUpdaterAndRegisterWithRM();
           }
@@ -465,7 +478,12 @@ public class TestNodeManagerResync {
 
         try {
           // ensure that containers are empty before restart nodeStatusUpdater
-          Assert.assertTrue(containers.isEmpty());
+          if (!containers.isEmpty()) {
+            for (Container container: containers.values()) {
+              Assert.assertEquals(ContainerState.COMPLETE,
+                  container.cloneAndGetContainerStatus().getState());
+            }
+          }
           super.rebootNodeStatusUpdaterAndRegisterWithRM();
           // After this point new containers are free to be launched, except
           // containers from previous RM
