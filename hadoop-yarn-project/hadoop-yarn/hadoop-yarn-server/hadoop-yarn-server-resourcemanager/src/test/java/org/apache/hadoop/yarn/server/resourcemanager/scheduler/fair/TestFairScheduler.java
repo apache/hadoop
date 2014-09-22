@@ -3128,7 +3128,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     out.println("<queue name=\"queue1\">");
     out.println("</queue>");
     out.println("<queue name=\"queue2\">");
-    out.println("<maxAMShare>1.0</maxAMShare>");
+    out.println("<maxAMShare>0.4</maxAMShare>");
     out.println("</queue>");
     out.println("<queue name=\"queue3\">");
     out.println("</queue>");
@@ -3172,40 +3172,42 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertEquals("Queue queue5's fair share should be 0", 0, queue5
         .getFairShare().getMemory());
 
-    List<String> queues = Arrays.asList("root.default", "root.queue3",
-        "root.queue4", "root.queue5");
+    List<String> queues = Arrays.asList("root.queue3", "root.queue4",
+        "root.queue5");
     for (String queue : queues) {
       createSchedulingRequest(1 * 1024, queue, "user1");
       scheduler.update();
       scheduler.handle(updateEvent);
     }
 
-    Resource amResource1 = Resource.newInstance(2048, 1);
+    Resource amResource1 = Resource.newInstance(1024, 1);
     int amPriority = RMAppAttemptImpl.AM_CONTAINER_PRIORITY.getPriority();
 
-    // Exceeds queue limit, but default maxAMShare is -1.0 so it doesn't matter
+    // The fair share is 2048 MB, and the default maxAMShare is 0.5f,
+    // so the AM is accepted.
     ApplicationAttemptId attId1 = createAppAttemptId(1, 1);
     createApplicationWithAMResource(attId1, "queue1", "test1", amResource1);
-    createSchedulingRequestExistingApplication(2048, 1, amPriority, attId1);
+    createSchedulingRequestExistingApplication(1024, 1, amPriority, attId1);
     FSAppAttempt app1 = scheduler.getSchedulerApp(attId1);
     scheduler.update();
     scheduler.handle(updateEvent);
-    assertEquals("Application1's AM requests 2048 MB memory",
-        2048, app1.getAMResource().getMemory());
+    assertEquals("Application1's AM requests 1024 MB memory",
+        1024, app1.getAMResource().getMemory());
     assertEquals("Application1's AM should be running",
         1, app1.getLiveContainers().size());
-    assertEquals("Queue1's AM resource usage should be 2048 MB memory",
-        2048, queue1.getAmResourceUsage().getMemory());
+    assertEquals("Queue1's AM resource usage should be 1024 MB memory",
+        1024, queue1.getAmResourceUsage().getMemory());
 
-    // Exceeds queue limit, and maxAMShare is 1.0
+    // Now the fair share is 1639 MB, and the maxAMShare is 0.4f,
+    // so the AM is not accepted.
     ApplicationAttemptId attId2 = createAppAttemptId(2, 1);
     createApplicationWithAMResource(attId2, "queue2", "test1", amResource1);
-    createSchedulingRequestExistingApplication(2048, 1, amPriority, attId2);
+    createSchedulingRequestExistingApplication(1024, 1, amPriority, attId2);
     FSAppAttempt app2 = scheduler.getSchedulerApp(attId2);
     scheduler.update();
     scheduler.handle(updateEvent);
-    assertEquals("Application2's AM requests 2048 MB memory",
-        2048, app2.getAMResource().getMemory());
+    assertEquals("Application2's AM requests 1024 MB memory",
+        1024, app2.getAMResource().getMemory());
     assertEquals("Application2's AM should not be running",
         0, app2.getLiveContainers().size());
     assertEquals("Queue2's AM resource usage should be 0 MB memory",

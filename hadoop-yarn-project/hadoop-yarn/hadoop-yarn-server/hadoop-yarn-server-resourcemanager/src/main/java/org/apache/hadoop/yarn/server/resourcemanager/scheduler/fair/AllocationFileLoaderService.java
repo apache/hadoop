@@ -224,7 +224,7 @@ public class AllocationFileLoaderService extends AbstractService {
         new HashMap<String, Map<QueueACL, AccessControlList>>();
     int userMaxAppsDefault = Integer.MAX_VALUE;
     int queueMaxAppsDefault = Integer.MAX_VALUE;
-    float queueMaxAMShareDefault = -1.0f;
+    float queueMaxAMShareDefault = 0.5f;
     long defaultFairSharePreemptionTimeout = Long.MAX_VALUE;
     long defaultMinSharePreemptionTimeout = Long.MAX_VALUE;
     float defaultFairSharePreemptionThreshold = 0.5f;
