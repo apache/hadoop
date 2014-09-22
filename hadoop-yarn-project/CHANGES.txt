@@ -208,6 +208,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2001. Added a time threshold for RM to wait before starting container
     allocations after restart/failover. (Jian He via vinodkv)
 
+    YARN-1372. Ensure all completed containers are reported to the AMs across
+    RM restart. (Anubhav Dhoot via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES

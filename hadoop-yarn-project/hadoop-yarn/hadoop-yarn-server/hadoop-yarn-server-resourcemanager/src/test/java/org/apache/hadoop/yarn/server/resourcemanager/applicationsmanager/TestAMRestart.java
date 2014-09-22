@@ -98,6 +98,9 @@ public class TestAMRestart {
       Thread.sleep(200);
     }
 
+    ContainerId amContainerId = ContainerId.newInstance(am1
+        .getApplicationAttemptId(), 1);
+
     // launch the 2nd container, for testing running container transferred.
     nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 2, ContainerState.RUNNING);
     ContainerId containerId2 =
@@ -196,11 +199,15 @@ public class TestAMRestart {
     // completed containerId4 is also transferred to the new attempt.
     RMAppAttempt newAttempt =
         app1.getRMAppAttempt(am2.getApplicationAttemptId());
-    // 4 containers finished, acquired/allocated/reserved/completed.
-    waitForContainersToFinish(4, newAttempt);
+    // 4 containers finished, acquired/allocated/reserved/completed + AM
+    // container.
+    waitForContainersToFinish(5, newAttempt);
     boolean container3Exists = false, container4Exists = false, container5Exists =
-        false, container6Exists = false;
+        false, container6Exists = false, amContainerExists = false;
     for(ContainerStatus status :  newAttempt.getJustFinishedContainers()) {
+      if(status.getContainerId().equals(amContainerId)) {
+        amContainerExists = true;
+      }
       if(status.getContainerId().equals(containerId3)) {
         // containerId3 is the container ran by previous attempt but finished by the
         // new attempt.
@@ -220,8 +227,11 @@ public class TestAMRestart {
         container6Exists = true;
       }
     }
-    Assert.assertTrue(container3Exists && container4Exists && container5Exists
-        && container6Exists);
+    Assert.assertTrue(amContainerExists);
+    Assert.assertTrue(container3Exists);
+    Assert.assertTrue(container4Exists);
+    Assert.assertTrue(container5Exists);
+    Assert.assertTrue(container6Exists);
 
     // New SchedulerApplicationAttempt also has the containers info.
     rm1.waitForState(nm1, containerId2, RMContainerState.RUNNING);
@@ -240,14 +250,14 @@ public class TestAMRestart {
     // all 4 normal containers finished.
     System.out.println("New attempt's just finished containers: "
         + newAttempt.getJustFinishedContainers());
-    waitForContainersToFinish(5, newAttempt);
+    waitForContainersToFinish(6, newAttempt);
     rm1.stop();
   }
 
   private void waitForContainersToFinish(int expectedNum, RMAppAttempt attempt)
       throws InterruptedException {
     int count = 0;
-    while (attempt.getJustFinishedContainers().size() != expectedNum
+    while (attempt.getJustFinishedContainers().size() < expectedNum
         && count < 500) {
       Thread.sleep(100);
       count++;
