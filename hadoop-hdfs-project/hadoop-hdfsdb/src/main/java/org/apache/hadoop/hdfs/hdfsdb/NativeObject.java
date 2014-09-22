@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.hdfsdb;
 
 abstract class NativeObject implements AutoCloseable {
   static {
-    System.loadLibrary("hdfs-jni");
+    System.loadLibrary("hdfsdb-jni");
   }
   protected long nativeHandle;
   protected long nativeHandle() { return nativeHandle; }

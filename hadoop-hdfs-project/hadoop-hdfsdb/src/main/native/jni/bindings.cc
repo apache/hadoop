@@ -224,6 +224,11 @@ jlong JNICALL Java_org_apache_hadoop_hdfs_hdfsdb_WriteOptions_construct(JNIEnv *
   return uintptr(new leveldb::WriteOptions());
 }
 
+void JNICALL Java_org_apache_hadoop_hdfs_hdfsdb_WriteOptions_sync(JNIEnv *, jclass, jlong handle, jboolean value) {
+  leveldb::WriteOptions *options = reinterpret_cast<leveldb::WriteOptions*>(handle);
+  options->sync = value;
+}
+
 void JNICALL Java_org_apache_hadoop_hdfs_hdfsdb_WriteOptions_destruct(JNIEnv *, jclass, jlong handle) {
   delete reinterpret_cast<leveldb::WriteOptions*>(handle);
 }

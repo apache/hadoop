@@ -22,6 +22,11 @@ public class WriteOptions extends NativeObject {
     super(construct());
   }
 
+  public WriteOptions sync(boolean value) {
+    sync(nativeHandle, value);
+    return this;
+  }
+
   @Override
   public void close() {
     if (nativeHandle != 0) {
@@ -32,4 +37,5 @@ public class WriteOptions extends NativeObject {
 
   private static native long construct();
   private static native void destruct(long handle);
+  private static native void sync(long handle, boolean value);
 }
