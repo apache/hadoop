@@ -126,6 +126,9 @@ Trunk (Unreleased)
 
     HADOOP-11041. VersionInfo specifies subversion (Tsuyoshi OZAWA via aw)
 
+    HADOOP-11092. hadoop shell commands should print usage if not given a
+    a class (aw)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.

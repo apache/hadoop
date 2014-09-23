@@ -162,11 +162,11 @@ case ${COMMAND} in
   version)
     CLASS=org.apache.hadoop.util.VersionInfo
   ;;
-  -*|hdfs)
-    hadoop_exit_with_usage 1
-  ;;
   *)
     CLASS="${COMMAND}"
+    if ! hadoop_validate_classname "${CLASS}"; then
+      hadoop_exit_with_usage 1
+    fi
   ;;
 esac
 

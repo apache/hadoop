@@ -279,6 +279,17 @@ function hadoop_connect_to_hosts
   fi
 }
 
+function hadoop_validate_classname
+{
+  local class=$1
+  shift 1
+
+  if [[ ! ${class} =~ \. ]]; then
+    return 1
+  fi
+  return 0
+}
+
 function hadoop_add_param
 {
   #

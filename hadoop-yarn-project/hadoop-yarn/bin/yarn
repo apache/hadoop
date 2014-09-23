@@ -154,11 +154,11 @@ case "${COMMAND}" in
     hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
   ;;
-  -*)
-    hadoop_exit_with_usage 1
-  ;;
   *)
     CLASS="${COMMAND}"
+    if ! hadoop_validate_classname "${CLASS}"; then
+      hadoop_exit_with_usage 1
+    fi
   ;;
 esac
 
