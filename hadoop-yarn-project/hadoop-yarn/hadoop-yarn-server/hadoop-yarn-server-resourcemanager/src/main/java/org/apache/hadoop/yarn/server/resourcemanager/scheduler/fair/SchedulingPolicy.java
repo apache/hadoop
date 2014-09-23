@@ -175,4 +175,19 @@ public abstract class SchedulingPolicy {
    */
   public abstract boolean checkIfAMResourceUsageOverLimit(
       Resource usage, Resource maxAMResource);
+
+  /**
+   * Get headroom by calculating the min of <code>clusterAvailable</code> and
+   * (<code>queueFairShare</code> - <code>queueUsage</code>) resources that are
+   * applicable to this policy. For eg if only memory then leave other
+   * resources such as CPU to same as clusterAvailable.
+   *
+   * @param queueFairShare fairshare in the queue
+   * @param queueUsage resources used in the queue
+   * @param clusterAvailable available resource in cluster
+   * @return calculated headroom
+   */
+  public abstract Resource getHeadroom(Resource queueFairShare,
+      Resource queueUsage, Resource clusterAvailable);
+
 }

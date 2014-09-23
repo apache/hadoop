@@ -108,6 +108,18 @@ public class FifoPolicy extends SchedulingPolicy {
   }
 
   @Override
+  public Resource getHeadroom(Resource queueFairShare,
+                              Resource queueUsage, Resource clusterAvailable) {
+    int queueAvailableMemory = Math.max(
+        queueFairShare.getMemory() - queueUsage.getMemory(), 0);
+    Resource headroom = Resources.createResource(
+        Math.min(clusterAvailable.getMemory(), queueAvailableMemory),
+        clusterAvailable.getVirtualCores());
+    return headroom;
+  }
+
+
+  @Override
   public byte getApplicableDepth() {
     return SchedulingPolicy.DEPTH_LEAF;
   }

@@ -171,6 +171,33 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
         + priority + "; currentReservation " + currentReservation);
   }
 
+  @Override
+  public synchronized Resource getHeadroom() {
+    final FSQueue queue = (FSQueue) this.queue;
+    SchedulingPolicy policy = queue.getPolicy();
+
+    Resource queueFairShare = queue.getFairShare();
+    Resource queueUsage = queue.getResourceUsage();
+    Resource clusterResource = this.scheduler.getClusterResource();
+    Resource clusterUsage = this.scheduler.getRootQueueMetrics()
+        .getAllocatedResources();
+    Resource clusterAvailableResource = Resources.subtract(clusterResource,
+        clusterUsage);
+    Resource headroom = policy.getHeadroom(queueFairShare,
+        queueUsage, clusterAvailableResource);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Headroom calculation for " + this.getName() + ":" +
+          "Min(" +
+          "(queueFairShare=" + queueFairShare +
+          " - queueUsage=" + queueUsage + ")," +
+          " clusterAvailableResource=" + clusterAvailableResource +
+          "(clusterResource=" + clusterResource +
+          " - clusterUsage=" + clusterUsage + ")" +
+          "Headroom=" + headroom);
+    }
+    return headroom;
+  }
+
   public synchronized float getLocalityWaitFactor(
       Priority priority, int clusterNodes) {
     // Estimate: Required unique resources (i.e. hosts + racks)
