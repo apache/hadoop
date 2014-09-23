@@ -584,6 +584,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7115. TestEncryptionZones assumes Unix path separator for KMS key store
     path. (Xiaoyu Yao via cnauroth)
 
+    HDFS-7115. TestEncryptionZonesWithHA assumes Unix path separator for KMS key
+    store path. (Xiaoyu Yao via cnauroth)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

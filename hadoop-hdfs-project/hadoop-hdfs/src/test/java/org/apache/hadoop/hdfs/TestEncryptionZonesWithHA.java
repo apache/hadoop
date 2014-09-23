@@ -60,7 +60,8 @@ public class TestEncryptionZonesWithHA {
     String testRoot = fsHelper.getTestRootDir();
     testRootDir = new File(testRoot).getAbsoluteFile();
     conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI,
-        JavaKeyStoreProvider.SCHEME_NAME + "://file" + testRootDir + "/test.jks"
+        JavaKeyStoreProvider.SCHEME_NAME + "://file" +
+        new Path(testRootDir.toString(), "test.jks").toUri()
     );
 
     cluster = new MiniDFSCluster.Builder(conf)
