@@ -70,6 +70,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -108,6 +109,11 @@ import java.util.UUID;
  * <p/>
  */
 public class MiniKdc {
+
+  public static final String JAVA_SECURITY_KRB5_CONF =
+      "java.security.krb5.conf";
+  public static final String SUN_SECURITY_KRB5_DEBUG =
+      "sun.security.krb5.debug";
 
   public static void main(String[] args) throws  Exception {
     if (args.length < 4) {
@@ -266,7 +272,8 @@ public class MiniKdc {
     }
     String orgName= conf.getProperty(ORG_NAME);
     String orgDomain = conf.getProperty(ORG_DOMAIN);
-    realm = orgName.toUpperCase() + "." + orgDomain.toUpperCase();
+    realm = orgName.toUpperCase(Locale.ENGLISH) + "."
+            + orgDomain.toUpperCase(Locale.ENGLISH);
   }
 
   /**
@@ -355,8 +362,8 @@ public class MiniKdc {
     ds.addLast(new KeyDerivationInterceptor());
 
     // create one partition
-    String orgName= conf.getProperty(ORG_NAME).toLowerCase();
-    String orgDomain = conf.getProperty(ORG_DOMAIN).toLowerCase();
+    String orgName= conf.getProperty(ORG_NAME).toLowerCase(Locale.ENGLISH);
+    String orgDomain = conf.getProperty(ORG_DOMAIN).toLowerCase(Locale.ENGLISH);
 
     JdbmPartition partition = new JdbmPartition(ds.getSchemaManager());
     partition.setId(orgName);
@@ -387,10 +394,10 @@ public class MiniKdc {
     String orgDomain = conf.getProperty(ORG_DOMAIN);
     String bindAddress = conf.getProperty(KDC_BIND_ADDRESS);
     final Map<String, String> map = new HashMap<String, String>();
-    map.put("0", orgName.toLowerCase());
-    map.put("1", orgDomain.toLowerCase());
-    map.put("2", orgName.toUpperCase());
-    map.put("3", orgDomain.toUpperCase());
+    map.put("0", orgName.toLowerCase(Locale.ENGLISH));
+    map.put("1", orgDomain.toLowerCase(Locale.ENGLISH));
+    map.put("2", orgName.toUpperCase(Locale.ENGLISH));
+    map.put("3", orgDomain.toUpperCase(Locale.ENGLISH));
     map.put("4", bindAddress);
 
     ClassLoader cl = Thread.currentThread().getContextClassLoader();
@@ -455,9 +462,9 @@ public class MiniKdc {
     FileUtils.writeStringToFile(krb5conf,
             MessageFormat.format(sb.toString(), getRealm(), getHost(),
                     Integer.toString(getPort()), System.getProperty("line.separator")));
-    System.setProperty("java.security.krb5.conf", krb5conf.getAbsolutePath());
+    System.setProperty(JAVA_SECURITY_KRB5_CONF, krb5conf.getAbsolutePath());
 
-    System.setProperty("sun.security.krb5.debug", conf.getProperty(DEBUG,
+    System.setProperty(SUN_SECURITY_KRB5_DEBUG, conf.getProperty(DEBUG,
             "false"));
 
     // refresh the config
@@ -481,8 +488,8 @@ public class MiniKdc {
    */
   public synchronized void stop() {
     if (kdc != null) {
-      System.getProperties().remove("java.security.krb5.conf");
-      System.getProperties().remove("sun.security.krb5.debug");
+      System.getProperties().remove(JAVA_SECURITY_KRB5_CONF);
+      System.getProperties().remove(SUN_SECURITY_KRB5_DEBUG);
       kdc.stop();
       try {
         ds.shutdown();
@@ -520,8 +527,8 @@ public class MiniKdc {
           throws Exception {
     String orgName= conf.getProperty(ORG_NAME);
     String orgDomain = conf.getProperty(ORG_DOMAIN);
-    String baseDn = "ou=users,dc=" + orgName.toLowerCase() + ",dc=" +
-            orgDomain.toLowerCase();
+    String baseDn = "ou=users,dc=" + orgName.toLowerCase(Locale.ENGLISH)
+                    + ",dc=" + orgDomain.toLowerCase(Locale.ENGLISH);
     String content = "dn: uid=" + principal + "," + baseDn + "\n" +
             "objectClass: top\n" +
             "objectClass: person\n" +
