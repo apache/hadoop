@@ -1,0 +1,12 @@
+.settings/
+.cproject
+.project
+build*/
+releng/
+ext/
+dist/
+test/data/unittest.xml
+
+test/data/functiontest.xml
+
+test/data/securetest.xml
