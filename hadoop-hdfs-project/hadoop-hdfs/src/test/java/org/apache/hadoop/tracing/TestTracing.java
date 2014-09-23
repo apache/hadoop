@@ -53,13 +53,15 @@ public class TestTracing {
   private static Configuration conf;
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem dfs;
+  private static SpanReceiverHost spanReceiverHost;
 
   @Test
-  public void testSpanReceiverHost() throws Exception {
-    Configuration conf = new Configuration();
-    conf.set(SpanReceiverHost.SPAN_RECEIVERS_CONF_KEY,
-        SetSpanReceiver.class.getName());
-    SpanReceiverHost spanReceiverHost = SpanReceiverHost.getInstance(conf);
+  public void testGetSpanReceiverHost() throws Exception {
+    Configuration c = new Configuration();
+    // getting instance already loaded.
+    c.set(SpanReceiverHost.SPAN_RECEIVERS_CONF_KEY, "");
+    SpanReceiverHost s = SpanReceiverHost.getInstance(c);
+    Assert.assertEquals(spanReceiverHost, s);
   }
 
   @Test
@@ -228,8 +230,10 @@ public class TestTracing {
     cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(3)
         .build();
+    cluster.waitActive();
 
     dfs = cluster.getFileSystem();
+    spanReceiverHost = SpanReceiverHost.getInstance(conf);
   }
 
   @AfterClass

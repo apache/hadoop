@@ -450,6 +450,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7106. Reconfiguring DataNode volumes does not release the lock files
     in removed volumes. (cnauroth via cmccabe)
 
+    HDFS-7001. Tests in TestTracing depends on the order of execution
+    (iwasakims via cmccabe)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
