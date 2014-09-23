@@ -1,0 +1,122 @@
+#!/bin/sh
+
+die() {
+    echo "$@" 1>&2 ; exit 1
+}
+
+arg () {
+    echo "$1" | sed "s/^${2-[^=]*=}//" | sed "s/:/;/g"
+}
+
+# Detect directory information.
+source_dir=`cd "\`dirname \"$0\"\`";pwd`
+binary_dir=`pwd`
+
+# Choose the default install prefix.
+default_prefix=${source_dir}/dist
+
+# Choose the default dependency install prefix
+default_dependency=${DEPENDENCY_INSTALL_PREFIX}
+
+if [ x"${default_dependency}" = x"" ]; then
+    default_dependency="/opt/dependency"
+fi
+
+# Display bootstrap usage
+usage() {
+echo '
+Usage: '"$0"' [<options>]
+Options: [defaults in brackets after descriptions]
+Configuration:
+    --help                          print this message
+    --prefix=PREFIX                 install files in tree rooted at PREFIX
+                                    ['"${default_prefix}"']
+    --dependency=DIRs               specify the dependencies at DIRs, separated by colon 
+                                    ['"${default_dependency}"']
+    --enable-debug                  enable debug build
+    --enable-boost                  force to enable boost
+    --enable-coverage               enable build with code coverage support
+    --enable-libc++                 using libc++ instead of libstdc++, only valid for clang compiler
+    
+Dependencies:
+    c/c++ compiler
+    GNU make
+    cmake           http://www.cmake.org/
+    protobuf        https://code.google.com/p/protobuf/
+    kerberos        http://web.mit.edu/kerberos/
+    libgsasl        http://www.gnu.org/software/gsasl/
+    libxml2         http://xmlsoft.org/
+    libuuid         http://sourceforge.net/projects/libuuid/
+    boost 1.53+     http://www.boost.org/
+                    [boost is not required if c++ compiler is g++ 4.6.0+ or clang++ with stdc++]
+
+Example:
+    mkdir build
+    cd build
+    ../bootstrap --prefix=/path/to/install --dependency=/path/to/protobuf:/path/to/kerberos/:path/to/others
+    make
+    make install                  
+'
+    exit 10
+}
+
+# Parse arguments
+prefix_dirs="${default_prefix}"
+dependency_dir="${default_dependency}"
+build_type="Release"
+enable_boost="OFF"
+enable_coverage="OFF"
+enable_clang_lib="OFF"
+while test $# != 0; do
+    case "$1" in
+    --prefix=*) dir=`arg "$1"`
+                prefix_dirs="$dir";;
+    --dependency=*) dir=`arg "$1"`
+                dependency_dir="$dir";;
+    --enable-debug) enable_build="ON";;
+    --enable-boost) enable_boost="ON";;
+    --enable-coverage) enable_coverage="ON";;
+    --enable-libc++) enable_clang_lib="ON";;
+    --help) usage ;;
+    *) die "Unknown option: $1" ;;
+    esac
+    shift
+done
+
+if [ ${source_dir} = ${binary_dir} ]; then
+    die "cannot build the project in the source directory! Out-of-source build is enforced!"
+fi
+
+# Check clang compiler
+if [[ x"${CC}" = x"" ]]; then
+    CC=gcc
+fi
+
+if [[ x"${CXX}" = x"" ]]; then
+    CXX=g++
+fi
+
+c_compiler=`which ${CC}`
+cxx_compiler=`which ${CXX}`
+cmake=`which cmake`
+
+if [[ ! -x ${c_compiler} ]]; then
+    die "cannot found c compiler"
+fi
+
+if [[ ! -x ${cxx_compiler} ]]; then
+    die "cannot found cplusplus compiler"
+fi
+
+if [[ ! -x ${cmake} ]]; then
+    die "cannot found cmake"
+fi
+
+# Configure 
+${cmake} -DENABLE_DEBUG=${enable_build} -DCMAKE_INSTALL_PREFIX=${prefix_dirs} \
+    -DCMAKE_C_COMPILER=${c_compiler} -DCMAKE_CXX_COMPILER=${cxx_compiler} \
+    -DCMAKE_PREFIX_PATH=${dependency_dir} -DENABLE_BOOST=${enable_boost} \
+    -DENABLE_COVERAGE=${enable_coverage} -DENABLE_LIBCPP=${enable_clang_lib} ${source_dir} \
+    || die "failed to configure the project"
+
+echo 'bootstrap success. Run "make" to build.'

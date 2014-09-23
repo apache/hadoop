@@ -1,0 +1,68 @@
+~~ Licensed under the Apache License, Version 2.0 (the "License");
+~~ you may not use this file except in compliance with the License.
+~~ You may obtain a copy of the License at
+~~
+~~   http://www.apache.org/licenses/LICENSE-2.0
+~~
+~~ Unless required by applicable law or agreed to in writing, software
+~~ distributed under the License is distributed on an "AS IS" BASIS,
+~~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~~ See the License for the specific language governing permissions and
+~~ limitations under the License. See accompanying LICENSE file.
+
+  ---
+  libhdfs3    a c/c++ hdfs client
+  ---
+  ---
+  ${maven.build.timestamp}
+
+libhdfs3
+
+*  Build Requirements
+
+  To build libhdfs3, the following libraries are needed.
+
+  * cmake (2.8+) from http://www.cmake.org/
+
+  * google protocol buffers from http://code.google.com/p/protobuf/
+
+  * kerberos from http://web.mit.edu/kerberos/
+
+  * libuuid from http://sourceforge.net/projects/libuuid/
+
+  * libgsasl from http://www.gnu.org/software/gsasl/
+
+  To run code coverage tests, the following tools are needed.
+
+  * gcov (included in gcc distribution)
+
+  * lcov (tested on 1.9)            http://ltp.sourceforge.net/coverage/lcov.php
+
+* Unit Tests
+
+    You can run unit tests with the command:
+
++---+
+  make unittest
++---+
+
+    libhdfs3 also includes a suite of functional tests.  To run these tests,
+    you will need a running hdfs instance to test against.  Then, you will need
+    to create a function test configuration file in
+    <<<$LIBHDFS3_HOME/test/data/function-test.xml>>>.  See
+    <<<$LIBHDFS3_HOME/test/data/function-test.xml.example>>> for an example
+    configuration file.
+
+    You can run functional tests with:
+
++---+
+  make functiontest
++---+
+    
+    You can run code coverage tests with:
+
++---+
+  make ShowCoverage
++---+
+
+    The code coverage result will be placed at <<<$BUILD_DIR/CodeCoverageReport/index.html>>>.
