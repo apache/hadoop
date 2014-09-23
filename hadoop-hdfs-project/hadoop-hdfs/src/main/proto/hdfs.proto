@@ -158,6 +158,7 @@ message FsPermissionProto {
 enum StorageTypeProto {
   DISK = 1;
   SSD = 2;
+  ARCHIVE = 3;
 }
 
 /**
@@ -215,7 +216,27 @@ message FileEncryptionInfoProto {
   required CipherSuite suite = 1;
   required bytes key = 2;
   required bytes iv = 3;
-  required string ezKeyVersionName = 4;
+  required string keyName = 4;
+  required string ezKeyVersionName = 5;
+}
+
+/**
+ * Encryption information for an individual
+ * file within an encryption zone
+ */
+message PerFileEncryptionInfoProto {
+  required bytes key = 1;
+  required bytes iv = 2;
+  required string ezKeyVersionName = 3;
+}
+
+/**
+ * Encryption information for an encryption
+ * zone
+ */
+message ZoneEncryptionInfoProto {
+  required CipherSuite suite = 1;
+  required string keyName = 2;
 }
 
 /**
@@ -263,6 +284,8 @@ message HdfsFileStatusProto {
 
   // Optional field for file encryption
   optional FileEncryptionInfoProto fileEncryptionInfo = 15;
+
+  optional uint32 storagePolicy = 16 [default = 0]; // block storage policy id
 } 
 
 /**

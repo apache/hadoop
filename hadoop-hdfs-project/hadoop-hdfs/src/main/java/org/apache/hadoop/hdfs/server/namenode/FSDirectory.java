@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_FILE_ENCRYPTION_INFO;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_XATTR_UNREADABLE_BY_SUPERUSER;
 import static org.apache.hadoop.util.Time.now;
 
 import java.io.Closeable;
@@ -36,6 +37,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
@@ -51,6 +53,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -62,7 +65,7 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
-import org.apache.hadoop.hdfs.protocol.FsAclPermission;
+import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
@@ -90,6 +93,7 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import org.apache.hadoop.security.AccessControlException;
 
 /**
  * Both FSDirectory and FSNamesystem manage the state of the namespace.
@@ -128,6 +132,8 @@ public class FSDirectory implements Closeable {
       DFSUtil.string2Bytes(DOT_INODES_STRING);
   private final XAttr KEYID_XATTR =
       XAttrHelper.buildXAttr(CRYPTO_XATTR_ENCRYPTION_ZONE, null);
+  private final XAttr UNREADABLE_BY_SUPERUSER_XATTR =
+      XAttrHelper.buildXAttr(SECURITY_XATTR_UNREADABLE_BY_SUPERUSER, null);
 
   INodeDirectory rootDir;
   private final FSNamesystem namesystem;
@@ -269,6 +275,12 @@ public class FSDirectory implements Closeable {
     skipQuotaCheck = true;
   }
 
+  private static INodeFile newINodeFile(long id, PermissionStatus permissions,
+      long mtime, long atime, short replication, long preferredBlockSize) {
+    return new INodeFile(id, null, permissions, mtime, atime,
+        BlockInfo.EMPTY_ARRAY, replication, preferredBlockSize, (byte)0);
+  }
+
   /**
    * Add the given filename to the fs.
    * @throws FileAlreadyExistsException
@@ -283,9 +295,8 @@ public class FSDirectory implements Closeable {
       UnresolvedLinkException, SnapshotAccessControlException, AclException {
 
     long modTime = now();
-    INodeFile newNode = new INodeFile(namesystem.allocateNewInodeId(), null,
-        permissions, modTime, modTime, BlockInfo.EMPTY_ARRAY, replication,
-        preferredBlockSize);
+    INodeFile newNode = newINodeFile(namesystem.allocateNewInodeId(),
+        permissions, modTime, modTime, replication, preferredBlockSize);
     newNode.toUnderConstruction(clientName, clientMachine);
 
     boolean added = false;
@@ -321,14 +332,13 @@ public class FSDirectory implements Closeable {
     final INodeFile newNode;
     assert hasWriteLock();
     if (underConstruction) {
-      newNode = new INodeFile(id, null, permissions, modificationTime,
-          modificationTime, BlockInfo.EMPTY_ARRAY, replication,
-          preferredBlockSize);
+      newNode = newINodeFile(id, permissions, modificationTime,
+          modificationTime, replication, preferredBlockSize);
       newNode.toUnderConstruction(clientName, clientMachine);
 
     } else {
-      newNode = new INodeFile(id, null, permissions, modificationTime, atime,
-          BlockInfo.EMPTY_ARRAY, replication, preferredBlockSize);
+      newNode = newINodeFile(id, permissions, modificationTime, atime,
+          replication, preferredBlockSize);
     }
 
     try {
@@ -995,6 +1005,44 @@ public class FSDirectory implements Closeable {
     return file.getBlocks();
   }
 
+  /** Set block storage policy for a directory */
+  void setStoragePolicy(String src, byte policyId)
+      throws IOException {
+    writeLock();
+    try {
+      unprotectedSetStoragePolicy(src, policyId);
+    } finally {
+      writeUnlock();
+    }
+  }
+
+  void unprotectedSetStoragePolicy(String src, byte policyId)
+      throws IOException {
+    assert hasWriteLock();
+    final INodesInPath iip = getINodesInPath4Write(src, true);
+    final INode inode = iip.getLastINode();
+    if (inode == null) {
+      throw new FileNotFoundException("File/Directory does not exist: " + src);
+    }
+    final int snapshotId = iip.getLatestSnapshotId();
+    if (inode.isFile()) {
+      inode.asFile().setStoragePolicyID(policyId, snapshotId);
+    } else if (inode.isDirectory()) {
+      setDirStoragePolicy(inode.asDirectory(), policyId, snapshotId);  
+    } else {
+      throw new FileNotFoundException(src + " is not a file or directory");
+    }
+  }
+
+  private void setDirStoragePolicy(INodeDirectory inode, byte policyId,
+      int latestSnapshotId) throws IOException {
+    List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
+    XAttr xAttr = BlockStoragePolicy.buildXAttr(policyId);
+    List<XAttr> newXAttrs = setINodeXAttrs(existingXAttrs, Arrays.asList(xAttr),
+        EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
+    XAttrStorage.updateINodeXAttrs(inode, newXAttrs, latestSnapshotId);
+  }
+
   /**
    * @param path the file path
    * @return the block size of the file. 
@@ -1326,6 +1374,11 @@ public class FSDirectory implements Closeable {
     }
   }
 
+  private byte getStoragePolicyID(byte inodePolicy, byte parentPolicy) {
+    return inodePolicy != BlockStoragePolicy.ID_UNSPECIFIED ? inodePolicy :
+        parentPolicy;
+  }
+
   /**
    * Get a partial listing of the indicated directory
    *
@@ -1340,7 +1393,8 @@ public class FSDirectory implements Closeable {
    * @return a partial listing starting after startAfter
    */
   DirectoryListing getListing(String src, byte[] startAfter,
-      boolean needLocation) throws UnresolvedLinkException, IOException {
+      boolean needLocation, boolean isSuperUser)
+      throws UnresolvedLinkException, IOException {
     String srcs = normalizePath(src);
     final boolean isRawPath = isReservedRawName(src);
 
@@ -1349,16 +1403,20 @@ public class FSDirectory implements Closeable {
       if (srcs.endsWith(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR)) {
         return getSnapshotsListing(srcs, startAfter);
       }
-      final INodesInPath inodesInPath = getLastINodeInPath(srcs, true);
+      final INodesInPath inodesInPath = getINodesInPath(srcs, true);
+      final INode[] inodes = inodesInPath.getINodes();
       final int snapshot = inodesInPath.getPathSnapshotId();
-      final INode targetNode = inodesInPath.getINode(0);
+      final INode targetNode = inodes[inodes.length - 1];
       if (targetNode == null)
         return null;
+      byte parentStoragePolicy = isSuperUser ?
+          targetNode.getStoragePolicyID() : BlockStoragePolicy.ID_UNSPECIFIED;
       
       if (!targetNode.isDirectory()) {
         return new DirectoryListing(
             new HdfsFileStatus[]{createFileStatus(HdfsFileStatus.EMPTY_NAME,
-                targetNode, needLocation, snapshot, isRawPath)}, 0);
+                targetNode, needLocation, parentStoragePolicy, snapshot,
+                isRawPath, inodesInPath)}, 0);
       }
 
       final INodeDirectory dirInode = targetNode.asDirectory();
@@ -1371,8 +1429,11 @@ public class FSDirectory implements Closeable {
       HdfsFileStatus listing[] = new HdfsFileStatus[numOfListing];
       for (int i=0; i<numOfListing && locationBudget>0; i++) {
         INode cur = contents.get(startChild+i);
-        listing[i] = createFileStatus(cur.getLocalNameBytes(), cur,
-            needLocation, snapshot, isRawPath);
+        byte curPolicy = isSuperUser && !cur.isSymlink()?
+            cur.getLocalStoragePolicyID(): BlockStoragePolicy.ID_UNSPECIFIED;
+        listing[i] = createFileStatus(cur.getLocalNameBytes(), cur, needLocation,
+            getStoragePolicyID(curPolicy, parentStoragePolicy), snapshot,
+            isRawPath, inodesInPath);
         listingCnt++;
         if (needLocation) {
             // Once we  hit lsLimit locations, stop.
@@ -1423,7 +1484,8 @@ public class FSDirectory implements Closeable {
     for (int i = 0; i < numOfListing; i++) {
       Root sRoot = snapshots.get(i + skipSize).getRoot();
       listing[i] = createFileStatus(sRoot.getLocalNameBytes(), sRoot,
-          Snapshot.CURRENT_STATE_ID, false);
+          BlockStoragePolicy.ID_UNSPECIFIED, Snapshot.CURRENT_STATE_ID,
+          false, null);
     }
     return new DirectoryListing(
         listing, snapshots.size() - skipSize - numOfListing);
@@ -1433,10 +1495,12 @@ public class FSDirectory implements Closeable {
    * @param src The string representation of the path to the file
    * @param resolveLink whether to throw UnresolvedLinkException
    * @param isRawPath true if a /.reserved/raw pathname was passed by the user
+   * @param includeStoragePolicy whether to include storage policy
    * @return object containing information regarding the file
    *         or null if file not found
    */
-  HdfsFileStatus getFileInfo(String src, boolean resolveLink, boolean isRawPath)
+  HdfsFileStatus getFileInfo(String src, boolean resolveLink,
+      boolean isRawPath, boolean includeStoragePolicy)
     throws IOException {
     String srcs = normalizePath(src);
     readLock();
@@ -1444,11 +1508,14 @@ public class FSDirectory implements Closeable {
       if (srcs.endsWith(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR)) {
         return getFileInfo4DotSnapshot(srcs);
       }
-      final INodesInPath inodesInPath = getLastINodeInPath(srcs, resolveLink);
-      final INode i = inodesInPath.getINode(0);
-
-      return i == null? null: createFileStatus(HdfsFileStatus.EMPTY_NAME, i,
-          inodesInPath.getPathSnapshotId(), isRawPath);
+      final INodesInPath inodesInPath = getINodesInPath(srcs, resolveLink);
+      final INode[] inodes = inodesInPath.getINodes();
+      final INode i = inodes[inodes.length - 1];
+      byte policyId = includeStoragePolicy && i != null && !i.isSymlink() ?
+          i.getStoragePolicyID() : BlockStoragePolicy.ID_UNSPECIFIED;
+      return i == null ? null : createFileStatus(HdfsFileStatus.EMPTY_NAME, i,
+          policyId, inodesInPath.getPathSnapshotId(), isRawPath,
+          inodesInPath);
     } finally {
       readUnlock();
     }
@@ -1465,7 +1532,7 @@ public class FSDirectory implements Closeable {
       throws UnresolvedLinkException {
     if (getINode4DotSnapshot(src) != null) {
       return new HdfsFileStatus(0, true, 0, 0, 0, 0, null, null, null, null,
-          HdfsFileStatus.EMPTY_NAME, -1L, 0, null);
+          HdfsFileStatus.EMPTY_NAME, -1L, 0, null, BlockStoragePolicy.ID_UNSPECIFIED);
     }
     return null;
   }
@@ -2100,8 +2167,17 @@ public class FSDirectory implements Closeable {
           for (XAttr xattr : xattrs) {
             final String xaName = XAttrHelper.getPrefixName(xattr);
             if (CRYPTO_XATTR_ENCRYPTION_ZONE.equals(xaName)) {
-              ezManager.unprotectedAddEncryptionZone(inode.getId(),
-                  new String(xattr.getValue()));
+              try {
+                final HdfsProtos.ZoneEncryptionInfoProto ezProto =
+                    HdfsProtos.ZoneEncryptionInfoProto.parseFrom(
+                        xattr.getValue());
+                ezManager.unprotectedAddEncryptionZone(inode.getId(),
+                    PBHelper.convert(ezProto.getSuite()),
+                    ezProto.getKeyName());
+              } catch (InvalidProtocolBufferException e) {
+                NameNode.LOG.warn("Error parsing protocol buffer of " +
+                    "EZ XAttr " + xattr.getName());
+              }
             }
           }
         }
@@ -2293,33 +2369,44 @@ public class FSDirectory implements Closeable {
    * @throws IOException if any error occurs
    */
   private HdfsFileStatus createFileStatus(byte[] path, INode node,
-      boolean needLocation, int snapshot, boolean isRawPath)
+      boolean needLocation, byte storagePolicy, int snapshot,
+      boolean isRawPath, INodesInPath iip)
       throws IOException {
     if (needLocation) {
-      return createLocatedFileStatus(path, node, snapshot, isRawPath);
+      return createLocatedFileStatus(path, node, storagePolicy, snapshot,
+          isRawPath, iip);
     } else {
-      return createFileStatus(path, node, snapshot, isRawPath);
+      return createFileStatus(path, node, storagePolicy, snapshot,
+          isRawPath, iip);
     }
   }
+
   /**
    * Create FileStatus by file INode 
    */
-   HdfsFileStatus createFileStatus(byte[] path, INode node,
-       int snapshot, boolean isRawPath) throws IOException {
+  HdfsFileStatus createFileStatus(byte[] path, INode node, byte storagePolicy,
+      int snapshot, boolean isRawPath, INodesInPath iip) throws IOException {
      long size = 0;     // length is zero for directories
      short replication = 0;
      long blocksize = 0;
+     final boolean isEncrypted;
+
+     final FileEncryptionInfo feInfo = isRawPath ? null :
+         getFileEncryptionInfo(node, snapshot, iip);
+
      if (node.isFile()) {
        final INodeFile fileNode = node.asFile();
        size = fileNode.computeFileSize(snapshot);
        replication = fileNode.getFileReplication(snapshot);
        blocksize = fileNode.getPreferredBlockSize();
+       isEncrypted = (feInfo != null) ||
+           (isRawPath && isInAnEZ(INodesInPath.fromINode(node)));
+     } else {
+       isEncrypted = isInAnEZ(INodesInPath.fromINode(node));
      }
+
      int childrenNum = node.isDirectory() ? 
          node.asDirectory().getChildrenNum(snapshot) : 0;
-
-     FileEncryptionInfo feInfo = isRawPath ? null :
-         getFileEncryptionInfo(node, snapshot);
 
      return new HdfsFileStatus(
         size, 
@@ -2328,28 +2415,31 @@ public class FSDirectory implements Closeable {
         blocksize,
         node.getModificationTime(snapshot),
         node.getAccessTime(snapshot),
-        getPermissionForFileStatus(node, snapshot),
+        getPermissionForFileStatus(node, snapshot, isEncrypted),
         node.getUserName(snapshot),
         node.getGroupName(snapshot),
         node.isSymlink() ? node.asSymlink().getSymlink() : null,
         path,
         node.getId(),
         childrenNum,
-        feInfo);
+        feInfo,
+        storagePolicy);
   }
 
   /**
    * Create FileStatus with location info by file INode
    */
-  private HdfsLocatedFileStatus createLocatedFileStatus(byte[] path,
-      INode node, int snapshot, boolean isRawPath) throws IOException {
+  private HdfsLocatedFileStatus createLocatedFileStatus(byte[] path, INode node,
+      byte storagePolicy, int snapshot, boolean isRawPath,
+      INodesInPath iip) throws IOException {
     assert hasReadLock();
     long size = 0; // length is zero for directories
     short replication = 0;
     long blocksize = 0;
     LocatedBlocks loc = null;
+    final boolean isEncrypted;
     final FileEncryptionInfo feInfo = isRawPath ? null :
-        getFileEncryptionInfo(node, snapshot);
+        getFileEncryptionInfo(node, snapshot, iip);
     if (node.isFile()) {
       final INodeFile fileNode = node.asFile();
       size = fileNode.computeFileSize(snapshot);
@@ -2367,6 +2457,10 @@ public class FSDirectory implements Closeable {
       if (loc == null) {
         loc = new LocatedBlocks();
       }
+      isEncrypted = (feInfo != null) ||
+          (isRawPath && isInAnEZ(INodesInPath.fromINode(node)));
+    } else {
+      isEncrypted = isInAnEZ(INodesInPath.fromINode(node));
     }
     int childrenNum = node.isDirectory() ? 
         node.asDirectory().getChildrenNum(snapshot) : 0;
@@ -2375,10 +2469,10 @@ public class FSDirectory implements Closeable {
         new HdfsLocatedFileStatus(size, node.isDirectory(), replication,
           blocksize, node.getModificationTime(snapshot),
           node.getAccessTime(snapshot),
-          getPermissionForFileStatus(node, snapshot),
+          getPermissionForFileStatus(node, snapshot, isEncrypted),
           node.getUserName(snapshot), node.getGroupName(snapshot),
           node.isSymlink() ? node.asSymlink().getSymlink() : null, path,
-          node.getId(), loc, childrenNum, feInfo);
+          node.getId(), loc, childrenNum, feInfo, storagePolicy);
     // Set caching information for the located blocks.
     if (loc != null) {
       CacheManager cacheManager = namesystem.getCacheManager();
@@ -2391,17 +2485,21 @@ public class FSDirectory implements Closeable {
 
   /**
    * Returns an inode's FsPermission for use in an outbound FileStatus.  If the
-   * inode has an ACL, then this method will convert to a FsAclPermission.
+   * inode has an ACL or is for an encrypted file/dir, then this method will
+   * return an FsPermissionExtension.
    *
    * @param node INode to check
    * @param snapshot int snapshot ID
+   * @param isEncrypted boolean true if the file/dir is encrypted
    * @return FsPermission from inode, with ACL bit on if the inode has an ACL
+   * and encrypted bit on if it represents an encrypted file/dir.
    */
   private static FsPermission getPermissionForFileStatus(INode node,
-      int snapshot) {
+      int snapshot, boolean isEncrypted) {
     FsPermission perm = node.getFsPermission(snapshot);
-    if (node.getAclFeature(snapshot) != null) {
-      perm = new FsAclPermission(perm);
+    boolean hasAcl = node.getAclFeature(snapshot) != null;
+    if (hasAcl || isEncrypted) {
+      perm = new FsPermissionExtension(perm, hasAcl, isEncrypted);
     }
     return perm;
   }
@@ -2611,7 +2709,8 @@ public class FSDirectory implements Closeable {
    */
   @VisibleForTesting
   List<XAttr> filterINodeXAttrs(final List<XAttr> existingXAttrs,
-      final List<XAttr> toFilter, final List<XAttr> filtered) {
+      final List<XAttr> toFilter, final List<XAttr> filtered)
+    throws AccessControlException {
     if (existingXAttrs == null || existingXAttrs.isEmpty() ||
         toFilter == null || toFilter.isEmpty()) {
       return existingXAttrs;
@@ -2627,6 +2726,10 @@ public class FSDirectory implements Closeable {
         XAttr filter = it.next();
         Preconditions.checkArgument(!KEYID_XATTR.equalsIgnoreValue(filter),
             "The encryption zone xattr should never be deleted.");
+        if (UNREADABLE_BY_SUPERUSER_XATTR.equalsIgnoreValue(filter)) {
+          throw new AccessControlException("The xattr '" +
+              SECURITY_XATTR_UNREADABLE_BY_SUPERUSER + "' can not be deleted.");
+        }
         if (a.equalsIgnoreValue(filter)) {
           add = false;
           it.remove();
@@ -2661,11 +2764,11 @@ public class FSDirectory implements Closeable {
     }
   }
 
-  XAttr createEncryptionZone(String src, String keyName)
+  XAttr createEncryptionZone(String src, CipherSuite suite, String keyName)
     throws IOException {
     writeLock();
     try {
-      return ezManager.createEncryptionZone(src, keyName);
+      return ezManager.createEncryptionZone(src, suite, keyName);
     } finally {
       writeUnlock();
     }
@@ -2696,7 +2799,8 @@ public class FSDirectory implements Closeable {
   void setFileEncryptionInfo(String src, FileEncryptionInfo info)
       throws IOException {
     // Make the PB for the xattr
-    final HdfsProtos.FileEncryptionInfoProto proto = PBHelper.convert(info);
+    final HdfsProtos.PerFileEncryptionInfoProto proto =
+        PBHelper.convertPerFileEncInfo(info);
     final byte[] protoBytes = proto.toByteArray();
     final XAttr fileEncryptionAttr =
         XAttrHelper.buildXAttr(CRYPTO_XATTR_FILE_ENCRYPTION_INFO, protoBytes);
@@ -2712,35 +2816,64 @@ public class FSDirectory implements Closeable {
   }
 
   /**
-   * Return the FileEncryptionInfo for an INode, or null if the INode is not
-   * an encrypted file.
+   * This function combines the per-file encryption info (obtained
+   * from the inode's XAttrs), and the encryption info from its zone, and
+   * returns a consolidated FileEncryptionInfo instance. Null is returned
+   * for non-encrypted files.
+   *
+   * @param inode inode of the file
+   * @param snapshotId ID of the snapshot that
+   *                   we want to get encryption info from
+   * @param iip inodes in the path containing the file, passed in to
+   *            avoid obtaining the list of inodes again; if iip is
+   *            null then the list of inodes will be obtained again
+   * @return consolidated file encryption info; null for non-encrypted files
    */
-  FileEncryptionInfo getFileEncryptionInfo(INode inode, int snapshotId)
-      throws IOException {
+  FileEncryptionInfo getFileEncryptionInfo(INode inode, int snapshotId,
+      INodesInPath iip) throws IOException {
     if (!inode.isFile()) {
       return null;
     }
     readLock();
     try {
-      List<XAttr> xAttrs = XAttrStorage.readINodeXAttrs(inode, snapshotId);
-      if (xAttrs == null) {
-        return null;
+      if (iip == null) {
+        iip = getINodesInPath(inode.getFullPathName(), true);
       }
-      for (XAttr x : xAttrs) {
-        if (XAttrHelper.getPrefixName(x)
-            .equals(CRYPTO_XATTR_FILE_ENCRYPTION_INFO)) {
-          try {
-            HdfsProtos.FileEncryptionInfoProto proto =
-                HdfsProtos.FileEncryptionInfoProto.parseFrom(x.getValue());
-            FileEncryptionInfo feInfo = PBHelper.convert(proto);
-            return feInfo;
-          } catch (InvalidProtocolBufferException e) {
-            throw new IOException("Could not parse file encryption info for " +
-                "inode " + inode, e);
-          }
+      EncryptionZone encryptionZone = getEZForPath(iip);
+      if (encryptionZone == null ||
+          encryptionZone.equals(EncryptionZoneManager.NULL_EZ)) {
+        // not an encrypted file
+        return null;
+      } else if(encryptionZone.getPath() == null
+          || encryptionZone.getPath().isEmpty()) {
+        if (NameNode.LOG.isDebugEnabled()) {
+          NameNode.LOG.debug("Encryption zone " +
+              encryptionZone.getPath() + " does not have a valid path.");
         }
       }
-      return null;
+
+      CipherSuite suite = encryptionZone.getSuite();
+      String keyName = encryptionZone.getKeyName();
+
+      XAttr fileXAttr = unprotectedGetXAttrByName(inode, snapshotId,
+          CRYPTO_XATTR_FILE_ENCRYPTION_INFO);
+
+      if (fileXAttr == null) {
+        NameNode.LOG.warn("Could not find encryption XAttr for file " +
+            inode.getFullPathName() + " in encryption zone " +
+            encryptionZone.getPath());
+        return null;
+      }
+
+      try {
+        HdfsProtos.PerFileEncryptionInfoProto fileProto =
+            HdfsProtos.PerFileEncryptionInfoProto.parseFrom(
+                fileXAttr.getValue());
+        return PBHelper.convert(fileProto, suite, keyName);
+      } catch (InvalidProtocolBufferException e) {
+        throw new IOException("Could not parse file encryption info for " +
+            "inode " + inode, e);
+      }
     } finally {
       readUnlock();
     }
@@ -2765,15 +2898,26 @@ public class FSDirectory implements Closeable {
     int snapshotId = iip.getLatestSnapshotId();
     List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
     List<XAttr> newXAttrs = setINodeXAttrs(existingXAttrs, xAttrs, flag);
+    final boolean isFile = inode.isFile();
 
-    /*
-     * If we're adding the encryption zone xattr, then add src to the list
-     * of encryption zones.
-     */
     for (XAttr xattr : newXAttrs) {
       final String xaName = XAttrHelper.getPrefixName(xattr);
+
+      /*
+       * If we're adding the encryption zone xattr, then add src to the list
+       * of encryption zones.
+       */
       if (CRYPTO_XATTR_ENCRYPTION_ZONE.equals(xaName)) {
-        ezManager.addEncryptionZone(inode.getId(), new String(xattr.getValue()));
+        final HdfsProtos.ZoneEncryptionInfoProto ezProto =
+            HdfsProtos.ZoneEncryptionInfoProto.parseFrom(xattr.getValue());
+        ezManager.addEncryptionZone(inode.getId(),
+            PBHelper.convert(ezProto.getSuite()),
+            ezProto.getKeyName());
+      }
+
+      if (!isFile && SECURITY_XATTR_UNREADABLE_BY_SUPERUSER.equals(xaName)) {
+        throw new IOException("Can only set '" +
+            SECURITY_XATTR_UNREADABLE_BY_SUPERUSER + "' on a file.");
       }
     }
 
@@ -2865,10 +3009,40 @@ public class FSDirectory implements Closeable {
       INodesInPath iip = getLastINodeInPath(srcs, true);
       INode inode = resolveLastINode(src, iip);
       int snapshotId = iip.getPathSnapshotId();
-      return XAttrStorage.readINodeXAttrs(inode, snapshotId);
+      return unprotectedGetXAttrs(inode, snapshotId);
     } finally {
       readUnlock();
     }
+  }
+
+  List<XAttr> getXAttrs(INode inode, int snapshotId) throws IOException {
+    readLock();
+    try {
+      return unprotectedGetXAttrs(inode, snapshotId);
+    } finally {
+      readUnlock();
+    }
+  }
+
+  private List<XAttr> unprotectedGetXAttrs(INode inode, int snapshotId)
+      throws IOException {
+    return XAttrStorage.readINodeXAttrs(inode, snapshotId);
+  }
+
+  private XAttr unprotectedGetXAttrByName(INode inode, int snapshotId,
+      String xAttrName)
+      throws IOException {
+    List<XAttr> xAttrs = XAttrStorage.readINodeXAttrs(inode, snapshotId);
+    if (xAttrs == null) {
+      return null;
+    }
+    for (XAttr x : xAttrs) {
+      if (XAttrHelper.getPrefixName(x)
+          .equals(xAttrName)) {
+        return x;
+      }
+    }
+    return null;
   }
 
   private static INode resolveLastINode(String src, INodesInPath iip)

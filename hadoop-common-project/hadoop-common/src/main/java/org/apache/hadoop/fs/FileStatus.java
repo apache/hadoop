@@ -200,6 +200,15 @@ public class FileStatus implements Writable, Comparable {
   public FsPermission getPermission() {
     return permission;
   }
+
+  /**
+   * Tell whether the underlying file or directory is encrypted or not.
+   *
+   * @return true if the underlying file is encrypted.
+   */
+  public boolean isEncrypted() {
+    return permission.getEncryptedBit();
+  }
   
   /**
    * Get the owner of the file.

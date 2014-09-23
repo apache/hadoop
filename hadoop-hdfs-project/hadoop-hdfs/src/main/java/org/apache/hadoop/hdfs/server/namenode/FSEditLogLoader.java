@@ -33,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.XAttrSetFlag;
+import org.apache.hadoop.hdfs.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -78,6 +79,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetOwnerOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetPermissionsOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetQuotaOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetReplicationOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetStoragePolicyOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetXAttrOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemoveXAttrOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
@@ -339,8 +341,10 @@ public class FSEditLogLoader {
       // 3. OP_ADD to open file for append
 
       // See if the file already exists (persistBlocks call)
-      final INodesInPath iip = fsDir.getLastINodeInPath(path);
-      INodeFile oldFile = INodeFile.valueOf(iip.getINode(0), path, true);
+      final INodesInPath iip = fsDir.getINodesInPath(path, true);
+      final INode[] inodes = iip.getINodes();
+      INodeFile oldFile = INodeFile.valueOf(
+          inodes[inodes.length - 1], path, true);
       if (oldFile != null && addCloseOp.overwrite) {
         // This is OP_ADD with overwrite
         fsDir.unprotectedDelete(path, addCloseOp.mtime);
@@ -368,8 +372,9 @@ public class FSEditLogLoader {
         // add the op into retry cache if necessary
         if (toAddRetryCache) {
           HdfsFileStatus stat = fsNamesys.dir.createFileStatus(
-              HdfsFileStatus.EMPTY_NAME, newFile, Snapshot.CURRENT_STATE_ID,
-              false);
+              HdfsFileStatus.EMPTY_NAME, newFile,
+              BlockStoragePolicy.ID_UNSPECIFIED, Snapshot.CURRENT_STATE_ID,
+              false, iip);
           fsNamesys.addCacheEntryWithPayload(addCloseOp.rpcClientId,
               addCloseOp.rpcCallId, stat);
         }
@@ -830,6 +835,13 @@ public class FSEditLogLoader {
         fsNamesys.addCacheEntry(removeXAttrOp.rpcClientId,
             removeXAttrOp.rpcCallId);
       }
+      break;
+    }
+    case OP_SET_STORAGE_POLICY: {
+      SetStoragePolicyOp setStoragePolicyOp = (SetStoragePolicyOp) op;
+      fsDir.unprotectedSetStoragePolicy(
+          renameReservedPathsOnUpgrade(setStoragePolicyOp.path, logVersion),
+          setStoragePolicyOp.policyId);
       break;
     }
     default:

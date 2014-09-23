@@ -191,11 +191,4 @@ public class TestUberAM extends TestMRJobs {
   throws IOException, InterruptedException, ClassNotFoundException {
     super.testSleepJobWithSecurityOn();
   }
-
-  // Add a test for distcache when uber mode is enabled. TODO
-  @Override
-  @Test
-  public void testDistributedCache() throws Exception {
-    //
-  }
 }

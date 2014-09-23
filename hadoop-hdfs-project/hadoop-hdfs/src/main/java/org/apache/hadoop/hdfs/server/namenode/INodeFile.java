@@ -28,6 +28,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
@@ -71,10 +72,14 @@ public class INodeFile extends INodeWithAdditionalFields
     return inode.asFile();
   }
 
-  /** Format: [16 bits for replication][48 bits for PreferredBlockSize] */
+  /** 
+   * Bit format:
+   * [4-bit storagePolicyID][12-bit replication][48-bit preferredBlockSize]
+   */
   static enum HeaderFormat {
     PREFERRED_BLOCK_SIZE(null, 48, 1),
-    REPLICATION(PREFERRED_BLOCK_SIZE.BITS, 16, 1);
+    REPLICATION(PREFERRED_BLOCK_SIZE.BITS, 12, 1),
+    STORAGE_POLICY_ID(REPLICATION.BITS, BlockStoragePolicy.ID_BIT_LENGTH, 0);
 
     private final LongBitFormat BITS;
 
@@ -90,10 +95,16 @@ public class INodeFile extends INodeWithAdditionalFields
       return PREFERRED_BLOCK_SIZE.BITS.retrieve(header);
     }
 
-    static long toLong(long preferredBlockSize, short replication) {
+    static byte getStoragePolicyID(long header) {
+      return (byte)STORAGE_POLICY_ID.BITS.retrieve(header);
+    }
+
+    static long toLong(long preferredBlockSize, short replication,
+        byte storagePolicyID) {
       long h = 0;
       h = PREFERRED_BLOCK_SIZE.BITS.combine(preferredBlockSize, h);
       h = REPLICATION.BITS.combine(replication, h);
+      h = STORAGE_POLICY_ID.BITS.combine(storagePolicyID, h);
       return h;
     }
   }
@@ -104,9 +115,10 @@ public class INodeFile extends INodeWithAdditionalFields
 
   INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime,
       long atime, BlockInfo[] blklist, short replication,
-      long preferredBlockSize) {
+      long preferredBlockSize, byte storagePolicyID) {
     super(id, name, permissions, mtime, atime);
-    header = HeaderFormat.toLong(preferredBlockSize, replication);
+    header = HeaderFormat.toLong(preferredBlockSize, replication,
+        storagePolicyID);
     this.blocks = blklist;
   }
   
@@ -160,7 +172,6 @@ public class INodeFile extends INodeWithAdditionalFields
     return getFileUnderConstructionFeature() != null;
   }
 
-  /** Convert this file to an {@link INodeFileUnderConstruction}. */
   INodeFile toUnderConstruction(String clientName, String clientMachine) {
     Preconditions.checkState(!isUnderConstruction(),
         "file is already under construction");
@@ -353,6 +364,32 @@ public class INodeFile extends INodeWithAdditionalFields
   @Override
   public long getPreferredBlockSize() {
     return HeaderFormat.getPreferredBlockSize(header);
+  }
+
+  @Override
+  public byte getLocalStoragePolicyID() {
+    return HeaderFormat.getStoragePolicyID(header);
+  }
+
+  @Override
+  public byte getStoragePolicyID() {
+    byte id = getLocalStoragePolicyID();
+    if (id == BlockStoragePolicy.ID_UNSPECIFIED) {
+      return this.getParent() != null ?
+          this.getParent().getStoragePolicyID() : id;
+    }
+    return id;
+  }
+
+  private void setStoragePolicyID(byte storagePolicyId) {
+    header = HeaderFormat.STORAGE_POLICY_ID.BITS.combine(storagePolicyId,
+        header);
+  }
+
+  public final void setStoragePolicyID(byte storagePolicyId,
+      int latestSnapshotId) throws QuotaExceededException {
+    recordModification(latestSnapshotId);
+    setStoragePolicyID(storagePolicyId);
   }
 
   @Override

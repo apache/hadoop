@@ -57,7 +57,7 @@ public class TestApplicationMasterServiceOnHA extends ProtocolHATestBase{
     Token<AMRMTokenIdentifier> appToken =
         this.cluster.getResourceManager().getRMContext()
           .getAMRMTokenSecretManager().createAndGetAMRMToken(attemptId);
-    appToken.setService(new Text("appToken service"));
+    appToken.setService(ClientRMProxy.getAMRMTokenService(conf));
     UserGroupInformation.setLoginUser(UserGroupInformation
         .createRemoteUser(UserGroupInformation.getCurrentUser()
             .getUserName()));

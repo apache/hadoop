@@ -217,6 +217,7 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
     fileInfo = hdfsGetPathInfo(fs, paths->file2);
     EXPECT_NONNULL(fileInfo);
     EXPECT_ZERO(strcmp("doop", fileInfo->mGroup));
+    EXPECT_ZERO(hdfsFileIsEncrypted(fileInfo));
     hdfsFreeFileInfo(fileInfo, 1);
 
     EXPECT_ZERO(hdfsChown(fs, paths->file2, "ha", "doop2"));

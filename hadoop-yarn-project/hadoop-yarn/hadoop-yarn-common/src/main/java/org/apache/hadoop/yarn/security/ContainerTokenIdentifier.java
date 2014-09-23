@@ -128,7 +128,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     out.writeLong(applicationId.getClusterTimestamp());
     out.writeInt(applicationId.getId());
     out.writeInt(applicationAttemptId.getAttemptId());
-    out.writeInt(this.containerId.getId());
+    out.writeLong(this.containerId.getContainerId());
     out.writeUTF(this.nmHostAddr);
     out.writeUTF(this.appSubmitter);
     out.writeInt(this.resource.getMemory());
@@ -147,7 +147,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     ApplicationAttemptId applicationAttemptId =
         ApplicationAttemptId.newInstance(applicationId, in.readInt());
     this.containerId =
-        ContainerId.newInstance(applicationAttemptId, in.readInt());
+        ContainerId.newInstance(applicationAttemptId, in.readLong());
     this.nmHostAddr = in.readUTF();
     this.appSubmitter = in.readUTF();
     int memory = in.readInt();

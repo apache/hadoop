@@ -220,7 +220,8 @@ public class FSImageFormatPBSnapshot {
           copy = new INodeFileAttributes.SnapshotCopy(pbf.getName()
               .toByteArray(), permission, acl, fileInPb.getModificationTime(),
               fileInPb.getAccessTime(), (short) fileInPb.getReplication(),
-              fileInPb.getPreferredBlockSize(), xAttrs);
+              fileInPb.getPreferredBlockSize(),
+              (byte)fileInPb.getStoragePolicyID(), xAttrs);
         }
 
         FileDiff diff = new FileDiff(pbf.getSnapshotId(), copy, null,

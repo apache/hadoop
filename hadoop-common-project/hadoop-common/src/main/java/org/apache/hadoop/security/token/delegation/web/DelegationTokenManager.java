@@ -17,16 +17,20 @@
  */
 package org.apache.hadoop.security.token.delegation.web;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
+import org.apache.hadoop.security.token.delegation.ZKDelegationTokenSecretManager;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-import java.io.IOException;
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Delegation Token Manager used by the
@@ -35,20 +39,36 @@ import java.io.IOException;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-class DelegationTokenManager {
+public class DelegationTokenManager {
+
+  public static final String ENABLE_ZK_KEY = "zk-dt-secret-manager.enable";
+
+  public static final String PREFIX = "delegation-token.";
+
+  public static final String UPDATE_INTERVAL = PREFIX + "update-interval.sec";
+  public static final long UPDATE_INTERVAL_DEFAULT = 24 * 60 * 60;
+
+  public static final String MAX_LIFETIME = PREFIX + "max-lifetime.sec";
+  public static final long MAX_LIFETIME_DEFAULT = 7 * 24 * 60 * 60;
+
+  public static final String RENEW_INTERVAL = PREFIX + "renew-interval.sec";
+  public static final long RENEW_INTERVAL_DEFAULT = 24 * 60 * 60;
+
+  public static final String REMOVAL_SCAN_INTERVAL = PREFIX +
+      "removal-scan-interval.sec";
+  public static final long REMOVAL_SCAN_INTERVAL_DEFAULT = 60 * 60;
 
   private static class DelegationTokenSecretManager
       extends AbstractDelegationTokenSecretManager<DelegationTokenIdentifier> {
 
     private Text tokenKind;
 
-    public DelegationTokenSecretManager(Text tokenKind,
-        long delegationKeyUpdateInterval,
-        long delegationTokenMaxLifetime,
-        long delegationTokenRenewInterval,
-        long delegationTokenRemoverScanInterval) {
-      super(delegationKeyUpdateInterval, delegationTokenMaxLifetime,
-          delegationTokenRenewInterval, delegationTokenRemoverScanInterval);
+    public DelegationTokenSecretManager(Configuration conf, Text tokenKind) {
+      super(conf.getLong(UPDATE_INTERVAL, UPDATE_INTERVAL_DEFAULT) * 1000,
+          conf.getLong(MAX_LIFETIME, MAX_LIFETIME_DEFAULT) * 1000,
+          conf.getLong(RENEW_INTERVAL, RENEW_INTERVAL_DEFAULT) * 1000,
+          conf.getLong(REMOVAL_SCAN_INTERVAL,
+              REMOVAL_SCAN_INTERVAL_DEFAULT * 1000));
       this.tokenKind = tokenKind;
     }
 
@@ -56,21 +76,34 @@ class DelegationTokenManager {
     public DelegationTokenIdentifier createIdentifier() {
       return new DelegationTokenIdentifier(tokenKind);
     }
+  }
 
+  private static class ZKSecretManager
+      extends ZKDelegationTokenSecretManager<DelegationTokenIdentifier> {
+
+    private Text tokenKind;
+
+    public ZKSecretManager(Configuration conf, Text tokenKind) {
+      super(conf);
+      this.tokenKind = tokenKind;
+    }
+
+    @Override
+    public DelegationTokenIdentifier createIdentifier() {
+      return new DelegationTokenIdentifier(tokenKind);
+    }
   }
 
   private AbstractDelegationTokenSecretManager secretManager = null;
   private boolean managedSecretManager;
   private Text tokenKind;
 
-  public DelegationTokenManager(Text tokenKind,
-      long delegationKeyUpdateInterval,
-      long delegationTokenMaxLifetime,
-      long delegationTokenRenewInterval,
-      long delegationTokenRemoverScanInterval) {
-    this.secretManager = new DelegationTokenSecretManager(tokenKind,
-        delegationKeyUpdateInterval, delegationTokenMaxLifetime,
-        delegationTokenRenewInterval, delegationTokenRemoverScanInterval);
+  public DelegationTokenManager(Configuration conf, Text tokenKind) {
+    if (conf.getBoolean(ENABLE_ZK_KEY, false)) {
+      this.secretManager = new ZKSecretManager(conf, tokenKind);
+    } else {
+      this.secretManager = new DelegationTokenSecretManager(conf, tokenKind);
+    }
     this.tokenKind = tokenKind;
     managedSecretManager = true;
   }
@@ -150,4 +183,9 @@ class DelegationTokenManager {
     return id.getUser();
   }
 
+  @VisibleForTesting
+  @SuppressWarnings("rawtypes")
+  public AbstractDelegationTokenSecretManager getDelegationTokenSecretManager() {
+    return secretManager;
+  }
 }

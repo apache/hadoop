@@ -149,7 +149,7 @@ public class FSImageSerialization {
     assert numLocs == 0 : "Unexpected block locations";
 
     INodeFile file = new INodeFile(inodeId, name, perm, modificationTime,
-        modificationTime, blocks, blockReplication, preferredBlockSize);
+        modificationTime, blocks, blockReplication, preferredBlockSize, (byte)0);
     file.toUnderConstruction(clientName, clientMachine);
     return file;
   }

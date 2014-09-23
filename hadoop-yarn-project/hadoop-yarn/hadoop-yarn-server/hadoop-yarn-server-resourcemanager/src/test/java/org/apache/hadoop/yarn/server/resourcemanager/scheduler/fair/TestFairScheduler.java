@@ -131,8 +131,14 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
   @After
   public void tearDown() {
-    scheduler = null;
-    resourceManager = null;
+    if (scheduler != null) {
+      scheduler.stop();
+      scheduler = null;
+    }
+    if (resourceManager != null) {
+      resourceManager.stop();
+      resourceManager = null;
+    }
     QueueMetrics.clearQueueMetrics();
     DefaultMetricsSystem.shutdown();
   }
@@ -140,7 +146,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
   @Test (timeout = 30000)
   public void testConfValidation() throws Exception {
-    FairScheduler scheduler = new FairScheduler();
+    scheduler = new FairScheduler();
     Configuration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 2048);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB, 1024);
@@ -212,7 +218,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   
   @Test  
   public void testNonMinZeroResourcesSettings() throws IOException {
-    FairScheduler fs = new FairScheduler();
+    scheduler = new FairScheduler();
     YarnConfiguration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 256);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES, 1);
@@ -220,17 +226,17 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       FairSchedulerConfiguration.RM_SCHEDULER_INCREMENT_ALLOCATION_MB, 512);
     conf.setInt(
       FairSchedulerConfiguration.RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES, 2);
-    fs.init(conf);
-    fs.reinitialize(conf, null);
-    Assert.assertEquals(256, fs.getMinimumResourceCapability().getMemory());
-    Assert.assertEquals(1, fs.getMinimumResourceCapability().getVirtualCores());
-    Assert.assertEquals(512, fs.getIncrementResourceCapability().getMemory());
-    Assert.assertEquals(2, fs.getIncrementResourceCapability().getVirtualCores());
+    scheduler.init(conf);
+    scheduler.reinitialize(conf, null);
+    Assert.assertEquals(256, scheduler.getMinimumResourceCapability().getMemory());
+    Assert.assertEquals(1, scheduler.getMinimumResourceCapability().getVirtualCores());
+    Assert.assertEquals(512, scheduler.getIncrementResourceCapability().getMemory());
+    Assert.assertEquals(2, scheduler.getIncrementResourceCapability().getVirtualCores());
   }  
   
   @Test  
   public void testMinZeroResourcesSettings() throws IOException {  
-    FairScheduler fs = new FairScheduler();  
+    scheduler = new FairScheduler();
     YarnConfiguration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 0);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES, 0);
@@ -238,12 +244,12 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       FairSchedulerConfiguration.RM_SCHEDULER_INCREMENT_ALLOCATION_MB, 512);
     conf.setInt(
       FairSchedulerConfiguration.RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES, 2);
-    fs.init(conf);
-    fs.reinitialize(conf, null);
-    Assert.assertEquals(0, fs.getMinimumResourceCapability().getMemory());
-    Assert.assertEquals(0, fs.getMinimumResourceCapability().getVirtualCores());
-    Assert.assertEquals(512, fs.getIncrementResourceCapability().getMemory());
-    Assert.assertEquals(2, fs.getIncrementResourceCapability().getVirtualCores());
+    scheduler.init(conf);
+    scheduler.reinitialize(conf, null);
+    Assert.assertEquals(0, scheduler.getMinimumResourceCapability().getMemory());
+    Assert.assertEquals(0, scheduler.getMinimumResourceCapability().getVirtualCores());
+    Assert.assertEquals(512, scheduler.getIncrementResourceCapability().getMemory());
+    Assert.assertEquals(2, scheduler.getIncrementResourceCapability().getVirtualCores());
   }  
   
   @Test
@@ -3128,7 +3134,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     out.println("<queue name=\"queue1\">");
     out.println("</queue>");
     out.println("<queue name=\"queue2\">");
-    out.println("<maxAMShare>1.0</maxAMShare>");
+    out.println("<maxAMShare>0.4</maxAMShare>");
     out.println("</queue>");
     out.println("<queue name=\"queue3\">");
     out.println("</queue>");
@@ -3172,40 +3178,42 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertEquals("Queue queue5's fair share should be 0", 0, queue5
         .getFairShare().getMemory());
 
-    List<String> queues = Arrays.asList("root.default", "root.queue3",
-        "root.queue4", "root.queue5");
+    List<String> queues = Arrays.asList("root.queue3", "root.queue4",
+        "root.queue5");
     for (String queue : queues) {
       createSchedulingRequest(1 * 1024, queue, "user1");
       scheduler.update();
       scheduler.handle(updateEvent);
     }
 
-    Resource amResource1 = Resource.newInstance(2048, 1);
+    Resource amResource1 = Resource.newInstance(1024, 1);
     int amPriority = RMAppAttemptImpl.AM_CONTAINER_PRIORITY.getPriority();
 
-    // Exceeds queue limit, but default maxAMShare is -1.0 so it doesn't matter
+    // The fair share is 2048 MB, and the default maxAMShare is 0.5f,
+    // so the AM is accepted.
     ApplicationAttemptId attId1 = createAppAttemptId(1, 1);
     createApplicationWithAMResource(attId1, "queue1", "test1", amResource1);
-    createSchedulingRequestExistingApplication(2048, 1, amPriority, attId1);
+    createSchedulingRequestExistingApplication(1024, 1, amPriority, attId1);
     FSAppAttempt app1 = scheduler.getSchedulerApp(attId1);
     scheduler.update();
     scheduler.handle(updateEvent);
-    assertEquals("Application1's AM requests 2048 MB memory",
-        2048, app1.getAMResource().getMemory());
+    assertEquals("Application1's AM requests 1024 MB memory",
+        1024, app1.getAMResource().getMemory());
     assertEquals("Application1's AM should be running",
         1, app1.getLiveContainers().size());
-    assertEquals("Queue1's AM resource usage should be 2048 MB memory",
-        2048, queue1.getAmResourceUsage().getMemory());
+    assertEquals("Queue1's AM resource usage should be 1024 MB memory",
+        1024, queue1.getAmResourceUsage().getMemory());
 
-    // Exceeds queue limit, and maxAMShare is 1.0
+    // Now the fair share is 1639 MB, and the maxAMShare is 0.4f,
+    // so the AM is not accepted.
     ApplicationAttemptId attId2 = createAppAttemptId(2, 1);
     createApplicationWithAMResource(attId2, "queue2", "test1", amResource1);
-    createSchedulingRequestExistingApplication(2048, 1, amPriority, attId2);
+    createSchedulingRequestExistingApplication(1024, 1, amPriority, attId2);
     FSAppAttempt app2 = scheduler.getSchedulerApp(attId2);
     scheduler.update();
     scheduler.handle(updateEvent);
-    assertEquals("Application2's AM requests 2048 MB memory",
-        2048, app2.getAMResource().getMemory());
+    assertEquals("Application2's AM requests 1024 MB memory",
+        1024, app2.getAMResource().getMemory());
     assertEquals("Application2's AM should not be running",
         0, app2.getLiveContainers().size());
     assertEquals("Queue2's AM resource usage should be 0 MB memory",
@@ -3291,49 +3299,49 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   @Test (timeout = 10000)
   public void testContinuousScheduling() throws Exception {
     // set continuous scheduling enabled
-    FairScheduler fs = new FairScheduler();
+    scheduler = new FairScheduler();
     Configuration conf = createConfiguration();
     conf.setBoolean(FairSchedulerConfiguration.CONTINUOUS_SCHEDULING_ENABLED,
             true);
-    fs.setRMContext(resourceManager.getRMContext());
-    fs.init(conf);
-    fs.start();
-    fs.reinitialize(conf, resourceManager.getRMContext());
+    scheduler.setRMContext(resourceManager.getRMContext());
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
     Assert.assertTrue("Continuous scheduling should be enabled.",
-            fs.isContinuousSchedulingEnabled());
+        scheduler.isContinuousSchedulingEnabled());
 
     // Add two nodes
     RMNode node1 =
             MockNodes.newNodeInfo(1, Resources.createResource(8 * 1024, 8), 1,
                     "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
-    fs.handle(nodeEvent1);
+    scheduler.handle(nodeEvent1);
     RMNode node2 =
             MockNodes.newNodeInfo(1, Resources.createResource(8 * 1024, 8), 2,
                     "127.0.0.2");
     NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
-    fs.handle(nodeEvent2);
+    scheduler.handle(nodeEvent2);
 
     // available resource
-    Assert.assertEquals(fs.getClusterResource().getMemory(), 16 * 1024);
-    Assert.assertEquals(fs.getClusterResource().getVirtualCores(), 16);
+    Assert.assertEquals(scheduler.getClusterResource().getMemory(), 16 * 1024);
+    Assert.assertEquals(scheduler.getClusterResource().getVirtualCores(), 16);
 
     // send application request
     ApplicationAttemptId appAttemptId =
             createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
-    fs.addApplication(appAttemptId.getApplicationId(), "queue11", "user11", false);
-    fs.addApplicationAttempt(appAttemptId, false, false);
+    scheduler.addApplication(appAttemptId.getApplicationId(), "queue11", "user11", false);
+    scheduler.addApplicationAttempt(appAttemptId, false, false);
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
     ResourceRequest request =
             createResourceRequest(1024, 1, ResourceRequest.ANY, 1, 1, true);
     ask.add(request);
-    fs.allocate(appAttemptId, ask, new ArrayList<ContainerId>(), null, null);
+    scheduler.allocate(appAttemptId, ask, new ArrayList<ContainerId>(), null, null);
 
     // waiting for continuous_scheduler_sleep_time
     // at least one pass
-    Thread.sleep(fs.getConf().getContinuousSchedulingSleepMs() + 500);
+    Thread.sleep(scheduler.getConf().getContinuousSchedulingSleepMs() + 500);
 
-    FSAppAttempt app = fs.getSchedulerApp(appAttemptId);
+    FSAppAttempt app = scheduler.getSchedulerApp(appAttemptId);
     // Wait until app gets resources.
     while (app.getCurrentConsumption().equals(Resources.none())) { }
 
@@ -3346,7 +3354,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
             createResourceRequest(1024, 1, ResourceRequest.ANY, 2, 1, true);
     ask.clear();
     ask.add(request);
-    fs.allocate(appAttemptId, ask, new ArrayList<ContainerId>(), null, null);
+    scheduler.allocate(appAttemptId, ask, new ArrayList<ContainerId>(), null, null);
 
     // Wait until app gets resources
     while (app.getCurrentConsumption()

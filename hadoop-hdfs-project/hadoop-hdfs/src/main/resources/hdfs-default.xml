@@ -22,7 +22,8 @@
 <!-- wish to modify from this file into hdfs-site.xml and change them -->
 <!-- there.  If hdfs-site.xml does not already exist, create it.      -->
 
-<configuration>
+<configuration xmlns:xi="http://www.w3.org/2001/XInclude"> 
+  <xi:include href="blockStoragePolicy-default.xml" />
 
 <property>
   <name>hadoop.hdfs.configuration.version</name>
@@ -2069,19 +2070,6 @@
 </property>
 
 <property>
-  <name>dfs.namenode.randomize-block-locations-per-block</name>
-  <value>false</value>
-  <description>When fetching replica locations of a block, the replicas
-   are sorted based on network distance. This configuration parameter
-   determines whether the replicas at the same network distance are randomly
-   shuffled. By default, this is false, such that repeated requests for a block's
-   replicas always result in the same order. This potentially improves page cache
-   behavior. However, for some network topologies, it is desirable to shuffle this
-   order for better load balancing.
-  </description>
-</property>
-
-<property>
   <name>dfs.datanode.block.id.layout.upgrade.threads</name>
   <value>12</value>
   <description>The number of threads to use when creating hard links from
@@ -2134,6 +2122,14 @@
   <value>500</value>
   <description>How often the DataNode should poll to see if the clients have
     stopped using a replica that the DataNode wants to uncache.
+  </description>
+</property>
+
+<property>
+  <name>dfs.encryption.key.provider.uri</name>
+  <description>
+    The KeyProvider to use when interacting with encryption keys used
+    when reading and writing to an encryption zone.
   </description>
 </property>
 

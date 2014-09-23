@@ -756,6 +756,7 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         new org.apache.hadoop.security.token.Token<AMRMTokenIdentifier>(token
           .getIdentifier().array(), token.getPassword().array(), new Text(
           token.getKind()), new Text(token.getService()));
+    amrmToken.setService(ClientRMProxy.getAMRMTokenService(getConfig()));
     UserGroupInformation currentUGI = UserGroupInformation.getCurrentUser();
     if (UserGroupInformation.isSecurityEnabled()) {
       currentUGI = UserGroupInformation.getLoginUser();

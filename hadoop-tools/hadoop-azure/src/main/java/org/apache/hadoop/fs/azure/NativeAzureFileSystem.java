@@ -1095,7 +1095,7 @@ public class NativeAzureFileSystem extends FileSystem {
       if (dstKey.startsWith(srcKey + PATH_DELIMITER)) {
 
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Renaming directory to a itself is disallowed. src=" + src
+          LOG.debug("Renaming directory to itself is disallowed. src=" + src
               + " dest=" + dst);
         }
         return false;

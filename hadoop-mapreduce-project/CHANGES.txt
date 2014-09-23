@@ -251,6 +251,13 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5130. Add missing job config options to mapred-default.xml
     (Ray Chiang via Sandy Ryza)
 
+    MAPREDUCE-5891. Improved shuffle error handling across NM restarts
+    (Junping Du via jlowe)
+
+    MAPREDUCE-5279. Made MR headroom calculation honor cpu dimension when YARN
+    scheduler resource type is memory plus cpu. (Peng Zhang and Varun Vasudev
+    via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -346,6 +353,19 @@ Release 2.6.0 - UNRELEASED
 
     MAPREDUCE-6070. yarn.app.am.resource.mb/cpu-vcores affects uber mode but
     is not documented (Tsuyoshi OZAWA via jlowe)
+
+    MAPREDUCE-6090. mapred hsadmin getGroups fails to connect in some cases
+    (Robert Kanter via jlowe)
+
+    MAPREDUCE-6086. mapreduce.job.credentials.binary should allow all URIs. 
+    (Zhihai Xu via kasha)
+
+    MAPREDUCE-6091. YARNRunner.getJobStatus() fails with
+    ApplicationNotFoundException if the job rolled off the RM view (Sangjin
+    Lee via jlowe)
+
+    MAPREDUCE-6095. Enable DistributedCache for uber-mode Jobs (Gera Shegalov
+    via jlowe)
 
 Release 2.5.1 - 2014-09-05
 

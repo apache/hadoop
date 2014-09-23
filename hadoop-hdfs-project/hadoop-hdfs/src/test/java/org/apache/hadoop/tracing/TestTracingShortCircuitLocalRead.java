@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.tracing;
 
+import static org.junit.Assume.assumeTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
@@ -27,6 +29,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
+import org.apache.hadoop.util.NativeCodeLoader;
 import org.htrace.Sampler;
 import org.htrace.Span;
 import org.htrace.Trace;
@@ -59,6 +62,7 @@ public class TestTracingShortCircuitLocalRead {
 
   @Test
   public void testShortCircuitTraceHooks() throws IOException {
+    assumeTrue(NativeCodeLoader.isNativeCodeLoaded() && !Path.WINDOWS);
     conf = new Configuration();
     conf.set(SpanReceiverHost.SPAN_RECEIVERS_CONF_KEY,
         TestTracing.SetSpanReceiver.class.getName());

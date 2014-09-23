@@ -27,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -75,7 +76,7 @@ public abstract class BlockPlacementPolicy {
                                              boolean returnChosenNodes,
                                              Set<Node> excludedNodes,
                                              long blocksize,
-                                             StorageType storageType);
+                                             BlockStoragePolicy storagePolicy);
   
   /**
    * Same as {@link #chooseTarget(String, int, Node, Set, long, List, StorageType)}
@@ -89,14 +90,14 @@ public abstract class BlockPlacementPolicy {
       Set<Node> excludedNodes,
       long blocksize,
       List<DatanodeDescriptor> favoredNodes,
-      StorageType storageType) {
+      BlockStoragePolicy storagePolicy) {
     // This class does not provide the functionality of placing
     // a block in favored datanodes. The implementations of this class
     // are expected to provide this functionality
 
     return chooseTarget(src, numOfReplicas, writer, 
         new ArrayList<DatanodeStorageInfo>(numOfReplicas), false,
-        excludedNodes, blocksize, storageType);
+        excludedNodes, blocksize, storagePolicy);
   }
 
   /**
@@ -118,18 +119,21 @@ public abstract class BlockPlacementPolicy {
    * @param srcBC block collection of file to which block-to-be-deleted belongs
    * @param block The block to be deleted
    * @param replicationFactor The required number of replicas for this block
-   * @param existingReplicas The replica locations of this block that are present
-                  on at least two unique racks. 
-   * @param moreExistingReplicas Replica locations of this block that are not
-                   listed in the previous parameter.
+   * @param moreThanOne The replica locations of this block that are present
+   *                    on more than one unique racks.
+   * @param exactlyOne Replica locations of this block that  are present
+   *                    on exactly one unique racks.
+   * @param excessTypes The excess {@link StorageType}s according to the
+   *                    {@link BlockStoragePolicy}.
    * @return the replica that is the best candidate for deletion
    */
   abstract public DatanodeStorageInfo chooseReplicaToDelete(
       BlockCollection srcBC,
       Block block, 
       short replicationFactor,
-      Collection<DatanodeStorageInfo> existingReplicas,
-      Collection<DatanodeStorageInfo> moreExistingReplicas);
+      Collection<DatanodeStorageInfo> moreThanOne,
+      Collection<DatanodeStorageInfo> exactlyOne,
+      List<StorageType> excessTypes);
 
   /**
    * Used to setup a BlockPlacementPolicy object. This should be defined by 

@@ -69,6 +69,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -150,6 +151,8 @@ public class ClientServiceDelegate {
     ApplicationReport application = null;
     try {
       application = rm.getApplicationReport(appId);
+    } catch (ApplicationNotFoundException e) {
+      application = null;
     } catch (YarnException e2) {
       throw new IOException(e2);
     }

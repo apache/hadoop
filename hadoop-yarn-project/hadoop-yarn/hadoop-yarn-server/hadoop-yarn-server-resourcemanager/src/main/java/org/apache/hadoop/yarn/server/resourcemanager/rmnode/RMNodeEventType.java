@@ -40,6 +40,9 @@ public enum RMNodeEventType {
   CONTAINER_ALLOCATED,
   CLEANUP_CONTAINER,
 
+  // Source: RMAppAttempt
+  FINISHED_CONTAINERS_PULLED_BY_AM,
+
   // Source: NMLivelinessMonitor
   EXPIRE
 }

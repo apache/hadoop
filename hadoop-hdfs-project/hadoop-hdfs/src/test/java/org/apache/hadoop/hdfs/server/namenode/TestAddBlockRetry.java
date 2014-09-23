@@ -120,9 +120,9 @@ public class TestAddBlockRetry {
         }
         return ret;
       }
-    }).when(spyBM).chooseTarget(Mockito.anyString(), Mockito.anyInt(),
+    }).when(spyBM).chooseTarget4NewBlock(Mockito.anyString(), Mockito.anyInt(),
         Mockito.<DatanodeDescriptor>any(), Mockito.<HashSet<Node>>any(),
-        Mockito.anyLong(), Mockito.<List<String>>any());
+        Mockito.anyLong(), Mockito.<List<String>>any(), Mockito.anyByte());
 
     // create file
     nn.create(src, FsPermission.getFileDefault(),

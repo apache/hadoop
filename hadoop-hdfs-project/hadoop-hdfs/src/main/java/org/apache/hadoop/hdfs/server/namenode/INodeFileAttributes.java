@@ -32,11 +32,13 @@ public interface INodeFileAttributes extends INodeAttributes {
 
   /** @return preferred block size in bytes */
   public long getPreferredBlockSize();
-  
+
   /** @return the header as a long. */
   public long getHeaderLong();
 
   public boolean metadataEquals(INodeFileAttributes other);
+
+  public byte getLocalStoragePolicyID();
 
   /** A copy of the inode file attributes */
   public static class SnapshotCopy extends INodeAttributes.SnapshotCopy
@@ -45,10 +47,11 @@ public interface INodeFileAttributes extends INodeAttributes {
 
     public SnapshotCopy(byte[] name, PermissionStatus permissions,
         AclFeature aclFeature, long modificationTime, long accessTime,
-        short replication, long preferredBlockSize, XAttrFeature xAttrsFeature) {
+        short replication, long preferredBlockSize, byte storagePolicyID,
+        XAttrFeature xAttrsFeature) {
       super(name, permissions, aclFeature, modificationTime, accessTime, 
           xAttrsFeature);
-      header = HeaderFormat.toLong(preferredBlockSize, replication);
+      header = HeaderFormat.toLong(preferredBlockSize, replication, storagePolicyID);
     }
 
     public SnapshotCopy(INodeFile file) {
@@ -64,6 +67,11 @@ public interface INodeFileAttributes extends INodeAttributes {
     @Override
     public long getPreferredBlockSize() {
       return HeaderFormat.getPreferredBlockSize(header);
+    }
+
+    @Override
+    public byte getLocalStoragePolicyID() {
+      return HeaderFormat.getStoragePolicyID(header);
     }
 
     @Override

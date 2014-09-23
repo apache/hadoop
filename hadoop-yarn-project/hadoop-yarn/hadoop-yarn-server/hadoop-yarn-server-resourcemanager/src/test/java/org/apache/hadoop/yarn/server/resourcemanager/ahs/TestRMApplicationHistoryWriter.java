@@ -60,6 +60,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -78,6 +81,8 @@ public class TestRMApplicationHistoryWriter {
     store = new MemoryApplicationHistoryStore();
     Configuration conf = new Configuration();
     conf.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED, true);
+    conf.setClass(YarnConfiguration.APPLICATION_HISTORY_STORE,
+        MemoryApplicationHistoryStore.class, ApplicationHistoryStore.class);
     writer = new RMApplicationHistoryWriter() {
 
       @Override
@@ -172,6 +177,22 @@ public class TestRMApplicationHistoryWriter {
     when(container.getContainerExitStatus()).thenReturn(-1);
     when(container.getContainerState()).thenReturn(ContainerState.COMPLETE);
     return container;
+  }
+
+  @Test
+  public void testDefaultStoreSetup() throws Exception {
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED, true);
+    RMApplicationHistoryWriter writer = new RMApplicationHistoryWriter();
+    writer.init(conf);
+    writer.start();
+    try {
+      Assert.assertFalse(writer.historyServiceEnabled);
+      Assert.assertNull(writer.writer);
+    } finally {
+      writer.stop();
+      writer.close();
+    }
   }
 
   @Test
@@ -351,10 +372,29 @@ public class TestRMApplicationHistoryWriter {
   }
 
   @Test
-  public void testRMWritingMassiveHistory() throws Exception {
+  public void testRMWritingMassiveHistoryForFairSche() throws Exception {
+    //test WritingMassiveHistory for Fair Scheduler.
+    testRMWritingMassiveHistory(true);
+  }
+
+  @Test
+  public void testRMWritingMassiveHistoryForCapacitySche() throws Exception {
+    //test WritingMassiveHistory for Capacity Scheduler.
+    testRMWritingMassiveHistory(false);
+  }
+
+  private void testRMWritingMassiveHistory(boolean isFS) throws Exception {
     // 1. Show RM can run with writing history data
     // 2. Test additional workload of processing history events
     YarnConfiguration conf = new YarnConfiguration();
+    if (isFS) {
+      conf.setBoolean(FairSchedulerConfiguration.ASSIGN_MULTIPLE, true);
+      conf.set("yarn.resourcemanager.scheduler.class",
+          FairScheduler.class.getName());
+    } else {
+      conf.set("yarn.resourcemanager.scheduler.class",
+          CapacityScheduler.class.getName());
+    }
     // don't process history events
     MockRM rm = new MockRM(conf) {
       @Override

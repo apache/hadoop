@@ -24,9 +24,12 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -52,6 +55,7 @@ import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
@@ -83,6 +87,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptStatusupdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeFinishedContainersPulledByAMEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
@@ -129,9 +134,16 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private final ApplicationSubmissionContext submissionContext;
   private Token<AMRMTokenIdentifier> amrmToken = null;
   private SecretKey clientTokenMasterKey = null;
-  
-  private List<ContainerStatus> justFinishedContainers =
-    new ArrayList<ContainerStatus>();
+
+  private ConcurrentMap<NodeId, List<ContainerStatus>>
+      justFinishedContainers =
+      new ConcurrentHashMap<NodeId, List<ContainerStatus>>();
+  // Tracks the previous finished containers that are waiting to be
+  // verified as received by the AM. If the AM sends the next allocate
+  // request it implicitly acks this list.
+  private ConcurrentMap<NodeId, List<ContainerStatus>>
+      finishedContainersSentToAM =
+      new ConcurrentHashMap<NodeId, List<ContainerStatus>>();
   private Container masterContainer;
 
   private float progress = 0;
@@ -627,11 +639,40 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     }
   }
 
+  @VisibleForTesting
   @Override
   public List<ContainerStatus> getJustFinishedContainers() {
     this.readLock.lock();
     try {
+      List<ContainerStatus> returnList = new ArrayList<ContainerStatus>();
+      for (Collection<ContainerStatus> containerStatusList :
+          justFinishedContainers.values()) {
+        returnList.addAll(containerStatusList);
+      }
+      return returnList;
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  @Override
+  public ConcurrentMap<NodeId, List<ContainerStatus>>
+  getJustFinishedContainersReference
+      () {
+    this.readLock.lock();
+    try {
       return this.justFinishedContainers;
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  @Override
+  public ConcurrentMap<NodeId, List<ContainerStatus>>
+  getFinishedContainersSentToAMReference() {
+    this.readLock.lock();
+    try {
+      return this.finishedContainersSentToAM;
     } finally {
       this.readLock.unlock();
     }
@@ -642,10 +683,52 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     this.writeLock.lock();
 
     try {
-      List<ContainerStatus> returnList = new ArrayList<ContainerStatus>(
-          this.justFinishedContainers.size());
-      returnList.addAll(this.justFinishedContainers);
-      this.justFinishedContainers.clear();
+      List<ContainerStatus> returnList = new ArrayList<ContainerStatus>();
+
+      // A new allocate means the AM received the previously sent
+      // finishedContainers. We can ack this to NM now
+      for (NodeId nodeId:finishedContainersSentToAM.keySet()) {
+
+        // Clear and get current values
+        List<ContainerStatus> currentSentContainers =
+            finishedContainersSentToAM
+            .put(nodeId, new ArrayList<ContainerStatus>());
+        List<ContainerId> containerIdList = new ArrayList<ContainerId>
+            (currentSentContainers.size());
+        for (ContainerStatus containerStatus:currentSentContainers) {
+          containerIdList.add(containerStatus.getContainerId());
+        }
+        eventHandler.handle(new RMNodeFinishedContainersPulledByAMEvent(
+            nodeId, containerIdList));
+      }
+
+      // Mark every containerStatus as being sent to AM though we may return
+      // only the ones that belong to the current attempt
+      boolean keepContainersAcressAttempts = this.submissionContext
+          .getKeepContainersAcrossApplicationAttempts();
+      for (NodeId nodeId:justFinishedContainers.keySet()) {
+
+        // Clear and get current values
+        List<ContainerStatus> finishedContainers = justFinishedContainers.put
+            (nodeId, new ArrayList<ContainerStatus>());
+
+        if (keepContainersAcressAttempts) {
+          returnList.addAll(finishedContainers);
+        } else {
+          // Filter out containers from previous attempt
+          for (ContainerStatus containerStatus: finishedContainers) {
+            if (containerStatus.getContainerId().getApplicationAttemptId()
+                .equals(this.getAppAttemptId())) {
+              returnList.add(containerStatus);
+            }
+          }
+        }
+
+        finishedContainersSentToAM.putIfAbsent(nodeId, new ArrayList
+              <ContainerStatus>());
+        finishedContainersSentToAM.get(nodeId).addAll(finishedContainers);
+      }
+
       return returnList;
     } finally {
       this.writeLock.unlock();
@@ -732,7 +815,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     }
     setMasterContainer(attemptState.getMasterContainer());
     recoverAppAttemptCredentials(attemptState.getAppAttemptCredentials(),
-      attemptState.getState());
+        attemptState.getState());
     this.recoveredFinalState = attemptState.getState();
     this.originalTrackingUrl = attemptState.getFinalTrackingUrl();
     this.proxiedTrackingUrl = generateProxyUriWithScheme(originalTrackingUrl);
@@ -744,7 +827,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   }
 
   public void transferStateFromPreviousAttempt(RMAppAttempt attempt) {
-    this.justFinishedContainers = attempt.getJustFinishedContainers();
+    this.justFinishedContainers = attempt.getJustFinishedContainersReference();
+    this.finishedContainersSentToAM =
+        attempt.getFinishedContainersSentToAMReference();
   }
 
   private void recoverAppAttemptCredentials(Credentials appAttemptTokens,
@@ -1159,8 +1244,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       appAttempt.rmContext.getRMApplicationHistoryWriter()
           .applicationAttemptFinished(appAttempt, finalAttemptState);
       appAttempt.rmContext.getSystemMetricsPublisher()
-          .appAttemptFinished(
-              appAttempt, finalAttemptState, System.currentTimeMillis());
+          .appAttemptFinished(appAttempt, finalAttemptState,
+              appAttempt.rmContext.getRMApps().get(
+                  appAttempt.applicationAttemptId.getApplicationId()),
+              System.currentTimeMillis());
     }
   }
 
@@ -1505,6 +1592,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       ContainerStatus containerStatus =
           containerFinishedEvent.getContainerStatus();
 
+      // Add all finished containers so that they can be acked to NM
+      addJustFinishedContainer(appAttempt, containerFinishedEvent);
+
       // Is this container the AmContainer? If the finished container is same as
       // the AMContainer, AppAttempt fails
       if (appAttempt.masterContainer != null
@@ -1517,10 +1607,16 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         return RMAppAttemptState.FINAL_SAVING;
       }
 
-      // Normal container.Put it in completed containers list
-      appAttempt.justFinishedContainers.add(containerStatus);
       return this.currentState;
     }
+  }
+
+  private static void addJustFinishedContainer(RMAppAttemptImpl appAttempt,
+      RMAppAttemptContainerFinishedEvent containerFinishedEvent) {
+    appAttempt.justFinishedContainers.putIfAbsent(containerFinishedEvent
+        .getNodeId(), new ArrayList<ContainerStatus>());
+    appAttempt.justFinishedContainers.get(containerFinishedEvent
+            .getNodeId()).add(containerFinishedEvent.getContainerStatus());
   }
 
   private static final class ContainerFinishedAtFinalStateTransition
@@ -1531,10 +1627,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       RMAppAttemptContainerFinishedEvent containerFinishedEvent =
           (RMAppAttemptContainerFinishedEvent) event;
       
-      ContainerStatus containerStatus =
-          containerFinishedEvent.getContainerStatus();
       // Normal container. Add it in completed containers list
-      appAttempt.justFinishedContainers.add(containerStatus);
+      addJustFinishedContainer(appAttempt, containerFinishedEvent);
     }
   }
 
@@ -1567,6 +1661,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       ContainerStatus containerStatus =
           containerFinishedEvent.getContainerStatus();
 
+      // Add all finished containers so that they can be acked to NM.
+      addJustFinishedContainer(appAttempt, containerFinishedEvent);
+
       // Is this container the ApplicationMaster container?
       if (appAttempt.masterContainer.getId().equals(
           containerStatus.getContainerId())) {
@@ -1574,8 +1671,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
             appAttempt, containerFinishedEvent);
         return RMAppAttemptState.FINISHED;
       }
-      // Normal container.
-      appAttempt.justFinishedContainers.add(containerStatus);
+
       return RMAppAttemptState.FINISHING;
     }
   }
@@ -1589,6 +1685,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           (RMAppAttemptContainerFinishedEvent) event;
       ContainerStatus containerStatus =
           containerFinishedEvent.getContainerStatus();
+
+      // Add all finished containers so that they can be acked to NM.
+      addJustFinishedContainer(appAttempt, containerFinishedEvent);
 
       // If this is the AM container, it means the AM container is finished,
       // but we are not yet acknowledged that the final state has been saved.
@@ -1609,8 +1708,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
             appAttempt.eventCausingFinalSaving), RMAppAttemptState.FINISHED);
         return;
       }
-      // Normal container.
-      appAttempt.justFinishedContainers.add(containerStatus);
     }
   }
 
@@ -1627,7 +1724,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         transition(RMAppAttemptImpl appAttempt, RMAppAttemptEvent event) {
       appAttempt.updateInfoOnAMUnregister(amUnregisteredEvent);
       new FinalTransition(RMAppAttemptState.FINISHED).transition(appAttempt,
-        event);
+          event);
     }
   }
 

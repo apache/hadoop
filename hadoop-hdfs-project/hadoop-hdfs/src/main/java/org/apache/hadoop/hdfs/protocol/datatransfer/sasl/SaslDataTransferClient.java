@@ -28,6 +28,7 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
@@ -71,9 +72,24 @@ public class SaslDataTransferClient {
   private static final Logger LOG = LoggerFactory.getLogger(
     SaslDataTransferClient.class);
 
-  private final boolean fallbackToSimpleAuthAllowed;
+  private final AtomicBoolean fallbackToSimpleAuth;
   private final SaslPropertiesResolver saslPropsResolver;
   private final TrustedChannelResolver trustedChannelResolver;
+
+  /**
+   * Creates a new SaslDataTransferClient.  This constructor is used in cases
+   * where it is not relevant to track if a secure client did a fallback to
+   * simple auth.  For intra-cluster connections between data nodes in the same
+   * cluster, we can assume that all run under the same security configuration.
+   *
+   * @param saslPropsResolver for determining properties of SASL negotiation
+   * @param trustedChannelResolver for identifying trusted connections that do
+   *   not require SASL negotiation
+   */
+  public SaslDataTransferClient(SaslPropertiesResolver saslPropsResolver,
+      TrustedChannelResolver trustedChannelResolver) {
+    this(saslPropsResolver, trustedChannelResolver, null);
+  }
 
   /**
    * Creates a new SaslDataTransferClient.
@@ -81,11 +97,13 @@ public class SaslDataTransferClient {
    * @param saslPropsResolver for determining properties of SASL negotiation
    * @param trustedChannelResolver for identifying trusted connections that do
    *   not require SASL negotiation
+   * @param fallbackToSimpleAuth checked on each attempt at general SASL
+   *   handshake, if true forces use of simple auth
    */
   public SaslDataTransferClient(SaslPropertiesResolver saslPropsResolver,
       TrustedChannelResolver trustedChannelResolver,
-      boolean fallbackToSimpleAuthAllowed) {
-    this.fallbackToSimpleAuthAllowed = fallbackToSimpleAuthAllowed;
+      AtomicBoolean fallbackToSimpleAuth) {
+    this.fallbackToSimpleAuth = fallbackToSimpleAuth;
     this.saslPropsResolver = saslPropsResolver;
     this.trustedChannelResolver = trustedChannelResolver;
   }
@@ -221,22 +239,26 @@ public class SaslDataTransferClient {
         "SASL client skipping handshake in secured configuration with "
         + "privileged port for addr = {}, datanodeId = {}", addr, datanodeId);
       return null;
-    } else if (accessToken.getIdentifier().length == 0) {
-      if (!fallbackToSimpleAuthAllowed) {
-        throw new IOException(
-          "No block access token was provided (insecure cluster), but this " +
-          "client is configured to allow only secure connections.");
-      }
+    } else if (fallbackToSimpleAuth != null && fallbackToSimpleAuth.get()) {
       LOG.debug(
         "SASL client skipping handshake in secured configuration with "
         + "unsecured cluster for addr = {}, datanodeId = {}", addr, datanodeId);
       return null;
-    } else {
+    } else if (saslPropsResolver != null) {
       LOG.debug(
         "SASL client doing general handshake for addr = {}, datanodeId = {}",
         addr, datanodeId);
       return getSaslStreams(addr, underlyingOut, underlyingIn, accessToken,
         datanodeId);
+    } else {
+      // It's a secured cluster using non-privileged ports, but no SASL.  The
+      // only way this can happen is if the DataNode has
+      // ignore.secure.ports.for.testing configured, so this is a rare edge case.
+      LOG.debug(
+        "SASL client skipping handshake in secured configuration with no SASL "
+        + "protection configured for addr = {}, datanodeId = {}",
+        addr, datanodeId);
+      return null;
     }
   }
 
@@ -348,12 +370,6 @@ public class SaslDataTransferClient {
       OutputStream underlyingOut, InputStream underlyingIn,
       Token<BlockTokenIdentifier> accessToken, DatanodeID datanodeId)
       throws IOException {
-    if (saslPropsResolver == null) {
-      throw new IOException(String.format("Cannot create a secured " +
-        "connection if DataNode listens on unprivileged port (%d) and no " +
-        "protection is defined in configuration property %s.",
-        datanodeId.getXferPort(), DFS_DATA_TRANSFER_PROTECTION_KEY));
-    }
     Map<String, String> saslProps = saslPropsResolver.getClientProperties(addr);
 
     String userName = buildUserName(accessToken);

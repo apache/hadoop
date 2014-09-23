@@ -100,6 +100,14 @@ message SetReplicationResponseProto {
   required bool result = 1;
 }
 
+message SetStoragePolicyRequestProto {
+  required string src = 1;
+  required string policyName = 2;
+}
+
+message SetStoragePolicyResponseProto { // void response
+}
+
 message SetPermissionRequestProto {
   required string src = 1;
   required FsPermissionProto permission = 2;
@@ -689,6 +697,8 @@ service ClientNamenodeProtocol {
   rpc append(AppendRequestProto) returns(AppendResponseProto);
   rpc setReplication(SetReplicationRequestProto)
       returns(SetReplicationResponseProto);
+  rpc setStoragePolicy(SetStoragePolicyRequestProto)
+      returns(SetStoragePolicyResponseProto);
   rpc setPermission(SetPermissionRequestProto)
       returns(SetPermissionResponseProto);
   rpc setOwner(SetOwnerRequestProto) returns(SetOwnerResponseProto);

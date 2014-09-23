@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import static org.junit.Assert.assertEquals;
 
@@ -26,7 +27,12 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
 import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -184,5 +190,62 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
             null, rmContext);
     assertEquals(NodeType.OFF_SWITCH, schedulerApp.getAllowedLocalityLevel(
         prio, 10, -1.0, -1.0));
+  }
+
+  @Test
+  public void testHeadroom() {
+    final FairScheduler mockScheduler = Mockito.mock(FairScheduler.class);
+    Mockito.when(mockScheduler.getClock()).thenReturn(scheduler.getClock());
+
+    final FSLeafQueue mockQueue = Mockito.mock(FSLeafQueue.class);
+    final Resource queueFairShare = Resources.createResource(4096, 4);
+    final Resource queueUsage = Resource.newInstance(1024, 1);
+    final Resource clusterResource = Resources.createResource(8192, 8);
+    final Resource clusterUsage = Resources.createResource(6144, 2);
+    final QueueMetrics fakeRootQueueMetrics = Mockito.mock(QueueMetrics.class);
+
+    ApplicationAttemptId applicationAttemptId = createAppAttemptId(1, 1);
+    RMContext rmContext = resourceManager.getRMContext();
+    FSAppAttempt schedulerApp =
+        new FSAppAttempt(mockScheduler, applicationAttemptId, "user1", mockQueue ,
+            null, rmContext);
+
+    Mockito.when(mockQueue.getFairShare()).thenReturn(queueFairShare);
+    Mockito.when(mockQueue.getResourceUsage()).thenReturn(queueUsage);
+    Mockito.when(mockScheduler.getClusterResource()).thenReturn
+        (clusterResource);
+    Mockito.when(fakeRootQueueMetrics.getAllocatedResources()).thenReturn
+        (clusterUsage);
+    Mockito.when(mockScheduler.getRootQueueMetrics()).thenReturn
+        (fakeRootQueueMetrics);
+
+    int minClusterAvailableMemory = 2048;
+    int minClusterAvailableCPU = 6;
+    int minQueueAvailableCPU = 3;
+
+    // Min of Memory and CPU across cluster and queue is used in
+    // DominantResourceFairnessPolicy
+    Mockito.when(mockQueue.getPolicy()).thenReturn(SchedulingPolicy
+        .getInstance(DominantResourceFairnessPolicy.class));
+    verifyHeadroom(schedulerApp, minClusterAvailableMemory,
+        minQueueAvailableCPU);
+
+    // Fair and Fifo ignore CPU of queue, so use cluster available CPU
+    Mockito.when(mockQueue.getPolicy()).thenReturn(SchedulingPolicy
+        .getInstance(FairSharePolicy.class));
+    verifyHeadroom(schedulerApp, minClusterAvailableMemory,
+        minClusterAvailableCPU);
+
+    Mockito.when(mockQueue.getPolicy()).thenReturn(SchedulingPolicy
+        .getInstance(FifoPolicy.class));
+    verifyHeadroom(schedulerApp, minClusterAvailableMemory,
+        minClusterAvailableCPU);
+  }
+
+  protected void verifyHeadroom(FSAppAttempt schedulerApp,
+                                int expectedMemory, int expectedCPU) {
+    Resource headroom = schedulerApp.getHeadroom();
+    assertEquals(expectedMemory, headroom.getMemory());
+    assertEquals(expectedCPU, headroom.getVirtualCores());
   }
 }

@@ -294,6 +294,13 @@ public class FsPermission implements Writable {
     return false;
   }
 
+  /**
+   * Returns true if the file is encrypted or directory is in an encryption zone
+   */
+  public boolean getEncryptedBit() {
+    return false;
+  }
+
   /** Set the user file creation mask (umask) */
   public static void setUMask(Configuration conf, FsPermission umask) {
     conf.set(UMASK_LABEL, String.format("%1$03o", umask.toShort()));

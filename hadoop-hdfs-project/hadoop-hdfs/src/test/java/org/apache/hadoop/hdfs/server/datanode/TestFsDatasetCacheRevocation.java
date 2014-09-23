@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.junit.Assume.assumeTrue;
+
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.EnumSet;
@@ -41,6 +43,7 @@ import org.apache.hadoop.io.nativeio.NativeIO.POSIX.CacheManipulator;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX.NoMlockCacheManipulator;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
+import org.apache.hadoop.util.NativeCodeLoader;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -94,6 +97,7 @@ public class TestFsDatasetCacheRevocation {
    */
   @Test(timeout=120000)
   public void testPinning() throws Exception {
+    assumeTrue(NativeCodeLoader.isNativeCodeLoaded() && !Path.WINDOWS);
     Configuration conf = getDefaultConf();
     // Set a really long revocation timeout, so that we won't reach it during
     // this test.
@@ -143,6 +147,7 @@ public class TestFsDatasetCacheRevocation {
    */
   @Test(timeout=120000)
   public void testRevocation() throws Exception {
+    assumeTrue(NativeCodeLoader.isNativeCodeLoaded() && !Path.WINDOWS);
     BlockReaderTestUtil.enableHdfsCachingTracing();
     BlockReaderTestUtil.enableShortCircuitShmTracing();
     Configuration conf = getDefaultConf();

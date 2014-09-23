@@ -78,13 +78,13 @@ public class RMContainerImpl implements RMContainer {
         RMContainerEventType.RECOVER, new ContainerRecoveredTransition())
 
     // Transitions from RESERVED state
-    .addTransition(RMContainerState.RESERVED, RMContainerState.RESERVED, 
+    .addTransition(RMContainerState.RESERVED, RMContainerState.RESERVED,
         RMContainerEventType.RESERVED, new ContainerReservedTransition())
-    .addTransition(RMContainerState.RESERVED, RMContainerState.ALLOCATED, 
+    .addTransition(RMContainerState.RESERVED, RMContainerState.ALLOCATED,
         RMContainerEventType.START, new ContainerStartedTransition())
-    .addTransition(RMContainerState.RESERVED, RMContainerState.KILLED, 
+    .addTransition(RMContainerState.RESERVED, RMContainerState.KILLED,
         RMContainerEventType.KILL) // nothing to do
-    .addTransition(RMContainerState.RESERVED, RMContainerState.RELEASED, 
+    .addTransition(RMContainerState.RESERVED, RMContainerState.RELEASED,
         RMContainerEventType.RELEASED) // nothing to do
        
 
@@ -100,7 +100,7 @@ public class RMContainerImpl implements RMContainer {
     .addTransition(RMContainerState.ACQUIRED, RMContainerState.RUNNING,
         RMContainerEventType.LAUNCHED, new LaunchedTransition())
     .addTransition(RMContainerState.ACQUIRED, RMContainerState.COMPLETED,
-        RMContainerEventType.FINISHED, new ContainerFinishedAtAcquiredState())        
+        RMContainerEventType.FINISHED, new ContainerFinishedAtAcquiredState())
     .addTransition(RMContainerState.ACQUIRED, RMContainerState.RELEASED,
         RMContainerEventType.RELEASED, new KillTransition())
     .addTransition(RMContainerState.ACQUIRED, RMContainerState.EXPIRED,
@@ -495,7 +495,8 @@ public class RMContainerImpl implements RMContainer {
       updateAttemptMetrics(container);
 
       container.eventHandler.handle(new RMAppAttemptContainerFinishedEvent(
-        container.appAttemptId, finishedEvent.getRemoteContainerStatus()));
+        container.appAttemptId, finishedEvent.getRemoteContainerStatus(),
+          container.getAllocatedNode()));
 
       container.rmContext.getRMApplicationHistoryWriter().containerFinished(
         container);

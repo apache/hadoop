@@ -127,7 +127,7 @@ extends AbstractDelegationTokenIdentifier>
   public synchronized void reset() {
     currentId = 0;
     allKeys.clear();
-    delegationTokenSequenceNumber = 0;
+    setDelegationTokenSeqNum(0);
     currentTokens.clear();
   }
   
@@ -141,7 +141,7 @@ extends AbstractDelegationTokenIdentifier>
     if (key.getKeyId() > currentId) {
       currentId = key.getKeyId();
     }
-    allKeys.put(key.getKeyId(), key);
+    storeDelegationKey(key);
   }
 
   public synchronized DelegationKey[] getAllKeys() {
@@ -163,22 +163,106 @@ extends AbstractDelegationTokenIdentifier>
     return;
   }
 
+  // for ZK based secretManager
+  protected void updateMasterKey(DelegationKey key) throws IOException{
+    return;
+  }
+
   // RM
   protected void removeStoredMasterKey(DelegationKey key) {
     return;
   }
 
   // RM
-  protected void storeNewToken(TokenIdent ident, long renewDate) {
+  protected void storeNewToken(TokenIdent ident, long renewDate) throws IOException{
     return;
   }
+
   // RM
   protected void removeStoredToken(TokenIdent ident) throws IOException {
 
   }
   // RM
-  protected void updateStoredToken(TokenIdent ident, long renewDate) {
+  protected void updateStoredToken(TokenIdent ident, long renewDate) throws IOException {
     return;
+  }
+
+  /**
+   * For subclasses externalizing the storage, for example Zookeeper
+   * based implementations
+   */
+  protected int getDelegationTokenSeqNum() {
+    return delegationTokenSequenceNumber;
+  }
+
+  /**
+   * For subclasses externalizing the storage, for example Zookeeper
+   * based implementations
+   */
+  protected int incrementDelegationTokenSeqNum() {
+    return ++delegationTokenSequenceNumber;
+  }
+
+  /**
+   * For subclasses externalizing the storage, for example Zookeeper
+   * based implementations
+   */
+  protected void setDelegationTokenSeqNum(int seqNum) {
+    delegationTokenSequenceNumber = seqNum;
+  }
+
+  /**
+   * For subclasses externalizing the storage, for example Zookeeper
+   * based implementations
+   */
+  protected DelegationKey getDelegationKey(int keyId) {
+    return allKeys.get(keyId);
+  }
+
+  /**
+   * For subclasses externalizing the storage, for example Zookeeper
+   * based implementations
+   */
+  protected void storeDelegationKey(DelegationKey key) throws IOException {
+    allKeys.put(key.getKeyId(), key);
+    storeNewMasterKey(key);
+  }
+
+  /**
+   * For subclasses externalizing the storage, for example Zookeeper
+   * based implementations
+   */
+  protected void updateDelegationKey(DelegationKey key) throws IOException {
+    allKeys.put(key.getKeyId(), key);
+    updateMasterKey(key);
+  }
+
+  /**
+   * For subclasses externalizing the storage, for example Zookeeper
+   * based implementations
+   */
+  protected DelegationTokenInformation getTokenInfo(TokenIdent ident) {
+    return currentTokens.get(ident);
+  }
+
+  /**
+   * For subclasses externalizing the storage, for example Zookeeper
+   * based implementations
+   */
+  protected void storeToken(TokenIdent ident,
+      DelegationTokenInformation tokenInfo) throws IOException {
+    currentTokens.put(ident, tokenInfo);
+    storeNewToken(ident, tokenInfo.getRenewDate());
+  }
+
+  /**
+   * For subclasses externalizing the storage, for example Zookeeper
+   * based implementations
+   */
+  protected void updateToken(TokenIdent ident,
+      DelegationTokenInformation tokenInfo) throws IOException {
+    currentTokens.put(ident, tokenInfo);
+    updateStoredToken(ident, tokenInfo.getRenewDate());
   }
 
   /**
@@ -196,17 +280,18 @@ extends AbstractDelegationTokenIdentifier>
           "Can't add persisted delegation token to a running SecretManager.");
     }
     int keyId = identifier.getMasterKeyId();
-    DelegationKey dKey = allKeys.get(keyId);
+    DelegationKey dKey = getDelegationKey(keyId);
     if (dKey == null) {
       LOG.warn("No KEY found for persisted identifier " + identifier.toString());
       return;
     }
     byte[] password = createPassword(identifier.getBytes(), dKey.getKey());
-    if (identifier.getSequenceNumber() > this.delegationTokenSequenceNumber) {
-      this.delegationTokenSequenceNumber = identifier.getSequenceNumber();
+    int delegationTokenSeqNum = getDelegationTokenSeqNum();
+    if (identifier.getSequenceNumber() > delegationTokenSeqNum) {
+      setDelegationTokenSeqNum(identifier.getSequenceNumber());
     }
-    if (currentTokens.get(identifier) == null) {
-      currentTokens.put(identifier, new DelegationTokenInformation(renewDate,
+    if (getTokenInfo(identifier) == null) {
+      storeToken(identifier, new DelegationTokenInformation(renewDate,
           password, getTrackingIdIfEnabled(identifier)));
     } else {
       throw new IOException("Same delegation token being added twice.");
@@ -234,7 +319,7 @@ extends AbstractDelegationTokenIdentifier>
     synchronized (this) {
       currentId = newKey.getKeyId();
       currentKey = newKey;
-      allKeys.put(currentKey.getKeyId(), currentKey);
+      storeDelegationKey(currentKey);
     }
   }
   
@@ -252,7 +337,7 @@ extends AbstractDelegationTokenIdentifier>
        * updateMasterKey() isn't called at expected interval. Add it back to
        * allKeys just in case.
        */
-      allKeys.put(currentKey.getKeyId(), currentKey);
+      updateDelegationKey(currentKey);
     }
     updateCurrentKey();
   }
@@ -276,19 +361,25 @@ extends AbstractDelegationTokenIdentifier>
   protected synchronized byte[] createPassword(TokenIdent identifier) {
     int sequenceNum;
     long now = Time.now();
-    sequenceNum = ++delegationTokenSequenceNumber;
+    sequenceNum = incrementDelegationTokenSeqNum();
     identifier.setIssueDate(now);
     identifier.setMaxDate(now + tokenMaxLifetime);
     identifier.setMasterKeyId(currentId);
     identifier.setSequenceNumber(sequenceNum);
     LOG.info("Creating password for identifier: " + identifier);
     byte[] password = createPassword(identifier.getBytes(), currentKey.getKey());
-    storeNewToken(identifier, now + tokenRenewInterval);
-    currentTokens.put(identifier, new DelegationTokenInformation(now
-        + tokenRenewInterval, password, getTrackingIdIfEnabled(identifier)));
+    DelegationTokenInformation tokenInfo = new DelegationTokenInformation(now
+        + tokenRenewInterval, password, getTrackingIdIfEnabled(identifier));
+    try {
+      storeToken(identifier, tokenInfo);
+    } catch (IOException ioe) {
+      LOG.error("Could not store token !!", ioe);
+    }
     return password;
   }
   
+
+
   /**
    * Find the DelegationTokenInformation for the given token id, and verify that
    * if the token is expired. Note that this method should be called with 
@@ -297,7 +388,7 @@ extends AbstractDelegationTokenIdentifier>
   protected DelegationTokenInformation checkToken(TokenIdent identifier)
       throws InvalidToken {
     assert Thread.holdsLock(this);
-    DelegationTokenInformation info = currentTokens.get(identifier);
+    DelegationTokenInformation info = getTokenInfo(identifier);
     if (info == null) {
       throw new InvalidToken("token (" + identifier.toString()
           + ") can't be found in cache");
@@ -322,7 +413,7 @@ extends AbstractDelegationTokenIdentifier>
   }
 
   public synchronized String getTokenTrackingId(TokenIdent identifier) {
-    DelegationTokenInformation info = currentTokens.get(identifier);
+    DelegationTokenInformation info = getTokenInfo(identifier);
     if (info == null) {
       return null;
     }
@@ -373,7 +464,7 @@ extends AbstractDelegationTokenIdentifier>
       throw new AccessControlException(renewer +
           " tries to renew a token with renewer " + id.getRenewer());
     }
-    DelegationKey key = allKeys.get(id.getMasterKeyId());
+    DelegationKey key = getDelegationKey(id.getMasterKeyId());
     if (key == null) {
       throw new InvalidToken("Unable to find master key for keyId="
           + id.getMasterKeyId()
@@ -390,11 +481,10 @@ extends AbstractDelegationTokenIdentifier>
     DelegationTokenInformation info = new DelegationTokenInformation(renewTime,
         password, trackingId);
 
-    if (currentTokens.get(id) == null) {
+    if (getTokenInfo(id) == null) {
       throw new InvalidToken("Renewal request for unknown token");
     }
-    currentTokens.put(id, info);
-    updateStoredToken(id, renewTime);
+    updateToken(id, info);
     return renewTime;
   }
   

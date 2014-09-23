@@ -40,7 +40,10 @@ import org.mockito.Mockito;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -117,6 +120,7 @@ public class TestFsDatasetImpl {
     final int numExistingVolumes = dataset.getVolumes().size();
     final int totalVolumes = numNewVolumes + numExistingVolumes;
     List<StorageLocation> newLocations = new ArrayList<StorageLocation>();
+    Set<String> expectedVolumes = new HashSet<String>();
     for (int i = 0; i < numNewVolumes; i++) {
       String path = BASE_DIR + "/newData" + i;
       newLocations.add(StorageLocation.parse(path));
@@ -125,13 +129,15 @@ public class TestFsDatasetImpl {
     }
     when(storage.getNumStorageDirs()).thenReturn(totalVolumes);
 
-    dataset.addVolumes(newLocations);
+    dataset.addVolumes(newLocations, Arrays.asList(BLOCK_POOL_IDS));
     assertEquals(totalVolumes, dataset.getVolumes().size());
     assertEquals(totalVolumes, dataset.storageMap.size());
+
+    Set<String> actualVolumes = new HashSet<String>();
     for (int i = 0; i < numNewVolumes; i++) {
-      assertEquals(newLocations.get(i).getFile().getPath(),
-          dataset.getVolumes().get(numExistingVolumes + i).getBasePath());
+      dataset.getVolumes().get(numExistingVolumes + i).getBasePath();
     }
+    assertEquals(actualVolumes, expectedVolumes);
   }
 
   @Test

@@ -21,6 +21,7 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.*;
@@ -180,9 +181,16 @@ public class JsonUtil {
   }
 
   /** Convert a string to a FsPermission object. */
-  private static FsPermission toFsPermission(final String s, Boolean aclBit) {
+  private static FsPermission toFsPermission(final String s, Boolean aclBit,
+      Boolean encBit) {
     FsPermission perm = new FsPermission(Short.parseShort(s, 8));
-    return (aclBit != null && aclBit) ? new FsAclPermission(perm) : perm;
+    final boolean aBit = (aclBit != null) ? aclBit : false;
+    final boolean eBit = (encBit != null) ? encBit : false;
+    if (aBit || eBit) {
+      return new FsPermissionExtension(perm, aBit, eBit);
+    } else {
+      return perm;
+    }
   }
 
   static enum PathType {
@@ -214,12 +222,16 @@ public class JsonUtil {
     if (perm.getAclBit()) {
       m.put("aclBit", true);
     }
+    if (perm.getEncryptedBit()) {
+      m.put("encBit", true);
+    }
     m.put("accessTime", status.getAccessTime());
     m.put("modificationTime", status.getModificationTime());
     m.put("blockSize", status.getBlockSize());
     m.put("replication", status.getReplication());
     m.put("fileId", status.getFileId());
     m.put("childrenNum", status.getChildrenNum());
+    m.put("storagePolicy", status.getStoragePolicy());
     return includeType ? toJsonString(FileStatus.class, m): JSON.toString(m);
   }
 
@@ -240,7 +252,7 @@ public class JsonUtil {
     final String owner = (String) m.get("owner");
     final String group = (String) m.get("group");
     final FsPermission permission = toFsPermission((String) m.get("permission"),
-      (Boolean)m.get("aclBit"));
+      (Boolean)m.get("aclBit"), (Boolean)m.get("encBit"));
     final long aTime = (Long) m.get("accessTime");
     final long mTime = (Long) m.get("modificationTime");
     final long blockSize = (Long) m.get("blockSize");
@@ -250,10 +262,12 @@ public class JsonUtil {
     Long childrenNumLong = (Long) m.get("childrenNum");
     final int childrenNum = (childrenNumLong == null) ? -1
             : childrenNumLong.intValue();
+    final byte storagePolicy = m.containsKey("storagePolicy") ?
+        (byte) (long) (Long) m.get("storagePolicy") :
+          BlockStoragePolicy.ID_UNSPECIFIED;
     return new HdfsFileStatus(len, type == PathType.DIRECTORY, replication,
-        blockSize, mTime, aTime, permission, owner, group,
-        symlink, DFSUtil.string2Bytes(localName), fileId, childrenNum,
-        null);
+        blockSize, mTime, aTime, permission, owner, group, symlink,
+        DFSUtil.string2Bytes(localName), fileId, childrenNum, null, storagePolicy);
   }
 
   /** Convert an ExtendedBlock to a Json map. */

@@ -27,6 +27,7 @@ import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -49,6 +50,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -76,6 +78,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+
+import com.google.common.io.ByteArrayDataInput;
+import com.google.common.io.ByteStreams;
 
 @RunWith(Parameterized.class)
 public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
@@ -134,7 +139,7 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     this.conf = conf;
   }
   
-  @Test (timeout = 1000000)
+  @Test (timeout = 120000)
   public void testContainerManager() throws Exception {
     try {
       yarnCluster = new MiniYARNCluster(TestContainerManagerSecurity.class
@@ -151,6 +156,25 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     } catch (Exception e) {
       e.printStackTrace();
       throw e;
+    } finally {
+      if (yarnCluster != null) {
+        yarnCluster.stop();
+        yarnCluster = null;
+      }
+    }
+  }
+
+  @Test (timeout = 120000)
+  public void testContainerManagerWithEpoch() throws Exception {
+    try {
+      yarnCluster = new MiniYARNCluster(TestContainerManagerSecurity.class
+          .getName(), 1, 1, 1);
+      yarnCluster.init(conf);
+      yarnCluster.start();
+
+      // Testing for container token tampering
+      testContainerTokenWithEpoch(conf);
+
     } finally {
       if (yarnCluster != null) {
         yarnCluster.stop();
@@ -289,7 +313,7 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     // trying to stop the container. It should not throw any exception.
     testStopContainer(rpc, validAppAttemptId, validNode, validContainerId,
         validNMToken, false);
-    
+
     // Rolling over master key twice so that we can check whether older keys
     // are used for authentication.
     rollNMTokenMasterKey(nmTokenSecretManagerRM, nmTokenSecretManagerNM);
@@ -304,7 +328,7 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     sb.append(" was recently stopped on node manager");
     Assert.assertTrue(testGetContainer(rpc, validAppAttemptId, validNode,
         validContainerId, validNMToken, true).contains(sb.toString()));
-    
+
     // Now lets remove the container from nm-memory
     nm.getNodeStatusUpdater().clearFinishedContainersFromCache();
     
@@ -333,14 +357,22 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
   private void waitForContainerToFinishOnNM(ContainerId containerId) {
     Context nmContet = yarnCluster.getNodeManager(0).getNMContext();
     int interval = 4 * 60; // Max time for container token to expire.
+    Assert.assertNotNull(nmContet.getContainers().containsKey(containerId));
     while ((interval-- > 0)
-        && nmContet.getContainers().containsKey(containerId)) {
+        && !nmContet.getContainers().get(containerId)
+          .cloneAndGetContainerStatus().getState()
+          .equals(ContainerState.COMPLETE)) {
       try {
+        LOG.info("Waiting for " + containerId + " to complete.");
         Thread.sleep(1000);
       } catch (InterruptedException e) {
       }
     }
-    Assert.assertFalse(nmContet.getContainers().containsKey(containerId));
+    // Normally, Containers will be removed from NM context after they are
+    // explicitly acked by RM. Now, manually remove it for testing.
+    yarnCluster.getNodeManager(0).getNodeStatusUpdater()
+      .addCompletedContainer(containerId);
+    nmContet.getContainers().remove(containerId);
   }
 
   protected void waitForNMToReceiveNMTokenKey(
@@ -602,5 +634,75 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     sb.append(" seems to have an illegally generated token.");
     Assert.assertTrue(testStartContainer(rpc, appAttemptId, nodeId,
         containerToken, nmToken, true).contains(sb.toString()));
+  }
+
+  /**
+   * This tests whether a containerId is serialized/deserialized with epoch.
+   *
+   * @throws IOException
+   * @throws InterruptedException
+   * @throws YarnException
+   */
+  private void testContainerTokenWithEpoch(Configuration conf)
+      throws IOException, InterruptedException, YarnException {
+
+    LOG.info("Running test for serializing/deserializing containerIds");
+
+    NMTokenSecretManagerInRM nmTokenSecretManagerInRM =
+        yarnCluster.getResourceManager().getRMContext()
+            .getNMTokenSecretManager();
+    ApplicationId appId = ApplicationId.newInstance(1, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 0);
+    ContainerId cId = ContainerId.newInstance(appAttemptId, (5L << 40) | 3L);
+    NodeManager nm = yarnCluster.getNodeManager(0);
+    NMTokenSecretManagerInNM nmTokenSecretManagerInNM =
+        nm.getNMContext().getNMTokenSecretManager();
+    String user = "test";
+
+    waitForNMToReceiveNMTokenKey(nmTokenSecretManagerInNM, nm);
+
+    NodeId nodeId = nm.getNMContext().getNodeId();
+
+    // Both id should be equal.
+    Assert.assertEquals(nmTokenSecretManagerInNM.getCurrentKey().getKeyId(),
+        nmTokenSecretManagerInRM.getCurrentKey().getKeyId());
+
+    // Creating a normal Container Token
+    RMContainerTokenSecretManager containerTokenSecretManager =
+        yarnCluster.getResourceManager().getRMContext().
+            getContainerTokenSecretManager();
+    Resource r = Resource.newInstance(1230, 2);
+    Token containerToken =
+        containerTokenSecretManager.createContainerToken(cId, nodeId, user, r,
+            Priority.newInstance(0), 0);
+
+    ByteArrayDataInput input = ByteStreams.newDataInput(
+        containerToken.getIdentifier().array());
+    ContainerTokenIdentifier containerTokenIdentifier =
+        new ContainerTokenIdentifier();
+    containerTokenIdentifier.readFields(input);
+    Assert.assertEquals(cId, containerTokenIdentifier.getContainerID());
+    Assert.assertEquals(
+        cId.toString(), containerTokenIdentifier.getContainerID().toString());
+
+    Token nmToken =
+        nmTokenSecretManagerInRM.createNMToken(appAttemptId, nodeId, user);
+
+    YarnRPC rpc = YarnRPC.create(conf);
+    testStartContainer(rpc, appAttemptId, nodeId, containerToken, nmToken,
+        false);
+
+    List<ContainerId> containerIds = new LinkedList<ContainerId>();
+    containerIds.add(cId);
+    ContainerManagementProtocol proxy
+        = getContainerManagementProtocolProxy(rpc, nmToken, nodeId, user);
+    GetContainerStatusesResponse res = proxy.getContainerStatuses(
+        GetContainerStatusesRequest.newInstance(containerIds));
+    Assert.assertNotNull(res.getContainerStatuses().get(0));
+    Assert.assertEquals(
+        cId, res.getContainerStatuses().get(0).getContainerId());
+    Assert.assertEquals(cId.toString(),
+        res.getContainerStatuses().get(0).getContainerId().toString());
   }
 }

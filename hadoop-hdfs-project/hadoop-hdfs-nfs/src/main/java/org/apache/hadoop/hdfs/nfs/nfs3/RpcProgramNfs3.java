@@ -922,8 +922,9 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
           EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE) : 
           EnumSet.of(CreateFlag.CREATE);
 
-      fos = new HdfsDataOutputStream(dfsClient.create(fileIdPath, permission,
-          flag, false, replication, blockSize, null, bufferSize, null),
+      fos = dfsClient.createWrappedOutputStream(
+          dfsClient.create(fileIdPath, permission, flag, false, replication,
+              blockSize, null, bufferSize, null),
           statistics);
 
       if ((createMode == Nfs3Constant.CREATE_UNCHECKED)

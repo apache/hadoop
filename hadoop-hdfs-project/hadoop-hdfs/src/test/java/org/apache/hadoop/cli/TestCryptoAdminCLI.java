@@ -66,7 +66,7 @@ public class TestCryptoAdminCLI extends CLITestHelperDFS {
     tmpDir = new File(System.getProperty("test.build.data", "target"),
         UUID.randomUUID().toString()).getAbsoluteFile();
     final Path jksPath = new Path(tmpDir.toString(), "test.jks");
-    conf.set(KeyProviderFactory.KEY_PROVIDER_PATH,
+    conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI,
         JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri());
 
     dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();

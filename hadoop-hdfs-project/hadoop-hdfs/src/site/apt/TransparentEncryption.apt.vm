@@ -85,6 +85,12 @@ Transparent Encryption in HDFS
   A necessary prerequisite is an instance of the KMS, as well as a backing key store for the KMS.
   See the {{{../../hadoop-kms/index.html}KMS documentation}} for more information.
 
+** Configuring the cluster KeyProvider
+
+*** dfs.encryption.key.provider.uri
+
+  The KeyProvider to use when interacting with encryption keys used when reading and writing to an encryption zone.
+
 ** Selecting an encryption algorithm and codec
 
 *** hadoop.security.crypto.codec.classes.EXAMPLECIPHERSUITE

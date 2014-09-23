@@ -117,13 +117,14 @@ public class TestKMS {
 
   protected Configuration createBaseKMSConf(File keyStoreDir) throws Exception {
     Configuration conf = new Configuration(false);
-    conf.set("hadoop.security.key.provider.path",
+    conf.set(KMSConfiguration.KEY_PROVIDER_URI,
         "jceks://file@" + new Path(keyStoreDir.getAbsolutePath(), "kms.keystore").toUri());
     conf.set("hadoop.kms.authentication.type", "simple");
     return conf;
   }
 
-  protected void writeConf(File confDir, Configuration conf) throws Exception {
+  public static void writeConf(File confDir, Configuration conf)
+      throws Exception {
     Writer writer = new FileWriter(new File(confDir,
         KMSConfiguration.KMS_SITE_XML));
     conf.writeXml(writer);
@@ -139,7 +140,7 @@ public class TestKMS {
     writer.close();
   }
 
-  protected URI createKMSUri(URL kmsUrl) throws Exception {
+  public static URI createKMSUri(URL kmsUrl) throws Exception {
     String str = kmsUrl.toString();
     str = str.replaceFirst("://", "@");
     return new URI("kms://" + str);

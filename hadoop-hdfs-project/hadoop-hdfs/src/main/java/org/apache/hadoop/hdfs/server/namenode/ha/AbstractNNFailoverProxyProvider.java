@@ -18,11 +18,15 @@
 
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.FailoverProxyProvider;
 
 public abstract class AbstractNNFailoverProxyProvider<T> implements
    FailoverProxyProvider <T> {
+
+  protected AtomicBoolean fallbackToSimpleAuth;
 
   /**
    * Inquire whether logical HA URI is used for the implementation. If it is
@@ -32,4 +36,16 @@ public abstract class AbstractNNFailoverProxyProvider<T> implements
    * @return true if logical HA URI is used. false, if not used.
    */
   public abstract boolean useLogicalURI(); 
+
+  /**
+   * Set for tracking if a secure client falls back to simple auth.  This method
+   * is synchronized only to stifle a Findbugs warning.
+   *
+   * @param fallbackToSimpleAuth - set to true or false during this method to
+   *   indicate if a secure client falls back to simple auth
+   */
+  public synchronized void setFallbackToSimpleAuth(
+      AtomicBoolean fallbackToSimpleAuth) {
+    this.fallbackToSimpleAuth = fallbackToSimpleAuth;
+  }
 }

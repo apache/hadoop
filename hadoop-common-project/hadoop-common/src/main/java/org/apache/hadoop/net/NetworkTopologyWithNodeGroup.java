@@ -268,19 +268,17 @@ public class NetworkTopologyWithNodeGroup extends NetworkTopology {
   /**
    * Sort nodes array by their distances to <i>reader</i>.
    * <p/>
-   * This is the same as
-   * {@link NetworkTopology#sortByDistance(Node, Node[], long)} except with a
-   * four-level network topology which contains the additional network distance
-   * of a "node group" which is between local and same rack.
-   * 
-   * @param reader Node where data will be read
-   * @param nodes Available replicas with the requested data
-   * @param seed Used to seed the pseudo-random generator that randomizes the
-   *          set of nodes at each network distance.
+   * This is the same as {@link NetworkTopology#sortByDistance(Node, Node[],
+   * int)} except with a four-level network topology which contains the
+   * additional network distance of a "node group" which is between local and
+   * same rack.
+   *
+   * @param reader    Node where data will be read
+   * @param nodes     Available replicas with the requested data
+   * @param activeLen Number of active nodes at the front of the array
    */
   @Override
-  public void sortByDistance(Node reader, Node[] nodes, int activeLen,
-      long seed, boolean randomizeBlockLocationsPerBlock) {
+  public void sortByDistance(Node reader, Node[] nodes, int activeLen) {
     // If reader is not a datanode (not in NetworkTopology tree), we need to
     // replace this reader with a sibling leaf node in tree.
     if (reader != null && !this.contains(reader)) {
@@ -293,8 +291,7 @@ public class NetworkTopologyWithNodeGroup extends NetworkTopology {
         return;
       }
     }
-    super.sortByDistance(reader, nodes, activeLen, seed,
-        randomizeBlockLocationsPerBlock);
+    super.sortByDistance(reader, nodes, activeLen);
   }
 
   /** InnerNodeWithNodeGroup represents a switch/router of a data center, rack
