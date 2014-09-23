@@ -27,10 +27,8 @@ import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 import java.util.LinkedList;
-import com.google.common.io.ByteArrayDataInput;
-import com.google.common.io.ByteStreams;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -52,6 +50,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -79,6 +78,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+
+import com.google.common.io.ByteArrayDataInput;
+import com.google.common.io.ByteStreams;
 
 @RunWith(Parameterized.class)
 public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
@@ -137,7 +139,7 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     this.conf = conf;
   }
   
-  @Test (timeout = 1000000)
+  @Test (timeout = 120000)
   public void testContainerManager() throws Exception {
     try {
       yarnCluster = new MiniYARNCluster(TestContainerManagerSecurity.class
@@ -162,7 +164,7 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     }
   }
 
-  @Test (timeout = 500000)
+  @Test (timeout = 120000)
   public void testContainerManagerWithEpoch() throws Exception {
     try {
       yarnCluster = new MiniYARNCluster(TestContainerManagerSecurity.class
@@ -311,7 +313,7 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     // trying to stop the container. It should not throw any exception.
     testStopContainer(rpc, validAppAttemptId, validNode, validContainerId,
         validNMToken, false);
-    
+
     // Rolling over master key twice so that we can check whether older keys
     // are used for authentication.
     rollNMTokenMasterKey(nmTokenSecretManagerRM, nmTokenSecretManagerNM);
@@ -326,7 +328,7 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     sb.append(" was recently stopped on node manager");
     Assert.assertTrue(testGetContainer(rpc, validAppAttemptId, validNode,
         validContainerId, validNMToken, true).contains(sb.toString()));
-    
+
     // Now lets remove the container from nm-memory
     nm.getNodeStatusUpdater().clearFinishedContainersFromCache();
     
@@ -355,14 +357,22 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
   private void waitForContainerToFinishOnNM(ContainerId containerId) {
     Context nmContet = yarnCluster.getNodeManager(0).getNMContext();
     int interval = 4 * 60; // Max time for container token to expire.
+    Assert.assertNotNull(nmContet.getContainers().containsKey(containerId));
     while ((interval-- > 0)
-        && nmContet.getContainers().containsKey(containerId)) {
+        && !nmContet.getContainers().get(containerId)
+          .cloneAndGetContainerStatus().getState()
+          .equals(ContainerState.COMPLETE)) {
       try {
+        LOG.info("Waiting for " + containerId + " to complete.");
         Thread.sleep(1000);
       } catch (InterruptedException e) {
       }
     }
-    Assert.assertFalse(nmContet.getContainers().containsKey(containerId));
+    // Normally, Containers will be removed from NM context after they are
+    // explicitly acked by RM. Now, manually remove it for testing.
+    yarnCluster.getNodeManager(0).getNodeStatusUpdater()
+      .addCompletedContainer(containerId);
+    nmContet.getContainers().remove(containerId);
   }
 
   protected void waitForNMToReceiveNMTokenKey(

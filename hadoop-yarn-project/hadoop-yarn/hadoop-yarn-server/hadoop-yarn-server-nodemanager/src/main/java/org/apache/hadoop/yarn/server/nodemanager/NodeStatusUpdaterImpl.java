@@ -422,7 +422,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   @VisibleForTesting
   @Private
   public void removeCompletedContainersFromContext(
-      List<ContainerId>containerIds) throws IOException {
+      List<ContainerId> containerIds) throws IOException {
     Set<ContainerId> removedContainers = new HashSet<ContainerId>();
 
     // If the AM has pulled the completedContainer it can be removed
