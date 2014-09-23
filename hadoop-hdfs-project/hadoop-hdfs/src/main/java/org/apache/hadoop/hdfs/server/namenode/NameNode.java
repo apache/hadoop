@@ -1347,6 +1347,9 @@ public class NameNode implements NameNodeStatusMXBean {
    */
   private static boolean printMetadataVersion(Configuration conf)
     throws IOException {
+    final String nsId = DFSUtil.getNamenodeNameServiceId(conf);
+    final String namenodeId = HAUtil.getNameNodeId(conf, nsId);
+    NameNode.initializeGenericKeys(conf, nsId, namenodeId);
     final FSImage fsImage = new FSImage(conf);
     final FSNamesystem fs = new FSNamesystem(conf, fsImage, false);
     return fsImage.recoverTransitionRead(
