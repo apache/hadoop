@@ -391,6 +391,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2540. FairScheduler: Queue filters not working on scheduler page in 
     RM UI. (Ashwin Shankar via kasha)
 
+    YARN-2584. TestContainerManagerSecurity fails on trunk. (Jian He via 
+    junping_du)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
