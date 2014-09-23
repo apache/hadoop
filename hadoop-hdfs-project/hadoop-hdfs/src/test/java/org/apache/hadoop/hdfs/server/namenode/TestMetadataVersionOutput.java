@@ -25,26 +25,21 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
+
 public class TestMetadataVersionOutput {
 
   private MiniDFSCluster dfsCluster = null;
   private final Configuration conf = new Configuration();
-
-  @Before
-  public void setUp() throws Exception {
-    dfsCluster = new MiniDFSCluster.Builder(conf).
-            numDataNodes(1).
-            checkExitOnShutdown(false).
-            build();
-    dfsCluster.waitClusterUp();
-  }
 
   @After
   public void tearDown() throws Exception {
@@ -54,9 +49,26 @@ public class TestMetadataVersionOutput {
     Thread.sleep(2000);
   }
 
+  private void initConfig() {
+    conf.set(DFS_NAMESERVICE_ID, "ns1");
+    conf.set(DFS_HA_NAMENODES_KEY_PREFIX + ".ns1", "nn1");
+    conf.set(DFS_HA_NAMENODE_ID_KEY, "nn1");
+    conf.set(DFS_NAMENODE_NAME_DIR_KEY + ".ns1.nn1", MiniDFSCluster.getBaseDirectory() + "1");
+    conf.unset(DFS_NAMENODE_NAME_DIR_KEY);
+  }
+
   @Test(timeout = 30000)
   public void testMetadataVersionOutput() throws IOException {
 
+    initConfig();
+    dfsCluster = new MiniDFSCluster.Builder(conf).
+        manageNameDfsDirs(false).
+        numDataNodes(1).
+        checkExitOnShutdown(false).
+        build();
+    dfsCluster.waitClusterUp();
+    dfsCluster.shutdown(false);
+    initConfig();
     final PrintStream origOut = System.out;
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final PrintStream stdOut = new PrintStream(baos);
