@@ -115,6 +115,17 @@ public class FairSharePolicy extends SchedulingPolicy {
   }
 
   @Override
+  public Resource getHeadroom(Resource queueFairShare,
+                              Resource queueUsage, Resource clusterAvailable) {
+    int queueAvailableMemory = Math.max(
+        queueFairShare.getMemory() - queueUsage.getMemory(), 0);
+    Resource headroom = Resources.createResource(
+        Math.min(clusterAvailable.getMemory(), queueAvailableMemory),
+        clusterAvailable.getVirtualCores());
+    return headroom;
+  }
+
+  @Override
   public void computeShares(Collection<? extends Schedulable> schedulables,
       Resource totalResources) {
     ComputeFairShares.computeShares(schedulables, totalResources, ResourceType.MEMORY);

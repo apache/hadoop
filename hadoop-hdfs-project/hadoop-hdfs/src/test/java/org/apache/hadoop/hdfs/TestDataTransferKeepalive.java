@@ -105,7 +105,7 @@ public class TestDataTransferKeepalive {
 
     // Sleep for a bit longer than the keepalive timeout
     // and make sure the xceiver died.
-    Thread.sleep(DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_DEFAULT + 1);
+    Thread.sleep(DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_DEFAULT + 50);
     assertXceiverCount(0);
     
     // The socket is still in the cache, because we don't
@@ -149,7 +149,7 @@ public class TestDataTransferKeepalive {
     assertXceiverCount(1);
 
     // Sleep for a bit longer than the client keepalive timeout.
-    Thread.sleep(CLIENT_EXPIRY_MS + 1);
+    Thread.sleep(CLIENT_EXPIRY_MS + 50);
     
     // Taking out a peer which is expired should give a null.
     Peer peer = peerCache.get(dn.getDatanodeId(), false);

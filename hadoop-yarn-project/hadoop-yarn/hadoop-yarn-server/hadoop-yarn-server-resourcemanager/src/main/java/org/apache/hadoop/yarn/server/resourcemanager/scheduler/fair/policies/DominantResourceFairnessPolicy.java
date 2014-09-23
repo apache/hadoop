@@ -77,7 +77,7 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
       ComputeFairShares.computeSteadyShares(queues, totalResources, type);
     }
   }
-  
+
   @Override
   public boolean checkIfUsageOverFairShare(Resource usage, Resource fairShare) {
     return !Resources.fitsIn(usage, fairShare);
@@ -86,6 +86,21 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
   @Override
   public boolean checkIfAMResourceUsageOverLimit(Resource usage, Resource maxAMResource) {
     return !Resources.fitsIn(usage, maxAMResource);
+  }
+
+  @Override
+  public Resource getHeadroom(Resource queueFairShare, Resource queueUsage,
+                              Resource clusterAvailable) {
+    int queueAvailableMemory =
+        Math.max(queueFairShare.getMemory() - queueUsage.getMemory(), 0);
+    int queueAvailableCPU =
+        Math.max(queueFairShare.getVirtualCores() - queueUsage
+            .getVirtualCores(), 0);
+    Resource headroom = Resources.createResource(
+        Math.min(clusterAvailable.getMemory(), queueAvailableMemory),
+        Math.min(clusterAvailable.getVirtualCores(),
+            queueAvailableCPU));
+    return headroom;
   }
 
   @Override

@@ -91,6 +91,9 @@ Release 2.6.0 - UNRELEASED
     YARN-1250. Generic history service should support application-acls. (Zhijie Shen
     via junping_du)
 
+    YARN-2569. Added the log handling APIs for the long running services. (Xuan
+    Gong via zjshen)
+
   IMPROVEMENTS
 
     YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc
@@ -243,6 +246,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2539. FairScheduler: Set the default value for maxAMShare to 0.5. 
     (Wei Yan via kasha)
+
+    YARN-1959. Fix headroom calculation in FairScheduler. 
+    (Anubhav Dhoot via kasha)
 
   OPTIMIZATIONS
 
@@ -420,6 +426,13 @@ Release 2.6.0 - UNRELEASED
     
     YARN-2540. FairScheduler: Queue filters not working on scheduler page in 
     RM UI. (Ashwin Shankar via kasha)
+
+    YARN-2584. TestContainerManagerSecurity fails on trunk. (Jian He via 
+    junping_du)
+
+    YARN-2252. Intermittent failure of 
+    TestFairScheduler.testContinuousScheduling. 
+    (Ratandeep Ratti and kasha via kasha)
 
 Release 2.5.1 - 2014-09-05
 
