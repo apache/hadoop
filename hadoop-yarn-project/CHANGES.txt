@@ -397,6 +397,10 @@ Release 2.6.0 - UNRELEASED
     YARN-2584. TestContainerManagerSecurity fails on trunk. (Jian He via 
     junping_du)
 
+    YARN-2252. Intermittent failure of 
+    TestFairScheduler.testContinuousScheduling. 
+    (Ratandeep Ratti and kasha via kasha)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
