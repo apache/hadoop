@@ -68,4 +68,7 @@
     version and add LazyPersist flag. (Xiaoyu Yao and Arpit Agarwal via
     Arpit Agarwal)
     
+    HDFS-6990. Add unit test for evict/delete RAM_DISK block with open
+    handle. (Xiaoyu Yao via Arpit Agarwal)
+
 
