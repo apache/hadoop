@@ -214,6 +214,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2539. FairScheduler: Set the default value for maxAMShare to 0.5. 
     (Wei Yan via kasha)
 
+    YARN-1959. Fix headroom calculation in FairScheduler. 
+    (Anubhav Dhoot via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
