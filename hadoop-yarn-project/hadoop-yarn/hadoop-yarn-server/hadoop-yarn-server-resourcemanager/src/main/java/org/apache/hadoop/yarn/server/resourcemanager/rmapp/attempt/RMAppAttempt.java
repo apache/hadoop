@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 
 import java.util.List;
+import java.util.concurrent.ConcurrentMap;
 
 import javax.crypto.SecretKey;
 
@@ -31,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -120,12 +122,27 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
   List<ContainerStatus> pullJustFinishedContainers();
 
   /**
-   * Return the list of last set of finished containers. This does not reset the
-   * finished containers.
-   * @return the list of just finished contianers, this does not reset the
+   * Returns a reference to the map of last set of finished containers to the
+   * corresponding node. This does not reset the finished containers.
+   * @return the list of just finished containers, this does not reset the
    * finished containers.
    */
+  ConcurrentMap<NodeId, List<ContainerStatus>>
+      getJustFinishedContainersReference();
+
+  /**
+   * Return the list of last set of finished containers. This does not reset
+   * the finished containers.
+   * @return the list of just finished containers
+   */
   List<ContainerStatus> getJustFinishedContainers();
+
+  /**
+   * The map of conatiners per Node that are already sent to the AM.
+   * @return map of per node list of finished container status sent to AM
+   */
+  ConcurrentMap<NodeId, List<ContainerStatus>>
+      getFinishedContainersSentToAMReference();
 
   /**
    * The container on which the Application Master is running.

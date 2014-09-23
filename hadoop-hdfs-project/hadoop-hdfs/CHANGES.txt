@@ -133,6 +133,9 @@ Trunk (Unreleased)
     HDFS-6609. Use DirectorySnapshottableFeature to represent a snapshottable
     directory. (Jing Zhao via wheat9)
 
+    HDFS-6987. Move CipherSuite xattr information up to the encryption zone
+    root. (Zhe Zhang via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -786,6 +789,12 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7046. HA NN can NPE upon transition to active. (kihwal)
 
+    HDFS-7106. Reconfiguring DataNode volumes does not release the lock files
+    in removed volumes. (cnauroth via cmccabe)
+
+    HDFS-7001. Tests in TestTracing depends on the order of execution
+    (iwasakims via cmccabe)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
@@ -904,6 +913,18 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7105. Allow falling back to a non-SASL connection on
     DataTransferProtocol in several edge cases. (cnauroth)
+
+    HDFS-7107. Avoid Findbugs warning for synchronization on
+    AbstractNNFailoverProxyProvider#fallbackToSimpleAuth. (cnauroth)
+
+    HDFS-7109. TestDataStorage does not release file locks between tests.
+    (cnauroth)
+
+    HDFS-7110. Skip tests related to short-circuit read on platforms that do not
+    currently implement short-circuit read. (cnauroth)
+
+    HDFS-7115. TestEncryptionZones assumes Unix path separator for KMS key store
+    path. (Xiaoyu Yao via cnauroth)
 
 Release 2.5.1 - 2014-09-05
 

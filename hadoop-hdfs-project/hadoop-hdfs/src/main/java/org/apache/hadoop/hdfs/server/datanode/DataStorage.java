@@ -376,6 +376,13 @@ public class DataStorage extends Storage {
       StorageDirectory sd = it.next();
       if (dataDirs.contains(sd.getRoot())) {
         it.remove();
+        try {
+          sd.unlock();
+        } catch (IOException e) {
+          LOG.warn(String.format(
+            "I/O error attempting to unlock storage directory %s.",
+            sd.getRoot()), e);
+        }
       }
     }
   }

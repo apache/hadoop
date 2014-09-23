@@ -34,6 +34,7 @@ public class FileEncryptionInfo {
   private final CipherSuite cipherSuite;
   private final byte[] edek;
   private final byte[] iv;
+  private final String keyName;
   private final String ezKeyVersionName;
 
   /**
@@ -42,14 +43,16 @@ public class FileEncryptionInfo {
    * @param suite CipherSuite used to encrypt the file
    * @param edek encrypted data encryption key (EDEK) of the file
    * @param iv initialization vector (IV) used to encrypt the file
+   * @param keyName name of the key used for the encryption zone
    * @param ezKeyVersionName name of the KeyVersion used to encrypt the
    *                         encrypted data encryption key.
    */
   public FileEncryptionInfo(final CipherSuite suite, final byte[] edek,
-      final byte[] iv, final String ezKeyVersionName) {
+      final byte[] iv, final String keyName, final String ezKeyVersionName) {
     checkNotNull(suite);
     checkNotNull(edek);
     checkNotNull(iv);
+    checkNotNull(keyName);
     checkNotNull(ezKeyVersionName);
     checkArgument(edek.length == suite.getAlgorithmBlockSize(),
         "Unexpected key length");
@@ -58,6 +61,7 @@ public class FileEncryptionInfo {
     this.cipherSuite = suite;
     this.edek = edek;
     this.iv = iv;
+    this.keyName = keyName;
     this.ezKeyVersionName = ezKeyVersionName;
   }
 
@@ -84,6 +88,11 @@ public class FileEncryptionInfo {
   }
 
   /**
+   * @return name of the encryption zone key.
+   */
+  public String getKeyName() { return keyName; }
+
+  /**
    * @return name of the encryption zone KeyVersion used to encrypt the
    * encrypted data encryption key (EDEK).
    */
@@ -95,6 +104,7 @@ public class FileEncryptionInfo {
     builder.append("cipherSuite: " + cipherSuite);
     builder.append(", edek: " + Hex.encodeHexString(edek));
     builder.append(", iv: " + Hex.encodeHexString(iv));
+    builder.append(", keyName: " + keyName);
     builder.append(", ezKeyVersionName: " + ezKeyVersionName);
     builder.append("}");
     return builder.toString();

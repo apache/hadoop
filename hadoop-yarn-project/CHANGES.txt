@@ -238,6 +238,12 @@ Release 2.6.0 - UNRELEASED
     YARN-2001. Added a time threshold for RM to wait before starting container
     allocations after restart/failover. (Jian He via vinodkv)
 
+    YARN-1372. Ensure all completed containers are reported to the AMs across
+    RM restart. (Anubhav Dhoot via jianhe)
+
+    YARN-2539. FairScheduler: Set the default value for maxAMShare to 0.5. 
+    (Wei Yan via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -405,6 +411,15 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2460. Remove obsolete entries from yarn-default.xml (Ray Chiang via
     aw)
+
+    YARN-2452. TestRMApplicationHistoryWriter fails with FairScheduler. 
+    (Zhihai Xu via kasha)
+
+    YARN-2453. TestProportionalCapacityPreemptionPolicy fails with 
+    FairScheduler. (Zhihai Xu via kasha)
+    
+    YARN-2540. FairScheduler: Queue filters not working on scheduler page in 
+    RM UI. (Ashwin Shankar via kasha)
 
 Release 2.5.1 - 2014-09-05
 

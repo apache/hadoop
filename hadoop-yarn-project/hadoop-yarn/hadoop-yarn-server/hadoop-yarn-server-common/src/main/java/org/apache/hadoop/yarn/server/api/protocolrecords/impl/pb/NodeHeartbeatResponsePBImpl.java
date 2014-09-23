@@ -46,6 +46,7 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
   boolean viaProto = false;
   
   private List<ContainerId> containersToCleanup = null;
+  private List<ContainerId> finishedContainersPulledByAM = null;
   private List<ApplicationId> applicationsToCleanup = null;
   private MasterKey containerTokenMasterKey = null;
   private MasterKey nmTokenMasterKey = null;
@@ -72,6 +73,9 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
     }
     if (this.applicationsToCleanup != null) {
       addApplicationsToCleanupToProto();
+    }
+    if (this.finishedContainersPulledByAM != null) {
+      addFinishedContainersPulledByAMToProto();
     }
     if (this.containerTokenMasterKey != null) {
       builder.setContainerTokenMasterKey(
@@ -199,6 +203,12 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
     return this.containersToCleanup;
   }
 
+  @Override
+  public List<ContainerId> getFinishedContainersPulledByAM() {
+    initFinishedContainersPulledByAM();
+    return this.finishedContainersPulledByAM;
+  }
+
   private void initContainersToCleanup() {
     if (this.containersToCleanup != null) {
       return;
@@ -212,6 +222,19 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
     }
   }
 
+  private void initFinishedContainersPulledByAM() {
+    if (this.finishedContainersPulledByAM != null) {
+      return;
+    }
+    NodeHeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
+    List<ContainerIdProto> list = p.getFinishedContainersPulledByAmList();
+    this.finishedContainersPulledByAM = new ArrayList<ContainerId>();
+
+    for (ContainerIdProto c : list) {
+      this.finishedContainersPulledByAM.add(convertFromProtoFormat(c));
+    }
+  }
+
   @Override
   public void addAllContainersToCleanup(
       final List<ContainerId> containersToCleanup) {
@@ -219,6 +242,15 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
       return;
     initContainersToCleanup();
     this.containersToCleanup.addAll(containersToCleanup);
+  }
+
+  @Override
+  public void addFinishedContainersPulledByAM(
+      final List<ContainerId> finishedContainersPulledByAM) {
+    if (finishedContainersPulledByAM == null)
+      return;
+    initFinishedContainersPulledByAM();
+    this.finishedContainersPulledByAM.addAll(finishedContainersPulledByAM);
   }
 
   private void addContainersToCleanupToProto() {
@@ -254,6 +286,41 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
       }
     };
     builder.addAllContainersToCleanup(iterable);
+  }
+
+  private void addFinishedContainersPulledByAMToProto() {
+    maybeInitBuilder();
+    builder.clearFinishedContainersPulledByAm();
+    if (finishedContainersPulledByAM == null)
+      return;
+    Iterable<ContainerIdProto> iterable = new Iterable<ContainerIdProto>() {
+
+      @Override
+      public Iterator<ContainerIdProto> iterator() {
+        return new Iterator<ContainerIdProto>() {
+
+          Iterator<ContainerId> iter = finishedContainersPulledByAM.iterator();
+
+          @Override
+          public boolean hasNext() {
+            return iter.hasNext();
+          }
+
+          @Override
+          public ContainerIdProto next() {
+            return convertToProtoFormat(iter.next());
+          }
+
+          @Override
+          public void remove() {
+            throw new UnsupportedOperationException();
+
+          }
+        };
+
+      }
+    };
+    builder.addAllFinishedContainersPulledByAm(iterable);
   }
 
   @Override

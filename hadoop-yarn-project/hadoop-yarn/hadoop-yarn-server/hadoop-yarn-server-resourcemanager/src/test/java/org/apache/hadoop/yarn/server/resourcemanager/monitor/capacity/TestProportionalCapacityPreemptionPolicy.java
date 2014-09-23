@@ -112,6 +112,13 @@ public class TestProportionalCapacityPreemptionPolicy {
     // report "ideal" preempt
     conf.setFloat(TOTAL_PREEMPTION_PER_ROUND, (float) 1.0);
     conf.setFloat(NATURAL_TERMINATION_FACTOR, (float) 1.0);
+    conf.set(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES,
+        ProportionalCapacityPreemptionPolicy.class.getCanonicalName());
+    conf.setBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS, true);
+    // FairScheduler doesn't support this test,
+    // Set CapacityScheduler as the scheduler for this test.
+    conf.set("yarn.resourcemanager.scheduler.class",
+        CapacityScheduler.class.getName());
 
     mClock = mock(Clock.class);
     mCS = mock(CapacityScheduler.class);
@@ -441,11 +448,6 @@ public class TestProportionalCapacityPreemptionPolicy {
   
   @Test
   public void testPolicyInitializeAfterSchedulerInitialized() {
-    Configuration conf = new Configuration();
-    conf.set(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES,
-        ProportionalCapacityPreemptionPolicy.class.getCanonicalName());
-    conf.setBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS, true);
-    
     @SuppressWarnings("resource")
     MockRM rm = new MockRM(conf);
     rm.init(conf);

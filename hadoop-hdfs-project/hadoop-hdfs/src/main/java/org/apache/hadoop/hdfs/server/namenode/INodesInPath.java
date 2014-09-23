@@ -133,6 +133,7 @@ public class INodesInPath {
    *        be thrown when the path refers to a symbolic link.
    * @return the specified number of existing INodes in the path
    */
+  // TODO: Eliminate null elements from inodes (to be provided by HDFS-7104)
   static INodesInPath resolve(final INodeDirectory startingDir,
       final byte[][] components, final int numOfINodes, 
       final boolean resolveLink) throws UnresolvedLinkException {
@@ -311,7 +312,7 @@ public class INodesInPath {
   }
 
   /**
-   * @return the whole inodes array including the null elements.
+   * @return the inodes array excluding the null elements.
    */
   INode[] getINodes() {
     if (capacity < inodes.length) {

@@ -26,6 +26,7 @@ import java.util.TreeMap;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
@@ -33,6 +34,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
+import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,8 +56,8 @@ public class EncryptionZoneManager {
   public static Logger LOG = LoggerFactory.getLogger(EncryptionZoneManager
       .class);
 
-  private static final EncryptionZone NULL_EZ =
-      new EncryptionZone("", "", -1);
+  public static final EncryptionZone NULL_EZ =
+      new EncryptionZone(-1, "", CipherSuite.UNKNOWN, "");
 
   /**
    * EncryptionZoneInt is the internal representation of an encryption zone. The
@@ -62,20 +65,26 @@ public class EncryptionZoneManager {
    * contains the EZ's pathname.
    */
   private static class EncryptionZoneInt {
-    private final String keyName;
     private final long inodeId;
+    private final CipherSuite suite;
+    private final String keyName;
 
-    EncryptionZoneInt(long inodeId, String keyName) {
-      this.keyName = keyName;
+    EncryptionZoneInt(long inodeId, CipherSuite suite, String keyName) {
       this.inodeId = inodeId;
-    }
-
-    String getKeyName() {
-      return keyName;
+      this.suite = suite;
+      this.keyName = keyName;
     }
 
     long getINodeId() {
       return inodeId;
+    }
+
+    CipherSuite getSuite() {
+      return suite;
+    }
+
+    String getKeyName() {
+      return keyName;
     }
   }
 
@@ -109,9 +118,9 @@ public class EncryptionZoneManager {
    * @param inodeId of the encryption zone
    * @param keyName encryption zone key name
    */
-  void addEncryptionZone(Long inodeId, String keyName) {
+  void addEncryptionZone(Long inodeId, CipherSuite suite, String keyName) {
     assert dir.hasWriteLock();
-    unprotectedAddEncryptionZone(inodeId, keyName);
+    unprotectedAddEncryptionZone(inodeId, suite, keyName);
   }
 
   /**
@@ -122,8 +131,10 @@ public class EncryptionZoneManager {
    * @param inodeId of the encryption zone
    * @param keyName encryption zone key name
    */
-  void unprotectedAddEncryptionZone(Long inodeId, String keyName) {
-    final EncryptionZoneInt ez = new EncryptionZoneInt(inodeId, keyName);
+  void unprotectedAddEncryptionZone(Long inodeId,
+      CipherSuite suite, String keyName) {
+    final EncryptionZoneInt ez = new EncryptionZoneInt(
+        inodeId, suite, keyName);
     encryptionZones.put(inodeId, ez);
   }
 
@@ -207,8 +218,8 @@ public class EncryptionZoneManager {
     if (ezi == null) {
       return NULL_EZ;
     } else {
-      return new EncryptionZone(getFullPathName(ezi), ezi.getKeyName(),
-          ezi.getINodeId());
+      return new EncryptionZone(ezi.getINodeId(), getFullPathName(ezi),
+          ezi.getSuite(), ezi.getKeyName());
     }
   }
 
@@ -264,7 +275,7 @@ public class EncryptionZoneManager {
    * <p/>
    * Called while holding the FSDirectory lock.
    */
-  XAttr createEncryptionZone(String src, String keyName)
+  XAttr createEncryptionZone(String src, CipherSuite suite, String keyName)
       throws IOException {
     assert dir.hasWriteLock();
     if (dir.isNonEmptyDirectory(src)) {
@@ -284,8 +295,10 @@ public class EncryptionZoneManager {
           "encryption zone. (" + getFullPathName(ezi) + ")");
     }
 
+    final HdfsProtos.ZoneEncryptionInfoProto proto =
+        PBHelper.convert(suite, keyName);
     final XAttr ezXAttr = XAttrHelper
-        .buildXAttr(CRYPTO_XATTR_ENCRYPTION_ZONE, keyName.getBytes());
+        .buildXAttr(CRYPTO_XATTR_ENCRYPTION_ZONE, proto.toByteArray());
 
     final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
     xattrs.add(ezXAttr);
@@ -327,8 +340,8 @@ public class EncryptionZoneManager {
         continue;
       }
       // Add the EZ to the result list
-      zones.add(new EncryptionZone(pathName,
-          ezi.getKeyName(), ezi.getINodeId()));
+      zones.add(new EncryptionZone(ezi.getINodeId(), pathName,
+          ezi.getSuite(), ezi.getKeyName()));
       count++;
       if (count >= numResponses) {
         break;

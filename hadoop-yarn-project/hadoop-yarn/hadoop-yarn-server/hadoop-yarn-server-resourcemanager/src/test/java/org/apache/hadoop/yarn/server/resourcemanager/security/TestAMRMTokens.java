@@ -161,7 +161,7 @@ public class TestAMRMTokens {
           .getEventHandler()
           .handle(
               new RMAppAttemptContainerFinishedEvent(applicationAttemptId,
-                  containerStatus));
+                  containerStatus, nm1.getNodeId()));
 
       // Make sure the RMAppAttempt is at Finished State.
       // Both AMRMToken and ClientToAMToken have been removed.

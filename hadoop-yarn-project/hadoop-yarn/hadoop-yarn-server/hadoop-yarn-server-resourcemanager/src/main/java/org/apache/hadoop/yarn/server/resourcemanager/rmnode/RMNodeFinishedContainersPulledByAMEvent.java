@@ -18,31 +18,24 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
 
-public enum RMNodeEventType {
-  
-  STARTED,
-  
-  // Source: AdminService
-  DECOMMISSION,
-  
-  // Source: AdminService, ResourceTrackerService
-  RESOURCE_UPDATE,
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NodeId;
 
-  // ResourceTrackerService
-  STATUS_UPDATE,
-  REBOOTING,
-  RECONNECTED,
+import java.util.List;
 
-  // Source: Application
-  CLEANUP_APP,
+// Happens after an implicit ack from AM that the container completion has
+// been notified successfully to the AM
+public class RMNodeFinishedContainersPulledByAMEvent extends RMNodeEvent {
 
-  // Source: Container
-  CONTAINER_ALLOCATED,
-  CLEANUP_CONTAINER,
+  private List<ContainerId> containers;
 
-  // Source: RMAppAttempt
-  FINISHED_CONTAINERS_PULLED_BY_AM,
+  public RMNodeFinishedContainersPulledByAMEvent(NodeId nodeId,
+      List<ContainerId> containers) {
+    super(nodeId, RMNodeEventType.FINISHED_CONTAINERS_PULLED_BY_AM);
+    this.containers = containers;
+  }
 
-  // Source: NMLivelinessMonitor
-  EXPIRE
+  public List<ContainerId> getContainers() {
+    return this.containers;
+  }
 }

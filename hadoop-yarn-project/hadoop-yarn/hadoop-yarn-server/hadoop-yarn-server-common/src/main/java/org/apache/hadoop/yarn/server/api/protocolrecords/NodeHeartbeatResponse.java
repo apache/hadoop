@@ -30,6 +30,7 @@ public interface NodeHeartbeatResponse {
   NodeAction getNodeAction();
 
   List<ContainerId> getContainersToCleanup();
+  List<ContainerId> getFinishedContainersPulledByAM();
 
   List<ApplicationId> getApplicationsToCleanup();
 
@@ -43,6 +44,10 @@ public interface NodeHeartbeatResponse {
   void setNMTokenMasterKey(MasterKey secretKey);
 
   void addAllContainersToCleanup(List<ContainerId> containers);
+
+  // This tells NM to remove finished containers only after the AM
+  // has actually received it in a previous allocate response
+  void addFinishedContainersPulledByAM(List<ContainerId> containers);
   
   void addAllApplicationsToCleanup(List<ApplicationId> applications);
 

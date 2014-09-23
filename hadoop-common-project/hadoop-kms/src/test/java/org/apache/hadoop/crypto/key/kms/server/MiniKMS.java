@@ -169,7 +169,6 @@ public class MiniKMS {
       kms.set(KMSConfiguration.KEY_PROVIDER_URI,
           "jceks://file@" + new Path(kmsConfDir, "kms.keystore").toUri());
       kms.set("hadoop.kms.authentication.type", "simple");
-      kms.setBoolean(KMSConfiguration.KEY_AUTHORIZATION_ENABLE, false);
       Writer writer = new FileWriter(kmsFile);
       kms.writeXml(writer);
       writer.close();

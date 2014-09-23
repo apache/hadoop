@@ -112,6 +112,10 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private final Set<ContainerId> containersToClean = new TreeSet<ContainerId>(
       new ContainerIdComparator());
 
+  /* set of containers that were notified to AM about their completion */
+  private final Set<ContainerId> finishedContainersPulledByAM =
+      new HashSet<ContainerId>();
+
   /* the list of applications that have finished and need to be purged */
   private final List<ApplicationId> finishedApplications = new ArrayList<ApplicationId>();
 
@@ -135,7 +139,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
          new UpdateNodeResourceWhenUnusableTransition())
 
      //Transitions from RUNNING state
-     .addTransition(NodeState.RUNNING, 
+     .addTransition(NodeState.RUNNING,
          EnumSet.of(NodeState.RUNNING, NodeState.UNHEALTHY),
          RMNodeEventType.STATUS_UPDATE, new StatusUpdateWhenHealthyTransition())
      .addTransition(NodeState.RUNNING, NodeState.DECOMMISSIONED,
@@ -152,29 +156,39 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
      .addTransition(NodeState.RUNNING, NodeState.RUNNING,
          RMNodeEventType.CLEANUP_CONTAINER, new CleanUpContainerTransition())
      .addTransition(NodeState.RUNNING, NodeState.RUNNING,
+         RMNodeEventType.FINISHED_CONTAINERS_PULLED_BY_AM,
+         new FinishedContainersPulledByAMTransition())
+     .addTransition(NodeState.RUNNING, NodeState.RUNNING,
          RMNodeEventType.RECONNECTED, new ReconnectNodeTransition())
      .addTransition(NodeState.RUNNING, NodeState.RUNNING,
          RMNodeEventType.RESOURCE_UPDATE, new UpdateNodeResourceWhenRunningTransition())
 
      //Transitions from REBOOTED state
      .addTransition(NodeState.REBOOTED, NodeState.REBOOTED,
-         RMNodeEventType.RESOURCE_UPDATE, 
+         RMNodeEventType.RESOURCE_UPDATE,
          new UpdateNodeResourceWhenUnusableTransition())
          
      //Transitions from DECOMMISSIONED state
      .addTransition(NodeState.DECOMMISSIONED, NodeState.DECOMMISSIONED,
-         RMNodeEventType.RESOURCE_UPDATE, 
+         RMNodeEventType.RESOURCE_UPDATE,
          new UpdateNodeResourceWhenUnusableTransition())
-         
+     .addTransition(NodeState.DECOMMISSIONED, NodeState.DECOMMISSIONED,
+         RMNodeEventType.FINISHED_CONTAINERS_PULLED_BY_AM,
+         new FinishedContainersPulledByAMTransition())
+
      //Transitions from LOST state
      .addTransition(NodeState.LOST, NodeState.LOST,
-         RMNodeEventType.RESOURCE_UPDATE, 
+         RMNodeEventType.RESOURCE_UPDATE,
          new UpdateNodeResourceWhenUnusableTransition())
+     .addTransition(NodeState.LOST, NodeState.LOST,
+         RMNodeEventType.FINISHED_CONTAINERS_PULLED_BY_AM,
+         new FinishedContainersPulledByAMTransition())
 
      //Transitions from UNHEALTHY state
-     .addTransition(NodeState.UNHEALTHY, 
+     .addTransition(NodeState.UNHEALTHY,
          EnumSet.of(NodeState.UNHEALTHY, NodeState.RUNNING),
-         RMNodeEventType.STATUS_UPDATE, new StatusUpdateWhenUnHealthyTransition())
+         RMNodeEventType.STATUS_UPDATE,
+         new StatusUpdateWhenUnHealthyTransition())
      .addTransition(NodeState.UNHEALTHY, NodeState.DECOMMISSIONED,
          RMNodeEventType.DECOMMISSION,
          new DeactivateNodeTransition(NodeState.DECOMMISSIONED))
@@ -192,7 +206,10 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
          RMNodeEventType.CLEANUP_CONTAINER, new CleanUpContainerTransition())
      .addTransition(NodeState.UNHEALTHY, NodeState.UNHEALTHY,
          RMNodeEventType.RESOURCE_UPDATE, new UpdateNodeResourceWhenUnusableTransition())
-         
+     .addTransition(NodeState.UNHEALTHY, NodeState.UNHEALTHY,
+         RMNodeEventType.FINISHED_CONTAINERS_PULLED_BY_AM,
+         new FinishedContainersPulledByAMTransition())
+
      // create the topology tables
      .installTopology(); 
 
@@ -365,8 +382,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       response.addAllContainersToCleanup(
           new ArrayList<ContainerId>(this.containersToClean));
       response.addAllApplicationsToCleanup(this.finishedApplications);
+      response.addFinishedContainersPulledByAM(
+          new ArrayList<ContainerId>(this.finishedContainersPulledByAM));
       this.containersToClean.clear();
       this.finishedApplications.clear();
+      this.finishedContainersPulledByAM.clear();
     } finally {
       this.writeLock.unlock();
     }
@@ -652,6 +672,16 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     }
   }
 
+  public static class FinishedContainersPulledByAMTransition implements
+      SingleArcTransition<RMNodeImpl, RMNodeEvent> {
+
+    @Override
+    public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
+      rmNode.finishedContainersPulledByAM.addAll(((
+          RMNodeFinishedContainersPulledByAMEvent) event).getContainers());
+    }
+  }
+
   public static class DeactivateNodeTransition
     implements SingleArcTransition<RMNodeImpl, RMNodeEvent> {
 
@@ -726,7 +756,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
           new ArrayList<ContainerStatus>();
       for (ContainerStatus remoteContainer : statusEvent.getContainers()) {
         ContainerId containerId = remoteContainer.getContainerId();
-        
+
         // Don't bother with containers already scheduled for cleanup, or for
         // applications already killed. The scheduler doens't need to know any
         // more about this container

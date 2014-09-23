@@ -112,7 +112,7 @@ public class FairSchedulerConfiguration extends Configuration {
   protected static final int DEFAULT_WAIT_TIME_BEFORE_KILL = 15000;
 
   /** Whether to assign multiple containers in one check-in. */
-  protected static final String  ASSIGN_MULTIPLE = CONF_PREFIX + "assignmultiple";
+  public static final String  ASSIGN_MULTIPLE = CONF_PREFIX + "assignmultiple";
   protected static final boolean DEFAULT_ASSIGN_MULTIPLE = false;
 
   /** Whether to give more weight to apps requiring many resources. */
