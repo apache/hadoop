@@ -29,6 +29,12 @@
 #include <time.h>
 #include <unistd.h>
 
+#ifdef __MACH__ // OS X does not have clock_gettime
+#include <mach/clock.h>
+#include <mach/mach.h>
+#include <mach/mach_time.h>
+#endif
+
 #include "config.h"
 #include "hdfs.h"
 
@@ -49,6 +55,29 @@ struct stopwatch {
     struct timespec stop;
 };
 
+
+#ifdef __MACH__
+static int clock_gettime_mono(struct timespec * ts) {
+    static mach_timebase_info_data_t tb;
+    static uint64_t timestart = 0;
+    uint64_t t = 0;
+    if (timestart == 0) {
+        mach_timebase_info(&tb);
+        timestart = mach_absolute_time();
+    }
+    t = mach_absolute_time() - timestart;
+    t *= tb.numer;
+    t /= tb.denom;
+    ts->tv_sec = t / 1000000000ULL;
+    ts->tv_nsec = t - (ts->tv_sec * 1000000000ULL);
+    return 0;
+}
+#else
+static int clock_gettime_mono(struct timespec * ts) {
+    return clock_gettime(CLOCK_MONOTONIC, ts);
+}
+#endif
+
 static struct stopwatch *stopwatch_create(void)
 {
     struct stopwatch *watch;
@@ -58,7 +87,7 @@ static struct stopwatch *stopwatch_create(void)
         fprintf(stderr, "failed to allocate memory for stopwatch\n");
         goto error;
     }
-    if (clock_gettime(CLOCK_MONOTONIC, &watch->start)) {
+    if (clock_gettime_mono(&watch->start)) {
         int err = errno;
         fprintf(stderr, "clock_gettime(CLOCK_MONOTONIC) failed with "
             "error %d (%s)\n", err, strerror(err));
@@ -76,7 +105,7 @@ static void stopwatch_stop(struct stopwatch *watch,
 {
     double elapsed, rate;
 
-    if (clock_gettime(CLOCK_MONOTONIC, &watch->stop)) {
+    if (clock_gettime_mono(&watch->stop)) {
         int err = errno;
         fprintf(stderr, "clock_gettime(CLOCK_MONOTONIC) failed with "
             "error %d (%s)\n", err, strerror(err));
