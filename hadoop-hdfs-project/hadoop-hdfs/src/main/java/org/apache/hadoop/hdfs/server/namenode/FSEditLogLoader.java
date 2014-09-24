@@ -340,8 +340,10 @@ public class FSEditLogLoader {
       // 3. OP_ADD to open file for append
 
       // See if the file already exists (persistBlocks call)
-      final INodesInPath iip = fsDir.getLastINodeInPath(path);
-      INodeFile oldFile = INodeFile.valueOf(iip.getINode(0), path, true);
+      final INodesInPath iip = fsDir.getINodesInPath(path, true);
+      final INode[] inodes = iip.getINodes();
+      INodeFile oldFile = INodeFile.valueOf(
+          inodes[inodes.length - 1], path, true);
       if (oldFile != null && addCloseOp.overwrite) {
         // This is OP_ADD with overwrite
         fsDir.unprotectedDelete(path, addCloseOp.mtime);
@@ -370,7 +372,7 @@ public class FSEditLogLoader {
         if (toAddRetryCache) {
           HdfsFileStatus stat = fsNamesys.dir.createFileStatus(
               HdfsFileStatus.EMPTY_NAME, newFile, Snapshot.CURRENT_STATE_ID,
-              false);
+              false, iip);
           fsNamesys.addCacheEntryWithPayload(addCloseOp.rpcClientId,
               addCloseOp.rpcCallId, stat);
         }

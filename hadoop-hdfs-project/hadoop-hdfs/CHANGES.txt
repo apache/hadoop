@@ -230,6 +230,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6948. DN rejects blocks if it has older UC block
     (Eric Payne via kihwal)
 
+    HDFS-6987. Move CipherSuite xattr information up to the encryption zone
+    root. (Zhe Zhang via wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

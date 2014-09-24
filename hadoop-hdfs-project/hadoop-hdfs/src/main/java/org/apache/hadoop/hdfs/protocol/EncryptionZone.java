@@ -21,6 +21,7 @@ import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.crypto.CipherSuite;
 
 /**
  * A simple class for representing an encryption zone. Presently an encryption
@@ -31,32 +32,40 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public class EncryptionZone {
 
-  private final String path;
-  private final String keyName;
   private final long id;
+  private final String path;
+  private final CipherSuite suite;
+  private final String keyName;
 
-  public EncryptionZone(String path, String keyName, long id) {
-    this.path = path;
-    this.keyName = keyName;
+  public EncryptionZone(long id, String path,
+      CipherSuite suite, String keyName) {
     this.id = id;
-  }
-
-  public String getPath() {
-    return path;
-  }
-
-  public String getKeyName() {
-    return keyName;
+    this.path = path;
+    this.suite = suite;
+    this.keyName = keyName;
   }
 
   public long getId() {
     return id;
   }
 
+  public String getPath() {
+    return path;
+  }
+
+  public CipherSuite getSuite() {
+    return suite;
+  }
+
+  public String getKeyName() {
+    return keyName;
+  }
+
   @Override
   public int hashCode() {
     return new HashCodeBuilder(13, 31).
-      append(path).append(keyName).append(id).
+      append(id).append(path).
+      append(suite).append(keyName).
       toHashCode();
   }
 
@@ -74,16 +83,18 @@ public class EncryptionZone {
 
     EncryptionZone rhs = (EncryptionZone) obj;
     return new EqualsBuilder().
-      append(path, rhs.path).
-      append(keyName, rhs.keyName).
       append(id, rhs.id).
+      append(path, rhs.path).
+      append(suite, rhs.suite).
+      append(keyName, rhs.keyName).
       isEquals();
   }
 
   @Override
   public String toString() {
-    return "EncryptionZone [path=" + path +
-        ", keyName=" + keyName +
-        ", id=" + id + "]";
+    return "EncryptionZone [id=" + id +
+        ", path=" + path +
+        ", suite=" + suite +
+        ", keyName=" + keyName + "]";
   }
 }
