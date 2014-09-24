@@ -409,6 +409,8 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2161. Fix build on macosx: YARN parts (Binglin Chang via aw)
 
+    YARN-2596. TestWorkPreservingRMRestart fails with FairScheduler. (kasha)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
