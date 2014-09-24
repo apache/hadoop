@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.timeline.webapp;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -32,6 +33,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -40,6 +42,7 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
@@ -53,7 +56,10 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomains;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.timeline.EntityIdentifier;
 import org.apache.hadoop.yarn.server.timeline.GenericObjectMapper;
 import org.apache.hadoop.yarn.server.timeline.NameValuePair;
@@ -254,6 +260,100 @@ public class TimelineWebServices {
       return timelineDataManager.postEntities(entities, callerUGI);
     } catch (Exception e) {
       LOG.error("Error putting entities", e);
+      throw new WebApplicationException(e,
+          Response.Status.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  /**
+   * Store the given domain into the timeline store, and return the errors
+   * that happen during storing.
+   */
+  @PUT
+  @Path("/domain")
+  @Consumes({ MediaType.APPLICATION_JSON /* , MediaType.APPLICATION_XML */})
+  public Response putDomain(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      TimelineDomain domain) {
+    init(res);
+    UserGroupInformation callerUGI = getUser(req);
+    if (callerUGI == null) {
+      String msg = "The owner of the posted timeline domain is not set";
+      LOG.error(msg);
+      throw new ForbiddenException(msg);
+    }
+    domain.setOwner(callerUGI.getShortUserName());
+    try {
+      timelineDataManager.putDomain(domain, callerUGI);
+    } catch (YarnException e) {
+      // The user doesn't have the access to override the existing domain.
+      LOG.error(e.getMessage(), e);
+      throw new ForbiddenException(e);
+    } catch (IOException e) {
+      LOG.error("Error putting domain", e);
+      throw new WebApplicationException(e,
+          Response.Status.INTERNAL_SERVER_ERROR);
+    }
+    return Response.status(Status.OK).build();
+  }
+
+  /**
+   * Return a single domain of the given domain Id.
+   */
+  @GET
+  @Path("/domain/{domainId}")
+  @Produces({ MediaType.APPLICATION_JSON /* , MediaType.APPLICATION_XML */})
+  public TimelineDomain getDomain(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("domainId") String domainId) {
+    init(res);
+    domainId = parseStr(domainId);
+    if (domainId == null || domainId.length() == 0) {
+      throw new BadRequestException("Domain ID is not specified.");
+    }
+    TimelineDomain domain = null;
+    try {
+      domain = timelineDataManager.getDomain(
+          parseStr(domainId), getUser(req));
+    } catch (Exception e) {
+      LOG.error("Error getting domain", e);
+      throw new WebApplicationException(e,
+          Response.Status.INTERNAL_SERVER_ERROR);
+    }
+    if (domain == null) {
+      throw new NotFoundException("Timeline domain ["
+          + domainId + "] is not found");
+    }
+    return domain;
+  }
+
+  /**
+   * Return a list of domains of the given owner.
+   */
+  @GET
+  @Path("/domain")
+  @Produces({ MediaType.APPLICATION_JSON /* , MediaType.APPLICATION_XML */})
+  public TimelineDomains getDomains(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @QueryParam("owner") String owner) {
+    init(res);
+    owner = parseStr(owner);
+    UserGroupInformation callerUGI = getUser(req);
+    if (owner == null || owner.length() == 0) {
+      if (callerUGI == null) {
+        throw new BadRequestException("Domain owner is not specified.");
+      } else {
+        // By default it's going to list the caller's domains
+        owner = callerUGI.getShortUserName();
+      }
+    }
+    try {
+      return timelineDataManager.getDomains(owner, callerUGI);
+    } catch (Exception e) {
+      LOG.error("Error getting domains", e);
       throw new WebApplicationException(e,
           Response.Status.INTERNAL_SERVER_ERROR);
     }

@@ -34,8 +34,9 @@ public class TestMemoryTimelineStore extends TimelineStoreTestUtils {
     store = new MemoryTimelineStore();
     store.init(new YarnConfiguration());
     store.start();
-    loadTestData();
-    loadVerificationData();
+    loadTestEntityData();
+    loadVerificationEntityData();
+    loadTestDomainData();
   }
 
   @After
@@ -80,6 +81,16 @@ public class TestMemoryTimelineStore extends TimelineStoreTestUtils {
   @Test
   public void testGetEvents() throws IOException {
     super.testGetEvents();
+  }
+
+  @Test
+  public void testGetDomain() throws IOException {
+    super.testGetDomain();
+  }
+
+  @Test
+  public void testGetDomains() throws IOException {
+    super.testGetDomains();
   }
 
 }

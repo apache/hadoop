@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.yarn.server.timeline;
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
-
-import java.io.IOException;
 
 /**
  * This interface is for storing timeline information.
@@ -37,10 +38,21 @@ public interface TimelineWriter {
    * individual put request objects will be reported in the response.
    * 
    * @param data
-   *          An {@link TimelineEntities} object.
-   * @return An {@link TimelinePutResponse} object.
+   *          a {@link TimelineEntities} object.
+   * @return a {@link TimelinePutResponse} object.
    * @throws IOException
    */
   TimelinePutResponse put(TimelineEntities data) throws IOException;
+
+  /**
+   * Store domain information to the timeline store. If A domain of the
+   * same ID already exists in the timeline store, it will be COMPLETELY updated
+   * with the given domain.
+   * 
+   * @param domain
+   *          a {@link TimelineDomain} object
+   * @throws IOException
+   */
+   void put(TimelineDomain domain) throws IOException;
 
 }

@@ -50,6 +50,8 @@ import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomains;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
@@ -84,11 +86,15 @@ public class TimelineClientImpl extends TimelineClient {
   public final static int DEFAULT_SOCKET_TIMEOUT = 1 * 60 * 1000; // 1 minute
 
   private static Options opts;
+  private static final String ENTITY_DATA_TYPE = "entity";
+  private static final String DOMAIN_DATA_TYPE = "domain";
 
   static {
     opts = new Options();
-    opts.addOption("put", true, "Put the TimelineEntities in a JSON file");
+    opts.addOption("put", true, "Put the timeline entities/domain in a JSON file");
     opts.getOption("put").setArgName("Path to the JSON file");
+    opts.addOption(ENTITY_DATA_TYPE, false, "Specify the JSON file contains the entities");
+    opts.addOption(DOMAIN_DATA_TYPE, false, "Specify the JSON file contains the domain");
     opts.addOption("help", false, "Print usage");
   }
 
@@ -150,9 +156,27 @@ public class TimelineClientImpl extends TimelineClient {
     }
     TimelineEntities entitiesContainer = new TimelineEntities();
     entitiesContainer.addEntities(Arrays.asList(entities));
+    ClientResponse resp = doPosting(entitiesContainer, null);
+    return resp.getEntity(TimelinePutResponse.class);
+  }
+
+
+  @Override
+  public void putDomain(TimelineDomain domain) throws IOException,
+      YarnException {
+    if (!isEnabled) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Nothing will be put because timeline service is not enabled");
+      }
+      return;
+    }
+    doPosting(domain, "domain");
+  }
+
+  private ClientResponse doPosting(Object obj, String path) throws IOException, YarnException {
     ClientResponse resp;
     try {
-      resp = doPostingEntities(entitiesContainer);
+      resp = doPostingObject(obj, path);
     } catch (RuntimeException re) {
       // runtime exception is expected if the client cannot connect the server
       String msg =
@@ -172,7 +196,7 @@ public class TimelineClientImpl extends TimelineClient {
       }
       throw new YarnException(msg);
     }
-    return resp.getEntity(TimelinePutResponse.class);
+    return resp;
   }
 
   @Override
@@ -184,11 +208,22 @@ public class TimelineClientImpl extends TimelineClient {
 
   @Private
   @VisibleForTesting
-  public ClientResponse doPostingEntities(TimelineEntities entities) {
+  public ClientResponse doPostingObject(Object object, String path) {
     WebResource webResource = client.resource(resURI);
-    return webResource.accept(MediaType.APPLICATION_JSON)
-        .type(MediaType.APPLICATION_JSON)
-        .post(ClientResponse.class, entities);
+    if (path != null) {
+      webResource.path(path);
+    }
+    if (path == null) {
+      return webResource.accept(MediaType.APPLICATION_JSON)
+          .type(MediaType.APPLICATION_JSON)
+          .post(ClientResponse.class, object);
+    } else if (path.equals("domain")) {
+      return webResource.path(path).accept(MediaType.APPLICATION_JSON)
+          .type(MediaType.APPLICATION_JSON)
+          .put(ClientResponse.class, object);
+    } else {
+      throw new YarnRuntimeException("Unknown resource type");
+    }
   }
 
   private static class PseudoAuthenticatedURLConnectionFactory
@@ -334,8 +369,13 @@ public class TimelineClientImpl extends TimelineClient {
     if (cliParser.hasOption("put")) {
       String path = cliParser.getOptionValue("put");
       if (path != null && path.length() > 0) {
-        putTimelineEntitiesInJSONFile(path);
-        return;
+        if (cliParser.hasOption(ENTITY_DATA_TYPE)) {
+          putTimelineDataInJSONFile(path, ENTITY_DATA_TYPE);
+          return;
+        } else if (cliParser.hasOption(DOMAIN_DATA_TYPE)) {
+          putTimelineDataInJSONFile(path, DOMAIN_DATA_TYPE);
+          return;
+        }
       }
     }
     printUsage();
@@ -345,22 +385,28 @@ public class TimelineClientImpl extends TimelineClient {
    * Put timeline data in a JSON file via command line.
    * 
    * @param path
-   *          path to the {@link TimelineEntities} JSON file
+   *          path to the timeline data JSON file
+   * @param type
+   *          the type of the timeline data in the JSON file
    */
-  private static void putTimelineEntitiesInJSONFile(String path) {
+  private static void putTimelineDataInJSONFile(String path, String type) {
     File jsonFile = new File(path);
     if (!jsonFile.exists()) {
-      System.out.println("Error: File [" + jsonFile.getAbsolutePath()
-          + "] doesn't exist");
+      LOG.error("File [" + jsonFile.getAbsolutePath() + "] doesn't exist");
       return;
     }
     ObjectMapper mapper = new ObjectMapper();
     YarnJacksonJaxbJsonProvider.configObjectMapper(mapper);
     TimelineEntities entities = null;
+    TimelineDomains domains = null;
     try {
-      entities = mapper.readValue(jsonFile, TimelineEntities.class);
+      if (type.equals(ENTITY_DATA_TYPE)) {
+        entities = mapper.readValue(jsonFile, TimelineEntities.class);
+      } else if (type.equals(DOMAIN_DATA_TYPE)){
+        domains = mapper.readValue(jsonFile, TimelineDomains.class);
+      }
     } catch (Exception e) {
-      System.err.println("Error: " + e.getMessage());
+      LOG.error("Error when reading  " + e.getMessage());
       e.printStackTrace(System.err);
       return;
     }
@@ -376,21 +422,37 @@ public class TimelineClientImpl extends TimelineClient {
                 UserGroupInformation.getCurrentUser().getUserName());
         UserGroupInformation.getCurrentUser().addToken(token);
       }
-      TimelinePutResponse response = client.putEntities(
-          entities.getEntities().toArray(
-              new TimelineEntity[entities.getEntities().size()]));
-      if (response.getErrors().size() == 0) {
-        System.out.println("Timeline data is successfully put");
-      } else {
-        for (TimelinePutResponse.TimelinePutError error : response.getErrors()) {
-          System.out.println("TimelineEntity [" + error.getEntityType() + ":" +
-              error.getEntityId() + "] is not successfully put. Error code: " +
-              error.getErrorCode());
+      if (type.equals(ENTITY_DATA_TYPE)) {
+        TimelinePutResponse response = client.putEntities(
+            entities.getEntities().toArray(
+                new TimelineEntity[entities.getEntities().size()]));
+        if (response.getErrors().size() == 0) {
+          LOG.info("Timeline entities are successfully put");
+        } else {
+          for (TimelinePutResponse.TimelinePutError error : response.getErrors()) {
+            LOG.error("TimelineEntity [" + error.getEntityType() + ":" +
+                error.getEntityId() + "] is not successfully put. Error code: " +
+                error.getErrorCode());
+          }
+        }
+      } else if (type.equals(DOMAIN_DATA_TYPE)) {
+        boolean hasError = false;
+        for (TimelineDomain domain : domains.getDomains()) {
+          try {
+            client.putDomain(domain);
+          } catch (Exception e) {
+            LOG.error("Error when putting domain " + domain.getId(), e);
+            hasError = true;
+          }
+        }
+        if (!hasError) {
+          LOG.info("Timeline domains are successfully put");
         }
       }
+    } catch(RuntimeException e) {
+      LOG.error("Error when putting the timeline data", e);
     } catch (Exception e) {
-      System.err.println("Error: " + e.getMessage());
-      e.printStackTrace(System.err);
+      LOG.error("Error when putting the timeline data", e);
     } finally {
       client.stop();
     }

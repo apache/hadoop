@@ -36,6 +36,7 @@ import javax.servlet.FilterConfig;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response.Status;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
@@ -44,6 +45,8 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomains;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -69,7 +72,6 @@ import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.JerseyTest;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 
-
 public class TestTimelineWebServices extends JerseyTest {
 
   private static TimelineStore store;
@@ -85,7 +87,7 @@ public class TestTimelineWebServices extends JerseyTest {
       bind(YarnJacksonJaxbJsonProvider.class);
       bind(TimelineWebServices.class);
       bind(GenericExceptionHandler.class);
-      try{
+      try {
         store = mockTimelineStore();
       } catch (Exception e) {
         Assert.fail();
@@ -100,7 +102,8 @@ public class TestTimelineWebServices extends JerseyTest {
           new TimelineDataManager(store, timelineACLsManager);
       bind(TimelineDataManager.class).toInstance(timelineDataManager);
       serve("/*").with(GuiceContainer.class);
-      TimelineAuthenticationFilter taFilter = new TimelineAuthenticationFilter();
+      TimelineAuthenticationFilter taFilter =
+          new TimelineAuthenticationFilter();
       FilterConfig filterConfig = mock(FilterConfig.class);
       when(filterConfig.getInitParameter(AuthenticationFilter.CONFIG_PREFIX))
           .thenReturn(null);
@@ -159,7 +162,8 @@ public class TestTimelineWebServices extends JerseyTest {
         .filterClass(com.google.inject.servlet.GuiceFilter.class)
         .contextPath("jersey-guice-filter")
         .servletPath("/")
-        .clientConfig(new DefaultClientConfig(YarnJacksonJaxbJsonProvider.class))
+        .clientConfig(
+            new DefaultClientConfig(YarnJacksonJaxbJsonProvider.class))
         .build());
   }
 
@@ -277,7 +281,7 @@ public class TestTimelineWebServices extends JerseyTest {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").queryParam("primaryFilter",
-            "long:" + Long.toString((long)Integer.MAX_VALUE + 1l))
+            "long:" + Long.toString((long) Integer.MAX_VALUE + 1l))
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
@@ -406,7 +410,8 @@ public class TestTimelineWebServices extends JerseyTest {
     TimelineEntities entities = new TimelineEntities();
     TimelineEntity entity = new TimelineEntity();
     Map<String, Set<Object>> filters = new HashMap<String, Set<Object>>();
-    filters.put(TimelineStore.SystemFilter.ENTITY_OWNER.toString(), new HashSet<Object>());
+    filters.put(TimelineStore.SystemFilter.ENTITY_OWNER.toString(),
+        new HashSet<Object>());
     entity.setPrimaryFilters(filters);
     entity.setEntityId("test id 6");
     entity.setEntityType("test type 6");
@@ -418,13 +423,15 @@ public class TestTimelineWebServices extends JerseyTest {
         .accept(MediaType.APPLICATION_JSON)
         .type(MediaType.APPLICATION_JSON)
         .post(ClientResponse.class, entities);
-    TimelinePutResponse putResposne = response.getEntity(TimelinePutResponse.class);
+    TimelinePutResponse putResposne =
+        response.getEntity(TimelinePutResponse.class);
     Assert.assertEquals(1, putResposne.getErrors().size());
     List<TimelinePutError> errors = putResposne.getErrors();
-    Assert.assertEquals(TimelinePutResponse.TimelinePutError.SYSTEM_FILTER_CONFLICT,
-      errors.get(0).getErrorCode());
+    Assert.assertEquals(
+        TimelinePutResponse.TimelinePutError.SYSTEM_FILTER_CONFLICT,
+        errors.get(0).getErrorCode());
   }
-  
+
   @Test
   public void testPostEntities() throws Exception {
     TimelineEntities entities = new TimelineEntities();
@@ -449,7 +456,8 @@ public class TestTimelineWebServices extends JerseyTest {
         .type(MediaType.APPLICATION_JSON)
         .post(ClientResponse.class, entities);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    TimelinePutResponse putResposne = response.getEntity(TimelinePutResponse.class);
+    TimelinePutResponse putResposne =
+        response.getEntity(TimelinePutResponse.class);
     Assert.assertNotNull(putResposne);
     Assert.assertEquals(0, putResposne.getErrors().size());
     // verify the entity exists in the store
@@ -482,7 +490,8 @@ public class TestTimelineWebServices extends JerseyTest {
           .type(MediaType.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-      TimelinePutResponse putResponse = response.getEntity(TimelinePutResponse.class);
+      TimelinePutResponse putResponse =
+          response.getEntity(TimelinePutResponse.class);
       Assert.assertNotNull(putResponse);
       Assert.assertEquals(0, putResponse.getErrors().size());
 
@@ -668,4 +677,202 @@ public class TestTimelineWebServices extends JerseyTest {
     }
   }
 
+  @Test
+  public void testGetDomain() throws Exception {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("timeline")
+        .path("domain").path("domain_id_1")
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    TimelineDomain domain = response.getEntity(TimelineDomain.class);
+    verifyDomain(domain, "domain_id_1", true);
+  }
+
+  @Test
+  public void testGetDomainYarnACLsEnabled() {
+    AdminACLsManager oldAdminACLsManager =
+        timelineACLsManager.setAdminACLsManager(adminACLsManager);
+    try {
+      WebResource r = resource();
+      ClientResponse response = r.path("ws").path("v1").path("timeline")
+          .path("domain").path("domain_id_1")
+          .queryParam("user.name", "owner_1")
+          .accept(MediaType.APPLICATION_JSON)
+          .get(ClientResponse.class);
+      Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      TimelineDomain domain = response.getEntity(TimelineDomain.class);
+      verifyDomain(domain, "domain_id_1", true);
+
+      response = r.path("ws").path("v1").path("timeline")
+          .path("domain").path("domain_id_1")
+          .queryParam("user.name", "tester")
+          .accept(MediaType.APPLICATION_JSON)
+          .get(ClientResponse.class);
+      Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      domain = response.getEntity(TimelineDomain.class);
+      verifyDomain(domain, "domain_id_1", false);
+    } finally {
+      timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
+    }
+  }
+
+  @Test
+  public void testGetDomains() throws Exception {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("timeline")
+        .path("domain")
+        .queryParam("owner", "owner_1")
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    TimelineDomains domains = response.getEntity(TimelineDomains.class);
+    Assert.assertEquals(2, domains.getDomains().size());
+    for (int i = 0; i < domains.getDomains().size(); ++i) {
+      verifyDomain(domains.getDomains().get(i),
+          i == 0 ? "domain_id_4" : "domain_id_1", true);
+    }
+  }
+
+  @Test
+  public void testGetDomainsYarnACLsEnabled() throws Exception {
+    AdminACLsManager oldAdminACLsManager =
+        timelineACLsManager.setAdminACLsManager(adminACLsManager);
+    try {
+      WebResource r = resource();
+      ClientResponse response = r.path("ws").path("v1").path("timeline")
+          .path("domain")
+          .queryParam("user.name", "owner_1")
+          .accept(MediaType.APPLICATION_JSON)
+          .get(ClientResponse.class);
+      Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      TimelineDomains domains = response.getEntity(TimelineDomains.class);
+      Assert.assertEquals(2, domains.getDomains().size());
+      for (int i = 0; i < domains.getDomains().size(); ++i) {
+        verifyDomain(domains.getDomains().get(i),
+            i == 0 ? "domain_id_4" : "domain_id_1", true);
+      }
+
+      response = r.path("ws").path("v1").path("timeline")
+          .path("domain")
+          .queryParam("owner", "owner_1")
+          .queryParam("user.name", "tester")
+          .accept(MediaType.APPLICATION_JSON)
+          .get(ClientResponse.class);
+      Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      domains = response.getEntity(TimelineDomains.class);
+      Assert.assertEquals(2, domains.getDomains().size());
+      for (int i = 0; i < domains.getDomains().size(); ++i) {
+        verifyDomain(domains.getDomains().get(i),
+            i == 0 ? "domain_id_4" : "domain_id_1", false);
+      }
+    } finally {
+      timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
+    }
+  }
+
+  @Test
+  public void testPutDomain() throws Exception {
+    TimelineDomain domain = new TimelineDomain();
+    domain.setId("test_domain_id");
+    WebResource r = resource();
+    // No owner, will be rejected
+    ClientResponse response = r.path("ws").path("v1")
+        .path("timeline").path("domain")
+        .accept(MediaType.APPLICATION_JSON)
+        .type(MediaType.APPLICATION_JSON)
+        .put(ClientResponse.class, domain);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(ClientResponse.Status.FORBIDDEN,
+        response.getClientResponseStatus());
+
+    response = r.path("ws").path("v1")
+        .path("timeline").path("domain")
+        .queryParam("user.name", "tester")
+        .accept(MediaType.APPLICATION_JSON)
+        .type(MediaType.APPLICATION_JSON)
+        .put(ClientResponse.class, domain);
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    
+    // Verify the domain exists
+    response = r.path("ws").path("v1").path("timeline")
+        .path("domain").path("test_domain_id")
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    domain = response.getEntity(TimelineDomain.class);
+    Assert.assertNotNull(domain);
+    Assert.assertEquals("test_domain_id", domain.getId());
+    Assert.assertEquals("tester", domain.getOwner());
+    Assert.assertEquals(null, domain.getDescription());
+
+    // Update the domain
+    domain.setDescription("test_description");
+    response = r.path("ws").path("v1")
+        .path("timeline").path("domain")
+        .queryParam("user.name", "tester")
+        .accept(MediaType.APPLICATION_JSON)
+        .type(MediaType.APPLICATION_JSON)
+        .put(ClientResponse.class, domain);
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+
+    // Verify the domain is updated
+    response = r.path("ws").path("v1").path("timeline")
+        .path("domain").path("test_domain_id")
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    domain = response.getEntity(TimelineDomain.class);
+    Assert.assertNotNull(domain);
+    Assert.assertEquals("test_domain_id", domain.getId());
+    Assert.assertEquals("test_description", domain.getDescription());
+  }
+
+  @Test
+  public void testPutDomainYarnACLsEnabled() throws Exception {
+    AdminACLsManager oldAdminACLsManager =
+        timelineACLsManager.setAdminACLsManager(adminACLsManager);
+    try {
+      TimelineDomain domain = new TimelineDomain();
+      domain.setId("test_domain_id_acl");
+      WebResource r = resource();
+      ClientResponse response = r.path("ws").path("v1")
+          .path("timeline").path("domain")
+          .queryParam("user.name", "tester")
+          .accept(MediaType.APPLICATION_JSON)
+          .type(MediaType.APPLICATION_JSON)
+          .put(ClientResponse.class, domain);
+      assertEquals(Status.OK.getStatusCode(), response.getStatus());
+
+      // Update the domain by another user
+      response = r.path("ws").path("v1")
+          .path("timeline").path("domain")
+          .queryParam("user.name", "other")
+          .accept(MediaType.APPLICATION_JSON)
+          .type(MediaType.APPLICATION_JSON)
+          .put(ClientResponse.class, domain);
+      assertEquals(Status.FORBIDDEN.getStatusCode(), response.getStatus());
+    } finally {
+      timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
+    }
+  }
+
+  private static void verifyDomain(TimelineDomain domain,
+      String domainId, boolean hasAccess) {
+    Assert.assertNotNull(domain);
+    Assert.assertEquals(domainId, domain.getId());
+    // The specific values have been verified in TestMemoryTimelineStore
+    Assert.assertTrue(hasAccess && domain.getDescription() != null ||
+        !hasAccess && domain.getDescription() == null);
+    Assert.assertTrue(hasAccess && domain.getOwner() != null ||
+        !hasAccess && domain.getOwner() == null);
+    Assert.assertTrue(hasAccess && domain.getReaders() != null ||
+        !hasAccess && domain.getReaders() == null);
+    Assert.assertTrue(hasAccess && domain.getWriters() != null ||
+        !hasAccess && domain.getWriters() == null);
+    Assert.assertTrue(hasAccess && domain.getCreatedTime() != null ||
+        !hasAccess && domain.getCreatedTime() == null);
+    Assert.assertTrue(hasAccess && domain.getModifiedTime() != null ||
+        !hasAccess && domain.getModifiedTime() == null);
+  }
 }
