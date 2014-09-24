@@ -133,7 +133,7 @@ extends AbstractDelegationTokenIdentifier>
   
   /** 
    * Add a previously used master key to cache (when NN restarts), 
-   * should be called before activate().
+   * should be called before activate(). 
    * */
   public synchronized void addKey(DelegationKey key) throws IOException {
     if (running) // a safety check
@@ -141,7 +141,7 @@ extends AbstractDelegationTokenIdentifier>
     if (key.getKeyId() > currentId) {
       currentId = key.getKeyId();
     }
-    storeDelegationKey(key);
+    allKeys.put(key.getKeyId(), key);
   }
 
   public synchronized DelegationKey[] getAllKeys() {
@@ -268,6 +268,8 @@ extends AbstractDelegationTokenIdentifier>
   /**
    * This method is intended to be used for recovering persisted delegation
    * tokens
+   * This method must be called before this secret manager is activated (before
+   * startThreads() is called)
    * @param identifier identifier read from persistent storage
    * @param renewDate token renew time
    * @throws IOException
@@ -280,18 +282,17 @@ extends AbstractDelegationTokenIdentifier>
           "Can't add persisted delegation token to a running SecretManager.");
     }
     int keyId = identifier.getMasterKeyId();
-    DelegationKey dKey = getDelegationKey(keyId);
+    DelegationKey dKey = allKeys.get(keyId);
     if (dKey == null) {
       LOG.warn("No KEY found for persisted identifier " + identifier.toString());
       return;
     }
     byte[] password = createPassword(identifier.getBytes(), dKey.getKey());
-    int delegationTokenSeqNum = getDelegationTokenSeqNum();
-    if (identifier.getSequenceNumber() > delegationTokenSeqNum) {
-      setDelegationTokenSeqNum(identifier.getSequenceNumber());
+    if (identifier.getSequenceNumber() > delegationTokenSequenceNumber) {
+      delegationTokenSequenceNumber = identifier.getSequenceNumber();
     }
     if (getTokenInfo(identifier) == null) {
-      storeToken(identifier, new DelegationTokenInformation(renewDate,
+      currentTokens.put(identifier, new DelegationTokenInformation(renewDate,
           password, getTrackingIdIfEnabled(identifier)));
     } else {
       throw new IOException("Same delegation token being added twice.");
@@ -315,7 +316,6 @@ extends AbstractDelegationTokenIdentifier>
         + keyUpdateInterval + tokenMaxLifetime, generateSecret());
     //Log must be invoked outside the lock on 'this'
     logUpdateMasterKey(newKey);
-    storeNewMasterKey(newKey);
     synchronized (this) {
       currentId = newKey.getKeyId();
       currentKey = newKey;
