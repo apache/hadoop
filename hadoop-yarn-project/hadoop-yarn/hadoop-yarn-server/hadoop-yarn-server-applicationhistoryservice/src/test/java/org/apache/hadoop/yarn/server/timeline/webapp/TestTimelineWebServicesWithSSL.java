@@ -24,7 +24,6 @@ import java.util.EnumSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
@@ -124,8 +123,8 @@ public class TestTimelineWebServicesWithSSL {
     private ClientResponse resp;
 
     @Override
-    public ClientResponse doPostingEntities(TimelineEntities entities) {
-      resp = super.doPostingEntities(entities);
+    public ClientResponse doPostingObject(Object obj, String path) {
+      resp = super.doPostingObject(obj, path);
       return resp;
     }
 

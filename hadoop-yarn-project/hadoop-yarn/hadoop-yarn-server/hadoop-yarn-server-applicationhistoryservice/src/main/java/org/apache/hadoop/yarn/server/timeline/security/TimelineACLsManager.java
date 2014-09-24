@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AdminACLsManager;
 import org.apache.hadoop.yarn.server.timeline.EntityIdentifier;
@@ -73,6 +74,31 @@ public class TimelineACLsManager {
     // TODO: Currently we just check the user is the admin or the timeline
     // entity owner. In the future, we need to check whether the user is in the
     // allowed user/group list
+    if (callerUGI != null
+        && (adminAclsManager.isAdmin(callerUGI) ||
+            callerUGI.getShortUserName().equals(owner))) {
+      return true;
+    }
+    return false;
+  }
+
+  public boolean checkAccess(UserGroupInformation callerUGI,
+      TimelineDomain domain) throws YarnException, IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Verifying the access of "
+          + (callerUGI == null ? null : callerUGI.getShortUserName())
+          + " on the timeline domain " + domain);
+    }
+
+    if (!adminAclsManager.areACLsEnabled()) {
+      return true;
+    }
+
+    String owner = domain.getOwner();
+    if (owner == null || owner.length() == 0) {
+      throw new YarnException("Owner information of the timeline domain "
+          + domain.getId() + " is corrupted.");
+    }
     if (callerUGI != null
         && (adminAclsManager.isAdmin(callerUGI) ||
             callerUGI.getShortUserName().equals(owner))) {

@@ -21,17 +21,17 @@ package org.apache.hadoop.yarn.server.timeline.security;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
-import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class TestTimelineACLsManager {
 
   @Test
-  public void testYarnACLsNotEnabled() throws Exception {
+  public void testYarnACLsNotEnabledForEntity() throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, false);
     TimelineACLsManager timelineACLsManager =
@@ -47,7 +47,7 @@ public class TestTimelineACLsManager {
   }
 
   @Test
-  public void testYarnACLsEnabled() throws Exception {
+  public void testYarnACLsEnabledForEntity() throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
     conf.set(YarnConfiguration.YARN_ADMIN_ACL, "admin");
@@ -72,7 +72,7 @@ public class TestTimelineACLsManager {
   }
 
   @Test
-  public void testCorruptedOwnerInfo() throws Exception {
+  public void testCorruptedOwnerInfoForEntity() throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
     conf.set(YarnConfiguration.YARN_ADMIN_ACL, "owner");
@@ -82,6 +82,61 @@ public class TestTimelineACLsManager {
     try {
       timelineACLsManager.checkAccess(
           UserGroupInformation.createRemoteUser("owner"), entity);
+      Assert.fail("Exception is expected");
+    } catch (YarnException e) {
+      Assert.assertTrue("It's not the exact expected exception", e.getMessage()
+          .contains("is corrupted."));
+    }
+  }
+
+  @Test
+  public void testYarnACLsNotEnabledForDomain() throws Exception {
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, false);
+    TimelineACLsManager timelineACLsManager =
+        new TimelineACLsManager(conf);
+    TimelineDomain domain = new TimelineDomain();
+    domain.setOwner("owner");
+    Assert.assertTrue(
+        "Always true when ACLs are not enabled",
+        timelineACLsManager.checkAccess(
+            UserGroupInformation.createRemoteUser("user"), domain));
+  }
+
+  @Test
+  public void testYarnACLsEnabledForDomain() throws Exception {
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+    conf.set(YarnConfiguration.YARN_ADMIN_ACL, "admin");
+    TimelineACLsManager timelineACLsManager =
+        new TimelineACLsManager(conf);
+    TimelineDomain domain = new TimelineDomain();
+    domain.setOwner("owner");
+    Assert.assertTrue(
+        "Owner should be allowed to access",
+        timelineACLsManager.checkAccess(
+            UserGroupInformation.createRemoteUser("owner"), domain));
+    Assert.assertFalse(
+        "Other shouldn't be allowed to access",
+        timelineACLsManager.checkAccess(
+            UserGroupInformation.createRemoteUser("other"), domain));
+    Assert.assertTrue(
+        "Admin should be allowed to access",
+        timelineACLsManager.checkAccess(
+            UserGroupInformation.createRemoteUser("admin"), domain));
+  }
+
+  @Test
+  public void testCorruptedOwnerInfoForDomain() throws Exception {
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+    conf.set(YarnConfiguration.YARN_ADMIN_ACL, "owner");
+    TimelineACLsManager timelineACLsManager =
+        new TimelineACLsManager(conf);
+    TimelineDomain domain = new TimelineDomain();
+    try {
+      timelineACLsManager.checkAccess(
+          UserGroupInformation.createRemoteUser("owner"), domain);
       Assert.fail("Exception is expected");
     } catch (YarnException e) {
       Assert.assertTrue("It's not the exact expected exception", e.getMessage()

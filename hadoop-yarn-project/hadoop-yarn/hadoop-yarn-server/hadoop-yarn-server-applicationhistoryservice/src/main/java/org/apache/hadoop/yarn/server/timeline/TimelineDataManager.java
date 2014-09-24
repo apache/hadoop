@@ -34,6 +34,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomains;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.timeline.TimelineReader.Field;
@@ -284,6 +286,78 @@ public class TimelineDataManager {
     // add the errors of timeline system filter key conflict
     response.addErrors(errors);
     return response;
+  }
+
+  /**
+   * Add or update an domain. If the domain already exists, only the owner
+   * and the admin can update it.
+   */
+  public void putDomain(TimelineDomain domain,
+      UserGroupInformation callerUGI) throws YarnException, IOException {
+    TimelineDomain existingDomain =
+        store.getDomain(domain.getId());
+    if (existingDomain != null) {
+      if (!timelineACLsManager.checkAccess(callerUGI, existingDomain)) {
+        throw new YarnException(callerUGI.getShortUserName() +
+            " is not allowed to override an existing domain " +
+            existingDomain.getId());
+      }
+      // Set it again in case ACLs are not enabled: The domain can be
+      // modified by every body, but the owner is not changed.
+      domain.setOwner(existingDomain.getOwner());
+    }
+    store.put(domain);
+  }
+
+  /**
+   * Get a single domain of the particular ID. If callerUGI is not the owner
+   * or the admin of the domain, we need to hide the details from him, and
+   * only allow him to see the ID.
+   */
+  public TimelineDomain getDomain(String domainId,
+      UserGroupInformation callerUGI) throws YarnException, IOException {
+    TimelineDomain domain = store.getDomain(domainId);
+    if (domain != null) {
+      if (timelineACLsManager.checkAccess(callerUGI, domain)) {
+        return domain;
+      } else {
+        hideDomainDetails(domain);
+        return domain;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Get all the domains that belong to the given owner. If callerUGI is not
+   * the owner or the admin of the domain, we need to hide the details from
+   * him, and only allow him to see the ID.
+   */
+  public TimelineDomains getDomains(String owner,
+      UserGroupInformation callerUGI) throws YarnException, IOException {
+    TimelineDomains domains = store.getDomains(owner);
+    boolean hasAccess = true;
+    boolean isChecked = false;
+    for (TimelineDomain domain : domains.getDomains()) {
+      // The owner for each domain is the same, just need to check on
+      if (!isChecked) {
+        hasAccess = timelineACLsManager.checkAccess(callerUGI, domain);
+        isChecked = true;
+      }
+      if (!hasAccess) {
+        hideDomainDetails(domain);
+      }
+    }
+    return domains;
+  }
+
+  private static void hideDomainDetails(TimelineDomain domain) {
+    domain.setDescription(null);
+    domain.setOwner(null);
+    domain.setReaders(null);
+    domain.setWriters(null);
+    domain.setCreatedTime(null);
+    domain.setModifiedTime(null);
   }
 
   private static boolean extendFields(EnumSet<Field> fieldEnums) {

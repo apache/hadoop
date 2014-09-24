@@ -18,11 +18,14 @@
 
 package org.apache.hadoop.yarn.server.timeline;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +43,8 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents.EventsOfOneEntity;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomains;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
 
@@ -61,6 +66,10 @@ public class MemoryTimelineStore
       new HashMap<EntityIdentifier, TimelineEntity>();
   private Map<EntityIdentifier, Long> entityInsertTimes =
       new HashMap<EntityIdentifier, Long>();
+  private Map<String, TimelineDomain> domainsById =
+      new HashMap<String, TimelineDomain>();
+  private Map<String, Set<TimelineDomain>> domainsByOwner =
+      new HashMap<String, Set<TimelineDomain>>();
 
   public MemoryTimelineStore() {
     super(MemoryTimelineStore.class.getName());
@@ -211,6 +220,58 @@ public class MemoryTimelineStore
   }
 
   @Override
+  public TimelineDomain getDomain(String domainId)
+      throws IOException {
+    TimelineDomain domain = domainsById.get(domainId);
+    if (domain == null) {
+      return null;
+    } else {
+      return createTimelineDomain(
+          domain.getId(),
+          domain.getDescription(),
+          domain.getOwner(),
+          domain.getReaders(),
+          domain.getWriters(),
+          domain.getCreatedTime(),
+          domain.getModifiedTime());
+    }
+  }
+
+  @Override
+  public TimelineDomains getDomains(String owner)
+      throws IOException {
+    List<TimelineDomain> domains = new ArrayList<TimelineDomain>();
+    for (TimelineDomain domain : domainsByOwner.get(owner)) {
+      TimelineDomain domainToReturn = createTimelineDomain(
+          domain.getId(),
+          domain.getDescription(),
+          domain.getOwner(),
+          domain.getReaders(),
+          domain.getWriters(),
+          domain.getCreatedTime(),
+          domain.getModifiedTime());
+      domains.add(domainToReturn);
+    }
+    Collections.sort(domains, new Comparator<TimelineDomain>() {
+      @Override
+      public int compare(
+          TimelineDomain domain1, TimelineDomain domain2) {
+         int result = domain2.getCreatedTime().compareTo(
+             domain1.getCreatedTime());
+         if (result == 0) {
+           return domain2.getModifiedTime().compareTo(
+               domain1.getModifiedTime());
+         } else {
+           return result;
+         }
+      }
+    });
+    TimelineDomains domainsToReturn = new TimelineDomains();
+    domainsToReturn.addDomains(domains);
+    return domainsToReturn;
+  }
+
+  @Override
   public synchronized TimelinePutResponse put(TimelineEntities data) {
     TimelinePutResponse response = new TimelinePutResponse();
     for (TimelineEntity entity : data.getEntities()) {
@@ -306,6 +367,44 @@ public class MemoryTimelineStore
       }
     }
     return response;
+  }
+
+  public void put(TimelineDomain domain) throws IOException {
+    TimelineDomain domainToReplace =
+        domainsById.get(domain.getId());
+    long currentTimestamp = System.currentTimeMillis();
+    TimelineDomain domainToStore = createTimelineDomain(
+        domain.getId(), domain.getDescription(), domain.getOwner(),
+        domain.getReaders(), domain.getWriters(),
+        (domainToReplace == null ?
+            currentTimestamp : domainToReplace.getCreatedTime()),
+        currentTimestamp);
+    domainsById.put(domainToStore.getId(), domainToStore);
+    Set<TimelineDomain> domainsByOneOwner =
+        domainsByOwner.get(domainToStore.getOwner());
+    if (domainsByOneOwner == null) {
+      domainsByOneOwner = new HashSet<TimelineDomain>();
+      domainsByOwner.put(domainToStore.getOwner(), domainsByOneOwner);
+    }
+    if (domainToReplace != null) {
+      domainsByOneOwner.remove(domainToReplace);
+    }
+    domainsByOneOwner.add(domainToStore);
+  }
+
+  private static TimelineDomain createTimelineDomain(
+      String id, String description, String owner,
+      String readers, String writers,
+      Long createdTime, Long modifiedTime) {
+    TimelineDomain domainToStore = new TimelineDomain();
+    domainToStore.setId(id);
+    domainToStore.setDescription(description);
+    domainToStore.setOwner(owner);
+    domainToStore.setReaders(readers);
+    domainToStore.setWriters(writers);
+    domainToStore.setCreatedTime(createdTime);
+    domainToStore.setModifiedTime(modifiedTime);
+    return domainToStore;
   }
 
   private static TimelineEntity maskFields(

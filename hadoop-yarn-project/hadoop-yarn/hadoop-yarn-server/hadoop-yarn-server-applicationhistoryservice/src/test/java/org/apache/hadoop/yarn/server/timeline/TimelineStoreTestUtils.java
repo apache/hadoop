@@ -38,11 +38,11 @@ import java.util.TreeSet;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
-import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents.EventsOfOneEntity;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomains;
+import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
-import org.apache.hadoop.yarn.server.timeline.NameValuePair;
-import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineReader.Field;
 
 public class TimelineStoreTestUtils {
@@ -88,9 +88,9 @@ public class TimelineStoreTestUtils {
   protected long beforeTs;
 
   /**
-   * Load test data into the given store
+   * Load test entity data into the given store
    */
-  protected void loadTestData() throws IOException {
+  protected void loadTestEntityData() throws IOException {
     beforeTs = System.currentTimeMillis()-1;
     TimelineEntities entities = new TimelineEntities();
     Map<String, Set<Object>> primaryFilters =
@@ -184,9 +184,9 @@ public class TimelineStoreTestUtils {
   }
 
   /**
-   * Load verification data
+   * Load verification entity data
    */
-  protected void loadVerificationData() throws Exception {
+  protected void loadVerificationEntityData() throws Exception {
     userFilter = new NameValuePair("user", "username");
     numericFilter1 = new NameValuePair("appname", Integer.MAX_VALUE);
     numericFilter2 = new NameValuePair("long", (long)Integer.MAX_VALUE + 1l);
@@ -261,6 +261,51 @@ public class TimelineStoreTestUtils {
     events2 = new ArrayList<TimelineEvent>();
     events2.add(ev3);
     events2.add(ev4);
+  }
+
+  private TimelineDomain domain1;
+  private TimelineDomain domain2;
+  private TimelineDomain domain3;
+  private long elapsedTime;
+
+  protected void loadTestDomainData() throws IOException {
+    domain1 = new TimelineDomain();
+    domain1.setId("domain_id_1");
+    domain1.setDescription("description_1");
+    domain1.setOwner("owner_1");
+    domain1.setReaders("reader_user_1 reader_group_1");
+    domain1.setWriters("writer_user_1 writer_group_1");
+    store.put(domain1);
+
+    domain2 = new TimelineDomain();
+    domain2.setId("domain_id_2");
+    domain2.setDescription("description_2");
+    domain2.setOwner("owner_2");
+    domain2.setReaders("reader_user_2 reader_group_2");
+    domain2.setWriters("writer_user_2writer_group_2");
+    store.put(domain2);
+
+    // Wait a second before updating the domain information
+    elapsedTime = 1000;
+    try {
+      Thread.sleep(elapsedTime);
+    } catch (InterruptedException e) {
+      throw new IOException(e);
+    }
+
+    domain2.setDescription("description_3");
+    domain2.setOwner("owner_3");
+    domain2.setReaders("reader_user_3 reader_group_3");
+    domain2.setWriters("writer_user_3 writer_group_3");
+    store.put(domain2);
+
+    domain3 = new TimelineDomain();
+    domain3.setId("domain_id_4");
+    domain3.setDescription("description_4");
+    domain3.setOwner("owner_1");
+    domain3.setReaders("reader_user_4 reader_group_4");
+    domain3.setWriters("writer_user_4 writer_group_4");
+    store.put(domain3);
   }
 
   public void testGetSingleEntity() throws IOException {
@@ -519,7 +564,7 @@ public class TimelineStoreTestUtils {
     assertEquals(2, getEntitiesWithPrimaryFilter("type_1", userFilter).size());
     // check insert time is not overwritten
     long beforeTs = this.beforeTs;
-    loadTestData();
+    loadTestEntityData();
     assertEquals(0, getEntitiesFromTs("type_1", beforeTs).size());
     assertEquals(0, getEntitiesFromTs("type_2", beforeTs).size());
     assertEquals(0, getEntitiesFromTsWithPrimaryFilter("type_1", userFilter,
@@ -788,4 +833,39 @@ public class TimelineStoreTestUtils {
     return event;
   }
 
+  public void testGetDomain() throws IOException {
+    TimelineDomain actualDomain1 =
+        store.getDomain(domain1.getId());
+    verifyDomainInfo(domain1, actualDomain1);
+    assertTrue(actualDomain1.getCreatedTime() > 0);
+    assertTrue(actualDomain1.getModifiedTime() > 0);
+    assertEquals(
+        actualDomain1.getCreatedTime(), actualDomain1.getModifiedTime());
+
+    TimelineDomain actualDomain2 =
+        store.getDomain(domain2.getId());
+    verifyDomainInfo(domain2, actualDomain2);
+    assertEquals("domain_id_2", actualDomain2.getId());
+    assertTrue(actualDomain2.getCreatedTime() > 0);
+    assertTrue(actualDomain2.getModifiedTime() > 0);
+    assertTrue(
+        actualDomain2.getCreatedTime() < actualDomain2.getModifiedTime());
+  }
+
+  public void testGetDomains() throws IOException {
+    TimelineDomains actualDomains =
+        store.getDomains("owner_1");
+    assertEquals(2, actualDomains.getDomains().size());
+    verifyDomainInfo(domain3, actualDomains.getDomains().get(0));
+    verifyDomainInfo(domain1, actualDomains.getDomains().get(1));
+  }
+
+  private static void verifyDomainInfo(
+      TimelineDomain expected, TimelineDomain actual) {
+    assertEquals(expected.getId(), actual.getId());
+    assertEquals(expected.getDescription(), actual.getDescription());
+    assertEquals(expected.getOwner(), actual.getOwner());
+    assertEquals(expected.getReaders(), actual.getReaders());
+    assertEquals(expected.getWriters(), actual.getWriters());
+  }
 }
