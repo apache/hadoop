@@ -36,7 +36,7 @@ import org.apache.hadoop.conf.ReconfigurationException;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -56,6 +56,7 @@ import org.apache.hadoop.hdfs.server.balancer.Dispatcher;
 import org.apache.hadoop.hdfs.server.balancer.ExitStatus;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -87,7 +88,7 @@ public class TestStorageMover {
   private static final short REPL = 3;
   private static final int NUM_DATANODES = 6;
   private static final Configuration DEFAULT_CONF = new HdfsConfiguration();
-  private static final BlockStoragePolicy.Suite DEFAULT_POLICIES;
+  private static final BlockStoragePolicySuite DEFAULT_POLICIES;
   private static final BlockStoragePolicy HOT;
   private static final BlockStoragePolicy WARM;
   private static final BlockStoragePolicy COLD;
@@ -99,7 +100,7 @@ public class TestStorageMover {
         2L);
     DEFAULT_CONF.setLong(DFSConfigKeys.DFS_MOVER_MOVEDWINWIDTH_KEY, 2000L);
 
-    DEFAULT_POLICIES = BlockStoragePolicy.readBlockStorageSuite(DEFAULT_CONF);
+    DEFAULT_POLICIES = BlockStoragePolicySuite.createDefaultSuite();
     HOT = DEFAULT_POLICIES.getPolicy("HOT");
     WARM = DEFAULT_POLICIES.getPolicy("WARM");
     COLD = DEFAULT_POLICIES.getPolicy("COLD");
@@ -192,13 +193,21 @@ public class TestStorageMover {
 
     private MiniDFSCluster cluster;
     private DistributedFileSystem dfs;
-    private final BlockStoragePolicy.Suite policies;
+    private final BlockStoragePolicySuite policies;
 
     MigrationTest(ClusterScheme cScheme, NamespaceScheme nsScheme) {
       this.clusterScheme = cScheme;
       this.nsScheme = nsScheme;
       this.conf = clusterScheme.conf;
-      this.policies = BlockStoragePolicy.readBlockStorageSuite(conf);
+      this.policies = DEFAULT_POLICIES;
+    }
+
+    MigrationTest(ClusterScheme cScheme, NamespaceScheme nsScheme,
+        BlockStoragePolicySuite policies) {
+      this.clusterScheme = cScheme;
+      this.nsScheme = nsScheme;
+      this.conf = clusterScheme.conf;
+      this.policies = policies;
     }
 
     /**

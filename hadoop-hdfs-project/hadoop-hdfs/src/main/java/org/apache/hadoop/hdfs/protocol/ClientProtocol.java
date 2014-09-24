@@ -260,6 +260,13 @@ public interface ClientProtocol {
       SnapshotAccessControlException, IOException;
 
   /**
+   * Get all the available block storage policies.
+   * @return All the in-use block storage policies currently.
+   */
+  @Idempotent
+  public BlockStoragePolicy[] getStoragePolicySuite() throws IOException;
+
+  /**
    * Set the storage policy for a file/directory
    * @param src Path of an existing file/directory. 
    * @param policyName The name of the storage policy

@@ -72,6 +72,7 @@ import org.apache.hadoop.hdfs.inotify.EventsList;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
@@ -585,6 +586,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public void setStoragePolicy(String src, String policyName)
       throws IOException {
     namesystem.setStoragePolicy(src, policyName);
+  }
+
+  @Override
+  public BlockStoragePolicy[] getStoragePolicySuite() throws IOException {
+    return namesystem.getStoragePolicySuite();
   }
 
   @Override // ClientProtocol

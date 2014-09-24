@@ -62,6 +62,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
@@ -502,6 +503,12 @@ public class DistributedFileSystem extends FileSystem {
         }
       }
     }.resolve(this, absF);
+  }
+
+  /** Get all the existing storage policies */
+  public BlockStoragePolicy[] getStoragePolicySuite() throws IOException {
+    statistics.incrementReadOps(1);
+    return dfs.getStoragePolicySuite();
   }
 
   /**
