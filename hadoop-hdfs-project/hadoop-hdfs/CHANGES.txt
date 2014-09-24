@@ -575,6 +575,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-6987. Move CipherSuite xattr information up to the encryption zone
     root. (Zhe Zhang via wang)
 
+    HDFS-7139. Unit test for creating encryption zone on root path. (Zhe Zhang via wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
