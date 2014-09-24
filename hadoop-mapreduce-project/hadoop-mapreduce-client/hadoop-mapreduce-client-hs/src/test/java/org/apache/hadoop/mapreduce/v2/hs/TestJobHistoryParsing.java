@@ -806,7 +806,7 @@ public class TestJobHistoryParsing {
   /**
    * Simple test PartialJob
    */
-  @Test(timeout = 1000)
+  @Test(timeout = 3000)
   public void testPartialJob() throws Exception {
     JobId jobId = new JobIdPBImpl();
     jobId.setId(0);

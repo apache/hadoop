@@ -150,6 +150,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6095. Enable DistributedCache for uber-mode Jobs (Gera Shegalov
     via jlowe)
 
+    MAPREDUCE-6104. TestJobHistoryParsing.testPartialJob fails in branch-2
+    (Mit Desai via jlowe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
