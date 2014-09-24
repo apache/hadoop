@@ -593,6 +593,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-7130. TestDataTransferKeepalive fails intermittently on Windows.
     (cnauroth)
 
+    HDFS-6534. Fix build on macosx: HDFS parts (Binglin Chang via aw)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
