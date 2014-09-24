@@ -518,6 +518,9 @@ Release 2.6.0 - UNRELEASED
     wrong value if excluded nodes passed are not part of the cluster tree
     (vinayakumarb)
 
+    HADOOP-11064. UnsatisifedLinkError with hadoop 2.4 JARs on hadoop-2.6 due to
+    NativeCRC32 method changes. (cnauroth)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

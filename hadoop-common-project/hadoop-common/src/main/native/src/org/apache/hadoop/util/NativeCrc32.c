@@ -181,6 +181,18 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_util_NativeCrc32_nativeComputeChun
   }
 }
 
+JNIEXPORT void JNICALL Java_org_apache_hadoop_util_NativeCrc32_nativeVerifyChunkedSums
+  (JNIEnv *env, jclass clazz,
+    jint bytes_per_checksum, jint j_crc_type,
+    jobject j_sums, jint sums_offset,
+    jobject j_data, jint data_offset, jint data_len,
+    jstring j_filename, jlong base_pos)
+{
+  Java_org_apache_hadoop_util_NativeCrc32_nativeComputeChunkedSums(env, clazz,
+    bytes_per_checksum, j_crc_type, j_sums, sums_offset, j_data, data_offset,
+    data_len, j_filename, base_pos, JNI_TRUE);
+}
+
 JNIEXPORT void JNICALL Java_org_apache_hadoop_util_NativeCrc32_nativeComputeChunkedSumsByteArray
   (JNIEnv *env, jclass clazz,
     jint bytes_per_checksum, jint j_crc_type,
