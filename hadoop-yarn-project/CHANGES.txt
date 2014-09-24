@@ -434,6 +434,8 @@ Release 2.6.0 - UNRELEASED
     TestFairScheduler.testContinuousScheduling. 
     (Ratandeep Ratti and kasha via kasha)
 
+    YARN-2161. Fix build on macosx: YARN parts (Binglin Chang via aw)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

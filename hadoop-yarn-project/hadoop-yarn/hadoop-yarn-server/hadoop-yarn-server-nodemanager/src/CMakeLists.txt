@@ -20,6 +20,9 @@ set(CMAKE_BUILD_TYPE, Release)
 
 include(../../../../../hadoop-common-project/hadoop-common/src/JNIFlags.cmake NO_POLICY_SCOPE)
 
+include(CheckFunctionExists)
+CHECK_FUNCTION_EXISTS(fcloseall HAVE_FCLOSEALL)
+
 function(output_directory TGT DIR)
     SET_TARGET_PROPERTIES(${TGT} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${DIR}")

@@ -103,7 +103,12 @@ char *resolve_config_path(const char* file_name, const char *root) {
     real_fname = buffer;
   }
 
-  return (real_fname == NULL) ? NULL : realpath(real_fname, NULL);
+  char * ret = (real_fname == NULL) ? NULL : realpath(real_fname, NULL);
+#ifdef DEBUG
+  fprintf(stderr, "resolve_config_path(file_name=%s,root=%s)=%s\n",
+          file_name, root ? root : "null", ret ? ret : "null");
+#endif
+  return ret;
 }
 
 /**
