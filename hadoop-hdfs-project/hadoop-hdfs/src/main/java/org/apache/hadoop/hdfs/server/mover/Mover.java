@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.server.balancer.Dispatcher.DDatanode.StorageGroup;
 import org.apache.hadoop.hdfs.server.balancer.ExitStatus;
 import org.apache.hadoop.hdfs.server.balancer.Matcher;
 import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
@@ -102,7 +103,7 @@ public class Mover {
   private final StorageMap storages;
   private final List<Path> targetPaths;
 
-  private final BlockStoragePolicy.Suite blockStoragePolicies;
+  private final BlockStoragePolicy[] blockStoragePolicies;
 
   Mover(NameNodeConnector nnc, Configuration conf) {
     final long movedWinWidth = conf.getLong(
@@ -119,11 +120,13 @@ public class Mover {
         Collections.<String> emptySet(), movedWinWidth, moverThreads, 0,
         maxConcurrentMovesPerNode, conf);
     this.storages = new StorageMap();
-    this.blockStoragePolicies = BlockStoragePolicy.readBlockStorageSuite(conf);
     this.targetPaths = nnc.getTargetPaths();
+    this.blockStoragePolicies = new BlockStoragePolicy[1 <<
+        BlockStoragePolicySuite.ID_BIT_LENGTH];
   }
 
   void init() throws IOException {
+    initStoragePolicies();
     final List<DatanodeStorageReport> reports = dispatcher.init();
     for(DatanodeStorageReport r : reports) {
       final DDatanode dn = dispatcher.newDatanode(r.getDatanodeInfo());
@@ -134,6 +137,14 @@ public class Mover {
             maxRemaining) : null;
         storages.add(source, target);
       }
+    }
+  }
+
+  private void initStoragePolicies() throws IOException {
+    BlockStoragePolicy[] policies = dispatcher.getDistributedFileSystem()
+        .getStoragePolicySuite();
+    for (BlockStoragePolicy policy : policies) {
+      this.blockStoragePolicies[policy.getId()] = policy;
     }
   }
 
@@ -305,7 +316,7 @@ public class Mover {
           if (!isSnapshotPathInCurrent(fullPath)) {
             // the full path is a snapshot path but it is also included in the
             // current directory tree, thus ignore it.
-            hasRemaining = processFile((HdfsLocatedFileStatus)status);
+            hasRemaining = processFile(fullPath, (HdfsLocatedFileStatus)status);
           }
         } catch (IOException e) {
           LOG.warn("Failed to check the status of " + parent
@@ -317,9 +328,17 @@ public class Mover {
     }
 
     /** @return true if it is necessary to run another round of migration */
-    private boolean processFile(HdfsLocatedFileStatus status) {
-      final BlockStoragePolicy policy = blockStoragePolicies.getPolicy(
-          status.getStoragePolicy());
+    private boolean processFile(String fullPath, HdfsLocatedFileStatus status) {
+      final byte policyId = status.getStoragePolicy();
+      // currently we ignore files with unspecified storage policy
+      if (policyId == BlockStoragePolicySuite.ID_UNSPECIFIED) {
+        return false;
+      }
+      final BlockStoragePolicy policy = blockStoragePolicies[policyId];
+      if (policy == null) {
+        LOG.warn("Failed to get the storage policy of file " + fullPath);
+        return false;
+      }
       final List<StorageType> types = policy.chooseStorageTypes(
           status.getReplication());
 

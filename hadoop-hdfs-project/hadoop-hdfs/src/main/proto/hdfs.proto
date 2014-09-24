@@ -169,6 +169,20 @@ message StorageTypesProto {
 }
 
 /**
+ * Block replica storage policy.
+ */
+message BlockStoragePolicyProto {
+  required uint32 policyId = 1;
+  required string name = 2;
+  // a list of storage types for storing the block replicas when creating a
+  // block.
+  required StorageTypesProto creationPolicy = 3;
+  // A list of storage types for creation fallback storage.
+  optional StorageTypesProto creationFallbackPolicy = 4;
+  optional StorageTypesProto replicationFallbackPolicy = 5;
+}
+
+/**
  * A list of storage IDs. 
  */
 message StorageUuidsProto {

@@ -108,6 +108,13 @@ message SetStoragePolicyRequestProto {
 message SetStoragePolicyResponseProto { // void response
 }
 
+message GetStoragePolicySuiteRequestProto { // void request
+}
+
+message GetStoragePolicySuiteResponseProto {
+  repeated BlockStoragePolicyProto policies = 1;
+}
+
 message SetPermissionRequestProto {
   required string src = 1;
   required FsPermissionProto permission = 2;
@@ -699,6 +706,8 @@ service ClientNamenodeProtocol {
       returns(SetReplicationResponseProto);
   rpc setStoragePolicy(SetStoragePolicyRequestProto)
       returns(SetStoragePolicyResponseProto);
+  rpc getStoragePolicySuite(GetStoragePolicySuiteRequestProto)
+      returns(GetStoragePolicySuiteResponseProto);
   rpc setPermission(SetPermissionRequestProto)
       returns(SetPermissionResponseProto);
   rpc setOwner(SetOwnerRequestProto) returns(SetOwnerResponseProto);

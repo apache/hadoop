@@ -44,7 +44,7 @@ import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFormat;
-import org.apache.hadoop.hdfs.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -63,6 +63,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.ipc.GenericRefreshProtocol;
@@ -609,15 +610,18 @@ public class DFSAdmin extends FsShell {
           + argv[1]);
     }
     byte storagePolicyId = status.getStoragePolicy();
-    BlockStoragePolicy.Suite suite = BlockStoragePolicy
-        .readBlockStorageSuite(getConf());
-    BlockStoragePolicy policy = suite.getPolicy(storagePolicyId);
-    if (policy != null) {
-      System.out.println("The storage policy of " + argv[1] + ":\n" + policy);
+    if (storagePolicyId == BlockStoragePolicySuite.ID_UNSPECIFIED) {
+      System.out.println("The storage policy of " + argv[1] + " is unspecified");
       return 0;
-    } else {
-      throw new IOException("Cannot identify the storage policy for " + argv[1]);
     }
+    BlockStoragePolicy[] policies = dfs.getStoragePolicySuite();
+    for (BlockStoragePolicy p : policies) {
+      if (p.getId() == storagePolicyId) {
+        System.out.println("The storage policy of " + argv[1] + ":\n" + p);
+        return 0;
+      }
+    }
+    throw new IOException("Cannot identify the storage policy for " + argv[1]);
   }
 
   /**
