@@ -222,6 +222,8 @@ Trunk (Unreleased)
 
     MAPREDUCE-6077. native-task: Remove CustomModule examples in nativetask (seanzhong)
 
+    MAPREDUCE-6078. native-task: fix gtest build on macosx (Binglin Chang)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
