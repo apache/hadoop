@@ -346,35 +346,35 @@ message QueueUserACLInfoProto {
 ////////////////////////////////////////////////////////////////////////
 
 message ReservationIdProto {
-  optional int64 id = 1;
-  optional int64 cluster_timestamp = 2;
+optional int64 id = 1;
+optional int64 cluster_timestamp = 2;
 }
 
 message ReservationRequestProto {
-  optional ResourceProto capability = 1;
-  optional int32 num_containers = 2 [default = 1];
-  optional int32 concurrency = 3 [default = 1];
-  optional int64 duration = 4 [default = -1];
+optional ResourceProto capability = 1;
+optional int32 num_containers = 2 [default = 1];
+optional int32 concurrency = 3 [default = 1];
+optional int64 duration = 4 [default = -1];
 }
 
 message ReservationRequestsProto {
-  repeated ReservationRequestProto reservation_resources = 1;
-  optional ReservationRequestInterpreterProto interpreter = 2 [default = R_ALL];
+repeated ReservationRequestProto reservation_resources = 1;
+optional ReservationRequestInterpreterProto interpreter = 2 [default = R_ALL];
 }
 
 message ReservationDefinitionProto {
-  optional ReservationRequestsProto reservation_requests = 1;
-  optional int64 arrival = 2;
-  optional int64 deadline = 3;
-  optional string reservation_name = 4;
+optional ReservationRequestsProto reservation_requests = 1;
+optional int64 arrival = 2;
+optional int64 deadline = 3;
+optional string reservation_name = 4;
 }
 
 enum ReservationRequestInterpreterProto {
-  R_ANY = 0;
-  R_ALL = 1;
-  R_ORDER = 2;
-  R_ORDER_NO_GAP = 3;
- }
+R_ANY = 0;
+R_ALL = 1;
+R_ORDER = 2;
+R_ORDER_NO_GAP = 3;
+}
 
 ////////////////////////////////////////////////////////////////////////
 ////// From container_manager //////////////////////////////////////////

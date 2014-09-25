@@ -117,8 +117,9 @@ extends ApplicationSubmissionContext {
       builder.clearApplicationTags();
       builder.addAllApplicationTags(this.applicationTags);
     }
-    if (this.reservationId != null) {
-      builder.setReservationId(convertToProtoFormat(this.reservationId));
+    if (this.logAggregationContext != null) {
+      builder.setLogAggregationContext(
+          convertToProtoFormat(this.logAggregationContext));
     }
     if (this.reservationId != null) {
       builder.setReservationId(convertToProtoFormat(this.reservationId));
