@@ -204,7 +204,7 @@ public class CapacitySchedulerConfiguration extends Configuration {
       "instantaneous-max-capacity";
 
   @Private
-  public static final long DEFAULT_RESERVATION_WINDOW = 0L;
+  public static final long DEFAULT_RESERVATION_WINDOW = 86400000L;
 
   @Private
   public static final String RESERVATION_ADMISSION_POLICY =

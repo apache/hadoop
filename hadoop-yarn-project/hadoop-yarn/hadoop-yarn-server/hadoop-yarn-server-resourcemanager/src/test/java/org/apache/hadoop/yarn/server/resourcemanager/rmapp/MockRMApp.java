@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
@@ -256,6 +257,11 @@ public class MockRMApp implements RMApp {
 
   @Override
   public RMAppMetrics getRMAppMetrics() {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
+
+  @Override
+  public ReservationId getReservationId() {
     throw new UnsupportedOperationException("Not supported yet.");
   }
 }
