@@ -582,6 +582,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7138. Fix hftp to work with encryption. (clamb via wang)
 
+    HDFS-7118. Improve diagnostics on storage directory rename operations by
+    using NativeIO#renameTo in Storage#rename. (cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
