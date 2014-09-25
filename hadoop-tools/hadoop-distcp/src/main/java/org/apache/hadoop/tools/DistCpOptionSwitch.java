@@ -54,7 +54,7 @@ public enum DistCpOptionSwitch {
           "and timestamps. " +
           "raw.* xattrs are preserved when both the source and destination " +
           "paths are in the /.reserved/raw hierarchy (HDFS only). raw.* xattr" +
-          "preservation is independent of the -p flag." +
+          "preservation is independent of the -p flag. " +
           "Refer to the DistCp documentation for more details.")),
 
   /**

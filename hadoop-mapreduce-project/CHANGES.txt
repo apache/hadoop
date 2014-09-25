@@ -153,6 +153,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6104. TestJobHistoryParsing.testPartialJob fails in branch-2
     (Mit Desai via jlowe)
 
+    MAPREDUCE-6109. Fix minor typo in distcp -p usage text (Charles Lamb
+    via aw)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
