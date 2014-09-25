@@ -243,6 +243,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6808. Add command line option to ask DataNode reload configuration.
     (Lei Xu via Colin Patrick McCabe)
 
+    HDFS-7119. Split error checks in AtomicFileOutputStream#close into separate
+    conditions to improve diagnostics. (cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
