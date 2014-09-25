@@ -71,4 +71,6 @@
     HDFS-6990. Add unit test for evict/delete RAM_DISK block with open
     handle. (Xiaoyu Yao via Arpit Agarwal)
 
+    HDFS-7143. Fix findbugs warnings in HDFS-6581 branch. (szetszwo via
+    Arpit Agarwal)
 

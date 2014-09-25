@@ -29,6 +29,8 @@ import java.io.RandomAccessFile;
 import java.util.Scanner;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DU;
 import org.apache.hadoop.fs.FileUtil;
@@ -43,6 +45,7 @@ import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaBeingWritten;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaWaitingToBeRecovered;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -57,6 +60,8 @@ import org.apache.hadoop.util.Time;
  * This class is synchronized by {@link FsVolumeImpl}.
  */
 class BlockPoolSlice {
+  static final Log LOG = LogFactory.getLog(BlockPoolSlice.class);
+
   private final String bpid;
   private final FsVolumeImpl volume; // volume to which this BlockPool belongs to
   private final File currentDir; // StorageDirectory/current/bpid/current
@@ -369,22 +374,36 @@ class BlockPoolSlice {
         File targetDir = DatanodeUtil.idToBlockDir(finalizedDir, blockId);
 
         if (blockFile.exists()) {
-          File targetBlockFile = new File(targetDir, blockFile.getName());
-          File targetMetaFile = new File(targetDir, metaFile.getName());
 
           if (!targetDir.exists() && !targetDir.mkdirs()) {
-            FsDatasetImpl.LOG.warn("Failed to move " + blockFile + " to " + targetDir);
+            LOG.warn("Failed to mkdirs " + targetDir);
             continue;
           }
 
-          metaFile.renameTo(targetMetaFile);
-          blockFile.renameTo(targetBlockFile);
+          final File targetMetaFile = new File(targetDir, metaFile.getName());
+          try {
+            NativeIO.renameTo(metaFile, targetMetaFile);
+          } catch (IOException e) {
+            LOG.warn("Failed to move meta file from "
+                + metaFile + " to " + targetMetaFile, e);
+            continue;
+
+          }
+
+          final File targetBlockFile = new File(targetDir, blockFile.getName());
+          try {
+            NativeIO.renameTo(blockFile, targetBlockFile);
+          } catch (IOException e) {
+            LOG.warn("Failed to move block file from "
+                + blockFile + " to " + targetBlockFile, e);
+            continue;
+          }
 
           if (targetBlockFile.exists() && targetMetaFile.exists()) {
             ++numRecovered;
           } else {
             // Failure should be rare.
-            FsDatasetImpl.LOG.warn("Failed to move " + blockFile + " to " + targetDir);
+            LOG.warn("Failed to move " + blockFile + " to " + targetDir);
           }
         }
       }
@@ -538,16 +557,23 @@ class BlockPoolSlice {
 
     replicaToDelete = (replicaToKeep == replica1) ? replica2 : replica1;
 
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("resolveDuplicateReplicas decide to keep " + replicaToKeep
+          + ".  Will try to delete " + replicaToDelete);
+    }
+
     // Update volumeMap.
     volumeMap.add(bpid, replicaToKeep);
 
     // Delete the files on disk. Failure here is okay.
-    replicaToDelete.getBlockFile().delete();
-    replicaToDelete.getMetaFile().delete();
-
-    FsDatasetImpl.LOG.info(
-        "resolveDuplicateReplicas keeping " + replicaToKeep.getBlockFile() +
-        ", deleting " + replicaToDelete.getBlockFile());
+    final File blockFile = replicaToDelete.getBlockFile();
+    if (!blockFile.delete()) {
+      LOG.warn("Failed to delete block file " + blockFile);
+    }
+    final File metaFile = replicaToDelete.getMetaFile();
+    if (!metaFile.delete()) {
+      LOG.warn("Failed to delete meta file " + metaFile);
+    }
 
     return replicaToKeep;
   }
