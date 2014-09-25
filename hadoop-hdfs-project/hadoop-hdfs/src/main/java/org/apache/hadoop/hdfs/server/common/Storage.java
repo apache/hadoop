@@ -36,6 +36,8 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.io.nativeio.NativeIO;
+import org.apache.hadoop.io.nativeio.NativeIOException;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.VersionInfo;
 
@@ -985,9 +987,13 @@ public abstract class Storage extends StorageInfo {
   }
 
   public static void rename(File from, File to) throws IOException {
-    if (!from.renameTo(to))
-      throw new IOException("Failed to rename " 
-                            + from.getCanonicalPath() + " to " + to.getCanonicalPath());
+    try {
+      NativeIO.renameTo(from, to);
+    } catch (NativeIOException e) {
+      throw new IOException("Failed to rename " + from.getCanonicalPath()
+        + " to " + to.getCanonicalPath() + " due to failure in native rename. "
+        + e.toString());
+    }
   }
 
   /**

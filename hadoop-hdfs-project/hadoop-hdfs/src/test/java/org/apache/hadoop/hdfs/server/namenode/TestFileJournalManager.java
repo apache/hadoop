@@ -21,6 +21,7 @@ import static org.apache.hadoop.hdfs.server.namenode.TestEditLog.TXNS_PER_FAIL;
 import static org.apache.hadoop.hdfs.server.namenode.TestEditLog.TXNS_PER_ROLL;
 import static org.apache.hadoop.hdfs.server.namenode.TestEditLog.setupEdits;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -42,8 +43,11 @@ import org.apache.hadoop.hdfs.server.namenode.JournalManager.CorruptionException
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.TestEditLog.AbortSpec;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.NativeCodeLoader;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
@@ -59,6 +63,9 @@ public class TestFileJournalManager {
     // the tests run much faster.
     EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
   }
+
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
 
   @Before
   public void setUp() {
@@ -470,6 +477,36 @@ public class TestFileJournalManager {
       }
     } finally {
       IOUtils.cleanup(LOG, elis);
+    }
+  }
+
+  /**
+   * Tests that internal renames are done using native code on platforms that
+   * have it.  The native rename includes more detailed information about the
+   * failure, which can be useful for troubleshooting.
+   */
+  @Test
+  public void testDoPreUpgradeIOError() throws IOException {
+    File storageDir = new File(TestEditLog.TEST_DIR, "preupgradeioerror");
+    List<URI> editUris = Collections.singletonList(storageDir.toURI());
+    NNStorage storage = setupEdits(editUris, 5);
+    StorageDirectory sd = storage.dirIterator(NameNodeDirType.EDITS).next();
+    assertNotNull(sd);
+    // Change storage directory so that renaming current to previous.tmp fails.
+    FileUtil.setWritable(storageDir, false);
+    FileJournalManager jm = null;
+    try {
+      jm = new FileJournalManager(conf, sd, storage);
+      exception.expect(IOException.class);
+      if (NativeCodeLoader.isNativeCodeLoaded()) {
+        exception.expectMessage("failure in native rename");
+      }
+      jm.doPreUpgrade();
+    } finally {
+      IOUtils.cleanup(LOG, jm);
+      // Restore permissions on storage directory and make sure we can delete.
+      FileUtil.setWritable(storageDir, true);
+      FileUtil.fullyDelete(storageDir);
     }
   }
 
