@@ -43,6 +43,8 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import com.sun.jersey.api.client.config.ClientConfig;
+import com.sun.jersey.api.client.config.DefaultClientConfig;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -214,6 +216,7 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
       "org.apache.hadoop.yarn.server.resourcemanager.webapp")
       .contextListenerClass(GuiceServletConfig.class)
       .filterClass(com.google.inject.servlet.GuiceFilter.class)
+      .clientConfig(new DefaultClientConfig(JAXBContextResolver.class))
       .contextPath("jersey-guice-filter").servletPath("/").build());
     switch (run) {
     case 0:
@@ -550,10 +553,10 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
     }
   }
 
-  // Simple test - just post to /apps/id and validate the response
+  // Simple test - just post to /apps/new-application and validate the response
   @Test
   public void testGetNewApplication() throws Exception {
-    // client().addFilter(new LoggingFilter(System.out));
+    client().addFilter(new LoggingFilter(System.out));
     rm.start();
     String mediaTypes[] =
         { MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML };
@@ -653,7 +656,7 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
     // create a test app and submit it via rest(after getting an app-id) then
     // get the app details from the rmcontext and check that everything matches
 
-    // client().addFilter(new LoggingFilter(System.out));
+    client().addFilter(new LoggingFilter(System.out));
     String lrKey = "example";
     String queueName = "testqueue";
     String appName = "test";

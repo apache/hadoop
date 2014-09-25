@@ -444,6 +444,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2596. TestWorkPreservingRMRestart fails with FairScheduler. (kasha)
 
+    YARN-2546. Made REST API for application creation/submission use numeric and
+    boolean types instead of the string of them. (Varun Vasudev via zjshen)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
