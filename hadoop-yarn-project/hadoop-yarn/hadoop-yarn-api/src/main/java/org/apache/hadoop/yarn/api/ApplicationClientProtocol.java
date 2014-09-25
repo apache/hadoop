@@ -553,7 +553,7 @@ public interface ApplicationClientProtocol {
   /**
    * <p>
    * The interface used by clients to submit a new reservation to the
-   * {@link ResourceManager}.
+   * {@code ResourceManager}.
    * </p>
    * 
    * <p>
@@ -566,12 +566,12 @@ public interface ApplicationClientProtocol {
    * 
    * <p>
    * In order to respond, a new admission control component in the
-   * {@link ResourceManager} performs an analysis of the resources that have
+   * {@code ResourceManager} performs an analysis of the resources that have
    * been committed over the period of time the user is requesting, verify that
    * the user requests can be fulfilled, and that it respect a sharing policy
-   * (e.g., {@link CapacityOverTimePolicy}). Once it has positively determined
+   * (e.g., {@code CapacityOverTimePolicy}). Once it has positively determined
    * that the ReservationSubmissionRequest is satisfiable the
-   * {@link ResourceManager} answers with a
+   * {@code ResourceManager} answers with a
    * {@link ReservationSubmissionResponse} that include a non-null
    * {@link ReservationId}. Upon failure to find a valid allocation the response
    * is an exception with the reason.

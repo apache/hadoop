@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import java.io.IOException;
 import java.text.NumberFormat;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -33,7 +34,7 @@ import org.apache.hadoop.yarn.util.Records;
  * 
  * <p>
  * The globally unique nature of the identifier is achieved by using the
- * <em>cluster timestamp</em> i.e. start-time of the {@link ResourceManager}
+ * <em>cluster timestamp</em> i.e. start-time of the {@code ResourceManager}
  * along with a monotonically increasing counter for the reservation.
  * </p>
  */
@@ -60,7 +61,7 @@ public abstract class ReservationId implements Comparable<ReservationId> {
   /**
    * Get the long identifier of the {@link ReservationId} which is unique for
    * all Reservations started by a particular instance of the
-   * {@link ResourceManager}.
+   * {@code ResourceManager}.
    * 
    * @return long identifier of the {@link ReservationId}
    */
@@ -73,10 +74,10 @@ public abstract class ReservationId implements Comparable<ReservationId> {
   protected abstract void setId(long id);
 
   /**
-   * Get the <em>start time</em> of the {@link ResourceManager} which is used to
+   * Get the <em>start time</em> of the {@code ResourceManager} which is used to
    * generate globally unique {@link ReservationId}.
    * 
-   * @return <em>start time</em> of the {@link ResourceManager}
+   * @return <em>start time</em> of the {@code ResourceManager}
    */
   @Public
   @Unstable
@@ -113,6 +114,34 @@ public abstract class ReservationId implements Comparable<ReservationId> {
   public String toString() {
     return reserveIdStrPrefix + this.getClusterTimestamp() + "_"
         + reservIdFormat.get().format(getId());
+  }
+
+  /**
+   * Parse the string argument as a {@link ReservationId}
+   *
+   * @param reservationId the string representation of the {@link ReservationId}
+   * @return the {@link ReservationId} corresponding to the input string if
+   *         valid, null if input is null
+   * @throws IOException if unable to parse the input string
+   */
+  @Public
+  @Unstable
+  public static ReservationId parseReservationId(String reservationId)
+      throws IOException {
+    if (reservationId == null) {
+      return null;
+    }
+    if (!reservationId.startsWith(reserveIdStrPrefix)) {
+      throw new IOException("The specified reservation id is invalid: "
+          + reservationId);
+    }
+    String[] resFields = reservationId.split("_");
+    if (resFields.length != 3) {
+      throw new IOException("The specified reservation id is not parseable: "
+          + reservationId);
+    }
+    return newInstance(Long.parseLong(resFields[1]),
+        Long.parseLong(resFields[2]));
   }
 
   @Override
