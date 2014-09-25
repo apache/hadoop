@@ -97,6 +97,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2102. Added the concept of a Timeline Domain to handle read/write ACLs
     on Timeline service event data. (Zhijie Shen via vinodkv)
 
+    YARN-2581. Passed LogAggregationContext to NM via ContainerTokenIdentifier.
+    (Xuan Gong via zjshen)
+
   IMPROVEMENTS
 
     YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc

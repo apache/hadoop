@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -91,6 +92,7 @@ public class SchedulerApplicationAttempt {
   private Resource amResource = Resources.none();
   private boolean unmanagedAM = true;
   private boolean amRunning = false;
+  private LogAggregationContext logAggregationContext;
 
   protected List<RMContainer> newlyAllocatedContainers = 
       new ArrayList<RMContainer>();
@@ -138,6 +140,8 @@ public class SchedulerApplicationAttempt {
               .getApplicationSubmissionContext();
       if (appSubmissionContext != null) {
         unmanagedAM = appSubmissionContext.getUnmanagedAM();
+        this.logAggregationContext =
+            appSubmissionContext.getLogAggregationContext();
       }
     }
   }
@@ -444,7 +448,7 @@ public class SchedulerApplicationAttempt {
         container.setContainerToken(rmContext.getContainerTokenSecretManager()
           .createContainerToken(container.getId(), container.getNodeId(),
             getUser(), container.getResource(), container.getPriority(),
-            rmContainer.getCreationTime()));
+            rmContainer.getCreationTime(), this.logAggregationContext));
         NMToken nmToken =
             rmContext.getNMTokenSecretManager().createAndGetNMToken(getUser(),
               getApplicationAttemptId(), container);
