@@ -2083,12 +2083,12 @@ _01_000001</amContainerLogs>
 
 +---+
 {
-  "application-id":"application_1404198295326_0001",
+  "application-id":"application_1404198295326_0003",
   "maximum-resource-capability":
-   {
-      "memory":"8192",
-      "vCores":"32"
-   }
+    {
+      "memory":8192,
+      "vCores":32
+    }
 }
 +---+
 
@@ -2257,8 +2257,8 @@ _01_000001</amContainerLogs>
               "resource":"hdfs://hdfs-namenode:9000/user/testuser/DistributedShell/demo-app/AppMaster.jar",
               "type":"FILE",
               "visibility":"APPLICATION",
-              "size": "43004",
-              "timestamp": "1405452071209"
+              "size": 43004,
+              "timestamp": 1405452071209
             }
           }
         ]
@@ -2290,15 +2290,15 @@ _01_000001</amContainerLogs>
         ]
       }
     },
-    "unmanaged-AM":"false",
-    "max-app-attempts":"2",
+    "unmanaged-AM":false,
+    "max-app-attempts":2,
     "resource":
     {
-      "memory":"1024",
-      "vCores":"1"
+      "memory":1024,
+      "vCores":1
     },
     "application-type":"YARN",
-    "keep-containers-across-application-attempts":"false"
+    "keep-containers-across-application-attempts":false
   }
 
 +---+
@@ -2797,8 +2797,8 @@ Server: Jetty(6.1.26)
     "renewer":"test-renewer",
     "owner":"client@EXAMPLE.COM",
     "kind":"RM_DELEGATION_TOKEN",
-    "expiration-time":"1405153616489",
-    "max-validity":"1405672016489"
+    "expiration-time":1405153616489,
+    "max-validity":1405672016489
   }
 +---+
 
@@ -2869,7 +2869,7 @@ Server: Jetty(6.1.26)
 
 +---+
   {
-    "expiration-time":"1404112520402"
+    "expiration-time":1404112520402
   }
 +---+
 
