@@ -66,6 +66,7 @@ public class TestSafeMode {
   public static final Log LOG = LogFactory.getLog(TestSafeMode.class);
   private static final Path TEST_PATH = new Path("/test");
   private static final int BLOCK_SIZE = 1024;
+  private static final String NEWLINE = System.getProperty("line.separator");
   Configuration conf; 
   MiniDFSCluster cluster;
   FileSystem fs;
@@ -196,7 +197,7 @@ public class TestSafeMode {
     
     String status = nn.getNamesystem().getSafemode();
     assertEquals("Safe mode is ON. The reported blocks 0 needs additional " +
-        "15 blocks to reach the threshold 0.9990 of total blocks 15.\n" +
+        "15 blocks to reach the threshold 0.9990 of total blocks 15." + NEWLINE +
         "The number of live datanodes 0 has reached the minimum number 0. " +
         "Safe mode will be turned off automatically once the thresholds " +
         "have been reached.", status);
@@ -448,9 +449,9 @@ public class TestSafeMode {
 
     String tipMsg = cluster.getNamesystem().getSafemode();
     assertTrue("Safemode tip message doesn't look right: " + tipMsg,
-               tipMsg.contains("The number of live datanodes 0 needs an additional " +
-                               "1 live datanodes to reach the minimum number 1.\n" +
-                               "Safe mode will be turned off automatically"));
+      tipMsg.contains("The number of live datanodes 0 needs an additional " +
+                      "1 live datanodes to reach the minimum number 1." +
+                      NEWLINE + "Safe mode will be turned off automatically"));
 
     // Start a datanode
     cluster.startDataNodes(conf, 1, true, null, null);
