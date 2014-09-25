@@ -1394,7 +1394,8 @@ public class MiniDFSCluster {
       // Set up datanode address
       setupDatanodeAddress(dnConf, setupHostsFile, checkDataNodeAddrConfig);
       if (manageDfsDirs) {
-        String dirs = makeDataNodeDirs(i, storageTypes == null ? null : storageTypes[i]);
+        String dirs = makeDataNodeDirs(i, storageTypes == null ?
+          null : storageTypes[i - curDatanodesNum]);
         dnConf.set(DFS_DATANODE_DATA_DIR_KEY, dirs);
         conf.set(DFS_DATANODE_DATA_DIR_KEY, dirs);
       }
