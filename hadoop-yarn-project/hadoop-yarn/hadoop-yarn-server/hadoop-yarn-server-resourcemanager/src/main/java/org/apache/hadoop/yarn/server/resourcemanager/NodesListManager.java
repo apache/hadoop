@@ -121,7 +121,6 @@ public class NodesListManager extends AbstractService implements
                   this.conf, includesFile), excludesFile.isEmpty() ? null
               : this.rmContext.getConfigurationProvider()
                   .getConfigurationInputStream(this.conf, excludesFile));
-      setDecomissionedNMsMetrics();
       printConfiguredHosts();
     }
   }
