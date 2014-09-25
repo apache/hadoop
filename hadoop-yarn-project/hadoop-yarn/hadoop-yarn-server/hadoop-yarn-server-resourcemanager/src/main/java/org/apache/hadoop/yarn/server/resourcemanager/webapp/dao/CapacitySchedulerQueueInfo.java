@@ -49,7 +49,7 @@ public class CapacitySchedulerQueueInfo {
   protected QueueState state;
   protected CapacitySchedulerQueueInfoList queues;
   protected ResourceInfo resourcesUsed;
-  private boolean hideReservationQueues = true;
+  private boolean hideReservationQueues = false;
 
   CapacitySchedulerQueueInfo() {
   };
@@ -72,8 +72,8 @@ public class CapacitySchedulerQueueInfo {
     state = q.getState();
     resourcesUsed = new ResourceInfo(q.getUsedResources());
     if(q instanceof PlanQueue &&
-       ((PlanQueue)q).showReservationsAsQueues()) {
-      hideReservationQueues = false;
+       !((PlanQueue)q).showReservationsAsQueues()) {
+      hideReservationQueues = true;
     }
   }
 

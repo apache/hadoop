@@ -66,7 +66,7 @@ public class TestCapacitySchedulerDynamicBehavior {
     setupPlanQueueConfiguration(conf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
-    conf.setBoolean(YarnConfiguration.RM_RESERVATIONS_ENABLE, false);
+    conf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, false);
     rm = new MockRM(conf);
     rm.start();
   }
@@ -272,7 +272,7 @@ public class TestCapacitySchedulerDynamicBehavior {
     conf.setCapacity(B3, B3_CAPACITY);
     conf.setUserLimitFactor(B3, 100.0f);
 
-    conf.setReservableQueue(A, true);
+    conf.setReservable(A, true);
     conf.setReservationWindow(A, 86400 * 1000);
     conf.setAverageCapacity(A, 1.0f);
 

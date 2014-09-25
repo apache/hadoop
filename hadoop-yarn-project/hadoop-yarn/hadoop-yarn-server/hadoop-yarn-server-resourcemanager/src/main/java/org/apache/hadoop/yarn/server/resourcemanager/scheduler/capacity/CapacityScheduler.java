@@ -522,7 +522,7 @@ public class CapacityScheduler extends
             : (parent.getQueuePath() + "." + queueName);
     String[] childQueueNames = 
       conf.getQueues(fullQueueName);
-    boolean isReservableQueue = conf.isReservableQueue(fullQueueName);
+    boolean isReservableQueue = conf.isReservable(fullQueueName);
     if (childQueueNames == null || childQueueNames.length == 0) {
       if (null == parent) {
         throw new IllegalStateException(
@@ -1279,6 +1279,15 @@ public class CapacityScheduler extends
                 + applicationId
                 + " submitted to a reservation which is not yet currently active: "
                 + resQName;
+        this.rmContext.getDispatcher().getEventHandler()
+            .handle(new RMAppRejectedEvent(applicationId, message));
+        return null;
+      }
+      if (!queue.getParent().getQueueName().equals(queueName)) {
+        String message =
+            "Application: " + applicationId + " submitted to a reservation "
+                + resQName + " which does not belong to the specified queue: "
+                + queueName;
         this.rmContext.getDispatcher().getEventHandler()
             .handle(new RMAppRejectedEvent(applicationId, message));
         return null;

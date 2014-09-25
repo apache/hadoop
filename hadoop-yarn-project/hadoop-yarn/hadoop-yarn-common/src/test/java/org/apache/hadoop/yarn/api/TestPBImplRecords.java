@@ -216,6 +216,11 @@ public class TestPBImplRecords {
         "root", 1.0f, 1.0f, 0.1f, null, null, QueueState.RUNNING));
     generateByNewInstance(QueueUserACLInfo.class);
     generateByNewInstance(YarnClusterMetrics.class);
+    // for reservation system
+    generateByNewInstance(ReservationId.class);
+    generateByNewInstance(ReservationRequest.class);
+    generateByNewInstance(ReservationRequests.class);
+    generateByNewInstance(ReservationDefinition.class);
   }
 
   private class GetSetPair {
@@ -892,5 +897,41 @@ public class TestPBImplRecords {
   public void testUpdateNodeResourceResponsePBImpl() throws Exception {
     validatePBImplRecord(UpdateNodeResourceResponsePBImpl.class,
         UpdateNodeResourceResponseProto.class);
+  }
+
+  @Test
+  public void testReservationSubmissionRequestPBImpl() throws Exception {
+    validatePBImplRecord(ReservationSubmissionRequestPBImpl.class,
+        ReservationSubmissionRequestProto.class);
+  }
+
+  @Test
+  public void testReservationSubmissionResponsePBImpl() throws Exception {
+    validatePBImplRecord(ReservationSubmissionResponsePBImpl.class,
+        ReservationSubmissionResponseProto.class);
+  }
+
+  @Test
+  public void testReservationUpdateRequestPBImpl() throws Exception {
+    validatePBImplRecord(ReservationUpdateRequestPBImpl.class,
+        ReservationUpdateRequestProto.class);
+  }
+
+  @Test
+  public void testReservationUpdateResponsePBImpl() throws Exception {
+    validatePBImplRecord(ReservationUpdateResponsePBImpl.class,
+        ReservationUpdateResponseProto.class);
+  }
+
+  @Test
+  public void testReservationDeleteRequestPBImpl() throws Exception {
+    validatePBImplRecord(ReservationDeleteRequestPBImpl.class,
+        ReservationDeleteRequestProto.class);
+  }
+
+  @Test
+  public void testReservationDeleteResponsePBImpl() throws Exception {
+    validatePBImplRecord(ReservationDeleteResponsePBImpl.class,
+        ReservationDeleteResponseProto.class);
   }
 }

@@ -26,3 +26,6 @@ client-RM protocol. (Subru Krishnan and Carlo Curino  via subru)
 
 MAPREDUCE-6103. Adding reservation APIs to MR resource manager
 delegate. (Subru Krishnan and Carlo Curino  via subru)
+
+YARN-2576. Fixing compilation, javadocs and audit issues to pass
+test patch in branch. (Subru Krishnan and Carlo Curino  via subru)

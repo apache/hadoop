@@ -69,11 +69,11 @@ public abstract class ReservationSubmissionRequest {
       ReservationDefinition reservationDefinition);
 
   /**
-   * Get the name of the {@link Plan} that corresponds to the name of the
+   * Get the name of the {@code Plan} that corresponds to the name of the
    * {@link QueueInfo} in the scheduler to which the reservation will be
    * submitted to.
    * 
-   * @return the name of the {@link Plan} that corresponds to the name of the
+   * @return the name of the {@code Plan} that corresponds to the name of the
    *         {@link QueueInfo} in the scheduler to which the reservation will be
    *         submitted to
    */
@@ -82,13 +82,13 @@ public abstract class ReservationSubmissionRequest {
   public abstract String getQueue();
 
   /**
-   * Set the name of the {@link Plan} that corresponds to the name of the
+   * Set the name of the {@code Plan} that corresponds to the name of the
    * {@link QueueInfo} in the scheduler to which the reservation will be
    * submitted to
    * 
-   * @param the name of the parent {@link Plan} that corresponds to the name of
-   *          the {@link QueueInfo} in the scheduler to which the reservation
-   *          will be submitted to
+   * @param queueName the name of the parent {@code Plan} that corresponds to
+   *          the name of the {@link QueueInfo} in the scheduler to which the
+   *          reservation will be submitted to
    */
   @Public
   @Unstable

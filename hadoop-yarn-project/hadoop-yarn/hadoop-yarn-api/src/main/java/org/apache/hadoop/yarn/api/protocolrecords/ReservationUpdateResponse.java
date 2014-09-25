@@ -26,7 +26,7 @@ import org.apache.hadoop.yarn.util.Records;
 
 /**
  * {@link ReservationUpdateResponse} contains the answer of the admission
- * control system in the {@link ResourceManager} to a reservation update
+ * control system in the {@code ResourceManager} to a reservation update
  * operation. Currently response is empty if the operation was successful, if
  * not an exception reporting reason for a failure.
  * 

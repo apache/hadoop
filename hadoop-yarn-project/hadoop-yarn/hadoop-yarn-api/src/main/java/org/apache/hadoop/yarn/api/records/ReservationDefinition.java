@@ -103,7 +103,7 @@ public abstract class ReservationDefinition {
    * Set the list of {@link ReservationRequests} representing the resources
    * required by the application
    * 
-   * @param resources the list of {@link ReservationRequests}
+   * @param reservationRequests the list of {@link ReservationRequests}
    */
   @Public
   @Unstable
