@@ -120,8 +120,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSna
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotDiffReportResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshottableDirListingRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshottableDirListingResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePolicySuiteRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePolicySuiteResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePoliciesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePoliciesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.IsFileClosedRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.IsFileClosedResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCacheDirectivesRequestProto;
@@ -1433,13 +1433,13 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   }
 
   @Override
-  public GetStoragePolicySuiteResponseProto getStoragePolicySuite(
-      RpcController controller, GetStoragePolicySuiteRequestProto request)
+  public GetStoragePoliciesResponseProto getStoragePolicies(
+      RpcController controller, GetStoragePoliciesRequestProto request)
       throws ServiceException {
     try {
-      BlockStoragePolicy[] policies = server.getStoragePolicySuite();
-      GetStoragePolicySuiteResponseProto.Builder builder =
-          GetStoragePolicySuiteResponseProto.newBuilder();
+      BlockStoragePolicy[] policies = server.getStoragePolicies();
+      GetStoragePoliciesResponseProto.Builder builder =
+          GetStoragePoliciesResponseProto.newBuilder();
       if (policies == null) {
         return builder.build();
       }

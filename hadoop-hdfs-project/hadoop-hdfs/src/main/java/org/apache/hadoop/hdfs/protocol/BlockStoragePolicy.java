@@ -209,7 +209,7 @@ public class BlockStoragePolicy {
     return getClass().getSimpleName() + "{" + name + ":" + id
         + ", storageTypes=" + Arrays.asList(storageTypes)
         + ", creationFallbacks=" + Arrays.asList(creationFallbacks)
-        + ", replicationFallbacks=" + Arrays.asList(replicationFallbacks);
+        + ", replicationFallbacks=" + Arrays.asList(replicationFallbacks) + "}";
   }
 
   public byte getId() {

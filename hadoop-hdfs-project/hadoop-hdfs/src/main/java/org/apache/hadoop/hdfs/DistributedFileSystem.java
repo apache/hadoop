@@ -506,9 +506,9 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /** Get all the existing storage policies */
-  public BlockStoragePolicy[] getStoragePolicySuite() throws IOException {
+  public BlockStoragePolicy[] getStoragePolicies() throws IOException {
     statistics.incrementReadOps(1);
-    return dfs.getStoragePolicySuite();
+    return dfs.getStoragePolicies();
   }
 
   /**

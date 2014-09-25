@@ -142,7 +142,7 @@ public class Mover {
 
   private void initStoragePolicies() throws IOException {
     BlockStoragePolicy[] policies = dispatcher.getDistributedFileSystem()
-        .getStoragePolicySuite();
+        .getStoragePolicies();
     for (BlockStoragePolicy policy : policies) {
       this.blockStoragePolicies[policy.getId()] = policy;
     }
@@ -387,8 +387,8 @@ public class Mover {
     boolean scheduleMoveReplica(DBlock db, MLocation ml,
                                 List<StorageType> targetTypes) {
       final Source source = storages.getSource(ml);
-      return source == null ? false : scheduleMoveReplica(db,
-          storages.getSource(ml), targetTypes);
+      return source == null ? false : scheduleMoveReplica(db, source,
+          targetTypes);
     }
 
     boolean scheduleMoveReplica(DBlock db, Source source,

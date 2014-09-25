@@ -1783,8 +1783,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   /**
    * @return All the existing storage policies
    */
-  public BlockStoragePolicy[] getStoragePolicySuite() throws IOException {
-    return namenode.getStoragePolicySuite();
+  public BlockStoragePolicy[] getStoragePolicies() throws IOException {
+    return namenode.getStoragePolicies();
   }
 
   /**

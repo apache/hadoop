@@ -108,10 +108,10 @@ message SetStoragePolicyRequestProto {
 message SetStoragePolicyResponseProto { // void response
 }
 
-message GetStoragePolicySuiteRequestProto { // void request
+message GetStoragePoliciesRequestProto { // void request
 }
 
-message GetStoragePolicySuiteResponseProto {
+message GetStoragePoliciesResponseProto {
   repeated BlockStoragePolicyProto policies = 1;
 }
 
@@ -706,8 +706,8 @@ service ClientNamenodeProtocol {
       returns(SetReplicationResponseProto);
   rpc setStoragePolicy(SetStoragePolicyRequestProto)
       returns(SetStoragePolicyResponseProto);
-  rpc getStoragePolicySuite(GetStoragePolicySuiteRequestProto)
-      returns(GetStoragePolicySuiteResponseProto);
+  rpc getStoragePolicies(GetStoragePoliciesRequestProto)
+      returns(GetStoragePoliciesResponseProto);
   rpc setPermission(SetPermissionRequestProto)
       returns(SetPermissionResponseProto);
   rpc setOwner(SetOwnerRequestProto) returns(SetOwnerResponseProto);

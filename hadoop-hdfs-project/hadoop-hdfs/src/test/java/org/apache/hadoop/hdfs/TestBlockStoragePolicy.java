@@ -73,11 +73,14 @@ public class TestBlockStoragePolicy {
   public void testDefaultPolicies() {
     final Map<Byte, String> expectedPolicyStrings = new HashMap<Byte, String>();
     expectedPolicyStrings.put(COLD,
-        "BlockStoragePolicy{COLD:4, storageTypes=[ARCHIVE], creationFallbacks=[], replicationFallbacks=[]");
+        "BlockStoragePolicy{COLD:4, storageTypes=[ARCHIVE], " +
+            "creationFallbacks=[], replicationFallbacks=[]}");
     expectedPolicyStrings.put(WARM,
-        "BlockStoragePolicy{WARM:8, storageTypes=[DISK, ARCHIVE], creationFallbacks=[DISK, ARCHIVE], replicationFallbacks=[DISK, ARCHIVE]");
+        "BlockStoragePolicy{WARM:8, storageTypes=[DISK, ARCHIVE], " +
+            "creationFallbacks=[DISK, ARCHIVE], replicationFallbacks=[DISK, ARCHIVE]}");
     expectedPolicyStrings.put(HOT,
-        "BlockStoragePolicy{HOT:12, storageTypes=[DISK], creationFallbacks=[], replicationFallbacks=[ARCHIVE]");
+        "BlockStoragePolicy{HOT:12, storageTypes=[DISK], " +
+            "creationFallbacks=[], replicationFallbacks=[ARCHIVE]}");
 
     for(byte i = 1; i < 16; i++) {
       final BlockStoragePolicy policy = POLICY_SUITE.getPolicy(i); 
@@ -1102,7 +1105,7 @@ public class TestBlockStoragePolicy {
     cluster.waitActive();
     final DistributedFileSystem fs = cluster.getFileSystem();
     try {
-      BlockStoragePolicy[] policies = fs.getStoragePolicySuite();
+      BlockStoragePolicy[] policies = fs.getStoragePolicies();
       Assert.assertEquals(3, policies.length);
       Assert.assertEquals(POLICY_SUITE.getPolicy(COLD).toString(),
           policies[0].toString());

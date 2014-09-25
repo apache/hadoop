@@ -64,6 +64,7 @@ function print_usage(){
   echo "  nfs3                 run an NFS version 3 gateway"
   echo "  cacheadmin           configure the HDFS cache"
   echo "  crypto               configure HDFS encryption zones"
+  echo "  storagepolicies      get all the existing block storage policies"
   echo ""
   echo "Most commands print help when invoked w/o parameters."
 }
@@ -164,6 +165,8 @@ elif [ "$COMMAND" = "balancer" ] ; then
 elif [ "$COMMAND" = "mover" ] ; then
   CLASS=org.apache.hadoop.hdfs.server.mover.Mover
   HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_MOVER_OPTS}"
+elif [ "$COMMAND" = "storagepolicies" ] ; then
+  CLASS=org.apache.hadoop.hdfs.tools.GetStoragePolicies
 elif [ "$COMMAND" = "jmxget" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.JMXGet
 elif [ "$COMMAND" = "oiv" ] ; then
