@@ -206,6 +206,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11009. Add Timestamp Preservation to DistCp (Gary Steelman via aw)
 
+    HADOOP-11101. How about inputstream close statement from catch block to
+    finally block in FileContext#copy() ( skrho via vinayakumarb )
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)

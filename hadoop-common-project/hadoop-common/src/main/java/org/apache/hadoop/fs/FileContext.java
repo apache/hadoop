@@ -2035,10 +2035,9 @@ public final class FileContext {
                 EnumSet.of(CreateFlag.CREATE);
           out = create(qDst, createFlag);
           IOUtils.copyBytes(in, out, conf, true);
-        } catch (IOException e) {
+        } finally {
           IOUtils.closeStream(out);
           IOUtils.closeStream(in);
-          throw e;
         }
       }
       if (deleteSource) {
