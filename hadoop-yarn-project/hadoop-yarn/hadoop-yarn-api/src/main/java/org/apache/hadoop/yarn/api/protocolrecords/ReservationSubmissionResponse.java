@@ -25,11 +25,9 @@ import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.util.Records;
 
-import com.sun.naming.internal.ResourceManager;
-
 /**
  * {@link ReservationSubmissionResponse} contains the answer of the admission
- * control system in the {@link ResourceManager} to a reservation create
+ * control system in the {@code ResourceManager} to a reservation create
  * operation. Response contains a {@link ReservationId} if the operation was
  * successful, if not an exception reporting reason for a failure.
  * 

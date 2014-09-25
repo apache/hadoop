@@ -27,7 +27,7 @@ import org.apache.hadoop.yarn.util.Records;
 /**
  * <p>
  * {@link ReservationRequest} represents the request made by an application to
- * the {@link ResourceManager} to reserve {@link Resource}s.
+ * the {@code ResourceManager} to reserve {@link Resource}s.
  * </p>
  * 
  * <p>
