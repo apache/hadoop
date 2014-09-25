@@ -23,3 +23,6 @@ subsystem with the scheduler. (Subru Krishnan and Carlo Curino  via subru)
 
 YARN-2080. Integrating reservation system with ResourceManager and 
 client-RM protocol. (Subru Krishnan and Carlo Curino  via subru)
+
+MAPREDUCE-6103. Adding reservation APIs to MR resource manager
+delegate. (Subru Krishnan and Carlo Curino  via subru)

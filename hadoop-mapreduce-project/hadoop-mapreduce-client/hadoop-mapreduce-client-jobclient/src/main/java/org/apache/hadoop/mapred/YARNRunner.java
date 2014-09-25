@@ -76,6 +76,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -489,6 +490,26 @@ public class YARNRunner implements ClientProtocol {
     appContext.setQueue(                                       // Queue name
         jobConf.get(JobContext.QUEUE_NAME,
         YarnConfiguration.DEFAULT_QUEUE_NAME));
+    // add reservationID if present
+    ReservationId reservationID = null;
+    try {
+      reservationID =
+          ReservationId.parseReservationId(jobConf
+              .get(JobContext.RESERVATION_ID));
+    } catch (NumberFormatException e) {
+      // throw exception as reservationid as is invalid
+      String errMsg =
+          "Invalid reservationId: " + jobConf.get(JobContext.RESERVATION_ID)
+              + " specified for the app: " + applicationId;
+      LOG.warn(errMsg);
+      throw new IOException(errMsg);
+    }
+    if (reservationID != null) {
+      appContext.setReservationID(reservationID);
+      LOG.info("SUBMITTING ApplicationSubmissionContext app:" + applicationId
+          + " to queue:" + appContext.getQueue() + " with reservationId:"
+          + appContext.getReservationID());
+    }
     appContext.setApplicationName(                             // Job name
         jobConf.get(JobContext.JOB_NAME,
         YarnConfiguration.DEFAULT_APPLICATION_NAME));
@@ -503,6 +524,7 @@ public class YARNRunner implements ClientProtocol {
     if (tagsFromConf != null && !tagsFromConf.isEmpty()) {
       appContext.setApplicationTags(new HashSet<String>(tagsFromConf));
     }
+
     return appContext;
   }
 
