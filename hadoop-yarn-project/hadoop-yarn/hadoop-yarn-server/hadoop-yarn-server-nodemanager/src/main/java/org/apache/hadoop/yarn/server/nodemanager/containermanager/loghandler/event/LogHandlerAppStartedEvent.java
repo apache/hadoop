@@ -23,6 +23,7 @@ import java.util.Map;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogsRetentionPolicy;
 
 public class LogHandlerAppStartedEvent extends LogHandlerEvent {
@@ -32,16 +33,25 @@ public class LogHandlerAppStartedEvent extends LogHandlerEvent {
   private final String user;
   private final Credentials credentials;
   private final Map<ApplicationAccessType, String> appAcls;
+  private final LogAggregationContext logAggregationContext;
 
   public LogHandlerAppStartedEvent(ApplicationId appId, String user,
       Credentials credentials, ContainerLogsRetentionPolicy retentionPolicy,
       Map<ApplicationAccessType, String> appAcls) {
+    this(appId, user, credentials, retentionPolicy, appAcls, null);
+  }
+
+  public LogHandlerAppStartedEvent(ApplicationId appId, String user,
+      Credentials credentials, ContainerLogsRetentionPolicy retentionPolicy,
+      Map<ApplicationAccessType, String> appAcls,
+      LogAggregationContext logAggregationContext) {
     super(LogHandlerEventType.APPLICATION_STARTED);
     this.applicationId = appId;
     this.user = user;
     this.credentials = credentials;
     this.retentionPolicy = retentionPolicy;
     this.appAcls = appAcls;
+    this.logAggregationContext = logAggregationContext;
   }
 
   public ApplicationId getApplicationId() {
@@ -64,4 +74,7 @@ public class LogHandlerAppStartedEvent extends LogHandlerEvent {
     return this.appAcls;
   }
 
+  public LogAggregationContext getLogAggregationContext() {
+    return this.logAggregationContext;
+  }
 }

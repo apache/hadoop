@@ -133,9 +133,6 @@ Trunk (Unreleased)
     HDFS-6609. Use DirectorySnapshottableFeature to represent a snapshottable
     directory. (Jing Zhao via wheat9)
 
-    HDFS-6987. Move CipherSuite xattr information up to the encryption zone
-    root. (Zhe Zhang via wang)
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -344,6 +341,12 @@ Trunk (Unreleased)
     TestBalancerWithMultipleNameNodes. (szetszwo via jing9)
 
     HDFS-7095. TestStorageMover often fails in Jenkins. (jing9)
+
+    HDFS-7081. Add new DistributedFileSystem API for getting all the existing
+    storage policies. (jing9)
+
+    HDFS-7140. Add a tool to list all the existing block storage policies.
+    (jing9)
 
 Release 2.6.0 - UNRELEASED
 
@@ -571,6 +574,13 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6948. DN rejects blocks if it has older UC block
     (Eric Payne via kihwal)
+
+    HDFS-6987. Move CipherSuite xattr information up to the encryption zone
+    root. (Zhe Zhang via wang)
+
+    HDFS-7139. Unit test for creating encryption zone on root path. (Zhe Zhang via wang)
+
+    HDFS-7138. Fix hftp to work with encryption. (clamb via wang)
 
   OPTIMIZATIONS
 
@@ -934,6 +944,8 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7130. TestDataTransferKeepalive fails intermittently on Windows.
     (cnauroth)
+
+    HDFS-6534. Fix build on macosx: HDFS parts (Binglin Chang via aw)
 
 Release 2.5.1 - 2014-09-05
 

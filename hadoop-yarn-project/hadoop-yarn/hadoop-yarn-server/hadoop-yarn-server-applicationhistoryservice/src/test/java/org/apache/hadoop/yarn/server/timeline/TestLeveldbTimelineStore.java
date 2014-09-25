@@ -69,8 +69,9 @@ public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
     store = new LeveldbTimelineStore();
     store.init(config);
     store.start();
-    loadTestData();
-    loadVerificationData();
+    loadTestEntityData();
+    loadVerificationEntityData();
+    loadTestDomainData();
   }
 
   @After
@@ -93,7 +94,7 @@ public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
     super.testGetSingleEntity();
     ((LeveldbTimelineStore)store).clearStartTimeCache();
     super.testGetSingleEntity();
-    loadTestData();
+    loadTestEntityData();
   }
 
   @Test
@@ -257,7 +258,7 @@ public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
     assertEquals(0, getEntities("type_2").size());
     assertEquals(0, getEntitiesFromTsWithPrimaryFilter("type_1", userFilter,
         l).size());
-    loadTestData();
+    loadTestEntityData();
     assertEquals(0, getEntitiesFromTs("type_1", l).size());
     assertEquals(0, getEntitiesFromTs("type_2", l).size());
     assertEquals(0, getEntitiesFromTsWithPrimaryFilter("type_1", userFilter,
@@ -307,6 +308,16 @@ public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
     store = new LeveldbTimelineStore();
     store.init(config);
     store.start();
+  }
+
+  @Test
+  public void testGetDomain() throws IOException {
+    super.testGetDomain();
+  }
+
+  @Test
+  public void testGetDomains() throws IOException {
+    super.testGetDomains();
   }
 
 }

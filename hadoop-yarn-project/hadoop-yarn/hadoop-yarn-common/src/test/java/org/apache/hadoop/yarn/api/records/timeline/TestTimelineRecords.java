@@ -161,4 +161,42 @@ public class TestTimelineRecords {
     Assert.assertEquals(error2.getErrorCode(), e.getErrorCode());
   }
 
+  @Test
+  public void testTimelineDomain() throws Exception {
+    TimelineDomains domains = new TimelineDomains();
+
+    TimelineDomain domain = null;
+    for (int i = 0; i < 2; ++i) {
+      domain = new TimelineDomain();
+      domain.setId("test id " + (i + 1));
+      domain.setDescription("test description " + (i + 1));
+      domain.setOwner("test owner " + (i + 1));
+      domain.setReaders("test_reader_user_" + (i + 1) +
+          " test_reader_group+" + (i + 1));
+      domain.setWriters("test_writer_user_" + (i + 1) +
+          " test_writer_group+" + (i + 1));
+      domain.setCreatedTime(0L);
+      domain.setModifiedTime(1L);
+      domains.addDomain(domain);
+    }
+    LOG.info("Domain in JSON:");
+    LOG.info(TimelineUtils.dumpTimelineRecordtoJSON(domains, true));
+
+    Assert.assertEquals(2, domains.getDomains().size());
+
+    for (int i = 0; i < domains.getDomains().size(); ++i) {
+      domain = domains.getDomains().get(i);
+      Assert.assertEquals("test id " + (i + 1), domain.getId());
+      Assert.assertEquals("test description " + (i + 1),
+          domain.getDescription());
+      Assert.assertEquals("test owner " + (i + 1), domain.getOwner());
+      Assert.assertEquals("test_reader_user_" + (i + 1) +
+          " test_reader_group+" + (i + 1), domain.getReaders());
+      Assert.assertEquals("test_writer_user_" + (i + 1) +
+          " test_writer_group+" + (i + 1), domain.getWriters());
+      Assert.assertEquals(new Long(0L), domain.getCreatedTime());
+      Assert.assertEquals(new Long(1L), domain.getModifiedTime());
+    }
+  }
+
 }

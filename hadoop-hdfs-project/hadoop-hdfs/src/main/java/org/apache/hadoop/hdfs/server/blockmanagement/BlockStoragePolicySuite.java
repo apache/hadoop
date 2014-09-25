@@ -1,0 +1,119 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.hdfs.server.blockmanagement;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Lists;
+import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.hdfs.StorageType;
+import org.apache.hadoop.hdfs.XAttrHelper;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.List;
+
+/** A collection of block storage policies. */
+public class BlockStoragePolicySuite {
+  static final Logger LOG = LoggerFactory.getLogger(BlockStoragePolicySuite
+      .class);
+
+  public static final String STORAGE_POLICY_XATTR_NAME
+      = "hsm.block.storage.policy.id";
+  public static final XAttr.NameSpace XAttrNS = XAttr.NameSpace.SYSTEM;
+
+  public static final int ID_BIT_LENGTH = 4;
+  public static final byte ID_UNSPECIFIED = 0;
+
+  @VisibleForTesting
+  public static BlockStoragePolicySuite createDefaultSuite() {
+    final BlockStoragePolicy[] policies =
+        new BlockStoragePolicy[1 << ID_BIT_LENGTH];
+    final byte hotId = 12;
+    policies[hotId] = new BlockStoragePolicy(hotId, "HOT",
+        new StorageType[]{StorageType.DISK}, StorageType.EMPTY_ARRAY,
+        new StorageType[]{StorageType.ARCHIVE});
+    final byte warmId = 8;
+    policies[warmId] = new BlockStoragePolicy(warmId, "WARM",
+        new StorageType[]{StorageType.DISK, StorageType.ARCHIVE},
+        new StorageType[]{StorageType.DISK, StorageType.ARCHIVE},
+        new StorageType[]{StorageType.DISK, StorageType.ARCHIVE});
+    final byte coldId = 4;
+    policies[coldId] = new BlockStoragePolicy(coldId, "COLD",
+        new StorageType[]{StorageType.ARCHIVE}, StorageType.EMPTY_ARRAY,
+        StorageType.EMPTY_ARRAY);
+    return new BlockStoragePolicySuite(hotId, policies);
+  }
+
+  private final byte defaultPolicyID;
+  private final BlockStoragePolicy[] policies;
+
+  public BlockStoragePolicySuite(byte defaultPolicyID,
+      BlockStoragePolicy[] policies) {
+    this.defaultPolicyID = defaultPolicyID;
+    this.policies = policies;
+  }
+
+  /** @return the corresponding policy. */
+  public BlockStoragePolicy getPolicy(byte id) {
+    // id == 0 means policy not specified.
+    return id == 0? getDefaultPolicy(): policies[id];
+  }
+
+  /** @return the default policy. */
+  public BlockStoragePolicy getDefaultPolicy() {
+    return getPolicy(defaultPolicyID);
+  }
+
+  public BlockStoragePolicy getPolicy(String policyName) {
+    if (policies != null) {
+      for (BlockStoragePolicy policy : policies) {
+        if (policy != null && policy.getName().equals(policyName)) {
+          return policy;
+        }
+      }
+    }
+    return null;
+  }
+
+  public BlockStoragePolicy[] getAllPolicies() {
+    List<BlockStoragePolicy> list = Lists.newArrayList();
+    if (policies != null) {
+      for (BlockStoragePolicy policy : policies) {
+        if (policy != null) {
+          list.add(policy);
+        }
+      }
+    }
+    return list.toArray(new BlockStoragePolicy[list.size()]);
+  }
+
+  public static String buildXAttrName() {
+    return XAttrNS.toString().toLowerCase() + "." + STORAGE_POLICY_XATTR_NAME;
+  }
+
+  public static XAttr buildXAttr(byte policyId) {
+    final String name = buildXAttrName();
+    return XAttrHelper.buildXAttr(name, new byte[]{policyId});
+  }
+
+  public static boolean isStoragePolicyXAttr(XAttr xattr) {
+    return xattr != null && xattr.getNameSpace() == XAttrNS
+        && xattr.getName().equals(STORAGE_POLICY_XATTR_NAME);
+  }
+}

@@ -1177,4 +1177,25 @@ public class TestEncryptionZones {
     parser.parse(new InputSource(new StringReader(xml)), new DefaultHandler());
   }
 
+  /**
+   * Test creating encryption zone on the root path
+   */
+  @Test(timeout = 60000)
+  public void testEncryptionZonesOnRootPath() throws Exception {
+    final int len = 8196;
+    final Path rootDir = new Path("/");
+    final Path zoneFile = new Path(rootDir, "file");
+    final Path rawFile = new Path("/.reserved/raw/file");
+    dfsAdmin.createEncryptionZone(rootDir, TEST_KEY);
+    DFSTestUtil.createFile(fs, zoneFile, len, (short) 1, 0xFEED);
+
+    assertEquals("File can be created on the root encryption zone " +
+            "with correct length",
+        len, fs.getFileStatus(zoneFile).getLen());
+    assertEquals("Root dir is encrypted",
+        true, fs.getFileStatus(rootDir).isEncrypted());
+    assertEquals("File is encrypted",
+        true, fs.getFileStatus(zoneFile).isEncrypted());
+    DFSTestUtil.verifyFilesNotEqual(fs, zoneFile, rawFile, len);
+  }
 }

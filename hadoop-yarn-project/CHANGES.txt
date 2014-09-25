@@ -94,6 +94,12 @@ Release 2.6.0 - UNRELEASED
     YARN-2569. Added the log handling APIs for the long running services. (Xuan
     Gong via zjshen)
 
+    YARN-2102. Added the concept of a Timeline Domain to handle read/write ACLs
+    on Timeline service event data. (Zhijie Shen via vinodkv)
+
+    YARN-2581. Passed LogAggregationContext to NM via ContainerTokenIdentifier.
+    (Xuan Gong via zjshen)
+
   IMPROVEMENTS
 
     YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc
@@ -433,6 +439,13 @@ Release 2.6.0 - UNRELEASED
     YARN-2252. Intermittent failure of 
     TestFairScheduler.testContinuousScheduling. 
     (Ratandeep Ratti and kasha via kasha)
+
+    YARN-2161. Fix build on macosx: YARN parts (Binglin Chang via aw)
+
+    YARN-2596. TestWorkPreservingRMRestart fails with FairScheduler. (kasha)
+
+    YARN-2546. Made REST API for application creation/submission use numeric and
+    boolean types instead of the string of them. (Varun Vasudev via zjshen)
 
 Release 2.5.1 - 2014-09-05
 

@@ -543,6 +543,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11017. KMS delegation token secret manager should be able to use 
     zookeeper as store. (asuresh via tucu)
 
+    HADOOP-11009. Add Timestamp Preservation to DistCp (Gary Steelman via aw)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
@@ -855,6 +857,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10131. NetWorkTopology#countNumOfAvailableNodes() is returning
     wrong value if excluded nodes passed are not part of the cluster tree
     (vinayakumarb)
+
+    HADOOP-11064. UnsatisifedLinkError with hadoop 2.4 JARs on hadoop-2.6 due to
+    NativeCRC32 method changes. (cnauroth)
 
 Release 2.5.1 - 2014-09-05
 

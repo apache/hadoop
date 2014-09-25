@@ -21,6 +21,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -60,6 +62,11 @@ public class TestStoragePolicyCommands {
     final Path bar = new Path(foo, "bar");
     DFSTestUtil.createFile(fs, bar, SIZE, REPL, 0);
 
+    DFSTestUtil.DFSAdminRun("-getStoragePolicy /foo", 0,
+        "The storage policy of " + foo.toString() + " is unspecified", conf);
+    DFSTestUtil.DFSAdminRun("-getStoragePolicy /foo/bar", 0,
+        "The storage policy of " + bar.toString() + " is unspecified", conf);
+
     DFSTestUtil.DFSAdminRun("-setStoragePolicy /foo WARM", 0,
         "Set storage policy WARM on " + foo.toString(), conf);
     DFSTestUtil.DFSAdminRun("-setStoragePolicy /foo/bar COLD", 0,
@@ -67,8 +74,8 @@ public class TestStoragePolicyCommands {
     DFSTestUtil.DFSAdminRun("-setStoragePolicy /fooz WARM", -1,
         "File/Directory does not exist: /fooz", conf);
 
-    final BlockStoragePolicy.Suite suite = BlockStoragePolicy
-        .readBlockStorageSuite(conf);
+    final BlockStoragePolicySuite suite = BlockStoragePolicySuite
+        .createDefaultSuite();
     final BlockStoragePolicy warm = suite.getPolicy("WARM");
     final BlockStoragePolicy cold = suite.getPolicy("COLD");
     DFSTestUtil.DFSAdminRun("-getStoragePolicy /foo", 0,
