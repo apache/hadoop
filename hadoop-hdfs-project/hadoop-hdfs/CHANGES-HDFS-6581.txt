@@ -77,4 +77,7 @@
     HDFS-6932. Balancer and Mover tools should ignore replicas on RAM_DISK.
     (Xiaoyu Yao via Arpit Agarwal)
 
+    HDFS-7144. Fix findbugs warnings in RamDiskReplicaTracker. (szetszwo via
+    Arpit Agarwal)
+
 

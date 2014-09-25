@@ -40,6 +40,16 @@ public class RamDiskReplicaLruTracker extends RamDiskReplicaTracker {
     private RamDiskReplicaLru(String bpid, long blockId, FsVolumeImpl ramDiskVolume) {
       super(bpid, blockId, ramDiskVolume);
     }
+
+    @Override
+    public int hashCode() {
+      return super.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      return super.equals(other);
+    }
   }
 
   /**

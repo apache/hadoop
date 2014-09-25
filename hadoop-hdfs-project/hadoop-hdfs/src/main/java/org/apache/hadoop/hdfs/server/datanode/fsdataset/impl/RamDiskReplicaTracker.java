@@ -19,6 +19,9 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import com.google.common.base.Preconditions;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -31,6 +34,7 @@ import java.io.File;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public abstract class RamDiskReplicaTracker {
+  static final Log LOG = LogFactory.getLog(RamDiskReplicaTracker.class);
 
   FsDatasetImpl fsDataset;
 
@@ -117,18 +121,18 @@ public abstract class RamDiskReplicaTracker {
     // Delete the saved meta and block files. Failure to delete can be
     // ignored, the directory scanner will retry the deletion later.
     void deleteSavedFiles() {
-      try {
-        if (savedBlockFile != null) {
-          savedBlockFile.delete();
-          savedBlockFile = null;
+      if (savedBlockFile != null) {
+        if (!savedBlockFile.delete()) {
+          LOG.warn("Failed to delete block file " + savedBlockFile);
         }
+        savedBlockFile = null;
+      }
 
-        if (savedMetaFile != null) {
-          savedMetaFile.delete();
-          savedMetaFile = null;
+      if (savedMetaFile != null) {
+        if (!savedMetaFile.delete()) {
+          LOG.warn("Failed to delete meta file " + savedMetaFile);
         }
-      } catch (Throwable t) {
-        // Ignore any exceptions.
+        savedMetaFile = null;
       }
     }
 
