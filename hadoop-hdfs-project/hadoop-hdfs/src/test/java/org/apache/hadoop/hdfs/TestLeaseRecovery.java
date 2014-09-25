@@ -41,12 +41,22 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.TestInterDatanodePr
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.junit.After;
 import org.junit.Test;
 
 public class TestLeaseRecovery {
   static final int BLOCK_SIZE = 1024;
   static final short REPLICATION_NUM = (short)3;
   private static final long LEASE_PERIOD = 300L;
+
+  private MiniDFSCluster cluster;
+
+  @After
+  public void shutdown() throws IOException {
+    if (cluster != null) {
+      cluster.shutdown();
+    }
+  }
 
   static void checkMetaInfo(ExtendedBlock b, DataNode dn
       ) throws IOException {
@@ -82,79 +92,71 @@ public class TestLeaseRecovery {
     final int ORG_FILE_SIZE = 3000; 
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
-    MiniDFSCluster cluster = null;
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(5).build();
+    cluster.waitActive();
 
-    try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(5).build();
-      cluster.waitActive();
+    //create a file
+    DistributedFileSystem dfs = cluster.getFileSystem();
+    String filestr = "/foo";
+    Path filepath = new Path(filestr);
+    DFSTestUtil.createFile(dfs, filepath, ORG_FILE_SIZE, REPLICATION_NUM, 0L);
+    assertTrue(dfs.exists(filepath));
+    DFSTestUtil.waitReplication(dfs, filepath, REPLICATION_NUM);
 
-      //create a file
-      DistributedFileSystem dfs = cluster.getFileSystem();
-      String filestr = "/foo";
-      Path filepath = new Path(filestr);
-      DFSTestUtil.createFile(dfs, filepath, ORG_FILE_SIZE, REPLICATION_NUM, 0L);
-      assertTrue(dfs.exists(filepath));
-      DFSTestUtil.waitReplication(dfs, filepath, REPLICATION_NUM);
+    //get block info for the last block
+    LocatedBlock locatedblock = TestInterDatanodeProtocol.getLastLocatedBlock(
+        dfs.dfs.getNamenode(), filestr);
+    DatanodeInfo[] datanodeinfos = locatedblock.getLocations();
+    assertEquals(REPLICATION_NUM, datanodeinfos.length);
 
-      //get block info for the last block
-      LocatedBlock locatedblock = TestInterDatanodeProtocol.getLastLocatedBlock(
-          dfs.dfs.getNamenode(), filestr);
-      DatanodeInfo[] datanodeinfos = locatedblock.getLocations();
-      assertEquals(REPLICATION_NUM, datanodeinfos.length);
-
-      //connect to data nodes
-      DataNode[] datanodes = new DataNode[REPLICATION_NUM];
-      for(int i = 0; i < REPLICATION_NUM; i++) {
-        datanodes[i] = cluster.getDataNode(datanodeinfos[i].getIpcPort());
-        assertTrue(datanodes[i] != null);
-      }
-      
-      //verify Block Info
-      ExtendedBlock lastblock = locatedblock.getBlock();
-      DataNode.LOG.info("newblocks=" + lastblock);
-      for(int i = 0; i < REPLICATION_NUM; i++) {
-        checkMetaInfo(lastblock, datanodes[i]);
-      }
-
-
-      DataNode.LOG.info("dfs.dfs.clientName=" + dfs.dfs.clientName);
-      cluster.getNameNodeRpc().append(filestr, dfs.dfs.clientName);
-
-      // expire lease to trigger block recovery.
-      waitLeaseRecovery(cluster);
-
-      Block[] updatedmetainfo = new Block[REPLICATION_NUM];
-      long oldSize = lastblock.getNumBytes();
-      lastblock = TestInterDatanodeProtocol.getLastLocatedBlock(
-          dfs.dfs.getNamenode(), filestr).getBlock();
-      long currentGS = lastblock.getGenerationStamp();
-      for(int i = 0; i < REPLICATION_NUM; i++) {
-        updatedmetainfo[i] = DataNodeTestUtils.getFSDataset(datanodes[i]).getStoredBlock(
-            lastblock.getBlockPoolId(), lastblock.getBlockId());
-        assertEquals(lastblock.getBlockId(), updatedmetainfo[i].getBlockId());
-        assertEquals(oldSize, updatedmetainfo[i].getNumBytes());
-        assertEquals(currentGS, updatedmetainfo[i].getGenerationStamp());
-      }
-
-      // verify that lease recovery does not occur when namenode is in safemode
-      System.out.println("Testing that lease recovery cannot happen during safemode.");
-      filestr = "/foo.safemode";
-      filepath = new Path(filestr);
-      dfs.create(filepath, (short)1);
-      cluster.getNameNodeRpc().setSafeMode(
-          HdfsConstants.SafeModeAction.SAFEMODE_ENTER, false);
-      assertTrue(dfs.dfs.exists(filestr));
-      DFSTestUtil.waitReplication(dfs, filepath, (short)1);
-      waitLeaseRecovery(cluster);
-      // verify that we still cannot recover the lease
-      LeaseManager lm = NameNodeAdapter.getLeaseManager(cluster.getNamesystem());
-      assertTrue("Found " + lm.countLease() + " lease, expected 1", lm.countLease() == 1);
-      cluster.getNameNodeRpc().setSafeMode(
-          HdfsConstants.SafeModeAction.SAFEMODE_LEAVE, false);
+    //connect to data nodes
+    DataNode[] datanodes = new DataNode[REPLICATION_NUM];
+    for(int i = 0; i < REPLICATION_NUM; i++) {
+      datanodes[i] = cluster.getDataNode(datanodeinfos[i].getIpcPort());
+      assertTrue(datanodes[i] != null);
     }
-    finally {
-      if (cluster != null) {cluster.shutdown();}
+
+    //verify Block Info
+    ExtendedBlock lastblock = locatedblock.getBlock();
+    DataNode.LOG.info("newblocks=" + lastblock);
+    for(int i = 0; i < REPLICATION_NUM; i++) {
+      checkMetaInfo(lastblock, datanodes[i]);
     }
+
+    DataNode.LOG.info("dfs.dfs.clientName=" + dfs.dfs.clientName);
+    cluster.getNameNodeRpc().append(filestr, dfs.dfs.clientName);
+
+    // expire lease to trigger block recovery.
+    waitLeaseRecovery(cluster);
+
+    Block[] updatedmetainfo = new Block[REPLICATION_NUM];
+    long oldSize = lastblock.getNumBytes();
+    lastblock = TestInterDatanodeProtocol.getLastLocatedBlock(
+        dfs.dfs.getNamenode(), filestr).getBlock();
+    long currentGS = lastblock.getGenerationStamp();
+    for(int i = 0; i < REPLICATION_NUM; i++) {
+      updatedmetainfo[i] = DataNodeTestUtils.getFSDataset(datanodes[i]).getStoredBlock(
+          lastblock.getBlockPoolId(), lastblock.getBlockId());
+      assertEquals(lastblock.getBlockId(), updatedmetainfo[i].getBlockId());
+      assertEquals(oldSize, updatedmetainfo[i].getNumBytes());
+      assertEquals(currentGS, updatedmetainfo[i].getGenerationStamp());
+    }
+
+    // verify that lease recovery does not occur when namenode is in safemode
+    System.out.println("Testing that lease recovery cannot happen during safemode.");
+    filestr = "/foo.safemode";
+    filepath = new Path(filestr);
+    dfs.create(filepath, (short)1);
+    cluster.getNameNodeRpc().setSafeMode(
+        HdfsConstants.SafeModeAction.SAFEMODE_ENTER, false);
+    assertTrue(dfs.dfs.exists(filestr));
+    DFSTestUtil.waitReplication(dfs, filepath, (short)1);
+    waitLeaseRecovery(cluster);
+    // verify that we still cannot recover the lease
+    LeaseManager lm = NameNodeAdapter.getLeaseManager(cluster.getNamesystem());
+    assertTrue("Found " + lm.countLease() + " lease, expected 1", lm.countLease() == 1);
+    cluster.getNameNodeRpc().setSafeMode(
+        HdfsConstants.SafeModeAction.SAFEMODE_LEAVE, false);
   }
 
   /**
@@ -166,8 +168,7 @@ public class TestLeaseRecovery {
     Configuration conf = new Configuration();
     conf.set(DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY,
         UserGroupInformation.getCurrentUser().getShortUserName());
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
-        .build();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     Path file = new Path("/testRecoveryFile");
     DistributedFileSystem dfs = cluster.getFileSystem();
     FSDataOutputStream out = dfs.create(file);

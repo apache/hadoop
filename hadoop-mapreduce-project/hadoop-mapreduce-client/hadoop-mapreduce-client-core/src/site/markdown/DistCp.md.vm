@@ -119,13 +119,13 @@ $H3 Basic Usage
 $H3 Update and Overwrite
 
   `-update` is used to copy files from source that don't exist at the target
-  or differ than the target version. `-overwrite` overwrites target-files that
+  or differ from the target version. `-overwrite` overwrites target-files that
   exist at the target.
 
-  Update and Overwrite options warrant special attention, since their handling
-  of source-paths varies from the defaults in a very subtle manner. Consider a
-  copy from `/source/first/` and `/source/second/` to `/target/`, where the
-  source paths have the following contents:
+  The Update and Overwrite options warrant special attention since their
+  handling of source-paths varies from the defaults in a very subtle manner.
+  Consider a copy from `/source/first/` and `/source/second/` to `/target/`,
+  where the source paths have the following contents:
 
     hdfs://nn1:8020/source/first/1
     hdfs://nn1:8020/source/first/2

@@ -950,6 +950,11 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6534. Fix build on macosx: HDFS parts (Binglin Chang via aw)
 
+    HDFS-7111. TestSafeMode assumes Unix line endings in safe mode tip.
+    (cnauroth)
+
+    HDFS-7127. TestLeaseRecovery leaks MiniDFSCluster instances. (cnauroth)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
