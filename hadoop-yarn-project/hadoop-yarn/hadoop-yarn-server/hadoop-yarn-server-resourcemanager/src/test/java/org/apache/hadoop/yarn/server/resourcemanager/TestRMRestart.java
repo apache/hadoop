@@ -77,6 +77,8 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
@@ -1833,10 +1835,16 @@ public class TestRMRestart {
     conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
       hostFile.getAbsolutePath());
     writeToHostsFile("");
-    MockRM rm1 = new MockRM(conf);
+    final DrainDispatcher dispatcher = new DrainDispatcher();
+    MockRM rm1 = new MockRM(conf) {
+      @Override
+      protected Dispatcher createDispatcher() {
+        return dispatcher;
+      }
+    };
     rm1.start();
-    rm1.registerNode("localhost:1234", 8000);
-    rm1.registerNode("host2:1234", 8000);
+    MockNM nm1 = rm1.registerNode("localhost:1234", 8000);
+    MockNM nm2 = rm1.registerNode("host2:1234", 8000);
     Assert
       .assertEquals(0, ClusterMetrics.getMetrics().getNumDecommisionedNMs());
     String ip = NetUtils.normalizeHostName("localhost");
@@ -1845,15 +1853,25 @@ public class TestRMRestart {
 
     // refresh nodes
     rm1.getNodesListManager().refreshNodes(conf);
+    NodeHeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
+    Assert
+        .assertTrue(NodeAction.SHUTDOWN.equals(nodeHeartbeat.getNodeAction()));
+    nodeHeartbeat = nm2.nodeHeartbeat(true);
+    Assert.assertTrue("The decommisioned metrics are not updated",
+        NodeAction.SHUTDOWN.equals(nodeHeartbeat.getNodeAction()));
+
+    dispatcher.await();
     Assert
       .assertEquals(2, ClusterMetrics.getMetrics().getNumDecommisionedNMs());
+    rm1.stop();
+    Assert
+        .assertEquals(0, ClusterMetrics.getMetrics().getNumDecommisionedNMs());
 
     // restart RM.
     MockRM rm2 = new MockRM(conf);
     rm2.start();
     Assert
       .assertEquals(2, ClusterMetrics.getMetrics().getNumDecommisionedNMs());
-    rm1.stop();
     rm2.stop();
   }
 
