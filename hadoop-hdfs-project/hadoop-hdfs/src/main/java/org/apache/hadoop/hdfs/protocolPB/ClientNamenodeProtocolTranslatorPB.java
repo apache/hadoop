@@ -118,8 +118,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSna
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotDiffReportResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshottableDirListingRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshottableDirListingResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePolicySuiteRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePolicySuiteResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePoliciesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePoliciesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.IsFileClosedRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCacheDirectivesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCacheDirectivesResponseProto;
@@ -226,9 +226,9 @@ public class ClientNamenodeProtocolTranslatorPB implements
   VOID_GET_DATA_ENCRYPTIONKEY_REQUEST =
       GetDataEncryptionKeyRequestProto.newBuilder().build();
 
-  private final static GetStoragePolicySuiteRequestProto
-  VOID_GET_STORAGE_POLICY_SUITE_REQUEST =
-      GetStoragePolicySuiteRequestProto.newBuilder().build();
+  private final static GetStoragePoliciesRequestProto
+  VOID_GET_STORAGE_POLICIES_REQUEST =
+      GetStoragePoliciesRequestProto.newBuilder().build();
 
   public ClientNamenodeProtocolTranslatorPB(ClientNamenodeProtocolPB proxy) {
     rpcProxy = proxy;
@@ -1456,10 +1456,10 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public BlockStoragePolicy[] getStoragePolicySuite() throws IOException {
+  public BlockStoragePolicy[] getStoragePolicies() throws IOException {
     try {
-      GetStoragePolicySuiteResponseProto response = rpcProxy
-          .getStoragePolicySuite(null, VOID_GET_STORAGE_POLICY_SUITE_REQUEST);
+      GetStoragePoliciesResponseProto response = rpcProxy
+          .getStoragePolicies(null, VOID_GET_STORAGE_POLICIES_REQUEST);
       return PBHelper.convertStoragePolicies(response.getPoliciesList());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);

@@ -614,7 +614,7 @@ public class DFSAdmin extends FsShell {
       System.out.println("The storage policy of " + argv[1] + " is unspecified");
       return 0;
     }
-    BlockStoragePolicy[] policies = dfs.getStoragePolicySuite();
+    BlockStoragePolicy[] policies = dfs.getStoragePolicies();
     for (BlockStoragePolicy p : policies) {
       if (p.getId() == storagePolicyId) {
         System.out.println("The storage policy of " + argv[1] + ":\n" + p);

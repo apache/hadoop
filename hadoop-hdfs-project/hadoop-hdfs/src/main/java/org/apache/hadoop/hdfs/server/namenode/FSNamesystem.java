@@ -2304,13 +2304,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * @return All the existing block storage policies
    */
-  BlockStoragePolicy[] getStoragePolicySuite() throws IOException {
+  BlockStoragePolicy[] getStoragePolicies() throws IOException {
     checkOperation(OperationCategory.READ);
     waitForLoadingFSImage();
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      return blockManager.getStoragePolicySuite();
+      return blockManager.getStoragePolicies();
     } finally {
       readUnlock();
     }

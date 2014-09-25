@@ -402,7 +402,7 @@ public class BlockManager {
     return storagePolicySuite.getPolicy(policyName);
   }
 
-  public BlockStoragePolicy[] getStoragePolicySuite() {
+  public BlockStoragePolicy[] getStoragePolicies() {
     return storagePolicySuite.getAllPolicies();
   }
 

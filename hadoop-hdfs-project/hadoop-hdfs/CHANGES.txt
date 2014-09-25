@@ -345,6 +345,9 @@ Trunk (Unreleased)
     HDFS-7081. Add new DistributedFileSystem API for getting all the existing
     storage policies. (jing9)
 
+    HDFS-7140. Add a tool to list all the existing block storage policies.
+    (jing9)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
