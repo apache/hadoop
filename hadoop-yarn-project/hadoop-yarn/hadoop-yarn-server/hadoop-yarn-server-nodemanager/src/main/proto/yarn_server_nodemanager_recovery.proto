@@ -29,6 +29,7 @@ message ContainerManagerApplicationProto {
   optional string user = 2;
   optional bytes credentials = 3;
   repeated ApplicationACLMapProto acls = 4;
+  optional LogAggregationContextProto log_aggregation_context = 5;
 }
 
 message DeletionServiceDeleteTaskProto {
