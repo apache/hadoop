@@ -63,6 +63,8 @@ public interface MRJobConfig {
 
   public static final String QUEUE_NAME = "mapreduce.job.queuename";
 
+  public static final String RESERVATION_ID = "mapreduce.job.reservation.id";
+
   public static final String JOB_TAGS = "mapreduce.job.tags";
 
   public static final String JVM_NUMTASKS_TORUN = "mapreduce.job.jvm.numtasks";
