@@ -1457,6 +1457,39 @@ public class DFSTestUtil {
   }
 
   /**
+   * Helper function that verified blocks of a file are placed on the
+   * expected storage type.
+   *
+   * @param fs The file system containing the the file.
+   * @param client The DFS client used to access the file
+   * @param path name to the file to verify
+   * @param storageType expected storage type
+   * @returns true if file exists and its blocks are located on the expected
+   *            storage type.
+   *          false otherwise.
+   */
+  public static boolean verifyFileReplicasOnStorageType(FileSystem fs,
+    DFSClient client, Path path, StorageType storageType) throws IOException {
+    if (!fs.exists(path)) {
+      LOG.info("verifyFileReplicasOnStorageType: file " + path + "does not exist");
+      return false;
+    }
+    long fileLength = client.getFileInfo(path.toString()).getLen();
+    LocatedBlocks locatedBlocks =
+      client.getLocatedBlocks(path.toString(), 0, fileLength);
+    for (LocatedBlock locatedBlock : locatedBlocks.getLocatedBlocks()) {
+      if (locatedBlock.getStorageTypes()[0] != storageType) {
+        LOG.info("verifyFileReplicasOnStorageType: for file " + path +
+            ". Expect blk" + locatedBlock +
+          " on Type: " + storageType + ". Actual Type: " +
+          locatedBlock.getStorageTypes()[0]);
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
    * Helper function to create a key in the Key Provider. Defaults
    * to the first indexed NameNode's Key Provider.
    *
