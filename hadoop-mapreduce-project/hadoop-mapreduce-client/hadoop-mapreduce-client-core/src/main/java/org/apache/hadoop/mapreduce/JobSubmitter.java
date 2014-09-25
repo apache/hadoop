@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.QueueACL;
+
 import static org.apache.hadoop.mapred.QueueManager.toFullPropertyName;
 
 import org.apache.hadoop.mapreduce.filecache.ClientDistributedCacheManager;
@@ -60,6 +61,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -425,6 +427,12 @@ class JobSubmitter {
         }
         conf.setStrings(MRJobConfig.JOB_TOKEN_TRACKING_IDS,
             trackingIds.toArray(new String[trackingIds.size()]));
+      }
+
+      // Set reservation info if it exists
+      ReservationId reservationId = job.getReservationId();
+      if (reservationId != null) {
+        conf.set(MRJobConfig.RESERVATION_ID, reservationId.toString());
       }
 
       // Write job file to submit dir

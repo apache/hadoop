@@ -38,6 +38,7 @@ import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.util.ConfigUtil;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 
 /**
  * The job submitter's view of the Job.
@@ -112,6 +113,7 @@ public class Job extends JobContextImpl implements JobContext {
   private JobStatus status;
   private long statustime;
   private Cluster cluster;
+  private ReservationId reservationId;
 
   /**
    * @deprecated Use {@link #getInstance()}
@@ -1522,6 +1524,25 @@ public class Job extends JobContextImpl implements JobContext {
     ensureState(JobState.RUNNING);
     updateStatus();
     return status.isUber();
+  }
+
+  /**
+   * Get the reservation to which the job is submitted to, if any
+   *
+   * @return the reservationId the identifier of the job's reservation, null if
+   *         the job does not have any reservation associated with it
+   */
+  public ReservationId getReservationId() {
+    return reservationId;
+  }
+
+  /**
+   * Set the reservation to which the job is submitted to
+   *
+   * @param reservationId the reservationId to set
+   */
+  public void setReservationId(ReservationId reservationId) {
+    this.reservationId = reservationId;
   }
   
 }
