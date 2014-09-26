@@ -78,6 +78,36 @@ public class ReservationInterval implements Comparable<ReservationInterval> {
     }
   }
 
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + (int) (endTime ^ (endTime >>> 32));
+    result = prime * result + (int) (startTime ^ (startTime >>> 32));
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (!(obj instanceof ReservationInterval)) {
+      return false;
+    }
+    ReservationInterval other = (ReservationInterval) obj;
+    if (endTime != other.endTime) {
+      return false;
+    }
+    if (startTime != other.startTime) {
+      return false;
+    }
+    return true;
+  }
+
   public String toString() {
     return "[" + startTime + ", " + endTime + "]";
   }
