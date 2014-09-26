@@ -29,3 +29,6 @@ delegate. (Subru Krishnan and Carlo Curino  via subru)
 
 YARN-2576. Fixing compilation, javadocs and audit issues to pass
 test patch in branch. (Subru Krishnan and Carlo Curino  via subru)
+
+YARN-2611. Fixing jenkins findbugs warning and TestRMWebServicesCapacitySched
+for branch YARN-1051. (Subru Krishnan and Carlo Curino  via subru)

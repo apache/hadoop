@@ -138,7 +138,7 @@ class InMemoryPlan implements Plan {
       rleSparseVector.removeInterval(r.getKey(), r.getValue());
     }
     if (resAlloc.isEmpty()) {
-      userResourceAlloc.remove(resAlloc);
+      userResourceAlloc.remove(user);
     }
   }
 
@@ -311,9 +311,9 @@ class InMemoryPlan implements Plan {
   public void archiveCompletedReservations(long tick) {
     // Since we are looking for old reservations, read lock is optimal
     LOG.debug("Running archival at time: {}", tick);
-    readLock.lock();
     List<InMemoryReservationAllocation> expiredReservations =
         new ArrayList<InMemoryReservationAllocation>();
+    readLock.lock();
     // archive reservations and delete the ones which are beyond
     // the reservation policy "window"
     try {
@@ -351,9 +351,9 @@ class InMemoryPlan implements Plan {
 
   @Override
   public Set<ReservationAllocation> getReservationsAtTime(long tick) {
-    readLock.lock();
     ReservationInterval searchInterval =
         new ReservationInterval(tick, Long.MAX_VALUE);
+    readLock.lock();
     try {
       SortedMap<ReservationInterval, Set<InMemoryReservationAllocation>> reservations =
           currentReservations.headMap(searchInterval, true);

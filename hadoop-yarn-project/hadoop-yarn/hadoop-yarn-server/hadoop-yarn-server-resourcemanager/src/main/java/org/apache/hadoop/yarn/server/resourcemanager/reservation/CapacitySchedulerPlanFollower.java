@@ -326,7 +326,7 @@ public class CapacitySchedulerPlanFollower implements PlanFollower {
     return currentReservations;
   }
 
-  private class ReservationAllocationComparator implements
+  private static class ReservationAllocationComparator implements
       Comparator<ReservationAllocation> {
     CapacityScheduler scheduler;
     long now;
