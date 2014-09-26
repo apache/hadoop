@@ -961,6 +961,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7127. TestLeaseRecovery leaks MiniDFSCluster instances. (cnauroth)
 
+    HDFS-7131. During HA upgrade, JournalNode should create a new committedTxnId
+    file in the current directory. (jing9)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
