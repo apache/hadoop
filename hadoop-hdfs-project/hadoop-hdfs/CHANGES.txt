@@ -591,6 +591,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-7119. Split error checks in AtomicFileOutputStream#close into separate
     conditions to improve diagnostics. (cnauroth)
 
+    HDFS-7077. Separate CipherSuite from crypto protocol version. (wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

@@ -132,6 +132,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherSuite;
+import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
@@ -164,8 +165,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.UnknownCryptoProtocolVersionException;
 import org.apache.hadoop.hdfs.XAttrHelper;
-import org.apache.hadoop.hdfs.UnknownCipherSuiteException;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -2355,46 +2356,41 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * If the file is within an encryption zone, select the appropriate 
-   * CipherSuite from the list provided by the client. Since the client may 
-   * be newer, need to handle unknown CipherSuites.
+   * CryptoProtocolVersion from the list provided by the client. Since the
+   * client may be newer, we need to handle unknown versions.
    *
-   * @param srcIIP path of the file
-   * @param cipherSuites client-provided list of supported CipherSuites, 
-   *                     in desired order.
-   * @return chosen CipherSuite, or null if file is not in an EncryptionZone
+   * @param zone EncryptionZone of the file
+   * @param supportedVersions List of supported protocol versions
+   * @return chosen protocol version
    * @throws IOException
    */
-  private CipherSuite chooseCipherSuite(INodesInPath srcIIP, List<CipherSuite>
-      cipherSuites)
-      throws UnknownCipherSuiteException, UnresolvedLinkException,
+  private CryptoProtocolVersion chooseProtocolVersion(EncryptionZone zone,
+      CryptoProtocolVersion[] supportedVersions)
+      throws UnknownCryptoProtocolVersionException, UnresolvedLinkException,
         SnapshotAccessControlException {
-    // Not in an EZ
-    if (!dir.isInAnEZ(srcIIP)) {
-      return null;
-    }
-    CipherSuite chosen = null;
-    for (CipherSuite c : cipherSuites) {
-      if (c.equals(CipherSuite.UNKNOWN)) {
+    Preconditions.checkNotNull(zone);
+    Preconditions.checkNotNull(supportedVersions);
+    // Right now, we only support a single protocol version,
+    // so simply look for it in the list of provided options
+    final CryptoProtocolVersion required = zone.getVersion();
+
+    for (CryptoProtocolVersion c : supportedVersions) {
+      if (c.equals(CryptoProtocolVersion.UNKNOWN)) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Ignoring unknown CipherSuite provided by client: "
-              + c.getUnknownValue());
+          LOG.debug("Ignoring unknown CryptoProtocolVersion provided by " +
+              "client: " + c.getUnknownValue());
         }
         continue;
       }
-      for (CipherSuite supported : CipherSuite.values()) {
-        if (supported.equals(c)) {
-          chosen = c;
-          break;
-        }
+      if (c.equals(required)) {
+        return c;
       }
     }
-    if (chosen == null) {
-      throw new UnknownCipherSuiteException(
-          "No cipher suites provided by the client are supported."
-              + " Client provided: " + Arrays.toString(cipherSuites.toArray())
-              + " NameNode supports: " + Arrays.toString(CipherSuite.values()));
-    }
-    return chosen;
+    throw new UnknownCryptoProtocolVersionException(
+        "No crypto protocol versions provided by the client are supported."
+            + " Client provided: " + Arrays.toString(supportedVersions)
+            + " NameNode supports: " + Arrays.toString(CryptoProtocolVersion
+            .values()));
   }
 
   /**
@@ -2430,7 +2426,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   HdfsFileStatus startFile(String src, PermissionStatus permissions,
       String holder, String clientMachine, EnumSet<CreateFlag> flag,
       boolean createParent, short replication, long blockSize, 
-      List<CipherSuite> cipherSuites)
+      CryptoProtocolVersion[] supportedVersions)
       throws AccessControlException, SafeModeException,
       FileAlreadyExistsException, UnresolvedLinkException,
       FileNotFoundException, ParentNotDirectoryException, IOException {
@@ -2443,7 +2439,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     
     try {
       status = startFileInt(src, permissions, holder, clientMachine, flag,
-          createParent, replication, blockSize, cipherSuites,
+          createParent, replication, blockSize, supportedVersions,
           cacheEntry != null);
     } catch (AccessControlException e) {
       logAuditEvent(false, "create", src);
@@ -2457,7 +2453,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private HdfsFileStatus startFileInt(final String srcArg,
       PermissionStatus permissions, String holder, String clientMachine,
       EnumSet<CreateFlag> flag, boolean createParent, short replication,
-      long blockSize, List<CipherSuite> cipherSuites, boolean logRetryCache)
+      long blockSize, CryptoProtocolVersion[] supportedVersions,
+      boolean logRetryCache)
       throws AccessControlException, SafeModeException,
       FileAlreadyExistsException, UnresolvedLinkException,
       FileNotFoundException, ParentNotDirectoryException, IOException {
@@ -2471,9 +2468,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               + ", replication=" + replication
               + ", createFlag=" + flag.toString()
               + ", blockSize=" + blockSize);
-      builder.append(", cipherSuites=");
-      if (cipherSuites != null) {
-        builder.append(Arrays.toString(cipherSuites.toArray()));
+      builder.append(", supportedVersions=");
+      if (supportedVersions != null) {
+        builder.append(Arrays.toString(supportedVersions));
       } else {
         builder.append("null");
       }
@@ -2511,6 +2508,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * special RetryStartFileException to ask the DFSClient to try the create
      * again later.
      */
+    CryptoProtocolVersion protocolVersion = null;
     CipherSuite suite = null;
     String ezKeyName = null;
     readLock();
@@ -2519,13 +2517,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       INodesInPath iip = dir.getINodesInPath4Write(src);
       // Nothing to do if the path is not within an EZ
       if (dir.isInAnEZ(iip)) {
-        suite = chooseCipherSuite(iip, cipherSuites);
-        if (suite != null) {
-          Preconditions.checkArgument(!suite.equals(CipherSuite.UNKNOWN),
-              "Chose an UNKNOWN CipherSuite!");
-        }
+        EncryptionZone zone = dir.getEZForPath(iip);
+        protocolVersion = chooseProtocolVersion(zone, supportedVersions);
+        suite = zone.getSuite();
         ezKeyName = dir.getKeyName(iip);
-        Preconditions.checkState(ezKeyName != null);
+
+        Preconditions.checkNotNull(protocolVersion);
+        Preconditions.checkNotNull(suite);
+        Preconditions.checkArgument(!suite.equals(CipherSuite.UNKNOWN),
+            "Chose an UNKNOWN CipherSuite!");
+        Preconditions.checkNotNull(ezKeyName);
       }
     } finally {
       readUnlock();
@@ -2551,7 +2552,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       src = resolvePath(src, pathComponents);
       toRemoveBlocks = startFileInternal(pc, src, permissions, holder, 
           clientMachine, create, overwrite, createParent, replication, 
-          blockSize, suite, edek, logRetryCache);
+          blockSize, suite, protocolVersion, edek, logRetryCache);
       stat = dir.getFileInfo(src, false,
           FSDirectory.isReservedRawName(srcArg), false);
     } catch (StandbyException se) {
@@ -2587,7 +2588,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       String src, PermissionStatus permissions, String holder, 
       String clientMachine, boolean create, boolean overwrite, 
       boolean createParent, short replication, long blockSize, 
-      CipherSuite suite, EncryptedKeyVersion edek, boolean logRetryEntry)
+      CipherSuite suite, CryptoProtocolVersion version,
+      EncryptedKeyVersion edek, boolean logRetryEntry)
       throws FileAlreadyExistsException, AccessControlException,
       UnresolvedLinkException, FileNotFoundException,
       ParentNotDirectoryException, RetryStartFileException, IOException {
@@ -2612,7 +2614,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (!ezKeyName.equals(edek.getEncryptionKeyName())) {
         throw new RetryStartFileException();
       }
-      feInfo = new FileEncryptionInfo(suite,
+      feInfo = new FileEncryptionInfo(suite, version,
           edek.getEncryptedKeyVersion().getMaterial(),
           edek.getEncryptedKeyIv(),
           ezKeyName, edek.getEncryptionKeyVersionName());
@@ -8674,7 +8676,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       src = resolvePath(src, pathComponents);
 
       final CipherSuite suite = CipherSuite.convert(cipher);
-      final XAttr ezXAttr = dir.createEncryptionZone(src, suite, keyName);
+      // For now this is hardcoded, as we only support one method.
+      final CryptoProtocolVersion version =
+          CryptoProtocolVersion.ENCRYPTION_ZONES;
+      final XAttr ezXAttr = dir.createEncryptionZone(src, suite,
+          version, keyName);
       List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
       xAttrs.add(ezXAttr);
       getEditLog().logSetXAttrs(src, xAttrs, logRetryCache);
