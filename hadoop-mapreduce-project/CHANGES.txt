@@ -161,6 +161,10 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5831. Make MR client ignore unknown counters received from AM.
     (Junping Du via zjshen)
 
+    MAPREDUCE-6073. Description of mapreduce.job.speculative.slowtaskthreshold
+    in mapred-default should be moved into description tags (Tsuyoshi OZAWA 
+    via aw)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

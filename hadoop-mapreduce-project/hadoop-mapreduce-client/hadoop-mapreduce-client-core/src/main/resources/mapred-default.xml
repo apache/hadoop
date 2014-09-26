@@ -763,10 +763,10 @@
  
 <property>
   <name>mapreduce.job.speculative.slowtaskthreshold</name>
-  <value>1.0</value>The number of standard deviations by which a task's 
+  <value>1.0</value>
+  <description>The number of standard deviations by which a task's
   ave progress-rates must be lower than the average of all running tasks'
   for the task to be considered too slow.
-  <description>
   </description>
 </property>
 
