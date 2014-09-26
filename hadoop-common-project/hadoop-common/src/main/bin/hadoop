@@ -38,6 +38,7 @@ function print_usage(){
   echo "  credential           interact with credential providers"
   echo "                       Hadoop jar and the required libraries"
   echo "  daemonlog            get/set the log level for each daemon"
+  echo "  trace                view and modify Hadoop tracing settings"
   echo " or"
   echo "  CLASSNAME            run the class named CLASSNAME"
   echo ""
@@ -114,6 +115,8 @@ case $COMMAND in
       CLASSPATH=${CLASSPATH}:${TOOL_PATH}
     elif [ "$COMMAND" = "credential" ] ; then
       CLASS=org.apache.hadoop.security.alias.CredentialShell
+    elif [ "$COMMAND" = "trace" ] ; then
+      CLASS=org.apache.hadoop.tracing.TraceAdmin
     elif [ "$COMMAND" = "classpath" ] ; then
       if [ "$#" -eq 1 ]; then
         # No need to bother starting up a JVM for this simple case.

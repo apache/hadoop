@@ -251,6 +251,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7077. Separate CipherSuite from crypto protocol version. (wang)
 
+    HDFS-6956. Allow dynamically changing the tracing level in Hadoop servers
+    (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
