@@ -348,6 +348,7 @@
                   <include>ProtobufRpcEngine.proto</include>
                   <include>Security.proto</include>
                   <include>GetUserMappingsProtocol.proto</include>
+                  <include>TraceAdmin.proto</include>
                   <include>RefreshAuthorizationPolicyProtocol.proto</include>
                   <include>RefreshUserMappingsProtocol.proto</include>
                   <include>RefreshCallQueueProtocol.proto</include>
