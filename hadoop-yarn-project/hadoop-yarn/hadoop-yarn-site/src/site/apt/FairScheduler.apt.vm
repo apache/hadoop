@@ -405,6 +405,9 @@ Queue Access Control Lists (ACLs)
   that queue or in the ACL of any of that queue's ancestors. So if queue2
   is inside queue1, and user1 is in queue1's ACL, and user2 is in queue2's
   ACL, then both users may submit to queue2.
+
+  <<Note:>> The delimiter is a space character. To specify only ACL groups, begin the 
+  value with a space character. 
   
   The root queue's ACLs are "*" by default which, because ACLs are passed down,
   means that everybody may submit to and kill applications from every queue.
