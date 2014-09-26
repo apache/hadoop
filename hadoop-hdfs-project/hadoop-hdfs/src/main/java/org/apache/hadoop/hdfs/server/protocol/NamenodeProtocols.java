@@ -26,6 +26,7 @@ import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
 import org.apache.hadoop.ipc.GenericRefreshProtocol;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
+import org.apache.hadoop.tracing.TraceAdminProtocol;
 
 /** The full set of RPC methods implemented by the Namenode.  */
 @InterfaceAudience.Private
@@ -38,5 +39,6 @@ public interface NamenodeProtocols
           RefreshCallQueueProtocol,
           GenericRefreshProtocol,
           GetUserMappingsProtocol,
-          HAServiceProtocol {
+          HAServiceProtocol,
+          TraceAdminProtocol {
 }

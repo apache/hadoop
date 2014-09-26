@@ -34,6 +34,8 @@ import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.io.WritableUtils;
@@ -53,6 +55,8 @@ public abstract class FileSystemCounterGroup<C extends Counter>
 
   static final int MAX_NUM_SCHEMES = 100; // intern/sanity check
   static final ConcurrentMap<String, String> schemes = Maps.newConcurrentMap();
+  
+  private static final Log LOG = LogFactory.getLog(FileSystemCounterGroup.class);
 
   // C[] would need Array.newInstance which requires a Class<C> reference.
   // Just a few local casts probably worth not having to carry it around.
@@ -159,13 +163,17 @@ public abstract class FileSystemCounterGroup<C extends Counter>
     else {
       ours = findCounter(counter.getName());
     }
-    ours.setValue(counter.getValue());
+    if (ours != null) {
+      ours.setValue(counter.getValue());
+    }
   }
 
   @Override
   public C addCounter(String name, String displayName, long value) {
     C counter = findCounter(name);
-    counter.setValue(value);
+    if (counter != null) {
+      counter.setValue(value);
+    }
     return counter;
   }
 
@@ -192,13 +200,14 @@ public abstract class FileSystemCounterGroup<C extends Counter>
     }
     catch (Exception e) {
       if (create) throw new IllegalArgumentException(e);
+      LOG.warn(counterName + " is not a recognized counter.");
       return null;
     }
   }
 
   @Override
   public C findCounter(String counterName) {
-    return findCounter(counterName, true);
+    return findCounter(counterName, false);
   }
 
   @SuppressWarnings("unchecked")

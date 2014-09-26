@@ -241,7 +241,10 @@ public class TypeConverter {
         org.apache.hadoop.mapreduce.Counter c =
           counters.findCounter(yGrp.getName(),
               yCntr.getName());
-        c.setValue(yCntr.getValue());
+        // if c can be found, or it will be skipped.
+        if (c != null) {
+          c.setValue(yCntr.getValue());
+        }
       }
     }
     return counters;

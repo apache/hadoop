@@ -256,6 +256,9 @@ Release 2.6.0 - UNRELEASED
     YARN-1959. Fix headroom calculation in FairScheduler. 
     (Anubhav Dhoot via kasha)
 
+    YARN-2577. Clarify ACL delimiter and how to configure ACL groups only
+    (Miklos Christine via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
