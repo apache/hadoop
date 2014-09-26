@@ -168,6 +168,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5796. Use current version of the archive name in 
     DistributedCacheDeploy document (Akira AJISAKA via aw)
 
+    MAPREDUCE-5945. Update the description of GenericOptionsParser -jt 
+    option (Akira AJISAKA via aw)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
