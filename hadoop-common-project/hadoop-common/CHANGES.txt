@@ -746,6 +746,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11040. Return value of read(ByteBuffer buf) in CryptoInputStream is
     incorrect in some cases. (Yi Liu via wang)
 
+    HADOOP-11140. hadoop-aws only need test-scoped dependency on
+    hadoop-common's tests jar. (Juan Yu via wang)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HADOOP-10734. Implement high-performance secure random number sources.
