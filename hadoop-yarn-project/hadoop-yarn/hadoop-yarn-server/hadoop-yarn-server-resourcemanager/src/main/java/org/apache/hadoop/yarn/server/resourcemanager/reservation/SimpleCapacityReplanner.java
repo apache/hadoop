@@ -70,6 +70,11 @@ public class SimpleCapacityReplanner implements Planner {
 
   @Override
   public void init(String planQueueName, Configuration conf) {
+    if (!(conf instanceof CapacitySchedulerConfiguration)) {
+      throw new IllegalArgumentException("Unexpected conf type: "
+          + conf.getClass().getSimpleName() + " only supported conf is: "
+          + CapacitySchedulerConfiguration.class.getSimpleName());
+    }
     this.lengthOfCheckZone =
         ((CapacitySchedulerConfiguration) conf)
             .getEnforcementWindow(planQueueName);
