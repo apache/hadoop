@@ -548,6 +548,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11101. How about inputstream close statement from catch block to
     finally block in FileContext#copy() ( skrho via vinayakumarb )
 
+    HADOOP-8808. Update FsShell documentation to mention deprecation of some of
+    the commands, and mention alternatives (Akira AJISAKA via aw)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
