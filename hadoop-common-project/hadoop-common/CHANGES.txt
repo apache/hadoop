@@ -535,6 +535,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11064. UnsatisifedLinkError with hadoop 2.4 JARs on hadoop-2.6 due to
     NativeCRC32 method changes. (cnauroth)
 
+    HADOOP-11048. user/custom LogManager fails to load if the client
+    classloader is enabled (Sangjin Lee via jlowe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
