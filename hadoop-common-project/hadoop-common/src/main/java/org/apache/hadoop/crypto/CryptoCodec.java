@@ -82,12 +82,7 @@ public abstract class CryptoCodec implements Configurable {
       }
     }
     
-    if (codec != null) {
-      return codec;
-    }
-    
-    throw new RuntimeException("No available crypto codec which meets " + 
-        "the cipher suite " + cipherSuite.getName() + ".");
+    return codec;
   }
   
   /**

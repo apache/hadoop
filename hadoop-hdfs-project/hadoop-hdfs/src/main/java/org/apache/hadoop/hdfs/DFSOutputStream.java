@@ -43,7 +43,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSOutputSummer;
@@ -54,6 +53,7 @@ import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
+import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -134,7 +134,10 @@ public class DFSOutputStream extends FSOutputSummer
    * errors (typically related to encryption zones and KeyProvider operations).
    */
   @VisibleForTesting
-  public static final int CREATE_RETRY_COUNT = 10;
+  static final int CREATE_RETRY_COUNT = 10;
+  @VisibleForTesting
+  static CryptoProtocolVersion[] SUPPORTED_CRYPTO_VERSIONS =
+      CryptoProtocolVersion.supported();
 
   private final DFSClient dfsClient;
   private Socket s;
@@ -1655,8 +1658,7 @@ public class DFSOutputStream extends FSOutputSummer
   static DFSOutputStream newStreamForCreate(DFSClient dfsClient, String src,
       FsPermission masked, EnumSet<CreateFlag> flag, boolean createParent,
       short replication, long blockSize, Progressable progress, int buffersize,
-      DataChecksum checksum, String[] favoredNodes,
-      List<CipherSuite> cipherSuites) throws IOException {
+      DataChecksum checksum, String[] favoredNodes) throws IOException {
     HdfsFileStatus stat = null;
 
     // Retry the create if we get a RetryStartFileException up to a maximum
@@ -1668,7 +1670,7 @@ public class DFSOutputStream extends FSOutputSummer
       try {
         stat = dfsClient.namenode.create(src, masked, dfsClient.clientName,
             new EnumSetWritable<CreateFlag>(flag), createParent, replication,
-            blockSize, cipherSuites);
+            blockSize, SUPPORTED_CRYPTO_VERSIONS);
         break;
       } catch (RemoteException re) {
         IOException e = re.unwrapRemoteException(
@@ -1682,7 +1684,7 @@ public class DFSOutputStream extends FSOutputSummer
             SafeModeException.class,
             UnresolvedPathException.class,
             SnapshotAccessControlException.class,
-            UnknownCipherSuiteException.class);
+            UnknownCryptoProtocolVersionException.class);
         if (e instanceof RetryStartFileException) {
           if (retryCount > 0) {
             shouldRetry = true;

@@ -48,8 +48,9 @@ message ListEncryptionZonesRequestProto {
 message EncryptionZoneProto {
   required int64 id = 1;
   required string path = 2;
-  required CipherSuite suite = 3;
-  required string keyName = 4;
+  required CipherSuiteProto suite = 3;
+  required CryptoProtocolVersionProto cryptoProtocolVersion = 4;
+  required string keyName = 5;
 }
 
 message ListEncryptionZonesResponseProto {

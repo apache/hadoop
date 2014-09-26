@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.protocolPB;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos
     .EncryptionZoneProto;
+import static org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CipherSuiteProto;
+import static org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CryptoProtocolVersionProto;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -59,6 +61,7 @@ import org.apache.hadoop.hdfs.protocol.CachePoolStats;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
+import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
@@ -2392,15 +2395,17 @@ public class PBHelper {
   public static EncryptionZoneProto convert(EncryptionZone zone) {
     return EncryptionZoneProto.newBuilder()
         .setId(zone.getId())
-        .setKeyName(zone.getKeyName())
         .setPath(zone.getPath())
         .setSuite(convert(zone.getSuite()))
+        .setCryptoProtocolVersion(convert(zone.getVersion()))
+        .setKeyName(zone.getKeyName())
         .build();
   }
 
   public static EncryptionZone convert(EncryptionZoneProto proto) {
-      return new EncryptionZone(proto.getId(), proto.getPath(),
-              convert(proto.getSuite()), proto.getKeyName());
+    return new EncryptionZone(proto.getId(), proto.getPath(),
+        convert(proto.getSuite()), convert(proto.getCryptoProtocolVersion()),
+        proto.getKeyName());
   }
 
   public static ShortCircuitShmSlotProto convert(SlotId slotId) {
@@ -2670,18 +2675,18 @@ public class PBHelper {
         builder.build()).build();
   }
 
-  public static HdfsProtos.CipherSuite convert(CipherSuite suite) {
+  public static CipherSuiteProto convert(CipherSuite suite) {
     switch (suite) {
     case UNKNOWN:
-      return HdfsProtos.CipherSuite.UNKNOWN;
+      return CipherSuiteProto.UNKNOWN;
     case AES_CTR_NOPADDING:
-      return HdfsProtos.CipherSuite.AES_CTR_NOPADDING;
+      return CipherSuiteProto.AES_CTR_NOPADDING;
     default:
       return null;
     }
   }
 
-  public static CipherSuite convert(HdfsProtos.CipherSuite proto) {
+  public static CipherSuite convert(CipherSuiteProto proto) {
     switch (proto) {
     case AES_CTR_NOPADDING:
       return CipherSuite.AES_CTR_NOPADDING;
@@ -2693,26 +2698,49 @@ public class PBHelper {
     }
   }
 
-  public static List<HdfsProtos.CipherSuite> convertCipherSuites
-      (List<CipherSuite> suites) {
-    if (suites == null) {
-      return null;
-    }
-    List<HdfsProtos.CipherSuite> protos =
-        Lists.newArrayListWithCapacity(suites.size());
-    for (CipherSuite suite : suites) {
-      protos.add(convert(suite));
+  public static List<CryptoProtocolVersionProto> convert(
+      CryptoProtocolVersion[] versions) {
+    List<CryptoProtocolVersionProto> protos =
+        Lists.newArrayListWithCapacity(versions.length);
+    for (CryptoProtocolVersion v: versions) {
+      protos.add(convert(v));
     }
     return protos;
   }
 
-  public static List<CipherSuite> convertCipherSuiteProtos(
-      List<HdfsProtos.CipherSuite> protos) {
-    List<CipherSuite> suites = Lists.newArrayListWithCapacity(protos.size());
-    for (HdfsProtos.CipherSuite proto : protos) {
-      suites.add(convert(proto));
+  public static CryptoProtocolVersion[] convertCryptoProtocolVersions(
+      List<CryptoProtocolVersionProto> protos) {
+    List<CryptoProtocolVersion> versions =
+        Lists.newArrayListWithCapacity(protos.size());
+    for (CryptoProtocolVersionProto p: protos) {
+      versions.add(convert(p));
     }
-    return suites;
+    return versions.toArray(new CryptoProtocolVersion[] {});
+  }
+
+  public static CryptoProtocolVersion convert(CryptoProtocolVersionProto
+      proto) {
+    switch(proto) {
+    case ENCRYPTION_ZONES:
+      return CryptoProtocolVersion.ENCRYPTION_ZONES;
+    default:
+      // Set to UNKNOWN and stash the unknown enum value
+      CryptoProtocolVersion version = CryptoProtocolVersion.UNKNOWN;
+      version.setUnknownValue(proto.getNumber());
+      return version;
+    }
+  }
+
+  public static CryptoProtocolVersionProto convert(CryptoProtocolVersion
+      version) {
+    switch(version) {
+    case UNKNOWN:
+      return CryptoProtocolVersionProto.UNKNOWN_PROTOCOL_VERSION;
+    case ENCRYPTION_ZONES:
+      return CryptoProtocolVersionProto.ENCRYPTION_ZONES;
+    default:
+      return null;
+    }
   }
 
   public static HdfsProtos.FileEncryptionInfoProto convert(
@@ -2722,6 +2750,7 @@ public class PBHelper {
     }
     return HdfsProtos.FileEncryptionInfoProto.newBuilder()
         .setSuite(convert(info.getCipherSuite()))
+        .setCryptoProtocolVersion(convert(info.getCryptoProtocolVersion()))
         .setKey(getByteString(info.getEncryptedDataEncryptionKey()))
         .setIv(getByteString(info.getIV()))
         .setEzKeyVersionName(info.getEzKeyVersionName())
@@ -2742,12 +2771,13 @@ public class PBHelper {
   }
 
   public static HdfsProtos.ZoneEncryptionInfoProto convert(
-      CipherSuite suite, String keyName) {
-    if (suite == null || keyName == null) {
+      CipherSuite suite, CryptoProtocolVersion version, String keyName) {
+    if (suite == null || version == null || keyName == null) {
       return null;
     }
     return HdfsProtos.ZoneEncryptionInfoProto.newBuilder()
         .setSuite(convert(suite))
+        .setCryptoProtocolVersion(convert(version))
         .setKeyName(keyName)
         .build();
   }
@@ -2758,23 +2788,27 @@ public class PBHelper {
       return null;
     }
     CipherSuite suite = convert(proto.getSuite());
+    CryptoProtocolVersion version = convert(proto.getCryptoProtocolVersion());
     byte[] key = proto.getKey().toByteArray();
     byte[] iv = proto.getIv().toByteArray();
     String ezKeyVersionName = proto.getEzKeyVersionName();
     String keyName = proto.getKeyName();
-    return new FileEncryptionInfo(suite, key, iv, keyName, ezKeyVersionName);
+    return new FileEncryptionInfo(suite, version, key, iv, keyName,
+        ezKeyVersionName);
   }
 
   public static FileEncryptionInfo convert(
       HdfsProtos.PerFileEncryptionInfoProto fileProto,
-      CipherSuite suite, String keyName) {
-    if (fileProto == null || suite == null || keyName == null) {
+      CipherSuite suite, CryptoProtocolVersion version, String keyName) {
+    if (fileProto == null || suite == null || version == null ||
+        keyName == null) {
       return null;
     }
     byte[] key = fileProto.getKey().toByteArray();
     byte[] iv = fileProto.getIv().toByteArray();
     String ezKeyVersionName = fileProto.getEzKeyVersionName();
-    return new FileEncryptionInfo(suite, key, iv, keyName, ezKeyVersionName);
+    return new FileEncryptionInfo(suite, version, key, iv, keyName,
+        ezKeyVersionName);
   }
 
 }

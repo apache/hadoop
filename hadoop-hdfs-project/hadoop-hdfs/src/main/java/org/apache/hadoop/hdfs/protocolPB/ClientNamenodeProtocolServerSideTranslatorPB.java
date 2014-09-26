@@ -394,8 +394,9 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       HdfsFileStatus result = server.create(req.getSrc(),
           PBHelper.convert(req.getMasked()), req.getClientName(),
           PBHelper.convertCreateFlag(req.getCreateFlag()), req.getCreateParent(),
-          (short) req.getReplication(), req.getBlockSize(), 
-          PBHelper.convertCipherSuiteProtos(req.getCipherSuitesList()));
+          (short) req.getReplication(), req.getBlockSize(),
+          PBHelper.convertCryptoProtocolVersions(
+              req.getCryptoProtocolVersionList()));
 
       if (result != null) {
         return CreateResponseProto.newBuilder().setFs(PBHelper.convert(result))
