@@ -51,7 +51,7 @@ public class ApplicationClassLoader extends URLClassLoader {
   public static final String SYSTEM_CLASSES_DEFAULT;
 
   private static final String PROPERTIES_FILE =
-      "application-classloader.properties";
+      "org.apache.hadoop.application-classloader.properties";
   private static final String SYSTEM_CLASSES_DEFAULT_KEY =
       "system.classes.default";
 
