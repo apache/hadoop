@@ -62,6 +62,11 @@ public class CapacityOverTimePolicy implements SharingPolicy {
   // it should be easy to remove this limitation
   @Override
   public void init(String reservationQueuePath, Configuration conf) {
+    if (!(conf instanceof CapacitySchedulerConfiguration)) {
+      throw new IllegalArgumentException("Unexpected conf type: "
+          + conf.getClass().getSimpleName() + " only supported conf is: "
+          + CapacitySchedulerConfiguration.class.getSimpleName());
+    }
     this.conf = (CapacitySchedulerConfiguration) conf;
     validWindow = this.conf.getReservationWindow(reservationQueuePath);
     maxInst = this.conf.getInstantaneousMaxCapacity(reservationQueuePath) / 100;
@@ -203,7 +208,7 @@ public class CapacityOverTimePolicy implements SharingPolicy {
    * The comparison/multiplication behaviors of IntegralResource are consistent
    * with the DefaultResourceCalculator.
    */
-  public class IntegralResource {
+  private static class IntegralResource {
     long memory;
     long vcores;
 
