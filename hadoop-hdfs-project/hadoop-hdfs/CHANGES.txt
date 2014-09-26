@@ -480,6 +480,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7049. TestByteRangeInputStream.testPropagatedClose fails and throw
     NPE on branch-2. (Juan Yu via wheat9)
 
+    HDFS-7148. TestEncryptionZones#testIsEncryptedMethod fails on branch-2
+    after archival storage merge. (wang)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
