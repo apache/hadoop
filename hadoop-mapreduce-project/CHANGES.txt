@@ -165,6 +165,9 @@ Release 2.6.0 - UNRELEASED
     in mapred-default should be moved into description tags (Tsuyoshi OZAWA 
     via aw)
 
+    MAPREDUCE-5796. Use current version of the archive name in 
+    DistributedCacheDeploy document (Akira AJISAKA via aw)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
