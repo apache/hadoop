@@ -879,6 +879,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11048. user/custom LogManager fails to load if the client
     classloader is enabled (Sangjin Lee via jlowe)
 
+    HADOOP-10552. Fix usage and example at FileSystemShell.apt.vm (Kenji 
+    Kikushima via aw)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

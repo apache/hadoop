@@ -370,7 +370,7 @@ mkdir
 
 moveFromLocal
 
-   Usage: <<<dfs -moveFromLocal <localsrc> <dst> >>>
+   Usage: <<<hdfs dfs -moveFromLocal <localsrc> <dst> >>>
 
    Similar to put command, except that the source localsrc is deleted after
    it's copied.
@@ -617,7 +617,7 @@ touchz
 
    Example:
 
-     * <<<hadoop -touchz pathname>>>
+     * <<<hdfs dfs -touchz pathname>>>
 
    Exit Code:
    Returns 0 on success and -1 on error.
