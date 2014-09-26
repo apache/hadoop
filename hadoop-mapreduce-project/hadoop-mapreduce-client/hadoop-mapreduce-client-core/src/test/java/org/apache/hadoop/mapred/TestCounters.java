@@ -33,9 +33,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.Counters.CountersExceededException;
 import org.apache.hadoop.mapred.Counters.Group;
+import org.apache.hadoop.mapred.Counters.GroupFactory;
 import org.apache.hadoop.mapreduce.FileSystemCounter;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.TaskCounter;
+import org.apache.hadoop.mapreduce.counters.FrameworkCounterGroup;
+import org.apache.hadoop.mapreduce.counters.CounterGroupFactory.FrameworkGroupFactory;
 import org.junit.Test;
 
 /**
@@ -321,4 +324,55 @@ public class TestCounters {
   public static void main(String[] args) throws IOException {
     new TestCounters().testCounters();
   }
+  
+  @SuppressWarnings("rawtypes")
+  @Test
+  public void testFrameworkCounter() {
+    GroupFactory groupFactory = new GroupFactoryForTest();
+    FrameworkGroupFactory frameworkGroupFactory = 
+        groupFactory.newFrameworkGroupFactory(JobCounter.class);
+    Group group = (Group) frameworkGroupFactory.newGroup("JobCounter");
+    
+    FrameworkCounterGroup counterGroup = 
+        (FrameworkCounterGroup) group.getUnderlyingGroup();
+  
+    org.apache.hadoop.mapreduce.Counter count1 = 
+        counterGroup.findCounter(JobCounter.NUM_FAILED_MAPS.toString());
+    Assert.assertNotNull(count1);
+    
+    // Verify no exception get thrown when finding an unknown counter
+    org.apache.hadoop.mapreduce.Counter count2 = 
+        counterGroup.findCounter("Unknown");
+    Assert.assertNull(count2);
+  }
+  
+  @Test
+  public void testFilesystemCounter() {
+    GroupFactory groupFactory = new GroupFactoryForTest();
+    Group fsGroup = groupFactory.newFileSystemGroup();
+  
+    org.apache.hadoop.mapreduce.Counter count1 = 
+        fsGroup.findCounter("ANY_BYTES_READ");
+    Assert.assertNotNull(count1);
+    
+    // Verify no exception get thrown when finding an unknown counter
+    org.apache.hadoop.mapreduce.Counter count2 = 
+        fsGroup.findCounter("Unknown");
+    Assert.assertNull(count2);
+  }
+  
 }
+
+  class GroupFactoryForTest extends GroupFactory {
+    public <T extends Enum<T>>
+        FrameworkGroupFactory<Group> newFrameworkGroupFactory(final Class<T> cls) {
+      return super.newFrameworkGroupFactory(cls);
+    }
+    
+    public Group newFileSystemGroup() {
+      return super.newFileSystemGroup();
+    }
+    
+  }
+
+
