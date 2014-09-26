@@ -259,6 +259,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2577. Clarify ACL delimiter and how to configure ACL groups only
     (Miklos Christine via aw)
 
+    YARN-2372. There are Chinese Characters in the FairScheduler's document
+    (Fengdong Yu via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES

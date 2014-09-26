@@ -221,7 +221,9 @@ dus
 
    Usage: <<<hdfs dfs -dus <args> >>>
 
-   Displays a summary of file lengths. This is an alternate form of hdfs dfs -du -s.
+   Displays a summary of file lengths.
+
+   <<Note:>> This command is deprecated. Instead use <<<hdfs dfs -du -s>>>.
 
 expunge
 
@@ -311,7 +313,12 @@ getmerge
 
 ls
 
-   Usage: <<<hdfs dfs -ls <args> >>>
+   Usage: <<<hdfs dfs -ls [-R] <args> >>>
+
+   Options:
+
+     * The -R option will return stat recursively through the directory
+       structure.
 
    For a file returns stat on the file with the following format:
 
@@ -337,7 +344,9 @@ lsr
 
    Usage: <<<hdfs dfs -lsr <args> >>>
 
-   Recursive version of ls. Similar to Unix ls -R.
+   Recursive version of ls.
+
+   <<Note:>> This command is deprecated. Instead use <<<hdfs dfs -ls -R>>>
 
 mkdir
 
@@ -361,7 +370,7 @@ mkdir
 
 moveFromLocal
 
-   Usage: <<<dfs -moveFromLocal <localsrc> <dst> >>>
+   Usage: <<<hdfs dfs -moveFromLocal <localsrc> <dst> >>>
 
    Similar to put command, except that the source localsrc is deleted after
    it's copied.
@@ -413,13 +422,22 @@ put
 
 rm
 
-   Usage: <<<hdfs dfs -rm [-skipTrash] URI [URI ...]>>>
+   Usage: <<<hdfs dfs -rm [-f] [-r|-R] [-skipTrash] URI [URI ...]>>>
 
-   Delete files specified as args. Only deletes non empty directory and files.
-   If the -skipTrash option is specified, the trash, if enabled, will be
-   bypassed and the specified file(s) deleted immediately. This can be useful
-   when it is necessary to delete files from an over-quota directory. Refer to
-   rmr for recursive deletes.
+   Delete files specified as args.
+
+   Options:
+
+    * The -f option will not display a diagnostic message or modify the exit
+      status to reflect an error if the file does not exist.
+
+    * The -R option deletes the directory and any content under it recursively.
+
+    * The -r option is equivalent to -R.
+
+    * The -skipTrash option will bypass trash, if enabled, and delete the
+      specified file(s) immediately. This can be useful when it is necessary
+      to delete files from an over-quota directory.
 
    Example:
 
@@ -433,20 +451,9 @@ rmr
 
    Usage: <<<hdfs dfs -rmr [-skipTrash] URI [URI ...]>>>
 
-   Recursive version of delete. If the -skipTrash option is specified, the
-   trash, if enabled, will be bypassed and the specified file(s) deleted
-   immediately. This can be useful when it is necessary to delete files from an
-   over-quota directory.
+   Recursive version of delete.
 
-   Example:
-
-     * <<<hdfs dfs -rmr /user/hadoop/dir>>>
-
-     * <<<hdfs dfs -rmr hdfs://nn.example.com/user/hadoop/dir>>>
-
-   Exit Code:
-
-   Returns 0 on success and -1 on error.
+   <<Note:>> This command is deprecated. Instead use <<<hdfs dfs -rm -r>>>
 
 setfacl
 
@@ -610,7 +617,7 @@ touchz
 
    Example:
 
-     * <<<hadoop -touchz pathname>>>
+     * <<<hdfs dfs -touchz pathname>>>
 
    Exit Code:
    Returns 0 on success and -1 on error.

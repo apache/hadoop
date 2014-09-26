@@ -548,6 +548,12 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11101. How about inputstream close statement from catch block to
     finally block in FileContext#copy() ( skrho via vinayakumarb )
 
+    HADOOP-8808. Update FsShell documentation to mention deprecation of some of
+    the commands, and mention alternatives (Akira AJISAKA via aw)
+
+    HADOOP-10954. Adding site documents of hadoop-tools (Masatake Iwasaki 
+    via aw)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
@@ -605,6 +611,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11112. TestKMSWithZK does not use KEY_PROVIDER_URI. (tucu via wang)
 
     HADOOP-11111 MiniKDC to use locale EN_US for case conversions. (stevel)
+
+    HADOOP-10731. Remove @date JavaDoc comment in ProgramDriver class (Henry 
+    Saputra via aw)
 
   BUG FIXES
 
@@ -866,6 +875,12 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11064. UnsatisifedLinkError with hadoop 2.4 JARs on hadoop-2.6 due to
     NativeCRC32 method changes. (cnauroth)
+
+    HADOOP-11048. user/custom LogManager fails to load if the client
+    classloader is enabled (Sangjin Lee via jlowe)
+
+    HADOOP-10552. Fix usage and example at FileSystemShell.apt.vm (Kenji 
+    Kikushima via aw)
 
 Release 2.5.1 - 2014-09-05
 

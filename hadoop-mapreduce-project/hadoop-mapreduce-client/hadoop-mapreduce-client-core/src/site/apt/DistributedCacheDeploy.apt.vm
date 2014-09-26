@@ -67,9 +67,9 @@ Hadoop MapReduce Next Generation - Distributed Cache Deploy
   location where the archive is located. As when specifying distributed cache
   files for a job, this is a URL that also supports creating an alias for the
   archive if a URL fragment is specified. For example,
-  <<<hdfs:/mapred/framework/hadoop-mapreduce-2.1.1.tar.gz#mrframework>>> will
-  be localized as <<<mrframework>>> rather than
-  <<<hadoop-mapreduce-2.1.1.tar.gz>>>.
+  <<<hdfs:/mapred/framework/hadoop-mapreduce-${project.version}.tar.gz#mrframework>>>
+  will be localized as <<<mrframework>>> rather than
+  <<<hadoop-mapreduce-${project.version}.tar.gz>>>.
 
   [[3]] Configure <<<mapreduce.application.classpath>>> to set the proper
   classpath to use with the MapReduce archive configured above. NOTE: An error
@@ -105,14 +105,14 @@ Hadoop MapReduce Next Generation - Distributed Cache Deploy
   necessary YARN, HDFS, and Hadoop Common jars and all other dependencies. In
   that case, <<<mapreduce.application.classpath>>> would be configured to
   something like the following example, where the archive basename is
-  hadoop-mapreduce-2.1.1.tar.gz and the archive is organized internally similar
-  to the standard Hadoop distribution archive:
+  hadoop-mapreduce-${project.version}.tar.gz and the archive is organized
+  internally similar to the standard Hadoop distribution archive:
 
-    <<<$HADOOP_CONF_DIR,$PWD/hadoop-mapreduce-2.1.1.tar.gz/hadoop-mapreduce-2.1.1/share/hadoop/mapreduce/*,$PWD/hadoop-mapreduce-2.1.1.tar.gz/hadoop-mapreduce-2.1.1/share/hadoop/mapreduce/lib/*,$PWD/hadoop-mapreduce-2.1.1.tar.gz/hadoop-mapreduce-2.1.1/share/hadoop/common/*,$PWD/hadoop-mapreduce-2.1.1.tar.gz/hadoop-mapreduce-2.1.1/share/hadoop/common/lib/*,$PWD/hadoop-mapreduce-2.1.1.tar.gz/hadoop-mapreduce-2.1.1/share/hadoop/yarn/*,$PWD/hadoop-mapreduce-2.1.1.tar.gz/hadoop-mapreduce-2.1.1/share/hadoop/yarn/lib/*,$PWD/hadoop-mapreduce-2.1.1.tar.gz/hadoop-mapreduce-2.1.1/share/hadoop/hdfs/*,$PWD/hadoop-mapreduce-2.1.1.tar.gz/hadoop-mapreduce-2.1.1/share/hadoop/hdfs/lib/*>>>
+    <<<$HADOOP_CONF_DIR,$PWD/hadoop-mapreduce-${project.version}.tar.gz/hadoop-mapreduce-${project.version}/share/hadoop/mapreduce/*,$PWD/hadoop-mapreduce-${project.version}.tar.gz/hadoop-mapreduce-${project.version}/share/hadoop/mapreduce/lib/*,$PWD/hadoop-mapreduce-${project.version}.tar.gz/hadoop-mapreduce-${project.version}/share/hadoop/common/*,$PWD/hadoop-mapreduce-${project.version}.tar.gz/hadoop-mapreduce-${project.version}/share/hadoop/common/lib/*,$PWD/hadoop-mapreduce-${project.version}.tar.gz/hadoop-mapreduce-${project.version}/share/hadoop/yarn/*,$PWD/hadoop-mapreduce-${project.version}.tar.gz/hadoop-mapreduce-${project.version}/share/hadoop/yarn/lib/*,$PWD/hadoop-mapreduce-${project.version}.tar.gz/hadoop-mapreduce-${project.version}/share/hadoop/hdfs/*,$PWD/hadoop-mapreduce-${project.version}.tar.gz/hadoop-mapreduce-${project.version}/share/hadoop/hdfs/lib/*>>>
 
   Another possible approach is to have the archive consist of just the
   MapReduce jars and have the remaining dependencies picked up from the Hadoop
   distribution installed on the nodes.  In that case, the above example would
   change to something like the following:
 
-    <<<$HADOOP_CONF_DIR,$PWD/hadoop-mapreduce-2.1.1.tar.gz/hadoop-mapreduce-2.1.1/share/hadoop/mapreduce/*,$PWD/hadoop-mapreduce-2.1.1.tar.gz/hadoop-mapreduce-2.1.1/share/hadoop/mapreduce/lib/*,$HADOOP_COMMON_HOME/share/hadoop/common/*,$HADOOP_COMMON_HOME/share/hadoop/common/lib/*,$HADOOP_HDFS_HOME/share/hadoop/hdfs/*,$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*,$HADOOP_YARN_HOME/share/hadoop/yarn/*,$HADOOP_YARN_HOME/share/hadoop/yarn/lib/*>>>
+    <<<$HADOOP_CONF_DIR,$PWD/hadoop-mapreduce-${project.version}.tar.gz/hadoop-mapreduce-${project.version}/share/hadoop/mapreduce/*,$PWD/hadoop-mapreduce-${project.version}.tar.gz/hadoop-mapreduce-${project.version}/share/hadoop/mapreduce/lib/*,$HADOOP_COMMON_HOME/share/hadoop/common/*,$HADOOP_COMMON_HOME/share/hadoop/common/lib/*,$HADOOP_HDFS_HOME/share/hadoop/hdfs/*,$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*,$HADOOP_YARN_HOME/share/hadoop/yarn/*,$HADOOP_YARN_HOME/share/hadoop/yarn/lib/*>>>

@@ -56,7 +56,7 @@ Generic Options
 *------------------------------------------------+-----------------------------+
 |<<<-D \<property\>=\<value\> >>>                | Use value for given property.
 *------------------------------------------------+-----------------------------+
-|<<<-jt \<local\> or \<jobtracker:port\> >>>     | Specify a job tracker.
+|<<<-jt \<local\> or \<resourcemanager:port\>>>> | Specify a ResourceManager.
                                                  | Applies only to job.
 *------------------------------------------------+-----------------------------+
 |<<<-files \<comma separated list of files\> >>> | Specify comma separated files

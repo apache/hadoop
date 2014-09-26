@@ -35,7 +35,6 @@ public class ProgramDriver {
   /**
    * A description of a program based on its class and a 
    * human-readable description.
-   * @date april 2006
    */
   Map<String, ProgramDescription> programs;
      
