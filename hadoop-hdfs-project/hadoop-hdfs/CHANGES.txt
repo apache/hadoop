@@ -819,6 +819,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7132. hdfs namenode -metadataVersion command does not honor
     configured name dirs. (Charles Lamb via wang)
 
+    HDFS-7148. TestEncryptionZones#testIsEncryptedMethod fails on branch-2
+    after archival storage merge. (wang)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
