@@ -996,7 +996,7 @@ public class Journal implements Closeable {
   public synchronized void doPreUpgrade() throws IOException {
     // Do not hold file lock on committedTxnId, because the containing
     // directory will be renamed.  It will be reopened lazily on next access.
-    committedTxnId.close();
+    IOUtils.cleanup(LOG, committedTxnId);
     storage.getJournalManager().doPreUpgrade();
   }
 
@@ -1021,14 +1021,25 @@ public class Journal implements Closeable {
         new File(previousDir, LAST_PROMISED_FILENAME), 0);
     PersistentLongFile prevLastWriterEpoch = new PersistentLongFile(
         new File(previousDir, LAST_WRITER_EPOCH), 0);
-    
+    BestEffortLongFile prevCommittedTxnId = new BestEffortLongFile(
+        new File(previousDir, COMMITTED_TXID_FILENAME),
+        HdfsConstants.INVALID_TXID);
+
     lastPromisedEpoch = new PersistentLongFile(
         new File(currentDir, LAST_PROMISED_FILENAME), 0);
     lastWriterEpoch = new PersistentLongFile(
         new File(currentDir, LAST_WRITER_EPOCH), 0);
-    
-    lastPromisedEpoch.set(prevLastPromisedEpoch.get());
-    lastWriterEpoch.set(prevLastWriterEpoch.get());
+    committedTxnId = new BestEffortLongFile(
+        new File(currentDir, COMMITTED_TXID_FILENAME),
+        HdfsConstants.INVALID_TXID);
+
+    try {
+      lastPromisedEpoch.set(prevLastPromisedEpoch.get());
+      lastWriterEpoch.set(prevLastWriterEpoch.get());
+      committedTxnId.set(prevCommittedTxnId.get());
+    } finally {
+      IOUtils.cleanup(LOG, prevCommittedTxnId);
+    }
   }
 
   public synchronized void doFinalize() throws IOException {
@@ -1049,7 +1060,7 @@ public class Journal implements Closeable {
   public synchronized void doRollback() throws IOException {
     // Do not hold file lock on committedTxnId, because the containing
     // directory will be renamed.  It will be reopened lazily on next access.
-    committedTxnId.close();
+    IOUtils.cleanup(LOG, committedTxnId);
     storage.getJournalManager().doRollback();
   }
 
