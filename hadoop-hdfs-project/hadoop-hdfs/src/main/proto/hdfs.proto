@@ -219,20 +219,29 @@ message DataEncryptionKeyProto {
 /**
  * Cipher suite.
  */
-enum CipherSuite {
+enum CipherSuiteProto {
     UNKNOWN = 1;
     AES_CTR_NOPADDING = 2;
+}
+
+/**
+ * Crypto protocol version used to access encrypted files.
+ */
+enum CryptoProtocolVersionProto {
+    UNKNOWN_PROTOCOL_VERSION = 1;
+    ENCRYPTION_ZONES = 2;
 }
 
 /**
  * Encryption information for a file.
  */
 message FileEncryptionInfoProto {
-  required CipherSuite suite = 1;
-  required bytes key = 2;
-  required bytes iv = 3;
-  required string keyName = 4;
-  required string ezKeyVersionName = 5;
+  required CipherSuiteProto suite = 1;
+  required CryptoProtocolVersionProto cryptoProtocolVersion = 2;
+  required bytes key = 3;
+  required bytes iv = 4;
+  required string keyName = 5;
+  required string ezKeyVersionName = 6;
 }
 
 /**
@@ -250,8 +259,9 @@ message PerFileEncryptionInfoProto {
  * zone
  */
 message ZoneEncryptionInfoProto {
-  required CipherSuite suite = 1;
-  required string keyName = 2;
+  required CipherSuiteProto suite = 1;
+  required CryptoProtocolVersionProto cryptoProtocolVersion = 2;
+  required string keyName = 3;
 }
 
 /**

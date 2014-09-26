@@ -22,6 +22,7 @@ import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.crypto.CipherSuite;
+import org.apache.hadoop.crypto.CryptoProtocolVersion;
 
 /**
  * A simple class for representing an encryption zone. Presently an encryption
@@ -35,13 +36,15 @@ public class EncryptionZone {
   private final long id;
   private final String path;
   private final CipherSuite suite;
+  private final CryptoProtocolVersion version;
   private final String keyName;
 
-  public EncryptionZone(long id, String path,
-      CipherSuite suite, String keyName) {
+  public EncryptionZone(long id, String path, CipherSuite suite,
+      CryptoProtocolVersion version, String keyName) {
     this.id = id;
     this.path = path;
     this.suite = suite;
+    this.version = version;
     this.keyName = keyName;
   }
 
@@ -57,15 +60,20 @@ public class EncryptionZone {
     return suite;
   }
 
+  public CryptoProtocolVersion getVersion() { return version; }
+
   public String getKeyName() {
     return keyName;
   }
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder(13, 31).
-      append(id).append(path).
-      append(suite).append(keyName).
+    return new HashCodeBuilder(13, 31)
+        .append(id)
+        .append(path)
+        .append(suite)
+        .append(version)
+        .append(keyName).
       toHashCode();
   }
 
@@ -86,6 +94,7 @@ public class EncryptionZone {
       append(id, rhs.id).
       append(path, rhs.path).
       append(suite, rhs.suite).
+      append(version, rhs.version).
       append(keyName, rhs.keyName).
       isEquals();
   }
@@ -95,6 +104,7 @@ public class EncryptionZone {
     return "EncryptionZone [id=" + id +
         ", path=" + path +
         ", suite=" + suite +
+        ", version=" + version +
         ", keyName=" + keyName + "]";
   }
 }

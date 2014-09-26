@@ -76,7 +76,7 @@ message CreateRequestProto {
   required bool createParent = 5;
   required uint32 replication = 6; // Short: Only 16 bits used
   required uint64 blockSize = 7;
-  repeated CipherSuite cipherSuites = 8;
+  repeated CryptoProtocolVersionProto cryptoProtocolVersion = 8;
 }
 
 message CreateResponseProto {

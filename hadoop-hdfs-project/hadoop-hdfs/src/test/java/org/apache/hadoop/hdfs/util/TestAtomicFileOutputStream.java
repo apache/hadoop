@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -30,9 +31,13 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.PathUtils;
+import org.apache.hadoop.util.Shell;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import com.google.common.base.Joiner;
 
@@ -44,6 +49,9 @@ public class TestAtomicFileOutputStream {
   private static final File TEST_DIR = PathUtils.getTestDir(TestAtomicFileOutputStream.class);
   
   private static final File DST_FILE = new File(TEST_DIR, "test.txt");
+
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
   
   @Before
   public void cleanupTestDir() throws IOException {
@@ -117,6 +125,27 @@ public class TestAtomicFileOutputStream {
     
     assertEquals("Temporary file should have been cleaned up",
         DST_FILE.getName(), Joiner.on(",").join(TEST_DIR.list()));
+  }
+
+  @Test
+  public void testFailToRename() throws IOException {
+    assumeTrue(Shell.WINDOWS);
+    OutputStream fos = null;
+    try {
+      fos = new AtomicFileOutputStream(DST_FILE);
+      fos.write(TEST_STRING.getBytes());
+      FileUtil.setWritable(TEST_DIR, false);
+      exception.expect(IOException.class);
+      exception.expectMessage("failure in native rename");
+      try {
+        fos.close();
+      } finally {
+        fos = null;
+      }
+    } finally {
+      IOUtils.cleanup(null, fos);
+      FileUtil.setWritable(TEST_DIR, true);
+    }
   }
 
   /**

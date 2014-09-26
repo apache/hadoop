@@ -460,22 +460,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         break;
     }
 
-    // Decomissioned NMs equals to the nodes missing in include list (if
-    // include list not empty) or the nodes listed in excluded list.
-    // DecomissionedNMs as per exclude list is set upfront when the
-    // exclude list is read so that RM restart can also reflect the
-    // decomissionedNMs. Note that RM is still not able to know decomissionedNMs
-    // as per include list after it restarts as they are known when those nodes
-    // come for registration.
-    // DecomissionedNMs as per include list is incremented in this transition.
     switch (finalState) {
     case DECOMMISSIONED:
-      Set<String> ecludedHosts =
-          context.getNodesListManager().getHostsReader().getExcludedHosts();
-      if (!ecludedHosts.contains(hostName)
-          && !ecludedHosts.contains(NetUtils.normalizeHostName(hostName))) {
         metrics.incrDecommisionedNMs();
-      }
       break;
     case LOST:
       metrics.incrNumLostNMs();

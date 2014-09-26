@@ -18,13 +18,32 @@
 
 package org.apache.hadoop.conf;
 
+import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.conf.ReconfigurationUtil.PropertyChange;
 import org.junit.Test;
 import org.junit.Before;
-import static org.junit.Assert.*;
 
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
+
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 
 public class TestReconfiguration {
   private Configuration conf1;
@@ -105,8 +124,8 @@ public class TestReconfiguration {
     }
 
     @Override
-    public synchronized void reconfigurePropertyImpl(String property, 
-                                                     String newVal) {
+    public synchronized void reconfigurePropertyImpl(
+        String property, String newVal) throws ReconfigurationException {
       // do nothing
     }
     
@@ -312,4 +331,136 @@ public class TestReconfiguration {
     
   }
 
+  private static class AsyncReconfigurableDummy extends ReconfigurableBase {
+    AsyncReconfigurableDummy(Configuration conf) {
+      super(conf);
+    }
+
+    final CountDownLatch latch = new CountDownLatch(1);
+
+    @Override
+    public Collection<String> getReconfigurableProperties() {
+      return Arrays.asList(PROP1, PROP2, PROP4);
+    }
+
+    @Override
+    public synchronized void reconfigurePropertyImpl(String property,
+        String newVal) throws ReconfigurationException {
+      try {
+        latch.await();
+      } catch (InterruptedException e) {
+        // Ignore
+      }
+    }
+  }
+
+  private static void waitAsyncReconfigureTaskFinish(ReconfigurableBase rb)
+      throws InterruptedException {
+    ReconfigurationTaskStatus status = null;
+    int count = 20;
+    while (count > 0) {
+      status = rb.getReconfigurationTaskStatus();
+      if (status.stopped()) {
+        break;
+      }
+      count--;
+      Thread.sleep(500);
+    }
+    assert(status.stopped());
+  }
+
+  @Test
+  public void testAsyncReconfigure()
+      throws ReconfigurationException, IOException, InterruptedException {
+    AsyncReconfigurableDummy dummy = spy(new AsyncReconfigurableDummy(conf1));
+
+    List<PropertyChange> changes = Lists.newArrayList();
+    changes.add(new PropertyChange("name1", "new1", "old1"));
+    changes.add(new PropertyChange("name2", "new2", "old2"));
+    changes.add(new PropertyChange("name3", "new3", "old3"));
+    doReturn(changes).when(dummy).getChangedProperties(
+        any(Configuration.class), any(Configuration.class));
+
+    doReturn(true).when(dummy).isPropertyReconfigurable(eq("name1"));
+    doReturn(false).when(dummy).isPropertyReconfigurable(eq("name2"));
+    doReturn(true).when(dummy).isPropertyReconfigurable(eq("name3"));
+
+    doNothing().when(dummy)
+        .reconfigurePropertyImpl(eq("name1"), anyString());
+    doNothing().when(dummy)
+        .reconfigurePropertyImpl(eq("name2"), anyString());
+    doThrow(new ReconfigurationException("NAME3", "NEW3", "OLD3"))
+        .when(dummy).reconfigurePropertyImpl(eq("name3"), anyString());
+
+    dummy.startReconfigurationTask();
+
+    waitAsyncReconfigureTaskFinish(dummy);
+    ReconfigurationTaskStatus status = dummy.getReconfigurationTaskStatus();
+    assertEquals(3, status.getStatus().size());
+    for (Map.Entry<PropertyChange, Optional<String>> result :
+        status.getStatus().entrySet()) {
+      PropertyChange change = result.getKey();
+      if (change.prop.equals("name1")) {
+        assertFalse(result.getValue().isPresent());
+      } else if (change.prop.equals("name2")) {
+        assertThat(result.getValue().get(),
+            containsString("Property name2 is not reconfigurable"));
+      } else if (change.prop.equals("name3")) {
+        assertThat(result.getValue().get(), containsString("NAME3"));
+      } else {
+        fail("Unknown property: " + change.prop);
+      }
+    }
+  }
+
+  @Test(timeout=30000)
+  public void testStartReconfigurationFailureDueToExistingRunningTask()
+      throws InterruptedException, IOException {
+    AsyncReconfigurableDummy dummy = spy(new AsyncReconfigurableDummy(conf1));
+    List<PropertyChange> changes = Lists.newArrayList(
+        new PropertyChange(PROP1, "new1", "old1")
+    );
+    doReturn(changes).when(dummy).getChangedProperties(
+        any(Configuration.class), any(Configuration.class));
+
+    ReconfigurationTaskStatus status = dummy.getReconfigurationTaskStatus();
+    assertFalse(status.hasTask());
+
+    dummy.startReconfigurationTask();
+    status = dummy.getReconfigurationTaskStatus();
+    assertTrue(status.hasTask());
+    assertFalse(status.stopped());
+
+    // An active reconfiguration task is running.
+    try {
+      dummy.startReconfigurationTask();
+      fail("Expect to throw IOException.");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Another reconfiguration task is running", e);
+    }
+    status = dummy.getReconfigurationTaskStatus();
+    assertTrue(status.hasTask());
+    assertFalse(status.stopped());
+
+    dummy.latch.countDown();
+    waitAsyncReconfigureTaskFinish(dummy);
+    status = dummy.getReconfigurationTaskStatus();
+    assertTrue(status.hasTask());
+    assertTrue(status.stopped());
+
+    // The first task has finished.
+    dummy.startReconfigurationTask();
+    waitAsyncReconfigureTaskFinish(dummy);
+    ReconfigurationTaskStatus status2 = dummy.getReconfigurationTaskStatus();
+    assertTrue(status2.getStartTime() >= status.getEndTime());
+
+    dummy.shutdownReconfigurationTask();
+    try {
+      dummy.startReconfigurationTask();
+      fail("Expect to throw IOException");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("The server is stopped", e);
+    }
+  }
 }

@@ -20,11 +20,14 @@ package org.apache.hadoop.hdfs.protocolPB;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
+import com.google.common.base.Optional;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.ReconfigurationTaskStatus;
+import org.apache.hadoop.conf.ReconfigurationUtil.PropertyChange;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.DeleteBlockPoolRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.DeleteBlockPoolResponseProto;
@@ -32,6 +35,9 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetBlo
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetBlockLocalPathInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetDatanodeInfoRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetDatanodeInfoResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReconfigurationStatusConfigChangeProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReconfigurationStatusRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReconfigurationStatusResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetHdfsBlockLocationsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetHdfsBlockLocationsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetHdfsBlockLocationsResponseProto.Builder;
@@ -41,11 +47,11 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.Refres
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.RefreshNamenodesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.ShutdownDatanodeRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.ShutdownDatanodeResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.StartReconfigurationRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.StartReconfigurationResponseProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.VersionInfo;
 
 import com.google.common.primitives.Longs;
 import com.google.protobuf.ByteString;
@@ -66,6 +72,8 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
       DeleteBlockPoolResponseProto.newBuilder().build();
   private final static ShutdownDatanodeResponseProto SHUTDOWN_DATANODE_RESP =
       ShutdownDatanodeResponseProto.newBuilder().build();
+  private final static StartReconfigurationResponseProto START_RECONFIG_RESP =
+      StartReconfigurationResponseProto.newBuilder().build();
   
   private final ClientDatanodeProtocol impl;
 
@@ -181,5 +189,52 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
       throw new ServiceException(e);
     }
     return res;
+  }
+
+  @Override
+  public StartReconfigurationResponseProto startReconfiguration(
+      RpcController unused, StartReconfigurationRequestProto request)
+    throws ServiceException {
+    try {
+      impl.startReconfiguration();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return START_RECONFIG_RESP;
+  }
+
+  @Override
+  public GetReconfigurationStatusResponseProto getReconfigurationStatus(
+      RpcController unused, GetReconfigurationStatusRequestProto request)
+      throws ServiceException {
+    GetReconfigurationStatusResponseProto.Builder builder =
+        GetReconfigurationStatusResponseProto.newBuilder();
+    try {
+      ReconfigurationTaskStatus status = impl.getReconfigurationStatus();
+      builder.setStartTime(status.getStartTime());
+      if (status.stopped()) {
+        builder.setEndTime(status.getEndTime());
+        assert status.getStatus() != null;
+        for (Map.Entry<PropertyChange, Optional<String>> result :
+            status.getStatus().entrySet()) {
+          GetReconfigurationStatusConfigChangeProto.Builder changeBuilder =
+              GetReconfigurationStatusConfigChangeProto.newBuilder();
+          PropertyChange change = result.getKey();
+          changeBuilder.setName(change.prop);
+          changeBuilder.setOldValue(change.oldVal != null ? change.oldVal : "");
+          if (change.newVal != null) {
+            changeBuilder.setNewValue(change.newVal);
+          }
+          if (result.getValue().isPresent()) {
+            // Get full stack trace.
+            changeBuilder.setErrorMessage(result.getValue().get());
+          }
+          builder.addChanges(changeBuilder);
+        }
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
   }
 }

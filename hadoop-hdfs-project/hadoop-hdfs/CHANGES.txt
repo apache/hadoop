@@ -585,6 +585,14 @@ Release 2.6.0 - UNRELEASED
     HDFS-7118. Improve diagnostics on storage directory rename operations by
     using NativeIO#renameTo in Storage#rename. (cnauroth)
 
+    HDFS-6808. Add command line option to ask DataNode reload configuration.
+    (Lei Xu via Colin Patrick McCabe)
+
+    HDFS-7119. Split error checks in AtomicFileOutputStream#close into separate
+    conditions to improve diagnostics. (cnauroth)
+
+    HDFS-7077. Separate CipherSuite from crypto protocol version. (wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -954,6 +962,9 @@ Release 2.6.0 - UNRELEASED
     (cnauroth)
 
     HDFS-7127. TestLeaseRecovery leaks MiniDFSCluster instances. (cnauroth)
+
+    HDFS-7131. During HA upgrade, JournalNode should create a new committedTxnId
+    file in the current directory. (jing9)
 
 Release 2.5.1 - 2014-09-05
 
