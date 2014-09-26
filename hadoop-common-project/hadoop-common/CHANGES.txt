@@ -212,6 +212,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-8808. Update FsShell documentation to mention deprecation of some 
     of the commands, and mention alternatives (Akira AJISAKA via aw)
 
+    HADOOP-10954. Adding site documents of hadoop-tools (Masatake Iwasaki 
+    via aw)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
