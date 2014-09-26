@@ -44,7 +44,7 @@ Hadoop MapReduce Next Generation - Fair Scheduler
 
   The scheduler organizes apps further into "queues", and shares resources
   fairly between these queues. By default, all users share a single queue,
-  named “default”. If an app specifically lists a queue in a container resource
+  named "default". If an app specifically lists a queue in a container resource
   request, the request is submitted to that queue. It is also possible to assign
   queues based on the user name included with the request through
   configuration. Within each queue, a scheduling policy is used to share
@@ -97,7 +97,7 @@ Hadoop MapReduce Next Generation - Fair Scheduler
 
   Certain add-ons are not yet supported which existed in the original (MR1) 
   Fair Scheduler. Among them, is the use of a custom policies governing 
-  priority “boosting” over  certain apps. 
+  priority "boosting" over  certain apps. 
 
 * {Automatically placing applications in queues}
 
@@ -217,7 +217,7 @@ Allocation file format
   elements:
 
  * <<Queue elements>>, which represent queues. Queue elements can take an optional
-   attribute ’type’,which when set to ‘parent’ makes it a parent queue. This is useful
+   attribute 'type', which when set to 'parent' makes it a parent queue. This is useful
    when we want to create a parent queue without configuring any leaf queues.
    Each queue element may contain the following properties:
 
@@ -336,15 +336,15 @@ Allocation file format
 
      * nestedUserQueue : the app is placed into a queue with the name of the user
        under the queue suggested by the nested rule. This is similar to ‘user’
-       rule,the difference being in ‘nestedUserQueue’ rule,user queues can be created 
-       under any parent queue, while ‘user’ rule creates user queues only under root queue.
+       rule,the difference being in 'nestedUserQueue' rule,user queues can be created 
+       under any parent queue, while 'user' rule creates user queues only under root queue.
        Note that nestedUserQueue rule would be applied only if the nested rule returns a 
-       parent queue.One can configure a parent queue either by setting ‘type’ attribute of queue
-       to ‘parent’ or by configuring at least one leaf under that queue which makes it a parent.
+       parent queue.One can configure a parent queue either by setting 'type' attribute of queue
+       to 'parent' or by configuring at least one leaf under that queue which makes it a parent.
        See example allocation for a sample use case. 
 
-     * default: the app is placed into the queue specified in the ‘queue’ attribute of the 
-       default rule. If ‘queue’ attribute is not specified, the app is placed into ‘root.default’ queue.
+     * default: the app is placed into the queue specified in the 'queue' attribute of the 
+       default rule. If 'queue' attribute is not specified, the app is placed into 'root.default' queue.
 
      * reject: the app is rejected.
 
@@ -368,9 +368,9 @@ Allocation file format
 
   <queueMaxAMShareDefault>0.5</queueMaxAMShareDefault>
 
-  <!—- Queue ‘secondary_group_queue’ is a parent queue and may have
-       user queues under it -—>
-  <queue name=“secondary_group_queue” type=“parent”>
+  <!—- Queue 'secondary_group_queueue' is a parent queue and may have
+       user queues under it -->
+  <queue name="secondary_group_queue" type="parent">
   <weight>3.0</weight>
   </queue>
   
@@ -382,10 +382,10 @@ Allocation file format
   <queuePlacementPolicy>
     <rule name="specified" />
     <rule name="primaryGroup" create="false" />
-    <rule name=“nestedUserQueue”>
-        <rule name=“secondaryGroupExistingQueue” create=“false” />
+    <rule name="nestedUserQueue">
+        <rule name="secondaryGroupExistingQueue" create="false" />
     </rule>
-    <rule name="default" queue=“sample_queue” />
+    <rule name="default" queue="sample_queue"/>
   </queuePlacementPolicy>
 </allocations>
 ---
