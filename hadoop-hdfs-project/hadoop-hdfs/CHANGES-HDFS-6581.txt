@@ -80,4 +80,6 @@
     HDFS-7144. Fix findbugs warnings in RamDiskReplicaTracker. (szetszwo via
     Arpit Agarwal)
 
+    HDFS-7155. Bugfix in createLocatedFileStatus caused by bad merge.
+    (Arpit Agarwal)
 
