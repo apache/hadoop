@@ -2464,6 +2464,7 @@ public class FSDirectory implements Closeable {
       final INodeFile fileNode = node.asFile();
       size = fileNode.computeFileSize(snapshot);
       replication = fileNode.getFileReplication(snapshot);
+      blocksize = fileNode.getPreferredBlockSize();
       isLazyPersist = fileNode.getLazyPersistFlag();
 
       final boolean inSnapshot = snapshot != Snapshot.CURRENT_STATE_ID; 
