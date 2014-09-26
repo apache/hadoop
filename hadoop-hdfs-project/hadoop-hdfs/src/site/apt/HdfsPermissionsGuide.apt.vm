@@ -99,9 +99,16 @@ HDFS Permissions Guide
    Once a username has been determined as described above, the list of
    groups is determined by a group mapping service, configured by the
    hadoop.security.group.mapping property. The default implementation,
-   org.apache.hadoop.security.ShellBasedUnixGroupsMapping, will shell out
-   to the Unix bash -c groups command to resolve a list of groups for a
-   user.
+   org.apache.hadoop.security.JniBasedUnixGroupsMappingWithFallback,
+   will determine if the Java Native Interface (JNI) is available.  If
+   JNI is available, the implementation will use the API within hadoop
+   to resolve a list of groups for a user. If JNI is not available
+   then the shell implementation,
+   org.apache.hadoop.security.ShellBasedUnixGroupsMapping, is used.
+   This implementation shells out with the <<<bash -c groups>>>
+   command (for a Linux/Unix environment) or the <<<net group>>>
+   command (for a Windows environment) to resolve a list of groups for
+   a user.
 
    An alternate implementation, which connects directly to an LDAP server
    to resolve the list of groups, is available via
