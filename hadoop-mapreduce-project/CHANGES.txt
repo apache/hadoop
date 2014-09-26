@@ -158,6 +158,9 @@ Release 2.6.0 - UNRELEASED
 
     MAPREDUCE-6093. minor distcp doc edits (Charles Lamb via aw)
 
+    MAPREDUCE-5831. Make MR client ignore unknown counters received from AM.
+    (Junping Du via zjshen)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
