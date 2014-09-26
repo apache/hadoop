@@ -972,6 +972,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7140. Add a tool to list all the existing block storage policies.
     (jing9)
 
+    HDFS-6664. HDFS permissions guide documentation states incorrect default 
+    group mapping class. (Ray Chiang via aw)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
