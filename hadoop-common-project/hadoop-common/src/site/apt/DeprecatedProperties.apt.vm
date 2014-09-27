@@ -538,6 +538,8 @@ Deprecated Properties
 *---+---+
 |webinterface.private.actions | mapreduce.jobtracker.webinterface.trusted
 *---+---+
+|yarn.app.mapreduce.yarn.app.mapreduce.client-am.ipc.max-retries-on-timeouts | yarn.app.mapreduce.client-am.ipc.max-retries-on-timeouts
+*---+---+
 
   The following table lists additional changes to some configuration properties:
 
