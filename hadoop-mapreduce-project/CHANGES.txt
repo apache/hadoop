@@ -171,6 +171,10 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5945. Update the description of GenericOptionsParser -jt 
     option (Akira AJISAKA via aw)
 
+    MAPREDUCE-6087. Fixed wrong config name of
+    MRJobConfig#MR_CLIENT_TO_AM_IPC_MAX_RETRIES_ON_TIMEOUTS. Contributed by
+    Akira AJISAKA. (Akira AJISAKA via jianhe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

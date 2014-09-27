@@ -180,6 +180,8 @@ public class ConfigUtil {
         TTConfig.TT_LOCAL_CACHE_SIZE),
       new DeprecationDelta("tasktracker.contention.tracking",
         TTConfig.TT_CONTENTION_TRACKING),
+      new DeprecationDelta("yarn.app.mapreduce.yarn.app.mapreduce.client-am.ipc.max-retries-on-timeouts",
+        MRJobConfig.MR_CLIENT_TO_AM_IPC_MAX_RETRIES_ON_TIMEOUTS),
       new DeprecationDelta("job.end.notification.url",
         MRJobConfig.MR_JOB_END_NOTIFICATION_URL),
       new DeprecationDelta("job.end.retry.attempts",

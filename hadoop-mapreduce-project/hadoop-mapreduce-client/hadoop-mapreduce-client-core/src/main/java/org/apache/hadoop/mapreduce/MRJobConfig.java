@@ -387,7 +387,7 @@ public interface MRJobConfig {
    * reconnecting to the RM to fetch Application Status.
    */
   public static final String MR_CLIENT_TO_AM_IPC_MAX_RETRIES_ON_TIMEOUTS =
-    MR_PREFIX + "yarn.app.mapreduce.client-am.ipc.max-retries-on-timeouts";
+    MR_PREFIX + "client-am.ipc.max-retries-on-timeouts";
   public static final int
     DEFAULT_MR_CLIENT_TO_AM_IPC_MAX_RETRIES_ON_TIMEOUTS = 3;
 
