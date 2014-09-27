@@ -232,6 +232,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2372. There are Chinese Characters in the FairScheduler's document 
     (Fengdong Yu via aw)
 
+    YARN-668. Changed NMTokenIdentifier/AMRMTokenIdentifier/ContainerTokenIdentifier
+    to use protobuf object as the payload. (Junping Du via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES

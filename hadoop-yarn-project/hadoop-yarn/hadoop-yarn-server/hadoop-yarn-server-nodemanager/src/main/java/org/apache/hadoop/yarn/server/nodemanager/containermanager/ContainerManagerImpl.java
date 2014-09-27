@@ -133,6 +133,7 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.Re
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.security.authorize.NMPolicyProvider;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.server.security.BaseNMTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -650,8 +651,8 @@ public class ContainerManagerImpl extends CompositeService implements
     boolean unauthorized = false;
     StringBuilder messageBuilder =
         new StringBuilder("Unauthorized request to start container. ");
-    if (!nmTokenIdentifier.getApplicationAttemptId().getApplicationId().equals(
-        containerId.getApplicationAttemptId().getApplicationId())) {
+    if (!nmTokenIdentifier.getApplicationAttemptId().getApplicationId().
+        equals(containerId.getApplicationAttemptId().getApplicationId())) {
       unauthorized = true;
       messageBuilder.append("\nNMToken for application attempt : ")
         .append(nmTokenIdentifier.getApplicationAttemptId())
@@ -784,7 +785,7 @@ public class ContainerManagerImpl extends CompositeService implements
      */
     authorizeStartRequest(nmTokenIdentifier, containerTokenIdentifier);
  
-    if (containerTokenIdentifier.getRMIdentifer() != nodeStatusUpdater
+    if (containerTokenIdentifier.getRMIdentifier() != nodeStatusUpdater
         .getRMIdentifier()) {
         // Is the container coming from unknown RM
         StringBuilder sb = new StringBuilder("\nContainer ");
@@ -1035,9 +1036,10 @@ public class ContainerManagerImpl extends CompositeService implements
      */
     ApplicationId nmTokenAppId =
         identifier.getApplicationAttemptId().getApplicationId();
+    
     if ((!nmTokenAppId.equals(containerId.getApplicationAttemptId().getApplicationId()))
         || (container != null && !nmTokenAppId.equals(container
-          .getContainerId().getApplicationAttemptId().getApplicationId()))) {
+            .getContainerId().getApplicationAttemptId().getApplicationId()))) {
       if (stopRequest) {
         LOG.warn(identifier.getApplicationAttemptId()
             + " attempted to stop non-application container : "
