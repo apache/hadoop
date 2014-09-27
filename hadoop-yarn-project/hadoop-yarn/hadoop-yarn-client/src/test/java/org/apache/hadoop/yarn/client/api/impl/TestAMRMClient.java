@@ -41,6 +41,7 @@ import java.util.TreeSet;
 
 import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -908,6 +909,36 @@ public class TestAMRMClient {
 
       // can do the allocate call with latest AMRMToken
       amClient.allocate(0.1f);
+      
+      // Verify latest AMRMToken can be used to send allocation request.
+      UserGroupInformation testUser1 =
+          UserGroupInformation.createRemoteUser("testUser1");
+      
+      AMRMTokenIdentifierForTest newVersionTokenIdentifier = 
+          new AMRMTokenIdentifierForTest(amrmToken_2.decodeIdentifier(), "message");
+      
+      Assert.assertEquals("Message is changed after set to newVersionTokenIdentifier",
+          "message", newVersionTokenIdentifier.getMessage());
+      org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> newVersionToken = 
+          new org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> (
+              newVersionTokenIdentifier.getBytes(), 
+              amrmTokenSecretManager.retrievePassword(newVersionTokenIdentifier),
+              newVersionTokenIdentifier.getKind(), new Text());
+      
+      SecurityUtil.setTokenService(newVersionToken, yarnCluster
+        .getResourceManager().getApplicationMasterService().getBindAddress());
+      testUser1.addToken(newVersionToken);
+      
+      
+      testUser1.doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
+        @Override
+        public ApplicationMasterProtocol run() {
+          return (ApplicationMasterProtocol) YarnRPC.create(conf).getProxy(
+            ApplicationMasterProtocol.class,
+            yarnCluster.getResourceManager().getApplicationMasterService()
+                .getBindAddress(), conf);
+        }
+      }).allocate(Records.newRecord(AllocateRequest.class));
 
       // Make sure previous token has been rolled-over
       // and can not use this rolled-over token to make a allocate all.
@@ -931,12 +962,12 @@ public class TestAMRMClient {
       }
 
       try {
-        UserGroupInformation testUser =
-            UserGroupInformation.createRemoteUser("testUser");
+        UserGroupInformation testUser2 =
+            UserGroupInformation.createRemoteUser("testUser2");
         SecurityUtil.setTokenService(amrmToken_2, yarnCluster
           .getResourceManager().getApplicationMasterService().getBindAddress());
-        testUser.addToken(amrmToken_2);
-        testUser.doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
+        testUser2.addToken(amrmToken_2);
+        testUser2.doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
           @Override
           public ApplicationMasterProtocol run() {
             return (ApplicationMasterProtocol) YarnRPC.create(conf).getProxy(
