@@ -19,9 +19,11 @@
 package org.apache.hadoop.yarn.security;
 
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -38,7 +40,14 @@ import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.LogAggregationContextPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.PriorityPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.LogAggregationContextProto;
+import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.ContainerTokenIdentifierProto;
+
+import com.google.protobuf.TextFormat;
+
 
 /**
  * TokenIdentifier for a container. Encodes {@link ContainerId},
@@ -53,15 +62,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
 
   public static final Text KIND = new Text("ContainerToken");
 
-  private ContainerId containerId;
-  private String nmHostAddr;
-  private String appSubmitter;
-  private Resource resource;
-  private long expiryTimeStamp;
-  private int masterKeyId;
-  private long rmIdentifier;
-  private Priority priority;
-  private long creationTime;
+  private ContainerTokenIdentifierProto proto;
   private LogAggregationContext logAggregationContext;
 
   public ContainerTokenIdentifier(ContainerId containerID,
@@ -75,16 +76,29 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
       String appSubmitter, Resource r, long expiryTimeStamp, int masterKeyId,
       long rmIdentifier, Priority priority, long creationTime,
       LogAggregationContext logAggregationContext) {
-    this.containerId = containerID;
-    this.nmHostAddr = hostName;
-    this.appSubmitter = appSubmitter;
-    this.resource = r;
-    this.expiryTimeStamp = expiryTimeStamp;
-    this.masterKeyId = masterKeyId;
-    this.rmIdentifier = rmIdentifier;
-    this.priority = priority;
-    this.creationTime = creationTime;
-    this.logAggregationContext = logAggregationContext;
+    ContainerTokenIdentifierProto.Builder builder = 
+        ContainerTokenIdentifierProto.newBuilder();
+    if (containerID != null) {
+      builder.setContainerId(((ContainerIdPBImpl)containerID).getProto());
+    }
+    builder.setNmHostAddr(hostName);
+    builder.setAppSubmitter(appSubmitter);
+    if (r != null) {
+      builder.setResource(((ResourcePBImpl)r).getProto());
+    }
+    builder.setExpiryTimeStamp(expiryTimeStamp);
+    builder.setMasterKeyId(masterKeyId);
+    builder.setRmIdentifier(rmIdentifier);
+    if (priority != null) {
+      builder.setPriority(((PriorityPBImpl)priority).getProto());
+    }
+    builder.setCreationTime(creationTime);
+    
+    if (logAggregationContext != null) {
+      builder.setLogAggregationContext(
+          ((LogAggregationContextPBImpl)logAggregationContext).getProto());
+    }
+    proto = builder.build();
   }
 
   /**
@@ -94,104 +108,75 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
   }
 
   public ContainerId getContainerID() {
-    return this.containerId;
+    if (!proto.hasContainerId()) {
+      return null;
+    }
+    return new ContainerIdPBImpl(proto.getContainerId());
   }
 
   public String getApplicationSubmitter() {
-    return this.appSubmitter;
+    return proto.getAppSubmitter();
   }
 
   public String getNmHostAddress() {
-    return this.nmHostAddr;
+    return proto.getNmHostAddr();
   }
 
   public Resource getResource() {
-    return this.resource;
+    if (!proto.hasResource()) {
+      return null;
+    }
+    return new ResourcePBImpl(proto.getResource());
   }
 
   public long getExpiryTimeStamp() {
-    return this.expiryTimeStamp;
+    return proto.getExpiryTimeStamp();
   }
 
   public int getMasterKeyId() {
-    return this.masterKeyId;
+    return proto.getMasterKeyId();
   }
 
   public Priority getPriority() {
-    return this.priority;
+    if (!proto.hasPriority()) {
+      return null;
+    }
+    return new PriorityPBImpl(proto.getPriority());
   }
 
   public long getCreationTime() {
-    return this.creationTime;
+    return proto.getCreationTime();
   }
   /**
    * Get the RMIdentifier of RM in which containers are allocated
    * @return RMIdentifier
    */
-  public long getRMIdentifer() {
-    return this.rmIdentifier;
+  public long getRMIdentifier() {
+    return proto.getRmIdentifier();
+  }
+  
+  public ContainerTokenIdentifierProto getProto() {
+    return proto;
   }
 
   public LogAggregationContext getLogAggregationContext() {
-    return this.logAggregationContext;
+    if (!proto.hasLogAggregationContext()) {
+      return null;
+    }
+    return new LogAggregationContextPBImpl(proto.getLogAggregationContext());
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
     LOG.debug("Writing ContainerTokenIdentifier to RPC layer: " + this);
-    ApplicationAttemptId applicationAttemptId = this.containerId
-        .getApplicationAttemptId();
-    ApplicationId applicationId = applicationAttemptId.getApplicationId();
-    out.writeLong(applicationId.getClusterTimestamp());
-    out.writeInt(applicationId.getId());
-    out.writeInt(applicationAttemptId.getAttemptId());
-    out.writeLong(this.containerId.getContainerId());
-    out.writeUTF(this.nmHostAddr);
-    out.writeUTF(this.appSubmitter);
-    out.writeInt(this.resource.getMemory());
-    out.writeInt(this.resource.getVirtualCores());
-    out.writeLong(this.expiryTimeStamp);
-    out.writeInt(this.masterKeyId);
-    out.writeLong(this.rmIdentifier);
-    out.writeInt(this.priority.getPriority());
-    out.writeLong(this.creationTime);
-    if (this.logAggregationContext == null) {
-      out.writeInt(-1);
-    } else {
-      byte[] logAggregationContext =
-          ((LogAggregationContextPBImpl) this.logAggregationContext).getProto()
-            .toByteArray();
-      out.writeInt(logAggregationContext.length);
-      out.write(logAggregationContext);
-    }
+    out.write(proto.toByteArray());
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    ApplicationId applicationId =
-        ApplicationId.newInstance(in.readLong(), in.readInt());
-    ApplicationAttemptId applicationAttemptId =
-        ApplicationAttemptId.newInstance(applicationId, in.readInt());
-    this.containerId =
-        ContainerId.newInstance(applicationAttemptId, in.readLong());
-    this.nmHostAddr = in.readUTF();
-    this.appSubmitter = in.readUTF();
-    int memory = in.readInt();
-    int vCores = in.readInt();
-    this.resource = Resource.newInstance(memory, vCores);
-    this.expiryTimeStamp = in.readLong();
-    this.masterKeyId = in.readInt();
-    this.rmIdentifier = in.readLong();
-    this.priority = Priority.newInstance(in.readInt());
-    this.creationTime = in.readLong();
-    int size = in.readInt();
-    if (size != -1) {
-      byte[] bytes = new byte[size];
-      in.readFully(bytes);
-      this.logAggregationContext =
-          new LogAggregationContextPBImpl(
-            LogAggregationContextProto.parseFrom(bytes));
-    }
+    DataInputStream dis = (DataInputStream)in;
+    byte[] buffer = IOUtils.toByteArray(dis);
+    proto = ContainerTokenIdentifierProto.parseFrom(buffer);
   }
 
   @Override
@@ -201,7 +186,12 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
 
   @Override
   public UserGroupInformation getUser() {
-    return UserGroupInformation.createRemoteUser(this.containerId.toString());
+    String containerId = null;
+    if (proto.hasContainerId()) {
+      containerId = new ContainerIdPBImpl(proto.getContainerId()).toString();
+    }
+    return UserGroupInformation.createRemoteUser(
+        containerId);
   }
 
   // TODO: Needed?
@@ -211,5 +201,25 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     protected Text getKind() {
       return KIND;
     }
+  }
+  
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return TextFormat.shortDebugString(getProto());
   }
 }

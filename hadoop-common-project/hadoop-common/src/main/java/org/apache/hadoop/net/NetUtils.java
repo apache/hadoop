@@ -716,7 +716,7 @@ public class NetUtils {
                                           final int localPort,
                                           final IOException exception) {
     if (exception instanceof BindException) {
-      return new BindException(
+      return wrapWithMessage(exception,
           "Problem binding to ["
               + localHost
               + ":"

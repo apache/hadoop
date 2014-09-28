@@ -882,6 +882,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10552. Fix usage and example at FileSystemShell.apt.vm (Kenji 
     Kikushima via aw)
 
+    HADOOP-11143 NetUtils.wrapException loses inner stack trace on BindException
+    (stevel)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
