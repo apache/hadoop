@@ -254,6 +254,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-6956. Allow dynamically changing the tracing level in Hadoop servers
     (cmccabe)
 
+    HDFS-7156. Update fsck documentation. (Masahiro Yamaguch via shv)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

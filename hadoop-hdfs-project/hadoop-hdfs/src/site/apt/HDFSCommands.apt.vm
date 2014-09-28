@@ -82,28 +82,37 @@ HDFS Commands Guide
    See {{{./HdfsUserGuide.html#fsck}fsck}} for more info.
 
    Usage: <<<hdfs fsck [GENERIC_OPTIONS] <path>
+          [-list-corruptfileblocks |
           [-move | -delete | -openforwrite]
-          [-files [-blocks [-locations | -racks]]]>>>
+          [-files [-blocks [-locations | -racks]]]]
+          [-includeSnapshots]>>>
 
-*------------------+---------------------------------------------+
-||  COMMAND_OPTION || Description
-*------------------+---------------------------------------------+
-|   <path>         | Start checking from this path.
-*------------------+---------------------------------------------+
-|   -move          | Move corrupted files to /lost+found
-*------------------+---------------------------------------------+
-|   -delete        | Delete corrupted files.
-*------------------+---------------------------------------------+
-|   -openforwrite  | Print out files opened for write.
-*------------------+---------------------------------------------+
-|   -files         | Print out files being checked.
-*------------------+---------------------------------------------+
-|   -blocks        | Print out block report.
-*------------------+---------------------------------------------+
-|   -locations     | Print out locations for every block.
-*------------------+---------------------------------------------+
-|   -racks         | Print out network topology for data-node locations.
-*------------------+---------------------------------------------+
+*------------------------+---------------------------------------------+
+||  COMMAND_OPTION       || Description
+*------------------------+---------------------------------------------+
+|   <path>               | Start checking from this path.
+*------------------------+---------------------------------------------+
+|   -move                | Move corrupted files to /lost+found
+*------------------------+---------------------------------------------+
+|   -delete              | Delete corrupted files.
+*------------------------+---------------------------------------------+
+|   -files               | Print out files being checked.
+*------------------------+---------------------------------------------+
+|   -openforwrite        | Print out files opened for write.
+*------------------------+---------------------------------------------+
+|                        | Include snapshot data if the given path
+| -includeSnapshots      | indicates a snapshottable directory or
+|                        | there are snapshottable directories under it.
+*------------------------+---------------------------------------------+
+| -list-corruptfileblocks| Print out list of missing blocks and
+|                        | files they belong to.
+*------------------------+---------------------------------------------+
+|   -blocks              | Print out block report.
+*------------------------+---------------------------------------------+
+|   -locations           | Print out locations for every block.
+*------------------------+---------------------------------------------+
+|   -racks               | Print out network topology for data-node locations.
+*------------------------+---------------------------------------------+
 
 * Administration Commands
 
