@@ -177,6 +177,9 @@ Release 2.6.0 - UNRELEASED
     MRJobConfig#MR_CLIENT_TO_AM_IPC_MAX_RETRIES_ON_TIMEOUTS. Contributed by
     Akira AJISAKA. (Akira AJISAKA via jianhe)
 
+    MAPREDUCE-6094. TestMRCJCFileInputFormat.testAddInputPath() fails on trunk
+    (Akira AJISAKA via jlowe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
