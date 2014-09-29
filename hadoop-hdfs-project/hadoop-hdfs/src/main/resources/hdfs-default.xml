@@ -2140,4 +2140,15 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.namenode.legacy-oiv-image.dir</name>
+  <value></value>
+  <description>Determines where to save the namespace in the old fsimage format
+    during checkpointing by standby NameNode or SecondaryNameNode. Users can
+    dump the contents of the old format fsimage by oiv_legacy command. If
+    the value is not specified, old format fsimage will not be saved in
+    checkpoint.
+  </description>
+</property>
+
 </configuration>
