@@ -2142,4 +2142,12 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.storage.policy.enabled</name>
+  <value>true</value>
+  <description>
+    Allow users to change the storage policy on files and directories.
+  </description>
+</property>
+
 </configuration>
