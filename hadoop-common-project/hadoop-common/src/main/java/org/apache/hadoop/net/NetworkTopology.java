@@ -674,27 +674,11 @@ public class NetworkTopology {
     return node1.getParent()==node2.getParent();
   }
 
-  private static final ThreadLocal<Random> r = new ThreadLocal<Random>();
-
-  /**
-   * Getter for thread-local Random, which provides better performance than
-   * a shared Random (even though Random is thread-safe).
-   *
-   * @return Thread-local Random.
-   */
-  protected Random getRandom() {
-    Random rand = r.get();
-    if (rand == null) {
-      rand = new Random();
-      r.set(rand);
-    }
-    return rand;
-  }
+  private static final Random r = new Random();
 
   @VisibleForTesting
   void setRandomSeed(long seed) {
-    Random rand = getRandom();
-    rand.setSeed(seed);
+    r.setSeed(seed);
   }
 
   /** randomly choose one node from <i>scope</i>
@@ -746,7 +730,7 @@ public class NetworkTopology {
           "Failed to find datanode (scope=\"" + String.valueOf(scope) +
           "\" excludedScope=\"" + String.valueOf(excludedScope) + "\").");
     }
-    int leaveIndex = getRandom().nextInt(numOfDatanodes);
+    int leaveIndex = r.nextInt(numOfDatanodes);
     return innerNode.getLeaf(leaveIndex, node);
   }
 
@@ -919,11 +903,10 @@ public class NetworkTopology {
       list.add(node);
     }
 
-    Random rand = getRandom();
     int idx = 0;
     for (List<Node> list: tree.values()) {
       if (list != null) {
-        Collections.shuffle(list, rand);
+        Collections.shuffle(list, r);
         for (Node n: list) {
           nodes[idx] = n;
           idx++;
