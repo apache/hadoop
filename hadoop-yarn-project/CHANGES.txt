@@ -235,6 +235,9 @@ Release 2.6.0 - UNRELEASED
     YARN-668. Changed NMTokenIdentifier/AMRMTokenIdentifier/ContainerTokenIdentifier
     to use protobuf object as the payload. (Junping Du via jianhe)
 
+    YARN-1769. CapacityScheduler: Improve reservations (Thomas Graves via
+    jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES

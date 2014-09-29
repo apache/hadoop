@@ -100,6 +100,8 @@ public class ParentQueue implements CSQueue {
     RecordFactoryProvider.getRecordFactory(null);
 
   private final ResourceCalculator resourceCalculator;
+
+  private boolean reservationsContinueLooking;
   
   public ParentQueue(CapacitySchedulerContext cs, 
       String queueName, CSQueue parent, CSQueue old) {
@@ -146,7 +148,8 @@ public class ParentQueue implements CSQueue {
 
     setupQueueConfigs(cs.getClusterResource(),
         capacity, absoluteCapacity, 
-        maximumCapacity, absoluteMaxCapacity, state, acls);
+        maximumCapacity, absoluteMaxCapacity, state, acls,
+        cs.getConfiguration().getReservationContinueLook());
     
     this.queueComparator = cs.getQueueComparator();
     this.childQueues = new TreeSet<CSQueue>(queueComparator);
@@ -160,7 +163,8 @@ public class ParentQueue implements CSQueue {
       Resource clusterResource,
       float capacity, float absoluteCapacity, 
       float maximumCapacity, float absoluteMaxCapacity,
-      QueueState state, Map<QueueACL, AccessControlList> acls
+      QueueState state, Map<QueueACL, AccessControlList> acls,
+      boolean continueLooking
   ) {
     // Sanity check
     CSQueueUtils.checkMaxCapacity(getQueueName(), capacity, maximumCapacity);
@@ -180,6 +184,8 @@ public class ParentQueue implements CSQueue {
     this.queueInfo.setMaximumCapacity(this.maximumCapacity);
     this.queueInfo.setQueueState(this.state);
 
+    this.reservationsContinueLooking = continueLooking;
+
     StringBuilder aclsString = new StringBuilder();
     for (Map.Entry<QueueACL, AccessControlList> e : acls.entrySet()) {
       aclsString.append(e.getKey() + ":" + e.getValue().getAclString());
@@ -195,7 +201,8 @@ public class ParentQueue implements CSQueue {
         ", maxCapacity=" + maximumCapacity +
         ", asboluteMaxCapacity=" + absoluteMaxCapacity + 
         ", state=" + state +
-        ", acls=" + aclsString);
+        ", acls=" + aclsString +
+        ", reservationsContinueLooking=" + reservationsContinueLooking);
   }
 
   private static float PRECISION = 0.0005f; // 0.05% precision
@@ -383,7 +390,8 @@ public class ParentQueue implements CSQueue {
         newlyParsedParentQueue.maximumCapacity, 
         newlyParsedParentQueue.absoluteMaxCapacity,
         newlyParsedParentQueue.state, 
-        newlyParsedParentQueue.acls);
+        newlyParsedParentQueue.acls,
+        newlyParsedParentQueue.reservationsContinueLooking);
 
     // Re-configure existing child queues and add new ones
     // The CS has already checked to ensure all existing child queues are present!
@@ -551,7 +559,7 @@ public class ParentQueue implements CSQueue {
 
   @Override
   public synchronized CSAssignment assignContainers(
-      Resource clusterResource, FiCaSchedulerNode node) {
+      Resource clusterResource, FiCaSchedulerNode node, boolean needToUnreserve) {
     CSAssignment assignment = 
         new CSAssignment(Resources.createResource(0, 0), NodeType.NODE_LOCAL);
     
@@ -561,14 +569,19 @@ public class ParentQueue implements CSQueue {
           + getQueueName());
       }
       
+      boolean localNeedToUnreserve = false;
       // Are we over maximum-capacity for this queue?
       if (!assignToQueue(clusterResource)) {
-        break;
+        // check to see if we could if we unreserve first
+        localNeedToUnreserve = assignToQueueIfUnreserve(clusterResource);
+        if (!localNeedToUnreserve) {
+          break;
+        }
       }
       
       // Schedule
       CSAssignment assignedToChild = 
-          assignContainersToChildQueues(clusterResource, node);
+          assignContainersToChildQueues(clusterResource, node, localNeedToUnreserve | needToUnreserve);
       assignment.setType(assignedToChild.getType());
       
       // Done if no child-queue assigned anything
@@ -632,6 +645,39 @@ public class ParentQueue implements CSQueue {
     return true;
 
   }
+
+  
+  private synchronized boolean assignToQueueIfUnreserve(Resource clusterResource) {
+    if (this.reservationsContinueLooking) {      
+      // check to see if we could potentially use this node instead of a reserved
+      // node
+
+      Resource reservedResources = Resources.createResource(getMetrics()
+          .getReservedMB(), getMetrics().getReservedVirtualCores());
+      float capacityWithoutReservedCapacity = Resources.divide(
+          resourceCalculator, clusterResource,
+          Resources.subtract(usedResources, reservedResources),
+          clusterResource);
+
+      if (capacityWithoutReservedCapacity <= absoluteMaxCapacity) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("parent: try to use reserved: " + getQueueName()
+            + " usedResources: " + usedResources.getMemory()
+            + " clusterResources: " + clusterResource.getMemory()
+            + " reservedResources: " + reservedResources.getMemory()
+            + " currentCapacity " + ((float) usedResources.getMemory())
+            / clusterResource.getMemory()
+            + " potentialNewWithoutReservedCapacity: "
+            + capacityWithoutReservedCapacity + " ( " + " max-capacity: "
+            + absoluteMaxCapacity + ")");
+        }
+        // we could potentially use this node instead of reserved node
+        return true;
+      }
+    }
+    return false;
+   }
+
   
   private boolean canAssign(Resource clusterResource, FiCaSchedulerNode node) {
     return (node.getReservedContainer() == null) && 
@@ -640,7 +686,7 @@ public class ParentQueue implements CSQueue {
   }
   
   synchronized CSAssignment assignContainersToChildQueues(Resource cluster, 
-      FiCaSchedulerNode node) {
+      FiCaSchedulerNode node, boolean needToUnreserve) {
     CSAssignment assignment = 
         new CSAssignment(Resources.createResource(0, 0), NodeType.NODE_LOCAL);
     
@@ -653,7 +699,7 @@ public class ParentQueue implements CSQueue {
         LOG.debug("Trying to assign to queue: " + childQueue.getQueuePath()
           + " stats: " + childQueue);
       }
-      assignment = childQueue.assignContainers(cluster, node);
+      assignment = childQueue.assignContainers(cluster, node, needToUnreserve);
       if(LOG.isDebugEnabled()) {
         LOG.debug("Assigned to queue: " + childQueue.getQueuePath() +
           " stats: " + childQueue + " --> " + 
@@ -697,7 +743,8 @@ public class ParentQueue implements CSQueue {
   public void completedContainer(Resource clusterResource,
       FiCaSchedulerApp application, FiCaSchedulerNode node, 
       RMContainer rmContainer, ContainerStatus containerStatus, 
-      RMContainerEventType event, CSQueue completedChildQueue) {
+      RMContainerEventType event, CSQueue completedChildQueue,
+      boolean sortQueues) {
     if (application != null) {
       // Careful! Locking order is important!
       // Book keeping
@@ -713,16 +760,21 @@ public class ParentQueue implements CSQueue {
             " cluster=" + clusterResource);
       }
 
-      // reinsert the updated queue
-      for (Iterator<CSQueue> iter=childQueues.iterator(); iter.hasNext();) {
-        CSQueue csqueue = iter.next();
-        if(csqueue.equals(completedChildQueue))
-        {
-          iter.remove();
-          LOG.info("Re-sorting completed queue: " + csqueue.getQueuePath() + 
-              " stats: " + csqueue);
-          childQueues.add(csqueue);
-          break;
+      // Note that this is using an iterator on the childQueues so this can't be
+      // called if already within an iterator for the childQueues. Like  
+      // from assignContainersToChildQueues.
+      if (sortQueues) {
+        // reinsert the updated queue
+        for (Iterator<CSQueue> iter=childQueues.iterator(); iter.hasNext();) {
+          CSQueue csqueue = iter.next();
+          if(csqueue.equals(completedChildQueue))
+          {
+            iter.remove();
+            LOG.info("Re-sorting completed queue: " + csqueue.getQueuePath() + 
+                " stats: " + csqueue);
+            childQueues.add(csqueue);
+            break;
+          }
         }
       }
       
@@ -730,9 +782,14 @@ public class ParentQueue implements CSQueue {
       if (parent != null) {
         // complete my parent
         parent.completedContainer(clusterResource, application, 
-            node, rmContainer, null, event, this);
+            node, rmContainer, null, event, this, sortQueues);
       }    
     }
+  }
+
+  @Private
+  boolean getReservationContinueLooking() {
+    return reservationsContinueLooking;
   }
   
   synchronized void allocateResource(Resource clusterResource, 

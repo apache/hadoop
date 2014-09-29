@@ -516,13 +516,13 @@ public class CapacityScheduler extends
             "Queue configuration missing child queue names for " + queueName);
       }
       queue = 
-          new LeafQueue(csContext, queueName, parent,oldQueues.get(queueName));
+          new LeafQueue(csContext, queueName, parent, oldQueues.get(queueName));
       
       // Used only for unit tests
       queue = hook.hook(queue);
     } else {
       ParentQueue parentQueue = 
-        new ParentQueue(csContext, queueName, parent,oldQueues.get(queueName));
+        new ParentQueue(csContext, queueName, parent, oldQueues.get(queueName));
 
       // Used only for unit tests
       queue = hook.hook(parentQueue);
@@ -922,7 +922,8 @@ public class CapacityScheduler extends
           node.getNodeID());
       
       LeafQueue queue = ((LeafQueue)reservedApplication.getQueue());
-      CSAssignment assignment = queue.assignContainers(clusterResource, node);
+      CSAssignment assignment = queue.assignContainers(clusterResource, node,
+          false);
       
       RMContainer excessReservation = assignment.getExcessReservation();
       if (excessReservation != null) {
@@ -933,7 +934,7 @@ public class CapacityScheduler extends
           SchedulerUtils.createAbnormalContainerStatus(
               container.getId(), 
               SchedulerUtils.UNRESERVED_CONTAINER), 
-          RMContainerEventType.RELEASED, null);
+          RMContainerEventType.RELEASED, null, true);
       }
 
     }
@@ -946,7 +947,7 @@ public class CapacityScheduler extends
           LOG.debug("Trying to schedule on node: " + node.getNodeName() +
               ", available: " + node.getAvailableResource());
         }
-        root.assignContainers(clusterResource, node);
+        root.assignContainers(clusterResource, node, false);
       }
     } else {
       LOG.info("Skipping scheduling since node " + node.getNodeID() + 
@@ -1122,7 +1123,7 @@ public class CapacityScheduler extends
     // Inform the queue
     LeafQueue queue = (LeafQueue)application.getQueue();
     queue.completedContainer(clusterResource, application, node, 
-        rmContainer, containerStatus, event, null);
+        rmContainer, containerStatus, event, null, true);
 
     LOG.info("Application attempt " + application.getApplicationAttemptId()
         + " released container " + container.getId() + " on node: " + node
@@ -1138,7 +1139,7 @@ public class CapacityScheduler extends
   }
   
   @Lock(Lock.NoLock.class)
-  FiCaSchedulerNode getNode(NodeId nodeId) {
+  public FiCaSchedulerNode getNode(NodeId nodeId) {
     return nodes.get(nodeId);
   }
   
