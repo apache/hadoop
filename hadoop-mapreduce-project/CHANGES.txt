@@ -41,6 +41,8 @@ Release 2.6.0 - UNRELEASED
     scheduler resource type is memory plus cpu. (Peng Zhang and Varun Vasudev
     via zjshen)
 
+    MAPREDUCE-6072. Remove INSTALL document (Akira AJISAKA via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
