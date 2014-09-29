@@ -726,6 +726,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-6664. HDFS permissions guide documentation states incorrect default
     group mapping class. (Ray Chiang via aw)
 
+    HDFS-4227. Document dfs.namenode.resource.*  (Daisuke Kobayashi via aw)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
