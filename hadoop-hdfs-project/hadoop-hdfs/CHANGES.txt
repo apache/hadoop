@@ -263,6 +263,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-4165. Faulty sanity check in FsDirectory.unprotectedSetQuota.
     (Binglin Chang via suresh)
 
+    HDFS-7104. Fix and clarify INodeInPath getter functions. (Zhe Zhang via wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
