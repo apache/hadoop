@@ -425,6 +425,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-1110. JavaKeystoreProvider should not report a key as created if it
     was not flushed to the backing file.
 
+    HADOOP-11130. NFS updateMaps OS check is reversed (brandonli)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HADOOP-10734. Implement high-performance secure random number sources.

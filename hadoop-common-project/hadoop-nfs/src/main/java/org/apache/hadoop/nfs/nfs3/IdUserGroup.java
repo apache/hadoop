@@ -45,8 +45,8 @@ public class IdUserGroup {
   private final static String OS = System.getProperty("os.name");
 
   /** Shell commands to get users and groups */
-  static final String LINUX_GET_ALL_USERS_CMD = "getent passwd | cut -d: -f1,3";
-  static final String LINUX_GET_ALL_GROUPS_CMD = "getent group | cut -d: -f1,3";
+  static final String GET_ALL_USERS_CMD = "getent passwd | cut -d: -f1,3";
+  static final String GET_ALL_GROUPS_CMD = "getent group | cut -d: -f1,3";
   static final String MAC_GET_ALL_USERS_CMD = "dscl . -list /Users UniqueID";
   static final String MAC_GET_ALL_GROUPS_CMD = "dscl . -list /Groups PrimaryGroupID";
 
@@ -223,16 +223,15 @@ public class IdUserGroup {
           + "' does not exist.");
     }
 
-    if (OS.startsWith("Linux")) {
-      updateMapInternal(uMap, "user", LINUX_GET_ALL_USERS_CMD, ":",
-          staticMapping.uidMapping);
-      updateMapInternal(gMap, "group", LINUX_GET_ALL_GROUPS_CMD, ":",
-          staticMapping.gidMapping);
-    } else {
-      // Mac
+    if (OS.startsWith("Mac")) {
       updateMapInternal(uMap, "user", MAC_GET_ALL_USERS_CMD, "\\s+",
           staticMapping.uidMapping);
       updateMapInternal(gMap, "group", MAC_GET_ALL_GROUPS_CMD, "\\s+",
+          staticMapping.gidMapping);
+    } else {
+      updateMapInternal(uMap, "user", GET_ALL_USERS_CMD, ":",
+          staticMapping.uidMapping);
+      updateMapInternal(gMap, "group", GET_ALL_GROUPS_CMD, ":",
           staticMapping.gidMapping);
     }
 
