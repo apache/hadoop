@@ -134,7 +134,7 @@ public abstract class ReconfigurableBase
       }
 
       synchronized (this.parent.reconfigLock) {
-        this.parent.endTime = Time.monotonicNow();
+        this.parent.endTime = Time.now();
         this.parent.status = Collections.unmodifiableMap(results);
         this.parent.reconfigThread = null;
       }
@@ -160,7 +160,7 @@ public abstract class ReconfigurableBase
       reconfigThread.setDaemon(true);
       reconfigThread.setName("Reconfiguration Task");
       reconfigThread.start();
-      startTime = Time.monotonicNow();
+      startTime = Time.now();
     }
   }
 

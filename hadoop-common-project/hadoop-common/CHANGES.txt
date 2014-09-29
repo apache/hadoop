@@ -420,6 +420,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11140. hadoop-aws only need test-scoped dependency on
     hadoop-common's tests jar. (Juan Yu via wang)
 
+    HDFS-7157. Using Time.now() for recording start/end time of reconfiguration
+    tasks (Lei Xu via cmccabe)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HADOOP-10734. Implement high-performance secure random number sources.
