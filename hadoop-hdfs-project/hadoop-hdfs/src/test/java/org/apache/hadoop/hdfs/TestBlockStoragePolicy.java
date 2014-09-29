@@ -21,6 +21,7 @@ import static org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySu
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.*;
 
 import com.google.common.collect.Lists;
@@ -68,6 +69,40 @@ public class TestBlockStoragePolicy {
   static final byte COLD = (byte) 4;
   static final byte WARM = (byte) 8;
   static final byte HOT  = (byte) 12;
+
+
+  @Test (timeout=300000)
+  public void testConfigKeyEnabled() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY, true);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).build();
+    try {
+      cluster.waitActive();
+      cluster.getFileSystem().setStoragePolicy(new Path("/"), "COLD");
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * Ensure that setStoragePolicy throws IOException when
+   * dfs.storage.policy.enabled is set to false.
+   * @throws IOException
+   */
+  @Test (timeout=300000, expected=IOException.class)
+  public void testConfigKeyDisabled() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY, false);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).build();
+    try {
+      cluster.waitActive();
+      cluster.getFileSystem().setStoragePolicy(new Path("/"), "COLD");
+    } finally {
+      cluster.shutdown();
+    }
+  }
 
   @Test
   public void testDefaultPolicies() {

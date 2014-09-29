@@ -256,6 +256,8 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7156. Update fsck documentation. (Masahiro Yamaguch via shv)
 
+    HDFS-7093. Add config key to restrict setStoragePolicy. (Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

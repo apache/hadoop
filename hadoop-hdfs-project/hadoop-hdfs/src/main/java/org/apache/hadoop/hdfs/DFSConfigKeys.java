@@ -564,6 +564,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_DOMAIN_SOCKET_PATH_KEY = "dfs.domain.socket.path";
   public static final String DFS_DOMAIN_SOCKET_PATH_DEFAULT = "";
 
+  public static final String  DFS_STORAGE_POLICY_ENABLED_KEY = "dfs.storage.policy.enabled";
+  public static final boolean DFS_STORAGE_POLICY_ENABLED_DEFAULT = true;
+
   // HA related configuration
   public static final String DFS_HA_NAMENODES_KEY_PREFIX = "dfs.ha.namenodes";
   public static final String DFS_HA_NAMENODE_ID_KEY = "dfs.ha.namenode.id";
