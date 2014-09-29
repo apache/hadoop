@@ -204,9 +204,6 @@ Trunk (Unreleased)
     HDFS-4115. TestHDFSCLI.testAll fails one test due to number format.
     (Trevor Robinson via suresh)
 
-    HDFS-4165. Faulty sanity check in FsDirectory.unprotectedSetQuota.
-    (Binglin Chang via suresh)
-
     HDFS-4105. The SPNEGO user for secondary namenode should use the web 
     keytab. (Arpit Gupta via jitendra)
 
@@ -517,6 +514,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7093. Add config key to restrict setStoragePolicy. (Arpit Agarwal)
 
     HDFS-6519. Document oiv_legacy command (Akira AJISAKA via aw)
+
+    HDFS-4165. Faulty sanity check in FsDirectory.unprotectedSetQuota.
+    (Binglin Chang via suresh)
 
   OPTIMIZATIONS
 
