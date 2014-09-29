@@ -83,3 +83,6 @@
     HDFS-7155. Bugfix in createLocatedFileStatus caused by bad merge.
     (Arpit Agarwal)
 
+    HDFS-7153. Add storagePolicy to NN edit log during file creation.
+    (Arpit Agarwal)
+
