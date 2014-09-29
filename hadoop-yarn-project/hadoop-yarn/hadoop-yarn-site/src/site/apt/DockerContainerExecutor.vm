@@ -1,0 +1,230 @@
+
+~~ Licensed under the Apache License, Version 2.0 (the "License");
+~~ you may not use this file except in compliance with the License.
+~~ You may obtain a copy of the License at
+~~
+~~   http://www.apache.org/licenses/LICENSE-2.0
+~~
+~~ Unless required by applicable law or agreed to in writing, software
+~~ distributed under the License is distributed on an "AS IS" BASIS,
+~~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~~ See the License for the specific language governing permissions and
+~~ limitations under the License. See accompanying LICENSE file.
+
+  ---
+  Hadoop Map Reduce Next Generation-${project.version} - Docker Container Executor
+  ---
+  ---
+  ${maven.build.timestamp}
+
+Docker Container Executor
+
+%{toc|section=1|fromDepth=0}
+
+* {Overview}
+
+  Docker (https://www.docker.io/) combines an easy-to-use interface to
+Linux containers with easy-to-construct image files for those
+containers.  In short, Docker launches very light weight "virtual
+machines.
+
+  The Docker Container Executor (DCE) allows the YARN NodeManager to
+launch YARN containers into Docker containers.  Users can specify the
+Docker Images they want for their YARN containers.  These containers
+provide a custom software environment in which the user's code runs,
+isolated from the software environment of the NodeManager.  These
+containers can include special libraries needed by the application,
+and they can have different versions of Perl, Python, and even Java
+than what is installed on the NodeManager.  Indeed, these containers
+can run a different flavor of Linux than what is running on the
+NodeManager -- although the YARN container will share the kernel of
+the NodeManager, and (for MapReduce and Tez) JAVA_HOME of the YARN
+container must match that of the NodeManager. In cases where the JAVA_HOME
+values do not match(for instance, if running an ubuntu container within
+a centos NodeManager), user/Administrator must mount the $JAVA_HOME on the
+container from the NodeManager.
+
+   Docker for YARN provides both consistency (all YARN containers will
+have the same software environment) and isolation (no interference
+with whatever is installed on the physical machine).
+  
+* {Cluster Configuration}
+
+   Docker Container Executor runs in non-secure mode of HDFS and
+YARN. It will not run in secure mode, and will exit if it detects
+secure mode.
+
+   The DockerContainerExecutor requires Docker daemon to be running on
+the NodeManager, and the Docker client installed and able start Docker
+containers.  To prevent timeouts while starting jobs, the Docker
+images to be used by a job should already be downloaded in the
+NodeManagers. Here's an example of how this can be done:
+----
+sudo docker pull centos
+----
+
+This should be done as part of the Nodemanager startup.
+
+   The following properties must be set in yarn-site.xml:
+----
+<property>
+  <name>yarn.nodemanager.docker-container-executor.image-name</name>
+  <value>busybox</value>
+  <description>
+     This image is used by all nodemanagers to launch containers.
+     This maybe modified by the users(see below)
+  </description>
+</property>
+----
+<property>
+  <name>yarn.nodemanager.docker-container-executor.run-args</name>
+  <value>--rm --net=host</value>
+  <description>
+     This arguments to pass to the 'docker run' invocation.
+  </description>
+</property>
+----
+<property>
+ <name>yarn.nodemanager.docker-container-executor.exec-name</name>
+  <value>docker</value>
+  <description>
+     Name or path to the Docker client.
+  </description>
+</property>
+----
+<property>
+  <name>yarn.nodemanager.container-executor.class</name>
+  <value>org.apache.hadoop.yarn.server.nodemanager.DockerContainerExecutor</value>
+  <description>
+     This is the container executor setting that ensures that all 
+jobs are started with the DockerContainerExecutor.
+  </description>
+</property>
+----
+
+
+   Administrators are expected to include both --rm and --net=host in
+yarn.nodemanager.docker-run.args.  --rm ensures that all containers
+that are killed are cleaned up. --net=host makes the container share
+the host's network, which allows all Hadoop processes (including the
+Application Master) to talk to the containers as if they where just
+processes on the same host as the container's NodeManager.
+
+   Administrators should be aware that DCE doesn't currently provide
+user name-space isolation.  This means, in particular, that software
+running as root in the YARN container will have root privileges in the
+underlying NodeManager.  Put differently, DCE currently provides no
+better security guarantees than YARN's Default Container Executor. In
+fact, DockerContainerExecutor will exit if it detects secure hadoop.
+
+* {Tips for connecting to a secure docker repository}
+
+To connect to a secure docker repository, you can use the following invocation:
+----
+docker login [OPTIONS] [SERVER]
+
+Register or log in to a Docker registry server, if no server is specified 
+"https://index.docker.io/v1/" is the default.
+
+  -e, --email=""       Email
+  -p, --password=""    Password
+  -u, --username=""    Username
+----
+
+If you want to login to a self-hosted registry you can specify this by adding 
+the server name.
+
+----
+docker login localhost:8080
+----
+
+This needs to be run as part of the NodeManager startup, or as a cron job if 
+the login session expires periodically.
+
+* {Job Configuration}
+
+Currently you cannot configure any of the Docker settings with the job configuration.
+You can provide Mapper, Reducer, and ApplicationMaster environment overrides for the
+docker images, using the following 3 JVM properties respectively(only for MR jobs):
+  * mapreduce.map.env: You can override the mapper's image by passing 
+yarn.nodemanager.docker-container-executor.image-name=<your_image_name>
+to this JVM property.
+  * mapreduce.reduce.env: You can override the reducer's image by passing
+yarn.nodemanager.docker-container-executor.image-name=<your_image_name>
+to this JVM property.
+  * yarn.app.mapreduce.am.env: You can override the ApplicationMaster's image
+by passing yarn.nodemanager.docker-container-executor.image-name=<your_image_name>
+to this JVM property.
+
+* {Docker Image requirements}
+
+   The Docker Images used for YARN containers must meet the following
+requirements:
+
+   The distro and version of Linux in your Docker Image can be quite different 
+from that of your NodeManager.  (Docker does have a few limitations in this 
+regard, but you're not likely to hit them.)  However, if you're using the 
+MapReduce framework, then your image will need to be configured for running 
+Hadoop. Java must either be installed in the container, in the same location
+as the NodeManager's java, or JAVA_HOME must be mounted.
+
+
+* {Working example of yarn launched docker containers.}
+
+The following example shows how to run teragen using DockerContainerExecutor.
+
+  * First ensure that YARN is properly configured with DockerContainerExecutor(see above).
+If you use an image that does not have hadoop in it, you will need to mount the hadoop jars.
+In the following example, hadoop is installed at /opt/hadoop-3.0.0.
+See below:
+
+<property>
+  <name>yarn.nodemanager.docker-container-executor.run-args</name>
+  <value>
+    --rm --net=host
+    -v $JAVA_HOME:$JAVA_HOME
+    -v /opt/hadoop-3.0.0:/opt/hadoop
+    -v /opt/hadoop-3.0.0:/opt/hadoop-3.0.0
+  </value>
+  <description>
+     These are arguments to pass to the 'docker run' invocation.
+     We are mounting hadoop and JAVA_HOME
+  </description>
+</property>
+----
+<property>
+ <name>yarn.nodemanager.docker-container-executor.exec-name</name>
+  <value>docker -H=tcp://0.0.0.0:4243</value>
+  <description>
+     Name or path to the Docker client. The tcp socket must be
+     where docker daemon is listening.
+  </description>
+</property>
+----
+<property>
+  <name>yarn.nodemanager.container-executor.class</name>
+  <value>org.apache.hadoop.yarn.server.nodemanager.DockerContainerExecutor</value>
+  <description>
+     This is the container executor setting that ensures that all
+jobs are started with the DockerContainerExecutor.
+  </description>
+</property>
+----
+
+  * Pick a custom Docker image if you want. Ensure that it has the java binary in the same
+location as the NodeManager node. In this example, we'll use ubuntu and centos from the
+docker hub repository. These docker images have no hadoop jars or java in it, therefore those
+must be mounted.
+  * Run: 
+----
+hadoop jar $HADOOP_INSTALLATION_DIR/share/hadoop/mapreduce/hadoop-mapreduce-examples-*.jar \
+teragen \
+-Dmapreduce.map.env="yarn.nodemanager.docker-container-executor.image-name=ubuntu" \
+-Dyarn.app.mapreduce.am.env="yarn.nodemanager.docker-container-executor.image-name=centos" \
+1000 \
+teragen_out_dir 
+
+Once it succeeds, you can check the yarn debug logs to verify that docker indeed has launched containers.
+Alternatively, if you launch your container without the --rm option(yarn.nodemanager.docker-container-executor.run-arg)
+you can see containers that ran by running 'docker ps -a' on the Nodemanager where the containers ran.
+----
