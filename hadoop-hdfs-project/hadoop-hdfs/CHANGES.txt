@@ -265,6 +265,8 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7104. Fix and clarify INodeInPath getter functions. (Zhe Zhang via wang)
 
+    HDFS-7124. Remove EncryptionZoneManager.NULL_EZ. (clamb via wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

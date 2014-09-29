@@ -57,10 +57,6 @@ public class EncryptionZoneManager {
   public static Logger LOG = LoggerFactory.getLogger(EncryptionZoneManager
       .class);
 
-  public static final EncryptionZone NULL_EZ =
-      new EncryptionZone(-1, "", CipherSuite.UNKNOWN,
-          CryptoProtocolVersion.UNKNOWN, "");
-
   /**
    * EncryptionZoneInt is the internal representation of an encryption zone. The
    * external representation of an EZ is embodied in an EncryptionZone and
@@ -226,7 +222,7 @@ public class EncryptionZoneManager {
   EncryptionZone getEZINodeForPath(INodesInPath iip) {
     final EncryptionZoneInt ezi = getEncryptionZoneForPath(iip);
     if (ezi == null) {
-      return NULL_EZ;
+      return null;
     } else {
       return new EncryptionZone(ezi.getINodeId(), getFullPathName(ezi),
           ezi.getSuite(), ezi.getVersion(), ezi.getKeyName());

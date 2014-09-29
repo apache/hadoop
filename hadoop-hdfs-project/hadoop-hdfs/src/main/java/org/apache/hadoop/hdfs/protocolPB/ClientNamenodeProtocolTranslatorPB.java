@@ -1347,7 +1347,11 @@ public class ClientNamenodeProtocolTranslatorPB implements
     try {
       final EncryptionZonesProtos.GetEZForPathResponseProto response =
           rpcProxy.getEZForPath(null, req);
-      return PBHelper.convert(response.getZone());
+      if (response.hasZone()) {
+        return PBHelper.convert(response.getZone());
+      } else {
+        return null;
+      }
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

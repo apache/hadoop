@@ -1340,7 +1340,9 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       GetEZForPathResponseProto.Builder builder =
           GetEZForPathResponseProto.newBuilder();
       final EncryptionZone ret = server.getEZForPath(req.getSrc());
-      builder.setZone(PBHelper.convert(ret));
+      if (ret != null) {
+        builder.setZone(PBHelper.convert(ret));
+      }
       return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
