@@ -2940,8 +2940,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           throws IOException {
     checkOpen();
     try {
-      final EncryptionZone ez = namenode.getEZForPath(src);
-      return (ez.getId() < 0) ? null : ez;
+      return namenode.getEZForPath(src);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      UnresolvedPathException.class);

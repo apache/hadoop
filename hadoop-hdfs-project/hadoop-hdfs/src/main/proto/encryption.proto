@@ -63,5 +63,5 @@ message GetEZForPathRequestProto {
 }
 
 message GetEZForPathResponseProto {
-    required EncryptionZoneProto zone = 1;
+    optional EncryptionZoneProto zone = 1;
 }
