@@ -345,8 +345,8 @@ public class KeyShell extends Configured implements Tool {
             + provider + "\n  for key name: " + keyName);
         try {
           provider.rollNewVersion(keyName);
-          out.println(keyName + " has been successfully rolled.");
           provider.flush();
+          out.println(keyName + " has been successfully rolled.");
           printProviderWritten();
         } catch (NoSuchAlgorithmException e) {
           out.println("Cannot roll key: " + keyName + " within KeyProvider: "
@@ -418,8 +418,8 @@ public class KeyShell extends Configured implements Tool {
       if (cont) {
         try {
           provider.deleteKey(keyName);
-          out.println(keyName + " has been successfully deleted.");
           provider.flush();
+          out.println(keyName + " has been successfully deleted.");
           printProviderWritten();
         } catch (IOException e) {
           out.println(keyName + " has not been deleted.");
@@ -479,9 +479,9 @@ public class KeyShell extends Configured implements Tool {
       warnIfTransientProvider();
       try {
         provider.createKey(keyName, options);
+        provider.flush();
         out.println(keyName + " has been successfully created with options "
             + options.toString() + ".");
-        provider.flush();
         printProviderWritten();
       } catch (InvalidParameterException e) {
         out.println(keyName + " has not been created. " + e.getMessage());
