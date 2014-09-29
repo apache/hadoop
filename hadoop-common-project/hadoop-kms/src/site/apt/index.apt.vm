@@ -152,6 +152,8 @@ hadoop-${project.version} $ sbin/kms.sh start
 
   * KMS_ADMIN_PORT
 
+  * KMS_MAX_THREADS
+
   * KMS_LOG
 
   NOTE: You need to restart the KMS for the configuration changes to take

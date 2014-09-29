@@ -36,6 +36,10 @@
 #
 # export KMS_ADMIN_PORT=`expr ${KMS_HTTP_PORT} + 1`
 
+# The maximum number of Tomcat handler threads
+#
+# export KMS_MAX_THREADS=1000
+
 # The location of the SSL keystore if using SSL
 #
 # export KMS_SSL_KEYSTORE_FILE=${HOME}/.keystore
