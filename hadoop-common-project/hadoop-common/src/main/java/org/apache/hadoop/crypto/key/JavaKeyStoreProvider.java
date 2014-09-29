@@ -20,6 +20,7 @@ package org.apache.hadoop.crypto.key;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -29,6 +30,8 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.ProviderUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import javax.crypto.spec.SecretKeySpec;
 
@@ -106,6 +109,20 @@ public class JavaKeyStoreProvider extends KeyProvider {
   private Lock writeLock;
 
   private final Map<String, Metadata> cache = new HashMap<String, Metadata>();
+
+  @VisibleForTesting
+  JavaKeyStoreProvider(JavaKeyStoreProvider other) {
+    super(new Configuration());
+    uri = other.uri;
+    path = other.path;
+    fs = other.fs;
+    permissions = other.permissions;
+    keyStore = other.keyStore;
+    password = other.password;
+    changed = other.changed;
+    readLock = other.readLock;
+    writeLock = other.writeLock;
+  }
 
   private JavaKeyStoreProvider(URI uri, Configuration conf) throws IOException {
     super(conf);
@@ -501,6 +518,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
   public void flush() throws IOException {
     Path newPath = constructNewPath(path);
     Path oldPath = constructOldPath(path);
+    Path resetPath = path;
     writeLock.lock();
     try {
       if (!changed) {
@@ -527,6 +545,9 @@ public class JavaKeyStoreProvider extends KeyProvider {
 
       // Save old File first
       boolean fileExisted = backupToOld(oldPath);
+      if (fileExisted) {
+        resetPath = oldPath;
+      }
       // write out the keystore
       // Write to _NEW path first :
       try {
@@ -534,13 +555,31 @@ public class JavaKeyStoreProvider extends KeyProvider {
       } catch (IOException ioe) {
         // rename _OLD back to curent and throw Exception
         revertFromOld(oldPath, fileExisted);
+        resetPath = path;
         throw ioe;
       }
       // Rename _NEW to CURRENT and delete _OLD
       cleanupNewAndOld(newPath, oldPath);
       changed = false;
+    } catch (IOException ioe) {
+      resetKeyStoreState(resetPath);
+      throw ioe;
     } finally {
       writeLock.unlock();
+    }
+  }
+
+  private void resetKeyStoreState(Path path) {
+    LOG.debug("Could not flush Keystore.."
+        + "attempting to reset to previous state !!");
+    // 1) flush cache
+    cache.clear();
+    // 2) load keyStore from previous path
+    try {
+      loadFromPath(path, password);
+      LOG.debug("KeyStore resetting to previously flushed state !!");
+    } catch (Exception e) {
+      LOG.debug("Could not reset Keystore to previous state", e);
     }
   }
 
@@ -553,7 +592,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
     }
   }
 
-  private void writeToNew(Path newPath) throws IOException {
+  protected void writeToNew(Path newPath) throws IOException {
     FSDataOutputStream out =
         FileSystem.create(fs, newPath, permissions);
     try {
@@ -570,14 +609,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
     out.close();
   }
 
-  private void revertFromOld(Path oldPath, boolean fileExisted)
-      throws IOException {
-    if (fileExisted) {
-      renameOrFail(oldPath, path);
-    }
-  }
-
-  private boolean backupToOld(Path oldPath)
+  protected boolean backupToOld(Path oldPath)
       throws IOException {
     boolean fileExisted = false;
     if (fs.exists(path)) {
@@ -586,6 +618,14 @@ public class JavaKeyStoreProvider extends KeyProvider {
     }
     return fileExisted;
   }
+
+  private void revertFromOld(Path oldPath, boolean fileExisted)
+      throws IOException {
+    if (fileExisted) {
+      renameOrFail(oldPath, path);
+    }
+  }
+
 
   private void renameOrFail(Path src, Path dest)
       throws IOException {

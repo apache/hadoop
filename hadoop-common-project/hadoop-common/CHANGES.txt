@@ -761,6 +761,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7157. Using Time.now() for recording start/end time of reconfiguration
     tasks (Lei Xu via cmccabe)
 
+    HADOOP-1110. JavaKeystoreProvider should not report a key as created if it
+    was not flushed to the backing file.
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HADOOP-10734. Implement high-performance secure random number sources.
