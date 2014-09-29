@@ -494,7 +494,7 @@ public class TestMRApps {
 
   private static final String[] SYS_CLASSES = new String[] {
       "/java/fake/Klass",
-      "/javax/fake/Klass",
+      "/javax/management/fake/Klass",
       "/org/apache/commons/logging/fake/Klass",
       "/org/apache/log4j/fake/Klass",
       "/org/apache/hadoop/fake/Klass"
@@ -511,7 +511,7 @@ public class TestMRApps {
   public void testSystemClasses() {
     final List<String> systemClasses =
         Arrays.asList(StringUtils.getTrimmedStrings(
-        ApplicationClassLoader.DEFAULT_SYSTEM_CLASSES));
+        ApplicationClassLoader.SYSTEM_CLASSES_DEFAULT));
     for (String defaultXml : DEFAULT_XMLS) {
       assertTrue(defaultXml + " must be system resource",
           ApplicationClassLoader.isSystemClass(defaultXml, systemClasses));
