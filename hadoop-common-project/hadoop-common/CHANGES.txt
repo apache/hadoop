@@ -885,6 +885,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11143 NetUtils.wrapException loses inner stack trace on BindException
     (stevel)
 
+    HADOOP-11049. javax package system class default is too broad (Sangjin Lee
+    via jlowe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
