@@ -115,7 +115,8 @@ public class FileSystemApplicationHistoryStore extends AbstractService
   }
 
   @Override
-  public void serviceInit(Configuration conf) throws Exception {
+  public void serviceStart() throws Exception {
+    Configuration conf = getConfig();
     Path fsWorkingPath =
         new Path(conf.get(YarnConfiguration.FS_APPLICATION_HISTORY_STORE_URI,
             conf.get("hadoop.tmp.dir") + "/yarn/timeline/generic-history"));
@@ -132,7 +133,7 @@ public class FileSystemApplicationHistoryStore extends AbstractService
       LOG.error("Error when initializing FileSystemHistoryStorage", e);
       throw e;
     }
-    super.serviceInit(conf);
+    super.serviceStart();
   }
 
   @Override
