@@ -2423,10 +2423,10 @@ public class Hamlet extends HamletImpl implements HamletSpec._Html {
   }
 
   private <T extends _> TH<T> th_(T e, boolean inline) {
-    return new TH<T>("th", e, opt(false, inline, false)); }
+    return new TH<T>("th", e, opt(true, inline, false)); }
 
   private <T extends _> TD<T> td_(T e, boolean inline) {
-    return new TD<T>("td", e, opt(false, inline, false)); }
+    return new TD<T>("td", e, opt(true, inline, false)); }
 
   public class COL<T extends _> extends EImp<T> implements HamletSpec.COL {
     public COL(String name, T parent, EnumSet<EOpt> opts) {
@@ -3719,10 +3719,10 @@ public class Hamlet extends HamletImpl implements HamletSpec._Html {
     return new COLGROUP<T>("colgroup", e, opt(false, inline, false)); }
 
   private <T extends _> THEAD<T> thead_(T e, boolean inline) {
-    return new THEAD<T>("thead", e, opt(false, inline, false)); }
+    return new THEAD<T>("thead", e, opt(true, inline, false)); }
 
   private <T extends _> TFOOT<T> tfoot_(T e, boolean inline) {
-    return new TFOOT<T>("tfoot", e, opt(false, inline, false)); }
+    return new TFOOT<T>("tfoot", e, opt(true, inline, false)); }
 
   private <T extends _> TBODY<T> tbody_(T e, boolean inline) {
     return new TBODY<T>("tbody", e, opt(true, inline, false)); }
@@ -3731,7 +3731,7 @@ public class Hamlet extends HamletImpl implements HamletSpec._Html {
     return new COL<T>("col", e, opt(false, inline, false)); }
 
   private <T extends _> TR<T> tr_(T e, boolean inline) {
-    return new TR<T>("tr", e, opt(false, inline, false)); }
+    return new TR<T>("tr", e, opt(true, inline, false)); }
 
   public class BUTTON<T extends _> extends EImp<T> implements HamletSpec.BUTTON {
     public BUTTON(String name, T parent, EnumSet<EOpt> opts) {

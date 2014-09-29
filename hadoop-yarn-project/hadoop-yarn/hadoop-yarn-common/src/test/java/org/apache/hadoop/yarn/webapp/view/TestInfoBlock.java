@@ -68,7 +68,7 @@ public class TestInfoBlock {
 
     static {
       resInfo = new ResponseInfo();
-      resInfo._("Single_line_value", "This is one line.");
+      resInfo._("Multiple_line_value", "This is one line.");
       resInfo._("Multiple_line_value", "This is first line.\nThis is second line.");	
     }
 
@@ -98,13 +98,14 @@ public class TestInfoBlock {
     WebAppTests.testBlock(MultilineInfoBlock.class);
     TestInfoBlock.pw.flush();
     String output = TestInfoBlock.sw.toString().replaceAll(" +", " ");
-    String expectedSinglelineData = String.format("<tr class=\"odd\">%n"
-      + " <th>%n Single_line_value%n <td>%n This is one line.%n");
-    String expectedMultilineData = String.format("<tr class=\"even\">%n"
-      + " <th>%n Multiple_line_value%n <td>%n <div>%n"
+    String expectedMultilineData1 = String.format("<tr class=\"odd\">%n"
+      + " <th>%n Multiple_line_value%n </th>%n"
+      + " <td>%n This is one line.%n </td>%n");
+    String expectedMultilineData2 = String.format("<tr class=\"even\">%n"
+      + " <th>%n Multiple_line_value%n </th>%n <td>%n <div>%n"
       + " This is first line.%n </div>%n <div>%n"
       + " This is second line.%n </div>%n");
-    assertTrue(output.contains(expectedSinglelineData) && output.contains(expectedMultilineData));
+    assertTrue(output.contains(expectedMultilineData1) && output.contains(expectedMultilineData2));
   }
   
   @Test(timeout=60000L)
