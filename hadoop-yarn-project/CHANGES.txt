@@ -450,6 +450,8 @@ Release 2.6.0 - UNRELEASED
     YARN-2606. Application History Server tries to access hdfs before doing
     secure login (Mit Desai via jeagles)
 
+    YARN-2610. Hamlet should close table tags. (Ray Chiang via kasha)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
