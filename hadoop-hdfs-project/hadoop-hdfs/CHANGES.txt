@@ -497,6 +497,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7148. TestEncryptionZones#testIsEncryptedMethod fails on branch-2
     after archival storage merge. (wang)
 
+    HDFS-7157. Using Time.now() for recording start/end time of reconfiguration
+    tasks (Lei Xu via cmccabe)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
