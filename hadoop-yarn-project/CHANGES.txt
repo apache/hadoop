@@ -441,6 +441,8 @@ Release 2.6.0 - UNRELEASED
     YARN-2606. Application History Server tries to access hdfs before doing
     secure login (Mit Desai via jeagles)
 
+    YARN-2610. Hamlet should close table tags. (Ray Chiang via kasha)
+
     YARN-2387. Resource Manager crashes with NPE due to lack of
     synchronization (Mit Desai via jlowe)
 
