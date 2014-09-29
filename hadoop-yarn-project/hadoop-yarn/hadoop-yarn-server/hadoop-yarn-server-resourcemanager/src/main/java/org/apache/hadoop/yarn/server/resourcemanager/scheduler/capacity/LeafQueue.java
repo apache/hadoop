@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManage
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
@@ -128,6 +129,8 @@ public class LeafQueue implements CSQueue {
   private final ActiveUsersManager activeUsersManager;
   
   private final ResourceCalculator resourceCalculator;
+  
+  private boolean reservationsContinueLooking;
   
   public LeafQueue(CapacitySchedulerContext cs, 
       String queueName, CSQueue parent, CSQueue old) {
@@ -202,8 +205,9 @@ public class LeafQueue implements CSQueue {
         maximumCapacity, absoluteMaxCapacity, 
         userLimit, userLimitFactor, 
         maxApplications, maxAMResourcePerQueuePercent, maxApplicationsPerUser,
-        maxActiveApplications, maxActiveApplicationsPerUser, state, acls, cs
-            .getConfiguration().getNodeLocalityDelay());
+        maxActiveApplications, maxActiveApplicationsPerUser, state, acls, 
+        cs.getConfiguration().getNodeLocalityDelay(), 
+        cs.getConfiguration().getReservationContinueLook());
 
     if(LOG.isDebugEnabled()) {
       LOG.debug("LeafQueue:" + " name=" + queueName
@@ -225,7 +229,8 @@ public class LeafQueue implements CSQueue {
       int maxApplications, float maxAMResourcePerQueuePercent,
       int maxApplicationsPerUser, int maxActiveApplications,
       int maxActiveApplicationsPerUser, QueueState state,
-      Map<QueueACL, AccessControlList> acls, int nodeLocalityDelay)
+      Map<QueueACL, AccessControlList> acls, int nodeLocalityDelay,
+      boolean continueLooking)
   {
     // Sanity check
     CSQueueUtils.checkMaxCapacity(getQueueName(), capacity, maximumCapacity);
@@ -257,6 +262,7 @@ public class LeafQueue implements CSQueue {
     this.queueInfo.setQueueState(this.state);
     
     this.nodeLocalityDelay = nodeLocalityDelay;
+    this.reservationsContinueLooking = continueLooking;
 
     StringBuilder aclsString = new StringBuilder();
     for (Map.Entry<QueueACL, AccessControlList> e : acls.entrySet()) {
@@ -321,7 +327,9 @@ public class LeafQueue implements CSQueue {
         " [= configuredState ]" + "\n" +
         "acls = " + aclsString +
         " [= configuredAcls ]" + "\n" + 
-        "nodeLocalityDelay = " +  nodeLocalityDelay + "\n");
+        "nodeLocalityDelay = " +  nodeLocalityDelay + "\n" +
+        "reservationsContinueLooking = " +
+        reservationsContinueLooking + "\n");
   }
   
   @Override
@@ -555,6 +563,11 @@ public class LeafQueue implements CSQueue {
     return nodeLocalityDelay;
   }
   
+  @Private
+  boolean getReservationContinueLooking() {
+    return reservationsContinueLooking;
+  }
+  
   public String toString() {
     return queueName + ": " + 
         "capacity=" + capacity + ", " + 
@@ -613,7 +626,8 @@ public class LeafQueue implements CSQueue {
         newlyParsedLeafQueue.getMaximumActiveApplications(), 
         newlyParsedLeafQueue.getMaximumActiveApplicationsPerUser(),
         newlyParsedLeafQueue.state, newlyParsedLeafQueue.acls,
-        newlyParsedLeafQueue.getNodeLocalityDelay());
+        newlyParsedLeafQueue.getNodeLocalityDelay(),
+        newlyParsedLeafQueue.reservationsContinueLooking);
 
     // queue metrics are updated, more resource may be available
     // activate the pending applications if possible
@@ -802,8 +816,8 @@ public class LeafQueue implements CSQueue {
   private static final CSAssignment SKIP_ASSIGNMENT = new CSAssignment(true);
   
   @Override
-  public synchronized CSAssignment 
-  assignContainers(Resource clusterResource, FiCaSchedulerNode node) {
+  public synchronized CSAssignment assignContainers(Resource clusterResource,
+      FiCaSchedulerNode node, boolean needToUnreserve) {
 
     if(LOG.isDebugEnabled()) {
       LOG.debug("assignContainers: node=" + node.getNodeName()
@@ -848,8 +862,16 @@ public class LeafQueue implements CSQueue {
           Resource required = anyRequest.getCapability();
 
           // Do we need containers at this 'priority'?
-          if (!needContainers(application, priority, required)) {
+          if (application.getTotalRequiredResources(priority) <= 0) {
             continue;
+          }
+          if (!this.reservationsContinueLooking) {
+            if (!needContainers(application, priority, required)) {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("doesn't need containers based on reservation algo!");
+              }
+              continue;
+            }
           }
 
           // Compute user-limit & set headroom
@@ -862,14 +884,14 @@ public class LeafQueue implements CSQueue {
                   required);          
           
           // Check queue max-capacity limit
-          if (!assignToQueue(clusterResource, required)) {
+          if (!assignToQueue(clusterResource, required, application, true)) {
             return NULL_ASSIGNMENT;
           }
 
           // Check user limit
-          if (!assignToUser(
-              clusterResource, application.getUser(), userLimit)) {
-            break; 
+          if (!assignToUser(clusterResource, application.getUser(), userLimit,
+              application, true)) {
+            break;
           }
 
           // Inform the application it is about to get a scheduling opportunity
@@ -878,7 +900,7 @@ public class LeafQueue implements CSQueue {
           // Try to schedule
           CSAssignment assignment =  
             assignContainersOnNode(clusterResource, node, application, priority, 
-                null);
+                null, needToUnreserve);
 
           // Did the application skip this node?
           if (assignment.getSkipped()) {
@@ -900,6 +922,9 @@ public class LeafQueue implements CSQueue {
             // otherwise the app will be delayed for each non-local assignment.
             // This helps apps with many off-cluster requests schedule faster.
             if (assignment.getType() != NodeType.OFF_SWITCH) {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Resetting scheduling opportunities");
+              }
               application.resetSchedulingOpportunities(priority);
             }
             
@@ -935,22 +960,57 @@ public class LeafQueue implements CSQueue {
 
     // Try to assign if we have sufficient resources
     assignContainersOnNode(clusterResource, node, application, priority, 
-        rmContainer);
+        rmContainer, false);
     
     // Doesn't matter... since it's already charged for at time of reservation
     // "re-reservation" is *free*
     return new CSAssignment(Resources.none(), NodeType.NODE_LOCAL);
   }
 
-  private synchronized boolean assignToQueue(Resource clusterResource, 
-      Resource required) {
+
+  @Private
+  protected synchronized boolean assignToQueue(Resource clusterResource, 
+      Resource required, FiCaSchedulerApp application, 
+      boolean checkReservations) {
+
+    Resource potentialTotalResource = Resources.add(usedResources, required);
     // Check how of the cluster's absolute capacity we are currently using...
-    float potentialNewCapacity = 
-        Resources.divide(
-            resourceCalculator, clusterResource, 
-            Resources.add(usedResources, required), 
-            clusterResource);
+    float potentialNewCapacity = Resources.divide(resourceCalculator,
+        clusterResource, potentialTotalResource, clusterResource);
     if (potentialNewCapacity > absoluteMaxCapacity) {
+      // if enabled, check to see if could we potentially use this node instead
+      // of a reserved node if the application has reserved containers
+      if (this.reservationsContinueLooking && checkReservations) {
+
+        float potentialNewWithoutReservedCapacity = Resources.divide(
+            resourceCalculator,
+            clusterResource,
+            Resources.subtract(potentialTotalResource,
+                application.getCurrentReservation()),
+             clusterResource);
+
+        if (potentialNewWithoutReservedCapacity <= absoluteMaxCapacity) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("try to use reserved: "
+                + getQueueName()
+                + " usedResources: "
+                + usedResources
+                + " clusterResources: "
+                + clusterResource
+                + " reservedResources: "
+                + application.getCurrentReservation()
+                + " currentCapacity "
+                + Resources.divide(resourceCalculator, clusterResource,
+                    usedResources, clusterResource) + " required " + required
+                + " potentialNewWithoutReservedCapacity: "
+                + potentialNewWithoutReservedCapacity + " ( " + " max-capacity: "
+                + absoluteMaxCapacity + ")");
+          }
+          // we could potentially use this node instead of reserved node
+          return true;
+        }
+
+      }
       if (LOG.isDebugEnabled()) {
         LOG.debug(getQueueName()
             + " usedResources: " + usedResources
@@ -965,6 +1025,8 @@ public class LeafQueue implements CSQueue {
     }
     return true;
   }
+
+
 
   @Lock({LeafQueue.class, FiCaSchedulerApp.class})
   private Resource computeUserLimitAndSetHeadroom(
@@ -1085,25 +1147,43 @@ public class LeafQueue implements CSQueue {
     return limit;
   }
   
-  private synchronized boolean assignToUser(Resource clusterResource,
-      String userName, Resource limit) {
+  @Private
+  protected synchronized boolean assignToUser(Resource clusterResource,
+      String userName, Resource limit, FiCaSchedulerApp application,
+      boolean checkReservations) {
 
     User user = getUser(userName);
-    
+
     // Note: We aren't considering the current request since there is a fixed
     // overhead of the AM, but it's a > check, not a >= check, so...
-    if (Resources.greaterThan(resourceCalculator, clusterResource, 
-            user.getConsumedResources(), limit)) {
+    if (Resources.greaterThan(resourceCalculator, clusterResource,
+        user.getConsumedResources(), limit)) {
+
+      // if enabled, check to see if could we potentially use this node instead
+      // of a reserved node if the application has reserved containers
+      if (this.reservationsContinueLooking && checkReservations) {
+        if (Resources.lessThanOrEqual(
+            resourceCalculator,
+            clusterResource,
+            Resources.subtract(user.getConsumedResources(),
+                application.getCurrentReservation()), limit)) {
+
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("User " + userName + " in queue " + getQueueName()
+                + " will exceed limit based on reservations - " + " consumed: "
+                + user.getConsumedResources() + " reserved: "
+                + application.getCurrentReservation() + " limit: " + limit);
+          }
+          return true;
+        }
+      }
       if (LOG.isDebugEnabled()) {
-        LOG.debug("User " + userName + " in queue " + getQueueName() + 
-            " will exceed limit - " +  
-            " consumed: " + user.getConsumedResources() + 
-            " limit: " + limit
-        );
+        LOG.debug("User " + userName + " in queue " + getQueueName()
+            + " will exceed limit - " + " consumed: "
+            + user.getConsumedResources() + " limit: " + limit);
       }
       return false;
     }
-
     return true;
   }
 
@@ -1139,7 +1219,7 @@ public class LeafQueue implements CSQueue {
 
   private CSAssignment assignContainersOnNode(Resource clusterResource, 
       FiCaSchedulerNode node, FiCaSchedulerApp application, 
-      Priority priority, RMContainer reservedContainer) {
+      Priority priority, RMContainer reservedContainer, boolean needToUnreserve) {
 
     Resource assigned = Resources.none();
 
@@ -1149,7 +1229,7 @@ public class LeafQueue implements CSQueue {
     if (nodeLocalResourceRequest != null) {
       assigned = 
           assignNodeLocalContainers(clusterResource, nodeLocalResourceRequest, 
-              node, application, priority, reservedContainer); 
+              node, application, priority, reservedContainer, needToUnreserve); 
       if (Resources.greaterThan(resourceCalculator, clusterResource, 
           assigned, Resources.none())) {
         return new CSAssignment(assigned, NodeType.NODE_LOCAL);
@@ -1166,7 +1246,7 @@ public class LeafQueue implements CSQueue {
       
       assigned = 
           assignRackLocalContainers(clusterResource, rackLocalResourceRequest, 
-              node, application, priority, reservedContainer);
+              node, application, priority, reservedContainer, needToUnreserve);
       if (Resources.greaterThan(resourceCalculator, clusterResource, 
           assigned, Resources.none())) {
         return new CSAssignment(assigned, NodeType.RACK_LOCAL);
@@ -1183,21 +1263,99 @@ public class LeafQueue implements CSQueue {
 
       return new CSAssignment(
           assignOffSwitchContainers(clusterResource, offSwitchResourceRequest,
-              node, application, priority, reservedContainer), 
+              node, application, priority, reservedContainer, needToUnreserve), 
               NodeType.OFF_SWITCH);
     }
     
     return SKIP_ASSIGNMENT;
   }
 
-  private Resource assignNodeLocalContainers(
-      Resource clusterResource, ResourceRequest nodeLocalResourceRequest, 
-      FiCaSchedulerNode node, FiCaSchedulerApp application, 
-      Priority priority, RMContainer reservedContainer) {
+  @Private
+  protected boolean findNodeToUnreserve(Resource clusterResource,
+      FiCaSchedulerNode node, FiCaSchedulerApp application, Priority priority,
+      Resource capability) {
+    // need to unreserve some other container first
+    NodeId idToUnreserve = application.getNodeIdToUnreserve(priority, capability);
+    if (idToUnreserve == null) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("checked to see if could unreserve for app but nothing "
+            + "reserved that matches for this app");
+      }
+      return false;
+    }
+    FiCaSchedulerNode nodeToUnreserve = scheduler.getNode(idToUnreserve);
+    if (nodeToUnreserve == null) {
+      LOG.error("node to unreserve doesn't exist, nodeid: " + idToUnreserve);
+      return false;
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("unreserving for app: " + application.getApplicationId()
+        + " on nodeId: " + idToUnreserve
+        + " in order to replace reserved application and place it on node: "
+        + node.getNodeID() + " needing: " + capability);
+    }
+
+    // headroom
+    Resources.addTo(application.getHeadroom(), nodeToUnreserve
+        .getReservedContainer().getReservedResource());
+
+    // Make sure to not have completedContainers sort the queues here since
+    // we are already inside an iterator loop for the queues and this would
+    // cause an concurrent modification exception.
+    completedContainer(clusterResource, application, nodeToUnreserve,
+        nodeToUnreserve.getReservedContainer(),
+        SchedulerUtils.createAbnormalContainerStatus(nodeToUnreserve
+            .getReservedContainer().getContainerId(),
+            SchedulerUtils.UNRESERVED_CONTAINER),
+        RMContainerEventType.RELEASED, null, false);
+    return true;
+  }
+
+  @Private
+  protected boolean checkLimitsToReserve(Resource clusterResource,
+      FiCaSchedulerApp application, Resource capability,
+      boolean needToUnreserve) {
+    if (needToUnreserve) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("we needed to unreserve to be able to allocate");
+      }
+      return false;
+    }
+
+    // we can't reserve if we got here based on the limit
+    // checks assuming we could unreserve!!!
+    Resource userLimit = computeUserLimitAndSetHeadroom(application,
+        clusterResource, capability);
+
+    // Check queue max-capacity limit
+    if (!assignToQueue(clusterResource, capability, application, false)) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("was going to reserve but hit queue limit");
+      }
+      return false;
+    }
+
+    // Check user limit
+    if (!assignToUser(clusterResource, application.getUser(), userLimit,
+        application, false)) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("was going to reserve but hit user limit");
+      }
+      return false;
+    }
+    return true;
+  }
+
+
+  private Resource assignNodeLocalContainers(Resource clusterResource,
+      ResourceRequest nodeLocalResourceRequest, FiCaSchedulerNode node,
+      FiCaSchedulerApp application, Priority priority,
+      RMContainer reservedContainer, boolean needToUnreserve) {
     if (canAssign(application, priority, node, NodeType.NODE_LOCAL, 
         reservedContainer)) {
-      return assignContainer(clusterResource, node, application, priority, 
-          nodeLocalResourceRequest, NodeType.NODE_LOCAL, reservedContainer);
+      return assignContainer(clusterResource, node, application, priority,
+          nodeLocalResourceRequest, NodeType.NODE_LOCAL, reservedContainer,
+          needToUnreserve);
     }
     
     return Resources.none();
@@ -1206,11 +1364,12 @@ public class LeafQueue implements CSQueue {
   private Resource assignRackLocalContainers(
       Resource clusterResource, ResourceRequest rackLocalResourceRequest,  
       FiCaSchedulerNode node, FiCaSchedulerApp application, Priority priority,
-      RMContainer reservedContainer) {
+      RMContainer reservedContainer, boolean needToUnreserve) {
     if (canAssign(application, priority, node, NodeType.RACK_LOCAL, 
         reservedContainer)) {
-      return assignContainer(clusterResource, node, application, priority, 
-          rackLocalResourceRequest, NodeType.RACK_LOCAL, reservedContainer);
+      return assignContainer(clusterResource, node, application, priority,
+          rackLocalResourceRequest, NodeType.RACK_LOCAL, reservedContainer,
+          needToUnreserve);
     }
     
     return Resources.none();
@@ -1219,11 +1378,12 @@ public class LeafQueue implements CSQueue {
   private Resource assignOffSwitchContainers(
       Resource clusterResource, ResourceRequest offSwitchResourceRequest,
       FiCaSchedulerNode node, FiCaSchedulerApp application, Priority priority, 
-      RMContainer reservedContainer) {
+      RMContainer reservedContainer, boolean needToUnreserve) {
     if (canAssign(application, priority, node, NodeType.OFF_SWITCH, 
         reservedContainer)) {
-      return assignContainer(clusterResource, node, application, priority, 
-          offSwitchResourceRequest, NodeType.OFF_SWITCH, reservedContainer);
+      return assignContainer(clusterResource, node, application, priority,
+          offSwitchResourceRequest, NodeType.OFF_SWITCH, reservedContainer,
+          needToUnreserve);
     }
     
     return Resources.none();
@@ -1303,14 +1463,17 @@ public class LeafQueue implements CSQueue {
     return container;
   }
 
+
   private Resource assignContainer(Resource clusterResource, FiCaSchedulerNode node, 
       FiCaSchedulerApp application, Priority priority, 
-      ResourceRequest request, NodeType type, RMContainer rmContainer) {
+      ResourceRequest request, NodeType type, RMContainer rmContainer,
+      boolean needToUnreserve) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("assignContainers: node=" + node.getNodeName()
         + " application=" + application.getApplicationId()
         + " priority=" + priority.getPriority()
-        + " request=" + request + " type=" + type);
+        + " request=" + request + " type=" + type
+        + " needToUnreserve= " + needToUnreserve);
     }
     Resource capability = request.getCapability();
     Resource available = node.getAvailableResource();
@@ -1335,6 +1498,18 @@ public class LeafQueue implements CSQueue {
       return Resources.none();
     }
 
+    // default to true since if reservation continue look feature isn't on
+    // needContainers is checked earlier and we wouldn't have gotten this far
+    boolean canAllocContainer = true;
+    if (this.reservationsContinueLooking) {
+      // based on reservations can we allocate/reserve more or do we need
+      // to unreserve one first
+      canAllocContainer = needContainers(application, priority, capability);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("can alloc container is: " + canAllocContainer);
+      }
+    }
+
     // Can we allocate a container on this node?
     int availableContainers = 
         resourceCalculator.computeAvailableContainers(available, capability);
@@ -1342,8 +1517,28 @@ public class LeafQueue implements CSQueue {
       // Allocate...
 
       // Did we previously reserve containers at this 'priority'?
-      if (rmContainer != null){
+      if (rmContainer != null) {
         unreserve(application, priority, node, rmContainer);
+      } else if (this.reservationsContinueLooking
+          && (!canAllocContainer || needToUnreserve)) {
+        // need to unreserve some other container first
+        boolean res = findNodeToUnreserve(clusterResource, node, application,
+            priority, capability);
+        if (!res) {
+          return Resources.none();
+        }
+      } else {
+        // we got here by possibly ignoring queue capacity limits. If the
+        // parameter needToUnreserve is true it means we ignored one of those
+        // limits in the chance we could unreserve. If we are here we aren't
+        // trying to unreserve so we can't allocate anymore due to that parent
+        // limit.
+        if (needToUnreserve) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("we needed to unreserve to be able to allocate, skipping");
+          }
+          return Resources.none();
+        }
       }
 
       // Inform the application
@@ -1366,17 +1561,38 @@ public class LeafQueue implements CSQueue {
 
       return container.getResource();
     } else {
-      // Reserve by 'charging' in advance...
-      reserve(application, priority, node, rmContainer, container);
+      // if we are allowed to allocate but this node doesn't have space, reserve it or
+      // if this was an already a reserved container, reserve it again
+      if ((canAllocContainer) || (rmContainer != null)) {
 
-      LOG.info("Reserved container " + 
-          " application attempt=" + application.getApplicationAttemptId() +
-          " resource=" + request.getCapability() + 
-          " queue=" + this.toString() + 
-          " node=" + node +
-          " clusterResource=" + clusterResource);
+        if (reservationsContinueLooking) {
+          // we got here by possibly ignoring parent queue capacity limits. If
+          // the parameter needToUnreserve is true it means we ignored one of
+          // those limits in the chance we could unreserve. If we are here
+          // we aren't trying to unreserve so we can't allocate
+          // anymore due to that parent limit
+          boolean res = checkLimitsToReserve(clusterResource, application, capability, 
+              needToUnreserve);
+          if (!res) {
+            return Resources.none();
+          }
+        }
 
-      return request.getCapability();
+        // Reserve by 'charging' in advance...
+        reserve(application, priority, node, rmContainer, container);
+
+        LOG.info("Reserved container " + 
+            " application=" + application.getApplicationId() + 
+            " resource=" + request.getCapability() + 
+            " queue=" + this.toString() + 
+            " usedCapacity=" + getUsedCapacity() + 
+            " absoluteUsedCapacity=" + getAbsoluteUsedCapacity() + 
+            " used=" + usedResources +
+            " cluster=" + clusterResource);
+
+        return request.getCapability();
+      }
+      return Resources.none();
     }
   }
 
@@ -1402,8 +1618,8 @@ public class LeafQueue implements CSQueue {
       node.unreserveResource(application);
 
       // Update reserved metrics
-      getMetrics().unreserveResource(
-          application.getUser(), rmContainer.getContainer().getResource());
+      getMetrics().unreserveResource(application.getUser(),
+          rmContainer.getContainer().getResource());
       return true;
     }
     return false;
@@ -1412,7 +1628,8 @@ public class LeafQueue implements CSQueue {
   @Override
   public void completedContainer(Resource clusterResource, 
       FiCaSchedulerApp application, FiCaSchedulerNode node, RMContainer rmContainer, 
-      ContainerStatus containerStatus, RMContainerEventType event, CSQueue childQueue) {
+      ContainerStatus containerStatus, RMContainerEventType event, CSQueue childQueue,
+      boolean sortQueues) {
     if (application != null) {
 
       boolean removed = false;
@@ -1449,7 +1666,7 @@ public class LeafQueue implements CSQueue {
       if (removed) {
         // Inform the parent queue _outside_ of the leaf-queue lock
         getParent().completedContainer(clusterResource, application, node,
-          rmContainer, null, event, this);
+          rmContainer, null, event, this, sortQueues);
       }
     }
   }
@@ -1466,6 +1683,8 @@ public class LeafQueue implements CSQueue {
     String userName = application.getUser();
     User user = getUser(userName);
     user.assignContainer(resource);
+    // Note this is a bit unconventional since it gets the object and modifies it here
+    // rather then using set routine
     Resources.subtractFrom(application.getHeadroom(), resource); // headroom
     metrics.setAvailableResourcesToUser(userName, application.getHeadroom());
     
@@ -1585,7 +1804,7 @@ public class LeafQueue implements CSQueue {
 
     public synchronized void releaseContainer(Resource resource) {
       Resources.subtractFrom(consumed, resource);
-    }
+    }  
   }
 
   @Override

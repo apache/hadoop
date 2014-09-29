@@ -81,6 +81,13 @@ public class CapacitySchedulerConfiguration extends Configuration {
 
   @Private
   public static final String STATE = "state";
+  
+  @Private
+  public static final String RESERVE_CONT_LOOK_ALL_NODES = PREFIX
+      + "reservations-continue-look-all-nodes";
+  
+  @Private
+  public static final boolean DEFAULT_RESERVE_CONT_LOOK_ALL_NODES = true;
 
   @Private
   public static final int DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS = 10000;
@@ -306,6 +313,17 @@ public class CapacitySchedulerConfiguration extends Configuration {
     String state = get(getQueuePrefix(queue) + STATE);
     return (state != null) ? 
         QueueState.valueOf(state.toUpperCase()) : QueueState.RUNNING;
+  }
+  
+  /*
+   * Returns whether we should continue to look at all heart beating nodes even
+   * after the reservation limit was hit. The node heart beating in could
+   * satisfy the request thus could be a better pick then waiting for the
+   * reservation to be fullfilled.  This config is refreshable.
+   */
+  public boolean getReservationContinueLook() {
+    return getBoolean(RESERVE_CONT_LOOK_ALL_NODES,
+        DEFAULT_RESERVE_CONT_LOOK_ALL_NODES);
   }
   
   private static String getAclKey(QueueACL acl) {
