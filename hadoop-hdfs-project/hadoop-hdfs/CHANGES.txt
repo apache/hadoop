@@ -520,6 +520,8 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7104. Fix and clarify INodeInPath getter functions. (Zhe Zhang via wang)
 
+    HDFS-7124. Remove EncryptionZoneManager.NULL_EZ. (clamb via wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -529,6 +531,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6865. Byte array native checksumming on client side
     (James Thomas via todd)
+
+    HDFS-7122. Use of ThreadLocal<Random> results in poor block placement.
+    (wang)
 
   BUG FIXES
 

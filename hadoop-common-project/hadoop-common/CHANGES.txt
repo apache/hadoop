@@ -554,6 +554,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10954. Adding site documents of hadoop-tools (Masatake Iwasaki 
     via aw)
 
+    HADOOP-11153. Make number of KMS threads configurable. (wang)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
@@ -760,6 +762,8 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-1110. JavaKeystoreProvider should not report a key as created if it
     was not flushed to the backing file.
+
+    HADOOP-11130. NFS updateMaps OS check is reversed (brandonli)
 
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   

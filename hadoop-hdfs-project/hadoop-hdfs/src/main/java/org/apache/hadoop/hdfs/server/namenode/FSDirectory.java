@@ -2863,8 +2863,7 @@ public class FSDirectory implements Closeable {
         iip = getINodesInPath(inode.getFullPathName(), true);
       }
       EncryptionZone encryptionZone = getEZForPath(iip);
-      if (encryptionZone == null ||
-          encryptionZone.equals(EncryptionZoneManager.NULL_EZ)) {
+      if (encryptionZone == null) {
         // not an encrypted file
         return null;
       } else if(encryptionZone.getPath() == null

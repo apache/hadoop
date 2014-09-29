@@ -136,6 +136,13 @@ else
   print "Using   KMS_ADMIN_PORT:     ${KMS_ADMIN_PORT}"
 fi
 
+if [ "${KMS_MAX_THREADS}" = "" ]; then
+  export KMS_MAX_THREADS=1000
+  print "Setting KMS_MAX_THREADS:     ${KMS_MAX_THREADS}"
+else
+  print "Using   KMS_MAX_THREADS:     ${KMS_MAX_THREADS}"
+fi
+
 if [ "${KMS_SSL_KEYSTORE_FILE}" = "" ]; then
   export KMS_SSL_KEYSTORE_FILE=${HOME}/.keystore
   print "Setting KMS_SSL_KEYSTORE_FILE:     ${KMS_SSL_KEYSTORE_FILE}"
