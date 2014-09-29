@@ -260,6 +260,8 @@ Release 2.6.0 - UNRELEASED
     scheduler resource type is memory plus cpu. (Peng Zhang and Varun Vasudev
     via zjshen)
 
+    MAPREDUCE-6072. Remove INSTALL document (Akira AJISAKA via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -393,6 +395,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6087. Fixed wrong config name of
     MRJobConfig#MR_CLIENT_TO_AM_IPC_MAX_RETRIES_ON_TIMEOUTS. Contributed by
     Akira AJISAKA. (Akira AJISAKA via jianhe)
+
+    MAPREDUCE-6094. TestMRCJCFileInputFormat.testAddInputPath() fails on trunk
+    (Akira AJISAKA via jlowe)
 
 Release 2.5.1 - 2014-09-05
 

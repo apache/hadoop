@@ -758,6 +758,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11140. hadoop-aws only need test-scoped dependency on
     hadoop-common's tests jar. (Juan Yu via wang)
 
+    HADOOP-1110. JavaKeystoreProvider should not report a key as created if it
+    was not flushed to the backing file.
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HADOOP-10734. Implement high-performance secure random number sources.
@@ -884,6 +887,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11143 NetUtils.wrapException loses inner stack trace on BindException
     (stevel)
+
+    HADOOP-11049. javax package system class default is too broad (Sangjin Lee
+    via jlowe)
 
 Release 2.5.1 - 2014-09-05
 

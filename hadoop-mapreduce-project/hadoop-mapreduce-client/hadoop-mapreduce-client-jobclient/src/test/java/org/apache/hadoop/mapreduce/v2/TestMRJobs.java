@@ -242,7 +242,7 @@ public class TestMRJobs {
       // to test AM loading user classes such as output format class, we want
       // to blacklist them from the system classes (they need to be prepended
       // as the first match wins)
-      String systemClasses = ApplicationClassLoader.DEFAULT_SYSTEM_CLASSES;
+      String systemClasses = ApplicationClassLoader.SYSTEM_CLASSES_DEFAULT;
       // exclude the custom classes from system classes
       systemClasses = "-" + CustomOutputFormat.class.getName() + ",-" +
           CustomSpeculator.class.getName() + "," +

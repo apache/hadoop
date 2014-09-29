@@ -254,5 +254,32 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       currentContPreemption, Collections.singletonList(rr),
       allocation.getNMTokenList());
   }
+  
+  synchronized public NodeId getNodeIdToUnreserve(Priority priority,
+      Resource capability) {
+
+    // first go around make this algorithm simple and just grab first
+    // reservation that has enough resources
+    Map<NodeId, RMContainer> reservedContainers = this.reservedContainers
+        .get(priority);
+
+    if ((reservedContainers != null) && (!reservedContainers.isEmpty())) {
+      for (Map.Entry<NodeId, RMContainer> entry : reservedContainers.entrySet()) {
+        // make sure we unreserve one with at least the same amount of
+        // resources, otherwise could affect capacity limits
+        if (Resources.fitsIn(capability, entry.getValue().getContainer()
+            .getResource())) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("unreserving node with reservation size: "
+                + entry.getValue().getContainer().getResource()
+                + " in order to allocate container with size: " + capability);
+          }
+          return entry.getKey();
+        }
+      }
+    }
+    return null;
+  }
+
 
 }

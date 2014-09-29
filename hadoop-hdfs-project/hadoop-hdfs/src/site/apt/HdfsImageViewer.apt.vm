@@ -28,7 +28,7 @@ Offline Image Viewer Guide
    namespace. The tool is able to process very large image files relatively
    quickly. The tool handles the layout formats that were included with Hadoop
    versions 2.4 and up. If you want to handle older layout formats, you can
-   use the Offline Image Viewer of Hadoop 2.3.
+   use the Offline Image Viewer of Hadoop 2.3 or {{oiv_legacy Command}}.
    If the tool is not able to process an image file, it will exit cleanly.
    The Offline Image Viewer does not require a Hadoop cluster to be running;
    it is entirely offline in its operation.
@@ -188,3 +188,60 @@ Offline Image Viewer Guide
    about the hdfs namespace. This information can then be used to explore
    file system usage patterns or find specific files that match arbitrary
    criteria, along with other types of namespace analysis.
+
+* oiv_legacy Command
+
+   Due to the internal layout changes introduced by the ProtocolBuffer-based
+   fsimage ({{{https://issues.apache.org/jira/browse/HDFS-5698}HDFS-5698}}),
+   OfflineImageViewer consumes excessive amount of memory and loses some
+   functions such as Indented and Delimited processor. If you want to process
+   without large amount of memory or use these processors, you can use
+   <<<oiv_legacy>>> command (same as <<<oiv>>> in Hadoop 2.3).
+
+** Usage
+
+   1. Set <<<dfs.namenode.legacy-oiv-image.dir>>> to an appropriate directory
+      to make standby NameNode or SecondaryNameNode save its namespace in the
+      old fsimage format during checkpointing.
+
+   2. Use <<<oiv_legacy>>> command to the old format fsimage.
+
+----
+   bash$ bin/hdfs oiv_legacy -i fsimage_old -o output
+----
+
+** Options
+
+*-----------------------:-----------------------------------+
+| <<Flag>>              | <<Description>>                   |
+*-----------------------:-----------------------------------+
+| <<<-i>>>\|<<<--inputFile>>> <input file> | Specify the input fsimage file to
+|                       | process. Required.
+*-----------------------:-----------------------------------+
+| <<<-o>>>\|<<<--outputFile>>> <output file> | Specify the output filename, if
+|                       | the specified output processor generates one. If the
+|                       | specified file already exists, it is silently
+|                       | overwritten. Required.
+*-----------------------:-----------------------------------+
+| <<<-p>>>\|<<<--processor>>> <processor> | Specify the image processor to
+|                       | apply against the image file. Valid options are
+|                       | Ls (default), XML, Delimited, Indented, and
+|                       | FileDistribution.
+*-----------------------:-----------------------------------+
+| <<<-skipBlocks>>>     | Do not enumerate individual blocks within files. This
+|                       | may save processing time and outfile file space on
+|                       | namespaces with very large files. The Ls processor
+|                       | reads the blocks to correctly determine file sizes
+|                       | and ignores this option.
+*-----------------------:-----------------------------------+
+| <<<-printToScreen>>>  | Pipe output of processor to console as well as
+|                       | specified file. On extremely large namespaces, this
+|                       | may increase processing time by an order of
+|                       | magnitude.
+*-----------------------:-----------------------------------+
+| <<<-delimiter>>> <arg>| When used in conjunction with the Delimited
+|                       | processor, replaces the default tab delimiter with
+|                       | the string specified by <arg>.
+*-----------------------:-----------------------------------+
+| <<<-h>>>\|<<<--help>>>| Display the tool usage and help information and exit.
+*-----------------------:-----------------------------------+

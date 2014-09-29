@@ -47,9 +47,8 @@ public class TestMRCJCFileInputFormat {
   @Test
   public void testAddInputPath() throws IOException {
     final Configuration conf = new Configuration();
-    conf.set("fs.defaultFS", "s3://abc:xyz@hostname/");
+    conf.set("fs.defaultFS", "file:///abc/");
     final Job j = Job.getInstance(conf);
-    j.getConfiguration().set("fs.defaultFS", "s3://abc:xyz@hostname/");
 
     //setup default fs
     final FileSystem defaultfs = FileSystem.get(conf);

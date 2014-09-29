@@ -171,6 +171,17 @@ Create a local staging version of the website (in /tmp/hadoop-site)
   $ mvn clean site; mvn site:stage -DstagingDirectory=/tmp/hadoop-site
 
 ----------------------------------------------------------------------------------
+Installing Hadoop
+
+Look for these HTML files after you build the document by the above commands.
+
+  * Single Node Setup:
+    hadoop-project-dist/hadoop-common/SingleCluster.html
+
+  * Cluster Setup:
+    hadoop-project-dist/hadoop-common/ClusterSetup.html
+
+----------------------------------------------------------------------------------
 
 Handling out of memory errors in builds
 

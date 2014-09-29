@@ -40,6 +40,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
 
 public class TestKeyProviderFactory {
 
@@ -171,6 +172,7 @@ public class TestKeyProviderFactory {
       assertEquals("Key no-such-key not found", e.getMessage());
     }
     provider.flush();
+
     // get a new instance of the provider to ensure it was saved correctly
     provider = KeyProviderFactory.getProviders(conf).get(0);
     assertArrayEquals(new byte[]{2},
@@ -215,6 +217,50 @@ public class TestKeyProviderFactory {
     file.delete();
     conf.set(KeyProviderFactory.KEY_PROVIDER_PATH, ourUrl);
     checkSpecificProvider(conf, ourUrl);
+
+    // START : Test flush error by failure injection
+    conf.set(KeyProviderFactory.KEY_PROVIDER_PATH, ourUrl.replace(
+        JavaKeyStoreProvider.SCHEME_NAME,
+        FailureInjectingJavaKeyStoreProvider.SCHEME_NAME));
+    // get a new instance of the provider to ensure it was saved correctly
+    KeyProvider provider = KeyProviderFactory.getProviders(conf).get(0);
+    // inject failure during keystore write
+    FailureInjectingJavaKeyStoreProvider fProvider =
+        (FailureInjectingJavaKeyStoreProvider) provider;
+    fProvider.setWriteFail(true);
+    provider.createKey("key5", new byte[]{1},
+        KeyProvider.options(conf).setBitLength(8));
+    assertNotNull(provider.getCurrentKey("key5"));
+    try {
+      provider.flush();
+      Assert.fail("Should not succeed");
+    } catch (Exception e) {
+      // Ignore
+    }
+    // SHould be reset to pre-flush state
+    Assert.assertNull(provider.getCurrentKey("key5"));
+    
+    // Un-inject last failure and
+    // inject failure during keystore backup
+    fProvider.setWriteFail(false);
+    fProvider.setBackupFail(true);
+    provider.createKey("key6", new byte[]{1},
+        KeyProvider.options(conf).setBitLength(8));
+    assertNotNull(provider.getCurrentKey("key6"));
+    try {
+      provider.flush();
+      Assert.fail("Should not succeed");
+    } catch (Exception e) {
+      // Ignore
+    }
+    // SHould be reset to pre-flush state
+    Assert.assertNull(provider.getCurrentKey("key6"));
+    // END : Test flush error by failure injection
+
+    conf.set(KeyProviderFactory.KEY_PROVIDER_PATH, ourUrl.replace(
+        FailureInjectingJavaKeyStoreProvider.SCHEME_NAME,
+        JavaKeyStoreProvider.SCHEME_NAME));
+
     Path path = ProviderUtils.unnestUri(new URI(ourUrl));
     FileSystem fs = path.getFileSystem(conf);
     FileStatus s = fs.getFileStatus(path);
@@ -227,7 +273,7 @@ public class TestKeyProviderFactory {
     file.delete();
     file.createNewFile();
     assertTrue(oldFile.exists());
-    KeyProvider provider = KeyProviderFactory.getProviders(conf).get(0);
+    provider = KeyProviderFactory.getProviders(conf).get(0);
     assertTrue(file.exists());
     assertTrue(oldFile + "should be deleted", !oldFile.exists());
     verifyAfterReload(file, provider);

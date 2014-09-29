@@ -184,10 +184,11 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * Assign containers to applications in the queue or it's children (if any).
    * @param clusterResource the resource of the cluster.
    * @param node node on which resources are available
+   * @param needToUnreserve assign container only if it can unreserve one first
    * @return the assignment
    */
   public CSAssignment assignContainers(
-      Resource clusterResource, FiCaSchedulerNode node);
+      Resource clusterResource, FiCaSchedulerNode node, boolean needToUnreserve);
   
   /**
    * A container assigned to the queue has completed.
@@ -200,11 +201,13 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    *                        container
    * @param childQueue <code>CSQueue</code> to reinsert in childQueues 
    * @param event event to be sent to the container
+   * @param sortQueues indicates whether it should re-sort the queues
    */
   public void completedContainer(Resource clusterResource,
       FiCaSchedulerApp application, FiCaSchedulerNode node, 
       RMContainer container, ContainerStatus containerStatus, 
-      RMContainerEventType event, CSQueue childQueue);
+      RMContainerEventType event, CSQueue childQueue,
+      boolean sortQueues);
 
   /**
    * Get the number of applications in the queue.

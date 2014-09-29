@@ -204,9 +204,6 @@ Trunk (Unreleased)
     HDFS-4115. TestHDFSCLI.testAll fails one test due to number format.
     (Trevor Robinson via suresh)
 
-    HDFS-4165. Faulty sanity check in FsDirectory.unprotectedSetQuota.
-    (Binglin Chang via suresh)
-
     HDFS-4105. The SPNEGO user for secondary namenode should use the web 
     keytab. (Arpit Gupta via jitendra)
 
@@ -516,6 +513,13 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7093. Add config key to restrict setStoragePolicy. (Arpit Agarwal)
 
+    HDFS-6519. Document oiv_legacy command (Akira AJISAKA via aw)
+
+    HDFS-4165. Faulty sanity check in FsDirectory.unprotectedSetQuota.
+    (Binglin Chang via suresh)
+
+    HDFS-7104. Fix and clarify INodeInPath getter functions. (Zhe Zhang via wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -744,6 +748,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7148. TestEncryptionZones#testIsEncryptedMethod fails on branch-2
     after archival storage merge. (wang)
+
+    HDFS-7157. Using Time.now() for recording start/end time of reconfiguration
+    tasks (Lei Xu via cmccabe)
 
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
@@ -978,6 +985,8 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6664. HDFS permissions guide documentation states incorrect default 
     group mapping class. (Ray Chiang via aw)
+
+    HDFS-4227. Document dfs.namenode.resource.*  (Daisuke Kobayashi via aw)
 
 Release 2.5.1 - 2014-09-05
 
