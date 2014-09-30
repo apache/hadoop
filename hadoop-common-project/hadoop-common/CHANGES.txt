@@ -557,6 +557,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11049. javax package system class default is too broad (Sangjin Lee
     via jlowe)
 
+    HADOOP-11154. Update BUILDING.txt to state that CMake 3.0 or newer is
+    required on Mac. (cnauroth)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
