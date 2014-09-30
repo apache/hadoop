@@ -522,6 +522,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7124. Remove EncryptionZoneManager.NULL_EZ. (clamb via wang)
 
+    HDFS-6779. Add missing version subcommand for hdfs.
+    (Sasaki Toru via wheat9)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
