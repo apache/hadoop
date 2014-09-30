@@ -22,6 +22,7 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 import com.google.common.collect.TreeMultimap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.util.Time;
 
 import java.io.File;
 import java.util.*;
@@ -97,9 +98,11 @@ public class RamDiskReplicaLruTracker extends RamDiskReplicaTracker {
       return;
     }
 
+    ramDiskReplicaLru.numReads.getAndIncrement();
+
     // Reinsert the replica with its new timestamp.
     if (replicasPersisted.remove(ramDiskReplicaLru.lastUsedTime, ramDiskReplicaLru)) {
-      ramDiskReplicaLru.lastUsedTime = System.currentTimeMillis();
+      ramDiskReplicaLru.lastUsedTime = Time.monotonicNow();
       replicasPersisted.put(ramDiskReplicaLru.lastUsedTime, ramDiskReplicaLru);
     }
   }
@@ -132,8 +135,9 @@ public class RamDiskReplicaLruTracker extends RamDiskReplicaTracker {
       replicasNotPersisted.remove(ramDiskReplicaLru);
     }
 
-    ramDiskReplicaLru.lastUsedTime = System.currentTimeMillis();
+    ramDiskReplicaLru.lastUsedTime = Time.monotonicNow();
     replicasPersisted.put(ramDiskReplicaLru.lastUsedTime, ramDiskReplicaLru);
+    ramDiskReplicaLru.isPersisted = true;
   }
 
   @Override
@@ -214,5 +218,17 @@ public class RamDiskReplicaLruTracker extends RamDiskReplicaTracker {
     replicasPersisted.remove(ramDiskReplicaLru.lastUsedTime, ramDiskReplicaLru);
 
     // replicasNotPersisted will be lazily GC'ed.
+  }
+
+  @Override
+  synchronized RamDiskReplica getReplica(
+    final String bpid, final long blockId) {
+    Map<Long, RamDiskReplicaLru> map = replicaMaps.get(bpid);
+
+    if (map == null) {
+      return null;
+    }
+
+    return map.get(blockId);
   }
 }

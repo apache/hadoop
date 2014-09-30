@@ -28,8 +28,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Time;
 
 import java.io.File;
+import java.util.concurrent.atomic.AtomicLong;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -43,6 +45,10 @@ public abstract class RamDiskReplicaTracker {
     private final long blockId;
     private File savedBlockFile;
     private File savedMetaFile;
+
+    private long creationTime;
+    protected AtomicLong numReads = new AtomicLong(0);
+    protected boolean isPersisted;
 
     /**
      * RAM_DISK volume that holds the original replica.
@@ -62,6 +68,8 @@ public abstract class RamDiskReplicaTracker {
       lazyPersistVolume = null;
       savedMetaFile = null;
       savedBlockFile = null;
+      creationTime = Time.monotonicNow();
+      isPersisted = false;
     }
 
     long getBlockId() {
@@ -88,6 +96,12 @@ public abstract class RamDiskReplicaTracker {
     File getSavedMetaFile() {
       return savedMetaFile;
     }
+
+    long getNumReads() { return numReads.get(); }
+
+    long getCreationTime() { return creationTime; }
+
+    boolean getIsPersisted() {return isPersisted; }
 
     /**
      * Record the saved meta and block files on the given volume.
@@ -243,7 +257,10 @@ public abstract class RamDiskReplicaTracker {
       final String bpid, final long blockId,
       boolean deleteSavedCopies);
 
-  void discardReplica(RamDiskReplica replica, boolean deleteSavedCopies) {
-    discardReplica(replica.getBlockPoolId(), replica.getBlockId(), deleteSavedCopies);
-  }
+  /**
+   * Return RamDiskReplica info given block pool id and block id
+   * Return null if it does not exist in RamDisk
+   */
+  abstract RamDiskReplica getReplica(
+    final String bpid, final long blockId);
 }
