@@ -122,7 +122,11 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     for (int i = 1; i <= SCALE; ++i) {
       TimelineEntities entities = new TimelineEntities();
       ApplicationId appId = ApplicationId.newInstance(0, i);
-      entities.addEntity(createApplicationTimelineEntity(appId));
+      if (i == 2) {
+        entities.addEntity(createApplicationTimelineEntity(appId, true));
+      } else {
+        entities.addEntity(createApplicationTimelineEntity(appId, false));
+      }
       store.put(entities);
       for (int j = 1; j <= SCALE; ++j) {
         entities = new TimelineEntities();
@@ -142,50 +146,58 @@ public class TestApplicationHistoryManagerOnTimelineStore {
 
   @Test
   public void testGetApplicationReport() throws Exception {
-    final ApplicationId appId = ApplicationId.newInstance(0, 1);
-    ApplicationReport app;
-    if (callerUGI == null) {
-      app = historyManager.getApplication(appId);
-    } else {
-      app =
-          callerUGI.doAs(new PrivilegedExceptionAction<ApplicationReport> () {
-        @Override
-        public ApplicationReport run() throws Exception {
-          return historyManager.getApplication(appId);
-        }
-      });
+    for (int i = 1; i <= 2; ++i) {
+      final ApplicationId appId = ApplicationId.newInstance(0, i);
+      ApplicationReport app;
+      if (callerUGI == null) {
+        app = historyManager.getApplication(appId);
+      } else {
+        app =
+            callerUGI.doAs(new PrivilegedExceptionAction<ApplicationReport> () {
+          @Override
+          public ApplicationReport run() throws Exception {
+            return historyManager.getApplication(appId);
+          }
+        });
+      }
+      Assert.assertNotNull(app);
+      Assert.assertEquals(appId, app.getApplicationId());
+      Assert.assertEquals("test app", app.getName());
+      Assert.assertEquals("test app type", app.getApplicationType());
+      Assert.assertEquals("user1", app.getUser());
+      Assert.assertEquals("test queue", app.getQueue());
+      Assert.assertEquals(Integer.MAX_VALUE + 2L, app.getStartTime());
+      Assert.assertEquals(Integer.MAX_VALUE + 3L, app.getFinishTime());
+      Assert.assertTrue(Math.abs(app.getProgress() - 1.0F) < 0.0001);
+      // App 2 doesn't have the ACLs, such that the default ACLs " " will be used.
+      // Nobody except admin and owner has access to the details of the app.
+      if ((i ==  1 && callerUGI != null &&
+          callerUGI.getShortUserName().equals("user3")) ||
+          (i ==  2 && callerUGI != null &&
+          (callerUGI.getShortUserName().equals("user2") ||
+              callerUGI.getShortUserName().equals("user3")))) {
+        Assert.assertEquals(ApplicationAttemptId.newInstance(appId, -1),
+            app.getCurrentApplicationAttemptId());
+        Assert.assertEquals(null, app.getHost());
+        Assert.assertEquals(-1, app.getRpcPort());
+        Assert.assertEquals(null, app.getTrackingUrl());
+        Assert.assertEquals(null, app.getOriginalTrackingUrl());
+        Assert.assertEquals(null, app.getDiagnostics());
+      } else {
+        Assert.assertEquals(ApplicationAttemptId.newInstance(appId, 1),
+            app.getCurrentApplicationAttemptId());
+        Assert.assertEquals("test host", app.getHost());
+        Assert.assertEquals(-100, app.getRpcPort());
+        Assert.assertEquals("test tracking url", app.getTrackingUrl());
+        Assert.assertEquals("test original tracking url",
+            app.getOriginalTrackingUrl());
+        Assert.assertEquals("test diagnostics info", app.getDiagnostics());
+      }
+      Assert.assertEquals(FinalApplicationStatus.UNDEFINED,
+          app.getFinalApplicationStatus());
+      Assert.assertEquals(YarnApplicationState.FINISHED,
+          app.getYarnApplicationState());
     }
-    Assert.assertNotNull(app);
-    Assert.assertEquals(appId, app.getApplicationId());
-    Assert.assertEquals("test app", app.getName());
-    Assert.assertEquals("test app type", app.getApplicationType());
-    Assert.assertEquals("user1", app.getUser());
-    Assert.assertEquals("test queue", app.getQueue());
-    Assert.assertEquals(Integer.MAX_VALUE + 2L, app.getStartTime());
-    Assert.assertEquals(Integer.MAX_VALUE + 3L, app.getFinishTime());
-    Assert.assertTrue(Math.abs(app.getProgress() - 1.0F) < 0.0001);
-    if (callerUGI != null && callerUGI.getShortUserName().equals("user3")) {
-      Assert.assertEquals(ApplicationAttemptId.newInstance(appId, -1),
-          app.getCurrentApplicationAttemptId());
-      Assert.assertEquals(null, app.getHost());
-      Assert.assertEquals(-1, app.getRpcPort());
-      Assert.assertEquals(null, app.getTrackingUrl());
-      Assert.assertEquals(null, app.getOriginalTrackingUrl());
-      Assert.assertEquals(null, app.getDiagnostics());
-    } else {
-      Assert.assertEquals(ApplicationAttemptId.newInstance(appId, 1),
-          app.getCurrentApplicationAttemptId());
-      Assert.assertEquals("test host", app.getHost());
-      Assert.assertEquals(-100, app.getRpcPort());
-      Assert.assertEquals("test tracking url", app.getTrackingUrl());
-      Assert.assertEquals("test original tracking url",
-          app.getOriginalTrackingUrl());
-      Assert.assertEquals("test diagnostics info", app.getDiagnostics());
-    }
-    Assert.assertEquals(FinalApplicationStatus.UNDEFINED,
-        app.getFinalApplicationStatus());
-    Assert.assertEquals(YarnApplicationState.FINISHED,
-        app.getYarnApplicationState());
   }
 
   @Test
@@ -396,7 +408,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
   }
 
   private static TimelineEntity createApplicationTimelineEntity(
-      ApplicationId appId) {
+      ApplicationId appId, boolean emptyACLs) {
     TimelineEntity entity = new TimelineEntity();
     entity.setEntityType(ApplicationMetricsConstants.ENTITY_TYPE);
     entity.setEntityId(appId.toString());
@@ -410,8 +422,12 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     entityInfo.put(ApplicationMetricsConstants.QUEUE_ENTITY_INFO, "test queue");
     entityInfo.put(ApplicationMetricsConstants.SUBMITTED_TIME_ENTITY_INFO,
         Integer.MAX_VALUE + 1L);
-    entityInfo.put(ApplicationMetricsConstants.APP_VIEW_ACLS_ENTITY_INFO,
-        "user2");
+    if (emptyACLs) {
+      entityInfo.put(ApplicationMetricsConstants.APP_VIEW_ACLS_ENTITY_INFO, "");
+    } else {
+      entityInfo.put(ApplicationMetricsConstants.APP_VIEW_ACLS_ENTITY_INFO,
+          "user2");
+    }
     entity.setOtherInfo(entityInfo);
     TimelineEvent tEvent = new TimelineEvent();
     tEvent.setEventType(ApplicationMetricsConstants.CREATED_EVENT_TYPE);

@@ -95,77 +95,89 @@ public class TestSystemMetricsPublisher {
 
   @Test(timeout = 10000)
   public void testPublishApplicationMetrics() throws Exception {
-    ApplicationId appId = ApplicationId.newInstance(0, 1);
-    RMApp app = createRMApp(appId);
-    metricsPublisher.appCreated(app, app.getStartTime());
-    metricsPublisher.appFinished(app, RMAppState.FINISHED, app.getFinishTime());
-    metricsPublisher.appACLsUpdated(app, "uers1,user2", 4L);
-    TimelineEntity entity = null;
-    do {
-      entity =
-          store.getEntity(appId.toString(),
-              ApplicationMetricsConstants.ENTITY_TYPE,
-              EnumSet.allOf(Field.class));
-      // ensure three events are both published before leaving the loop
-    } while (entity == null || entity.getEvents().size() < 3);
-    // verify all the fields
-    Assert.assertEquals(ApplicationMetricsConstants.ENTITY_TYPE,
-        entity.getEntityType());
-    Assert
-        .assertEquals(app.getApplicationId().toString(), entity.getEntityId());
-    Assert
-        .assertEquals(
-            app.getName(),
-            entity.getOtherInfo().get(
-                ApplicationMetricsConstants.NAME_ENTITY_INFO));
-    Assert.assertEquals(app.getQueue(),
-        entity.getOtherInfo()
-            .get(ApplicationMetricsConstants.QUEUE_ENTITY_INFO));
-    Assert
-        .assertEquals(
-            app.getUser(),
-            entity.getOtherInfo().get(
-                ApplicationMetricsConstants.USER_ENTITY_INFO));
-    Assert
-        .assertEquals(
-            app.getApplicationType(),
-            entity.getOtherInfo().get(
-                ApplicationMetricsConstants.TYPE_ENTITY_INFO));
-    Assert.assertEquals(app.getSubmitTime(),
-        entity.getOtherInfo().get(
-            ApplicationMetricsConstants.SUBMITTED_TIME_ENTITY_INFO));
-    Assert.assertEquals("uers1,user2",
-        entity.getOtherInfo().get(
-            ApplicationMetricsConstants.APP_VIEW_ACLS_ENTITY_INFO));
-    boolean hasCreatedEvent = false;
-    boolean hasFinishedEvent = false;
-    boolean hasACLsUpdatedEvent = false;
-    for (TimelineEvent event : entity.getEvents()) {
-      if (event.getEventType().equals(
-          ApplicationMetricsConstants.CREATED_EVENT_TYPE)) {
-        hasCreatedEvent = true;
-        Assert.assertEquals(app.getStartTime(), event.getTimestamp());
-      } else if (event.getEventType().equals(
-          ApplicationMetricsConstants.FINISHED_EVENT_TYPE)) {
-        hasFinishedEvent = true;
-        Assert.assertEquals(app.getFinishTime(), event.getTimestamp());
-        Assert.assertEquals(
-            app.getDiagnostics().toString(),
-            event.getEventInfo().get(
-                ApplicationMetricsConstants.DIAGNOSTICS_INFO_EVENT_INFO));
-        Assert.assertEquals(
-            app.getFinalApplicationStatus().toString(),
-            event.getEventInfo().get(
-                ApplicationMetricsConstants.FINAL_STATUS_EVENT_INFO));
-        Assert.assertEquals(YarnApplicationState.FINISHED.toString(), event
-            .getEventInfo().get(ApplicationMetricsConstants.STATE_EVENT_INFO));
-      } else if (event.getEventType().equals(
-          ApplicationMetricsConstants.ACLS_UPDATED_EVENT_TYPE)) {
-        hasACLsUpdatedEvent = true;
-        Assert.assertEquals(4L, event.getTimestamp());
+    for (int i = 1; i <= 2; ++i) {
+      ApplicationId appId = ApplicationId.newInstance(0, i);
+      RMApp app = createRMApp(appId);
+      metricsPublisher.appCreated(app, app.getStartTime());
+      metricsPublisher.appFinished(app, RMAppState.FINISHED, app.getFinishTime());
+      if (i == 1) {
+        metricsPublisher.appACLsUpdated(app, "uers1,user2", 4L);
+      } else {
+        // in case user doesn't specify the ACLs
+        metricsPublisher.appACLsUpdated(app, null, 4L);
       }
+      TimelineEntity entity = null;
+      do {
+        entity =
+            store.getEntity(appId.toString(),
+                ApplicationMetricsConstants.ENTITY_TYPE,
+                EnumSet.allOf(Field.class));
+        // ensure three events are both published before leaving the loop
+      } while (entity == null || entity.getEvents().size() < 3);
+      // verify all the fields
+      Assert.assertEquals(ApplicationMetricsConstants.ENTITY_TYPE,
+          entity.getEntityType());
+      Assert
+          .assertEquals(app.getApplicationId().toString(), entity.getEntityId());
+      Assert
+          .assertEquals(
+              app.getName(),
+              entity.getOtherInfo().get(
+                  ApplicationMetricsConstants.NAME_ENTITY_INFO));
+      Assert.assertEquals(app.getQueue(),
+          entity.getOtherInfo()
+              .get(ApplicationMetricsConstants.QUEUE_ENTITY_INFO));
+      Assert
+          .assertEquals(
+              app.getUser(),
+              entity.getOtherInfo().get(
+                  ApplicationMetricsConstants.USER_ENTITY_INFO));
+      Assert
+          .assertEquals(
+              app.getApplicationType(),
+              entity.getOtherInfo().get(
+                  ApplicationMetricsConstants.TYPE_ENTITY_INFO));
+      Assert.assertEquals(app.getSubmitTime(),
+          entity.getOtherInfo().get(
+              ApplicationMetricsConstants.SUBMITTED_TIME_ENTITY_INFO));
+      if (i == 1) {
+        Assert.assertEquals("uers1,user2",
+            entity.getOtherInfo().get(
+                ApplicationMetricsConstants.APP_VIEW_ACLS_ENTITY_INFO));
+      } else {
+        Assert.assertEquals("", entity.getOtherInfo().get(
+            ApplicationMetricsConstants.APP_VIEW_ACLS_ENTITY_INFO));
+      }
+      boolean hasCreatedEvent = false;
+      boolean hasFinishedEvent = false;
+      boolean hasACLsUpdatedEvent = false;
+      for (TimelineEvent event : entity.getEvents()) {
+        if (event.getEventType().equals(
+            ApplicationMetricsConstants.CREATED_EVENT_TYPE)) {
+          hasCreatedEvent = true;
+          Assert.assertEquals(app.getStartTime(), event.getTimestamp());
+        } else if (event.getEventType().equals(
+            ApplicationMetricsConstants.FINISHED_EVENT_TYPE)) {
+          hasFinishedEvent = true;
+          Assert.assertEquals(app.getFinishTime(), event.getTimestamp());
+          Assert.assertEquals(
+              app.getDiagnostics().toString(),
+              event.getEventInfo().get(
+                  ApplicationMetricsConstants.DIAGNOSTICS_INFO_EVENT_INFO));
+          Assert.assertEquals(
+              app.getFinalApplicationStatus().toString(),
+              event.getEventInfo().get(
+                  ApplicationMetricsConstants.FINAL_STATUS_EVENT_INFO));
+          Assert.assertEquals(YarnApplicationState.FINISHED.toString(), event
+              .getEventInfo().get(ApplicationMetricsConstants.STATE_EVENT_INFO));
+        } else if (event.getEventType().equals(
+            ApplicationMetricsConstants.ACLS_UPDATED_EVENT_TYPE)) {
+          hasACLsUpdatedEvent = true;
+          Assert.assertEquals(4L, event.getTimestamp());
+        }
+      }
+      Assert.assertTrue(hasCreatedEvent && hasFinishedEvent && hasACLsUpdatedEvent);
     }
-    Assert.assertTrue(hasCreatedEvent && hasFinishedEvent && hasACLsUpdatedEvent);
   }
 
   @Test(timeout = 10000)

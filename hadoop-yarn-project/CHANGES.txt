@@ -449,6 +449,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2594. Potential deadlock in RM when querying 
     ApplicationResourceUsageReport. (Wangda Tan via kasha)
 
+    YARN-2602. Fixed possible NPE in ApplicationHistoryManagerOnTimelineStore.
+    (Zhijie Shen via jianhe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
