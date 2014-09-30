@@ -247,10 +247,6 @@ public final class PBImageXmlWriter {
         .o("perferredBlockSize", f.getPreferredBlockSize())
         .o("permission", dumpPermission(f.getPermission()));
 
-    if (f.hasIsLazyPersist()) {
-      o("lazyPersist", f.getIsLazyPersist());
-    }
-
     if (f.getBlocksCount() > 0) {
       out.print("<blocks>");
       for (BlockProto b : f.getBlocksList()) {

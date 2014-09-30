@@ -96,6 +96,10 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   protected ThreadPoolExecutor initializeCacheExecutor(File parent) {
+    if (storageType.isTransient()) {
+      return null;
+    }
+
     final int maxNumThreads = dataset.datanode.getConf().getInt(
         DFSConfigKeys.DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_KEY,
         DFSConfigKeys.DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_DEFAULT);
@@ -203,7 +207,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   
   @Override
   public boolean isTransientStorage() {
-    return false;
+    return storageType.isTransient();
   }
 
   @Override

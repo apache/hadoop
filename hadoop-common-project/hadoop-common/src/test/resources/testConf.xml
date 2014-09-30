@@ -798,7 +798,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*\(%y, %Y\), lazyPersist flag \(\%l\)( )*</expected-output>
+          <expected-output>^( |\t)*\(%y, %Y\)( )*</expected-output>
         </comparator>
       </comparators>
     </test>

@@ -366,7 +366,7 @@ public class FSEditLogLoader {
             path, addCloseOp.permissions, addCloseOp.aclEntries,
             addCloseOp.xAttrs,
             replication, addCloseOp.mtime, addCloseOp.atime,
-            addCloseOp.blockSize, addCloseOp.isLazyPersist, true, addCloseOp.clientName,
+            addCloseOp.blockSize, true, addCloseOp.clientName,
             addCloseOp.clientMachine, addCloseOp.storagePolicyId);
         fsNamesys.leaseManager.addLease(addCloseOp.clientName, path);
 

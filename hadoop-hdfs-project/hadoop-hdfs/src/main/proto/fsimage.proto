@@ -139,7 +139,6 @@ message INodeSection {
     optional AclFeatureProto acl = 8;
     optional XAttrFeatureProto xAttrs = 9;
     optional uint32 storagePolicyID = 10;
-    optional bool isLazyPersist = 11 [default = false];
   }
 
   message INodeDirectory {

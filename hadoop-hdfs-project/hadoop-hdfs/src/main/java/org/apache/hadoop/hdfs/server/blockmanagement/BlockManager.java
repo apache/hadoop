@@ -402,6 +402,10 @@ public class BlockManager {
     return storagePolicySuite.getPolicy(policyName);
   }
 
+  public BlockStoragePolicy getStoragePolicy(final byte policyId) {
+    return storagePolicySuite.getPolicy(policyId);
+  }
+
   public BlockStoragePolicy[] getStoragePolicies() {
     return storagePolicySuite.getAllPolicies();
   }

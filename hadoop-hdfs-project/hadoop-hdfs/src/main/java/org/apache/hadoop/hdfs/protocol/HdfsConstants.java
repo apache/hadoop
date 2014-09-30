@@ -171,7 +171,9 @@ public class HdfsConstants {
   public static final String HOT_STORAGE_POLICY_NAME = "HOT";
   public static final String WARM_STORAGE_POLICY_NAME = "WARM";
   public static final String COLD_STORAGE_POLICY_NAME = "COLD";
+  public static final String LAZY_PERSIST_STORAGE_POLICY_NAME = "LAZY_PERSIST";
 
+  public static final byte LAZY_PERSIST_STORAGE_POLICY_ID = 15;
   public static final byte ALLSSD_STORAGE_POLICY_ID = 12;
   public static final byte ONESSD_STORAGE_POLICY_ID = 10;
   public static final byte HOT_STORAGE_POLICY_ID = 7;

@@ -255,19 +255,12 @@ public class TestScrLazyPersistFiles {
 
       for (FsVolumeSpi volume : volumes) {
         if (volume.getStorageType() == RAM_DISK) {
-          ((FsTransientVolumeImpl) volume).setCapacityForTesting(ramDiskStorageLimit);
+          ((FsVolumeImpl) volume).setCapacityForTesting(ramDiskStorageLimit);
         }
       }
     }
 
     LOG.info("Cluster startup complete");
-  }
-
-  private void startUpCluster(final int numDataNodes,
-                              final StorageType[] storageTypes,
-                              final long ramDiskStorageLimit)
-    throws IOException {
-    startUpCluster(numDataNodes, storageTypes, ramDiskStorageLimit, false);
   }
 
   private void makeTestFile(Path path, long length, final boolean isLazyPersist)
@@ -322,14 +315,6 @@ public class TestScrLazyPersistFiles {
                                   long seed) throws IOException {
     DFSTestUtil.createFile(fs, path, isLazyPersist, BUFFER_LENGTH, length,
       BLOCK_SIZE, REPL_FACTOR, seed, true);
-  }
-
-  private boolean verifyReadRandomFile(
-    Path path, int fileLength, int seed) throws IOException {
-    byte contents[] = DFSTestUtil.readFileBuffer(fs, path);
-    byte expected[] = DFSTestUtil.
-      calculateFileContentsFromSeed(seed, fileLength);
-    return Arrays.equals(contents, expected);
   }
 
   private void triggerBlockReport()
