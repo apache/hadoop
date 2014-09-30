@@ -376,6 +376,11 @@ public class RMAppImpl implements RMApp, Recoverable {
 
     this.attemptFailuresValidityInterval =
         submissionContext.getAttemptFailuresValidityInterval();
+    if (this.attemptFailuresValidityInterval > 0) {
+      LOG.info("The attemptFailuresValidityInterval for the application: "
+          + this.applicationId + " is " + this.attemptFailuresValidityInterval
+          + ".");
+    }
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();
@@ -1179,6 +1184,11 @@ public class RMAppImpl implements RMApp, Recoverable {
     @Override
     public RMAppState transition(RMAppImpl app, RMAppEvent event) {
       int numberOfFailure = app.getNumFailedAppAttempts();
+      LOG.info("The number of failed attempts"
+          + (app.attemptFailuresValidityInterval > 0 ? " in previous "
+              + app.attemptFailuresValidityInterval + " milliseconds " : " ")
+          + "is " + numberOfFailure + ". The max attempts is "
+          + app.maxAppAttempts);
       if (!app.submissionContext.getUnmanagedAM()
           && numberOfFailure < app.maxAppAttempts) {
         boolean transferStateFromPreviousAttempt;
@@ -1293,4 +1303,5 @@ public class RMAppImpl implements RMApp, Recoverable {
   public void setSystemClock(Clock clock) {
     this.systemClock = clock;
   }
+
 }
