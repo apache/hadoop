@@ -252,14 +252,9 @@ public class Mover {
      */
     private boolean processNamespace() {
       getSnapshottableDirs();
-      boolean hasRemaining = true;
-      try {
-        for (Path target : targetPaths) {
-          hasRemaining = processDirRecursively("", dfs.getFileInfo(target
-              .toUri().getPath()));
-        }
-      } catch (IOException e) {
-        LOG.warn("Failed to get root directory status. Ignore and continue.", e);
+      boolean hasRemaining = false;
+      for (Path target : targetPaths) {
+        hasRemaining |= processPath(target.toUri().getPath());
       }
       // wait for pending move to finish and retry the failed migration
       hasRemaining |= Dispatcher.waitForMoveCompletion(storages.targets.values());
@@ -270,7 +265,7 @@ public class Mover {
      * @return whether there is still remaing migration work for the next
      *         round
      */
-    private boolean processChildrenList(String fullPath) {
+    private boolean processPath(String fullPath) {
       boolean hasRemaining = false;
       for (byte[] lastReturnedName = HdfsFileStatus.EMPTY_NAME;;) {
         final DirectoryListing children;
@@ -285,7 +280,7 @@ public class Mover {
           return hasRemaining;
         }
         for (HdfsFileStatus child : children.getPartialListing()) {
-          hasRemaining |= processDirRecursively(fullPath, child);
+          hasRemaining |= processRecursively(fullPath, child);
         }
         if (children.hasMore()) {
           lastReturnedName = children.getLastName();
@@ -296,8 +291,7 @@ public class Mover {
     }
 
     /** @return whether the migration requires next round */
-    private boolean processDirRecursively(String parent,
-                                          HdfsFileStatus status) {
+    private boolean processRecursively(String parent, HdfsFileStatus status) {
       String fullPath = status.getFullName(parent);
       boolean hasRemaining = false;
       if (status.isDir()) {
@@ -305,11 +299,11 @@ public class Mover {
           fullPath = fullPath + Path.SEPARATOR;
         }
 
-        hasRemaining = processChildrenList(fullPath);
+        hasRemaining = processPath(fullPath);
         // process snapshots if this is a snapshottable directory
         if (snapshottableDirs.contains(fullPath)) {
           final String dirSnapshot = fullPath + HdfsConstants.DOT_SNAPSHOT_DIR;
-          hasRemaining |= processChildrenList(dirSnapshot);
+          hasRemaining |= processPath(dirSnapshot);
         }
       } else if (!status.isSymlink()) { // file
         try {
