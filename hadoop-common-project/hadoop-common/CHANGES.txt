@@ -8,6 +8,9 @@ Release 2.7.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-11156. DelegateToFileSystem should implement
+    getFsStatus(final Path f). (Zhihai Xu via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
