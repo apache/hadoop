@@ -65,6 +65,7 @@ function print_usage(){
   echo "  cacheadmin           configure the HDFS cache"
   echo "  crypto               configure HDFS encryption zones"
   echo "  storagepolicies      get all the existing block storage policies"
+  echo "  version              print the version"
   echo ""
   echo "Most commands print help when invoked w/o parameters."
 }
@@ -112,7 +113,7 @@ if [ "$COMMAND" == "nfs3" ] && [ "$EUID" -eq 0 ] && [ -n "$HADOOP_PRIVILEGED_NFS
     if [ -n "$HADOOP_PRIVILEGED_NFS_PID_DIR" ]; then
       HADOOP_PID_DIR=$HADOOP_PRIVILEGED_NFS_PID_DIR
     fi
-  
+
     if [ -n "$HADOOP_PRIVILEGED_NFS_LOG_DIR" ]; then
       HADOOP_LOG_DIR=$HADOOP_PRIVILEGED_NFS_LOG_DIR
       HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.dir=$HADOOP_LOG_DIR"
@@ -195,6 +196,8 @@ elif [ "$COMMAND" = "cacheadmin" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.CacheAdmin
 elif [ "$COMMAND" = "crypto" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.CryptoAdmin
+elif [ "$COMMAND" = "version" ] ; then
+  CLASS=org.apache.hadoop.util.VersionInfo
 else
   CLASS="$COMMAND"
 fi

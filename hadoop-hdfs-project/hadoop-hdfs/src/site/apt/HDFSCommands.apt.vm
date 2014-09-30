@@ -114,6 +114,12 @@ HDFS Commands Guide
 |   -racks               | Print out network topology for data-node locations.
 *------------------------+---------------------------------------------+
 
+** <<<version>>>
+
+   Prints the version.
+
+   Usage: <<<hdfs version>>>
+
 * Administration Commands
 
    Commands useful for administrators of a hadoop cluster.
