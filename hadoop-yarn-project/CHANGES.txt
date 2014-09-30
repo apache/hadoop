@@ -238,6 +238,9 @@ Release 2.6.0 - UNRELEASED
     YARN-1769. CapacityScheduler: Improve reservations (Thomas Graves via
     jlowe)
 
+    YARN-2627. Added the info logs of attemptFailuresValidityInterval and number
+    of previous failed attempts. (Xuan Gong via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
