@@ -137,7 +137,7 @@ public class SystemMetricsPublisher extends CompositeService {
       dispatcher.getEventHandler().handle(
           new ApplicationACLsUpdatedEvent(
               app.getApplicationId(),
-              appViewACLs,
+              appViewACLs == null ? "" : appViewACLs,
               updatedTime));
     }
   }

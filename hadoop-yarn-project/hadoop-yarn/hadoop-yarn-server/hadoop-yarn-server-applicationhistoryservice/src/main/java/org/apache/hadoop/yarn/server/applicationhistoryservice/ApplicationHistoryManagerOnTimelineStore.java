@@ -227,7 +227,9 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
       if (entityInfo.containsKey(ApplicationMetricsConstants.APP_VIEW_ACLS_ENTITY_INFO)) {
         String appViewACLsStr = entityInfo.get(
             ApplicationMetricsConstants.APP_VIEW_ACLS_ENTITY_INFO).toString();
-        appViewACLs.put(ApplicationAccessType.VIEW_APP, appViewACLsStr);
+        if (appViewACLsStr.length() > 0) {
+          appViewACLs.put(ApplicationAccessType.VIEW_APP, appViewACLsStr);
+        }
       }
       if (field == ApplicationReportField.USER_AND_ACLS) {
         return new ApplicationReportExt(ApplicationReport.newInstance(
