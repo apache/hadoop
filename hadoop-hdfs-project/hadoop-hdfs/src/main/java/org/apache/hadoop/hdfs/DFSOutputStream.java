@@ -54,6 +54,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -75,6 +76,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.RetryStartFileException;
@@ -172,6 +174,8 @@ public class DFSOutputStream extends FSOutputSummer
   private final AtomicReference<CachingStrategy> cachingStrategy;
   private boolean failPacket = false;
   private FileEncryptionInfo fileEncryptionInfo;
+  private static final BlockStoragePolicySuite blockStoragePolicySuite =
+      BlockStoragePolicySuite.createDefaultSuite();
 
   private static class Packet {
     private static final long HEART_BEAT_SEQNO = -1L;
@@ -386,7 +390,7 @@ public class DFSOutputStream extends FSOutputSummer
      */
     private DataStreamer(HdfsFileStatus stat, Span span) {
       isAppend = false;
-      isLazyPersistFile = stat.isLazyPersist();
+      isLazyPersistFile = initLazyPersist(stat);
       stage = BlockConstructionStage.PIPELINE_SETUP_CREATE;
       traceSpan = span;
     }
@@ -406,7 +410,7 @@ public class DFSOutputStream extends FSOutputSummer
       block = lastBlock.getBlock();
       bytesSent = block.getNumBytes();
       accessToken = lastBlock.getBlockToken();
-      isLazyPersistFile = stat.isLazyPersist();
+      isLazyPersistFile = initLazyPersist(stat);
       long usedInLastBlock = stat.getLen() % blockSize;
       int freeInLastBlock = (int)(blockSize - usedInLastBlock);
 
@@ -450,6 +454,13 @@ public class DFSOutputStream extends FSOutputSummer
       }
     }
     
+    private boolean initLazyPersist(HdfsFileStatus stat) {
+      final BlockStoragePolicy lpPolicy =
+          blockStoragePolicySuite.getPolicy("LAZY_PERSIST");
+      return lpPolicy != null &&
+             stat.getStoragePolicy() == lpPolicy.getId();
+    }
+
     private void setPipeline(LocatedBlock lb) {
       setPipeline(lb.getLocations(), lb.getStorageTypes(), lb.getStorageIDs());
     }

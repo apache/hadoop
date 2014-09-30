@@ -391,7 +391,6 @@ class FSImageLoader {
             f.getPermission(), stringTable);
         map.put("accessTime", f.getAccessTime());
         map.put("blockSize", f.getPreferredBlockSize());
-        map.put("lazyPersist", f.getIsLazyPersist());
         map.put("group", p.getGroupName());
         map.put("length", getFileSize(f));
         map.put("modificationTime", f.getModificationTime());

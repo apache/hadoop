@@ -86,3 +86,7 @@
     HDFS-7153. Add storagePolicy to NN edit log during file creation.
     (Arpit Agarwal)
 
+    HDFS-7159. Use block storage policy to set lazy persist preference.
+    (Arpit Agarwal)
+
+

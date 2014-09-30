@@ -39,7 +39,6 @@ import org.apache.hadoop.fs.FileStatus;
  *   %u: User name of owner
  *   %y: UTC date as &quot;yyyy-MM-dd HH:mm:ss&quot;
  *   %Y: Milliseconds since January 1, 1970 UTC
- *   %l: Whether lazyPersist flag is set on the file.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -54,8 +53,7 @@ class Stat extends FsCommand {
   public static final String DESCRIPTION =
     "Print statistics about the file/directory at <path> " +
     "in the specified format. Format accepts filesize in blocks (%b), group name of owner(%g), " +
-    "filename (%n), block size (%o), replication (%r), user name of owner(%u), modification date (%y, %Y), " +
-    "lazyPersist flag (%l)\n";
+    "filename (%n), block size (%o), replication (%r), user name of owner(%u), modification date (%y, %Y)\n";
 
   protected static final SimpleDateFormat timeFmt;
   static {
@@ -93,7 +91,7 @@ class Stat extends FsCommand {
             break;
           case 'F':
             buf.append(stat.isDirectory()
-                ? "directory" 
+                ? "directory"
                 : (stat.isFile() ? "regular file" : "symlink"));
             break;
           case 'g':
@@ -116,9 +114,6 @@ class Stat extends FsCommand {
             break;
           case 'Y':
             buf.append(stat.getModificationTime());
-            break;
-          case 'l':
-            buf.append(stat.isLazyPersist());
             break;
           default:
             // this leaves %<unknown> alone, which causes the potential for

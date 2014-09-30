@@ -44,6 +44,12 @@ public class BlockStoragePolicySuite {
   public static BlockStoragePolicySuite createDefaultSuite() {
     final BlockStoragePolicy[] policies =
         new BlockStoragePolicy[1 << ID_BIT_LENGTH];
+    final byte lazyPersistId = 15;
+    policies[lazyPersistId] = new BlockStoragePolicy(lazyPersistId, "LAZY_PERSIST",
+        new StorageType[]{StorageType.RAM_DISK, StorageType.DISK},
+        new StorageType[]{StorageType.DISK},
+        new StorageType[]{StorageType.DISK},
+        true);    // Cannot be changed on regular files, but inherited.
     final byte hotId = 12;
     policies[hotId] = new BlockStoragePolicy(hotId, "HOT",
         new StorageType[]{StorageType.DISK}, StorageType.EMPTY_ARRAY,

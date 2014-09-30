@@ -404,7 +404,6 @@ public abstract class FSEditLogOp {
     long mtime;
     long atime;
     long blockSize;
-    boolean isLazyPersist;
     Block[] blocks;
     PermissionStatus permissions;
     List<AclEntry> aclEntries;
@@ -416,6 +415,7 @@ public abstract class FSEditLogOp {
     
     private AddCloseOp(FSEditLogOpCodes opCode) {
       super(opCode);
+      storagePolicyId = BlockStoragePolicySuite.ID_UNSPECIFIED;
       assert(opCode == OP_ADD || opCode == OP_CLOSE);
     }
     
@@ -451,11 +451,6 @@ public abstract class FSEditLogOp {
 
     <T extends AddCloseOp> T setBlockSize(long blockSize) {
       this.blockSize = blockSize;
-      return (T)this;
-    }
-
-    <T extends AddCloseOp> T setLazyPersistFlag(boolean isLazyPersist) {
-      this.isLazyPersist = isLazyPersist;
       return (T)this;
     }
 
@@ -516,7 +511,6 @@ public abstract class FSEditLogOp {
       FSImageSerialization.writeLong(mtime, out);
       FSImageSerialization.writeLong(atime, out);
       FSImageSerialization.writeLong(blockSize, out);
-      FSImageSerialization.writeInt((isLazyPersist ? 1 : 0), out);
       new ArrayWritable(Block.class, blocks).write(out);
       permissions.write(out);
 
@@ -586,13 +580,6 @@ public abstract class FSEditLogOp {
         this.blockSize = readLong(in);
       }
 
-      if (NameNodeLayoutVersion.supports(
-          NameNodeLayoutVersion.Feature.LAZY_PERSIST_FILES, logVersion)) {
-        this.isLazyPersist = (FSImageSerialization.readInt(in) != 0);
-      } else {
-        this.isLazyPersist = false;
-      }
-
       this.blocks = readBlocks(in, logVersion);
       this.permissions = PermissionStatus.read(in);
 
@@ -658,8 +645,6 @@ public abstract class FSEditLogOp {
       builder.append(atime);
       builder.append(", blockSize=");
       builder.append(blockSize);
-      builder.append(", lazyPersist");
-      builder.append(isLazyPersist);
       builder.append(", blocks=");
       builder.append(Arrays.toString(blocks));
       builder.append(", permissions=");
@@ -700,8 +685,6 @@ public abstract class FSEditLogOp {
           Long.toString(atime));
       XMLUtils.addSaxString(contentHandler, "BLOCKSIZE",
           Long.toString(blockSize));
-      XMLUtils.addSaxString(contentHandler, "LAZY_PERSIST",
-          Boolean.toString(isLazyPersist));
       XMLUtils.addSaxString(contentHandler, "CLIENT_NAME", clientName);
       XMLUtils.addSaxString(contentHandler, "CLIENT_MACHINE", clientMachine);
       XMLUtils.addSaxString(contentHandler, "OVERWRITE", 
@@ -727,10 +710,6 @@ public abstract class FSEditLogOp {
       this.mtime = Long.parseLong(st.getValue("MTIME"));
       this.atime = Long.parseLong(st.getValue("ATIME"));
       this.blockSize = Long.parseLong(st.getValue("BLOCKSIZE"));
-
-      String lazyPersistString = st.getValueOrNull("LAZY_PERSIST");
-      this.isLazyPersist =
-          lazyPersistString != null && Boolean.parseBoolean(lazyPersistString);
 
       this.clientName = st.getValue("CLIENT_NAME");
       this.clientMachine = st.getValue("CLIENT_MACHINE");

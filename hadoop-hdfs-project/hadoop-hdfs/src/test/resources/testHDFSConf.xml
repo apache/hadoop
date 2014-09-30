@@ -4554,42 +4554,6 @@
       </comparators>
     </test>
 
-    <test> <!-- TESTED -->
-      <description>put: The LazyPersist flag is set when requested</description>
-      <test-commands>
-        <command>-fs NAMENODE -mkdir /dirLp</command>
-        <command>-fs NAMENODE -put -l CLITEST_DATA/data15bytes /dirLp/data15bytes</command>
-        <command>-fs NAMENODE -stat %l /dirLp/data15bytes</command>
-      </test-commands>
-      <cleanup-commands>
-        <command>-fs NAMENODE -rm -r /dirLp/</command>
-      </cleanup-commands>
-      <comparators>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^true</expected-output>
-        </comparator>
-      </comparators>
-    </test>
-
-    <test> <!-- TESTED -->
-      <description>put: The LazyPersist flag is not set by default</description>
-      <test-commands>
-        <command>-fs NAMENODE -mkdir /dirLp</command>
-        <command>-fs NAMENODE -put CLITEST_DATA/data15bytes /dirLp/data15bytes</command>
-        <command>-fs NAMENODE -stat %l /dirLp/data15bytes</command>
-      </test-commands>
-      <cleanup-commands>
-        <command>-fs NAMENODE -rm -r /dirLp/</command>
-      </cleanup-commands>
-      <comparators>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^false</expected-output>
-        </comparator>
-      </comparators>
-    </test>
-
     <!-- Tests for copyFromLocal -->
     <test> <!-- TESTED -->
       <description>copyFromLocal: copying file into a file (absolute path)</description>

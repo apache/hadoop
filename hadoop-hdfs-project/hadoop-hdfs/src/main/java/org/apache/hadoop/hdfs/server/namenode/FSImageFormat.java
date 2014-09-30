@@ -784,8 +784,6 @@ public class FSImageFormat {
         counter.increment();
       }
 
-      // Images in the old format will not have the lazyPersist flag so it is
-      // safe to pass false always.
       final INodeFile file = new INodeFile(inodeId, localName, permissions,
           modificationTime, atime, blocks, replication, blockSize);
       if (underConstruction) {
@@ -887,10 +885,8 @@ public class FSImageFormat {
           in.readShort());
       final long preferredBlockSize = in.readLong();
 
-      // LazyPersist flag will not be present in old image formats and hence
-      // can be safely set to false always.
       return new INodeFileAttributes.SnapshotCopy(name, permissions, null, modificationTime,
-          accessTime, replication, preferredBlockSize, false, (byte) 0, null);
+          accessTime, replication, preferredBlockSize, (byte) 0, null);
     }
 
     public INodeDirectoryAttributes loadINodeDirectoryAttributes(DataInput in)

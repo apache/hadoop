@@ -310,7 +310,6 @@ message HdfsFileStatusProto {
   optional FileEncryptionInfoProto fileEncryptionInfo = 15;
 
   optional uint32 storagePolicy = 16 [default = 0]; // block storage policy id
-  optional bool isLazyPersist = 17 [default = false];
 } 
 
 /**

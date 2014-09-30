@@ -269,7 +269,7 @@ public class JsonUtil {
         (byte) (long) (Long) m.get("storagePolicy") :
           BlockStoragePolicySuite.ID_UNSPECIFIED;
     return new HdfsFileStatus(len, type == PathType.DIRECTORY, replication,
-        blockSize, isLazyPersist, mTime, aTime, permission, owner, group,
+        blockSize, mTime, aTime, permission, owner, group,
         symlink, DFSUtil.string2Bytes(localName), fileId, childrenNum, null,
         storagePolicy);
   }

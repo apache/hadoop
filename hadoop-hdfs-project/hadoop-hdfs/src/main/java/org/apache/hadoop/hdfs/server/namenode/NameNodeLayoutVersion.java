@@ -69,9 +69,7 @@ public class NameNodeLayoutVersion {
     CREATE_OVERWRITE(-58, "Use single editlog record for " +
       "creating file with overwrite"),
     XATTRS_NAMESPACE_EXT(-59, "Increase number of xattr namespaces"),
-    BLOCK_STORAGE_POLICY(-60, "Block Storage policy"),
-    LAZY_PERSIST_FILES(-60, "Support for optional lazy persistence of " + 
-        " files with reduced durability guarantees");    
+    BLOCK_STORAGE_POLICY(-60, "Block Storage policy");
     
     private final FeatureInfo info;
 
