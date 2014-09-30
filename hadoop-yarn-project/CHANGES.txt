@@ -485,6 +485,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2610. Hamlet should close table tags. (Ray Chiang via kasha)
 
+    YARN-2387. Resource Manager crashes with NPE due to lack of
+    synchronization (Mit Desai via jlowe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
