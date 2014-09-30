@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 
 import junit.framework.TestCase;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.BlockingQueue;
 
@@ -243,11 +244,14 @@ public class TestFairCallQueue extends TestCase {
     public final String tag;
     public volatile int callsAdded = 0; // How many calls we added, accurate unless interrupted
     private final int maxCalls;
+    private final CountDownLatch latch;
 
-    public Putter(BlockingQueue<Schedulable> aCq, int maxCalls, String tag) {
+    public Putter(BlockingQueue<Schedulable> aCq, int maxCalls, String tag,
+                  CountDownLatch latch) {
       this.maxCalls = maxCalls;
       this.cq = aCq;
       this.tag = tag;
+      this.latch = latch;
     }
 
     private String getTag() {
@@ -262,6 +266,7 @@ public class TestFairCallQueue extends TestCase {
         while (callsAdded < maxCalls || maxCalls < 0) {
           cq.put(mockCall(getTag()));
           callsAdded++;
+          latch.countDown();
         }
       } catch (InterruptedException e) {
         return;
@@ -280,14 +285,17 @@ public class TestFairCallQueue extends TestCase {
     public volatile int callsTaken = 0; // total calls taken, accurate if we aren't interrupted
     public volatile Schedulable lastResult = null; // the last thing we took
     private final int maxCalls; // maximum calls to take
+    private final CountDownLatch latch;
 
     private IdentityProvider uip;
 
-    public Taker(BlockingQueue<Schedulable> aCq, int maxCalls, String tag) {
+    public Taker(BlockingQueue<Schedulable> aCq, int maxCalls, String tag,
+                 CountDownLatch latch) {
       this.maxCalls = maxCalls;
       this.cq = aCq;
       this.tag = tag;
       this.uip = new UserIdentityProvider();
+      this.latch = latch;
     }
 
     @Override
@@ -303,6 +311,7 @@ public class TestFairCallQueue extends TestCase {
             cq.put(res);
           } else {
             callsTaken++;
+            latch.countDown();
             lastResult = res;
           }
         }
@@ -316,10 +325,11 @@ public class TestFairCallQueue extends TestCase {
   public void assertCanTake(BlockingQueue<Schedulable> cq, int numberOfTakes,
     int takeAttempts) throws InterruptedException {
 
-    Taker taker = new Taker(cq, takeAttempts, "default");
+    CountDownLatch latch = new CountDownLatch(numberOfTakes);
+    Taker taker = new Taker(cq, takeAttempts, "default", latch);
     Thread t = new Thread(taker);
     t.start();
-    t.join(100);
+    latch.await();
 
     assertEquals(numberOfTakes, taker.callsTaken);
     t.interrupt();
@@ -329,10 +339,11 @@ public class TestFairCallQueue extends TestCase {
   public void assertCanPut(BlockingQueue<Schedulable> cq, int numberOfPuts,
     int putAttempts) throws InterruptedException {
 
-    Putter putter = new Putter(cq, putAttempts, null);
+    CountDownLatch latch = new CountDownLatch(numberOfPuts);
+    Putter putter = new Putter(cq, putAttempts, null, latch);
     Thread t = new Thread(putter);
     t.start();
-    t.join(100);
+    latch.await();
 
     assertEquals(numberOfPuts, putter.callsAdded);
     t.interrupt();
