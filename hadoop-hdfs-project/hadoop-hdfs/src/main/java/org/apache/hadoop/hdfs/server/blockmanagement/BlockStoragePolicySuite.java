@@ -45,6 +45,13 @@ public class BlockStoragePolicySuite {
   public static BlockStoragePolicySuite createDefaultSuite() {
     final BlockStoragePolicy[] policies =
         new BlockStoragePolicy[1 << ID_BIT_LENGTH];
+    final byte lazyPersistId = HdfsConstants.LAZY_PERSIST_STORAGE_POLICY_ID;
+    policies[lazyPersistId] = new BlockStoragePolicy(lazyPersistId, 
+        HdfsConstants.LAZY_PERSIST_STORAGE_POLICY_NAME,
+        new StorageType[]{StorageType.RAM_DISK, StorageType.DISK},
+        new StorageType[]{StorageType.DISK},
+        new StorageType[]{StorageType.DISK},
+        true);    // Cannot be changed on regular files, but inherited.
     final byte allssdId = HdfsConstants.ALLSSD_STORAGE_POLICY_ID;
     policies[allssdId] = new BlockStoragePolicy(allssdId,
         HdfsConstants.ALLSSD_STORAGE_POLICY_NAME,

@@ -60,6 +60,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
@@ -299,14 +300,13 @@ public class FSDirectory implements Closeable {
    */
   INodeFile addFile(String path, PermissionStatus permissions,
                     short replication, long preferredBlockSize,
-                    boolean isLazyPersist,
                     String clientName, String clientMachine)
     throws FileAlreadyExistsException, QuotaExceededException,
       UnresolvedLinkException, SnapshotAccessControlException, AclException {
 
     long modTime = now();
     INodeFile newNode = newINodeFile(namesystem.allocateNewInodeId(),
-        permissions, modTime, modTime, replication, preferredBlockSize, isLazyPersist);
+        permissions, modTime, modTime, replication, preferredBlockSize);
     newNode.toUnderConstruction(clientName, clientMachine);
 
     boolean added = false;
@@ -336,7 +336,6 @@ public class FSDirectory implements Closeable {
                             long modificationTime,
                             long atime,
                             long preferredBlockSize,
-                            boolean isLazyPersist,
                             boolean underConstruction,
                             String clientName,
                             String clientMachine,
@@ -345,12 +344,12 @@ public class FSDirectory implements Closeable {
     assert hasWriteLock();
     if (underConstruction) {
       newNode = newINodeFile(id, permissions, modificationTime,
-          modificationTime, replication, preferredBlockSize, storagePolicyId, isLazyPersist);
+          modificationTime, replication, preferredBlockSize, storagePolicyId);
       newNode.toUnderConstruction(clientName, clientMachine);
 
     } else {
       newNode = newINodeFile(id, permissions, modificationTime, atime,
-          replication, preferredBlockSize, storagePolicyId, isLazyPersist);
+          replication, preferredBlockSize, storagePolicyId);
     }
 
     try {
@@ -1038,6 +1037,20 @@ public class FSDirectory implements Closeable {
     }
     final int snapshotId = iip.getLatestSnapshotId();
     if (inode.isFile()) {
+      BlockStoragePolicy newPolicy = getBlockManager().getStoragePolicy(policyId);
+      if (newPolicy.isCopyOnCreateFile()) {
+        throw new HadoopIllegalArgumentException(
+            "Policy " + newPolicy + " cannot be set after file creation.");
+      }
+
+      BlockStoragePolicy currentPolicy =
+          getBlockManager().getStoragePolicy(inode.getLocalStoragePolicyID());
+
+      if (currentPolicy != null && currentPolicy.isCopyOnCreateFile()) {
+        throw new HadoopIllegalArgumentException(
+            "Existing policy " + currentPolicy.getName() +
+                " cannot be changed after file creation.");
+      }
       inode.asFile().setStoragePolicyID(policyId, snapshotId);
     } else if (inode.isDirectory()) {
       setDirStoragePolicy(inode.asDirectory(), policyId, snapshotId);  
@@ -2431,7 +2444,6 @@ public class FSDirectory implements Closeable {
         node.isDirectory(), 
         replication, 
         blocksize,
-        isLazyPersist,
         node.getModificationTime(snapshot),
         node.getAccessTime(snapshot),
         getPermissionForFileStatus(node, snapshot, isEncrypted),
@@ -2455,7 +2467,6 @@ public class FSDirectory implements Closeable {
     long size = 0; // length is zero for directories
     short replication = 0;
     long blocksize = 0;
-    boolean isLazyPersist = false;
     LocatedBlocks loc = null;
     final boolean isEncrypted;
     final FileEncryptionInfo feInfo = isRawPath ? null :
@@ -2465,7 +2476,6 @@ public class FSDirectory implements Closeable {
       size = fileNode.computeFileSize(snapshot);
       replication = fileNode.getFileReplication(snapshot);
       blocksize = fileNode.getPreferredBlockSize();
-      isLazyPersist = fileNode.getLazyPersistFlag();
 
       final boolean inSnapshot = snapshot != Snapshot.CURRENT_STATE_ID; 
       final boolean isUc = !inSnapshot && fileNode.isUnderConstruction();
@@ -2488,7 +2498,7 @@ public class FSDirectory implements Closeable {
 
     HdfsLocatedFileStatus status =
         new HdfsLocatedFileStatus(size, node.isDirectory(), replication,
-          blocksize, isLazyPersist, node.getModificationTime(snapshot),
+          blocksize, node.getModificationTime(snapshot),
           node.getAccessTime(snapshot),
           getPermissionForFileStatus(node, snapshot, isEncrypted),
           node.getUserName(snapshot), node.getGroupName(snapshot),

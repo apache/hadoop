@@ -222,9 +222,7 @@ public class FSImageFormatPBSnapshot {
               fileInPb.getAccessTime(), (short) fileInPb.getReplication(),
               fileInPb.getPreferredBlockSize(),
               (byte)fileInPb.getStoragePolicyID(), 
-              fileInPb.hasIsLazyPersist() ? fileInPb.getIsLazyPersist() : false,
               xAttrs);
-
         }
 
         FileDiff diff = new FileDiff(pbf.getSnapshotId(), copy, null,

@@ -2356,6 +2356,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
 
       src = FSDirectory.resolvePath(src, pathComponents, dir);
+      INode inode = dir.getINode(src);
 
       // get the corresponding policy and make sure the policy name is valid
       BlockStoragePolicy policy = blockManager.getStoragePolicy(policyName);
@@ -2741,7 +2742,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (parent != null && mkdirsRecursively(parent.toString(),
               permissions, true, now())) {
         newNode = dir.addFile(src, permissions, replication, blockSize,
-                isLazyPersist, holder, clientMachine);
+                              holder, clientMachine);
       }
 
       if (newNode == null) {
@@ -2756,6 +2757,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         newNode = dir.getInode(newNode.getId()).asFile();
       }
 
+      setNewINodeStoragePolicy(newNode, iip, isLazyPersist);
+
       // record file record in log, record new generation stamp
       getEditLog().logOpenFile(src, newNode, overwrite, logRetryEntry);
       if (NameNode.stateChangeLog.isDebugEnabled()) {
@@ -2767,6 +2770,37 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       NameNode.stateChangeLog.warn("DIR* NameSystem.startFile: " + src + " " +
           ie.getMessage());
       throw ie;
+    }
+  }
+
+  private void setNewINodeStoragePolicy(INodeFile inode,
+                                        INodesInPath iip,
+                                        boolean isLazyPersist)
+      throws IOException {
+
+    if (isLazyPersist) {
+      BlockStoragePolicy lpPolicy =
+          blockManager.getStoragePolicy("LAZY_PERSIST");
+
+      // Set LAZY_PERSIST storage policy if the flag was passed to
+      // CreateFile.
+      if (lpPolicy == null) {
+        throw new HadoopIllegalArgumentException(
+            "The LAZY_PERSIST storage policy has been disabled " +
+            "by the administrator.");
+      }
+      inode.setStoragePolicyID(lpPolicy.getId(),
+                                 iip.getLatestSnapshotId());
+    } else {
+      BlockStoragePolicy effectivePolicy =
+          blockManager.getStoragePolicy(inode.getStoragePolicyID());
+
+      if (effectivePolicy != null &&
+          effectivePolicy.isCopyOnCreateFile()) {
+        // Copy effective policy from ancestor directory to current file.
+        inode.setStoragePolicyID(effectivePolicy.getId(),
+                                 iip.getLatestSnapshotId());
+      }
     }
   }
 
@@ -2809,8 +2843,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           + src + " for client " + clientMachine);
       }
       INodeFile myFile = INodeFile.valueOf(inode, src, true);
+      final BlockStoragePolicy lpPolicy =
+          blockManager.getStoragePolicy("LAZY_PERSIST");
 
-      if (myFile.getLazyPersistFlag()) {
+      if (lpPolicy != null &&
+          lpPolicy.getId() == myFile.getStoragePolicyID()) {
         throw new UnsupportedOperationException(
             "Cannot append to lazy persist file " + src);
       }
@@ -5166,6 +5203,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throws SafeModeException, AccessControlException,
         UnresolvedLinkException, IOException {
 
+      BlockStoragePolicy lpPolicy = blockManager.getStoragePolicy("LAZY_PERSIST");
+
       List<BlockCollection> filesToDelete = new ArrayList<BlockCollection>();
 
       writeLock();
@@ -5176,7 +5215,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         while (it.hasNext()) {
           Block b = it.next();
           BlockInfo blockInfo = blockManager.getStoredBlock(b);
-          if (blockInfo.getBlockCollection().getLazyPersistFlag()) {
+          if (blockInfo.getBlockCollection().getStoragePolicyID() == lpPolicy.getId()) {
             filesToDelete.add(blockInfo.getBlockCollection());
           }
         }

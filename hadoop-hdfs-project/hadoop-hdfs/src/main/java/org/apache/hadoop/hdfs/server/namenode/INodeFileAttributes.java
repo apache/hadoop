@@ -32,8 +32,6 @@ public interface INodeFileAttributes extends INodeAttributes {
   /** @return preferred block size in bytes */
   public long getPreferredBlockSize();
 
-  public boolean getLazyPersistFlag();
-  
   /** @return the header as a long. */
   public long getHeaderLong();
 
@@ -49,10 +47,10 @@ public interface INodeFileAttributes extends INodeAttributes {
     public SnapshotCopy(byte[] name, PermissionStatus permissions,
         AclFeature aclFeature, long modificationTime, long accessTime,
         short replication, long preferredBlockSize, byte storagePolicyID,
-        boolean isTransient, XAttrFeature xAttrsFeature) {
+        XAttrFeature xAttrsFeature) {
       super(name, permissions, aclFeature, modificationTime, accessTime, 
           xAttrsFeature);
-      header = HeaderFormat.toLong(preferredBlockSize, replication, isTransient, storagePolicyID);
+      header = HeaderFormat.toLong(preferredBlockSize, replication, storagePolicyID);
     }
 
     public SnapshotCopy(INodeFile file) {

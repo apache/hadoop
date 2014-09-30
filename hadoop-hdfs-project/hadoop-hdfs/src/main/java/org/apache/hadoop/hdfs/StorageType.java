@@ -47,7 +47,13 @@ public enum StorageType {
 
   StorageType(boolean isTransient) { this.isTransient = isTransient; }
 
-  public boolean isMovable() { return isTransient == false; }
+  public boolean isTransient() {
+    return isTransient;
+  }
+
+  public boolean isMovable() {
+    return !isTransient;
+  }
 
   public static List<StorageType> asList() {
     return Arrays.asList(VALUES);
