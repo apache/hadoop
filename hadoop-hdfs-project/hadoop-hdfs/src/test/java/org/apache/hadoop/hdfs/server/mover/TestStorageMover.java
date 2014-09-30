@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.mover;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -27,12 +26,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.base.Joiner;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.ReconfigurationException;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -46,7 +43,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -512,6 +508,42 @@ public class TestStorageMover {
     LOG.info("\n\n\n\n================================================\n" +
         string + "\n" +
         "==================================================\n\n");
+  }
+
+  /**
+   * Run Mover with arguments specifying files and directories
+   */
+  @Test
+  public void testMoveSpecificPaths() throws Exception {
+    LOG.info("testMoveSpecificPaths");
+    final Path foo = new Path("/foo");
+    final Path barFile = new Path(foo, "bar");
+    final Path foo2 = new Path("/foo2");
+    final Path bar2File = new Path(foo2, "bar2");
+    Map<Path, BlockStoragePolicy> policyMap = Maps.newHashMap();
+    policyMap.put(foo, COLD);
+    policyMap.put(foo2, WARM);
+    NamespaceScheme nsScheme = new NamespaceScheme(Arrays.asList(foo, foo2),
+        Arrays.asList(barFile, bar2File), BLOCK_SIZE, null, policyMap);
+    ClusterScheme clusterScheme = new ClusterScheme(DEFAULT_CONF,
+        NUM_DATANODES, REPL, genStorageTypes(NUM_DATANODES), null);
+    MigrationTest test = new MigrationTest(clusterScheme, nsScheme);
+    test.setupCluster();
+
+    try {
+      test.prepareNamespace();
+      test.setStoragePolicy();
+
+      Map<URI, List<Path>> map = Mover.Cli.getNameNodePathsToMove(test.conf,
+          "-p", "/foo/bar", "/foo2");
+      int result = Mover.run(map, test.conf);
+      Assert.assertEquals(ExitStatus.SUCCESS.getExitCode(), result);
+
+      Thread.sleep(5000);
+      test.verify(true);
+    } finally {
+      test.shutdownCluster();
+    }
   }
 
   /**
