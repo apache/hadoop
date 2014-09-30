@@ -89,7 +89,7 @@ public class TestKMS {
     return file;
   }
 
-  public static abstract class KMSCallable implements Callable<Void> {
+  public static abstract class KMSCallable<T> implements Callable<T> {
     private URL kmsUrl;
 
     protected URL getKMSUrl() {
@@ -97,19 +97,27 @@ public class TestKMS {
     }
   }
 
-  protected void runServer(String keystore, String password, File confDir,
-      KMSCallable callable) throws Exception {
+  protected <T> T runServer(String keystore, String password, File confDir,
+      KMSCallable<T> callable) throws Exception {
+    return runServer(-1, keystore, password, confDir, callable);
+  }
+
+  protected <T> T runServer(int port, String keystore, String password, File confDir,
+      KMSCallable<T> callable) throws Exception {
     MiniKMS.Builder miniKMSBuilder = new MiniKMS.Builder().setKmsConfDir(confDir)
         .setLog4jConfFile("log4j.properties");
     if (keystore != null) {
       miniKMSBuilder.setSslConf(new File(keystore), password);
+    }
+    if (port > 0) {
+      miniKMSBuilder.setPort(port);
     }
     MiniKMS miniKMS = miniKMSBuilder.build();
     miniKMS.start();
     try {
       System.out.println("Test KMS running at: " + miniKMS.getKMSUrl());
       callable.kmsUrl = miniKMS.getKMSUrl();
-      callable.call();
+      return callable.call();
     } finally {
       miniKMS.stop();
     }
@@ -284,7 +292,7 @@ public class TestKMS {
 
     writeConf(testDir, conf);
 
-    runServer(keystore, password, testDir, new KMSCallable() {
+    runServer(keystore, password, testDir, new KMSCallable<Void>() {
       @Override
       public Void call() throws Exception {
         final Configuration conf = new Configuration();
@@ -351,7 +359,7 @@ public class TestKMS {
     conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "k6.ALL", "*");
     writeConf(confDir, conf);
 
-    runServer(null, null, confDir, new KMSCallable() {
+    runServer(null, null, confDir, new KMSCallable<Void>() {
       @Override
       public Void call() throws Exception {
         Date started = new Date();
@@ -616,7 +624,7 @@ public class TestKMS {
 
     writeConf(testDir, conf);
 
-    runServer(null, null, testDir, new KMSCallable() {
+    runServer(null, null, testDir, new KMSCallable<Void>() {
 
       @Override
       public Void call() throws Exception {
@@ -783,6 +791,92 @@ public class TestKMS {
   }
 
   @Test
+  public void testKMSRestart() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set("hadoop.security.authentication", "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+    final File testDir = getTestDir();
+    conf = createBaseKMSConf(testDir);
+    conf.set("hadoop.kms.authentication.kerberos.keytab",
+        keytab.getAbsolutePath());
+    conf.set("hadoop.kms.authentication.kerberos.principal", "HTTP/localhost");
+    conf.set("hadoop.kms.authentication.kerberos.name.rules", "DEFAULT");
+
+    for (KMSACLs.Type type : KMSACLs.Type.values()) {
+      conf.set(type.getAclConfigKey(), type.toString());
+    }
+    conf.set(KMSACLs.Type.CREATE.getAclConfigKey(),
+        KMSACLs.Type.CREATE.toString() + ",SET_KEY_MATERIAL");
+
+    conf.set(KMSACLs.Type.ROLLOVER.getAclConfigKey(),
+        KMSACLs.Type.ROLLOVER.toString() + ",SET_KEY_MATERIAL");
+
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "k0.ALL", "*");
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "k1.ALL", "*");
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "k2.ALL", "*");
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "k3.ALL", "*");
+
+    writeConf(testDir, conf);
+
+    KMSCallable<KeyProvider> c =
+        new KMSCallable<KeyProvider>() {
+      @Override
+      public KeyProvider call() throws Exception {
+        final Configuration conf = new Configuration();
+        conf.setInt(KeyProvider.DEFAULT_BITLENGTH_NAME, 128);
+        final URI uri = createKMSUri(getKMSUrl());
+
+        final KeyProvider kp =
+            doAs("SET_KEY_MATERIAL",
+                new PrivilegedExceptionAction<KeyProvider>() {
+                  @Override
+                  public KeyProvider run() throws Exception {
+                    KMSClientProvider kp = new KMSClientProvider(uri, conf);
+                        kp.createKey("k1", new byte[16],
+                            new KeyProvider.Options(conf));
+                    return kp;
+                  }
+                });
+        return kp;
+      }
+    };
+
+    final KeyProvider retKp =
+        runServer(null, null, testDir, c);
+
+    // Restart server (using the same port)
+    runServer(c.getKMSUrl().getPort(), null, null, testDir,
+        new KMSCallable<Void>() {
+          @Override
+          public Void call() throws Exception {
+            final Configuration conf = new Configuration();
+            conf.setInt(KeyProvider.DEFAULT_BITLENGTH_NAME, 128);
+            doAs("SET_KEY_MATERIAL",
+                new PrivilegedExceptionAction<Void>() {
+                  @Override
+                  public Void run() throws Exception {
+                    try {
+                      retKp.createKey("k2", new byte[16],
+                          new KeyProvider.Options(conf));
+                      Assert.fail("Should fail first time !!");
+                    } catch (IOException e) {
+                      String message = e.getMessage();
+                      Assert.assertTrue("Should be a 403 error : " + message,
+                          message.contains("403"));
+                    }
+                    retKp.createKey("k2", new byte[16],
+                        new KeyProvider.Options(conf));
+                    retKp.createKey("k3", new byte[16],
+                        new KeyProvider.Options(conf));
+                    return null;
+                  }
+                });
+            return null;
+          }
+        });
+  }
+
+  @Test
   public void testACLs() throws Exception {
     Configuration conf = new Configuration();
     conf.set("hadoop.security.authentication", "kerberos");
@@ -809,7 +903,7 @@ public class TestKMS {
 
     writeConf(testDir, conf);
 
-    runServer(null, null, testDir, new KMSCallable() {
+    runServer(null, null, testDir, new KMSCallable<Void>() {
       @Override
       public Void call() throws Exception {
         final Configuration conf = new Configuration();
@@ -1117,7 +1211,7 @@ public class TestKMS {
 
     writeConf(testDir, conf);
 
-    runServer(null, null, testDir, new KMSCallable() {
+    runServer(null, null, testDir, new KMSCallable<Void>() {
       @Override
       public Void call() throws Exception {
         final Configuration conf = new Configuration();
@@ -1201,7 +1295,7 @@ public class TestKMS {
 
     writeConf(testDir, conf);
 
-    runServer(null, null, testDir, new KMSCallable() {
+    runServer(null, null, testDir, new KMSCallable<Void>() {
       @Override
       public Void call() throws Exception {
         final Configuration conf = new Configuration();
@@ -1326,7 +1420,7 @@ public class TestKMS {
 
     writeConf(testDir, conf);
 
-    runServer(null, null, testDir, new KMSCallable() {
+    runServer(null, null, testDir, new KMSCallable<Void>() {
       @Override
       public Void call() throws Exception {
         final Configuration conf = new Configuration();
@@ -1398,7 +1492,7 @@ public class TestKMS {
 
     writeConf(testDir, conf);
 
-    runServer(null, null, testDir, new KMSCallable() {
+    runServer(null, null, testDir, new KMSCallable<Void>() {
       @Override
       public Void call() throws Exception {
         final Configuration conf = new Configuration();
