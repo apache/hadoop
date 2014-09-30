@@ -89,4 +89,7 @@
     HDFS-7159. Use block storage policy to set lazy persist preference.
     (Arpit Agarwal)
 
+    HDFS-7129. Metrics to track usage of memory for writes. (Xiaoyu Yao
+    via Arpit Agarwal)
+
 
