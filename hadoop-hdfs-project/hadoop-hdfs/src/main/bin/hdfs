@@ -49,6 +49,7 @@ function hadoop_usage
   echo "  snapshotDiff         diff two snapshots of a directory or diff the"
   echo "                       current directory contents with a snapshot"
   echo "  storagepolicies      get all the existing block storage policies"
+  echo "  version              print the version"
   echo "  zkfc                 run the ZK Failover Controller daemon"
   echo ""
   echo "Most commands print help when invoked w/o parameters."
@@ -219,6 +220,9 @@ case ${COMMAND} in
   ;;
   storagepolicies)
     CLASS=org.apache.hadoop.hdfs.tools.GetStoragePolicies
+  ;;
+  version)
+    CLASS=org.apache.hadoop.util.VersionInfo
   ;;
   zkfc)
     daemon="true"

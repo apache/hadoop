@@ -117,6 +117,12 @@ HDFS Commands Guide
 |                        | (no progress).
 *------------------------+---------------------------------------------+
 
+** <<<version>>>
+
+   Prints the version.
+
+   Usage: <<<hdfs version>>>
+
 * Administration Commands
 
    Commands useful for administrators of a hadoop cluster.
