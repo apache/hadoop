@@ -50,7 +50,7 @@ public class ContainerStatusPBImpl extends ContainerStatus {
     viaProto = true;
   }
   
-  public ContainerStatusProto getProto() {
+  public synchronized ContainerStatusProto getProto() {
       mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -90,7 +90,7 @@ public class ContainerStatusPBImpl extends ContainerStatus {
     }
   }
 
-  private void mergeLocalToProto() {
+  private synchronized void mergeLocalToProto() {
     if (viaProto) 
       maybeInitBuilder();
     mergeLocalToBuilder();
@@ -98,7 +98,7 @@ public class ContainerStatusPBImpl extends ContainerStatus {
     viaProto = true;
   }
 
-  private void maybeInitBuilder() {
+  private synchronized void maybeInitBuilder() {
     if (viaProto || builder == null) {
       builder = ContainerStatusProto.newBuilder(proto);
     }
@@ -107,7 +107,7 @@ public class ContainerStatusPBImpl extends ContainerStatus {
     
   
   @Override
-  public ContainerState getState() {
+  public synchronized ContainerState getState() {
     ContainerStatusProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasState()) {
       return null;
@@ -116,7 +116,7 @@ public class ContainerStatusPBImpl extends ContainerStatus {
   }
 
   @Override
-  public void setState(ContainerState state) {
+  public synchronized void setState(ContainerState state) {
     maybeInitBuilder();
     if (state == null) {
       builder.clearState();
@@ -125,7 +125,7 @@ public class ContainerStatusPBImpl extends ContainerStatus {
     builder.setState(convertToProtoFormat(state));
   }
   @Override
-  public ContainerId getContainerId() {
+  public synchronized ContainerId getContainerId() {
     ContainerStatusProtoOrBuilder p = viaProto ? proto : builder;
     if (this.containerId != null) {
       return this.containerId;
@@ -138,32 +138,32 @@ public class ContainerStatusPBImpl extends ContainerStatus {
   }
 
   @Override
-  public void setContainerId(ContainerId containerId) {
+  public synchronized void setContainerId(ContainerId containerId) {
     maybeInitBuilder();
     if (containerId == null) 
       builder.clearContainerId();
     this.containerId = containerId;
   }
   @Override
-  public int getExitStatus() {
+  public synchronized int getExitStatus() {
     ContainerStatusProtoOrBuilder p = viaProto ? proto : builder;
     return p.getExitStatus();
   }
 
   @Override
-  public void setExitStatus(int exitStatus) {
+  public synchronized void setExitStatus(int exitStatus) {
     maybeInitBuilder();
     builder.setExitStatus(exitStatus);
   }
 
   @Override
-  public String getDiagnostics() {
+  public synchronized String getDiagnostics() {
     ContainerStatusProtoOrBuilder p = viaProto ? proto : builder;
     return (p.getDiagnostics());    
   }
 
   @Override
-  public void setDiagnostics(String diagnostics) {
+  public synchronized void setDiagnostics(String diagnostics) {
     maybeInitBuilder();
     builder.setDiagnostics(diagnostics);
   }
