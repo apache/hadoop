@@ -279,9 +279,8 @@ public class FSDirectory implements Closeable {
 
   private static INodeFile newINodeFile(long id, PermissionStatus permissions,
       long mtime, long atime, short replication, long preferredBlockSize) {
-    return new INodeFile(id, null, permissions, mtime, atime,
-        BlockInfo.EMPTY_ARRAY, replication, preferredBlockSize,
-        (byte) 0);
+    return newINodeFile(id, permissions, mtime, atime, replication, preferredBlockSize,
+        (byte)0);
   }
 
   private static INodeFile newINodeFile(long id, PermissionStatus permissions,
