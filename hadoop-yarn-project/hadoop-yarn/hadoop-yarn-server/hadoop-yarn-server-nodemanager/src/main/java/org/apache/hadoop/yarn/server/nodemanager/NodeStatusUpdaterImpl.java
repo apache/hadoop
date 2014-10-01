@@ -558,7 +558,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             // when NM re-registers with RM.
             // Only remove the cleanedup containers that are acked
             removeCompletedContainersFromContext(response
-                  .getFinishedContainersPulledByAM());
+                  .getContainersToBeRemovedFromNM());
 
             lastHeartBeatID = response.getResponseId();
             List<ContainerId> containersToCleanup = response

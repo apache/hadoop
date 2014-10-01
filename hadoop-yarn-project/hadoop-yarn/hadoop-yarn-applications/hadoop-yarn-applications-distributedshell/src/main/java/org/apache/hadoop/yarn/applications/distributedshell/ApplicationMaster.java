@@ -668,6 +668,7 @@ public class ApplicationMaster {
           + ", completed=" + numCompletedContainers.get() + ", allocated="
           + numAllocatedContainers.get() + ", failed="
           + numFailedContainers.get();
+      LOG.info(appMessage);
       success = false;
     }
     try {

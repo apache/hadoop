@@ -692,7 +692,7 @@ public class TestNodeStatusUpdater {
       NodeHeartbeatResponse nhResponse =
           YarnServerBuilderUtils.newNodeHeartbeatResponse(heartBeatID,
             heartBeatNodeAction, null, null, null, null, 1000L);
-      nhResponse.addFinishedContainersPulledByAM(finishedContainersPulledByAM);
+      nhResponse.addContainersToBeRemovedFromNM(finishedContainersPulledByAM);
       return nhResponse;
     }
   }
