@@ -415,7 +415,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     return conn;
   }
 
-  private static <T> T call(HttpURLConnection conn, Map jsonOutput,
+  private <T> T call(HttpURLConnection conn, Map jsonOutput,
       int expectedResponse, Class<T> klass)
       throws IOException {
     T ret = null;
@@ -426,6 +426,14 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     } catch (IOException ex) {
       conn.getInputStream().close();
       throw ex;
+    }
+    if (conn.getResponseCode() == HttpURLConnection.HTTP_FORBIDDEN) {
+      // Ideally, this should happen only when there is an Authentication
+      // failure. Unfortunately, the AuthenticationFilter returns 403 when it
+      // cannot authenticate (Since a 401 requires Server to send
+      // WWW-Authenticate header as well)..
+      KMSClientProvider.this.authToken =
+          new DelegationTokenAuthenticatedURL.Token();
     }
     HttpExceptionUtils.validateResponse(conn, expectedResponse);
     if (APPLICATION_JSON_MIME.equalsIgnoreCase(conn.getContentType())

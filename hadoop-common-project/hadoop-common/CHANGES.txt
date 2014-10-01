@@ -339,6 +339,21 @@ Trunk (Unreleased)
 
     HADOOP-8589. ViewFs tests fail when tests and home dirs are nested (sanjay Radia)
 
+Release 2.7.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HADOOP-11156. DelegateToFileSystem should implement
+    getFsStatus(final Path f). (Zhihai Xu via wang)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -765,6 +780,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11130. NFS updateMaps OS check is reversed (brandonli)
 
+    HADOOP-11113. Namenode not able to reconnect to KMS after KMS restart.
+    (Arun Suresh via wang)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HADOOP-10734. Implement high-performance secure random number sources.
@@ -894,6 +912,14 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11049. javax package system class default is too broad (Sangjin Lee
     via jlowe)
+
+    HADOOP-11154. Update BUILDING.txt to state that CMake 3.0 or newer is
+    required on Mac. (cnauroth)
+
+    HADOOP-11145. TestFairCallQueue fails. (Akira AJISAKA via cnauroth)
+
+    HADOOP-11117 UGI HadoopLoginModule doesn't catch & wrap all
+    kerberos-related exceptions (stevel)
 
 Release 2.5.1 - 2014-09-05
 

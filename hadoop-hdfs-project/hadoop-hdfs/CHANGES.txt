@@ -258,6 +258,18 @@ Trunk (Unreleased)
 
     HDFS-6981. Fix DN upgrade with layout version change. (Arpit Agarwal)
 
+Release 2.7.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -760,6 +772,11 @@ Release 2.6.0 - UNRELEASED
     HDFS-7157. Using Time.now() for recording start/end time of reconfiguration
     tasks (Lei Xu via cmccabe)
 
+    HDFS-6664. HDFS permissions guide documentation states incorrect default 
+    group mapping class. (Ray Chiang via aw)
+
+    HDFS-4227. Document dfs.namenode.resource.*  (Daisuke Kobayashi via aw)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
@@ -991,10 +1008,7 @@ Release 2.6.0 - UNRELEASED
     HDFS-7140. Add a tool to list all the existing block storage policies.
     (jing9)
 
-    HDFS-6664. HDFS permissions guide documentation states incorrect default 
-    group mapping class. (Ray Chiang via aw)
-
-    HDFS-4227. Document dfs.namenode.resource.*  (Daisuke Kobayashi via aw)
+    HDFS-7167. NPE while running Mover if the given path is for a file. (jing9)
 
 Release 2.5.1 - 2014-09-05
 

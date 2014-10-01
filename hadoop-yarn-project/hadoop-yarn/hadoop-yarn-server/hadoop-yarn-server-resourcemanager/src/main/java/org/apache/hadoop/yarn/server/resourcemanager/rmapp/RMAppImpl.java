@@ -128,7 +128,8 @@ public class RMAppImpl implements RMApp, Recoverable {
   private long startTime;
   private long finishTime = 0;
   private long storedFinishTime = 0;
-  private RMAppAttempt currentAttempt;
+  // This field isn't protected by readlock now.
+  private volatile RMAppAttempt currentAttempt;
   private String queue;
   private EventHandler handler;
   private static final AppFinishedTransition FINISHED_TRANSITION =
@@ -376,6 +377,11 @@ public class RMAppImpl implements RMApp, Recoverable {
 
     this.attemptFailuresValidityInterval =
         submissionContext.getAttemptFailuresValidityInterval();
+    if (this.attemptFailuresValidityInterval > 0) {
+      LOG.info("The attemptFailuresValidityInterval for the application: "
+          + this.applicationId + " is " + this.attemptFailuresValidityInterval
+          + ".");
+    }
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();
@@ -433,16 +439,11 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   @Override
   public float getProgress() {
-    this.readLock.lock();
-
-    try {
-      if (this.currentAttempt != null) {
-        return this.currentAttempt.getProgress();
-      }
-      return 0;
-    } finally {
-      this.readLock.unlock();
+    RMAppAttempt attempt = this.currentAttempt;
+    if (attempt != null) {
+      return attempt.getProgress();
     }
+    return 0;
   }
 
   @Override
@@ -473,13 +474,7 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   @Override
   public RMAppAttempt getCurrentAppAttempt() {
-    this.readLock.lock();
-
-    try {
-      return this.currentAttempt;
-    } finally {
-      this.readLock.unlock();
-    }
+    return this.currentAttempt;
   }
 
   @Override
@@ -650,30 +645,20 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   @Override
   public String getTrackingUrl() {
-    this.readLock.lock();
-    
-    try {
-      if (this.currentAttempt != null) {
-        return this.currentAttempt.getTrackingUrl();
-      }
-      return null;
-    } finally {
-      this.readLock.unlock();
+    RMAppAttempt attempt = this.currentAttempt;
+    if (attempt != null) {
+      return attempt.getTrackingUrl();
     }
+    return null;
   }
 
   @Override
   public String getOriginalTrackingUrl() {
-    this.readLock.lock();
-    
-    try {
-      if (this.currentAttempt != null) {
-        return this.currentAttempt.getOriginalTrackingUrl();
-      }
-      return null;
-    } finally {
-      this.readLock.unlock();
+    RMAppAttempt attempt = this.currentAttempt;
+    if (attempt != null) {
+      return attempt.getOriginalTrackingUrl();
     }
+    return null;
   }
 
   @Override
@@ -1179,6 +1164,11 @@ public class RMAppImpl implements RMApp, Recoverable {
     @Override
     public RMAppState transition(RMAppImpl app, RMAppEvent event) {
       int numberOfFailure = app.getNumFailedAppAttempts();
+      LOG.info("The number of failed attempts"
+          + (app.attemptFailuresValidityInterval > 0 ? " in previous "
+              + app.attemptFailuresValidityInterval + " milliseconds " : " ")
+          + "is " + numberOfFailure + ". The max attempts is "
+          + app.maxAppAttempts);
       if (!app.submissionContext.getUnmanagedAM()
           && numberOfFailure < app.maxAppAttempts) {
         boolean transferStateFromPreviousAttempt;
@@ -1293,4 +1283,5 @@ public class RMAppImpl implements RMApp, Recoverable {
   public void setSystemClock(Clock clock) {
     this.systemClock = clock;
   }
+
 }

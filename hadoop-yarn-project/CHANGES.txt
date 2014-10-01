@@ -27,6 +27,18 @@ Trunk - Unreleased
 
     YARN-2525. yarn logs command gives error on trunk (Akira AJISAKA via aw)
 
+Release 2.7.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -268,6 +280,9 @@ Release 2.6.0 - UNRELEASED
     YARN-1769. CapacityScheduler: Improve reservations (Thomas Graves via
     jlowe)
 
+    YARN-2627. Added the info logs of attemptFailuresValidityInterval and number
+    of previous failed attempts. (Xuan Gong via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -467,6 +482,17 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2606. Application History Server tries to access hdfs before doing
     secure login (Mit Desai via jeagles)
+
+    YARN-2610. Hamlet should close table tags. (Ray Chiang via kasha)
+
+    YARN-2387. Resource Manager crashes with NPE due to lack of
+    synchronization (Mit Desai via jlowe)
+
+    YARN-2594. Potential deadlock in RM when querying 
+    ApplicationResourceUsageReport. (Wangda Tan via kasha)
+
+    YARN-2602. Fixed possible NPE in ApplicationHistoryManagerOnTimelineStore.
+    (Zhijie Shen via jianhe)
 
 Release 2.5.1 - 2014-09-05
 

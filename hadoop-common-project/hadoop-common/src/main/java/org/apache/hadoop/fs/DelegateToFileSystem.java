@@ -129,6 +129,11 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
   }
 
   @Override
+  public FsStatus getFsStatus(final Path f) throws IOException {
+    return fsImpl.getStatus(f);
+  }
+
+  @Override
   public FsServerDefaults getServerDefaults() throws IOException {
     return fsImpl.getServerDefaults();
   }
