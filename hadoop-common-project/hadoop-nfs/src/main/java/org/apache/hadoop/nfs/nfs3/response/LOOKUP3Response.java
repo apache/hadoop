@@ -62,8 +62,8 @@ public class LOOKUP3Response extends NFS3Response {
   }
 
   @Override
-  public XDR writeHeaderAndResponse(XDR out, int xid, Verifier verifier) {
-    super.writeHeaderAndResponse(out, xid, verifier);
+  public XDR serialize(XDR out, int xid, Verifier verifier) {
+    super.serialize(out, xid, verifier);
     if (this.status == Nfs3Status.NFS3_OK) {
       fileHandle.serialize(out);
       out.writeBoolean(true); // Attribute follows

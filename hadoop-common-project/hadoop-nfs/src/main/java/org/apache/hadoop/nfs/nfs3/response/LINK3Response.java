@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.nfs.nfs3.response;
 
+import org.apache.hadoop.nfs.nfs3.Nfs3FileAttributes;
+import org.apache.hadoop.nfs.nfs3.Nfs3Status;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.Verifier;
 
@@ -43,9 +45,17 @@ public class LINK3Response extends NFS3Response {
     return linkDirWcc;
   }
 
+  public static LINK3Response deserialize(XDR xdr) {
+    int status = xdr.readInt();
+    WccData fromDirWcc = WccData.deserialize(xdr);
+    WccData linkDirWcc = WccData.deserialize(xdr);
+    return new LINK3Response(status, fromDirWcc, linkDirWcc);
+  }
+
+
   @Override
-  public XDR writeHeaderAndResponse(XDR out, int xid, Verifier verifier) {
-    super.writeHeaderAndResponse(out, xid, verifier);
+  public XDR serialize(XDR out, int xid, Verifier verifier) {
+    super.serialize(out, xid, verifier);
     fromDirWcc.serialize(out);
     linkDirWcc.serialize(out);
     

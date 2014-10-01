@@ -2025,7 +2025,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       WccData fileWcc = new WccData(Nfs3Utils.getWccAttr(preOpAttr), postOpAttr);
       int status = mapErrorStatus(e);
       return new COMMIT3Response(status, fileWcc,
-        Nfs3Constant.WRITE_COMMIT_VERF);
+          Nfs3Constant.WRITE_COMMIT_VERF);
     }
   }
 
@@ -2163,7 +2163,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return;
     }
     // TODO: currently we just return VerifierNone
-    out = response.writeHeaderAndResponse(out, xid, new VerifierNone());
+    out = response.serialize(out, xid, new VerifierNone());
     ChannelBuffer buf = ChannelBuffers.wrappedBuffer(out.asReadOnlyWrap()
         .buffer());
     RpcResponse rsp = new RpcResponse(buf, info.remoteAddress());

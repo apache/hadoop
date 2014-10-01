@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.nfs.nfs3.response;
 
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -58,6 +60,19 @@ public class READDIR3Response extends NFS3Response {
 
     long getCookie() {
       return cookie;
+    }
+
+    static Entry3 deserialzie(XDR xdr) {
+      long fileId = xdr.readHyper();
+      String name = xdr.readString();
+      long cookie = xdr.readHyper();
+      return new Entry3(fileId, name, cookie);
+    }
+
+    void seralize(XDR xdr) {
+      xdr.writeLongAsHyper(getFileId());
+      xdr.writeString(getName());
+      xdr.writeLongAsHyper(getCookie());
     }
   }
 
@@ -104,9 +119,31 @@ public class READDIR3Response extends NFS3Response {
     return dirList;
   }
 
+  public static READDIR3Response deserialize(XDR xdr) {
+    int status = xdr.readInt();
+    xdr.readBoolean();
+    Nfs3FileAttributes postOpDirAttr = Nfs3FileAttributes.deserialize(xdr);
+    long cookieVerf = 0;
+    ArrayList<Entry3> entries = new ArrayList<Entry3>();
+    DirList3 dirList = null;
+
+    if (status == Nfs3Status.NFS3_OK) {
+      cookieVerf = xdr.readHyper();
+      while (xdr.readBoolean()) {
+        Entry3 e =  Entry3.deserialzie(xdr);
+        entries.add(e);
+      }
+      boolean eof = xdr.readBoolean();
+      Entry3[] allEntries = new Entry3[entries.size()];
+      entries.toArray(allEntries);
+      dirList = new DirList3(allEntries, eof);
+    }
+    return new READDIR3Response(status, postOpDirAttr, cookieVerf, dirList);
+  }
+
   @Override
-  public XDR writeHeaderAndResponse(XDR xdr, int xid, Verifier verifier) {
-    super.writeHeaderAndResponse(xdr, xid, verifier);
+  public XDR serialize(XDR xdr, int xid, Verifier verifier) {
+    super.serialize(xdr, xid, verifier);
     xdr.writeBoolean(true); // Attributes follow
     postOpDirAttr.serialize(xdr);
 
@@ -114,9 +151,7 @@ public class READDIR3Response extends NFS3Response {
       xdr.writeLongAsHyper(cookieVerf);
       for (Entry3 e : dirList.entries) {
         xdr.writeBoolean(true); // Value follows
-        xdr.writeLongAsHyper(e.getFileId());
-        xdr.writeString(e.getName());
-        xdr.writeLongAsHyper(e.getCookie());
+        e.seralize(xdr);
       }
 
       xdr.writeBoolean(false);

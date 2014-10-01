@@ -123,7 +123,7 @@ public class WriteManager {
     byte[] data = request.getData().array();
     if (data.length < count) {
       WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3ERR_INVAL);
-      Nfs3Utils.writeChannel(channel, response.writeHeaderAndResponse(
+      Nfs3Utils.writeChannel(channel, response.serialize(
           new XDR(), xid, new VerifierNone()), xid);
       return;
     }
@@ -169,7 +169,7 @@ public class WriteManager {
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3ERR_IO,
             fileWcc, count, request.getStableHow(),
             Nfs3Constant.WRITE_COMMIT_VERF);
-        Nfs3Utils.writeChannel(channel, response.writeHeaderAndResponse(
+        Nfs3Utils.writeChannel(channel, response.serialize(
             new XDR(), xid, new VerifierNone()), xid);
         return;
       }
@@ -192,7 +192,7 @@ public class WriteManager {
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3ERR_JUKEBOX,
             fileWcc, 0, request.getStableHow(), Nfs3Constant.WRITE_COMMIT_VERF);
         Nfs3Utils.writeChannel(channel,
-            response.writeHeaderAndResponse(new XDR(), xid, new VerifierNone()),
+            response.serialize(new XDR(), xid, new VerifierNone()),
             xid);
         return;
       }
@@ -297,7 +297,7 @@ public class WriteManager {
     COMMIT3Response response = new COMMIT3Response(status, fileWcc,
         Nfs3Constant.WRITE_COMMIT_VERF);
     Nfs3Utils.writeChannelCommit(channel,
-        response.writeHeaderAndResponse(new XDR(), xid, new VerifierNone()),
+        response.serialize(new XDR(), xid, new VerifierNone()),
         xid);
   }
 

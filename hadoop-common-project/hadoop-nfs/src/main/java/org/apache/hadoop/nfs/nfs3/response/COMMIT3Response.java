@@ -47,9 +47,19 @@ public class COMMIT3Response extends NFS3Response {
     return verf;
   }
 
+  public static COMMIT3Response deserialize(XDR xdr) {
+    int status = xdr.readInt();
+    long verf = 0;
+    WccData fileWcc = WccData.deserialize(xdr);
+    if (status == Nfs3Status.NFS3_OK) {
+      verf = xdr.readHyper();
+    }
+    return new COMMIT3Response(status, fileWcc, verf);
+  }
+
   @Override
-  public XDR writeHeaderAndResponse(XDR out, int xid, Verifier verifier) {
-    super.writeHeaderAndResponse(out, xid, verifier);
+  public XDR serialize(XDR out, int xid, Verifier verifier) {
+    super.serialize(out, xid, verifier);
     fileWcc.serialize(out);
     if (getStatus() == Nfs3Status.NFS3_OK) {
       out.writeLongAsHyper(verf);

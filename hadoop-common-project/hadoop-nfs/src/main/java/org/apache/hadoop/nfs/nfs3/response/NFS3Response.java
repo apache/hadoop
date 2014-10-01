@@ -39,12 +39,12 @@ public class NFS3Response {
   public void setStatus(int status) {
     this.status = status;
   }
-  
+
   /**
    * Write the response, along with the rpc header (including verifier), to the
    * XDR.
    */
-  public XDR writeHeaderAndResponse(XDR out, int xid, Verifier verifier) {
+  public XDR serialize(XDR out, int xid, Verifier verifier) {
     RpcAcceptedReply reply = RpcAcceptedReply.getAcceptInstance(xid, verifier);
     reply.write(out);
     out.writeInt(this.getStatus());
