@@ -687,20 +687,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
       // A new allocate means the AM received the previously sent
       // finishedContainers. We can ack this to NM now
-      for (NodeId nodeId:finishedContainersSentToAM.keySet()) {
-
-        // Clear and get current values
-        List<ContainerStatus> currentSentContainers =
-            finishedContainersSentToAM
-            .put(nodeId, new ArrayList<ContainerStatus>());
-        List<ContainerId> containerIdList = new ArrayList<ContainerId>
-            (currentSentContainers.size());
-        for (ContainerStatus containerStatus:currentSentContainers) {
-          containerIdList.add(containerStatus.getContainerId());
-        }
-        eventHandler.handle(new RMNodeFinishedContainersPulledByAMEvent(
-            nodeId, containerIdList));
-      }
+      sendFinishedContainersToNM();
 
       // Mark every containerStatus as being sent to AM though we may return
       // only the ones that belong to the current attempt
@@ -1592,14 +1579,12 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       ContainerStatus containerStatus =
           containerFinishedEvent.getContainerStatus();
 
-      // Add all finished containers so that they can be acked to NM
-      addJustFinishedContainer(appAttempt, containerFinishedEvent);
-
       // Is this container the AmContainer? If the finished container is same as
       // the AMContainer, AppAttempt fails
       if (appAttempt.masterContainer != null
           && appAttempt.masterContainer.getId().equals(
               containerStatus.getContainerId())) {
+        appAttempt.sendAMContainerToNM(appAttempt, containerFinishedEvent);
 
         // Remember the follow up transition and save the final attempt state.
         appAttempt.rememberTargetTransitionsAndStoreState(event,
@@ -1607,7 +1592,43 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         return RMAppAttemptState.FINAL_SAVING;
       }
 
+      // Add all finished containers so that they can be acked to NM
+      addJustFinishedContainer(appAttempt, containerFinishedEvent);
       return this.currentState;
+    }
+  }
+
+
+  // Ack NM to remove finished containers from context.
+  private void sendFinishedContainersToNM() {
+    for (NodeId nodeId : finishedContainersSentToAM.keySet()) {
+
+      // Clear and get current values
+      List<ContainerStatus> currentSentContainers =
+          finishedContainersSentToAM.put(nodeId,
+            new ArrayList<ContainerStatus>());
+      List<ContainerId> containerIdList =
+          new ArrayList<ContainerId>(currentSentContainers.size());
+      for (ContainerStatus containerStatus : currentSentContainers) {
+        containerIdList.add(containerStatus.getContainerId());
+      }
+      eventHandler.handle(new RMNodeFinishedContainersPulledByAMEvent(nodeId,
+        containerIdList));
+    }
+  }
+
+  // Add am container to the list so that am container instance will be
+  // removed from NMContext.
+  private void sendAMContainerToNM(RMAppAttemptImpl appAttempt,
+      RMAppAttemptContainerFinishedEvent containerFinishedEvent) {
+    NodeId nodeId = containerFinishedEvent.getNodeId();
+    finishedContainersSentToAM.putIfAbsent(nodeId,
+      new ArrayList<ContainerStatus>());
+    appAttempt.finishedContainersSentToAM.get(nodeId).add(
+      containerFinishedEvent.getContainerStatus());
+    if (!appAttempt.getSubmissionContext()
+      .getKeepContainersAcrossApplicationAttempts()) {
+      appAttempt.sendFinishedContainersToNM();
     }
   }
 
@@ -1661,16 +1682,16 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       ContainerStatus containerStatus =
           containerFinishedEvent.getContainerStatus();
 
-      // Add all finished containers so that they can be acked to NM.
-      addJustFinishedContainer(appAttempt, containerFinishedEvent);
-
       // Is this container the ApplicationMaster container?
       if (appAttempt.masterContainer.getId().equals(
           containerStatus.getContainerId())) {
         new FinalTransition(RMAppAttemptState.FINISHED).transition(
             appAttempt, containerFinishedEvent);
+        appAttempt.sendAMContainerToNM(appAttempt, containerFinishedEvent);
         return RMAppAttemptState.FINISHED;
       }
+      // Add all finished containers so that they can be acked to NM.
+      addJustFinishedContainer(appAttempt, containerFinishedEvent);
 
       return RMAppAttemptState.FINISHING;
     }
@@ -1686,14 +1707,13 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       ContainerStatus containerStatus =
           containerFinishedEvent.getContainerStatus();
 
-      // Add all finished containers so that they can be acked to NM.
-      addJustFinishedContainer(appAttempt, containerFinishedEvent);
-
       // If this is the AM container, it means the AM container is finished,
       // but we are not yet acknowledged that the final state has been saved.
       // Thus, we still return FINAL_SAVING state here.
       if (appAttempt.masterContainer.getId().equals(
         containerStatus.getContainerId())) {
+        appAttempt.sendAMContainerToNM(appAttempt, containerFinishedEvent);
+
         if (appAttempt.targetedFinalState.equals(RMAppAttemptState.FAILED)
             || appAttempt.targetedFinalState.equals(RMAppAttemptState.KILLED)) {
           // ignore Container_Finished Event if we were supposed to reach
@@ -1708,6 +1728,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
             appAttempt.eventCausingFinalSaving), RMAppAttemptState.FINISHED);
         return;
       }
+
+      // Add all finished containers so that they can be acked to NM.
+      addJustFinishedContainer(appAttempt, containerFinishedEvent);
     }
   }
 

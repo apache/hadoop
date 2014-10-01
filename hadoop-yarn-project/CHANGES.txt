@@ -470,6 +470,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2602. Fixed possible NPE in ApplicationHistoryManagerOnTimelineStore.
     (Zhijie Shen via jianhe)
 
+    YARN-2630. Prevented previous AM container status from being acquired by the
+    current restarted AM. (Jian He via zjshen) 
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
