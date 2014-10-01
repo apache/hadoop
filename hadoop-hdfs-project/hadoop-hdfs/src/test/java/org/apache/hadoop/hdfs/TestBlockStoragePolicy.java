@@ -69,7 +69,7 @@ public class TestBlockStoragePolicy {
   static final byte COLD = (byte) 4;
   static final byte WARM = (byte) 8;
   static final byte HOT  = (byte) 12;
-
+  static final byte LAZY_PERSIST  = (byte) 15;
 
   @Test (timeout=300000)
   public void testConfigKeyEnabled() throws IOException {
@@ -116,6 +116,9 @@ public class TestBlockStoragePolicy {
     expectedPolicyStrings.put(HOT,
         "BlockStoragePolicy{HOT:12, storageTypes=[DISK], " +
             "creationFallbacks=[], replicationFallbacks=[ARCHIVE]}");
+    expectedPolicyStrings.put(LAZY_PERSIST,
+        "BlockStoragePolicy{LAZY_PERSIST:15, storageTypes=[RAM_DISK, DISK], " +
+            "creationFallbacks=[DISK], replicationFallbacks=[DISK]}");
 
     for(byte i = 1; i < 16; i++) {
       final BlockStoragePolicy policy = POLICY_SUITE.getPolicy(i); 
@@ -1141,7 +1144,7 @@ public class TestBlockStoragePolicy {
     final DistributedFileSystem fs = cluster.getFileSystem();
     try {
       BlockStoragePolicy[] policies = fs.getStoragePolicies();
-      Assert.assertEquals(3, policies.length);
+      Assert.assertEquals(4, policies.length);
       Assert.assertEquals(POLICY_SUITE.getPolicy(COLD).toString(),
           policies[0].toString());
       Assert.assertEquals(POLICY_SUITE.getPolicy(WARM).toString(),

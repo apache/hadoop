@@ -92,4 +92,5 @@
     HDFS-7129. Metrics to track usage of memory for writes. (Xiaoyu Yao
     via Arpit Agarwal)
 
+    HDFS-7171. Fix Jenkins failures in HDFS-6581 branch. (Arpit Agarwal)
 
