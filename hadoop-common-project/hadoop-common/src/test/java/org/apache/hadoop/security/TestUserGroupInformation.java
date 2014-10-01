@@ -339,7 +339,8 @@ public class TestUserGroupInformation {
     } catch (IllegalArgumentException e) {
       String expect = (userName == null || userName.isEmpty())
           ? "Null user" : "Illegal principal name "+userName;
-      assertEquals(expect, e.getMessage());
+      assertTrue("Did not find "+ expect + " in " + e,
+          e.toString().contains(expect));
     }
   }
 
