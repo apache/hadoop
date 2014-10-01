@@ -112,8 +112,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private final Set<ContainerId> containersToClean = new TreeSet<ContainerId>(
       new ContainerIdComparator());
 
-  /* set of containers that were notified to AM about their completion */
-  private final Set<ContainerId> finishedContainersPulledByAM =
+  /*
+   * set of containers to notify NM to remove them from its context. Currently,
+   * this includes containers that were notified to AM about their completion
+   */
+  private final Set<ContainerId> containersToBeRemovedFromNM =
       new HashSet<ContainerId>();
 
   /* the list of applications that have finished and need to be purged */
@@ -157,7 +160,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
          RMNodeEventType.CLEANUP_CONTAINER, new CleanUpContainerTransition())
      .addTransition(NodeState.RUNNING, NodeState.RUNNING,
          RMNodeEventType.FINISHED_CONTAINERS_PULLED_BY_AM,
-         new FinishedContainersPulledByAMTransition())
+         new AddContainersToBeRemovedFromNMTransition())
      .addTransition(NodeState.RUNNING, NodeState.RUNNING,
          RMNodeEventType.RECONNECTED, new ReconnectNodeTransition())
      .addTransition(NodeState.RUNNING, NodeState.RUNNING,
@@ -174,7 +177,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
          new UpdateNodeResourceWhenUnusableTransition())
      .addTransition(NodeState.DECOMMISSIONED, NodeState.DECOMMISSIONED,
          RMNodeEventType.FINISHED_CONTAINERS_PULLED_BY_AM,
-         new FinishedContainersPulledByAMTransition())
+         new AddContainersToBeRemovedFromNMTransition())
 
      //Transitions from LOST state
      .addTransition(NodeState.LOST, NodeState.LOST,
@@ -182,7 +185,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
          new UpdateNodeResourceWhenUnusableTransition())
      .addTransition(NodeState.LOST, NodeState.LOST,
          RMNodeEventType.FINISHED_CONTAINERS_PULLED_BY_AM,
-         new FinishedContainersPulledByAMTransition())
+         new AddContainersToBeRemovedFromNMTransition())
 
      //Transitions from UNHEALTHY state
      .addTransition(NodeState.UNHEALTHY,
@@ -208,7 +211,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
          RMNodeEventType.RESOURCE_UPDATE, new UpdateNodeResourceWhenUnusableTransition())
      .addTransition(NodeState.UNHEALTHY, NodeState.UNHEALTHY,
          RMNodeEventType.FINISHED_CONTAINERS_PULLED_BY_AM,
-         new FinishedContainersPulledByAMTransition())
+         new AddContainersToBeRemovedFromNMTransition())
 
      // create the topology tables
      .installTopology(); 
@@ -382,11 +385,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       response.addAllContainersToCleanup(
           new ArrayList<ContainerId>(this.containersToClean));
       response.addAllApplicationsToCleanup(this.finishedApplications);
-      response.addFinishedContainersPulledByAM(
-          new ArrayList<ContainerId>(this.finishedContainersPulledByAM));
+      response.addContainersToBeRemovedFromNM(
+          new ArrayList<ContainerId>(this.containersToBeRemovedFromNM));
       this.containersToClean.clear();
       this.finishedApplications.clear();
-      this.finishedContainersPulledByAM.clear();
+      this.containersToBeRemovedFromNM.clear();
     } finally {
       this.writeLock.unlock();
     }
@@ -659,12 +662,12 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     }
   }
 
-  public static class FinishedContainersPulledByAMTransition implements
+  public static class AddContainersToBeRemovedFromNMTransition implements
       SingleArcTransition<RMNodeImpl, RMNodeEvent> {
 
     @Override
     public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
-      rmNode.finishedContainersPulledByAM.addAll(((
+      rmNode.containersToBeRemovedFromNM.addAll(((
           RMNodeFinishedContainersPulledByAMEvent) event).getContainers());
     }
   }

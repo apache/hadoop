@@ -40,13 +40,14 @@ import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 
 
     
-public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponseProto> implements NodeHeartbeatResponse {
+public class NodeHeartbeatResponsePBImpl extends
+    ProtoBase<NodeHeartbeatResponseProto> implements NodeHeartbeatResponse {
   NodeHeartbeatResponseProto proto = NodeHeartbeatResponseProto.getDefaultInstance();
   NodeHeartbeatResponseProto.Builder builder = null;
   boolean viaProto = false;
   
   private List<ContainerId> containersToCleanup = null;
-  private List<ContainerId> finishedContainersPulledByAM = null;
+  private List<ContainerId> containersToBeRemovedFromNM = null;
   private List<ApplicationId> applicationsToCleanup = null;
   private MasterKey containerTokenMasterKey = null;
   private MasterKey nmTokenMasterKey = null;
@@ -74,8 +75,8 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
     if (this.applicationsToCleanup != null) {
       addApplicationsToCleanupToProto();
     }
-    if (this.finishedContainersPulledByAM != null) {
-      addFinishedContainersPulledByAMToProto();
+    if (this.containersToBeRemovedFromNM != null) {
+      addContainersToBeRemovedFromNMToProto();
     }
     if (this.containerTokenMasterKey != null) {
       builder.setContainerTokenMasterKey(
@@ -204,9 +205,9 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
   }
 
   @Override
-  public List<ContainerId> getFinishedContainersPulledByAM() {
-    initFinishedContainersPulledByAM();
-    return this.finishedContainersPulledByAM;
+  public List<ContainerId> getContainersToBeRemovedFromNM() {
+    initContainersToBeRemovedFromNM();
+    return this.containersToBeRemovedFromNM;
   }
 
   private void initContainersToCleanup() {
@@ -222,16 +223,16 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
     }
   }
 
-  private void initFinishedContainersPulledByAM() {
-    if (this.finishedContainersPulledByAM != null) {
+  private void initContainersToBeRemovedFromNM() {
+    if (this.containersToBeRemovedFromNM != null) {
       return;
     }
     NodeHeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
-    List<ContainerIdProto> list = p.getFinishedContainersPulledByAmList();
-    this.finishedContainersPulledByAM = new ArrayList<ContainerId>();
+    List<ContainerIdProto> list = p.getContainersToBeRemovedFromNmList();
+    this.containersToBeRemovedFromNM = new ArrayList<ContainerId>();
 
     for (ContainerIdProto c : list) {
-      this.finishedContainersPulledByAM.add(convertFromProtoFormat(c));
+      this.containersToBeRemovedFromNM.add(convertFromProtoFormat(c));
     }
   }
 
@@ -245,12 +246,12 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
   }
 
   @Override
-  public void addFinishedContainersPulledByAM(
-      final List<ContainerId> finishedContainersPulledByAM) {
-    if (finishedContainersPulledByAM == null)
+  public void
+      addContainersToBeRemovedFromNM(final List<ContainerId> containers) {
+    if (containers == null)
       return;
-    initFinishedContainersPulledByAM();
-    this.finishedContainersPulledByAM.addAll(finishedContainersPulledByAM);
+    initContainersToBeRemovedFromNM();
+    this.containersToBeRemovedFromNM.addAll(containers);
   }
 
   private void addContainersToCleanupToProto() {
@@ -288,10 +289,10 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
     builder.addAllContainersToCleanup(iterable);
   }
 
-  private void addFinishedContainersPulledByAMToProto() {
+  private void addContainersToBeRemovedFromNMToProto() {
     maybeInitBuilder();
-    builder.clearFinishedContainersPulledByAm();
-    if (finishedContainersPulledByAM == null)
+    builder.clearContainersToBeRemovedFromNm();
+    if (containersToBeRemovedFromNM == null)
       return;
     Iterable<ContainerIdProto> iterable = new Iterable<ContainerIdProto>() {
 
@@ -299,7 +300,7 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
       public Iterator<ContainerIdProto> iterator() {
         return new Iterator<ContainerIdProto>() {
 
-          Iterator<ContainerId> iter = finishedContainersPulledByAM.iterator();
+          Iterator<ContainerId> iter = containersToBeRemovedFromNM.iterator();
 
           @Override
           public boolean hasNext() {
@@ -320,7 +321,7 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
 
       }
     };
-    builder.addAllFinishedContainersPulledByAm(iterable);
+    builder.addAllContainersToBeRemovedFromNm(iterable);
   }
 
   @Override

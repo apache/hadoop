@@ -58,7 +58,7 @@ message NodeHeartbeatResponseProto {
   repeated ApplicationIdProto applications_to_cleanup = 6;
   optional int64 nextHeartBeatInterval = 7;
   optional string diagnostics_message = 8;
-  repeated ContainerIdProto finished_containers_pulled_by_am = 9;
+  repeated ContainerIdProto containers_to_be_removed_from_nm = 9;
 }
 
 message NMContainerStatusProto {
