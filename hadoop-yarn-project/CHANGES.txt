@@ -5,6 +5,9 @@ Release 2.7.0 - UNRELEASED
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
+  
+    YARN-2179. [YARN-1492] Initial cache manager structure and context. 
+    (Chris Trezzo via kasha) 
 
   IMPROVEMENTS
 

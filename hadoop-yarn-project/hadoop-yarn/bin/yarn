@@ -66,6 +66,7 @@ function print_usage(){
   echo "  nodemanager                           run a nodemanager on each slave"
   echo "  timelineserver                        run the timeline server"
   echo "  rmadmin                               admin tools"
+  echo "  sharedcachemanager                    run the SharedCacheManager daemon"
   echo "  version                               print the version"
   echo "  jar <jar>                             run a jar file"
   echo "  application                           prints application(s)"
