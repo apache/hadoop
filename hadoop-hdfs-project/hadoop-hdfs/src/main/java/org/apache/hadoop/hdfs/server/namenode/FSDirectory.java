@@ -278,8 +278,16 @@ public class FSDirectory implements Closeable {
 
   private static INodeFile newINodeFile(long id, PermissionStatus permissions,
       long mtime, long atime, short replication, long preferredBlockSize) {
+    return newINodeFile(id, permissions, mtime, atime, replication, preferredBlockSize,
+        (byte)0);
+  }
+
+  private static INodeFile newINodeFile(long id, PermissionStatus permissions,
+      long mtime, long atime, short replication, long preferredBlockSize,
+      byte storagePolicyId) {
     return new INodeFile(id, null, permissions, mtime, atime,
-        BlockInfo.EMPTY_ARRAY, replication, preferredBlockSize, (byte)0);
+        BlockInfo.EMPTY_ARRAY, replication, preferredBlockSize,
+        storagePolicyId);
   }
 
   /**
@@ -329,17 +337,18 @@ public class FSDirectory implements Closeable {
                             long preferredBlockSize,
                             boolean underConstruction,
                             String clientName,
-                            String clientMachine) {
+                            String clientMachine,
+                            byte storagePolicyId) {
     final INodeFile newNode;
     assert hasWriteLock();
     if (underConstruction) {
       newNode = newINodeFile(id, permissions, modificationTime,
-          modificationTime, replication, preferredBlockSize);
+          modificationTime, replication, preferredBlockSize, storagePolicyId);
       newNode.toUnderConstruction(clientName, clientMachine);
 
     } else {
       newNode = newINodeFile(id, permissions, modificationTime, atime,
-          replication, preferredBlockSize);
+          replication, preferredBlockSize, storagePolicyId);
     }
 
     try {

@@ -366,7 +366,7 @@ public class FSEditLogLoader {
             addCloseOp.xAttrs,
             replication, addCloseOp.mtime, addCloseOp.atime,
             addCloseOp.blockSize, true, addCloseOp.clientName,
-            addCloseOp.clientMachine);
+            addCloseOp.clientMachine, addCloseOp.storagePolicyId);
         fsNamesys.leaseManager.addLease(addCloseOp.clientName, path);
 
         // add the op into retry cache if necessary
