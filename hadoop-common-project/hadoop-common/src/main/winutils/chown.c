@@ -63,11 +63,11 @@ static DWORD ChangeFileOwnerBySid(__in LPCWSTR path,
   // SID is not contained in the caller's token, and have the SE_GROUP_OWNER
   // permission enabled.
   //
-  if (!EnablePrivilege(L"SeTakeOwnershipPrivilege"))
+  if (EnablePrivilege(L"SeTakeOwnershipPrivilege") != ERROR_SUCCESS)
   {
     fwprintf(stdout, L"INFO: The user does not have SeTakeOwnershipPrivilege.\n");
   }
-  if (!EnablePrivilege(L"SeRestorePrivilege"))
+  if (EnablePrivilege(L"SeRestorePrivilege") != ERROR_SUCCESS)
   {
     fwprintf(stdout, L"INFO: The user does not have SeRestorePrivilege.\n");
   }

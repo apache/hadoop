@@ -17,6 +17,8 @@
 
 #pragma comment(lib, "authz.lib")
 #pragma comment(lib, "netapi32.lib")
+#pragma comment(lib, "Secur32.lib")
+#pragma comment(lib, "Userenv.lib")
 #include "winutils.h"
 #include <authz.h>
 #include <sddl.h>
@@ -797,7 +799,6 @@ DWORD FindFileOwnerAndPermission(
   __out_opt PINT pMask)
 {
   DWORD dwRtnCode = 0;
-
   PSECURITY_DESCRIPTOR pSd = NULL;
 
   PSID psidOwner = NULL;
@@ -1638,11 +1639,12 @@ GetLocalGroupsForUserEnd:
 //  to the process's access token.
 //
 // Returns:
-//	TRUE: on success
+//  ERROR_SUCCESS on success
+//  GetLastError() on error
 //
 // Notes:
 //
-BOOL EnablePrivilege(__in LPCWSTR privilegeName)
+DWORD EnablePrivilege(__in LPCWSTR privilegeName)
 {
   HANDLE hToken = INVALID_HANDLE_VALUE;
   TOKEN_PRIVILEGES tp = { 0 };
@@ -1651,28 +1653,31 @@ BOOL EnablePrivilege(__in LPCWSTR privilegeName)
   if (!OpenProcessToken(GetCurrentProcess(),
     TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken))
   {
-    ReportErrorCode(L"OpenProcessToken", GetLastError());
-    return FALSE;
+    dwErrCode = GetLastError();
+    ReportErrorCode(L"OpenProcessToken", dwErrCode);
+    return dwErrCode;
   }
 
   tp.PrivilegeCount = 1;
   if (!LookupPrivilegeValueW(NULL,
     privilegeName, &(tp.Privileges[0].Luid)))
   {
-    ReportErrorCode(L"LookupPrivilegeValue", GetLastError());
+    dwErrCode = GetLastError();
+    ReportErrorCode(L"LookupPrivilegeValue", dwErrCode);
     CloseHandle(hToken);
-    return FALSE;
+    return dwErrCode;
   }
   tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
 
   // As stated on MSDN, we need to use GetLastError() to check if
   // AdjustTokenPrivileges() adjusted all of the specified privileges.
   //
-  AdjustTokenPrivileges(hToken, FALSE, &tp, 0, NULL, NULL);
+  if( !AdjustTokenPrivileges(hToken, FALSE, &tp, 0, NULL, NULL) ) {
   dwErrCode = GetLastError();
+  }
   CloseHandle(hToken);
 
-  return dwErrCode == ERROR_SUCCESS;
+  return dwErrCode;
 }
 
 //----------------------------------------------------------------------------
@@ -1716,9 +1721,6 @@ void ReportErrorCode(LPCWSTR func, DWORD err)
 // Description:
 //  Given an address, get the file name of the library from which it was loaded.
 //
-// Returns:
-//  None
-//
 // Notes:
 // - The function allocates heap memory and points the filename out parameter to
 //   the newly allocated memory, which will contain the name of the file.
@@ -1756,4 +1758,291 @@ cleanup:
     free(*filename);
     *filename = NULL;
   }
+}
+
+// Function: AssignLsaString
+//
+// Description:
+//  fills in values of LSA_STRING struct to point to a string buffer
+//
+// Returns:
+//  None
+//
+//  IMPORTANT*** strBuf is not copied. It must be globally immutable
+//
+void AssignLsaString(__inout LSA_STRING * target, __in const char *strBuf)
+{
+  target->Length = (USHORT)(sizeof(char)*strlen(strBuf));
+  target->MaximumLength = target->Length;
+  target->Buffer = (char *)(strBuf);
+}
+
+//----------------------------------------------------------------------------
+// Function: RegisterWithLsa
+//
+// Description:
+//  Registers with local security authority and sets handle for use in later LSA
+//  operations
+//
+// Returns:
+//  ERROR_SUCCESS on success
+//  Other error code on failure
+//
+// Notes:
+//
+DWORD RegisterWithLsa(__in const char *logonProcessName, __out HANDLE * lsaHandle) 
+{
+  LSA_STRING processName; 
+  LSA_OPERATIONAL_MODE o_mode; // never useful as per msdn docs
+  NTSTATUS registerStatus;
+  *lsaHandle = 0;
+  
+  AssignLsaString(&processName, logonProcessName);
+  registerStatus = LsaRegisterLogonProcess(&processName, lsaHandle, &o_mode); 
+  
+  return LsaNtStatusToWinError( registerStatus );
+}
+
+//----------------------------------------------------------------------------
+// Function: UnregisterWithLsa
+//
+// Description:
+//  Closes LSA handle allocated by RegisterWithLsa()
+//
+// Returns:
+//  None
+//
+// Notes:
+//
+void UnregisterWithLsa(__in HANDLE lsaHandle)
+{
+  LsaClose(lsaHandle);
+}
+
+//----------------------------------------------------------------------------
+// Function: LookupKerberosAuthenticationPackageId
+//
+// Description:
+//  Looks of the current id (integer index) of the Kerberos authentication package on the local
+//  machine.
+//
+// Returns:
+//  ERROR_SUCCESS on success
+//  Other error code on failure
+//
+// Notes:
+//
+DWORD LookupKerberosAuthenticationPackageId(__in HANDLE lsaHandle, __out ULONG * packageId)
+{
+  NTSTATUS lookupStatus; 
+  LSA_STRING pkgName;
+
+  AssignLsaString(&pkgName, MICROSOFT_KERBEROS_NAME_A);
+  lookupStatus = LsaLookupAuthenticationPackage(lsaHandle, &pkgName, packageId);
+  return LsaNtStatusToWinError( lookupStatus );
+}
+  
+//----------------------------------------------------------------------------
+// Function: CreateLogonForUser
+//
+// Description:
+//  Contacts the local LSA and performs a logon without credential for the 
+//  given principal. This logon token will be local machine only and have no 
+//  network credentials attached.
+//
+// Returns:
+//  ERROR_SUCCESS on success
+//  Other error code on failure
+//
+// Notes:
+//  This call assumes that all required privileges have already been enabled (TCB etc).
+//  IMPORTANT ****  tokenOriginName must be immutable!
+//
+DWORD CreateLogonForUser(__in HANDLE lsaHandle,
+                         __in const char * tokenSourceName, 
+                         __in const char * tokenOriginName, // must be immutable, will not be copied!
+                         __in ULONG authnPkgId, 
+                         __in const wchar_t* principalName, 
+                         __out HANDLE *tokenHandle) 
+{ 
+  DWORD logonStatus = ERROR_ASSERTION_FAILURE; // Failure to set status should trigger error
+  TOKEN_SOURCE tokenSource;
+  LSA_STRING originName;
+  void * profile = NULL;
+
+  // from MSDN:
+  // The ClientUpn and ClientRealm members of the KERB_S4U_LOGON 
+  // structure must point to buffers in memory that are contiguous 
+  // to the structure itself. The value of the 
+  // AuthenticationInformationLength parameter must take into 
+  // account the length of these buffers.
+  const int principalNameBufLen = lstrlen(principalName)*sizeof(*principalName);
+  const int totalAuthInfoLen = sizeof(KERB_S4U_LOGON) + principalNameBufLen;
+  KERB_S4U_LOGON* s4uLogonAuthInfo = (KERB_S4U_LOGON*)calloc(totalAuthInfoLen, 1);
+  if (s4uLogonAuthInfo == NULL ) {
+    logonStatus = ERROR_NOT_ENOUGH_MEMORY;
+    goto done;
+  }
+  s4uLogonAuthInfo->MessageType = KerbS4ULogon;
+  s4uLogonAuthInfo->ClientUpn.Buffer = (wchar_t*)((char*)s4uLogonAuthInfo + sizeof *s4uLogonAuthInfo);
+  CopyMemory(s4uLogonAuthInfo->ClientUpn.Buffer, principalName, principalNameBufLen);
+  s4uLogonAuthInfo->ClientUpn.Length        = (USHORT)principalNameBufLen;
+  s4uLogonAuthInfo->ClientUpn.MaximumLength = (USHORT)principalNameBufLen;
+
+  AllocateLocallyUniqueId(&tokenSource.SourceIdentifier);
+  StringCchCopyA(tokenSource.SourceName, TOKEN_SOURCE_LENGTH, tokenSourceName );
+  AssignLsaString(&originName, tokenOriginName);
+
+  {
+    DWORD cbProfile = 0;
+    LUID logonId;
+    QUOTA_LIMITS quotaLimits;
+    NTSTATUS subStatus;
+
+    NTSTATUS logonNtStatus = LsaLogonUser(lsaHandle,
+      &originName,
+      Batch, // SECURITY_LOGON_TYPE
+      authnPkgId,
+      s4uLogonAuthInfo, 
+      totalAuthInfoLen,
+      0,
+      &tokenSource,
+      &profile, 
+      &cbProfile,
+      &logonId, 
+      tokenHandle,
+      &quotaLimits,
+      &subStatus);
+    logonStatus = LsaNtStatusToWinError( logonNtStatus );
+  }
+done:
+  // clean up
+  if (s4uLogonAuthInfo != NULL) {
+    free(s4uLogonAuthInfo);
+  }
+  if (profile != NULL) {
+    LsaFreeReturnBuffer(profile);
+  }
+  return logonStatus;
+}
+
+// NOTE: must free allocatedName
+DWORD GetNameFromLogonToken(__in HANDLE logonToken, __out wchar_t **allocatedName)
+{
+  DWORD userInfoSize = 0;
+  PTOKEN_USER  user = NULL;
+  DWORD userNameSize = 0;
+  wchar_t * userName = NULL;
+  DWORD domainNameSize = 0; 
+  wchar_t * domainName = NULL;
+  SID_NAME_USE sidUse = SidTypeUnknown;
+  DWORD getNameStatus = ERROR_ASSERTION_FAILURE; // Failure to set status should trigger error
+  BOOL tokenInformation = FALSE;
+
+  // call for sid size then alloc and call for sid
+  tokenInformation = GetTokenInformation(logonToken, TokenUser, NULL, 0, &userInfoSize);
+  assert (FALSE == tokenInformation);
+  
+  // last call should have failed and filled in allocation size
+  if ((getNameStatus = GetLastError()) != ERROR_INSUFFICIENT_BUFFER)
+  {
+    goto done; 
+  }
+  user = (PTOKEN_USER)calloc(userInfoSize,1);
+  if (user == NULL)
+  {
+    getNameStatus = ERROR_NOT_ENOUGH_MEMORY;
+    goto done;
+  }
+  if (!GetTokenInformation(logonToken, TokenUser, user, userInfoSize, &userInfoSize)) {
+      getNameStatus = GetLastError();
+      goto done;
+  }
+  LookupAccountSid( NULL, user->User.Sid, NULL, &userNameSize, NULL, &domainNameSize, &sidUse );
+  // last call should have failed and filled in allocation size
+  if ((getNameStatus = GetLastError()) != ERROR_INSUFFICIENT_BUFFER)
+  {
+    goto done;
+  }
+  userName = (wchar_t *)calloc(userNameSize, sizeof(wchar_t));
+  if (userName == NULL) {
+    getNameStatus = ERROR_NOT_ENOUGH_MEMORY;
+    goto done;
+  }
+  domainName = (wchar_t *)calloc(domainNameSize, sizeof(wchar_t));
+  if (domainName == NULL) {
+    getNameStatus = ERROR_NOT_ENOUGH_MEMORY;
+    goto done;
+  }
+  if (!LookupAccountSid( NULL, user->User.Sid, userName, &userNameSize, domainName, &domainNameSize, &sidUse )) {
+      getNameStatus = GetLastError();
+      goto done;
+  }
+
+  getNameStatus = ERROR_SUCCESS;
+  *allocatedName = userName;
+  userName = NULL;
+done:
+  if (user != NULL) {
+    free( user );
+    user = NULL;
+  }
+  if (userName != NULL) {
+    free( userName );
+    userName = NULL;
+  }
+  if (domainName != NULL) {
+    free( domainName );
+    domainName = NULL;
+  }
+  return getNameStatus;
+}
+
+DWORD LoadUserProfileForLogon(__in HANDLE logonHandle, __out PROFILEINFO * pi)
+{
+  wchar_t *userName = NULL;
+  DWORD loadProfileStatus = ERROR_ASSERTION_FAILURE; // Failure to set status should trigger error
+
+  loadProfileStatus = GetNameFromLogonToken( logonHandle, &userName );
+  if (loadProfileStatus != ERROR_SUCCESS) {
+    goto done;
+  }
+
+  assert(pi);
+
+  ZeroMemory( pi, sizeof(*pi) );
+  pi->dwSize = sizeof(*pi); 
+  pi->lpUserName = userName;
+  pi->dwFlags = PI_NOUI;
+
+  // if the profile does not exist it will be created
+  if ( !LoadUserProfile( logonHandle, pi ) ) {      
+    loadProfileStatus = GetLastError();
+    goto done;
+  }
+
+  loadProfileStatus = ERROR_SUCCESS;
+done:
+  return loadProfileStatus;
+}
+
+DWORD UnloadProfileForLogon(__in HANDLE logonHandle, __in PROFILEINFO * pi)
+{
+  DWORD touchProfileStatus = ERROR_ASSERTION_FAILURE; // Failure to set status should trigger error
+
+  assert(pi);
+
+  if ( !UnloadUserProfile(logonHandle, pi->hProfile ) ) {
+    touchProfileStatus = GetLastError();
+    goto done;
+  }
+  if (pi->lpUserName != NULL) {
+    free(pi->lpUserName);
+    pi->lpUserName = NULL;
+  }
+  ZeroMemory( pi, sizeof(*pi) );
+
+  touchProfileStatus = ERROR_SUCCESS;
+done:
+  return touchProfileStatus;
 }
