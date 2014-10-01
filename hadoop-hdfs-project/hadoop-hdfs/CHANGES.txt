@@ -528,6 +528,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-4227. Document dfs.namenode.resource.*  (Daisuke Kobayashi via aw)
 
+    HDFS-6754. TestNamenodeCapacityReport may sometimes fail due to lack of
+    retry. (Mit Desai via kihwal)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
