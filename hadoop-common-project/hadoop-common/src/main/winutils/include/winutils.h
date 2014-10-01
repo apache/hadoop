@@ -27,6 +27,8 @@
 #include <accctrl.h>
 #include <strsafe.h>
 #include <lm.h>
+#include <ntsecapi.h>
+#include <userenv.h>
 
 enum EXIT_CODE
 {
@@ -153,6 +155,26 @@ DWORD ChangeFileModeByMask(__in LPCWSTR path, INT mode);
 DWORD GetLocalGroupsForUser(__in LPCWSTR user,
   __out LPLOCALGROUP_USERS_INFO_0 *groups, __out LPDWORD entries);
 
-BOOL EnablePrivilege(__in LPCWSTR privilegeName);
-
 void GetLibraryName(__in LPCVOID lpAddress, __out LPWSTR *filename);
+
+DWORD EnablePrivilege(__in LPCWSTR privilegeName);
+
+void AssignLsaString(__inout LSA_STRING * target, __in const char *strBuf);
+
+DWORD RegisterWithLsa(__in const char *logonProcessName, __out HANDLE * lsaHandle);
+
+void UnregisterWithLsa(__in HANDLE lsaHandle);
+
+DWORD LookupKerberosAuthenticationPackageId(__in HANDLE lsaHandle, __out ULONG * packageId);
+
+DWORD CreateLogonForUser(__in HANDLE lsaHandle,
+                         __in const char * tokenSourceName, 
+                         __in const char * tokenOriginName, 
+                         __in ULONG authnPkgId, 
+                         __in const wchar_t* principalName, 
+                         __out HANDLE *tokenHandle);
+
+DWORD LoadUserProfileForLogon(__in HANDLE logonHandle, __out PROFILEINFO * pi);
+
+DWORD UnloadProfileForLogon(__in HANDLE logonHandle, __in PROFILEINFO * pi);
+

@@ -77,7 +77,7 @@ int Symlink(__in int argc, __in_ecount(argc) wchar_t *argv[])
   // This is just an additional step to do the privilege check by not using
   // error code from CreateSymbolicLink() method.
   //
-  if (!EnablePrivilege(L"SeCreateSymbolicLinkPrivilege"))
+  if (EnablePrivilege(L"SeCreateSymbolicLinkPrivilege") != ERROR_SUCCESS)
   {
     fwprintf(stderr,
       L"No privilege to create symbolic links.\n");

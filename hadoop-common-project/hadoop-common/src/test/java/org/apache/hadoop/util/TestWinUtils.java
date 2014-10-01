@@ -20,10 +20,12 @@ package org.apache.hadoop.util;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
+import static org.junit.matchers.JUnitMatchers.containsString;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 
 import org.apache.commons.io.FileUtils;
@@ -33,7 +35,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assume.*;
+
 import static org.hamcrest.CoreMatchers.*;
 
 /**
@@ -520,5 +522,27 @@ public class TestWinUtils {
     } catch (Shell.ExitCodeException ece) {
       assertThat(ece.getExitCode(), is(1));
     }
+  }
+  
+  @SuppressWarnings("deprecation")
+  @Test(timeout=10000)
+  public void testTaskCreate() throws IOException {
+    File batch = new File(TEST_DIR, "testTaskCreate.cmd");
+    File proof = new File(TEST_DIR, "testTaskCreate.out");
+    FileWriter fw = new FileWriter(batch);
+    String testNumber = String.format("%f", Math.random());
+    fw.write(String.format("echo %s > \"%s\"", testNumber, proof.getAbsolutePath()));
+    fw.close();
+    
+    assertFalse(proof.exists());
+    
+    Shell.execCommand(Shell.WINUTILS, "task", "create", "testTaskCreate" + testNumber, 
+        batch.getAbsolutePath());
+    
+    assertTrue(proof.exists());
+    
+    String outNumber = FileUtils.readFileToString(proof);
+    
+    assertThat(outNumber, containsString(testNumber));
   }
 }
