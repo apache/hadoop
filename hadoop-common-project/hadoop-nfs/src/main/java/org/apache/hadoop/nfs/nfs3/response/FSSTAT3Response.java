@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.nfs.nfs3.response;
 
+import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.nfs.nfs3.Nfs3FileAttributes;
 import org.apache.hadoop.nfs.nfs3.Nfs3Status;
 import org.apache.hadoop.oncrpc.XDR;
@@ -90,9 +91,34 @@ public class FSSTAT3Response extends NFS3Response {
     this.invarsec = invarsec;
   }
 
+  public static FSSTAT3Response deserialize(XDR xdr) {
+    int status = xdr.readInt();
+    xdr.readBoolean();
+    Nfs3FileAttributes postOpAttr = Nfs3FileAttributes.deserialize(xdr);
+    long tbytes = 0;
+    long fbytes = 0;
+    long abytes = 0;
+    long tfiles = 0;
+    long ffiles = 0;
+    long afiles = 0;
+    int invarsec = 0;
+
+    if (status == Nfs3Status.NFS3_OK) {
+      tbytes = xdr.readHyper();
+      fbytes = xdr.readHyper();
+      abytes = xdr.readHyper();
+      tfiles = xdr.readHyper();
+      ffiles = xdr.readHyper();
+      afiles = xdr.readHyper();
+      invarsec = xdr.readInt();
+    }
+    return new FSSTAT3Response(status, postOpAttr, tbytes, fbytes, abytes,
+        tfiles, ffiles, afiles, invarsec);
+  }
+
   @Override
-  public XDR writeHeaderAndResponse(XDR out, int xid, Verifier verifier) {
-    super.writeHeaderAndResponse(out, xid, verifier);
+  public XDR serialize(XDR out, int xid, Verifier verifier) {
+    super.serialize(out, xid, verifier);
     out.writeBoolean(true);
     if (postOpAttr == null) {
       postOpAttr = new Nfs3FileAttributes();

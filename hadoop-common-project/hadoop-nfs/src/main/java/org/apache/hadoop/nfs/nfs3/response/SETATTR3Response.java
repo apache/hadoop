@@ -39,9 +39,15 @@ public class SETATTR3Response extends NFS3Response {
     return wccData;
   }
 
+  public static SETATTR3Response deserialize(XDR xdr) {
+    int status = xdr.readInt();
+    WccData wccData = WccData.deserialize(xdr);
+    return new SETATTR3Response(status, wccData);
+  }
+
   @Override
-  public XDR writeHeaderAndResponse(XDR out, int xid, Verifier verifier) {
-    super.writeHeaderAndResponse(out, xid, verifier);
+  public XDR serialize(XDR out, int xid, Verifier verifier) {
+    super.serialize(out, xid, verifier);
     wccData.serialize(out);
     return out;
   }

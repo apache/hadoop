@@ -77,9 +77,32 @@ public class PATHCONF3Response extends NFS3Response {
     this.casePreserving = casePreserving;
   }
 
+  public static PATHCONF3Response deserialize(XDR xdr) {
+    int status = xdr.readInt();
+    xdr.readBoolean();
+    Nfs3FileAttributes objPostOpAttr = Nfs3FileAttributes.deserialize(xdr);
+    int linkMax = 0;
+    int nameMax = 0;
+    boolean noTrunc = false;
+    boolean chownRestricted = false;
+    boolean caseInsensitive = false;
+    boolean casePreserving = false;
+
+    if (status == Nfs3Status.NFS3_OK) {
+      linkMax = xdr.readInt();
+      nameMax = xdr.readInt();
+      noTrunc = xdr.readBoolean();
+      chownRestricted = xdr.readBoolean();
+      caseInsensitive = xdr.readBoolean();
+      casePreserving = xdr.readBoolean();
+    }
+    return new PATHCONF3Response(status, objPostOpAttr, linkMax, nameMax,
+        noTrunc, chownRestricted, caseInsensitive, casePreserving);
+  }
+
   @Override
-  public XDR writeHeaderAndResponse(XDR out, int xid, Verifier verifier) {
-    super.writeHeaderAndResponse(out, xid, verifier);
+  public XDR serialize(XDR out, int xid, Verifier verifier) {
+    super.serialize(out, xid, verifier);
     out.writeBoolean(true);
     postOpAttr.serialize(out);
 

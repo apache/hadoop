@@ -43,9 +43,21 @@ public class ACCESS3Response extends NFS3Response {
     this.access = access;
   }
 
+  public static ACCESS3Response deserialize(XDR xdr) {
+    int status = xdr.readInt();
+    Nfs3FileAttributes postOpAttr = null;
+    int access = 0;
+
+    if (status == Nfs3Status.NFS3_OK) {
+      postOpAttr = Nfs3FileAttributes.deserialize(xdr);
+      access = xdr.readInt();
+    }
+    return new ACCESS3Response(status, postOpAttr, access);
+  }
+
   @Override
-  public XDR writeHeaderAndResponse(XDR out, int xid, Verifier verifier) {
-    super.writeHeaderAndResponse(out, xid, verifier);
+  public XDR serialize(XDR out, int xid, Verifier verifier) {
+    super.serialize(out, xid, verifier);
     if (this.getStatus() == Nfs3Status.NFS3_OK) {
       out.writeBoolean(true);
       postOpAttr.serialize(out);

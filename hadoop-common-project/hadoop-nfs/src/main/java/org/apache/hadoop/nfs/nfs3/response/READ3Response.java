@@ -62,9 +62,29 @@ public class READ3Response extends NFS3Response {
     return data;
   }
 
+  public static READ3Response deserialize(XDR xdr) {
+    int status = xdr.readInt();
+    xdr.readBoolean();
+    Nfs3FileAttributes postOpAttr = Nfs3FileAttributes.deserialize(xdr);
+    int count = 0;
+    boolean eof = false;
+    byte[] data = new byte[0];
+
+    if (status == Nfs3Status.NFS3_OK) {
+      count = xdr.readInt();
+      eof = xdr.readBoolean();
+      int len = xdr.readInt();
+      assert (len == count);
+      data = xdr.readFixedOpaque(count);
+    }
+
+    return new READ3Response(status, postOpAttr, count, eof,
+        ByteBuffer.wrap(data));
+  }
+
   @Override
-  public XDR writeHeaderAndResponse(XDR out, int xid, Verifier verifier) {
-    super.writeHeaderAndResponse(out, xid, verifier);
+  public XDR serialize(XDR out, int xid, Verifier verifier) {
+    super.serialize(out, xid, verifier);
     out.writeBoolean(true); // Attribute follows
     postOpAttr.serialize(out);
 

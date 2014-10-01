@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.nfs.nfs3.response;
 
+import org.apache.hadoop.nfs.nfs3.Nfs3FileAttributes;
+import org.apache.hadoop.nfs.nfs3.Nfs3Status;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.Verifier;
 
@@ -35,9 +37,15 @@ public class REMOVE3Response extends NFS3Response {
     this.dirWcc = dirWcc;
   }
   
+  public static REMOVE3Response deserialize(XDR xdr) {
+    int status = xdr.readInt();
+    WccData dirWcc = WccData.deserialize(xdr);
+    return new REMOVE3Response(status, dirWcc);
+  }
+
   @Override
-  public XDR writeHeaderAndResponse(XDR out, int xid, Verifier verifier) {
-    super.writeHeaderAndResponse(out, xid, verifier);
+  public XDR serialize(XDR out, int xid, Verifier verifier) {
+    super.serialize(out, xid, verifier);
     if (dirWcc == null) {
       dirWcc = new WccData(null, null);
     }

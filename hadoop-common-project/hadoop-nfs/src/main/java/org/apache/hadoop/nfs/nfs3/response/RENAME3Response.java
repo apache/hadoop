@@ -45,9 +45,16 @@ public class RENAME3Response extends NFS3Response {
     return toDirWcc;
   }
 
+  public static RENAME3Response deserialize(XDR xdr) {
+    int status = xdr.readInt();
+    WccData fromDirWcc = WccData.deserialize(xdr);
+    WccData toDirWcc = WccData.deserialize(xdr);
+    return new RENAME3Response(status, fromDirWcc, toDirWcc);
+  }
+
   @Override
-  public XDR writeHeaderAndResponse(XDR out, int xid, Verifier verifier) {
-    super.writeHeaderAndResponse(out, xid, verifier);
+  public XDR serialize(XDR out, int xid, Verifier verifier) {
+    super.serialize(out, xid, verifier);
     fromDirWcc.serialize(out);
     toDirWcc.serialize(out);
     return out;

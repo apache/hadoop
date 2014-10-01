@@ -55,9 +55,25 @@ public class MKDIR3Response extends NFS3Response {
     return dirWcc;
   }
 
+  public static MKDIR3Response deserialize(XDR xdr) {
+    int status = xdr.readInt();
+    FileHandle objFileHandle = new FileHandle();
+    Nfs3FileAttributes objAttr = null;
+    WccData dirWcc;
+
+    if (status == Nfs3Status.NFS3_OK) {
+      xdr.readBoolean();
+      objFileHandle.deserialize(xdr);
+      xdr.readBoolean();
+      objAttr = Nfs3FileAttributes.deserialize(xdr);
+    }
+    dirWcc = WccData.deserialize(xdr);
+    return new MKDIR3Response(status, objFileHandle, objAttr, dirWcc);
+  }
+
   @Override
-  public XDR writeHeaderAndResponse(XDR out, int xid, Verifier verifier) {
-    super.writeHeaderAndResponse(out, xid, verifier);
+  public XDR serialize(XDR out, int xid, Verifier verifier) {
+    super.serialize(out, xid, verifier);
     if (getStatus() == Nfs3Status.NFS3_OK) {
       out.writeBoolean(true); // Handle follows
       objFileHandle.serialize(out);

@@ -52,6 +52,13 @@ public class WccAttr {
     this.ctime = ctime;
   }
 
+  public static WccAttr deserialize(XDR xdr) {
+    long size = xdr.readHyper();
+    NfsTime mtime = NfsTime.deserialize(xdr);
+    NfsTime ctime = NfsTime.deserialize(xdr);
+    return new WccAttr(size, mtime, ctime);
+  }
+
   public void serialize(XDR out) {
     out.writeLongAsHyper(size);
     if (mtime == null) {

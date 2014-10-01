@@ -407,7 +407,7 @@ class OpenFileCtx {
       WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3ERR_IO,
           fileWcc, 0, request.getStableHow(), Nfs3Constant.WRITE_COMMIT_VERF);
       Nfs3Utils.writeChannel(channel,
-          response.writeHeaderAndResponse(new XDR(), xid, new VerifierNone()),
+          response.serialize(new XDR(), xid, new VerifierNone()),
           xid);
     } else {
       // Update the write time first
@@ -433,7 +433,7 @@ class OpenFileCtx {
           WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3_OK,
               fileWcc, request.getCount(), request.getStableHow(),
               Nfs3Constant.WRITE_COMMIT_VERF);
-          Nfs3Utils.writeChannel(channel, response.writeHeaderAndResponse(
+          Nfs3Utils.writeChannel(channel, response.serialize(
               new XDR(), xid, new VerifierNone()), xid);
         }
       } else {
@@ -570,7 +570,7 @@ class OpenFileCtx {
     }
     updateLastAccessTime();
     Nfs3Utils.writeChannel(channel,
-        response.writeHeaderAndResponse(new XDR(), xid, new VerifierNone()),
+        response.serialize(new XDR(), xid, new VerifierNone()),
         xid);
   }
   
@@ -642,7 +642,7 @@ class OpenFileCtx {
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3_OK,
             fileWcc, count, stableHow, Nfs3Constant.WRITE_COMMIT_VERF);
         Nfs3Utils
-            .writeChannel(channel, response.writeHeaderAndResponse(new XDR(),
+            .writeChannel(channel, response.serialize(new XDR(),
                 xid, new VerifierNone()), xid);
         writeCtx.setReplied(true);
       }
@@ -1016,7 +1016,7 @@ class OpenFileCtx {
       COMMIT3Response response = new COMMIT3Response(status, wccData,
           Nfs3Constant.WRITE_COMMIT_VERF);
       Nfs3Utils.writeChannelCommit(commit.getChannel(), response
-          .writeHeaderAndResponse(new XDR(), commit.getXid(),
+          .serialize(new XDR(), commit.getXid(),
               new VerifierNone()), commit.getXid());
       
       if (LOG.isDebugEnabled()) {
@@ -1097,7 +1097,7 @@ class OpenFileCtx {
         }
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3_OK,
             fileWcc, count, stableHow, Nfs3Constant.WRITE_COMMIT_VERF);
-        Nfs3Utils.writeChannel(channel, response.writeHeaderAndResponse(
+        Nfs3Utils.writeChannel(channel, response.serialize(
             new XDR(), xid, new VerifierNone()), xid);
       }
       
@@ -1109,7 +1109,7 @@ class OpenFileCtx {
           + offset + " and length " + count, e);
       if (!writeCtx.getReplied()) {
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3ERR_IO);
-        Nfs3Utils.writeChannel(channel, response.writeHeaderAndResponse(
+        Nfs3Utils.writeChannel(channel, response.serialize(
             new XDR(), xid, new VerifierNone()), xid);
         // Keep stream open. Either client retries or SteamMonitor closes it.
       }
@@ -1160,7 +1160,7 @@ class OpenFileCtx {
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3ERR_IO,
             fileWcc, 0, writeCtx.getStableHow(), Nfs3Constant.WRITE_COMMIT_VERF);
         Nfs3Utils.writeChannel(writeCtx.getChannel(), response
-            .writeHeaderAndResponse(new XDR(), writeCtx.getXid(),
+            .serialize(new XDR(), writeCtx.getXid(),
                 new VerifierNone()), writeCtx.getXid());
       }
     }

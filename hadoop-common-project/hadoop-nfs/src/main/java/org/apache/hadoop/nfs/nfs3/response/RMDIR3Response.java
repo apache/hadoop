@@ -39,9 +39,15 @@ public class RMDIR3Response extends NFS3Response {
     return dirWcc;
   }
 
+  public static RMDIR3Response deserialize(XDR xdr) {
+    int status = xdr.readInt();
+    WccData dirWcc = WccData.deserialize(xdr);
+    return new RMDIR3Response(status, dirWcc);
+  }
+
   @Override
-  public XDR writeHeaderAndResponse(XDR out, int xid, Verifier verifier) {
-    super.writeHeaderAndResponse(out, xid, verifier);
+  public XDR serialize(XDR out, int xid, Verifier verifier) {
+    super.serialize(out, xid, verifier);
     dirWcc.serialize(out);
     return out;
   }
