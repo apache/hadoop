@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.nfs.nfs3.response;
 
+import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
+import org.apache.hadoop.nfs.nfs3.Nfs3FileAttributes;
 import org.apache.hadoop.nfs.nfs3.Nfs3Status;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant.WriteStableHow;
 import org.apache.hadoop.oncrpc.XDR;
@@ -58,9 +60,25 @@ public class WRITE3Response extends NFS3Response {
     return verifer;
   }
 
+  public static WRITE3Response deserialize(XDR xdr) {
+    int status = xdr.readInt();
+    WccData fileWcc = WccData.deserialize(xdr);
+    int count = 0;
+    WriteStableHow stableHow = null;
+    long verifier = 0;
+
+    if (status == Nfs3Status.NFS3_OK) {
+      count = xdr.readInt();
+      int how = xdr.readInt();
+      stableHow = WriteStableHow.values()[how];
+      verifier = xdr.readHyper();
+    }
+    return new WRITE3Response(status, fileWcc, count, stableHow, verifier);
+  }
+
   @Override
-  public XDR writeHeaderAndResponse(XDR out, int xid, Verifier verifier) {
-    super.writeHeaderAndResponse(out, xid, verifier);
+  public XDR serialize(XDR out, int xid, Verifier verifier) {
+    super.serialize(out, xid, verifier);
     fileWcc.serialize(out);
     if (getStatus() == Nfs3Status.NFS3_OK) {
       out.writeInt(count);

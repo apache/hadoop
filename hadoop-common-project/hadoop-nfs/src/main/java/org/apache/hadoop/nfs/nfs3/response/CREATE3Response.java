@@ -55,9 +55,25 @@ public class CREATE3Response extends NFS3Response {
     return dirWcc;
   }
 
+  public static CREATE3Response deserialize(XDR xdr) {
+    int status = xdr.readInt();
+    FileHandle objHandle = new FileHandle();
+    Nfs3FileAttributes postOpObjAttr = null;
+
+    if (status == Nfs3Status.NFS3_OK) {
+      xdr.readBoolean();
+      objHandle.deserialize(xdr);
+      xdr.readBoolean();
+      postOpObjAttr = Nfs3FileAttributes.deserialize(xdr);
+    }
+
+    WccData dirWcc = WccData.deserialize(xdr);
+    return new CREATE3Response(status, objHandle, postOpObjAttr, dirWcc);
+  }
+
   @Override
-  public XDR writeHeaderAndResponse(XDR out, int xid, Verifier verifier) {
-    super.writeHeaderAndResponse(out, xid, verifier);
+  public XDR serialize(XDR out, int xid, Verifier verifier) {
+    super.serialize(out, xid, verifier);
     if (getStatus() == Nfs3Status.NFS3_OK) {
       out.writeBoolean(true); // Handle follows
       objHandle.serialize(out);
