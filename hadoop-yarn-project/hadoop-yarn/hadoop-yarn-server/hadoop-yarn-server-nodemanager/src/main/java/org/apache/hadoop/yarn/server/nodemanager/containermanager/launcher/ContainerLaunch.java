@@ -766,6 +766,8 @@ public class ContainerLaunch implements Callable<Integer> {
 
         String classPathJar = FileUtil.createJarWithClassPath(
           newClassPath.toString(), pwd, mergedEnv);
+        // In a secure cluster the classpath jar must be localized to grant access
+        this.exec.localizeClasspathJar(new Path(classPathJar), container.getUser());
         environment.put(Environment.CLASSPATH.name(), classPathJar);
       }
     }

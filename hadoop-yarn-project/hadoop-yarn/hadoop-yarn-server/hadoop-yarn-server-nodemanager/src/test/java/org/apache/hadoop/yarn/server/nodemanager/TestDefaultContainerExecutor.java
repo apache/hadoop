@@ -199,7 +199,7 @@ public class TestDefaultContainerExecutor {
         Assert.assertEquals(appDirPerm, stats.getPermission());
       }
 
-      executor.createAppLogDirs(appId, logDirs);
+      executor.createAppLogDirs(appId, logDirs, user);
 
       for (String dir : logDirs) {
         FileStatus stats = lfs.getFileStatus(new Path(dir, appId));
@@ -277,7 +277,7 @@ public class TestDefaultContainerExecutor {
       mockExec.createUserLocalDirs(localDirs, appSubmitter);
       mockExec.createUserCacheDirs(localDirs, appSubmitter);
       mockExec.createAppDirs(localDirs, appSubmitter, appId);
-      mockExec.createAppLogDirs(appId, logDirs);
+      mockExec.createAppLogDirs(appId, logDirs, appSubmitter);
 
       Path scriptPath = new Path("file:///bin/echo");
       Path tokensPath = new Path("file:///dev/null");

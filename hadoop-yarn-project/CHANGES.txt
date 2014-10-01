@@ -118,6 +118,9 @@ Release 2.6.0 - UNRELEASED
     YARN-1063. Augmented Hadoop common winutils to have the ability to create
     containers as domain users. (Remus Rusanu via vinodkv)
 
+    YARN-1972. Added a secure container-executor for Windows. (Remus Rusanu via
+    vinodkv)
+
   IMPROVEMENTS
 
     YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc
