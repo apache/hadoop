@@ -1310,6 +1310,26 @@
     <value>/etc/krb5.keytab</value>
   </property>
 
+  <!--  Shared Cache Configuration -->
+  <property>
+    <description>Whether the shared cache is enabled</description>
+    <name>yarn.sharedcache.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>The root directory for the shared cache</description>
+    <name>yarn.sharedcache.root-dir</name>
+    <value>/sharedcache</value>
+  </property>
+
+  <property>
+    <description>The level of nested directories before getting to the checksum
+    directories. It must be non-negative.</description>
+    <name>yarn.sharedcache.nested-level</name>
+    <value>3</value>
+  </property>
+
   <!-- Other configuration -->
   <property>
     <description>The interval that the yarn client library uses to poll the

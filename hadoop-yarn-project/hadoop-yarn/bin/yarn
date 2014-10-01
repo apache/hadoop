@@ -33,6 +33,7 @@ function hadoop_usage
   echo "  resourcemanager                       run the ResourceManager"
   echo "  resourcemanager -format-state-store   deletes the RMStateStore"
   echo "  rmadmin                               admin tools"
+  echo "  sharedcachemanager                    run the SharedCacheManager daemon"
   echo "  timelineserver                        run the timeline server"
   echo "  version                               print the version"
   echo " or"
@@ -148,6 +149,11 @@ case "${COMMAND}" in
     if [[ -n "${YARN_TIMELINESERVER_HEAPSIZE}" ]]; then
       JAVA_HEAP_MAX="-Xmx${YARN_TIMELINESERVER_HEAPSIZE}m"
     fi
+  ;;
+  sharedcachemanager)
+    daemon="true"
+    CLASS='org.apache.hadoop.yarn.server.sharedcachemanager.SharedCacheManager'
+    YARN_OPTS="$YARN_OPTS $YARN_SHAREDCACHEMANAGER_OPTS"
   ;;
   version)
     CLASS=org.apache.hadoop.util.VersionInfo
