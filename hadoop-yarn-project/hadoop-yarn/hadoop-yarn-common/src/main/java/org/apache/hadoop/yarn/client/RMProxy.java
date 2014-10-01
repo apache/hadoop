@@ -21,6 +21,9 @@ package org.apache.hadoop.yarn.client;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.net.NoRouteToHostException;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,6 +38,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.ipc.RetriableException;
+import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.conf.HAUtil;
@@ -165,7 +170,7 @@ public class RMProxy<T> {
   @VisibleForTesting
   public static RetryPolicy createRetryPolicy(Configuration conf) {
     long rmConnectWaitMS =
-        conf.getInt(
+        conf.getLong(
             YarnConfiguration.RESOURCEMANAGER_CONNECT_MAX_WAIT_MS,
             YarnConfiguration.DEFAULT_RESOURCEMANAGER_CONNECT_MAX_WAIT_MS);
     long rmConnectionRetryIntervalMS =
@@ -234,9 +239,14 @@ public class RMProxy<T> {
 
     Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap =
         new HashMap<Class<? extends Exception>, RetryPolicy>();
+
     exceptionToPolicyMap.put(ConnectException.class, retryPolicy);
-    //TO DO: after HADOOP-9576,  IOException can be changed to EOFException
-    exceptionToPolicyMap.put(IOException.class, retryPolicy);
+    exceptionToPolicyMap.put(NoRouteToHostException.class, retryPolicy);
+    exceptionToPolicyMap.put(UnknownHostException.class, retryPolicy);
+    exceptionToPolicyMap.put(ConnectTimeoutException.class, retryPolicy);
+    exceptionToPolicyMap.put(RetriableException.class, retryPolicy);
+    exceptionToPolicyMap.put(SocketException.class, retryPolicy);
+
     return RetryPolicies.retryByException(
         RetryPolicies.TRY_ONCE_THEN_FAIL, exceptionToPolicyMap);
   }

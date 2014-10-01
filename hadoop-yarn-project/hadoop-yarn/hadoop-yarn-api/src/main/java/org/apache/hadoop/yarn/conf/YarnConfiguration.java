@@ -1027,7 +1027,7 @@ public class YarnConfiguration extends Configuration {
   /** Max time to wait to establish a connection to RM */
   public static final String RESOURCEMANAGER_CONNECT_MAX_WAIT_MS =
       RM_PREFIX + "connect.max-wait.ms";
-  public static final int DEFAULT_RESOURCEMANAGER_CONNECT_MAX_WAIT_MS =
+  public static final long DEFAULT_RESOURCEMANAGER_CONNECT_MAX_WAIT_MS =
       15 * 60 * 1000;
 
   /** Time interval between each attempt to connect to RM */
@@ -1341,6 +1341,18 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_CLIENT_MAX_NM_PROXIES =
       YARN_PREFIX + "client.max-nodemanagers-proxies";
   public static final int DEFAULT_NM_CLIENT_MAX_NM_PROXIES = 500;
+
+  /** Max time to wait to establish a connection to NM */
+  public static final String CLIENT_NM_CONNECT_MAX_WAIT_MS =
+      YARN_PREFIX + "client.nodemanager-connect.max-wait-ms";
+  public static final long DEFAULT_CLIENT_NM_CONNECT_MAX_WAIT_MS =
+      15 * 60 * 1000;
+
+  /** Time interval between each attempt to connect to NM */
+  public static final String CLIENT_NM_CONNECT_RETRY_INTERVAL_MS =
+      YARN_PREFIX + "client.nodemanager-connect.retry-interval-ms";
+  public static final long DEFAULT_CLIENT_NM_CONNECT_RETRY_INTERVAL_MS
+      = 10 * 1000;
 
   public static final String YARN_HTTP_POLICY_KEY = YARN_PREFIX + "http.policy";
   public static final String YARN_HTTP_POLICY_DEFAULT = HttpConfig.Policy.HTTP_ONLY

@@ -1080,7 +1080,19 @@
     <name>yarn.client.nodemanager-client-async.thread-pool-max-size</name>
     <value>500</value>
   </property>
-  
+
+  <property>
+    <description>Max time to wait to establish a connection to NM</description>
+    <name>yarn.client.nodemanager-connect.max-wait-ms</name>
+    <value>900000</value>
+  </property>
+
+  <property>
+    <description>Time interval between each attempt to connect to NM</description>
+    <name>yarn.client.nodemanager-connect.retry-interval-ms</name>
+    <value>10000</value>
+  </property>
+
   <property>
   	<description>
   	  Maximum number of proxy connections for node manager. It should always be
