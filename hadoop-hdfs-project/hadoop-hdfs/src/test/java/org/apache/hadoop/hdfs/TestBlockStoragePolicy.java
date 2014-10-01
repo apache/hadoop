@@ -71,6 +71,7 @@ public class TestBlockStoragePolicy {
   static final byte HOT  = HdfsConstants.HOT_STORAGE_POLICY_ID;
   static final byte ONESSD  = HdfsConstants.ONESSD_STORAGE_POLICY_ID;
   static final byte ALLSSD  = HdfsConstants.ALLSSD_STORAGE_POLICY_ID;
+  static final byte LAZY_PERSIST  = HdfsConstants.LAZY_PERSIST_STORAGE_POLICY_ID;
 
   @Test (timeout=300000)
   public void testConfigKeyEnabled() throws IOException {
@@ -126,6 +127,9 @@ public class TestBlockStoragePolicy {
     expectedPolicyStrings.put(ALLSSD, "BlockStoragePolicy{ALL_SSD:" + ALLSSD +
         ", storageTypes=[SSD], creationFallbacks=[DISK], " +
         "replicationFallbacks=[DISK]}");
+    expectedPolicyStrings.put(LAZY_PERSIST,
+        "BlockStoragePolicy{LAZY_PERSIST:" + LAZY_PERSIST + ", storageTypes=[RAM_DISK, DISK], " +
+            "creationFallbacks=[DISK], replicationFallbacks=[DISK]}");
 
     for(byte i = 1; i < 16; i++) {
       final BlockStoragePolicy policy = POLICY_SUITE.getPolicy(i); 
@@ -1151,13 +1155,19 @@ public class TestBlockStoragePolicy {
     final DistributedFileSystem fs = cluster.getFileSystem();
     try {
       BlockStoragePolicy[] policies = fs.getStoragePolicies();
-      Assert.assertEquals(5, policies.length);
+      Assert.assertEquals(6, policies.length);
       Assert.assertEquals(POLICY_SUITE.getPolicy(COLD).toString(),
           policies[0].toString());
       Assert.assertEquals(POLICY_SUITE.getPolicy(WARM).toString(),
           policies[1].toString());
       Assert.assertEquals(POLICY_SUITE.getPolicy(HOT).toString(),
           policies[2].toString());
+      Assert.assertEquals(POLICY_SUITE.getPolicy(ONESSD).toString(),
+          policies[3].toString());
+      Assert.assertEquals(POLICY_SUITE.getPolicy(ALLSSD).toString(),
+          policies[4].toString());
+      Assert.assertEquals(POLICY_SUITE.getPolicy(LAZY_PERSIST).toString(),
+          policies[5].toString());
     } finally {
       IOUtils.cleanup(null, fs);
       cluster.shutdown();
