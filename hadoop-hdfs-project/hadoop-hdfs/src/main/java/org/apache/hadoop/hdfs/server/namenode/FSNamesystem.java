@@ -2356,7 +2356,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
 
       src = FSDirectory.resolvePath(src, pathComponents, dir);
-      INode inode = dir.getINode(src);
 
       // get the corresponding policy and make sure the policy name is valid
       BlockStoragePolicy policy = blockManager.getStoragePolicy(policyName);
