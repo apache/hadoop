@@ -273,6 +273,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-7153. Add storagePolicy to NN edit log during file creation.
     (Arpit Agarwal)
 
+    HDFS-7158. Reduce the memory usage of WebImageViewer. (wheat9)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
