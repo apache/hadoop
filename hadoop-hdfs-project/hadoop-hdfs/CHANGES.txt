@@ -282,6 +282,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6779. Add missing version subcommand for hdfs.
     (Sasaki Toru via wheat9)
 
+    HDFS-7153. Add storagePolicy to NN edit log during file creation.
+    (Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
