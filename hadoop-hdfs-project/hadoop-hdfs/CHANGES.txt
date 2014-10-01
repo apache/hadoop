@@ -883,6 +883,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6754. TestNamenodeCapacityReport may sometimes fail due to lack of
     retry. (Mit Desai via kihwal)
 
+    HDFS-7172. Test data files may be checked out of git with incorrect line
+    endings, causing test failures in TestHDFSCLI. (Chris Nauroth via wheat9)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
