@@ -23,7 +23,6 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -57,6 +56,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.client.NMProxy;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -607,17 +607,9 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     if (nmToken != null) {
       ugi.addToken(ConverterUtils.convertFromYarn(nmToken, addr));      
     }
-
-    proxy = ugi
-        .doAs(new PrivilegedAction<ContainerManagementProtocol>() {
-
-          @Override
-          public ContainerManagementProtocol run() {
-            return (ContainerManagementProtocol) rpc.getProxy(
-                ContainerManagementProtocol.class,
-                addr, conf);
-          }
-        });
+    proxy =
+        NMProxy.createNMProxy(conf, ContainerManagementProtocol.class, ugi,
+          rpc, addr);
     return proxy;
   }
 

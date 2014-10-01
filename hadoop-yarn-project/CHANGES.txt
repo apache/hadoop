@@ -91,6 +91,9 @@ Release 2.6.0 - UNRELEASED
     YARN-1063. Augmented Hadoop common winutils to have the ability to create
     containers as domain users. (Remus Rusanu via vinodkv)
 
+    YARN-2613. Support retry in NMClient for rolling-upgrades. (Jian He via 
+    junping_du)
+
   IMPROVEMENTS
 
     YARN-2242. Improve exception information on AM launch crashes. (Li Lu 

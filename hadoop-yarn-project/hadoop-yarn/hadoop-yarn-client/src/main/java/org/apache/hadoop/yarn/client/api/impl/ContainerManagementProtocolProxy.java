@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import java.net.InetSocketAddress;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -35,6 +34,7 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.client.NMProxy;
 import org.apache.hadoop.yarn.client.api.NMTokenCache;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -219,16 +219,8 @@ public class ContainerManagementProtocolProxy {
           ConverterUtils.convertFromYarn(token, cmAddr);
       user.addToken(nmToken);
 
-      ContainerManagementProtocol proxy = user
-          .doAs(new PrivilegedAction<ContainerManagementProtocol>() {
-
-            @Override
-            public ContainerManagementProtocol run() {
-              return (ContainerManagementProtocol) rpc.getProxy(
-                  ContainerManagementProtocol.class, cmAddr, conf);
-            }
-          });
-      return proxy;
+      return NMProxy.createNMProxy(conf, ContainerManagementProtocol.class,
+        user, rpc, cmAddr);
     }
 
     public ContainerManagementProtocol getContainerManagementProtocol() {
