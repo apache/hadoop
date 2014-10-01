@@ -536,6 +536,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7162. Wrong path when deleting through fuse-dfs a file which already
     exists in trash (Chenging Liu via cmccabe)
 
+    HDFS-7176. The namenode usage message doesn't include "-rollingupgrade
+    started" (cmccabe)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
