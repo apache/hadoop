@@ -169,8 +169,8 @@ public class TestNamenodeCapacityReport {
   @Test
   public void testXceiverCount() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    // don't waste time retrying if close fails
-    conf.setInt(DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_KEY, 0);
+    // retry one time, if close fails
+    conf.setInt(DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_KEY, 1);
     MiniDFSCluster cluster = null;
 
     final int nodes = 8;
