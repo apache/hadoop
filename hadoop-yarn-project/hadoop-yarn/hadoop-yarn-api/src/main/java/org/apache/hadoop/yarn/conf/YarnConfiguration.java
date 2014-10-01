@@ -1285,6 +1285,28 @@ public class YarnConfiguration extends Configuration {
   public static final boolean
       TIMELINE_SERVICE_HTTP_CROSS_ORIGIN_ENABLED_DEFAULT = false;
 
+  // ///////////////////////////////
+  // Shared Cache Configs
+  // ///////////////////////////////
+  public static final String SHARED_CACHE_PREFIX = "yarn.sharedcache.";
+
+  // common configs
+  /** whether the shared cache is enabled/disabled */
+  public static final String SHARED_CACHE_ENABLED =
+      SHARED_CACHE_PREFIX + "enabled";
+  public static final boolean DEFAULT_SHARED_CACHE_ENABLED = false;
+
+  /** The config key for the shared cache root directory. */
+  public static final String SHARED_CACHE_ROOT =
+      SHARED_CACHE_PREFIX + "root-dir";
+  public static final String DEFAULT_SHARED_CACHE_ROOT = "/sharedcache";
+
+  /** The config key for the level of nested directories before getting to the
+   * checksum directory. */
+  public static final String SHARED_CACHE_NESTED_LEVEL =
+      SHARED_CACHE_PREFIX + "nested-level";
+  public static final int DEFAULT_SHARED_CACHE_NESTED_LEVEL = 3;
+  
   ////////////////////////////////
   // Other Configs
   ////////////////////////////////
