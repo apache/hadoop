@@ -35,7 +35,12 @@ IF(ENABLE_DEBUG STREQUAL ON)
 ELSE(ENABLE_DEBUG STREQUAL ON)
     SET(CMAKE_BUILD_TYPE RelWithDebInfo CACHE 
         STRING "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
+    SET(CMAKE_CXX_FLAGS_DEBUG "-g -O2" CACHE STRING "compiler flags for RelWithDebInfo" FORCE)
+    SET(CMAKE_C_FLAGS_DEBUG "-g -O2" CACHE STRING "compiler flags for debug" FORCE)
 ENDIF(ENABLE_DEBUG STREQUAL ON)
+
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing")
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-strict-aliasing")
 
 IF(ENABLE_COVERAGE STREQUAL ON)
     INCLUDE(CodeCoverage)
