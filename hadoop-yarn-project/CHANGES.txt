@@ -45,6 +45,9 @@ Release 2.7.0 - UNRELEASED
 
   BUG FIXES
 
+    YARN-2254. TestRMWebServicesAppsModification should run against both 
+    CS and FS. (Zhihai Xu via kasha)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
