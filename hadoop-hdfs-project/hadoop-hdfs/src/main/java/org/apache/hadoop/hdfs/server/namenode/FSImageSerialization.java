@@ -383,6 +383,12 @@ public class FSImageSerialization {
     uBoolean.write(out);
   }
   
+  /** write the byte value */
+  static void writeByte(byte value, DataOutputStream out)
+      throws IOException {
+    out.write(value);
+  }
+
   /** read the int value */
   static int readInt(DataInput in) throws IOException {
     IntWritable uInt = TL_DATA.get().U_INT;
@@ -420,6 +426,10 @@ public class FSImageSerialization {
     byte[] bytes = new byte[len];
     System.arraycopy(ustr.getBytes(), 0, bytes, 0, len);
     return bytes;
+  }
+
+  public static byte readByte(DataInput in) throws IOException {
+    return in.readByte();
   }
 
   /**
