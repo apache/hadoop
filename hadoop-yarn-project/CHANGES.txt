@@ -121,6 +121,9 @@ Release 2.6.0 - UNRELEASED
     YARN-1972. Added a secure container-executor for Windows. (Remus Rusanu via
     vinodkv)
 
+    YARN-2613. Support retry in NMClient for rolling-upgrades. (Jian He via 
+    junping_du)
+
   IMPROVEMENTS
 
     YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc
