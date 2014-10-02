@@ -104,6 +104,7 @@ import org.apache.hadoop.crypto.CryptoCodec;
 import org.apache.hadoop.crypto.CryptoInputStream;
 import org.apache.hadoop.crypto.CryptoOutputStream;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
+import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStorageLocation;
@@ -264,7 +265,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       new DFSHedgedReadMetrics();
   private static ThreadPoolExecutor HEDGED_READ_THREAD_POOL;
   @VisibleForTesting
-  KeyProviderCryptoExtension provider;
+  KeyProvider provider;
   /**
    * DFSClient configuration 
    */
@@ -596,7 +597,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     this.authority = nameNodeUri == null? "null": nameNodeUri.getAuthority();
     this.clientName = "DFSClient_" + dfsClientConf.taskId + "_" + 
         DFSUtil.getRandom().nextInt()  + "_" + Thread.currentThread().getId();
-    provider = DFSUtil.createKeyProviderCryptoExtension(conf);
+    provider = DFSUtil.createKeyProvider(conf);
     if (LOG.isDebugEnabled()) {
       if (provider == null) {
         LOG.debug("No KeyProvider found.");
@@ -1315,7 +1316,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         feInfo.getKeyName(), feInfo.getEzKeyVersionName(), feInfo.getIV(),
         feInfo.getEncryptedDataEncryptionKey());
     try {
-      return provider.decryptEncryptedKey(ekv);
+      KeyProviderCryptoExtension cryptoProvider = KeyProviderCryptoExtension
+          .createKeyProviderCryptoExtension(provider);
+      return cryptoProvider.decryptEncryptedKey(ekv);
     } catch (GeneralSecurityException e) {
       throw new IOException(e);
     }
@@ -3138,7 +3141,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return HEDGED_READ_METRIC;
   }
 
-  public KeyProviderCryptoExtension getKeyProvider() {
+  public KeyProvider getKeyProvider() {
     return provider;
   }
 
