@@ -1825,15 +1825,14 @@ public class DFSUtil {
   }
 
   /**
-   * Creates a new KeyProviderCryptoExtension by wrapping the
-   * KeyProvider specified in the given Configuration.
+   * Creates a new KeyProvider from the given Configuration.
    *
    * @param conf Configuration
-   * @return new KeyProviderCryptoExtension, or null if no provider was found.
+   * @return new KeyProvider, or null if no provider was found.
    * @throws IOException if the KeyProvider is improperly specified in
    *                             the Configuration
    */
-  public static KeyProviderCryptoExtension createKeyProviderCryptoExtension(
+  public static KeyProvider createKeyProvider(
       final Configuration conf) throws IOException {
     final String providerUriStr =
         conf.get(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, null);
@@ -1856,6 +1855,24 @@ public class DFSUtil {
     if (keyProvider.isTransient()) {
       throw new IOException("KeyProvider " + keyProvider.toString()
           + " was found but it is a transient provider.");
+    }
+    return keyProvider;
+  }
+
+  /**
+   * Creates a new KeyProviderCryptoExtension by wrapping the
+   * KeyProvider specified in the given Configuration.
+   *
+   * @param conf Configuration
+   * @return new KeyProviderCryptoExtension, or null if no provider was found.
+   * @throws IOException if the KeyProvider is improperly specified in
+   *                             the Configuration
+   */
+  public static KeyProviderCryptoExtension createKeyProviderCryptoExtension(
+      final Configuration conf) throws IOException {
+    KeyProvider keyProvider = createKeyProvider(conf);
+    if (keyProvider == null) {
+      return null;
     }
     KeyProviderCryptoExtension cryptoProvider = KeyProviderCryptoExtension
         .createKeyProviderCryptoExtension(keyProvider);
