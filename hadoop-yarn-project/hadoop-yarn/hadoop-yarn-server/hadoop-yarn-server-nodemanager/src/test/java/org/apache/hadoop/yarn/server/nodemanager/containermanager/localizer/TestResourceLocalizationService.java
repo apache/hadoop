@@ -26,6 +26,7 @@ import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyShort;
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isA;
@@ -38,11 +39,14 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -58,6 +62,10 @@ import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.security.AccessControlException;
 import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
@@ -218,6 +226,74 @@ public class TestResourceLocalizationService {
           .mkdir(eq(publicCache),
               eq(defaultPerm), eq(true));
         Path nmPriv = new Path(p, ResourceLocalizationService.NM_PRIVATE_DIR);
+        verify(spylfs).mkdir(eq(nmPriv),
+            eq(ResourceLocalizationService.NM_PRIVATE_PERM), eq(true));
+      }
+    } finally {
+      dispatcher.stop();
+      delService.stop();
+    }
+  }
+
+  @Test
+  public void testDirectoryCleanupOnNewlyCreatedStateStore()
+      throws IOException, URISyntaxException {
+    conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "077");
+    AsyncDispatcher dispatcher = new AsyncDispatcher();
+    dispatcher.init(new Configuration());
+
+    ContainerExecutor exec = mock(ContainerExecutor.class);
+    DeletionService delService = spy(new DeletionService(exec));
+    delService.init(conf);
+    delService.start();
+
+    List<Path> localDirs = new ArrayList<Path>();
+    String[] sDirs = new String[4];
+    for (int i = 0; i < 4; ++i) {
+      localDirs.add(lfs.makeQualified(new Path(basedir, i + "")));
+      sDirs[i] = localDirs.get(i).toString();
+    }
+    conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS, sDirs);
+
+    LocalDirsHandlerService diskhandler = new LocalDirsHandlerService();
+    diskhandler.init(conf);
+
+    NMStateStoreService nmStateStoreService = mock(NMStateStoreService.class);
+    when(nmStateStoreService.canRecover()).thenReturn(true);
+    when(nmStateStoreService.isNewlyCreated()).thenReturn(true);
+
+    ResourceLocalizationService locService =
+        spy(new ResourceLocalizationService(dispatcher, exec, delService,
+            diskhandler,
+            nmStateStoreService));
+    doReturn(lfs)
+        .when(locService).getLocalFileContext(isA(Configuration.class));
+    try {
+      dispatcher.start();
+
+      // initialize ResourceLocalizationService
+      locService.init(conf);
+
+      final FsPermission defaultPerm = new FsPermission((short)0755);
+
+      // verify directory creation
+      for (Path p : localDirs) {
+        p = new Path((new URI(p.toString())).getPath());
+        Path usercache = new Path(p, ContainerLocalizer.USERCACHE);
+        verify(spylfs)
+            .rename(eq(usercache), any(Path.class), any(Options.Rename.class));
+        verify(spylfs)
+            .mkdir(eq(usercache),
+                eq(defaultPerm), eq(true));
+        Path publicCache = new Path(p, ContainerLocalizer.FILECACHE);
+        verify(spylfs)
+            .rename(eq(usercache), any(Path.class), any(Options.Rename.class));
+        verify(spylfs)
+            .mkdir(eq(publicCache),
+                eq(defaultPerm), eq(true));
+        Path nmPriv = new Path(p, ResourceLocalizationService.NM_PRIVATE_DIR);
+        verify(spylfs)
+            .rename(eq(usercache), any(Path.class), any(Options.Rename.class));
         verify(spylfs).mkdir(eq(nmPriv),
             eq(ResourceLocalizationService.NM_PRIVATE_PERM), eq(true));
       }

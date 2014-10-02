@@ -222,7 +222,7 @@ public class ResourceLocalizationService extends CompositeService
       FileContext lfs = getLocalFileContext(conf);
       lfs.setUMask(new FsPermission((short)FsPermission.DEFAULT_UMASK));
 
-      if (!stateStore.canRecover()) {
+      if (!stateStore.canRecover() || stateStore.isNewlyCreated()) {
         cleanUpLocalDir(lfs,delService);
       }
 

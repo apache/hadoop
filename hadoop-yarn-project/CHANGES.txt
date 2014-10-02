@@ -491,6 +491,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2617. Fixed NM to not send duplicate container status whose app is not
     running. (Jun Gong via jianhe)
 
+    YARN-2624. Resource Localization fails on a cluster due to existing cache
+    directories (Anubhav Dhoot via jlowe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
