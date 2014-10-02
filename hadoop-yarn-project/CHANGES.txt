@@ -515,6 +515,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2630. Prevented previous AM container status from being acquired by the
     current restarted AM. (Jian He via zjshen) 
 
+    YARN-2617. Fixed NM to not send duplicate container status whose app is not
+    running. (Jun Gong via jianhe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

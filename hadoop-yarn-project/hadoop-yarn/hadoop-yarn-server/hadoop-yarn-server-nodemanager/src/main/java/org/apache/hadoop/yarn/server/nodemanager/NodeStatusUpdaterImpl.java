@@ -62,6 +62,7 @@ import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
@@ -354,18 +355,22 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       ContainerId containerId = container.getContainerId();
       ApplicationId applicationId = container.getContainerId()
           .getApplicationAttemptId().getApplicationId();
-      if (!this.context.getApplications().containsKey(applicationId)) {
-        context.getContainers().remove(containerId);
-        continue;
-      }
       org.apache.hadoop.yarn.api.records.ContainerStatus containerStatus =
           container.cloneAndGetContainerStatus();
       containerStatuses.add(containerStatus);
-      if (containerStatus.getState().equals(ContainerState.COMPLETE)) {
-        // Adding to finished containers cache. Cache will keep it around at
-        // least for #durationToTrackStoppedContainers duration. In the
-        // subsequent call to stop container it will get removed from cache.
-        addCompletedContainer(container.getContainerId());
+      if (containerStatus.getState() == ContainerState.COMPLETE) {
+        if (isApplicationStopped(applicationId)) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(applicationId + " is completing, " + " remove "
+                + containerId + " from NM context.");
+          }
+          context.getContainers().remove(containerId);
+        } else {
+          // Adding to finished containers cache. Cache will keep it around at
+          // least for #durationToTrackStoppedContainers duration. In the
+          // subsequent call to stop container it will get removed from cache.
+          addCompletedContainer(container.getContainerId());
+        }
       }
     }
     if (LOG.isDebugEnabled()) {
@@ -396,7 +401,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       NMContainerStatus status =
           container.getNMContainerStatus();
       containerStatuses.add(status);
-      if (status.getContainerState().equals(ContainerState.COMPLETE)) {
+      if (status.getContainerState() == ContainerState.COMPLETE) {
         // Adding to finished containers cache. Cache will keep it around at
         // least for #durationToTrackStoppedContainers duration. In the
         // subsequent call to stop container it will get removed from cache.
@@ -406,6 +411,22 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     LOG.info("Sending out " + containerStatuses.size()
       + " NM container statuses: " + containerStatuses);
     return containerStatuses;
+  }
+
+  private boolean isApplicationStopped(ApplicationId applicationId) {
+    if (!this.context.getApplications().containsKey(applicationId)) {
+      return true;
+    }
+
+    ApplicationState applicationState = this.context.getApplications().get(
+        applicationId).getApplicationState();
+    if (applicationState == ApplicationState.FINISHING_CONTAINERS_WAIT
+        || applicationState == ApplicationState.APPLICATION_RESOURCES_CLEANINGUP
+        || applicationState == ApplicationState.FINISHED) {
+      return true;
+    } else {
+      return false;
+    }
   }
 
   @Override
