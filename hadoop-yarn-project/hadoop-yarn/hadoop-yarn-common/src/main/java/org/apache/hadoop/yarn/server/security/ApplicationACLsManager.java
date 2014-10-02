@@ -41,6 +41,8 @@ public class ApplicationACLsManager {
   private static final Log LOG = LogFactory
       .getLog(ApplicationACLsManager.class);
 
+  private static AccessControlList DEFAULT_YARN_APP_ACL 
+    = new AccessControlList(YarnConfiguration.DEFAULT_YARN_APP_ACL);
   private final Configuration conf;
   private final AdminACLsManager adminAclsManager;
   private final ConcurrentMap<ApplicationId, Map<ApplicationAccessType, AccessControlList>> applicationACLS
@@ -100,18 +102,26 @@ public class ApplicationACLsManager {
     if (!areACLsEnabled()) {
       return true;
     }
-
-    AccessControlList applicationACL = this.applicationACLS
-        .get(applicationId).get(applicationAccessType);
-    if (applicationACL == null) {
+    AccessControlList applicationACL = DEFAULT_YARN_APP_ACL;
+    Map<ApplicationAccessType, AccessControlList> acls = this.applicationACLS
+        .get(applicationId);
+    if (acls == null) {
       if (LOG.isDebugEnabled()) {
+        LOG.debug("ACL not found for application "
+            + applicationId + " owned by "
+            + applicationOwner + ". Using default ["
+            + YarnConfiguration.DEFAULT_YARN_APP_ACL + "]");
+      }
+    } else {
+      AccessControlList applicationACLInMap = acls.get(applicationAccessType);
+      if (applicationACLInMap != null) {
+        applicationACL = applicationACLInMap;
+      } else if (LOG.isDebugEnabled()) {
         LOG.debug("ACL not found for access-type " + applicationAccessType
             + " for application " + applicationId + " owned by "
             + applicationOwner + ". Using default ["
             + YarnConfiguration.DEFAULT_YARN_APP_ACL + "]");
       }
-      applicationACL =
-          new AccessControlList(YarnConfiguration.DEFAULT_YARN_APP_ACL);
     }
 
     // Allow application-owner for any type of access on the application
