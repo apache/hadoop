@@ -79,6 +79,20 @@ public abstract class ContainerExecutor implements Configurable {
   public abstract void init() throws IOException;
 
   /**
+   * On Windows the ContainerLaunch creates a temporary empty jar to workaround the CLASSPATH length
+   * In a  secure cluster this jar must be localized so that the container has access to it
+   * This function localizes on-demand the jar.
+   * 
+   * @param classPathJar
+   * @param owner
+   * @throws IOException
+   */
+  public void localizeClasspathJar(Path classPathJar, String owner) throws IOException {
+    // For the default container this is a no-op
+    // The WindowsSecureContainerExecutor overrides this
+  }
+
+  /**
    * Prepare the environment for containers in this application to execute.
    * For $x in local.dirs
    *   create $x/$user/$appId
@@ -264,8 +278,8 @@ public abstract class ContainerExecutor implements Configurable {
    * and associate the given groupId in a process group. On
    * non-Windows, groupId is ignored.
    */
-  protected static String[] getRunCommand(String command, String groupId,
-                                          Configuration conf) {
+  protected String[] getRunCommand(String command, String groupId,
+       String userName, Path pidFile, Configuration conf) {
     int containerSchedPriorityAdjustment = 
         YarnConfiguration.DEFAULT_NM_CONTAINER_EXECUTOR_SCHED_PRIORITY;
     if (conf.get(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY) !=
@@ -389,5 +403,4 @@ public abstract class ContainerExecutor implements Configurable {
       }
     }
   }
-
 }
