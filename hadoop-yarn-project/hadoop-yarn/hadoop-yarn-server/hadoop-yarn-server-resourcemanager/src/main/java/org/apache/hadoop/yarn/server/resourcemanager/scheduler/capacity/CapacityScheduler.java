@@ -941,8 +941,8 @@ public class CapacityScheduler extends
 
     // Try to schedule more if there are no reservations to fulfill
     if (node.getReservedContainer() == null) {
-      if (Resources.greaterThanOrEqual(calculator, getClusterResource(),
-          node.getAvailableResource(), minimumAllocation)) {
+      if (calculator.computeAvailableContainers(node.getAvailableResource(),
+        minimumAllocation) > 0) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Trying to schedule on node: " + node.getNodeName() +
               ", available: " + node.getAvailableResource());
