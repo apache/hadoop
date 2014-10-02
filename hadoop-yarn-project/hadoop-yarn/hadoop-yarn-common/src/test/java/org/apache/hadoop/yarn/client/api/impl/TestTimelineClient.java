@@ -240,6 +240,7 @@ public class TestTimelineClient {
     entity.addPrimaryFilter("pkey2", "pval2");
     entity.addOtherInfo("okey1", "oval1");
     entity.addOtherInfo("okey2", "oval2");
+    entity.setDomainId("domain id 1");
     return entity;
   }
 

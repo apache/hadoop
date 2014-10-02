@@ -61,6 +61,7 @@ public class TestTimelineRecords {
       entity.addPrimaryFilter("pkey2", "pval2");
       entity.addOtherInfo("okey1", "oval1");
       entity.addOtherInfo("okey2", "oval2");
+      entity.setDomainId("domain id " + j);
       entities.addEntity(entity);
     }
     LOG.info("Entities in JSON:");
@@ -74,6 +75,7 @@ public class TestTimelineRecords {
     Assert.assertEquals(2, entity1.getEvents().size());
     Assert.assertEquals(2, entity1.getPrimaryFilters().size());
     Assert.assertEquals(2, entity1.getOtherInfo().size());
+    Assert.assertEquals("domain id 0", entity1.getDomainId());
     TimelineEntity entity2 = entities.getEntities().get(1);
     Assert.assertEquals("entity id 1", entity2.getEntityId());
     Assert.assertEquals("entity type 1", entity2.getEntityType());
@@ -81,6 +83,7 @@ public class TestTimelineRecords {
     Assert.assertEquals(2, entity2.getEvents().size());
     Assert.assertEquals(2, entity2.getPrimaryFilters().size());
     Assert.assertEquals(2, entity2.getOtherInfo().size());
+    Assert.assertEquals("domain id 1", entity2.getDomainId());
   }
 
   @Test

@@ -412,6 +412,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     TimelineEntity entity = new TimelineEntity();
     entity.setEntityType(ApplicationMetricsConstants.ENTITY_TYPE);
     entity.setEntityId(appId.toString());
+    entity.setDomainId(TimelineDataManager.DEFAULT_DOMAIN_ID);
     entity.addPrimaryFilter(
         TimelineStore.SystemFilter.ENTITY_OWNER.toString(), "yarn");
     Map<String, Object> entityInfo = new HashMap<String, Object>();
@@ -456,6 +457,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     TimelineEntity entity = new TimelineEntity();
     entity.setEntityType(AppAttemptMetricsConstants.ENTITY_TYPE);
     entity.setEntityId(appAttemptId.toString());
+    entity.setDomainId(TimelineDataManager.DEFAULT_DOMAIN_ID);
     entity.addPrimaryFilter(AppAttemptMetricsConstants.PARENT_PRIMARY_FILTER,
         appAttemptId.getApplicationId().toString());
     entity.addPrimaryFilter(
@@ -497,6 +499,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     TimelineEntity entity = new TimelineEntity();
     entity.setEntityType(ContainerMetricsConstants.ENTITY_TYPE);
     entity.setEntityId(containerId.toString());
+    entity.setDomainId(TimelineDataManager.DEFAULT_DOMAIN_ID);
     entity.addPrimaryFilter(ContainerMetricsConstants.PARENT_PRIMARIY_FILTER,
         containerId.getApplicationAttemptId().toString());
     entity.addPrimaryFilter(
