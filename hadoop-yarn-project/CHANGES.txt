@@ -497,6 +497,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2527. Fixed the potential NPE in ApplicationACLsManager and added test
     cases for it. (Benoy Antony via zjshen)
 
+    YARN-2628. Capacity scheduler with DominantResourceCalculator carries out
+    reservation even though slots are free. (Varun Vasudev via jianhe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
