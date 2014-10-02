@@ -73,16 +73,6 @@ public enum CipherSuite {
     return builder.toString();
   }
   
-  public static void checkName(String name) {
-    CipherSuite[] suites = CipherSuite.values();
-    for (CipherSuite suite : suites) {
-      if (suite.getName().equals(name)) {
-        return;
-      }
-    }
-    throw new IllegalArgumentException("Invalid cipher suite name: " + name);
-  }
-  
   /**
    * Convert to CipherSuite from name, {@link #algoBlockSize} is fixed for
    * certain cipher suite, just need to compare the name.

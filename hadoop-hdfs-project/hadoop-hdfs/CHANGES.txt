@@ -551,6 +551,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7179. DFSClient should instantiate a KeyProvider, not a
     KeyProviderCryptoExtension. (wang)
 
+    HDFS-7181. Remove incorrect precondition check on key length in
+    FileEncryptionInfo. (wang)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
