@@ -897,6 +897,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7178. Additional unit test for replica write with full disk.
     (Arpit Agarwal)
 
+    HDFS-7162. Wrong path when deleting through fuse-dfs a file which already
+    exists in trash (cmccabe)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
