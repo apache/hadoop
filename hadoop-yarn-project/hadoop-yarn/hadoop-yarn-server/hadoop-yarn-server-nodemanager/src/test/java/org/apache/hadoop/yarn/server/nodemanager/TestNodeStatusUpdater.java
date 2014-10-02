@@ -80,6 +80,7 @@ import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
@@ -891,15 +892,23 @@ public class TestNodeStatusUpdater {
       }
     };
 
-    nm.getNMContext().getApplications().putIfAbsent(appId,
-        mock(Application.class));
+    Application application = mock(Application.class);
+    when(application.getApplicationState()).thenReturn(ApplicationState.RUNNING);
+    nm.getNMContext().getApplications().putIfAbsent(appId, application);
     nm.getNMContext().getContainers().put(cId, anyCompletedContainer);
 
     Assert.assertEquals(1, nodeStatusUpdater.getContainerStatuses().size());
 
+    when(application.getApplicationState()).thenReturn(
+        ApplicationState.FINISHING_CONTAINERS_WAIT);
+    // The completed container will be sent one time. Then we will delete it.
+    Assert.assertEquals(1, nodeStatusUpdater.getContainerStatuses().size());
+    Assert.assertEquals(0, nodeStatusUpdater.getContainerStatuses().size());
+
+    nm.getNMContext().getContainers().put(cId, anyCompletedContainer);
     nm.getNMContext().getApplications().remove(appId);
-    nodeStatusUpdater.removeCompletedContainersFromContext(new ArrayList
-        <ContainerId>());
+    // The completed container will be sent one time. Then we will delete it.
+    Assert.assertEquals(1, nodeStatusUpdater.getContainerStatuses().size());
     Assert.assertEquals(0, nodeStatusUpdater.getContainerStatuses().size());
   }
 
