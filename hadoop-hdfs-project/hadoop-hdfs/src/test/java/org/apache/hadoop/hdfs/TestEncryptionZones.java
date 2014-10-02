@@ -43,7 +43,6 @@ import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
 import org.apache.hadoop.crypto.key.KeyProvider;
-import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.CreateFlag;
@@ -1043,7 +1042,7 @@ public class TestEncryptionZones {
   public void testDelegationToken() throws Exception {
     UserGroupInformation.createRemoteUser("JobTracker");
     DistributedFileSystem dfs = cluster.getFileSystem();
-    KeyProviderCryptoExtension keyProvider = Mockito.mock(KeyProviderCryptoExtension.class,
+    KeyProvider keyProvider = Mockito.mock(KeyProvider.class,
         withSettings().extraInterfaces(
             DelegationTokenExtension.class,
             CryptoExtension.class));
