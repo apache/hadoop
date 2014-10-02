@@ -524,6 +524,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2624. Resource Localization fails on a cluster due to existing cache
     directories (Anubhav Dhoot via jlowe)
 
+    YARN-2527. Fixed the potential NPE in ApplicationACLsManager and added test
+    cases for it. (Benoy Antony via zjshen)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
