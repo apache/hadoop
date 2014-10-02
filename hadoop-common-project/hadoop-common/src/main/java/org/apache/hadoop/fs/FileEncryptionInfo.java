@@ -58,8 +58,6 @@ public class FileEncryptionInfo {
     checkNotNull(iv);
     checkNotNull(keyName);
     checkNotNull(ezKeyVersionName);
-    checkArgument(edek.length == suite.getAlgorithmBlockSize(),
-        "Unexpected key length");
     checkArgument(iv.length == suite.getAlgorithmBlockSize(),
         "Unexpected IV length");
     this.cipherSuite = suite;
