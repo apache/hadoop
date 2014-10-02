@@ -118,6 +118,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private static final byte[] EMPTY_VALUE = new byte[0];
 
   private DB db;
+  private boolean isNewlyCreated;
 
   public NMLeveldbStateStoreService() {
     super(NMLeveldbStateStoreService.class.getName());
@@ -132,6 +133,11 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     if (db != null) {
       db.close();
     }
+  }
+
+  @Override
+  public boolean isNewlyCreated() {
+    return isNewlyCreated;
   }
 
 
@@ -837,6 +843,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     } catch (NativeDB.DBException e) {
       if (e.isNotFound() || e.getMessage().contains(" does not exist ")) {
         LOG.info("Creating state database at " + dbfile);
+        isNewlyCreated = true;
         options.createIfMissing(true);
         try {
           db = JniDBFactory.factory.open(dbfile, options);
