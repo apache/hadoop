@@ -114,7 +114,7 @@ public class IdUserGroup {
       + "The host system with duplicated user/group name or id might work fine most of the time by itself.\n"
       + "However when NFS gateway talks to HDFS, HDFS accepts only user and group name.\n"
       + "Therefore, same name means the same user or same group. To find the duplicated names/ids, one can do:\n"
-      + "<getent passwd | cut -d: -f1,3> and <getent group | cut -d: -f1,3> on Linux systms,\n"
+      + "<getent passwd | cut -d: -f1,3> and <getent group | cut -d: -f1,3> on Linux systems,\n"
       + "<dscl . -list /Users UniqueID> and <dscl . -list /Groups PrimaryGroupID> on MacOS.";
   
   private static void reportDuplicateEntry(final String header,
