@@ -898,7 +898,7 @@ Release 2.6.0 - UNRELEASED
     (Arpit Agarwal)
 
     HDFS-7162. Wrong path when deleting through fuse-dfs a file which already
-    exists in trash (cmccabe)
+    exists in trash (Chengbing Liu via cmccabe)
 
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
