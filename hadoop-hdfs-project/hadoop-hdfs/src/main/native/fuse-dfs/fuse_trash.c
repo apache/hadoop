@@ -150,13 +150,14 @@ int move_to_trash(const char *abs_path, hdfsFS userFS)
   if (ret) {
     goto done;
   }
-  if (!strncmp(trash_base, abs_path, strlen(trash_base))) {
+  int trash_base_len = strlen(trash_base);
+  if (!strncmp(trash_base, abs_path, trash_base_len)
+      && (strlen(abs_path) == trash_base_len || abs_path[trash_base_len] == '/')) {
     INFO("move_to_trash(%s): file is already in the trash; deleting.",
          abs_path);
     ret = ALREADY_IN_TRASH_ERR;
     goto done;
   }
-  fprintf(stderr, "trash_base='%s'\n", trash_base);
   if (asprintf(&target_dir, "%s%s", trash_base, parent_dir) < 0) {
     ret = ENOMEM;
     target_dir = NULL;
@@ -182,7 +183,7 @@ int move_to_trash(const char *abs_path, hdfsFS userFS)
     int idx;
     for (idx = 1; idx < TRASH_RENAME_TRIES; idx++) {
       free(target);
-      if (asprintf(&target, "%s%s.%d", target_dir, pcomp, idx) < 0) {
+      if (asprintf(&target, "%s/%s.%d", target_dir, pcomp, idx) < 0) {
         target = NULL;
         ret = ENOMEM;
         goto done;
