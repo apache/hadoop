@@ -113,6 +113,9 @@ import com.google.common.annotations.VisibleForTesting;
  *     RELATED_ENTITIES_COLUMN + relatedentity type + relatedentity id
  *
  *   ENTITY_ENTRY_PREFIX + entity type + revstarttime + entity id +
+ *     DOMAIN_ID_COLUMN
+ *
+ *   ENTITY_ENTRY_PREFIX + entity type + revstarttime + entity id +
  *     INVISIBLE_REVERSE_RELATED_ENTITIES_COLUMN + relatedentity type +
  *     relatedentity id</pre>
  *
@@ -146,6 +149,7 @@ public class LeveldbTimelineStore extends AbstractService
   private static final byte[] RELATED_ENTITIES_COLUMN = "r".getBytes();
   private static final byte[] INVISIBLE_REVERSE_RELATED_ENTITIES_COLUMN =
       "z".getBytes();
+  private static final byte[] DOMAIN_ID_COLUMN = "d".getBytes();
 
   private static final byte[] DOMAIN_ENTRY_PREFIX = "d".getBytes();
   private static final byte[] OWNER_LOOKUP_PREFIX = "o".getBytes();
@@ -521,6 +525,10 @@ public class LeveldbTimelineStore extends AbstractService
             entity.addEvent(event);
           }
         }
+      } else if (key[prefixlen] == DOMAIN_ID_COLUMN[0]) {
+        byte[] v = iterator.peekNext().getValue();
+        String domainId = new String(v);
+        entity.setDomainId(domainId);
       } else {
         if (key[prefixlen] !=
             INVISIBLE_REVERSE_RELATED_ENTITIES_COLUMN[0]) {
@@ -793,6 +801,7 @@ public class LeveldbTimelineStore extends AbstractService
     List<EntityIdentifier> relatedEntitiesWithoutStartTimes =
         new ArrayList<EntityIdentifier>();
     byte[] revStartTime = null;
+    Map<String, Set<Object>> primaryFilters = null;
     try {
       writeBatch = db.createWriteBatch();
       List<TimelineEvent> events = entity.getEvents();
@@ -812,7 +821,7 @@ public class LeveldbTimelineStore extends AbstractService
       revStartTime = writeReverseOrderedLong(startAndInsertTime
           .startTime);
 
-      Map<String, Set<Object>> primaryFilters = entity.getPrimaryFilters();
+      primaryFilters = entity.getPrimaryFilters();
 
       // write entity marker
       byte[] markerKey = createEntityMarkerKey(entity.getEntityId(),
@@ -857,6 +866,21 @@ public class LeveldbTimelineStore extends AbstractService
               relatedEntitiesWithoutStartTimes.add(
                   new EntityIdentifier(relatedEntityId, relatedEntityType));
               continue;
+            } else {
+              byte[] domainIdBytes = db.get(createDomainIdKey(
+                  relatedEntityId, relatedEntityType, relatedEntityStartTime));
+              // This is the existing entity
+              String domainId = new String(domainIdBytes);
+              if (!domainId.equals(entity.getDomainId())) {
+                // in this case the entity will be put, but the relation will be
+                // ignored
+                TimelinePutError error = new TimelinePutError();
+                error.setEntityId(entity.getEntityId());
+                error.setEntityType(entity.getEntityType());
+                error.setErrorCode(TimelinePutError.FORBIDDEN_RELATION);
+                response.addError(error);
+                continue;
+              }
             }
             // write "forward" entry (related entity -> entity)
             key = createRelatedEntityKey(relatedEntityId,
@@ -893,6 +917,23 @@ public class LeveldbTimelineStore extends AbstractService
           writePrimaryFilterEntries(writeBatch, primaryFilters, key, value);
         }
       }
+
+      // write domain id entry
+      byte[] key = createDomainIdKey(entity.getEntityId(),
+          entity.getEntityType(), revStartTime);
+      if (entity.getDomainId() == null ||
+          entity.getDomainId().length() == 0) {
+        TimelinePutError error = new TimelinePutError();
+        error.setEntityId(entity.getEntityId());
+        error.setEntityType(entity.getEntityType());
+        error.setErrorCode(TimelinePutError.NO_DOMAIN);
+        response.addError(error);
+        return;
+      } else {
+        writeBatch.put(key, entity.getDomainId().getBytes());
+        writePrimaryFilterEntries(writeBatch, primaryFilters, key,
+            entity.getDomainId().getBytes());
+      }
       db.write(writeBatch);
     } catch (IOException e) {
       LOG.error("Error putting entity " + entity.getEntityId() +
@@ -920,6 +961,10 @@ public class LeveldbTimelineStore extends AbstractService
         }
         byte[] relatedEntityStartTime = writeReverseOrderedLong(
             relatedEntityStartAndInsertTime.startTime);
+          // This is the new entity, the domain should be the same
+        byte[] key = createDomainIdKey(relatedEntity.getId(),
+            relatedEntity.getType(), relatedEntityStartTime);
+        db.put(key, entity.getDomainId().getBytes());
         db.put(createRelatedEntityKey(relatedEntity.getId(),
             relatedEntity.getType(), relatedEntityStartTime,
             entity.getEntityId(), entity.getEntityType()), EMPTY_BYTES);
@@ -1265,6 +1310,15 @@ public class LeveldbTimelineStore extends AbstractService
         .add(relatedEntityType).add(relatedEntityId).getBytes();
   }
 
+  /**
+   * Creates a domain id key, serializing ENTITY_ENTRY_PREFIX +
+   * entity type + revstarttime + entity id + DOMAIN_ID_COLUMN.
+   */
+  private static byte[] createDomainIdKey(String entityId,
+      String entityType, byte[] revStartTime) throws IOException {
+    return KeyBuilder.newInstance().add(ENTITY_ENTRY_PREFIX).add(entityType)
+        .add(revStartTime).add(entityId).add(DOMAIN_ID_COLUMN).getBytes();
+  }
   /**
    * Clears the cache to test reloading start times from leveldb (only for
    * testing).

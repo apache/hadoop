@@ -30,7 +30,10 @@ import java.util.SortedSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
@@ -42,23 +45,49 @@ import org.apache.hadoop.yarn.server.timeline.TimelineReader.Field;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * The class wrap over the timeline store and the ACLs manager. It does some non
  * trivial manipulation of the timeline data before putting or after getting it
  * from the timeline store, and checks the user's access to it.
  * 
  */
-public class TimelineDataManager {
+public class TimelineDataManager extends AbstractService {
 
   private static final Log LOG = LogFactory.getLog(TimelineDataManager.class);
+  @VisibleForTesting
+  public static final String DEFAULT_DOMAIN_ID = "DEFAULT";
 
   private TimelineStore store;
   private TimelineACLsManager timelineACLsManager;
 
   public TimelineDataManager(TimelineStore store,
       TimelineACLsManager timelineACLsManager) {
+    super(TimelineDataManager.class.getName());
     this.store = store;
     this.timelineACLsManager = timelineACLsManager;
+    timelineACLsManager.setTimelineStore(store);
+  }
+
+  @Override
+  protected void serviceInit(Configuration conf) throws Exception {
+    TimelineDomain domain = store.getDomain("DEFAULT");
+    // it is okay to reuse an existing domain even if it was created by another
+    // user of the timeline server before, because it allows everybody to access.
+    if (domain == null) {
+      // create a default domain, which allows everybody to access and modify
+      // the entities in it.
+      domain = new TimelineDomain();
+      domain.setId(DEFAULT_DOMAIN_ID);
+      domain.setDescription("System Default Domain");
+      domain.setOwner(
+          UserGroupInformation.getCurrentUser().getShortUserName());
+      domain.setReaders("*");
+      domain.setWriters("*");
+      store.put(domain);
+    }
+    super.serviceInit(conf);
   }
 
   /**
@@ -98,7 +127,8 @@ public class TimelineDataManager {
         TimelineEntity entity = entitiesItr.next();
         try {
           // check ACLs
-          if (!timelineACLsManager.checkAccess(callerUGI, entity)) {
+          if (!timelineACLsManager.checkAccess(
+              callerUGI, ApplicationAccessType.VIEW_APP, entity)) {
             entitiesItr.remove();
           } else {
             // clean up system data
@@ -141,7 +171,8 @@ public class TimelineDataManager {
         store.getEntity(entityId, entityType, fields);
     if (entity != null) {
       // check ACLs
-      if (!timelineACLsManager.checkAccess(callerUGI, entity)) {
+      if (!timelineACLsManager.checkAccess(
+          callerUGI, ApplicationAccessType.VIEW_APP, entity)) {
         entity = null;
       } else {
         // clean up the system data
@@ -189,7 +220,8 @@ public class TimelineDataManager {
               eventsOfOneEntity.getEntityType(),
               EnumSet.of(Field.PRIMARY_FILTERS));
           // check ACLs
-          if (!timelineACLsManager.checkAccess(callerUGI, entity)) {
+          if (!timelineACLsManager.checkAccess(
+              callerUGI, ApplicationAccessType.VIEW_APP, entity)) {
             eventsItr.remove();
           }
         } catch (Exception e) {
@@ -225,16 +257,29 @@ public class TimelineDataManager {
       EntityIdentifier entityID =
           new EntityIdentifier(entity.getEntityId(), entity.getEntityType());
 
+      // if the domain id is not specified, the entity will be put into
+      // the default domain
+      if (entity.getDomainId() == null ||
+          entity.getDomainId().length() == 0) {
+        entity.setDomainId(DEFAULT_DOMAIN_ID);
+      }
+
       // check if there is existing entity
       TimelineEntity existingEntity = null;
       try {
         existingEntity =
             store.getEntity(entityID.getId(), entityID.getType(),
                 EnumSet.of(Field.PRIMARY_FILTERS));
-        if (existingEntity != null
-            && !timelineACLsManager.checkAccess(callerUGI, existingEntity)) {
-          throw new YarnException("The timeline entity " + entityID
-              + " was not put by " + callerUGI + " before");
+        if (existingEntity != null &&
+            !existingEntity.getDomainId().equals(entity.getDomainId())) {
+          throw new YarnException("The domain of the timeline entity "
+            + entityID + " is not allowed to be changed.");
+        }
+        if (!timelineACLsManager.checkAccess(
+            callerUGI, ApplicationAccessType.MODIFY_APP, entity)) {
+          throw new YarnException(callerUGI
+              + " is not allowed to put the timeline entity " + entityID
+              + " into the domain " + entity.getDomainId() + ".");
         }
       } catch (Exception e) {
         // Skip the entity which already exists and was put by others
@@ -307,6 +352,11 @@ public class TimelineDataManager {
       domain.setOwner(existingDomain.getOwner());
     }
     store.put(domain);
+    // If the domain exists already, it is likely to be in the cache.
+    // We need to invalidate it.
+    if (existingDomain != null) {
+      timelineACLsManager.replaceIfExist(domain);
+    }
   }
 
   /**

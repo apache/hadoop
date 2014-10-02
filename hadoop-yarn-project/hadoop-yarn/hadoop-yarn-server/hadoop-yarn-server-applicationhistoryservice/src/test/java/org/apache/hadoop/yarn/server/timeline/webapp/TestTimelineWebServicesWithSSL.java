@@ -95,6 +95,7 @@ public class TestTimelineWebServicesWithSSL {
       TimelineEntity expectedEntity = new TimelineEntity();
       expectedEntity.setEntityType("test entity type");
       expectedEntity.setEntityId("test entity id");
+      expectedEntity.setDomainId("test domain id");
       TimelineEvent event = new TimelineEvent();
       event.setEventType("test event type");
       event.setTimestamp(0L);

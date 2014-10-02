@@ -18,17 +18,31 @@
 
 package org.apache.hadoop.yarn.server.timeline.security;
 
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class TestTimelineACLsManager {
+
+  private static TimelineDomain domain;
+
+  static {
+    domain = new TimelineDomain();
+    domain.setId("domain_id_1");
+    domain.setOwner("owner");
+    domain.setReaders("reader");
+    domain.setWriters("writer");
+  }
 
   @Test
   public void testYarnACLsNotEnabledForEntity() throws Exception {
@@ -36,14 +50,22 @@ public class TestTimelineACLsManager {
     conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, false);
     TimelineACLsManager timelineACLsManager =
         new TimelineACLsManager(conf);
+    timelineACLsManager.setTimelineStore(new TestTimelineStore());
     TimelineEntity entity = new TimelineEntity();
     entity.addPrimaryFilter(
         TimelineStore.SystemFilter.ENTITY_OWNER
             .toString(), "owner");
+    entity.setDomainId("domain_id_1");
     Assert.assertTrue(
         "Always true when ACLs are not enabled",
         timelineACLsManager.checkAccess(
-            UserGroupInformation.createRemoteUser("user"), entity));
+            UserGroupInformation.createRemoteUser("user"),
+            ApplicationAccessType.VIEW_APP, entity));
+    Assert.assertTrue(
+        "Always true when ACLs are not enabled",
+        timelineACLsManager.checkAccess(
+            UserGroupInformation.createRemoteUser("user"),
+            ApplicationAccessType.MODIFY_APP, entity));
   }
 
   @Test
@@ -53,22 +75,53 @@ public class TestTimelineACLsManager {
     conf.set(YarnConfiguration.YARN_ADMIN_ACL, "admin");
     TimelineACLsManager timelineACLsManager =
         new TimelineACLsManager(conf);
+    timelineACLsManager.setTimelineStore(new TestTimelineStore());
     TimelineEntity entity = new TimelineEntity();
     entity.addPrimaryFilter(
         TimelineStore.SystemFilter.ENTITY_OWNER
             .toString(), "owner");
+    entity.setDomainId("domain_id_1");
     Assert.assertTrue(
-        "Owner should be allowed to access",
+        "Owner should be allowed to view",
         timelineACLsManager.checkAccess(
-            UserGroupInformation.createRemoteUser("owner"), entity));
+            UserGroupInformation.createRemoteUser("owner"),
+            ApplicationAccessType.VIEW_APP, entity));
+    Assert.assertTrue(
+        "Reader should be allowed to view",
+        timelineACLsManager.checkAccess(
+            UserGroupInformation.createRemoteUser("reader"),
+            ApplicationAccessType.VIEW_APP, entity));
     Assert.assertFalse(
-        "Other shouldn't be allowed to access",
+        "Other shouldn't be allowed to view",
         timelineACLsManager.checkAccess(
-            UserGroupInformation.createRemoteUser("other"), entity));
+            UserGroupInformation.createRemoteUser("other"),
+            ApplicationAccessType.VIEW_APP, entity));
     Assert.assertTrue(
-        "Admin should be allowed to access",
+        "Admin should be allowed to view",
         timelineACLsManager.checkAccess(
-            UserGroupInformation.createRemoteUser("admin"), entity));
+            UserGroupInformation.createRemoteUser("admin"),
+            ApplicationAccessType.VIEW_APP, entity));
+
+    Assert.assertTrue(
+        "Owner should be allowed to modify",
+        timelineACLsManager.checkAccess(
+            UserGroupInformation.createRemoteUser("owner"),
+            ApplicationAccessType.MODIFY_APP, entity));
+    Assert.assertTrue(
+        "Writer should be allowed to modify",
+        timelineACLsManager.checkAccess(
+            UserGroupInformation.createRemoteUser("writer"),
+            ApplicationAccessType.MODIFY_APP, entity));
+    Assert.assertFalse(
+        "Other shouldn't be allowed to modify",
+        timelineACLsManager.checkAccess(
+            UserGroupInformation.createRemoteUser("other"),
+            ApplicationAccessType.MODIFY_APP, entity));
+    Assert.assertTrue(
+        "Admin should be allowed to modify",
+        timelineACLsManager.checkAccess(
+            UserGroupInformation.createRemoteUser("admin"),
+            ApplicationAccessType.MODIFY_APP, entity));
   }
 
   @Test
@@ -78,14 +131,16 @@ public class TestTimelineACLsManager {
     conf.set(YarnConfiguration.YARN_ADMIN_ACL, "owner");
     TimelineACLsManager timelineACLsManager =
         new TimelineACLsManager(conf);
+    timelineACLsManager.setTimelineStore(new TestTimelineStore());
     TimelineEntity entity = new TimelineEntity();
     try {
       timelineACLsManager.checkAccess(
-          UserGroupInformation.createRemoteUser("owner"), entity);
+          UserGroupInformation.createRemoteUser("owner"),
+          ApplicationAccessType.VIEW_APP, entity);
       Assert.fail("Exception is expected");
     } catch (YarnException e) {
       Assert.assertTrue("It's not the exact expected exception", e.getMessage()
-          .contains("is corrupted."));
+          .contains("doesn't exist."));
     }
   }
 
@@ -144,4 +199,15 @@ public class TestTimelineACLsManager {
     }
   }
 
+  private static class TestTimelineStore extends MemoryTimelineStore {
+    @Override
+    public TimelineDomain getDomain(
+        String domainId) throws IOException {
+      if (domainId == null) {
+        return null;
+      } else {
+        return domain;
+      }
+    }
+  }
 }

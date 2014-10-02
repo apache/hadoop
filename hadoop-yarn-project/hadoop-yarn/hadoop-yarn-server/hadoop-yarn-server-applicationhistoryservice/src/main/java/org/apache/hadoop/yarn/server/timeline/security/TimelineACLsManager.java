@@ -19,19 +19,26 @@
 package org.apache.hadoop.yarn.server.timeline.security;
 
 import java.io.IOException;
-import java.util.Set;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
+import org.apache.commons.collections.map.LRUMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
+import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AdminACLsManager;
 import org.apache.hadoop.yarn.server.timeline.EntityIdentifier;
-import org.apache.hadoop.yarn.server.timeline.TimelineStore.SystemFilter;
+import org.apache.hadoop.yarn.server.timeline.TimelineStore;
+import org.apache.hadoop.yarn.util.StringHelper;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -42,14 +49,58 @@ import com.google.common.annotations.VisibleForTesting;
 public class TimelineACLsManager {
 
   private static final Log LOG = LogFactory.getLog(TimelineACLsManager.class);
+  private static final int DOMAIN_ACCESS_ENTRY_CACHE_SIZE = 100;
 
   private AdminACLsManager adminAclsManager;
+  private Map<String, AccessControlListExt> aclExts;
+  private TimelineStore store;
 
+  @SuppressWarnings("unchecked")
   public TimelineACLsManager(Configuration conf) {
     this.adminAclsManager = new AdminACLsManager(conf);
+    aclExts = Collections.synchronizedMap(
+        new LRUMap(DOMAIN_ACCESS_ENTRY_CACHE_SIZE));
+  }
+
+  public void setTimelineStore(TimelineStore store) {
+    this.store = store;
+  }
+
+  private AccessControlListExt loadDomainFromTimelineStore(
+      String domainId) throws IOException {
+    if (store == null) {
+      return null;
+    }
+    TimelineDomain domain = store.getDomain(domainId);
+    if (domain == null) {
+      return null;
+    } else {
+      return putDomainIntoCache(domain);
+    }
+  }
+
+  public void replaceIfExist(TimelineDomain domain) {
+    if (aclExts.containsKey(domain.getId())) {
+      putDomainIntoCache(domain);
+    }
+  }
+
+  private AccessControlListExt putDomainIntoCache(
+      TimelineDomain domain) {
+    Map<ApplicationAccessType, AccessControlList> acls
+    = new HashMap<ApplicationAccessType, AccessControlList>(2);
+    acls.put(ApplicationAccessType.VIEW_APP,
+        new AccessControlList(StringHelper.cjoin(domain.getReaders())));
+    acls.put(ApplicationAccessType.MODIFY_APP,
+        new AccessControlList(StringHelper.cjoin(domain.getWriters())));
+    AccessControlListExt aclExt =
+        new AccessControlListExt(domain.getOwner(), acls);
+    aclExts.put(domain.getId(), aclExt);
+    return aclExt;
   }
 
   public boolean checkAccess(UserGroupInformation callerUGI,
+      ApplicationAccessType applicationAccessType,
       TimelineEntity entity) throws YarnException, IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Verifying the access of "
@@ -62,21 +113,33 @@ public class TimelineACLsManager {
       return true;
     }
 
-    Set<Object> values =
-        entity.getPrimaryFilters().get(
-            SystemFilter.ENTITY_OWNER.toString());
-    if (values == null || values.size() != 1) {
-      throw new YarnException("Owner information of the timeline entity "
-          + new EntityIdentifier(entity.getEntityId(), entity.getEntityType())
-          + " is corrupted.");
+    // find domain owner and acls
+    AccessControlListExt aclExt = aclExts.get(entity.getDomainId());
+    if (aclExt == null) {
+      aclExt = loadDomainFromTimelineStore(entity.getDomainId());
     }
-    String owner = values.iterator().next().toString();
-    // TODO: Currently we just check the user is the admin or the timeline
-    // entity owner. In the future, we need to check whether the user is in the
-    // allowed user/group list
+    if (aclExt == null) {
+      throw new YarnException("Domain information of the timeline entity "
+          + new EntityIdentifier(entity.getEntityId(), entity.getEntityType())
+          + " doesn't exist.");
+    }
+    String owner = aclExt.owner;
+    AccessControlList domainACL = aclExt.acls.get(applicationAccessType);
+    if (domainACL == null) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("ACL not found for access-type " + applicationAccessType
+            + " for domain " + entity.getDomainId() + " owned by "
+            + owner + ". Using default ["
+            + YarnConfiguration.DEFAULT_YARN_APP_ACL + "]");
+      }
+      domainACL =
+          new AccessControlList(YarnConfiguration.DEFAULT_YARN_APP_ACL);
+    }
+
     if (callerUGI != null
         && (adminAclsManager.isAdmin(callerUGI) ||
-            callerUGI.getShortUserName().equals(owner))) {
+            callerUGI.getShortUserName().equals(owner) ||
+            domainACL.isUserAllowed(callerUGI))) {
       return true;
     }
     return false;
@@ -116,4 +179,14 @@ public class TimelineACLsManager {
     return oldAdminACLsManager;
   }
 
+  private static class AccessControlListExt {
+    private String owner;
+    private Map<ApplicationAccessType, AccessControlList> acls;
+
+    public AccessControlListExt(
+        String owner, Map<ApplicationAccessType, AccessControlList> acls) {
+      this.owner = owner;
+      this.acls = acls;
+    }
+  }
 }

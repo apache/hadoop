@@ -31,7 +31,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.AHSWebApp;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFilterInitializer;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -48,7 +47,7 @@ public class TestApplicationHistoryServer {
     Configuration config = new YarnConfiguration();
     historyServer.init(config);
     assertEquals(STATE.INITED, historyServer.getServiceState());
-    assertEquals(4, historyServer.getServices().size());
+    assertEquals(5, historyServer.getServices().size());
     ApplicationHistoryClientService historyService =
         historyServer.getClientService();
     assertNotNull(historyServer.getClientService());

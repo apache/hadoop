@@ -64,6 +64,7 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
       new HashMap<String, Set<Object>>();
   private Map<String, Object> otherInfo =
       new HashMap<String, Object>();
+  private String domainId;
 
   public TimelineEntity() {
 
@@ -323,6 +324,26 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
    */
   public void setOtherInfo(Map<String, Object> otherInfo) {
     this.otherInfo = otherInfo;
+  }
+
+  /**
+   * Get the ID of the domain that the entity is to be put
+   * 
+   * @return the domain ID
+   */
+  @XmlElement(name = "domain")
+  public String getDomainId() {
+    return domainId;
+  }
+
+  /**
+   * Set the ID of the domain that the entity is to be put
+   * 
+   * @param domainId
+   *          the name space ID
+   */
+  public void setDomainId(String domainId) {
+    this.domainId = domainId;
   }
 
   @Override
