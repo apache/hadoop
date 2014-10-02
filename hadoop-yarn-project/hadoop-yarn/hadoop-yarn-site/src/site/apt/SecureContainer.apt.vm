@@ -1,0 +1,118 @@
+~~ Licensed under the Apache License, Version 2.0 (the "License");
+~~ you may not use this file except in compliance with the License.
+~~ You may obtain a copy of the License at
+~~
+~~   http://www.apache.org/licenses/LICENSE-2.0
+~~
+~~ Unless required by applicable law or agreed to in writing, software
+~~ distributed under the License is distributed on an "AS IS" BASIS,
+~~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~~ See the License for the specific language governing permissions and
+~~ limitations under the License. See accompanying LICENSE file.
+
+  ---
+  YARN Secure Containers
+  ---
+  ---
+  ${maven.build.timestamp}
+
+YARN Secure Containers
+
+%{toc|section=1|fromDepth=0|toDepth=3}
+
+* {Overview}
+
+  YARN containers in a secure cluster use the operating system facilities to offer
+  execution isolation for containers. Secure containers execute under the credentials
+  of the job user. The operating system enforces access restriction for the container.
+  The container must run as the use that submitted the application.
+  
+  Secure Containers work only in the context of secured YARN clusters.
+  
+  ** Container isolation requirements
+  
+    The container executor must access the local files and directories needed by the 
+    container such as jars, configuration files, log files, shared objects etc. Although
+    it is launched by the NodeManager, the container should not have access to the 
+    NodeManager private files and configuration. Container running applications 
+    submitted by different users should be isolated and unable to access each other
+    files and directories. Similar requirements apply to other system non-file securable 
+    objects like named pipes, critical sections, LPC queues, shared memory etc.
+    
+    
+  ** Linux Secure Container Executor
+
+    On Linux environment the secure container executor is the <<<LinuxContainerExecutor>>>.
+    It uses an external program called the <<container-executor>>> to launch the container.
+    This program has the <<<setuid>>> access right flag set which allows it to launch 
+    the container with the permissions of the YARN application user.
+    
+  *** Configuration
+
+      The configured directories for <<<yarn.nodemanager.local-dirs>>> and 
+      <<<yarn.nodemanager.log-dirs>>> must be owned by the configured NodeManager user
+      (<<<yarn>>>) and group (<<<hadoop>>>). The permission set on these directories must
+      be <<<drwxr-xr-x>>>.
+      
+      The <<<container-executor>>> program must be owned by <<<root>>> and have the
+      permission set <<<---sr-s--->>>.
+
+      To configure the <<<NodeManager>>> to use the <<<LinuxContainerExecutor>>> set the following 
+      in the <<conf/yarn-site.xml>>:
+
++---+
+<property>
+  <name>yarn.nodemanager.container-executor.class</name>
+  <value>org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor</value>
+</property>
+
+<property>
+  <name>yarn.nodemanager.linux-container-executor.group</name>
+  <value>hadoop</value>
+</property>
++---+
+
+      Additionally the LCE requires the <<<container-executor.cfg>>> file, which is read by the
+      <<<container-executor>>> program. 
+
++---+
+yarn.nodemanager.linux-container-executor.group=#configured value of yarn.nodemanager.linux-container-executor.group
+banned.users=#comma separated list of users who can not run applications
+allowed.system.users=#comma separated list of allowed system users
+min.user.id=1000#Prevent other super-users
++---+
+
+   
+  ** Windows Secure Container Executor
+  
+    The Windows environment secure container executor is the <<<WindowsSecureContainerExecutor>>>.
+    It uses the Windows S4U infrastructure to launch the container as the 
+    YARN application user.
+    
+  *** Configuration
+  
+      To configure the <<<NodeManager>>> to use the <<<WindowsSecureContainerExecutor>>> 
+      set the following in the <<conf/yarn-site.xml>>:
+
++---+
+<property>
+  <name>yarn.nodemanager.container-executor.class</name>
+  <value>org.apache.hadoop.yarn.server.nodemanager.WindowsSecureContainerExecutor</value>
+</property>
+
+<property>
+  <name>yarn.nodemanager.windows-secure-container-executor.group</name>
+  <value>hadoop</value>
+</property>
++---+
+
+      The NodeManager must run as a member of the local <<<Administrators>>> group or as 
+      <<<LocalSystem>>>. It is not enough for the NodeManager to simply impersonate such an user.
+      
+  *** Useful Links
+    
+    * {{{http://msdn.microsoft.com/en-us/magazine/cc188757.aspx}Exploring S4U Kerberos Extensions in Windows Server 2003}}
+    
+    * {{{https://issues.apache.org/jira/browse/YARN-1063}Winutils needs ability to create task as domain user}}
+    
+    * {{{https://issues.apache.org/jira/browse/YARN-1972}Implement secure Windows Container Executor}}

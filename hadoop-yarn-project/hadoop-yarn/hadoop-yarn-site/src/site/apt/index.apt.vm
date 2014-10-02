@@ -52,6 +52,8 @@ MapReduce NextGen aka YARN aka MRv2
   * {{{./WebApplicationProxy.html}Web Application Proxy}}
 
   * {{{./TimelineServer.html}YARN Timeline Server}}
+  
+  * {{{./SecureContainer.html}YARN Secure Containers}}
 
   * {{{../../hadoop-project-dist/hadoop-common/CLIMiniCluster.html}CLI MiniCluster}}
 

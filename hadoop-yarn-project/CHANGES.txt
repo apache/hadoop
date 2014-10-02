@@ -111,6 +111,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2504. Enhanced RM Admin CLI to support management of node-labels.
     (Wangda Tan via vinodkv)
 
+    YARN-1972. Added a secure container-executor for Windows. (Remus Rusanu via
+    vinodkv)
+
   IMPROVEMENTS
 
     YARN-2242. Improve exception information on AM launch crashes. (Li Lu 

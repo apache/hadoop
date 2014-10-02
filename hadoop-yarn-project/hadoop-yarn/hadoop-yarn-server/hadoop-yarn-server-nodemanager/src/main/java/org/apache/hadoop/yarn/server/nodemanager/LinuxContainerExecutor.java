@@ -218,15 +218,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     if (javaLibPath != null) {
       command.add("-Djava.library.path=" + javaLibPath);
     }
-    command.add(ContainerLocalizer.class.getName());
-    command.add(user);
-    command.add(appId);
-    command.add(locId);
-    command.add(nmAddr.getHostName());
-    command.add(Integer.toString(nmAddr.getPort()));
-    for (String dir : localDirs) {
-      command.add(dir);
-    }
+    ContainerLocalizer.buildMainArgs(command, user, appId, locId, nmAddr, localDirs);
     String[] commandArray = command.toArray(new String[command.size()]);
     ShellCommandExecutor shExec = new ShellCommandExecutor(commandArray);
     if (LOG.isDebugEnabled()) {

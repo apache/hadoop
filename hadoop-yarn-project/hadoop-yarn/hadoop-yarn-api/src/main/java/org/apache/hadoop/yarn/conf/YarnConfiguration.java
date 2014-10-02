@@ -954,6 +954,12 @@ public class YarnConfiguration extends Configuration {
 
   public static final long DEFAULT_NM_LINUX_CONTAINER_CGROUPS_DELETE_TIMEOUT =
       1000;
+  
+  /** 
+  /* The Windows group that the windows-secure-container-executor should run as.
+  */
+  public static final String NM_WINDOWS_SECURE_CONTAINER_GROUP =
+      NM_PREFIX + "windows-secure-container-executor.group";
 
   /** T-file compression types used to compress aggregated logs.*/
   public static final String NM_LOG_AGG_COMPRESSION_TYPE = 
