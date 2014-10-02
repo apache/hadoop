@@ -25,6 +25,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -95,11 +96,14 @@ public class TestTimelineWebServices extends JerseyTest {
       Configuration conf = new YarnConfiguration();
       conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, false);
       timelineACLsManager = new TimelineACLsManager(conf);
+      timelineACLsManager.setTimelineStore(store);
       conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
       conf.set(YarnConfiguration.YARN_ADMIN_ACL, "admin");
       adminACLsManager = new AdminACLsManager(conf);
       TimelineDataManager timelineDataManager =
           new TimelineDataManager(store, timelineACLsManager);
+      timelineDataManager.init(conf);
+      timelineDataManager.start();
       bind(TimelineDataManager.class).toInstance(timelineDataManager);
       serve("/*").with(GuiceContainer.class);
       TimelineAuthenticationFilter taFilter =
@@ -182,7 +186,7 @@ public class TestTimelineWebServices extends JerseyTest {
 
   private static void verifyEntities(TimelineEntities entities) {
     Assert.assertNotNull(entities);
-    Assert.assertEquals(2, entities.getEntities().size());
+    Assert.assertEquals(3, entities.getEntities().size());
     TimelineEntity entity1 = entities.getEntities().get(0);
     Assert.assertNotNull(entity1);
     Assert.assertEquals("id_1", entity1.getEntityId());
@@ -199,6 +203,14 @@ public class TestTimelineWebServices extends JerseyTest {
     Assert.assertEquals(2, entity2.getEvents().size());
     Assert.assertEquals(4, entity2.getPrimaryFilters().size());
     Assert.assertEquals(4, entity2.getOtherInfo().size());
+    TimelineEntity entity3 = entities.getEntities().get(2);
+    Assert.assertNotNull(entity2);
+    Assert.assertEquals("id_6", entity3.getEntityId());
+    Assert.assertEquals("type_1", entity3.getEntityType());
+    Assert.assertEquals(61l, entity3.getStartTime().longValue());
+    Assert.assertEquals(0, entity3.getEvents().size());
+    Assert.assertEquals(4, entity3.getPrimaryFilters().size());
+    Assert.assertEquals(4, entity3.getOtherInfo().size());
   }
 
   @Test
@@ -220,7 +232,7 @@ public class TestTimelineWebServices extends JerseyTest {
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    assertEquals(1, response.getEntity(TimelineEntities.class).getEntities()
+    assertEquals(2, response.getEntity(TimelineEntities.class).getEntities()
         .size());
 
     response = r.path("ws").path("v1").path("timeline")
@@ -228,7 +240,7 @@ public class TestTimelineWebServices extends JerseyTest {
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    assertEquals(2, response.getEntity(TimelineEntities.class).getEntities()
+    assertEquals(3, response.getEntity(TimelineEntities.class).getEntities()
         .size());
   }
 
@@ -249,7 +261,7 @@ public class TestTimelineWebServices extends JerseyTest {
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    assertEquals(2, response.getEntity(TimelineEntities.class).getEntities()
+    assertEquals(3, response.getEntity(TimelineEntities.class).getEntities()
         .size());
   }
 
@@ -439,6 +451,7 @@ public class TestTimelineWebServices extends JerseyTest {
     entity.setEntityId("test id 1");
     entity.setEntityType("test type 1");
     entity.setStartTime(System.currentTimeMillis());
+    entity.setDomainId("domain_id_1");
     entities.addEntity(entity);
     WebResource r = resource();
     // No owner, will be rejected
@@ -482,10 +495,11 @@ public class TestTimelineWebServices extends JerseyTest {
       entity.setEntityId("test id 2");
       entity.setEntityType("test type 2");
       entity.setStartTime(System.currentTimeMillis());
+      entity.setDomainId("domain_id_1");
       entities.addEntity(entity);
       WebResource r = resource();
       ClientResponse response = r.path("ws").path("v1").path("timeline")
-          .queryParam("user.name", "tester")
+          .queryParam("user.name", "writer_user_1")
           .accept(MediaType.APPLICATION_JSON)
           .type(MediaType.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
@@ -497,7 +511,7 @@ public class TestTimelineWebServices extends JerseyTest {
 
       // override/append timeline data in the same entity with different user
       response = r.path("ws").path("v1").path("timeline")
-          .queryParam("user.name", "other")
+          .queryParam("user.name", "writer_user_3")
           .accept(MediaType.APPLICATION_JSON)
           .type(MediaType.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
@@ -507,6 +521,82 @@ public class TestTimelineWebServices extends JerseyTest {
       Assert.assertEquals(1, putResponse.getErrors().size());
       Assert.assertEquals(TimelinePutResponse.TimelinePutError.ACCESS_DENIED,
           putResponse.getErrors().get(0).getErrorCode());
+
+      // Cross domain relationship will be rejected
+      entities = new TimelineEntities();
+      entity = new TimelineEntity();
+      entity.setEntityId("test id 3");
+      entity.setEntityType("test type 2");
+      entity.setStartTime(System.currentTimeMillis());
+      entity.setDomainId("domain_id_2");
+      entity.setRelatedEntities(Collections.singletonMap(
+          "test type 2", Collections.singleton("test id 2")));
+      entities.addEntity(entity);
+      r = resource();
+      response = r.path("ws").path("v1").path("timeline")
+          .queryParam("user.name", "writer_user_3")
+          .accept(MediaType.APPLICATION_JSON)
+          .type(MediaType.APPLICATION_JSON)
+          .post(ClientResponse.class, entities);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      putResponse = response.getEntity(TimelinePutResponse.class);
+      Assert.assertNotNull(putResponse);
+      Assert.assertEquals(1, putResponse.getErrors().size());
+      Assert.assertEquals(TimelinePutError.FORBIDDEN_RELATION,
+          putResponse.getErrors().get(0).getErrorCode());
+
+      // Make sure the entity has been added anyway even though the
+      // relationship is been excluded
+      response = r.path("ws").path("v1").path("timeline")
+          .path("test type 2").path("test id 3")
+          .queryParam("user.name", "reader_user_3")
+          .accept(MediaType.APPLICATION_JSON)
+          .get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      entity = response.getEntity(TimelineEntity.class);
+      Assert.assertNotNull(entity);
+      Assert.assertEquals("test id 3", entity.getEntityId());
+      Assert.assertEquals("test type 2", entity.getEntityType());
+    } finally {
+      timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
+    }
+  }
+
+  @Test
+  public void testPostEntitiesToDefaultDomain() throws Exception {
+    AdminACLsManager oldAdminACLsManager =
+        timelineACLsManager.setAdminACLsManager(adminACLsManager);
+    try {
+      TimelineEntities entities = new TimelineEntities();
+      TimelineEntity entity = new TimelineEntity();
+      entity.setEntityId("test id 7");
+      entity.setEntityType("test type 7");
+      entity.setStartTime(System.currentTimeMillis());
+      entities.addEntity(entity);
+      WebResource r = resource();
+      ClientResponse response = r.path("ws").path("v1").path("timeline")
+          .queryParam("user.name", "anybody_1")
+          .accept(MediaType.APPLICATION_JSON)
+          .type(MediaType.APPLICATION_JSON)
+          .post(ClientResponse.class, entities);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      TimelinePutResponse putResposne =
+          response.getEntity(TimelinePutResponse.class);
+      Assert.assertNotNull(putResposne);
+      Assert.assertEquals(0, putResposne.getErrors().size());
+      // verify the entity exists in the store
+      response = r.path("ws").path("v1").path("timeline")
+          .path("test type 7").path("test id 7")
+          .queryParam("user.name", "any_body_2")
+          .accept(MediaType.APPLICATION_JSON)
+          .get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      entity = response.getEntity(TimelineEntity.class);
+      Assert.assertNotNull(entity);
+      Assert.assertEquals("test id 7", entity.getEntityId());
+      Assert.assertEquals("test type 7", entity.getEntityType());
+      Assert.assertEquals(TimelineDataManager.DEFAULT_DOMAIN_ID,
+          entity.getDomainId());
     } finally {
       timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
     }
@@ -522,18 +612,23 @@ public class TestTimelineWebServices extends JerseyTest {
       entity.setEntityId("test id 3");
       entity.setEntityType("test type 3");
       entity.setStartTime(System.currentTimeMillis());
+      entity.setDomainId("domain_id_1");
       entities.addEntity(entity);
       WebResource r = resource();
       ClientResponse response = r.path("ws").path("v1").path("timeline")
-          .queryParam("user.name", "tester")
+          .queryParam("user.name", "writer_user_1")
           .accept(MediaType.APPLICATION_JSON)
           .type(MediaType.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      TimelinePutResponse putResponse =
+          response.getEntity(TimelinePutResponse.class);
+      Assert.assertEquals(0, putResponse.getErrors().size());
       // verify the system data will not be exposed
       // 1. No field specification
       response = r.path("ws").path("v1").path("timeline")
           .path("test type 3").path("test id 3")
-          .queryParam("user.name", "tester")
+          .queryParam("user.name", "reader_user_1")
           .accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
@@ -544,7 +639,7 @@ public class TestTimelineWebServices extends JerseyTest {
       response = r.path("ws").path("v1").path("timeline")
           .path("test type 3").path("test id 3")
           .queryParam("fields", "relatedentities")
-          .queryParam("user.name", "tester")
+          .queryParam("user.name", "reader_user_1")
           .accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
@@ -555,7 +650,7 @@ public class TestTimelineWebServices extends JerseyTest {
       response = r.path("ws").path("v1").path("timeline")
           .path("test type 3").path("test id 3")
           .queryParam("fields", "primaryfilters")
-          .queryParam("user.name", "tester")
+          .queryParam("user.name", "reader_user_1")
           .accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
@@ -566,7 +661,7 @@ public class TestTimelineWebServices extends JerseyTest {
       // get entity with other user
       response = r.path("ws").path("v1").path("timeline")
           .path("test type 3").path("test id 3")
-          .queryParam("user.name", "other")
+          .queryParam("user.name", "reader_user_2")
           .accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
@@ -582,42 +677,55 @@ public class TestTimelineWebServices extends JerseyTest {
     AdminACLsManager oldAdminACLsManager =
         timelineACLsManager.setAdminACLsManager(adminACLsManager);
     try {
+      // Put entity [4, 4] in domain 1
       TimelineEntities entities = new TimelineEntities();
       TimelineEntity entity = new TimelineEntity();
       entity.setEntityId("test id 4");
       entity.setEntityType("test type 4");
       entity.setStartTime(System.currentTimeMillis());
+      entity.setDomainId("domain_id_1");
       entities.addEntity(entity);
       WebResource r = resource();
       ClientResponse response = r.path("ws").path("v1").path("timeline")
-          .queryParam("user.name", "tester")
+          .queryParam("user.name", "writer_user_1")
           .accept(MediaType.APPLICATION_JSON)
           .type(MediaType.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      TimelinePutResponse putResponse =
+          response.getEntity(TimelinePutResponse.class);
+      Assert.assertEquals(0, putResponse.getErrors().size());
 
+      // Put entity [4, 5] in domain 2
       entities = new TimelineEntities();
       entity = new TimelineEntity();
       entity.setEntityId("test id 5");
       entity.setEntityType("test type 4");
       entity.setStartTime(System.currentTimeMillis());
+      entity.setDomainId("domain_id_2");
       entities.addEntity(entity);
       r = resource();
       response = r.path("ws").path("v1").path("timeline")
-          .queryParam("user.name", "other")
+          .queryParam("user.name", "writer_user_3")
           .accept(MediaType.APPLICATION_JSON)
           .type(MediaType.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      putResponse = response.getEntity(TimelinePutResponse.class);
+      Assert.assertEquals(0, putResponse.getErrors().size());
 
+      // Query entities of type 4
       response = r.path("ws").path("v1").path("timeline")
-          .queryParam("user.name", "other")
+          .queryParam("user.name", "reader_user_1")
           .path("test type 4")
           .accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       entities = response.getEntity(TimelineEntities.class);
+      // Reader 1 should just have the access to entity [4, 4]
       assertEquals(1, entities.getEntities().size());
       assertEquals("test type 4", entities.getEntities().get(0).getEntityType());
-      assertEquals("test id 5", entities.getEntities().get(0).getEntityId());
+      assertEquals("test id 4", entities.getEntities().get(0).getEntityId());
     } finally {
       timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
     }
@@ -628,11 +736,13 @@ public class TestTimelineWebServices extends JerseyTest {
     AdminACLsManager oldAdminACLsManager =
         timelineACLsManager.setAdminACLsManager(adminACLsManager);
     try {
+      // Put entity [5, 5] in domain 1
       TimelineEntities entities = new TimelineEntities();
       TimelineEntity entity = new TimelineEntity();
       entity.setEntityId("test id 5");
       entity.setEntityType("test type 5");
       entity.setStartTime(System.currentTimeMillis());
+      entity.setDomainId("domain_id_1");
       TimelineEvent event = new TimelineEvent();
       event.setEventType("event type 1");
       event.setTimestamp(System.currentTimeMillis());
@@ -640,16 +750,22 @@ public class TestTimelineWebServices extends JerseyTest {
       entities.addEntity(entity);
       WebResource r = resource();
       ClientResponse response = r.path("ws").path("v1").path("timeline")
-          .queryParam("user.name", "tester")
+          .queryParam("user.name", "writer_user_1")
           .accept(MediaType.APPLICATION_JSON)
           .type(MediaType.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      TimelinePutResponse putResponse =
+          response.getEntity(TimelinePutResponse.class);
+      Assert.assertEquals(0, putResponse.getErrors().size());
 
+      // Put entity [5, 6] in domain 2
       entities = new TimelineEntities();
       entity = new TimelineEntity();
       entity.setEntityId("test id 6");
       entity.setEntityType("test type 5");
       entity.setStartTime(System.currentTimeMillis());
+      entity.setDomainId("domain_id_2");
       event = new TimelineEvent();
       event.setEventType("event type 2");
       event.setTimestamp(System.currentTimeMillis());
@@ -657,21 +773,26 @@ public class TestTimelineWebServices extends JerseyTest {
       entities.addEntity(entity);
       r = resource();
       response = r.path("ws").path("v1").path("timeline")
-          .queryParam("user.name", "other")
+          .queryParam("user.name", "writer_user_3")
           .accept(MediaType.APPLICATION_JSON)
           .type(MediaType.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      putResponse = response.getEntity(TimelinePutResponse.class);
+      Assert.assertEquals(0, putResponse.getErrors().size());
 
+      // Query events belonging to the entities of type 4
       response = r.path("ws").path("v1").path("timeline")
           .path("test type 5").path("events")
-          .queryParam("user.name", "other")
+          .queryParam("user.name", "reader_user_1")
           .queryParam("entityId", "test id 5,test id 6")
           .accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       TimelineEvents events = response.getEntity(TimelineEvents.class);
+      // Reader 1 should just have the access to the events of entity [5, 5]
       assertEquals(1, events.getAllEvents().size());
-      assertEquals("test id 6", events.getAllEvents().get(0).getEntityId());
+      assertEquals("test id 5", events.getAllEvents().get(0).getEntityId());
     } finally {
       timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
     }

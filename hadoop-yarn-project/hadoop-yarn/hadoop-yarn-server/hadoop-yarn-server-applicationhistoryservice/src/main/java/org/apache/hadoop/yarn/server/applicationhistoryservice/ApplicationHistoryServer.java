@@ -84,6 +84,7 @@ public class ApplicationHistoryServer extends CompositeService {
     secretManagerService = createTimelineDelegationTokenSecretManagerService(conf);
     addService(secretManagerService);
     timelineDataManager = createTimelineDataManager(conf);
+    addService(timelineDataManager);
 
     // init generic history service afterwards
     aclsManager = createApplicationACLsManager(conf);

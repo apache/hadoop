@@ -284,6 +284,16 @@ public class MemoryTimelineStore
         existingEntity.setEntityId(entity.getEntityId());
         existingEntity.setEntityType(entity.getEntityType());
         existingEntity.setStartTime(entity.getStartTime());
+        if (entity.getDomainId() == null ||
+            entity.getDomainId().length() == 0) {
+          TimelinePutError error = new TimelinePutError();
+          error.setEntityId(entityId.getId());
+          error.setEntityType(entityId.getType());
+          error.setErrorCode(TimelinePutError.NO_DOMAIN);
+          response.addError(error);
+          continue;
+        }
+        existingEntity.setDomainId(entity.getDomainId());
         entities.put(entityId, existingEntity);
         entityInsertTimes.put(entityId, System.currentTimeMillis());
       }
@@ -351,8 +361,19 @@ public class MemoryTimelineStore
               new EntityIdentifier(idStr, partRelatedEntities.getKey());
           TimelineEntity relatedEntity = entities.get(relatedEntityId);
           if (relatedEntity != null) {
-            relatedEntity.addRelatedEntity(
-                existingEntity.getEntityType(), existingEntity.getEntityId());
+            if (relatedEntity.getDomainId().equals(
+                existingEntity.getDomainId())) {
+              relatedEntity.addRelatedEntity(
+                  existingEntity.getEntityType(), existingEntity.getEntityId());
+            } else {
+              // in this case the entity will be put, but the relation will be
+              // ignored
+              TimelinePutError error = new TimelinePutError();
+              error.setEntityType(existingEntity.getEntityType());
+              error.setEntityId(existingEntity.getEntityId());
+              error.setErrorCode(TimelinePutError.FORBIDDEN_RELATION);
+              response.addError(error);
+            }
           } else {
             relatedEntity = new TimelineEntity();
             relatedEntity.setEntityId(relatedEntityId.getId());
@@ -360,6 +381,7 @@ public class MemoryTimelineStore
             relatedEntity.setStartTime(existingEntity.getStartTime());
             relatedEntity.addRelatedEntity(existingEntity.getEntityType(),
                 existingEntity.getEntityId());
+            relatedEntity.setDomainId(existingEntity.getDomainId());
             entities.put(relatedEntityId, relatedEntity);
             entityInsertTimes.put(relatedEntityId, System.currentTimeMillis());
           }
@@ -414,6 +436,7 @@ public class MemoryTimelineStore
     entityToReturn.setEntityId(entity.getEntityId());
     entityToReturn.setEntityType(entity.getEntityType());
     entityToReturn.setStartTime(entity.getStartTime());
+    entityToReturn.setDomainId(entity.getDomainId());
     // Deep copy
     if (fields.contains(Field.EVENTS)) {
       entityToReturn.addEvents(entity.getEvents());
