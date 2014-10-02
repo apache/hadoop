@@ -11,6 +11,9 @@ Release 2.7.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-1979. TestDirectoryCollection fails when the umask is unusual.
+    (Vinod Kumar Vavilapalli and Tsuyoshi OZAWA via junping_du)
+
   OPTIMIZATIONS
 
   BUG FIXES
