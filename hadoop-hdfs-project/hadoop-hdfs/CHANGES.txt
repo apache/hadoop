@@ -7,6 +7,7 @@ Release 2.7.0 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+    HDFS-7055. Add tracing to DFSInputStream (cmccabe)
 
   OPTIMIZATIONS
 

@@ -17,24 +17,30 @@
  */
 package org.apache.hadoop.tracing;
 
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.tracing.SpanReceiverInfo.ConfigurationPair;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.htrace.HTraceConfiguration;
 import org.htrace.SpanReceiver;
 import org.htrace.Trace;
- 
 
 /**
  * This class provides functions for reading the names of SpanReceivers from
@@ -45,13 +51,16 @@ import org.htrace.Trace;
 @InterfaceAudience.Private
 public class SpanReceiverHost implements TraceAdminProtocol {
   public static final String SPAN_RECEIVERS_CONF_KEY =
-    "hadoop.trace.spanreceiver.classes";
+    "hadoop.htrace.spanreceiver.classes";
   private static final Log LOG = LogFactory.getLog(SpanReceiverHost.class);
   private final TreeMap<Long, SpanReceiver> receivers =
       new TreeMap<Long, SpanReceiver>();
   private Configuration config;
   private boolean closed = false;
   private long highestId = 1;
+
+  private final static String LOCAL_FILE_SPAN_RECEIVER_PATH =
+      "hadoop.htrace.local-file-span-receiver.path";
 
   private static enum SingletonHolder {
     INSTANCE;
@@ -81,9 +90,32 @@ public class SpanReceiverHost implements TraceAdminProtocol {
 
   private static List<ConfigurationPair> EMPTY = Collections.emptyList();
 
+  private static String getUniqueLocalTraceFileName() {
+    String tmp = System.getProperty("java.io.tmpdir", "/tmp");
+    String nonce = null;
+    BufferedReader reader = null;
+    try {
+      // On Linux we can get a unique local file name by reading the process id
+      // out of /proc/self/stat.  (There isn't any portable way to get the
+      // process ID from Java.)
+      reader = new BufferedReader(
+          new InputStreamReader(new FileInputStream("/proc/self/stat")));
+      String line = reader.readLine();
+      nonce = line.split(" ")[0];
+    } catch (IOException e) {
+    } finally {
+      IOUtils.cleanup(LOG, reader);
+    }
+    if (nonce == null) {
+      // If we can't use the process ID, use a random nonce.
+      nonce = UUID.randomUUID().toString();
+    }
+    return new File(tmp, nonce).getAbsolutePath();
+  }
+
   /**
    * Reads the names of classes specified in the
-   * "hadoop.trace.spanreceiver.classes" property and instantiates and registers
+   * "hadoop.htrace.spanreceiver.classes" property and instantiates and registers
    * them with the Tracer as SpanReceiver's.
    *
    * The nullary constructor is called during construction, but if the classes
@@ -98,8 +130,17 @@ public class SpanReceiverHost implements TraceAdminProtocol {
     if (receiverNames == null || receiverNames.length == 0) {
       return;
     }
+    // It's convenient to have each daemon log to a random trace file when
+    // testing.
+    if (config.get(LOCAL_FILE_SPAN_RECEIVER_PATH) == null) {
+      config.set(LOCAL_FILE_SPAN_RECEIVER_PATH,
+          getUniqueLocalTraceFileName());
+    }
     for (String className : receiverNames) {
       className = className.trim();
+      if (!className.contains(".")) {
+        className = "org.htrace.impl." + className;
+      }
       try {
         SpanReceiver rcvr = loadInstance(className, EMPTY);
         Trace.addReceiver(rcvr);
@@ -145,7 +186,7 @@ public class SpanReceiverHost implements TraceAdminProtocol {
       extraMap.put(pair.getKey(), pair.getValue());
     }
     return new HTraceConfiguration() {
-      public static final String HTRACE_CONF_PREFIX = "hadoop.";
+      public static final String HTRACE_CONF_PREFIX = "hadoop.htrace.";
 
       @Override
       public String get(String key) {

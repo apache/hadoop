@@ -46,6 +46,9 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
+import org.htrace.Sampler;
+import org.htrace.Trace;
+import org.htrace.TraceScope;
 
 
 /**
@@ -68,6 +71,8 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
 
   /** offset in block where reader wants to actually read */
   private long startOffset;
+
+  private final long blockId;
 
   /** offset in block of of first chunk - may be less than startOffset
       if startOffset is not chunk-aligned */
@@ -208,6 +213,19 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   protected synchronized int readChunk(long pos, byte[] buf, int offset, 
                                        int len, byte[] checksumBuf) 
                                        throws IOException {
+    TraceScope scope =
+        Trace.startSpan("RemoteBlockReader#readChunk(" + blockId + ")",
+            Sampler.NEVER);
+    try {
+      return readChunkImpl(pos, buf, offset, len, checksumBuf);
+    } finally {
+      scope.close();
+    }
+  }
+
+  private synchronized int readChunkImpl(long pos, byte[] buf, int offset,
+                                     int len, byte[] checksumBuf)
+                                     throws IOException {
     // Read one chunk.
     if (eos) {
       // Already hit EOF
@@ -347,6 +365,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
     this.in = in;
     this.checksum = checksum;
     this.startOffset = Math.max( startOffset, 0 );
+    this.blockId = blockId;
 
     // The total number of bytes that we need to transfer from the DN is
     // the amount that the user wants (bytesToRead), plus the padding at
@@ -367,7 +386,6 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
    * Create a new BlockReader specifically to satisfy a read.
    * This method also sends the OP_READ_BLOCK request.
    *
-   * @param sock  An established Socket to the DN. The BlockReader will not close it normally
    * @param file  File location
    * @param block  The block object
    * @param blockToken  The block token for security

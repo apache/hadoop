@@ -46,6 +46,9 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
+import org.htrace.Sampler;
+import org.htrace.Trace;
+import org.htrace.TraceScope;
 
 /**
  * BlockReaderLocalLegacy enables local short circuited reads. If the DFS client is on
@@ -169,6 +172,7 @@ class BlockReaderLocalLegacy implements BlockReader {
   /** offset in block where reader wants to actually read */
   private long startOffset;
   private final String filename;
+  private long blockId;
   
   /**
    * The only way this object can be instantiated.
@@ -320,6 +324,7 @@ class BlockReaderLocalLegacy implements BlockReader {
     this.checksum = checksum;
     this.verifyChecksum = verifyChecksum;
     this.startOffset = Math.max(startOffset, 0);
+    this.blockId = block.getBlockId();
 
     bytesPerChecksum = this.checksum.getBytesPerChecksum();
     checksumSize = this.checksum.getChecksumSize();
@@ -357,20 +362,26 @@ class BlockReaderLocalLegacy implements BlockReader {
    */
   private int fillBuffer(FileInputStream stream, ByteBuffer buf)
       throws IOException {
-    int bytesRead = stream.getChannel().read(buf);
-    if (bytesRead < 0) {
-      //EOF
-      return bytesRead;
-    }
-    while (buf.remaining() > 0) {
-      int n = stream.getChannel().read(buf);
-      if (n < 0) {
+    TraceScope scope = Trace.startSpan("BlockReaderLocalLegacy#fillBuffer(" +
+        blockId + ")", Sampler.NEVER);
+    try {
+      int bytesRead = stream.getChannel().read(buf);
+      if (bytesRead < 0) {
         //EOF
         return bytesRead;
       }
-      bytesRead += n;
+      while (buf.remaining() > 0) {
+        int n = stream.getChannel().read(buf);
+        if (n < 0) {
+          //EOF
+          return bytesRead;
+        }
+        bytesRead += n;
+      }
+      return bytesRead;
+    } finally {
+      scope.close();
     }
-    return bytesRead;
   }
   
   /**
