@@ -47,6 +47,9 @@ import org.apache.hadoop.util.DataChecksum;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.htrace.Sampler;
+import org.htrace.Trace;
+import org.htrace.TraceScope;
 
 /**
  * Reads a block from the disk and sends it to a recipient.
@@ -668,6 +671,17 @@ class BlockSender implements java.io.Closeable {
    */
   long sendBlock(DataOutputStream out, OutputStream baseStream, 
                  DataTransferThrottler throttler) throws IOException {
+    TraceScope scope =
+        Trace.startSpan("sendBlock_" + block.getBlockId(), Sampler.NEVER);
+    try {
+      return doSendBlock(out, baseStream, throttler);
+    } finally {
+      scope.close();
+    }
+  }
+
+  private long doSendBlock(DataOutputStream out, OutputStream baseStream,
+        DataTransferThrottler throttler) throws IOException {
     if (out == null) {
       throw new IOException( "out stream is null" );
     }
