@@ -16,23 +16,44 @@
  * limitations under the License.
  */
 
-#ifndef _HDFS_LIBHDFS3_COMMON_STACK_PRINTER_H_
-#define _HDFS_LIBHDFS3_COMMON_STACK_PRINTER_H_
+#ifndef _HDFS_LIBHDFS_SERVER_NAMENODEINFO_H_
+#define _HDFS_LIBHDFS_SERVER_NAMENODEINFO_H_
 
-#include "platform.h"
+#include "XmlConfig.h"
 
 #include <string>
-
-#ifndef DEFAULT_STACK_PREFIX
-#define DEFAULT_STACK_PREFIX "\t@\t"
-#endif
+#include <vector>
 
 namespace hdfs {
-namespace internal {
 
-extern const std::string PrintStack(int skip, int maxDepth);
+class NamenodeInfo {
+public:
+    NamenodeInfo();
+
+    const std::string &getHttpAddr() const {
+        return http_addr;
+    }
+
+    void setHttpAddr(const std::string &httpAddr) {
+        http_addr = httpAddr;
+    }
+
+    const std::string &getRpcAddr() const {
+        return rpc_addr;
+    }
+
+    void setRpcAddr(const std::string &rpcAddr) {
+        rpc_addr = rpcAddr;
+    }
+
+    static std::vector<NamenodeInfo> GetHANamenodeInfo(
+          const std::string &service, const Config &conf);
+
+private:
+    std::string rpc_addr;
+    std::string http_addr;
+};
 
 }
-}
 
-#endif /* _HDFS_LIBHDFS3_COMMON_STACK_PRINTER_H_ */
+#endif /* _HDFS_LIBHDFS_SERVER_NAMENODEINFO_H_ */

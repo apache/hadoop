@@ -16,23 +16,47 @@
  * limitations under the License.
  */
 
-#ifndef _HDFS_LIBHDFS3_COMMON_STACK_PRINTER_H_
-#define _HDFS_LIBHDFS3_COMMON_STACK_PRINTER_H_
+#ifndef _HDFS_LIBHDFS3_RPC_SASLCLIENT_H_
+#define _HDFS_LIBHDFS3_RPC_SASLCLIENT_H_
 
-#include "platform.h"
+#include "RpcAuth.h"
+#include "RpcHeader.pb.h"
+#include "client/Token.h"
+#include "network/Socket.h"
 
+#include <gsasl.h>
 #include <string>
 
-#ifndef DEFAULT_STACK_PREFIX
-#define DEFAULT_STACK_PREFIX "\t@\t"
-#endif
+#define SWITCH_TO_SIMPLE_AUTH -88
 
 namespace hdfs {
 namespace internal {
 
-extern const std::string PrintStack(int skip, int maxDepth);
+using hadoop::common::RpcSaslProto_SaslAuth;
+
+class SaslClient {
+public:
+    SaslClient(const RpcSaslProto_SaslAuth &auth, const Token &token,
+               const std::string &principal);
+
+    ~SaslClient();
+
+    std::string evaluateChallenge(const std::string &challenge);
+
+    bool isComplete();
+
+private:
+    void initKerberos(const RpcSaslProto_SaslAuth &auth,
+                      const std::string &principal);
+    void initDigestMd5(const RpcSaslProto_SaslAuth &auth, const Token &token);
+
+private:
+    Gsasl *ctx;
+    Gsasl_session *session;
+    bool complete;
+};
 
 }
 }
 
-#endif /* _HDFS_LIBHDFS3_COMMON_STACK_PRINTER_H_ */
+#endif /* _HDFS_LIBHDFS3_RPC_SASLCLIENT_H_ */

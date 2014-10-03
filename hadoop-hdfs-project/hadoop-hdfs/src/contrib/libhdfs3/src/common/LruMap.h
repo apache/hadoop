@@ -20,7 +20,7 @@
 #define _HDFS_LIBHDFS3_COMMON_LRUMAP_H_
 
 #include "Thread.h"
-#include "Unordered.h"
+#include "UnorderedMap.h"
 
 #include <list>
 

@@ -16,23 +16,41 @@
  * limitations under the License.
  */
 
-#ifndef _HDFS_LIBHDFS3_COMMON_STACK_PRINTER_H_
-#define _HDFS_LIBHDFS3_COMMON_STACK_PRINTER_H_
+#ifndef _HDFS_LIBHDFS3_NETWORK_SYSCALL_H_
+#define _HDFS_LIBHDFS3_NETWORK_SYSCALL_H_
 
-#include "platform.h"
+#include <fcntl.h>
+#include <netdb.h>
+#include <poll.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
-#include <string>
+namespace real_syscalls {
 
-#ifndef DEFAULT_STACK_PREFIX
-#define DEFAULT_STACK_PREFIX "\t@\t"
+using ::recv;
+using ::send;
+using ::getaddrinfo;
+using ::freeaddrinfo;
+using ::socket;
+using ::connect;
+using ::getpeername;
+using ::fcntl;
+using ::setsockopt;
+using ::poll;
+using ::shutdown;
+using ::close;
+
+}
+
+#ifdef MOCK
+
+#include "MockSystem.h"
+namespace syscalls = mock_systems;
+
+#else
+
+namespace syscalls = real_syscalls;
+
 #endif
 
-namespace hdfs {
-namespace internal {
-
-extern const std::string PrintStack(int skip, int maxDepth);
-
-}
-}
-
-#endif /* _HDFS_LIBHDFS3_COMMON_STACK_PRINTER_H_ */
+#endif /* _HDFS_LIBHDFS3_NETWORK_SYSCALL_H_ */

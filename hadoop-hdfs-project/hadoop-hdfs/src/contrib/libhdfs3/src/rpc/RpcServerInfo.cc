@@ -16,23 +16,17 @@
  * limitations under the License.
  */
 
-#ifndef _HDFS_LIBHDFS3_COMMON_STACK_PRINTER_H_
-#define _HDFS_LIBHDFS3_COMMON_STACK_PRINTER_H_
-
-#include "platform.h"
+#include "RpcServerInfo.h"
 
 #include <string>
-
-#ifndef DEFAULT_STACK_PREFIX
-#define DEFAULT_STACK_PREFIX "\t@\t"
-#endif
 
 namespace hdfs {
 namespace internal {
 
-extern const std::string PrintStack(int skip, int maxDepth);
+size_t RpcServerInfo::hash_value() const {
+    size_t values[] = { StringHasher(host), StringHasher(port), StringHasher(tokenService) };
+    return CombineHasher(values, sizeof(values) / sizeof(values[0]));
+}
 
 }
 }
-
-#endif /* _HDFS_LIBHDFS3_COMMON_STACK_PRINTER_H_ */

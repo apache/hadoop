@@ -16,23 +16,30 @@
  * limitations under the License.
  */
 
-#ifndef _HDFS_LIBHDFS3_COMMON_STACK_PRINTER_H_
-#define _HDFS_LIBHDFS3_COMMON_STACK_PRINTER_H_
+#ifndef _HDFS_LIBHDFS3_RPC_RPCCONTENTWRAPPER_H_
+#define _HDFS_LIBHDFS3_RPC_RPCCONTENTWRAPPER_H_
 
-#include "platform.h"
+#include <google/protobuf/message.h>
 
-#include <string>
-
-#ifndef DEFAULT_STACK_PREFIX
-#define DEFAULT_STACK_PREFIX "\t@\t"
-#endif
+#include "WriteBuffer.h"
 
 namespace hdfs {
 namespace internal {
 
-extern const std::string PrintStack(int skip, int maxDepth);
+class RpcContentWrapper {
+public:
+    RpcContentWrapper(::google::protobuf::Message *header,
+                      ::google::protobuf::Message *msg);
+
+    int getLength();
+    void writeTo(WriteBuffer &buffer);
+
+public:
+    ::google::protobuf::Message *header;
+    ::google::protobuf::Message *msg;
+};
 
 }
 }
 
-#endif /* _HDFS_LIBHDFS3_COMMON_STACK_PRINTER_H_ */
+#endif /* _HDFS_LIBHDFS3_RPC_RPCCONTENTWRAPPER_H_ */

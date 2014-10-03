@@ -15,24 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include "Permission.h"
 
-#ifndef _HDFS_LIBHDFS3_COMMON_STACK_PRINTER_H_
-#define _HDFS_LIBHDFS3_COMMON_STACK_PRINTER_H_
-
-#include "platform.h"
-
-#include <string>
-
-#ifndef DEFAULT_STACK_PREFIX
-#define DEFAULT_STACK_PREFIX "\t@\t"
-#endif
+#include "Exception.h"
+#include "ExceptionInternal.h"
 
 namespace hdfs {
-namespace internal {
 
-extern const std::string PrintStack(int skip, int maxDepth);
+Permission::Permission(uint16_t mode) {
+    if (mode >> 10) {
+        THROW(InvalidParameter,
+              "Invalid parameter: cannot convert %u to \"Permission\"",
+              static_cast<unsigned int>(mode));
+    }
+
+    userAction = (Action)((mode >> 6) & 7);
+    groupAction = (Action)((mode >> 3) & 7);
+    otherAction = (Action)(mode & 7);
+    stickyBit = (((mode >> 9) & 1) == 1);
+}
 
 }
-}
-
-#endif /* _HDFS_LIBHDFS3_COMMON_STACK_PRINTER_H_ */
