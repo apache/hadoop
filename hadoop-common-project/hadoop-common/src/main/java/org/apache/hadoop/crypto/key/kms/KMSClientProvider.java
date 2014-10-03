@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.security.ssl.SSLFactory;
@@ -76,6 +77,8 @@ import com.google.common.base.Preconditions;
 public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     KeyProviderDelegationTokenExtension.DelegationTokenExtension {
 
+  private static final String ANONYMOUS_REQUESTS_DISALLOWED = "Anonymous requests are disallowed";
+
   public static final String TOKEN_KIND = "kms-dt";
 
   public static final String SCHEME_NAME = "kms";
@@ -96,6 +99,13 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   /* It's possible to specify a timeout, in seconds, in the config file */
   public static final String TIMEOUT_ATTR = CONFIG_PREFIX + "timeout";
   public static final int DEFAULT_TIMEOUT = 60;
+
+  /* Number of times to retry authentication in the event of auth failure
+   * (normally happens due to stale authToken) 
+   */
+  public static final String AUTH_RETRY = CONFIG_PREFIX
+      + "authentication.retry-count";
+  public static final int DEFAULT_AUTH_RETRY = 1;
 
   private final ValueQueue<EncryptedKeyVersion> encKeyVersionQueue;
 
@@ -238,6 +248,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   private ConnectionConfigurator configurator;
   private DelegationTokenAuthenticatedURL.Token authToken;
   private UserGroupInformation loginUgi;
+  private final int authRetry;
 
   @Override
   public String toString() {
@@ -296,6 +307,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       }
     }
     int timeout = conf.getInt(TIMEOUT_ATTR, DEFAULT_TIMEOUT);
+    authRetry = conf.getInt(AUTH_RETRY, DEFAULT_AUTH_RETRY);
     configurator = new TimeoutConnConfigurator(timeout, sslFactory);
     encKeyVersionQueue =
         new ValueQueue<KeyProviderCryptoExtension.EncryptedKeyVersion>(
@@ -416,7 +428,12 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   }
 
   private <T> T call(HttpURLConnection conn, Map jsonOutput,
-      int expectedResponse, Class<T> klass)
+      int expectedResponse, Class<T> klass) throws IOException {
+    return call(conn, jsonOutput, expectedResponse, klass, authRetry);
+  }
+
+  private <T> T call(HttpURLConnection conn, Map jsonOutput,
+      int expectedResponse, Class<T> klass, int authRetryCount)
       throws IOException {
     T ret = null;
     try {
@@ -427,13 +444,36 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       conn.getInputStream().close();
       throw ex;
     }
-    if (conn.getResponseCode() == HttpURLConnection.HTTP_FORBIDDEN) {
+    if ((conn.getResponseCode() == HttpURLConnection.HTTP_FORBIDDEN
+        && conn.getResponseMessage().equals(ANONYMOUS_REQUESTS_DISALLOWED))
+        || conn.getResponseCode() == HttpURLConnection.HTTP_UNAUTHORIZED) {
       // Ideally, this should happen only when there is an Authentication
       // failure. Unfortunately, the AuthenticationFilter returns 403 when it
       // cannot authenticate (Since a 401 requires Server to send
       // WWW-Authenticate header as well)..
       KMSClientProvider.this.authToken =
           new DelegationTokenAuthenticatedURL.Token();
+      KMSClientProvider.this.loginUgi =
+          UserGroupInformation.getCurrentUser();
+      if (authRetryCount > 0) {
+        String contentType = conn.getRequestProperty(CONTENT_TYPE);
+        String requestMethod = conn.getRequestMethod();
+        URL url = conn.getURL();
+        conn = createConnection(url, requestMethod);
+        conn.setRequestProperty(CONTENT_TYPE, contentType);
+        return call(conn, jsonOutput, expectedResponse, klass,
+            authRetryCount - 1);
+      }
+    }
+    try {
+      AuthenticatedURL.extractToken(conn, authToken);
+    } catch (AuthenticationException e) {
+      // Ignore the AuthExceptions.. since we are just using the method to
+      // extract and set the authToken.. (Workaround till we actually fix
+      // AuthenticatedURL properly to set authToken post initialization)
+    } finally {
+      KMSClientProvider.this.loginUgi =
+          UserGroupInformation.getCurrentUser();
     }
     HttpExceptionUtils.validateResponse(conn, expectedResponse);
     if (APPLICATION_JSON_MIME.equalsIgnoreCase(conn.getContentType())

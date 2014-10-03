@@ -1607,6 +1607,13 @@ for ldap providers in the same way as above does.
 
 <!--- KMSClientProvider configurations -->
 <property>
+  <name>hadoop.security.kms.client.authentication.retry-count</name>
+  <value>1</value>
+  <description>
+    Number of time to retry connecting to KMS on authentication failure
+  </description>
+</property>
+<property>
   <name>hadoop.security.kms.client.encrypted.key.cache.size</name>
   <value>500</value>
   <description>

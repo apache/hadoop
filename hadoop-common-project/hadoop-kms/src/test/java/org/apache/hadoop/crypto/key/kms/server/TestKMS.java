@@ -32,8 +32,10 @@ import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -49,6 +51,8 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -791,12 +795,24 @@ public class TestKMS {
   }
 
   @Test
-  public void testKMSRestart() throws Exception {
+  public void testKMSRestartKerberosAuth() throws Exception {
+    doKMSRestart(true);
+  }
+
+  @Test
+  public void testKMSRestartSimpleAuth() throws Exception {
+    doKMSRestart(false);
+  }
+
+  public void doKMSRestart(boolean useKrb) throws Exception {
     Configuration conf = new Configuration();
     conf.set("hadoop.security.authentication", "kerberos");
     UserGroupInformation.setConfiguration(conf);
     final File testDir = getTestDir();
     conf = createBaseKMSConf(testDir);
+    if (useKrb) {
+      conf.set("hadoop.kms.authentication.type", "kerberos");
+    }
     conf.set("hadoop.kms.authentication.kerberos.keytab",
         keytab.getAbsolutePath());
     conf.set("hadoop.kms.authentication.kerberos.principal", "HTTP/localhost");
@@ -855,15 +871,6 @@ public class TestKMS {
                 new PrivilegedExceptionAction<Void>() {
                   @Override
                   public Void run() throws Exception {
-                    try {
-                      retKp.createKey("k2", new byte[16],
-                          new KeyProvider.Options(conf));
-                      Assert.fail("Should fail first time !!");
-                    } catch (IOException e) {
-                      String message = e.getMessage();
-                      Assert.assertTrue("Should be a 403 error : " + message,
-                          message.contains("403"));
-                    }
                     retKp.createKey("k2", new byte[16],
                         new KeyProvider.Options(conf));
                     retKp.createKey("k3", new byte[16],
@@ -874,6 +881,106 @@ public class TestKMS {
             return null;
           }
         });
+  }
+
+  @Test
+  public void testKMSAuthFailureRetry() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set("hadoop.security.authentication", "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+    final File testDir = getTestDir();
+    conf = createBaseKMSConf(testDir);
+    conf.set("hadoop.kms.authentication.kerberos.keytab",
+        keytab.getAbsolutePath());
+    conf.set("hadoop.kms.authentication.kerberos.principal", "HTTP/localhost");
+    conf.set("hadoop.kms.authentication.kerberos.name.rules", "DEFAULT");
+
+    for (KMSACLs.Type type : KMSACLs.Type.values()) {
+      conf.set(type.getAclConfigKey(), type.toString());
+    }
+    conf.set(KMSACLs.Type.CREATE.getAclConfigKey(),
+        KMSACLs.Type.CREATE.toString() + ",SET_KEY_MATERIAL");
+
+    conf.set(KMSACLs.Type.ROLLOVER.getAclConfigKey(),
+        KMSACLs.Type.ROLLOVER.toString() + ",SET_KEY_MATERIAL");
+
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "k0.ALL", "*");
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "k1.ALL", "*");
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "k2.ALL", "*");
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "k3.ALL", "*");
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "k4.ALL", "*");
+
+    writeConf(testDir, conf);
+
+    runServer(null, null, testDir,
+        new KMSCallable<Void>() {
+          @Override
+          public Void call() throws Exception {
+            final Configuration conf = new Configuration();
+            conf.setInt(KeyProvider.DEFAULT_BITLENGTH_NAME, 128);
+            final URI uri = createKMSUri(getKMSUrl());
+            doAs("SET_KEY_MATERIAL",
+                new PrivilegedExceptionAction<Void>() {
+                  @Override
+                  public Void run() throws Exception {
+                    KMSClientProvider kp = new KMSClientProvider(uri, conf);
+                    kp.createKey("k1", new byte[16],
+                        new KeyProvider.Options(conf));
+                    makeAuthTokenStale(kp);
+                    kp.createKey("k2", new byte[16],
+                        new KeyProvider.Options(conf));
+                    return null;
+                  }
+                });
+            return null;
+          }
+        });
+
+    // Test retry count
+    runServer(null, null, testDir,
+        new KMSCallable<Void>() {
+          @Override
+          public Void call() throws Exception {
+            final Configuration conf = new Configuration();
+            conf.setInt(KeyProvider.DEFAULT_BITLENGTH_NAME, 128);
+            conf.setInt(KMSClientProvider.AUTH_RETRY, 0);
+            final URI uri = createKMSUri(getKMSUrl());
+            doAs("SET_KEY_MATERIAL",
+                new PrivilegedExceptionAction<Void>() {
+                  @Override
+                  public Void run() throws Exception {
+                    KMSClientProvider kp = new KMSClientProvider(uri, conf);
+                    kp.createKey("k3", new byte[16],
+                        new KeyProvider.Options(conf));
+                    makeAuthTokenStale(kp);
+                    try {
+                      kp.createKey("k4", new byte[16],
+                          new KeyProvider.Options(conf));
+                      Assert.fail("Shoud fail since retry count == 0");
+                    } catch (IOException e) {
+                      Assert.assertTrue(
+                          "HTTP exception must be a 403 : " + e.getMessage(), e
+                              .getMessage().contains("403"));
+                    }
+                    return null;
+                  }
+                });
+            return null;
+          }
+        });
+  }
+
+  private void makeAuthTokenStale(KMSClientProvider kp) throws Exception {
+    Field tokF = KMSClientProvider.class.getDeclaredField("authToken");
+    tokF.setAccessible(true);
+    DelegationTokenAuthenticatedURL.Token delToken =
+        (DelegationTokenAuthenticatedURL.Token) tokF.get(kp);
+    String oldTokStr = delToken.toString();
+    Method setM =
+        AuthenticatedURL.Token.class.getDeclaredMethod("set", String.class);
+    setM.setAccessible(true);
+    String newTokStr = oldTokStr.replaceAll("e=[^&]*", "e=1000");
+    setM.invoke(((AuthenticatedURL.Token)delToken), newTokStr);
   }
 
   @Test
