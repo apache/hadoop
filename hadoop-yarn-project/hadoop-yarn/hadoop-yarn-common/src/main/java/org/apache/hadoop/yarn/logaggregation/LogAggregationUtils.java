@@ -25,8 +25,12 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
+import com.google.common.annotations.VisibleForTesting;
+
 @Private
 public class LogAggregationUtils {
+
+  public static final String TMP_FILE_SUFFIX = ".tmp";
 
   /**
    * Constructs the full filename for an application's log file per node.
@@ -102,8 +106,8 @@ public class LogAggregationUtils {
    * @param nodeId
    * @return the node string to be used to construct the file name.
    */
-  private static String getNodeString(NodeId nodeId) {
+  @VisibleForTesting
+  public static String getNodeString(NodeId nodeId) {
     return nodeId.toString().replace(":", "_");
   }
-  
 }
