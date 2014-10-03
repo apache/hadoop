@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.util.Records;
 public abstract class ContainerId implements Comparable<ContainerId>{
   private static final Splitter _SPLITTER = Splitter.on('_').trimResults();
   private static final String CONTAINER_PREFIX = "container";
+  private static final String EPOCH_PREFIX = "e";
 
   @Private
   @Unstable
@@ -158,10 +159,24 @@ public abstract class ContainerId implements Comparable<ContainerId>{
     }
   }
 
+  /**
+   * @return A string representation of containerId. The format is
+   * container_e*epoch*_*clusterTimestamp*_*appId*_*attemptId*_*containerId*
+   * when epoch is larger than 0
+   * (e.g. container_e17_1410901177871_0001_01_000005).
+   * *epoch* is increased when RM restarts or fails over.
+   * When epoch is 0, epoch is omitted
+   * (e.g. container_1410901177871_0001_01_000005).
+   */
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("container_");
+    sb.append(CONTAINER_PREFIX + "_");
+    long epoch = getContainerId() >> 40;
+    if (epoch > 0) {
+      sb.append(EPOCH_PREFIX)
+          .append(appAttemptIdAndEpochFormat.get().format(epoch)).append("_");;
+    }
     ApplicationId appId = getApplicationAttemptId().getApplicationId();
     sb.append(appId.getClusterTimestamp()).append("_");
     sb.append(ApplicationId.appIdFormat.get().format(appId.getId()))
@@ -170,10 +185,6 @@ public abstract class ContainerId implements Comparable<ContainerId>{
         appAttemptIdAndEpochFormat.get().format(
             getApplicationAttemptId().getAttemptId())).append("_");
     sb.append(containerIdFormat.get().format(0xffffffffffL & getContainerId()));
-    long epoch = getContainerId() >> 40;
-    if (epoch > 0) {
-      sb.append("_").append(appAttemptIdAndEpochFormat.get().format(epoch));
-    }
     return sb.toString();
   }
 
@@ -186,12 +197,19 @@ public abstract class ContainerId implements Comparable<ContainerId>{
           + containerIdStr);
     }
     try {
-      ApplicationAttemptId appAttemptID = toApplicationAttemptId(it);
-      long id = Long.parseLong(it.next());
+      String epochOrClusterTimestampStr = it.next();
       long epoch = 0;
-      if (it.hasNext()) {
-        epoch = Integer.parseInt(it.next());
+      ApplicationAttemptId appAttemptID = null;
+      if (epochOrClusterTimestampStr.startsWith(EPOCH_PREFIX)) {
+        String epochStr = epochOrClusterTimestampStr;
+        epoch = Integer.parseInt(epochStr.substring(EPOCH_PREFIX.length()));
+        appAttemptID = toApplicationAttemptId(it);
+      } else {
+        String clusterTimestampStr = epochOrClusterTimestampStr;
+        long clusterTimestamp = Long.parseLong(clusterTimestampStr);
+        appAttemptID = toApplicationAttemptId(clusterTimestamp, it);
       }
+      long id = Long.parseLong(it.next());
       long cid = (epoch << 40) | id;
       ContainerId containerId = ContainerId.newInstance(appAttemptID, cid);
       return containerId;
@@ -203,7 +221,12 @@ public abstract class ContainerId implements Comparable<ContainerId>{
 
   private static ApplicationAttemptId toApplicationAttemptId(
       Iterator<String> it) throws NumberFormatException {
-    ApplicationId appId = ApplicationId.newInstance(Long.parseLong(it.next()),
+    return toApplicationAttemptId(Long.parseLong(it.next()), it);
+  }
+
+  private static ApplicationAttemptId toApplicationAttemptId(
+      long clusterTimestamp, Iterator<String> it) throws NumberFormatException {
+    ApplicationId appId = ApplicationId.newInstance(clusterTimestamp,
         Integer.parseInt(it.next()));
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, Integer.parseInt(it.next()));

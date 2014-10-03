@@ -67,14 +67,16 @@ public class TestConverterUtils {
     ContainerId id2 =
         TestContainerId.newContainerId(36473, 4365472, ts, 4298334883325L);
     String cid2 = ConverterUtils.toString(id2);
-    assertEquals("container_" + ts + "_36473_4365472_999799999997_03", cid2);
+    assertEquals(
+        "container_e03_" + ts + "_36473_4365472_999799999997", cid2);
     ContainerId gen2 = ConverterUtils.toContainerId(cid2);
     assertEquals(gen2.toString(), id2.toString());
 
     ContainerId id3 =
         TestContainerId.newContainerId(36473, 4365472, ts, 844424930131965L);
     String cid3 = ConverterUtils.toString(id3);
-    assertEquals("container_" + ts + "_36473_4365472_1099511627773_767", cid3);
+    assertEquals(
+        "container_e767_" + ts + "_36473_4365472_1099511627773", cid3);
     ContainerId gen3 = ConverterUtils.toContainerId(cid3);
     assertEquals(gen3.toString(), id3.toString());
   }
