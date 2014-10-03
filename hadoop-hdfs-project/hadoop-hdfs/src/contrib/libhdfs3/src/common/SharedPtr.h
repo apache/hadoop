@@ -19,6 +19,18 @@
 #ifndef _HDFS_LIBHDFS3_COMMON_SHARED_PTR_H_
 #define _HDFS_LIBHDFS3_COMMON_SHARED_PTR_H_
 
+#ifdef _LIBCPP_VERSION
+#include <memory>
+
+namespace hdfs {
+namespace internal {
+
+using std::shared_ptr;
+
+}
+}
+
+#else
 #include <tr1/memory>
 
 namespace hdfs {
@@ -29,4 +41,5 @@ using std::tr1::shared_ptr;
 }
 }
 
+#endif
 #endif

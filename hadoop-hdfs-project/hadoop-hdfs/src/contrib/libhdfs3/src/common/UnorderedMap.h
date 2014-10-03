@@ -19,7 +19,21 @@
 #ifndef _HDFS_LIBHDFS3_COMMON_UNORDERED_MAP_H_
 #define _HDFS_LIBHDFS3_COMMON_UNORDERED_MAP_H_
 
-#include <tr1/unordred_map>
+#ifdef _LIBCPP_VERSION
+
+#include <unordered_map>
+
+namespace hdfs {
+namespace internal {
+
+using std::unordered_map;
+
+}
+}
+
+#else
+
+#include <tr1/unordered_map>
 
 namespace hdfs {
 namespace internal {
@@ -29,4 +43,5 @@ using std::tr1::unordered_map;
 }
 }
 
+#endif
 #endif

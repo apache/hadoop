@@ -16,23 +16,31 @@
  * limitations under the License.
  */
 
-#ifndef _HDFS_LIBHDFS3_COMMON_STACK_PRINTER_H_
-#define _HDFS_LIBHDFS3_COMMON_STACK_PRINTER_H_
+#include "RpcAuth.h"
 
-#include "platform.h"
-
-#include <string>
-
-#ifndef DEFAULT_STACK_PREFIX
-#define DEFAULT_STACK_PREFIX "\t@\t"
-#endif
+#include "Exception.h"
+#include "ExceptionInternal.h"
 
 namespace hdfs {
 namespace internal {
 
-extern const std::string PrintStack(int skip, int maxDepth);
+AuthMethod RpcAuth::ParseMethod(const std::string &str) {
+    if (0 == strcasecmp(str.c_str(), "SIMPLE")) {
+        return AuthMethod::SIMPLE;
+    } else if (0 == strcasecmp(str.c_str(), "KERBEROS")) {
+        return AuthMethod::KERBEROS;
+    } else if (0 == strcasecmp(str.c_str(), "TOKEN")) {
+        return AuthMethod::TOKEN;
+    } else {
+        THROW(InvalidParameter, "RpcAuth: Unknown auth mechanism type: %s",
+              str.c_str());
+    }
+}
+
+size_t RpcAuth::hash_value() const {
+    size_t values[] = { Int32Hasher(method), user.hash_value() };
+    return CombineHasher(values, sizeof(values) / sizeof(values[0]));
+}
 
 }
 }
-
-#endif /* _HDFS_LIBHDFS3_COMMON_STACK_PRINTER_H_ */
