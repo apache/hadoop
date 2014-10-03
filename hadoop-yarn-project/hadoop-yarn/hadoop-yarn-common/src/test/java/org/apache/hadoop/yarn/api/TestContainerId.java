@@ -63,13 +63,15 @@ public class TestContainerId {
     Assert.assertEquals(999799999997L, 0xffffffffffL & c7.getContainerId());
     Assert.assertEquals(3, c7.getContainerId() >> 40);
     Assert.assertEquals(
-        "container_" + ts + "_36473_4365472_999799999997_03", c7.toString());
+        "container_e03_" + ts + "_36473_4365472_999799999997",
+        c7.toString());
 
     ContainerId c8 = newContainerId(36473, 4365472, ts, 844424930131965L);
     Assert.assertEquals(1099511627773L, 0xffffffffffL & c8.getContainerId());
     Assert.assertEquals(767, c8.getContainerId() >> 40);
     Assert.assertEquals(
-        "container_" + ts + "_36473_4365472_1099511627773_767", c8.toString());
+        "container_e767_" + ts + "_36473_4365472_1099511627773",
+        c8.toString());
   }
 
   public static ContainerId newContainerId(int appId, int appAttemptId,
