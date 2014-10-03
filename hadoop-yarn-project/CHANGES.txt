@@ -136,6 +136,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2446. Augmented Timeline service APIs to start taking in domains as a
     parameter while posting entities and events. (Zhijie Shen via vinodkv)
 
+    YARN-2468. Enhanced NodeManager to support log handling APIs (YARN-2569) for
+    use by long running services. (Xuan Gong via vinodkv)
+
   IMPROVEMENTS
 
     YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc
