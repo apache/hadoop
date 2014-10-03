@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import org.junit.Before;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.spy;
@@ -65,7 +66,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptE
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.log4j.Level;
@@ -75,12 +75,22 @@ import org.junit.Test;
 import org.mockito.ArgumentMatcher;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
-public class TestRM {
-
+public class TestRM extends ParameterizedSchedulerTestBase {
   private static final Log LOG = LogFactory.getLog(TestRM.class);
 
   // Milliseconds to sleep for when waiting for something to happen
   private final static int WAIT_SLEEP_MS = 100;
+
+  private YarnConfiguration conf;
+
+  public TestRM(SchedulerType type) {
+    super(type);
+  }
+
+  @Before
+  public void setup() {
+    conf = getConf();
+  }
 
   @After
   public void tearDown() {
@@ -93,7 +103,7 @@ public class TestRM {
   public void testGetNewAppId() throws Exception {
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
-    MockRM rm = new MockRM();
+    MockRM rm = new MockRM(conf);
     rm.start();
     
     GetNewApplicationResponse resp = rm.getNewAppId();
@@ -106,7 +116,7 @@ public class TestRM {
   public void testAppWithNoContainers() throws Exception {
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
-    MockRM rm = new MockRM();
+    MockRM rm = new MockRM(conf);
     rm.start();
     MockNM nm1 = rm.registerNode("h1:1234", 5120);
     
@@ -128,7 +138,6 @@ public class TestRM {
   public void testAppOnMultiNode() throws Exception {
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
-    YarnConfiguration conf = new YarnConfiguration();
     conf.set("yarn.scheduler.capacity.node-locality-delay", "-1");
     MockRM rm = new MockRM(conf);
     rm.start();
@@ -188,7 +197,6 @@ public class TestRM {
   // corresponding NM Token.
   @Test (timeout = 20000)
   public void testNMTokenSentForNormalContainer() throws Exception {
-    YarnConfiguration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.RM_SCHEDULER,
         CapacityScheduler.class.getCanonicalName());
     MockRM rm = new MockRM(conf);
@@ -240,7 +248,7 @@ public class TestRM {
 
   @Test (timeout = 40000)
   public void testNMToken() throws Exception {
-    MockRM rm = new MockRM();
+    MockRM rm = new MockRM(conf);
     try {
       rm.start();
       MockNM nm1 = rm.registerNode("h1:1234", 10000);
@@ -422,8 +430,6 @@ public class TestRM {
 
   @Test (timeout = 300000)
   public void testActivatingApplicationAfterAddingNM() throws Exception {
-    YarnConfiguration conf = new YarnConfiguration();
-
     MockRM rm1 = new MockRM(conf);
 
     // start like normal because state is empty
@@ -469,7 +475,6 @@ public class TestRM {
   // is killed or failed, so that client doesn't get the wrong information.
   @Test (timeout = 80000)
   public void testInvalidateAMHostPortWhenAMFailedOrKilled() throws Exception {
-    YarnConfiguration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
     MockRM rm1 = new MockRM(conf);
     rm1.start();
@@ -522,7 +527,6 @@ public class TestRM {
 
   @Test (timeout = 60000)
   public void testInvalidatedAMHostPortOnAMRestart() throws Exception {
-    YarnConfiguration conf = new YarnConfiguration();
     MockRM rm1 = new MockRM(conf);
     rm1.start();
     MockNM nm1 =
@@ -555,7 +559,6 @@ public class TestRM {
   @Test (timeout = 60000)
   public void testApplicationKillAtAcceptedState() throws Exception {
 
-    YarnConfiguration conf = new YarnConfiguration();
     final Dispatcher dispatcher = new AsyncDispatcher() {
       @Override
       public EventHandler getEventHandler() {
@@ -632,15 +635,4 @@ public class TestRM {
     Assert.assertEquals(appsSubmitted + 1, metrics.getAppsSubmitted());
   }
 
-  public static void main(String[] args) throws Exception {
-    TestRM t = new TestRM();
-    t.testGetNewAppId();
-    t.testAppWithNoContainers();
-    t.testAppOnMultiNode();
-    t.testNMToken();
-    t.testActivatingApplicationAfterAddingNM();
-    t.testInvalidateAMHostPortWhenAMFailedOrKilled();
-    t.testInvalidatedAMHostPortOnAMRestart();
-    t.testApplicationKillAtAcceptedState();
-  }
 }
