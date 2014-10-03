@@ -6,8 +6,6 @@ Release 2.6.0 - 2014-11-15
 
   NEW FEATURES
 
-    YARN-1964. Create Docker analog of the LinuxContainerExecutor in YARN. (Abin 
-    Shahab via raviprak)
 
     YARN-2131. Add a way to format the RMStateStore. (Robert Kanter via kasha)
 
