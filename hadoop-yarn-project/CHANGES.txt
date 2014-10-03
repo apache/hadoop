@@ -274,6 +274,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2627. Added the info logs of attemptFailuresValidityInterval and number
     of previous failed attempts. (Xuan Gong via zjshen)
 
+    YARN-2562. Changed ContainerId#toString() to be more readable. (Tsuyoshi
+    OZAWA via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
