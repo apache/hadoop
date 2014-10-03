@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.security;
 
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager
+    .ParameterizedSchedulerTestBase;
 import static org.junit.Assert.fail;
+import org.junit.Before;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -74,7 +78,17 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Test;
 
-public class TestClientToAMTokens {
+public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
+  private YarnConfiguration conf;
+
+  public TestClientToAMTokens(SchedulerType type) {
+    super(type);
+  }
+
+  @Before
+  public void setup() {
+    conf = getConf();
+  }
 
   private interface CustomProtocol {
     @SuppressWarnings("unused")
@@ -151,8 +165,6 @@ public class TestClientToAMTokens {
 
   @Test
   public void testClientToAMTokens() throws Exception {
-
-    final Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
       "kerberos");
     UserGroupInformation.setConfiguration(conf);
@@ -267,6 +279,8 @@ public class TestClientToAMTokens {
 
     // Now for an authenticated user
     verifyValidToken(conf, am, token);
+
+    rm.stop();
   }
 
   private void verifyTokenWithTamperedID(final Configuration conf,

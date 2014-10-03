@@ -14,6 +14,9 @@ Release 2.7.0 - UNRELEASED
     YARN-1979. TestDirectoryCollection fails when the umask is unusual.
     (Vinod Kumar Vavilapalli and Tsuyoshi OZAWA via junping_du)
 
+    YARN-2635. TestRM, TestRMRestart, TestClientToAMTokens should run 
+    with both CS and FS. (Wei Yan and kasha via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
