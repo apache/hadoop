@@ -577,6 +577,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11117 UGI HadoopLoginModule doesn't catch & wrap all
     kerberos-related exceptions (stevel)
 
+    HADOOP-11163 MetricsSystemImpl may miss a registered source. (cnauroth)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

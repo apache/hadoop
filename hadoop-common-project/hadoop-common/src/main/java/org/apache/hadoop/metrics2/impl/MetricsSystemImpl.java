@@ -234,7 +234,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     }
     // We want to re-register the source to pick up new config when the
     // metrics system restarts.
-    register(name, new AbstractCallback() {
+    register(finalName, new AbstractCallback() {
       @Override public void postStart() {
         registerSource(finalName, finalDesc, s);
       }
