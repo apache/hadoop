@@ -225,7 +225,7 @@ public class LeafQueue implements CSQueue {
     return (float)scheduler.getConfiguration().getCapacity(getQueuePath()) / 100;
   }
 
-  private synchronized void setupQueueConfigs(
+  protected synchronized void setupQueueConfigs(
       Resource clusterResource,
       float capacity, float absoluteCapacity, 
       float maximumCapacity, float absoluteMaxCapacity,
