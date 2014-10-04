@@ -103,7 +103,8 @@ public class PlanQueue extends ParentQueue {
         newlyParsedParentQueue.getAbsoluteCapacity(),
         newlyParsedParentQueue.getMaximumCapacity(),
         newlyParsedParentQueue.getAbsoluteMaximumCapacity(),
-        newlyParsedParentQueue.getState(), newlyParsedParentQueue.getACLs());
+        newlyParsedParentQueue.getState(), newlyParsedParentQueue.getACLs(),
+        newlyParsedParentQueue.getReservationContinueLooking());
 
     updateQuotas(newlyParsedParentQueue.userLimit,
         newlyParsedParentQueue.userLimitFactor,
