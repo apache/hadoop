@@ -397,6 +397,24 @@ public class TestMetricsSystemImpl {
     ms.shutdown();
   }
 
+  @Test public void testRegisterSourceWithoutName() {
+    MetricsSystem ms = new MetricsSystemImpl();
+    TestSource ts = new TestSource("ts");
+    TestSource2 ts2 = new TestSource2("ts2");
+    ms.register(ts);
+    ms.register(ts2);
+    ms.init("TestMetricsSystem");
+    // if metrics source is registered without name,
+    // the class name will be used as the name
+    MetricsSourceAdapter sa = ((MetricsSystemImpl) ms)
+        .getSourceAdapter("TestSource");
+    assertNotNull(sa);
+    MetricsSourceAdapter sa2 = ((MetricsSystemImpl) ms)
+        .getSourceAdapter("TestSource2");
+    assertNotNull(sa2);
+    ms.shutdown();
+  }
+
   private void checkMetricsRecords(List<MetricsRecord> recs) {
     LOG.debug(recs);
     MetricsRecord r = recs.get(0);
@@ -426,6 +444,20 @@ public class TestMetricsSystemImpl {
     final MetricsRegistry registry;
 
     TestSource(String recName) {
+      registry = new MetricsRegistry(recName);
+    }
+  }
+
+  @Metrics(context="test")
+  private static class TestSource2 {
+    @Metric("C1 desc") MutableCounterLong c1;
+    @Metric("XXX desc") MutableCounterLong xxx;
+    @Metric("G1 desc") MutableGaugeLong g1;
+    @Metric("YYY desc") MutableGaugeLong yyy;
+    @Metric MutableRate s1;
+    final MetricsRegistry registry;
+
+    TestSource2(String recName) {
       registry = new MetricsRegistry(recName);
     }
   }
