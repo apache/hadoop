@@ -278,9 +278,6 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11111 MiniKDC to use locale EN_US for case conversions. (stevel)
 
-    HADOOP-10731. Remove @date JavaDoc comment in ProgramDriver class (Henry 
-    Saputra via aw)
-
     HADOOP-10681. Remove unnecessary synchronization from Snappy & Zlib
     codecs. (Gopal Vijayaraghavan via acmurthy)
 
