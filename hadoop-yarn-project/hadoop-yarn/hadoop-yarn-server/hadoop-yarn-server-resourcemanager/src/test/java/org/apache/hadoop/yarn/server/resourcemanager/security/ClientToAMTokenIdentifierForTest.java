@@ -15,49 +15,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.yarn.security.client;
+package org.apache.hadoop.yarn.server.resourcemanager.security;
 
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
-import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.ClientToAMTokenIdentifierProto;
+import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
+import org.apache.hadoop.yarn.proto.YarnSecurityTestClientAMTokenProtos.ClientToAMTokenIdentifierForTestProto;
 
 import com.google.protobuf.TextFormat;
 
+public class ClientToAMTokenIdentifierForTest extends ClientToAMTokenIdentifier {
 
-@Public
-@Evolving
-public class ClientToAMTokenIdentifier extends TokenIdentifier {
+  private ClientToAMTokenIdentifierForTestProto proto;
 
-  public static final Text KIND_NAME = new Text("YARN_CLIENT_TOKEN");
-
-  private ClientToAMTokenIdentifierProto proto;
-
-  // TODO: Add more information in the tokenID such that it is not
-  // transferrable, more secure etc.
-
-  public ClientToAMTokenIdentifier() {
+  public ClientToAMTokenIdentifierForTest() {
   }
-
-  public ClientToAMTokenIdentifier(ApplicationAttemptId id, String client) {
-    ClientToAMTokenIdentifierProto.Builder builder = 
-        ClientToAMTokenIdentifierProto.newBuilder();
-    if (id != null) {
-      builder.setAppAttemptId(((ApplicationAttemptIdPBImpl)id).getProto());
-    }
-    if (client != null) {
-      builder.setClientName(client);
-    }
+  
+  public ClientToAMTokenIdentifierForTest(
+      ClientToAMTokenIdentifier tokenIdentifier, String message) {
+    ClientToAMTokenIdentifierForTestProto.Builder builder = 
+        ClientToAMTokenIdentifierForTestProto.newBuilder();
+    builder.setAppAttemptId(tokenIdentifier.getProto().getAppAttemptId());
+    builder.setClientName(tokenIdentifier.getProto().getClientName());
+    builder.setMessage(message);
     proto = builder.build();
   }
 
@@ -72,10 +62,6 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
     return proto.getClientName();
   }
 
-  public ClientToAMTokenIdentifierProto getProto() {
-    return proto;
-  }
-  
   @Override
   public void write(DataOutput out) throws IOException {
     out.write(proto.toByteArray());
@@ -83,12 +69,9 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    proto = ClientToAMTokenIdentifierProto.parseFrom((DataInputStream)in);
-  }
-
-  @Override
-  public Text getKind() {
-    return KIND_NAME;
+    DataInputStream dis = (DataInputStream)in;
+    byte[] buffer = IOUtils.toByteArray(dis);
+    proto = ClientToAMTokenIdentifierForTestProto.parseFrom(buffer);
   }
 
   @Override
@@ -102,7 +85,7 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
   
   @Override
   public int hashCode() {
-    return getProto().hashCode();
+    return getNewProto().hashCode();
   }
 
   @Override
@@ -110,13 +93,18 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
     if (other == null)
       return false;
     if (other.getClass().isAssignableFrom(this.getClass())) {
-      return this.getProto().equals(this.getClass().cast(other).getProto());
+      return this.getNewProto().equals(this.getClass().cast(other).getNewProto());
     }
     return false;
+  }
+  
+  public ClientToAMTokenIdentifierForTestProto getNewProto() {
+    return proto;
   }
 
   @Override
   public String toString() {
-    return TextFormat.shortDebugString(getProto());
+    return TextFormat.shortDebugString(getNewProto());
   }
+
 }

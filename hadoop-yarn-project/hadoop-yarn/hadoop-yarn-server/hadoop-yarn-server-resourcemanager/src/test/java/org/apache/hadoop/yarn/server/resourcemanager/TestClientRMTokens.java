@@ -43,6 +43,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
@@ -221,8 +222,51 @@ public class TestClientRMTokens {
       } catch (IOException e) {
       } catch (YarnException e) {
       }
+      
+      // Test new version token
+      // Stop the existing proxy, start another.
+      if (clientRMWithDT != null) {
+        RPC.stopProxy(clientRMWithDT);
+        clientRMWithDT = null;
+      }
+      token = getDelegationToken(loggedInUser, clientRMService,
+          loggedInUser.getShortUserName());
+      
+      byte[] tokenIdentifierContent = token.getIdentifier().array();
+      RMDelegationTokenIdentifier tokenIdentifier = new RMDelegationTokenIdentifier();
+      
+      DataInputBuffer dib = new DataInputBuffer();
+      dib.reset(tokenIdentifierContent, tokenIdentifierContent.length);
+      tokenIdentifier.readFields(dib);
+      
+      // Construct new version RMDelegationTokenIdentifier with additional field
+      RMDelegationTokenIdentifierForTest newVersionTokenIdentifier = 
+          new RMDelegationTokenIdentifierForTest(tokenIdentifier, "message");
+      
+      Token<RMDelegationTokenIdentifier> newRMDTtoken =
+          new Token<RMDelegationTokenIdentifier>(newVersionTokenIdentifier,
+              rmDtSecretManager);
+      org.apache.hadoop.yarn.api.records.Token newToken = 
+          BuilderUtils.newDelegationToken(
+              newRMDTtoken.getIdentifier(),
+              newRMDTtoken.getKind().toString(),
+              newRMDTtoken.getPassword(),
+              newRMDTtoken.getService().toString()
+          );
+ 
+      // Now try talking to RMService using the new version delegation token
+      clientRMWithDT = getClientRMProtocolWithDT(newToken,
+          clientRMService.getBindAddress(), "loginuser3", conf);
 
-
+      request = Records.newRecord(GetNewApplicationRequest.class);
+      
+      try {
+        clientRMWithDT.getNewApplication(request);
+      } catch (IOException e) {
+        fail("Unexpected exception" + e);
+      } catch (YarnException e) {
+        fail("Unexpected exception" + e);
+      }
 
     } finally {
       rmDtSecretManager.stopThreads();

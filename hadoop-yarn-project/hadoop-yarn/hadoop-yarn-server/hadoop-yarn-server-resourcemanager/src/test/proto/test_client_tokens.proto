@@ -17,46 +17,20 @@
  */
 
 option java_package = "org.apache.hadoop.yarn.proto";
-option java_outer_classname = "YarnSecurityTokenProtos";
+option java_outer_classname = "YarnSecurityTestClientAMTokenProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 package hadoop.yarn;
 
 import "yarn_protos.proto";
 
-// None of the following records are supposed to be exposed to users.
-
-message NMTokenIdentifierProto {
-  optional ApplicationAttemptIdProto appAttemptId = 1;
-  optional NodeIdProto nodeId = 2;
-  optional string appSubmitter = 3;
-  optional int32 keyId = 4 [default = -1];
-}
-
-message AMRMTokenIdentifierProto {
-  optional ApplicationAttemptIdProto appAttemptId = 1;
-  optional int32 keyId = 2 [default = -1];
-}
-
-message ContainerTokenIdentifierProto {
-  optional ContainerIdProto containerId = 1;
-  optional string nmHostAddr = 2;
-  optional string appSubmitter = 3;
-  optional ResourceProto resource = 4;
-  optional int64 expiryTimeStamp =5;
-  optional int32 masterKeyId = 6 [default = -1];
-  optional int64 rmIdentifier = 7;
-  optional PriorityProto priority = 8;
-  optional int64 creationTime = 9;
-  optional LogAggregationContextProto logAggregationContext = 10;
-}
-
-message ClientToAMTokenIdentifierProto {
+message ClientToAMTokenIdentifierForTestProto {
   optional ApplicationAttemptIdProto appAttemptId = 1;
   optional string clientName = 2;
+  optional string message = 3;
 }
 
-message YARNDelegationTokenIdentifierProto {
+message RMDelegationTokenIdentifierForTestProto {
   optional string owner = 1;
   optional string renewer = 2;
   optional string realUser = 3;
@@ -65,5 +39,5 @@ message YARNDelegationTokenIdentifierProto {
   optional int32 sequenceNumber = 6;
   optional int32 masterKeyId = 7 [default = -1];
   optional int64 renewDate = 8;
+  optional string message = 9;
 }
-
