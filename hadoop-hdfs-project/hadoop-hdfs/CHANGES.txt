@@ -7,11 +7,15 @@ Release 2.7.0 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
     HDFS-7055. Add tracing to DFSInputStream (cmccabe)
 
   OPTIMIZATIONS
 
   BUG FIXES
+    
+    HDFS-7194. Fix findbugs "inefficient new String constructor" warning in
+    DFSClient#PATH (yzhang via cmccabe)
 
 Release 2.6.0 - UNRELEASED
 

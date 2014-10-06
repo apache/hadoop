@@ -3174,8 +3174,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return saslClient;
   }
 
-  private static final byte[] PATH =
-      new String("path").getBytes(Charset.forName("UTF-8"));
+  private static final byte[] PATH = "path".getBytes(Charset.forName("UTF-8"));
 
   TraceScope getPathTraceScope(String description, String path) {
     TraceScope scope = Trace.startSpan(description, traceSampler);
