@@ -552,6 +552,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2611. Fixing jenkins findbugs warning and TestRMWebServicesCapacitySched
     for branch YARN-1051. (Subru Krishnan and Carlo Curino via subru)
 
+    YARN-2644. Fixed CapacityScheduler to return up-to-date headroom when
+    AM allocates. (Craig Welch via jianhe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
