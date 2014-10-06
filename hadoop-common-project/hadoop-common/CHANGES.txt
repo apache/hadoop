@@ -15,6 +15,9 @@ Release 2.7.0 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-10404. Some accesses to DomainSocketWatcher#closed are not protected
+    by the lock (cmccabe)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
