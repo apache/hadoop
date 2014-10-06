@@ -447,6 +447,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11169. Fix DelegationTokenAuthenticatedURL to pass the connection
     Configurator to the authenticator. (Arun Suresh via wang)
 
+    HADOOP-10404. Some accesses to DomainSocketWatcher#closed are not protected
+    by lock (cmccabe)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HADOOP-10734. Implement high-performance secure random number sources.
