@@ -272,6 +272,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
+import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -3149,7 +3150,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     final long blockSize;
     final int replication;
     final byte storagePolicyID;
-    DatanodeDescriptor clientNode = null;
+    Node clientNode = null;
+    String clientMachine = null;
 
     if(NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("BLOCK* NameSystem.getAdditionalBlock: "
@@ -3180,12 +3182,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             + maxBlocksPerFile);
       }
       blockSize = pendingFile.getPreferredBlockSize();
+      clientMachine = pendingFile.getFileUnderConstructionFeature()
+          .getClientMachine();
       clientNode = blockManager.getDatanodeManager().getDatanodeByHost(
-              pendingFile.getFileUnderConstructionFeature().getClientMachine());
+          clientMachine);
       replication = pendingFile.getFileReplication();
       storagePolicyID = pendingFile.getStoragePolicyID();
     } finally {
       readUnlock();
+    }
+
+    if (clientNode == null) {
+      clientNode = getClientNode(clientMachine);
     }
 
     // choose targets for the new block to be allocated.
@@ -3242,6 +3250,24 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     // Return located block
     return makeLocatedBlock(newBlock, targets, offset);
+  }
+
+  /*
+   * Resolve clientmachine address to get a network location path
+   */
+  private Node getClientNode(String clientMachine) {
+    List<String> hosts = new ArrayList<String>(1);
+    hosts.add(clientMachine);
+    List<String> rName = getBlockManager().getDatanodeManager()
+        .resolveNetworkLocation(hosts);
+    Node clientNode = null;
+    if (rName != null) {
+      // Able to resolve clientMachine mapping.
+      // Create a temp node to findout the rack local nodes
+      clientNode = new NodeBase(rName.get(0) + NodeBase.PATH_SEPARATOR_STR
+          + clientMachine);
+    }
+    return clientNode;
   }
 
   static class FileState {
@@ -3377,7 +3403,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     //check if the feature is enabled
     dtpReplaceDatanodeOnFailure.checkEnabled();
 
-    final DatanodeDescriptor clientnode;
+    Node clientnode = null;
+    String clientMachine;
     final long preferredblocksize;
     final byte storagePolicyID;
     final List<DatanodeStorageInfo> chosen;
@@ -3402,8 +3429,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         if (inode != null) src = inode.getFullPathName();
       }
       final INodeFile file = checkLease(src, clientName, inode, fileId);
-      String clientMachine = file.getFileUnderConstructionFeature()
-              .getClientMachine();
+      clientMachine = file.getFileUnderConstructionFeature().getClientMachine();
       clientnode = blockManager.getDatanodeManager().getDatanodeByHost(clientMachine);
       preferredblocksize = file.getPreferredBlockSize();
       storagePolicyID = file.getStoragePolicyID();
@@ -3413,6 +3439,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       chosen = Arrays.asList(dm.getDatanodeStorageInfos(existings, storageIDs));
     } finally {
       readUnlock();
+    }
+
+    if (clientnode == null) {
+      clientnode = getClientNode(clientMachine);
     }
 
     // choose new datanodes.

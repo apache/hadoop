@@ -1509,7 +1509,7 @@ public class BlockManager {
   /** Choose target for getting additional datanodes for an existing pipeline. */
   public DatanodeStorageInfo[] chooseTarget4AdditionalDatanode(String src,
       int numAdditionalNodes,
-      DatanodeDescriptor clientnode,
+      Node clientnode,
       List<DatanodeStorageInfo> chosen,
       Set<Node> excludes,
       long blocksize,
@@ -1529,7 +1529,7 @@ public class BlockManager {
    *      Set, long, List, BlockStoragePolicy)
    */
   public DatanodeStorageInfo[] chooseTarget4NewBlock(final String src,
-      final int numOfReplicas, final DatanodeDescriptor client,
+      final int numOfReplicas, final Node client,
       final Set<Node> excludedNodes,
       final long blocksize,
       final List<String> favoredNodes,
