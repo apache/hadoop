@@ -691,8 +691,7 @@ public class DatanodeManager {
       names.add(node.getHostName());
     }
     
-    // resolve its network location
-    List<String> rName = dnsToSwitchMapping.resolve(names);
+    List<String> rName = resolveNetworkLocation(names);
     String networkLocation;
     if (rName == null) {
       LOG.error("The resolve call returned null!");
@@ -702,6 +701,18 @@ public class DatanodeManager {
       networkLocation = rName.get(0);
     }
     return networkLocation;
+  }
+
+  /**
+   * Resolve network locations for specified hosts
+   *
+   * @param names
+   * @return Network locations if available, Else returns null
+   */
+  public List<String> resolveNetworkLocation(List<String> names) {
+    // resolve its network location
+    List<String> rName = dnsToSwitchMapping.resolve(names);
+    return rName;
   }
 
   /**

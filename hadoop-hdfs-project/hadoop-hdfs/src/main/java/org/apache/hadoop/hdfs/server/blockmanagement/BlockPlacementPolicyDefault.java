@@ -204,11 +204,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       // add localMachine and related nodes to excludedNodes
       addToExcludedNodes(storage.getDatanodeDescriptor(), excludedNodes);
     }
-      
-    if (!clusterMap.contains(writer)) {
-      writer = null;
-    }
-      
+
     boolean avoidStaleNodes = (stats != null
         && stats.isAvoidingStaleDataNodesForWrite());
     final Node localNode = chooseTarget(numOfReplicas, writer, excludedNodes,
@@ -219,8 +215,10 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     }
       
     // sorting nodes to form a pipeline
-    return getPipeline((writer==null)?localNode:writer,
-                       results.toArray(new DatanodeStorageInfo[results.size()]));
+    return getPipeline(
+        (writer != null && writer instanceof DatanodeDescriptor) ? writer
+            : localNode,
+        results.toArray(new DatanodeStorageInfo[results.size()]));
   }
 
   private int[] getMaxNodesPerRack(int numOfChosen, int numOfReplicas) {
@@ -271,7 +269,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
                             final EnumSet<StorageType> unavailableStorages,
                             final boolean newBlock) {
     if (numOfReplicas == 0 || clusterMap.getNumOfLeaves()==0) {
-      return writer;
+      return (writer instanceof DatanodeDescriptor) ? writer : null;
     }
     final int numOfResults = results.size();
     final int totalReplicasExpected = numOfReplicas + numOfResults;
