@@ -18,13 +18,11 @@
 
 package org.apache.hadoop.yarn.security;
 
-import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -33,11 +31,9 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.NodeReportPBImpl;
 import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.NMTokenIdentifierProto;
 
 import com.google.protobuf.TextFormat;
@@ -103,9 +99,7 @@ public class NMTokenIdentifier extends TokenIdentifier {
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    DataInputStream dis = (DataInputStream)in;
-    byte[] buffer = IOUtils.toByteArray(dis);
-    proto = NMTokenIdentifierProto.parseFrom(buffer);
+    proto = NMTokenIdentifierProto.parseFrom((DataInputStream)in);
   }
 
   @Override

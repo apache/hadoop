@@ -286,6 +286,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2562. Changed ContainerId#toString() to be more readable. (Tsuyoshi
     OZAWA via jianhe)
 
+    YARN-2615. Changed ClientToAMTokenIdentifier/RM(Timeline)DelegationTokenIdentifier
+    to use protobuf as payload. (Junping Du via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
