@@ -469,6 +469,10 @@ public class CapacityScheduler extends
     // Re-configure queues
     root.reinitialize(newRoot, clusterResource);
     initializeQueueMappings();
+    
+    // Re-calculate headroom for active applications
+    root.updateClusterResource(clusterResource);
+
   }
 
   /**

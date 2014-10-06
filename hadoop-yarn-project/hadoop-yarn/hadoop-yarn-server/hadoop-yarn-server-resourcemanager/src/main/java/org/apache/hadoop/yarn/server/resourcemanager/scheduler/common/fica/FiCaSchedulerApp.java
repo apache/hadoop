@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityHeadroomProvider;
 
 /**
  * Represents an application attempt from the viewpoint of the FIFO or Capacity
@@ -64,6 +65,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
 
   private final Set<ContainerId> containersToPreempt =
     new HashSet<ContainerId>();
+    
+  private CapacityHeadroomProvider headroomProvider;
 
   public FiCaSchedulerApp(ApplicationAttemptId applicationAttemptId, 
       String user, Queue queue, ActiveUsersManager activeUsersManager,
@@ -279,6 +282,31 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       }
     }
     return null;
+  }
+  
+  public synchronized void setHeadroomProvider(
+    CapacityHeadroomProvider headroomProvider) {
+    this.headroomProvider = headroomProvider;
+  }
+
+  public synchronized CapacityHeadroomProvider getHeadroomProvider() {
+    return headroomProvider;
+  }
+  
+  @Override
+  public synchronized Resource getHeadroom() {
+    if (headroomProvider != null) {
+      return headroomProvider.getHeadroom();
+    }
+    return super.getHeadroom();
+  }
+  
+  @Override
+  public synchronized void transferStateFromPreviousAttempt(
+      SchedulerApplicationAttempt appAttempt) {
+    super.transferStateFromPreviousAttempt(appAttempt);
+    this.headroomProvider = 
+      ((FiCaSchedulerApp) appAttempt).getHeadroomProvider();
   }
 
 

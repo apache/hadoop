@@ -132,6 +132,8 @@ public class LeafQueue implements CSQueue {
   
   private boolean reservationsContinueLooking;
   
+  private final QueueHeadroomInfo queueHeadroomInfo = new QueueHeadroomInfo();
+  
   public LeafQueue(CapacitySchedulerContext cs, 
       String queueName, CSQueue parent, CSQueue old) {
     this.scheduler = cs;
@@ -970,6 +972,22 @@ public class LeafQueue implements CSQueue {
     // "re-reservation" is *free*
     return new CSAssignment(Resources.none(), NodeType.NODE_LOCAL);
   }
+  
+  protected Resource getHeadroom(User user, Resource queueMaxCap,
+      Resource clusterResource, FiCaSchedulerApp application, Resource required) {
+    return getHeadroom(user, queueMaxCap, clusterResource,
+	  computeUserLimit(application, clusterResource, required, user));
+  }
+  
+  private Resource getHeadroom(User user, Resource queueMaxCap,
+      Resource clusterResource, Resource userLimit) {
+    Resource headroom = 
+        Resources.subtract(
+            Resources.min(resourceCalculator, clusterResource, 
+                userLimit, queueMaxCap), 
+            user.getConsumedResources());
+    return headroom;
+  }
 
 
   @Private
@@ -1038,12 +1056,14 @@ public class LeafQueue implements CSQueue {
     
     String user = application.getUser();
     
+    User queueUser = getUser(user);
+    
     /** 
      * Headroom is min((userLimit, queue-max-cap) - consumed)
      */
 
     Resource userLimit =                          // User limit
-        computeUserLimit(application, clusterResource, required);
+        computeUserLimit(application, clusterResource, required, queueUser);
 
     //Max avail capacity needs to take into account usage by ancestor-siblings
     //which are greater than their base capacity, so we are interested in "max avail"
@@ -1057,23 +1077,27 @@ public class LeafQueue implements CSQueue {
             clusterResource, 
             absoluteMaxAvailCapacity,
             minimumAllocation);
+	
+    synchronized (queueHeadroomInfo) {
+      queueHeadroomInfo.setQueueMaxCap(queueMaxCap);
+      queueHeadroomInfo.setClusterResource(clusterResource);
+    }
     
-    Resource userConsumed = getUser(user).getConsumedResources(); 
-    Resource headroom = 
-        Resources.subtract(
-            Resources.min(resourceCalculator, clusterResource, 
-                userLimit, queueMaxCap), 
-            userConsumed);
+    Resource headroom = getHeadroom(queueUser, queueMaxCap, clusterResource, userLimit);
     
     if (LOG.isDebugEnabled()) {
       LOG.debug("Headroom calculation for user " + user + ": " + 
           " userLimit=" + userLimit + 
           " queueMaxCap=" + queueMaxCap + 
-          " consumed=" + userConsumed + 
+          " consumed=" + queueUser.getConsumedResources() + 
           " headroom=" + headroom);
     }
     
-    application.setHeadroom(headroom);
+    CapacityHeadroomProvider headroomProvider = new CapacityHeadroomProvider(
+      queueUser, this, application, required, queueHeadroomInfo);
+    
+    application.setHeadroomProvider(headroomProvider);
+
     metrics.setAvailableResourcesToUser(user, headroom);
     
     return userLimit;
@@ -1081,7 +1105,7 @@ public class LeafQueue implements CSQueue {
   
   @Lock(NoLock.class)
   private Resource computeUserLimit(FiCaSchedulerApp application, 
-      Resource clusterResource, Resource required) {
+      Resource clusterResource, Resource required, User user) {
     // What is our current capacity? 
     // * It is equal to the max(required, queue-capacity) if
     //   we're running below capacity. The 'max' ensures that jobs in queues
@@ -1138,7 +1162,7 @@ public class LeafQueue implements CSQueue {
           " userLimit=" + userLimit +
           " userLimitFactor=" + userLimitFactor +
           " required: " + required + 
-          " consumed: " + getUser(userName).getConsumedResources() + 
+          " consumed: " + user.getConsumedResources() + 
           " limit: " + limit +
           " queueCapacity: " + queueCapacity + 
           " qconsumed: " + usedResources +
@@ -1687,9 +1711,6 @@ public class LeafQueue implements CSQueue {
     String userName = application.getUser();
     User user = getUser(userName);
     user.assignContainer(resource);
-    // Note this is a bit unconventional since it gets the object and modifies it here
-    // rather then using set routine
-    Resources.subtractFrom(application.getHeadroom(), resource); // headroom
     metrics.setAvailableResourcesToUser(userName, application.getHeadroom());
     
     if (LOG.isDebugEnabled()) {
@@ -1895,5 +1916,30 @@ public class LeafQueue implements CSQueue {
 
   public void setMaxApplications(int maxApplications) {
     this.maxApplications = maxApplications;
+  }
+  
+  /*
+   * Holds shared values used by all applications in
+   * the queue to calculate headroom on demand
+   */
+  static class QueueHeadroomInfo {
+    private Resource queueMaxCap;
+    private Resource clusterResource;
+    
+    public void setQueueMaxCap(Resource queueMaxCap) {
+      this.queueMaxCap = queueMaxCap;
+    }
+    
+    public Resource getQueueMaxCap() {
+      return queueMaxCap;
+    }
+    
+    public void setClusterResource(Resource clusterResource) {
+      this.clusterResource = clusterResource;
+    }
+    
+    public Resource getClusterResource() {
+      return clusterResource;
+    }
   }
 }
