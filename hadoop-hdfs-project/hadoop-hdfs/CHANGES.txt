@@ -702,6 +702,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7131. During HA upgrade, JournalNode should create a new committedTxnId
     file in the current directory. (jing9)
 
+    HDFS-6995. Block should be placed in the client's 'rack-local' node
+    if 'client-local' node is not available (vinayakumarb)
+
   BREAKDOWN OF HDFS-6584 ARCHIVAL STORAGE
 
     HDFS-6677. Change INodeFile and FSImage to support storage policy ID.
