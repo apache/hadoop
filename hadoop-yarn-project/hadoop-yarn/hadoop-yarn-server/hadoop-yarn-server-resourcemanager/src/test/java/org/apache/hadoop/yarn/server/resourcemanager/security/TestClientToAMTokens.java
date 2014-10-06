@@ -28,6 +28,7 @@ import java.lang.annotation.Annotation;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
 
 import javax.security.sasl.SaslException;
 
@@ -35,6 +36,7 @@ import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
@@ -115,6 +117,7 @@ public class TestClientToAMTokens {
     private final byte[] secretKey;
     private InetSocketAddress address;
     private boolean pinged = false;
+    private ClientToAMTokenSecretManager secretMgr;
     
     public CustomAM(ApplicationAttemptId appId, byte[] secretKey) {
       super("CustomAM");
@@ -126,6 +129,10 @@ public class TestClientToAMTokens {
     public void ping() throws YarnException, IOException {
       this.pinged = true;
     }
+    
+    public ClientToAMTokenSecretManager getClientToAMTokenSecretManager() {
+      return secretMgr;
+    }
 
     @Override
     protected void serviceStart() throws Exception {
@@ -133,12 +140,13 @@ public class TestClientToAMTokens {
 
       Server server;
       try {
+        secretMgr = new ClientToAMTokenSecretManager(
+            this.appAttemptId, secretKey);
         server =
             new RPC.Builder(conf)
               .setProtocol(CustomProtocol.class)
               .setNumHandlers(1)
-              .setSecretManager(
-                new ClientToAMTokenSecretManager(this.appAttemptId, secretKey))
+              .setSecretManager(secretMgr)
               .setInstance(this).build();
       } catch (Exception e) {
         throw new YarnRuntimeException(e);
@@ -267,6 +275,12 @@ public class TestClientToAMTokens {
 
     // Now for an authenticated user
     verifyValidToken(conf, am, token);
+    
+    // Verify for a new version token
+    verifyNewVersionToken(conf, am, token, rm);
+
+
+    rm.stop();
   }
 
   private void verifyTokenWithTamperedID(final Configuration conf,
@@ -338,6 +352,33 @@ public class TestClientToAMTokens {
     }
   }
 
+  private void verifyNewVersionToken(final Configuration conf, final CustomAM am,
+      Token<ClientToAMTokenIdentifier> token, MockRM rm) throws IOException,
+      InterruptedException {
+    UserGroupInformation ugi;
+    ugi = UserGroupInformation.createRemoteUser("me");
+    
+    Token<ClientToAMTokenIdentifier> newToken = 
+        new Token<ClientToAMTokenIdentifier>(
+            new ClientToAMTokenIdentifierForTest(token.decodeIdentifier(), "message"),
+            am.getClientToAMTokenSecretManager());
+    newToken.setService(token.getService());
+    
+    ugi.addToken(newToken);
+
+    ugi.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        CustomProtocol client =
+            (CustomProtocol) RPC.getProxy(CustomProtocol.class, 1L, am.address,
+              conf);
+        client.ping();
+        Assert.assertTrue(am.pinged);
+        return null;
+      }
+    });
+  }
+  
   private void verifyValidToken(final Configuration conf, final CustomAM am,
       Token<ClientToAMTokenIdentifier> token) throws IOException,
       InterruptedException {

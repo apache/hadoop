@@ -17,19 +17,26 @@
  */
 package org.apache.hadoop.yarn.security;
 
+import java.io.IOException;
+
+import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class TestYARNTokenIdentifier {
 
   @Test
-  public void testNMTokenIdentifier() {
+  public void testNMTokenIdentifier() throws IOException {
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
         ApplicationId.newInstance(1, 1), 1);
     NodeId nodeId = NodeId.newInstance("host0", 0);
@@ -39,8 +46,12 @@ public class TestYARNTokenIdentifier {
     NMTokenIdentifier token = new NMTokenIdentifier(
         appAttemptId, nodeId, applicationSubmitter, masterKeyId);
     
-    NMTokenIdentifier anotherToken = new NMTokenIdentifier(
-        appAttemptId, nodeId, applicationSubmitter, masterKeyId);
+    NMTokenIdentifier anotherToken = new NMTokenIdentifier();
+    
+    byte[] tokenContent = token.getBytes();
+    DataInputBuffer dib = new DataInputBuffer();
+    dib.reset(tokenContent, tokenContent.length);
+    anotherToken.readFields(dib);
     
     // verify the whole record equals with original record
     Assert.assertEquals("Token is not the same after serialization " +
@@ -65,15 +76,18 @@ public class TestYARNTokenIdentifier {
   }
 
   @Test
-  public void testAMRMTokenIdentifier() {
+  public void testAMRMTokenIdentifier() throws IOException {
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
         ApplicationId.newInstance(1, 1), 1);
     int masterKeyId = 1;
   
     AMRMTokenIdentifier token = new AMRMTokenIdentifier(appAttemptId, masterKeyId);
     
-    AMRMTokenIdentifier anotherToken = new AMRMTokenIdentifier(
-        appAttemptId, masterKeyId);
+    AMRMTokenIdentifier anotherToken = new AMRMTokenIdentifier();
+    byte[] tokenContent = token.getBytes();
+    DataInputBuffer dib = new DataInputBuffer();
+    dib.reset(tokenContent, tokenContent.length);
+    anotherToken.readFields(dib);
         
     // verify the whole record equals with original record
     Assert.assertEquals("Token is not the same after serialization " +
@@ -87,7 +101,35 @@ public class TestYARNTokenIdentifier {
   }
   
   @Test
-  public void testContainerTokenIdentifier() {
+  public void testClientToAMTokenIdentifier() throws IOException {
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(1, 1), 1);
+    
+    String clientName = "user";
+  
+    ClientToAMTokenIdentifier token = new ClientToAMTokenIdentifier(
+        appAttemptId, clientName);
+    
+    ClientToAMTokenIdentifier anotherToken = new ClientToAMTokenIdentifier();
+    
+    byte[] tokenContent = token.getBytes();
+    DataInputBuffer dib = new DataInputBuffer();
+    dib.reset(tokenContent, tokenContent.length);
+    anotherToken.readFields(dib);
+        
+    // verify the whole record equals with original record
+    Assert.assertEquals("Token is not the same after serialization " +
+        "and deserialization.", token, anotherToken);
+        
+    Assert.assertEquals("ApplicationAttemptId from proto is not the same with original token",
+        anotherToken.getApplicationAttemptID(), appAttemptId);
+    
+    Assert.assertEquals("clientName from proto is not the same with original token",
+        anotherToken.getClientName(), clientName);
+  }
+  
+  @Test
+  public void testContainerTokenIdentifier() throws IOException {
     ContainerId containerID = ContainerId.newInstance(
         ApplicationAttemptId.newInstance(ApplicationId.newInstance(
             1, 1), 1), 1);
@@ -104,9 +146,12 @@ public class TestYARNTokenIdentifier {
         containerID, hostName, appSubmitter, r, expiryTimeStamp, 
         masterKeyId, rmIdentifier, priority, creationTime);
     
-    ContainerTokenIdentifier anotherToken = new ContainerTokenIdentifier(
-        containerID, hostName, appSubmitter, r, expiryTimeStamp, 
-        masterKeyId, rmIdentifier, priority, creationTime);
+    ContainerTokenIdentifier anotherToken = new ContainerTokenIdentifier();
+    
+    byte[] tokenContent = token.getBytes();
+    DataInputBuffer dib = new DataInputBuffer();
+    dib.reset(tokenContent, tokenContent.length);
+    anotherToken.readFields(dib);
     
     // verify the whole record equals with original record
     Assert.assertEquals("Token is not the same after serialization " +
@@ -149,6 +194,114 @@ public class TestYARNTokenIdentifier {
         anotherToken.getCreationTime(), creationTime);
     
     Assert.assertNull(anotherToken.getLogAggregationContext());
+  }
+  
+  @Test
+  public void testRMDelegationTokenIdentifier() throws IOException {
+    
+    Text owner = new Text("user1");
+    Text renewer = new Text("user2");
+    Text realUser = new Text("user3");
+    long issueDate = 1;
+    long maxDate = 2;
+    int sequenceNumber = 3;
+    int masterKeyId = 4;
+    
+    RMDelegationTokenIdentifier token = 
+        new RMDelegationTokenIdentifier(owner, renewer, realUser);
+    token.setIssueDate(issueDate);
+    token.setMaxDate(maxDate);
+    token.setSequenceNumber(sequenceNumber);
+    token.setMasterKeyId(masterKeyId);
+    
+    RMDelegationTokenIdentifier anotherToken = new RMDelegationTokenIdentifier();
+    
+    byte[] tokenContent = token.getBytes();
+    DataInputBuffer dib = new DataInputBuffer();
+    dib.reset(tokenContent, tokenContent.length);
+    anotherToken.readFields(dib);
+        
+    // verify the whole record equals with original record
+    Assert.assertEquals("Token is not the same after serialization " +
+        "and deserialization.", token, anotherToken);
+    
+    Assert.assertEquals("owner from proto is not the same with original token",
+        anotherToken.getOwner(), owner);
+    
+    Assert.assertEquals("renewer from proto is not the same with original token",
+        anotherToken.getRenewer(), renewer);
+    
+    Assert.assertEquals("realUser from proto is not the same with original token",
+        anotherToken.getRealUser(), realUser);
+    
+    Assert.assertEquals("issueDate from proto is not the same with original token",
+        anotherToken.getIssueDate(), issueDate);
+    
+    Assert.assertEquals("maxDate from proto is not the same with original token",
+        anotherToken.getMaxDate(), maxDate);
+    
+    Assert.assertEquals("sequenceNumber from proto is not the same with original token",
+        anotherToken.getSequenceNumber(), sequenceNumber);
+    
+    Assert.assertEquals("masterKeyId from proto is not the same with original token",
+        anotherToken.getMasterKeyId(), masterKeyId);
+  }
+  
+  @Test
+  public void testTimelineDelegationTokenIdentifier() throws IOException {
+    
+    Text owner = new Text("user1");
+    Text renewer = new Text("user2");
+    Text realUser = new Text("user3");
+    long issueDate = 1;
+    long maxDate = 2;
+    int sequenceNumber = 3;
+    int masterKeyId = 4;
+    long renewDate = 5;
+    
+    TimelineDelegationTokenIdentifier token = 
+        new TimelineDelegationTokenIdentifier(owner, renewer, realUser);
+    token.setIssueDate(issueDate);
+    token.setMaxDate(maxDate);
+    token.setSequenceNumber(sequenceNumber);
+    token.setMasterKeyId(masterKeyId);
+    token.setRenewDate(renewDate);
+    
+    TimelineDelegationTokenIdentifier anotherToken = 
+        new TimelineDelegationTokenIdentifier();
+    
+    byte[] tokenContent = token.getBytes();
+    DataInputBuffer dib = new DataInputBuffer();
+    dib.reset(tokenContent, tokenContent.length);
+    anotherToken.readFields(dib);
+        
+    // verify the whole record equals with original record
+    Assert.assertEquals("Token is not the same after serialization " +
+        "and deserialization.", token, anotherToken);
+    
+    Assert.assertEquals("owner from proto is not the same with original token",
+        anotherToken.getOwner(), owner);
+    
+    Assert.assertEquals("renewer from proto is not the same with original token",
+        anotherToken.getRenewer(), renewer);
+    
+    Assert.assertEquals("realUser from proto is not the same with original token",
+        anotherToken.getRealUser(), realUser);
+    
+    Assert.assertEquals("issueDate from proto is not the same with original token",
+        anotherToken.getIssueDate(), issueDate);
+    
+    Assert.assertEquals("maxDate from proto is not the same with original token",
+        anotherToken.getMaxDate(), maxDate);
+    
+    Assert.assertEquals("sequenceNumber from proto is not the same with original token",
+        anotherToken.getSequenceNumber(), sequenceNumber);
+    
+    Assert.assertEquals("masterKeyId from proto is not the same with original token",
+        anotherToken.getMasterKeyId(), masterKeyId);
+    
+    Assert.assertEquals("renewDate from proto is not the same with original token",
+            anotherToken.getRenewDate(), renewDate);
   }
 
 }

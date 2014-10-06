@@ -23,11 +23,10 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 
 @Public
 @Unstable
-public class TimelineDelegationTokenIdentifier extends AbstractDelegationTokenIdentifier {
+public class TimelineDelegationTokenIdentifier extends YARNDelegationTokenIdentifier {
 
   public static final Text KIND_NAME = new Text("TIMELINE_DELEGATION_TOKEN");
 

@@ -23,7 +23,6 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -33,17 +32,14 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.impl.pb.LogAggregationContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.LogAggregationContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.PriorityPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
-import org.apache.hadoop.yarn.proto.YarnProtos.LogAggregationContextProto;
 import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.ContainerTokenIdentifierProto;
 
 import com.google.protobuf.TextFormat;
@@ -63,7 +59,6 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
   public static final Text KIND = new Text("ContainerToken");
 
   private ContainerTokenIdentifierProto proto;
-  private LogAggregationContext logAggregationContext;
 
   public ContainerTokenIdentifier(ContainerId containerID,
       String hostName, String appSubmitter, Resource r, long expiryTimeStamp,
@@ -174,9 +169,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    DataInputStream dis = (DataInputStream)in;
-    byte[] buffer = IOUtils.toByteArray(dis);
-    proto = ContainerTokenIdentifierProto.parseFrom(buffer);
+    proto = ContainerTokenIdentifierProto.parseFrom((DataInputStream)in);
   }
 
   @Override
