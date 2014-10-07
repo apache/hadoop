@@ -519,7 +519,13 @@ abstract public class Shell {
     };
     try {
       errThread.start();
-    } catch (IllegalStateException ise) { }
+    } catch (IllegalStateException ise) {
+    } catch (OutOfMemoryError oe) {
+      LOG.error("Caught " + oe + ". One possible reason is that ulimit"
+          + " setting of 'max user processes' is too low. If so, do"
+          + " 'ulimit -u <largerNum>' and try again.");
+      throw oe;
+    }
     try {
       parseExecResult(inReader); // parse the output
       // clear the input stream buffer

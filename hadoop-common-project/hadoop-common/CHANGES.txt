@@ -353,6 +353,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7186. Document the "hadoop trace" command. (Masatake Iwasaki via Colin
     P. McCabe)
 
+    Improve error message in Shell#runCommand on OutOfMemoryError.
+    (Yongjun Zhang via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
