@@ -368,6 +368,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7055. Add tracing to DFSInputStream (cmccabe)
 
+    HDFS-7186. Document the "hadoop trace" command. (Masatake Iwasaki via Colin
+    P. McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
