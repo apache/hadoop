@@ -58,6 +58,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.JobCommitCompletedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobCommitFailedEvent;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Event;
@@ -84,8 +85,12 @@ public class TestCommitterEventHandler {
     
     public synchronized Event getAndClearEvent() throws InterruptedException {
       if (event == null) {
-        //Wait for at most 10 ms
-        wait(100);
+        final long waitTime = 5000;
+        long waitStartTime = Time.monotonicNow();
+        while(event == null && Time.monotonicNow() - waitStartTime < waitTime) {
+          //Wait for at most 5 sec
+          wait(waitTime);
+        }
       }
       Event e = event;
       event = null;
