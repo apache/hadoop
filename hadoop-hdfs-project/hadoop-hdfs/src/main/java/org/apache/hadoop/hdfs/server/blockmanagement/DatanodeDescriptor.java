@@ -221,6 +221,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   private boolean disallowed = false;
 
+  // The number of replication work pending before targets are determined
+  private int PendingReplicationWithoutTargets = 0;
+
   /**
    * DatanodeDescriptor constructor
    * @param nodeID id of the data node
@@ -410,6 +413,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return new BlockIterator(getStorageInfo(storageID));
   }
 
+  void incrementPendingReplicationWithoutTargets() {
+    PendingReplicationWithoutTargets++;
+  }
+
+  void decrementPendingReplicationWithoutTargets() {
+    PendingReplicationWithoutTargets--;
+  }
+
   /**
    * Store block replication work.
    */
@@ -441,12 +452,12 @@ public class DatanodeDescriptor extends DatanodeInfo {
       }
     }
   }
-  
+
   /**
    * The number of work items that are pending to be replicated
    */
   int getNumberOfBlocksToBeReplicated() {
-    return replicateBlocks.size();
+    return PendingReplicationWithoutTargets + replicateBlocks.size();
   }
 
   /**

@@ -714,6 +714,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6995. Block should be placed in the client's 'rack-local' node
     if 'client-local' node is not available (vinayakumarb)
 
+    HDFS-7128. Decommission slows way down when it gets towards the end.
+    (Ming Ma via cnauroth)
+
   BREAKDOWN OF HDFS-6584 ARCHIVAL STORAGE
 
     HDFS-6677. Change INodeFile and FSImage to support storage policy ID.
