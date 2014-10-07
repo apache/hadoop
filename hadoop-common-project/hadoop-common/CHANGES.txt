@@ -241,6 +241,8 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11153. Make number of KMS threads configurable. (wang)
 
+    HADOOP-11007. Reinstate building of ant tasks support. (jlowe via kihwal)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
