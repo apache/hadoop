@@ -469,9 +469,6 @@ Configuration for <<<conf/hdfs-site.xml>>>
 *-------------------------+-------------------------+------------------------+
 || Parameter              || Value                  || Notes                 |
 *-------------------------+-------------------------+------------------------+
-| <<<dfs.webhdfs.enabled>>> | http/_HOST@REALM.TLD | |
-| | | Enable security on WebHDFS. |
-*-------------------------+-------------------------+------------------------+
 | <<<dfs.web.authentication.kerberos.principal>>> | http/_HOST@REALM.TLD | |
 | | | Kerberos keytab file for the WebHDFS. |
 *-------------------------+-------------------------+------------------------+
