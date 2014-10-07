@@ -11,10 +11,7 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11156. DelegateToFileSystem should implement
     getFsStatus(final Path f). (Zhihai Xu via wang)
 
-    HDFS-7186. Document the "hadoop trace" command. (Masatake Iwasaki via Colin
-    P. McCabe)
-
-    Improve error message in Shell#runCommand on OutOfMemoryError.
+    HADOOP-11172. Improve error message in Shell#runCommand on OutOfMemoryError.
     (Yongjun Zhang via wang)
 
   OPTIMIZATIONS
