@@ -95,6 +95,7 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
   }
 
   private Authenticator authenticator;
+  private ConnectionConfigurator connConfigurator;
 
   public DelegationTokenAuthenticator(Authenticator authenticator) {
     this.authenticator = authenticator;
@@ -103,6 +104,7 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
   @Override
   public void setConnectionConfigurator(ConnectionConfigurator configurator) {
     authenticator.setConnectionConfigurator(configurator);
+    connConfigurator = configurator;
   }
 
   private boolean hasDelegationToken(URL url, AuthenticatedURL.Token token) {
@@ -215,7 +217,7 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
       separator = "&";
     }
     url = new URL(sb.toString());
-    AuthenticatedURL aUrl = new AuthenticatedURL(this);
+    AuthenticatedURL aUrl = new AuthenticatedURL(this, connConfigurator);
     HttpURLConnection conn = aUrl.openConnection(url, token);
     conn.setRequestMethod(operation.getHttpMethod());
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);

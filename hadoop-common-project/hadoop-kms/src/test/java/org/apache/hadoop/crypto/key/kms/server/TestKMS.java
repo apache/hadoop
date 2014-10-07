@@ -35,6 +35,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -321,6 +322,10 @@ public class TestKMS {
           KeyProvider kp = new KMSClientProvider(uri, conf);
           // getKeys() empty
           Assert.assertTrue(kp.getKeys().isEmpty());
+
+          Token<?>[] tokens = ((KMSClientProvider)kp).addDelegationTokens("myuser", new Credentials());
+          Assert.assertEquals(1, tokens.length);
+          Assert.assertEquals("kms-dt", tokens[0].getKind().toString());
         }
         return null;
       }
