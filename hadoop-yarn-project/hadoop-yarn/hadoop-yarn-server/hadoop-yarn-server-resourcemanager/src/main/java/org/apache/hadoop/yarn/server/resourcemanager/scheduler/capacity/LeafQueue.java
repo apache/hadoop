@@ -981,11 +981,28 @@ public class LeafQueue implements CSQueue {
   
   private Resource getHeadroom(User user, Resource queueMaxCap,
       Resource clusterResource, Resource userLimit) {
+    /** 
+     * Headroom is:
+     *    min(
+     *        min(userLimit, queueMaxCap) - userConsumed,
+     *        queueMaxCap - queueUsedResources
+     *       )
+     * 
+     * ( which can be expressed as, 
+     *  min (userLimit - userConsumed, queuMaxCap - userConsumed, 
+     *    queueMaxCap - queueUsedResources)
+     *  )
+     *
+     * given that queueUsedResources >= userConsumed, this simplifies to
+     *
+     * >> min (userlimit - userConsumed,   queueMaxCap - queueUsedResources) << 
+     *
+     */
     Resource headroom = 
-        Resources.subtract(
-            Resources.min(resourceCalculator, clusterResource, 
-                userLimit, queueMaxCap), 
-            user.getConsumedResources());
+      Resources.min(resourceCalculator, clusterResource,
+        Resources.subtract(userLimit, user.getConsumedResources()),
+        Resources.subtract(queueMaxCap, usedResources)
+        );
     return headroom;
   }
 
@@ -1051,16 +1068,12 @@ public class LeafQueue implements CSQueue {
 
 
   @Lock({LeafQueue.class, FiCaSchedulerApp.class})
-  private Resource computeUserLimitAndSetHeadroom(
+  Resource computeUserLimitAndSetHeadroom(
       FiCaSchedulerApp application, Resource clusterResource, Resource required) {
     
     String user = application.getUser();
     
     User queueUser = getUser(user);
-    
-    /** 
-     * Headroom is min((userLimit, queue-max-cap) - consumed)
-     */
 
     Resource userLimit =                          // User limit
         computeUserLimit(application, clusterResource, required, queueUser);
