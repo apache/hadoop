@@ -117,9 +117,14 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
   }
 
   private static DelegationTokenAuthenticator
-      obtainDelegationTokenAuthenticator(DelegationTokenAuthenticator dta) {
+      obtainDelegationTokenAuthenticator(DelegationTokenAuthenticator dta,
+            ConnectionConfigurator connConfigurator) {
     try {
-      return (dta != null) ? dta : DEFAULT_AUTHENTICATOR.newInstance();
+      if (dta == null) {
+        dta = DEFAULT_AUTHENTICATOR.newInstance();
+        dta.setConnectionConfigurator(connConfigurator);
+      }
+      return dta;
     } catch (Exception ex) {
       throw new IllegalArgumentException(ex);
     }
@@ -169,7 +174,8 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
   public DelegationTokenAuthenticatedURL(
       DelegationTokenAuthenticator authenticator,
       ConnectionConfigurator connConfigurator) {
-    super(obtainDelegationTokenAuthenticator(authenticator), connConfigurator);
+    super(obtainDelegationTokenAuthenticator(authenticator, connConfigurator),
+            connConfigurator);
   }
 
   /**
