@@ -564,6 +564,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7181. Remove incorrect precondition check on key length in
     FileEncryptionInfo. (wang)
 
+    HDFS-7203. Concurrent appending to the same file can cause data corruption
+    (kihwal)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
