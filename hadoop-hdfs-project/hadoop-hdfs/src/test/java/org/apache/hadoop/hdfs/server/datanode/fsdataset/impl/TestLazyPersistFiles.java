@@ -971,7 +971,9 @@ public class TestLazyPersistFiles {
 
   void printRamDiskJMXMetrics() {
     try {
-      jmx.printAllMatchedAttributes(JMX_RAM_DISK_METRICS_PATTERN);
+      if (jmx != null) {
+        jmx.printAllMatchedAttributes(JMX_RAM_DISK_METRICS_PATTERN);
+      }
     } catch (Exception e) {
       e.printStackTrace();
     }
