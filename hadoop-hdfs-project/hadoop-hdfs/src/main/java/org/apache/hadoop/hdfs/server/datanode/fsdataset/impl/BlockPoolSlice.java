@@ -171,6 +171,10 @@ class BlockPoolSlice {
   long getDfsUsed() throws IOException {
     return dfsUsage.getUsed();
   }
+
+  void incDfsUsed(long value) {
+    dfsUsage.incDfsUsed(value);
+  }
   
    /**
    * Read in the cached DU value and return it if it is less than 600 seconds
@@ -274,23 +278,6 @@ class BlockPoolSlice {
     File metaFile = FsDatasetUtil.getMetaFile(blockFile, b.getGenerationStamp());
     dfsUsage.incDfsUsed(b.getNumBytes()+metaFile.length());
     return blockFile;
-  }
-
-  /**
-   * Save the given replica to persistent storage.
-   *
-   * @return The saved meta and block files, in that order.
-   * @throws IOException
-   */
-  File[] lazyPersistReplica(long blockId, long genStamp,
-                            File srcMeta, File srcFile) throws IOException {
-    if (!lazypersistDir.exists() && !lazypersistDir.mkdirs()) {
-      FsDatasetImpl.LOG.warn("Failed to create " + lazypersistDir);
-    }
-    File targetFiles[] = FsDatasetImpl.copyBlockFiles(
-        blockId, genStamp, srcMeta, srcFile, lazypersistDir);
-    dfsUsage.incDfsUsed(targetFiles[0].length() + targetFiles[1].length());
-    return targetFiles;
   }
 
   /**
