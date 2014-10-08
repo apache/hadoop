@@ -357,6 +357,8 @@ Trunk (Unreleased)
 
     HDFS-7171. Fix Jenkins failures in HDFS-6581 branch. (Arpit Agarwal)
 
+    HDFS-7112. LazyWriter should use either async IO or one thread per physical
+    disk. (Xiaoyu Yao via cnauroth)
 
 Release 2.7.0 - UNRELEASED
 
