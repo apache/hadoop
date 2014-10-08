@@ -707,7 +707,7 @@ public class FileUtil {
       TarArchiveEntry entry, File outputDir) throws IOException {
     if (entry.isDirectory()) {
       File subDir = new File(outputDir, entry.getName());
-      if (!subDir.mkdir() && !subDir.isDirectory()) {
+      if (!subDir.mkdirs() && !subDir.isDirectory()) {
         throw new IOException("Mkdirs failed to create tar internal dir "
             + outputDir);
       }
@@ -720,8 +720,8 @@ public class FileUtil {
     }
 
     File outputFile = new File(outputDir, entry.getName());
-    if (!outputDir.exists()) {
-      if (!outputDir.mkdirs()) {
+    if (!outputFile.getParentFile().exists()) {
+      if (!outputFile.getParentFile().mkdirs()) {
         throw new IOException("Mkdirs failed to create tar internal dir "
             + outputDir);
       }

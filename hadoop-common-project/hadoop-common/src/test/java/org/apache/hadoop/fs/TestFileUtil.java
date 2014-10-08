@@ -619,7 +619,7 @@ public class TestFileUtil {
     OutputStream os = new FileOutputStream(simpleTar); 
     TarOutputStream tos = new TarOutputStream(os);
     try {
-      TarEntry te = new TarEntry("foo");
+      TarEntry te = new TarEntry("/bar/foo");
       byte[] data = "some-content".getBytes("UTF-8");
       te.setSize(data.length);
       tos.putNextEntry(te);
@@ -634,8 +634,8 @@ public class TestFileUtil {
     // successfully untar it into an existing dir:
     FileUtil.unTar(simpleTar, tmp);
     // check result:
-    assertTrue(new File(tmp, "foo").exists());
-    assertEquals(12, new File(tmp, "foo").length());
+    assertTrue(new File(tmp, "/bar/foo").exists());
+    assertEquals(12, new File(tmp, "/bar/foo").length());
     
     final File regularFile = new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog");
     regularFile.createNewFile();
