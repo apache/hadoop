@@ -41,11 +41,11 @@ import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class AzureFileSystemInstrumentation implements MetricsSource {
-  
+
   public static final String METRIC_TAG_FILESYSTEM_ID = "wasbFileSystemId";
   public static final String METRIC_TAG_ACCOUNT_NAME = "accountName";
   public static final String METRIC_TAG_CONTAINTER_NAME = "containerName";
-  
+
   public static final String WASB_WEB_RESPONSES = "wasb_web_responses";
   public static final String WASB_BYTES_WRITTEN =
       "wasb_bytes_written_last_second";
@@ -381,7 +381,6 @@ public final class AzureFileSystemInstrumentation implements MetricsSource {
    */
   public long getCurrentMaximumDownloadBandwidth() {
     return currentMaximumDownloadBytesPerSecond;
-
   }
 
   @Override

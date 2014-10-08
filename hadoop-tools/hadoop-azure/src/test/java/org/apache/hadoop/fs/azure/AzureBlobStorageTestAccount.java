@@ -78,6 +78,8 @@ public final class AzureBlobStorageTestAccount {
 
   private static final String KEY_DISABLE_THROTTLING = "fs.azure.disable.bandwidth.throttling";
   private static final String KEY_READ_TOLERATE_CONCURRENT_APPEND = "fs.azure.io.read.tolerate.concurrent.append";
+  public static final String DEFAULT_PAGE_BLOB_DIRECTORY = "pageBlobs";
+  public static final String DEFAULT_ATOMIC_RENAME_DIRECTORIES = "/atomicRenameDir1,/atomicRenameDir2";
 
   private CloudStorageAccount account;
   private CloudBlobContainer container;
@@ -85,12 +87,14 @@ public final class AzureBlobStorageTestAccount {
   private NativeAzureFileSystem fs;
   private AzureNativeFileSystemStore storage;
   private MockStorageInterface mockStorage;
+  private String pageBlobDirectory;
   private static final ConcurrentLinkedQueue<MetricsRecord> allMetrics =
       new ConcurrentLinkedQueue<MetricsRecord>();
-  
+  private static boolean metricsConfigSaved = false;
   
   private AzureBlobStorageTestAccount(NativeAzureFileSystem fs,
-      CloudStorageAccount account, CloudBlobContainer container) {
+      CloudStorageAccount account,
+      CloudBlobContainer container) {
     this.account = account;
     this.container = container;
     this.fs = fs;
@@ -158,6 +162,14 @@ public final class AzureBlobStorageTestAccount {
     return toMockUri(path.toUri().getRawPath().substring(1)); 
   }
   
+  public static Path pageBlobPath() {
+    return new Path("/" + DEFAULT_PAGE_BLOB_DIRECTORY);
+  }
+
+  public static Path pageBlobPath(String fileName) {
+    return new Path(pageBlobPath(), fileName);
+  }
+
   public Number getLatestMetricValue(String metricName, Number defaultValue)
       throws IndexOutOfBoundsException{
     boolean found = false;
@@ -206,8 +218,10 @@ public final class AzureBlobStorageTestAccount {
    *          The blob key (no initial slash).
    * @return The blob reference.
    */
-  public CloudBlockBlob getBlobReference(String blobKey) throws Exception {
-    return container.getBlockBlobReference(String.format(blobKey));
+  public CloudBlockBlob getBlobReference(String blobKey)
+      throws Exception {
+    return container.getBlockBlobReference(
+        String.format(blobKey));
   }
 
   /**
@@ -233,24 +247,56 @@ public final class AzureBlobStorageTestAccount {
     getBlobReference(blobKey).releaseLease(accessCondition);
   }
 
+  private static void saveMetricsConfigFile() {
+    if (!metricsConfigSaved) {
+      new org.apache.hadoop.metrics2.impl.ConfigBuilder()
+      .add("azure-file-system.sink.azuretestcollector.class",
+          StandardCollector.class.getName())
+      .save("hadoop-metrics2-azure-file-system.properties");
+      metricsConfigSaved = true;
+    }
+  }
+
   public static AzureBlobStorageTestAccount createMock() throws Exception {
     return createMock(new Configuration());
   }
 
-  public static AzureBlobStorageTestAccount createMock(Configuration conf)
-      throws Exception {
+  public static AzureBlobStorageTestAccount createMock(Configuration conf) throws Exception {
+    saveMetricsConfigFile();
+    configurePageBlobDir(conf);
+    configureAtomicRenameDir(conf);
     AzureNativeFileSystemStore store = new AzureNativeFileSystemStore();
     MockStorageInterface mockStorage = new MockStorageInterface();
     store.setAzureStorageInteractionLayer(mockStorage);
     NativeAzureFileSystem fs = new NativeAzureFileSystem(store);
-    addWasbToConfiguration(conf);
     setMockAccountKey(conf);
     // register the fs provider.
 
     fs.initialize(new URI(MOCK_WASB_URI), conf);
-    AzureBlobStorageTestAccount testAcct = new AzureBlobStorageTestAccount(fs,
-        mockStorage);
+    AzureBlobStorageTestAccount testAcct =
+        new AzureBlobStorageTestAccount(fs, mockStorage);
     return testAcct;
+  }
+
+  /**
+   * Set the page blob directories configuration to the default if it is not
+   * already set. Some tests may set it differently (e.g. the page blob
+   * tests in TestNativeAzureFSPageBlobLive).
+   * @param conf The configuration to conditionally update.
+   */
+  private static void configurePageBlobDir(Configuration conf) {
+    if (conf.get(AzureNativeFileSystemStore.KEY_PAGE_BLOB_DIRECTORIES) == null) {
+      conf.set(AzureNativeFileSystemStore.KEY_PAGE_BLOB_DIRECTORIES,
+          "/" + DEFAULT_PAGE_BLOB_DIRECTORY);
+    }
+  }
+
+  /** Do the same for the atomic rename directories configuration */
+  private static void configureAtomicRenameDir(Configuration conf) {
+    if (conf.get(AzureNativeFileSystemStore.KEY_ATOMIC_RENAME_DIRECTORIES) == null) {
+      conf.set(AzureNativeFileSystemStore.KEY_ATOMIC_RENAME_DIRECTORIES,
+          DEFAULT_ATOMIC_RENAME_DIRECTORIES);
+    }
   }
 
   /**
@@ -260,18 +306,20 @@ public final class AzureBlobStorageTestAccount {
    */
   public static AzureBlobStorageTestAccount createForEmulator()
       throws Exception {
+    saveMetricsConfigFile();
     NativeAzureFileSystem fs = null;
     CloudBlobContainer container = null;
     Configuration conf = createTestConfiguration();
     if (!conf.getBoolean(USE_EMULATOR_PROPERTY_NAME, false)) {
       // Not configured to test against the storage emulator.
-      System.out.println("Skipping emulator Azure test because configuration "
-          + "doesn't indicate that it's running."
-          + " Please see README.txt for guidance.");
+      System.out
+        .println("Skipping emulator Azure test because configuration " +
+            "doesn't indicate that it's running." +
+            " Please see RunningLiveWasbTests.txt for guidance.");
       return null;
     }
-    CloudStorageAccount account = CloudStorageAccount
-        .getDevelopmentStorageAccount();
+    CloudStorageAccount account =
+        CloudStorageAccount.getDevelopmentStorageAccount();
     fs = new NativeAzureFileSystem();
     String containerName = String.format("wasbtests-%s-%tQ",
         System.getProperty("user.name"), new Date());
@@ -285,14 +333,18 @@ public final class AzureBlobStorageTestAccount {
     fs.initialize(accountUri, conf);
 
     // Create test account initializing the appropriate member variables.
-    AzureBlobStorageTestAccount testAcct = new AzureBlobStorageTestAccount(fs,
-        account, container);
+    //
+    AzureBlobStorageTestAccount testAcct =
+        new AzureBlobStorageTestAccount(fs, account, container);
 
     return testAcct;
   }
 
   public static AzureBlobStorageTestAccount createOutOfBandStore(
       int uploadBlockSize, int downloadBlockSize) throws Exception {
+
+    saveMetricsConfigFile();
+
     CloudBlobContainer container = null;
     Configuration conf = createTestConfiguration();
     CloudStorageAccount account = createTestAccount(conf);
@@ -337,8 +389,9 @@ public final class AzureBlobStorageTestAccount {
     testStorage.initialize(accountUri, conf, instrumentation);
 
     // Create test account initializing the appropriate member variables.
-    AzureBlobStorageTestAccount testAcct = new AzureBlobStorageTestAccount(
-        testStorage, account, container);
+    //
+    AzureBlobStorageTestAccount testAcct =
+        new AzureBlobStorageTestAccount(testStorage, account, container);
 
     return testAcct;
   }
@@ -416,11 +469,11 @@ public final class AzureBlobStorageTestAccount {
     }
   }
 
-  private static Configuration createTestConfiguration() {
+  public static Configuration createTestConfiguration() {
     return createTestConfiguration(null);
   }
 
-  protected static Configuration createTestConfiguration(Configuration conf) {
+  private static Configuration createTestConfiguration(Configuration conf) {
     if (conf == null) {
       conf = new Configuration();
     }
@@ -429,16 +482,9 @@ public final class AzureBlobStorageTestAccount {
     return conf;
   }
 
-  // for programmatic setting of the wasb configuration.
-  // note that tests can also get the
-  public static void addWasbToConfiguration(Configuration conf) {
-    conf.set("fs.wasb.impl", "org.apache.hadoop.fs.azure.NativeAzureFileSystem");
-    conf.set("fs.wasbs.impl",
-        "org.apache.hadoop.fs.azure.NativeAzureFileSystem");
-  }
-
-  static CloudStorageAccount createTestAccount() throws URISyntaxException,
-      KeyProviderException {
+  static CloudStorageAccount createTestAccount()
+      throws URISyntaxException, KeyProviderException
+  {
     return createTestAccount(createTestConfiguration());
   }
 
@@ -447,8 +493,8 @@ public final class AzureBlobStorageTestAccount {
     String testAccountName = conf.get(TEST_ACCOUNT_NAME_PROPERTY_NAME);
     if (testAccountName == null) {
       System.out
-          .println("Skipping live Azure test because of missing test account."
-              + " Please see README.txt for guidance.");
+        .println("Skipping live Azure test because of missing test account." +
+                 " Please see RunningLiveWasbTests.txt for guidance.");
       return null;
     }
     return createStorageAccount(testAccountName, conf, false);
@@ -466,9 +512,12 @@ public final class AzureBlobStorageTestAccount {
   public static AzureBlobStorageTestAccount create(String containerNameSuffix,
       EnumSet<CreateOptions> createOptions, Configuration initialConfiguration)
       throws Exception {
+    saveMetricsConfigFile();
     NativeAzureFileSystem fs = null;
     CloudBlobContainer container = null;
     Configuration conf = createTestConfiguration(initialConfiguration);
+    configurePageBlobDir(conf);
+    configureAtomicRenameDir(conf);
     CloudStorageAccount account = createTestAccount(conf);
     if (account == null) {
       return null;
@@ -510,15 +559,18 @@ public final class AzureBlobStorageTestAccount {
     fs.initialize(accountUri, conf);
 
     // Create test account initializing the appropriate member variables.
-    AzureBlobStorageTestAccount testAcct = new AzureBlobStorageTestAccount(fs,
-        account, container);
+    //
+    AzureBlobStorageTestAccount testAcct =
+        new AzureBlobStorageTestAccount(fs, account, container);
 
     return testAcct;
   }
 
   private static String generateContainerName() throws Exception {
-    String containerName = String.format("wasbtests-%s-%tQ",
-        System.getProperty("user.name"), new Date());
+    String containerName =
+        String.format ("wasbtests-%s-%tQ",
+            System.getProperty("user.name"),
+            new Date());
     return containerName;
   }
 
@@ -548,12 +600,16 @@ public final class AzureBlobStorageTestAccount {
 
     if (readonly) {
       // Set READ permissions
-      sasPolicy.setPermissions(EnumSet.of(SharedAccessBlobPermissions.READ,
+      sasPolicy.setPermissions(EnumSet.of(
+          SharedAccessBlobPermissions.READ,
           SharedAccessBlobPermissions.LIST));
     } else {
       // Set READ and WRITE permissions.
-      sasPolicy.setPermissions(EnumSet.of(SharedAccessBlobPermissions.READ,
-          SharedAccessBlobPermissions.WRITE, SharedAccessBlobPermissions.LIST));
+      //
+      sasPolicy.setPermissions(EnumSet.of(
+          SharedAccessBlobPermissions.READ,
+          SharedAccessBlobPermissions.WRITE,
+          SharedAccessBlobPermissions.LIST));
     }
 
     // Create the container permissions.
@@ -590,8 +646,11 @@ public final class AzureBlobStorageTestAccount {
     SharedAccessBlobPolicy sasPolicy = new SharedAccessBlobPolicy();
 
     // Set READ and WRITE permissions.
-    sasPolicy.setPermissions(EnumSet.of(SharedAccessBlobPermissions.READ,
-        SharedAccessBlobPermissions.WRITE, SharedAccessBlobPermissions.LIST,
+    //
+    sasPolicy.setPermissions(EnumSet.of(
+        SharedAccessBlobPermissions.READ,
+        SharedAccessBlobPermissions.WRITE,
+        SharedAccessBlobPermissions.LIST,
         SharedAccessBlobPermissions.DELETE));
 
     // Create the container permissions.
@@ -725,8 +784,9 @@ public final class AzureBlobStorageTestAccount {
 
     // Create test account initializing the appropriate member variables.
     // Set the container value to null for the default root container.
-    AzureBlobStorageTestAccount testAcct = new AzureBlobStorageTestAccount(fs,
-        account, blobRoot);
+    //
+    AzureBlobStorageTestAccount testAcct = new AzureBlobStorageTestAccount(
+        fs, account, blobRoot);
 
     // Return to caller with test account.
     return testAcct;
@@ -805,5 +865,12 @@ public final class AzureBlobStorageTestAccount {
     public void flush() {
     }
   }
- 
+
+  public void setPageBlobDirectory(String directory) {
+    this.pageBlobDirectory = directory;
+  }
+
+  public String getPageBlobDirectory() {
+    return pageBlobDirectory;
+  }
 }

@@ -32,7 +32,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.TestHookOperationContext;
@@ -65,19 +64,18 @@ public class TestAzureFileSystemErrorConditions {
    */
   @Test
   public void testAccessUnauthorizedPublicContainer() throws Exception {
-    Configuration conf = new Configuration();
-    AzureBlobStorageTestAccount.addWasbToConfiguration(conf);
     Path noAccessPath = new Path(
         "wasb://nonExistentContainer@hopefullyNonExistentAccount/someFile");
     NativeAzureFileSystem.suppressRetryPolicy();
     try {
-      FileSystem.get(noAccessPath.toUri(), conf).open(noAccessPath);
+      FileSystem.get(noAccessPath.toUri(), new Configuration())
+        .open(noAccessPath);
       assertTrue("Should've thrown.", false);
     } catch (AzureException ex) {
-      assertTrue("Unexpected message in exception " + ex, ex.getMessage()
-          .contains(
-              "Unable to access container nonExistentContainer in account"
-                  + " hopefullyNonExistentAccount"));
+      assertTrue("Unexpected message in exception " + ex,
+          ex.getMessage().contains(
+          "Unable to access container nonExistentContainer in account" +
+          " hopefullyNonExistentAccount"));
     } finally {
       NativeAzureFileSystem.resumeRetryPolicy();
     }
@@ -104,11 +102,11 @@ public class TestAzureFileSystemErrorConditions {
         fs.listStatus(new Path("/"));
         passed = true;
       } catch (AzureException ex) {
-        assertTrue("Unexpected exception message: " + ex, ex.getMessage()
-            .contains("unsupported version: 2090-04-05."));
+        assertTrue("Unexpected exception message: " + ex,
+            ex.getMessage().contains("unsupported version: 2090-04-05."));
       }
-      assertFalse(
-          "Should've thrown an exception because of the wrong version.", passed);
+      assertFalse("Should've thrown an exception because of the wrong version.",
+          passed);
     } finally {
       fs.close();
     }
@@ -118,8 +116,7 @@ public class TestAzureFileSystemErrorConditions {
     boolean isTargetConnection(HttpURLConnection connection);
   }
 
-  private class TransientErrorInjector extends
-      StorageEvent<SendingRequestEvent> {
+  private class TransientErrorInjector extends StorageEvent<SendingRequestEvent> {
     final ConnectionRecognizer connectionRecognizer;
     private boolean injectedErrorOnce = false;
 
@@ -129,8 +126,7 @@ public class TestAzureFileSystemErrorConditions {
 
     @Override
     public void eventOccurred(SendingRequestEvent eventArg) {
-      HttpURLConnection connection = (HttpURLConnection) eventArg
-          .getConnectionObject();
+      HttpURLConnection connection = (HttpURLConnection)eventArg.getConnectionObject();
       if (!connectionRecognizer.isTargetConnection(connection)) {
         return;
       }
@@ -157,8 +153,8 @@ public class TestAzureFileSystemErrorConditions {
   @Test
   public void testTransientErrorOnDelete() throws Exception {
     // Need to do this test against a live storage account
-    AzureBlobStorageTestAccount testAccount = AzureBlobStorageTestAccount
-        .create();
+    AzureBlobStorageTestAccount testAccount =
+        AzureBlobStorageTestAccount.create();
     assumeNotNull(testAccount);
     try {
       NativeAzureFileSystem fs = testAccount.getFileSystem();
@@ -179,7 +175,7 @@ public class TestAzureFileSystemErrorConditions {
   private void writeAllThreeFile(NativeAzureFileSystem fs, Path testFile)
       throws IOException {
     byte[] buffer = new byte[ALL_THREE_FILE_SIZE];
-    Arrays.fill(buffer, (byte) 3);
+    Arrays.fill(buffer, (byte)3);
     OutputStream stream = fs.create(testFile);
     stream.write(buffer);
     stream.close();
@@ -189,7 +185,8 @@ public class TestAzureFileSystemErrorConditions {
       throws IOException {
     byte[] buffer = new byte[ALL_THREE_FILE_SIZE];
     InputStream inStream = fs.open(testFile);
-    assertEquals(buffer.length, inStream.read(buffer, 0, buffer.length));
+    assertEquals(buffer.length,
+        inStream.read(buffer, 0, buffer.length));
     inStream.close();
     for (int i = 0; i < buffer.length; i++) {
       assertEquals(3, buffer[i]);
@@ -199,8 +196,8 @@ public class TestAzureFileSystemErrorConditions {
   @Test
   public void testTransientErrorOnCommitBlockList() throws Exception {
     // Need to do this test against a live storage account
-    AzureBlobStorageTestAccount testAccount = AzureBlobStorageTestAccount
-        .create();
+    AzureBlobStorageTestAccount testAccount =
+        AzureBlobStorageTestAccount.create();
     assumeNotNull(testAccount);
     try {
       NativeAzureFileSystem fs = testAccount.getFileSystem();
@@ -222,8 +219,8 @@ public class TestAzureFileSystemErrorConditions {
   @Test
   public void testTransientErrorOnRead() throws Exception {
     // Need to do this test against a live storage account
-    AzureBlobStorageTestAccount testAccount = AzureBlobStorageTestAccount
-        .create();
+    AzureBlobStorageTestAccount testAccount =
+        AzureBlobStorageTestAccount.create();
     assumeNotNull(testAccount);
     try {
       NativeAzureFileSystem fs = testAccount.getFileSystem();
@@ -239,17 +236,5 @@ public class TestAzureFileSystemErrorConditions {
     } finally {
       testAccount.cleanup();
     }
-  }
-  
-  // Tests an error during stream creation (in this case in the seek() implementation
-  // to verify the close-stream-on-error logic.
-  @Test (expected=AzureException.class)
-  public void testErrorDuringRetrieve() throws Exception {
-    NativeAzureFileSystem fs = AzureBlobStorageTestAccount.createMock().getFileSystem();
-    Path testFile = new Path("/testErrorDuringRetrieve");
-    writeAllThreeFile(fs, testFile);
-
-    FSDataInputStream stream = fs.open(testFile);
-    stream.seek(Integer.MAX_VALUE);
   }
 }

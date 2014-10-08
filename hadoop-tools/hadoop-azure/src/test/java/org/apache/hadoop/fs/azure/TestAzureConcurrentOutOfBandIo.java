@@ -22,11 +22,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeNotNull;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.Arrays;
 
+import org.apache.hadoop.fs.azure.AzureException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.junit.After;
@@ -100,13 +99,14 @@ public class TestAzureConcurrentOutOfBandIo {
     public void run() {
       byte[] dataBlockWrite = new byte[UPLOAD_BLOCK_SIZE];
 
-      DataOutputStream outputStream = null;
+      OutputStream outputStream = null;
 
       try {
         for (int i = 0; !done; i++) {
           // Write two 4 MB blocks to the blob.
           //
-          outputStream = writerStorageAccount.getStore().storefile(key,
+          outputStream = writerStorageAccount.getStore().storefile(
+              key,
               new PermissionStatus("", "", FsPermission.getDefault()));
 
           Arrays.fill(dataBlockWrite, (byte) (i % 256));
@@ -124,7 +124,7 @@ public class TestAzureConcurrentOutOfBandIo {
       } catch (IOException e) {
         System.out
             .println("DatablockWriter thread encountered an I/O exception."
-                + e.getMessage());
+            + e.getMessage());
       }
     }
   }
@@ -137,30 +137,29 @@ public class TestAzureConcurrentOutOfBandIo {
 
     // Write to blob to make sure it exists.
     //
-    // Write five 4 MB blocks to the blob. To ensure there is data in the blob
-    // before reading. This eliminates the race between the reader and writer
-    // threads.
-    DataOutputStream outputStream = testAccount.getStore().storefile(
-        "WASB_String.txt",
-        new PermissionStatus("", "", FsPermission.getDefault()));
-    Arrays.fill(dataBlockWrite, (byte) 255);
-    for (int i = 0; i < NUMBER_OF_BLOCKS; i++) {
-      outputStream.write(dataBlockWrite);
-    }
+   // Write five 4 MB blocks to the blob. To ensure there is data in the blob before
+   // reading.  This eliminates the race between the reader and writer threads.
+   OutputStream outputStream = testAccount.getStore().storefile(
+       "WASB_String.txt",
+       new PermissionStatus("", "", FsPermission.getDefault()));
+   Arrays.fill(dataBlockWrite, (byte) 255);
+   for (int i = 0; i < NUMBER_OF_BLOCKS; i++) {
+     outputStream.write(dataBlockWrite);
+   }
 
-    outputStream.flush();
-    outputStream.close();
+   outputStream.flush();
+   outputStream.close();
 
-    // Start writing blocks to Azure store using the DataBlockWriter thread.
+   // Start writing blocks to Azure store using the DataBlockWriter thread.
     DataBlockWriter writeBlockTask = new DataBlockWriter(testAccount,
         "WASB_String.txt");
-    writeBlockTask.startWriting();
-    int count = 0;
-    DataInputStream inputStream = null;
+   writeBlockTask.startWriting();
+   int count = 0;
+   DataInputStream inputStream = null;
 
-    for (int i = 0; i < 5; i++) {
-      try {
-        inputStream = testAccount.getStore().retrieve("WASB_String.txt", 0);
+   for (int i = 0; i < 5; i++) {
+     try {
+        inputStream = testAccount.getStore().retrieve("WASB_String.txt");
         count = 0;
         int c = 0;
 
@@ -173,17 +172,17 @@ public class TestAzureConcurrentOutOfBandIo {
           // Counting the number of bytes.
           count += c;
         }
-      } catch (IOException e) {
-        System.out.println(e.getCause().toString());
-        e.printStackTrace();
-        fail();
-      }
+     } catch (IOException e) {
+       System.out.println(e.getCause().toString());
+       e.printStackTrace();
+       fail();
+     }
 
-      // Close the stream.
-      if (null != inputStream) {
-        inputStream.close();
-      }
-    }
+     // Close the stream.
+     if (null != inputStream){
+       inputStream.close();
+     }
+   }
 
     // Stop writing blocks.
     writeBlockTask.stopWriting();

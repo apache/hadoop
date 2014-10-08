@@ -274,8 +274,8 @@ public class TestWasbUriAndConfiguration {
     assumeNotNull(firstAccount);
     assumeNotNull(secondAccount);
     try {
-      FileSystem firstFs = firstAccount.getFileSystem(), secondFs = secondAccount
-          .getFileSystem();
+      FileSystem firstFs = firstAccount.getFileSystem(),
+          secondFs = secondAccount.getFileSystem();
       Path testFile = new Path("/testWasb");
       assertTrue(validateIOStreams(firstFs, testFile));
       assertTrue(validateIOStreams(secondFs, testFile));
@@ -356,13 +356,16 @@ public class TestWasbUriAndConfiguration {
     // the actual URI being asv(s)/wasb(s):///, it should work.
 
     String[] wasbAliases = new String[] { "wasb", "wasbs" };
-    for (String defaultScheme : wasbAliases){
+    for (String defaultScheme : wasbAliases) {
       for (String wantedScheme : wasbAliases) {
         testAccount = AzureBlobStorageTestAccount.createMock();
         Configuration conf = testAccount.getFileSystem().getConf();
         String authority = testAccount.getFileSystem().getUri().getAuthority();
         URI defaultUri = new URI(defaultScheme, authority, null, null, null);
         conf.set("fs.default.name", defaultUri.toString());
+        
+        // Add references to file system implementations for wasb and wasbs.
+        conf.addResource("azure-test.xml");
         URI wantedUri = new URI(wantedScheme + ":///random/path");
         NativeAzureFileSystem obtained = (NativeAzureFileSystem) FileSystem
             .get(wantedUri, conf);

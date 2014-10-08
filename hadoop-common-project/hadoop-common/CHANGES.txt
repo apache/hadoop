@@ -129,6 +129,9 @@ Trunk (Unreleased)
     HADOOP-11092. hadoop shell commands should print usage if not given a
     a class (aw)
 
+    HADOOP-10809. hadoop-azure: page blob support. (Dexter Bradshaw,
+    Mostafa Elhemali, Eric Hanson, and Mike Liddell via cnauroth)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.

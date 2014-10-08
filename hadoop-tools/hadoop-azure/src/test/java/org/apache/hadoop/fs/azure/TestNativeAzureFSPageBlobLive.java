@@ -15,29 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.fs.azure;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 
 /**
- * Key provider that simply returns the storage account key from the
- * configuration as plaintext.
+ * Run the base Azure file system tests strictly on page blobs to make sure fundamental
+ * operations on page blob files and folders work as expected.
+ * These operations include create, delete, rename, list, and so on.
  */
-@InterfaceAudience.Private
-public class SimpleKeyProvider implements KeyProvider {
-
-  protected static final String KEY_ACCOUNT_KEY_PREFIX =
-      "fs.azure.account.key.";
+public class TestNativeAzureFSPageBlobLive extends
+    NativeAzureFileSystemBaseTest {
 
   @Override
-  public String getStorageAccountKey(String accountName, Configuration conf)
-      throws KeyProviderException {
-    return conf.get(getStorageAccountKeyName(accountName));
-  }
+  protected AzureBlobStorageTestAccount createTestAccount()
+      throws Exception {
+    Configuration conf = new Configuration();
 
-  protected String getStorageAccountKeyName(String accountName) {
-    return KEY_ACCOUNT_KEY_PREFIX + accountName;
+    // Configure the page blob directories key so every file created is a page blob.
+    conf.set(AzureNativeFileSystemStore.KEY_PAGE_BLOB_DIRECTORIES, "/");
+
+    // Configure the atomic rename directories key so every folder will have
+    // atomic rename applied.
+    conf.set(AzureNativeFileSystemStore.KEY_ATOMIC_RENAME_DIRECTORIES, "/");
+    return AzureBlobStorageTestAccount.create(conf);
   }
 }

@@ -26,6 +26,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -67,8 +68,8 @@ public class TestNativeAzureFileSystemConcurrency {
     HashMap<String, String> metadata = backingStore
         .getMetadata(AzureBlobStorageTestAccount.toMockUri(filePath));
     assertNotNull(metadata);
-    String linkValue = metadata
-        .get(AzureNativeFileSystemStore.LINK_BACK_TO_UPLOAD_IN_PROGRESS_METADATA_KEY);
+    String linkValue = metadata.get(AzureNativeFileSystemStore.LINK_BACK_TO_UPLOAD_IN_PROGRESS_METADATA_KEY);
+    linkValue = URLDecoder.decode(linkValue, "UTF-8");
     assertNotNull(linkValue);
     assertTrue(backingStore.exists(AzureBlobStorageTestAccount
         .toMockUri(linkValue)));

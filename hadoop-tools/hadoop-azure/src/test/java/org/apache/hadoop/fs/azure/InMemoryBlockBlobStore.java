@@ -41,12 +41,15 @@ public class InMemoryBlockBlobStore {
     private final String key;
     private final HashMap<String, String> metadata;
     private final int contentLength;
+    private final boolean isPageBlob;
 
+    
     ListBlobEntry(String key, HashMap<String, String> metadata,
-        int contentLength) {
+        int contentLength, boolean isPageBlob) {
       this.key = key;
       this.metadata = metadata;
       this.contentLength = contentLength;
+      this.isPageBlob = isPageBlob;
     }
 
     public String getKey() {
@@ -59,6 +62,10 @@ public class InMemoryBlockBlobStore {
 
     public int getContentLength() {
       return contentLength;
+    }
+
+    public boolean isPageBlob() {
+      return isPageBlob;
     }
   }
 
@@ -77,10 +84,13 @@ public class InMemoryBlockBlobStore {
     ArrayList<ListBlobEntry> list = new ArrayList<ListBlobEntry>();
     for (Map.Entry<String, Entry> entry : blobs.entrySet()) {
       if (entry.getKey().startsWith(prefix)) {
-        list.add(new ListBlobEntry(entry.getKey(),
-            includeMetadata ? new HashMap<String, String>(
-                entry.getValue().metadata) : null,
-            entry.getValue().content.length));
+        list.add(new ListBlobEntry(
+            entry.getKey(),
+            includeMetadata ?
+                new HashMap<String, String>(entry.getValue().metadata) :
+                  null,
+            entry.getValue().content.length,
+            entry.getValue().isPageBlob));
       }
     }
     return list;
@@ -92,19 +102,49 @@ public class InMemoryBlockBlobStore {
 
   @SuppressWarnings("unchecked")
   public synchronized void setContent(String key, byte[] value,
-      HashMap<String, String> metadata) {
-    blobs
-        .put(key, new Entry(value, (HashMap<String, String>) metadata.clone()));
+      HashMap<String, String> metadata, boolean isPageBlob,
+      long length) {
+    blobs.put(key, new Entry(value, (HashMap<String, String>)metadata.clone(),
+        isPageBlob, length));
   }
 
-  public OutputStream upload(final String key,
+  @SuppressWarnings("unchecked")
+  public synchronized void setMetadata(String key,
+      HashMap<String, String> metadata) {
+    blobs.get(key).metadata = (HashMap<String, String>) metadata.clone();
+  }
+
+  public OutputStream uploadBlockBlob(final String key,
       final HashMap<String, String> metadata) {
-    setContent(key, new byte[0], metadata);
+    setContent(key, new byte[0], metadata, false, 0);
     return new ByteArrayOutputStream() {
       @Override
-      public void flush() throws IOException {
+      public void flush()
+          throws IOException {
         super.flush();
-        setContent(key, toByteArray(), metadata);
+        byte[] tempBytes = toByteArray();
+        setContent(key, tempBytes, metadata, false, tempBytes.length);
+      }
+      @Override
+      public void close()
+          throws IOException {
+        super.close();
+        byte[] tempBytes = toByteArray();
+        setContent(key, tempBytes, metadata, false, tempBytes.length);
+      }
+    };
+  }
+
+  public OutputStream uploadPageBlob(final String key,
+      final HashMap<String, String> metadata,
+      final long length) {
+    setContent(key, new byte[0], metadata, true, length);
+    return new ByteArrayOutputStream() {
+      @Override
+      public void flush()
+          throws IOException {
+        super.flush();
+        setContent(key, toByteArray(), metadata, true, length);
       }
     };
   }
@@ -137,10 +177,16 @@ public class InMemoryBlockBlobStore {
   private static class Entry {
     private byte[] content;
     private HashMap<String, String> metadata;
+    private boolean isPageBlob;
+    @SuppressWarnings("unused") // TODO: use it
+    private long length;
 
-    public Entry(byte[] content, HashMap<String, String> metadata) {
+    public Entry(byte[] content, HashMap<String, String> metadata,
+        boolean isPageBlob, long length) {
       this.content = content;
       this.metadata = metadata;
+      this.isPageBlob = isPageBlob;
+      this.length = length;
     }
   }
 }
