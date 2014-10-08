@@ -142,6 +142,9 @@ Release 2.6.0 - UNRELEASED
     YARN-1051. Add a system for creating reservations of cluster capacity.
     (see breakdown below)
 
+    YARN-913. Add a way to register long-lived services in a YARN cluster.
+    (stevel)
+
   IMPROVEMENTS
 
     YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc
@@ -589,6 +592,10 @@ Release 2.6.0 - UNRELEASED
     (Chen He and Craig Welch via jianhe)
 
     YARN-2649. Fixed TestAMRMRPCNodeUpdates test failure. (Ming Ma via jianhe)
+
+  BREAKDOWN OF YARN-913 SUBTASKS AND RELATED JIRAS
+
+    YARN-2652 Add hadoop-yarn-registry package under hadoop-yarn. (stevel)
 
 Release 2.5.1 - 2014-09-05
 
