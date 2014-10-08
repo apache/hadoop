@@ -58,3 +58,5 @@ MapReduce NextGen aka YARN aka MRv2
   * {{{../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduce_Compatibility_Hadoop1_Hadoop2.html}Backward Compatibility between Apache Hadoop 1.x and 2.x for MapReduce}}
 
   * {{{../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/EncryptedShuffle.html}Encrypted Shuffle}}
+
+  * {{{./registry/index.html}Registry}}
