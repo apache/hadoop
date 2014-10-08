@@ -363,4 +363,14 @@
     <Field name="reservationsContinueLooking" />
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
+
+  <!--
+  This code is meant to deserialize this way...subclasses of will need to
+  instantiate their own JsonSerDeser instances if they want to deserialize.
+  -->
+  <Match>
+    <Class name="org.apache.hadoop.registry.client.binding.JsonSerDeser"/>
+    <Bug pattern="UI_INHERITANCE_UNSAFE_GETRESOURCE"/>
+  </Match>
+
 </FindBugsFilter>
