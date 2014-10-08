@@ -20,14 +20,10 @@ package org.apache.hadoop.fs.azure.metrics;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeNotNull;
 
 import java.util.Date;
-import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;
-import org.junit.Assume;
 import org.junit.Test;
 
 public class TestBandwidthGaugeUpdater {
@@ -78,48 +74,5 @@ public class TestBandwidthGaugeUpdater {
     updater.triggerUpdate(false);
     assertEquals(10 * threads.length, AzureMetricsTestUtil.getCurrentBytesRead(instrumentation));
     updater.close();
-  }
-  
-  @Test
-  public void testFinalizerThreadShutdown() throws Exception {
-    
-    // force cleanup of any existing wasb filesystems
-    System.gc();
-    System.runFinalization();
-    
-    int nUpdaterThreadsStart = getWasbThreadCount();
-    assertTrue("Existing WASB threads have not been cleared", nUpdaterThreadsStart == 0);
-    
-    final int nFilesystemsToSpawn = 10;
-    AzureBlobStorageTestAccount testAccount = null;
-    
-    for(int i = 0; i < nFilesystemsToSpawn; i++){
-      testAccount = AzureBlobStorageTestAccount.createMock();
-      testAccount.getFileSystem();
-    }
-
-    int nUpdaterThreadsAfterSpawn = getWasbThreadCount();
-    Assume.assumeTrue("Background threads should have spawned.", nUpdaterThreadsAfterSpawn == 10);
-   
-    testAccount = null;  //clear the last reachable reference
-    
-    // force cleanup
-    System.gc();
-    System.runFinalization();
-    
-    int nUpdaterThreadsAfterCleanup = getWasbThreadCount();
-    assertTrue("Finalizers should have reduced the thread count.  ", nUpdaterThreadsAfterCleanup == 0 );
-  }
-
-  private int getWasbThreadCount() {
-    int c = 0;
-    Map<Thread, StackTraceElement[]> stacksStart = Thread.getAllStackTraces();
-    for (Thread t : stacksStart.keySet()){
-      if(t.getName().equals(BandwidthGaugeUpdater.THREAD_NAME))
-      {
-        c++;
-      }
-    }
-    return c;
   }
 }

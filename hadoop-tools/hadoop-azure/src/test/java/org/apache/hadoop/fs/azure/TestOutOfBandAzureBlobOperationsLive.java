@@ -163,6 +163,27 @@ public class TestOutOfBandAzureBlobOperationsLive {
     fs.rename(srcFilePath, destFilePath);
   }
 
+  // Verify that you can rename a file which is the only file in an implicit folder in the
+  // WASB file system.
+  // scenario for this particular test described at MONARCH-HADOOP-892
+  @Test
+  public void outOfBandSingleFile_rename() throws Exception {
+
+    //NOTE: manual use of CloubBlockBlob targets working directory explicitly.
+    //       WASB driver methods prepend working directory implicitly.
+    String workingDir = "user/" + UserGroupInformation.getCurrentUser().getShortUserName() + "/";
+    CloudBlockBlob blob = testAccount.getBlobReference(workingDir + "testFolder5/a/input/file");
+    BlobOutputStream s = blob.openOutputStream();
+    s.close();
+
+    Path srcFilePath = new Path("testFolder5/a/input/file");
+    assertTrue(fs.exists(srcFilePath));
+
+    Path destFilePath = new Path("testFolder5/file2");
+    fs.rename(srcFilePath, destFilePath);
+  }
+
+  // WASB must force explicit parent directories in create, delete, mkdirs, rename.
   // scenario for this particular test described at MONARCH-HADOOP-764
   @Test
   public void outOfBandFolder_rename_rootLevelFiles() throws Exception {

@@ -18,26 +18,39 @@
 
 package org.apache.hadoop.fs.azure;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+
+import org.apache.hadoop.fs.Syncable;
 
 /**
- * Key provider that simply returns the storage account key from the
- * configuration as plaintext.
+ * Support the Syncable interface on top of a DataOutputStream.
+ * This allows passing the sync/hflush/hsync calls through to the
+ * wrapped stream passed in to the constructor. This is required
+ * for HBase when wrapping a PageBlobOutputStream used as a write-ahead log.
  */
-@InterfaceAudience.Private
-public class SimpleKeyProvider implements KeyProvider {
+public class SyncableDataOutputStream extends DataOutputStream implements Syncable {
 
-  protected static final String KEY_ACCOUNT_KEY_PREFIX =
-      "fs.azure.account.key.";
-
-  @Override
-  public String getStorageAccountKey(String accountName, Configuration conf)
-      throws KeyProviderException {
-    return conf.get(getStorageAccountKeyName(accountName));
+  public SyncableDataOutputStream(OutputStream out) {
+    super(out);
   }
 
-  protected String getStorageAccountKeyName(String accountName) {
-    return KEY_ACCOUNT_KEY_PREFIX + accountName;
+  @Override
+  public void hflush() throws IOException {
+    if (out instanceof Syncable) {
+      ((Syncable) out).hflush();
+    } else {
+      out.flush();
+    }
+  }
+
+  @Override
+  public void hsync() throws IOException {
+    if (out instanceof Syncable) {
+      ((Syncable) out).hsync();
+    } else {
+      out.flush();
+    }
   }
 }

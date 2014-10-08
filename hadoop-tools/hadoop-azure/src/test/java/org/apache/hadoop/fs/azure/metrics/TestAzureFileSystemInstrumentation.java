@@ -104,7 +104,7 @@ public class TestAzureFileSystemInstrumentation {
   @Test
   public void testMetricsOnMkdirList() throws Exception {
     long base = getBaseWebResponses();
-    
+
     // Create a directory
     assertTrue(fs.mkdirs(new Path("a")));
     // At the time of writing, it takes 1 request to create the actual directory,
@@ -121,7 +121,7 @@ public class TestAzureFileSystemInstrumentation {
         AzureMetricsTestUtil.getLongCounterValue(getInstrumentation(), WASB_DIRECTORIES_CREATED));
 
     // List the root contents
-    assertEquals(1, fs.listStatus(new Path("/")).length);    
+    assertEquals(1, fs.listStatus(new Path("/")).length);
     base = assertWebResponsesEquals(base, 1);
 
     assertNoErrors();
@@ -142,7 +142,7 @@ public class TestAzureFileSystemInstrumentation {
   @Test
   public void testMetricsOnFileCreateRead() throws Exception {
     long base = getBaseWebResponses();
-    
+
     assertEquals(0, AzureMetricsTestUtil.getCurrentBytesWritten(getInstrumentation()));
 
     Path filePath = new Path("/metricsTest_webResponses");
@@ -158,7 +158,7 @@ public class TestAzureFileSystemInstrumentation {
     outputStream.write(nonZeroByteArray(FILE_SIZE));
     outputStream.close();
     long uploadDurationMs = new Date().getTime() - start.getTime();
-    
+
     // The exact number of requests/responses that happen to create a file
     // can vary  - at the time of writing this code it takes 10
     // requests/responses for the 1000 byte file (33 for 100 MB),
@@ -200,7 +200,7 @@ public class TestAzureFileSystemInstrumentation {
         " the case since the test overestimates the latency by looking at " +
         " end-to-end time instead of just block upload time.",
         uploadLatency <= expectedLatency);
-    
+
     // Read the file
     start = new Date();
     InputStream inputStream = fs.open(filePath);
@@ -380,19 +380,19 @@ public class TestAzureFileSystemInstrumentation {
   @Test
   public void testMetricsOnDirRename() throws Exception {
     long base = getBaseWebResponses();
-    
+
     Path originalDirName = new Path("/metricsTestDirectory_RenameStart");
     Path innerFileName = new Path(originalDirName, "innerFile");
     Path destDirName = new Path("/metricsTestDirectory_RenameFinal");
-    
+
     // Create an empty directory
     assertTrue(fs.mkdirs(originalDirName));
     base = getCurrentWebResponses();
-    
+
     // Create an inner file
     assertTrue(fs.createNewFile(innerFileName));
     base = getCurrentWebResponses();
-    
+
     // Rename the directory
     assertTrue(fs.rename(originalDirName, destDirName));
     // At the time of writing this code it takes 11 requests/responses
@@ -499,7 +499,7 @@ public class TestAzureFileSystemInstrumentation {
    */
   private static class TagMatcher extends TagExistsMatcher {
     private final String tagValue;
-    
+
     public TagMatcher(String tagName, String tagValue) {
       super(tagName);
       this.tagValue = tagValue;
@@ -522,7 +522,7 @@ public class TestAzureFileSystemInstrumentation {
    */
   private static class TagExistsMatcher extends BaseMatcher<MetricsTag> {
     private final String tagName;
-    
+
     public TagExistsMatcher(String tagName) {
       this.tagName = tagName;
     }
@@ -532,7 +532,7 @@ public class TestAzureFileSystemInstrumentation {
       MetricsTag asTag = (MetricsTag)toMatch;
       return asTag.name().equals(tagName) && matches(asTag);
     }
-    
+
     protected boolean matches(MetricsTag toMatch) {
       return true;
     }
@@ -542,5 +542,32 @@ public class TestAzureFileSystemInstrumentation {
       desc.appendText("Has tag " + tagName);
     }
   }
-  
+
+  /**
+   * A matcher class for asserting that a long value is in a
+   * given range.
+   */
+  private static class InRange extends BaseMatcher<Long> {
+    private final long inclusiveLowerLimit;
+    private final long inclusiveUpperLimit;
+    private long obtained;
+
+    public InRange(long inclusiveLowerLimit, long inclusiveUpperLimit) {
+      this.inclusiveLowerLimit = inclusiveLowerLimit;
+      this.inclusiveUpperLimit = inclusiveUpperLimit;
+    }
+
+    @Override
+    public boolean matches(Object number) {
+      obtained = (Long)number;
+      return obtained >= inclusiveLowerLimit &&
+          obtained <= inclusiveUpperLimit;
+    }
+
+    @Override
+    public void describeTo(Description description) {
+      description.appendText("Between " + inclusiveLowerLimit +
+          " and " + inclusiveUpperLimit + " inclusively");
+    }
+  }
 }

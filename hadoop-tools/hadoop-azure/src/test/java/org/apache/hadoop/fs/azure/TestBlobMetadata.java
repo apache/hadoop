@@ -69,7 +69,8 @@ public class TestBlobMetadata {
       throws Exception {
     return String.format(
         "{\"owner\":\"%s\",\"group\":\"%s\",\"permissions\":\"%s\"}",
-        getExpectedOwner(), NativeAzureFileSystem.AZURE_DEFAULT_GROUP_DEFAULT,
+        getExpectedOwner(),
+        NativeAzureFileSystem.AZURE_DEFAULT_GROUP_DEFAULT,
         permissionString);
   }
 
@@ -80,8 +81,8 @@ public class TestBlobMetadata {
   public void testContainerVersionMetadata() throws Exception {
     // Do a write operation to trigger version stamp
     fs.createNewFile(new Path("/foo"));
-    HashMap<String, String> containerMetadata = backingStore
-        .getContainerMetadata();
+    HashMap<String, String> containerMetadata =
+        backingStore.getContainerMetadata();
     assertNotNull(containerMetadata);
     assertEquals(AzureNativeFileSystemStore.CURRENT_WASB_VERSION,
         containerMetadata.get(AzureNativeFileSystemStore.VERSION_METADATA_KEY));
@@ -226,26 +227,32 @@ public class TestBlobMetadata {
   @Test
   public void testOldPermissionMetadata() throws Exception {
     Path selfishFile = new Path("/noOneElse");
-    HashMap<String, String> metadata = new HashMap<String, String>();
-    metadata.put("asv_permission", getExpectedPermissionString("rw-------"));
-    backingStore.setContent(AzureBlobStorageTestAccount.toMockUri(selfishFile),
-        new byte[] {}, metadata);
-    FsPermission justMe = new FsPermission(FsAction.READ_WRITE, FsAction.NONE,
-        FsAction.NONE);
+    HashMap<String, String> metadata =
+        new HashMap<String, String>();
+    metadata.put("asv_permission",
+        getExpectedPermissionString("rw-------"));
+    backingStore.setContent(
+        AzureBlobStorageTestAccount.toMockUri(selfishFile),
+        new byte[] { },
+        metadata, false, 0);
+    FsPermission justMe = new FsPermission(
+        FsAction.READ_WRITE, FsAction.NONE, FsAction.NONE);
     FileStatus retrievedStatus = fs.getFileStatus(selfishFile);
     assertNotNull(retrievedStatus);
     assertEquals(justMe, retrievedStatus.getPermission());
     assertEquals(getExpectedOwner(), retrievedStatus.getOwner());
     assertEquals(NativeAzureFileSystem.AZURE_DEFAULT_GROUP_DEFAULT,
         retrievedStatus.getGroup());
-    FsPermission meAndYou = new FsPermission(FsAction.READ_WRITE,
-        FsAction.READ_WRITE, FsAction.NONE);
+    FsPermission meAndYou = new FsPermission(
+        FsAction.READ_WRITE, FsAction.READ_WRITE, FsAction.NONE);
     fs.setPermission(selfishFile, meAndYou);
-    metadata = backingStore.getMetadata(AzureBlobStorageTestAccount
-        .toMockUri(selfishFile));
+    metadata =
+        backingStore.getMetadata(
+            AzureBlobStorageTestAccount.toMockUri(selfishFile));
     assertNotNull(metadata);
     String storedPermission = metadata.get("hdi_permission");
-    assertEquals(getExpectedPermissionString("rw-rw----"), storedPermission);
+    assertEquals(getExpectedPermissionString("rw-rw----"),
+        storedPermission);
     assertNull(metadata.get("asv_permission"));
   }
 

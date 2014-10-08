@@ -30,7 +30,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
  * This listing may be returned in chunks, so a <code>priorLastKey</code> is
  * provided so that the next chunk may be requested.
  * </p>
- * 
+ *
  * @see NativeFileSystemStore#list(String, int, String)
  */
 @InterfaceAudience.Private

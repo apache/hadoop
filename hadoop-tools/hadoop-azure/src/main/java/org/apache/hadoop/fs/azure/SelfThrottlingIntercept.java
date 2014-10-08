@@ -68,12 +68,14 @@ public class SelfThrottlingIntercept {
 
   private final float readFactor;
   private final float writeFactor;
+  private final OperationContext operationContext;
 
   // Concurrency: access to non-final members must be thread-safe
   private long lastE2Elatency;
 
-  public SelfThrottlingIntercept(OperationContext operationContext,
+  public SelfThrottlingIntercept(OperationContext operationContext, 
       float readFactor, float writeFactor) {
+    this.operationContext = operationContext;
     this.readFactor = readFactor;
     this.writeFactor = writeFactor;
   }

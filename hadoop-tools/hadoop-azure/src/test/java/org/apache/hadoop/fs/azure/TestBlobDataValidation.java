@@ -128,7 +128,7 @@ public class TestBlobDataValidation {
       if (!expectMd5Stored) {
         throw ex;
       }
-      StorageException cause = (StorageException) ex.getCause();
+      StorageException cause = (StorageException)ex.getCause();
       assertNotNull(cause);
       assertTrue("Unexpected cause: " + cause,
           cause.getErrorCode().equals(StorageErrorCodeStrings.INVALID_MD5));
@@ -212,13 +212,13 @@ public class TestBlobDataValidation {
     // validate the data as expected, but the HttpURLConnection wasn't
     // pluggable enough for me to do that.
     testAccount.getFileSystem().getStore()
-        .addTestHookToOperationContext(new TestHookOperationContext() {
-          @Override
+    .addTestHookToOperationContext(new TestHookOperationContext() {
+    @Override
           public OperationContext modifyOperationContext(
               OperationContext original) {
-            original.getResponseReceivedEventHandler().addListener(
-                new ContentMD5Checker(expectMd5Checked));
-            return original;
+      original.getResponseReceivedEventHandler().addListener(
+          new ContentMD5Checker(expectMd5Checked));
+      return original;
           }
         });
 

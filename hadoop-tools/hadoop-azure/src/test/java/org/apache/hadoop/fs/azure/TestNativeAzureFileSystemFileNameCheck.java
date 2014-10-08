@@ -123,11 +123,12 @@ public class TestNativeAzureFileSystemFileNameCheck {
     assertFalse(runWasbFsck(testFolder1));
 
     // negative test
-    InMemoryBlockBlobStore backingStore = testAccount.getMockStorage()
-        .getBackingStore();
-    backingStore.setContent(AzureBlobStorageTestAccount
-        .toMockUri("testFolder1/testFolder2/test2:2"), new byte[] { 1, 2 },
-        new HashMap<String, String>());
+    InMemoryBlockBlobStore backingStore
+        = testAccount.getMockStorage().getBackingStore();
+    backingStore.setContent(
+        AzureBlobStorageTestAccount.toMockUri("testFolder1/testFolder2/test2:2"),
+        new byte[] { 1, 2 },
+        new HashMap<String, String>(), false, 0);
     assertTrue(runWasbFsck(testFolder1));
   }
 

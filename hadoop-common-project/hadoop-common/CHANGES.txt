@@ -79,6 +79,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11238. Update the NameNode's Group Cache in the background when
     possible (Chris Li via Colin P. McCabe)
 
+    HADOOP-10809. hadoop-azure: page blob support. (Dexter Bradshaw,
+    Mostafa Elhemali, Eric Hanson, and Mike Liddell via cnauroth)
+
   BUG FIXES
 
     HADOOP-11236. NFS: Fix javadoc warning in RpcProgram.java (Abhiraj Butala via harsh)

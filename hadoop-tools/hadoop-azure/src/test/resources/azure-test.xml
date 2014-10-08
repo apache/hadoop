@@ -15,19 +15,7 @@
 
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration xmlns:xi="http://www.w3.org/2001/XInclude">
-
-  <property> 
-    <name>fs.wasb.impl</name> 
-    <value>org.apache.hadoop.fs.azure.NativeAzureFileSystem</value> 
-  </property> 
-   
-  <property> 
-    <name>fs.wasbs.impl</name> 
-    <value>org.apache.hadoop.fs.azure.NativeAzureFileSystem</value> 
-  </property> 
  
- 
-  
   <!-- For tests against live azure, provide the following account information -->
   <!--
   <property>

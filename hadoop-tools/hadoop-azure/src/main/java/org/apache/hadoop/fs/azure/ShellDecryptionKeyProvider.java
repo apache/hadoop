@@ -31,7 +31,8 @@ import org.apache.hadoop.util.Shell;
  */
 @InterfaceAudience.Private
 public class ShellDecryptionKeyProvider extends SimpleKeyProvider {
-  static final String KEY_ACCOUNT_SHELLKEYPROVIDER_SCRIPT = "fs.azure.shellkeyprovider.script";
+  static final String KEY_ACCOUNT_SHELLKEYPROVIDER_SCRIPT =
+      "fs.azure.shellkeyprovider.script";
 
   @Override
   public String getStorageAccountKey(String accountName, Configuration conf)

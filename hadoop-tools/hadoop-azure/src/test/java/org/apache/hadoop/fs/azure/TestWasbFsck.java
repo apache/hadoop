@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class TestWasbFsck {
@@ -61,6 +62,38 @@ public class TestWasbFsck {
       }
     }
     return count;
+  }
+
+  /**
+   * Tests that we recover files properly
+   */
+  @Test
+  @Ignore  /* flush() no longer does anything  @@TODO: reinstate an appropriate test of fsck recovery*/
+  public void testRecover() throws Exception {
+    Path danglingFile = new Path("/crashedInTheMiddle");
+
+    // Create a file and leave it dangling and try to recover it.
+    FSDataOutputStream stream = fs.create(danglingFile);
+    stream.write(new byte[] { 1, 2, 3 });
+    stream.flush();
+
+    // Now we should still only see a zero-byte file in this place
+    FileStatus fileStatus = fs.getFileStatus(danglingFile);
+    assertNotNull(fileStatus);
+    assertEquals(0, fileStatus.getLen());
+    assertEquals(1, getNumTempBlobs());
+
+    // Run WasbFsck -move to recover the file.
+    runFsck("-move");
+
+    // Now we should the see the file in lost+found with the data there.
+    fileStatus = fs.getFileStatus(new Path("/lost+found",
+        danglingFile.getName()));
+    assertNotNull(fileStatus);
+    assertEquals(3, fileStatus.getLen());
+    assertEquals(0, getNumTempBlobs());
+    // But not in its original location
+    assertFalse(fs.exists(danglingFile));
   }
 
   private void runFsck(String command) throws Exception {
