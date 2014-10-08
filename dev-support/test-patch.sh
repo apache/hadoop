@@ -13,7 +13,6 @@
 
 
 #set -x
-ulimit -n 1024
 
 ### Setup some variables.  
 ### BUILD_URL is set by Hudson if it is run by patch process
