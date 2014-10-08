@@ -591,6 +591,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11163. MetricsSystemImpl may miss a registered source.
     (Chuan Liu via cnauroth)
 
+    HADOOP-11179. Java untar should handle the case that the file entry comes
+    without its parent directory entry. (Craig Welch via zjshen)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
