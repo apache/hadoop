@@ -386,7 +386,15 @@ public class MockRM extends ResourceManager {
     if (waitForAccepted) {
       waitForState(appId, RMAppState.ACCEPTED);
     }
-    return getRMContext().getRMApps().get(appId);
+    RMApp rmApp = getRMContext().getRMApps().get(appId);
+
+    // unmanaged AM won't go to RMAppAttemptState.SCHEDULED.
+    if (waitForAccepted && !unmanaged) {
+      waitForState(rmApp.getCurrentAppAttempt().getAppAttemptId(),
+          RMAppAttemptState.SCHEDULED);
+    }
+
+    return rmApp;
   }
 
   public MockNM registerNode(String nodeIdStr, int memory) throws Exception {

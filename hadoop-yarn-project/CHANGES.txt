@@ -528,6 +528,8 @@ Release 2.6.0 - UNRELEASED
     YARN-1857. CapacityScheduler headroom doesn't account for other AM's running.
     (Chen He and Craig Welch via jianhe)
 
+    YARN-2649. Fixed TestAMRMRPCNodeUpdates test failure. (Ming Ma via jianhe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
