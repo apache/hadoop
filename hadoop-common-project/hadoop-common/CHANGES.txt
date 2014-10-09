@@ -450,6 +450,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10404. Some accesses to DomainSocketWatcher#closed are not protected
     by lock (cmccabe)
 
+    HADOOP-11161. Expose close method in KeyProvider to give clients of
+    Provider implementations a hook to release resources. (Arun Suresh via atm)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HADOOP-10734. Implement high-performance secure random number sources.
