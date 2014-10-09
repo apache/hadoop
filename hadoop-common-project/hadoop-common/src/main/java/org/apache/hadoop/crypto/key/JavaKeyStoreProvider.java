@@ -146,7 +146,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
         if (pwdFile != null) {
           InputStream is = pwdFile.openStream();
           try {
-            password = IOUtils.toCharArray(is);
+            password = IOUtils.toString(is).trim().toCharArray();
           } finally {
             is.close();
           }
