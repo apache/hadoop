@@ -137,10 +137,6 @@ public class SpanReceiverHost implements TraceAdminProtocol {
           getUniqueLocalTraceFileName());
     }
     for (String className : receiverNames) {
-      className = className.trim();
-      if (!className.contains(".")) {
-        className = "org.htrace.impl." + className;
-      }
       try {
         SpanReceiver rcvr = loadInstance(className, EMPTY);
         Trace.addReceiver(rcvr);
@@ -154,6 +150,10 @@ public class SpanReceiverHost implements TraceAdminProtocol {
 
   private synchronized SpanReceiver loadInstance(String className,
       List<ConfigurationPair> extraConfig) throws IOException {
+    className = className.trim();
+    if (!className.contains(".")) {
+      className = "org.htrace.impl." + className;
+    }
     Class<?> implClass = null;
     SpanReceiver impl;
     try {
