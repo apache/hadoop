@@ -21,12 +21,12 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
-import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.Text;
@@ -44,20 +44,21 @@ import static org.junit.Assert.assertNotNull;
 
 public class TestKeyProviderFactory {
 
-  private static File tmpDir;
+  private FileSystemTestHelper fsHelper;
+  private File testRootDir;
 
   @Before
   public void setup() {
-    tmpDir = new File(System.getProperty("test.build.data", "target"),
-        UUID.randomUUID().toString());
-    tmpDir.mkdirs();
+    fsHelper = new FileSystemTestHelper();
+    String testRoot = fsHelper.getTestRootDir();
+    testRootDir = new File(testRoot).getAbsoluteFile();
   }
 
   @Test
   public void testFactory() throws Exception {
     Configuration conf = new Configuration();
     final String userUri = UserProvider.SCHEME_NAME + ":///";
-    final Path jksPath = new Path(tmpDir.toString(), "test.jks");
+    final Path jksPath = new Path(testRootDir.toString(), "test.jks");
     final String jksUri = JavaKeyStoreProvider.SCHEME_NAME +
         "://file" + jksPath.toUri().toString();
     conf.set(KeyProviderFactory.KEY_PROVIDER_PATH,
@@ -209,11 +210,11 @@ public class TestKeyProviderFactory {
   @Test
   public void testJksProvider() throws Exception {
     Configuration conf = new Configuration();
-    final Path jksPath = new Path(tmpDir.toString(), "test.jks");
+    final Path jksPath = new Path(testRootDir.toString(), "test.jks");
     final String ourUrl =
         JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri();
 
-    File file = new File(tmpDir, "test.jks");
+    File file = new File(testRootDir, "test.jks");
     file.delete();
     conf.set(KeyProviderFactory.KEY_PROVIDER_PATH, ourUrl);
     checkSpecificProvider(conf, ourUrl);
@@ -364,10 +365,10 @@ public class TestKeyProviderFactory {
   @Test
   public void testJksProviderPasswordViaConfig() throws Exception {
     Configuration conf = new Configuration();
-    final Path jksPath = new Path(tmpDir.toString(), "test.jks");
+    final Path jksPath = new Path(testRootDir.toString(), "test.jks");
     final String ourUrl =
         JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri();
-    File file = new File(tmpDir, "test.jks");
+    File file = new File(testRootDir, "test.jks");
     file.delete();
     try {
       conf.set(KeyProviderFactory.KEY_PROVIDER_PATH, ourUrl);
@@ -408,7 +409,7 @@ public class TestKeyProviderFactory {
   @Test
   public void testGetProviderViaURI() throws Exception {
     Configuration conf = new Configuration(false);
-    final Path jksPath = new Path(tmpDir.toString(), "test.jks");
+    final Path jksPath = new Path(testRootDir.toString(), "test.jks");
     URI uri = new URI(JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri());
     KeyProvider kp = KeyProviderFactory.get(uri, conf);
     Assert.assertNotNull(kp);
