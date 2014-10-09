@@ -59,9 +59,14 @@ import org.apache.hadoop.yarn.server.timeline.TimelineReader.Field;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
+import com.google.common.annotations.VisibleForTesting;
+
 public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
     implements
     ApplicationHistoryManager {
+
+  @VisibleForTesting
+  static final String UNAVAILABLE = "N/A";
 
   private TimelineDataManager timelineDataManager;
   private ApplicationACLsManager aclsManager;
@@ -507,6 +512,21 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
     if (app.appReport.getCurrentApplicationAttemptId() == null) {
       app.appReport.setCurrentApplicationAttemptId(
           ApplicationAttemptId.newInstance(app.appReport.getApplicationId(), -1));
+    }
+    if (app.appReport.getHost() == null) {
+      app.appReport.setHost(UNAVAILABLE);
+    }
+    if (app.appReport.getRpcPort() < 0) {
+      app.appReport.setRpcPort(-1);
+    }
+    if (app.appReport.getTrackingUrl() == null) {
+      app.appReport.setTrackingUrl(UNAVAILABLE);
+    }
+    if (app.appReport.getOriginalTrackingUrl() == null) {
+      app.appReport.setOriginalTrackingUrl(UNAVAILABLE);
+    }
+    if (app.appReport.getDiagnostics() == null) {
+      app.appReport.setDiagnostics("");
     }
     return app;
   }
