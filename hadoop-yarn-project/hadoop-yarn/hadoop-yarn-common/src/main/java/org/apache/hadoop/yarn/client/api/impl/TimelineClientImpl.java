@@ -210,9 +210,6 @@ public class TimelineClientImpl extends TimelineClient {
   @VisibleForTesting
   public ClientResponse doPostingObject(Object object, String path) {
     WebResource webResource = client.resource(resURI);
-    if (path != null) {
-      webResource.path(path);
-    }
     if (path == null) {
       return webResource.accept(MediaType.APPLICATION_JSON)
           .type(MediaType.APPLICATION_JSON)

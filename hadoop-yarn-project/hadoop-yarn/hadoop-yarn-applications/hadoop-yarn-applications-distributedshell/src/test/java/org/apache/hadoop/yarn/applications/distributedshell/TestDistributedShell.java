@@ -29,10 +29,10 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.junit.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -43,6 +43,7 @@ import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -52,6 +53,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManag
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -129,8 +131,16 @@ public class TestDistributedShell {
   }
   
   @Test(timeout=90000)
-  public void testDSShell() throws Exception {
+  public void testDSShellWithDomain() throws Exception {
+    testDSShell(true);
+  }
 
+  @Test(timeout=90000)
+  public void testDSShellWithoutDomain() throws Exception {
+    testDSShell(false);
+  }
+
+  public void testDSShell(boolean haveDomain) throws Exception {
     String[] args = {
         "--jar",
         APPMASTER_JAR,
@@ -147,6 +157,20 @@ public class TestDistributedShell {
         "--container_vcores",
         "1"
     };
+    if (haveDomain) {
+      String[] domainArgs = {
+          "--domain",
+          "TEST_DOMAIN",
+          "--view_acls",
+          "reader_user reader_group",
+          "--modify_acls",
+          "writer_user writer_group",
+          "--create"
+      };
+      List<String> argsList = new ArrayList<String>(Arrays.asList(args));
+      argsList.addAll(Arrays.asList(domainArgs));
+      args = argsList.toArray(new String[argsList.size()]);
+    }
 
     LOG.info("Initializing DS Client");
     final Client client = new Client(new Configuration(yarnCluster.getConfig()));
@@ -198,7 +222,15 @@ public class TestDistributedShell {
     t.join();
     LOG.info("Client run completed. Result=" + result);
     Assert.assertTrue(result.get());
-    
+
+    TimelineDomain domain = null;
+    if (haveDomain) {
+      domain = yarnCluster.getApplicationHistoryServer()
+          .getTimelineStore().getDomain("TEST_DOMAIN");
+      Assert.assertNotNull(domain);
+      Assert.assertEquals("reader_user reader_group", domain.getReaders());
+      Assert.assertEquals("writer_user writer_group", domain.getWriters());
+    }
     TimelineEntities entitiesAttempts = yarnCluster
         .getApplicationHistoryServer()
         .getTimelineStore()
@@ -210,6 +242,13 @@ public class TestDistributedShell {
         .size());
     Assert.assertEquals(entitiesAttempts.getEntities().get(0).getEntityType()
         .toString(), ApplicationMaster.DSEntity.DS_APP_ATTEMPT.toString());
+    if (haveDomain) {
+      Assert.assertEquals(domain.getId(),
+          entitiesAttempts.getEntities().get(0).getDomainId());
+    } else {
+      Assert.assertEquals("DEFAULT",
+          entitiesAttempts.getEntities().get(0).getDomainId());
+    }
     TimelineEntities entities = yarnCluster
         .getApplicationHistoryServer()
         .getTimelineStore()
@@ -219,6 +258,13 @@ public class TestDistributedShell {
     Assert.assertEquals(2, entities.getEntities().size());
     Assert.assertEquals(entities.getEntities().get(0).getEntityType()
         .toString(), ApplicationMaster.DSEntity.DS_CONTAINER.toString());
+    if (haveDomain) {
+      Assert.assertEquals(domain.getId(),
+          entities.getEntities().get(0).getDomainId());
+    } else {
+      Assert.assertEquals("DEFAULT",
+          entities.getEntities().get(0).getDomainId());
+    }
   }
 
   /*
