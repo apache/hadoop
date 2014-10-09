@@ -178,16 +178,19 @@ public class TestApplicationHistoryManagerOnTimelineStore {
               callerUGI.getShortUserName().equals("user3")))) {
         Assert.assertEquals(ApplicationAttemptId.newInstance(appId, -1),
             app.getCurrentApplicationAttemptId());
-        Assert.assertEquals(null, app.getHost());
+        Assert.assertEquals(ApplicationHistoryManagerOnTimelineStore.UNAVAILABLE,
+            app.getHost());
         Assert.assertEquals(-1, app.getRpcPort());
-        Assert.assertEquals(null, app.getTrackingUrl());
-        Assert.assertEquals(null, app.getOriginalTrackingUrl());
-        Assert.assertEquals(null, app.getDiagnostics());
+        Assert.assertEquals(ApplicationHistoryManagerOnTimelineStore.UNAVAILABLE,
+            app.getTrackingUrl());
+        Assert.assertEquals(ApplicationHistoryManagerOnTimelineStore.UNAVAILABLE,
+            app.getOriginalTrackingUrl());
+        Assert.assertEquals("", app.getDiagnostics());
       } else {
         Assert.assertEquals(ApplicationAttemptId.newInstance(appId, 1),
             app.getCurrentApplicationAttemptId());
         Assert.assertEquals("test host", app.getHost());
-        Assert.assertEquals(-100, app.getRpcPort());
+        Assert.assertEquals(100, app.getRpcPort());
         Assert.assertEquals("test tracking url", app.getTrackingUrl());
         Assert.assertEquals("test original tracking url",
             app.getOriginalTrackingUrl());
@@ -236,7 +239,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     Assert.assertEquals(ContainerId.newInstance(appAttemptId, 1),
         appAttempt.getAMContainerId());
     Assert.assertEquals("test host", appAttempt.getHost());
-    Assert.assertEquals(-100, appAttempt.getRpcPort());
+    Assert.assertEquals(100, appAttempt.getRpcPort());
     Assert.assertEquals("test tracking url", appAttempt.getTrackingUrl());
     Assert.assertEquals("test original tracking url",
         appAttempt.getOriginalTrackingUrl());
@@ -282,7 +285,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     Assert.assertEquals(Integer.MAX_VALUE + 2L, container.getFinishTime());
     Assert.assertEquals(Resource.newInstance(-1, -1),
         container.getAllocatedResource());
-    Assert.assertEquals(NodeId.newInstance("test host", -100),
+    Assert.assertEquals(NodeId.newInstance("test host", 100),
         container.getAssignedNode());
     Assert.assertEquals(Priority.UNDEFINED, container.getPriority());
     Assert
@@ -290,7 +293,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     Assert.assertEquals(ContainerState.COMPLETE, container.getContainerState());
     Assert.assertEquals(-1, container.getContainerExitStatus());
     Assert.assertEquals("http://0.0.0.0:8188/applicationhistory/logs/" +
-        "test host:-100/container_0_0001_01_000001/"
+        "test host:100/container_0_0001_01_000001/"
         + "container_0_0001_01_000001/user1", container.getLogUrl());
   }
 
@@ -471,7 +474,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     eventInfo.put(AppAttemptMetricsConstants.ORIGINAL_TRACKING_URL_EVENT_INFO,
         "test original tracking url");
     eventInfo.put(AppAttemptMetricsConstants.HOST_EVENT_INFO, "test host");
-    eventInfo.put(AppAttemptMetricsConstants.RPC_PORT_EVENT_INFO, -100);
+    eventInfo.put(AppAttemptMetricsConstants.RPC_PORT_EVENT_INFO, 100);
     eventInfo.put(AppAttemptMetricsConstants.MASTER_CONTAINER_EVENT_INFO,
         ContainerId.newInstance(appAttemptId, 1));
     tEvent.setEventInfo(eventInfo);
@@ -509,7 +512,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     entityInfo.put(ContainerMetricsConstants.ALLOCATED_VCORE_ENTITY_INFO, -1);
     entityInfo.put(ContainerMetricsConstants.ALLOCATED_HOST_ENTITY_INFO,
         "test host");
-    entityInfo.put(ContainerMetricsConstants.ALLOCATED_PORT_ENTITY_INFO, -100);
+    entityInfo.put(ContainerMetricsConstants.ALLOCATED_PORT_ENTITY_INFO, 100);
     entityInfo
         .put(ContainerMetricsConstants.ALLOCATED_PRIORITY_ENTITY_INFO, -1);
     entity.setOtherInfo(entityInfo);
