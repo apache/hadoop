@@ -84,7 +84,7 @@ public class TestIncrementalBlockReports {
   private void injectBlockReceived() {
     ReceivedDeletedBlockInfo rdbi = new ReceivedDeletedBlockInfo(
         getDummyBlock(), BlockStatus.RECEIVED_BLOCK, null);
-    actor.notifyNamenodeBlockImmediately(rdbi, storageUuid);
+    actor.notifyNamenodeBlock(rdbi, storageUuid, true);
   }
 
   /**

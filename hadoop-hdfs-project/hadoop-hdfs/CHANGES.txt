@@ -660,6 +660,8 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7169. Add SE_BAD_FIELD to findbugsExcludeFile.xml.  (szetszwo)
 
+    HDFS-7217. Better batching of IBRs. (kihwal)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)

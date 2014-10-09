@@ -236,7 +236,7 @@ class BPOfferService {
         delHint);
 
     for (BPServiceActor actor : bpServices) {
-      actor.notifyNamenodeBlockImmediately(bInfo, storageUuid);
+      actor.notifyNamenodeBlock(bInfo, storageUuid, true);
     }
   }
 
@@ -264,7 +264,7 @@ class BPOfferService {
        block.getLocalBlock(), BlockStatus.RECEIVING_BLOCK, null);
     
     for (BPServiceActor actor : bpServices) {
-      actor.notifyNamenodeBlockImmediately(bInfo, storageUuid);
+      actor.notifyNamenodeBlock(bInfo, storageUuid, false);
     }
   }
 
