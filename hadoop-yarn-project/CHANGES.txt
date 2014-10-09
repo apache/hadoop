@@ -118,6 +118,8 @@ Release 2.6.0 - UNRELEASED
     YARN-913. Add a way to register long-lived services in a YARN cluster.
     (stevel)
 
+    YARN-2493. Added user-APIs for using node-labels. (Wangda Tan via vinodkv)
+
   IMPROVEMENTS
 
     YARN-2242. Improve exception information on AM launch crashes. (Li Lu 
