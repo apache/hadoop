@@ -961,6 +961,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11179. Java untar should handle the case that the file entry comes
     without its parent directory entry. (Craig Welch via zjshen)
 
+    HADOOP-11175. Fix several issues of hadoop security configuration in user
+    doc. (Yi Liu via cnauroth)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

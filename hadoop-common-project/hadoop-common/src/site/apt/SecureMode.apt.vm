@@ -402,8 +402,8 @@ Configuration for <<<conf/core-site.xml>>>
 | <<<dfs.namenode.kerberos.principal>>> | nn/_HOST@REALM.TLD | |
 | | | Kerberos principal name for the NameNode. |
 *-------------------------+-------------------------+------------------------+
-| <<<dfs.namenode.kerberos.https.principal>>> | host/_HOST@REALM.TLD | |
-| | | HTTPS Kerberos principal name for the NameNode. |
+| <<<dfs.namenode.kerberos.internal.spnego.principal>>> | HTTP/_HOST@REALM.TLD | |
+| | | HTTP Kerberos principal name for the NameNode. |
 *-------------------------+-------------------------+------------------------+
 Configuration for <<<conf/hdfs-site.xml>>>
 
@@ -416,16 +416,16 @@ Configuration for <<<conf/hdfs-site.xml>>>
 *-------------------------+-------------------------+------------------------+
 | <<<dfs.namenode.secondary.https-port>>> | <50470> | |
 *-------------------------+-------------------------+------------------------+
-| <<<dfs.namenode.secondary.keytab.file>>> | | |
+| <<<dfs.secondary.namenode.keytab.file>>> | | |
 | | </etc/security/keytab/sn.service.keytab> | |
-| | | Kerberos keytab file for the NameNode. |
+| | | Kerberos keytab file for the Secondary NameNode. |
 *-------------------------+-------------------------+------------------------+
-| <<<dfs.namenode.secondary.kerberos.principal>>> | sn/_HOST@REALM.TLD | |
+| <<<dfs.secondary.namenode.kerberos.principal>>> | sn/_HOST@REALM.TLD | |
 | | | Kerberos principal name for the Secondary NameNode. |
 *-------------------------+-------------------------+------------------------+
-| <<<dfs.namenode.secondary.kerberos.https.principal>>> | | |
-| | host/_HOST@REALM.TLD | |
-| | | HTTPS Kerberos principal name for the Secondary NameNode. |
+| <<<dfs.secondary.namenode.kerberos.internal.spnego.principal>>> | | |
+| | HTTP/_HOST@REALM.TLD | |
+| | | HTTP Kerberos principal name for the Secondary NameNode. |
 *-------------------------+-------------------------+------------------------+
 Configuration for <<<conf/hdfs-site.xml>>>
 
@@ -453,10 +453,6 @@ Configuration for <<<conf/hdfs-site.xml>>>
 *-------------------------+-------------------------+------------------------+
 | <<<dfs.datanode.kerberos.principal>>> | dn/_HOST@REALM.TLD | |
 | | | Kerberos principal name for the DataNode. |
-*-------------------------+-------------------------+------------------------+
-| <<<dfs.datanode.kerberos.https.principal>>> | | |
-| | host/_HOST@REALM.TLD | |
-| | | HTTPS Kerberos principal name for the DataNode. |
 *-------------------------+-------------------------+------------------------+
 | <<<dfs.encrypt.data.transfer>>> | <false> | |
 | | | set to <<<true>>> when using data encryption |
