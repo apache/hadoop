@@ -332,6 +332,8 @@ message QueueInfoProto {
   optional QueueStateProto state = 5;
   repeated QueueInfoProto childQueues = 6;
   repeated ApplicationReportProto applications = 7;
+  repeated string accessibleNodeLabels = 8;
+  optional string defaultNodeLabelExpression = 9;
 }
 
 enum QueueACLProto {

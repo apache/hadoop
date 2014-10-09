@@ -147,6 +147,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2493. Added user-APIs for using node-labels. (Wangda Tan via vinodkv)
 
+    YARN-2544. Added admin-API objects for using node-labels. (Wangda Tan via
+    vinodkv)
+
   IMPROVEMENTS
 
     YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc

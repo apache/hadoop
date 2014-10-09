@@ -19,8 +19,10 @@
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -44,6 +46,7 @@ public class QueueInfoPBImpl extends QueueInfo {
 
   List<ApplicationReport> applicationsList;
   List<QueueInfo> childQueuesList;
+  Set<String> accessibleNodeLabels;
   
   public QueueInfoPBImpl() {
     builder = QueueInfoProto.newBuilder();
@@ -281,6 +284,10 @@ public class QueueInfoPBImpl extends QueueInfo {
     if (this.applicationsList != null) {
       addApplicationsToProto();
     }
+    if (this.accessibleNodeLabels != null) {
+      builder.clearAccessibleNodeLabels();
+      builder.addAllAccessibleNodeLabels(this.accessibleNodeLabels);
+    }
   }
 
   private void mergeLocalToProto() {
@@ -322,5 +329,43 @@ public class QueueInfoPBImpl extends QueueInfo {
   private QueueStateProto convertToProtoFormat(QueueState queueState) {
     return ProtoUtils.convertToProtoFormat(queueState);
   }
+  
+  @Override
+  public void setAccessibleNodeLabels(Set<String> nodeLabels) {
+    maybeInitBuilder();
+    builder.clearAccessibleNodeLabels();
+    this.accessibleNodeLabels = nodeLabels;
+  }
+  
+  private void initNodeLabels() {
+    if (this.accessibleNodeLabels != null) {
+      return;
+    }
+    QueueInfoProtoOrBuilder p = viaProto ? proto : builder;
+    this.accessibleNodeLabels = new HashSet<String>();
+    this.accessibleNodeLabels.addAll(p.getAccessibleNodeLabelsList());
+  }
 
+  @Override
+  public Set<String> getAccessibleNodeLabels() {
+    initNodeLabels();
+    return this.accessibleNodeLabels;
+  }
+
+  @Override
+  public String getDefaultNodeLabelExpression() {
+    QueueInfoProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasDefaultNodeLabelExpression()) ? p
+        .getDefaultNodeLabelExpression() : null;
+  }
+
+  @Override
+  public void setDefaultNodeLabelExpression(String defaultNodeLabelExpression) {
+    maybeInitBuilder();
+    if (defaultNodeLabelExpression == null) {
+      builder.clearDefaultNodeLabelExpression();
+      return;
+    }
+    builder.setDefaultNodeLabelExpression(defaultNodeLabelExpression);
+  }
 }
