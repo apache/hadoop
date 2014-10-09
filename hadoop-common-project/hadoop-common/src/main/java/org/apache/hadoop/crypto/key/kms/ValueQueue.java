@@ -75,6 +75,8 @@ public class ValueQueue <E> {
   private final int numValues;
   private final float lowWatermark;
 
+  private volatile boolean executorThreadsStarted = false;
+
   /**
    * A <code>Runnable</code> which takes a string name.
    */
@@ -187,9 +189,6 @@ public class ValueQueue <E> {
             TimeUnit.MILLISECONDS, queue, new ThreadFactoryBuilder()
                 .setDaemon(true)
                 .setNameFormat(REFILL_THREAD).build());
-    // To ensure all requests are first queued, make coreThreads = maxThreads
-    // and pre-start all the Core Threads.
-    executor.prestartAllCoreThreads();
   }
 
   public ValueQueue(final int numValues, final float lowWaterMark, long expiry,
@@ -297,6 +296,15 @@ public class ValueQueue <E> {
 
   private void submitRefillTask(final String keyName,
       final Queue<E> keyQueue) throws InterruptedException {
+    if (!executorThreadsStarted) {
+      synchronized (this) {
+        // To ensure all requests are first queued, make coreThreads =
+        // maxThreads
+        // and pre-start all the Core Threads.
+        executor.prestartAllCoreThreads();
+        executorThreadsStarted = true;
+      }
+    }
     // The submit/execute method of the ThreadPoolExecutor is bypassed and
     // the Runnable is directly put in the backing BlockingQueue so that we
     // can control exactly how the runnable is inserted into the queue.

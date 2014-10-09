@@ -791,4 +791,15 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     return tokens;
   }
 
+  /**
+   * Shutdown valueQueue executor threads
+   */
+  @Override
+  public void close() throws IOException {
+    try {
+      encKeyVersionQueue.shutdown();
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+  }
 }
