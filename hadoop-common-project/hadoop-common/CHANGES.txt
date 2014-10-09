@@ -584,6 +584,8 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11007. Reinstate building of ant tasks support. (jlowe via kihwal)
 
+    HADOOP-11178. Fix findbugs exclude file. (Arun Suresh via wang)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
