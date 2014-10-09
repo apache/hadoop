@@ -206,7 +206,10 @@ esac
 # custom functions.  See hadoop-functions.sh for more information.
 #
 
-# The jsvc implementation to use. Jsvc is required to run secure datanodes.
+# The jsvc implementation to use. Jsvc is required to run secure datanodes
+# that bind to privileged ports to provide authentication of data transfer
+# protocol.  Jsvc is not required if SASL is configured for authentication of
+# data transfer protocol using non-privileged ports.
 # export JSVC_HOME=/usr/bin
 
 #
@@ -263,8 +266,11 @@ esac
 # This is the default:
 # export HADOOP_DATANODE_OPTS="-Dhadoop.security.logger=ERROR,RFAS"
 
-# On secure datanodes, user to run the datanode as after dropping privileges
-# This **MUST** be uncommented to enable secure HDFS!
+# On secure datanodes, user to run the datanode as after dropping privileges.
+# This **MUST** be uncommented to enable secure HDFS if using privileged ports
+# to provide authentication of data transfer protocol.  This **MUST NOT** be
+# defined if SASL is configured for authentication of data transfer protocol
+# using non-privileged ports.
 # export HADOOP_SECURE_DN_USER=hdfs
 
 # Supplemental options for secure datanodes
