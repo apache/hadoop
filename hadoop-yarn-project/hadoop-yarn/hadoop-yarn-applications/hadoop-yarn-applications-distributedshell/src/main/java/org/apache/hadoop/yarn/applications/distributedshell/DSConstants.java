@@ -44,4 +44,9 @@ public class DSConstants {
    * Used to validate the local resource. 
    */
   public static final String DISTRIBUTEDSHELLSCRIPTLEN = "DISTRIBUTEDSHELLSCRIPTLEN";
+
+  /**
+   * Environment key name denoting the timeline domain ID.
+   */
+  public static final String DISTRIBUTEDSHELLTIMELINEDOMAIN = "DISTRIBUTEDSHELLTIMELINEDOMAIN";
 }
