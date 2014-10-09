@@ -19,11 +19,16 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
 import org.apache.hadoop.crypto.key.kms.server.MiniKMS;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Test;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.UUID;
 
 public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
@@ -52,5 +57,26 @@ public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
     super.teardown();
     miniKMS.stop();
   }
+  
+  @Override
+  protected void setProvider() {
+  }
 
+  @Test(timeout = 120000)
+  public void testDelegationToken() throws Exception {
+    final String renewer = "JobTracker";
+    UserGroupInformation.createRemoteUser(renewer);
+
+    Credentials creds = new Credentials();
+    Token<?> tokens[] = fs.addDelegationTokens(renewer, creds);
+    DistributedFileSystem.LOG.debug("Delegation tokens: " +
+        Arrays.asList(tokens));
+    Assert.assertEquals(2, tokens.length);
+    Assert.assertEquals(2, creds.numberOfTokens());
+    
+    // If the dt exists, will not get again
+    tokens = fs.addDelegationTokens(renewer, creds);
+    Assert.assertEquals(0, tokens.length);
+    Assert.assertEquals(2, creds.numberOfTokens());
+  }
 }
