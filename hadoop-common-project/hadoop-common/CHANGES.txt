@@ -586,6 +586,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11178. Fix findbugs exclude file. (Arun Suresh via wang)
 
+    HADOOP-11174. Delegation token for KMS should only be got once if it
+    already exists. (Yi Liu via wang)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)

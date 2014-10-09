@@ -26,8 +26,10 @@ import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.ProviderUtils;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
@@ -48,6 +50,7 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -773,22 +776,34 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   @Override
   public Token<?>[] addDelegationTokens(String renewer,
       Credentials credentials) throws IOException {
-    Token<?>[] tokens;
-    URL url = createURL(null, null, null, null);
-    DelegationTokenAuthenticatedURL authUrl =
-        new DelegationTokenAuthenticatedURL(configurator);
-    try {
-      Token<?> token = authUrl.getDelegationToken(url, authToken, renewer);
-      if (token != null) {
-        credentials.addToken(token.getService(), token);
-        tokens = new Token<?>[] { token };
-      } else {
-        throw new IOException("Got NULL as delegation token");
+    Token<?>[] tokens = null;
+    Text dtService = getDelegationTokenService();
+    Token<?> token = credentials.getToken(dtService);
+    if (token == null) {
+      URL url = createURL(null, null, null, null);
+      DelegationTokenAuthenticatedURL authUrl =
+          new DelegationTokenAuthenticatedURL(configurator);
+      try {
+        token = authUrl.getDelegationToken(url, authToken, renewer);
+        if (token != null) {
+          credentials.addToken(token.getService(), token);
+          tokens = new Token<?>[] { token };
+        } else {
+          throw new IOException("Got NULL as delegation token");
+        }
+      } catch (AuthenticationException ex) {
+        throw new IOException(ex);
       }
-    } catch (AuthenticationException ex) {
-      throw new IOException(ex);
     }
     return tokens;
+  }
+  
+  private Text getDelegationTokenService() throws IOException {
+    URL url = new URL(kmsUrl);
+    InetSocketAddress addr = new InetSocketAddress(url.getHost(),
+        url.getPort());
+    Text dtService = SecurityUtil.buildTokenService(addr);
+    return dtService;
   }
 
   /**
