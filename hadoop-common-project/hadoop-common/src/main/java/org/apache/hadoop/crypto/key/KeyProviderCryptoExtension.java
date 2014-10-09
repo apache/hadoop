@@ -410,4 +410,11 @@ public class KeyProviderCryptoExtension extends
     return new KeyProviderCryptoExtension(keyProvider, cryptoExtension);
   }
 
+  @Override
+  public void close() throws IOException {
+    if (getKeyProvider() != null) {
+      getKeyProvider().close();
+    }
+  }
+
 }
