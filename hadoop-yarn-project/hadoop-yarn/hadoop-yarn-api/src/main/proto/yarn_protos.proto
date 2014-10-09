@@ -241,6 +241,7 @@ message ResourceRequestProto {
   optional ResourceProto capability = 3;
   optional int32 num_containers = 4;
   optional bool relax_locality = 5 [default = true];
+  optional string node_label_expression = 6;
 }
 
 enum AMCommandProto {
@@ -294,6 +295,8 @@ message ApplicationSubmissionContextProto {
   optional int64 attempt_failures_validity_interval = 13 [default = -1];
   optional LogAggregationContextProto log_aggregation_context = 14;
   optional ReservationIdProto reservation_id = 15;
+  optional string node_label_expression = 16;
+  optional ResourceRequestProto am_container_resource_request = 17;
 }
 
 message LogAggregationContextProto {
