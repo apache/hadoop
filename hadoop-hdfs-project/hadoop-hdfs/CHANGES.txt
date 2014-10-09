@@ -373,6 +373,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7186. Document the "hadoop trace" command. (Masatake Iwasaki via Colin
     P. McCabe)
 
+    HDFS-7202. Should be able to omit package name of SpanReceiver on "hadoop
+    trace -add" (iwasakims via cmccabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
