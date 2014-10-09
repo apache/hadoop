@@ -368,13 +368,17 @@ class BPServiceActor implements Runnable {
    * till namenode is informed before responding with success to the
    * client? For now we don't.
    */
-  void notifyNamenodeBlockImmediately(
-      ReceivedDeletedBlockInfo bInfo, String storageUuid) {
+  void notifyNamenodeBlock(ReceivedDeletedBlockInfo bInfo,
+      String storageUuid, boolean now) {
     synchronized (pendingIncrementalBRperStorage) {
       addPendingReplicationBlockInfo(
           bInfo, dn.getFSDataset().getStorage(storageUuid));
       sendImmediateIBR = true;
-      pendingIncrementalBRperStorage.notifyAll();
+      // If now is true, the report is sent right away.
+      // Otherwise, it will be sent out in the next heartbeat.
+      if (now) {
+        pendingIncrementalBRperStorage.notifyAll();
+      }
     }
   }
 
