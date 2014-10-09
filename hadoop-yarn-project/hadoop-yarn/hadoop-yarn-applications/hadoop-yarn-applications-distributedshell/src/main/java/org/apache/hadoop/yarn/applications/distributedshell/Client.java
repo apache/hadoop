@@ -70,11 +70,14 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
+import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 /**
  * Client for Distributed Shell application submission to YARN.
@@ -165,7 +168,19 @@ public class Client {
   private long attemptFailuresValidityInterval = -1;
 
   // Debug flag
-  boolean debugFlag = false;	
+  boolean debugFlag = false;
+
+  // Timeline domain ID
+  private String domainId = null;
+
+  // Flag to indicate whether to create the domain of the given ID
+  private boolean toCreateDomain = false;
+
+  // Timeline domain reader access control
+  private String viewACLs = null;
+
+  // Timeline domain writer access control
+  private String modifyACLs = null;
 
   // Command line options
   private Options opts;
@@ -256,6 +271,14 @@ public class Client {
       "If failure count reaches to maxAppAttempts, " +
       "the application will be failed.");
     opts.addOption("debug", false, "Dump out debug information");
+    opts.addOption("domain", true, "ID of the timeline domain where the "
+        + "timeline entities will be put");
+    opts.addOption("view_acls", true, "Users and groups that allowed to "
+        + "view the timeline entities in the given domain");
+    opts.addOption("modify_acls", true, "Users and groups that allowed to "
+        + "modify the timeline entities in the given domain");
+    opts.addOption("create", false, "Flag to indicate whether to create the "
+        + "domain specified with -domain.");
     opts.addOption("help", false, "Print usage");
 
   }
@@ -385,6 +408,18 @@ public class Client {
 
     log4jPropFile = cliParser.getOptionValue("log_properties", "");
 
+    // Get timeline domain options
+    if (cliParser.hasOption("domain")) {
+      domainId = cliParser.getOptionValue("domain");
+      toCreateDomain = cliParser.hasOption("create");
+      if (cliParser.hasOption("view_acls")) {
+        viewACLs = cliParser.getOptionValue("view_acls");
+      }
+      if (cliParser.hasOption("modify_acls")) {
+        modifyACLs = cliParser.getOptionValue("modify_acls");
+      }
+    }
+
     return true;
   }
 
@@ -430,6 +465,10 @@ public class Client {
             + ", userAcl=" + userAcl.name());
       }
     }		
+
+    if (domainId != null && domainId.length() > 0 && toCreateDomain) {
+      prepareTimelineDomain();
+    }
 
     // Get a new application id
     YarnClientApplication app = yarnClient.createApplication();
@@ -535,6 +574,9 @@ public class Client {
     env.put(DSConstants.DISTRIBUTEDSHELLSCRIPTLOCATION, hdfsShellScriptLocation);
     env.put(DSConstants.DISTRIBUTEDSHELLSCRIPTTIMESTAMP, Long.toString(hdfsShellScriptTimestamp));
     env.put(DSConstants.DISTRIBUTEDSHELLSCRIPTLEN, Long.toString(hdfsShellScriptLen));
+    if (domainId != null && domainId.length() > 0) {
+      env.put(DSConstants.DISTRIBUTEDSHELLTIMELINEDOMAIN, domainId);
+    }
 
     // Add AppMaster.jar location to classpath 		
     // At some point we should not be required to add 
@@ -772,5 +814,36 @@ public class Client {
             LocalResourceType.FILE, LocalResourceVisibility.APPLICATION,
             scFileStatus.getLen(), scFileStatus.getModificationTime());
     localResources.put(fileDstPath, scRsrc);
+  }
+
+  private void prepareTimelineDomain() {
+    TimelineClient timelineClient = null;
+    if (conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED)) {
+      timelineClient = TimelineClient.createTimelineClient();
+      timelineClient.init(conf);
+      timelineClient.start();
+    } else {
+      LOG.warn("Cannot put the domain " + domainId +
+          " because the timeline service is not enabled");
+      return;
+    }
+    try {
+      //TODO: we need to check and combine the existing timeline domain ACLs,
+      //but let's do it once we have client java library to query domains.
+      TimelineDomain domain = new TimelineDomain();
+      domain.setId(domainId);
+      domain.setReaders(
+          viewACLs != null && viewACLs.length() > 0 ? viewACLs : " ");
+      domain.setWriters(
+          modifyACLs != null && modifyACLs.length() > 0 ? modifyACLs : " ");
+      timelineClient.putDomain(domain);
+      LOG.info("Put the timeline domain: " +
+          TimelineUtils.dumpTimelineRecordtoJSON(domain));
+    } catch (Exception e) {
+      LOG.error("Error when putting the timeline domain", e);
+    } finally {
+      timelineClient.stop();
+    }
   }
 }
