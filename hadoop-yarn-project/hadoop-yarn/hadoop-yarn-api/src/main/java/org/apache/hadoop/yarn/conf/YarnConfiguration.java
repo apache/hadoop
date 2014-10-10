@@ -1332,6 +1332,49 @@ public class YarnConfiguration extends Configuration {
       SHARED_CACHE_PREFIX + "nested-level";
   public static final int DEFAULT_SHARED_CACHE_NESTED_LEVEL = 3;
   
+  // Shared Cache Manager Configs
+
+  public static final String SCM_STORE_PREFIX = SHARED_CACHE_PREFIX + "store.";
+
+  public static final String SCM_STORE_CLASS = SCM_STORE_PREFIX + "class";
+  public static final String DEFAULT_SCM_STORE_CLASS =
+      "org.apache.hadoop.yarn.server.sharedcachemanager.store.InMemorySCMStore";
+
+  public static final String SCM_APP_CHECKER_CLASS = SHARED_CACHE_PREFIX
+      + "app-checker.class";
+  public static final String DEFAULT_SCM_APP_CHECKER_CLASS =
+      "org.apache.hadoop.yarn.server.sharedcachemanager.RemoteAppChecker";
+
+  // In-memory SCM store configuration
+  
+  public static final String IN_MEMORY_STORE_PREFIX =
+      SHARED_CACHE_PREFIX + "in-memory.";
+
+  /**
+   * A resource in the InMemorySCMStore is considered stale if the time since
+   * the last reference exceeds the staleness period. This value is specified in
+   * minutes.
+   */
+  public static final String IN_MEMORY_STALENESS_PERIOD =
+      IN_MEMORY_STORE_PREFIX + "staleness-period";
+  public static final int DEFAULT_IN_MEMORY_STALENESS_PERIOD = 7 * 24 * 60;
+
+  /**
+   * Initial delay before the in-memory store runs its first check to remove
+   * dead initial applications. Specified in minutes.
+   */
+  public static final String IN_MEMORY_INITIAL_DELAY =
+      IN_MEMORY_STORE_PREFIX + "initial-delay";
+  public static final int DEFAULT_IN_MEMORY_INITIAL_DELAY = 10;
+  
+  /**
+   * The frequency at which the in-memory store checks to remove dead initial
+   * applications. Specified in minutes.
+   */
+  public static final String IN_MEMORY_CHECK_PERIOD =
+      IN_MEMORY_STORE_PREFIX + "check-period";
+  public static final int DEFAULT_IN_MEMORY_CHECK_PERIOD = 12 * 60;
+
   ////////////////////////////////
   // Other Configs
   ////////////////////////////////
