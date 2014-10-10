@@ -2569,36 +2569,39 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     CryptoProtocolVersion protocolVersion = null;
     CipherSuite suite = null;
     String ezKeyName = null;
-    readLock();
-    try {
-      src = resolvePath(src, pathComponents);
-      INodesInPath iip = dir.getINodesInPath4Write(src);
-      // Nothing to do if the path is not within an EZ
-      if (dir.isInAnEZ(iip)) {
-        EncryptionZone zone = dir.getEZForPath(iip);
-        protocolVersion = chooseProtocolVersion(zone, supportedVersions);
-        suite = zone.getSuite();
-        ezKeyName = dir.getKeyName(iip);
+    EncryptedKeyVersion edek = null;
 
-        Preconditions.checkNotNull(protocolVersion);
-        Preconditions.checkNotNull(suite);
-        Preconditions.checkArgument(!suite.equals(CipherSuite.UNKNOWN),
-            "Chose an UNKNOWN CipherSuite!");
-        Preconditions.checkNotNull(ezKeyName);
+    if (provider != null) {
+      readLock();
+      try {
+        src = resolvePath(src, pathComponents);
+        INodesInPath iip = dir.getINodesInPath4Write(src);
+        // Nothing to do if the path is not within an EZ
+        if (dir.isInAnEZ(iip)) {
+          EncryptionZone zone = dir.getEZForPath(iip);
+          protocolVersion = chooseProtocolVersion(zone, supportedVersions);
+          suite = zone.getSuite();
+          ezKeyName = dir.getKeyName(iip);
+
+          Preconditions.checkNotNull(protocolVersion);
+          Preconditions.checkNotNull(suite);
+          Preconditions.checkArgument(!suite.equals(CipherSuite.UNKNOWN),
+              "Chose an UNKNOWN CipherSuite!");
+          Preconditions.checkNotNull(ezKeyName);
+        }
+      } finally {
+        readUnlock();
       }
-    } finally {
-      readUnlock();
+
+      Preconditions.checkState(
+          (suite == null && ezKeyName == null) ||
+              (suite != null && ezKeyName != null),
+          "Both suite and ezKeyName should both be null or not null");
+
+      // Generate EDEK if necessary while not holding the lock
+      edek = generateEncryptedDataEncryptionKey(ezKeyName);
+      EncryptionFaultInjector.getInstance().startFileAfterGenerateKey();
     }
-
-    Preconditions.checkState(
-        (suite == null && ezKeyName == null) ||
-            (suite != null && ezKeyName != null),
-        "Both suite and ezKeyName should both be null or not null");
-
-    // Generate EDEK if necessary while not holding the lock
-    EncryptedKeyVersion edek =
-        generateEncryptedDataEncryptionKey(ezKeyName);
-    EncryptionFaultInjector.getInstance().startFileAfterGenerateKey();
 
     // Proceed with the create, using the computed cipher suite and 
     // generated EDEK
@@ -8844,6 +8847,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
          */
         throw new IOException("Key " + keyName + " doesn't exist.");
       }
+      // If the provider supports pool for EDEKs, this will fill in the pool
+      generateEncryptedDataEncryptionKey(keyName);
       createEncryptionZoneInt(src, metadata.getCipher(),
           keyName, cacheEntry != null);
       success = true;
