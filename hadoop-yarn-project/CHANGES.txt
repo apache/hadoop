@@ -574,6 +574,8 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2649. Fixed TestAMRMRPCNodeUpdates test failure. (Ming Ma via jianhe)
 
+    YARN-2662. TestCgroupsLCEResourcesHandler leaks file descriptors. (cnauroth)
+
   BREAKDOWN OF YARN-913 SUBTASKS AND RELATED JIRAS
 
     YARN-2652 Add hadoop-yarn-registry package under hadoop-yarn. (stevel)
