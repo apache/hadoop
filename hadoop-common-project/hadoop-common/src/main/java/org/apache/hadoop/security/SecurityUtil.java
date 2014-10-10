@@ -57,6 +57,8 @@ import com.google.common.annotations.VisibleForTesting;
 public class SecurityUtil {
   public static final Log LOG = LogFactory.getLog(SecurityUtil.class);
   public static final String HOSTNAME_PATTERN = "_HOST";
+  public static final String FAILED_TO_GET_UGI_MSG_HEADER = 
+      "Failed to obtain user group information:";
 
   // controls whether buildTokenService will use an ip or host/ip as given
   // by the user

@@ -416,7 +416,7 @@ public class TestDelegationTokensWithHA {
             // Mimic the UserProvider class logic (server side) by throwing
             // SecurityException here
             throw new SecurityException(
-                "Failed to obtain user group information: " + e, e);
+                SecurityUtil.FAILED_TO_GET_UGI_MSG_HEADER + " " + e, e);
           }
         } catch (Exception oe) {
           //
