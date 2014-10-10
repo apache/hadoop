@@ -1341,6 +1341,40 @@
     <value>3</value>
   </property>
 
+  <property>
+    <description>The implementation to be used for the SCM store</description>
+    <name>yarn.sharedcache.store.class</name>
+    <value>org.apache.hadoop.yarn.server.sharedcachemanager.store.InMemorySCMStore</value>
+  </property>
+
+  <property>
+    <description>The implementation to be used for the SCM app-checker</description>
+    <name>yarn.sharedcache.app-checker.class</name>
+    <value>org.apache.hadoop.yarn.server.sharedcachemanager.RemoteAppChecker</value>
+  </property>
+  
+  <property>
+    <description>A resource in the in-memory store is considered stale
+    if the time since the last reference exceeds the staleness period.
+    This value is specified in minutes.</description>
+    <name>yarn.sharedcache.store.in-memory.staleness-period</name>
+    <value>10080</value>
+  </property>
+  
+  <property>
+    <description>Initial delay before the in-memory store runs its first check
+    to remove dead initial applications. Specified in minutes.</description>
+    <name>yarn.sharedcache.store.in-memory.initial-delay</name>
+    <value>10</value>
+  </property>
+  
+  <property>
+    <description>The frequency at which the in-memory store checks to remove
+    dead initial applications. Specified in minutes.</description>
+    <name>yarn.sharedcache.store.in-memory.check-period</name>
+    <value>720</value>
+  </property>
+
   <!-- Other configuration -->
   <property>
     <description>The interval that the yarn client library uses to poll the

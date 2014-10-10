@@ -32,9 +32,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
  */
 @Private
 @Unstable
-public class SharedCacheStructureUtil {
+public class SharedCacheUtil {
 
-  private static final Log LOG = LogFactory.getLog(SharedCacheStructureUtil.class);
+  private static final Log LOG = LogFactory.getLog(SharedCacheUtil.class);
 
   @Private
   public static int getCacheDepth(Configuration conf) {
