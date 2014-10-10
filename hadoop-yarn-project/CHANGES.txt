@@ -270,6 +270,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2629. Made the distributed shell use the domain-based timeline ACLs.
     (zjshen)
 
+    YARN-2583. Modified AggregatedLogDeletionService to be able to delete rolling
+    aggregated logs. (Xuan Gong via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
