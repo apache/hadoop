@@ -89,6 +89,7 @@ public abstract class ApplicationSubmissionContext {
     context.setApplicationType(applicationType);
     context.setKeepContainersAcrossApplicationAttempts(keepContainers);
     context.setNodeLabelExpression(appLabelExpression);
+    context.setResource(resource);
     
     ResourceRequest amReq = Records.newRecord(ResourceRequest.class);
     amReq.setResourceName(ResourceRequest.ANY);
