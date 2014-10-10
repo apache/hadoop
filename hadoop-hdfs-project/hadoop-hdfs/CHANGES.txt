@@ -376,6 +376,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7202. Should be able to omit package name of SpanReceiver on "hadoop
     trace -add" (iwasakims via cmccabe)
 
+    HDFS-7026. Introduce a string constant for "Failed to obtain user group
+    info...". (Yongjun Zhang via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -27,6 +27,7 @@ import javax.ws.rs.ext.Provider;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 
@@ -54,7 +55,7 @@ public class UserProvider
           AuthenticationMethod.KERBEROS, false);
     } catch (IOException e) {
       throw new SecurityException(
-          "Failed to obtain user group information: " + e, e);
+          SecurityUtil.FAILED_TO_GET_UGI_MSG_HEADER + " " + e, e);
     }
   }
 
