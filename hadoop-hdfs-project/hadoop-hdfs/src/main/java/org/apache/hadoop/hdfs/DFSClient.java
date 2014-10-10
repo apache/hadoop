@@ -277,7 +277,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   @VisibleForTesting
   KeyProvider provider;
   private final SpanReceiverHost spanReceiverHost;
-  private final Sampler traceSampler;
+  private final Sampler<?> traceSampler;
 
   /**
    * DFSClient configuration 
