@@ -699,7 +699,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     }
   }
 
-  private void verifyContainerLogs(LogAggregationService logAggregationService,
+  private String verifyContainerLogs(LogAggregationService logAggregationService,
       ApplicationId appId, ContainerId[] expectedContainerIds,
       String[] logFiles, int numOfContainerLogs, boolean multiLogs)
       throws IOException {
@@ -811,6 +811,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         Assert.assertEquals(0, thisContainerMap.size());
       }
       Assert.assertEquals(0, logMap.size());
+      return targetNodeFile.getPath().getName();
     } finally {
       reader.close();
     }
@@ -1219,17 +1220,32 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     dispatcher.stop();
   }
 
-  @SuppressWarnings("unchecked")
   @Test (timeout = 50000)
   public void testLogAggregationServiceWithInterval() throws Exception {
-    final int maxAttempts = 50;
+    testLogAggregationService(false);
+  }
+
+  @Test (timeout = 50000)
+  public void testLogAggregationServiceWithRetention() throws Exception {
+    testLogAggregationService(true);
+  }
+
+  @SuppressWarnings("unchecked")
+  private void testLogAggregationService(boolean retentionSizeLimitation)
+      throws Exception {
     LogAggregationContext logAggregationContextWithInterval =
         Records.newRecord(LogAggregationContext.class);
     logAggregationContextWithInterval.setRollingIntervalSeconds(5000);
-
     this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
     this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
       this.remoteRootLogDir.getAbsolutePath());
+    if (retentionSizeLimitation) {
+      // set the retention size as 1. The number of logs for one application
+      // in one NM should be 1.
+      this.conf.setInt(YarnConfiguration.NM_PREFIX
+          + "log-aggregation.num-log-files-per-app", 1);
+    }
+
     // by setting this configuration, the log files will not be deleted immediately after
     // they are aggregated to remote directory.
     // We could use it to test whether the previous aggregated log files will be aggregated
@@ -1280,23 +1296,29 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
           .get(application);
     aggregator.doLogAggregationOutOfBand();
 
-    int count = 0;
-    while (numOfLogsAvailable(logAggregationService, application) != 1
-        && count <= maxAttempts) {
-      Thread.sleep(100);
-      count++;
+    if (retentionSizeLimitation) {
+      Assert.assertTrue(waitAndCheckLogNum(logAggregationService, application,
+        50, 1, true, null));
+    } else {
+      Assert.assertTrue(waitAndCheckLogNum(logAggregationService, application,
+        50, 1, false, null));
     }
+    String logFileInLastCycle = null;
     // Container logs should be uploaded
-    verifyContainerLogs(logAggregationService, application,
+    logFileInLastCycle = verifyContainerLogs(logAggregationService, application,
         new ContainerId[] { container }, logFiles1, 3, true);
+
+    Thread.sleep(2000);
 
     // There is no log generated at this time. Do the log aggregation again.
     aggregator.doLogAggregationOutOfBand();
 
     // Same logs will not be aggregated again.
     // Only one aggregated log file in Remote file directory.
-    Assert.assertEquals(numOfLogsAvailable(logAggregationService, application),
-      1);
+    Assert.assertEquals(numOfLogsAvailable(logAggregationService,
+        application, true, null), 1);
+
+    Thread.sleep(2000);
 
     // Do log aggregation
     String[] logFiles2 = new String[] { "stdout_1", "stderr_1", "syslog_1" };
@@ -1304,15 +1326,18 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
     aggregator.doLogAggregationOutOfBand();
 
-    count = 0;
-    while (numOfLogsAvailable(logAggregationService, application) != 2
-        && count <= maxAttempts) {
-      Thread.sleep(100);
-      count ++;
+    if (retentionSizeLimitation) {
+      Assert.assertTrue(waitAndCheckLogNum(logAggregationService, application,
+        50, 1, true, logFileInLastCycle));
+    } else {
+      Assert.assertTrue(waitAndCheckLogNum(logAggregationService, application,
+        50, 2, false, null));
     }
     // Container logs should be uploaded
-    verifyContainerLogs(logAggregationService, application,
+    logFileInLastCycle = verifyContainerLogs(logAggregationService, application,
         new ContainerId[] { container }, logFiles2, 3, true);
+
+    Thread.sleep(2000);
 
     // create another logs
     String[] logFiles3 = new String[] { "stdout_2", "stderr_2", "syslog_2" };
@@ -1323,13 +1348,13 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
     dispatcher.await();
     logAggregationService.handle(new LogHandlerAppFinishedEvent(application));
-    count = 0;
-    while (numOfLogsAvailable(logAggregationService, application) != 3
-        && count <= maxAttempts) {
-      Thread.sleep(100);
-      count ++;
+    if (retentionSizeLimitation) {
+      Assert.assertTrue(waitAndCheckLogNum(logAggregationService, application,
+        50, 1, true, logFileInLastCycle));
+    } else {
+      Assert.assertTrue(waitAndCheckLogNum(logAggregationService, application,
+        50, 3, false, null));
     }
-
     verifyContainerLogs(logAggregationService, application,
       new ContainerId[] { container }, logFiles3, 3, true);
     logAggregationService.stop();
@@ -1338,7 +1363,8 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
   }
 
   private int numOfLogsAvailable(LogAggregationService logAggregationService,
-      ApplicationId appId) throws IOException {
+      ApplicationId appId, boolean sizeLimited, String lastLogFile)
+      throws IOException {
     Path appLogDir = logAggregationService.getRemoteAppLogDir(appId, this.user);
     RemoteIterator<FileStatus> nodeFiles = null;
     try {
@@ -1354,7 +1380,9 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     while (nodeFiles.hasNext()) {
       FileStatus status = nodeFiles.next();
       String filename = status.getPath().getName();
-      if (filename.contains(LogAggregationUtils.TMP_FILE_SUFFIX)) {
+      if (filename.contains(LogAggregationUtils.TMP_FILE_SUFFIX)
+          || (lastLogFile != null && filename.contains(lastLogFile)
+              && sizeLimited)) {
         return -1;
       }
       if (filename.contains(LogAggregationUtils
@@ -1363,5 +1391,19 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
       }
     }
     return count;
+  }
+
+  private boolean waitAndCheckLogNum(
+      LogAggregationService logAggregationService, ApplicationId application,
+      int maxAttempts, int expectNum, boolean sizeLimited, String lastLogFile)
+      throws IOException, InterruptedException {
+    int count = 0;
+    while (numOfLogsAvailable(logAggregationService, application, sizeLimited,
+      lastLogFile) != expectNum && count <= maxAttempts) {
+      Thread.sleep(500);
+      count++;
+    }
+    return numOfLogsAvailable(logAggregationService, application, sizeLimited,
+      lastLogFile) == expectNum;
   }
 }
