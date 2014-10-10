@@ -73,7 +73,7 @@ uint32_t Lz4DecompressStream::decompressOneBlock(uint32_t compressedSize, void *
     THROW_EXCEPTION(IOException, "readFully reach EOF");
   }
   _compressedBytesRead += rd;
-  uint32_t ret = LZ4_uncompress(_tempBuffer, (char*)buff, length);
+  uint32_t ret = LZ4_decompress_fast(_tempBuffer, (char*)buff, length);
   if (ret == compressedSize) {
     return length;
   } else {
