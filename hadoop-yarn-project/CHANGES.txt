@@ -581,7 +581,7 @@ Release 2.6.0 - UNRELEASED
     YARN-2598 GHS should show N/A instead of null for the inaccessible information
     (Zhijie Shen via mayank)
 
-    YARN-2617. Fixed ApplicationSubmissionContext to still set resource for
+    YARN-2671. Fixed ApplicationSubmissionContext to still set resource for
     backward compatibility. (Wangda Tan via zjshen)
 
 Release 2.5.1 - 2014-09-05
