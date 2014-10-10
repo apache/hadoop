@@ -414,7 +414,7 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6029. TestCommitterEventHandler fails in trunk (Mit Desai via
     jlowe)
 
-    MAPREDUCE-6029. TestLineRecordReader may fail due to test data files checked
+    MAPREDUCE-6122. TestLineRecordReader may fail due to test data files checked
     out of git with incorrect line endings. (cnauroth)
 
 Release 2.5.1 - 2014-09-05
