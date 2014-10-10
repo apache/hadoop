@@ -26,6 +26,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7194. Fix findbugs "inefficient new String constructor" warning in
     DFSClient#PATH (yzhang via cmccabe)
 
+    HDFS-7198. Fix or suppress findbugs "unchecked conversion" warning in
+    DFSClient#getPathTraceScope (cmccabe)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

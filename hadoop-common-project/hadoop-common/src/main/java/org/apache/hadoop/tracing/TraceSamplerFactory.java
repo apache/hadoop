@@ -30,7 +30,7 @@ public class TraceSamplerFactory {
   private static final Logger LOG =
       LoggerFactory.getLogger(TraceSamplerFactory.class);
 
-  public static Sampler createSampler(Configuration conf) {
+  public static Sampler<?> createSampler(Configuration conf) {
     String samplerStr = conf.get(CommonConfigurationKeys.HADOOP_TRACE_SAMPLER,
         CommonConfigurationKeys.HADOOP_TRACE_SAMPLER_DEFAULT);
     if (samplerStr.equals("NeverSampler")) {
