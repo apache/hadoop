@@ -47,6 +47,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.microsoft.windowsazure.storage.OperationContext;
 import com.microsoft.windowsazure.storage.StorageException;
 import com.microsoft.windowsazure.storage.blob.BlobRequestOptions;
+import com.microsoft.windowsazure.storage.blob.CloudPageBlob;
 
 
 /**
@@ -83,6 +84,11 @@ final class PageBlobOutputStream extends OutputStream implements Syncable {
   private volatile IOException lastError;
 
   /**
+   * Current size of the page blob in bytes. It may be extended if the file
+   * gets full.
+   */
+  private long currentBlobSize;
+  /**
    * The current byte offset we're at in the blob (how many bytes we've
    * uploaded to the server).
    */
@@ -114,12 +120,22 @@ final class PageBlobOutputStream extends OutputStream implements Syncable {
 
   public static final Log LOG = LogFactory.getLog(AzureNativeFileSystemStore.class);
 
-  // Set the minimum page blob file size to 128MB, which is >> the default block size of 32MB.
-  // This default block size is often used as the hbase.regionserver.hlog.blocksize.
+  // Set the minimum page blob file size to 128MB, which is >> the default
+  // block size of 32MB. This default block size is often used as the
+  // hbase.regionserver.hlog.blocksize.
   // The goal is to have a safe minimum size for HBase log files to allow them
-  // to be filled and rolled without exceeding the minimum size. A larger size can be
-  // used by setting the fs.azure.page.blob.size configuration variable.
+  // to be filled and rolled without exceeding the minimum size. A larger size
+  // can be used by setting the fs.azure.page.blob.size configuration variable.
   public static final long PAGE_BLOB_MIN_SIZE = 128L * 1024L * 1024L;
+
+  // The default and minimum amount to extend a page blob by if it starts
+  // to get full.
+  public static final long
+    PAGE_BLOB_DEFAULT_EXTENSION_SIZE = 128L * 1024L * 1024L;
+
+  // The configured page blob extension size (either the default, or if greater,
+  // the value configured in fs.azure.page.blob.extension.size
+  private long configuredPageBlobExtensionSize;
 
   /**
    * Constructs an output stream over the given page blob.
@@ -156,6 +172,21 @@ final class PageBlobOutputStream extends OutputStream implements Syncable {
       pageBlobSize += PAGE_SIZE - pageBlobSize % PAGE_SIZE;
     }
     blob.create(pageBlobSize, new BlobRequestOptions(), opContext);
+    currentBlobSize = pageBlobSize;
+
+    // Set the page blob extension size. It must be a minimum of the default
+    // value.
+    configuredPageBlobExtensionSize =
+        conf.getLong("fs.azure.page.blob.extension.size", 0);
+    if (configuredPageBlobExtensionSize < PAGE_BLOB_DEFAULT_EXTENSION_SIZE) {
+      configuredPageBlobExtensionSize = PAGE_BLOB_DEFAULT_EXTENSION_SIZE;
+    }
+
+    // make sure it is a multiple of the page size
+    if (configuredPageBlobExtensionSize % PAGE_SIZE != 0) {
+      configuredPageBlobExtensionSize +=
+          PAGE_SIZE - configuredPageBlobExtensionSize % PAGE_SIZE;
+    }
   }
 
   private void checkStreamState() throws IOException {
@@ -308,6 +339,12 @@ final class PageBlobOutputStream extends OutputStream implements Syncable {
         // It wasn't a partial page, we won't need to rewrite it.
         previousLastPageDataWritten = new byte[0];
       }
+
+      // Extend the file if we need more room in the file. This typically takes
+      // less than 200 milliseconds if it has to actually be done,
+      // so it is okay to include it in a write and won't cause a long pause.
+      // Other writes can be queued behind this write in any case.
+      conditionalExtendFile();
     }
 
     /**
@@ -344,6 +381,56 @@ final class PageBlobOutputStream extends OutputStream implements Syncable {
     lastQueuedTask = new WriteRequest(outBuffer.toByteArray());
     ioThreadPool.execute(lastQueuedTask);
     outBuffer = new ByteArrayOutputStream();
+  }
+
+  /**
+   * Extend the page blob file if we are close to the end.
+   */
+  private void conditionalExtendFile() {
+
+    // maximum allowed size of an Azure page blob (1 terabyte)
+    final long MAX_PAGE_BLOB_SIZE = 1024L * 1024L * 1024L * 1024L;
+
+    // If blob is already at the maximum size, then don't try to extend it.
+    if (currentBlobSize == MAX_PAGE_BLOB_SIZE) {
+      return;
+    }
+
+    // If we are within the maximum write size of the end of the file,
+    if (currentBlobSize - currentBlobOffset <= MAX_RAW_BYTES_PER_REQUEST) {
+
+      // Extend the file. Retry up to 3 times with back-off.
+      CloudPageBlob cloudPageBlob = (CloudPageBlob) blob.getBlob();
+      long newSize = currentBlobSize + configuredPageBlobExtensionSize;
+
+      // Make sure we don't exceed maximum blob size.
+      if (newSize > MAX_PAGE_BLOB_SIZE) {
+        newSize = MAX_PAGE_BLOB_SIZE;
+      }
+      final int MAX_RETRIES = 3;
+      int retries = 1;
+      boolean resizeDone = false;
+      while(!resizeDone && retries <= MAX_RETRIES) {
+        try {
+          cloudPageBlob.resize(newSize);
+          resizeDone = true;
+          currentBlobSize = newSize;
+        } catch (StorageException e) {
+          LOG.warn("Failed to extend size of " + cloudPageBlob.getUri());
+          try {
+
+            // sleep 2, 8, 18 seconds for up to 3 retries
+            Thread.sleep(2000 * retries * retries);
+          } catch (InterruptedException e1) {
+
+            // Restore the interrupted status
+            Thread.currentThread().interrupt();
+          }
+        } finally {
+          retries++;
+        }
+      }
+    }
   }
 
   /**
