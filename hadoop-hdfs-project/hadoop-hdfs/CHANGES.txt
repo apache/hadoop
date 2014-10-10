@@ -21,6 +21,8 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7209. Populate EDEK cache when creating encryption zone. (Yi Liu via wang)
 
+    HDFS-6252. Phase out the old web UI in HDFS. (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES

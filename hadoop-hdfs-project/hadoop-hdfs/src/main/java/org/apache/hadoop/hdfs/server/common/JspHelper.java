@@ -24,52 +24,30 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_HTTP_STATIC_US
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.URL;
-import java.net.URLEncoder;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.List;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.jsp.JspWriter;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.BlockReader;
-import org.apache.hadoop.hdfs.BlockReaderFactory;
-import org.apache.hadoop.hdfs.ClientContext;
-import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.RemotePeerFactory;
-import org.apache.hadoop.hdfs.net.Peer;
-import org.apache.hadoop.hdfs.net.TcpPeerServer;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferClient;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
-import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
 import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
-import org.apache.hadoop.http.HtmlQuoting;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
@@ -79,9 +57,7 @@ import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.authorize.ProxyServers;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.VersionInfo;
 
-import com.google.common.base.Charsets;
 
 @InterfaceAudience.Private
 public class JspHelper {
@@ -93,8 +69,8 @@ public class JspHelper {
   private static final Log LOG = LogFactory.getLog(JspHelper.class);
 
   /** Private constructor for preventing creating JspHelper object. */
-  private JspHelper() {} 
-  
+  private JspHelper() {}
+
   // data structure to count number of blocks on datanodes.
   private static class NodeRecord extends DatanodeInfo {
     int frequency;
@@ -103,7 +79,7 @@ public class JspHelper {
       super(info);
       this.frequency = count;
     }
-    
+
     @Override
     public boolean equals(Object obj) {
       // Sufficient to use super equality as datanodes are uniquely identified
@@ -126,43 +102,8 @@ public class JspHelper {
         return -1;
       } else if (o1.frequency > o2.frequency) {
         return 1;
-      } 
-      return 0;
-    }
-  }
-  
-  /**
-   * convenience method for canonicalizing host name.
-   * @param addr name:port or name 
-   * @return canonicalized host name
-   */
-   public static String canonicalize(String addr) {
-    // default port 1 is supplied to allow addr without port.
-    // the port will be ignored.
-    return NetUtils.createSocketAddr(addr, 1).getAddress()
-           .getCanonicalHostName();
-  }
-
-  /**
-   * A helper class that generates the correct URL for different schema.
-   *
-   */
-  public static final class Url {
-    public static String authority(String scheme, DatanodeID d) {
-      String fqdn = (d.getIpAddr() != null && !d.getIpAddr().isEmpty())?
-          canonicalize(d.getIpAddr()): 
-          d.getHostName();
-      if (scheme.equals("http")) {
-        return fqdn + ":" + d.getInfoPort();
-      } else if (scheme.equals("https")) {
-        return fqdn + ":" + d.getInfoSecurePort();
-      } else {
-        throw new IllegalArgumentException("Unknown scheme:" + scheme);
       }
-    }
-
-    public static String url(String scheme, DatanodeID d) {
-      return scheme + "://" + authority(scheme, d);
+      return 0;
     }
   }
 
@@ -186,12 +127,6 @@ public class JspHelper {
     return bestNode(nodes, false);
   }
 
-  public static DatanodeInfo bestNode(LocatedBlock blk, Configuration conf)
-      throws IOException {
-    DatanodeInfo[] nodes = blk.getLocations();
-    return bestNode(nodes, true);
-  }
-
   private static DatanodeInfo bestNode(DatanodeInfo[] nodes, boolean doRandom)
       throws IOException {
     if (nodes == null || nodes.length == 0) {
@@ -208,293 +143,6 @@ public class JspHelper {
 
     int index = doRandom ? DFSUtil.getRandom().nextInt(l) : 0;
     return nodes[index];
-  }
-
-  public static void streamBlockInAscii(InetSocketAddress addr, String poolId,
-      long blockId, final Token<BlockTokenIdentifier> blockToken, long genStamp,
-      long blockSize, long offsetIntoBlock, long chunkSizeToView,
-      JspWriter out, final Configuration conf, DFSClient.Conf dfsConf,
-      final DFSClient dfs, final SaslDataTransferClient saslClient)
-          throws IOException {
-    if (chunkSizeToView == 0) return;
-    int amtToRead = (int)Math.min(chunkSizeToView, blockSize - offsetIntoBlock);
-      
-    DatanodeID datanodeId = new DatanodeID(addr.getAddress().getHostAddress(),
-      addr.getHostName(), poolId, addr.getPort(), 0, 0, 0);
-    BlockReader blockReader = new BlockReaderFactory(dfsConf).
-      setInetSocketAddress(addr).
-      setBlock(new ExtendedBlock(poolId, blockId, 0, genStamp)).
-      setFileName(BlockReaderFactory.getFileName(addr, poolId, blockId)).
-      setBlockToken(blockToken).
-      setStartOffset(offsetIntoBlock).
-      setLength(amtToRead).
-      setVerifyChecksum(true).
-      setClientName("JspHelper").
-      setClientCacheContext(ClientContext.getFromConf(conf)).
-      setDatanodeInfo(new DatanodeInfo(datanodeId)).
-      setCachingStrategy(CachingStrategy.newDefaultStrategy()).
-      setConfiguration(conf).
-      setRemotePeerFactory(new RemotePeerFactory() {
-        @Override
-        public Peer newConnectedPeer(InetSocketAddress addr,
-            Token<BlockTokenIdentifier> blockToken, DatanodeID datanodeId)
-            throws IOException {
-          Peer peer = null;
-          Socket sock = NetUtils.getDefaultSocketFactory(conf).createSocket();
-          try {
-            sock.connect(addr, HdfsServerConstants.READ_TIMEOUT);
-            sock.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
-            peer = TcpPeerServer.peerFromSocketAndKey(saslClient, sock, dfs,
-                blockToken, datanodeId);
-          } finally {
-            if (peer == null) {
-              IOUtils.closeSocket(sock);
-            }
-          }
-          return peer;
-        }
-      }).
-      build();
-
-    final byte[] buf = new byte[amtToRead];
-    try {
-      int readOffset = 0;
-      int retries = 2;
-      while (amtToRead > 0) {
-        int numRead = amtToRead;
-        try {
-          blockReader.readFully(buf, readOffset, amtToRead);
-        } catch (IOException e) {
-          retries--;
-          if (retries == 0)
-            throw new IOException("Could not read data from datanode");
-          continue;
-        }
-        amtToRead -= numRead;
-        readOffset += numRead;
-      }
-    } finally {
-      blockReader.close();
-    }
-    out.print(HtmlQuoting.quoteHtmlChars(new String(buf, Charsets.UTF_8)));
-  }
-
-  public static void addTableHeader(JspWriter out) throws IOException {
-    out.print("<table border=\"1\""+
-              " cellpadding=\"2\" cellspacing=\"2\">");
-    out.print("<tbody>");
-  }
-  public static void addTableRow(JspWriter out, String[] columns) throws IOException {
-    out.print("<tr>");
-    for (int i = 0; i < columns.length; i++) {
-      out.print("<td style=\"vertical-align: top;\"><B>"+columns[i]+"</B><br></td>");
-    }
-    out.print("</tr>");
-  }
-  public static void addTableRow(JspWriter out, String[] columns, int row) throws IOException {
-    out.print("<tr>");
-      
-    for (int i = 0; i < columns.length; i++) {
-      if (row/2*2 == row) {//even
-        out.print("<td style=\"vertical-align: top;background-color:LightGrey;\"><B>"+columns[i]+"</B><br></td>");
-      } else {
-        out.print("<td style=\"vertical-align: top;background-color:LightBlue;\"><B>"+columns[i]+"</B><br></td>");
-          
-      }
-    }
-    out.print("</tr>");
-  }
-  public static void addTableFooter(JspWriter out) throws IOException {
-    out.print("</tbody></table>");
-  }
-
-  public static void sortNodeList(final List<DatanodeDescriptor> nodes,
-                           String field, String order) {
-        
-    class NodeComapare implements Comparator<DatanodeDescriptor> {
-      static final int 
-        FIELD_NAME              = 1,
-        FIELD_LAST_CONTACT      = 2,
-        FIELD_BLOCKS            = 3,
-        FIELD_CAPACITY          = 4,
-        FIELD_USED              = 5,
-        FIELD_PERCENT_USED      = 6,
-        FIELD_NONDFS_USED       = 7,
-        FIELD_REMAINING         = 8,
-        FIELD_PERCENT_REMAINING = 9,
-        FIELD_ADMIN_STATE       = 10,
-        FIELD_DECOMMISSIONED    = 11,
-        SORT_ORDER_ASC          = 1,
-        SORT_ORDER_DSC          = 2;
-
-      int sortField = FIELD_NAME;
-      int sortOrder = SORT_ORDER_ASC;
-            
-      public NodeComapare(String field, String order) {
-        if (field.equals("lastcontact")) {
-          sortField = FIELD_LAST_CONTACT;
-        } else if (field.equals("capacity")) {
-          sortField = FIELD_CAPACITY;
-        } else if (field.equals("used")) {
-          sortField = FIELD_USED;
-        } else if (field.equals("nondfsused")) {
-          sortField = FIELD_NONDFS_USED;
-        } else if (field.equals("remaining")) {
-          sortField = FIELD_REMAINING;
-        } else if (field.equals("pcused")) {
-          sortField = FIELD_PERCENT_USED;
-        } else if (field.equals("pcremaining")) {
-          sortField = FIELD_PERCENT_REMAINING;
-        } else if (field.equals("blocks")) {
-          sortField = FIELD_BLOCKS;
-        } else if (field.equals("adminstate")) {
-          sortField = FIELD_ADMIN_STATE;
-        } else if (field.equals("decommissioned")) {
-          sortField = FIELD_DECOMMISSIONED;
-        } else {
-          sortField = FIELD_NAME;
-        }
-                
-        if (order.equals("DSC")) {
-          sortOrder = SORT_ORDER_DSC;
-        } else {
-          sortOrder = SORT_ORDER_ASC;
-        }
-      }
-
-      @Override
-      public int compare(DatanodeDescriptor d1,
-                         DatanodeDescriptor d2) {
-        int ret = 0;
-        switch (sortField) {
-        case FIELD_LAST_CONTACT:
-          ret = (int) (d2.getLastUpdate() - d1.getLastUpdate());
-          break;
-        case FIELD_CAPACITY:
-          long  dlong = d1.getCapacity() - d2.getCapacity();
-          ret = (dlong < 0) ? -1 : ((dlong > 0) ? 1 : 0);
-          break;
-        case FIELD_USED:
-          dlong = d1.getDfsUsed() - d2.getDfsUsed();
-          ret = (dlong < 0) ? -1 : ((dlong > 0) ? 1 : 0);
-          break;
-        case FIELD_NONDFS_USED:
-          dlong = d1.getNonDfsUsed() - d2.getNonDfsUsed();
-          ret = (dlong < 0) ? -1 : ((dlong > 0) ? 1 : 0);
-          break;
-        case FIELD_REMAINING:
-          dlong = d1.getRemaining() - d2.getRemaining();
-          ret = (dlong < 0) ? -1 : ((dlong > 0) ? 1 : 0);
-          break;
-        case FIELD_PERCENT_USED:
-          double ddbl =((d1.getDfsUsedPercent())-
-                        (d2.getDfsUsedPercent()));
-          ret = (ddbl < 0) ? -1 : ((ddbl > 0) ? 1 : 0);
-          break;
-        case FIELD_PERCENT_REMAINING:
-          ddbl =((d1.getRemainingPercent())-
-                 (d2.getRemainingPercent()));
-          ret = (ddbl < 0) ? -1 : ((ddbl > 0) ? 1 : 0);
-          break;
-        case FIELD_BLOCKS:
-          ret = d1.numBlocks() - d2.numBlocks();
-          break;
-        case FIELD_ADMIN_STATE:
-          ret = d1.getAdminState().toString().compareTo(
-              d2.getAdminState().toString());
-          break;
-        case FIELD_DECOMMISSIONED:
-          ret = DFSUtil.DECOM_COMPARATOR.compare(d1, d2);
-          break;
-        case FIELD_NAME: 
-          ret = d1.getHostName().compareTo(d2.getHostName());
-          break;
-        default:
-          throw new IllegalArgumentException("Invalid sortField");
-        }
-        return (sortOrder == SORT_ORDER_DSC) ? -ret : ret;
-      }
-    }
-        
-    Collections.sort(nodes, new NodeComapare(field, order));
-  }
-
-  public static void printPathWithLinks(String dir, JspWriter out, 
-                                        int namenodeInfoPort,
-                                        String tokenString,
-                                        String nnAddress
-                                        ) throws IOException {
-    try {
-      String[] parts = dir.split(Path.SEPARATOR);
-      StringBuilder tempPath = new StringBuilder(dir.length());
-      out.print("<a href=\"browseDirectory.jsp" + "?dir="+ Path.SEPARATOR
-          + "&namenodeInfoPort=" + namenodeInfoPort
-          + getDelegationTokenUrlParam(tokenString) 
-          + getUrlParam(NAMENODE_ADDRESS, nnAddress) + "\">" + Path.SEPARATOR
-          + "</a>");
-      tempPath.append(Path.SEPARATOR);
-      for (int i = 0; i < parts.length-1; i++) {
-        if (!parts[i].equals("")) {
-          tempPath.append(parts[i]);
-          out.print("<a href=\"browseDirectory.jsp" + "?dir="
-              + HtmlQuoting.quoteHtmlChars(tempPath.toString()) + "&namenodeInfoPort=" + namenodeInfoPort
-              + getDelegationTokenUrlParam(tokenString)
-              + getUrlParam(NAMENODE_ADDRESS, nnAddress));
-          out.print("\">" + HtmlQuoting.quoteHtmlChars(parts[i]) + "</a>" + Path.SEPARATOR);
-          tempPath.append(Path.SEPARATOR);
-        }
-      }
-      if(parts.length > 0) {
-        out.print(HtmlQuoting.quoteHtmlChars(parts[parts.length-1]));
-      }
-    }
-    catch (UnsupportedEncodingException ex) {
-      ex.printStackTrace();
-    }
-  }
-
-  public static void printGotoForm(JspWriter out,
-                                   int namenodeInfoPort,
-                                   String tokenString,
-                                   String file,
-                                   String nnAddress) throws IOException {
-    out.print("<form action=\"browseDirectory.jsp\" method=\"get\" name=\"goto\">");
-    out.print("Goto : ");
-    out.print("<input name=\"dir\" type=\"text\" width=\"50\" id=\"dir\" value=\""+ HtmlQuoting.quoteHtmlChars(file)+"\"/>");
-    out.print("<input name=\"go\" type=\"submit\" value=\"go\"/>");
-    out.print("<input name=\"namenodeInfoPort\" type=\"hidden\" "
-        + "value=\"" + namenodeInfoPort  + "\"/>");
-    if (UserGroupInformation.isSecurityEnabled()) {
-      out.print("<input name=\"" + DELEGATION_PARAMETER_NAME
-          + "\" type=\"hidden\" value=\"" + tokenString + "\"/>");
-    }
-    out.print("<input name=\""+ NAMENODE_ADDRESS +"\" type=\"hidden\" "
-        + "value=\"" + nnAddress  + "\"/>");
-    out.print("</form>");
-  }
-  
-  public static void createTitle(JspWriter out, 
-                                 HttpServletRequest req, 
-                                 String  file) throws IOException{
-    if(file == null) file = "";
-    int start = Math.max(0,file.length() - 100);
-    if(start != 0)
-      file = "..." + file.substring(start, file.length());
-    out.print("<title>HDFS:" + file + "</title>");
-  }
-
-  /** Convert a String to chunk-size-to-view. */
-  public static int string2ChunkSizeToView(String s, int defaultValue) {
-    int n = s == null? 0: Integer.parseInt(s);
-    return n > 0? n: defaultValue;
-  }
-
-  /** Return a table containing version information. */
-  public static String getVersionTable() {
-    return "<div class='dfstable'><table>"       
-        + "\n  <tr><td class='col1'>Version:</td><td>" + VersionInfo.getVersion() + ", " + VersionInfo.getRevision() + "</td></tr>"
-        + "\n  <tr><td class='col1'>Compiled:</td><td>" + VersionInfo.getDate() + " by " + VersionInfo.getUser() + " from " + VersionInfo.getBranch() + "</td></tr>"
-        + "\n</table></div>";
   }
 
   /**
@@ -514,29 +162,6 @@ public class JspHelper {
    */
   public static Long validateLong(String value) {
     return value == null? null: Long.parseLong(value);
-  }
-
-  /**
-   * Validate a URL.
-   * @return null if the value is invalid.
-   *         Otherwise, return the validated URL String.
-   */
-  public static String validateURL(String value) {
-    try {
-      return URLEncoder.encode(new URL(value).toString(), "UTF-8");
-    } catch (IOException e) {
-      return null;
-    }
-  }
-  
-  /**
-   * If security is turned off, what is the default web user?
-   * @param conf the configuration to look in
-   * @return the remote user that was configuration
-   */
-  public static UserGroupInformation getDefaultWebUser(Configuration conf
-                                                       ) throws IOException {
-    return UserGroupInformation.createRemoteUser(getDefaultWebUserName(conf));
   }
 
   private static String getDefaultWebUserName(Configuration conf
