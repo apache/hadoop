@@ -417,6 +417,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6122. TestLineRecordReader may fail due to test data files checked
     out of git with incorrect line endings. (cnauroth)
 
+    MAPREDUCE-6123. TestCombineFileInputFormat incorrectly starts 2
+    MiniDFSCluster instances. (cnauroth)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
