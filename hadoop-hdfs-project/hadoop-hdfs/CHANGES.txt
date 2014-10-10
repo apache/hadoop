@@ -19,6 +19,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7026. Introduce a string constant for "Failed to obtain user group
     info...". (Yongjun Zhang via atm)
 
+    HDFS-7209. Populate EDEK cache when creating encryption zone. (Yi Liu via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES

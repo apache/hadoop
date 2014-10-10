@@ -240,6 +240,16 @@ public class ValueQueue <E> {
   }
 
   /**
+   * Get size of the Queue for keyName
+   * @param keyName the key name
+   * @return int queue size
+   * @throws ExecutionException
+   */
+  public int getSize(String keyName) throws ExecutionException {
+    return keyQueues.get(keyName).size();
+  }
+
+  /**
    * This removes the "num" values currently at the head of the Queue for the
    * provided key. Will immediately fire the Queue filler function if key
    * does not exist

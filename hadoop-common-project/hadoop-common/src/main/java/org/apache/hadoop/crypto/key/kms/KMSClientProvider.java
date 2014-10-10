@@ -71,6 +71,7 @@ import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
@@ -771,6 +772,15 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   @Override
   public void drain(String keyName) {
     encKeyVersionQueue.drain(keyName);
+  }
+
+  @VisibleForTesting
+  public int getEncKeyQueueSize(String keyName) throws IOException {
+    try {
+      return encKeyVersionQueue.getSize(keyName);
+    } catch (ExecutionException e) {
+      throw new IOException(e);
+    }
   }
 
   @Override
