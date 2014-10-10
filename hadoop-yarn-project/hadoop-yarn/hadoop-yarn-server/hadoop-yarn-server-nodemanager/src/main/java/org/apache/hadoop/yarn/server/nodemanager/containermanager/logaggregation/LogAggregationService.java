@@ -342,7 +342,7 @@ public class LogAggregationService extends AbstractService implements
     // New application
     final AppLogAggregator appLogAggregator =
         new AppLogAggregatorImpl(this.dispatcher, this.deletionService,
-            getConfig(), appId, userUgi, dirsHandler,
+            getConfig(), appId, userUgi, this.nodeId, dirsHandler,
             getRemoteNodeLogFileForApp(appId, user), logRetentionPolicy,
             appAcls, logAggregationContext, this.context);
     if (this.appLogAggregators.putIfAbsent(appId, appLogAggregator) != null) {
