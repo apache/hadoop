@@ -132,6 +132,9 @@ Trunk (Unreleased)
     HADOOP-10809. hadoop-azure: page blob support. (Dexter Bradshaw,
     Mostafa Elhemali, Eric Hanson, and Mike Liddell via cnauroth)
 
+    HADOOP-11188. hadoop-azure: automatically expand page blobs when they become
+    full. (Eric Hanson via cnauroth)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.

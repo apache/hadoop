@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.AzureException;
@@ -330,4 +331,35 @@ public class TestReadAndSeekPageBlobAfterWrite {
       writeAndReadOneFile(numWrites, recordSize, syncInterval);
     }
   }
+  
+  // Write to a file repeatedly to verify that it extends.
+  // The page blob file should start out at 128MB and finish at 256MB.
+  @Test(timeout=300000)
+  public void testFileSizeExtension() throws IOException {
+    final int writeSize = 1024 * 1024;
+    final int numWrites = 129;
+    final byte dataByte = 5;
+    byte[] data = new byte[writeSize];
+    Arrays.fill(data, dataByte);
+    FSDataOutputStream output = fs.create(PATH);
+    try {
+      for (int i = 0; i < numWrites; i++) {
+        output.write(data);
+        output.hflush();
+        LOG.debug("total writes = " + (i + 1));
+      }
+    } finally {
+      output.close();
+    }
+
+    // Show that we wrote more than the default page blob file size.
+    assertTrue(numWrites * writeSize > PageBlobOutputStream.PAGE_BLOB_MIN_SIZE);
+
+    // Verify we can list the new size. That will prove we expanded the file.
+    FileStatus[] status = fs.listStatus(PATH);
+    assertTrue(status[0].getLen() == numWrites * writeSize);
+    LOG.debug("Total bytes written to " + PATH + " = " + status[0].getLen());
+    fs.delete(PATH, false);
+  }
+
 }
