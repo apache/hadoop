@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.*;
 import org.apache.hadoop.yarn.proto.YarnProtos.*;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.*;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.*;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -654,6 +655,12 @@ public class TestPBImplRecords {
   public void testApplicationSubmissionContextPBImpl() throws Exception {
     validatePBImplRecord(ApplicationSubmissionContextPBImpl.class,
         ApplicationSubmissionContextProto.class);
+    
+    ApplicationSubmissionContext ctx =
+        ApplicationSubmissionContext.newInstance(null, null, null, null, null,
+            false, false, 0, Resources.none(), null, false, null, null);
+    
+    Assert.assertNotNull(ctx.getResource());
   }
 
   @Test
