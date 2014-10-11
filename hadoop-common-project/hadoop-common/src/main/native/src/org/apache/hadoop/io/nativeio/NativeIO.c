@@ -275,7 +275,7 @@ cleanup:
 #ifdef WINDOWS
   LPWSTR owner = NULL;
   LPWSTR group = NULL;
-  int mode;
+  int mode = 0;
   jstring jstr_owner = NULL;
   jstring jstr_group = NULL;
   int rc;
