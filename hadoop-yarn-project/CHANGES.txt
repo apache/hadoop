@@ -156,6 +156,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2494. Added NodeLabels Manager internal API and implementation. (Wangda
     Tan via vinodkv)
 
+    YARN-2501. Enhanced AMRMClient library to support requests against node
+    labels. (Wangda Tan via vinodkv)
+
   IMPROVEMENTS
 
     YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc
