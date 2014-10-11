@@ -827,6 +827,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11133. Should trim the content of keystore password file for JavaKeyStoreProvider
     (Yi Liu via umamahesh)
 
+    HADOOP-11193. Fix uninitialized variables in NativeIO.c
+    (Xiaoyu Yao via wheat9)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HADOOP-10734. Implement high-performance secure random number sources.
