@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import com.google.common.base.Supplier;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -147,6 +148,7 @@ public class TestAMRMClient {
     racks = new String[]{ rack };
   }
   
+  @SuppressWarnings("deprecation")
   @Before
   public void startApp() throws Exception {
     // submit new app
@@ -666,6 +668,28 @@ public class TestAMRMClient {
         amClient.stop();
       }
     }
+  }
+  
+  @Test(timeout=30000)
+  public void testAskWithNodeLabels() {
+    AMRMClientImpl<ContainerRequest> client =
+        new AMRMClientImpl<ContainerRequest>();
+
+    // add x, y to ANY
+    client.addContainerRequest(new ContainerRequest(Resource.newInstance(1024,
+        1), null, null, Priority.UNDEFINED, true, "x && y"));
+    Assert.assertEquals(1, client.ask.size());
+    Assert.assertEquals("x && y", client.ask.iterator().next()
+        .getNodeLabelExpression());
+
+    // add x, y and a, b to ANY, only a, b should be kept
+    client.addContainerRequest(new ContainerRequest(Resource.newInstance(1024,
+        1), null, null, Priority.UNDEFINED, true, "x && y"));
+    client.addContainerRequest(new ContainerRequest(Resource.newInstance(1024,
+        1), null, null, Priority.UNDEFINED, true, "a && b"));
+    Assert.assertEquals(1, client.ask.size());
+    Assert.assertEquals("a && b", client.ask.iterator().next()
+        .getNodeLabelExpression());
   }
     
   private void testAllocation(final AMRMClientImpl<ContainerRequest> amClient)  
