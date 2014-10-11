@@ -128,8 +128,6 @@ Trunk (Unreleased)
 
     HDFS-6246. Remove 'dfs.support.append' flag from trunk code. (umamahesh)
 
-    HDFS-6252. Phase out the old web UI in HDFS. (wheat9)
-
     HDFS-6609. Use DirectorySnapshottableFeature to represent a snapshottable
     directory. (Jing Zhao via wheat9)
 
@@ -248,9 +246,6 @@ Trunk (Unreleased)
 
     HDFS-5794. Fix the inconsistency of layout version number of 
     ADD_DATANODE_AND_STORAGE_UUIDS between trunk and branch-2. (jing9)
-
-    HDFS-6657. Remove link to 'Legacy UI' in trunk's Namenode UI.
-    (Vinayakumar B via wheat 9)
 
     HDFS-6694. TestPipelinesFailover.testPipelineRecoveryStress tests fail
     intermittently with various symptoms - debugging patch. (Yongjun Zhang via
@@ -381,6 +376,8 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7209. Populate EDEK cache when creating encryption zone. (Yi Liu via wang)
 
+    HDFS-6252. Phase out the old web UI in HDFS. (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -390,6 +387,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7198. Fix or suppress findbugs "unchecked conversion" warning in
     DFSClient#getPathTraceScope (cmccabe)
+
+    HDFS-6657. Remove link to 'Legacy UI' in trunk's Namenode UI.
+    (Vinayakumar B via wheat)
 
 Release 2.6.0 - UNRELEASED
 
