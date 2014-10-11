@@ -806,8 +806,8 @@ DWORD FindFileOwnerAndPermission(
   DWORD cbSid = SECURITY_MAX_SID_SIZE;
   PACL pDacl = NULL;
 
-  BOOL isSymlink;
-  BY_HANDLE_FILE_INFORMATION fileInformation;
+  BOOL isSymlink = FALSE;
+  BY_HANDLE_FILE_INFORMATION fileInformation = {0};
 
   ACCESS_MASK ownerAccessRights = 0;
   ACCESS_MASK groupAccessRights = 0;
