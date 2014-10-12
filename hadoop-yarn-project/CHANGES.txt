@@ -556,6 +556,8 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2652 Add hadoop-yarn-registry package under hadoop-yarn. (stevel)
 
+    YARN-2668 yarn-registry JAR won't link against ZK 3.4.5. (stevel)
+
     YARN-2598 GHS should show N/A instead of null for the inaccessible information
     (Zhijie Shen via mayank)
 

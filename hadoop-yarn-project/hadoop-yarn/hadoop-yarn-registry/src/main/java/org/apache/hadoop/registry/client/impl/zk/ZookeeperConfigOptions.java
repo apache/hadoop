@@ -47,7 +47,7 @@ public interface ZookeeperConfigOptions {
    * but revert to classic authentication/anonymous access on failure.
    */
   String PROP_ZK_ENABLE_SASL_CLIENT =
-      ZooKeeperSaslClient.ENABLE_CLIENT_SASL_KEY;
+      "zookeeper.sasl.client";
 
   /**
    * Default flag for the ZK client: {@value}.
