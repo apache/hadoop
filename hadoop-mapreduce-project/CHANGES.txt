@@ -201,6 +201,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6123. TestCombineFileInputFormat incorrectly starts 2
     MiniDFSCluster instances. (cnauroth)
 
+    MAPREDUCE-5875. Make Counter limits consistent across JobClient, 
+    MRAppMaster, and YarnChild. (Gera Shegalov via kasha)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

@@ -182,15 +182,15 @@ public class Cluster {
   public Job getJob(JobID jobId) throws IOException, InterruptedException {
     JobStatus status = client.getJobStatus(jobId);
     if (status != null) {
-      JobConf conf;
+      final JobConf conf = new JobConf();
+      final Path jobPath = new Path(client.getFilesystemName(),
+          status.getJobFile());
+      final FileSystem fs = FileSystem.get(jobPath.toUri(), getConf());
       try {
-        conf = new JobConf(status.getJobFile());
-      } catch (RuntimeException ex) {
-        // If job file doesn't exist it means we can't find the job
-        if (ex.getCause() instanceof FileNotFoundException) {
-          return null;
-        } else {
-          throw ex;
+        conf.addResource(fs.open(jobPath), jobPath.toString());
+      } catch (FileNotFoundException fnf) {
+        if (LOG.isWarnEnabled()) {
+          LOG.warn("Job conf missing on cluster", fnf);
         }
       }
       return Job.getInstance(this, status, conf);
