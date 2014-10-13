@@ -24,14 +24,18 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -621,5 +625,35 @@ public class TestNativeIO {
   public void testGetMemlockLimit() throws Exception {
     assumeTrue(NativeIO.isAvailable());
     NativeIO.getMemlockLimit();
+  }
+
+  @Test (timeout = 30000)
+  public void testCopyFileUnbuffered() throws Exception {
+    final String METHOD_NAME = GenericTestUtils.getMethodName();
+    File srcFile = new File(TEST_DIR, METHOD_NAME + ".src.dat");
+    File dstFile = new File(TEST_DIR, METHOD_NAME + ".dst.dat");
+    final int fileSize = 0x8FFFFFF; // 128 MB
+    final int SEED = 0xBEEF;
+    final int batchSize = 4096;
+    final int numBatches = fileSize / batchSize;
+    Random rb = new Random(SEED);
+    FileChannel channel = null;
+    RandomAccessFile raSrcFile = null;
+    try {
+      raSrcFile = new RandomAccessFile(srcFile, "rw");
+      channel = raSrcFile.getChannel();
+      byte bytesToWrite[] = new byte[batchSize];
+      MappedByteBuffer mapBuf;
+      mapBuf = channel.map(MapMode.READ_WRITE, 0, fileSize);
+      for (int i = 0; i < numBatches; i++) {
+        rb.nextBytes(bytesToWrite);
+        mapBuf.put(bytesToWrite);
+      }
+      NativeIO.copyFileUnbuffered(srcFile, dstFile);
+    }finally {
+      IOUtils.cleanup(LOG, channel);
+      IOUtils.cleanup(LOG, raSrcFile);
+      FileUtils.deleteQuietly(TEST_DIR);
+    }
   }
 }
