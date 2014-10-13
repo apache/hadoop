@@ -29,6 +29,7 @@ import java.nio.MappedByteBuffer;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -845,5 +846,31 @@ public class NativeIO {
       throws NativeIOException;
 
   private static native void link0(String src, String dst)
+      throws NativeIOException;
+
+  /**
+   * Unbuffered file copy from src to dst without tainting OS buffer cache
+   * In Linux, it uses sendfile() which uses O_DIRECT flag internally
+   * In Windows, it uses CopyFileEx with COPY_FILE_NO_BUFFERING flag
+   *
+   * Note: This does not support FreeBSD/OSX which have a different sendfile()
+   * semantic. Also, this simple native wrapper does minimal parameter checking
+   * It is recommended to use wrapper function like
+   * the Storage#nativeCopyFileUnbuffered() function in hadoop-hdfs.
+   *
+   *
+   * @param src                  The source path
+   * @param dst                  The destination path
+   * @throws IOException
+   */
+  public static void copyFileUnbuffered(File src, File dst) throws IOException {
+    if ((nativeLoaded) && (Shell.WINDOWS || Shell.LINUX)) {
+      copyFileUnbuffered0(src.getAbsolutePath(), dst.getAbsolutePath());
+    } else {
+      FileUtils.copyFile(src, dst);
+    }
+  }
+
+  private static native void copyFileUnbuffered0(String src, String dst)
       throws NativeIOException;
 }

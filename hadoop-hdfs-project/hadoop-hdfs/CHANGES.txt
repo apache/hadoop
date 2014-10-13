@@ -355,6 +355,9 @@ Trunk (Unreleased)
     HDFS-7112. LazyWriter should use either async IO or one thread per physical
     disk. (Xiaoyu Yao via cnauroth)
 
+    HDFS-7090. Use unbuffered writes when persisting in-memory replicas.
+    (Xiaoyu Yao via cnauroth)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
