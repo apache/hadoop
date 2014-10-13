@@ -648,6 +648,19 @@ public class CapacityScheduler extends
     // sanity checks.
     CSQueue queue = getQueue(queueName);
     if (queue == null) {
+      //During a restart, this indicates a queue was removed, which is
+      //not presently supported
+      if (isAppRecovering) {
+        //throwing RuntimeException because some other exceptions are caught
+        //(including YarnRuntimeException) and we want this to force an exit
+        String queueErrorMsg = "Queue named " + queueName 
+           + " missing during application recovery."
+           + " Queue removal during recovery is not presently supported by the"
+           + " capacity scheduler, please restart with all queues configured"
+           + " which were present before shutdown/restart.";
+        LOG.fatal(queueErrorMsg);
+        throw new RuntimeException(queueErrorMsg);
+      }
       String message = "Application " + applicationId + 
       " submitted by user " + user + " to unknown queue: " + queueName;
       this.rmContext.getDispatcher().getEventHandler()
