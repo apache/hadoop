@@ -1008,12 +1008,12 @@ public class ResourceLocalizationService extends CompositeService
             response.setLocalizerAction(LocalizerAction.LIVE);
             break;
           case FETCH_FAILURE:
-            LOG.info("DEBUG: FAILED " + req 
-                + ", " + stat.getException().getMessage());
+            final String diagnostics = stat.getException().toString();
+            LOG.warn(req + " failed: " + diagnostics);
             response.setLocalizerAction(LocalizerAction.DIE);
             getLocalResourcesTracker(req.getVisibility(), user, applicationId)
               .handle(new ResourceFailedLocalizationEvent(
-                  req, stat.getException().getMessage()));
+                  req, diagnostics));
 
             // unlocking the resource and removing it from scheduled resource
             // list
