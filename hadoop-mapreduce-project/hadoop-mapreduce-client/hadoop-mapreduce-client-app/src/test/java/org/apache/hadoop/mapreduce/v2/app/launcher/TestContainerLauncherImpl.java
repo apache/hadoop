@@ -24,6 +24,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -82,6 +83,13 @@ public class TestContainerLauncherImpl {
     serviceResponse.clear();
     serviceResponse.put(ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID,
         ShuffleHandler.serializeMetaData(80));
+  }
+
+  // tests here mock ContainerManagementProtocol which does not have close
+  // method. creating an interface that implements ContainerManagementProtocol
+  // and Closeable so the tests does not fail with NoSuchMethodException
+  private static interface ContainerManagementProtocolClient extends
+    ContainerManagementProtocol, Closeable {
   }
   
   private static class ContainerLauncherImplUnderTest extends 
@@ -152,8 +160,8 @@ public class TestContainerLauncherImpl {
     EventHandler mockEventHandler = mock(EventHandler.class);
     when(mockContext.getEventHandler()).thenReturn(mockEventHandler);
     String cmAddress = "127.0.0.1:8000";
-    ContainerManagementProtocol mockCM =
-        mock(ContainerManagementProtocol.class);
+    ContainerManagementProtocolClient mockCM =
+        mock(ContainerManagementProtocolClient.class);
     ContainerLauncherImplUnderTest ut =
         new ContainerLauncherImplUnderTest(mockContext, mockCM);
     
@@ -213,8 +221,8 @@ public class TestContainerLauncherImpl {
     EventHandler mockEventHandler = mock(EventHandler.class);
     when(mockContext.getEventHandler()).thenReturn(mockEventHandler);
 
-    ContainerManagementProtocol mockCM =
-        mock(ContainerManagementProtocol.class);
+    ContainerManagementProtocolClient mockCM =
+        mock(ContainerManagementProtocolClient.class);
     ContainerLauncherImplUnderTest ut =
         new ContainerLauncherImplUnderTest(mockContext, mockCM);
     
@@ -275,8 +283,8 @@ public class TestContainerLauncherImpl {
     EventHandler mockEventHandler = mock(EventHandler.class);
     when(mockContext.getEventHandler()).thenReturn(mockEventHandler);
 
-    ContainerManagementProtocol mockCM =
-        mock(ContainerManagementProtocol.class);
+    ContainerManagementProtocolClient mockCM =
+        mock(ContainerManagementProtocolClient.class);
     ContainerLauncherImplUnderTest ut =
         new ContainerLauncherImplUnderTest(mockContext, mockCM);
 
@@ -330,7 +338,7 @@ public class TestContainerLauncherImpl {
     EventHandler mockEventHandler = mock(EventHandler.class);
     when(mockContext.getEventHandler()).thenReturn(mockEventHandler);
 
-    ContainerManagementProtocol mockCM =
+    ContainerManagementProtocolClient mockCM =
         new ContainerManagerForTest(startLaunchBarrier, completeLaunchBarrier);
     ContainerLauncherImplUnderTest ut =
         new ContainerLauncherImplUnderTest(mockContext, mockCM);
@@ -406,7 +414,7 @@ public class TestContainerLauncherImpl {
         currentTime + 10000L, 123, currentTime, Priority.newInstance(0), 0));
   }
 
-  private static class ContainerManagerForTest implements ContainerManagementProtocol {
+  private static class ContainerManagerForTest implements ContainerManagementProtocolClient {
 
     private CyclicBarrier startLaunchBarrier;
     private CyclicBarrier completeLaunchBarrier;
@@ -443,6 +451,10 @@ public class TestContainerLauncherImpl {
     public GetContainerStatusesResponse getContainerStatuses(
         GetContainerStatusesRequest request) throws IOException {
       return null;
+    }
+
+    @Override
+    public void close() throws IOException {
     }
   }
   
