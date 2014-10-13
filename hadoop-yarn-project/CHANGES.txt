@@ -570,6 +570,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2651. Spun off LogRollingInterval from LogAggregationContext. (Xuan Gong
     via zjshen)
 
+    YARN-2377. Localization exception stack traces are not passed as
+    diagnostic info (Gera Shegalov via jlowe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
