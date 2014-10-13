@@ -204,6 +204,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5875. Make Counter limits consistent across JobClient, 
     MRAppMaster, and YarnChild. (Gera Shegalov via kasha)
 
+    MAPREDUCE-6125. TestContainerLauncherImpl sometimes fails (Mit Desai via
+    jlowe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
