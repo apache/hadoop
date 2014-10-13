@@ -714,6 +714,9 @@ Release 2.6.0 - UNRELEASED
       HDFS-7112. LazyWriter should use either async IO or one thread per physical
       disk. (Xiaoyu Yao via cnauroth)
 
+      HDFS-7090. Use unbuffered writes when persisting in-memory replicas.
+      (Xiaoyu Yao via cnauroth)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an

@@ -724,12 +724,12 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     final File dstFile = new File(destDir, srcFile.getName());
     final File dstMeta = FsDatasetUtil.getMetaFile(dstFile, genStamp);
     try {
-      FileUtils.copyFile(srcMeta, dstMeta);
+      Storage.nativeCopyFileUnbuffered(srcMeta, dstMeta, true);
     } catch (IOException e) {
       throw new IOException("Failed to copy " + srcMeta + " to " + dstMeta, e);
     }
     try {
-      FileUtils.copyFile(srcFile, dstFile);
+      Storage.nativeCopyFileUnbuffered(srcFile, dstFile, true);
     } catch (IOException e) {
       throw new IOException("Failed to copy " + srcFile + " to " + dstFile, e);
     }
