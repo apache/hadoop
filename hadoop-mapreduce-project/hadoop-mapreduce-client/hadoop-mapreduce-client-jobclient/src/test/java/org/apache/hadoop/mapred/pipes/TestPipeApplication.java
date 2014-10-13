@@ -308,7 +308,7 @@ public class TestPipeApplication {
       assertTrue(out.toString().contains(
               "-fs <local|namenode:port>      specify a namenode"));
       assertTrue(out.toString().contains(
-              "-jt <local|ResourceManager:port>    specify a ResourceManager"));
+              "-jt <local|resourcemanager:port>    specify a ResourceManager"));
       assertTrue(out
               .toString()
               .contains(
