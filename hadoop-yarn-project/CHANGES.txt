@@ -564,6 +564,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2671. Fixed ApplicationSubmissionContext to still set resource for
     backward compatibility. (Wangda Tan via zjshen)
 
+    YARN-2667. Fix the release audit warning caused by hadoop-yarn-registry
+    (Yi Liu via jlowe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
