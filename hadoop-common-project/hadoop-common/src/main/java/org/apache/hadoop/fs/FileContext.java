@@ -171,7 +171,7 @@ import org.apache.hadoop.util.ShutdownHookManager;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving /*Evolving for a release,to be changed to Stable */
-public final class FileContext {
+public class FileContext {
   
   public static final Log LOG = LogFactory.getLog(FileContext.class);
   /**
