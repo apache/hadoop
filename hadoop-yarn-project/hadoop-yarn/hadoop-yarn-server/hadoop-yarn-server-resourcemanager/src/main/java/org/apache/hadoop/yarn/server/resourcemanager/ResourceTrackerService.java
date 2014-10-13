@@ -349,15 +349,25 @@ public class ResourceTrackerService extends AbstractService implements
     NodeStatus remoteNodeStatus = request.getNodeStatus();
     /**
      * Here is the node heartbeat sequence...
-     * 1. Check if it's a registered node
-     * 2. Check if it's a valid (i.e. not excluded) node 
-     * 3. Check if it's a 'fresh' heartbeat i.e. not duplicate heartbeat 
+     * 1. Check if it's a valid (i.e. not excluded) node
+     * 2. Check if it's a registered node
+     * 3. Check if it's a 'fresh' heartbeat i.e. not duplicate heartbeat
      * 4. Send healthStatus to RMNode
      */
 
     NodeId nodeId = remoteNodeStatus.getNodeId();
 
-    // 1. Check if it's a registered node
+    // 1. Check if it's a valid (i.e. not excluded) node
+    if (!this.nodesListManager.isValidNode(nodeId.getHost())) {
+      String message =
+          "Disallowed NodeManager nodeId: " + nodeId + " hostname: "
+              + nodeId.getHost();
+      LOG.info(message);
+      shutDown.setDiagnosticsMessage(message);
+      return shutDown;
+    }
+
+    // 2. Check if it's a registered node
     RMNode rmNode = this.rmContext.getRMNodes().get(nodeId);
     if (rmNode == null) {
       /* node does not exist */
@@ -370,18 +380,6 @@ public class ResourceTrackerService extends AbstractService implements
     // Send ping
     this.nmLivelinessMonitor.receivedPing(nodeId);
 
-    // 2. Check if it's a valid (i.e. not excluded) node
-    if (!this.nodesListManager.isValidNode(rmNode.getHostName())) {
-      String message =
-          "Disallowed NodeManager nodeId: " + nodeId + " hostname: "
-              + rmNode.getNodeAddress();
-      LOG.info(message);
-      shutDown.setDiagnosticsMessage(message);
-      this.rmContext.getDispatcher().getEventHandler().handle(
-          new RMNodeEvent(nodeId, RMNodeEventType.DECOMMISSION));
-      return shutDown;
-    }
-    
     // 3. Check if it's a 'fresh' heartbeat i.e. not duplicate heartbeat
     NodeHeartbeatResponse lastNodeHeartbeatResponse = rmNode.getLastNodeHeartBeatResponse();
     if (remoteNodeStatus.getResponseId() + 1 == lastNodeHeartbeatResponse
