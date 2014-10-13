@@ -606,6 +606,10 @@ Release 2.6.0 - UNRELEASED
     YARN-2377. Localization exception stack traces are not passed as
     diagnostic info (Gera Shegalov via jlowe)
 
+    YARN-2308. Changed CapacityScheduler to explicitly throw exception if the
+    queue to which the apps were submitted is changed across RM restart.
+    (Craig Welch & Chang Li via jianhe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
