@@ -116,19 +116,4 @@ public class LogAggregationContextPBImpl extends LogAggregationContext{
     }
     builder.setExcludePattern(excludePattern);
   }
-
-  @Override
-  public long getRollingIntervalSeconds() {
-    LogAggregationContextProtoOrBuilder p = viaProto ? proto : builder;
-    if (! p.hasRollingIntervalSeconds()) {
-      return -1;
-    }
-    return p.getRollingIntervalSeconds();
-  }
-
-  @Override
-  public void setRollingIntervalSeconds(long rollingIntervalSeconds) {
-    maybeInitBuilder();
-    builder.setRollingIntervalSeconds(rollingIntervalSeconds);
-  }
 }

@@ -1522,4 +1522,14 @@
     <value>Client</value>
   </property>
 
+  <property>
+    <description>Defines how often NMs wake up to upload log files.
+    The default value is -1. By default, the logs will be uploaded when
+    the application is finished. By setting this configure, logs can be uploaded
+    periodically when the application is running. The minimum rolling-interval-seconds
+    can be set is 3600.
+    </description>
+    <name>yarn.nodemanager.log-aggregation.roll-monitoring-interval-seconds</name>
+    <value>-1</value>
+  </property>
 </configuration>
