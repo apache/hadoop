@@ -175,6 +175,7 @@ public class TestOpenFilesWithSnapshot {
     fs.createSnapshot(path, "s2");
     fs.delete(new Path("/test/test"), true);
     fs.deleteSnapshot(path, "s2");
+    cluster.triggerBlockReports();
     if (saveNamespace) {
       NameNode nameNode = cluster.getNameNode();
       NameNodeAdapter.enterSafeMode(nameNode, false);
