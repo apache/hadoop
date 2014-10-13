@@ -948,7 +948,7 @@
     for full disk. This applies to yarn-nodemanager.local-dirs and 
     yarn.nodemanager.log-dirs.</description>
     <name>yarn.nodemanager.disk-health-checker.max-disk-utilization-per-disk-percentage</name>
-    <value>100.0</value>
+    <value>90.0</value>
   </property>
 
   <property>

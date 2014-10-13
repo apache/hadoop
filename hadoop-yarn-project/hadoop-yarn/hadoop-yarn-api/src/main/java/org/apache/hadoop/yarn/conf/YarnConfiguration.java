@@ -840,10 +840,10 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE =
       NM_DISK_HEALTH_CHECK_PREFIX + "max-disk-utilization-per-disk-percentage";
   /**
-   * By default, 100% of the disk can be used before it is marked as offline.
+   * By default, 90% of the disk can be used before it is marked as offline.
    */
   public static final float DEFAULT_NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE =
-      100.0F;
+      90.0F;
 
   /**
    * The minimum space that must be available on a local dir for it to be used.
