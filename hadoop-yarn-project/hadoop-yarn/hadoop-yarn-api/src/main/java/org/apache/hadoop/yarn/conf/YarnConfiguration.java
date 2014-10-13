@@ -712,6 +712,13 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_NM_LOG_RETAIN_SECONDS = 3 * 60 * 60;
 
   /**
+   * Define how often NMs wake up and upload log files
+   */
+  public static final String NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS =
+      NM_PREFIX + "log-aggregation.roll-monitoring-interval-seconds";
+  public static final long
+      DEFAULT_NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS = -1;
+  /**
    * Number of threads used in log cleanup. Only applicable if Log aggregation
    * is disabled
    */

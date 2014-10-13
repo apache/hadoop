@@ -212,16 +212,14 @@ public class TestContainerAllocation {
       .assertNull(getLogAggregationContextFromContainerToken(rm1, nm1, null));
 
     // create a not-null LogAggregationContext
-    final int interval = 2000;
     LogAggregationContext logAggregationContext =
         LogAggregationContext.newInstance(
-          "includePattern", "excludePattern", interval);
+          "includePattern", "excludePattern");
     LogAggregationContext returned =
         getLogAggregationContextFromContainerToken(rm1, nm2,
           logAggregationContext);
     Assert.assertEquals("includePattern", returned.getIncludePattern());
     Assert.assertEquals("excludePattern", returned.getExcludePattern());
-    Assert.assertEquals(interval, returned.getRollingIntervalSeconds());
     rm1.stop();
   }
 

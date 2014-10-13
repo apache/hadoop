@@ -1235,10 +1235,12 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
       throws Exception {
     LogAggregationContext logAggregationContextWithInterval =
         Records.newRecord(LogAggregationContext.class);
-    logAggregationContextWithInterval.setRollingIntervalSeconds(5000);
     this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
     this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
       this.remoteRootLogDir.getAbsolutePath());
+    this.conf.setLong(
+      YarnConfiguration.NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS,
+      3600);
     if (retentionSizeLimitation) {
       // set the retention size as 1. The number of logs for one application
       // in one NM should be 1.
