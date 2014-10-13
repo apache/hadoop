@@ -130,6 +130,7 @@
         <artifactId>apache-rat-plugin</artifactId>
         <configuration>
           <excludes>
+            <exclude>src/main/resources/.keep</exclude>
           </excludes>
         </configuration>
       </plugin>
