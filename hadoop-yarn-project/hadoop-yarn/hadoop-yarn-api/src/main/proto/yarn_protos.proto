@@ -302,7 +302,6 @@ message ApplicationSubmissionContextProto {
 message LogAggregationContextProto {
  optional string include_pattern = 1 [default = ".*"];
  optional string exclude_pattern = 2 [default = ""];
- optional int64 rolling_interval_seconds = 3 [default = -1];
 }
 
 enum ApplicationAccessTypeProto {

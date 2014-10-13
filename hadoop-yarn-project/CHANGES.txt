@@ -567,6 +567,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2667. Fix the release audit warning caused by hadoop-yarn-registry
     (Yi Liu via jlowe)
 
+    YARN-2651. Spun off LogRollingInterval from LogAggregationContext. (Xuan Gong
+    via zjshen)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

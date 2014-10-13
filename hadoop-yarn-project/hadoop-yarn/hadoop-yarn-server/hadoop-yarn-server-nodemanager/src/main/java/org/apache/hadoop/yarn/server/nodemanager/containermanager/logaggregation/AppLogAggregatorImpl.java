@@ -148,9 +148,11 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     } else {
       this.retentionSize = configuredRentionSize;
     }
-    long configuredRollingMonitorInterval =
-        this.logAggregationContext == null ? -1 : this.logAggregationContext
-          .getRollingIntervalSeconds();
+    long configuredRollingMonitorInterval = conf.getLong(
+      YarnConfiguration
+        .NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS,
+      YarnConfiguration
+        .DEFAULT_NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS);
     boolean debug_mode =
         conf.getBoolean(NM_LOG_AGGREGATION_DEBUG_ENABLED,
           DEFAULT_NM_LOG_AGGREGATION_DEBUG_ENABLED);
