@@ -20,6 +20,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2635. TestRM, TestRMRestart, TestClientToAMTokens should run 
     with both CS and FS. (Wei Yan and kasha via kasha)
 
+    YARN-2641. Decommission nodes on -refreshNodes instead of next 
+    NM-RM heartbeat. (Zhihai Xu via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
