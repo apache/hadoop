@@ -32,7 +32,6 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -44,6 +43,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -66,8 +66,6 @@ import org.junit.Test;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
-
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_LAZY_WRITER_INTERVAL_SEC;
 
 /**
  * Test the data migration tool (for Archival Storage)
@@ -100,9 +98,9 @@ public class TestStorageMover {
     DEFAULT_CONF.setLong(DFSConfigKeys.DFS_MOVER_MOVEDWINWIDTH_KEY, 2000L);
 
     DEFAULT_POLICIES = BlockStoragePolicySuite.createDefaultSuite();
-    HOT = DEFAULT_POLICIES.getPolicy("HOT");
-    WARM = DEFAULT_POLICIES.getPolicy("WARM");
-    COLD = DEFAULT_POLICIES.getPolicy("COLD");
+    HOT = DEFAULT_POLICIES.getPolicy(HdfsConstants.HOT_STORAGE_POLICY_NAME);
+    WARM = DEFAULT_POLICIES.getPolicy(HdfsConstants.WARM_STORAGE_POLICY_NAME);
+    COLD = DEFAULT_POLICIES.getPolicy(HdfsConstants.COLD_STORAGE_POLICY_NAME);
     TestBalancer.initTestSetup();
     Dispatcher.setDelayAfterErrors(1000L);
   }
@@ -201,14 +199,6 @@ public class TestStorageMover {
       this.policies = DEFAULT_POLICIES;
     }
 
-    MigrationTest(ClusterScheme cScheme, NamespaceScheme nsScheme,
-        BlockStoragePolicySuite policies) {
-      this.clusterScheme = cScheme;
-      this.nsScheme = nsScheme;
-      this.conf = clusterScheme.conf;
-      this.policies = policies;
-    }
-
     /**
      * Set up the cluster and start NameNode and DataNodes according to the
      * corresponding scheme.
@@ -273,9 +263,6 @@ public class TestStorageMover {
       }
       if (verifyAll) {
         verifyNamespace();
-      } else {
-        // TODO verify according to the given path list
-
       }
     }
 
@@ -414,11 +401,6 @@ public class TestStorageMover {
   }
 
   private static StorageType[][] genStorageTypes(int numDataNodes,
-      int numAllDisk, int numAllArchive) {
-    return genStorageTypes(numDataNodes, numAllDisk, numAllArchive, 0);
-  }
-
-  private static StorageType[][] genStorageTypes(int numDataNodes,
       int numAllDisk, int numAllArchive, int numRamDisk) {
     Preconditions.checkArgument(
       (numAllDisk + numAllArchive + numRamDisk) <= numDataNodes);
@@ -439,26 +421,6 @@ public class TestStorageMover {
       types[i] = new StorageType[]{StorageType.DISK, StorageType.ARCHIVE};
     }
     return types;
-  }
-
-  private static long[][] genCapacities(int nDatanodes, int numAllDisk,
-      int numAllArchive, int numRamDisk, long diskCapacity,
-      long archiveCapacity, long ramDiskCapacity) {
-    final long[][] capacities = new long[nDatanodes][];
-    int i = 0;
-    for (; i < numRamDisk; i++) {
-      capacities[i] = new long[]{ramDiskCapacity, diskCapacity};
-    }
-    for (; i < numRamDisk + numAllDisk; i++) {
-      capacities[i] = new long[]{diskCapacity, diskCapacity};
-    }
-    for (; i < numRamDisk + numAllDisk + numAllArchive; i++) {
-      capacities[i] = new long[]{archiveCapacity, archiveCapacity};
-    }
-    for(; i < capacities.length; i++) {
-      capacities[i] = new long[]{diskCapacity, archiveCapacity};
-    }
-    return capacities;
   }
 
   private static class PathPolicyMap {
@@ -666,8 +628,8 @@ public class TestStorageMover {
 
   private void setVolumeFull(DataNode dn, StorageType type) {
     List<? extends FsVolumeSpi> volumes = dn.getFSDataset().getVolumes();
-    for (int j = 0; j < volumes.size(); ++j) {
-      FsVolumeImpl volume = (FsVolumeImpl) volumes.get(j);
+    for (FsVolumeSpi v : volumes) {
+      FsVolumeImpl volume = (FsVolumeImpl) v;
       if (volume.getStorageType() == type) {
         LOG.info("setCapacity to 0 for [" + volume.getStorageType() + "]"
             + volume.getStorageID());
