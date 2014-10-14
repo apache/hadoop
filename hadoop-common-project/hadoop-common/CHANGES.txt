@@ -229,6 +229,10 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11184. Update Hadoop's lz4 to version r123. (cmccabe)
 
+    HADOOP-11181. Generalized o.a.h.s.t.d.DelegationTokenManager to handle all
+    sub-classes of AbstractDelegationTokenIdentifier. (zjshen)
+
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)

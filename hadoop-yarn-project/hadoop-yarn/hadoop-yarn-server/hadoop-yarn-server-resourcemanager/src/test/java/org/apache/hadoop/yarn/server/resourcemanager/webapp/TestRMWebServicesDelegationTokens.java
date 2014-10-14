@@ -738,7 +738,8 @@ public class TestRMWebServicesDelegationTokens extends JerseyTest {
     Token<RMDelegationTokenIdentifier> realToken =
         new Token<RMDelegationTokenIdentifier>();
     realToken.decodeFromUrlString(encodedToken);
-    RMDelegationTokenIdentifier ident = realToken.decodeIdentifier();
+    RMDelegationTokenIdentifier ident = rm.getRMContext()
+      .getRMDelegationTokenSecretManager().decodeTokenIdentifier(realToken);
     rm.getRMContext().getRMDelegationTokenSecretManager()
       .verifyToken(ident, realToken.getPassword());
     assertTrue(rm.getRMContext().getRMDelegationTokenSecretManager()
@@ -749,7 +750,8 @@ public class TestRMWebServicesDelegationTokens extends JerseyTest {
     Token<RMDelegationTokenIdentifier> realToken =
         new Token<RMDelegationTokenIdentifier>();
     realToken.decodeFromUrlString(encodedToken);
-    RMDelegationTokenIdentifier ident = realToken.decodeIdentifier();
+    RMDelegationTokenIdentifier ident = rm.getRMContext()
+      .getRMDelegationTokenSecretManager().decodeTokenIdentifier(realToken);
     boolean exceptionCaught = false;
     try {
       rm.getRMContext().getRMDelegationTokenSecretManager()
