@@ -1585,22 +1585,34 @@ public class TestKMS {
   }
 
   @Test
-  public void testProxyUser() throws Exception {
+  public void testProxyUserKerb() throws Exception {
+    doProxyUserTest(true);
+  }
+
+  @Test
+  public void testProxyUserSimple() throws Exception {
+    doProxyUserTest(false);
+  }
+
+  public void doProxyUserTest(final boolean kerberos) throws Exception {
     Configuration conf = new Configuration();
     conf.set("hadoop.security.authentication", "kerberos");
     UserGroupInformation.setConfiguration(conf);
     final File testDir = getTestDir();
     conf = createBaseKMSConf(testDir);
-    conf.set("hadoop.kms.authentication.type", "kerberos");
+    if (kerberos) {
+      conf.set("hadoop.kms.authentication.type", "kerberos");
+    }
     conf.set("hadoop.kms.authentication.kerberos.keytab",
         keytab.getAbsolutePath());
     conf.set("hadoop.kms.authentication.kerberos.principal", "HTTP/localhost");
     conf.set("hadoop.kms.authentication.kerberos.name.rules", "DEFAULT");
-    conf.set("hadoop.kms.proxyuser.client.users", "foo");
+    conf.set("hadoop.kms.proxyuser.client.users", "foo,bar");
     conf.set("hadoop.kms.proxyuser.client.hosts", "*");
-    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "kAA.ALL", "*");
-    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "kBB.ALL", "*");
-    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "kCC.ALL", "*");
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "kAA.ALL", "client");
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "kBB.ALL", "foo");
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "kCC.ALL", "foo1");
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "kDD.ALL", "bar");
 
     writeConf(testDir, conf);
 
@@ -1611,9 +1623,16 @@ public class TestKMS {
         conf.setInt(KeyProvider.DEFAULT_BITLENGTH_NAME, 64);
         final URI uri = createKMSUri(getKMSUrl());
 
-        // proxyuser client using kerberos credentials
-        final UserGroupInformation clientUgi = UserGroupInformation.
-            loginUserFromKeytabAndReturnUGI("client", keytab.getAbsolutePath());
+        UserGroupInformation proxyUgi = null;
+        if (kerberos) {
+          // proxyuser client using kerberos credentials
+          proxyUgi = UserGroupInformation.
+              loginUserFromKeytabAndReturnUGI("client", keytab.getAbsolutePath());
+        } else {
+          proxyUgi = UserGroupInformation.createRemoteUser("client");
+        }
+
+        final UserGroupInformation clientUgi = proxyUgi; 
         clientUgi.doAs(new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {
@@ -1649,6 +1668,123 @@ public class TestKMS {
                 return null;
               }
             });
+
+            // authorized proxyuser
+            UserGroupInformation barUgi =
+                UserGroupInformation.createProxyUser("bar", clientUgi);
+            barUgi.doAs(new PrivilegedExceptionAction<Void>() {
+              @Override
+              public Void run() throws Exception {
+                Assert.assertNotNull(kp.createKey("kDD",
+                    new KeyProvider.Options(conf)));
+                return null;
+              }
+            });
+            return null;
+          }
+        });
+
+        return null;
+      }
+    });
+  }
+
+  @Test
+  public void testWebHDFSProxyUserKerb() throws Exception {
+    doWebHDFSProxyUserTest(true);
+  }
+
+  @Test
+  public void testWebHDFSProxyUserSimple() throws Exception {
+    doWebHDFSProxyUserTest(false);
+  }
+
+  public void doWebHDFSProxyUserTest(final boolean kerberos) throws Exception {
+    Configuration conf = new Configuration();
+    conf.set("hadoop.security.authentication", "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+    final File testDir = getTestDir();
+    conf = createBaseKMSConf(testDir);
+    if (kerberos) {
+      conf.set("hadoop.kms.authentication.type", "kerberos");
+    }
+    conf.set("hadoop.kms.authentication.kerberos.keytab",
+        keytab.getAbsolutePath());
+    conf.set("hadoop.kms.authentication.kerberos.principal", "HTTP/localhost");
+    conf.set("hadoop.kms.authentication.kerberos.name.rules", "DEFAULT");
+    conf.set("hadoop.security.kms.client.timeout", "300");
+    conf.set("hadoop.kms.proxyuser.client.users", "foo,bar");
+    conf.set("hadoop.kms.proxyuser.client.hosts", "*");
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "kAA.ALL", "foo");
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "kBB.ALL", "foo1");
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "kCC.ALL", "bar");
+
+    writeConf(testDir, conf);
+
+    runServer(null, null, testDir, new KMSCallable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        final Configuration conf = new Configuration();
+        conf.setInt(KeyProvider.DEFAULT_BITLENGTH_NAME, 64);
+        final URI uri = createKMSUri(getKMSUrl());
+
+        UserGroupInformation proxyUgi = null;
+        if (kerberos) {
+          // proxyuser client using kerberos credentials
+          proxyUgi = UserGroupInformation.
+              loginUserFromKeytabAndReturnUGI("client", keytab.getAbsolutePath());
+        } else {
+          proxyUgi = UserGroupInformation.createRemoteUser("client");
+        }
+
+        final UserGroupInformation clientUgi = proxyUgi; 
+        clientUgi.doAs(new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+
+            // authorized proxyuser
+            UserGroupInformation fooUgi =
+                UserGroupInformation.createProxyUser("foo", clientUgi);
+            fooUgi.doAs(new PrivilegedExceptionAction<Void>() {
+              @Override
+              public Void run() throws Exception {
+                KeyProvider kp = new KMSClientProvider(uri, conf);
+                Assert.assertNotNull(kp.createKey("kAA",
+                    new KeyProvider.Options(conf)));
+                return null;
+              }
+            });
+
+            // unauthorized proxyuser
+            UserGroupInformation foo1Ugi =
+                UserGroupInformation.createProxyUser("foo1", clientUgi);
+            foo1Ugi.doAs(new PrivilegedExceptionAction<Void>() {
+              @Override
+              public Void run() throws Exception {
+                try {
+                  KeyProvider kp = new KMSClientProvider(uri, conf);
+                  kp.createKey("kBB", new KeyProvider.Options(conf));
+                  Assert.fail();
+                } catch (Exception ex) {
+                  Assert.assertTrue(ex.getMessage(), ex.getMessage().contains("Forbidden"));
+                }
+                return null;
+              }
+            });
+
+            // authorized proxyuser
+            UserGroupInformation barUgi =
+                UserGroupInformation.createProxyUser("bar", clientUgi);
+            barUgi.doAs(new PrivilegedExceptionAction<Void>() {
+              @Override
+              public Void run() throws Exception {
+                KeyProvider kp = new KMSClientProvider(uri, conf);
+                Assert.assertNotNull(kp.createKey("kCC",
+                    new KeyProvider.Options(conf)));
+                return null;
+              }
+            });
+
             return null;
           }
         });
