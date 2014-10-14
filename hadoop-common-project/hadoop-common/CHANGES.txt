@@ -833,6 +833,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11176. KMSClientProvider authentication fails when both currentUgi
     and loginUgi are a proxied user. (Arun Suresh via atm)
 
+    HADOOP-11198. Fix typo in javadoc for FileSystem#listStatus().
+    (Li Lu via wheat9)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HADOOP-10734. Implement high-performance secure random number sources.
