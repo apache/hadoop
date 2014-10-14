@@ -250,8 +250,8 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   private SSLFactory sslFactory;
   private ConnectionConfigurator configurator;
   private DelegationTokenAuthenticatedURL.Token authToken;
-  private UserGroupInformation loginUgi;
   private final int authRetry;
+  private final UserGroupInformation actualUgi;
 
   @Override
   public String toString() {
@@ -335,7 +335,11 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
                     KMS_CLIENT_ENC_KEY_CACHE_NUM_REFILL_THREADS_DEFAULT),
             new EncryptedQueueRefiller());
     authToken = new DelegationTokenAuthenticatedURL.Token();
-    loginUgi = UserGroupInformation.getCurrentUser();
+    actualUgi =
+        (UserGroupInformation.getCurrentUser().getAuthenticationMethod() ==
+        UserGroupInformation.AuthenticationMethod.PROXY) ? UserGroupInformation
+            .getCurrentUser().getRealUser() : UserGroupInformation
+            .getCurrentUser();
   }
 
   private String createServiceURL(URL url) throws IOException {
@@ -406,7 +410,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
                               ? currentUgi.getShortUserName() : null;
 
       // creating the HTTP connection using the current UGI at constructor time
-      conn = loginUgi.doAs(new PrivilegedExceptionAction<HttpURLConnection>() {
+      conn = actualUgi.doAs(new PrivilegedExceptionAction<HttpURLConnection>() {
         @Override
         public HttpURLConnection run() throws Exception {
           DelegationTokenAuthenticatedURL authUrl =
@@ -456,8 +460,6 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       // WWW-Authenticate header as well)..
       KMSClientProvider.this.authToken =
           new DelegationTokenAuthenticatedURL.Token();
-      KMSClientProvider.this.loginUgi =
-          UserGroupInformation.getCurrentUser();
       if (authRetryCount > 0) {
         String contentType = conn.getRequestProperty(CONTENT_TYPE);
         String requestMethod = conn.getRequestMethod();
@@ -474,9 +476,6 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       // Ignore the AuthExceptions.. since we are just using the method to
       // extract and set the authToken.. (Workaround till we actually fix
       // AuthenticatedURL properly to set authToken post initialization)
-    } finally {
-      KMSClientProvider.this.loginUgi =
-          UserGroupInformation.getCurrentUser();
     }
     HttpExceptionUtils.validateResponse(conn, expectedResponse);
     if (APPLICATION_JSON_MIME.equalsIgnoreCase(conn.getContentType())
