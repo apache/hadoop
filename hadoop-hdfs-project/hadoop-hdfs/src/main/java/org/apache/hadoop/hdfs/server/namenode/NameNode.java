@@ -215,10 +215,8 @@ public class NameNode implements NameNodeStatusMXBean {
         " [" + StartupOption.CLUSTERID.getName() + " cid]" +
         " [" + StartupOption.RENAMERESERVED.getName() + "<k-v pairs>] ] | \n\t["
       + StartupOption.ROLLBACK.getName() + "] | \n\t["
-      + StartupOption.ROLLINGUPGRADE.getName() + " <"
-      + RollingUpgradeStartupOption.DOWNGRADE.name().toLowerCase() + "|"
-      + RollingUpgradeStartupOption.ROLLBACK.name().toLowerCase() + "|"
-      + RollingUpgradeStartupOption.STARTED.name().toLowerCase() + "> ] | \n\t["
+      + StartupOption.ROLLINGUPGRADE.getName() + " "
+      + RollingUpgradeStartupOption.getAllOptionString() + " ] | \n\t["
       + StartupOption.FINALIZE.getName() + "] | \n\t["
       + StartupOption.IMPORT.getName() + "] | \n\t["
       + StartupOption.INITIALIZESHAREDEDITS.getName() + "] | \n\t["
@@ -1249,6 +1247,11 @@ public class NameNode implements NameNodeStatusMXBean {
       } else if (StartupOption.ROLLINGUPGRADE.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.ROLLINGUPGRADE;
         ++i;
+        if (i >= argsLen) {
+          LOG.fatal("Must specify a rolling upgrade startup option "
+              + RollingUpgradeStartupOption.getAllOptionString());
+          return null;
+        }
         startOpt.setRollingUpgradeStartupOption(args[i]);
       } else if (StartupOption.ROLLBACK.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.ROLLBACK;
@@ -1503,7 +1506,7 @@ public class NameNode implements NameNodeStatusMXBean {
         namenode.join();
       }
     } catch (Throwable e) {
-      LOG.fatal("Exception in namenode join", e);
+      LOG.fatal("Failed to start namenode.", e);
       terminate(1, e);
     }
   }
