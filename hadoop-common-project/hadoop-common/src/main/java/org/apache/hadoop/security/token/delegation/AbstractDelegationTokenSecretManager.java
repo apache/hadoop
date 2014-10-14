@@ -648,4 +648,17 @@ extends AbstractDelegationTokenIdentifier>
       }
     }
   }
+
+  /**
+   * Decode the token identifier. The subclass can customize the way to decode
+   * the token identifier.
+   * 
+   * @param token the token where to extract the identifier
+   * @return the delegation token identifier
+   * @throws IOException
+   */
+  public TokenIdent decodeTokenIdentifier(Token<TokenIdent> token) throws IOException {
+    return token.decodeIdentifier();
+  }
+
 }

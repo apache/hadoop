@@ -32,6 +32,7 @@ public class TestZKDelegationTokenSecretManager {
 
   private static final long DAY_IN_SECS = 86400;
 
+  @SuppressWarnings("unchecked")
   @Test
   public void testZKDelTokSecretManager() throws Exception {
     TestingServer zkServer = new TestingServer();
@@ -54,11 +55,13 @@ public class TestZKDelegationTokenSecretManager {
       tm2.init();
 
       Token<DelegationTokenIdentifier> token =
-          tm1.createToken(UserGroupInformation.getCurrentUser(), "foo");
+          (Token<DelegationTokenIdentifier>) tm1.createToken(
+              UserGroupInformation.getCurrentUser(), "foo");
       Assert.assertNotNull(token);
       tm2.verifyToken(token);
 
-      token = tm2.createToken(UserGroupInformation.getCurrentUser(), "bar");
+      token = (Token<DelegationTokenIdentifier>) tm2.createToken(
+          UserGroupInformation.getCurrentUser(), "bar");
       Assert.assertNotNull(token);
       tm1.verifyToken(token);
     } finally {

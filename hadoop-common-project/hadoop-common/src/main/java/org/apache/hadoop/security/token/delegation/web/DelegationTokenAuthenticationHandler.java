@@ -28,6 +28,7 @@ import org.apache.hadoop.security.authentication.server.AuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.AuthenticationToken;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.util.HttpExceptionUtils;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -216,8 +217,7 @@ public abstract class DelegationTokenAuthenticationHandler
                 );
                 requestContinues = false;
               } else {
-                Token<DelegationTokenIdentifier> dt =
-                    new Token<DelegationTokenIdentifier>();
+                Token<AbstractDelegationTokenIdentifier> dt = new Token();
                 try {
                   dt.decodeFromUrlString(tokenToRenew);
                   long expirationTime = tokenManager.renewToken(dt,
@@ -240,8 +240,7 @@ public abstract class DelegationTokenAuthenticationHandler
                 );
                 requestContinues = false;
               } else {
-                Token<DelegationTokenIdentifier> dt =
-                    new Token<DelegationTokenIdentifier>();
+                Token<AbstractDelegationTokenIdentifier> dt = new Token();
                 try {
                   dt.decodeFromUrlString(tokenToCancel);
                   tokenManager.cancelToken(dt, (requestUgi != null)
@@ -303,6 +302,7 @@ public abstract class DelegationTokenAuthenticationHandler
    * @throws IOException thrown if an IO error occurred.
    * @throws AuthenticationException thrown if the authentication failed.
    */
+  @SuppressWarnings("unchecked")
   @Override
   public AuthenticationToken authenticate(HttpServletRequest request,
       HttpServletResponse response)
@@ -311,8 +311,7 @@ public abstract class DelegationTokenAuthenticationHandler
     String delegationParam = getDelegationToken(request);
     if (delegationParam != null) {
       try {
-        Token<DelegationTokenIdentifier> dt =
-            new Token<DelegationTokenIdentifier>();
+        Token<AbstractDelegationTokenIdentifier> dt = new Token();
         dt.decodeFromUrlString(delegationParam);
         UserGroupInformation ugi = tokenManager.verifyToken(dt);
         final String shortName = ugi.getShortUserName();

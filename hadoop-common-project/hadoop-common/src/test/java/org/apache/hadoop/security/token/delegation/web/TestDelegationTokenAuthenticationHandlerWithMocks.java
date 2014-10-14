@@ -202,6 +202,7 @@ public class TestDelegationTokenAuthenticationHandlerWithMocks {
     Assert.assertEquals(expectedTokenKind, dt.getKind());
   }
 
+  @SuppressWarnings("unchecked")
   private void testCancelToken() throws Exception {
     DelegationTokenAuthenticator.DelegationTokenOperation op =
         DelegationTokenAuthenticator.DelegationTokenOperation.
@@ -220,7 +221,7 @@ public class TestDelegationTokenAuthenticationHandlerWithMocks {
 
     Mockito.reset(response);
     Token<DelegationTokenIdentifier> token =
-        handler.getTokenManager().createToken(
+        (Token<DelegationTokenIdentifier>) handler.getTokenManager().createToken(
             UserGroupInformation.getCurrentUser(), "foo");
     Mockito.when(request.getQueryString()).thenReturn(
         DelegationTokenAuthenticator.OP_PARAM + "=" + op.toString() + "&" +
@@ -239,6 +240,7 @@ public class TestDelegationTokenAuthenticationHandlerWithMocks {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void testRenewToken() throws Exception {
     DelegationTokenAuthenticator.DelegationTokenOperation op =
         DelegationTokenAuthenticator.DelegationTokenOperation.
@@ -271,7 +273,7 @@ public class TestDelegationTokenAuthenticationHandlerWithMocks {
     PrintWriter pwriter = new PrintWriter(writer);
     Mockito.when(response.getWriter()).thenReturn(pwriter);
     Token<DelegationTokenIdentifier> dToken =
-        handler.getTokenManager().createToken(
+        (Token<DelegationTokenIdentifier>) handler.getTokenManager().createToken(
             UserGroupInformation.getCurrentUser(), "user");
     Mockito.when(request.getQueryString()).
         thenReturn(DelegationTokenAuthenticator.OP_PARAM + "=" + op.toString() +
@@ -292,11 +294,12 @@ public class TestDelegationTokenAuthenticationHandlerWithMocks {
     testInvalidDelegationTokenHeader();
   }
 
+  @SuppressWarnings("unchecked")
   private void testValidDelegationTokenQueryString() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
     Token<DelegationTokenIdentifier> dToken =
-        handler.getTokenManager().createToken(
+        (Token<DelegationTokenIdentifier>) handler.getTokenManager().createToken(
             UserGroupInformation.getCurrentUser(), "user");
     Mockito.when(request.getQueryString()).thenReturn(
         DelegationTokenAuthenticator.DELEGATION_PARAM + "=" +
@@ -311,11 +314,12 @@ public class TestDelegationTokenAuthenticationHandlerWithMocks {
     Assert.assertTrue(token.isExpired());
   }
 
+  @SuppressWarnings("unchecked")
   private void testValidDelegationTokenHeader() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
     Token<DelegationTokenIdentifier> dToken =
-        handler.getTokenManager().createToken(
+        (Token<DelegationTokenIdentifier>) handler.getTokenManager().createToken(
             UserGroupInformation.getCurrentUser(), "user");
     Mockito.when(request.getHeader(Mockito.eq(
         DelegationTokenAuthenticator.DELEGATION_TOKEN_HEADER))).thenReturn(
