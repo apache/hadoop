@@ -72,6 +72,15 @@ public final class HdfsServerConstants {
       throw new IllegalArgumentException("Failed to convert \"" + s
           + "\" to " + RollingUpgradeStartupOption.class.getSimpleName());
     }
+
+    public static String getAllOptionString() {
+      final StringBuilder b = new StringBuilder("<");
+      for(RollingUpgradeStartupOption opt : VALUES) {
+        b.append(opt.name().toLowerCase()).append("|");
+      }
+      b.setCharAt(b.length() - 1, '>');
+      return b.toString();
+    }
   }
 
   /** Startup options */
