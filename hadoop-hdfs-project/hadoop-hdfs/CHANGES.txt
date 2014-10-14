@@ -593,6 +593,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6544. Broken Link for GFS in package.html. (Suraj Nayak M via wheat9)
 
+    HDFS-7237. The command "hdfs namenode -rollingUpgrade" throws
+    ArrayIndexOutOfBoundsException.  (szetszwo)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
