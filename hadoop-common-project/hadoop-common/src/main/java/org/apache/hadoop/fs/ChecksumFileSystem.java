@@ -562,7 +562,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * 
    * @param f
    *          given path
-   * @return the statuses of the files/directories in the given patch
+   * @return the statuses of the files/directories in the given path
    * @throws IOException
    */
   @Override
