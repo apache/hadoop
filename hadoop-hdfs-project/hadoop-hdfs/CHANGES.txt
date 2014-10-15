@@ -561,6 +561,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7237. The command "hdfs namenode -rollingUpgrade" throws
     ArrayIndexOutOfBoundsException.  (szetszwo)
 
+    HDFS-7185. The active NameNode will not accept an fsimage sent from the
+    standby during rolling upgrade. (jing9)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
