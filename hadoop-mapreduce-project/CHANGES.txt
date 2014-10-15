@@ -55,6 +55,9 @@ Release 2.6.0 - UNRELEASED
 
     MAPREDUCE-6072. Remove INSTALL document (Akira AJISAKA via aw)
 
+    MAPREDUCE-5970. Provide a boolean switch to enable MR-AM profiling (Gera
+    Shegalov via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES
