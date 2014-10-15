@@ -169,7 +169,7 @@ public class TestContainerResourceUsage {
     // launch the 2nd and 3rd containers.
     for (Container c : conts) {
       nm.nodeHeartbeat(attempt0.getAppAttemptId(),
-                       c.getId().getId(), ContainerState.RUNNING);
+                       c.getId().getContainerId(), ContainerState.RUNNING);
       rm0.waitForState(nm, c.getId(), RMContainerState.RUNNING);
     }
 
@@ -185,9 +185,9 @@ public class TestContainerResourceUsage {
 
     // Stop all non-AM containers
     for (Container c : conts) {
-      if (c.getId().getId() == 1) continue;
+      if (c.getId().getContainerId() == 1) continue;
       nm.nodeHeartbeat(attempt0.getAppAttemptId(),
-                       c.getId().getId(), ContainerState.COMPLETE);
+                       c.getId().getContainerId(), ContainerState.COMPLETE);
       rm0.waitForState(nm, c.getId(), RMContainerState.COMPLETED);
     }
 
@@ -198,7 +198,7 @@ public class TestContainerResourceUsage {
     // that all containers will complete prior to saving.
     ContainerId cId = ContainerId.newInstance(attempt0.getAppAttemptId(), 1);
     nm.nodeHeartbeat(attempt0.getAppAttemptId(),
-                 cId.getId(), ContainerState.COMPLETE);
+                 cId.getContainerId(), ContainerState.COMPLETE);
     rm0.waitForState(nm, cId, RMContainerState.COMPLETED);
 
     // Check that the container metrics match those from the app usage report.
@@ -280,7 +280,7 @@ public class TestContainerResourceUsage {
     ContainerId containerId2 =
         ContainerId.newInstance(am0.getApplicationAttemptId(), 2);
     nm.nodeHeartbeat(am0.getApplicationAttemptId(),
-                      containerId2.getId(), ContainerState.RUNNING);
+                      containerId2.getContainerId(), ContainerState.RUNNING);
     rm.waitForState(nm, containerId2, RMContainerState.RUNNING);
 
     // Capture the containers here so the metrics can be calculated after the
@@ -295,7 +295,7 @@ public class TestContainerResourceUsage {
     ContainerId amContainerId =
         app.getCurrentAppAttempt().getMasterContainer().getId();
     nm.nodeHeartbeat(am0.getApplicationAttemptId(),
-                      amContainerId.getId(), ContainerState.COMPLETE);
+                      amContainerId.getContainerId(), ContainerState.COMPLETE);
     am0.waitForState(RMAppAttemptState.FAILED);
 
     long memorySeconds = 0;
@@ -365,7 +365,7 @@ public class TestContainerResourceUsage {
     // earlier attempt's attemptId
     amContainerId = app.getCurrentAppAttempt().getMasterContainer().getId();
     nm.nodeHeartbeat(am0.getApplicationAttemptId(),
-                      amContainerId.getId(), ContainerState.COMPLETE);
+                      amContainerId.getContainerId(), ContainerState.COMPLETE);
     
     MockRM.finishAMAndVerifyAppState(app, rm, nm, am1);
 

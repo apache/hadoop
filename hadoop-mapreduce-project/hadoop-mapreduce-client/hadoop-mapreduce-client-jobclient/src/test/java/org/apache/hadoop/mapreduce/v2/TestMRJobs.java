@@ -671,7 +671,8 @@ public class TestMRJobs {
           if (!foundAppMaster) {
             final ContainerId cid = ConverterUtils.toContainerId(
                 containerPathComponent.getName());
-            foundAppMaster = (cid.getId() == 1);
+            foundAppMaster =
+                ((cid.getContainerId() & ContainerId.CONTAINER_ID_BITMASK)== 1);
           }
 
           final FileStatus[] sysSiblings = localFs.globStatus(new Path(

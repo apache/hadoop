@@ -157,7 +157,7 @@ public class MapReduceChildJVM {
 
   public static List<String> getVMCommand(
       InetSocketAddress taskAttemptListenerAddr, Task task, 
-      ID jvmID) {
+      JVMId jvmID) {
 
     TaskAttemptID attemptID = task.getTaskID();
     JobConf conf = task.conf;

@@ -219,6 +219,7 @@ public class TestNMClientAsync {
       actualStopFailureArray = new AtomicIntegerArray(expectedFailure);
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public void onContainerStarted(ContainerId containerId,
         Map<String, ByteBuffer> allServiceResponse) {
@@ -242,6 +243,7 @@ public class TestNMClientAsync {
       throw new RuntimeException("Ignorable Exception");
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public void onContainerStatusReceived(ContainerId containerId,
         ContainerStatus containerStatus) {
@@ -259,6 +261,7 @@ public class TestNMClientAsync {
       throw new RuntimeException("Ignorable Exception");
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public void onContainerStopped(ContainerId containerId) {
       if (containerId.getId() >= expectedSuccess) {
@@ -273,6 +276,7 @@ public class TestNMClientAsync {
       throw new RuntimeException("Ignorable Exception");
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public void onStartContainerError(ContainerId containerId, Throwable t) {
       // If the unexpected throwable comes from success callback functions, it
@@ -296,6 +300,7 @@ public class TestNMClientAsync {
       throw new RuntimeException("Ignorable Exception");
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public void onStopContainerError(ContainerId containerId, Throwable t) {
       if (t instanceof RuntimeException) {
@@ -316,6 +321,7 @@ public class TestNMClientAsync {
       throw new RuntimeException("Ignorable Exception");
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public void onGetContainerStatusError(ContainerId containerId,
         Throwable t) {

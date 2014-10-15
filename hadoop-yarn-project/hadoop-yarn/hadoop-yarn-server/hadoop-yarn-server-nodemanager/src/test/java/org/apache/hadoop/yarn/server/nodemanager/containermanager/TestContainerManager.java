@@ -665,13 +665,13 @@ public class TestContainerManager extends BaseContainerManagerTest {
     Assert.assertEquals(5, response.getSuccessfullyStartedContainers().size());
     for (ContainerId id : response.getSuccessfullyStartedContainers()) {
       // Containers with odd id should succeed.
-      Assert.assertEquals(1, id.getId() & 1);
+      Assert.assertEquals(1, id.getContainerId() & 1);
     }
     Assert.assertEquals(5, response.getFailedRequests().size());
     for (Map.Entry<ContainerId, SerializedException> entry : response
       .getFailedRequests().entrySet()) {
       // Containers with even id should fail.
-      Assert.assertEquals(0, entry.getKey().getId() & 1);
+      Assert.assertEquals(0, entry.getKey().getContainerId() & 1);
       Assert.assertTrue(entry.getValue().getMessage()
         .contains(
           "Container " + entry.getKey() + " rejected as it is allocated by a previous RM"));
@@ -718,13 +718,13 @@ public class TestContainerManager extends BaseContainerManagerTest {
     Assert.assertEquals(5, statusResponse.getContainerStatuses().size());
     for (ContainerStatus status : statusResponse.getContainerStatuses()) {
       // Containers with odd id should succeed
-      Assert.assertEquals(1, status.getContainerId().getId() & 1);
+      Assert.assertEquals(1, status.getContainerId().getContainerId() & 1);
     }
     Assert.assertEquals(5, statusResponse.getFailedRequests().size());
     for (Map.Entry<ContainerId, SerializedException> entry : statusResponse
       .getFailedRequests().entrySet()) {
       // Containers with even id should fail.
-      Assert.assertEquals(0, entry.getKey().getId() & 1);
+      Assert.assertEquals(0, entry.getKey().getContainerId() & 1);
       Assert.assertTrue(entry.getValue().getMessage()
         .contains("Reject this container"));
     }
@@ -738,13 +738,13 @@ public class TestContainerManager extends BaseContainerManagerTest {
       .size());
     for (ContainerId id : stopResponse.getSuccessfullyStoppedContainers()) {
       // Containers with odd id should succeed.
-      Assert.assertEquals(1, id.getId() & 1);
+      Assert.assertEquals(1, id.getContainerId() & 1);
     }
     Assert.assertEquals(5, stopResponse.getFailedRequests().size());
     for (Map.Entry<ContainerId, SerializedException> entry : stopResponse
       .getFailedRequests().entrySet()) {
       // Containers with even id should fail.
-      Assert.assertEquals(0, entry.getKey().getId() & 1);
+      Assert.assertEquals(0, entry.getKey().getContainerId() & 1);
       Assert.assertTrue(entry.getValue().getMessage()
         .contains("Reject this container"));
     }

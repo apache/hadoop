@@ -1513,8 +1513,8 @@ public abstract class TaskAttemptImpl implements
       taskAttempt.remoteTask = taskAttempt.createRemoteTask();
       taskAttempt.jvmID =
           new WrappedJvmID(taskAttempt.remoteTask.getTaskID().getJobID(),
-            taskAttempt.remoteTask.isMapTask(), taskAttempt.container.getId()
-              .getId());
+              taskAttempt.remoteTask.isMapTask(),
+              taskAttempt.container.getId().getContainerId());
       taskAttempt.taskAttemptListener.registerPendingTask(
           taskAttempt.remoteTask, taskAttempt.jvmID);
 
