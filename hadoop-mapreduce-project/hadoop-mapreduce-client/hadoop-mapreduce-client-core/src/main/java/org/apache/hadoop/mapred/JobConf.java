@@ -1643,8 +1643,7 @@ public class JobConf extends Configuration {
    */
   public String getProfileParams() {
     return get(JobContext.TASK_PROFILE_PARAMS,
-               "-agentlib:hprof=cpu=samples,heap=sites,force=n,thread=y," +
-                 "verbose=n,file=%s");
+        MRJobConfig.DEFAULT_TASK_PROFILE_PARAMS);
   }
 
   /**
