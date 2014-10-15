@@ -23,8 +23,8 @@ package org.apache.hadoop.mapred;
  */
 public class WrappedJvmID extends JVMId {
 
-  public WrappedJvmID(JobID jobID, boolean mapTask, int nextInt) {
-    super(jobID, mapTask, nextInt);
+  public WrappedJvmID(JobID jobID, boolean mapTask, long nextLong) {
+    super(jobID, mapTask, nextLong);
   }
 
 }

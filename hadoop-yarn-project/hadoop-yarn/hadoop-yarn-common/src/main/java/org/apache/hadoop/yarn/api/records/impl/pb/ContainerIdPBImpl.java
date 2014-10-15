@@ -47,6 +47,7 @@ public class ContainerIdPBImpl extends ContainerId {
     return proto;
   }
 
+  @Deprecated
   @Override
   public int getId() {
     Preconditions.checkNotNull(proto);

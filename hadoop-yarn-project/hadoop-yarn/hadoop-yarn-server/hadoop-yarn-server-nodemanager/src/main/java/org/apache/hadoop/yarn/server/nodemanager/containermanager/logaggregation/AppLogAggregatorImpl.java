@@ -430,7 +430,8 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     // AM Container only
     if (this.retentionPolicy
         .equals(ContainerLogsRetentionPolicy.APPLICATION_MASTER_ONLY)) {
-      if (containerId.getId() == 1) {
+      if ((containerId.getContainerId()
+          & ContainerId.CONTAINER_ID_BITMASK)== 1) {
         return true;
       }
       return false;
@@ -439,7 +440,8 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     // AM + Failing containers
     if (this.retentionPolicy
         .equals(ContainerLogsRetentionPolicy.AM_AND_FAILED_CONTAINERS_ONLY)) {
-      if (containerId.getId() == 1) {
+      if ((containerId.getContainerId()
+          & ContainerId.CONTAINER_ID_BITMASK) == 1) {
         return true;
       } else if(!wasContainerSuccessful) {
         return true;

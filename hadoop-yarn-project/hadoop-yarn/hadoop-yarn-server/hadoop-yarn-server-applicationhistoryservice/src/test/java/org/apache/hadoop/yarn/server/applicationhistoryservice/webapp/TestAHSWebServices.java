@@ -265,6 +265,7 @@ public class TestAHSWebServices extends JerseyTest {
     assertEquals("incorrect number of elements", 5, array.length());
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testSingleContainer() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(0, 1);

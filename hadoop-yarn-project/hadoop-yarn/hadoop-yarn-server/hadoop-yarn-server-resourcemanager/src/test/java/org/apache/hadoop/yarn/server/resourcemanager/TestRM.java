@@ -206,7 +206,8 @@ public class TestRM {
     nm1.nodeHeartbeat(true);
     MockAM am = MockRM.launchAM(app, rm, nm1);
     // am container Id not equal to 1.
-    Assert.assertTrue(attempt.getMasterContainer().getId().getId() != 1);
+    Assert.assertTrue(
+        attempt.getMasterContainer().getId().getContainerId() != 1);
     // NMSecretManager doesn't record the node on which the am is allocated.
     Assert.assertFalse(rm.getRMContext().getNMTokenSecretManager()
       .isApplicationAttemptNMTokenPresent(attempt.getAppAttemptId(),
@@ -374,11 +375,13 @@ public class TestRM {
       am.unregisterAppAttempt();
       // marking all the containers as finished.
       for (Container container : containersReceivedForNM1) {
-        nm1.nodeHeartbeat(attempt.getAppAttemptId(), container.getId().getId(),
+        nm1.nodeHeartbeat(attempt.getAppAttemptId(),
+            container.getId().getContainerId(),
             ContainerState.COMPLETE);
       }
       for (Container container : containersReceivedForNM2) {
-        nm2.nodeHeartbeat(attempt.getAppAttemptId(), container.getId().getId(),
+        nm2.nodeHeartbeat(attempt.getAppAttemptId(),
+            container.getId().getContainerId(),
             ContainerState.COMPLETE);
       }
       nm1.nodeHeartbeat(am.getApplicationAttemptId(), 1,

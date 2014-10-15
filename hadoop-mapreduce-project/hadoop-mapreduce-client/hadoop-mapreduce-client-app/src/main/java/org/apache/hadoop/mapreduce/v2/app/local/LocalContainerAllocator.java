@@ -150,7 +150,7 @@ public class LocalContainerAllocator extends RMCommunicator
       // Assign the same container ID as the AM
       ContainerId cID =
           ContainerId.newInstance(getContext().getApplicationAttemptId(),
-            this.containerId.getId());
+            this.containerId.getContainerId());
       Container container = recordFactory.newRecordInstance(Container.class);
       container.setId(cID);
       NodeId nodeId = NodeId.newInstance(this.nmHost, this.nmPort);

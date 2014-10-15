@@ -82,9 +82,9 @@ class YarnChild {
     final InetSocketAddress address =
         NetUtils.createSocketAddrForHost(host, port);
     final TaskAttemptID firstTaskid = TaskAttemptID.forName(args[2]);
-    int jvmIdInt = Integer.parseInt(args[3]);
+    long jvmIdLong = Long.parseLong(args[3]);
     JVMId jvmId = new JVMId(firstTaskid.getJobID(),
-        firstTaskid.getTaskType() == TaskType.MAP, jvmIdInt);
+        firstTaskid.getTaskType() == TaskType.MAP, jvmIdLong);
 
     // initialize metrics
     DefaultMetricsSystem.initialize(

@@ -130,6 +130,7 @@ public class TestMemoryApplicationHistoryStore extends
     }
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testReadWriteContainerHistory() throws Exception {
     // Out of order
