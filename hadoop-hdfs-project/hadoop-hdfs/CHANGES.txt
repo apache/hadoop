@@ -38,6 +38,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7201. Fix typos in hdfs-default.xml. (Dawson Choong via wheat9)
 
+    HDFS-7190. Bad use of Preconditions in startFileInternal().
+    (Dawson Choong via wheat9)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

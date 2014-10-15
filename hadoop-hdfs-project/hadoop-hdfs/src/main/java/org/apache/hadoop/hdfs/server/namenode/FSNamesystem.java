@@ -2648,7 +2648,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           edek.getEncryptedKeyVersion().getMaterial(),
           edek.getEncryptedKeyIv(),
           ezKeyName, edek.getEncryptionKeyVersionName());
-      Preconditions.checkNotNull(feInfo);
     }
 
     final INodeFile myFile = INodeFile.valueOf(inode, src, true);
