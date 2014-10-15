@@ -544,7 +544,7 @@ class Fetcher<K,V> extends Thread {
       retryStartTime = 0;
       
       scheduler.copySucceeded(mapId, host, compressedLength, 
-                              endTime - startTime, mapOutput);
+                              startTime, endTime, mapOutput);
       // Note successful shuffle
       remaining.remove(mapId);
       metrics.successFetch();
