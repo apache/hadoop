@@ -89,8 +89,8 @@ public class GraphiteSink implements MetricsSink, Closeable {
             }
         }
 
-        // Round the timestamp to second as Graphite accepts it in such format.
-        int timestamp = Math.round(record.timestamp() / 1000.0f);
+        // The record timestamp is in milliseconds while Graphite expects an epoc time in seconds.
+        long timestamp = record.timestamp() / 1000L;
 
         // Collect datapoints.
         for (AbstractMetric metric : record.metrics()) {
