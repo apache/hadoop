@@ -162,7 +162,7 @@ class LocalFetcher<K,V> extends Fetcher<K, V> {
       }
     }
 
-    scheduler.copySucceeded(mapTaskId, LOCALHOST, compressedLength, 0,
+    scheduler.copySucceeded(mapTaskId, LOCALHOST, compressedLength, 0, 0,
         mapOutput);
     return true; // successful fetch.
   }
