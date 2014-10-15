@@ -394,6 +394,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-6657. Remove link to 'Legacy UI' in trunk's Namenode UI.
     (Vinayakumar B via wheat)
 
+    HDFS-7201. Fix typos in hdfs-default.xml. (Dawson Choong via wheat9)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

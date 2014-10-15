@@ -752,7 +752,7 @@
   <name>dfs.namenode.replication.interval</name>
   <value>3</value>
   <description>The periodicity in seconds with which the namenode computes 
-  repliaction work for datanodes. </description>
+  replication work for datanodes. </description>
 </property>
 
 <property>
@@ -826,8 +826,8 @@
   <value>${dfs.namenode.checkpoint.dir}</value>
   <description>Determines where on the local filesystem the DFS secondary
       name node should store the temporary edits to merge.
-      If this is a comma-delimited list of directoires then teh edits is
-      replicated in all of the directoires for redundancy.
+      If this is a comma-delimited list of directories then the edits is
+      replicated in all of the directories for redundancy.
       Default value is same as dfs.namenode.checkpoint.dir
   </description>
 </property>
@@ -958,7 +958,7 @@
         dfs.image.transfer.bandwidthPerSec parameter should be configured such
         that normal image transfer can complete successfully.
         This timeout prevents client hangs when the sender fails during
-        image transfer. This is socket timeout during image tranfer.
+        image transfer. This is socket timeout during image transfer.
   </description>
 </property>
 
@@ -1035,7 +1035,7 @@
         (e.g HBase random-IO workloads).
 
         This may improve performance for some workloads by freeing buffer
-        cache spage usage for more cacheable data.
+        cache space usage for more cacheable data.
 
         If the Hadoop native libraries are not available, this configuration
         has no effect.
@@ -1053,7 +1053,7 @@
         after it is written to disk.
 
         This may improve performance for some workloads by freeing buffer
-        cache spage usage for more cacheable data.
+        cache space usage for more cacheable data.
 
         If the Hadoop native libraries are not available, this configuration
         has no effect.
