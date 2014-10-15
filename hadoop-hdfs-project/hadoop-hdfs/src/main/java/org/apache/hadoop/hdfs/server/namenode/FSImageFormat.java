@@ -210,7 +210,8 @@ public class FSImageFormat {
       return impl.getLoadedImageTxId();
     }
 
-    public void load(File file) throws IOException {
+    public void load(File file, boolean requireSameLayoutVersion)
+        throws IOException {
       Preconditions.checkState(impl == null, "Image already loaded!");
 
       FileInputStream is = null;
@@ -220,7 +221,7 @@ public class FSImageFormat {
         IOUtils.readFully(is, magic, 0, magic.length);
         if (Arrays.equals(magic, FSImageUtil.MAGIC_HEADER)) {
           FSImageFormatProtobuf.Loader loader = new FSImageFormatProtobuf.Loader(
-              conf, fsn);
+              conf, fsn, requireSameLayoutVersion);
           impl = loader;
           loader.load(file);
         } else {
@@ -228,7 +229,6 @@ public class FSImageFormat {
           impl = loader;
           loader.load(file);
         }
-
       } finally {
         IOUtils.cleanup(LOG, is);
       }
