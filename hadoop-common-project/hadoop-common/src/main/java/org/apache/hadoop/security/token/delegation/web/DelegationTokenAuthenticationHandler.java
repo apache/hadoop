@@ -81,7 +81,7 @@ public abstract class DelegationTokenAuthenticationHandler
 
   private static final Set<String> DELEGATION_TOKEN_OPS = new HashSet<String>();
 
-  static final String DELEGATION_TOKEN_UGI_ATTRIBUTE =
+  public static final String DELEGATION_TOKEN_UGI_ATTRIBUTE =
       "hadoop.security.delegation-token.ugi";
 
   static {
