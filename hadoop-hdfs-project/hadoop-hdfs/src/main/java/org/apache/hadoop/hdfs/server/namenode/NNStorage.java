@@ -39,9 +39,11 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
+import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
 import org.apache.hadoop.hdfs.server.common.Util;
@@ -620,6 +622,23 @@ public class NNStorage extends Storage implements Closeable,
     setDeprecatedPropertiesForUpgrade(props);
   }
 
+  void readProperties(StorageDirectory sd, StartupOption startupOption)
+      throws IOException {
+    Properties props = readPropertiesFile(sd.getVersionFile());
+    if (HdfsServerConstants.RollingUpgradeStartupOption.ROLLBACK.matches
+        (startupOption)) {
+      int lv = Integer.parseInt(getProperty(props, sd, "layoutVersion"));
+      if (lv > getServiceLayoutVersion()) {
+        // we should not use a newer version for rollingUpgrade rollback
+        throw new IncorrectVersionException(getServiceLayoutVersion(), lv,
+            "storage directory " + sd.getRoot().getAbsolutePath());
+      }
+      props.setProperty("layoutVersion",
+          Integer.toString(HdfsConstants.NAMENODE_LAYOUT_VERSION));
+    }
+    setFieldsFromProperties(props, sd);
+  }
+
   /**
    * Pull any properties out of the VERSION file that are from older
    * versions of HDFS and only necessary during upgrade.
@@ -1002,8 +1021,8 @@ public class NNStorage extends Storage implements Closeable,
    * <b>Note:</b> this can mutate the storage info fields (ctime, version, etc).
    * @throws IOException if no valid storage dirs are found or no valid layout version
    */
-  FSImageStorageInspector readAndInspectDirs(EnumSet<NameNodeFile> fileTypes)
-      throws IOException {
+  FSImageStorageInspector readAndInspectDirs(EnumSet<NameNodeFile> fileTypes,
+      StartupOption startupOption) throws IOException {
     Integer layoutVersion = null;
     boolean multipleLV = false;
     StringBuilder layoutVersions = new StringBuilder();
@@ -1016,7 +1035,7 @@ public class NNStorage extends Storage implements Closeable,
         FSImage.LOG.warn("Storage directory " + sd + " contains no VERSION file. Skipping...");
         continue;
       }
-      readProperties(sd); // sets layoutVersion
+      readProperties(sd, startupOption); // sets layoutVersion
       int lv = getLayoutVersion();
       if (layoutVersion == null) {
         layoutVersion = Integer.valueOf(lv);
