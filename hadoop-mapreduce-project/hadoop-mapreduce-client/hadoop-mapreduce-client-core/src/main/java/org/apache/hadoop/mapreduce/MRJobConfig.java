@@ -179,6 +179,10 @@ public interface MRJobConfig {
 
   public static final String TASK_PROFILE_PARAMS = "mapreduce.task.profile.params";
 
+  public static final String DEFAULT_TASK_PROFILE_PARAMS =
+      "-agentlib:hprof=cpu=samples,heap=sites,force=n,thread=y,"
+          + "verbose=n,file=%s";
+
   public static final String NUM_MAP_PROFILES = "mapreduce.task.profile.maps";
 
   public static final String NUM_REDUCE_PROFILES = "mapreduce.task.profile.reduces";
@@ -603,7 +607,12 @@ public interface MRJobConfig {
   
   public static final String MR_AM_ADMIN_USER_ENV =
       MR_AM_PREFIX + "admin.user.env";
-  
+
+  public static final String MR_AM_PROFILE = MR_AM_PREFIX + "profile";
+  public static final boolean DEFAULT_MR_AM_PROFILE = false;
+  public static final String MR_AM_PROFILE_PARAMS = MR_AM_PREFIX
+      + "profile.params";
+
   public static final String MAPRED_MAP_ADMIN_JAVA_OPTS =
       "mapreduce.admin.map.child.java.opts";
 
