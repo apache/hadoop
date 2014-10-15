@@ -101,7 +101,7 @@ public class TestCheckpointPreemptionPolicy {
 
     for (Map.Entry<ContainerId,TaskAttemptId> ent :
          assignedContainers.entrySet()) {
-      System.out.println("cont:" + ent.getKey().getId() +
+      System.out.println("cont:" + ent.getKey().getContainerId() +
           " type:" + ent.getValue().getTaskId().getTaskType() +
           " res:" + contToResourceMap.get(ent.getKey()).getMemory() + "MB" );
     }

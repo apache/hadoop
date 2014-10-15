@@ -199,8 +199,8 @@ public class TestYarnServerApiClasses {
     original.setResponseId(1);
 
     NodeStatusPBImpl copy = new NodeStatusPBImpl(original.getProto());
-    assertEquals(3, copy.getContainersStatuses().get(1).getContainerId()
-        .getId());
+    assertEquals(3L, copy.getContainersStatuses().get(1).getContainerId()
+        .getContainerId());
     assertEquals(3, copy.getKeepAliveApplications().get(0).getId());
     assertEquals(1000, copy.getNodeHealthStatus().getLastHealthReportTime());
     assertEquals(9090, copy.getNodeId().getPort());

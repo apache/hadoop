@@ -68,6 +68,7 @@ public class ApplicationHistoryStoreTestUtils {
       FinalApplicationStatus.UNDEFINED, YarnApplicationAttemptState.FINISHED));
   }
 
+  @SuppressWarnings("deprecation")
   protected void writeContainerStartData(ContainerId containerId)
       throws IOException {
     store.containerStarted(ContainerStartData.newInstance(containerId,

@@ -137,7 +137,8 @@ public class TestFileSystemApplicationHistoryStore extends
   private void testReadHistoryData(int num) throws IOException {
     testReadHistoryData(num, false, false);
   }
-  
+
+  @SuppressWarnings("deprecation")
   private void testReadHistoryData(
       int num, boolean missingContainer, boolean missingApplicationAttempt)
           throws IOException {

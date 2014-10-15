@@ -167,7 +167,8 @@ public class TestUtils {
     LOG.info("node = " + host + " avail=" + node.getAvailableResource());
     return node;
   }
-  
+
+  @SuppressWarnings("deprecation")
   public static ContainerId getMockContainerId(FiCaSchedulerApp application) {
     ContainerId containerId = mock(ContainerId.class);
     doReturn(application.getApplicationAttemptId()).
