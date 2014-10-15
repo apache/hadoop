@@ -429,6 +429,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6115. TestPipeApplication#testSubmitter fails in trunk (Binglin
     Chang via jlowe)
 
+    MAPREDUCE-5873. Shuffle bandwidth computation includes time spent waiting
+    for maps (Siqi Li via jlowe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
