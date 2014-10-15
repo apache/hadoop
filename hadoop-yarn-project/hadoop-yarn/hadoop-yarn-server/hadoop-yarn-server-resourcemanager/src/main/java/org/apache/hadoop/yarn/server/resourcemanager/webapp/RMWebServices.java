@@ -65,6 +65,7 @@ import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHa
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticationHandler;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
@@ -1085,10 +1086,18 @@ public class RMWebServices {
     }
 
     String authType = hsr.getAuthType();
-    if (!KerberosAuthenticationHandler.TYPE.equals(authType)) {
+    if (!KerberosAuthenticationHandler.TYPE.equalsIgnoreCase(authType)) {
       String msg =
           "Delegation token operations can only be carried out on a "
-              + "Kerberos authenticated channel";
+              + "Kerberos authenticated channel. Expected auth type is "
+              + KerberosAuthenticationHandler.TYPE + ", got type " + authType;
+      throw new YarnException(msg);
+    }
+    if (hsr
+      .getAttribute(DelegationTokenAuthenticationHandler.DELEGATION_TOKEN_UGI_ATTRIBUTE) != null) {
+      String msg =
+          "Delegation token operations cannot be carried out using delegation"
+              + " token authentication.";
       throw new YarnException(msg);
     }
 
