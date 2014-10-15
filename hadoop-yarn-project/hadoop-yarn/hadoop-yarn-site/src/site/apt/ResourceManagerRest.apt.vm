@@ -2943,7 +2943,7 @@ Accept: application/xml
 
 +---+
   PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/state
-  Hadoop-YARN-Auth-Delegation-Token: MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUbjqcHHigFHB7ZFxwQCFKWD3znCkDSy6SQIjRCLDydxbxvgE1JNX0RFTEVHQVRJT05fVE9LRU4A
+  X-Hadoop-Delegation-Token: MgASY2xpZW50QEVYQU1QTEUuQ09NDHRlc3QtcmVuZXdlcgCKAUbjqcHHigFHB7ZFxwQCFKWD3znCkDSy6SQIjRCLDydxbxvgE1JNX0RFTEVHQVRJT05fVE9LRU4A
   Content-Type: application/json; charset=UTF8
   {
     "state":"KILLED"

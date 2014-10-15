@@ -708,6 +708,7 @@ public class TestRMAdminService {
           aclsString);
 
       // verify ProxyUsers and ProxyHosts
+      ProxyUsers.refreshSuperUserGroupsConfiguration(configuration);
       Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyGroups()
           .get("hadoop.proxyuser.test.groups").size() == 1);
       Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyGroups()

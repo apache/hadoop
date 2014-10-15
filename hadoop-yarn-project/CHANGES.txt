@@ -99,6 +99,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2501. Enhanced AMRMClient library to support requests against node
     labels. (Wangda Tan via vinodkv)
 
+    YARN-2656. Made RM web services authentication filter support proxy user.
+    (Varun Vasudev and Zhijie Shen via zjshen)
+
   IMPROVEMENTS
 
     YARN-2242. Improve exception information on AM launch crashes. (Li Lu 

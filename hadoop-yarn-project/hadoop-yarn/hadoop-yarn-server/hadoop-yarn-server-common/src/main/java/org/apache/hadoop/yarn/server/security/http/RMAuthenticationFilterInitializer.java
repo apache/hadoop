@@ -35,17 +35,21 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticationHandler;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 
 @Unstable
 public class RMAuthenticationFilterInitializer extends FilterInitializer {
 
   String configPrefix;
+  String proxyPrefix;
   String signatureSecretFileProperty;
   String kerberosPrincipalProperty;
   String cookiePath;
 
   public RMAuthenticationFilterInitializer() {
     this.configPrefix = "hadoop.http.authentication.";
+    this.proxyPrefix = "yarn.resourcemanager.webapp.proxyuser.";
     this.signatureSecretFileProperty =
         AuthenticationFilter.SIGNATURE_SECRET + ".file";
     this.kerberosPrincipalProperty = KerberosAuthenticationHandler.PRINCIPAL;
@@ -59,10 +63,14 @@ public class RMAuthenticationFilterInitializer extends FilterInitializer {
     filterConfig.put(AuthenticationFilter.COOKIE_PATH, cookiePath);
 
     for (Map.Entry<String, String> entry : conf) {
-      String name = entry.getKey();
-      if (name.startsWith(configPrefix)) {
-        String value = conf.get(name);
-        name = name.substring(configPrefix.length());
+      String propName = entry.getKey();
+      if (propName.startsWith(configPrefix)) {
+        String value = conf.get(propName);
+        String name = propName.substring(configPrefix.length());
+        filterConfig.put(name, value);
+      } else if (propName.startsWith(proxyPrefix)) {
+        String value = conf.get(propName);
+        String name = propName.substring("yarn.resourcemanager.webapp.".length());
         filterConfig.put(name, value);
       }
     }
@@ -107,6 +115,10 @@ public class RMAuthenticationFilterInitializer extends FilterInitializer {
       }
       filterConfig.put(KerberosAuthenticationHandler.PRINCIPAL, principal);
     }
+
+    filterConfig.put(DelegationTokenAuthenticationHandler.TOKEN_KIND,
+        RMDelegationTokenIdentifier.KIND_NAME.toString());
+
     return filterConfig;
   }
 

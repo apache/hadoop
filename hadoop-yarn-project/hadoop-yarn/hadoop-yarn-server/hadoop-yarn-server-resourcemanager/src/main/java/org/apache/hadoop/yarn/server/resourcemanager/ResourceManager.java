@@ -901,6 +901,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
             + " for RM webapp authentication");
         RMAuthenticationHandler
           .setSecretManager(getClientRMService().rmDTSecretManager);
+        RMAuthenticationFilter
+          .setDelegationTokenSecretManager(getClientRMService().rmDTSecretManager);
         String yarnAuthKey =
             authPrefix + RMAuthenticationFilter.AUTH_HANDLER_PROPERTY;
         conf.setStrings(yarnAuthKey, RMAuthenticationHandler.class.getName());
