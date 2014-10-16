@@ -962,6 +962,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7208. NN doesn't schedule replication when a DN storage fails.
     (Ming Ma via szetszwo)
 
+    HDFS-5089. When a LayoutVersion support SNAPSHOT, it must support
+    FSIMAGE_NAME_OPTIMIZATION.  (szetszwo)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
