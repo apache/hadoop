@@ -21,11 +21,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -224,13 +226,16 @@ public class DatanodeDescriptor extends DatanodeInfo {
   // The number of replication work pending before targets are determined
   private int PendingReplicationWithoutTargets = 0;
 
+  // HB processing can use it to tell if it is the first HB since DN restarted
+  private boolean heartbeatedSinceRegistration = false;
+
   /**
    * DatanodeDescriptor constructor
    * @param nodeID id of the data node
    */
   public DatanodeDescriptor(DatanodeID nodeID) {
     super(nodeID);
-    updateHeartbeat(StorageReport.EMPTY_ARRAY, 0L, 0L, 0, 0);
+    updateHeartbeatState(StorageReport.EMPTY_ARRAY, 0L, 0L, 0, 0);
   }
 
   /**
@@ -241,7 +246,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   public DatanodeDescriptor(DatanodeID nodeID, 
                             String networkLocation) {
     super(nodeID, networkLocation);
-    updateHeartbeat(StorageReport.EMPTY_ARRAY, 0L, 0L, 0, 0);
+    updateHeartbeatState(StorageReport.EMPTY_ARRAY, 0L, 0L, 0, 0);
   }
 
   @VisibleForTesting
@@ -343,10 +348,48 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   public void updateHeartbeat(StorageReport[] reports, long cacheCapacity,
       long cacheUsed, int xceiverCount, int volFailures) {
+    updateHeartbeatState(reports, cacheCapacity, cacheUsed, xceiverCount,
+        volFailures);
+    heartbeatedSinceRegistration = true;
+  }
+
+  /**
+   * process datanode heartbeat or stats initialization.
+   */
+  public void updateHeartbeatState(StorageReport[] reports, long cacheCapacity,
+      long cacheUsed, int xceiverCount, int volFailures) {
     long totalCapacity = 0;
     long totalRemaining = 0;
     long totalBlockPoolUsed = 0;
     long totalDfsUsed = 0;
+    Set<DatanodeStorageInfo> failedStorageInfos = null;
+
+    // Decide if we should check for any missing StorageReport and mark it as
+    // failed. There are different scenarios.
+    // 1. When DN is running, a storage failed. Given the current DN
+    //    implementation doesn't add recovered storage back to its storage list
+    //    until DN restart, we can assume volFailures won't decrease
+    //    during the current DN registration session.
+    //    When volumeFailures == this.volumeFailures, it implies there is no
+    //    state change. No need to check for failed storage. This is an
+    //    optimization.
+    // 2. After DN restarts, volFailures might not increase and it is possible
+    //    we still have new failed storage. For example, admins reduce
+    //    available storages in configuration. Another corner case
+    //    is the failed volumes might change after restart; a) there
+    //    is one good storage A, one restored good storage B, so there is
+    //    one element in storageReports and that is A. b) A failed. c) Before
+    //    DN sends HB to NN to indicate A has failed, DN restarts. d) After DN
+    //    restarts, storageReports has one element which is B.
+    boolean checkFailedStorages = (volFailures > this.volumeFailures) ||
+        !heartbeatedSinceRegistration;
+
+    if (checkFailedStorages) {
+      LOG.info("Number of failed storage changes from "
+          + this.volumeFailures + " to " + volFailures);
+      failedStorageInfos = new HashSet<DatanodeStorageInfo>(
+          storageMap.values());
+    }
 
     setCacheCapacity(cacheCapacity);
     setCacheUsed(cacheUsed);
@@ -355,6 +398,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this.volumeFailures = volFailures;
     for (StorageReport report : reports) {
       DatanodeStorageInfo storage = updateStorage(report.getStorage());
+      if (checkFailedStorages) {
+        failedStorageInfos.remove(storage);
+      }
+
       storage.receivedHeartbeat(report);
       totalCapacity += report.getCapacity();
       totalRemaining += report.getRemaining();
@@ -368,6 +415,19 @@ public class DatanodeDescriptor extends DatanodeInfo {
     setRemaining(totalRemaining);
     setBlockPoolUsed(totalBlockPoolUsed);
     setDfsUsed(totalDfsUsed);
+    if (checkFailedStorages) {
+      updateFailedStorage(failedStorageInfos);
+    }
+  }
+
+  private void updateFailedStorage(
+      Set<DatanodeStorageInfo> failedStorageInfos) {
+    for (DatanodeStorageInfo storageInfo : failedStorageInfos) {
+      if (storageInfo.getState() != DatanodeStorage.State.FAILED) {
+        LOG.info(storageInfo + " failed.");
+        storageInfo.setState(DatanodeStorage.State.FAILED);
+      }
+    }
   }
 
   private static class BlockIterator implements Iterator<BlockInfo> {
@@ -641,6 +701,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     for(DatanodeStorageInfo storage : getStorageInfos()) {
       storage.setBlockReportCount(0);
     }
+    heartbeatedSinceRegistration = false;
   }
 
   /**

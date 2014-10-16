@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -52,6 +54,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -79,7 +82,8 @@ public class TestDataNodeVolumeFailure {
   File dataDir = null;
   File data_fail = null;
   File failedDir = null;
-  
+  private FileSystem fs;
+
   // mapping blocks to Meta files(physical files) and locs(NameNode locations)
   private class BlockLocs {
     public int num_files = 0;
@@ -97,6 +101,8 @@ public class TestDataNodeVolumeFailure {
     conf.setInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, 1);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(dn_num).build();
     cluster.waitActive();
+    fs = cluster.getFileSystem();
+    dataDir = new File(cluster.getDataDirectory());
   }
 
   @After
@@ -110,6 +116,10 @@ public class TestDataNodeVolumeFailure {
     if(cluster != null) {
       cluster.shutdown();
     }
+    for (int i = 0; i < 3; i++) {
+      FileUtil.setExecutable(new File(dataDir, "data"+(2*i+1)), true);
+      FileUtil.setExecutable(new File(dataDir, "data"+(2*i+2)), true);
+    }
   }
   
   /*
@@ -119,8 +129,6 @@ public class TestDataNodeVolumeFailure {
    */
   @Test
   public void testVolumeFailure() throws Exception {
-    FileSystem fs = cluster.getFileSystem();
-    dataDir = new File(cluster.getDataDirectory());
     System.out.println("Data dir: is " +  dataDir.getPath());
    
     
@@ -191,7 +199,40 @@ public class TestDataNodeVolumeFailure {
     System.out.println("file " + fileName1.getName() + 
         " is created and replicated");
   }
-  
+
+  /**
+   * Test that there are under replication blocks after vol failures
+   */
+  @Test
+  public void testUnderReplicationAfterVolFailure() throws Exception {
+    // Bring up one more datanode
+    cluster.startDataNodes(conf, 1, true, null, null);
+    cluster.waitActive();
+
+    final BlockManager bm = cluster.getNamesystem().getBlockManager();
+
+    Path file1 = new Path("/test1");
+    DFSTestUtil.createFile(fs, file1, 1024, (short)3, 1L);
+    DFSTestUtil.waitReplication(fs, file1, (short)3);
+
+    // Fail the first volume on both datanodes
+    File dn1Vol1 = new File(dataDir, "data"+(2*0+1));
+    File dn2Vol1 = new File(dataDir, "data"+(2*1+1));
+    assertTrue("Couldn't chmod local vol", FileUtil.setExecutable(dn1Vol1, false));
+    assertTrue("Couldn't chmod local vol", FileUtil.setExecutable(dn2Vol1, false));
+
+    Path file2 = new Path("/test2");
+    DFSTestUtil.createFile(fs, file2, 1024, (short)3, 1L);
+    DFSTestUtil.waitReplication(fs, file2, (short)3);
+
+    // underReplicatedBlocks are due to failed volumes
+    int underReplicatedBlocks =
+        BlockManagerTestUtil.checkHeartbeatAndGetUnderReplicatedBlocksCount(
+            cluster.getNamesystem(), bm);
+    assertTrue("There is no under replicated block after volume failure",
+        underReplicatedBlocks > 0);
+  }
+
   /**
    * verifies two things:
    *  1. number of locations of each block in the name node
