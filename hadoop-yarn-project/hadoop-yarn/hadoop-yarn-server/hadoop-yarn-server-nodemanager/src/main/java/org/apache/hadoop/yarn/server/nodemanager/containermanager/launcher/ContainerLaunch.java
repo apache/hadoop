@@ -269,7 +269,7 @@ public class ContainerLaunch implements Callable<Integer> {
           localResources, nmPrivateClasspathJarDir);
         
         // Write out the environment
-        writeLaunchEnv(containerScriptOutStream, environment, localResources,
+        exec.writeLaunchEnv(containerScriptOutStream, environment, localResources,
             launchContext.getCommands());
         
         // /////////// End of writing out container-script
@@ -502,8 +502,7 @@ public class ContainerLaunch implements Callable<Integer> {
     return context;
   }
 
-  @VisibleForTesting
-  static abstract class ShellScriptBuilder {
+  public static abstract class ShellScriptBuilder {
     public static ShellScriptBuilder create() {
       return Shell.WINDOWS ? new WindowsShellScriptBuilder() :
         new UnixShellScriptBuilder();
@@ -791,37 +790,6 @@ public class ContainerLaunch implements Callable<Integer> {
         .getAuxServiceMetaData().entrySet()) {
       AuxiliaryServiceHelper.setServiceDataIntoEnv(
           meta.getKey(), meta.getValue(), environment);
-    }
-  }
-    
-  static void writeLaunchEnv(OutputStream out,
-      Map<String,String> environment, Map<Path,List<String>> resources,
-      List<String> command)
-      throws IOException {
-    ShellScriptBuilder sb = ShellScriptBuilder.create();
-    if (environment != null) {
-      for (Map.Entry<String,String> env : environment.entrySet()) {
-        sb.env(env.getKey().toString(), env.getValue().toString());
-      }
-    }
-    if (resources != null) {
-      for (Map.Entry<Path,List<String>> entry : resources.entrySet()) {
-        for (String linkName : entry.getValue()) {
-          sb.symlink(entry.getKey(), new Path(linkName));
-        }
-      }
-    }
-
-    sb.command(command);
-
-    PrintStream pout = null;
-    try {
-      pout = new PrintStream(out);
-      sb.write(pout);
-    } finally {
-      if (out != null) {
-        out.close();
-      }
     }
   }
 

@@ -1147,22 +1147,6 @@
   </property>
 
   <!--Docker configuration-->
-  <property>
-    <name>yarn.nodemanager.docker-container-executor.image-name</name>
-    <value></value>
-    <description>
-      This image is used by all nodemanagers to launch containers.
-      This maybe modified by the users.
-    </description>
-  </property>
-
-  <property>
-    <name>yarn.nodemanager.docker-container-executor.run-args</name>
-    <value>--rm --net=host</value>
-    <description>
-      This arguments to pass to the 'docker run' invocation.
-    </description>
-  </property>
 
   <property>
     <name>yarn.nodemanager.docker-container-executor.exec-name</name>

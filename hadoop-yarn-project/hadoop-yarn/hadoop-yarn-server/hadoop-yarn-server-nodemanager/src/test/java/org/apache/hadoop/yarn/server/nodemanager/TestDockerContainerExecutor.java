@@ -209,17 +209,5 @@ public class TestDockerContainerExecutor {
         cId, env, "touch", touchFile.getAbsolutePath(), "&&", "cp", touchFile.getAbsolutePath(), "/");
 
     assertEquals(0, ret);
-    //get the script
-    //you've launched containers. Now you should verify
-    //whether docker actually launched any containers, and how they exited
-    containerIdStr = ConverterUtils.toString(cId);
-    String dockerExitCode = shellExec(dockerExec
-        + " inspect --format {{.State.ExitCode}} " + containerIdStr).getOutput();
-    assertEquals("0", dockerExitCode.trim());
-    String touchFilePathLocal = "/tmp";
-    //copy the touch file to local
-    shellExec(dockerExec + " cp " + containerIdStr
-        + ":/" + touchFileName + " " + touchFilePathLocal);
-    assertEquals(0, shellExec("ls " + touchFilePathLocal + "/" + touchFileName).getExitCode());
   }
 }

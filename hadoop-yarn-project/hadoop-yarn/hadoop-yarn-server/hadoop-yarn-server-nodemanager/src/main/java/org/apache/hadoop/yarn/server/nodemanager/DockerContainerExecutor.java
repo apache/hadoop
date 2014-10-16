@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -32,6 +33,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -41,12 +43,21 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.Conta
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
-import java.util.*;
-import java.util.regex.Pattern;
+import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.regex.Pattern;
 import java.net.InetSocketAddress;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
@@ -60,7 +71,11 @@ public class DockerContainerExecutor extends ContainerExecutor {
   private static final Log LOG = LogFactory
       .getLog(DockerContainerExecutor.class);
   public static final String DOCKER_CONTAINER_EXECUTOR_SCRIPT = "docker_container_executor";
-  public static final String DOCKER_IMAGE_PATTERN = "^(([\\w\\.-]+)(:\\d+)*\\/)?[\\w:-]+$";
+  public static final String DOCKER_CONTAINER_EXECUTOR_SESSION_SCRIPT = "docker_container_executor_session";
+
+  // This validates that the image is a proper docker image and would not crash docker.
+  public static final String DOCKER_IMAGE_PATTERN = "^(([\\w\\.-]+)(:\\d+)*\\/)?[\\w\\.:-]+$";
+
 
   private final FileContext lfs;
   private final Pattern dockerImagePattern;
@@ -74,36 +89,54 @@ public class DockerContainerExecutor extends ContainerExecutor {
     }
   }
 
+  protected void copyFile(Path src, Path dst, String owner) throws IOException {
+    lfs.util().copy(src, dst);
+  }
+
   @Override
   public void init() throws IOException {
     String auth = getConf().get(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION);
     if (auth != null && !auth.equals("simple")) {
       throw new IllegalStateException("DockerContainerExecutor only works with simple authentication mode");
     }
+    String dockerExecutor = getConf().get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME,
+      YarnConfiguration.NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME);
+    if (!new File(dockerExecutor).exists()) {
+      throw new IllegalStateException("Invalid docker exec path: " + dockerExecutor);
+    }
   }
 
   @Override
   public synchronized void startLocalizer(Path nmPrivateContainerTokensPath,
                                           InetSocketAddress nmAddr, String user, String appId, String locId,
-                                          List<String> localDirs, List<String> logDirs)
-      throws IOException, InterruptedException {
+                                          LocalDirsHandlerService dirsHandler)
+    throws IOException, InterruptedException {
+
+    List<String> localDirs = dirsHandler.getLocalDirs();
+    List<String> logDirs = dirsHandler.getLogDirs();
 
     ContainerLocalizer localizer =
-        new ContainerLocalizer(lfs, user, appId, locId, getPaths(localDirs),
-            RecordFactoryProvider.getRecordFactory(getConf()));
+      new ContainerLocalizer(lfs, user, appId, locId, getPaths(localDirs),
+        RecordFactoryProvider.getRecordFactory(getConf()));
 
     createUserLocalDirs(localDirs, user);
     createUserCacheDirs(localDirs, user);
     createAppDirs(localDirs, user, appId);
-    createAppLogDirs(appId, logDirs);
+    createAppLogDirs(appId, logDirs, user);
 
-    Path appStorageDir = getFirstApplicationDir(localDirs, user, appId);
+    // randomly choose the local directory
+    Path appStorageDir = getWorkingDir(localDirs, user, appId);
+
     String tokenFn = String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT, locId);
     Path tokenDst = new Path(appStorageDir, tokenFn);
-    lfs.util().copy(nmPrivateContainerTokensPath, tokenDst);
+    copyFile(nmPrivateContainerTokensPath, tokenDst, user);
+    LOG.info("Copying from " + nmPrivateContainerTokensPath + " to " + tokenDst);
     lfs.setWorkingDirectory(appStorageDir);
+    LOG.info("CWD set to " + appStorageDir + " = " + lfs.getWorkingDirectory());
+    // TODO: DO it over RPC for maintaining similarity?
     localizer.runLocalization(nmAddr);
   }
+
 
   @Override
   public int launchContainer(Container container,
@@ -115,12 +148,10 @@ public class DockerContainerExecutor extends ContainerExecutor {
     if (LOG.isDebugEnabled()) {
       LOG.debug("containerImageName from launchContext: " + containerImageName);
     }
-    containerImageName = containerImageName == null ?
-        getConf().get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME)
-        : containerImageName;
     Preconditions.checkArgument(!Strings.isNullOrEmpty(containerImageName), "Container image must not be null");
+    containerImageName = containerImageName.replaceAll("['\"]", "");
+
     Preconditions.checkArgument(saneDockerImage(containerImageName), "Image: " + containerImageName + " is not a proper docker image");
-    String containerArgs = Strings.nullToEmpty(getConf().get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_RUN_ARGS));
     String dockerExecutor = getConf().get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME,
         YarnConfiguration.NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME);
 
@@ -139,15 +170,15 @@ public class DockerContainerExecutor extends ContainerExecutor {
       Path appCacheDir = new Path(userdir, ContainerLocalizer.APPCACHE);
       Path appDir = new Path(appCacheDir, appIdStr);
       Path containerDir = new Path(appDir, containerIdStr);
-      createDir(containerDir, dirPerm, true);
+      createDir(containerDir, dirPerm, true, userName);
     }
 
     // Create the container log-dirs on all disks
-    createContainerLogDirs(appIdStr, containerIdStr, logDirs);
+    createContainerLogDirs(appIdStr, containerIdStr, logDirs, userName);
 
     Path tmpDir = new Path(containerWorkDir,
         YarnConfiguration.DEFAULT_CONTAINER_TEMP_DIR);
-    createDir(tmpDir, dirPerm, false);
+    createDir(tmpDir, dirPerm, false, userName);
 
     // copy launch script to work dir
     Path launchDst =
@@ -159,40 +190,38 @@ public class DockerContainerExecutor extends ContainerExecutor {
         new Path(containerWorkDir, ContainerLaunch.FINAL_CONTAINER_TOKENS_FILE);
     lfs.util().copy(nmPrivateTokensPath, tokenDst);
 
-    // Create new local launch wrapper script
-    LocalWrapperScriptBuilder sb =
-        new UnixLocalWrapperScriptBuilder(containerWorkDir);
+
 
     String localDirMount = toMount(localDirs);
     String logDirMount = toMount(logDirs);
     String containerWorkDirMount = toMount(Collections.singletonList(containerWorkDir.toUri().getPath()));
-    String envVars = createDockerEnvVars();
     StringBuilder commands = new StringBuilder();
     String commandStr = commands.append(dockerExecutor)
         .append(" ")
         .append("run")
+        .append(" ")
+        .append("--rm --net=host")
+        .append(" ")
         .append(" --name " + containerIdStr)
         .append(localDirMount)
         .append(logDirMount)
         .append(containerWorkDirMount)
         .append(" ")
-        .append(containerArgs)
-        .append(" ")
-        .append(envVars)
-        .append(" ")
         .append(containerImageName)
         .toString();
+    String dockerPidScript = "`" + dockerExecutor + " inspect --format {{.State.Pid}} " + containerIdStr + "`";
+    // Create new local launch wrapper script
+    LocalWrapperScriptBuilder sb =
+      new UnixLocalWrapperScriptBuilder(containerWorkDir, commandStr, dockerPidScript);
     Path pidFile = getPidFilePath(containerId);
     if (pidFile != null) {
-      sb.writeLocalWrapperScript(launchDst, pidFile, commandStr);
+      sb.writeLocalWrapperScript(launchDst, pidFile);
     } else {
       LOG.info("Container " + containerIdStr
           + " was marked as inactive. Returning terminated error");
       return ExitCode.TERMINATED.getExitCode();
     }
-
-    // create log dir under app
-    // fork script
+    
     ShellCommandExecutor shExec = null;
     try {
       lfs.setPermission(launchDst,
@@ -241,24 +270,64 @@ public class DockerContainerExecutor extends ContainerExecutor {
       }
       return exitCode;
     } finally {
-      ; //
+      if (shExec != null) {
+        shExec.close();
+      }
     }
     return 0;
   }
 
-  /**
-   * This adds all the HADOOP_* environment vars to Docker's launch environment.s
-   * @return A dockerized list of environment variables: "-e HADOOP_PATH=/path/to/hadoop"
-   */
-  String createDockerEnvVars() {
-    Map<String, String> allNMEnv = System.getenv();
-    StringBuilder sb = new StringBuilder();
-    for(Map.Entry<String, String> entry: allNMEnv.entrySet()){
-      if (entry.getKey().matches("^HADOOP_\\w+")){
-        sb.append(" -e ").append(entry.getKey()).append("=\"").append(entry.getValue()).append("\"");
+  @Override
+  public void writeLaunchEnv(OutputStream out, Map<String, String> environment, Map<Path, List<String>> resources, List<String> command) throws IOException {
+    ContainerLaunch.ShellScriptBuilder sb = ContainerLaunch.ShellScriptBuilder.create();
+
+    Set<String> exclusionSet = new HashSet<String>();
+    exclusionSet.add(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME);
+    exclusionSet.add(ApplicationConstants.Environment.HADOOP_YARN_HOME.name());
+    exclusionSet.add(ApplicationConstants.Environment.HADOOP_COMMON_HOME.name());
+    exclusionSet.add(ApplicationConstants.Environment.HADOOP_HDFS_HOME.name());
+    exclusionSet.add(ApplicationConstants.Environment.HADOOP_CONF_DIR.name());
+    exclusionSet.add(ApplicationConstants.Environment.JAVA_HOME.name());
+
+    if (environment != null) {
+      for (Map.Entry<String,String> env : environment.entrySet()) {
+        if (!exclusionSet.contains(env.getKey())) {
+          sb.env(env.getKey().toString(), env.getValue().toString());
+        }
       }
     }
-    return sb.toString();
+    if (resources != null) {
+      for (Map.Entry<Path,List<String>> entry : resources.entrySet()) {
+        for (String linkName : entry.getValue()) {
+          sb.symlink(entry.getKey(), new Path(linkName));
+        }
+      }
+    }
+
+    sb.command(command);
+
+    PrintStream pout = null;
+    PrintStream ps = null;
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    try {
+      pout = new PrintStream(out);
+      if (LOG.isDebugEnabled()) {
+        ps = new PrintStream(baos);
+        sb.write(ps);
+      }
+      sb.write(pout);
+
+    } finally {
+      if (out != null) {
+        out.close();
+      }
+      if (ps != null) {
+        ps.close();
+      }
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Script: " + baos.toString());
+    }
   }
 
   private boolean saneDockerImage(String containerImageName) {
@@ -266,20 +335,89 @@ public class DockerContainerExecutor extends ContainerExecutor {
   }
 
   @Override
-  public boolean signalContainer(String user, String pid, Signal signal) throws IOException {
-    return false;
+  public boolean signalContainer(String user, String pid, Signal signal)
+    throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Sending signal " + signal.getValue() + " to pid " + pid
+        + " as user " + user);
+    }
+    if (!containerIsAlive(pid)) {
+      return false;
+    }
+    try {
+      killContainer(pid, signal);
+    } catch (IOException e) {
+      if (!containerIsAlive(pid)) {
+        return false;
+      }
+      throw e;
+    }
+    return true;
   }
 
   @Override
-  public void deleteAsUser(String user, Path subDir, Path... basedirs) throws IOException, InterruptedException {
+  public boolean isContainerProcessAlive(String user, String pid)
+    throws IOException {
+    return containerIsAlive(pid);
+  }
 
+  /**
+   * Returns true if the process with the specified pid is alive.
+   *
+   * @param pid String pid
+   * @return boolean true if the process is alive
+   */
+  @VisibleForTesting
+  public static boolean containerIsAlive(String pid) throws IOException {
+    try {
+      new ShellCommandExecutor(Shell.getCheckProcessIsAliveCommand(pid))
+        .execute();
+      // successful execution means process is alive
+      return true;
+    }
+    catch (Shell.ExitCodeException e) {
+      // failure (non-zero exit code) means process is not alive
+      return false;
+    }
+  }
+
+  /**
+   * Send a specified signal to the specified pid
+   *
+   * @param pid the pid of the process [group] to signal.
+   * @param signal signal to send
+   * (for logging).
+   */
+  protected void killContainer(String pid, Signal signal) throws IOException {
+    new ShellCommandExecutor(Shell.getSignalKillCommand(signal.getValue(), pid))
+      .execute();
   }
 
   @Override
-  public boolean isContainerProcessAlive(String user, String pid) throws IOException {
-    return false;
+  public void deleteAsUser(String user, Path subDir, Path... baseDirs)
+    throws IOException, InterruptedException {
+    if (baseDirs == null || baseDirs.length == 0) {
+      LOG.info("Deleting absolute path : " + subDir);
+      if (!lfs.delete(subDir, true)) {
+        //Maybe retry
+        LOG.warn("delete returned false for path: [" + subDir + "]");
+      }
+      return;
+    }
+    for (Path baseDir : baseDirs) {
+      Path del = subDir == null ? baseDir : new Path(baseDir, subDir);
+      LOG.info("Deleting path : " + del);
+      if (!lfs.delete(del, true)) {
+        LOG.warn("delete returned false for path: [" + del + "]");
+      }
+    }
   }
 
+  /**
+   * Converts a directory list to a docker mount string
+   * @param dirs
+   * @return a string of mounts for docker
+   */
   private String toMount(List<String> dirs) {
     StringBuilder builder = new StringBuilder();
     for (String dir : dirs) {
@@ -296,21 +434,21 @@ public class DockerContainerExecutor extends ContainerExecutor {
       return wrapperScriptPath;
     }
 
-    public void writeLocalWrapperScript(Path launchDst, Path pidFile, String commandStr) throws IOException {
+    public void writeLocalWrapperScript(Path launchDst, Path pidFile) throws IOException {
       DataOutputStream out = null;
       PrintStream pout = null;
 
       try {
         out = lfs.create(wrapperScriptPath, EnumSet.of(CREATE, OVERWRITE));
         pout = new PrintStream(out);
-        writeLocalWrapperScript(launchDst, pidFile, pout, commandStr);
+        writeLocalWrapperScript(launchDst, pidFile, pout);
       } finally {
         IOUtils.cleanup(LOG, pout, out);
       }
     }
 
     protected abstract void writeLocalWrapperScript(Path launchDst, Path pidFile,
-                                                    PrintStream pout, String commandStr);
+                                                    PrintStream pout);
 
     protected LocalWrapperScriptBuilder(Path containerWorkDir) {
       this.wrapperScriptPath = new Path(containerWorkDir,
@@ -320,31 +458,66 @@ public class DockerContainerExecutor extends ContainerExecutor {
 
   private final class UnixLocalWrapperScriptBuilder
       extends LocalWrapperScriptBuilder {
+    private final Path sessionScriptPath;
+    private final String dockerCommand;
+    private final String dockerPidScript;
 
-    public UnixLocalWrapperScriptBuilder(Path containerWorkDir) {
+    public UnixLocalWrapperScriptBuilder(Path containerWorkDir, String dockerCommand, String dockerPidScript) {
       super(containerWorkDir);
+      this.dockerCommand = dockerCommand;
+      this.dockerPidScript = dockerPidScript;
+      this.sessionScriptPath = new Path(containerWorkDir,
+        Shell.appendScriptExtension(DOCKER_CONTAINER_EXECUTOR_SESSION_SCRIPT));
+    }
+
+    @Override
+    public void writeLocalWrapperScript(Path launchDst, Path pidFile)
+      throws IOException {
+      writeSessionScript(launchDst, pidFile);
+      super.writeLocalWrapperScript(launchDst, pidFile);
     }
 
     @Override
     public void writeLocalWrapperScript(Path launchDst, Path pidFile,
-                                        PrintStream pout, String commandStr) {
+                                        PrintStream pout) {
 
-      // We need to do a move as writing to a file is not atomic
-      // Process reading a file being written to may get garbled data
-      // hence write pid to tmp file first followed by a mv
+      String exitCodeFile = ContainerLaunch.getExitCodeFile(
+        pidFile.toString());
+      String tmpFile = exitCodeFile + ".tmp";
       pout.println("#!/usr/bin/env bash");
-      pout.println();
+      pout.println("bash \"" + sessionScriptPath.toString() + "\"");
+      pout.println("rc=$?");
+      pout.println("echo $rc > \"" + tmpFile + "\"");
+      pout.println("mv -f \"" + tmpFile + "\" \"" + exitCodeFile + "\"");
+      pout.println("exit $rc");
+    }
 
-      pout.println("echo $$ > " + pidFile.toString() + ".tmp");
-      pout.println("/bin/mv -f " + pidFile.toString() + ".tmp " + pidFile);
-      String exec = commandStr;
-      pout.println(exec + " bash \"" +
+    private void writeSessionScript(Path launchDst, Path pidFile)
+      throws IOException {
+      DataOutputStream out = null;
+      PrintStream pout = null;
+      try {
+        out = lfs.create(sessionScriptPath, EnumSet.of(CREATE, OVERWRITE));
+        pout = new PrintStream(out);
+        // We need to do a move as writing to a file is not atomic
+        // Process reading a file being written to may get garbled data
+        // hence write pid to tmp file first followed by a mv
+        pout.println("#!/usr/bin/env bash");
+        pout.println();
+        pout.println("echo "+ dockerPidScript +" > " + pidFile.toString() + ".tmp");
+        pout.println("/bin/mv -f " + pidFile.toString() + ".tmp " + pidFile);
+        pout.println(dockerCommand + " bash \"" +
           launchDst.toUri().getPath().toString() + "\"");
+      } finally {
+        IOUtils.cleanup(LOG, pout, out);
+      }
+      lfs.setPermission(sessionScriptPath,
+        ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
     }
   }
 
-  private void createDir(Path dirPath, FsPermission perms,
-                         boolean createParent) throws IOException {
+  protected void createDir(Path dirPath, FsPermission perms,
+                           boolean createParent, String user) throws IOException {
     lfs.mkdir(dirPath, perms, createParent);
     if (!perms.equals(perms.applyUMask(lfs.getUMask()))) {
       lfs.setPermission(dirPath, perms);
@@ -364,7 +537,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
     for (String localDir : localDirs) {
       // create $local.dir/usercache/$user and its immediate parent
       try {
-        createDir(getUserCacheDir(new Path(localDir), user), userperms, true);
+        createDir(getUserCacheDir(new Path(localDir), user), userperms, true, user);
       } catch (IOException e) {
         LOG.warn("Unable to create the user directory : " + localDir, e);
         continue;
@@ -387,10 +560,9 @@ public class DockerContainerExecutor extends ContainerExecutor {
    * </ul>
    */
   void createUserCacheDirs(List<String> localDirs, String user)
-      throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Initializing user " + user);
-    }
+    throws IOException {
+    LOG.info("Initializing user " + user);
+
     boolean appcacheDirStatus = false;
     boolean distributedCacheDirStatus = false;
     FsPermission appCachePerms = new FsPermission(APPCACHE_PERM);
@@ -401,7 +573,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
       Path localDirPath = new Path(localDir);
       final Path appDir = getAppcacheDir(localDirPath, user);
       try {
-        createDir(appDir, appCachePerms, true);
+        createDir(appDir, appCachePerms, true, user);
         appcacheDirStatus = true;
       } catch (IOException e) {
         LOG.warn("Unable to create app cache directory : " + appDir, e);
@@ -409,7 +581,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
       // create $local.dir/usercache/$user/filecache
       final Path distDir = getFileCacheDir(localDirPath, user);
       try {
-        createDir(distDir, fileperms, true);
+        createDir(distDir, fileperms, true, user);
         distributedCacheDirStatus = true;
       } catch (IOException e) {
         LOG.warn("Unable to create file cache directory : " + distDir, e);
@@ -417,13 +589,13 @@ public class DockerContainerExecutor extends ContainerExecutor {
     }
     if (!appcacheDirStatus) {
       throw new IOException("Not able to initialize app-cache directories "
-          + "in any of the configured local directories for user " + user);
+        + "in any of the configured local directories for user " + user);
     }
     if (!distributedCacheDirStatus) {
       throw new IOException(
-          "Not able to initialize distributed-cache directories "
-              + "in any of the configured local directories for user "
-              + user);
+        "Not able to initialize distributed-cache directories "
+          + "in any of the configured local directories for user "
+          + user);
     }
   }
 
@@ -432,18 +604,17 @@ public class DockerContainerExecutor extends ContainerExecutor {
    * <ul>
    * <li>$local.dir/usercache/$user/appcache/$appid</li>
    * </ul>
-   *
    * @param localDirs
    */
   void createAppDirs(List<String> localDirs, String user, String appId)
-      throws IOException {
+    throws IOException {
     boolean initAppDirStatus = false;
     FsPermission appperms = new FsPermission(APPDIR_PERM);
     for (String localDir : localDirs) {
       Path fullAppDir = getApplicationDir(new Path(localDir), user, appId);
       // create $local.dir/usercache/$user/appcache/$appId
       try {
-        createDir(fullAppDir, appperms, true);
+        createDir(fullAppDir, appperms, true, user);
         initAppDirStatus = true;
       } catch (IOException e) {
         LOG.warn("Unable to create app directory " + fullAppDir.toString(), e);
@@ -451,8 +622,8 @@ public class DockerContainerExecutor extends ContainerExecutor {
     }
     if (!initAppDirStatus) {
       throw new IOException("Not able to initialize app directories "
-          + "in any of the configured local directories for app "
-          + appId.toString());
+        + "in any of the configured local directories for app "
+        + appId.toString());
     }
   }
 
@@ -461,7 +632,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
    * Create application log directories on all disks.
    */
   void createContainerLogDirs(String appId, String containerId,
-                              List<String> logDirs) throws IOException {
+                              List<String> logDirs, String user) throws IOException {
 
     boolean containerLogDirStatus = false;
     FsPermission containerLogDirPerms = new FsPermission(LOGDIR_PERM);
@@ -470,19 +641,19 @@ public class DockerContainerExecutor extends ContainerExecutor {
       Path appLogDir = new Path(rootLogDir, appId);
       Path containerLogDir = new Path(appLogDir, containerId);
       try {
-        createDir(containerLogDir, containerLogDirPerms, true);
+        createDir(containerLogDir, containerLogDirPerms, true, user);
       } catch (IOException e) {
         LOG.warn("Unable to create the container-log directory : "
-            + appLogDir, e);
+          + appLogDir, e);
         continue;
       }
       containerLogDirStatus = true;
     }
     if (!containerLogDirStatus) {
       throw new IOException(
-          "Not able to initialize container-log directories "
-              + "in any of the configured local directories for container "
-              + containerId);
+        "Not able to initialize container-log directories "
+          + "in any of the configured local directories for container "
+          + containerId);
     }
   }
 
@@ -512,9 +683,8 @@ public class DockerContainerExecutor extends ContainerExecutor {
    */
   static final short LOGDIR_PERM = (short) 0710;
 
-  private Path getFirstApplicationDir(List<String> localDirs, String user,
-                                      String appId) {
-    return getApplicationDir(new Path(localDirs.get(0)), user, appId);
+  private long getDiskFreeSpace(Path base) throws IOException {
+    return lfs.getFsStatus(base).getRemaining();
   }
 
   private Path getApplicationDir(Path base, String user, String appId) {
@@ -535,11 +705,61 @@ public class DockerContainerExecutor extends ContainerExecutor {
         ContainerLocalizer.FILECACHE);
   }
 
+  protected Path getWorkingDir(List<String> localDirs, String user,
+                               String appId) throws IOException {
+    Path appStorageDir = null;
+    long totalAvailable = 0L;
+    long[] availableOnDisk = new long[localDirs.size()];
+    int i = 0;
+    // randomly choose the app directory
+    // the chance of picking a directory is proportional to
+    // the available space on the directory.
+    // firstly calculate the sum of all available space on these directories
+    for (String localDir : localDirs) {
+      Path curBase = getApplicationDir(new Path(localDir),
+        user, appId);
+      long space = 0L;
+      try {
+        space = getDiskFreeSpace(curBase);
+      } catch (IOException e) {
+        LOG.warn("Unable to get Free Space for " + curBase.toString(), e);
+      }
+      availableOnDisk[i++] = space;
+      totalAvailable += space;
+    }
+
+    // throw an IOException if totalAvailable is 0.
+    if (totalAvailable <= 0L) {
+      throw new IOException("Not able to find a working directory for "
+        + user);
+    }
+
+    // make probability to pick a directory proportional to
+    // the available space on the directory.
+    Random r = new Random();
+    long randomPosition = Math.abs(r.nextLong()) % totalAvailable;
+    int dir = 0;
+    // skip zero available space directory,
+    // because totalAvailable is greater than 0 and randomPosition
+    // is less than totalAvailable, we can find a valid directory
+    // with nonzero available space.
+    while (availableOnDisk[dir] == 0L) {
+      dir++;
+    }
+    while (randomPosition > availableOnDisk[dir]) {
+      randomPosition -= availableOnDisk[dir++];
+    }
+    appStorageDir = getApplicationDir(new Path(localDirs.get(dir)),
+      user, appId);
+
+    return appStorageDir;
+  }
+
   /**
    * Create application log directories on all disks.
    */
-  void createAppLogDirs(String appId, List<String> logDirs)
-      throws IOException {
+  void createAppLogDirs(String appId, List<String> logDirs, String user)
+    throws IOException {
 
     boolean appLogDirStatus = false;
     FsPermission appLogDirPerms = new FsPermission(LOGDIR_PERM);
@@ -547,7 +767,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
       // create $log.dir/$appid
       Path appLogDir = new Path(rootLogDir, appId);
       try {
-        createDir(appLogDir, appLogDirPerms, true);
+        createDir(appLogDir, appLogDirPerms, true, user);
       } catch (IOException e) {
         LOG.warn("Unable to create the app-log directory : " + appLogDir, e);
         continue;
@@ -556,7 +776,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
     }
     if (!appLogDirStatus) {
       throw new IOException("Not able to initialize app-log directories "
-          + "in any of the configured local directories for app " + appId);
+        + "in any of the configured local directories for app " + appId);
     }
   }
 

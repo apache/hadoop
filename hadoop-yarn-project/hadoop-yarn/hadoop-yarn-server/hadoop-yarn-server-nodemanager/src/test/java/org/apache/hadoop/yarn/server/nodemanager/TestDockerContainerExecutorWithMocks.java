@@ -61,7 +61,6 @@ public class TestDockerContainerExecutorWithMocks {
   private static final Log LOG = LogFactory
       .getLog(TestDockerContainerExecutorWithMocks.class);
   public static final String DOCKER_LAUNCH_COMMAND = "/bin/true";
-  public static final String DOCKER_LAUNCH_ARGS = "-args";
   private DockerContainerExecutor dockerContainerExecutor = null;
   private LocalDirsHandlerService dirsHandler;
   private Path workDir;
@@ -84,7 +83,6 @@ public class TestDockerContainerExecutorWithMocks {
     conf.set(YarnConfiguration.NM_LOG_DIRS, "/tmp/userlogs" + time);
     conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME, yarnImage);
     conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME , DOCKER_LAUNCH_COMMAND);
-    conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_RUN_ARGS, DOCKER_LAUNCH_ARGS);
     dockerContainerExecutor = new DockerContainerExecutor();
     dirsHandler = new LocalDirsHandlerService();
     dirsHandler.init(conf);
@@ -181,74 +179,11 @@ public class TestDockerContainerExecutorWithMocks {
   }
 
   @Test
-  public void testContainerLaunchYarnImage() throws IOException {
-    String appSubmitter = "nobody";
-    String appId = "APP_ID";
-    String containerId = "CONTAINER_ID";
-
-    Container container = mock(Container.class, RETURNS_DEEP_STUBS);
-    ContainerId cId = mock(ContainerId.class, RETURNS_DEEP_STUBS);
-    ContainerLaunchContext context = mock(ContainerLaunchContext.class);
-    HashMap<String, String> env = new HashMap<String,String>();
-
-    when(container.getContainerId()).thenReturn(cId);
-    when(container.getLaunchContext()).thenReturn(context);
-    when(cId.getApplicationAttemptId().getApplicationId().toString()).thenReturn(appId);
-    when(cId.toString()).thenReturn(containerId);
-
-    when(context.getEnvironment()).thenReturn(env);
-    Path scriptPath = new Path("file:///bin/echo");
-    Path tokensPath = new Path("file:///dev/null");
-
-    Path pidFile = new Path(workDir, "pid.txt");
-
-    dockerContainerExecutor.activateContainer(cId, pidFile);
-    int ret = dockerContainerExecutor.launchContainer(container, scriptPath, tokensPath,
-        appSubmitter, appId, workDir, dirsHandler.getLocalDirs(),
-        dirsHandler.getLogDirs());
-    assertEquals(0, ret);
-    //get the script
-    Path wrapperScriptPath = new Path(workDir,
-        Shell.appendScriptExtension(
-            DockerContainerExecutor.DOCKER_CONTAINER_EXECUTOR_SCRIPT));
-    LineNumberReader lnr = new LineNumberReader(new FileReader(wrapperScriptPath.toString()));
-    boolean cmdFound = false;
-    List<String> localDirs = dirsToMount(dirsHandler.getLocalDirs());
-    List<String> logDirs = dirsToMount(dirsHandler.getLogDirs());
-    List<String> workDirMount = dirsToMount(Collections.singletonList(workDir.toUri().getPath()));
-    List<String> expectedCommands =  new ArrayList<String>(
-        Arrays.asList(DOCKER_LAUNCH_COMMAND, "run", "--name", containerId));
-    expectedCommands.addAll(localDirs);
-    expectedCommands.addAll(logDirs);
-    expectedCommands.addAll(workDirMount);
-    expectedCommands.add(DOCKER_LAUNCH_ARGS);
-    expectedCommands.addAll(envVars());
-    String shellScript =  workDir + "/launch_container.sh";
-    expectedCommands.addAll(Arrays.asList(yarnImage, "bash","\"" + shellScript + "\""));
-    while(lnr.ready()){
-      String line = lnr.readLine();
-      LOG.info("line: " + line);
-      if (line.startsWith(DOCKER_LAUNCH_COMMAND)){
-        List<String> command = new ArrayList<String>();
-        for( String s :line.split("\\s+")){
-          command.add(s.trim());
-        }
-
-        assertEquals(expectedCommands, command);
-        cmdFound = true;
-        break;
-      }
-
-    }
-    assertTrue(cmdFound);
-  }
-
-  @Test
   public void testContainerLaunch() throws IOException {
     String appSubmitter = "nobody";
     String appId = "APP_ID";
     String containerId = "CONTAINER_ID";
-    String testImage = "testrepo.com/test-image";
+    String testImage = "\"sequenceiq/hadoop-docker:2.4.1\"";
 
     Container container = mock(Container.class, RETURNS_DEEP_STUBS);
     ContainerId cId = mock(ContainerId.class, RETURNS_DEEP_STUBS);
@@ -265,7 +200,7 @@ public class TestDockerContainerExecutorWithMocks {
     Path scriptPath = new Path("file:///bin/echo");
     Path tokensPath = new Path("file:///dev/null");
 
-    Path pidFile = new Path(workDir, "pid.txt");
+    Path pidFile = new Path(workDir, "pid");
 
     dockerContainerExecutor.activateContainer(cId, pidFile);
     int ret = dockerContainerExecutor.launchContainer(container, scriptPath, tokensPath,
@@ -273,23 +208,25 @@ public class TestDockerContainerExecutorWithMocks {
         dirsHandler.getLogDirs());
     assertEquals(0, ret);
     //get the script
-    Path wrapperScriptPath = new Path(workDir,
+    Path sessionScriptPath = new Path(workDir,
         Shell.appendScriptExtension(
-            DockerContainerExecutor.DOCKER_CONTAINER_EXECUTOR_SCRIPT));
-    LineNumberReader lnr = new LineNumberReader(new FileReader(wrapperScriptPath.toString()));
+            DockerContainerExecutor.DOCKER_CONTAINER_EXECUTOR_SESSION_SCRIPT));
+    LineNumberReader lnr = new LineNumberReader(new FileReader(sessionScriptPath.toString()));
     boolean cmdFound = false;
     List<String> localDirs = dirsToMount(dirsHandler.getLocalDirs());
     List<String> logDirs = dirsToMount(dirsHandler.getLogDirs());
     List<String> workDirMount = dirsToMount(Collections.singletonList(workDir.toUri().getPath()));
     List<String> expectedCommands =  new ArrayList<String>(
-        Arrays.asList(DOCKER_LAUNCH_COMMAND, "run", "--name", containerId));
+        Arrays.asList(DOCKER_LAUNCH_COMMAND, "run", "--rm", "--net=host",  "--name", containerId));
     expectedCommands.addAll(localDirs);
     expectedCommands.addAll(logDirs);
     expectedCommands.addAll(workDirMount);
-    expectedCommands.add(DOCKER_LAUNCH_ARGS);
-    expectedCommands.addAll(envVars());
     String shellScript =  workDir + "/launch_container.sh";
-    expectedCommands.addAll(Arrays.asList(testImage, "bash","\"" + shellScript + "\""));
+
+    expectedCommands.addAll(Arrays.asList(testImage.replaceAll("['\"]", ""), "bash","\"" + shellScript + "\""));
+
+    String expectedPidString = "echo `/bin/true inspect --format {{.State.Pid}} " + containerId+"` > "+ pidFile.toString() + ".tmp";
+    boolean pidSetterFound = false;
     while(lnr.ready()){
       String line = lnr.readLine();
       LOG.debug("line: " + line);
@@ -301,11 +238,14 @@ public class TestDockerContainerExecutorWithMocks {
 
         assertEquals(expectedCommands, command);
         cmdFound = true;
-        break;
+      } else if (line.startsWith("echo")) {
+        assertEquals(expectedPidString, line);
+        pidSetterFound = true;
       }
 
     }
     assertTrue(cmdFound);
+    assertTrue(pidSetterFound);
   }
 
   private List<String> dirsToMount(List<String> dirs) {
@@ -315,16 +255,5 @@ public class TestDockerContainerExecutorWithMocks {
       localDirs.add(dir + ":" + dir);
     }
     return localDirs;
-  }
-
-  private List<String> envVars() {
-    List<String> envs = new ArrayList<String>();
-    for(String env: dockerContainerExecutor.createDockerEnvVars().split("\\s")){
-      if (Strings.isNullOrEmpty(env)){
-        continue;
-      }
-      envs.add(env);
-    }
-    return envs;
   }
 }
