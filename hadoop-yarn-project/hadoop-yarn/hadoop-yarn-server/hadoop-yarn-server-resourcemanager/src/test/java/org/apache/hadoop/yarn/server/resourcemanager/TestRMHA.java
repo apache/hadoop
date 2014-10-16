@@ -127,7 +127,7 @@ public class TestRMHA {
 
     try {
       rm.getNewAppId();
-      rm.registerNode("127.0.0.1:0", 2048);
+      rm.registerNode("127.0.0.1:1", 2048);
       app = rm.submitApp(1024);
       attempt = app.getCurrentAppAttempt();
       rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.SCHEDULED);

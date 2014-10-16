@@ -40,10 +40,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.junit.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -63,6 +63,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -82,6 +83,7 @@ import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Matchers;
@@ -147,6 +149,7 @@ public class TestLeafQueue {
         thenReturn(CapacityScheduler.queueComparator);
     when(csContext.getResourceCalculator()).
         thenReturn(resourceCalculator);
+    when(csContext.getRMContext()).thenReturn(rmContext);
     RMContainerTokenSecretManager containerTokenSecretManager =
         new RMContainerTokenSecretManager(conf);
     containerTokenSecretManager.rollMasterKey();
@@ -686,8 +689,9 @@ public class TestLeafQueue {
         1, qb.getActiveUsersManager().getNumActiveUsers());
     //get headroom
     qb.assignContainers(clusterResource, node_0, false);
-    qb.computeUserLimitAndSetHeadroom(app_0, clusterResource,
-        app_0.getResourceRequest(u0Priority, ResourceRequest.ANY).getCapability());
+    qb.computeUserLimitAndSetHeadroom(app_0, clusterResource, app_0
+        .getResourceRequest(u0Priority, ResourceRequest.ANY).getCapability(),
+        null);
 
     //maxqueue 16G, userlimit 13G, - 4G used = 9G
     assertEquals(9*GB,app_0.getHeadroom().getMemory());
@@ -704,8 +708,9 @@ public class TestLeafQueue {
             u1Priority, recordFactory)));
     qb.submitApplicationAttempt(app_2, user_1);
     qb.assignContainers(clusterResource, node_1, false);
-    qb.computeUserLimitAndSetHeadroom(app_0, clusterResource,
-         app_0.getResourceRequest(u0Priority, ResourceRequest.ANY).getCapability());
+    qb.computeUserLimitAndSetHeadroom(app_0, clusterResource, app_0
+        .getResourceRequest(u0Priority, ResourceRequest.ANY).getCapability(),
+        null);
 
     assertEquals(8*GB, qb.getUsedResources().getMemory());
     assertEquals(4*GB, app_0.getCurrentConsumption().getMemory());
@@ -718,8 +723,10 @@ public class TestLeafQueue {
     //test case 3
     qb.finishApplication(app_0.getApplicationId(), user_0);
     qb.finishApplication(app_2.getApplicationId(), user_1);
-    qb.releaseResource(clusterResource, app_0, app_0.getResource(u0Priority));
-    qb.releaseResource(clusterResource, app_2, app_2.getResource(u1Priority));
+    qb.releaseResource(clusterResource, app_0, app_0.getResource(u0Priority),
+        null);
+    qb.releaseResource(clusterResource, app_2, app_2.getResource(u1Priority),
+        null);
 
     qb.setUserLimit(50);
     qb.setUserLimitFactor(1);
@@ -744,8 +751,9 @@ public class TestLeafQueue {
     qb.submitApplicationAttempt(app_3, user_1);
     qb.assignContainers(clusterResource, node_0, false);
     qb.assignContainers(clusterResource, node_0, false);
-    qb.computeUserLimitAndSetHeadroom(app_3, clusterResource,
-        app_3.getResourceRequest(u1Priority, ResourceRequest.ANY).getCapability());
+    qb.computeUserLimitAndSetHeadroom(app_3, clusterResource, app_3
+        .getResourceRequest(u1Priority, ResourceRequest.ANY).getCapability(),
+        null);
     assertEquals(4*GB, qb.getUsedResources().getMemory());
     //maxqueue 16G, userlimit 7G, used (by each user) 2G, headroom 5G (both)
     assertEquals(5*GB, app_3.getHeadroom().getMemory());
@@ -761,10 +769,12 @@ public class TestLeafQueue {
               TestUtils.createResourceRequest(ResourceRequest.ANY, 6*GB, 1, true,
                       u0Priority, recordFactory)));
     qb.assignContainers(clusterResource, node_1, false);
-    qb.computeUserLimitAndSetHeadroom(app_4, clusterResource,
-              app_4.getResourceRequest(u0Priority, ResourceRequest.ANY).getCapability());
-    qb.computeUserLimitAndSetHeadroom(app_3, clusterResource,
-        app_3.getResourceRequest(u1Priority, ResourceRequest.ANY).getCapability());
+    qb.computeUserLimitAndSetHeadroom(app_4, clusterResource, app_4
+        .getResourceRequest(u0Priority, ResourceRequest.ANY).getCapability(),
+        null);
+    qb.computeUserLimitAndSetHeadroom(app_3, clusterResource, app_3
+        .getResourceRequest(u1Priority, ResourceRequest.ANY).getCapability(),
+        null);
     
     
     //app3 is user1, active from last test case
@@ -2272,6 +2282,7 @@ public class TestLeafQueue {
     Resource clusterResource = Resources
         .createResource(100 * 16 * GB, 100 * 32);
     CapacitySchedulerContext csContext = mockCSContext(csConf, clusterResource);
+    when(csContext.getRMContext()).thenReturn(rmContext);
     csConf.setFloat(CapacitySchedulerConfiguration.
         MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT, 0.1f);
     ParentQueue root = new ParentQueue(csContext, 

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -126,11 +127,15 @@ public class CapacitySchedulerPlanFollower implements PlanFollower {
     // create the default reservation queue if it doesnt exist
     String defReservationQueue = planQueueName + PlanQueue.DEFAULT_QUEUE_SUFFIX;
     if (scheduler.getQueue(defReservationQueue) == null) {
-      ReservationQueue defQueue =
-          new ReservationQueue(scheduler, defReservationQueue, planQueue);
       try {
+        ReservationQueue defQueue =
+            new ReservationQueue(scheduler, defReservationQueue, planQueue);
         scheduler.addQueue(defQueue);
       } catch (SchedulerDynamicEditException e) {
+        LOG.warn(
+            "Exception while trying to create default reservation queue for plan: {}",
+            planQueueName, e);
+      } catch (IOException e) {
         LOG.warn(
             "Exception while trying to create default reservation queue for plan: {}",
             planQueueName, e);
@@ -186,11 +191,15 @@ public class CapacitySchedulerPlanFollower implements PlanFollower {
       for (ReservationAllocation res : sortedAllocations) {
         String currResId = res.getReservationId().toString();
         if (curReservationNames.contains(currResId)) {
-          ReservationQueue resQueue =
-              new ReservationQueue(scheduler, currResId, planQueue);
           try {
+            ReservationQueue resQueue =
+                new ReservationQueue(scheduler, currResId, planQueue);
             scheduler.addQueue(resQueue);
           } catch (SchedulerDynamicEditException e) {
+            LOG.warn(
+                "Exception while trying to activate reservation: {} for plan: {}",
+                currResId, planQueueName, e);
+          } catch (IOException e) {
             LOG.warn(
                 "Exception while trying to activate reservation: {} for plan: {}",
                 currResId, planQueueName, e);

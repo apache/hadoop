@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
@@ -63,6 +64,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessM
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
@@ -73,6 +75,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretMan
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -254,7 +257,7 @@ public class TestRMAppTransitions {
     RMApp application =
         new RMAppImpl(applicationId, rmContext, conf, name, user, queue,
           submissionContext, scheduler, masterService,
-          System.currentTimeMillis(), "YARN", null);
+          System.currentTimeMillis(), "YARN", null, null);
 
     testAppStartState(applicationId, user, name, queue, application);
     this.rmContext.getRMApps().putIfAbsent(application.getApplicationId(),
@@ -914,6 +917,7 @@ public class TestRMAppTransitions {
     }
   }
   
+  @SuppressWarnings("deprecation")
   public void testRecoverApplication(ApplicationState appState, RMState rmState)
       throws Exception {
     ApplicationSubmissionContext submissionContext =
@@ -923,7 +927,10 @@ public class TestRMAppTransitions {
             submissionContext.getApplicationName(), null,
             submissionContext.getQueue(), submissionContext, null, null,
             appState.getSubmitTime(), submissionContext.getApplicationType(),
-            submissionContext.getApplicationTags());
+            submissionContext.getApplicationTags(),
+            BuilderUtils.newResourceRequest(
+                RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
+                submissionContext.getResource(), 1));
     Assert.assertEquals(RMAppState.NEW, application.getState());
     application.recover(rmState);
 

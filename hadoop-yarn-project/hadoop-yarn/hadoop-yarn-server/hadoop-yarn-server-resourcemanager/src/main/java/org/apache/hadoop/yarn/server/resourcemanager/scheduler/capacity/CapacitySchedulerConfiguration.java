@@ -18,7 +18,15 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.StringTokenizer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,9 +39,13 @@ import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
+
+import com.google.common.collect.ImmutableSet;
 
 public class CapacitySchedulerConfiguration extends Configuration {
 
@@ -83,6 +95,12 @@ public class CapacitySchedulerConfiguration extends Configuration {
   public static final String STATE = "state";
   
   @Private
+  public static final String ACCESSIBLE_NODE_LABELS = "accessible-node-labels";
+  
+  @Private
+  public static final String DEFAULT_NODE_LABEL_EXPRESSION =
+      "default-node-label-expression";
+
   public static final String RESERVE_CONT_LOOK_ALL_NODES = PREFIX
       + "reservations-continue-look-all-nodes";
   
@@ -268,6 +286,10 @@ public class CapacitySchedulerConfiguration extends Configuration {
     return queueName;
   }
   
+  private String getNodeLabelPrefix(String queue, String label) {
+    return getQueuePrefix(queue) + ACCESSIBLE_NODE_LABELS + DOT + label + DOT;
+  }
+  
   public int getMaximumSystemApplications() {
     int maxApplications = 
       getInt(MAXIMUM_SYSTEM_APPLICATIONS, DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS);
@@ -343,6 +365,15 @@ public class CapacitySchedulerConfiguration extends Configuration {
         ", maxCapacity=" + maxCapacity);
   }
   
+  public void setCapacityByLabel(String queue, String label, float capacity) {
+    setFloat(getNodeLabelPrefix(queue, label) + CAPACITY, capacity);
+  }
+  
+  public void setMaximumCapacityByLabel(String queue, String label,
+      float capacity) {
+    setFloat(getNodeLabelPrefix(queue, label) + MAXIMUM_CAPACITY, capacity);
+  }
+  
   public int getUserLimit(String queue) {
     int userLimit = getInt(getQueuePrefix(queue) + USER_LIMIT,
         DEFAULT_USER_LIMIT);
@@ -372,6 +403,121 @@ public class CapacitySchedulerConfiguration extends Configuration {
         QueueState.valueOf(state.toUpperCase()) : QueueState.RUNNING;
   }
   
+  public void setAccessibleNodeLabels(String queue, Set<String> labels) {
+    if (labels == null) {
+      return;
+    }
+    String str = StringUtils.join(",", labels);
+    set(getQueuePrefix(queue) + ACCESSIBLE_NODE_LABELS, str);
+  }
+  
+  public Set<String> getAccessibleNodeLabels(String queue) {
+    String accessibleLabelStr =
+        get(getQueuePrefix(queue) + ACCESSIBLE_NODE_LABELS);
+
+    // When accessible-label is null, 
+    if (accessibleLabelStr == null) {
+      // Only return null when queue is not ROOT
+      if (!queue.equals(ROOT)) {
+        return null;
+      }
+    } else {
+      // print a warning when accessibleNodeLabel specified in config and queue
+      // is ROOT
+      if (queue.equals(ROOT)) {
+        LOG.warn("Accessible node labels for root queue will be ignored,"
+            + " it will be automatically set to \"*\".");
+      }
+    }
+
+    // always return ANY for queue root
+    if (queue.equals(ROOT)) {
+      return ImmutableSet.of(RMNodeLabelsManager.ANY);
+    }
+
+    // In other cases, split the accessibleLabelStr by ","
+    Set<String> set = new HashSet<String>();
+    for (String str : accessibleLabelStr.split(",")) {
+      if (!str.trim().isEmpty()) {
+        set.add(str.trim());
+      }
+    }
+    
+    // if labels contains "*", only keep ANY behind
+    if (set.contains(RMNodeLabelsManager.ANY)) {
+      set.clear();
+      set.add(RMNodeLabelsManager.ANY);
+    }
+    return Collections.unmodifiableSet(set);
+  }
+  
+  public Map<String, Float> getNodeLabelCapacities(String queue,
+      Set<String> labels, RMNodeLabelsManager mgr) {
+    Map<String, Float> nodeLabelCapacities = new HashMap<String, Float>();
+    
+    if (labels == null) {
+      return nodeLabelCapacities;
+    }
+
+    for (String label : labels.contains(CommonNodeLabelsManager.ANY) ? mgr
+        .getClusterNodeLabels() : labels) {
+      // capacity of all labels in each queue should be 1
+      if (org.apache.commons.lang.StringUtils.equals(ROOT, queue)) {
+        nodeLabelCapacities.put(label, 1.0f);
+        continue;
+      }
+      float capacity =
+          getFloat(getNodeLabelPrefix(queue, label) + CAPACITY, UNDEFINED);
+      if (capacity < MINIMUM_CAPACITY_VALUE
+          || capacity > MAXIMUM_CAPACITY_VALUE) {
+        throw new IllegalArgumentException("Illegal " + "capacity of "
+            + capacity + " for label=" + label + " in queue=" + queue);
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("CSConf - getCapacityOfLabel: prefix="
+            + getNodeLabelPrefix(queue, label) + ", capacity=" + capacity);
+      }
+      
+      nodeLabelCapacities.put(label, capacity / 100f);
+    }
+    return nodeLabelCapacities;
+  }
+  
+  public Map<String, Float> getMaximumNodeLabelCapacities(String queue,
+      Set<String> labels, RMNodeLabelsManager mgr) {
+    Map<String, Float> maximumNodeLabelCapacities = new HashMap<String, Float>();
+    if (labels == null) {
+      return maximumNodeLabelCapacities;
+    }
+
+    for (String label : labels.contains(CommonNodeLabelsManager.ANY) ? mgr
+        .getClusterNodeLabels() : labels) {
+      float maxCapacity =
+          getFloat(getNodeLabelPrefix(queue, label) + MAXIMUM_CAPACITY,
+              UNDEFINED);
+      maxCapacity = (maxCapacity == DEFAULT_MAXIMUM_CAPACITY_VALUE) ? 
+          MAXIMUM_CAPACITY_VALUE : maxCapacity;
+      if (maxCapacity < MINIMUM_CAPACITY_VALUE
+          || maxCapacity > MAXIMUM_CAPACITY_VALUE) {
+        throw new IllegalArgumentException("Illegal " + "capacity of "
+            + maxCapacity + " for label=" + label + " in queue=" + queue);
+      }
+      LOG.debug("CSConf - getCapacityOfLabel: prefix="
+          + getNodeLabelPrefix(queue, label) + ", capacity=" + maxCapacity);
+      
+      maximumNodeLabelCapacities.put(label, maxCapacity / 100f);
+    }
+    return maximumNodeLabelCapacities;
+  }
+  
+  public String getDefaultNodeLabelExpression(String queue) {
+    return get(getQueuePrefix(queue) + DEFAULT_NODE_LABEL_EXPRESSION);
+  }
+  
+  public void setDefaultNodeLabelExpression(String queue, String exp) {
+    set(getQueuePrefix(queue) + DEFAULT_NODE_LABEL_EXPRESSION, exp);
+  }
+
   /*
    * Returns whether we should continue to look at all heart beating nodes even
    * after the reservation limit was hit. The node heart beating in could

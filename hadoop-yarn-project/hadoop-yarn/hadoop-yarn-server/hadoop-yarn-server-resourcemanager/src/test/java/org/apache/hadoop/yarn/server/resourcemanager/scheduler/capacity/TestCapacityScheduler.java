@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterReque
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -64,7 +65,6 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -84,6 +84,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.Task;
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MockRMWithAMS;
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MyContainerManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.DummyRMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -149,7 +151,14 @@ public class TestCapacityScheduler {
   
   @Before
   public void setUp() throws Exception {
-    resourceManager = new ResourceManager();
+    resourceManager = new ResourceManager() {
+      @Override
+      protected RMNodeLabelsManager createNodeLabelManager() {
+        RMNodeLabelsManager mgr = new DummyRMNodeLabelsManager();
+        mgr.init(getConfig());
+        return mgr;
+      }
+    };
     CapacitySchedulerConfiguration csConf 
        = new CapacitySchedulerConfiguration();
     setupQueueConfiguration(csConf);
@@ -962,10 +971,7 @@ public class TestCapacityScheduler {
     YarnConfiguration conf = new YarnConfiguration();
     CapacityScheduler cs = new CapacityScheduler();
     cs.setConf(conf);
-    RMContextImpl rmContext =  new RMContextImpl(null, null, null, null, null,
-        null, new RMContainerTokenSecretManager(conf),
-        new NMTokenSecretManagerInRM(conf),
-        new ClientToAMTokenSecretManagerInRM(), null);
+    RMContext rmContext = TestUtils.getMockRMContext();
     cs.setRMContext(rmContext);
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
@@ -1476,8 +1482,14 @@ public class TestCapacityScheduler {
 
   @Test(expected = YarnException.class)
   public void testMoveAppViolateQueueState() throws Exception {
-
-    resourceManager = new ResourceManager();
+    resourceManager = new ResourceManager() {
+       @Override
+        protected RMNodeLabelsManager createNodeLabelManager() {
+          RMNodeLabelsManager mgr = new DummyRMNodeLabelsManager();
+          mgr.init(getConfig());
+          return mgr;
+        }
+    };
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
     setupQueueConfiguration(csConf);

@@ -65,6 +65,9 @@ public class TestApplicationLimits {
   LeafQueue queue;
   
   private final ResourceCalculator resourceCalculator = new DefaultResourceCalculator();
+
+  RMContext rmContext = null;
+
   
   @Before
   public void setUp() throws IOException {
@@ -73,7 +76,9 @@ public class TestApplicationLimits {
     YarnConfiguration conf = new YarnConfiguration();
     setupQueueConfiguration(csConf);
     
-    
+    rmContext = TestUtils.getMockRMContext();
+
+
     CapacitySchedulerContext csContext = mock(CapacitySchedulerContext.class);
     when(csContext.getConfiguration()).thenReturn(csConf);
     when(csContext.getConf()).thenReturn(conf);
@@ -89,6 +94,8 @@ public class TestApplicationLimits {
         thenReturn(CapacityScheduler.queueComparator);
     when(csContext.getResourceCalculator()).
         thenReturn(resourceCalculator);
+    when(csContext.getRMContext()).thenReturn(rmContext);
+    
     RMContainerTokenSecretManager containerTokenSecretManager =
         new RMContainerTokenSecretManager(conf);
     containerTokenSecretManager.rollMasterKey();
@@ -162,6 +169,7 @@ public class TestApplicationLimits {
     when(csContext.getQueueComparator()).
         thenReturn(CapacityScheduler.queueComparator);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
+    when(csContext.getRMContext()).thenReturn(rmContext);
     
     // Say cluster has 100 nodes of 16G each
     Resource clusterResource = Resources.createResource(100 * 16 * GB, 100 * 16);
@@ -475,6 +483,7 @@ public class TestApplicationLimits {
     when(csContext.getQueueComparator()).
         thenReturn(CapacityScheduler.queueComparator);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
+    when(csContext.getRMContext()).thenReturn(rmContext);
     
     // Say cluster has 100 nodes of 16G each
     Resource clusterResource = Resources.createResource(100 * 16 * GB);

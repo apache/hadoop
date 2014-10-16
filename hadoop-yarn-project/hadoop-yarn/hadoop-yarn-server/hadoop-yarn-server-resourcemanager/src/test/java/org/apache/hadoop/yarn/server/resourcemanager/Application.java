@@ -147,6 +147,7 @@ public class Application {
     return used;
   }
   
+  @SuppressWarnings("deprecation")
   public synchronized void submit() throws IOException, YarnException {
     ApplicationSubmissionContext context = recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
     context.setApplicationId(this.applicationId);
